@@ -1,0 +1,6 @@
+# space after quote will get trimmed
+    push @m, '
+all :: pure_all manifypods
+	' . $self->{NOECHO} . '$(NOOP)
+' 
+      unless $self->{SKIPHASH}{'all'};

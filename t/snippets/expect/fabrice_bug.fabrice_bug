@@ -1,0 +1,3 @@
+# no space around ^variable with -bt=0
+my $before = ${^PREMATCH};
+my $after  = ${ PREMATCH };

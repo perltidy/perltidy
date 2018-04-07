@@ -1,0 +1,3 @@
+# with defaults perltidy will break after the '=' here
+my @host_seq = $level eq "easy" ?
+	    @reordered : 0..$last;  # reordered has CDROM up front

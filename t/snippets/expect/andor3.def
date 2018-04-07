@@ -1,0 +1,3 @@
+ok(       ( $obj->name() eq $obj2->name() )
+      and ( $obj->version() eq $obj2->version() )
+      and ( $obj->help() eq $obj2->help() ) );

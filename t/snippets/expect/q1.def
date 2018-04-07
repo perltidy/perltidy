@@ -1,0 +1,4 @@
+print qq(You are in zone $thisTZ
+Difference with respect to GMT is ), $offset / 3600, qq( hours
+And local time is $hour hours $min minutes $sec seconds
+);

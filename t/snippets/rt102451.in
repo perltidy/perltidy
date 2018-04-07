@@ -1,0 +1,15 @@
+# RT#102451 bug test; unwanted spaces added before =head1 on each pass
+#<<<
+
+=head1 NAME
+
+=cut
+
+my %KA_CACHE; # indexed by uhost currently, points to [$handle...] array
+
+
+=head1 NAME
+
+=cut
+
+#>>>

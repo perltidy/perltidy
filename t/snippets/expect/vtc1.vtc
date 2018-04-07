@@ -1,0 +1,9 @@
+@lol = (
+    [
+        'Dr. Watson', undef,    '221b', 'Baker St.',
+        undef,        'London', 'NW1',  undef,
+        'England',    undef ],
+    [
+        'Sam Gamgee', undef,      undef, 'Bagshot Row',
+        undef,        'Hobbiton', undef, undef,
+        'The Shire',  undef ], );

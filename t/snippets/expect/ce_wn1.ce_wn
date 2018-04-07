@@ -1,0 +1,7 @@
+if ($BOLD_MATH) { (
+    $labels, $comment,
+    join( '', ' < B > ', &make_math( $mode, '', '', $_ ), ' < /B>' )
+) } else { (
+    &process_math_in_latex( $mode, $math_style, $slevel, "\\mbox{$text}" ),
+    $after
+) }

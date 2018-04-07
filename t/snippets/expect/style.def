@@ -1,0 +1,45 @@
+# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
+sub arrange_topframe {
+    my (@order) = (
+        $hslabel_frame,
+        $km_frame,
+        $speed_frame[0],
+        $power_frame[0],
+        $wind_frame,
+        $percent_frame,
+        $temp_frame,
+        @speed_frame[ 1 .. $#speed_frame ],
+        @power_frame[ 1 .. $#power_frame ],
+    );
+    my (@col) = (
+        0,
+        1,
+        3,
+        4 + $#speed_frame,
+        5 + $#speed_frame + $#power_frame,
+        2,
+        6 + $#speed_frame + $#power_frame,
+        4 .. 3 + $#speed_frame,
+        5 + $#speed_frame .. 4 + $#speed_frame + $#power_frame
+    );
+    $top->idletasks;
+    my $width = 0;
+    my (%gridslaves) = map { ( $_, 1 ) } $top_frame->gridSlaves;
+    for ( my $i = 0 ; $i <= $#order ; $i++ ) {
+        my $w = $order[$i];
+        next unless Tk::Exists($w);
+        my $col = $col[$i] || 0;
+        $width += $w->reqwidth;
+        if ( $gridslaves{$w} ) {
+            $w->gridForget;
+        }
+        if ( $width <= $top->width ) {
+            $w->grid(
+                -row    => 0,
+                -column => $col,
+                -sticky => 'nsew'
+            );    # XXX
+        }
+    }
+}
+

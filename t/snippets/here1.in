@@ -1,0 +1,3 @@
+is( <<~`END`, "ok\n", '<<~`HEREDOC`' );
+  $Perl -le "print 'ok'"
+  END

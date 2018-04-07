@@ -1,0 +1,2 @@
+$valuestr .= $value . " " ;    # with a trailing space in case there are multiple values
+   # for this tag (allowed in GFF2 and .ace format)

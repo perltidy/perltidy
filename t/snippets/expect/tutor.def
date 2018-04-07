@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+$y = shift || 5;
+for $i ( 1 .. 10 ) { $l[$i] = "T"; $w[$i] = 999999; }
+while (1) {
+    print "Name:";
+    $u = <STDIN>;
+    $t = 50;
+    $a = time;
+    for ( 0 .. 9 ) {
+        $x = "";
+        for ( 1 .. $y ) { $x .= chr( int( rand( 126 - 33 ) + 33 ) ); }
+        while ( $z ne $x ) {
+            print "\r\n$x\r\n";
+            $z = <STDIN>;
+            chomp($z);
+            $t -= 5;
+        }
+    }
+    $b = time;
+    $t -= ( $b - $a ) * 2;
+    $t = 0 - $t;
+    $z = 1;
+    @q = @l;
+    @p = @w;
+    print "You scored $t points\r\nTopTen\r\n";
+
+    for $i ( 1 .. 10 ) {
+        if ( $t < $p[$z] ) {
+            $l[$i] = $u;
+            chomp( $l[$i] );
+            $w[$i] = $t;
+            $t = 1000000;
+        }
+        else { $l[$i] = $q[$z]; $w[$i] = $p[$z]; $z++; }
+        print $l[$i], "\t", $w[$i], "\r\n";
+    }
+}

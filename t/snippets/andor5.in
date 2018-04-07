@@ -1,0 +1,11 @@
+    # two levels of && with side comments
+    if (
+        defined &syscopy
+        && \&syscopy != \&copy
+        && !$to_a_handle
+        && !( $from_a_handle && $^O eq 'os2' )      # OS/2 cannot handle
+        && !( $from_a_handle && $^O eq 'mpeix' )    # and neither can MPE/iX.
+      )
+    {
+        return syscopy( $from, $to );
+    }

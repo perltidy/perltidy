@@ -1,0 +1,13 @@
+if ( (      ( $old_new and $old_new eq 'changed' )
+        and ( $db_new and $db_new eq 'changed' ) 
+        and ( not defined $old_db ) 
+     ) or ( ( $old_new and $old_new eq 'changed' )
+        and ( $db_new and $db_new eq 'new' )
+        and ( $old_db and $old_db eq 'new' ) 
+     ) or ( ( $old_new and $old_new eq 'new' )
+        and ( $db_new and $db_new eq 'new' )
+        and ( not defined $old_db ) 
+   ) )
+{   
+    return "update";
+}

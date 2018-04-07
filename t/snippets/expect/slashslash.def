@@ -1,0 +1,7 @@
+$home = $ENV{HOME} // $ENV{LOGDIR} // ( getpwuid($<) )[7]
+  // die "You're homeless!\n";
+defined( $x // $y );
+$version = 'v' . join '.', map ord, split //, $version->PV;
+foreach ( split( //, $lets ) )  { }
+foreach ( split( //, $input ) ) { }
+'xyz' =~ //;

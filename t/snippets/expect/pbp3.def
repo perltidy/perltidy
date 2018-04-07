@@ -1,0 +1,5 @@
+return $sec + $SecOff +
+  ( SECS_PER_MINUTE * $min ) +
+  ( SECS_PER_HOUR * $hour ) +
+  ( SECS_PER_DAY * $days );
+

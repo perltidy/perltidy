@@ -1,0 +1,2 @@
+# do not break before the ++
+print $x++ . "\n";

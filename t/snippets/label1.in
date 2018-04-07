@@ -1,0 +1,11 @@
+INIT : { 
+$a++;
+print "looping with label INIT:, a=$a\n";
+  if ($a<10) {goto INIT}
+}
+package: {
+    print "hello!\n";
+}
+sub: {
+    print "hello!\n";
+}

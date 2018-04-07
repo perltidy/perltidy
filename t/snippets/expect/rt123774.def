@@ -1,0 +1,6 @@
+# retain any space between backslash and quote to avoid fooling html formatters
+my $var1 = \ "bubba";
+my $var2 = \"bubba";
+my $var3 = \ 'bubba';
+my $var4 = \'bubba';
+my $var5 = \ "bubba";

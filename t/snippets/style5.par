@@ -1,0 +1,33 @@
+-b
+-bext="~"
+-et=8
+-l=77
+-cbi=2
+-cpi=2
+-csbi=2
+-ci=4
+-nolq
+-nasc
+-bt=2
+-ndsm
+-nwls="++ -- ?"
+-nwrs="++ --"
+-pt=2
+-nsfs
+-nsts
+-sbt=2
+-sbvt=1
+-wls="= .= =~ !~ :"
+-wrs="= .= =~ !~ ? :"
+-ncsc
+-isbc
+-msc=2
+-nolc
+-bvt=1
+-bl
+-sbl
+-pvt=1
+-wba="% + - * / x != == >= <= =~ !~ < > | & >= < = **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x= . << >> -> && ||"
+-wbb=" "
+-cab=1
+-mbl=2

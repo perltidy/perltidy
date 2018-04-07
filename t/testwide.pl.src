@@ -1,0 +1,4 @@
+%pangrams=("Plain","ASCII",
+"Zwölf große Boxkämpfer jagen Vik quer über den Sylter.","DE",
+"Jeż wlókł gęś. Uf! Bądź choć przy nim, stań!","PL",
+"Любя, съешь щипцы, — вздохнёт мэр, — кайф жгуч.","RU");

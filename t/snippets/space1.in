@@ -1,0 +1,8 @@
+    # We usually want a space at '} (', for example:
+    map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
+
+    # But not others:
+    &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
+
+    # remove unwanted spaces after $ and -> here
+    &{ $ _ -> [1] }( delete $ _ [$#_   ]{ $_   ->     [0] } );

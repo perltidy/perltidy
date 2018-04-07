@@ -1,0 +1,20 @@
+# Example for rt.cpan.org #96101; Perltidy not properly formatting subroutine
+# references inside subroutine execution.
+
+# closing brace of second sub should get outdented here
+sub startup {
+    my $self = shift;
+    $self->plugin(
+        'authentication' => {
+            'autoload_user' => 1,
+            'session_key'   => rand(),
+            'load_user'     => sub {
+                return HaloVP::Users->load(@_);
+            },
+            'validate_user' => sub {
+                return HaloVP::Users->login(@_);
+            }
+        }
+    );
+}
+

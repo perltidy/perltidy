@@ -1,0 +1,5 @@
+# Treat newline as a whitespace. Otherwise, we might combine
+# 'Send' and '-recipients' here
+my $msg = new Fax::Send
+  -recipients => $to,
+  -data       => $data;

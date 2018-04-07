@@ -1,0 +1,7 @@
+# keep '=' lined up even with hanging side comments
+$ax=1;# side comment
+ # hanging side comment
+$boondoggle=5;# side comment
+$beetle=5;# side comment
+ # hanging side comment
+$d=3;

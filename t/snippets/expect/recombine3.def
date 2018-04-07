@@ -1,0 +1,6 @@
+        # recombine final line
+        $command = (
+            ( $catpage =~ m:\.gz: )
+            ? $ZCAT
+            : $CAT
+        ) . " < $catpage";

@@ -1,0 +1,42 @@
+severity = 4
+
+# Following is a list of policies to be skipped:  
+
+# There is a localization in Tokenizer.pm that is essential
+[-Variables::ProhibitLocalVars] 
+
+# immediate initialization of locals is not appropriate where used
+# in the Tokenizer.pm module
+[-Variables::RequireInitializationForLocalVars] 
+
+# C-style for loops are essential when working with multiple indexed
+# arrays
+[-ControlStructures::ProhibitCStyleForLoops] 
+
+# There is a stringy eval in Formatter.pm which is essential.  
+[-BuiltinFunctions::ProhibitStringyEval] 
+
+# maintaining VERSION numbers for all internal modules introduces
+# needless maintenance issues
+[-Modules::RequireVersionVar]
+
+# Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
+[-Modules::ProhibitAutomaticExportation]
+
+# print and close homonyms are appropriate where they are used.
+[-Subroutines::ProhibitBuiltinHomonyms]
+
+# Nested subs are needed for error handling in Tidy.pm. 
+[-Subroutines::ProhibitNestedSubs]
+
+# constants are needed for clean array indexing.
+[-ValuesAndExpressions::ProhibitConstantPragma]
+
+# Adding quotes on here doc terminators causes needless "line noise" in the
+# source code.  My editor uses color to make it clear if interpolation is in
+# effect.
+[-ValuesAndExpressions::RequireQuotedHeredocTerminator]
+
+# Perlcritic doesn't know ARGV actually is localized
+[-Variables::RequireLocalizedPunctuationVars]
+

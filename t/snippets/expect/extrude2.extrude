@@ -1,0 +1,14 @@
+if
+(
+-l pid_filename(
+)
+)
+{
+return
+readlink
+(
+pid_filename(
+)
+)
+;
+}

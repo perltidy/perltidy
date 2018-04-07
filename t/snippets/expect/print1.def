@@ -1,0 +1,11 @@
+# same text twice. Has uncontained commas; -- leave as is
+print "conformability (Not the same dimension)\n",
+  "\t",
+  $have, " is ",
+  text_unit($hu), "\n", "\t", $want, " is ", text_unit($wu), "\n",;
+
+print
+  "conformability (Not the same dimension)\n",
+  "\t", $have, " is ", text_unit($hu), "\n",
+  "\t", $want, " is ", text_unit($wu), "\n",
+  ;

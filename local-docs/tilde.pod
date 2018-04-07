@@ -1,0 +1,164 @@
+=head1 Developing a Perltidy Test for Missing Binding Operator
+
+I recently needed to construct a filter to process some text,
+and after about a minute of coding I had what I thought would do the
+job.  But when I went to test it, it didn't work, and I wasted several
+more minutes trying to find what I had done wrong.  The problem was
+a line something like this:
+
+  $line = s/\s*$//;
+
+whereas what I meant was
+
+  $line =~ s/\s*$//;
+
+Both are valid code, so perl does not complain.  I've made this error
+before in my haste to enter a script, and so I decided to update
+F<perltidy> to check for this.  This is an ideal candidate for the B<-w>
+flag, which warns of things that look suspicious but are not 
+necessarily incorrect.
+
+=head2 Illustrative Snippets
+
+It isn't possible to be perfectly accurate with a warning of this
+nature, but it would be nice to avoid many false-alarms.  What I needed
+to implement this was a fairly simple rule which would just flag the
+most likely cases of a missing binding operator.  
+
+In order to construct a rule, I needed lots of examples of code.  I
+modified perltidy to report situations in which an C<s y tr m> operator,
+as well as a B</> pattern delimiter, was preceded by a non-binding
+equality operator of some sort.  (I decided to skip the B<?> pattern
+delimiter because it is fairly rare).
+
+One thing that became obvious was that there is no need to look for
+operators such as C<+=>,
+
+   $line += tr/\n//;
+
+since the author is obviously doing some math.  
+
+Likewise, there is little chance that a C<||=>, such as this
+
+    $havedate  ||= m/^Date:/;
+
+should have been a binding operator.
+
+So I decided to limit my
+search to situations with patterns preceded by C<=>, C<==>, and C<!=>,
+since these could easily have been typed instead of C<=~> and C<!~>.
+
+Another useful result is shown in the next snippet,
+
+   $filename = /^$/ ? $filename : $_;
+
+where the pattern is part of a C<?:> conditional operator and therefore the
+C<=> is unlikely to have been mistaken for a binding operator.
+Likewise, in this example from B<The Perl Cookbook>, 
+
+    $page  =    /Mac/            && 'm/Macintrash.html'
+             || /Win(dows )?NT/  && 'e/evilandrude.html'
+             || /Win|MSIE|WebTV/ && 'm/MicroslothWindows.html'
+             || /Linux/          && 'l/Linux.html'
+             || /HP-UX/          && 'h/HP-SUX.html'
+             || /SunOS/          && 's/ScumOS.html'
+             ||                     'a/AppendixB.html';
+
+a trailing C<&&> indicates that the C<=> is what the author really
+wanted.  I therefore decided to only produce a warning if the pattern
+is terminated by a C<;>, a C<)>, or a C<}>.
+
+A large class of snippets that I found were in LIST context at the
+pattern, such as these:
+
+    ($key, $val) = m/^(.*?:)\s*(.*)/;
+    @export = m/sub\s+main'(\w+)/g;
+
+A binding operator is obviously not what is intended here, so I 
+limited the warning to a SCALAR variable immediately before the equality.
+
+The test for a SCALAR, as currently implemented, looks just one token to
+the left of the equality, so it would not flag something with a hash
+key, like this
+
+   $stats{a} = tr/a/a/;
+
+(which, in this case, is ok).  This could be done with some additional
+programming complexity, but is probably not worthwhile.
+
+Finally, I found many examples of scalars which were actually created
+just before the equality, such as this:
+
+        my $is_empty = /^$/;
+
+Obviously, these can be eliminated from consideration because
+the scalar does not contain character data to match to a pattern.
+
+=head2 A Simple Filter
+
+Putting all of this information together, here is a summary of the logic
+that I settled on:
+
+=over 4
+
+=item *
+
+We have an operator C<s y tr m> or pattern beginning with C</>,
+
+=item *
+
+followed by one of C<;>, C<)>, or C<}>,
+
+=item *
+
+and operator is preceded by C<=>, C<==>, or C<!=>,
+
+=item *
+
+and the C<=> or similar operator is immediately preceded by a 
+SCALAR identifier,
+
+=item *
+
+which is not introduced with a C<my>, C<our>, or C<local> keyword.
+
+=back
+
+=head2 Final Test
+
+This is localized enough that it is easy to implement, and does a fairly
+good job of avoiding false alarms.  Running it through a collection of
+several hundred megabytes of perl code produced about 30 warnings.  Most
+of them turned out to be valid code (as they should be, since the
+database is fairly mature code downloaded from the internet), but about
+fifteen percent were probably actual errors that had slipped by their
+authors.  
+
+Here are a few valid snippets that produce false-alarm warnings:
+
+    $saw_bk = /\\$/;
+    if ($pod = /^=head\d\s/) { }
+    $Match = /(\S+)\s+(\S+)\s+(\S+)\s+\[(.*)\]\s+"(.*)"\s+(\S+)\s+(\S+)/;
+
+    $match = /^(.*?)($delim.*?$delim)(.*)$/s;
+    ($pre, $match, $post) = ($1, $2, $3);
+
+And here are some suspicious snippets that this filter caught:
+
+    $text = s/\\itemize$id(.*)$id/\\itemize$id$tmptext$id/s;
+
+    if ($val = /^\|expand/) {		# Found an expand command
+
+    # edit comment to get rid of leading space and trailing dot
+    $comment = s/^\s*(\S+)\..*/$1/;
+
+    $Alt = s/\<.*\>//g;
+
+This test is currently activated in perltidy when the user enters
+the B<-w> flag, which is intended to look for problems like this.
+I think the value of being able to catch this type of error greatly
+outweighs the inconvenience of a few false alarms.  
+
+Here is the message produced:
+
+ 1:	Note: be sure you want '=' instead of '=~' here

@@ -1,0 +1,11 @@
+# From Safe.pm caused trouble with extrude
+use
+Opcode
+1.01
+,
+qw(
+opset opset_to_ops opmask_add
+empty_opset full_opset invert_opset verify_opset
+opdesc opcodes opmask define_optag opset_to_hex
+)
+;

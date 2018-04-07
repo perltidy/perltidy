@@ -1,0 +1,8 @@
+# if $w->vert is tokenized as type 'U' then the ? will start a quote
+# and an error will occur.
+sub vert {
+}
+
+sub Restore {
+    $w->vert ? $w->delta_width(0) : $w->delta_height(0);
+}

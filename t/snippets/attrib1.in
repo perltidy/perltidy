@@ -1,0 +1,5 @@
+sub be_careful () : locked method {
+    my $self = shift;
+
+    # ...
+}

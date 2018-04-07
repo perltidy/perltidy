@@ -1,0 +1,2 @@
+$_[0]->Blue->backColor(
+    ( $_[0]->Blue->backColor == cl::Blue ) ? cl::LightBlue : cl::Blue );

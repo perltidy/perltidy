@@ -1,0 +1,28 @@
+my::doit();
+join::doit();
+for::doit();
+sub::doit();
+package::doit();
+__END__::doit();
+__DATA__::doit();
+
+package my;
+sub doit { print "Hello My\n"; }
+
+package join;
+sub doit { print "Hello Join\n"; }
+
+package for;
+sub doit { print "Hello for\n"; }
+
+package package;
+sub doit { print "Hello package\n"; }
+
+package sub;
+sub doit { print "Hello sub\n"; }
+
+package __END__;
+sub doit { print "Hello __END__\n"; }
+
+package __DATA__;
+sub doit { print "Hello __DATA__\n"; }

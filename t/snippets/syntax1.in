@@ -1,0 +1,2 @@
+# Caused trouble:
+print $x **2;

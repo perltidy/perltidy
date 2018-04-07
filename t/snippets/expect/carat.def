@@ -1,0 +1,4 @@
+my $a = ${^WARNING_BITS};
+@{^HOWDY_PARDNER} = ( 101, 102 );
+${^W} = 1;
+$bb[$^]] = "bubba";

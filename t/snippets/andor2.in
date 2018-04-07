@@ -1,0 +1,2 @@
+# breaks at = or at && but not both
+my $success = ( system("$Config{cc} -o $te $tc $libs $HIDE") == 0 ) && -e $te ? 1 : 0;

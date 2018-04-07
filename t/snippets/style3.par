@@ -1,0 +1,13 @@
+-l=160
+-cbi=1
+-cpi=1
+-csbi=1
+-lp
+-nolq
+-csci=20
+-csct=40
+-csc
+-isbc
+-cuddled-blocks
+-nsbl
+-dcsc

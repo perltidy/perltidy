@@ -1,0 +1,125 @@
+#!/usr/bin/env perl
+use strict;
+
+# This script will recombine the perltidy binary script and all of its modules
+# into a single, monolithic script.  I use it for making a temporary "sandbox"
+# for debugging. 
+
+# This is also useful for making a copy of previous versions for parallel
+# debugging.
+
+# usage:
+#   perl pm2pl
+
+# Run this from the perltidy main installation directory.  It reads
+# bin/perltidy and lib/*.pm and writes a file 'perltidy-VERSION.pl' in the
+# current directory. 
+
+# This should work for a system with File::Spec,
+# and for older Windows/Unix systems without File::Spec.
+my $script = 'bin/perltidy';
+my @modules = qw(
+  lib/Perl/Tidy.pm
+  lib/Perl/Tidy/Debugger.pm
+  lib/Perl/Tidy/DevNull.pm
+  lib/Perl/Tidy/Diagnostics.pm
+  lib/Perl/Tidy/FileWriter.pm
+  lib/Perl/Tidy/Formatter.pm
+  lib/Perl/Tidy/HtmlWriter.pm
+  lib/Perl/Tidy/IOScalar.pm
+  lib/Perl/Tidy/IOScalarArray.pm
+  lib/Perl/Tidy/IndentationItem.pm
+  lib/Perl/Tidy/LineBuffer.pm
+  lib/Perl/Tidy/LineSink.pm
+  lib/Perl/Tidy/LineSource.pm
+  lib/Perl/Tidy/Logger.pm
+  lib/Perl/Tidy/Tokenizer.pm
+  lib/Perl/Tidy/VerticalAligner.pm
+  lib/Perl/Tidy/VerticalAligner/Alignment.pm
+  lib/Perl/Tidy/VerticalAligner/Line.pm
+);
+
+# try to make the pathnames system independent
+eval "use File::Spec;";
+my $missing_file_spec = $@;
+unless ($missing_file_spec) {
+    $script = File::Spec->catfile( split '/', $script );
+    foreach my $module (@modules) {
+        $module = File::Spec->catfile( split '/', $module );
+    }
+}
+
+my $VERSION=get_version("lib/Perl/Tidy.pm");
+my $outfile = "perltidy-$VERSION.pl";
+open OUTFILE, "> $outfile" or die "can't open file '$outfile' : $!\n";
+print "Creating file '$outfile' ....\n ";
+
+# first, open the script and copy the first (hash-bang) line
+# (Note: forward slashes in file names here will work in Windows)
+open SCRIPT, "< $script" or die "can't open script file '$script' : $!\n";
+my $hash_bang = <SCRIPT>;
+print OUTFILE $hash_bang;
+
+# then copy all modules 
+foreach my $module (@modules) {
+    open PM, "< $module" or die "can't open my module file '$module' : $!\n";
+    while (<PM>) {
+        last if /^\s*__END__\s*$/;
+        print OUTFILE unless $_ =~ /^use Perl::Tidy/;
+    }
+    close PM;
+}
+
+# then, copy the rest of the script except for the 'use PerlTidy' statement
+while (<SCRIPT>) {
+    last if /^\s*__END__\s*$/;
+    print OUTFILE unless $_ =~ /^use Perl::Tidy/;
+}
+close SCRIPT;
+close OUTPUT;
+chmod 0755, $outfile;
+print "...Done...\n";
+
+my $testfile = "Makefile.PL";
+if ( -e $testfile ) {
+    print <<EOM;
+
+You can now run perltidy.pl
+For a quick test, try reformatting $testfile with the following command:
+
+    perl perltidy.pl -lp $testfile
+
+and then compare the output in $testfile.tdy with the original file
+EOM
+}
+else {
+    $testfile = "somefile";
+    print <<EOM;
+
+You can now run perltidy to reformat any perl script.  
+For example, the following command:
+
+    perl perltidy $testfile
+
+will produce the output file $testfile.tdy
+EOM
+}
+sub get_version {
+    my ($file) = @_;
+    my $fh;
+    open( $fh, "<", $file ) || die "cannot open $fh: $!\n";
+    while ( my $line = <$fh> ) {
+
+        # Looking for something simple like this, with or without quotes,
+        # with semicolon and no sidecomments:
+        #                     $VERSION   =   "20180202.245"  ;
+        #                 our $VERSION   =    20104202       ;
+        if ( $line =~
+            /^((our)?\s*\$VERSION\s*=\s*\'?)  ([^'#]+)   (\'?) \s* ;/x )
+        {
+            $VERSION          = $3;
+            last;
+        }
+    }
+    return $VERSION;
+}

@@ -1,0 +1,5 @@
+# Breaking before a ++ can cause perl to guess wrong
+print( ( $i++ & 1 ) ? $_ : ( $change{$_} || $_ ) );
+
+# Space between '&' and 'O_ACCMODE' is essential here
+$opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);

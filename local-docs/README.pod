@@ -1,0 +1,66 @@
+=head1 Welcome to Perltidy!
+
+Perltidy is a tool to indent and reformat perl scripts.  It can also
+write scripts in html format.
+
+Perltidy is free software released under the GNU General Public
+License -- please see the included file "COPYING" for details.
+
+=head1 PREREQUISITES
+
+C<perltidy> should work with most standard Perl installations.
+The following modules are not required, but perltidy may use them if
+detected:
+
+  HTML::Entities  will be used to encode HTML entities if detected
+  Pod::Html will be used to format pod text
+
+The total disk space needed after removing the installation directory will
+about 2 Mb.  
+
+=head1 DOWNLOAD
+
+There are two source distribution files:
+
+=over 4
+
+=item *
+
+A F<.tgz> "tarball", with Unix-style <lf> line endings, and 
+
+=item *
+
+A zip file, F<.zip>, with Windows-style <cr><lf> line endings.
+
+=back
+
+In addition, the web site has links to debian and RPM packages.
+
+=head1 INSTALLATION
+
+For most standard installations, the standard Makefile.PL method should work:
+
+ perl Makefile.PL
+ make
+ make test
+ make install
+
+The INSTALL file has additional installation notes, and tells how
+to use perltidy without doing an installation.
+
+=head1 WHAT NEXT
+
+Please see the CHANGES file for notices of any recent updates.
+
+Please see the BUGS file for a list of all known open bugs.
+
+Documentation can be found in the F<docs> directory, and it can also be 
+found at http://perltidy.sourceforge.net
+
+Reading the brief tutorial should help you use perltidy effectively.  
+
+=head1 FEEDBACK / BUG REPORTS
+
+A list of current bugs and issues can be found at the CPAN site L<https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy>
+
+To report a new bug or problem, use the link on this page .  

@@ -1,0 +1,6 @@
+env(0, 15, 0, 10, {
+    Xtitle => 'X-data',
+    Ytitle => 'Y-data',
+    Title  => 'An example of errb and points',
+    Font   => 'Italic'
+});

@@ -1,0 +1,3 @@
+# remove spaces around arrows
+my $obj = Bio::Variation::AAChange -> new;
+my $termcap = Term::Cap -> Tgetent( { TERM => undef } );

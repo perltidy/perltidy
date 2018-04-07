@@ -1,0 +1,13 @@
+#############################################################
+# This will walk to the left because of bad -sil guess
+SKIP: {
+#############################################################
+}
+
+# This will walk to the right if it is the first line of a file.
+
+     ov_method mycan( $package, '(""' ),       $package
+  or ov_method mycan( $package, '(0+' ),       $package
+  or ov_method mycan( $package, '(bool' ),     $package
+  or ov_method mycan( $package, '(nomethod' ), $package;
+

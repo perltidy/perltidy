@@ -1,0 +1,1 @@
+    my ( $x, $y ) = ( $x0 + $index_x * $xgridwidth * $xm + ( $map_x * $xm * $xgridwidth ) / $detailwidth, $y0 - $index_y * $ygridwidth * $ym - ( $map_y * $ym * $ygridwidth ) / $detailheight,);

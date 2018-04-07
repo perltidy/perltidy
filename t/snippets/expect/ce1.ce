@@ -1,0 +1,19 @@
+# test -ce with blank lines and comments between blocks
+if ( $value[0] =~ /^(\#)/ ) {    # skip any comment line
+    last SWITCH;
+
+} elsif ( $value[0] =~ /^(o)$/ or $value[0] =~ /^(os)$/ ) {
+    $os = $value[1];
+    last SWITCH;
+
+} elsif ( $value[0] =~ /^(b)$/ or $value[0] =~ /^(dbfile)$/ )
+
+  # comment
+{
+    $dbfile = $value[1];
+    last SWITCH;
+
+    # Add the additional site
+} else {
+    $rebase_hash{$name} .= " $site";
+}

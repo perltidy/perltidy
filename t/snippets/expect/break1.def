@@ -1,0 +1,3 @@
+    # break at ;
+    $self->__print("*** Type 'p' now to show start up log\n")
+      ;    # XXX add to banner?

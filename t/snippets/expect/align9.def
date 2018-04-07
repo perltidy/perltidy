@@ -1,0 +1,7 @@
+# test of aligning ||
+my $os =
+  ( $ExtUtils::MM_Unix::Is_OS2   || 0 ) +
+  ( $ExtUtils::MM_Unix::Is_Mac   || 0 ) +
+  ( $ExtUtils::MM_Unix::Is_Win32 || 0 ) +
+  ( $ExtUtils::MM_Unix::Is_Dos   || 0 ) +
+  ( $ExtUtils::MM_Unix::Is_VMS   || 0 );

@@ -1,0 +1,8 @@
+# This is an angle operator:
+@message_list =sort sort_algorithm < INDEX_FILE >;# angle operator
+
+# Not an angle operator:
+# Patched added in guess routine for this case:
+if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
+}
+

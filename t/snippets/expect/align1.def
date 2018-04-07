@@ -1,0 +1,5 @@
+return ( $fetch_key eq $fk
+      && $store_key eq $sk
+      && $fetch_value eq $fv
+      && $store_value eq $sv
+      && $_ eq 'original' );

@@ -1,0 +1,7 @@
+# align opening parens
+if (   ( index( $msg_line_lc, $nick1 ) != -1 )
+    || ( index( $msg_line_lc, $nick2 ) != -1 )
+    || ( index( $msg_line_lc, $nick3 ) != -1 ) )
+{
+    do_something();
+}

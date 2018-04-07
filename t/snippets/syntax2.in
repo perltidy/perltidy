@@ -1,0 +1,2 @@
+# ? was taken as pattern
+my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';

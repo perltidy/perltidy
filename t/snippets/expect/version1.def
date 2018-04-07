@@ -1,0 +1,2 @@
+# VERSION statement unbroken, no semicolon added;
+our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r }

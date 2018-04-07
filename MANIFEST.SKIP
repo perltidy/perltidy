@@ -1,0 +1,130 @@
+############################################################################################
+# Top Section from ExtUtils::MANIFEST:
+#
+# https://metacpan.org/source/ETHER/ExtUtils-Manifest-1.70/lib/ExtUtils/MANIFEST.SKIP
+#
+############################################################################################
+
+# Avoid version control files.
+\bRCS\b
+\bCVS\b
+\bSCCS\b
+,v$
+\B\.svn\b
+\B\.git\b
+\B\.gitignore\b
+\b_darcs\b
+\B\.cvsignore$
+
+# Avoid VMS specific MakeMaker generated files
+\bDescrip.MMS$
+\bDESCRIP.MMS$
+\bdescrip.mms$
+
+# Avoid Makemaker generated and utility files.
+\bMANIFEST\.bak
+\bMakefile$
+\bblib/
+\bMakeMaker-\d
+\bpm_to_blib\.ts$
+\bpm_to_blib$
+\bblibdirs\.ts$         # 6.18 through 6.25 generated this
+\b_eumm/                # 7.05_05 and above
+
+# Avoid Module::Build generated and utility files.
+\bBuild$
+\b_build/
+\bBuild.bat$
+\bBuild.COM$
+\bBUILD.COM$
+\bbuild.com$
+
+# and Module::Build::Tiny generated files
+\b_build_params$
+
+# Avoid temp and backup files.
+~$
+\.old$
+\#$
+\b\.#
+\.bak$
+\.tmp$
+\.log$
+\.archive$
+\.#
+\.rej$
+\..*\.sw.?$
+
+# Avoid OS-specific files/dirs
+# Mac OSX metadata
+\B\.DS_Store
+# Mac OSX SMB mount metadata files
+\B\._
+
+# Avoid Devel::Cover and Devel::CoverX::Covered files.
+\bcover_db\b
+\bcovered\b
+
+# Avoid prove files
+\B\.prove$
+
+# Avoid MYMETA files
+^MYMETA\.
+
+#########################################################################
+# Project Specific Stuff, with help from:
+# ref: https://gist.github.com/jonasbn/aa6646544f2233de39f34c49532215ad #
+#########################################################################
+
+# avoid MANIFEST backups and this file
+\bMANIFEST\.\w
+
+# Avoid archives of perl distribution
+-[\d\.\_]+\.tar
+-[\d\.\_]+\.tar\.gz
+
+# Github files
+\.travis\.yml
+
+# tidyall files
+\.tidyall
+
+# Appveyor files
+\.appveyor\.yml
+
+# perlcritic config file
+\.perlcriticrc
+
+# any shell scripts
+\.sh$
+
+# Perl::Tidy error, log and tidy files
+\bperltidy\.ERR
+\bperltidy\.LOG
+
+# The temporary combined perltidy.pl made by pm2pl
+\bperltidy-.*\.pl
+\bperltidy\.pl
+
+# git files
+^\.git/
+^\.gitignore/
+
+# temporary file area
+^tmp/
+^tmp1/
+
+# snippet folder
+# These are bundled and distributed in the snippets*.t files
+\/snippets/
+
+# developer stuff
+^dev-bin/
+
+# my notes to self
+\bNOTES\.txt
+
+^local-docs/
+
+^archive/
+

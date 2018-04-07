@@ -1,0 +1,3 @@
+    # recombine = unless old break there
+    $a = [ length( $self->{fb}[-1] ), $#{ $self->{fb} } ]
+      ;    # set cursor at end of buffer and print this cursor

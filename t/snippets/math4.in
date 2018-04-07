@@ -1,0 +1,6 @@
+my$u=($range*$pratio**(1./3.))/$wratio;
+my$factor=exp(-(18/$u)**4);
+my$ovp=(1-$factor)*(70-0.655515*$u)+(1000/($u**1.3)+10000/($u**3.3))*$factor;
+my$impulse=(1-$factor)*(170-$u)+(350/$u**0.65+500/$u**5)*$factor;
+$ovp=$ovp*$pratio;
+$impulse=$impulse*$wratio*$pratio**(2/3);

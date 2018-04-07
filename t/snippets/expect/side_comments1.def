@@ -1,0 +1,10 @@
+    # side comments at different indentation levels should not be aligned
+    {
+        {
+            {
+                {
+                    { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+                }    #end level 4
+            }    # end level 3
+        }    # end level 2
+    }    # end level 1

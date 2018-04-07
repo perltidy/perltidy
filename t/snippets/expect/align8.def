@@ -1,0 +1,4 @@
+# aligning '=' and padding 'if'
+if    ( $tag == 263 ) { $bbi->{"Info.Thresholding"} = $value }
+elsif ( $tag == 264 ) { $bbi->{"Info.CellWidth"}    = $value }
+elsif ( $tag == 265 ) { $bbi->{"Info.CellLength"}   = $value }

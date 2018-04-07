@@ -1,0 +1,4 @@
+        # will not add semicolon for this block type
+        $highest = List::Util::reduce {
+            Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b
+        }

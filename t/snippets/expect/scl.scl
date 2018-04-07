@@ -1,0 +1,7 @@
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format =
+        "format STDOUT =\n"
+      . &format_line('Function:       @') . '$name' . "\n"
+      . &format_line('Arguments:      @') . '$args' . "\n"
+      . &format_line('Returns:        @') . '$returns' . "\n"
+      . &format_line('             ~~ ^') . '$desc' . "\n.\n";

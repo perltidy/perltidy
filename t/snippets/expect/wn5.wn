@@ -1,0 +1,11 @@
+# qw weld with -wn
+use_all_ok( qw{
+      PPI
+      PPI::Tokenizer
+      PPI::Lexer
+      PPI::Dumper
+      PPI::Find
+      PPI::Normal
+      PPI::Util
+      PPI::Cache
+      } );

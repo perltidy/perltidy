@@ -1,0 +1,11 @@
+deferred->resolve->then(
+    sub {
+        push @out, 'Resolve';
+        return $then;
+    }
+)->then(
+    sub {
+        push @out, 'Reject';
+        push @out, @_;
+    }
+);

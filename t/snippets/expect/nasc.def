@@ -1,0 +1,4 @@
+        # will break and add semicolon unless -nasc is given
+        eval {
+            $terminal = Tgetent Term::Cap { TERM => undef, OSPEED => $ospeed };
+        };

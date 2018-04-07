@@ -1,0 +1,2 @@
+return 1 if $det_a < 0 and $det_b > 0 or
+            $det_a > 0 and $det_b < 0;

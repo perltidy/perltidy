@@ -1,0 +1,21 @@
+	    # illustration of some do-not-weld rules
+	
+    	    # do not weld a two-line function call
+            $trans->add_transformation( PDL::Graphics::TriD::Scale->new( $sx, $sy, $sz ) );
+        
+            # but weld this more complex statement
+            my $compass = uc( opposite_direction( line_to_canvas_direction(
+                @{ $coords[0] }, @{ $coords[1] } ) ) );
+        
+            # do not weld to a one-line block because the function could get separated
+	    # from its opening paren 
+            $_[0]->code_handler
+                 ( sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
+
+	    # another example; do not weld because the sub is not broken
+            $wrapped->add_around_modifier( 
+		sub { push @tracelog => 'around 1'; $_[0]->(); } );
+
+	    # but okay to weld here because the sub is broken
+            $wrapped->add_around_modifier( sub { 
+			push @tracelog => 'around 1'; $_[0]->(); } );

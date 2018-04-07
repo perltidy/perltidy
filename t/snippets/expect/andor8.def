@@ -1,0 +1,4 @@
+        # original is broken:
+        $a = 1
+          if $l  and !$r
+          or !$l and $r;

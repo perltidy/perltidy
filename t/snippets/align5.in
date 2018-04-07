@@ -1,0 +1,3 @@
+printline( "Broadcast", &bintodq($b),    ( $b,    $mask, $bcolor, 0 ) );
+printline( "HostMin",   &bintodq($hmin), ( $hmin, $mask, $bcolor, 0 ) );
+printline( "HostMax",   &bintodq($hmax), ( $hmax, $mask, $bcolor, 0 ) );

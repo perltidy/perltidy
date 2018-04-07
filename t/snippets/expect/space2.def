@@ -1,0 +1,5 @@
+# space before this opening paren
+for $i ( 0 .. 20 ) { }
+
+# retain any space between '-' and bare word
+$myhash{ USER-NAME } = 'steve';

@@ -1,0 +1,18 @@
+# Example of nested ands and ors
+sub is_miniwhile {    # check for one-line loop (`foo() while $y--')
+    my $op = shift;
+    return (
+              !null($op) and null( $op->sibling )
+          and $op->ppaddr eq "pp_null"
+          and class($op) eq "UNOP"
+          and (
+            (
+                    $op->first->ppaddr =~ /^pp_(and|or)$/
+                and $op->first->first->sibling->ppaddr eq "pp_lineseq"
+            )
+            or (    $op->first->ppaddr eq "pp_lineseq"
+                and not null $op->first->first->sibling
+                and $op->first->first->sibling->ppaddr eq "pp_unstack" )
+          )
+    );
+}

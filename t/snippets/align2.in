@@ -1,0 +1,6 @@
+same =
+  (      ( $aP eq $bP )
+      && ( $aS eq $bS )
+      && ( $aT eq $bT )
+      && ( $a->{'title'} eq $b->{'title'} )
+      && ( $a->{'href'} eq $b->{'href'} ) );

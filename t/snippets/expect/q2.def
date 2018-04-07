@@ -1,0 +1,3 @@
+$a = qq
+XHello World\nX;
+print "$a";

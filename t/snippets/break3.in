@@ -1,0 +1,2 @@
+    # keep the anonymous hash block together:
+    my $red_color = $widget->window->get_colormap->color_alloc( { red => 65000, green => 0, blue => 0 } );

@@ -1,0 +1,6 @@
+# Rt116344
+# Attempting to tidy the following code failed:
+sub broken {
+    return ref {} ? 1 : 0;
+    something();
+}

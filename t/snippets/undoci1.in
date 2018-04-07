@@ -1,0 +1,4 @@
+        $rinfo{deleteStyle} = [
+            -fill      => 'red',
+              -stipple => '@' . Tk->findINC('demos/images/grey.25'),
+        ];

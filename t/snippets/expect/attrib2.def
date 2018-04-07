@@ -1,0 +1,5 @@
+sub witch
+  ()  # prototype may be on new line, but cannot put line break within prototype
+  : locked {
+    print "and your little dog ";
+}

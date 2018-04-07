@@ -1,0 +1,10 @@
+[PerlTidy]
+select = lib/**/*.pm
+select = bin/perltidy
+
+[PerlCritic]
+select = lib/**/*.pm
+argv = --severity 4 --exclude=nowarnings
+
+[SortLines]
+select = .gitignore

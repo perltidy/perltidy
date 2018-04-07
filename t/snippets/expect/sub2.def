@@ -1,0 +1,18 @@
+my $selector;
+
+# leading atrribute separator:
+$a = sub
+  : locked {
+    print "Hello, World!\n";
+  };
+$a->();
+
+# colon as both ?/: and attribute separator
+$a = $selector
+  ? sub : locked {
+    print "Hello, World!\n";
+  }
+  : sub : locked {
+    print "GOODBYE!\n";
+  };
+$a->();

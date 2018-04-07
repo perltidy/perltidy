@@ -1,0 +1,1 @@
+        spawn( "$LINTIAN_ROOT/unpack/list-binpkg", "$LINTIAN_LAB/info/binary-packages", $v ) == 0 or fail("cannot create binary package list"); 

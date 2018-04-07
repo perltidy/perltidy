@@ -1,0 +1,4 @@
+    if ( !$verbose_error && ( !$options->{'log'}
+          && ( ( $options->{'verbose'} & 8 ) || ( $options->{'verbose'} & 16 )
+              || ( $options->{'verbose'} & 32 )
+              || ( $options->{'verbose'} & 64 ) ) ) )

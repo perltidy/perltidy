@@ -1,0 +1,6 @@
+$search_mb = $menu_bar->Menubutton(
+                                   '-text'        => 'Search',
+                                   '-relief'      => 'raised',
+                                   '-borderwidth' => 2,
+  )->pack('-side' => 'left',
+          '-padx' => 2);

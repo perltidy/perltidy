@@ -1,0 +1,11 @@
+package A;
+
+sub new {
+    print "A::new! $_[0] $_[1]\n";
+    return 1;
+}
+
+package main;
+my $scanner = new A::();
+$scanner = new A::;
+$scanner = new A 'a';

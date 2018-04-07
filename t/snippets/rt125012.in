@@ -1,0 +1,6 @@
+++$_ for
+#one space before eol:
+values %_;
+system
+#one space before eol:
+qq{};

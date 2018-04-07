@@ -1,0 +1,15 @@
+package Canine;
+package Dog;
+my Canine $spot : Watchful ;  
+package Felis;
+my $cat : Nervous;
+package X;
+sub foo : locked ;  
+package X;
+sub Y::x : locked { 1 }  
+package X;
+sub foo { 1 }
+package Y;
+BEGIN { *bar = \&X::foo; }
+package Z;
+sub Y::bar : locked ;  

@@ -1,0 +1,4 @@
+# first prototype line will cause space between 'redirect' and '(' to close
+sub html::redirect($);    #<-- temporary prototype;
+use html;
+print html::redirect('http://www.glob.com.au/');

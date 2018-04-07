@@ -1,0 +1,5 @@
+    # do not recombine into two lines after a comma if
+    # the term is complex (has parens) or changes level
+    $delta_time = sprintf "%.4f",
+      ( ( $done[0] + ( $done[1] / 1e6 ) ) -
+          ( $start[0] + ( $start[1] / 1e6 ) ) );

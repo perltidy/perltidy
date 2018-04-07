@@ -1,0 +1,14 @@
+if (
+    (
+            ($a)
+        and ( $b == 13 )
+        and ( $c - 24 = 0 )
+        and ("test")
+        and ( $rudolph eq "reindeer" or $rudolph eq "red nosed" )
+        and $test
+    )
+    or ( $nobody and ( $noone or $none ) )
+  )
+{
+    $i++;
+}

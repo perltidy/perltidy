@@ -1,0 +1,3 @@
+# one-line blocks
+if   ( $editlblk eq 1 ) { $editlblk = "on";  $editlblkchecked = "checked" }
+else                    { $editlblk = "off"; $editlblkchecked = "unchecked" }

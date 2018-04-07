@@ -1,0 +1,8 @@
+# RT#98902
+# Running with -boc (break-at-old-comma-breakpoints) should not
+# allow forming a single line
+my @bar = map { {
+     number => $_,
+     character => chr $_,
+     padding => (' ' x $_),
+} } ( 0 .. 32 );

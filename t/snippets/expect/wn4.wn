@@ -1,0 +1,9 @@
+{ { {
+
+    # Orignal formatting looks nice but would be hard to duplicate
+    return
+         exists $G->{Attr}->{E}
+      && exists $G->{Attr}->{E}->{$u} && exists $G->{Attr}->{E}->{$u}->{$v}
+      ? %{ $G->{Attr}->{E}->{$u}->{$v} }
+      : ();
+} } }

@@ -1,0 +1,2 @@
+        # original is single line:
+        $a = 1 if $l and !$r or !$l and $r;

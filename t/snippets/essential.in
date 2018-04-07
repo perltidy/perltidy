@@ -1,0 +1,65 @@
+# Run with mangle to squeeze out the white space
+# also run with extrude
+
+# never combine two bare words or numbers
+status and ::ok(1);
+
+return ::spw(...);
+
+for bla::bla:: abc;
+
+# do not combine 'overload::' and 'and'
+if $self->{bareStringify} and ref $_
+and defined %overload:: and defined &{'overload::StrVal'};
+
+# do not combine 'SINK' and 'if'
+my $size=-s::SINK if $file;
+
+# do not combine to make $inputeq"quit"
+if ($input eq"quit"); 
+
+# do not combine a number with a concatenation dot to get a float '78.'
+$vt100_compatible ? "\e[0;0H" : ('-' x 78 . "\n");
+
+# do not join a minus with a bare word, because you might form
+# a file test operator.  Here  "z-i" would be taken as a file test.
+if (CORE::abs($z - i) < $eps); 
+
+# '= -' should not become =- or you will get a warning
+
+# and something like these could become ambiguous without space
+# after the '-':
+use constant III=>1;
+$a = $b - III;
+$a = - III;
+
+# keep a space between a token ending in '$' and any word;
+die @$ if $@;
+
+# avoid combining tokens to create new meanings. Example:
+# this must not become $a++$b
+$a+ +$b;
+
+# another example: do not combine these two &'s:
+allow_options & &OPT_EXECCGI;
+
+# Perl is sensitive to whitespace after the + here:
+$b = xvals $a + 0.1 * yvals $a;
+
+# keep paren separate here:
+use Foo::Bar ();
+
+# need space after foreach my; for example, this will fail in
+# older versions of Perl:
+foreach my$ft(@filetypes)...
+
+# must retain space between grep and left paren; "grep(" may fail
+my $match = grep (m/^-extrude$/, @list) ? 1 : 0;
+
+# don't stick numbers next to left parens, as in:
+use Mail::Internet 1.28 ();
+
+# do not remove space between an '&' and a bare word because
+# it may turn into a function evaluation, like here
+# between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
+$opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);

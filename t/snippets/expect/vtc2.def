@@ -1,0 +1,7 @@
+    ok(
+        $s->call(
+            SOAP::Data->name('getStateName')
+              ->attr( { xmlns => 'urn:/My/Examples' } ),
+            1
+        )->result eq 'Alabama'
+    );

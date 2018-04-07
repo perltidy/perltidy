@@ -1,0 +1,5 @@
+        # break before the '->'
+        ( $current_feature_item->children )[0]
+          ->set( $current_feature->primary_tag );
+        $sth->{'Database'}->{'xbase_tables'}->{ $parsed_sql->{'table'}[0] }
+          ->field_type($_);
