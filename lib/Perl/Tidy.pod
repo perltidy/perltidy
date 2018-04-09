@@ -421,11 +421,11 @@ Please refer to the file "COPYING" for details.
 
 =head1 BUG REPORTS
 
-A list of current bugs and issues can be found at the CPAN site
+A list of current bugs and issues can be found at the CPAN site L<https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy>
 
-     https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy
+To report a new bug or problem, use the link on this page.  
 
-To report a new bug or problem, use the link on this page .  
+The source code repository is at L<https://github.com/perltidy/perltidy>.
 
 =head1 SEE ALSO
 

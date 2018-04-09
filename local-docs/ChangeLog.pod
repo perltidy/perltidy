@@ -29,6 +29,8 @@
 
   - Fixed RT #124594, license text desc. changed from 'GPL-2.0+' to 'gpl_2'
 
+  - RT #106493; source code repository is https://github.com/perltidy/perltidy
+
   - Numerous installation test snippets have been added. 
 
   - Fixed bug in which a warning about a possible code bug was issued in a
