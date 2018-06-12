@@ -6392,7 +6392,11 @@ EOM
                     $line .= $rinput_token_array->[$jj]->[_TOKEN_];
                 }
             }
-            $line = trim($line);
+
+	    # Fix for rt #125506 Unexpected string formating
+	    # in which leading space of a terminal quote was removed
+    	    $line =~ s/\s+$//;
+            $line =~ s/^\s+// unless ($in_continued_quote);
 
             $self->extract_token(0);
             $token                 = $line;
