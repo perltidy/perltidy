@@ -7,7 +7,7 @@ The tests are intended to give a good overall check that perltidy is working
 correctly at installation but they are by no means exhaustive. Thorough testing
 of perltidy must be done against a very large body of perl code.
 
-Run 'make' anytime to see if recent code changes have changed the perltidy formatting.
+Run 'make' after any changes or additions to see if recent code changes have changed the perltidy formatting.
 
 Folder 'tmp' contains the the most recent formatting results.
 Folder 'expect' contains the previous expected output of perltidy.
@@ -32,6 +32,9 @@ then that script is
 For example, consider the source file "rt20421.in".  The base name is 'rt20421'.
 It will be run with the default parameters.  If a parameter file named "rt20421.par" 
 exists, then it will also be run with this parameter file.
+
+Incidentally, the numbered rt files correspond to the list at
+(rt)[https://rt.cpan.org/Dist/Display.html?Status=Resolved;Queue=Perl-Tidy]
 
 Besides these two rules, there are special naming rules for running a single
 script with an arbitrary number of parameter files, and a single parameter file

@@ -184,7 +184,7 @@ foreach my $basename (@olist) {
     my $tname = $opath . $basename;
     my $ename = $epath . $basename;
     if ( !-e $ename ) {
-        print "$basename is new\n";
+        print "tmp/$basename is a new file\n";
         push @mv, "cp $tname $ename";
     }
     elsif ( compare( $ename, $tname ) ) {
@@ -243,10 +243,14 @@ EOM
 
     close RUN;
     system("chmod 0755 $runme");
-my $diff_msg="Look at differences in '$diff_file'" if (-e $diff_file);
+    my $diff_msg =
+      -e $diff_file
+      ? "Look at differences in '$diff_file'"
+      : "no differences";
     print <<EOM;
 $diff_msg
-Enter ./$runme to move results to expect/ if results are acceptable
+Look at any new results in tmp/ and then
+Enter ./$runme to move results from tmp/ to expect/ if results are acceptable
 EOM
 }
 

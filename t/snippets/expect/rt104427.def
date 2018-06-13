@@ -1,0 +1,7 @@
+#!/usr/bin/env perl 
+use v5.020;    #includes strict
+use warnings;
+use experimental 'signatures';
+setidentifier();
+exit;
+sub setidentifier ( $href = {} ) { say 'hi'; }

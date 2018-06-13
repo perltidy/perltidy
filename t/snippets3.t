@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:23 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -18,6 +18,10 @@ BEGIN {
     # SECTION 1: Parameter combinations #
     #####################################
     $rparams = {
+        'ce_wn' => <<'----------',
+-cuddled-blocks
+-wn
+----------
         'colin' => <<'----------',
 -l=0
 -pt=2
@@ -52,7 +56,6 @@ BEGIN {
         'essential2'  => "-extrude",
         'extrude'     => "--extrude",
         'fabrice_bug' => "-bt=0",
-        'gnu'         => "-gnu",
     };
 
     ######################
@@ -226,10 +229,24 @@ $_, $val
     ##############################
     $rtests = {
 
+        'ce_wn1.ce_wn' => {
+            source => "ce_wn1",
+            params => "ce_wn",
+            expect => <<'#1...........',
+if ($BOLD_MATH) { (
+    $labels, $comment,
+    join( '', ' < B > ', &make_math( $mode, '', '', $_ ), ' < /B>' )
+) } else { (
+    &process_math_in_latex( $mode, $math_style, $slevel, "\\mbox{$text}" ),
+    $after
+) }
+#1...........
+        },
+
         'ce_wn1.def' => {
             source => "ce_wn1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 if ($BOLD_MATH) {
     (
         $labels, $comment,
@@ -242,26 +259,26 @@ else {
         $after
     )
 }
-#1...........
+#2...........
         },
 
         'colin.colin' => {
             source => "colin",
             params => "colin",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 env(0, 15, 0, 10, {
     Xtitle => 'X-data',
     Ytitle => 'Y-data',
     Title  => 'An example of errb and points',
     Font   => 'Italic'
 });
-#2...........
+#3...........
         },
 
         'colin.def' => {
             source => "colin",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 env(
     0, 15, 0, 10,
     {
@@ -271,13 +288,13 @@ env(
         Font   => 'Italic'
     }
 );
-#3...........
+#4...........
         },
 
         'essential.def' => {
             source => "essential",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 # Run with mangle to squeeze out the white space
 # also run with extrude
 
@@ -345,13 +362,13 @@ use Mail::Internet 1.28 ();
 # it may turn into a function evaluation, like here
 # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
 $opts{rdonly} = ( ( $opts{mode} & O_ACCMODE ) == O_RDONLY );
-#4...........
+#5...........
         },
 
         'essential.essential1' => {
             source => "essential",
             params => "essential1",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 # Run with mangle to squeeze out the white space
 # also run with extrude
 # never combine two bare words or numbers
@@ -397,13 +414,13 @@ use Mail::Internet 1.28 ();
 # it may turn into a function evaluation, like here
 # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
 $opts{rdonly}=(($opts{mode}& O_ACCMODE)==O_RDONLY);
-#5...........
+#6...........
         },
 
         'essential.essential2' => {
             source => "essential",
             params => "essential2",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 # Run with mangle to squeeze out the white space
 # also run with extrude
 # never combine two bare words or numbers
@@ -574,44 +591,44 @@ O_ACCMODE
 O_RDONLY
 )
 ;
-#6...........
+#7...........
         },
 
         'extrude1.def' => {
             source => "extrude1",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 # do not break before the ++
 print $x++ . "\n";
-#7...........
+#8...........
         },
 
         'extrude1.extrude' => {
             source => "extrude1",
             params => "extrude",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # do not break before the ++
 print$x++
 .
 "\n"
 ;
-#8...........
+#9...........
         },
 
         'extrude2.def' => {
             source => "extrude2",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
     if ( -l pid_filename() ) {
         return readlink( pid_filename() );
     }
-#9...........
+#10...........
         },
 
         'extrude2.extrude' => {
             source => "extrude2",
             params => "extrude",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 if
 (
 -l pid_filename(
@@ -626,25 +643,25 @@ pid_filename(
 )
 ;
 }
-#10...........
+#11...........
         },
 
         'extrude3.def' => {
             source => "extrude3",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 # Breaking before a ++ can cause perl to guess wrong
 print( ( $i++ & 1 ) ? $_ : ( $change{$_} || $_ ) );
 
 # Space between '&' and 'O_ACCMODE' is essential here
 $opts{rdonly} = ( ( $opts{mode} & O_ACCMODE ) == O_RDONLY );
-#11...........
+#12...........
         },
 
         'extrude3.extrude' => {
             source => "extrude3",
             params => "extrude",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 # Breaking before a ++ can cause perl to guess wrong
 print
 (
@@ -678,26 +695,26 @@ O_ACCMODE
 O_RDONLY
 )
 ;
-#12...........
+#13...........
         },
 
         'extrude4.def' => {
             source => "extrude4",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 # From Safe.pm caused trouble with extrude
 use Opcode 1.01, qw(
   opset opset_to_ops opmask_add
   empty_opset full_opset invert_opset verify_opset
   opdesc opcodes opmask define_optag opset_to_hex
 );
-#13...........
+#14...........
         },
 
         'extrude4.extrude' => {
             source => "extrude4",
             params => "extrude",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 # From Safe.pm caused trouble with extrude
 use
 Opcode
@@ -709,33 +726,33 @@ empty_opset full_opset invert_opset verify_opset
 opdesc opcodes opmask define_optag opset_to_hex
 )
 ;
-#14...........
+#15...........
         },
 
         'fabrice_bug.def' => {
             source => "fabrice_bug",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 # no space around ^variable with -bt=0
 my $before = ${^PREMATCH};
 my $after  = ${PREMATCH};
-#15...........
+#16...........
         },
 
         'fabrice_bug.fabrice_bug' => {
             source => "fabrice_bug",
             params => "fabrice_bug",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # no space around ^variable with -bt=0
 my $before = ${^PREMATCH};
 my $after  = ${ PREMATCH };
-#16...........
+#17...........
         },
 
         'format1.def' => {
             source => "format1",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
     if (/^--list$/o) {
         format =
 @<<<<<<<<<<<<<<<<<<<<<<<< 	@<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -747,13 +764,13 @@ $_, $val
             write;
         }
     }
-#17...........
+#18...........
         },
 
         'given1.def' => {
             source => "given1",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
         given ( [ 9, "a", 11 ] ) {
             when (qr/\d/) {
                 given ($count) {
@@ -765,29 +782,17 @@ $_, $val
             }
             ok(1) when 11;
         }
-#18...........
+#19...........
         },
 
         'gnu1.def' => {
             source => "gnu1",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 @common_sometimes = (
     "aclocal.m4", "acconfig.h", "config.h.top", "config.h.bot",
     "stamp-h.in", 'stamp-vti'
 );
-#19...........
-        },
-
-        'gnu1.gnu' => {
-            source => "gnu1",
-            params => "gnu",
-            expect => <<'#20...........',
-@common_sometimes = (
-                     "aclocal.m4",   "acconfig.h",
-                     "config.h.top", "config.h.bot",
-                     "stamp-h.in",   'stamp-vti'
-                    );
 #20...........
         },
     };

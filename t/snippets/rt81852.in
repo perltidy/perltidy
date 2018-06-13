@@ -1,0 +1,6 @@
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );

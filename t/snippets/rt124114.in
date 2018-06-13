@@ -1,0 +1,7 @@
+#!/usr/bin/perl 
+my %h = {
+    a    => 2 > 3 ? 1 : 0,
+    bbbb => sub { my $y = "1" },
+    c    => sub { my $z = "2" },
+    d    => 2 > 3 ? 1 : 0,
+};

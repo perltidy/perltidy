@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:24 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -18,20 +18,13 @@ BEGIN {
     # SECTION 1: Parameter combinations #
     #####################################
     $rparams = {
-        'def'  => "",
-        'vmll' => <<'----------',
--vmll
--bbt=2
--bt=2
--pt=2
--sbt=2
+        'def'     => "",
+        'rt81852' => <<'----------',
+-wn
+-act=2
 ----------
-        'vtc' => <<'----------',
--sbvtc=2
--bvtc=2
--pvtc=2
-----------
-        'wn' => "-wn",
+        'rt98902' => "-boc",
+        'scl'     => "-scl=12",
     };
 
     ######################
@@ -39,116 +32,135 @@ BEGIN {
     ######################
     $rsources = {
 
-        'version2' => <<'----------',
-# On one line so MakeMaker will see it.
-require Exporter; our $VERSION = $Exporter::VERSION;
+        'rt78764' => <<'----------',
+qr/3/ ~~ ['1234'] ? 1 : 0;
+map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
 ----------
 
-        'vert' => <<'----------',
-# if $w->vert is tokenized as type 'U' then the ? will start a quote
-# and an error will occur.
-sub vert {
-}
-sub Restore {
-    $w->vert ? $w->delta_width(0) : $w->delta_height(0);
-}
+        'rt79813' => <<'----------',
+my %hash = ( a => { bbbbbbbbb => {
+            cccccccccc => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        }, },);
 ----------
 
-        'vmll' => <<'----------',
-    # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
-    # in length, which is what vmll does
-    BEGIN {is_deeply(\@init_metas_called, [1]) || diag(Dumper(\@init_metas_called))}
-
-    This has the comma on the next line
-    exception {Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)},
-----------
-
-        'vtc1' => <<'----------',
-@lol = (
-        [   'Dr. Watson', undef,    '221b', 'Baker St.',
-            undef,        'London', 'NW1',  undef,
-            'England',    undef
-        ],
-        [   'Sam Gamgee', undef,      undef, 'Bagshot Row',
-            undef,        'Hobbiton', undef, undef,
-            'The Shire',  undef],
-        );
-----------
-
-        'vtc2' => <<'----------',
-    ok(
-        $s->call(
-            SOAP::Data->name('getStateName')
-              ->attr( { xmlns => 'urn:/My/Examples' } ),
-            1
-        )->result eq 'Alabama'
-    );
-----------
-
-        'vtc3' => <<'----------',
-    $day_long = (
-        "Sunday",   "Monday", "Tuesday",  "Wednesday",
-        "Thursday", "Friday", "Saturday", "Sunday"
-    )[$wday];
-----------
-
-        'vtc4' => <<'----------',
-my$bg_color=$im->colorAllocate(unpack('C3',pack('H2H2H2',unpack('a2a2a2',(length($options_r->{'bg_color'})?$options_r->{'bg_color'}:$MIDI::Opus::BG_color)))));
-----------
-
-        'wn1' => <<'----------',
-    my $bg_color = $im->colorAllocate(
-        unpack(
-            'C3',
-            pack(
-                'H2H2H2',
-                unpack(
-                    'a2a2a2',
-                    (
-                        length( $options_r->{'bg_color'} )
-                        ? $options_r->{'bg_color'}
-                        : $MIDI::Opus::BG_color
-                    )
-                )
-            )
-        )
-    );
-----------
-
-        'wn2' => <<'----------',
-if ($PLATFORM eq 'aix') {
-    skip_symbols([qw(
-              Perl_dump_fds
-              Perl_ErrorNo
-              Perl_GetVars
-              PL_sys_intern
-    )]);
+        'rt79947' => <<'----------',
+try { croak "An Error!"; }
+catch ($error) {
+    print STDERR $error . "\n";
 }
 ----------
 
-        'wn3' => <<'----------',
-deferred->resolve->then(
-    sub {
-        push @out, 'Resolve';
-        return $then;
+        'rt80645' => <<'----------',
+BEGIN { $^W = 1; }
+use warnings;
+use strict;
+@$ = 'test';
+print $#{$};
+----------
+
+        'rt81852' => <<'----------',
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
     }
-)->then(
-    sub {
-        push @out, 'Reject';
-        push @out, @_;
-    }
+} while ( $n++ < 10 );
+----------
+
+        'rt81854' => <<'----------',
+return "this is a descriptive error message"
+  if $res->is_error or not length $data;
+----------
+
+        'rt87502' => <<'----------',
+if ( @ARGV ~~ { map { $_ => 1 } qw(re restart reload) } ) { 
+    # CODE
+}
+----------
+
+        'rt93197' => <<'----------',
+$to = $to->{$_} ||= {} for @key; if (1) {2;} else {3;}
+----------
+
+        'rt94338' => <<'----------',
+# for-loop in a parenthesized block-map triggered an error message
+map( { foreach my $item ( '0', '1' ) { print $item} } qw(a b c) );
+----------
+
+        'rt95419' => <<'----------',
+case "blah" => sub {
+    { a => 1 }
+};
+----------
+
+        'rt95708' => <<'----------',
+use strict;
+use JSON;
+my $ref = { 
+when => time(), message => 'abc' };
+my $json  = encode_json   { 
+when => time(), message => 'abc' };
+my $json2 = encode_json + { 
+when => time(), message => 'abc' };
+----------
+
+        'rt96021' => <<'----------',
+$a->@*;
+$a->**;
+$a->$*;
+$a->&*;
+$a->%*;
+$a->$#*
+----------
+
+        'rt96101' => <<'----------',
+# Example for rt.cpan.org #96101; Perltidy not properly formatting subroutine
+# references inside subroutine execution.
+
+# closing brace of second sub should get outdented here
+sub startup {
+    my $self = shift;
+    $self->plugin(
+        'authentication' => {
+            'autoload_user' => 1,
+            'session_key'   => rand(),
+            'load_user'     => sub {
+                return HaloVP::Users->load(@_);
+            },
+            'validate_user' => sub {
+                return HaloVP::Users->login(@_);
+            }
+        }
+    );
+}
+
+----------
+
+        'rt98902' => <<'----------',
+my %foo = ( 
+   alpha => 1, 
+beta => 2, gamma => 3, 
 );
+
+my @bar = map { { 
+number => $_, 
+character => chr $_, 
+padding => ( ' ' x $_ ), 
+} } ( 0 .. 32 );
 ----------
 
-        'wn4' => <<'----------',
-{{{
-            # Orignal formatting looks nice but would be hard to duplicate
-            return exists $G->{ Attr }->{ E } &&
-                   exists $G->{ Attr }->{ E }->{ $u } &&
-                   exists $G->{ Attr }->{ E }->{ $u }->{ $v } ?
-                              %{ $G->{ Attr }->{ E }->{ $u }->{ $v } } :
-                              ( );
-}}}
+        'rt99961' => <<'----------',
+%thing = %{ print qq[blah1\n]; $b; };
+----------
+
+        'scl' => <<'----------',
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format = "format STDOUT =\n" . &format_line('Function:       @') . '$name' . "\n" . &format_line('Arguments:      @') . '$args' . "\n" . &format_line('Returns:        @') . '$returns' . "\n" . &format_line('             ~~ ^') . '$desc' . "\n.\n";
+----------
+
+        'semicolon2' => <<'----------',
+	# will not add semicolon for this block type
+        $highest = List::Util::reduce { Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b }
 ----------
     };
 
@@ -157,327 +169,273 @@ deferred->resolve->then(
     ##############################
     $rtests = {
 
-        'version2.def' => {
-            source => "version2",
+        'rt78764.def' => {
+            source => "rt78764",
             params => "def",
             expect => <<'#1...........',
-# On one line so MakeMaker will see it.
-require Exporter; our $VERSION = $Exporter::VERSION;
+qr/3/ ~~ ['1234'] ? 1 : 0;
+map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
 #1...........
         },
 
-        'vert.def' => {
-            source => "vert",
+        'rt79813.def' => {
+            source => "rt79813",
             params => "def",
             expect => <<'#2...........',
-# if $w->vert is tokenized as type 'U' then the ? will start a quote
-# and an error will occur.
-sub vert {
-}
-
-sub Restore {
-    $w->vert ? $w->delta_width(0) : $w->delta_height(0);
-}
+my %hash = (
+    a => {
+        bbbbbbbbb => {
+            cccccccccc => 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        },
+    },
+);
 #2...........
         },
 
-        'vmll.def' => {
-            source => "vmll",
+        'rt79947.def' => {
+            source => "rt79947",
             params => "def",
             expect => <<'#3...........',
-    # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
-    # in length, which is what vmll does
-    BEGIN {
-        is_deeply( \@init_metas_called, [1] )
-          || diag( Dumper( \@init_metas_called ) );
-    }
-
-    This has the comma on the next line exception {
-        Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
-    },
+try { croak "An Error!"; }
+catch ($error) {
+    print STDERR $error . "\n";
+}
 #3...........
         },
 
-        'vmll.vmll' => {
-            source => "vmll",
-            params => "vmll",
+        'rt80645.def' => {
+            source => "rt80645",
+            params => "def",
             expect => <<'#4...........',
-    # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
-    # in length, which is what vmll does
-    BEGIN {is_deeply(\@init_metas_called, [1]) || diag(Dumper(\@init_metas_called))}
-
-    This has the comma on the next line exception {
-        Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
-    },
+BEGIN { $^W = 1; }
+use warnings;
+use strict;
+@$ = 'test';
+print $#{$};
 #4...........
         },
 
-        'vtc1.def' => {
-            source => "vtc1",
+        'rt81852.def' => {
+            source => "rt81852",
             params => "def",
             expect => <<'#5...........',
-@lol = (
-    [
-        'Dr. Watson', undef,    '221b', 'Baker St.',
-        undef,        'London', 'NW1',  undef,
-        'England',    undef
-    ],
-    [
-        'Sam Gamgee', undef,      undef, 'Bagshot Row',
-        undef,        'Hobbiton', undef, undef,
-        'The Shire',  undef
-    ],
-);
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
 #5...........
         },
 
-        'vtc1.vtc' => {
-            source => "vtc1",
-            params => "vtc",
+        'rt81852.rt81852' => {
+            source => "rt81852",
+            params => "rt81852",
             expect => <<'#6...........',
-@lol = (
-    [
-        'Dr. Watson', undef,    '221b', 'Baker St.',
-        undef,        'London', 'NW1',  undef,
-        'England',    undef ],
-    [
-        'Sam Gamgee', undef,      undef, 'Bagshot Row',
-        undef,        'Hobbiton', undef, undef,
-        'The Shire',  undef ], );
+do {{
+    next if ($n % 2);
+    print $n, "\n";
+}} while ($n++ < 10);
 #6...........
         },
 
-        'vtc2.def' => {
-            source => "vtc2",
+        'rt81854.def' => {
+            source => "rt81854",
             params => "def",
             expect => <<'#7...........',
-    ok(
-        $s->call(
-            SOAP::Data->name('getStateName')
-              ->attr( { xmlns => 'urn:/My/Examples' } ),
-            1
-        )->result eq 'Alabama'
-    );
+return "this is a descriptive error message"
+  if $res->is_error or not length $data;
 #7...........
         },
 
-        'vtc2.vtc' => {
-            source => "vtc2",
-            params => "vtc",
+        'rt87502.def' => {
+            source => "rt87502",
+            params => "def",
             expect => <<'#8...........',
-    ok(
-        $s->call(
-            SOAP::Data->name('getStateName')
-              ->attr( { xmlns => 'urn:/My/Examples' } ),
-            1 )->result eq 'Alabama' );
+if ( @ARGV ~~ { map { $_ => 1 } qw(re restart reload) } ) {
+
+    # CODE
+}
 #8...........
         },
 
-        'vtc3.def' => {
-            source => "vtc3",
+        'rt93197.def' => {
+            source => "rt93197",
             params => "def",
             expect => <<'#9...........',
-    $day_long = (
-        "Sunday",   "Monday", "Tuesday",  "Wednesday",
-        "Thursday", "Friday", "Saturday", "Sunday"
-    )[$wday];
+$to = $to->{$_} ||= {} for @key;
+if   (1) { 2; }
+else     { 3; }
 #9...........
         },
 
-        'vtc3.vtc' => {
-            source => "vtc3",
-            params => "vtc",
+        'rt94338.def' => {
+            source => "rt94338",
+            params => "def",
             expect => <<'#10...........',
-    $day_long = (
-        "Sunday",   "Monday", "Tuesday",  "Wednesday",
-        "Thursday", "Friday", "Saturday", "Sunday" )[$wday];
+# for-loop in a parenthesized block-map triggered an error message
+map( {
+        foreach my $item ( '0', '1' ) {
+            print $item;
+        }
+} qw(a b c) );
 #10...........
         },
 
-        'vtc4.def' => {
-            source => "vtc4",
+        'rt95419.def' => {
+            source => "rt95419",
             params => "def",
             expect => <<'#11...........',
-my $bg_color = $im->colorAllocate(
-    unpack(
-        'C3',
-        pack(
-            'H2H2H2',
-            unpack(
-                'a2a2a2',
-                (
-                    length( $options_r->{'bg_color'} )
-                    ? $options_r->{'bg_color'}
-                    : $MIDI::Opus::BG_color
-                )
-            )
-        )
-    )
-);
+case "blah" => sub {
+    { a => 1 }
+};
 #11...........
         },
 
-        'vtc4.vtc' => {
-            source => "vtc4",
-            params => "vtc",
+        'rt95708.def' => {
+            source => "rt95708",
+            params => "def",
             expect => <<'#12...........',
-my $bg_color = $im->colorAllocate(
-    unpack(
-        'C3',
-        pack(
-            'H2H2H2',
-            unpack(
-                'a2a2a2',
-                (
-                    length( $options_r->{'bg_color'} )
-                    ? $options_r->{'bg_color'}
-                    : $MIDI::Opus::BG_color ) ) ) ) );
+use strict;
+use JSON;
+my $ref = {
+    when    => time(),
+    message => 'abc'
+};
+my $json = encode_json {
+    when    => time(),
+    message => 'abc'
+};
+my $json2 = encode_json + {
+    when    => time(),
+    message => 'abc'
+};
 #12...........
         },
 
-        'wn1.def' => {
-            source => "wn1",
+        'rt96021.def' => {
+            source => "rt96021",
             params => "def",
             expect => <<'#13...........',
-    my $bg_color = $im->colorAllocate(
-        unpack(
-            'C3',
-            pack(
-                'H2H2H2',
-                unpack(
-                    'a2a2a2',
-                    (
-                        length( $options_r->{'bg_color'} )
-                        ? $options_r->{'bg_color'}
-                        : $MIDI::Opus::BG_color
-                    )
-                )
-            )
-        )
-    );
+$a->@*;
+$a->**;
+$a->$*;
+$a->&*;
+$a->%*;
+$a->$#*
 #13...........
         },
 
-        'wn1.wn' => {
-            source => "wn1",
-            params => "wn",
+        'rt96101.def' => {
+            source => "rt96101",
+            params => "def",
             expect => <<'#14...........',
-    my $bg_color = $im->colorAllocate( unpack(
-        'C3',
-        pack(
-            'H2H2H2',
-            unpack(
-                'a2a2a2',
-                (
-                    length( $options_r->{'bg_color'} )
-                    ? $options_r->{'bg_color'}
-                    : $MIDI::Opus::BG_color
-                )
-            )
-        )
-    ) );
+# Example for rt.cpan.org #96101; Perltidy not properly formatting subroutine
+# references inside subroutine execution.
+
+# closing brace of second sub should get outdented here
+sub startup {
+    my $self = shift;
+    $self->plugin(
+        'authentication' => {
+            'autoload_user' => 1,
+            'session_key'   => rand(),
+            'load_user'     => sub {
+                return HaloVP::Users->load(@_);
+            },
+            'validate_user' => sub {
+                return HaloVP::Users->login(@_);
+            }
+        }
+    );
+}
+
 #14...........
         },
 
-        'wn2.def' => {
-            source => "wn2",
+        'rt98902.def' => {
+            source => "rt98902",
             params => "def",
             expect => <<'#15...........',
-if ( $PLATFORM eq 'aix' ) {
-    skip_symbols(
-        [
-            qw(
-              Perl_dump_fds
-              Perl_ErrorNo
-              Perl_GetVars
-              PL_sys_intern
-              )
-        ]
-    );
-}
+my %foo = (
+    alpha => 1,
+    beta  => 2,
+    gamma => 3,
+);
+
+my @bar =
+  map { { number => $_, character => chr $_, padding => ( ' ' x $_ ), } }
+  ( 0 .. 32 );
 #15...........
         },
 
-        'wn2.wn' => {
-            source => "wn2",
-            params => "wn",
+        'rt98902.rt98902' => {
+            source => "rt98902",
+            params => "rt98902",
             expect => <<'#16...........',
-if ( $PLATFORM eq 'aix' ) {
-    skip_symbols( [ qw(
-          Perl_dump_fds
-          Perl_ErrorNo
-          Perl_GetVars
-          PL_sys_intern
-          ) ] );
-}
+my %foo = (
+    alpha => 1,
+    beta  => 2, gamma => 3,
+);
+
+my @bar = map {
+    {
+        number    => $_,
+        character => chr $_,
+        padding   => ( ' ' x $_ ),
+    }
+} ( 0 .. 32 );
 #16...........
         },
 
-        'wn3.def' => {
-            source => "wn3",
+        'rt99961.def' => {
+            source => "rt99961",
             params => "def",
             expect => <<'#17...........',
-deferred->resolve->then(
-    sub {
-        push @out, 'Resolve';
-        return $then;
-    }
-)->then(
-    sub {
-        push @out, 'Reject';
-        push @out, @_;
-    }
-);
+%thing = %{
+    print qq[blah1\n];
+    $b;
+};
 #17...........
         },
 
-        'wn3.wn' => {
-            source => "wn3",
-            params => "wn",
+        'scl.def' => {
+            source => "scl",
+            params => "def",
             expect => <<'#18...........',
-deferred->resolve->then( sub {
-    push @out, 'Resolve';
-    return $then;
-} )->then( sub {
-    push @out, 'Reject';
-    push @out, @_;
-} );
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format =
+        "format STDOUT =\n"
+      . &format_line('Function:       @') . '$name' . "\n"
+      . &format_line('Arguments:      @') . '$args' . "\n"
+      . &format_line('Returns:        @')
+      . '$returns' . "\n"
+      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
 #18...........
         },
 
-        'wn4.def' => {
-            source => "wn4",
-            params => "def",
+        'scl.scl' => {
+            source => "scl",
+            params => "scl",
             expect => <<'#19...........',
-{
-    {
-        {
-            # Orignal formatting looks nice but would be hard to duplicate
-            return
-                 exists $G->{Attr}->{E}
-              && exists $G->{Attr}->{E}->{$u}
-              && exists $G->{Attr}->{E}->{$u}->{$v}
-              ? %{ $G->{Attr}->{E}->{$u}->{$v} }
-              : ();
-        }
-    }
-}
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format =
+        "format STDOUT =\n"
+      . &format_line('Function:       @') . '$name' . "\n"
+      . &format_line('Arguments:      @') . '$args' . "\n"
+      . &format_line('Returns:        @') . '$returns' . "\n"
+      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
 #19...........
         },
 
-        'wn4.wn' => {
-            source => "wn4",
-            params => "wn",
+        'semicolon2.def' => {
+            source => "semicolon2",
+            params => "def",
             expect => <<'#20...........',
-{ { {
-
-    # Orignal formatting looks nice but would be hard to duplicate
-    return
-         exists $G->{Attr}->{E}
-      && exists $G->{Attr}->{E}->{$u} && exists $G->{Attr}->{E}->{$u}->{$v}
-      ? %{ $G->{Attr}->{E}->{$u}->{$v} }
-      : ();
-} } }
+        # will not add semicolon for this block type
+        $highest = List::Util::reduce {
+            Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b
+        }
 #20...........
         },
     };

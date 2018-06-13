@@ -1,0 +1,14 @@
+if (1) {
+    my $uid =
+         $ENV{'ORIG_LOGNAME'}
+      || $ENV{'LOGNAME'}
+      || $ENV{'REMOTE_USER'}
+      || 'foobar';
+}
+if (2) {
+    my $uid =
+      (      $ENV{'ORIG_LOGNAME'}
+          || $ENV{'LOGNAME'}
+          || $ENV{'REMOTE_USER'}
+          || 'foobar' );
+}

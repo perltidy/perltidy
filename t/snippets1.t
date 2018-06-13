@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:22 2018
+# Tue Jun 12 19:09:23 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -23,6 +23,12 @@ BEGIN {
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        '105484' => <<'----------',
+switch (1) {
+    case x { 2 } else { }
+}
+----------
 
         'align1' => <<'----------',
 return ( $fetch_key eq $fk
@@ -194,17 +200,6 @@ if ( (      ( $old_new and $old_new eq 'changed' )
     return "update";
 }
 ----------
-
-        'angle' => <<'----------',
-# This is an angle operator:
-@message_list =sort sort_algorithm < INDEX_FILE >;# angle operator
-
-# Not an angle operator:
-# Patched added in guess routine for this case:
-if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
-}
-
-----------
     };
 
     ##############################
@@ -212,35 +207,45 @@ if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
     ##############################
     $rtests = {
 
+        '105484.def' => {
+            source => "105484",
+            params => "def",
+            expect => <<'#1...........',
+switch (1) {
+    case x { 2 } else { }
+}
+#1...........
+        },
+
         'align1.def' => {
             source => "align1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 return ( $fetch_key eq $fk
       && $store_key eq $sk
       && $fetch_value eq $fv
       && $store_value eq $sv
       && $_ eq 'original' );
-#1...........
+#2...........
         },
 
         'align2.def' => {
             source => "align2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 same =
   (      ( $aP eq $bP )
       && ( $aS eq $bS )
       && ( $aT eq $bT )
       && ( $a->{'title'} eq $b->{'title'} )
       && ( $a->{'href'} eq $b->{'href'} ) );
-#2...........
+#3...........
         },
 
         'align3.def' => {
             source => "align3",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 # This greatly improved after dropping 'ne' and 'eq':
 if (
     $dir eq $updir           and    # if we have an updir
@@ -252,36 +257,36 @@ if (
 {
     $bla;
 }
-#3...........
+#4...........
         },
 
         'align4.def' => {
             source => "align4",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 # removed 'eq' and '=~' from alignment tokens to get alignment of '?'s
 my $salute =
     $name eq $EMPTY_STR                      ? 'Customer'
   : $name =~ m/\A((?:Sir|Dame) \s+ \S+) /xms ? $1
   : $name =~ m/(.*), \s+ Ph[.]?D \z     /xms ? "Dr $1"
   :                                            $name;
-#4...........
+#5...........
         },
 
         'align5.def' => {
             source => "align5",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 printline( "Broadcast", &bintodq($b),    ( $b,    $mask, $bcolor, 0 ) );
 printline( "HostMin",   &bintodq($hmin), ( $hmin, $mask, $bcolor, 0 ) );
 printline( "HostMax",   &bintodq($hmax), ( $hmax, $mask, $bcolor, 0 ) );
-#5...........
+#6...........
         },
 
         'align6.def' => {
             source => "align6",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 # align opening parens
 if (   ( index( $msg_line_lc, $nick1 ) != -1 )
     || ( index( $msg_line_lc, $nick2 ) != -1 )
@@ -289,36 +294,36 @@ if (   ( index( $msg_line_lc, $nick1 ) != -1 )
 {
     do_something();
 }
-#6...........
+#7...........
         },
 
         'align7.def' => {
             source => "align7",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 # Alignment with two fat commas in second line
 my $ct = Courriel::Header::ContentType->new(
     mime_type  => 'multipart/alternative',
     attributes => { boundary => unique_boundary },
 );
-#7...........
+#8...........
         },
 
         'align8.def' => {
             source => "align8",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # aligning '=' and padding 'if'
 if    ( $tag == 263 ) { $bbi->{"Info.Thresholding"} = $value }
 elsif ( $tag == 264 ) { $bbi->{"Info.CellWidth"}    = $value }
 elsif ( $tag == 265 ) { $bbi->{"Info.CellLength"}   = $value }
-#8...........
+#9...........
         },
 
         'align9.def' => {
             source => "align9",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 # test of aligning ||
 my $os =
   ( $ExtUtils::MM_Unix::Is_OS2   || 0 ) +
@@ -326,23 +331,23 @@ my $os =
   ( $ExtUtils::MM_Unix::Is_Win32 || 0 ) +
   ( $ExtUtils::MM_Unix::Is_Dos   || 0 ) +
   ( $ExtUtils::MM_Unix::Is_VMS   || 0 );
-#9...........
+#10...........
         },
 
         'andor1.def' => {
             source => "andor1",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 return 1
   if $det_a < 0 and $det_b > 0
   or $det_a > 0 and $det_b < 0;
-#10...........
+#11...........
         },
 
         'andor10.def' => {
             source => "andor10",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 if (
     (
             ($a)
@@ -357,33 +362,33 @@ if (
 {
     $i++;
 }
-#11...........
+#12...........
         },
 
         'andor2.def' => {
             source => "andor2",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 # breaks at = or at && but not both
 my $success =
   ( system("$Config{cc} -o $te $tc $libs $HIDE") == 0 ) && -e $te ? 1 : 0;
-#12...........
+#13...........
         },
 
         'andor3.def' => {
             source => "andor3",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 ok(       ( $obj->name() eq $obj2->name() )
       and ( $obj->version() eq $obj2->version() )
       and ( $obj->help() eq $obj2->help() ) );
-#13...........
+#14...........
         },
 
         'andor4.def' => {
             source => "andor4",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
     if (
         !$verbose_error
         && (
@@ -394,13 +399,13 @@ ok(       ( $obj->name() eq $obj2->name() )
                 || ( $options->{'verbose'} & 64 ) )
         )
       )
-#14...........
+#15...........
         },
 
         'andor5.def' => {
             source => "andor5",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
     # two levels of && with side comments
     if (
            defined &syscopy
@@ -412,13 +417,13 @@ ok(       ( $obj->name() eq $obj2->name() )
     {
         return syscopy( $from, $to );
     }
-#15...........
+#16...........
         },
 
         'andor6.def' => {
             source => "andor6",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # Example of nested ands and ors
 sub is_miniwhile {    # check for one-line loop (`foo() while $y--')
     my $op = shift;
@@ -437,33 +442,33 @@ sub is_miniwhile {    # check for one-line loop (`foo() while $y--')
           )
     );
 }
-#16...........
+#17...........
         },
 
         'andor7.def' => {
             source => "andor7",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
         # original is single line:
         $a = 1 if $l and !$r or !$l and $r;
-#17...........
+#18...........
         },
 
         'andor8.def' => {
             source => "andor8",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
         # original is broken:
         $a = 1
           if $l  and !$r
           or !$l and $r;
-#18...........
+#19...........
         },
 
         'andor9.def' => {
             source => "andor9",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 if (
     (
             ( $old_new and $old_new eq 'changed' )
@@ -480,21 +485,6 @@ if (
 {
     return "update";
 }
-#19...........
-        },
-
-        'angle.def' => {
-            source => "angle",
-            params => "def",
-            expect => <<'#20...........',
-# This is an angle operator:
-@message_list = sort sort_algorithm < INDEX_FILE >;    # angle operator
-
-# Not an angle operator:
-# Patched added in guess routine for this case:
-if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
-}
-
 #20...........
         },
     };

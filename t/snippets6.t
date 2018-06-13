@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:23 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -19,6 +19,11 @@ BEGIN {
     #####################################
     $rparams = {
         'def' => "",
+        'otr' => <<'----------',
+-ohbr
+-opr
+-osbr
+----------
         'pbp' => "-pbp -nst -nse",
     };
 
@@ -26,6 +31,20 @@ BEGIN {
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'otr1' => <<'----------',
+return $pdl->slice(
+    join ',',
+    (
+        map {
+                $_ eq "X" ? ":"
+              : ref $_ eq "ARRAY" ? join ':', @$_
+              : !ref $_ ? $_
+              : die "INVALID SLICE DEF $_"
+        } @_
+    )
+);
+----------
 
         'pbp1' => <<'----------',
             # break after '+' if default, before + if pbp
@@ -111,40 +130,12 @@ $retarray =
     $delta_time = sprintf "%.4f", ( ( $done[0] + ( $done[1] / 1e6 ) ) - ( $start[0] + ( $start[1] / 1e6 ) ) );
 ----------
 
-        'rt102451' => <<'----------',
-# RT#102451 bug test; unwanted spaces added before =head1 on each pass
-#<<<
-
-=head1 NAME
-
-=cut
-
-my %KA_CACHE; # indexed by uhost currently, points to [$handle...] array
-
-
-=head1 NAME
-
-=cut
-
-#>>>
+        'rt101547' => <<'----------',
+{ source_host => MM::Config->instance->host // q{}, }
 ----------
 
-        'rt116344' => <<'----------',
-# Rt116344
-# Attempting to tidy the following code failed:
-sub broken {
-    return ref {} ? 1 : 0;
-    something();
-}
-----------
-
-        'rt123774' => <<'----------',
-# retain any space between backslash and quote to avoid fooling html formatters
-my $var1 = \ "bubba";
-my $var2 = \"bubba";
-my $var3 = \ 'bubba';
-my $var4 = \'bubba';
-my $var5 = \            "bubba";
+        'rt102371' => <<'----------',
+state $b //= ccc();
 ----------
     };
 
@@ -153,102 +144,119 @@ my $var5 = \            "bubba";
     ##############################
     $rtests = {
 
+        'otr1.otr' => {
+            source => "otr1",
+            params => "otr",
+            expect => <<'#1...........',
+return $pdl->slice(
+    join ',', (
+        map {
+                $_ eq "X" ? ":"
+              : ref $_ eq "ARRAY" ? join ':', @$_
+              : !ref $_ ? $_
+              : die "INVALID SLICE DEF $_"
+        } @_
+    )
+);
+#1...........
+        },
+
         'pbp1.def' => {
             source => "pbp1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
             # break after '+' if default, before + if pbp
             my $min_gnu_indentation =
               $standard_increment +
               $gnu_stack[$max_gnu_stack_index]->get_SPACES();
-#1...........
+#2...........
         },
 
         'pbp1.pbp' => {
             source => "pbp1",
             params => "pbp",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
             # break after '+' if default, before + if pbp
             my $min_gnu_indentation = $standard_increment
                 + $gnu_stack[$max_gnu_stack_index]->get_SPACES();
-#2...........
+#3...........
         },
 
         'pbp2.def' => {
             source => "pbp2",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 $tmp =
   $day - 32075 +
   1461 * ( $year + 4800 - ( 14 - $month ) / 12 ) / 4 +
   367 * ( $month - 2 + ( ( 14 - $month ) / 12 ) * 12 ) / 12 -
   3 * ( ( $year + 4900 - ( 14 - $month ) / 12 ) / 100 ) / 4;
-#3...........
+#4...........
         },
 
         'pbp2.pbp' => {
             source => "pbp2",
             params => "pbp",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 $tmp
     = $day - 32075
     + 1461 * ( $year + 4800 - ( 14 - $month ) / 12 ) / 4
     + 367 * ( $month - 2 + ( ( 14 - $month ) / 12 ) * 12 ) / 12
     - 3 * ( ( $year + 4900 - ( 14 - $month ) / 12 ) / 100 ) / 4;
-#4...........
+#5...........
         },
 
         'pbp3.def' => {
             source => "pbp3",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 return $sec + $SecOff +
   ( SECS_PER_MINUTE * $min ) +
   ( SECS_PER_HOUR * $hour ) +
   ( SECS_PER_DAY * $days );
 
-#5...........
+#6...........
         },
 
         'pbp3.pbp' => {
             source => "pbp3",
             params => "pbp",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 return
       $sec + $SecOff
     + ( SECS_PER_MINUTE * $min )
     + ( SECS_PER_HOUR * $hour )
     + ( SECS_PER_DAY * $days );
 
-#6...........
+#7...........
         },
 
         'pbp4.def' => {
             source => "pbp4",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 # with defaults perltidy will break after the '=' here
 my @host_seq =
   $level eq "easy" ? @reordered : 0 .. $last;    # reordered has CDROM up front
-#7...........
+#8...........
         },
 
         'pbp4.pbp' => {
             source => "pbp4",
             params => "pbp",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # with defaults perltidy will break after the '=' here
 my @host_seq
     = $level eq "easy"
     ? @reordered
     : 0 .. $last;    # reordered has CDROM up front
-#8...........
+#9...........
         },
 
         'pbp5.def' => {
             source => "pbp5",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 # illustates problem with -pbp: -ci should not equal -i
 say 'ok_200_24_hours.value '
   . average(
@@ -258,13 +266,13 @@ say 'ok_200_24_hours.value '
     }
   );
 
-#9...........
+#10...........
         },
 
         'pbp5.pbp' => {
             source => "pbp5",
             params => "pbp",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 # illustates problem with -pbp: -ci should not equal -i
 say 'ok_200_24_hours.value '
     . average(
@@ -274,13 +282,13 @@ say 'ok_200_24_hours.value '
     }
     );
 
-#10...........
+#11...........
         },
 
         'print1.def' => {
             source => "print1",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 # same text twice. Has uncontained commas; -- leave as is
 print "conformability (Not the same dimension)\n",
   "\t",
@@ -292,122 +300,90 @@ print
   "\t", $have, " is ", text_unit($hu), "\n",
   "\t", $want, " is ", text_unit($wu), "\n",
   ;
-#11...........
+#12...........
         },
 
         'q1.def' => {
             source => "q1",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 print qq(You are in zone $thisTZ
 Difference with respect to GMT is ), $offset / 3600, qq( hours
 And local time is $hour hours $min minutes $sec seconds
 );
-#12...........
+#13...........
         },
 
         'q2.def' => {
             source => "q2",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 $a = qq
 XHello World\nX;
 print "$a";
-#13...........
+#14...........
         },
 
         'recombine1.def' => {
             source => "recombine1",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 # recombine '= [' here:
 $retarray =
   [ &{ $sth->{'xbase_parsed_sql'}{'selectfn'} }
       ( $xbase, $values, $sth->{'xbase_bind_values'} ) ]
   if defined $values;
-#14...........
+#15...........
         },
 
         'recombine2.def' => {
             source => "recombine2",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
     # recombine = unless old break there
     $a = [ length( $self->{fb}[-1] ), $#{ $self->{fb} } ]
       ;    # set cursor at end of buffer and print this cursor
-#15...........
+#16...........
         },
 
         'recombine3.def' => {
             source => "recombine3",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
         # recombine final line
         $command = (
             ( $catpage =~ m:\.gz: )
             ? $ZCAT
             : $CAT
         ) . " < $catpage";
-#16...........
+#17...........
         },
 
         'recombine4.def' => {
             source => "recombine4",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
     # do not recombine into two lines after a comma if
     # the term is complex (has parens) or changes level
     $delta_time = sprintf "%.4f",
       ( ( $done[0] + ( $done[1] / 1e6 ) ) -
           ( $start[0] + ( $start[1] / 1e6 ) ) );
-#17...........
-        },
-
-        'rt102451.def' => {
-            source => "rt102451",
-            params => "def",
-            expect => <<'#18...........',
-# RT#102451 bug test; unwanted spaces added before =head1 on each pass
-#<<<
-
-=head1 NAME
-
-=cut
-
-my %KA_CACHE; # indexed by uhost currently, points to [$handle...] array
-
-
-=head1 NAME
-
-=cut
-
-#>>>
 #18...........
         },
 
-        'rt116344.def' => {
-            source => "rt116344",
+        'rt101547.def' => {
+            source => "rt101547",
             params => "def",
             expect => <<'#19...........',
-# Rt116344
-# Attempting to tidy the following code failed:
-sub broken {
-    return ref {} ? 1 : 0;
-    something();
-}
+{ source_host => MM::Config->instance->host // q{}, }
 #19...........
         },
 
-        'rt123774.def' => {
-            source => "rt123774",
+        'rt102371.def' => {
+            source => "rt102371",
             params => "def",
             expect => <<'#20...........',
-# retain any space between backslash and quote to avoid fooling html formatters
-my $var1 = \ "bubba";
-my $var2 = \"bubba";
-my $var3 = \ 'bubba';
-my $var4 = \'bubba';
-my $var5 = \ "bubba";
+state $b //= ccc();
 #20...........
         },
     };

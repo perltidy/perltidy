@@ -1,0 +1,9 @@
+print add( 3, 4 ), "\n";
+print add( 4, 3 ), "\n";
+
+sub add {
+    my ( $term1, $term2 ) = @_;
+# line 1234
+    die "$term1 > $term2" if $term1 > $term2;
+    return $term1 + $term2;
+}

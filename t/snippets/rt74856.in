@@ -1,0 +1,9 @@
+{
+my $foo = '1';
+#<<< 
+my $bar = (test())
+ ? 'some value'
+ : undef;
+#>>> 
+my $baz = 'something else';
+}

@@ -1,0 +1,12 @@
+my %foo = (
+    alpha => 1,
+    beta  => 2, gamma => 3,
+);
+
+my @bar = map {
+    {
+        number    => $_,
+        character => chr $_,
+        padding   => ( ' ' x $_ ),
+    }
+} ( 0 .. 32 );

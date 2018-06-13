@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:23 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -31,6 +31,13 @@ BEGIN {
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'gnu1' => <<'----------',
+@common_sometimes = (
+    "aclocal.m4", "acconfig.h", "config.h.top", "config.h.bot",
+    "stamp-h.in", 'stamp-vti'
+);
+----------
 
         'gnu2' => <<'----------',
 $search_mb = $menu_bar->Menubutton(
@@ -143,15 +150,6 @@ print(" MiXeD"),redo LOOP if/\G[A-Za-z]+\b[,.;]?\s*/gc;print(
 " alphanumeric"),redo LOOP if/\G[A-Za-z0-9]+\b[,.;]?\s*/gc;print(" line-noise"
 ),redo LOOP if/\G[^A-Za-z0-9]+/gc;print". That's all!\n";}
 ----------
-
-        'list1' => <<'----------',
-%height=("letter",27.9, "legal",35.6, "arche",121.9, "archd",91.4, "archc",61,
- "archb",45.7, "archa",30.5, "flsa",33, "flse",33, "halfletter",21.6,
- "11x17",43.2, "ledger",27.9);
-%width=("letter",21.6, "legal",21.6, "arche",91.4, "archd",61, "archc",45.7,
- "archb",30.5, "archa",22.9, "flsa",21.6, "flse",21.6, "halfletter",14,
- "11x17",27.9, "ledger",43.2);
-----------
     };
 
     ##############################
@@ -159,10 +157,22 @@ print(" MiXeD"),redo LOOP if/\G[A-Za-z]+\b[,.;]?\s*/gc;print(
     ##############################
     $rtests = {
 
+        'gnu1.gnu' => {
+            source => "gnu1",
+            params => "gnu",
+            expect => <<'#1...........',
+@common_sometimes = (
+                     "aclocal.m4",   "acconfig.h",
+                     "config.h.top", "config.h.bot",
+                     "stamp-h.in",   'stamp-vti'
+                    );
+#1...........
+        },
+
         'gnu2.def' => {
             source => "gnu2",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 $search_mb = $menu_bar->Menubutton(
     '-text'        => 'Search',
     '-relief'      => 'raised',
@@ -171,26 +181,26 @@ $search_mb = $menu_bar->Menubutton(
     '-side' => 'left',
     '-padx' => 2
 );
-#1...........
+#2...........
         },
 
         'gnu2.gnu' => {
             source => "gnu2",
             params => "gnu",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 $search_mb = $menu_bar->Menubutton(
                                    '-text'        => 'Search',
                                    '-relief'      => 'raised',
                                    '-borderwidth' => 2,
   )->pack('-side' => 'left',
           '-padx' => 2);
-#2...........
+#3...........
         },
 
         'gnu3.def' => {
             source => "gnu3",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 $output_rules .= &file_contents_with_transform(
     's/\@TEXI\@/'
       . $info_cursor . '/g; '
@@ -202,13 +212,13 @@ $output_rules .= &file_contents_with_transform(
       . $conf_pat . ',g;',
     'texi-vers'
 );
-#3...........
+#4...........
         },
 
         'gnu3.gnu' => {
             source => "gnu3",
             params => "gnu",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 $output_rules .=
   &file_contents_with_transform(
                                 's/\@TEXI\@/'
@@ -221,41 +231,41 @@ $output_rules .=
                                   . $conf_pat . ',g;',
                                 'texi-vers'
                                );
-#4...........
+#5...........
         },
 
         'gnu4.def' => {
             source => "gnu4",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 my $mzef = Bio::Tools::MZEF->new(
     '-file' => Bio::Root::IO->catfile( "t", "genomic-seq.mzef" ) );
-#5...........
+#6...........
         },
 
         'gnu4.gnu' => {
             source => "gnu4",
             params => "gnu",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 my $mzef = Bio::Tools::MZEF->new(
                     '-file' => Bio::Root::IO->catfile("t", "genomic-seq.mzef"));
-#6...........
+#7...........
         },
 
         'hanging_side_comments1.def' => {
             source => "hanging_side_comments1",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 $valuestr .=
   $value . " ";    # with a trailing space in case there are multiple values
                    # for this tag (allowed in GFF2 and .ace format)
-#7...........
+#8...........
         },
 
         'hanging_side_comments2.def' => {
             source => "hanging_side_comments2",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # keep '=' lined up even with hanging side comments
 $ax         = 1;    # side comment
                     # hanging side comment
@@ -263,13 +273,13 @@ $boondoggle = 5;    # side comment
 $beetle     = 5;    # side comment
                     # hanging side comment
 $d          = 3;
-#8...........
+#9...........
         },
 
         'hash1.def' => {
             source => "hash1",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 %TV = (
     flintstones => {
         series  => "flintstones",
@@ -315,40 +325,40 @@ $d          = 3;
         ],
     },
 );
-#9...........
+#10...........
         },
 
         'hashbang.def' => {
             source => "hashbang",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 #!/usr/bin/perl
-#10...........
+#11...........
         },
 
         'here1.def' => {
             source => "here1",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 is( <<~`END`, "ok\n", '<<~`HEREDOC`' );
   $Perl -le "print 'ok'"
   END
-#11...........
+#12...........
         },
 
         'html1.def' => {
             source => "html1",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 if   ( $editlblk eq 1 ) { $editlblk = "on";  $editlblkchecked = "checked" }
 else                    { $editlblk = "off"; $editlblkchecked = "unchecked" }
-#12...........
+#13...........
         },
 
         'html1.html' => {
             source => "html1",
             params => "html",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <!-- Generated by perltidy  -->
@@ -396,13 +406,13 @@ pre { color: #000000;
 </pre>
 </body>
 </html>
-#13...........
+#14...........
         },
 
         'ident1.def' => {
             source => "ident1",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 package A;
 
 sub new {
@@ -414,46 +424,46 @@ package main;
 my $scanner = new A::();
 $scanner = new A::;
 $scanner = new A 'a';
-#14...........
+#15...........
         },
 
         'if1.def' => {
             source => "if1",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 # one-line blocks
 if   ( $editlblk eq 1 ) { $editlblk = "on";  $editlblkchecked = "checked" }
 else                    { $editlblk = "off"; $editlblkchecked = "unchecked" }
-#15...........
+#16...........
         },
 
         'iscl1.def' => {
             source => "iscl1",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
         # -iscl will not allow alignment of hanging side comments (currently)
         $gsmatch =
           ( $sub >= 50 ) ? "equal" : "lequal";    # Force an equal match for
                                                   # dev, but be more forgiving
                                                   # for releases
-#16...........
+#17...........
         },
 
         'iscl1.iscl' => {
             source => "iscl1",
             params => "iscl",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
         # -iscl will not allow alignment of hanging side comments (currently)
         $gsmatch = ( $sub >= 50 ) ? "equal" : "lequal"; # Force an equal match for
                # dev, but be more forgiving
                # for releases
-#17...........
+#18...........
         },
 
         'label1.def' => {
             source => "label1",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
 INIT: {
     $a++;
     print "looping with label INIT:, a=$a\n";
@@ -465,13 +475,13 @@ package: {
 sub: {
     print "hello!\n";
 }
-#18...........
+#19...........
         },
 
         'lextest1.def' => {
             source => "lextest1",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 $_ = <<'EOL';
    $url = new URI::URL "http://www/";   die if $url eq "xXx";
 EOL
@@ -485,25 +495,6 @@ LOOP: {
     print(" line-noise"),   redo LOOP if /\G[^A-Za-z0-9]+/gc;
     print ". That's all!\n";
 }
-#19...........
-        },
-
-        'list1.def' => {
-            source => "list1",
-            params => "def",
-            expect => <<'#20...........',
-%height = (
-    "letter",     27.9, "legal", 35.6, "arche",  121.9,
-    "archd",      91.4, "archc", 61,   "archb",  45.7,
-    "archa",      30.5, "flsa",  33,   "flse",   33,
-    "halfletter", 21.6, "11x17", 43.2, "ledger", 27.9
-);
-%width = (
-    "letter",     21.6, "legal", 21.6, "arche",  91.4,
-    "archd",      61,   "archc", 45.7, "archb",  30.5,
-    "archa",      22.9, "flsa",  21.6, "flse",   21.6,
-    "halfletter", 14,   "11x17", 27.9, "ledger", 43.2
-);
 #20...........
         },
     };

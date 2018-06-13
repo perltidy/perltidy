@@ -1,0 +1,4 @@
+my $ct = Courriel::Header::ContentType->new(
+    mime_type  => 'multipart/alternative',
+    attributes => { boundary => unique_boundary },
+);

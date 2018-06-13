@@ -1,0 +1,1 @@
+my $user_prefs = $ref_type eq 'SCALAR' ? _load_from_string( $profile ) : $ref_type eq 'ARRAY' ? _load_from_array( $profile ) : $ref_type eq 'HASH' ? _load_from_hash( $profile ) : _load_from_file( $profile );

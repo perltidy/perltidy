@@ -1,0 +1,6 @@
+use strict;
+use warnings;
+my $x = 1;    # comment not removed
+
+# comment will be removed
+my $y = 2;    # comment also not removed

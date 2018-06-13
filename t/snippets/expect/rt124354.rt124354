@@ -1,0 +1,9 @@
+package Foo;
+
+use Moose;
+
+has a => ( is => 'ro', isa => 'Int' );
+has b => ( is => 'ro', isa => 'Int' );
+has c => ( is => 'ro', isa => 'Int' );
+
+__PACKAGE__->meta->make_immutable;

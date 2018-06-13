@@ -1,0 +1,8 @@
+use strict;
+use JSON;
+my $ref = { 
+when => time(), message => 'abc' };
+my $json  = encode_json   { 
+when => time(), message => 'abc' };
+my $json2 = encode_json + { 
+when => time(), message => 'abc' };

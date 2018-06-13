@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:23 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -23,17 +23,21 @@ BEGIN {
         'mangle'  => "--mangle",
         'nasc'    => "-nasc",
         'nothing' => "",
-        'otr'     => <<'----------',
--ohbr
--opr
--osbr
-----------
     };
 
     ######################
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'list1' => <<'----------',
+%height=("letter",27.9, "legal",35.6, "arche",121.9, "archd",91.4, "archc",61,
+ "archb",45.7, "archa",30.5, "flsa",33, "flse",33, "halfletter",21.6,
+ "11x17",43.2, "ledger",27.9);
+%width=("letter",21.6, "legal",21.6, "arche",91.4, "archd",61, "archc",45.7,
+ "archb",30.5, "archa",22.9, "flsa",21.6, "flse",21.6, "halfletter",14,
+ "11x17",27.9, "ledger",43.2);
+----------
 
         'listop1' => <<'----------',
 my @sorted = map { $_->[0] }
@@ -307,29 +311,48 @@ return $pdl->slice(
     ##############################
     $rtests = {
 
+        'list1.def' => {
+            source => "list1",
+            params => "def",
+            expect => <<'#1...........',
+%height = (
+    "letter",     27.9, "legal", 35.6, "arche",  121.9,
+    "archd",      91.4, "archc", 61,   "archb",  45.7,
+    "archa",      30.5, "flsa",  33,   "flse",   33,
+    "halfletter", 21.6, "11x17", 43.2, "ledger", 27.9
+);
+%width = (
+    "letter",     21.6, "legal", 21.6, "arche",  91.4,
+    "archd",      61,   "archc", 45.7, "archb",  30.5,
+    "archa",      22.9, "flsa",  21.6, "flse",   21.6,
+    "halfletter", 14,   "11x17", 27.9, "ledger", 43.2
+);
+#1...........
+        },
+
         'listop1.def' => {
             source => "listop1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 my @sorted = map { $_->[0] }
   sort { $a->[1] <=> $b->[1] }
   map { [ $_, rand ] } @list;
-#1...........
+#2...........
         },
 
         'listop2.def' => {
             source => "listop2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 my @sorted =
   map { $_->[0] } sort { $a->[1] <=> $b->[1] } map { [ $_, rand ] } @list;
-#2...........
+#3...........
         },
 
         'lp1.def' => {
             source => "lp1",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 # a good test problem for -lp; thanks to Ian Stuart
 push @contents,
   $c->table(
@@ -482,13 +505,13 @@ push @contents,
         )
     ),
   );
-#3...........
+#4...........
         },
 
         'lp1.lp' => {
             source => "lp1",
             params => "lp",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 # a good test problem for -lp; thanks to Ian Stuart
 push @contents,
   $c->table(
@@ -641,31 +664,31 @@ push @contents,
                      )
              ),
   );
-#4...........
+#5...........
         },
 
         'mangle1.def' => {
             source => "mangle1",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 # The space after the '?' is essential and must not be deleted
 print $::opt_m ? "  Files:  " . my_wrap( "", "          ", $v ) : $v;
-#5...........
+#6...........
         },
 
         'mangle1.mangle' => {
             source => "mangle1",
             params => "mangle",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 # The space after the '?' is essential and must not be deleted
 print$::opt_m ? "  Files:  ".my_wrap("","          ",$v):$v;
-#6...........
+#7...........
         },
 
         'mangle2.def' => {
             source => "mangle2",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 # hanging side comments - do not remove leading space with -mangle
 if ( $size1 == 0 || $size2 == 0 ) {    # special handling for zero-length
     if ( $size2 + $size1 == 0 ) {      # files.
@@ -685,13 +708,13 @@ if ( $size1 == 0 || $size2 == 0 ) {    # special handling for zero-length
     }
 }
 
-#7...........
+#8...........
         },
 
         'mangle2.mangle' => {
             source => "mangle2",
             params => "mangle",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # hanging side comments - do not remove leading space with -mangle
 if($size1==0||$size2==0){# special handling for zero-length
 if($size2+$size1==0){# files.
@@ -703,13 +726,13 @@ exit 0;}else{# Can't we say 'differ at byte zero'
  # filesize.
 if($volume){warn"$0: EOF on $file1\n" unless$size1;
 warn"$0: EOF on $file2\n" unless$size2;}exit 1;}}
-#8...........
+#9...........
         },
 
         'mangle3.def' => {
             source => "mangle3",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 # run with --mangle
 # Troublesome punctuation variables: $$ and $#
 
@@ -732,13 +755,13 @@ if ( $arc >= - CAKE && $arc <= CAKE ) {
 
 # do not remove the space after 'JUNK':
 print JUNK ( "<", "&", ">" )[ rand(3) ];    # make these a bit more likely
-#9...........
+#10...........
         },
 
         'mangle3.mangle' => {
             source => "mangle3",
             params => "mangle",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 # run with --mangle
 # Troublesome punctuation variables: $$ and $#
 # don't delete ws between '$$' and 'if'
@@ -755,13 +778,13 @@ use constant CAKE=>atan2(1,1)/2;
 if($arc>=- CAKE&&$arc<=CAKE){}
 # do not remove the space after 'JUNK':
 print JUNK ("<","&",">")[rand(3)];# make these a bit more likely
-#10...........
+#11...........
         },
 
         'math1.def' => {
             source => "math1",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 my $xyz_shield = [
     [ -0.060,  -0.060,  0. ],
     [ 0.060,   -0.060,  0. ],
@@ -772,13 +795,13 @@ my $xyz_shield = [
     [ 0.0925,  0.0925,  0.092 ],
     [ -0.0925, 0.0925,  0.092 ],
 ];
-#11...........
+#12...........
         },
 
         'math2.def' => {
             source => "math2",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 $ans = pdl(
     [ 0, 0, 0, 0, 0 ],
     [ 0, 0, 2, 0, 0 ],
@@ -786,13 +809,13 @@ $ans = pdl(
     [ 0, 0, 4, 0, 0 ],
     [ 0, 0, 0, 0, 0 ]
 );
-#12...........
+#13...........
         },
 
         'math3.def' => {
             source => "math3",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
     my ( $x, $y ) = (
         $x0 +
           $index_x * $xgridwidth * $xm +
@@ -801,13 +824,13 @@ $ans = pdl(
           $index_y * $ygridwidth * $ym -
           ( $map_y * $ym * $ygridwidth ) / $detailheight,
     );
-#13...........
+#14...........
         },
 
         'math4.def' => {
             source => "math4",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 my $u      = ( $range * $pratio**( 1. / 3. ) ) / $wratio;
 my $factor = exp( -( 18 / $u )**4 );
 my $ovp =
@@ -817,69 +840,52 @@ my $impulse =
   ( 1 - $factor ) * ( 170 - $u ) + ( 350 / $u**0.65 + 500 / $u**5 ) * $factor;
 $ovp     = $ovp * $pratio;
 $impulse = $impulse * $wratio * $pratio**( 2 / 3 );
-#14...........
+#15...........
         },
 
         'nasc.def' => {
             source => "nasc",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
         # will break and add semicolon unless -nasc is given
         eval {
             $terminal = Tgetent Term::Cap { TERM => undef, OSPEED => $ospeed };
         };
-#15...........
+#16...........
         },
 
         'nasc.nasc' => {
             source => "nasc",
             params => "nasc",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
         # will break and add semicolon unless -nasc is given
         eval {
             $terminal = Tgetent Term::Cap { TERM => undef, OSPEED => $ospeed }
         };
-#16...........
+#17...........
         },
 
         'nothing.def' => {
             source => "nothing",
             params => "def",
-            expect => <<'#17...........',
-#17...........
+            expect => <<'#18...........',
+#18...........
         },
 
         'nothing.nothing' => {
             source => "nothing",
             params => "nothing",
-            expect => <<'#18...........',
-#18...........
+            expect => <<'#19...........',
+#19...........
         },
 
         'otr1.def' => {
             source => "otr1",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 return $pdl->slice(
     join ',',
     (
-        map {
-                $_ eq "X" ? ":"
-              : ref $_ eq "ARRAY" ? join ':', @$_
-              : !ref $_ ? $_
-              : die "INVALID SLICE DEF $_"
-        } @_
-    )
-);
-#19...........
-        },
-
-        'otr1.otr' => {
-            source => "otr1",
-            params => "otr",
-            expect => <<'#20...........',
-return $pdl->slice(
-    join ',', (
         map {
                 $_ eq "X" ? ":"
               : ref $_ eq "ARRAY" ? join ':', @$_

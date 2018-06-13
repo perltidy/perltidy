@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:23 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -18,77 +18,18 @@ BEGIN {
     # SECTION 1: Parameter combinations #
     #####################################
     $rparams = {
-        'def'    => "",
-        'style2' => <<'----------',
--bt=2
--nwls=".."
--nwrs=".."
--pt=2
--nsfs
--sbt=2
--cuddled-blocks
--bar
--nsbl
--nbbc
+        'def'      => "",
+        'rt123749' => "-wn",
+        'rt124354' => "-io",
+        'rt125012' => <<'----------',
+-mangle
+-dac
 ----------
-        'style3' => <<'----------',
--l=160
--cbi=1
--cpi=1
--csbi=1
--lp
--nolq
--csci=20
--csct=40
--csc
--isbc
--cuddled-blocks
--nsbl
--dcsc
+        'rt125506' => "-io",
+        'rt50702'  => <<'----------',
+-wbb='='
 ----------
-        'style4' => <<'----------',
--bt=2
--pt=2
--sbt=2
--cuddled-blocks
--bar
-----------
-        'style5' => <<'----------',
--b
--bext="~"
--et=8
--l=77
--cbi=2
--cpi=2
--csbi=2
--ci=4
--nolq
--nasc
--bt=2
--ndsm
--nwls="++ -- ?"
--nwrs="++ --"
--pt=2
--nsfs
--nsts
--sbt=2
--sbvt=1
--wls="= .= =~ !~ :"
--wrs="= .= =~ !~ ? :"
--ncsc
--isbc
--msc=2
--nolc
--bvt=1
--bl
--sbl
--pvt=1
--wba="% + - * / x != == >= <= =~ !~ < > | & >= < = **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x= . << >> -> && ||"
--wbb=" "
--cab=1
--mbl=2
-----------
-        'tso' => "-tso",
+        'rt70747' => "-i=2",
     };
 
     ######################
@@ -96,178 +37,130 @@ BEGIN {
     ######################
     $rsources = {
 
-        'style' => <<'----------',
-# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
-sub arrange_topframe {
-    my(@order) = ($hslabel_frame, $km_frame, $speed_frame[0],
-		  $power_frame[0], $wind_frame, $percent_frame, $temp_frame,
-		  @speed_frame[1..$#speed_frame],
-		  @power_frame[1..$#power_frame],
-		 );
-    my(@col)   = (0, 1, 3, 4+$#speed_frame, 5+$#speed_frame+$#power_frame,
-		  2, 6+$#speed_frame+$#power_frame,
-		  4..3+$#speed_frame,
-		  5+$#speed_frame..4+$#speed_frame+$#power_frame);
-    $top->idletasks;
-    my $width = 0;
-    my(%gridslaves) = map {($_, 1)} $top_frame->gridSlaves;
-    for(my $i = 0; $i <= $#order; $i++) {
-	my $w = $order[$i];
-	next unless Tk::Exists($w);
-	my $col = $col[$i] || 0;
-	$width += $w->reqwidth;
-	if ($gridslaves{$w}) {
-	    $w->gridForget;
-	}
-	if ($width <= $top->width) {
-	    $w->grid(-row => 0,
-		     -column => $col,
-		     -sticky => 'nsew'); # XXX
-	}
+        'rt123749' => <<'----------',
+get('http://mojolicious.org')->then(
+    sub {
+        my $mojo = shift;
+        say $mojo->res->code;
+        return get('http://metacpan.org');
     }
+)->then(
+    sub {
+        my $cpan = shift;
+        say $cpan->res->code;
+    }
+)->catch(
+    sub {
+        my $err = shift;
+        warn "Something went wrong: $err";
+    }
+)->wait;
+----------
+
+        'rt123774' => <<'----------',
+# retain any space between backslash and quote to avoid fooling html formatters
+my $var1 = \ "bubba";
+my $var2 = \"bubba";
+my $var3 = \ 'bubba';
+my $var4 = \'bubba';
+my $var5 = \            "bubba";
+----------
+
+        'rt124114' => <<'----------',
+#!/usr/bin/perl 
+my %h = {
+    a    => 2 > 3 ? 1 : 0,
+    bbbb => sub { my $y = "1" },
+    c    => sub { my $z = "2" },
+    d    => 2 > 3 ? 1 : 0,
+};
+----------
+
+        'rt124354' => <<'----------',
+package Foo;
+
+use Moose;
+
+has a => ( is => 'ro', isa => 'Int' );
+has b => ( is => 'ro', isa => 'Int' );
+has c => ( is => 'ro', isa => 'Int' );
+
+__PACKAGE__->meta->make_immutable;
+----------
+
+        'rt125012' => <<'----------',
+++$_ for
+#one space before eol:
+values %_;
+system
+#one space before eol:
+qq{};
+----------
+
+        'rt125506' => <<'----------',
+my $t = '
+        un
+        deux
+        trois
+	';
+----------
+
+        'rt15735' => <<'----------',
+my $user_prefs = $ref_type eq 'SCALAR' ? _load_from_string( $profile ) : $ref_type eq 'ARRAY' ? _load_from_array( $profile ) : $ref_type eq 'HASH' ? _load_from_hash( $profile ) : _load_from_file( $profile );
+----------
+
+        'rt27000' => <<'----------',
+print add( 3, 4 ), "\n";
+print add( 4, 3 ), "\n";
+
+sub add {
+    my ( $term1, $term2 ) = @_;
+# line 1234
+    die "$term1 > $term2" if $term1 > $term2;
+    return $term1 + $term2;
 }
-
 ----------
 
-        'sub1' => <<'----------',
-my::doit();
-join::doit();
-for::doit();
-sub::doit();
-package::doit();
-__END__::doit();
-__DATA__::doit();
-package my;
-sub doit{print"Hello My\n";}package join;
-sub doit{print"Hello Join\n";}package for;
-sub doit{print"Hello for\n";}package package;
-sub doit{print"Hello package\n";}package sub;
-sub doit{print"Hello sub\n";}package __END__;
-sub doit{print"Hello __END__\n";}package __DATA__;
-sub doit{print"Hello __DATA__\n";}
+        'rt31741' => <<'----------',
+$msg //= 'World';
 ----------
 
-        'sub2' => <<'----------',
-my $selector;
-
-# leading atrribute separator:
-$a = 
-  sub  
-  : locked {
-    print "Hello, World!\n";
-  };
-$a->();
-
-# colon as both ?/: and attribute separator
-$a = $selector
-  ? sub  : locked {
-    print "Hello, World!\n";
-  }
-  : sub : locked {
-    print "GOODBYE!\n";
-  };
-$a->();
+        'rt49289' => <<'----------',
+use constant qw{ DEBUG 0 };
 ----------
 
-        'switch1' => <<'----------',
-sub classify_digit($digit)
-  { switch($digit)
-    { case 0 { return 'zero' } case [ 2, 4, 6, 8 ]{ return 'even' }
-        case [ 1, 3, 4, 7, 9 ]{ return 'odd' } case /[A-F]/i { return 'hex' } }
-  }
+        'rt50702' => <<'----------',
+if (1) { my $uid = $ENV{ 'ORIG_LOGNAME' } || $ENV{ 'LOGNAME' } || $ENV{ 'REMOTE_USER' } || 'foobar'; } if (2) { my $uid = ($ENV{ 'ORIG_LOGNAME' } || $ENV{ 'LOGNAME' } || $ENV{ 'REMOTE_USER' } || 'foobar'); }
 ----------
 
-        'syntax1' => <<'----------',
-# Caused trouble:
-print $x **2;
+        'rt68870' => <<'----------',
+s///r;
 ----------
 
-        'syntax2' => <<'----------',
-# ? was taken as pattern
-my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
+        'rt70747' => <<'----------',
+coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
+  [ map {
+      my $g = $_->as_hash;
+      $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ]; $g;
+    } @$_;
+  ]
+};
 ----------
 
-        'ternary1' => <<'----------',
-my $flags =
-  ( $_ & 1 ) ? ( $_ & 4 ) ? $THRf_DEAD : $THRf_ZOMBIE :
-  ( $_ & 4 ) ? $THRf_R_DETACHED : $THRf_R_JOINABLE;
-----------
-
-        'ternary2' => <<'----------',
-my $a=($b) ? ($c) ? ($d) ? $d1
-                         : $d2
-                  : ($e) ? $e1
-                         : $e2
-           : ($f) ? ($g) ? $g1
-                         : $g2
-                  : ($h) ? $h1
-                         : $h2;
-----------
-
-        'tick1' => <<'----------',
-sub a'this { $p'u'a = "mooo\n"; print $p::u::a; }
-a::this();       # print "mooo"
-print $p'u'a;    # print "mooo"
-sub a::that {
-    $p't'u = "wwoo\n";
-    return sub { print $p't'u}
+        'rt74856' => <<'----------',
+{
+my $foo = '1';
+#<<< 
+my $bar = (test())
+ ? 'some value'
+ : undef;
+#>>> 
+my $baz = 'something else';
 }
-$a'that = a'that();
-$a'that->();     # print "wwoo"
-$a'that  = a'that();
-$p::t::u = "booo\n";
-$a'that->();     # print "booo"
 ----------
 
-        'trim_quote' => <<'----------',
-# space after quote will get trimmed
-    push @m, '
-all :: pure_all manifypods
-	' . $self->{NOECHO} . '$(NOOP)
-' 
-      unless $self->{SKIPHASH}{'all'};
-----------
-
-        'tso1' => <<'----------',
-print 0+ '42 EUR';    # 42
-----------
-
-        'tutor' => <<'----------',
-#!/usr/bin/perl
-$y=shift||5;for $i(1..10){$l[$i]="T";$w[$i]=999999;}while(1){print"Name:";$u=<STDIN>;$t=50;$a=time;for(0..9){$x="";for(1..$y){$x.=chr(int(rand(126-33)+33));}while($z ne $x){print"\r\n$x\r\n";$z=<STDIN>;chomp($z);$t-=5;}}$b=time;$t-=($b-$a)*2;$t=0-$t;$z=1;@q=@l;@p=@w;print "You scored $t points\r\nTopTen\r\n";for $i(1..10){if ($t<$p[$z]){$l[$i]=$u;chomp($l[$i]);$w[$i]=$t;$t=1000000}else{$l[$i]=$q[$z];$w[$i]=$p[$z];$z++;}print $l[$i],"\t",$w[$i],"\r\n";}}
-----------
-
-        'undoci1' => <<'----------',
-        $rinfo{deleteStyle} = [
-            -fill      => 'red',
-              -stipple => '@' . Tk->findINC('demos/images/grey.25'),
-        ];
-----------
-
-        'use1' => <<'----------',
-# previously this caused an incorrect error message after '2.42'
-use lib "$Common::global::gInstallRoot/lib";
-use CGI 2.42 qw(fatalsToBrowser);
-use RRDs 1.000101;
-
-# the 0666 must expect an operator
-use constant MODE => do { 0666 & ( 0777 & ~umask ) };
-
-use IO::File ();
-----------
-
-        'use2' => <<'----------',
-# Keep the space before the '()' here:
-use Foo::Bar ();
-use Foo::Bar ();
-use Foo::Bar 1.0 ();
-use Foo::Bar qw(baz);
-use Foo::Bar 1.0 qw(baz);
-----------
-
-        'version1' => <<'----------',
-# VERSION statement unbroken, no semicolon added; 
-our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r }
+        'rt78156' => <<'----------',
+package Some::Class 2.012;
 ----------
     };
 
@@ -276,464 +169,278 @@ our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%0
     ##############################
     $rtests = {
 
-        'style.style2' => {
-            source => "style",
-            params => "style2",
+        'rt123749.rt123749' => {
+            source => "rt123749",
+            params => "rt123749",
             expect => <<'#1...........',
-# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
-sub arrange_topframe {
-    my (@order) = (
-        $hslabel_frame,  $km_frame,
-        $speed_frame[0], $power_frame[0],
-        $wind_frame,     $percent_frame,
-        $temp_frame,     @speed_frame[1..$#speed_frame],
-        @power_frame[1..$#power_frame],
-    );
-    my (@col) = (
-        0,
-        1,
-        3,
-        4 + $#speed_frame,
-        5 + $#speed_frame + $#power_frame,
-        2,
-        6 + $#speed_frame + $#power_frame,
-        4..3 + $#speed_frame,
-        5 + $#speed_frame..4 + $#speed_frame + $#power_frame
-    );
-    $top->idletasks;
-    my $width = 0;
-    my (%gridslaves) = map { ($_, 1) } $top_frame->gridSlaves;
-    for (my $i = 0; $i <= $#order; $i++) {
-        my $w = $order[$i];
-        next unless Tk::Exists($w);
-        my $col = $col[$i] || 0;
-        $width += $w->reqwidth;
-        if ($gridslaves{$w}) {
-            $w->gridForget;
-        }
-        if ($width <= $top->width) {
-            $w->grid(
-                -row    => 0,
-                -column => $col,
-                -sticky => 'nsew'
-            );    # XXX
-        }
-    }
-}
-
+get('http://mojolicious.org')->then( sub {
+    my $mojo = shift;
+    say $mojo->res->code;
+    return get('http://metacpan.org');
+} )->then( sub {
+    my $cpan = shift;
+    say $cpan->res->code;
+} )->catch( sub {
+    my $err = shift;
+    warn "Something went wrong: $err";
+} )->wait;
 #1...........
         },
 
-        'style.style3' => {
-            source => "style",
-            params => "style3",
+        'rt123774.def' => {
+            source => "rt123774",
+            params => "def",
             expect => <<'#2...........',
-# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
-sub arrange_topframe {
-    my (@order) = (
-                    $hslabel_frame, $km_frame, $speed_frame[0], $power_frame[0], $wind_frame, $percent_frame, $temp_frame,
-                    @speed_frame[ 1 .. $#speed_frame ],
-                    @power_frame[ 1 .. $#power_frame ],
-                  );
-    my (@col) = (
-                  0, 1, 3,
-                  4 + $#speed_frame,
-                  5 + $#speed_frame + $#power_frame,
-                  2,
-                  6 + $#speed_frame + $#power_frame,
-                  4 .. 3 + $#speed_frame,
-                  5 + $#speed_frame .. 4 + $#speed_frame + $#power_frame
-                );
-    $top->idletasks;
-    my $width = 0;
-    my (%gridslaves) = map { ( $_, 1 ) } $top_frame->gridSlaves;
-    for ( my $i = 0 ; $i <= $#order ; $i++ ) {
-        my $w = $order[$i];
-        next unless Tk::Exists($w);
-        my $col = $col[$i] || 0;
-        $width += $w->reqwidth;
-        if ( $gridslaves{$w} ) {
-            $w->gridForget;
-        }
-        if ( $width <= $top->width ) {
-            $w->grid(
-                      -row    => 0,
-                      -column => $col,
-                      -sticky => 'nsew'
-                    );    # XXX
-        }
-    }
-} ## end sub arrange_topframe
-
+# retain any space between backslash and quote to avoid fooling html formatters
+my $var1 = \ "bubba";
+my $var2 = \"bubba";
+my $var3 = \ 'bubba';
+my $var4 = \'bubba';
+my $var5 = \ "bubba";
 #2...........
         },
 
-        'style.style4' => {
-            source => "style",
-            params => "style4",
+        'rt124114.def' => {
+            source => "rt124114",
+            params => "def",
             expect => <<'#3...........',
-# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
-sub arrange_topframe {
-    my (@order) = (
-        $hslabel_frame,  $km_frame,
-        $speed_frame[0], $power_frame[0],
-        $wind_frame,     $percent_frame,
-        $temp_frame,     @speed_frame[1 .. $#speed_frame],
-        @power_frame[1 .. $#power_frame],
-    );
-    my (@col) = (
-        0,
-        1,
-        3,
-        4 + $#speed_frame,
-        5 + $#speed_frame + $#power_frame,
-        2,
-        6 + $#speed_frame + $#power_frame,
-        4 .. 3 + $#speed_frame,
-        5 + $#speed_frame .. 4 + $#speed_frame + $#power_frame
-    );
-    $top->idletasks;
-    my $width = 0;
-    my (%gridslaves) = map { ($_, 1) } $top_frame->gridSlaves;
-    for (my $i = 0 ; $i <= $#order ; $i++) {
-        my $w = $order[$i];
-        next unless Tk::Exists($w);
-        my $col = $col[$i] || 0;
-        $width += $w->reqwidth;
-        if ($gridslaves{$w}) {
-            $w->gridForget;
-        }
-        if ($width <= $top->width) {
-            $w->grid(
-                -row    => 0,
-                -column => $col,
-                -sticky => 'nsew'
-            );    # XXX
-        }
-    }
-}
-
+#!/usr/bin/perl 
+my %h = {
+    a    => 2 > 3 ? 1 : 0,
+    bbbb => sub { my $y = "1" },
+    c    => sub { my $z = "2" },
+    d    => 2 > 3 ? 1 : 0,
+};
 #3...........
         },
 
-        'style.style5' => {
-            source => "style",
-            params => "style5",
+        'rt124354.def' => {
+            source => "rt124354",
+            params => "def",
             expect => <<'#4...........',
-# This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
-sub arrange_topframe
-{
-    my (@order) = (
-	$hslabel_frame,  $km_frame,
-	$speed_frame[0], $power_frame[0],
-	$wind_frame,     $percent_frame,
-	$temp_frame,     @speed_frame[1 .. $#speed_frame],
-	@power_frame[1 .. $#power_frame],
-	);
-    my (@col) = (
-	0,
-	1,
-	3,
-	4 + $#speed_frame,
-	5 + $#speed_frame + $#power_frame,
-	2,
-	6 + $#speed_frame + $#power_frame,
-	4 .. 3 + $#speed_frame,
-	5 + $#speed_frame .. 4 + $#speed_frame + $#power_frame
-	);
-    $top->idletasks;
-    my $width = 0;
-    my (%gridslaves) = map { ($_, 1) } $top_frame->gridSlaves;
-    for (my $i = 0; $i <= $#order; $i++)
-    {
-	my $w = $order[$i];
-	next unless Tk::Exists($w);
-	my $col = $col[$i] || 0;
-	$width += $w->reqwidth;
-	if ($gridslaves{$w})
-	{
-	    $w->gridForget;
-	}
-	if ($width <= $top->width)
-	{
-	    $w->grid(
-		-row    => 0,
-		-column => $col,
-		-sticky => 'nsew'
-		);  # XXX
-	}
-    }
-}
+package Foo;
 
+use Moose;
+
+has a => ( is => 'ro', isa => 'Int' );
+has b => ( is => 'ro', isa => 'Int' );
+has c => ( is => 'ro', isa => 'Int' );
+
+__PACKAGE__->meta->make_immutable;
 #4...........
         },
 
-        'sub1.def' => {
-            source => "sub1",
-            params => "def",
+        'rt124354.rt124354' => {
+            source => "rt124354",
+            params => "rt124354",
             expect => <<'#5...........',
-my::doit();
-join::doit();
-for::doit();
-sub::doit();
-package::doit();
-__END__::doit();
-__DATA__::doit();
+package Foo;
 
-package my;
-sub doit { print "Hello My\n"; }
+use Moose;
 
-package join;
-sub doit { print "Hello Join\n"; }
+has a => ( is => 'ro', isa => 'Int' );
+has b => ( is => 'ro', isa => 'Int' );
+has c => ( is => 'ro', isa => 'Int' );
 
-package for;
-sub doit { print "Hello for\n"; }
-
-package package;
-sub doit { print "Hello package\n"; }
-
-package sub;
-sub doit { print "Hello sub\n"; }
-
-package __END__;
-sub doit { print "Hello __END__\n"; }
-
-package __DATA__;
-sub doit { print "Hello __DATA__\n"; }
+__PACKAGE__->meta->make_immutable;
 #5...........
         },
 
-        'sub2.def' => {
-            source => "sub2",
+        'rt125012.def' => {
+            source => "rt125012",
             params => "def",
             expect => <<'#6...........',
-my $selector;
+++$_ for
 
-# leading atrribute separator:
-$a = sub
-  : locked {
-    print "Hello, World!\n";
-  };
-$a->();
+  #one space before eol:
+  values %_;
+system
 
-# colon as both ?/: and attribute separator
-$a = $selector
-  ? sub : locked {
-    print "Hello, World!\n";
-  }
-  : sub : locked {
-    print "GOODBYE!\n";
-  };
-$a->();
+  #one space before eol:
+  qq{};
 #6...........
         },
 
-        'switch1.def' => {
-            source => "switch1",
-            params => "def",
+        'rt125012.rt125012' => {
+            source => "rt125012",
+            params => "rt125012",
             expect => <<'#7...........',
-sub classify_digit($digit) {
-    switch ($digit) {
-        case 0 { return 'zero' }
-        case [ 2, 4, 6, 8 ]{ return 'even' }
-        case [ 1, 3, 4, 7, 9 ]{ return 'odd' }
-        case /[A-F]/i { return 'hex' }
-    }
-}
+++$_ for values%_;
+system qq{};
 #7...........
         },
 
-        'syntax1.def' => {
-            source => "syntax1",
+        'rt125506.def' => {
+            source => "rt125506",
             params => "def",
             expect => <<'#8...........',
-# Caused trouble:
-print $x **2;
+my $t = '
+        un
+        deux
+        trois
+	';
 #8...........
         },
 
-        'syntax2.def' => {
-            source => "syntax2",
-            params => "def",
+        'rt125506.rt125506' => {
+            source => "rt125506",
+            params => "rt125506",
             expect => <<'#9...........',
-# ? was taken as pattern
-my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
+my $t = '
+        un
+        deux
+        trois
+	';
 #9...........
         },
 
-        'ternary1.def' => {
-            source => "ternary1",
+        'rt15735.def' => {
+            source => "rt15735",
             params => "def",
             expect => <<'#10...........',
-my $flags =
-    ( $_ & 1 )
-  ? ( $_ & 4 )
-      ? $THRf_DEAD
-      : $THRf_ZOMBIE
-  : ( $_ & 4 ) ? $THRf_R_DETACHED
-  :              $THRf_R_JOINABLE;
+my $user_prefs =
+    $ref_type eq 'SCALAR' ? _load_from_string($profile)
+  : $ref_type eq 'ARRAY'  ? _load_from_array($profile)
+  : $ref_type eq 'HASH'   ? _load_from_hash($profile)
+  :                         _load_from_file($profile);
 #10...........
         },
 
-        'ternary2.def' => {
-            source => "ternary2",
+        'rt27000.def' => {
+            source => "rt27000",
             params => "def",
             expect => <<'#11...........',
-my $a =
-    ($b)
-  ? ($c)
-      ? ($d)
-          ? $d1
-          : $d2
-      : ($e) ? $e1
-    : $e2
-  : ($f) ? ($g)
-      ? $g1
-      : $g2
-  : ($h) ? $h1
-  :        $h2;
+print add( 3, 4 ), "\n";
+print add( 4, 3 ), "\n";
+
+sub add {
+    my ( $term1, $term2 ) = @_;
+# line 1234
+    die "$term1 > $term2" if $term1 > $term2;
+    return $term1 + $term2;
+}
 #11...........
         },
 
-        'tick1.def' => {
-            source => "tick1",
+        'rt31741.def' => {
+            source => "rt31741",
             params => "def",
             expect => <<'#12...........',
-sub a'this { $p'u'a = "mooo\n"; print $p::u::a; }
-a::this();       # print "mooo"
-print $p'u'a;    # print "mooo"
-
-sub a::that {
-    $p't'u = "wwoo\n";
-    return sub { print $p't'u}
-}
-$a'that = a'that();
-$a'that->();     # print "wwoo"
-$a'that  = a'that();
-$p::t::u = "booo\n";
-$a'that->();     # print "booo"
+$msg //= 'World';
 #12...........
         },
 
-        'trim_quote.def' => {
-            source => "trim_quote",
+        'rt49289.def' => {
+            source => "rt49289",
             params => "def",
             expect => <<'#13...........',
-    # space after quote will get trimmed
-    push @m, '
-all :: pure_all manifypods
-	' . $self->{NOECHO} . '$(NOOP)
-'
-      unless $self->{SKIPHASH}{'all'};
+use constant qw{ DEBUG 0 };
 #13...........
         },
 
-        'tso1.def' => {
-            source => "tso1",
+        'rt50702.def' => {
+            source => "rt50702",
             params => "def",
             expect => <<'#14...........',
-print 0 + '42 EUR';    # 42
+if (1) {
+    my $uid =
+         $ENV{'ORIG_LOGNAME'}
+      || $ENV{'LOGNAME'}
+      || $ENV{'REMOTE_USER'}
+      || 'foobar';
+}
+if (2) {
+    my $uid =
+      (      $ENV{'ORIG_LOGNAME'}
+          || $ENV{'LOGNAME'}
+          || $ENV{'REMOTE_USER'}
+          || 'foobar' );
+}
 #14...........
         },
 
-        'tso1.tso' => {
-            source => "tso1",
-            params => "tso",
+        'rt50702.rt50702' => {
+            source => "rt50702",
+            params => "rt50702",
             expect => <<'#15...........',
-print 0+ '42 EUR';    # 42
+if (1) {
+    my $uid
+      = $ENV{'ORIG_LOGNAME'}
+      || $ENV{'LOGNAME'}
+      || $ENV{'REMOTE_USER'}
+      || 'foobar';
+}
+if (2) {
+    my $uid
+      = (    $ENV{'ORIG_LOGNAME'}
+          || $ENV{'LOGNAME'}
+          || $ENV{'REMOTE_USER'}
+          || 'foobar' );
+}
 #15...........
         },
 
-        'tutor.def' => {
-            source => "tutor",
+        'rt68870.def' => {
+            source => "rt68870",
             params => "def",
             expect => <<'#16...........',
-#!/usr/bin/perl
-$y = shift || 5;
-for $i ( 1 .. 10 ) { $l[$i] = "T"; $w[$i] = 999999; }
-while (1) {
-    print "Name:";
-    $u = <STDIN>;
-    $t = 50;
-    $a = time;
-    for ( 0 .. 9 ) {
-        $x = "";
-        for ( 1 .. $y ) { $x .= chr( int( rand( 126 - 33 ) + 33 ) ); }
-        while ( $z ne $x ) {
-            print "\r\n$x\r\n";
-            $z = <STDIN>;
-            chomp($z);
-            $t -= 5;
-        }
-    }
-    $b = time;
-    $t -= ( $b - $a ) * 2;
-    $t = 0 - $t;
-    $z = 1;
-    @q = @l;
-    @p = @w;
-    print "You scored $t points\r\nTopTen\r\n";
-
-    for $i ( 1 .. 10 ) {
-        if ( $t < $p[$z] ) {
-            $l[$i] = $u;
-            chomp( $l[$i] );
-            $w[$i] = $t;
-            $t = 1000000;
-        }
-        else { $l[$i] = $q[$z]; $w[$i] = $p[$z]; $z++; }
-        print $l[$i], "\t", $w[$i], "\r\n";
-    }
-}
+s///r;
 #16...........
         },
 
-        'undoci1.def' => {
-            source => "undoci1",
+        'rt70747.def' => {
+            source => "rt70747",
             params => "def",
             expect => <<'#17...........',
-        $rinfo{deleteStyle} = [
-            -fill    => 'red',
-            -stipple => '@' . Tk->findINC('demos/images/grey.25'),
-        ];
+coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
+    [
+        map {
+            my $g = $_->as_hash;
+            $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ];
+            $g;
+        } @$_;
+    ]
+};
 #17...........
         },
 
-        'use1.def' => {
-            source => "use1",
-            params => "def",
+        'rt70747.rt70747' => {
+            source => "rt70747",
+            params => "rt70747",
             expect => <<'#18...........',
-# previously this caused an incorrect error message after '2.42'
-use lib "$Common::global::gInstallRoot/lib";
-use CGI 2.42 qw(fatalsToBrowser);
-use RRDs 1.000101;
-
-# the 0666 must expect an operator
-use constant MODE => do { 0666 & ( 0777 & ~umask ) };
-
-use IO::File ();
+coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
+  [
+    map {
+      my $g = $_->as_hash;
+      $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ];
+      $g;
+    } @$_;
+  ]
+};
 #18...........
         },
 
-        'use2.def' => {
-            source => "use2",
+        'rt74856.def' => {
+            source => "rt74856",
             params => "def",
             expect => <<'#19...........',
-# Keep the space before the '()' here:
-use Foo::Bar ();
-use Foo::Bar ();
-use Foo::Bar 1.0 ();
-use Foo::Bar qw(baz);
-use Foo::Bar 1.0 qw(baz);
+{
+    my $foo = '1';
+#<<< 
+my $bar = (test())
+ ? 'some value'
+ : undef;
+#>>> 
+    my $baz = 'something else';
+}
 #19...........
         },
 
-        'version1.def' => {
-            source => "version1",
+        'rt78156.def' => {
+            source => "rt78156",
             params => "def",
             expect => <<'#20...........',
-# VERSION statement unbroken, no semicolon added;
-our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r }
+package Some::Class 2.012;
 #20...........
         },
     };

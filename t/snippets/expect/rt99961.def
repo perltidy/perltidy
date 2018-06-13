@@ -1,0 +1,4 @@
+%thing = %{
+    print qq[blah1\n];
+    $b;
+};

@@ -1,0 +1,24 @@
+#!perl
+use strict;
+use warnings;
+
+use experimental 'signatures';
+
+sub reader ( $line_sep, $chomp ) {
+    return sub ( $fh, $out ) : prototype(*$) {
+        local $/ = $line_sep;
+        my $content = <$fh>;
+        return undef unless defined $content;
+        chomp $content if $chomp;
+        $$out .= $content;
+        return 1;
+    };
+}
+
+BEGIN {
+    *get_line = reader( "\n", 1 );
+}
+
+while ( get_line( STDIN, \my $buf ) ) {
+    print "Got: $buf\n";
+}

@@ -97,6 +97,7 @@ while ( $nend < $nstop ) {
     foreach my $n ( $nbeg .. $nend ) { push @tests, $rtests->[$n]; }
     my $ofile = "../snippets" . $file_count . ".t";
     make_snippet_t( $ofile, \@tests, $rparams, $rsources );
+    print "Now run a 'make test' from the top directory to check these\n";
 }
 
 sub make_snippet_t {

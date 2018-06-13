@@ -1,0 +1,1 @@
+use constant qw{ DEBUG 0 };

@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Apr  5 07:31:22 2018
+# Tue Jun 12 19:09:24 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -18,13 +18,9 @@ BEGIN {
     # SECTION 1: Parameter combinations #
     #####################################
     $rparams = {
-        'bar'   => "-bar",
-        'boc'   => "-boc",
-        'ce'    => "-cuddled-blocks",
-        'ce_wn' => <<'----------',
--cuddled-blocks
--wn
-----------
+        'bar' => "-bar",
+        'boc' => "-boc",
+        'ce'  => "-cuddled-blocks",
         'def' => "",
     };
 
@@ -32,6 +28,17 @@ BEGIN {
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'angle' => <<'----------',
+# This is an angle operator:
+@message_list =sort sort_algorithm < INDEX_FILE >;# angle operator
+
+# Not an angle operator:
+# Patched added in guess routine for this case:
+if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
+}
+
+----------
 
         'arrows1' => <<'----------',
 # remove spaces around arrows
@@ -171,21 +178,6 @@ elsif($value[0] =~ /^(b)$/ or $value[0] =~ /^(dbfile)$/)
 	$rebase_hash{$name} .= " $site";
 }
 ----------
-
-        'ce_wn1' => <<'----------',
-if ($BOLD_MATH) {
-    (
-        $labels, $comment,
-        join( '', ' < B > ', &make_math( $mode, '', '', $_ ), ' < /B>' )
-      )
-}
-else {
-    (
-        &process_math_in_latex( $mode, $math_style, $slevel, "\\mbox{$text}" ),
-        $after
-      )
-}
-----------
     };
 
     ##############################
@@ -193,53 +185,68 @@ else {
     ##############################
     $rtests = {
 
+        'angle.def' => {
+            source => "angle",
+            params => "def",
+            expect => <<'#1...........',
+# This is an angle operator:
+@message_list = sort sort_algorithm < INDEX_FILE >;    # angle operator
+
+# Not an angle operator:
+# Patched added in guess routine for this case:
+if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
+}
+
+#1...........
+        },
+
         'arrows1.def' => {
             source => "arrows1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 # remove spaces around arrows
 my $obj = Bio::Variation::AAChange->new;
 my $termcap = Term::Cap->Tgetent( { TERM => undef } );
-#1...........
+#2...........
         },
 
         'arrows2.def' => {
             source => "arrows2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 $_[0]->Blue->backColor(
     ( $_[0]->Blue->backColor == cl::Blue ) ? cl::LightBlue : cl::Blue );
-#2...........
+#3...........
         },
 
         'attrib1.def' => {
             source => "attrib1",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 sub be_careful () : locked method {
     my $self = shift;
 
     # ...
 }
-#3...........
+#4...........
         },
 
         'attrib2.def' => {
             source => "attrib2",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 sub witch
   ()  # prototype may be on new line, but cannot put line break within prototype
   : locked {
     print "and your little dog ";
 }
-#4...........
+#5...........
         },
 
         'attrib3.def' => {
             source => "attrib3",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 package Canine;
 
 package Dog;
@@ -262,34 +269,34 @@ BEGIN { *bar = \&X::foo; }
 
 package Z;
 sub Y::bar : locked;
-#5...........
+#6...........
         },
 
         'bar1.bar' => {
             source => "bar1",
             params => "bar",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 if (   $bigwasteofspace1 && $bigwasteofspace2
     || $bigwasteofspace3 && $bigwasteofspace4 ) {
 }
-#6...........
+#7...........
         },
 
         'bar1.def' => {
             source => "bar1",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 if (   $bigwasteofspace1 && $bigwasteofspace2
     || $bigwasteofspace3 && $bigwasteofspace4 )
 {
 }
-#7...........
+#8...........
         },
 
         'block1.def' => {
             source => "block1",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 # Some block tests
 print "start main running\n";
 die "main now dying\n";
@@ -303,13 +310,13 @@ BEGIN { $a = 18; print "2nd begin, a=$a\n" }
 CHECK { $a = 20; print "2nd check, a=$a\n" }
 END   { $a = 23; print "3rd end, a=$a\n" }
 
-#8...........
+#9...........
         },
 
         'boc1.boc' => {
             source => "boc1",
             params => "boc",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 # RT#98902
 # Running with -boc (break-at-old-comma-breakpoints) should not
 # allow forming a single line
@@ -320,26 +327,26 @@ my @bar = map {
         padding   => ( ' ' x $_ ),
     }
 } ( 0 .. 32 );
-#9...........
+#10...........
         },
 
         'boc1.def' => {
             source => "boc1",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 # RT#98902
 # Running with -boc (break-at-old-comma-breakpoints) should not
 # allow forming a single line
 my @bar =
   map { { number => $_, character => chr $_, padding => ( ' ' x $_ ), } }
   ( 0 .. 32 );
-#10...........
+#11...........
         },
 
         'boc2.boc' => {
             source => "boc2",
             params => "boc",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 my @list = (
     1,
     1, 1,
@@ -348,75 +355,75 @@ my @list = (
     1, 4, 6, 4, 1,
 );
 
-#11...........
+#12...........
         },
 
         'boc2.def' => {
             source => "boc2",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
-#12...........
+#13...........
         },
 
         'break1.def' => {
             source => "break1",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
     # break at ;
     $self->__print("*** Type 'p' now to show start up log\n")
       ;    # XXX add to banner?
-#13...........
+#14...........
         },
 
         'break2.def' => {
             source => "break2",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
         # break before the '->'
         ( $current_feature_item->children )[0]
           ->set( $current_feature->primary_tag );
         $sth->{'Database'}->{'xbase_tables'}->{ $parsed_sql->{'table'}[0] }
           ->field_type($_);
-#14...........
+#15...........
         },
 
         'break3.def' => {
             source => "break3",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
     # keep the anonymous hash block together:
     my $red_color = $widget->window->get_colormap->color_alloc(
         { red => 65000, green => 0, blue => 0 } );
-#15...........
+#16...........
         },
 
         'break4.def' => {
             source => "break4",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
         spawn( "$LINTIAN_ROOT/unpack/list-binpkg",
             "$LINTIAN_LAB/info/binary-packages", $v ) == 0
           or fail("cannot create binary package list");
-#16...........
+#17...........
         },
 
         'carat.def' => {
             source => "carat",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 my $a = ${^WARNING_BITS};
 @{^HOWDY_PARDNER} = ( 101, 102 );
 ${^W} = 1;
 $bb[$^]] = "bubba";
-#17...........
+#18...........
         },
 
         'ce1.ce' => {
             source => "ce1",
             params => "ce",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
 # test -ce with blank lines and comments between blocks
 if ( $value[0] =~ /^(\#)/ ) {    # skip any comment line
     last SWITCH;
@@ -436,13 +443,13 @@ if ( $value[0] =~ /^(\#)/ ) {    # skip any comment line
 } else {
     $rebase_hash{$name} .= " $site";
 }
-#18...........
+#19...........
         },
 
         'ce1.def' => {
             source => "ce1",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 # test -ce with blank lines and comments between blocks
 if ( $value[0] =~ /^(\#)/ ) {    # skip any comment line
     last SWITCH;
@@ -465,20 +472,6 @@ elsif ( $value[0] =~ /^(b)$/ or $value[0] =~ /^(dbfile)$/ )
 else {
     $rebase_hash{$name} .= " $site";
 }
-#19...........
-        },
-
-        'ce_wn1.ce_wn' => {
-            source => "ce_wn1",
-            params => "ce_wn",
-            expect => <<'#20...........',
-if ($BOLD_MATH) { (
-    $labels, $comment,
-    join( '', ' < B > ', &make_math( $mode, '', '', $_ ), ' < /B>' )
-) } else { (
-    &process_math_in_latex( $mode, $math_style, $slevel, "\\mbox{$text}" ),
-    $after
-) }
 #20...........
         },
     };

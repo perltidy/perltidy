@@ -1,0 +1,3 @@
+if ( @ARGV ~~ { map { $_ => 1 } qw(re restart reload) } ) { 
+    # CODE
+}

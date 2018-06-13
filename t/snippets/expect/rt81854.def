@@ -1,0 +1,2 @@
+return "this is a descriptive error message"
+  if $res->is_error or not length $data;

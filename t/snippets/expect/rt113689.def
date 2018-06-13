@@ -1,0 +1,6 @@
+$a = sub {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    }
+    else { print( $_[0], "\n" ); }
+};
