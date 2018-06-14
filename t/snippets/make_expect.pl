@@ -184,7 +184,9 @@ foreach my $basename (@olist) {
     my $tname = $opath . $basename;
     my $ename = $epath . $basename;
     if ( !-e $ename ) {
-        print "tmp/$basename is a new file\n";
+	my $new_file = "tmp/$basename";
+	push @new, $new_file;
+        print "$new_file is a new file\n";
         push @mv, "cp $tname $ename";
     }
     elsif ( compare( $ename, $tname ) ) {
@@ -243,14 +245,67 @@ EOM
 
     close RUN;
     system("chmod 0755 $runme");
+
+    if (@new) {
+        if (
+            ifyes(
+"You need to review the new tidied files. Do you want to look at them now? [Y/N]"
+            )
+          )
+        {
+            my $str = join " ", @new;
+            system("vim -R $str");
+        }
+    }
+
+    if ( -e $diff_file ) {
+        if (
+            ifyes(
+"There are differences between the old and new tidied results.\nDo you want to look at them now? [Y/N]"
+            )
+          )
+        {
+            system("vim -R $diff_file");
+        }
+    }
+
+
     my $diff_msg =
       -e $diff_file
       ? "Look at differences in '$diff_file'"
       : "no differences";
+
     print <<EOM;
 $diff_msg
-Look at any new results in tmp/ and then
-Enter ./$runme to move results from tmp/ to expect/ if results are acceptable
+If the differences and any new results look okay, then
+Enter ./$runme to move results from tmp/ to expect/ and make new .t files
 EOM
+}
+sub query {
+    my ($msg) = @_;
+    print $msg;
+    my $ans = <STDIN>;
+    chomp $ans;
+    #my $val=$ans;
+    return $ans;
+}
+sub ifyes {
+
+  # Updated to have default, which should be "Y" or "N"
+  my ($msg, $default)=@_;
+    my $count = 0;
+  ASK:
+    my $ans   = query($msg);
+    if ( defined($default) ) {
+        $ans = $default unless ($ans);
+    }
+    if    ( $ans =~ /^Y/i ) { return 1 }
+    elsif ( $ans =~ /^N/i ) { return 0 }
+    else {
+        $count++;
+        if ( $count > 6 ) { die "error count exceeded in ifyes\n" }
+        print STDERR "Please answer 'Y' or 'N'\n";
+        goto ASK;
+    }
 }
 

@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Tue Jun 12 19:09:24 2018
+# Thu Jun 14 13:29:34 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -26,7 +26,10 @@ BEGIN {
 -dac
 ----------
         'rt125506' => "-io",
-        'rt50702'  => <<'----------',
+        'rt18318'  => <<'----------',
+-nwrs='A'
+----------
+        'rt50702' => <<'----------',
 -wbb='='
 ----------
         'rt70747' => "-i=2",
@@ -109,6 +112,13 @@ my $t = '
 my $user_prefs = $ref_type eq 'SCALAR' ? _load_from_string( $profile ) : $ref_type eq 'ARRAY' ? _load_from_array( $profile ) : $ref_type eq 'HASH' ? _load_from_hash( $profile ) : _load_from_file( $profile );
 ----------
 
+        'rt18318' => <<'----------',
+# Class::Std attribute list
+# The token type of the first colon is 'A' so use -nwrs='A' to avoid space
+# after it
+my %rank_of : ATTR( :init_arg<starting_rank>  :get<rank>  :set<rank> );
+----------
+
         'rt27000' => <<'----------',
 print add( 3, 4 ), "\n";
 print add( 4, 3 ), "\n";
@@ -145,22 +155,6 @@ coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
     } @$_;
   ]
 };
-----------
-
-        'rt74856' => <<'----------',
-{
-my $foo = '1';
-#<<< 
-my $bar = (test())
- ? 'some value'
- : undef;
-#>>> 
-my $baz = 'something else';
-}
-----------
-
-        'rt78156' => <<'----------',
-package Some::Class 2.012;
 ----------
     };
 
@@ -306,10 +300,32 @@ my $user_prefs =
 #10...........
         },
 
+        'rt18318.def' => {
+            source => "rt18318",
+            params => "def",
+            expect => <<'#11...........',
+# Class::Std attribute list
+# The token type of the first colon is 'A' so use -nwrs='A' to avoid space
+# after it
+my %rank_of : ATTR( :init_arg<starting_rank>  :get<rank>  :set<rank> );
+#11...........
+        },
+
+        'rt18318.rt18318' => {
+            source => "rt18318",
+            params => "rt18318",
+            expect => <<'#12...........',
+# Class::Std attribute list
+# The token type of the first colon is 'A' so use -nwrs='A' to avoid space
+# after it
+my %rank_of :ATTR( :init_arg<starting_rank>  :get<rank>  :set<rank> );
+#12...........
+        },
+
         'rt27000.def' => {
             source => "rt27000",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#13...........',
 print add( 3, 4 ), "\n";
 print add( 4, 3 ), "\n";
 
@@ -319,29 +335,29 @@ sub add {
     die "$term1 > $term2" if $term1 > $term2;
     return $term1 + $term2;
 }
-#11...........
+#13...........
         },
 
         'rt31741.def' => {
             source => "rt31741",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#14...........',
 $msg //= 'World';
-#12...........
+#14...........
         },
 
         'rt49289.def' => {
             source => "rt49289",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#15...........',
 use constant qw{ DEBUG 0 };
-#13...........
+#15...........
         },
 
         'rt50702.def' => {
             source => "rt50702",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#16...........',
 if (1) {
     my $uid =
          $ENV{'ORIG_LOGNAME'}
@@ -356,13 +372,13 @@ if (2) {
           || $ENV{'REMOTE_USER'}
           || 'foobar' );
 }
-#14...........
+#16...........
         },
 
         'rt50702.rt50702' => {
             source => "rt50702",
             params => "rt50702",
-            expect => <<'#15...........',
+            expect => <<'#17...........',
 if (1) {
     my $uid
       = $ENV{'ORIG_LOGNAME'}
@@ -377,21 +393,21 @@ if (2) {
           || $ENV{'REMOTE_USER'}
           || 'foobar' );
 }
-#15...........
+#17...........
         },
 
         'rt68870.def' => {
             source => "rt68870",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#18...........',
 s///r;
-#16...........
+#18...........
         },
 
         'rt70747.def' => {
             source => "rt70747",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#19...........',
 coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
     [
         map {
@@ -401,13 +417,13 @@ coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
         } @$_;
     ]
 };
-#17...........
+#19...........
         },
 
         'rt70747.rt70747' => {
             source => "rt70747",
             params => "rt70747",
-            expect => <<'#18...........',
+            expect => <<'#20...........',
 coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
   [
     map {
@@ -417,30 +433,6 @@ coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
     } @$_;
   ]
 };
-#18...........
-        },
-
-        'rt74856.def' => {
-            source => "rt74856",
-            params => "def",
-            expect => <<'#19...........',
-{
-    my $foo = '1';
-#<<< 
-my $bar = (test())
- ? 'some value'
- : undef;
-#>>> 
-    my $baz = 'something else';
-}
-#19...........
-        },
-
-        'rt78156.def' => {
-            source => "rt78156",
-            params => "def",
-            expect => <<'#20...........',
-package Some::Class 2.012;
 #20...........
         },
     };

@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Tue Jun 12 19:09:24 2018
+# Thu Jun 14 13:29:34 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -24,13 +24,28 @@ BEGIN {
 -act=2
 ----------
         'rt98902' => "-boc",
-        'scl'     => "-scl=12",
     };
 
     ######################
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'rt74856' => <<'----------',
+{
+my $foo = '1';
+#<<< 
+my $bar = (test())
+ ? 'some value'
+ : undef;
+#>>> 
+my $baz = 'something else';
+}
+----------
+
+        'rt78156' => <<'----------',
+package Some::Class 2.012;
+----------
 
         'rt78764' => <<'----------',
 qr/3/ ~~ ['1234'] ? 1 : 0;
@@ -157,11 +172,6 @@ padding => ( ' ' x $_ ),
     # try -scl=12 to see '$returns' joined with the previous line
     $format = "format STDOUT =\n" . &format_line('Function:       @') . '$name' . "\n" . &format_line('Arguments:      @') . '$args' . "\n" . &format_line('Returns:        @') . '$returns' . "\n" . &format_line('             ~~ ^') . '$desc' . "\n.\n";
 ----------
-
-        'semicolon2' => <<'----------',
-	# will not add semicolon for this block type
-        $highest = List::Util::reduce { Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b }
-----------
     };
 
     ##############################
@@ -169,19 +179,43 @@ padding => ( ' ' x $_ ),
     ##############################
     $rtests = {
 
+        'rt74856.def' => {
+            source => "rt74856",
+            params => "def",
+            expect => <<'#1...........',
+{
+    my $foo = '1';
+#<<< 
+my $bar = (test())
+ ? 'some value'
+ : undef;
+#>>> 
+    my $baz = 'something else';
+}
+#1...........
+        },
+
+        'rt78156.def' => {
+            source => "rt78156",
+            params => "def",
+            expect => <<'#2...........',
+package Some::Class 2.012;
+#2...........
+        },
+
         'rt78764.def' => {
             source => "rt78764",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#3...........',
 qr/3/ ~~ ['1234'] ? 1 : 0;
 map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-#1...........
+#3...........
         },
 
         'rt79813.def' => {
             source => "rt79813",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#4...........',
 my %hash = (
     a => {
         bbbbbbbbb => {
@@ -189,113 +223,113 @@ my %hash = (
         },
     },
 );
-#2...........
+#4...........
         },
 
         'rt79947.def' => {
             source => "rt79947",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#5...........',
 try { croak "An Error!"; }
 catch ($error) {
     print STDERR $error . "\n";
 }
-#3...........
+#5...........
         },
 
         'rt80645.def' => {
             source => "rt80645",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#6...........',
 BEGIN { $^W = 1; }
 use warnings;
 use strict;
 @$ = 'test';
 print $#{$};
-#4...........
+#6...........
         },
 
         'rt81852.def' => {
             source => "rt81852",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#7...........',
 do {
     {
         next if ( $n % 2 );
         print $n, "\n";
     }
 } while ( $n++ < 10 );
-#5...........
+#7...........
         },
 
         'rt81852.rt81852' => {
             source => "rt81852",
             params => "rt81852",
-            expect => <<'#6...........',
+            expect => <<'#8...........',
 do {{
     next if ($n % 2);
     print $n, "\n";
 }} while ($n++ < 10);
-#6...........
+#8...........
         },
 
         'rt81854.def' => {
             source => "rt81854",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#9...........',
 return "this is a descriptive error message"
   if $res->is_error or not length $data;
-#7...........
+#9...........
         },
 
         'rt87502.def' => {
             source => "rt87502",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#10...........',
 if ( @ARGV ~~ { map { $_ => 1 } qw(re restart reload) } ) {
 
     # CODE
 }
-#8...........
+#10...........
         },
 
         'rt93197.def' => {
             source => "rt93197",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#11...........',
 $to = $to->{$_} ||= {} for @key;
 if   (1) { 2; }
 else     { 3; }
-#9...........
+#11...........
         },
 
         'rt94338.def' => {
             source => "rt94338",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#12...........',
 # for-loop in a parenthesized block-map triggered an error message
 map( {
         foreach my $item ( '0', '1' ) {
             print $item;
         }
 } qw(a b c) );
-#10...........
+#12...........
         },
 
         'rt95419.def' => {
             source => "rt95419",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#13...........',
 case "blah" => sub {
     { a => 1 }
 };
-#11...........
+#13...........
         },
 
         'rt95708.def' => {
             source => "rt95708",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#14...........',
 use strict;
 use JSON;
 my $ref = {
@@ -310,26 +344,26 @@ my $json2 = encode_json + {
     when    => time(),
     message => 'abc'
 };
-#12...........
+#14...........
         },
 
         'rt96021.def' => {
             source => "rt96021",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#15...........',
 $a->@*;
 $a->**;
 $a->$*;
 $a->&*;
 $a->%*;
 $a->$#*
-#13...........
+#15...........
         },
 
         'rt96101.def' => {
             source => "rt96101",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#16...........',
 # Example for rt.cpan.org #96101; Perltidy not properly formatting subroutine
 # references inside subroutine execution.
 
@@ -350,13 +384,13 @@ sub startup {
     );
 }
 
-#14...........
+#16...........
         },
 
         'rt98902.def' => {
             source => "rt98902",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#17...........',
 my %foo = (
     alpha => 1,
     beta  => 2,
@@ -366,13 +400,13 @@ my %foo = (
 my @bar =
   map { { number => $_, character => chr $_, padding => ( ' ' x $_ ), } }
   ( 0 .. 32 );
-#15...........
+#17...........
         },
 
         'rt98902.rt98902' => {
             source => "rt98902",
             params => "rt98902",
-            expect => <<'#16...........',
+            expect => <<'#18...........',
 my %foo = (
     alpha => 1,
     beta  => 2, gamma => 3,
@@ -385,24 +419,24 @@ my @bar = map {
         padding   => ( ' ' x $_ ),
     }
 } ( 0 .. 32 );
-#16...........
+#18...........
         },
 
         'rt99961.def' => {
             source => "rt99961",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#19...........',
 %thing = %{
     print qq[blah1\n];
     $b;
 };
-#17...........
+#19...........
         },
 
         'scl.def' => {
             source => "scl",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#20...........',
     # try -scl=12 to see '$returns' joined with the previous line
     $format =
         "format STDOUT =\n"
@@ -411,31 +445,6 @@ my @bar = map {
       . &format_line('Returns:        @')
       . '$returns' . "\n"
       . &format_line('             ~~ ^') . '$desc' . "\n.\n";
-#18...........
-        },
-
-        'scl.scl' => {
-            source => "scl",
-            params => "scl",
-            expect => <<'#19...........',
-    # try -scl=12 to see '$returns' joined with the previous line
-    $format =
-        "format STDOUT =\n"
-      . &format_line('Function:       @') . '$name' . "\n"
-      . &format_line('Arguments:      @') . '$args' . "\n"
-      . &format_line('Returns:        @') . '$returns' . "\n"
-      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
-#19...........
-        },
-
-        'semicolon2.def' => {
-            source => "semicolon2",
-            params => "def",
-            expect => <<'#20...........',
-        # will not add semicolon for this block type
-        $highest = List::Util::reduce {
-            Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b
-        }
 #20...........
         },
     };

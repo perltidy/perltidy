@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Tue Jun 12 19:09:24 2018
+# Thu Jun 14 13:29:34 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -19,6 +19,7 @@ BEGIN {
     #####################################
     $rparams = {
         'def'    => "",
+        'scl'    => "-scl=12",
         'sil'    => "-sil=0",
         'style1' => <<'----------',
 -b
@@ -115,6 +116,16 @@ BEGIN {
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'scl' => <<'----------',
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format = "format STDOUT =\n" . &format_line('Function:       @') . '$name' . "\n" . &format_line('Arguments:      @') . '$args' . "\n" . &format_line('Returns:        @') . '$returns' . "\n" . &format_line('             ~~ ^') . '$desc' . "\n.\n";
+----------
+
+        'semicolon2' => <<'----------',
+	# will not add semicolon for this block type
+        $highest = List::Util::reduce { Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b }
+----------
 
         'side_comments1' => <<'----------',
     # side comments at different indentation levels should not be aligned
@@ -358,36 +369,6 @@ sub doit{print"Hello sub\n";}package __END__;
 sub doit{print"Hello __END__\n";}package __DATA__;
 sub doit{print"Hello __DATA__\n";}
 ----------
-
-        'sub2' => <<'----------',
-my $selector;
-
-# leading atrribute separator:
-$a = 
-  sub  
-  : locked {
-    print "Hello, World!\n";
-  };
-$a->();
-
-# colon as both ?/: and attribute separator
-$a = $selector
-  ? sub  : locked {
-    print "Hello, World!\n";
-  }
-  : sub : locked {
-    print "GOODBYE!\n";
-  };
-$a->();
-----------
-
-        'switch1' => <<'----------',
-sub classify_digit($digit)
-  { switch($digit)
-    { case 0 { return 'zero' } case [ 2, 4, 6, 8 ]{ return 'even' }
-        case [ 1, 3, 4, 7, 9 ]{ return 'odd' } case /[A-F]/i { return 'hex' } }
-  }
-----------
     };
 
     ##############################
@@ -395,10 +376,35 @@ sub classify_digit($digit)
     ##############################
     $rtests = {
 
+        'scl.scl' => {
+            source => "scl",
+            params => "scl",
+            expect => <<'#1...........',
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format =
+        "format STDOUT =\n"
+      . &format_line('Function:       @') . '$name' . "\n"
+      . &format_line('Arguments:      @') . '$args' . "\n"
+      . &format_line('Returns:        @') . '$returns' . "\n"
+      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
+#1...........
+        },
+
+        'semicolon2.def' => {
+            source => "semicolon2",
+            params => "def",
+            expect => <<'#2...........',
+        # will not add semicolon for this block type
+        $highest = List::Util::reduce {
+            Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b
+        }
+#2...........
+        },
+
         'side_comments1.def' => {
             source => "side_comments1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#3...........',
     # side comments at different indentation levels should not be aligned
     {
         {
@@ -409,13 +415,13 @@ sub classify_digit($digit)
             }    # end level 3
         }    # end level 2
     }    # end level 1
-#1...........
+#3...........
         },
 
         'sil1.def' => {
             source => "sil1",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#4...........',
 #############################################################
         # This will walk to the left because of bad -sil guess
       SKIP: {
@@ -429,13 +435,13 @@ sub classify_digit($digit)
           or ov_method mycan( $package, '(bool' ),     $package
           or ov_method mycan( $package, '(nomethod' ), $package;
 
-#2...........
+#4...........
         },
 
         'sil1.sil' => {
             source => "sil1",
             params => "sil",
-            expect => <<'#3...........',
+            expect => <<'#5...........',
 #############################################################
 # This will walk to the left because of bad -sil guess
 SKIP: {
@@ -449,13 +455,13 @@ SKIP: {
   or ov_method mycan( $package, '(bool' ),     $package
   or ov_method mycan( $package, '(nomethod' ), $package;
 
-#3...........
+#5...........
         },
 
         'slashslash.def' => {
             source => "slashslash",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#6...........',
 $home = $ENV{HOME} // $ENV{LOGDIR} // ( getpwuid($<) )[7]
   // die "You're homeless!\n";
 defined( $x // $y );
@@ -463,13 +469,13 @@ $version = 'v' . join '.', map ord, split //, $version->PV;
 foreach ( split( //, $lets ) )  { }
 foreach ( split( //, $input ) ) { }
 'xyz' =~ //;
-#4...........
+#6...........
         },
 
         'smart.def' => {
             source => "smart",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#7...........',
 \&foo !~~ \&foo;
 \&foo ~~ \&foo;
 \&foo ~~ \&foo;
@@ -582,13 +588,13 @@ qr/3/                  ~~ 12345;
 "foo"                  ~~ %hash;
 %hash                  ~~ /bar/;
 /bar/                  ~~ %hash;
-#5...........
+#7...........
         },
 
         'space1.def' => {
             source => "space1",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#8...........',
     # We usually want a space at '} (', for example:
     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
 
@@ -597,60 +603,60 @@ qr/3/                  ~~ 12345;
 
     # remove unwanted spaces after $ and -> here
     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
-#6...........
+#8...........
         },
 
         'space2.def' => {
             source => "space2",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#9...........',
 # space before this opening paren
 for $i ( 0 .. 20 ) { }
 
 # retain any space between '-' and bare word
 $myhash{ USER-NAME } = 'steve';
-#7...........
+#9...........
         },
 
         'space3.def' => {
             source => "space3",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#10...........',
 # Treat newline as a whitespace. Otherwise, we might combine
 # 'Send' and '-recipients' here
 my $msg = new Fax::Send
   -recipients => $to,
   -data       => $data;
-#8...........
+#10...........
         },
 
         'space4.def' => {
             source => "space4",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#11...........',
 # first prototype line will cause space between 'redirect' and '(' to close
 sub html::redirect($);    #<-- temporary prototype;
 use html;
 print html::redirect('http://www.glob.com.au/');
-#9...........
+#11...........
         },
 
         'space5.def' => {
             source => "space5",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#12...........',
 # first prototype line commented out; space after 'redirect' remains
 #sub html::redirect($);        #<-- temporary prototype;
 use html;
 print html::redirect ('http://www.glob.com.au/');
 
-#10...........
+#12...........
         },
 
         'structure1.def' => {
             source => "structure1",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#13...........',
 push @contents,
   $c->table(
     { -width => '100%' },
@@ -669,13 +675,13 @@ push @contents,
         )
     )
   );
-#11...........
+#13...........
         },
 
         'style.def' => {
             source => "style",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#14...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -721,13 +727,13 @@ sub arrange_topframe {
     }
 }
 
-#12...........
+#14...........
         },
 
         'style.style1' => {
             source => "style",
             params => "style1",
-            expect => <<'#13...........',
+            expect => <<'#15...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
   my (@order) = (
@@ -766,13 +772,13 @@ sub arrange_topframe {
   }
 }
 
-#13...........
+#15...........
         },
 
         'style.style2' => {
             source => "style",
             params => "style2",
-            expect => <<'#14...........',
+            expect => <<'#16...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -814,13 +820,13 @@ sub arrange_topframe {
     }
 }
 
-#14...........
+#16...........
         },
 
         'style.style3' => {
             source => "style",
             params => "style3",
-            expect => <<'#15...........',
+            expect => <<'#17...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -858,13 +864,13 @@ sub arrange_topframe {
     }
 } ## end sub arrange_topframe
 
-#15...........
+#17...........
         },
 
         'style.style4' => {
             source => "style",
             params => "style4",
-            expect => <<'#16...........',
+            expect => <<'#18...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -906,13 +912,13 @@ sub arrange_topframe {
     }
 }
 
-#16...........
+#18...........
         },
 
         'style.style5' => {
             source => "style",
             params => "style5",
-            expect => <<'#17...........',
+            expect => <<'#19...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe
 {
@@ -958,13 +964,13 @@ sub arrange_topframe
     }
 }
 
-#17...........
+#19...........
         },
 
         'sub1.def' => {
             source => "sub1",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#20...........',
 my::doit();
 join::doit();
 for::doit();
@@ -993,46 +999,6 @@ sub doit { print "Hello __END__\n"; }
 
 package __DATA__;
 sub doit { print "Hello __DATA__\n"; }
-#18...........
-        },
-
-        'sub2.def' => {
-            source => "sub2",
-            params => "def",
-            expect => <<'#19...........',
-my $selector;
-
-# leading atrribute separator:
-$a = sub
-  : locked {
-    print "Hello, World!\n";
-  };
-$a->();
-
-# colon as both ?/: and attribute separator
-$a = $selector
-  ? sub : locked {
-    print "Hello, World!\n";
-  }
-  : sub : locked {
-    print "GOODBYE!\n";
-  };
-$a->();
-#19...........
-        },
-
-        'switch1.def' => {
-            source => "switch1",
-            params => "def",
-            expect => <<'#20...........',
-sub classify_digit($digit) {
-    switch ($digit) {
-        case 0 { return 'zero' }
-        case [ 2, 4, 6, 8 ]{ return 'even' }
-        case [ 1, 3, 4, 7, 9 ]{ return 'odd' }
-        case /[A-F]/i { return 'hex' }
-    }
-}
 #20...........
         },
     };

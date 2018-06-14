@@ -1,0 +1,4 @@
+# Class::Std attribute list
+# The token type of the first colon is 'A' so use -nwrs='A' to avoid space
+# after it
+my %rank_of :ATTR( :init_arg<starting_rank>  :get<rank>  :set<rank> );

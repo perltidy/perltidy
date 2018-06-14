@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Tue Jun 12 19:09:24 2018
+# Thu Jun 14 13:29:35 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -27,17 +27,42 @@ BEGIN {
 -pt=2
 -sbt=2
 ----------
-        'vtc' => <<'----------',
--sbvtc=2
--bvtc=2
--pvtc=2
-----------
     };
 
     ######################
     # SECTION 2: Sources #
     ######################
     $rsources = {
+
+        'sub2' => <<'----------',
+my $selector;
+
+# leading atrribute separator:
+$a = 
+  sub  
+  : locked {
+    print "Hello, World!\n";
+  };
+$a->();
+
+# colon as both ?/: and attribute separator
+$a = $selector
+  ? sub  : locked {
+    print "Hello, World!\n";
+  }
+  : sub : locked {
+    print "GOODBYE!\n";
+  };
+$a->();
+----------
+
+        'switch1' => <<'----------',
+sub classify_digit($digit)
+  { switch($digit)
+    { case 0 { return 'zero' } case [ 2, 4, 6, 8 ]{ return 'even' }
+        case [ 1, 3, 4, 7, 9 ]{ return 'odd' } case /[A-F]/i { return 'hex' } }
+  }
+----------
 
         'syntax1' => <<'----------',
 # Caused trouble:
@@ -167,16 +192,6 @@ sub Restore {
             'The Shire',  undef],
         );
 ----------
-
-        'vtc2' => <<'----------',
-    ok(
-        $s->call(
-            SOAP::Data->name('getStateName')
-              ->attr( { xmlns => 'urn:/My/Examples' } ),
-            1
-        )->result eq 'Alabama'
-    );
-----------
     };
 
     ##############################
@@ -184,28 +199,68 @@ sub Restore {
     ##############################
     $rtests = {
 
+        'sub2.def' => {
+            source => "sub2",
+            params => "def",
+            expect => <<'#1...........',
+my $selector;
+
+# leading atrribute separator:
+$a = sub
+  : locked {
+    print "Hello, World!\n";
+  };
+$a->();
+
+# colon as both ?/: and attribute separator
+$a = $selector
+  ? sub : locked {
+    print "Hello, World!\n";
+  }
+  : sub : locked {
+    print "GOODBYE!\n";
+  };
+$a->();
+#1...........
+        },
+
+        'switch1.def' => {
+            source => "switch1",
+            params => "def",
+            expect => <<'#2...........',
+sub classify_digit($digit) {
+    switch ($digit) {
+        case 0 { return 'zero' }
+        case [ 2, 4, 6, 8 ]{ return 'even' }
+        case [ 1, 3, 4, 7, 9 ]{ return 'odd' }
+        case /[A-F]/i { return 'hex' }
+    }
+}
+#2...........
+        },
+
         'syntax1.def' => {
             source => "syntax1",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#3...........',
 # Caused trouble:
 print $x **2;
-#1...........
+#3...........
         },
 
         'syntax2.def' => {
             source => "syntax2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#4...........',
 # ? was taken as pattern
 my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
-#2...........
+#4...........
         },
 
         'ternary1.def' => {
             source => "ternary1",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#5...........',
 my $flags =
     ( $_ & 1 )
   ? ( $_ & 4 )
@@ -213,13 +268,13 @@ my $flags =
       : $THRf_ZOMBIE
   : ( $_ & 4 ) ? $THRf_R_DETACHED
   :              $THRf_R_JOINABLE;
-#3...........
+#5...........
         },
 
         'ternary2.def' => {
             source => "ternary2",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#6...........',
 my $a =
     ($b)
   ? ($c)
@@ -233,13 +288,13 @@ my $a =
       : $g2
   : ($h) ? $h1
   :        $h2;
-#4...........
+#6...........
         },
 
         'tick1.def' => {
             source => "tick1",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#7...........',
 sub a'this { $p'u'a = "mooo\n"; print $p::u::a; }
 a::this();       # print "mooo"
 print $p'u'a;    # print "mooo"
@@ -253,42 +308,42 @@ $a'that->();     # print "wwoo"
 $a'that  = a'that();
 $p::t::u = "booo\n";
 $a'that->();     # print "booo"
-#5...........
+#7...........
         },
 
         'trim_quote.def' => {
             source => "trim_quote",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#8...........',
     # space after quote will get trimmed
     push @m, '
 all :: pure_all manifypods
 	' . $self->{NOECHO} . '$(NOOP)
 '
       unless $self->{SKIPHASH}{'all'};
-#6...........
+#8...........
         },
 
         'tso1.def' => {
             source => "tso1",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#9...........',
 print 0 + '42 EUR';    # 42
-#7...........
+#9...........
         },
 
         'tso1.tso' => {
             source => "tso1",
             params => "tso",
-            expect => <<'#8...........',
+            expect => <<'#10...........',
 print 0+ '42 EUR';    # 42
-#8...........
+#10...........
         },
 
         'tutor.def' => {
             source => "tutor",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#11...........',
 #!/usr/bin/perl
 $y = shift || 5;
 for $i ( 1 .. 10 ) { $l[$i] = "T"; $w[$i] = 999999; }
@@ -326,24 +381,24 @@ while (1) {
         print $l[$i], "\t", $w[$i], "\r\n";
     }
 }
-#9...........
+#11...........
         },
 
         'undoci1.def' => {
             source => "undoci1",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#12...........',
         $rinfo{deleteStyle} = [
             -fill    => 'red',
             -stipple => '@' . Tk->findINC('demos/images/grey.25'),
         ];
-#10...........
+#12...........
         },
 
         'use1.def' => {
             source => "use1",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#13...........',
 # previously this caused an incorrect error message after '2.42'
 use lib "$Common::global::gInstallRoot/lib";
 use CGI 2.42 qw(fatalsToBrowser);
@@ -353,44 +408,44 @@ use RRDs 1.000101;
 use constant MODE => do { 0666 & ( 0777 & ~umask ) };
 
 use IO::File ();
-#11...........
+#13...........
         },
 
         'use2.def' => {
             source => "use2",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#14...........',
 # Keep the space before the '()' here:
 use Foo::Bar ();
 use Foo::Bar ();
 use Foo::Bar 1.0 ();
 use Foo::Bar qw(baz);
 use Foo::Bar 1.0 qw(baz);
-#12...........
+#14...........
         },
 
         'version1.def' => {
             source => "version1",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#15...........',
 # VERSION statement unbroken, no semicolon added;
 our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r }
-#13...........
+#15...........
         },
 
         'version2.def' => {
             source => "version2",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#16...........',
 # On one line so MakeMaker will see it.
 require Exporter; our $VERSION = $Exporter::VERSION;
-#14...........
+#16...........
         },
 
         'vert.def' => {
             source => "vert",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#17...........',
 # if $w->vert is tokenized as type 'U' then the ? will start a quote
 # and an error will occur.
 sub vert {
@@ -399,13 +454,13 @@ sub vert {
 sub Restore {
     $w->vert ? $w->delta_width(0) : $w->delta_height(0);
 }
-#15...........
+#17...........
         },
 
         'vmll.def' => {
             source => "vmll",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#18...........',
     # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
     # in length, which is what vmll does
     BEGIN {
@@ -416,13 +471,13 @@ sub Restore {
     This has the comma on the next line exception {
         Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
     },
-#16...........
+#18...........
         },
 
         'vmll.vmll' => {
             source => "vmll",
             params => "vmll",
-            expect => <<'#17...........',
+            expect => <<'#19...........',
     # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
     # in length, which is what vmll does
     BEGIN {is_deeply(\@init_metas_called, [1]) || diag(Dumper(\@init_metas_called))}
@@ -430,13 +485,13 @@ sub Restore {
     This has the comma on the next line exception {
         Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
     },
-#17...........
+#19...........
         },
 
         'vtc1.def' => {
             source => "vtc1",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#20...........',
 @lol = (
     [
         'Dr. Watson', undef,    '221b', 'Baker St.',
@@ -449,36 +504,6 @@ sub Restore {
         'The Shire',  undef
     ],
 );
-#18...........
-        },
-
-        'vtc1.vtc' => {
-            source => "vtc1",
-            params => "vtc",
-            expect => <<'#19...........',
-@lol = (
-    [
-        'Dr. Watson', undef,    '221b', 'Baker St.',
-        undef,        'London', 'NW1',  undef,
-        'England',    undef ],
-    [
-        'Sam Gamgee', undef,      undef, 'Bagshot Row',
-        undef,        'Hobbiton', undef, undef,
-        'The Shire',  undef ], );
-#19...........
-        },
-
-        'vtc2.def' => {
-            source => "vtc2",
-            params => "def",
-            expect => <<'#20...........',
-    ok(
-        $s->call(
-            SOAP::Data->name('getStateName')
-              ->attr( { xmlns => 'urn:/My/Examples' } ),
-            1
-        )->result eq 'Alabama'
-    );
 #20...........
         },
     };
