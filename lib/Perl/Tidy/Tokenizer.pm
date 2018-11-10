@@ -111,6 +111,7 @@ use vars qw{
   @opening_brace_names
   @closing_brace_names
   %is_keyword_taking_list
+  %is_keyword_taking_optional_args
   %is_q_qq_qw_qx_qr_s_y_tr_m
 };
 
@@ -1787,7 +1788,14 @@ sub prepare_for_a_new_file {
         '/' => sub {
             my $is_pattern;
 
-            if ( $expecting == UNKNOWN ) {    # indeterminate, must guess..
+	    # a pattern cannot follow certain keywords which take optional
+	    # arguments, like 'shift' and 'pop'. See also '?'. 
+            if (   $last_nonblank_type eq 'k'
+                && $is_keyword_taking_optional_args{$last_nonblank_token} )
+            {
+                $is_pattern = 0;
+            }
+            elsif ( $expecting == UNKNOWN ) {    # indeterminate, must guess..
                 my $msg;
                 ( $is_pattern, $msg ) =
                   guess_if_pattern_or_division( $i, $rtokens, $rtoken_map,
@@ -2016,7 +2024,15 @@ sub prepare_for_a_new_file {
 
             my $is_pattern;
 
-            if ( $expecting == UNKNOWN ) {
+            # Patch for rt #126965
+	    # a pattern cannot follow certain keywords which take optional
+	    # arguments, like 'shift' and 'pop'. See also '/'. 
+            if (   $last_nonblank_type eq 'k'
+                && $is_keyword_taking_optional_args{$last_nonblank_token} )
+            {
+                $is_pattern = 0;
+            }
+            elsif ( $expecting == UNKNOWN ) {
 
                 my $msg;
                 ( $is_pattern, $msg ) =
@@ -4287,14 +4303,12 @@ sub operator_expected {
     # no operator after many keywords, such as "die", "warn", etc
     elsif ( $expecting_term_token{$last_nonblank_token} ) {
 
-        # patch for dor.t (defined or).
-        # perl functions which may be unary operators
-        # TODO: This list is incomplete, and these should be put
-        # into a hash.
+        # // may follow perl functions which may be unary operators
+        # see test file dor.t (defined or);
         if (   $tok eq '/'
             && $next_type eq '/'
             && $last_nonblank_type eq 'k'
-            && $last_nonblank_token =~ /^eof|undef|shift|pop$/ )
+            && $is_keyword_taking_optional_args{$last_nonblank_token} )
         {
             $op_expected = OPERATOR;
         }
@@ -7842,6 +7856,20 @@ BEGIN {
     );
     @is_keyword_taking_list{@keyword_taking_list} =
       (1) x scalar(@keyword_taking_list);
+
+    # perl functions which may be unary operators
+    my @keyword_taking_optional_args = qw(
+      chomp
+      eof
+      eval
+      lc
+      pop
+      shift
+      uc
+      undef
+    );
+    @is_keyword_taking_optional_args{@keyword_taking_optional_args} = 
+      (1) x scalar(@keyword_taking_optional_args);
 
     # These are not used in any way yet
     #    my @unused_keywords = qw(

@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Jun 14 13:29:34 2018
+# Sat Nov 10 08:48:23 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -14,11 +14,12 @@ my $rtests;
 
 BEGIN {
 
-    #####################################
-    # SECTION 1: Parameter combinations #
-    #####################################
+    ###########################################
+    # BEGIN SECTION 1: Parameter combinations #
+    ###########################################
     $rparams = {
         'def'     => "",
+        'rt70747' => "-i=2",
         'rt81852' => <<'----------',
 -wn
 -act=2
@@ -26,10 +27,20 @@ BEGIN {
         'rt98902' => "-boc",
     };
 
-    ######################
-    # SECTION 2: Sources #
-    ######################
+    ############################
+    # BEGIN SECTION 2: Sources #
+    ############################
     $rsources = {
+
+        'rt70747' => <<'----------',
+coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
+  [ map {
+      my $g = $_->as_hash;
+      $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ]; $g;
+    } @$_;
+  ]
+};
+----------
 
         'rt74856' => <<'----------',
 {
@@ -167,22 +178,33 @@ padding => ( ' ' x $_ ),
         'rt99961' => <<'----------',
 %thing = %{ print qq[blah1\n]; $b; };
 ----------
-
-        'scl' => <<'----------',
-    # try -scl=12 to see '$returns' joined with the previous line
-    $format = "format STDOUT =\n" . &format_line('Function:       @') . '$name' . "\n" . &format_line('Arguments:      @') . '$args' . "\n" . &format_line('Returns:        @') . '$returns' . "\n" . &format_line('             ~~ ^') . '$desc' . "\n.\n";
-----------
     };
 
-    ##############################
-    # SECTION 3: Expected output #
-    ##############################
+    ####################################
+    # BEGIN SECTION 3: Expected output #
+    ####################################
     $rtests = {
+
+        'rt70747.rt70747' => {
+            source => "rt70747",
+            params => "rt70747",
+            expect => <<'#1...........',
+coerce Q2RawStatGroupArray, from ArrayRef [Q2StatGroup], via {
+  [
+    map {
+      my $g = $_->as_hash;
+      $g->{stats} = [ map { scalar $_->as_array } @{ $g->{stats} } ];
+      $g;
+    } @$_;
+  ]
+};
+#1...........
+        },
 
         'rt74856.def' => {
             source => "rt74856",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 {
     my $foo = '1';
 #<<< 
@@ -192,30 +214,30 @@ my $bar = (test())
 #>>> 
     my $baz = 'something else';
 }
-#1...........
+#2...........
         },
 
         'rt78156.def' => {
             source => "rt78156",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 package Some::Class 2.012;
-#2...........
+#3...........
         },
 
         'rt78764.def' => {
             source => "rt78764",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 qr/3/ ~~ ['1234'] ? 1 : 0;
 map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-#3...........
+#4...........
         },
 
         'rt79813.def' => {
             source => "rt79813",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 my %hash = (
     a => {
         bbbbbbbbb => {
@@ -223,113 +245,113 @@ my %hash = (
         },
     },
 );
-#4...........
+#5...........
         },
 
         'rt79947.def' => {
             source => "rt79947",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 try { croak "An Error!"; }
 catch ($error) {
     print STDERR $error . "\n";
 }
-#5...........
+#6...........
         },
 
         'rt80645.def' => {
             source => "rt80645",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 BEGIN { $^W = 1; }
 use warnings;
 use strict;
 @$ = 'test';
 print $#{$};
-#6...........
+#7...........
         },
 
         'rt81852.def' => {
             source => "rt81852",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 do {
     {
         next if ( $n % 2 );
         print $n, "\n";
     }
 } while ( $n++ < 10 );
-#7...........
+#8...........
         },
 
         'rt81852.rt81852' => {
             source => "rt81852",
             params => "rt81852",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
 do {{
     next if ($n % 2);
     print $n, "\n";
 }} while ($n++ < 10);
-#8...........
+#9...........
         },
 
         'rt81854.def' => {
             source => "rt81854",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 return "this is a descriptive error message"
   if $res->is_error or not length $data;
-#9...........
+#10...........
         },
 
         'rt87502.def' => {
             source => "rt87502",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 if ( @ARGV ~~ { map { $_ => 1 } qw(re restart reload) } ) {
 
     # CODE
 }
-#10...........
+#11...........
         },
 
         'rt93197.def' => {
             source => "rt93197",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 $to = $to->{$_} ||= {} for @key;
 if   (1) { 2; }
 else     { 3; }
-#11...........
+#12...........
         },
 
         'rt94338.def' => {
             source => "rt94338",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 # for-loop in a parenthesized block-map triggered an error message
 map( {
         foreach my $item ( '0', '1' ) {
             print $item;
         }
 } qw(a b c) );
-#12...........
+#13...........
         },
 
         'rt95419.def' => {
             source => "rt95419",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 case "blah" => sub {
     { a => 1 }
 };
-#13...........
+#14...........
         },
 
         'rt95708.def' => {
             source => "rt95708",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 use strict;
 use JSON;
 my $ref = {
@@ -344,26 +366,26 @@ my $json2 = encode_json + {
     when    => time(),
     message => 'abc'
 };
-#14...........
+#15...........
         },
 
         'rt96021.def' => {
             source => "rt96021",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 $a->@*;
 $a->**;
 $a->$*;
 $a->&*;
 $a->%*;
 $a->$#*
-#15...........
+#16...........
         },
 
         'rt96101.def' => {
             source => "rt96101",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # Example for rt.cpan.org #96101; Perltidy not properly formatting subroutine
 # references inside subroutine execution.
 
@@ -384,13 +406,13 @@ sub startup {
     );
 }
 
-#16...........
+#17...........
         },
 
         'rt98902.def' => {
             source => "rt98902",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 my %foo = (
     alpha => 1,
     beta  => 2,
@@ -400,13 +422,13 @@ my %foo = (
 my @bar =
   map { { number => $_, character => chr $_, padding => ( ' ' x $_ ), } }
   ( 0 .. 32 );
-#17...........
+#18...........
         },
 
         'rt98902.rt98902' => {
             source => "rt98902",
             params => "rt98902",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
 my %foo = (
     alpha => 1,
     beta  => 2, gamma => 3,
@@ -419,32 +441,17 @@ my @bar = map {
         padding   => ( ' ' x $_ ),
     }
 } ( 0 .. 32 );
-#18...........
+#19...........
         },
 
         'rt99961.def' => {
             source => "rt99961",
             params => "def",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 %thing = %{
     print qq[blah1\n];
     $b;
 };
-#19...........
-        },
-
-        'scl.def' => {
-            source => "scl",
-            params => "def",
-            expect => <<'#20...........',
-    # try -scl=12 to see '$returns' joined with the previous line
-    $format =
-        "format STDOUT =\n"
-      . &format_line('Function:       @') . '$name' . "\n"
-      . &format_line('Arguments:      @') . '$args' . "\n"
-      . &format_line('Returns:        @')
-      . '$returns' . "\n"
-      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
 #20...........
         },
     };
@@ -452,6 +459,10 @@ my @bar = map {
     my $ntests = 0 + keys %{$rtests};
     plan tests => $ntests;
 }
+
+###############
+# EXECUTE TESTS
+###############
 
 foreach my $key ( sort keys %{$rtests} ) {
     my $output;

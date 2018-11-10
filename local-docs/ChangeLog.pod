@@ -2,6 +2,10 @@
 
 =head2 2018 02 20.01
 
+  - Fixed RT #126965, in which a ternary operator was misparsed if immediately
+    following a function call without arguments, such as: 
+      my $restrict_customer = shift ? 1 : 0;
+
   - Fixed RT #125012: bug in -mangle --delete-all-comments
     A needed blank space bareword tokens was being removed when comments were
     deleted

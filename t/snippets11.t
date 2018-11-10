@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Jun 14 13:29:35 2018
+# Sat Nov 10 08:48:23 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -14,9 +14,9 @@ my $rtests;
 
 BEGIN {
 
-    #####################################
-    # SECTION 1: Parameter combinations #
-    #####################################
+    ###########################################
+    # BEGIN SECTION 1: Parameter combinations #
+    ###########################################
     $rparams = {
         'def'  => "",
         'tso'  => "-tso",
@@ -29,10 +29,28 @@ BEGIN {
 ----------
     };
 
-    ######################
-    # SECTION 2: Sources #
-    ######################
+    ############################
+    # BEGIN SECTION 2: Sources #
+    ############################
     $rsources = {
+
+        'sub1' => <<'----------',
+my::doit();
+join::doit();
+for::doit();
+sub::doit();
+package::doit();
+__END__::doit();
+__DATA__::doit();
+package my;
+sub doit{print"Hello My\n";}package join;
+sub doit{print"Hello Join\n";}package for;
+sub doit{print"Hello for\n";}package package;
+sub doit{print"Hello package\n";}package sub;
+sub doit{print"Hello sub\n";}package __END__;
+sub doit{print"Hello __END__\n";}package __DATA__;
+sub doit{print"Hello __DATA__\n";}
+----------
 
         'sub2' => <<'----------',
 my $selector;
@@ -180,29 +198,52 @@ sub Restore {
     This has the comma on the next line
     exception {Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)},
 ----------
-
-        'vtc1' => <<'----------',
-@lol = (
-        [   'Dr. Watson', undef,    '221b', 'Baker St.',
-            undef,        'London', 'NW1',  undef,
-            'England',    undef
-        ],
-        [   'Sam Gamgee', undef,      undef, 'Bagshot Row',
-            undef,        'Hobbiton', undef, undef,
-            'The Shire',  undef],
-        );
-----------
     };
 
-    ##############################
-    # SECTION 3: Expected output #
-    ##############################
+    ####################################
+    # BEGIN SECTION 3: Expected output #
+    ####################################
     $rtests = {
+
+        'sub1.def' => {
+            source => "sub1",
+            params => "def",
+            expect => <<'#1...........',
+my::doit();
+join::doit();
+for::doit();
+sub::doit();
+package::doit();
+__END__::doit();
+__DATA__::doit();
+
+package my;
+sub doit { print "Hello My\n"; }
+
+package join;
+sub doit { print "Hello Join\n"; }
+
+package for;
+sub doit { print "Hello for\n"; }
+
+package package;
+sub doit { print "Hello package\n"; }
+
+package sub;
+sub doit { print "Hello sub\n"; }
+
+package __END__;
+sub doit { print "Hello __END__\n"; }
+
+package __DATA__;
+sub doit { print "Hello __DATA__\n"; }
+#1...........
+        },
 
         'sub2.def' => {
             source => "sub2",
             params => "def",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 my $selector;
 
 # leading atrribute separator:
@@ -221,13 +262,13 @@ $a = $selector
     print "GOODBYE!\n";
   };
 $a->();
-#1...........
+#2...........
         },
 
         'switch1.def' => {
             source => "switch1",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
 sub classify_digit($digit) {
     switch ($digit) {
         case 0 { return 'zero' }
@@ -236,31 +277,31 @@ sub classify_digit($digit) {
         case /[A-F]/i { return 'hex' }
     }
 }
-#2...........
+#3...........
         },
 
         'syntax1.def' => {
             source => "syntax1",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
 # Caused trouble:
 print $x **2;
-#3...........
+#4...........
         },
 
         'syntax2.def' => {
             source => "syntax2",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 # ? was taken as pattern
 my $case_flag = File::Spec->case_tolerant ? '(?i)' : '';
-#4...........
+#5...........
         },
 
         'ternary1.def' => {
             source => "ternary1",
             params => "def",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 my $flags =
     ( $_ & 1 )
   ? ( $_ & 4 )
@@ -268,13 +309,13 @@ my $flags =
       : $THRf_ZOMBIE
   : ( $_ & 4 ) ? $THRf_R_DETACHED
   :              $THRf_R_JOINABLE;
-#5...........
+#6...........
         },
 
         'ternary2.def' => {
             source => "ternary2",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 my $a =
     ($b)
   ? ($c)
@@ -288,13 +329,13 @@ my $a =
       : $g2
   : ($h) ? $h1
   :        $h2;
-#6...........
+#7...........
         },
 
         'tick1.def' => {
             source => "tick1",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 sub a'this { $p'u'a = "mooo\n"; print $p::u::a; }
 a::this();       # print "mooo"
 print $p'u'a;    # print "mooo"
@@ -308,42 +349,42 @@ $a'that->();     # print "wwoo"
 $a'that  = a'that();
 $p::t::u = "booo\n";
 $a'that->();     # print "booo"
-#7...........
+#8...........
         },
 
         'trim_quote.def' => {
             source => "trim_quote",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
     # space after quote will get trimmed
     push @m, '
 all :: pure_all manifypods
 	' . $self->{NOECHO} . '$(NOOP)
 '
       unless $self->{SKIPHASH}{'all'};
-#8...........
+#9...........
         },
 
         'tso1.def' => {
             source => "tso1",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 print 0 + '42 EUR';    # 42
-#9...........
+#10...........
         },
 
         'tso1.tso' => {
             source => "tso1",
             params => "tso",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 print 0+ '42 EUR';    # 42
-#10...........
+#11...........
         },
 
         'tutor.def' => {
             source => "tutor",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 #!/usr/bin/perl
 $y = shift || 5;
 for $i ( 1 .. 10 ) { $l[$i] = "T"; $w[$i] = 999999; }
@@ -381,24 +422,24 @@ while (1) {
         print $l[$i], "\t", $w[$i], "\r\n";
     }
 }
-#11...........
+#12...........
         },
 
         'undoci1.def' => {
             source => "undoci1",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
         $rinfo{deleteStyle} = [
             -fill    => 'red',
             -stipple => '@' . Tk->findINC('demos/images/grey.25'),
         ];
-#12...........
+#13...........
         },
 
         'use1.def' => {
             source => "use1",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 # previously this caused an incorrect error message after '2.42'
 use lib "$Common::global::gInstallRoot/lib";
 use CGI 2.42 qw(fatalsToBrowser);
@@ -408,44 +449,44 @@ use RRDs 1.000101;
 use constant MODE => do { 0666 & ( 0777 & ~umask ) };
 
 use IO::File ();
-#13...........
+#14...........
         },
 
         'use2.def' => {
             source => "use2",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 # Keep the space before the '()' here:
 use Foo::Bar ();
 use Foo::Bar ();
 use Foo::Bar 1.0 ();
 use Foo::Bar qw(baz);
 use Foo::Bar 1.0 qw(baz);
-#14...........
+#15...........
         },
 
         'version1.def' => {
             source => "version1",
             params => "def",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 # VERSION statement unbroken, no semicolon added;
 our $VERSION = do { my @r = ( q$Revision: 2.2 $ =~ /\d+/g ); sprintf "%d." . "%02d" x $#r, @r }
-#15...........
+#16...........
         },
 
         'version2.def' => {
             source => "version2",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # On one line so MakeMaker will see it.
 require Exporter; our $VERSION = $Exporter::VERSION;
-#16...........
+#17...........
         },
 
         'vert.def' => {
             source => "vert",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 # if $w->vert is tokenized as type 'U' then the ? will start a quote
 # and an error will occur.
 sub vert {
@@ -454,13 +495,13 @@ sub vert {
 sub Restore {
     $w->vert ? $w->delta_width(0) : $w->delta_height(0);
 }
-#17...........
+#18...........
         },
 
         'vmll.def' => {
             source => "vmll",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
     # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
     # in length, which is what vmll does
     BEGIN {
@@ -471,13 +512,13 @@ sub Restore {
     This has the comma on the next line exception {
         Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
     },
-#18...........
+#19...........
         },
 
         'vmll.vmll' => {
             source => "vmll",
             params => "vmll",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
     # perltidy -act=2 -vmll will leave these intact and greater than 80 columns
     # in length, which is what vmll does
     BEGIN {is_deeply(\@init_metas_called, [1]) || diag(Dumper(\@init_metas_called))}
@@ -485,25 +526,6 @@ sub Restore {
     This has the comma on the next line exception {
         Class::MOP::Class->initialize("NonExistent")->rebless_instance($foo)
     },
-#19...........
-        },
-
-        'vtc1.def' => {
-            source => "vtc1",
-            params => "def",
-            expect => <<'#20...........',
-@lol = (
-    [
-        'Dr. Watson', undef,    '221b', 'Baker St.',
-        undef,        'London', 'NW1',  undef,
-        'England',    undef
-    ],
-    [
-        'Sam Gamgee', undef,      undef, 'Bagshot Row',
-        undef,        'Hobbiton', undef, undef,
-        'The Shire',  undef
-    ],
-);
 #20...........
         },
     };
@@ -511,6 +533,10 @@ sub Restore {
     my $ntests = 0 + keys %{$rtests};
     plan tests => $ntests;
 }
+
+###############
+# EXECUTE TESTS
+###############
 
 foreach my $key ( sort keys %{$rtests} ) {
     my $output;

@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Jun 14 13:29:34 2018
+# Sat Nov 10 08:48:23 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -14,9 +14,9 @@ my $rtests;
 
 BEGIN {
 
-    #####################################
-    # SECTION 1: Parameter combinations #
-    #####################################
+    ###########################################
+    # BEGIN SECTION 1: Parameter combinations #
+    ###########################################
     $rparams = {
         'def'    => "",
         'scl'    => "-scl=12",
@@ -112,9 +112,9 @@ BEGIN {
 ----------
     };
 
-    ######################
-    # SECTION 2: Sources #
-    ######################
+    ############################
+    # BEGIN SECTION 2: Sources #
+    ############################
     $rsources = {
 
         'scl' => <<'----------',
@@ -351,35 +351,32 @@ sub arrange_topframe {
 }
 
 ----------
-
-        'sub1' => <<'----------',
-my::doit();
-join::doit();
-for::doit();
-sub::doit();
-package::doit();
-__END__::doit();
-__DATA__::doit();
-package my;
-sub doit{print"Hello My\n";}package join;
-sub doit{print"Hello Join\n";}package for;
-sub doit{print"Hello for\n";}package package;
-sub doit{print"Hello package\n";}package sub;
-sub doit{print"Hello sub\n";}package __END__;
-sub doit{print"Hello __END__\n";}package __DATA__;
-sub doit{print"Hello __DATA__\n";}
-----------
     };
 
-    ##############################
-    # SECTION 3: Expected output #
-    ##############################
+    ####################################
+    # BEGIN SECTION 3: Expected output #
+    ####################################
     $rtests = {
+
+        'scl.def' => {
+            source => "scl",
+            params => "def",
+            expect => <<'#1...........',
+    # try -scl=12 to see '$returns' joined with the previous line
+    $format =
+        "format STDOUT =\n"
+      . &format_line('Function:       @') . '$name' . "\n"
+      . &format_line('Arguments:      @') . '$args' . "\n"
+      . &format_line('Returns:        @')
+      . '$returns' . "\n"
+      . &format_line('             ~~ ^') . '$desc' . "\n.\n";
+#1...........
+        },
 
         'scl.scl' => {
             source => "scl",
             params => "scl",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
     # try -scl=12 to see '$returns' joined with the previous line
     $format =
         "format STDOUT =\n"
@@ -387,24 +384,24 @@ sub doit{print"Hello __DATA__\n";}
       . &format_line('Arguments:      @') . '$args' . "\n"
       . &format_line('Returns:        @') . '$returns' . "\n"
       . &format_line('             ~~ ^') . '$desc' . "\n.\n";
-#1...........
+#2...........
         },
 
         'semicolon2.def' => {
             source => "semicolon2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
         # will not add semicolon for this block type
         $highest = List::Util::reduce {
             Sort::Versions::versioncmp( $a, $b ) > 0 ? $a : $b
         }
-#2...........
+#3...........
         },
 
         'side_comments1.def' => {
             source => "side_comments1",
             params => "def",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
     # side comments at different indentation levels should not be aligned
     {
         {
@@ -415,13 +412,13 @@ sub doit{print"Hello __DATA__\n";}
             }    # end level 3
         }    # end level 2
     }    # end level 1
-#3...........
+#4...........
         },
 
         'sil1.def' => {
             source => "sil1",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
 #############################################################
         # This will walk to the left because of bad -sil guess
       SKIP: {
@@ -435,13 +432,13 @@ sub doit{print"Hello __DATA__\n";}
           or ov_method mycan( $package, '(bool' ),     $package
           or ov_method mycan( $package, '(nomethod' ), $package;
 
-#4...........
+#5...........
         },
 
         'sil1.sil' => {
             source => "sil1",
             params => "sil",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
 #############################################################
 # This will walk to the left because of bad -sil guess
 SKIP: {
@@ -455,13 +452,13 @@ SKIP: {
   or ov_method mycan( $package, '(bool' ),     $package
   or ov_method mycan( $package, '(nomethod' ), $package;
 
-#5...........
+#6...........
         },
 
         'slashslash.def' => {
             source => "slashslash",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 $home = $ENV{HOME} // $ENV{LOGDIR} // ( getpwuid($<) )[7]
   // die "You're homeless!\n";
 defined( $x // $y );
@@ -469,13 +466,13 @@ $version = 'v' . join '.', map ord, split //, $version->PV;
 foreach ( split( //, $lets ) )  { }
 foreach ( split( //, $input ) ) { }
 'xyz' =~ //;
-#6...........
+#7...........
         },
 
         'smart.def' => {
             source => "smart",
             params => "def",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 \&foo !~~ \&foo;
 \&foo ~~ \&foo;
 \&foo ~~ \&foo;
@@ -588,13 +585,13 @@ qr/3/                  ~~ 12345;
 "foo"                  ~~ %hash;
 %hash                  ~~ /bar/;
 /bar/                  ~~ %hash;
-#7...........
+#8...........
         },
 
         'space1.def' => {
             source => "space1",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
     # We usually want a space at '} (', for example:
     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
 
@@ -603,60 +600,60 @@ qr/3/                  ~~ 12345;
 
     # remove unwanted spaces after $ and -> here
     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
-#8...........
+#9...........
         },
 
         'space2.def' => {
             source => "space2",
             params => "def",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
 # space before this opening paren
 for $i ( 0 .. 20 ) { }
 
 # retain any space between '-' and bare word
 $myhash{ USER-NAME } = 'steve';
-#9...........
+#10...........
         },
 
         'space3.def' => {
             source => "space3",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 # Treat newline as a whitespace. Otherwise, we might combine
 # 'Send' and '-recipients' here
 my $msg = new Fax::Send
   -recipients => $to,
   -data       => $data;
-#10...........
+#11...........
         },
 
         'space4.def' => {
             source => "space4",
             params => "def",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 # first prototype line will cause space between 'redirect' and '(' to close
 sub html::redirect($);    #<-- temporary prototype;
 use html;
 print html::redirect('http://www.glob.com.au/');
-#11...........
+#12...........
         },
 
         'space5.def' => {
             source => "space5",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 # first prototype line commented out; space after 'redirect' remains
 #sub html::redirect($);        #<-- temporary prototype;
 use html;
 print html::redirect ('http://www.glob.com.au/');
 
-#12...........
+#13...........
         },
 
         'structure1.def' => {
             source => "structure1",
             params => "def",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 push @contents,
   $c->table(
     { -width => '100%' },
@@ -675,13 +672,13 @@ push @contents,
         )
     )
   );
-#13...........
+#14...........
         },
 
         'style.def' => {
             source => "style",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -727,13 +724,13 @@ sub arrange_topframe {
     }
 }
 
-#14...........
+#15...........
         },
 
         'style.style1' => {
             source => "style",
             params => "style1",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
   my (@order) = (
@@ -772,13 +769,13 @@ sub arrange_topframe {
   }
 }
 
-#15...........
+#16...........
         },
 
         'style.style2' => {
             source => "style",
             params => "style2",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -820,13 +817,13 @@ sub arrange_topframe {
     }
 }
 
-#16...........
+#17...........
         },
 
         'style.style3' => {
             source => "style",
             params => "style3",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -864,13 +861,13 @@ sub arrange_topframe {
     }
 } ## end sub arrange_topframe
 
-#17...........
+#18...........
         },
 
         'style.style4' => {
             source => "style",
             params => "style4",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
     my (@order) = (
@@ -912,13 +909,13 @@ sub arrange_topframe {
     }
 }
 
-#18...........
+#19...........
         },
 
         'style.style5' => {
             source => "style",
             params => "style5",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe
 {
@@ -964,41 +961,6 @@ sub arrange_topframe
     }
 }
 
-#19...........
-        },
-
-        'sub1.def' => {
-            source => "sub1",
-            params => "def",
-            expect => <<'#20...........',
-my::doit();
-join::doit();
-for::doit();
-sub::doit();
-package::doit();
-__END__::doit();
-__DATA__::doit();
-
-package my;
-sub doit { print "Hello My\n"; }
-
-package join;
-sub doit { print "Hello Join\n"; }
-
-package for;
-sub doit { print "Hello for\n"; }
-
-package package;
-sub doit { print "Hello package\n"; }
-
-package sub;
-sub doit { print "Hello sub\n"; }
-
-package __END__;
-sub doit { print "Hello __END__\n"; }
-
-package __DATA__;
-sub doit { print "Hello __DATA__\n"; }
 #20...........
         },
     };
@@ -1006,6 +968,10 @@ sub doit { print "Hello __DATA__\n"; }
     my $ntests = 0 + keys %{$rtests};
     plan tests => $ntests;
 }
+
+###############
+# EXECUTE TESTS
+###############
 
 foreach my $key ( sort keys %{$rtests} ) {
     my $output;

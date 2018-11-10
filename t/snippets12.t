@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Jun 14 13:29:35 2018
+# Sat Nov 10 08:48:23 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -14,9 +14,9 @@ my $rtests;
 
 BEGIN {
 
-    #####################################
-    # SECTION 1: Parameter combinations #
-    #####################################
+    ###########################################
+    # BEGIN SECTION 1: Parameter combinations #
+    ###########################################
     $rparams = {
         'def' => "",
         'vtc' => <<'----------',
@@ -27,9 +27,9 @@ BEGIN {
         'wn' => "-wn",
     };
 
-    ######################
-    # SECTION 2: Sources #
-    ######################
+    ############################
+    # BEGIN SECTION 2: Sources #
+    ############################
     $rsources = {
 
         'vtc1' => <<'----------',
@@ -161,15 +161,34 @@ use_all_ok(
 ----------
     };
 
-    ##############################
-    # SECTION 3: Expected output #
-    ##############################
+    ####################################
+    # BEGIN SECTION 3: Expected output #
+    ####################################
     $rtests = {
+
+        'vtc1.def' => {
+            source => "vtc1",
+            params => "def",
+            expect => <<'#1...........',
+@lol = (
+    [
+        'Dr. Watson', undef,    '221b', 'Baker St.',
+        undef,        'London', 'NW1',  undef,
+        'England',    undef
+    ],
+    [
+        'Sam Gamgee', undef,      undef, 'Bagshot Row',
+        undef,        'Hobbiton', undef, undef,
+        'The Shire',  undef
+    ],
+);
+#1...........
+        },
 
         'vtc1.vtc' => {
             source => "vtc1",
             params => "vtc",
-            expect => <<'#1...........',
+            expect => <<'#2...........',
 @lol = (
     [
         'Dr. Watson', undef,    '221b', 'Baker St.',
@@ -179,13 +198,13 @@ use_all_ok(
         'Sam Gamgee', undef,      undef, 'Bagshot Row',
         undef,        'Hobbiton', undef, undef,
         'The Shire',  undef ], );
-#1...........
+#2...........
         },
 
         'vtc2.def' => {
             source => "vtc2",
             params => "def",
-            expect => <<'#2...........',
+            expect => <<'#3...........',
     ok(
         $s->call(
             SOAP::Data->name('getStateName')
@@ -193,46 +212,46 @@ use_all_ok(
             1
         )->result eq 'Alabama'
     );
-#2...........
+#3...........
         },
 
         'vtc2.vtc' => {
             source => "vtc2",
             params => "vtc",
-            expect => <<'#3...........',
+            expect => <<'#4...........',
     ok(
         $s->call(
             SOAP::Data->name('getStateName')
               ->attr( { xmlns => 'urn:/My/Examples' } ),
             1 )->result eq 'Alabama' );
-#3...........
+#4...........
         },
 
         'vtc3.def' => {
             source => "vtc3",
             params => "def",
-            expect => <<'#4...........',
+            expect => <<'#5...........',
     $day_long = (
         "Sunday",   "Monday", "Tuesday",  "Wednesday",
         "Thursday", "Friday", "Saturday", "Sunday"
     )[$wday];
-#4...........
+#5...........
         },
 
         'vtc3.vtc' => {
             source => "vtc3",
             params => "vtc",
-            expect => <<'#5...........',
+            expect => <<'#6...........',
     $day_long = (
         "Sunday",   "Monday", "Tuesday",  "Wednesday",
         "Thursday", "Friday", "Saturday", "Sunday" )[$wday];
-#5...........
+#6...........
         },
 
         'vtc4.def' => {
             source => "vtc4",
             params => "def",
-            expect => <<'#6...........',
+            expect => <<'#7...........',
 my $bg_color = $im->colorAllocate(
     unpack(
         'C3',
@@ -249,13 +268,13 @@ my $bg_color = $im->colorAllocate(
         )
     )
 );
-#6...........
+#7...........
         },
 
         'vtc4.vtc' => {
             source => "vtc4",
             params => "vtc",
-            expect => <<'#7...........',
+            expect => <<'#8...........',
 my $bg_color = $im->colorAllocate(
     unpack(
         'C3',
@@ -267,13 +286,13 @@ my $bg_color = $im->colorAllocate(
                     length( $options_r->{'bg_color'} )
                     ? $options_r->{'bg_color'}
                     : $MIDI::Opus::BG_color ) ) ) ) );
-#7...........
+#8...........
         },
 
         'wn1.def' => {
             source => "wn1",
             params => "def",
-            expect => <<'#8...........',
+            expect => <<'#9...........',
     my $bg_color = $im->colorAllocate(
         unpack(
             'C3',
@@ -290,13 +309,13 @@ my $bg_color = $im->colorAllocate(
             )
         )
     );
-#8...........
+#9...........
         },
 
         'wn1.wn' => {
             source => "wn1",
             params => "wn",
-            expect => <<'#9...........',
+            expect => <<'#10...........',
     my $bg_color = $im->colorAllocate( unpack(
         'C3',
         pack(
@@ -311,13 +330,13 @@ my $bg_color = $im->colorAllocate(
             )
         )
     ) );
-#9...........
+#10...........
         },
 
         'wn2.def' => {
             source => "wn2",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
 if ( $PLATFORM eq 'aix' ) {
     skip_symbols(
         [
@@ -330,13 +349,13 @@ if ( $PLATFORM eq 'aix' ) {
         ]
     );
 }
-#10...........
+#11...........
         },
 
         'wn2.wn' => {
             source => "wn2",
             params => "wn",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
 if ( $PLATFORM eq 'aix' ) {
     skip_symbols( [ qw(
           Perl_dump_fds
@@ -345,13 +364,13 @@ if ( $PLATFORM eq 'aix' ) {
           PL_sys_intern
           ) ] );
 }
-#11...........
+#12...........
         },
 
         'wn3.def' => {
             source => "wn3",
             params => "def",
-            expect => <<'#12...........',
+            expect => <<'#13...........',
 deferred->resolve->then(
     sub {
         push @out, 'Resolve';
@@ -363,13 +382,13 @@ deferred->resolve->then(
         push @out, @_;
     }
 );
-#12...........
+#13...........
         },
 
         'wn3.wn' => {
             source => "wn3",
             params => "wn",
-            expect => <<'#13...........',
+            expect => <<'#14...........',
 deferred->resolve->then( sub {
     push @out, 'Resolve';
     return $then;
@@ -377,13 +396,13 @@ deferred->resolve->then( sub {
     push @out, 'Reject';
     push @out, @_;
 } );
-#13...........
+#14...........
         },
 
         'wn4.def' => {
             source => "wn4",
             params => "def",
-            expect => <<'#14...........',
+            expect => <<'#15...........',
 {
     {
         {
@@ -397,13 +416,13 @@ deferred->resolve->then( sub {
         }
     }
 }
-#14...........
+#15...........
         },
 
         'wn4.wn' => {
             source => "wn4",
             params => "wn",
-            expect => <<'#15...........',
+            expect => <<'#16...........',
 { { {
 
     # Orignal formatting looks nice but would be hard to duplicate
@@ -413,13 +432,13 @@ deferred->resolve->then( sub {
       ? %{ $G->{Attr}->{E}->{$u}->{$v} }
       : ();
 } } }
-#15...........
+#16...........
         },
 
         'wn5.def' => {
             source => "wn5",
             params => "def",
-            expect => <<'#16...........',
+            expect => <<'#17...........',
 # qw weld with -wn
 use_all_ok(
     qw{
@@ -433,13 +452,13 @@ use_all_ok(
       PPI::Cache
       }
 );
-#16...........
+#17...........
         },
 
         'wn5.wn' => {
             source => "wn5",
             params => "wn",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 # qw weld with -wn
 use_all_ok( qw{
       PPI
@@ -451,13 +470,13 @@ use_all_ok( qw{
       PPI::Util
       PPI::Cache
       } );
-#17...........
+#18...........
         },
 
         'wn6.def' => {
             source => "wn6",
             params => "def",
-            expect => <<'#18...........',
+            expect => <<'#19...........',
             # illustration of some do-not-weld rules
 
             # do not weld a two-line function call
@@ -489,13 +508,13 @@ use_all_ok( qw{
                     $_[0]->();
                 }
             );
-#18...........
+#19...........
         },
 
         'wn6.wn' => {
             source => "wn6",
             params => "wn",
-            expect => <<'#19...........',
+            expect => <<'#20...........',
             # illustration of some do-not-weld rules
 
             # do not weld a two-line function call
@@ -521,13 +540,17 @@ use_all_ok( qw{
                 push @tracelog => 'around 1';
                 $_[0]->();
             } );
-#19...........
+#20...........
         },
     };
 
     my $ntests = 0 + keys %{$rtests};
     plan tests => $ntests;
 }
+
+###############
+# EXECUTE TESTS
+###############
 
 foreach my $key ( sort keys %{$rtests} ) {
     my $output;

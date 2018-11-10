@@ -1,0 +1,1 @@
+my $restrict_customer = shift ? 1 : 0;

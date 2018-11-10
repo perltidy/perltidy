@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Thu Jun 14 13:29:34 2018
+# Sat Nov 10 08:48:22 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -14,9 +14,9 @@ my $rtests;
 
 BEGIN {
 
-    #####################################
-    # SECTION 1: Parameter combinations #
-    #####################################
+    ###########################################
+    # BEGIN SECTION 1: Parameter combinations #
+    ###########################################
     $rparams = {
         'ce_wn' => <<'----------',
 -cuddled-blocks
@@ -58,9 +58,9 @@ BEGIN {
         'fabrice_bug' => "-bt=0",
     };
 
-    ######################
-    # SECTION 2: Sources #
-    ######################
+    ############################
+    # BEGIN SECTION 2: Sources #
+    ############################
     $rsources = {
 
         'ce_wn1' => <<'----------',
@@ -224,9 +224,9 @@ $_, $val
 ----------
     };
 
-    ##############################
-    # SECTION 3: Expected output #
-    ##############################
+    ####################################
+    # BEGIN SECTION 3: Expected output #
+    ####################################
     $rtests = {
 
         'ce_wn1.ce_wn' => {
@@ -800,6 +800,10 @@ $_, $val
     my $ntests = 0 + keys %{$rtests};
     plan tests => $ntests;
 }
+
+###############
+# EXECUTE TESTS
+###############
 
 foreach my $key ( sort keys %{$rtests} ) {
     my $output;

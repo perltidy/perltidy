@@ -43,7 +43,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK V TIDY T CL POD DIST)];
+my $rsteps = [qw( CHK V PC TIDY T CL POD DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }

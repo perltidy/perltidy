@@ -68,6 +68,9 @@ It is best to avoid file names which are pure digits because they can be difficu
   to avoid accidentally invoking unexpected parameter combinations. If you just
 want to format with default parameters, skip to the the run 'make' step.
 
+  - For example, you might add a file named "rt126965.in" and then type 'make'
+and follow the directions.
+
 - All snippets are run with default parameters. If the new snippet is to also
   be run with special parameters, put them in a file with the same base name
 but extension ".par". 
