@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sat Nov 10 08:48:23 2018
+# Sun Nov 11 06:54:12 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -416,7 +416,7 @@ while (1) {
             $l[$i] = $u;
             chomp( $l[$i] );
             $w[$i] = $t;
-            $t = 1000000;
+            $t     = 1000000;
         }
         else { $l[$i] = $q[$z]; $w[$i] = $p[$z]; $z++; }
         print $l[$i], "\t", $w[$i], "\r\n";

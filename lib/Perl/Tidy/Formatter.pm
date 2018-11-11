@@ -10611,11 +10611,11 @@ sub get_seqno {
 
         my @q;
 
-        # Removed =~ from list to improve chances of alignment
-        # Removed // from list to improve chances of alignment (RT# 119588)
+        # replaced =~ in the list
+        # TESTING: replaced. Removed // from list to improve chances of alignment (RT# 119588)
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~
+          { ? : => && || ~~ !~~ =~ //
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
@@ -10672,6 +10672,7 @@ sub get_seqno {
             $vert_last_nonblank_block_type        = '';
 
             # look at each token in this output line..
+	    my $count=0;
             foreach my $i ( $ibeg .. $iend ) {
                 my $alignment_type = '';
                 my $type           = $types_to_go[$i];
@@ -10824,9 +10825,24 @@ sub get_seqno {
                 }
 
                 #--------------------------------------------------------
+                # patch for =~ operator.  We only align this if it
+		# is the first operator in a line, and the line is a simple
+		# statement.  Aligning them within a statement causes
+		# interferes with other good alignments.
+                #--------------------------------------------------------
+                if ( $alignment_type eq '=~' ) {
+                    my $terminal_type = $types_to_go[$i_terminal];
+                    if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
+                    {
+                        $alignment_type = "";
+                    }
+                }
+
+                #--------------------------------------------------------
                 # then store the value
                 #--------------------------------------------------------
                 $matching_token_to_go[$i] = $alignment_type;
+		$count++ if ($alignment_type); 
                 if ( $type ne 'b' ) {
                     $vert_last_nonblank_type       = $type;
                     $vert_last_nonblank_token      = $token;

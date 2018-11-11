@@ -2,6 +2,10 @@
 
 =head2 2018 02 20.01
 
+  - The packaging for this version has changed. The Tidy.pm file has 
+    been split into a smaller Tidy.pm file plus supporting modules in the path
+    Perl/Tidy/*.
+
   - Fixed RT #126965, in which a ternary operator was misparsed if immediately
     following a function call without arguments, such as: 
       my $restrict_customer = shift ? 1 : 0;
@@ -46,9 +50,42 @@
     stamp on certain closing side comments. We need to avoid this in order
     to test this feature in an installation test.
 
-  - The packaging for this version has changed. The Tidy.pm file has 
-    been split into a smaller Tidy.pm file plus supporting modules in the path
-    Perl/Tidy/*.
+  - Vertical alignment has been improved in several ways.  Thanks especially to
+    Glenn for sending helpful snippets.
+
+    - In many cases, two lines which were previously left unaligned are now
+      aligned. 
+
+        OLD:
+        $expect = "1$expect" if $expect =~ /^e/i;
+        $p = "1$p" if defined $p and $p =~ /^e/i;
+    
+        NEW:
+        $expect = "1$expect" if $expect =~ /^e/i;
+        $p      = "1$p"      if defined $p and $p =~ /^e/i;
+
+    - Alignment of the =~ operators has been reactivated.  
+
+        OLD:
+        $service_profile =~ s/^\s+|\s+$//g;
+        $host_profile =~ s/^\s+|\s+$//g;
+    
+        NEW:
+        $service_profile =~ s/^\s+|\s+$//g;
+        $host_profile    =~ s/^\s+|\s+$//g;
+
+    - Alignment of the // operator has been reactivated.  
+
+        OLD:
+        is( pop // 7,       7, 'pop // ... works' );
+        is( pop() // 7,     0, 'pop() // ... works' );
+        is( pop @ARGV // 7, 3, 'pop @array // ... works' );
+        
+        NEW:
+        is( pop       // 7, 7, 'pop // ... works' );
+        is( pop()     // 7, 0, 'pop() // ... works' );
+        is( pop @ARGV // 7, 3, 'pop @array // ... works' );
+
 
 =head2 2018 02 20
 

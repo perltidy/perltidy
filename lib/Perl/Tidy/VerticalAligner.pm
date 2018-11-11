@@ -1953,23 +1953,28 @@ sub decide_if_aligned {
 
     my $group_list_type = $group_lines[0]->get_list_type();
 
+    # See if these two lines have leading equals type tokens
+    my $rtokens        = $group_lines[0]->get_rtokens();
+    my $leading_equals = $rtokens->[0] =~ /=/;
+
     my $do_not_align = (
 
         # always align lists
         !$group_list_type
 
+	# always align lines with leading equality operators
+        && !$leading_equals
+
           && (
 
-            # don't align if it was just a marginal match
+            # don't align if it was marked as a 'marginal" match
             $marginal_match
 
             # don't align two lines with big gap
             || $group_maximum_gap > 12
 
-            # or lines with differing number of alignment tokens
-            # TODO: this could be improved.  It occasionally rejects
-            # good matches.
-            || $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
+            # don't align lines with differing number of alignment tokens 
+            || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
           )
     );
 

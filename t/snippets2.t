@@ -1,6 +1,6 @@
 # **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sat Nov 10 08:48:22 2018
+# Sun Nov 11 06:54:11 2018
 
 # To locate test #13 for example, search for the string '#13'
 
@@ -205,7 +205,7 @@ if ( VERSION < 5.009 && $op->name eq 'aassign' ) {
             params => "def",
             expect => <<'#2...........',
 # remove spaces around arrows
-my $obj = Bio::Variation::AAChange->new;
+my $obj     = Bio::Variation::AAChange->new;
 my $termcap = Term::Cap->Tgetent( { TERM => undef } );
 #2...........
         },
@@ -415,7 +415,7 @@ my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
             expect => <<'#18...........',
 my $a = ${^WARNING_BITS};
 @{^HOWDY_PARDNER} = ( 101, 102 );
-${^W} = 1;
+${^W}             = 1;
 $bb[$^]] = "bubba";
 #18...........
         },
