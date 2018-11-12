@@ -1604,7 +1604,12 @@ sub salvage_equality_matches {
     # return 0 or undef if unsuccessful
     # return 1 if successful
 
-    # We only do this if there is one old line
+    # Here is a very simple example of two lines where we could at least
+    # align the equals:
+    #  $x = $class->_sub( $x, $delta );
+    #  $xpownm1 = $class->_pow( $class->_copy($x), $nm1 );    # x(i)^(n-1)
+
+    # We will only do this if there is one old line (and one new line)
     return unless ($maximum_line_index == 0 );
     return if ($is_matching_terminal_line);
 
@@ -2701,6 +2706,17 @@ sub valign_output_step_D {
 
         # Handle entab option
         elsif ($rOpts_entab_leading_whitespace) {
+
+	    # Patch 12-nov-2018 based on report from Glenn. Extra padding was
+	    # not correctly entabbed, nor were side comments:
+	    # Increase leading space count for a padded line to get correct tabbing
+            if ( $line =~ /^(\s+)(.*)$/ ) {
+                my $spaces = length($1);
+                if ( $spaces > $leading_space_count ) {
+                    $leading_space_count = $spaces;
+                }
+            }
+
             my $space_count =
               $leading_space_count % $rOpts_entab_leading_whitespace;
             my $tab_count =

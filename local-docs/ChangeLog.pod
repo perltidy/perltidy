@@ -50,6 +50,10 @@
     stamp on certain closing side comments. We need to avoid this in order
     to test this feature in an installation test.
 
+  - Fixed bug with the entab option, -et=8, in which the leading space of
+    some lines was was not entabbed.  This happened in code which was adjusted
+    for vertical alignment and in hanging side comments. Thanks to Glenn.
+
   - Vertical alignment has been improved in several ways.  Thanks especially to
     Glenn for sending helpful snippets.
 
