@@ -361,16 +361,6 @@ sub valign_input {
     # side comments.  Tabs in these fields can mess up the column counting.
     # The log file warns the user if there are any such tabs.
 
-##    my (
-##        $level,               $level_end,
-##        $indentation,         $rfields,
-##        $rtokens,             $rpatterns,
-##        $is_forced_break,     $outdent_long_lines,
-##        $is_terminal_ternary, $is_terminal_statement,
-##        $do_not_pad,          $rvertical_tightness_flags,
-##        $level_jump,
-##    ) = @_;
-
     my ( $rline_hash, $rfields, $rtokens, $rpatterns ) = @_;
     my $level                     = $rline_hash->{level};
     my $level_end                 = $rline_hash->{level_end};
@@ -1595,9 +1585,108 @@ sub fix_terminal_else {
 
       NO_MATCH:
         ##print "no match jmax=$jmax  max=$maximum_field_index $group_list_type lines=$maximum_line_index token=$old_rtokens->[0]\n";
-        my_flush();
+
+	# Make one last effort to retain a match of certain statements
+	my $match = salvage_equality_matches($new_line, $old_line);
+        my_flush() unless($match);
         return;
     }
+}
+
+sub salvage_equality_matches {
+    my ( $new_line, $old_line ) = @_;
+
+    # Reduce the complexity of the two lines if it will allow us to retain
+    # alignment of some common alignments, including '=' and '=>'.  We will
+    # convert both lines to have just two matching tokens, the equality and the
+    # side comment.
+
+    # return 0 or undef if unsuccessful
+    # return 1 if successful
+
+    # We only do this if there is one old line
+    return unless ($maximum_line_index == 0 );
+    return if ($is_matching_terminal_line);
+
+    # We are only looking for equality type statements
+    my $old_rtokens = $old_line->get_rtokens();
+    my $rtokens     = $new_line->get_rtokens();
+    my $is_equals =
+      ( $rtokens->[0] =~ /=/ && ( $old_rtokens->[0] eq $rtokens->[0] ) );
+    return unless ($is_equals);
+
+    # The leading patterns must match
+    my $old_rpatterns = $old_line->get_rpatterns();
+    my $rpatterns       = $new_line->get_rpatterns();
+    return if ( $old_rpatterns->[0] ne $rpatterns->[0] ); 
+
+    # Both should have side comment fields (should always be true)
+    my $jmax_old     = $old_line->get_jmax();
+    my $jmax_new     = $new_line->get_jmax();
+    my $end_tok_old = $old_rtokens->[$jmax_old-1];
+    my $end_tok_new = $rtokens->[$jmax_new-1];
+    my $have_side_comments =
+         defined($end_tok_old)
+      && $end_tok_old eq '#'
+      && defined($end_tok_new)
+      && $end_tok_new eq '#';
+    if ( !$have_side_comments ) { return; }
+
+    # Do not match if any remaining tokens in new line include '?', 'if',
+    # 'unless','||', '&&'. The reason is that (1) this isn't a great match, and
+    # (2) we will prevent possibly better matchs to follow.  Here is an
+    # example.  The match of the first two lines is rejected, and this allows
+    # the second and third lines to match. 
+    #   my $type = shift || "o";
+    #   my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
+    #   my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
+    # This logic can cause some unwanted losses of alignments, but it can retain
+    # long runs of multiple-token alignments, so overall it is worthwhile.  
+    # If we had a peek at the subsequent line we could make a much better 
+    # decision here, but for now this is not available.
+    for ( my $j = 1 ; $j < $jmax_new-1 ; $j++ ) {
+        my $new_tok = $rtokens->[$j];
+        my $is_good_alignment = ( $new_tok =~ /^(=|\?|if|unless|\|\||\&\&)/ );
+	return if ($is_good_alignment);
+    }
+
+    my $squeeze_line = sub {
+        my ($line_obj) = @_;
+
+        # reduce a line down to the three fields surrounding
+        # the two tokens, an '=' of some sort and a '#' at the end
+
+        my $jmax     = $line_obj->get_jmax();
+        my $jmax_new = 2;
+        return unless $jmax > $jmax_new;
+        my $rfields     = $line_obj->get_rfields();
+        my $rpatterns   = $line_obj->get_rpatterns();
+        my $rtokens     = $line_obj->get_rtokens();
+        my $rfields_new = [
+            $rfields->[0], join( '', @{$rfields}[ 1 .. $jmax - 1 ] ),
+            $rfields->[$jmax]
+        ];
+        my $rpatterns_new = [
+            $rpatterns->[0], join( '', @{$rpatterns}[ 1 .. $jmax - 1 ] ),
+            $rpatterns->[$jmax]
+        ];
+        my $rtokens_new = [ $rtokens->[0], $rtokens->[ $jmax - 1 ] ];
+        $line_obj->{_rfields}   = $rfields_new;
+        $line_obj->{_rpatterns} = $rpatterns_new;
+        $line_obj->{_rtokens}   = $rtokens_new;
+        $line_obj->set_jmax($jmax_new);
+    };
+    
+    # Okay, we will force a match at the equals-like token.  We will fix both
+    # lines to have just 2 tokens and 3 fields:
+    $squeeze_line->($new_line);
+    $squeeze_line->($old_line);
+
+    # start over with a new group
+    initialize_for_new_group();
+    add_to_group($old_line);
+    $current_line = $old_line; 
+    return 1;
 }
 
 sub check_fit {
