@@ -10611,8 +10611,7 @@ sub get_seqno {
 
         my @q;
 
-        # replaced =~ in the list
-        # TESTING: replaced. Removed // from list to improve chances of alignment (RT# 119588)
+        # Replaced =~ and // in the list.  // had been removed in RT 119588
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
           { ? : => && || ~~ !~~ =~ //
