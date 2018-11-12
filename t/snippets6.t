@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 otr1.otr
+#2 pbp1.def
+#3 pbp1.pbp
+#4 pbp2.def
+#5 pbp2.pbp
+#6 pbp3.def
+#7 pbp3.pbp
+#8 pbp4.def
+#9 pbp4.pbp
+#10 pbp5.def
+#11 pbp5.pbp
+#12 print1.def
+#13 q1.def
+#14 q2.def
+#15 recombine1.def
+#16 recombine2.def
+#17 recombine3.def
+#18 recombine4.def
+#19 rt101547.def
+#20 rt102371.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

@@ -2,6 +2,7 @@
 *.ERR
 *.LOG
 *.bak
+*.ba1
 *.log
 *.sw?
 *.tar.gz

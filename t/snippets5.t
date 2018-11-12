@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 list1.def
+#2 listop1.def
+#3 listop2.def
+#4 lp1.def
+#5 lp1.lp
+#6 mangle1.def
+#7 mangle1.mangle
+#8 mangle2.def
+#9 mangle2.mangle
+#10 mangle3.def
+#11 mangle3.mangle
+#12 math1.def
+#13 math2.def
+#14 math3.def
+#15 math4.def
+#16 nasc.def
+#17 nasc.nasc
+#18 nothing.def
+#19 nothing.nothing
+#20 otr1.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

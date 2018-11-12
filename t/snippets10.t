@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:12 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 scl.def
+#2 scl.scl
+#3 semicolon2.def
+#4 side_comments1.def
+#5 sil1.def
+#6 sil1.sil
+#7 slashslash.def
+#8 smart.def
+#9 space1.def
+#10 space2.def
+#11 space3.def
+#12 space4.def
+#13 space5.def
+#14 structure1.def
+#15 style.def
+#16 style.style1
+#17 style.style2
+#18 style.style3
+#19 style.style4
+#20 style.style5
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

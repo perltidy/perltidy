@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 angle.def
+#2 arrows1.def
+#3 arrows2.def
+#4 attrib1.def
+#5 attrib2.def
+#6 attrib3.def
+#7 bar1.bar
+#8 bar1.def
+#9 block1.def
+#10 boc1.boc
+#11 boc1.def
+#12 boc2.boc
+#13 boc2.def
+#14 break1.def
+#15 break2.def
+#16 break3.def
+#17 break4.def
+#18 carat.def
+#19 ce1.ce
+#20 ce1.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

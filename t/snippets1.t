@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 105484.def
+#2 align1.def
+#3 align2.def
+#4 align3.def
+#5 align4.def
+#6 align5.def
+#7 align6.def
+#8 align7.def
+#9 align8.def
+#10 align9.def
+#11 andor1.def
+#12 andor10.def
+#13 andor2.def
+#14 andor3.def
+#15 andor4.def
+#16 andor5.def
+#17 andor6.def
+#18 andor7.def
+#19 andor8.def
+#20 andor9.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

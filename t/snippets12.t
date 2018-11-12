@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:12 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 vtc1.def
+#2 vtc1.vtc
+#3 vtc2.def
+#4 vtc2.vtc
+#5 vtc3.def
+#6 vtc3.vtc
+#7 vtc4.def
+#8 vtc4.vtc
+#9 wn1.def
+#10 wn1.wn
+#11 wn2.def
+#12 wn2.wn
+#13 wn3.def
+#14 wn3.wn
+#15 wn4.def
+#16 wn4.wn
+#17 wn5.def
+#18 wn5.wn
+#19 wn6.def
+#20 wn6.wn
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

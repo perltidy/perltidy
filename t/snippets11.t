@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:12 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 sub1.def
+#2 sub2.def
+#3 switch1.def
+#4 syntax1.def
+#5 syntax2.def
+#6 ternary1.def
+#7 ternary2.def
+#8 tick1.def
+#9 trim_quote.def
+#10 tso1.def
+#11 tso1.tso
+#12 tutor.def
+#13 undoci1.def
+#14 use1.def
+#15 use2.def
+#16 version1.def
+#17 version2.def
+#18 vert.def
+#19 vmll.def
+#20 vmll.vmll
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

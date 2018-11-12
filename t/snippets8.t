@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 rt123749.rt123749
+#2 rt123774.def
+#3 rt124114.def
+#4 rt124354.def
+#5 rt124354.rt124354
+#6 rt125012.def
+#7 rt125012.rt125012
+#8 rt125506.def
+#9 rt125506.rt125506
+#10 rt126965.def
+#11 rt15735.def
+#12 rt18318.def
+#13 rt18318.rt18318
+#14 rt27000.def
+#15 rt31741.def
+#16 rt49289.def
+#17 rt50702.def
+#18 rt50702.rt50702
+#19 rt68870.def
+#20 rt70747.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

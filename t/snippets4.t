@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 gnu1.gnu
+#2 gnu2.def
+#3 gnu2.gnu
+#4 gnu3.def
+#5 gnu3.gnu
+#6 gnu4.def
+#7 gnu4.gnu
+#8 hanging_side_comments1.def
+#9 hanging_side_comments2.def
+#10 hash1.def
+#11 hashbang.def
+#12 here1.def
+#13 html1.def
+#14 html1.html
+#15 ident1.def
+#16 if1.def
+#17 iscl1.def
+#18 iscl1.iscl
+#19 label1.def
+#20 lextest1.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;

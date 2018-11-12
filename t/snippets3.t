@@ -1,8 +1,28 @@
-# **This script was automatically generated**
 # Created with: ./make_t.pl
-# Sun Nov 11 06:54:11 2018
 
-# To locate test #13 for example, search for the string '#13'
+# Contents:
+#1 ce_wn1.ce_wn
+#2 ce_wn1.def
+#3 colin.colin
+#4 colin.def
+#5 essential.def
+#6 essential.essential1
+#7 essential.essential2
+#8 extrude1.def
+#9 extrude1.extrude
+#10 extrude2.def
+#11 extrude2.extrude
+#12 extrude3.def
+#13 extrude3.extrude
+#14 extrude4.def
+#15 extrude4.extrude
+#16 fabrice_bug.def
+#17 fabrice_bug.fabrice_bug
+#18 format1.def
+#19 given1.def
+#20 gnu1.def
+
+# To locate test #13 you can search for its name or the string '#13'
 
 use strict;
 use Test;
