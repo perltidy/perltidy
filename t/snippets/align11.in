@@ -1,0 +1,4 @@
+my $accountno = getnextacctno( $env, $bornum, $dbh );
+my $item = getiteminformation( $env, $itemno );
+my $account = "Insert into accountlines
+ bla bla";

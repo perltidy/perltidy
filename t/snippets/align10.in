@@ -1,0 +1,2 @@
+$message =~ &rhs_wordwrap( $message, $width );
+$message_len =~ split( /^/, $message );
