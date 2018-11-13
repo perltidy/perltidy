@@ -9419,6 +9419,9 @@ sub send_lines_to_vertical_aligner {
 
                 my $tok = my $raw_tok = $matching_token_to_go[$i];
 
+		# map similar items
+		if ($tok eq '!~') {$tok = '=~'}
+
                 # make separators in different nesting depths unique
                 # by appending the nesting depth digit.
                 if ( $raw_tok ne '#' ) {
@@ -10614,7 +10617,7 @@ sub get_seqno {
         # Replaced =~ and // in the list.  // had been removed in RT 119588
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~ =~ //
+          { ? : => && || ~~ !~~ =~ !~ //
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
