@@ -1,0 +1,6 @@
+# align both = and //
+my$color=$opts{'-color'}//'black';
+my$background=$opts{'-background'}//'none';
+my$linewidth=$opts{'-linewidth'}//1;
+my$radius=$opts{'-radius'}//0;
+

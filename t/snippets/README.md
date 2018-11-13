@@ -2,7 +2,9 @@
 
 This directory contains some snippets of code to do simple checks of perltidy.
 These are used to create the test files 'snippets\*.t' in the source distribution.
-These test files each contain up to about twenty test cases each.
+These test files each contain the input file, parameter set, and expected output for
+up to about twenty test cases.  They are created and maintained by scripts
+in this directory. 
 
 The tests are intended to give a good overall check that perltidy is working
 correctly at installation but they are by no means exhaustive. Thorough testing
@@ -117,6 +119,23 @@ make
 make test
 ```
 
+## A typical example
+
+Suppose we fix a bug reported as RT #834567, and this bug only occurs when
+the parameter -xyzzy is used.  Then we do the following:
+
+- Add a file rt834587.in with the smallest possible test script
+- Add a file rt834587.par with one line '-xyzzy'. You can skip this
+step if there are no special parameters.
+- Enter 'make' and follow the directions
+- Enter .RUNME.sh if everything looks good
+- Look at the packing list file and verify that the new script is at the end. You 
+should see names for two cases, 'rt834587.def' and 'rt834587.rt834587', the first
+corresponding to running with default parameters and the second with '-xyzzy' parameter.
+- You can cd up one directory and run perl on that snippet file as a quick check
+- Go up to the git root directory and run 'make test' to verify that all
+snippets are still working correctly
+
 ## How to clean up a .par file
 
 The '.par' parameter files are just .perltidyrc files, and they can be quite
@@ -125,10 +144,10 @@ default parameters, and to write the parameters with the short abbreviations.
 The following command will do this.
 
 ```
-  ../../examples/perltidyrc_dump.pl -s -q -d oldfile.par >newfile.par
+  ../../examples/perltidyrc_dump.pl -s -q -d verbose.par >compact.par
 ```
 
-If the output file 'newfile.par' looks ok then it can replace 'messy.par'.  You
+If the output file 'compact.par' looks ok then it can replace 'verbose.par'.  You
 could then add a single short comment to the new file if it would be helpful.
 
 ## Coverage

@@ -7,6 +7,8 @@
 #4 align13.def
 #5 rt127633.def
 #6 rt127633.rt127633
+#7 align14.def
+#8 align15.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -59,6 +61,22 @@ ok( $out !~ /EXACT <fop>/, "No 'baz'" );
 ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
 ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
 ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap 
+----------
+
+        'align14' => <<'----------',
+# align the =
+my ($apple)         = new Fruit( "Apple1", .1, .30 );
+my ($grapefruit)    = new Grapefruit( "Grapefruit1", .3 );
+my ($redgrapefruit) = new RedGrapefruit( "Grapefruit2", .3 );
+----------
+
+        'align15' => <<'----------',
+# align both = and //
+my$color=$opts{'-color'}//'black';
+my$background=$opts{'-background'}//'none';
+my$linewidth=$opts{'-linewidth'}//1;
+my$radius=$opts{'-radius'}//0;
+
 ----------
 
         'rt127633' => <<'----------',
@@ -133,6 +151,30 @@ return $ref eq 'SCALAR'
 return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) :
   $ref eq 'ARRAY';
 #6...........
+        },
+
+        'align14.def' => {
+            source => "align14",
+            params => "def",
+            expect => <<'#7...........',
+# align the =
+my ($apple)         = new Fruit( "Apple1", .1, .30 );
+my ($grapefruit)    = new Grapefruit( "Grapefruit1", .3 );
+my ($redgrapefruit) = new RedGrapefruit( "Grapefruit2", .3 );
+#7...........
+        },
+
+        'align15.def' => {
+            source => "align15",
+            params => "def",
+            expect => <<'#8...........',
+# align both = and //
+my $color      = $opts{'-color'}      // 'black';
+my $background = $opts{'-background'} // 'none';
+my $linewidth  = $opts{'-linewidth'}  // 1;
+my $radius     = $opts{'-radius'}     // 0;
+
+#8...........
         },
     };
 
