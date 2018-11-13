@@ -5,6 +5,8 @@
 #2 align11.def
 #3 align12.def
 #4 align13.def
+#5 rt127633.def
+#6 rt127633.rt127633
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -21,7 +23,12 @@ BEGIN {
     ###########################################
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
-    $rparams = { 'def' => "", };
+    $rparams = {
+        'def'      => "",
+        'rt127633' => <<'----------',
+-wba=':'
+----------
+    };
 
     ############################
     # BEGIN SECTION 2: Sources #
@@ -52,6 +59,11 @@ ok( $out !~ /EXACT <fop>/, "No 'baz'" );
 ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
 ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
 ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap 
+----------
+
+        'rt127633' => <<'----------',
+# do not break after return with -wba=':'
+return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) : $ref eq 'ARRAY';
 ----------
     };
 
@@ -100,6 +112,27 @@ ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
 ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
 ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap
 #4...........
+        },
+
+        'rt127633.def' => {
+            source => "rt127633",
+            params => "def",
+            expect => <<'#5...........',
+# do not break after return with -wba=':'
+return $ref eq 'SCALAR'
+  ? $self->encode_scalar( $object, $name, $type, $attr )
+  : $ref eq 'ARRAY';
+#5...........
+        },
+
+        'rt127633.rt127633' => {
+            source => "rt127633",
+            params => "rt127633",
+            expect => <<'#6...........',
+# do not break after return with -wba=':'
+return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) :
+  $ref eq 'ARRAY';
+#6...........
         },
     };
 

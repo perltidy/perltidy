@@ -15506,13 +15506,36 @@ sub insert_final_breaks {
                 my $token = $tokens_to_go[$ii];
                 my $type  = $types_to_go[$ii];
 
-                # For now, a good break is either a comma or a 'return'.
-                if ( ( $type eq ',' || $type eq 'k' && $token eq 'return' )
-                    && in_same_container( $ii, $i_question ) )
+                # For now, a good break is either a comma or,
+                # in a long chain, a 'return'.  
+		# Patch for RT #126633: added the $nmax>1 check to avoid
+		# breaking after a return for a simple ternary.  For longer
+		# chains the break after return allows vertical alignment, so
+		# it is still done.  So perltidy -wba='?' will not break
+		# immediately after the return in the following statement:
+		# sub x {
+		#    return 0 ? 'aaaaaaaaaaaaaaaaaaaaa' :
+		#      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+		# }
+                if (
+                    (
+                           $type eq ','
+                        || $type eq 'k' && ( $nmax > 1 && $token eq 'return' )
+                    )
+                    && in_same_container( $ii, $i_question )
+                  )
                 {
                     push @insert_list, $ii;
                     last;
                 }
+
+##                # For now, a good break is either a comma or a 'return'.
+##                if ( ( $type eq ',' || $type eq 'k' && $token eq 'return' )
+##                    && in_same_container( $ii, $i_question ) )
+##                {
+##                    push @insert_list, $ii;
+##                    last;
+##                }
             }
 
             # insert any new break points

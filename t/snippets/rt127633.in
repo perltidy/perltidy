@@ -1,0 +1,2 @@
+# do not break after return with -wba=':'
+return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) : $ref eq 'ARRAY';

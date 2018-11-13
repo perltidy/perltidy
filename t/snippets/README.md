@@ -1,7 +1,8 @@
 # CODE SNIPPETS FOR TESTING PERLTIDY 
 
 This directory contains some snippets of code to do simple checks of perltidy.
-These are used to create the test file "snippets.t" in the source distribution.
+These are used to create the test files 'snippets\*.t' in the source distribution.
+These test files each contain up to about twenty test cases each.
 
 The tests are intended to give a good overall check that perltidy is working
 correctly at installation but they are by no means exhaustive. Thorough testing
@@ -27,7 +28,6 @@ on the file names.  Two rules are:
 
  - Rule 1: all scripts are run with the default parameters ("def.par")
  - Rule 2: if there is a parameter file with the same base name as the base name of the script file, then the script is also run with that parameter file. 
-then that script is 
 
 For example, consider the source file "rt20421.in".  The base name is 'rt20421'.
 It will be run with the default parameters.  If a parameter file named "rt20421.par" 
@@ -60,13 +60,16 @@ creating new names.
 
 - Parameter files 'style1.par' and 'style35.par' will be run against 'style.in' if it exists.
 
-It is best to avoid file names which are pure digits because they can be difficult to search for. But leading digits followed by some non-digits, would be okay.
+It is best to avoid file names which are pure digits because they can be
+difficult to search for. But leading digits followed by some non-digits, would
+be okay.  These rules may seem a little complex at first but they work quite
+well.
 
 ## How to name a new snippet and parameter file, if any:
 
 - Give it a new base name with extension ".in".  End the name with some digits
   to avoid accidentally invoking unexpected parameter combinations. If you just
-want to format with default parameters, skip to the the run 'make' step.
+want to format with default parameters, you can skip to the next step where you run 'make'. 
 
   - For example, you might add a file named "rt126965.in" and then type 'make'
 and follow the directions.
@@ -100,7 +103,11 @@ if everything looks good.
 
 - ./RUNME.sh
 
-- This re-creates the 'snippet#.t' files in the upper directory.
+- This re-creates the 'snippet#.t' files in the upper directory.  A file 
+named 'packing\_list.txt' is written which shows the order of the snippets
+in the snippet files.  If you added test cases they should appear at the
+end of the list and will be in the highest numbered snippet file.
+
 - Verify that everything is ok by running perl on the new '.t' files or by
 going to the top directory and doing 
 
