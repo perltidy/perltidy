@@ -4,6 +4,7 @@
 #1 align10.def
 #2 align11.def
 #3 align12.def
+#4 align13.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -44,6 +45,14 @@ my $account = "Insert into accountlines
     my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
     my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
 ----------
+
+        'align13' => <<'----------',
+# symbols =~ and !~ are equivalent in alignment
+ok( $out !~ /EXACT <fop>/, "No 'baz'" );
+ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
+ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
+ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap 
+----------
     };
 
     ####################################
@@ -79,6 +88,18 @@ my $account   = "Insert into accountlines
     my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
     my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
 #3...........
+        },
+
+        'align13.def' => {
+            source => "align13",
+            params => "def",
+            expect => <<'#4...........',
+# symbols =~ and !~ are equivalent in alignment
+ok( $out !~ /EXACT <fop>/, "No 'baz'" );
+ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
+ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
+ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap
+#4...........
         },
     };
 

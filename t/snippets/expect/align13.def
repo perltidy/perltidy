@@ -1,0 +1,5 @@
+# symbols =~ and !~ are equivalent in alignment
+ok( $out !~ /EXACT <fop>/, "No 'baz'" );
+ok( $out =~ /<liz>/,       "Got 'liz'" );    # liz
+ok( $out =~ /<zoo>/,       "Got 'zoo'" );    # zoo
+ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap

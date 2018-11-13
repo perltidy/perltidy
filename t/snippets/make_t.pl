@@ -81,7 +81,8 @@ EOM
 # reading the packing list file.  To get it from the file,
 # pass 'get_passing_list()' the file name.  Otherwise,
 # it will be constructed from the snippets.  Both
-# methods work.
+# methods work. It can be necessary to switch between these
+# methods if something goes wrong during development.
 #my $rpacking_list=get_packing_list($fpacking_list);
 my $rpacking_list=get_packing_list();
 
@@ -116,7 +117,7 @@ foreach my $item ( @{$rpacking_list} ) {
     $rassigned->{$ix} = $ofile;
 
     # Find the last snippet file in the set
-    if ( $ofile =~ /(\d+)\.t/ ) {
+    if ( $ofile =~ /snippets(\d+)\.t/ ) {
         my $digits = $1;
         if ( $digits > $high_digits ) {
             $high_digits = $digits;
@@ -126,7 +127,7 @@ foreach my $item ( @{$rpacking_list} ) {
 }
 
 # Pack all new items. Continue with last file in the list
-my $ofile_last = $rpacking_list->[-1]->[0];
+my $ofile_last = $high_file; ##$rpacking_list->[-1]->[0];
 my $case_count = $rcount->{$ofile_last} + 1;
 
 my $file_count = $high_digits;
