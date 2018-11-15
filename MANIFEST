@@ -1,11 +1,8 @@
+_config.yml
 bin/perltidy
 BUGS.md
 CHANGES.md
 COPYING
-docs/README
-docs/stylekey.pod
-docs/testfile.pl
-docs/tutorial.pod
 examples/bbtidy.pl
 examples/break_long_quotes.pl
 examples/ex_mp.pl
@@ -50,6 +47,9 @@ README.md
 t/filter_example.t
 t/snippets1.t
 t/snippets10.t
+t/snippets11.t
+t/snippets12.t
+t/snippets13.t
 t/snippets2.t
 t/snippets3.t
 t/snippets4.t

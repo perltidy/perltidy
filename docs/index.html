@@ -1,133 +1,72 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<html>
-<head>
-  <title>The Perltidy Home Page</title>
-  <META name="GENERATOR" CONTENT="alconv $Revision: 1.36 $">
-  <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
-</head>
-<body bgcolor="#A0E0E0">
-<div align="center">
-</div>
-<div align="center">
-<h1>The Perltidy Home Page</h1>
-</div>
-<A href="http://sourceforge.net"> <IMG src="http://sourceforge.net/sflogo.php?group_id=17029&type=5" width="210" height="62" border="0" alt="SourceForge Logo"></A> 
-<div align="left">
-<hr>
-<p /></div>
-<div align="center">
-<h2>Welcome to Perltidy</h2>
-</div>
-<div align="left">
-Perltidy is a Perl script which indents and reformats Perl scripts to make them
+<h1>Welcome to Perltidy</h1>
+
+<p>Perltidy is a Perl script which indents and reformats Perl scripts to make them
 easier to read.  If you write Perl scripts, or spend much time
-reading them, you will probably find it useful.
-<p /></div>
-<div align="left">
-Here are a few examples of reformatted code snippets:
-<p /></div>
-<blockquote><ul>
- <li><a name="node001" href="node001.html">Some code with side comments</a>
-<br>
- <li><a name="node002" href="node002.html">A loop</a>
-<br>
- <li><a name="node003" href="node003.html">A hash definition list</a>
-<br>
- <li><a name="node004" href="node004.html">A matrix</a>
-<br>
- <li><a name="node005" href="node005.html">A complex data structure</a>
-<br>
- <li><a name="node006" href="node006.html">Cleaning up code from a code generator</a>
-<br>
-</ul></blockquote>
-<div align="left">
-The formatting can be controlled with command line parameters.  The default
+reading them, you will probably find it useful.</p>
+
+<p>Perltidy is free software released under the GNU General Public
+License -- please see the included file <a href="./COPYING.txt">COPYING</a> for details.</p>
+
+<p>The formatting can be controlled with command line parameters.  The default
 parameter settings approximately follow the suggestions in the
-<a href="https://perldoc.perl.org/perlstyle.html">
-Perl Style Guide</a>.
-<p /></div>
-<div align="left">
-Perltidy can also output html of both pod and source code.  For example, the
-link below is an html version of the module <b>Conf.pm</b>
-from <a name="SpamAssasin" href="http://spamassassin.apache.org/index.html"> SpamAssassin</a>.  
-<p /></div>
-<blockquote><ul>
- <li><a name="Conf.pm" href="Conf.pm.html">An html example</a>
-</ul></blockquote>
-<div align="left">
-Besides reformatting scripts, Perltidy can be a great help in tracking
+<a href="https://perldoc.perl.org/perlstyle.html">Perl Style Guide</a>.</p>
+
+<p>Besides reformatting scripts, Perltidy can help in tracking
 down errors with missing or extra braces, parentheses, and square brackets
-because it is very good at localizing errors.  
-<p /></div>
-<div align="left">
-<hr>
-<p /></div>
-<div align="center">
+because it is very good at localizing errors.</p>
+
 <h2>Documentation</h2>
-</div>
+
 <ul>
-<li><a href="tutorial.html">A Brief Perltidy Tutorial</a>.
-<li><a href="stylekey.html">Perltidy Style Key</a> will
-guide you in methodically selecting a set of style parameters.
-<li> The 
-<a href="perltidy.html">Perltidy man
-page</a> explains how
-to precisely control the formatting details.
-<li> <a href="ChangeLog.html">Change Log</a>.
-<li> <a href="BUGS.html">Open BUGS</a>.
-<li> The 
-<a href="Tidy.html">Perl::Tidy man
-page</a> discusses how to use the Perl::Tidy module.
-<li>The license is the <a href="COPYING">GNU General Public License</a>
+<li><p><a href="./tutorial.html">A Brief Perltidy Tutorial</a></p></li>
+<li><p><a href="./stylekey.html">Perltidy Style Key</a> will help
+in methodically selecting a set of style parameters.</p></li>
+<li><p><a href="./perltidy.html">The Perltidy man page</a> explains how
+to precisely control the formatting details.</p></li>
+<li><p><a href="./Tidy.html">The Perl::Tidy man page</a> discusses how to use the Perl::Tidy module</p></li>
+<li><p><a href="./ChangeLog.html">Change Log</a></p></li>
 </ul>
-<div align="left">
-<hr>
-<p /></div>
-<div align="center">
+
+<h2>Prerequisites</h2>
+
+<p>Perltidy should run on any system with perl 5.008 or later.
+The total disk space needed after removing the installation directory will be
+about 2 Mb.</p>
+
 <h2>Download</h2>
-</div>
-<div align="left">
-Perltidy should run on any system with perl 5.008 or later.  
-<ul> 
-<p /></div>
-<li>Please check the <a href="README.html">README File</a>
-<li>Please check the <a href="INSTALL.html">Installation Notes</a>
-<li>Download <a href="http://prdownloads.sourceforge.net/perltidy/Perl-Tidy-20180220.tar.gz">
-The latest release (.tgz, Unix-style line endings)</a>
-<li>Download <a href="http://prdownloads.sourceforge.net/perltidy/Perl-Tidy-20180220.zip">
-The latest release (.zip, Windows-style line endings)</a>
-<li>Debian users can use: apt-get install perltidy
-<li>Download <a href= "http://rpmfind.net/" > rpm's from Rpmfind.Net</a>
-<li> If these links are broken, 
-go 
-to the download area at
-<a href="http://sourceforge.net/project/?group_id=17029">
-the SourceForge Project Page </a>
-<li> Or look for it at 
-<a href="http://search.cpan.org/search?mode=all&query=perltidy">CPAN</a>
+
+<ul>
+<li><p>The most recent release is always at <a href="https://metacpan.org/release/Perl-Tidy">CPAN</a></p></li>
+<li><p>The most recent release is also at <a href="https://sourceforge.net/projects/perltidy/">sourceforge</a></p></li>
+<li><p>For related modules search CPAN for <a href="https://metacpan.org/search?q=perltidy">perltidy</a></p></li>
 </ul>
-<div align="left">
-<hr>
-<p /></div>
-<div align="center">
+
+<h2>Installation</h2>
+
+<p>Perl::Tidy can be installed directly from CPAN one of the available methods.</p>
+
+<p>One way is to download a distribution file, unpack it and then 
+test and install using the Makefile.PL:</p>
+
+<pre><code>perl Makefile.PL
+make
+make test
+make install
+</code></pre>
+
+<p>The <a href="./INSTALL.html">INSTALL file</a> has additional installation notes, and tells how
+to use perltidy without doing an installation.</p>
+
 <h2>Links</h2>
-</div>
+
 <ul>
-<li> <a href="http://sourceforge.net/projects/tidyview">Tidyview</a> is a graphical program for tweaking your .perltidyrc configuration parameters.
-<li> <a href="https://github.com/vifo/SublimePerlTidy">https://github.com/vifo/SublimePerlTidy</a> perltidy plugin for Sublime Text 2/3 
+<li><a href="https://github.com/perltidy/perltidy">Perl::Tidy source code repository at GitHub</a></li>
+<li><a href="http://sourceforge.net/projects/tidyview">Tidyview</a> is a graphical program for tweaking your .perltidyrc configuration parameters.</li>
+<li><a href="https://github.com/vifo/SublimePerlTidy">A perltidy plugin for Sublime Text 2/3</a></li>
 </ul>
-<div align="left">
-<hr>
-<p /></div>
-<div align="center">
-<h2>Contact</h2>
-</div>
-<ul>
-<li>Author: Steve Hancock
-<li>email: &#112;&#101;&#114;&#108;&#116;&#105;&#100;&#121;&#32;&#97;&#116;&#32;&#117;&#115;&#101;&#114;&#115;&#46;&#115;&#111;&#117;&#114;&#99;&#101;&#102;&#111;&#114;&#103;&#101;&#46;&#110;&#101;&#116;&#10;
-<li>Thanks to <a href="http://sourceforge.net">SourceForge</a> for hosting this project. 
-</ul>
-<div align="center">
-</div>
-</body>
-</html>
+
+<h2>FEEDBACK / BUG REPORTS</h2>
+
+<p>A list of current bugs and issues can be found at the CPAN site <a href="https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy">https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy</a></p>
+
+<p>To report a new bug or problem, use the link on this page .</p>

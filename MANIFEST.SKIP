@@ -126,5 +126,8 @@
 
 ^local-docs/
 
+# this is reserved for html pages
+^docs/
+
 ^archive/
 

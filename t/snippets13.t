@@ -9,6 +9,8 @@
 #6 rt127633.rt127633
 #7 align14.def
 #8 align15.def
+#9 align16.def
+#10 break5.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -65,9 +67,9 @@ ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap
 
         'align14' => <<'----------',
 # align the =
-my ($apple)         = new Fruit( "Apple1", .1, .30 );
-my ($grapefruit)    = new Grapefruit( "Grapefruit1", .3 );
-my ($redgrapefruit) = new RedGrapefruit( "Grapefruit2", .3 );
+my($apple)=new Fruit("Apple1",.1,.30);
+my($grapefruit)=new Grapefruit("Grapefruit1",.3);
+my($redgrapefruit)=new RedGrapefruit("Grapefruit2",.3);
 ----------
 
         'align15' => <<'----------',
@@ -76,7 +78,32 @@ my$color=$opts{'-color'}//'black';
 my$background=$opts{'-background'}//'none';
 my$linewidth=$opts{'-linewidth'}//1;
 my$radius=$opts{'-radius'}//0;
+----------
 
+        'align16' => <<'----------',
+# align all at first =>
+use constant {
+    PHFAM => [ { John => 1, Jane => 2, Sally => 3 }, 33, 28, 3 ],
+    FAMILY => [qw( John Jane Sally )],
+    AGES   => { John => 33, Jane => 28, Sally => 3 },
+    RFAM => [ [qw( John Jane Sally )] ],
+    THREE => 3,
+    SPIT  => sub { shift },
+};
+
+----------
+
+        'break5' => <<'----------',
+# do not break at .'s after the ?
+return (
+    ( $pod eq $pod2 ) & amp;
+      &amp;
+      ( $htype eq "NAME" )
+  )
+  ? "\n&lt;A NAME=\""
+  . $value
+  . "\"&gt;\n$text&lt;/A&gt;\n"
+  : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
 ----------
 
         'rt127633' => <<'----------',
@@ -173,8 +200,39 @@ my $color      = $opts{'-color'}      // 'black';
 my $background = $opts{'-background'} // 'none';
 my $linewidth  = $opts{'-linewidth'}  // 1;
 my $radius     = $opts{'-radius'}     // 0;
-
 #8...........
+        },
+
+        'align16.def' => {
+            source => "align16",
+            params => "def",
+            expect => <<'#9...........',
+# align all at first =>
+use constant {
+    PHFAM  => [ { John => 1, Jane => 2, Sally => 3 }, 33, 28, 3 ],
+    FAMILY => [qw( John Jane Sally )],
+    AGES   => { John => 33, Jane => 28, Sally => 3 },
+    RFAM   => [ [qw( John Jane Sally )] ],
+    THREE  => 3,
+    SPIT   => sub { shift },
+};
+
+#9...........
+        },
+
+        'break5.def' => {
+            source => "break5",
+            params => "def",
+            expect => <<'#10...........',
+# do not break at .'s after the ?
+return (
+    ( $pod eq $pod2 ) & amp;
+    &amp;
+    ( $htype eq "NAME" )
+  )
+  ? "\n&lt;A NAME=\"" . $value . "\"&gt;\n$text&lt;/A&gt;\n"
+  : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
+#10...........
         },
     };
 
