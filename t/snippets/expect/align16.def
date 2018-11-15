@@ -1,0 +1,10 @@
+# align all at first =>
+use constant {
+    PHFAM  => [ { John => 1, Jane => 2, Sally => 3 }, 33, 28, 3 ],
+    FAMILY => [qw( John Jane Sally )],
+    AGES   => { John => 33, Jane => 28, Sally => 3 },
+    RFAM   => [ [qw( John Jane Sally )] ],
+    THREE  => 3,
+    SPIT   => sub { shift },
+};
+

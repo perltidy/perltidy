@@ -85,6 +85,8 @@
 ../snippets13.t	align13.def
 ../snippets13.t	rt127633.def
 ../snippets13.t	rt127633.rt127633
+../snippets13.t	align14.def
+../snippets13.t	align15.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -245,5 +247,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets13.t	align14.def
-../snippets13.t	align15.def
+../snippets13.t	align16.def
+../snippets13.t	break5.def

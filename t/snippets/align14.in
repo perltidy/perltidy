@@ -1,4 +1,4 @@
 # align the =
-my ($apple)         = new Fruit( "Apple1", .1, .30 );
-my ($grapefruit)    = new Grapefruit( "Grapefruit1", .3 );
-my ($redgrapefruit) = new RedGrapefruit( "Grapefruit2", .3 );
+my($apple)=new Fruit("Apple1",.1,.30);
+my($grapefruit)=new Grapefruit("Grapefruit1",.3);
+my($redgrapefruit)=new RedGrapefruit("Grapefruit2",.3);
