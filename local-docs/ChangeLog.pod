@@ -1,10 +1,7 @@
 =head1 Perltidy Change Log
 
-=head2 2018 02 20.01
+=head2 2018 11 16
 
-  - The packaging for this version has changed. The Tidy.pm file has 
-    been split into a smaller Tidy.pm file plus supporting modules in the path
-    Perl/Tidy/*.
 
   - Fixed RT #126965, in which a ternary operator was misparsed if immediately
     following a function call without arguments, such as: 
@@ -37,10 +34,6 @@
 
   - Fixed RT #124594, license text desc. changed from 'GPL-2.0+' to 'gpl_2'
 
-  - RT #106493; source code repository is https://github.com/perltidy/perltidy
-
-  - Numerous installation test snippets have been added. 
-
   - Fixed bug in which a warning about a possible code bug was issued in a
     script with brace errors. 
 
@@ -54,8 +47,11 @@
     some lines was was not entabbed.  This happened in code which was adjusted
     for vertical alignment and in hanging side comments. Thanks to Glenn.
 
-  - Vertical alignment has been improved in several ways.  Thanks especially to
-    Glenn for sending helpful snippets.
+  - Fixed RT #127633, undesirable line break after return when -baao flag is set
+
+  - Fixed RT #127035, vertical alignment. Vertical alignment has been improved 
+    in several ways.  Thanks especially to Glenn and Michael Wardman for sending 
+    helpful snippets. 
 
     - In many cases, two lines which were previously left unaligned are now
       aligned. 
@@ -89,6 +85,17 @@
         is( pop       // 7, 7, 'pop // ... works' );
         is( pop()     // 7, 0, 'pop() // ... works' );
         is( pop @ARGV // 7, 3, 'pop @array // ... works' );
+
+  - RT #106493; source code repository location has been added to docs; it is 
+       https://github.com/perltidy/perltidy
+
+  - The packaging for this version has changed. The Tidy.pm module is much 
+    smaller.  Supporting modules have been split out from it and placed below 
+    it in the path Perl/Tidy/*.
+
+  - A number of new installation test cases have been added. Updates are now
+    continuously tested at Travis CI against versions back to Perl 5.08.
+
 
 
 =head2 2018 02 20

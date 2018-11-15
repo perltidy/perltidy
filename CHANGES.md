@@ -1,6 +1,20 @@
 # Perltidy Change Log
 
-## 2018 02 20.01
+## 2018 11 16
+
+    - The packaging for this version has changed. The Tidy.pm file has 
+      been split into a smaller Tidy.pm file plus supporting modules in the path
+      Perl/Tidy/*.
+
+    - A number of new installation test cases have been added. 
+
+    - Fixed RT #126965, in which a ternary operator was misparsed if immediately
+      following a function call without arguments, such as: 
+        my $restrict_customer = shift ? 1 : 0;
+
+    - Fixed RT #125012: bug in -mangle --delete-all-comments
+      A needed blank space bareword tokens was being removed when comments were
+      deleted
 
     - Fixed RT #81852: Stacked containers and quoting operators. Quoted words
       (qw) delimited by container tokens ('{', '[', '(', '<') are now included in
@@ -25,7 +39,10 @@
 
     - Fixed RT #124594, license text desc. changed from 'GPL-2.0+' to 'gpl_2'
 
-    - Numerous installation test snippets have been added. 
+    - RT #106493; source code repository is https://github.com/perltidy/perltidy
+
+    - Fixed bug in which a warning about a possible code bug was issued in a
+      script with brace errors. 
 
     - added option --notimestamp or -nts to eliminate any time stamps in output 
       files.  This is used to prevent differences in test scripts from causing
@@ -33,9 +50,47 @@
       stamp on certain closing side comments. We need to avoid this in order
       to test this feature in an installation test.
 
-    - The packaging for this version has changed. The Tidy.pm file has 
-      been split into a smaller Tidy.pm file plus supporting modules in the path
-      Perl/Tidy/*.
+    - Fixed bug with the entab option, -et=8, in which the leading space of
+      some lines was was not entabbed.  This happened in code which was adjusted
+      for vertical alignment and in hanging side comments. Thanks to Glenn.
+
+    - Fixed RT #127633, undesirable line break after return when -baao flag is set
+
+    - Vertical alignment has been improved in several ways.  Thanks especially to
+      Glenn for sending helpful snippets.
+
+      - In many cases, two lines which were previously left unaligned are now
+        aligned. 
+
+          OLD:
+          $expect = "1$expect" if $expect =~ /^e/i;
+          $p = "1$p" if defined $p and $p =~ /^e/i;
+      
+          NEW:
+          $expect = "1$expect" if $expect =~ /^e/i;
+          $p      = "1$p"      if defined $p and $p =~ /^e/i;
+
+      - Alignment of the =~ operators has been reactivated.  
+
+          OLD:
+          $service_profile =~ s/^\s+|\s+$//g;
+          $host_profile =~ s/^\s+|\s+$//g;
+      
+          NEW:
+          $service_profile =~ s/^\s+|\s+$//g;
+          $host_profile    =~ s/^\s+|\s+$//g;
+
+      - Alignment of the // operator has been reactivated.  
+
+          OLD:
+          is( pop // 7,       7, 'pop // ... works' );
+          is( pop() // 7,     0, 'pop() // ... works' );
+          is( pop @ARGV // 7, 3, 'pop @array // ... works' );
+          
+          NEW:
+          is( pop       // 7, 7, 'pop // ... works' );
+          is( pop()     // 7, 0, 'pop() // ... works' );
+          is( pop @ARGV // 7, 3, 'pop @array // ... works' );
 
 ## 2018 02 20
 

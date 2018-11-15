@@ -336,7 +336,7 @@ BEGIN {
     );
     @is_digraph{@q} = (1) x scalar(@q);
 
-    @q = qw( ... **= <<= >>= &&= ||= //= <=> <<~ );
+    @q               = qw( ... **= <<= >>= &&= ||= //= <=> <<~ );
     @is_trigraph{@q} = (1) x scalar(@q);
 
     @q = qw(
@@ -360,22 +360,22 @@ BEGIN {
     @q = qw(is if unless and or err last next redo return);
     @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
 
-    @q = qw(last next redo return);
+    @q                            = qw(last next redo return);
     @is_last_next_redo_return{@q} = (1) x scalar(@q);
 
-    @q = qw(sort map grep);
+    @q                    = qw(sort map grep);
     @is_sort_map_grep{@q} = (1) x scalar(@q);
 
-    @q = qw(sort map grep eval);
+    @q                         = qw(sort map grep eval);
     @is_sort_map_grep_eval{@q} = (1) x scalar(@q);
 
-    @q = qw(sort map grep eval do);
+    @q                            = qw(sort map grep eval do);
     @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
 
-    @q = qw(if unless);
+    @q                = qw(if unless);
     @is_if_unless{@q} = (1) x scalar(@q);
 
-    @q = qw(and or err);
+    @q             = qw(and or err);
     @is_and_or{@q} = (1) x scalar(@q);
 
     # Identify certain operators which often occur in chains.
@@ -384,7 +384,7 @@ BEGIN {
     #    Checkbutton => 'Transmission checked',
     #   -variable    => \$TRANS
     # This usually improves appearance so it seems ok.
-    @q = qw(&& || and or : ? . + - * /);
+    @q                     = qw(&& || and or : ? . + - * /);
     @is_chain_operator{@q} = (1) x scalar(@q);
 
     # We can remove semicolons after blocks preceded by these keywords
@@ -408,17 +408,17 @@ BEGIN {
     @ok_to_add_semicolon_for_block_type{@q} = (1) x scalar(@q);
 
     # 'L' is token for opening { at hash key
-    @q = qw< L { ( [ >;
+    @q                   = qw< L { ( [ >;
     @is_opening_type{@q} = (1) x scalar(@q);
 
     # 'R' is token for closing } at hash key
-    @q = qw< R } ) ] >;
+    @q                   = qw< R } ) ] >;
     @is_closing_type{@q} = (1) x scalar(@q);
 
-    @q = qw< { ( [ >;
+    @q                    = qw< { ( [ >;
     @is_opening_token{@q} = (1) x scalar(@q);
 
-    @q = qw< } ) ] >;
+    @q                    = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
 
     # Patterns for standardizing matches to block types for regular subs and
@@ -1391,7 +1391,7 @@ sub set_whitespace_flags {
     my $ws_in_container = sub {
 
         my ($j) = @_;
-        my $ws = WS_YES;
+        my $ws  = WS_YES;
         if ( $j + 1 > $jmax ) { return (WS_NO) }
 
         # Patch to count '-foo' as single token so that
@@ -2162,7 +2162,7 @@ sub respace_tokens {
 
         # Insert any essential whitespace between lines
         # if last line was normal CODE.
-	# Patch for rt #125012: use K_previous_code rather than '_nonblank'
+        # Patch for rt #125012: use K_previous_code rather than '_nonblank'
         # because comments may disappear.
         my $type_next  = $rLL->[$Kfirst]->[_TYPE_];
         my $token_next = $rLL->[$Kfirst]->[_TOKEN_];
@@ -2287,7 +2287,7 @@ sub respace_tokens {
                             my $rcopy =
                               copy_token_as_type( $rtoken_vars, 'q', $part1 );
                             $store_token->($rcopy);
-                            $token = $part2;
+                            $token                  = $part2;
                             $rtoken_vars->[_TOKEN_] = $token;
 
                         }
@@ -2326,7 +2326,7 @@ sub respace_tokens {
                                 $store_token_and_space->(
                                     $rcopy, $rwhitespace_flags->[$KK] == WS_YES
                                 );
-                                $token = $part2;
+                                $token                  = $part2;
                                 $rtoken_vars->[_TOKEN_] = $token;
 
                                 # Second part goes without intermediate blank
@@ -2538,7 +2538,7 @@ sub respace_tokens {
         my $rLL    = $self->{rLL};
         my $Klimit = $self->{Klimit};
 
-        my $CODE_type = $rOpts->{'indent-only'} ? 'IO' : "";
+        my $CODE_type            = $rOpts->{'indent-only'} ? 'IO' : "";
         my $no_internal_newlines = 1 - $rOpts_add_newlines;
         if ( !$CODE_type && $no_internal_newlines ) { $CODE_type = 'NIN' }
 
@@ -2941,7 +2941,7 @@ sub K_next_nonblank {
 
 sub K_previous_code {
 
-    # return the index K of the previous nonblank, non-comment token 
+    # return the index K of the previous nonblank, non-comment token
     # Call with $KK=undef to start search at the top of the array
     my ( $self, $KK, $rLL ) = @_;
 
@@ -3069,13 +3069,13 @@ sub weld_cuddled_blocks {
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
-        my $KK = $K_opening_container->{$seqno};
+        my $KK      = $K_opening_container->{$seqno};
         my $lentot = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
         return $lentot;
     };
     my $length_to_closing_seqno = sub {
         my ($seqno) = @_;
-        my $KK = $K_closing_container->{$seqno};
+        my $KK      = $K_closing_container->{$seqno};
         my $lentot = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
         return $lentot;
     };
@@ -3084,7 +3084,7 @@ sub weld_cuddled_blocks {
 
         # a block is broken if the input line numbers of the braces differ
         # we can only cuddle between broken blocks
-        my ($seqno) = @_;
+        my ($seqno)   = @_;
         my $K_opening = $K_opening_container->{$seqno};
         return unless ( defined($K_opening) );
         my $K_closing = $K_closing_container->{$seqno};
@@ -3255,14 +3255,14 @@ sub weld_nested_containers {
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
-        my $KK = $K_opening_container->{$seqno};
+        my $KK      = $K_opening_container->{$seqno};
         my $lentot = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
         return $lentot;
     };
 
     my $length_to_closing_seqno = sub {
         my ($seqno) = @_;
-        my $KK = $K_closing_container->{$seqno};
+        my $KK      = $K_closing_container->{$seqno};
         my $lentot = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
         ##my $lentot  = $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
         return $lentot;
@@ -4138,7 +4138,7 @@ sub set_leading_whitespace {
             ##my $too_close = ($i_test==$max_index_to_go-1);
 
             my $test_position = total_line_length( $i_test, $max_index_to_go );
-            my $mll = maximum_line_length($i_test);
+            my $mll           = maximum_line_length($i_test);
 
             if (
 
@@ -5544,7 +5544,7 @@ sub make_block_pattern {
             Warn("unrecognized block type $i after $abbrev, ignoring\n");
         }
     }
-    my $pattern = '(' . join( '|', @words ) . ')$';
+    my $pattern      = '(' . join( '|', @words ) . ')$';
     my $sub_patterns = "";
     if ( $seen{'sub'} ) {
         $sub_patterns .= '|' . $SUB_PATTERN;
@@ -5627,7 +5627,7 @@ sub make_closing_side_comment_prefix {
         }
     }
     $rOpts->{'closing-side-comment-prefix'} = $csc_prefix;
-    $closing_side_comment_prefix_pattern = $csc_prefix_pattern;
+    $closing_side_comment_prefix_pattern    = $csc_prefix_pattern;
     return;
 }
 
@@ -5673,10 +5673,10 @@ EOM
     BEGIN {
 
         my @q;
-        @q = qw(sort grep map);
+        @q                    = qw(sort grep map);
         @is_sort_grep_map{@q} = (1) x scalar(@q);
 
-        @q = qw(for foreach);
+        @q                  = qw(for foreach);
         @is_for_foreach{@q} = (1) x scalar(@q);
 
     }
@@ -6066,7 +6066,7 @@ EOM
         # If this becomes too much of a problem, we might give up and just clip
         # them at zero.
         ## $levels_to_go[$max_index_to_go] = ( $level > 0 ) ? $level : 0;
-        $levels_to_go[$max_index_to_go] = $level;
+        $levels_to_go[$max_index_to_go]        = $level;
         $nesting_depth_to_go[$max_index_to_go] = ( $slevel >= 0 ) ? $slevel : 0;
 
         # link the non-blank tokens
@@ -6393,9 +6393,9 @@ EOM
                 }
             }
 
-	    # Fix for rt #125506 Unexpected string formating
-	    # in which leading space of a terminal quote was removed
-    	    $line =~ s/\s+$//;
+            # Fix for rt #125506 Unexpected string formating
+            # in which leading space of a terminal quote was removed
+            $line =~ s/\s+$//;
             $line =~ s/^\s+// unless ($in_continued_quote);
 
             $self->extract_token(0);
@@ -8636,7 +8636,7 @@ sub accumulate_block_text {
                     # A label can only be used on the next {
                     if ( $block_type =~ /:$/ ) { $csc_last_label = "" }
                     $csc_block_label{$type_sequence} = $csc_last_label;
-                    $csc_last_label = "";
+                    $csc_last_label                  = "";
 
                     if (   $accumulating_text_for_block
                         && $levels_to_go[$i] == $leading_block_text_level )
@@ -9419,8 +9419,8 @@ sub send_lines_to_vertical_aligner {
 
                 my $tok = my $raw_tok = $matching_token_to_go[$i];
 
-		# map similar items
-		if ($tok eq '!~') {$tok = '=~'}
+                # map similar items
+                if ( $tok eq '!~' ) { $tok = '=~' }
 
                 # make separators in different nesting depths unique
                 # by appending the nesting depth digit.
@@ -10481,7 +10481,7 @@ sub set_vertical_tightness_flags {
           )
         {
             my $valid_flag = 1;
-            my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
+            my $spaces     = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
             @{$rvertical_tightness_flags} =
               ( 2, $spaces, $type_sequence_to_go[$ibeg_next], $valid_flag, );
         }
@@ -10589,7 +10589,7 @@ sub get_seqno {
     # aligner.  Assign qw quotes a value to allow qw opening and closing tokens
     # to be treated somewhat like opening and closing tokens for stacking
     # tokens by the vertical aligner.
-    my ($ii) = @_;
+    my ($ii)  = @_;
     my $seqno = $type_sequence_to_go[$ii];
     if ( $types_to_go[$ii] eq 'q' ) {
         my $SEQ_QW = -1;
@@ -10622,7 +10622,7 @@ sub get_seqno {
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
         # only align these at end of line
-        @q = qw(&& ||);
+        @q                              = qw(&& ||);
         @is_terminal_alignment_type{@q} = (1) x scalar(@q);
 
         # eq and ne were removed from this list to improve alignment chances
@@ -10674,7 +10674,7 @@ sub get_seqno {
             $vert_last_nonblank_block_type        = '';
 
             # look at each token in this output line..
-	    my $count=0;
+            my $count = 0;
             foreach my $i ( $ibeg .. $iend ) {
                 my $alignment_type = '';
                 my $type           = $types_to_go[$i];
@@ -10828,9 +10828,9 @@ sub get_seqno {
 
                 #--------------------------------------------------------
                 # patch for =~ operator.  We only align this if it
-		# is the first operator in a line, and the line is a simple
-		# statement.  Aligning them within a statement causes
-		# interferes with other good alignments.
+                # is the first operator in a line, and the line is a simple
+                # statement.  Aligning them within a statement causes
+                # interferes with other good alignments.
                 #--------------------------------------------------------
                 if ( $alignment_type eq '=~' ) {
                     my $terminal_type = $types_to_go[$i_terminal];
@@ -10844,7 +10844,7 @@ sub get_seqno {
                 # then store the value
                 #--------------------------------------------------------
                 $matching_token_to_go[$i] = $alignment_type;
-		$count++ if ($alignment_type); 
+                $count++ if ($alignment_type);
                 if ( $type ne 'b' ) {
                     $vert_last_nonblank_type       = $type;
                     $vert_last_nonblank_token      = $token;
@@ -10923,10 +10923,10 @@ sub terminal_type {
     sub initialize_bond_strength_hashes {
 
         my @q;
-        @q = qw(if unless while until for foreach);
+        @q                              = qw(if unless while until for foreach);
         @is_good_keyword_breakpoint{@q} = (1) x scalar(@q);
 
-        @q = qw(lt gt le ge);
+        @q                  = qw(lt gt le ge);
         @is_lt_gt_le_ge{@q} = (1) x scalar(@q);
         #
         # The decision about where to break a line depends upon a "bond
@@ -11028,7 +11028,7 @@ sub terminal_type {
         $right_bond_strength{'CORE::'} = NO_BREAK;
 
         # breaking AFTER modulus operator is ok:
-        @q = qw< % >;
+        @q                      = qw< % >;
         @left_bond_strength{@q} = (STRONG) x scalar(@q);
         @right_bond_strength{@q} =
           ( 0.1 * NOMINAL + 0.9 * STRONG ) x scalar(@q);
@@ -11040,7 +11040,7 @@ sub terminal_type {
 
         # Break AFTER weakest math operators + and -
         # Make them weaker than * but a bit stronger than '.'
-        @q = qw< + - >;
+        @q                      = qw< + - >;
         @left_bond_strength{@q} = (STRONG) x scalar(@q);
         @right_bond_strength{@q} =
           ( 0.91 * NOMINAL + 0.09 * WEAK ) x scalar(@q);
@@ -11061,13 +11061,13 @@ sub terminal_type {
 
         # make these a little weaker than nominal so that they get
         # favored for end-of-line characters
-        @q = qw< != == =~ !~ ~~ !~~ >;
+        @q                      = qw< != == =~ !~ ~~ !~~ >;
         @left_bond_strength{@q} = (STRONG) x scalar(@q);
         @right_bond_strength{@q} =
           ( 0.9 * NOMINAL + 0.1 * WEAK ) x scalar(@q);
 
         # break AFTER these
-        @q = qw# < >  | & >= <= #;
+        @q                      = qw# < >  | & >= <= #;
         @left_bond_strength{@q} = (VERY_STRONG) x scalar(@q);
         @right_bond_strength{@q} =
           ( 0.8 * NOMINAL + 0.2 * WEAK ) x scalar(@q);
@@ -11429,7 +11429,7 @@ sub terminal_type {
             # section.
             if ( !defined($bsr) ) { $bsr = VERY_STRONG }
             if ( !defined($bsl) ) { $bsl = VERY_STRONG }
-            my $bond_str = ( $bsr < $bsl ) ? $bsr : $bsl;
+            my $bond_str   = ( $bsr < $bsl ) ? $bsr : $bsl;
             my $bond_str_1 = $bond_str;
 
             #---------------------------------------------------------------
@@ -11693,7 +11693,7 @@ sub terminal_type {
             elsif ( defined( $bias{$left_key} ) ) {
                 if ( !$want_break_before{$left_key} ) {
                     $bias{$left_key} += $delta_bias;
-                    $bond_str += $bias{$left_key};
+                    $bond_str        += $bias{$left_key};
                 }
             }
 
@@ -11913,7 +11913,7 @@ sub pad_array_to_go {
                     \$do_not_break_apart,
                     $must_break_open,
                 );
-                $bp_count = $forced_breakpoint_count - $fbc;
+                $bp_count           = $forced_breakpoint_count - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
             }
         }
@@ -12951,7 +12951,7 @@ sub pad_array_to_go {
         # set breaks for any unfinished lists ..
         for ( my $dd = $current_depth ; $dd >= $minimum_depth ; $dd-- ) {
 
-            $interrupted_list[$dd] = 1;
+            $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
             set_comma_breakpoints($dd);
             set_logical_breakpoints($dd)
@@ -13490,7 +13490,7 @@ sub find_token_starting_list {
 #           )
 #           if $style eq 'all';
 
-            my $i_last_comma = $rcomma_index->[ $comma_count - 1 ];
+            my $i_last_comma   = $rcomma_index->[ $comma_count - 1 ];
             my $long_last_term = excess_line_length( 0, $i_last_comma ) <= 0;
             my $long_first_term =
               excess_line_length( $i_first_comma + 1, $max_index_to_go ) <= 0;
@@ -14155,19 +14155,19 @@ sub undo_forced_breakpoint_stack {
     BEGIN {
 
         my @q;
-        @q = qw( && || );
+        @q              = qw( && || );
         @is_amp_amp{@q} = (1) x scalar(@q);
 
-        @q = qw( ? : );
+        @q              = qw( ? : );
         @is_ternary{@q} = (1) x scalar(@q);
 
-        @q = qw( + - * / );
+        @q              = qw( + - * / );
         @is_math_op{@q} = (1) x scalar(@q);
 
-        @q = qw( + - );
+        @q                 = qw( + - );
         @is_plus_minus{@q} = (1) x scalar(@q);
 
-        @q = qw( * / );
+        @q               = qw( * / );
         @is_mult_div{@q} = (1) x scalar(@q);
     }
 
@@ -14906,7 +14906,7 @@ sub undo_forced_breakpoint_stack {
                 # and the rest of the loop to do the join
                 if ($skip_Section_3) {
                     $forced_breakpoint_to_go[$iend_1] = 0;
-                    $n_best = $n;
+                    $n_best                           = $n;
                     last;
                 }
 
@@ -15507,16 +15507,16 @@ sub insert_final_breaks {
                 my $type  = $types_to_go[$ii];
 
                 # For now, a good break is either a comma or,
-                # in a long chain, a 'return'.  
-		# Patch for RT #126633: added the $nmax>1 check to avoid
-		# breaking after a return for a simple ternary.  For longer
-		# chains the break after return allows vertical alignment, so
-		# it is still done.  So perltidy -wba='?' will not break
-		# immediately after the return in the following statement:
-		# sub x {
-		#    return 0 ? 'aaaaaaaaaaaaaaaaaaaaa' :
-		#      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
-		# }
+                # in a long chain, a 'return'.
+                # Patch for RT #126633: added the $nmax>1 check to avoid
+                # breaking after a return for a simple ternary.  For longer
+                # chains the break after return allows vertical alignment, so
+                # it is still done.  So perltidy -wba='?' will not break
+                # immediately after the return in the following statement:
+                # sub x {
+                #    return 0 ? 'aaaaaaaaaaaaaaaaaaaaa' :
+                #      'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+                # }
                 if (
                     (
                            $type eq ','

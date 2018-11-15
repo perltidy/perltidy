@@ -416,7 +416,7 @@ sub valign_input {
             && $rvertical_tightness_flags->[2] == $cached_seqno )
         {
             $rvertical_tightness_flags->[3] ||= 1;
-            $cached_line_valid ||= 1;
+            $cached_line_valid              ||= 1;
         }
     }
 
@@ -502,7 +502,7 @@ sub valign_input {
         && $level_jump == 0 )
     {
         $j_terminal_match = fix_terminal_else( $rfields, $rtokens, $rpatterns );
-        $jmax = @{$rfields} - 1;
+        $jmax             = @{$rfields} - 1;
     }
 
     # --------------------------------------------------------------------
@@ -848,7 +848,7 @@ sub eliminate_old_fields {
         $new_fields[$j]            = $current_field;
         $new_matching_patterns[$j] = $current_pattern;
 
-        $new_alignments[$j] = $old_line->get_alignment($k);
+        $new_alignments[$j]  = $old_line->get_alignment($k);
         $maximum_field_index = $j;
 
         $old_line->set_alignments(@new_alignments);
@@ -1199,7 +1199,7 @@ sub fix_terminal_ternary {
         unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
 
         # insert appropriate number of empty fields
-        $jadd = $jquestion + 1;
+        $jadd      = $jquestion + 1;
         $fields[0] = $pad . $fields[0];
         splice( @fields, 0, 0, ('') x $jadd ) if $jadd;
     }
@@ -1586,9 +1586,9 @@ sub fix_terminal_else {
       NO_MATCH:
         ##print "no match jmax=$jmax  max=$maximum_field_index $group_list_type lines=$maximum_line_index token=$old_rtokens->[0]\n";
 
-	# Make one last effort to retain a match of certain statements
-	my $match = salvage_equality_matches($new_line, $old_line);
-        my_flush() unless($match);
+        # Make one last effort to retain a match of certain statements
+        my $match = salvage_equality_matches( $new_line, $old_line );
+        my_flush() unless ($match);
         return;
     }
 }
@@ -1610,7 +1610,7 @@ sub salvage_equality_matches {
     #  $xpownm1 = $class->_pow( $class->_copy($x), $nm1 );    # x(i)^(n-1)
 
     # We will only do this if there is one old line (and one new line)
-    return unless ($maximum_line_index == 0 );
+    return unless ( $maximum_line_index == 0 );
     return if ($is_matching_terminal_line);
 
     # We are only looking for equality type statements
@@ -1622,14 +1622,14 @@ sub salvage_equality_matches {
 
     # The leading patterns must match
     my $old_rpatterns = $old_line->get_rpatterns();
-    my $rpatterns       = $new_line->get_rpatterns();
-    return if ( $old_rpatterns->[0] ne $rpatterns->[0] ); 
+    my $rpatterns     = $new_line->get_rpatterns();
+    return if ( $old_rpatterns->[0] ne $rpatterns->[0] );
 
     # Both should have side comment fields (should always be true)
-    my $jmax_old     = $old_line->get_jmax();
-    my $jmax_new     = $new_line->get_jmax();
-    my $end_tok_old = $old_rtokens->[$jmax_old-1];
-    my $end_tok_new = $rtokens->[$jmax_new-1];
+    my $jmax_old    = $old_line->get_jmax();
+    my $jmax_new    = $new_line->get_jmax();
+    my $end_tok_old = $old_rtokens->[ $jmax_old - 1 ];
+    my $end_tok_new = $rtokens->[ $jmax_new - 1 ];
     my $have_side_comments =
          defined($end_tok_old)
       && $end_tok_old eq '#'
@@ -1641,18 +1641,18 @@ sub salvage_equality_matches {
     # 'unless','||', '&&'. The reason is that (1) this isn't a great match, and
     # (2) we will prevent possibly better matchs to follow.  Here is an
     # example.  The match of the first two lines is rejected, and this allows
-    # the second and third lines to match. 
+    # the second and third lines to match.
     #   my $type = shift || "o";
     #   my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
     #   my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
     # This logic can cause some unwanted losses of alignments, but it can retain
-    # long runs of multiple-token alignments, so overall it is worthwhile.  
-    # If we had a peek at the subsequent line we could make a much better 
+    # long runs of multiple-token alignments, so overall it is worthwhile.
+    # If we had a peek at the subsequent line we could make a much better
     # decision here, but for now this is not available.
-    for ( my $j = 1 ; $j < $jmax_new-1 ; $j++ ) {
-        my $new_tok = $rtokens->[$j];
+    for ( my $j = 1 ; $j < $jmax_new - 1 ; $j++ ) {
+        my $new_tok           = $rtokens->[$j];
         my $is_good_alignment = ( $new_tok =~ /^(=|\?|if|unless|\|\||\&\&)/ );
-	return if ($is_good_alignment);
+        return if ($is_good_alignment);
     }
 
     my $squeeze_line = sub {
@@ -1681,7 +1681,7 @@ sub salvage_equality_matches {
         $line_obj->{_rtokens}   = $rtokens_new;
         $line_obj->set_jmax($jmax_new);
     };
-    
+
     # Okay, we will force a match at the equals-like token.  We will fix both
     # lines to have just 2 tokens and 3 fields:
     $squeeze_line->($new_line);
@@ -1690,7 +1690,7 @@ sub salvage_equality_matches {
     # start over with a new group
     initialize_for_new_group();
     add_to_group($old_line);
-    $current_line = $old_line; 
+    $current_line = $old_line;
     return 1;
 }
 
@@ -2056,8 +2056,8 @@ sub decide_if_aligned {
         # always align lists
         !$group_list_type
 
-	# always align lines with leading equality operators
-        && !$leading_equals
+          # always align lines with leading equality operators
+          && !$leading_equals
 
           && (
 
@@ -2067,7 +2067,7 @@ sub decide_if_aligned {
             # don't align two lines with big gap
             || $group_maximum_gap > 12
 
-            # don't align lines with differing number of alignment tokens 
+            # don't align lines with differing number of alignment tokens
             || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
           )
     );
@@ -2537,9 +2537,9 @@ sub valign_output_step_B {
                     # and eliminate multiple colons might appear to be slow,
                     # but it's not an issue because we almost never come
                     # through here.  In a typical file we don't.
-                    $seqno_string =~ s/^:+//;
+                    $seqno_string               =~ s/^:+//;
                     $last_nonblank_seqno_string =~ s/^:+//;
-                    $seqno_string =~ s/:+/:/g;
+                    $seqno_string               =~ s/:+/:/g;
                     $last_nonblank_seqno_string =~ s/:+/:/g;
 
                     # how many spaces can we outdent?
@@ -2707,9 +2707,9 @@ sub valign_output_step_D {
         # Handle entab option
         elsif ($rOpts_entab_leading_whitespace) {
 
-	    # Patch 12-nov-2018 based on report from Glenn. Extra padding was
-	    # not correctly entabbed, nor were side comments:
-	    # Increase leading space count for a padded line to get correct tabbing
+         # Patch 12-nov-2018 based on report from Glenn. Extra padding was
+         # not correctly entabbed, nor were side comments:
+         # Increase leading space count for a padded line to get correct tabbing
             if ( $line =~ /^(\s+)(.*)$/ ) {
                 my $spaces = length($1);
                 if ( $spaces > $leading_space_count ) {

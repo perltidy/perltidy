@@ -1019,7 +1019,7 @@ sub guess_old_indentation_level {
     # what we do here but we'll guess that the old run used 4 spaces per level.
     my $indent_columns = $tokenizer_self->{_indent_columns};
     $indent_columns = 4 if ( !$indent_columns );
-    $level = int( $spaces / $indent_columns );
+    $level          = int( $spaces / $indent_columns );
     return ($level);
 }
 
@@ -1496,11 +1496,11 @@ sub prepare_for_a_new_file {
     # ------------------------------------------------------------
 
     my %is_for_foreach;
-    @_ = qw(for foreach);
+    @_                  = qw(for foreach);
     @is_for_foreach{@_} = (1) x scalar(@_);
 
     my %is_my_our;
-    @_ = qw(my our);
+    @_             = qw(my our);
     @is_my_our{@_} = (1) x scalar(@_);
 
     # These keywords may introduce blocks after parenthesized expressions,
@@ -1788,8 +1788,8 @@ sub prepare_for_a_new_file {
         '/' => sub {
             my $is_pattern;
 
-	    # a pattern cannot follow certain keywords which take optional
-	    # arguments, like 'shift' and 'pop'. See also '?'. 
+            # a pattern cannot follow certain keywords which take optional
+            # arguments, like 'shift' and 'pop'. See also '?'.
             if (   $last_nonblank_type eq 'k'
                 && $is_keyword_taking_optional_args{$last_nonblank_token} )
             {
@@ -2025,8 +2025,8 @@ sub prepare_for_a_new_file {
             my $is_pattern;
 
             # Patch for rt #126965
-	    # a pattern cannot follow certain keywords which take optional
-	    # arguments, like 'shift' and 'pop'. See also '/'. 
+            # a pattern cannot follow certain keywords which take optional
+            # arguments, like 'shift' and 'pop'. See also '/'.
             if (   $last_nonblank_type eq 'k'
                 && $is_keyword_taking_optional_args{$last_nonblank_token} )
             {
@@ -2409,7 +2409,7 @@ sub prepare_for_a_new_file {
     @is_zero_continuation_block_type{@_} = (1) x scalar(@_);
 
     my %is_not_zero_continuation_block_type;
-    @_ = qw(sort grep map do eval);
+    @_                                       = qw(sort grep map do eval);
     @is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
 
     my %is_logical_container;
@@ -2417,33 +2417,33 @@ sub prepare_for_a_new_file {
     @is_logical_container{@_} = (1) x scalar(@_);
 
     my %is_binary_type;
-    @_ = qw(|| &&);
+    @_                  = qw(|| &&);
     @is_binary_type{@_} = (1) x scalar(@_);
 
     my %is_binary_keyword;
-    @_ = qw(and or err eq ne cmp);
+    @_                     = qw(and or err eq ne cmp);
     @is_binary_keyword{@_} = (1) x scalar(@_);
 
     # 'L' is token for opening { at hash key
     my %is_opening_type;
-    @_ = qw< L { ( [ >;
+    @_                   = qw< L { ( [ >;
     @is_opening_type{@_} = (1) x scalar(@_);
 
     # 'R' is token for closing } at hash key
     my %is_closing_type;
-    @_ = qw< R } ) ] >;
+    @_                   = qw< R } ) ] >;
     @is_closing_type{@_} = (1) x scalar(@_);
 
     my %is_redo_last_next_goto;
-    @_ = qw(redo last next goto);
+    @_                          = qw(redo last next goto);
     @is_redo_last_next_goto{@_} = (1) x scalar(@_);
 
     my %is_use_require;
-    @_ = qw(use require);
+    @_                  = qw(use require);
     @is_use_require{@_} = (1) x scalar(@_);
 
     my %is_sub_package;
-    @_ = qw(sub package);
+    @_                  = qw(sub package);
     @is_sub_package{@_} = (1) x scalar(@_);
 
     # This hash holds the hash key in $tokenizer_self for these keywords:
@@ -2585,7 +2585,7 @@ sub prepare_for_a_new_file {
   #
   # -----------------------------------------------------------------------
 
-        my $line_of_tokens = shift;
+        my $line_of_tokens         = shift;
         my ($untrimmed_input_line) = $line_of_tokens->{_line_text};
 
         # patch while coding change is underway
@@ -2732,7 +2732,7 @@ sub prepare_for_a_new_file {
                         my $str = $rtokens->[$i];
                         my $saw_modifier_e;
                         while ( $str =~ /\G$allowed_quote_modifiers/gc ) {
-                            my $pos = pos($str);
+                            my $pos  = pos($str);
                             my $char = substr( $str, $pos - 1, 1 );
                             $saw_modifier_e ||= ( $char eq 'e' );
                         }
@@ -4842,14 +4842,14 @@ sub increase_nesting_depth {
             if ( $nested_ternary_flag[ $current_depth[$aa] - 1 ] == 0 ) {
                 my $pdepth = $total_depth[$aa][ $current_depth[$aa] - 1 ];
                 if ( $pdepth == $total_depth - 1 ) {
-                    $indent = 1;
+                    $indent                                         = 1;
                     $nested_ternary_flag[ $current_depth[$aa] - 1 ] = -1;
                 }
             }
         }
     }
     $nested_statement_type[$aa][ $current_depth[$aa] ] = $statement_type;
-    $statement_type = "";
+    $statement_type                                    = "";
     return ( $seqno, $indent );
 }
 
@@ -5634,7 +5634,7 @@ sub do_scan_package {
         $package =~ s/::$//;
         my $pos  = pos($input_line);
         my $numc = $pos - $pos_beg;
-        $tok = 'package ' . substr( $input_line, $pos_beg, $numc );
+        $tok  = 'package ' . substr( $input_line, $pos_beg, $numc );
         $type = 'i';
 
         # Now we must convert back from character position
@@ -5766,7 +5766,7 @@ sub scan_identifier_do {
 
     while ( $i < $max_token_index ) {
         $i_save = $i unless ( $tok =~ /^\s*$/ );
-        $tok = $rtokens->[ ++$i ];
+        $tok    = $rtokens->[ ++$i ];
 
         if ( ( $tok eq ':' ) && ( $rtokens->[ $i + 1 ] eq ':' ) ) {
             $tok = '::';
@@ -6248,7 +6248,7 @@ sub scan_identifier_do {
             $package =~ s/::$//;
             my $pos  = pos($input_line);
             my $numc = $pos - $pos_beg;
-            $tok = 'sub ' . substr( $input_line, $pos_beg, $numc );
+            $tok  = 'sub ' . substr( $input_line, $pos_beg, $numc );
             $type = 'i';
         }
 
@@ -6568,7 +6568,7 @@ sub find_angle_operator_termination {
             my $pos = pos($input_line);
 
             my $pos_beg = $rtoken_map->[$i];
-            my $str = substr( $input_line, $pos_beg, ( $pos - $pos_beg ) );
+            my $str     = substr( $input_line, $pos_beg, ( $pos - $pos_beg ) );
 
             # Reject if the closing '>' follows a '-' as in:
             # if ( VERSION < 5.009 && $op-> name eq 'assign' ) { }
@@ -6688,7 +6688,7 @@ sub scan_number_do {
         $pos = pos($input_line);
         my $numc = $pos - $pos_beg;
         $number = substr( $input_line, $pos_beg, $numc );
-        $type = 'v';
+        $type   = 'v';
         report_v_string($number);
     }
 
@@ -6701,7 +6701,7 @@ sub scan_number_do {
             $pos = pos($input_line);
             my $numc = $pos - $pos_beg;
             $number = substr( $input_line, $pos_beg, $numc );
-            $type = 'n';
+            $type   = 'n';
         }
     }
 
@@ -6720,7 +6720,7 @@ sub scan_number_do {
             }
             my $numc = $pos - $pos_beg;
             $number = substr( $input_line, $pos_beg, $numc );
-            $type = 'n';
+            $type   = 'n';
         }
     }
 
@@ -7415,11 +7415,11 @@ BEGIN {
     # these functions have prototypes of the form (&), so when they are
     # followed by a block, that block MAY BE followed by an operator.
     # Smartmatch operator ~~ may be followed by anonymous hash or array ref
-    @q = qw( do eval );
+    @q                     = qw( do eval );
     @is_block_operator{@q} = (1) x scalar(@q);
 
     # these functions allow an identifier in the indirect object slot
-    @q = qw( print printf sort exec system say);
+    @q                            = qw( print printf sort exec system say);
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
     # These tokens may precede a code block
@@ -7755,7 +7755,7 @@ BEGIN {
     delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
                                    # let perl do it
 
-    @q = qw(q qq qw qx qr s y tr m);
+    @q                             = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
@@ -7868,7 +7868,7 @@ BEGIN {
       uc
       undef
     );
-    @is_keyword_taking_optional_args{@keyword_taking_optional_args} = 
+    @is_keyword_taking_optional_args{@keyword_taking_optional_args} =
       (1) x scalar(@keyword_taking_optional_args);
 
     # These are not used in any way yet

@@ -3274,15 +3274,15 @@ perlstyle(1), Perl::Tidy(3)
 
 # VERSION
 
-This man page documents perltidy version 20180220.01
+This man page documents perltidy version 20181116
 
 # BUG REPORTS
 
-A list of current bugs and issues can be found at the CPAN site
-
-     https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy
+A list of current bugs and issues can be found at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
 
 To report a new bug or problem, use the link on this page.  
+
+The source code repository is at [https://github.com/perltidy/perltidy](https://github.com/perltidy/perltidy).
 
 # COPYRIGHT
 

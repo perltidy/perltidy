@@ -38,4 +38,4 @@
 - Upload Release to CPAN
 - Update CPAN tickets
 - Upload release to sourceforge
-- Update web site
+- Update web sites

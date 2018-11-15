@@ -141,6 +141,7 @@ sub run_tidyall {
     $fh->close();
     if ( !@errors ) {
         $rstatus->{'TIDY'} = 'OK';
+        $rstatus->{'PC'} = 'TBD';
         hitcr("Source OK.");
         return;
     }
