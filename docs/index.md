@@ -9,7 +9,7 @@ License -- please see the included file [COPYING](./COPYING.txt) for details.
 
 The formatting can be controlled with command line parameters.  The default
 parameter settings approximately follow the suggestions in the
-[Perl Style Guide](https://perldoc.perl.org/perlstyle.md).
+[Perl Style Guide](https://perldoc.perl.org/perlstyle.html).
 
 Besides reformatting scripts, Perltidy can help in tracking
 down errors with missing or extra braces, parentheses, and square brackets
@@ -17,17 +17,17 @@ because it is very good at localizing errors.
 
 ## Documentation
 
-- [A Brief Perltidy Tutorial](./tutorial.md)
+- [A Brief Perltidy Tutorial](./tutorial.html)
 
-- [Perltidy Style Key](./stylekey.md) will help
+- [Perltidy Style Key](./stylekey.html) will help
  in methodically selecting a set of style parameters.
 
-- [The Perltidy man page](./perltidy.md) explains how
+- [The Perltidy man page](./perltidy.html) explains how
 to precisely control the formatting details.
 
-- [The Perl::Tidy man page](./Tidy.md) discusses how to use the Perl::Tidy module
+- [The Perl::Tidy man page](./Tidy.html) discusses how to use the Perl::Tidy module
 
-- [Change Log](./ChangeLog.md)
+- [Change Log](./ChangeLog.html)
 
 
 ## Prerequisites
@@ -59,7 +59,7 @@ test and install using the Makefile.PL:
     make test
     make install
 
-The [INSTALL file](./INSTALL.md) has additional installation notes, and tells how
+The [INSTALL file](./INSTALL.html) has additional installation notes, and tells how
 to use perltidy without doing an installation.
 
 

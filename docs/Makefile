@@ -1,8 +1,9 @@
 .PHONY : all
 all:
-	pod2markdown ../local-docs/INSTALL.pod >INSTALL.md
-	pod2markdown ../local-docs/ChangeLog.pod >ChangeLog.md
-	pod2markdown ../local-docs/stylekey.pod >stylekey.md
-	pod2markdown ../local-docs/tutorial.pod >tutorial.md
-	pod2markdown ../bin/perltidy >perltidy.md
-	pod2markdown ../lib/Perl/Tidy.pod >Tidy.md
+	pod2html ../local-docs/INSTALL.pod >INSTALL.html
+	pod2html ../local-docs/ChangeLog.pod >ChangeLog.html
+	pod2html ../local-docs/stylekey.pod >stylekey.html
+	pod2html ../local-docs/tutorial.pod >tutorial.html
+	pod2html ../bin/perltidy >perltidy.html
+	pod2html ../lib/Perl/Tidy.pod >Tidy.html
+	markdown index.md >index.html
