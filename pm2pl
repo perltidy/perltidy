@@ -3,21 +3,21 @@ use strict;
 
 # This script will recombine the perltidy binary script and all of its modules
 # into a single, monolithic script.  I use it for making a temporary "sandbox"
-# for debugging. 
+# for debugging.
 
 # This is also useful for making a copy of previous versions for parallel
-# debugging.
+# debugging sessions.
 
 # usage:
 #   perl pm2pl
 
 # Run this from the perltidy main installation directory.  It reads
 # bin/perltidy and lib/*.pm and writes a file 'perltidy-VERSION.pl' in the
-# current directory. 
+# current directory.
 
 # This should work for a system with File::Spec,
 # and for older Windows/Unix systems without File::Spec.
-my $script = 'bin/perltidy';
+my $script  = 'bin/perltidy';
 my @modules = qw(
   lib/Perl/Tidy.pm
   lib/Perl/Tidy/Debugger.pm
@@ -49,10 +49,10 @@ unless ($missing_file_spec) {
     }
 }
 
-my $VERSION=get_version("lib/Perl/Tidy.pm");
+my $VERSION = get_version("lib/Perl/Tidy.pm");
 my $outfile = "perltidy-$VERSION.pl";
 open OUTFILE, "> $outfile" or die "can't open file '$outfile' : $!\n";
-print "Creating file '$outfile' ....\n ";
+print "Creating standalone formatter script '$outfile' ....\n ";
 
 # first, open the script and copy the first (hash-bang) line
 # (Note: forward slashes in file names here will work in Windows)
@@ -60,7 +60,7 @@ open SCRIPT, "< $script" or die "can't open script file '$script' : $!\n";
 my $hash_bang = <SCRIPT>;
 print OUTFILE $hash_bang;
 
-# then copy all modules 
+# then copy all modules
 foreach my $module (@modules) {
     open PM, "< $module" or die "can't open my module file '$module' : $!\n";
     while (<PM>) {
@@ -76,34 +76,20 @@ while (<SCRIPT>) {
     print OUTFILE unless $_ =~ /^use Perl::Tidy/;
 }
 close SCRIPT;
-close OUTPUT;
+close OUTFILE;
 chmod 0755, $outfile;
-print "...Done...\n";
 
-my $testfile = "Makefile.PL";
-if ( -e $testfile ) {
-    print <<EOM;
+my $testfile = "somefile.pl";
+print <<EOM;
 
-You can now run perltidy.pl
-For a quick test, try reformatting $testfile with the following command:
-
-    perl perltidy.pl -lp $testfile
-
-and then compare the output in $testfile.tdy with the original file
-EOM
-}
-else {
-    $testfile = "somefile";
-    print <<EOM;
-
-You can now run perltidy to reformat any perl script.  
+You can now run $outfile to reformat perl scripts.  
 For example, the following command:
 
-    perl perltidy $testfile
+    perl $outfile $testfile
 
 will produce the output file $testfile.tdy
 EOM
-}
+
 sub get_version {
     my ($file) = @_;
     my $fh;
@@ -117,7 +103,7 @@ sub get_version {
         if ( $line =~
             /^((our)?\s*\$VERSION\s*=\s*\'?)  ([^'#]+)   (\'?) \s* ;/x )
         {
-            $VERSION          = $3;
+            $VERSION = $3;
             last;
         }
     }

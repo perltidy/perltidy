@@ -416,7 +416,7 @@ sub valign_input {
             && $rvertical_tightness_flags->[2] == $cached_seqno )
         {
             $rvertical_tightness_flags->[3] ||= 1;
-            $cached_line_valid              ||= 1;
+            $cached_line_valid ||= 1;
         }
     }
 
@@ -848,7 +848,7 @@ sub eliminate_old_fields {
         $new_fields[$j]            = $current_field;
         $new_matching_patterns[$j] = $current_pattern;
 
-        $new_alignments[$j]  = $old_line->get_alignment($k);
+        $new_alignments[$j] = $old_line->get_alignment($k);
         $maximum_field_index = $j;
 
         $old_line->set_alignments(@new_alignments);
@@ -1199,7 +1199,7 @@ sub fix_terminal_ternary {
         unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
 
         # insert appropriate number of empty fields
-        $jadd      = $jquestion + 1;
+        $jadd = $jquestion + 1;
         $fields[0] = $pad . $fields[0];
         splice( @fields, 0, 0, ('') x $jadd ) if $jadd;
     }
@@ -1310,6 +1310,7 @@ sub fix_terminal_else {
         my $maximum_field_index = $old_line->get_jmax();
 
         # flush if this line has too many fields
+        my $GoToLoc = 1;
         if ( $jmax > $maximum_field_index ) { goto NO_MATCH }
 
         # flush if adding this line would make a non-monotonic field count
@@ -1322,6 +1323,7 @@ sub fix_terminal_else {
             )
           )
         {
+            $GoToLoc = 2;
             goto NO_MATCH;
         }
 
@@ -1353,6 +1355,7 @@ sub fix_terminal_else {
 
                 # lists always match ...
                 # unless they would align any '=>'s with ','s
+                $GoToLoc = 3;
                 goto NO_MATCH
                   if ( $old_tok =~ /^=>/ && $new_tok =~ /^,/
                     || $new_tok =~ /^=>/ && $old_tok =~ /^,/ );
@@ -1436,6 +1439,7 @@ sub fix_terminal_else {
                         last;
                     }
 
+                    $GoToLoc = 4;
                     goto NO_MATCH;
                 }
 
@@ -1474,6 +1478,7 @@ sub fix_terminal_else {
                     if ( $alignment_token eq ',' ) {
 
                        # do not align commas unless they are in named containers
+                        $GoToLoc = 5;
                         goto NO_MATCH unless ( $new_tok =~ /[A-Za-z]/ );
                     }
 
@@ -1483,6 +1488,7 @@ sub fix_terminal_else {
 
                         # But we can allow a match if the parens don't
                         # require any padding.
+                        $GoToLoc = 6;
                         if ( $pad != 0 ) { goto NO_MATCH }
                     }
 
@@ -1504,6 +1510,7 @@ sub fix_terminal_else {
                             substr( $old_rpatterns->[$j], 0, 1 ) ne
                             substr( $rpatterns->[$j],     0, 1 ) )
                         {
+                            $GoToLoc = 7;
                             goto NO_MATCH;
                         }
 
@@ -1528,6 +1535,7 @@ sub fix_terminal_else {
                 if ( $maximum_field_index > $jmax ) {
 
                     # Exception: suspend this rule to allow last lines to join
+                    $GoToLoc = 8;
                     if ( $pad > 0 ) { goto NO_MATCH; }
                 }
             } ## end for my $j ( 0 .. $jlimit)
@@ -1567,6 +1575,7 @@ sub fix_terminal_else {
             ##########################################################
 
             my $comment = $rfields->[$jmax];
+            $GoToLoc = 9;
             goto NO_MATCH if ($comment);
 
             # Corrected loop
@@ -1584,6 +1593,8 @@ sub fix_terminal_else {
         return;
 
       NO_MATCH:
+
+        #print "no match from $GoToLoc\n";
         ##print "no match jmax=$jmax  max=$maximum_field_index $group_list_type lines=$maximum_line_index token=$old_rtokens->[0]\n";
 
         # Make one last effort to retain a match of certain statements
@@ -2047,28 +2058,40 @@ sub decide_if_aligned {
 
     my $group_list_type = $group_lines[0]->get_list_type();
 
-    # See if these two lines have leading equals type tokens
-    my $rtokens        = $group_lines[0]->get_rtokens();
-    my $leading_equals = $rtokens->[0] =~ /=/;
+    # See if these two lines have leading equals type tokens which can be
+    # aligned without creating a big gap. These two below are an example that
+    # have a large gap and will not be aligned:
+    #  local (@pieces)            = split( /\./, $filename, 2 );
+    #  local ($just_dir_and_base) = $pieces[0];
+    my $good_leading_equals;
+    my $rtokens = $group_lines[0]->get_rtokens();
+    if ( $rtokens->[0] =~ /=/ ) {
+        my $rfields0 = $group_lines[0]->get_rfields();
+        my $rfields1 = $group_lines[1]->get_rfields();
+        my $len0     = length( $rfields0->[0] );
+        my $len1     = length( $rfields1->[0] );
+        my $gap      = abs( $len0 - $len1 );
+
+        # put a limit on the maximum gap we will allow here
+        $good_leading_equals = ( $gap > 8 ) ? 0 : 1;
+    }
 
     my $do_not_align = (
 
         # always align lists
         !$group_list_type
 
-          # always align lines with leading equality operators
-          && !$leading_equals
-
           && (
 
-            # don't align if it was marked as a 'marginal" match
+            # don't align if it was marked as a 'marginal" match.
             $marginal_match
 
-            # don't align two lines with big gap
             || $group_maximum_gap > 12
 
-            # don't align lines with differing number of alignment tokens
-            || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
+            # don't align lines with differing number of alignment tokens,
+            # unless the first common alignment is an equals
+            || ( ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
+                && !$good_leading_equals )
           )
     );
 

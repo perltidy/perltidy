@@ -86,6 +86,9 @@
 # Github files
 \.travis\.yml
 
+# Jekyl file
+_config.yml
+
 # tidyall files
 \.tidyall
 
@@ -125,9 +128,6 @@
 \bNOTES\.txt
 
 ^local-docs/
-
-# this is reserved for html pages
-^docs/
 
 ^archive/
 

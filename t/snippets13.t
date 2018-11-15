@@ -11,6 +11,9 @@
 #8 align15.def
 #9 align16.def
 #10 break5.def
+#11 align19.def
+#12 align20.def
+#13 align21.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -93,6 +96,24 @@ use constant {
 
 ----------
 
+        'align19' => <<'----------',
+# big gap; do not align the '='
+@_                                       = qw(sort grep map do eval);
+@is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
+----------
+
+        'align20' => <<'----------',
+# a marginal two-line match: do not align
+$w[$i] = $t;
+$t = 1000000;
+----------
+
+        'align21' => <<'----------',
+# do not align these two (large gap)
+local (@pieces)            = split( /\./, $filename, 2 );
+local ($just_dir_and_base) = $pieces[0];
+----------
+
         'break5' => <<'----------',
 # do not break at .'s after the ?
 return (
@@ -142,8 +163,8 @@ my $account   = "Insert into accountlines
             params => "def",
             expect => <<'#3...........',
     my $type = shift || "o";
-    my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
-    my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
+    my $fname = ( $type eq 'oo' ? 'orte_city' : 'orte' );
+    my $suffix = ( $coord_system eq 'standard' ? '' : '-orig' );
 #3...........
         },
 
@@ -233,6 +254,36 @@ return (
   ? "\n&lt;A NAME=\"" . $value . "\"&gt;\n$text&lt;/A&gt;\n"
   : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
 #10...........
+        },
+
+        'align19.def' => {
+            source => "align19",
+            params => "def",
+            expect => <<'#11...........',
+# big gap; do not align the '='
+@_ = qw(sort grep map do eval);
+@is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
+#11...........
+        },
+
+        'align20.def' => {
+            source => "align20",
+            params => "def",
+            expect => <<'#12...........',
+# a marginal two-line match: do not align
+$w[$i] = $t;
+$t = 1000000;
+#12...........
+        },
+
+        'align21.def' => {
+            source => "align21",
+            params => "def",
+            expect => <<'#13...........',
+# do not align these two (large gap)
+local (@pieces) = split( /\./, $filename, 2 );
+local ($just_dir_and_base) = $pieces[0];
+#13...........
         },
     };
 

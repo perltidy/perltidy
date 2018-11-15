@@ -1,0 +1,3 @@
+# a marginal two-line match: do not align
+$w[$i] = $t;
+$t = 1000000;
