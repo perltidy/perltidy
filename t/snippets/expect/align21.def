@@ -1,3 +1,3 @@
-# do not align these two (large gap)
-local (@pieces) = split( /\./, $filename, 2 );
+# two lines with large gap
+local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];

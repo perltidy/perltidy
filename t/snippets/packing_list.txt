@@ -91,6 +91,7 @@
 ../snippets13.t	break5.def
 ../snippets13.t	align19.def
 ../snippets13.t	align20.def
+../snippets13.t	align21.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -251,4 +252,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets13.t	align21.def
+../snippets13.t	align22.def
+../snippets13.t	align23.def

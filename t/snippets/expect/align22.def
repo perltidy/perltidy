@@ -1,0 +1,3 @@
+# two equality lines with different patterns to left of equals do not align
+$signame{$_} = ++$signal;
+$signum[$signal] = $_;

@@ -1,0 +1,3 @@
+# two equality lines with same pattern on left of equals will align
+my $orig = my $format = "^<<<<< ~~\n";
+my $abc  = "abc";

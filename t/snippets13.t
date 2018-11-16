@@ -14,6 +14,8 @@
 #11 align19.def
 #12 align20.def
 #13 align21.def
+#14 align22.def
+#15 align23.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -109,9 +111,21 @@ $t = 1000000;
 ----------
 
         'align21' => <<'----------',
-# do not align these two (large gap)
+# two lines with large gap
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
+----------
+
+        'align22' => <<'----------',
+# two equality lines with different patterns to left of equals do not align
+$signame{$_} = ++$signal;
+$signum[$signal] = $_;
+----------
+
+        'align23' => <<'----------',
+# two equality lines with same pattern on left of equals will align
+my $orig = my $format = "^<<<<< ~~\n";
+my $abc = "abc";
 ----------
 
         'break5' => <<'----------',
@@ -280,10 +294,30 @@ $t = 1000000;
             source => "align21",
             params => "def",
             expect => <<'#13...........',
-# do not align these two (large gap)
-local (@pieces) = split( /\./, $filename, 2 );
+# two lines with large gap
+local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
 #13...........
+        },
+
+        'align22.def' => {
+            source => "align22",
+            params => "def",
+            expect => <<'#14...........',
+# two equality lines with different patterns to left of equals do not align
+$signame{$_} = ++$signal;
+$signum[$signal] = $_;
+#14...........
+        },
+
+        'align23.def' => {
+            source => "align23",
+            params => "def",
+            expect => <<'#15...........',
+# two equality lines with same pattern on left of equals will align
+my $orig = my $format = "^<<<<< ~~\n";
+my $abc  = "abc";
+#15...........
         },
     };
 
