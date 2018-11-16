@@ -199,7 +199,6 @@ sub make_docs {
     foreach my $file (
         qw(
         local-docs/ChangeLog.pod
-        local-docs/README.pod
         local-docs/INSTALL.pod
         lib/Perl/Tidy.pod
         bin/perltidy
@@ -284,15 +283,15 @@ sub make_zip {
 
     my ($tar_gz_file) = @_;
     my $dir_name = $tar_gz_file;
-    $dir_name =~ s/\.tar*$//;
+    $dir_name =~ s/\.tar\.gz//;
 
     my $command;
 
     # clean out any old build in /tmp
     my $result = sys_command("rm -rf /tmp/$dir_name");
 
-    # move the file
-    $result = sys_command("mv $tar_gz_file /tmp");
+    # copy the file
+    $result = sys_command("cp $tar_gz_file /tmp");
 
     # untar it
     $command = "(cd /tmp; tar xvfz $tar_gz_file;)";
@@ -518,7 +517,7 @@ unchanged: (@unchanged);
 EOM
     if ( grep { $_ =~ /Tidy\.pm/ } @changed ) {
 
-        my $runme = "RUNME.sh";
+        my $runme = "RUNME_after_release.sh";
         make_tag_script( $new_VERSION, $runme );
 
         print <<EOM;

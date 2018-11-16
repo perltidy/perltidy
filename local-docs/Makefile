@@ -2,20 +2,15 @@
 
 CHANGES="../CHANGES.md"
 INSTALL="../INSTALL.md"
-README="../README.md"
 BUGS="../BUGS.md"
 
 DOCS=INSTALL \
-README \
 BUGS \
 CHANGES \
 perltidy.md \
 tutorial.md
 
 docs: $(DOCS)
-
-README: README.pod
-	pod2markdown README.pod >../README.md
 
 INSTALL: INSTALL.pod
 	pod2markdown INSTALL.pod >../INSTALL.md

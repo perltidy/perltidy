@@ -4,6 +4,7 @@
 *.ba1
 *.bak
 *.log
+*.sh
 *.sw?
 *.tar.gz
 *.tdy
