@@ -92,7 +92,7 @@ sub write_debug_entry {
             $pattern .= $rtoken_type->[$j];
         }
         $reconstructed_original .= $rtokens->[$j];
-        $block_str .= "($rblock_type->[$j])";
+        $block_str              .= "($rblock_type->[$j])";
         $num = length( $rtokens->[$j] );
         my $type_str = $rtoken_type->[$j];
 

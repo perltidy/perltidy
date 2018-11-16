@@ -44,8 +44,6 @@ about 2 Mb.
 
 - The most recent release is also at [sourceforge](https://sourceforge.net/projects/perltidy/)
 
-- For related modules search CPAN for [perltidy](https://metacpan.org/search?q=perltidy)
-
 
 ## Installation
 
