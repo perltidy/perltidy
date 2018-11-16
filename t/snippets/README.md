@@ -136,6 +136,19 @@ corresponding to running with default parameters and the second with '-xyzzy' pa
 - Go up to the git root directory and run 'make test' to verify that all
 snippets are still working correctly
 
+
+## What to do if a test script fails
+
+If one of the test scripts fails it could be due to a bug which has been introduced
+or it could be a desirable formatting change introduced by a recent update. In either
+case just run 'make' and look at the differences.  The script will give the
+names of the cases with differences.  For example, if case 'align6.def' failed
+then the old expected result is 'expect/align6.def' and the new result is 'tmp/align6.def'.
+These files are the result of running perltidy on 'align6.def' with default parameters 
+('def.par').  After investigating and fixing any problems with the code,
+run 'make' again, and if all is well run the script it writes 'RUNME.sh'
+to create new snippets if necessary.
+
 ## How to clean up a .par file
 
 The '.par' parameter files are just .perltidyrc files, and they can be quite

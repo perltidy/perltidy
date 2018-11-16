@@ -49,7 +49,7 @@ about 2 Mb.
 
 ## Installation
 
-Perl::Tidy can be installed directly from CPAN one of the available methods.
+Perl::Tidy can be installed directly from CPAN one of the standard methods.
 
 One way is to download a distribution file, unpack it and then 
 test and install using the Makefile.PL:
@@ -59,13 +59,13 @@ test and install using the Makefile.PL:
     make test
     make install
 
-The [INSTALL file](./INSTALL.html) has additional installation notes, and tells how
-to use perltidy without doing an installation.
-
+The [INSTALL file](./INSTALL.html) has additional installation notes. They
+are mainly for older sytems but also tell how to use perltidy without doing an installation.
 
 ## Links
 
  - [Perl::Tidy source code repository at GitHub](https://github.com/perltidy/perltidy)
+ - [tidyall](https://metacpan.org/pod/distribution/Code-TidyAll/bin/tidyall) is a great tool for automatically running perltidy and other tools including perlcritic on a set of project files.
  - [Tidyview](http://sourceforge.net/projects/tidyview) is a graphical program for tweaking your .perltidyrc configuration parameters.
  - [A perltidy plugin for Sublime Text 2/3](https://github.com/vifo/SublimePerlTidy)
 

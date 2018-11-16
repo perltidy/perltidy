@@ -1496,11 +1496,11 @@ sub prepare_for_a_new_file {
     # ------------------------------------------------------------
 
     my %is_for_foreach;
-    @_                  = qw(for foreach);
+    @_ = qw(for foreach);
     @is_for_foreach{@_} = (1) x scalar(@_);
 
     my %is_my_our;
-    @_             = qw(my our);
+    @_ = qw(my our);
     @is_my_our{@_} = (1) x scalar(@_);
 
     # These keywords may introduce blocks after parenthesized expressions,
@@ -2409,7 +2409,7 @@ sub prepare_for_a_new_file {
     @is_zero_continuation_block_type{@_} = (1) x scalar(@_);
 
     my %is_not_zero_continuation_block_type;
-    @_                                       = qw(sort grep map do eval);
+    @_ = qw(sort grep map do eval);
     @is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
 
     my %is_logical_container;
@@ -2417,33 +2417,33 @@ sub prepare_for_a_new_file {
     @is_logical_container{@_} = (1) x scalar(@_);
 
     my %is_binary_type;
-    @_                  = qw(|| &&);
+    @_ = qw(|| &&);
     @is_binary_type{@_} = (1) x scalar(@_);
 
     my %is_binary_keyword;
-    @_                     = qw(and or err eq ne cmp);
+    @_ = qw(and or err eq ne cmp);
     @is_binary_keyword{@_} = (1) x scalar(@_);
 
     # 'L' is token for opening { at hash key
     my %is_opening_type;
-    @_                   = qw< L { ( [ >;
+    @_ = qw< L { ( [ >;
     @is_opening_type{@_} = (1) x scalar(@_);
 
     # 'R' is token for closing } at hash key
     my %is_closing_type;
-    @_                   = qw< R } ) ] >;
+    @_ = qw< R } ) ] >;
     @is_closing_type{@_} = (1) x scalar(@_);
 
     my %is_redo_last_next_goto;
-    @_                          = qw(redo last next goto);
+    @_ = qw(redo last next goto);
     @is_redo_last_next_goto{@_} = (1) x scalar(@_);
 
     my %is_use_require;
-    @_                  = qw(use require);
+    @_ = qw(use require);
     @is_use_require{@_} = (1) x scalar(@_);
 
     my %is_sub_package;
-    @_                  = qw(sub package);
+    @_ = qw(sub package);
     @is_sub_package{@_} = (1) x scalar(@_);
 
     # This hash holds the hash key in $tokenizer_self for these keywords:
@@ -2585,7 +2585,7 @@ sub prepare_for_a_new_file {
   #
   # -----------------------------------------------------------------------
 
-        my $line_of_tokens         = shift;
+        my $line_of_tokens = shift;
         my ($untrimmed_input_line) = $line_of_tokens->{_line_text};
 
         # patch while coding change is underway
@@ -4842,14 +4842,14 @@ sub increase_nesting_depth {
             if ( $nested_ternary_flag[ $current_depth[$aa] - 1 ] == 0 ) {
                 my $pdepth = $total_depth[$aa][ $current_depth[$aa] - 1 ];
                 if ( $pdepth == $total_depth - 1 ) {
-                    $indent                                         = 1;
+                    $indent = 1;
                     $nested_ternary_flag[ $current_depth[$aa] - 1 ] = -1;
                 }
             }
         }
     }
     $nested_statement_type[$aa][ $current_depth[$aa] ] = $statement_type;
-    $statement_type                                    = "";
+    $statement_type = "";
     return ( $seqno, $indent );
 }
 
@@ -7415,11 +7415,11 @@ BEGIN {
     # these functions have prototypes of the form (&), so when they are
     # followed by a block, that block MAY BE followed by an operator.
     # Smartmatch operator ~~ may be followed by anonymous hash or array ref
-    @q                     = qw( do eval );
+    @q = qw( do eval );
     @is_block_operator{@q} = (1) x scalar(@q);
 
     # these functions allow an identifier in the indirect object slot
-    @q                            = qw( print printf sort exec system say);
+    @q = qw( print printf sort exec system say);
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
     # These tokens may precede a code block
@@ -7755,7 +7755,7 @@ BEGIN {
     delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
                                    # let perl do it
 
-    @q                             = qw(q qq qw qx qr s y tr m);
+    @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:

@@ -109,7 +109,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20181116';
+    $VERSION = '20181117';
 }
 
 sub streamhandle {
@@ -358,7 +358,7 @@ EOM
     }
 
     my $get_hash_ref = sub {
-        my ($key)    = @_;
+        my ($key) = @_;
         my $hash_ref = $input_hash{$key};
         if ( defined($hash_ref) ) {
             unless ( ref($hash_ref) eq 'HASH' ) {
@@ -1582,7 +1582,7 @@ sub generate_options {
         $option_category{$opt} = $category_name[$category];
     }
 
-    $category              = 11;                          # HTML
+    $category = 11;                                       # HTML
     $option_category{html} = $category_name[$category];
 
     # routine to install and check options

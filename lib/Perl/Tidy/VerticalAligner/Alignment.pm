@@ -43,7 +43,7 @@ use warnings;
     sub new {
         my ( $caller, %arg ) = @_;
         my $caller_is_obj = ref($caller);
-        my $class = $caller_is_obj || $caller;
+        my $class         = $caller_is_obj || $caller;
         ##no strict "refs";
         my $self = bless {}, $class;
 

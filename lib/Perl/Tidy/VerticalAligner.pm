@@ -1310,6 +1310,7 @@ sub fix_terminal_else {
         my $maximum_field_index = $old_line->get_jmax();
 
         # flush if this line has too many fields
+        # variable $GoToLoc indicates goto branch point, for debugging
         my $GoToLoc = 1;
         if ( $jmax > $maximum_field_index ) { goto NO_MATCH }
 
@@ -1594,6 +1595,7 @@ sub fix_terminal_else {
 
       NO_MATCH:
 
+        # variable $GoToLoc is for debugging
         #print "no match from $GoToLoc\n";
         ##print "no match jmax=$jmax  max=$maximum_field_index $group_list_type lines=$maximum_line_index token=$old_rtokens->[0]\n";
 
@@ -2058,22 +2060,27 @@ sub decide_if_aligned {
 
     my $group_list_type = $group_lines[0]->get_list_type();
 
-    # See if these two lines have leading equals type tokens which can be
-    # aligned without creating a big gap. These two below are an example that
-    # have a large gap and will not be aligned:
-    #  local (@pieces)            = split( /\./, $filename, 2 );
-    #  local ($just_dir_and_base) = $pieces[0];
-    my $good_leading_equals;
-    my $rtokens = $group_lines[0]->get_rtokens();
-    if ( $rtokens->[0] =~ /=/ ) {
-        my $rfields0 = $group_lines[0]->get_rfields();
-        my $rfields1 = $group_lines[1]->get_rfields();
-        my $len0     = length( $rfields0->[0] );
-        my $len1     = length( $rfields1->[0] );
-        my $gap      = abs( $len0 - $len1 );
+    my $rtokens        = $group_lines[0]->get_rtokens();
+    my $leading_equals = ( $rtokens->[0] =~ /=/ );
 
-        # put a limit on the maximum gap we will allow here
-        $good_leading_equals = ( $gap > 8 ) ? 0 : 1;
+   # A marginal match is a match which has different patterns. Normally, we
+   # should not allow exactly two lines to match if marginal. But we will modify
+   # this rule for two lines with a leading equals-like operator such that we
+   # match if the patterns to the left of the equals are the same. So for
+   # example the following two lines are a marginal match but have the same
+   # left side patterns, so we will align the equals.
+   #     my $orig = my $format = "^<<<<< ~~\n";
+   #     my $abc  = "abc";
+   # But these have a different left pattern so they will not be aligned
+   #     $xmldoc .= $`;
+   #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
+    my $is_marginal = $marginal_match;
+    if ( $leading_equals && $is_marginal ) {
+        my $rpatterns0 = $group_lines[0]->get_rpatterns();
+        my $rpatterns1 = $group_lines[1]->get_rpatterns();
+        my $pat0       = $rpatterns0->[0];
+        my $pat1       = $rpatterns1->[0];
+        $is_marginal = $pat0 ne $pat1;
     }
 
     my $do_not_align = (
@@ -2083,15 +2090,16 @@ sub decide_if_aligned {
 
           && (
 
-            # don't align if it was marked as a 'marginal" match.
-            $marginal_match
+            # don't align if it was just a marginal match
+            $is_marginal    ##$marginal_match
 
+            # don't align two lines with big gap
+            # NOTE: I am not sure if this test is actually functional any longer
             || $group_maximum_gap > 12
 
-            # don't align lines with differing number of alignment tokens,
-            # unless the first common alignment is an equals
-            || ( ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
-                && !$good_leading_equals )
+            # or lines with differing number of alignment tokens
+            || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
+                && !$leading_equals )
           )
     );
 

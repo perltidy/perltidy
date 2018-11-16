@@ -1,20 +1,14 @@
 # Perltidy Change Log
 
-## 2018 11 16
-
-    - The packaging for this version has changed. The Tidy.pm file has 
-      been split into a smaller Tidy.pm file plus supporting modules in the path
-      Perl/Tidy/*.
-
-    - A number of new installation test cases have been added. 
+## 2018 11 17
 
     - Fixed RT #126965, in which a ternary operator was misparsed if immediately
       following a function call without arguments, such as: 
         my $restrict_customer = shift ? 1 : 0;
 
     - Fixed RT #125012: bug in -mangle --delete-all-comments
-      A needed blank space bareword tokens was being removed when comments were
-      deleted
+      A needed blank space before bareword tokens was being removed when comments 
+      were deleted
 
     - Fixed RT #81852: Stacked containers and quoting operators. Quoted words
       (qw) delimited by container tokens ('{', '[', '(', '<') are now included in
@@ -39,8 +33,6 @@
 
     - Fixed RT #124594, license text desc. changed from 'GPL-2.0+' to 'gpl_2'
 
-    - RT #106493; source code repository is https://github.com/perltidy/perltidy
-
     - Fixed bug in which a warning about a possible code bug was issued in a
       script with brace errors. 
 
@@ -56,19 +48,9 @@
 
     - Fixed RT #127633, undesirable line break after return when -baao flag is set
 
-    - Vertical alignment has been improved in several ways.  Thanks especially to
-      Glenn for sending helpful snippets.
-
-      - In many cases, two lines which were previously left unaligned are now
-        aligned. 
-
-          OLD:
-          $expect = "1$expect" if $expect =~ /^e/i;
-          $p = "1$p" if defined $p and $p =~ /^e/i;
-      
-          NEW:
-          $expect = "1$expect" if $expect =~ /^e/i;
-          $p      = "1$p"      if defined $p and $p =~ /^e/i;
+    - Fixed RT #127035, vertical alignment. Vertical alignment has been improved 
+      in several ways.  Thanks especially to Michael Wardman and Glenn for sending 
+      helpful snippets. 
 
       - Alignment of the =~ operators has been reactivated.  
 
@@ -91,6 +73,29 @@
           is( pop       // 7, 7, 'pop // ... works' );
           is( pop()     // 7, 0, 'pop() // ... works' );
           is( pop @ARGV // 7, 3, 'pop @array // ... works' );
+
+      - The rules for alignment of just two lines have been adjusted,
+        hopefully to be a little better overall.  In some cases, two 
+        lines which were previously unaligned are now aligned, and vice-versa.
+
+          OLD:
+          $expect = "1$expect" if $expect =~ /^e/i;
+          $p = "1$p" if defined $p and $p =~ /^e/i;
+      
+          NEW:
+          $expect = "1$expect" if $expect =~ /^e/i;
+          $p      = "1$p"      if defined $p and $p =~ /^e/i;
+
+
+    - RT #106493; source code repository location has been added to docs; it is 
+         https://github.com/perltidy/perltidy
+
+    - The packaging for this version has changed. The Tidy.pm module is much 
+      smaller.  Supporting modules have been split out from it and placed below 
+      it in the path Perl/Tidy/*.
+
+    - A number of new installation test cases have been added. Updates are now
+      continuously tested at Travis CI against versions back to Perl 5.08.
 
 ## 2018 02 20
 

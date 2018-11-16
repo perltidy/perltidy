@@ -1,8 +1,16 @@
-_config.yml
 bin/perltidy
 BUGS.md
 CHANGES.md
 COPYING
+docs/ChangeLog.html
+docs/COPYING.txt
+docs/index.html
+docs/index.md
+docs/INSTALL.html
+docs/perltidy.html
+docs/stylekey.html
+docs/Tidy.html
+docs/tutorial.html
 examples/bbtidy.pl
 examples/break_long_quotes.pl
 examples/ex_mp.pl

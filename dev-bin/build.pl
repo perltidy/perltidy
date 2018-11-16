@@ -43,7 +43,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK V PC TIDY T CL POD DIST)];
+my $rsteps = [qw( CHK V PC TIDY T CL DOCS DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -59,11 +59,12 @@ my $rcode = {
     'PC'   => \&run_perl_critic,
     'TIDY'  => \&run_tidyall,
     'T'    => \&make_tests,
-    'POD'  => \&make_docs,
+    'DOCS'  => \&make_docs,
     'DIST' => \&make_dist,
     'CL'   => sub {openurl($changelog)},
     'LOG'  => sub { openurl($logfile) },
     'DIR'  => sub { openurl("local-docs") },
+    'HTML' => sub { openurl("docs/index.html") },
 };
 
 open( $fh_log, ">", $logfile ) or die "cannot open log file $logfile: $!\n";
@@ -84,10 +85,11 @@ tidy  - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc    - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 t     - make Tests			status: $rstatus->{'T'}
 cl    - review/edit ChangeLog.pod       status: $rstatus->{'CL'}
-pod   - check and process POD docs      status: $rstatus->{'POD'}
+docs  - check and process POD & html    status: $rstatus->{'DOCS'}
 dist  - make a Distribution tar.gz      status: $rstatus->{'DIST'}
 dir   - browse doc files
 log   - view Log file
+html  - view html files
 
 q,x   - eXit
 
@@ -225,14 +227,19 @@ sub make_docs {
         local $" = ') (';
         print "These file(s) had errors: (@errors)\n";
         hitcr("See the log file");
-        $rstatus->{'POD'} = 'TBD';
+        $rstatus->{'DOCS'} = 'TBD';
         return;
     }
 
     # finish up
     my $result = sys_command("(cd local-docs; make)");
     print $result;
-    $rstatus->{'POD'} = $result =~ /Stop\./i ? 'TBD' : 'OK';
+    my $status = $result =~ /Stop\./i ? 'TBD' : 'OK';
+    if ($status eq 'OK') {
+        $result = sys_command("(cd bubba; make)");
+        print $result;
+    }
+    $rstatus->{'DOCS'} = $status;
     hitcr();
     return;
 }

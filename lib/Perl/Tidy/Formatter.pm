@@ -9517,6 +9517,19 @@ sub send_lines_to_vertical_aligner {
                     }
                 }
 
+         # Convert a bareword within braces into a quote for matching. This will
+         # allow alignment of expressions like this:
+         #    local ( $SIG{'INT'} ) = IGNORE;
+         #    local ( $SIG{ALRM} )  = 'POSTMAN';
+                if (   $type eq 'w'
+                    && $i > $ibeg
+                    && $i < $iend
+                    && $types_to_go[ $i - 1 ] eq 'L'
+                    && $types_to_go[ $i + 1 ] eq 'R' )
+                {
+                    $type = 'Q';
+                }
+
                 # patch to make numbers and quotes align
                 if ( $type eq 'n' ) { $type = 'Q' }
 
