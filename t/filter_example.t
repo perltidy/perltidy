@@ -48,13 +48,12 @@ my $output;
 my $stderr_string;
 my $errorfile_string;
 my $err = Perl::Tidy::perltidy(
-    argv => '',
+    argv => '-npro',  # fix for RT#127679, avoid reading unwanted .perltidyrc
     prefilter =>
       sub { $_ = $_[0]; s/^\s*method\s+(\w.*)/sub METHOD_$1/gm; return $_ },
     postfilter  => sub { $_ = $_[0]; s/sub\s+METHOD_/method /gm; return $_ },
     source      => \$source,
     destination => \$output,
-    argv      => '',                   # for safety; hide any ARGV from perltidy
     stderr    => \$stderr_string,
     errorfile => \$errorfile_string,   # not used when -se flag is set
 );
