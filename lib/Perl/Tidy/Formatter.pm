@@ -14825,10 +14825,10 @@ sub undo_forced_breakpoint_stack {
                             # this is a very approximate test for this
                             && (
 
-				# RT#127633 - the leading tokens are not operators
+                              # RT#127633 - the leading tokens are not operators
                                 ( $type_ibeg_2 ne $tokens_to_go[$ibeg_2] )
 
-				# or they are different
+                                # or they are different
                                 || (   $ibeg_3 >= 0
                                     && $type_ibeg_2 ne $types_to_go[$ibeg_3] )
                             )
