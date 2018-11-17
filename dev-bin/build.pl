@@ -340,7 +340,7 @@ q   nothing; return to Main Menu
 EOM
 
     my $ans = queryu(":");
-    if ( $ans eq 'IV' ) {
+    if ( $ans eq 'BV' ) {
         my $new_VERSION = get_new_development_version($reported_VERSION);
         next if ( $new_VERSION == $reported_VERSION );
         if ( ifyes("New version will be: '$new_VERSION'. OK? [Y/N]") ) {

@@ -410,7 +410,7 @@ C<write_debug_entry> in Tidy.pm.
 
 =head1 VERSION
 
-This man page documents Perl::Tidy version 20181117
+This man page documents Perl::Tidy version 20181117.01
 
 =head1 LICENSE
 

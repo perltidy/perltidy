@@ -1,6 +1,6 @@
 =head1 Perltidy Change Log
 
-=head2 2018 11 17
+=head2 2018 11 17.01
 
 
   - Fixed RT #126965, in which a ternary operator was misparsed if immediately
