@@ -186,8 +186,7 @@ return $pdl->slice(
             params => "def",
             expect => <<'#2...........',
             # break after '+' if default, before + if pbp
-            my $min_gnu_indentation =
-              $standard_increment +
+            my $min_gnu_indentation = $standard_increment +
               $gnu_stack[$max_gnu_stack_index]->get_SPACES();
 #2...........
         },

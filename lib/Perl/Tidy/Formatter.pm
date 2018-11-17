@@ -14823,8 +14823,15 @@ sub undo_forced_breakpoint_stack {
 
                             # do not recombine if the two lines might align well
                             # this is a very approximate test for this
-                            && (   $ibeg_3 >= 0
-                                && $type_ibeg_2 ne $types_to_go[$ibeg_3] )
+                            && (
+
+				# RT#127633 - the leading tokens are not operators
+                                ( $type_ibeg_2 ne $tokens_to_go[$ibeg_2] )
+
+				# or they are different
+                                || (   $ibeg_3 >= 0
+                                    && $type_ibeg_2 ne $types_to_go[$ibeg_3] )
+                            )
                           );
 
                         if (

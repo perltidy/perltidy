@@ -1,2 +1,3 @@
-# do not break after return with -wba=':'
+# keep lines long; do not break after 'return' and '.' with -baoo
 return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) : $ref eq 'ARRAY';
+my $s = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' .  'bbbbbbbbbbbbbbbbbbbbbbbbb';

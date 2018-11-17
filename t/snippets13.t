@@ -34,9 +34,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'      => "",
-        'rt127633' => <<'----------',
--wba=':'
-----------
+        'rt127633' => "-baao",
     };
 
     ############################
@@ -142,8 +140,9 @@ return (
 ----------
 
         'rt127633' => <<'----------',
-# do not break after return with -wba=':'
+# keep lines long; do not break after 'return' and '.' with -baoo
 return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) : $ref eq 'ARRAY';
+my $s = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' .  'bbbbbbbbbbbbbbbbbbbbbbbbb';
 ----------
     };
 
@@ -198,10 +197,12 @@ ok( $out !~ /<zap>/,       "Got 'zap'" );    # zap
             source => "rt127633",
             params => "def",
             expect => <<'#5...........',
-# do not break after return with -wba=':'
+# keep lines long; do not break after 'return' and '.' with -baoo
 return $ref eq 'SCALAR'
   ? $self->encode_scalar( $object, $name, $type, $attr )
   : $ref eq 'ARRAY';
+my $s = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  . 'bbbbbbbbbbbbbbbbbbbbbbbbb';
 #5...........
         },
 
@@ -209,9 +210,11 @@ return $ref eq 'SCALAR'
             source => "rt127633",
             params => "rt127633",
             expect => <<'#6...........',
-# do not break after return with -wba=':'
+# keep lines long; do not break after 'return' and '.' with -baoo
 return $ref eq 'SCALAR' ? $self->encode_scalar( $object, $name, $type, $attr ) :
   $ref eq 'ARRAY';
+my $s = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' .
+  'bbbbbbbbbbbbbbbbbbbbbbbbb';
 #6...........
         },
 
