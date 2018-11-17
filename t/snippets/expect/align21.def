@@ -1,3 +1,3 @@
-# two lines with large gap
+# two lines with large gap but same lhs pattern so align equals
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];

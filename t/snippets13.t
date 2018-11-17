@@ -97,19 +97,19 @@ use constant {
 ----------
 
         'align19' => <<'----------',
-# big gap; do not align the '='
+# different lhs patterns, do not align the '='
 @_                                       = qw(sort grep map do eval);
 @is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
 ----------
 
         'align20' => <<'----------',
-# a marginal two-line match: do not align
+# marginal two-line match; differnt lhs patterns; do not align
 $w[$i] = $t;
 $t = 1000000;
 ----------
 
         'align21' => <<'----------',
-# two lines with large gap
+# two lines with large gap but same lhs pattern so align equals
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
 ----------
@@ -277,7 +277,7 @@ return (
             source => "align19",
             params => "def",
             expect => <<'#11...........',
-# big gap; do not align the '='
+# different lhs patterns, do not align the '='
 @_ = qw(sort grep map do eval);
 @is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
 #11...........
@@ -287,7 +287,7 @@ return (
             source => "align20",
             params => "def",
             expect => <<'#12...........',
-# a marginal two-line match: do not align
+# marginal two-line match; differnt lhs patterns; do not align
 $w[$i] = $t;
 $t = 1000000;
 #12...........
@@ -297,7 +297,7 @@ $t = 1000000;
             source => "align21",
             params => "def",
             expect => <<'#13...........',
-# two lines with large gap
+# two lines with large gap but same lhs pattern so align equals
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
 #13...........

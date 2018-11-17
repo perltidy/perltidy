@@ -88,6 +88,7 @@ my $salute =
 ----------
 
         'align5' => <<'----------',
+# some lists
 printline( "Broadcast", &bintodq($b),    ( $b,    $mask, $bcolor, 0 ) );
 printline( "HostMin",   &bintodq($hmin), ( $hmin, $mask, $bcolor, 0 ) );
 printline( "HostMax",   &bintodq($hmax), ( $hmax, $mask, $bcolor, 0 ) );
@@ -297,6 +298,7 @@ my $salute =
             source => "align5",
             params => "def",
             expect => <<'#6...........',
+# some lists
 printline( "Broadcast", &bintodq($b),    ( $b,    $mask, $bcolor, 0 ) );
 printline( "HostMin",   &bintodq($hmin), ( $hmin, $mask, $bcolor, 0 ) );
 printline( "HostMax",   &bintodq($hmax), ( $hmax, $mask, $bcolor, 0 ) );
