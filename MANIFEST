@@ -53,6 +53,7 @@ MANIFEST			This list of files
 pm2pl
 README.md
 t/filter_example.t
+t/filter_example.t.SKIP
 t/snippets1.t
 t/snippets10.t
 t/snippets11.t

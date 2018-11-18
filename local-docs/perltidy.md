@@ -3274,7 +3274,7 @@ perlstyle(1), Perl::Tidy(3)
 
 # VERSION
 
-This man page documents perltidy version 20181117
+This man page documents perltidy version 20181118
 
 # BUG REPORTS
 

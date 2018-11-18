@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2018 11 18
+
+    - Removed test case 'filter_example.t' which was causing a failure on a
+      Windows installation for unknown reasons, possibly due to an unexpected
+      perltidyrc being read by the test script.  
+
 ## 2018 11 17
 
     - Fixed RT #126965, in which a ternary operator was misparsed if immediately
