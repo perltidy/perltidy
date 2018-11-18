@@ -315,6 +315,28 @@ sub update_version_number {
     my @sources          = ( $lib_path . "Tidy.pm", $lib_path . "Tidy.pod",
         $bin_path . "perltidy", );
     push @sources, "local-docs/ChangeLog.pod";
+    my @more = qw(
+      Tidy/Debugger.pm
+      Tidy/DevNull.pm
+      Tidy/Diagnostics.pm
+      Tidy/FileWriter.pm
+      Tidy/Formatter.pm
+      Tidy/HtmlWriter.pm
+      Tidy/IOScalar.pm
+      Tidy/IOScalarArray.pm
+      Tidy/IndentationItem.pm
+      Tidy/LineBuffer.pm
+      Tidy/LineSink.pm
+      Tidy/LineSource.pm
+      Tidy/Logger.pm
+      Tidy/Tokenizer.pm
+      Tidy/VerticalAligner.pm
+      Tidy/VerticalAligner/Alignment.pm
+      Tidy/VerticalAligner/Line.pm
+    );
+    foreach my $module (@more) {
+        push @sources, $lib_path . $module;
+    }
 
     my $Tidy_pm_file = $lib_path . "Tidy.pm";
 

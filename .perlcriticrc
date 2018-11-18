@@ -16,10 +16,6 @@ severity = 4
 # There is a stringy eval in Formatter.pm which is essential.  
 [-BuiltinFunctions::ProhibitStringyEval] 
 
-# maintaining VERSION numbers for all internal modules introduces
-# needless maintenance issues
-[-Modules::RequireVersionVar]
-
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
