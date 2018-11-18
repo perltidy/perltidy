@@ -21,6 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
+our $VERSION = '20181118';
 
 use Perl::Tidy::LineBuffer;
 
