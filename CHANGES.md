@@ -1,10 +1,11 @@
 # Perltidy Change Log
 
-## 2018 11 18
+## 2018 11 19
 
     - Removed test case 'filter_example.t' which was causing a failure on a
       Windows installation for unknown reasons, possibly due to an unexpected
-      perltidyrc being read by the test script.  
+      perltidyrc being read by the test script.  Added VERSION numbers to all
+      new modules.
 
 ## 2018 11 17
 

@@ -7,7 +7,7 @@
 package Perl::Tidy::HtmlWriter;
 use strict;
 use warnings;
-our $VERSION = '20181118';
+our $VERSION = '20181119';
 
 use File::Basename;
 
