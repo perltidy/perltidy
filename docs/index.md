@@ -5,7 +5,7 @@ easier to read.  If you write Perl scripts, or spend much time
 reading them, you will probably find it useful.
 
 Perltidy is free software released under the GNU General Public
-License -- please see the included file [COPYING](./COPYING.txt) for details.
+License -- please see the included file [COPYING](../COPYING) for details.
 
 The formatting can be controlled with command line parameters.  The default
 parameter settings approximately follow the suggestions in the

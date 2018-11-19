@@ -1,7 +1,9 @@
 # Perltidy Change Log
 
-## 2018 11 19.01
+## 2018 11 20
 
+    - fix RT#127736 Perl-Tidy-20181119 has the EXE_FILES entry commented out in
+      Makefile.PL so it doesn't install the perltidy script or its manpage.
 
 
 ## 2018 11 19

@@ -7,7 +7,7 @@
 package Perl::Tidy::FileWriter;
 use strict;
 use warnings;
-our $VERSION = '20181119.01';
+our $VERSION = '20181120';
 
 # Maximum number of little messages; probably need not be changed.
 my $MAX_NAG_MESSAGES = 6;
