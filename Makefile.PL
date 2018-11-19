@@ -12,6 +12,6 @@ WriteMakefile(
         : ()
     ),
 
-    #EXE_FILES => ['bin/perltidy'],
+    EXE_FILES => ['bin/perltidy'],
     dist => { COMPRESS => 'gzip', SUFFIX => 'gz' },
 );
