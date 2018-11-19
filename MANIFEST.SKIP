@@ -101,6 +101,9 @@ _config.yml
 # any shell scripts
 \.sh$
 
+# any zip files
+\.zip$
+
 # Perl::Tidy error, log and tidy files
 \bperltidy\.ERR
 \bperltidy\.LOG
@@ -126,6 +129,8 @@ _config.yml
 
 # my notes to self
 \bNOTES\.txt
+
+^docs/tmp
 
 ^local-docs/
 
