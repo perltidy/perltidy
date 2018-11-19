@@ -1,383 +1,430 @@
-<?xml version="1.0" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title></title>
-<meta http-equiv="content-type" content="text/html; charset=utf-8" />
-<link rev="made" href="mailto:root@localhost" />
-</head>
+<h1>PERLTIDY INSTALLATION NOTES</h1>
 
-<body>
+<h1>Get a distribution file</h1>
 
+<ul>
+<li><p>Source Files in .tar.gz and .zip format</p>
 
+<p>This document tells how to install perltidy from the basic source
+distribution files in <code>.tar.gz</code> or <code>.zip</code> format.  These files are
+identical except for the line endings.  The <code>.tar.gz</code> has Unix style
+line endings, and the <code>.zip</code> file has Windows style line endings.  The
+standard perl MakeMaker method should work for these in most cases. </p></li>
+<li><p>Source files in RPM and .deb format</p>
 
-<ul id="index">
-  <li><a href="#PERLTIDY-INSTALLATION-NOTES">PERLTIDY INSTALLATION NOTES</a></li>
-  <li><a href="#Get-a-distribution-file">Get a distribution file</a></li>
-  <li><a href="#Quick-Test-Drive">Quick Test Drive</a></li>
-  <li><a href="#Uninstall-older-versions">Uninstall older versions</a></li>
-  <li><a href="#Two-Installation-Methods---Overview">Two Installation Methods - Overview</a>
-    <ul>
-      <li><a href="#Unix-Installation-Notes">Unix Installation Notes</a></li>
-      <li><a href="#Windows-Installation-Notes">Windows Installation Notes</a></li>
-      <li><a href="#VMS-Installation-Notes">VMS Installation Notes</a></li>
-    </ul>
-  </li>
-  <li><a href="#Troubleshooting-Other-Operating-Systems">Troubleshooting / Other Operating Systems</a></li>
-  <li><a href="#CONFIGURATION-FILE">CONFIGURATION FILE</a></li>
-  <li><a href="#SYSTEM-TEMPORARY-FILES">SYSTEM TEMPORARY FILES</a></li>
-  <li><a href="#DOCUMENTATION">DOCUMENTATION</a></li>
-  <li><a href="#CREDITS">CREDITS</a></li>
-  <li><a href="#FEEDBACK-BUG-REPORTS">FEEDBACK / BUG REPORTS</a></li>
+<p>The web site also has links to RPM and Debian .deb Linux packages, which may be
+convenient for some users.</p></li>
 </ul>
 
-<h1 id="PERLTIDY-INSTALLATION-NOTES">PERLTIDY INSTALLATION NOTES</h1>
+<h1>Quick Test Drive</h1>
 
-<h1 id="Get-a-distribution-file">Get a distribution file</h1>
+<p>If you want to do a quick test of perltidy without doing any installation, get
+a <code>.tar.gz</code> or a <code>.zip</code> source file and see the section below "Method 2: Installation
+as a single binary script".</p>
 
-<dl>
+<h1>Uninstall older versions</h1>
 
-<dt id="Source-Files-in-.tar.gz-and-.zip-format">Source Files in .tar.gz and .zip format</dt>
-<dd>
+<p>In certain circumstances, it is best to remove an older version
+of perltidy before installing the latest version.  These are:</p>
 
-<p>This document tells how to install perltidy from the basic source distribution files in <i>.tar.gz</i> or <i>.zip</i> format. These files are identical except for the line endings. The <i>.tar.gz</i> has Unix style line endings, and the <i>.zip</i> file has Windows style line endings. The standard perl MakeMaker method should work for these in most cases.</p>
+<ul>
+<li><p>Uninstall a Version older than 20020225</p>
 
-</dd>
-<dt id="Source-files-in-RPM-and-.deb-format">Source files in RPM and .deb format</dt>
-<dd>
+<p>You can use perltidy -v to determine the version number.  The first
+version of perltidy to use Makefile.PL for installation was 20020225, so
+if your previous installation is older than this, it is best to remove
+it, because the installation path may now be different.  There were up
+to 3 files these older installations: the script <code>perltidy</code> and
+possibly two man pages, <code>perltidy.1</code> and <code>perl2web.1</code>.  If you saved
+your Makefile, you can probably use <code>make uninstall</code>.  Otherwise, you
+can use a <code>locate</code> or <code>find</code> command to find and remove these files.</p></li>
+<li><p>Uninstall older versions when changing installation method</p>
 
-<p>The web site also has links to RPM and Debian .deb Linux packages, which may be convenient for some users.</p>
+<p>If you switch from one installation method to another, the paths to the
+components of perltidy may change, so it is probably best to remove the older
+version before installing the new version.  If your older installation method
+had an uninstall option (such as with RPM's and debian packages), use it.
+Otherwise, you can locate and remove the older files by hand.  There are two
+key files: <code>Tidy.pm</code> and <code>perltidy</code>.  In addition, there may be one or two
+man pages, something like <code>Perl::Tidy.3pm</code> and <code>perltidy.1p</code>.  You can use a
+<code>locate</code> and/or <code>find</code> command to find and remove these files.  After
+installation, you can verify that the new version of perltidy is working with
+the <code>perltidy -v</code> command.</p></li>
+</ul>
 
-</dd>
-</dl>
+<h1>Two Installation Methods - Overview</h1>
 
-<h1 id="Quick-Test-Drive">Quick Test Drive</h1>
+<p>These are generic instructions.  Some system-specific notes and hints
+are given in later sections.  </p>
 
-<p>If you want to do a quick test of perltidy without doing any installation, get a <i>.tar.gz</i> or a <i>.zip</i> source file and see the section below &quot;Method 2: Installation as a single binary script&quot;.</p>
+<p>Two separate installation methods are possible.  </p>
 
-<h1 id="Uninstall-older-versions">Uninstall older versions</h1>
+<ul>
+<li><p>Method 1: Standard Installation Method</p>
 
-<p>In certain circumstances, it is best to remove an older version of perltidy before installing the latest version. These are:</p>
+<p>The standard method based on MakeMaker should work in a normal perl
+environment.  This is the recommended installation procedure for
+systems which support it.</p>
 
-<dl>
+<pre><code>    perl Makefile.PL
+    make
+    make test
+    make install
+</code></pre>
 
-<dt id="Uninstall-a-Version-older-than-20020225">Uninstall a Version older than 20020225</dt>
-<dd>
+<p>The <code>make</code> command is probably <code>nmake</code> under a Windows system.  You
+may need to become root (or administrator) before doing the <code>make
+install</code> step.  </p></li>
+<li><p>Method 2: Installation as a single binary script</p>
 
-<p>You can use perltidy -v to determine the version number. The first version of perltidy to use Makefile.PL for installation was 20020225, so if your previous installation is older than this, it is best to remove it, because the installation path may now be different. There were up to 3 files these older installations: the script <i>perltidy</i> and possibly two man pages, <i>perltidy.1</i> and <i>perl2web.1</i>. If you saved your Makefile, you can probably use <code>make uninstall</code>. Otherwise, you can use a <i>locate</i> or <i>find</i> command to find and remove these files.</p>
+<p>If you just want to take perltidy for a quick test drive without installing it,
+or are having trouble installing modules, you can bundle it all in one
+independent executable script.  This might also be helpful on a system for
+which the Makefile.PL method does not work, or if you are temporarily a guest
+on some system, or if you want to try hacking a special version of perltidy
+without messing up your regular version.  </p>
 
-</dd>
-<dt id="Uninstall-older-versions-when-changing-installation-method">Uninstall older versions when changing installation method</dt>
-<dd>
+<p>You just need to uncompress the source distribution, cd down into it, and enter
+the command:</p>
 
-<p>If you switch from one installation method to another, the paths to the components of perltidy may change, so it is probably best to remove the older version before installing the new version. If your older installation method had an uninstall option (such as with RPM&#39;s and debian packages), use it. Otherwise, you can locate and remove the older files by hand. There are two key files: <i>Tidy.pm</i> and <i>perltidy</i>. In addition, there may be one or two man pages, something like <i>Perl::Tidy.3pm</i> and <i>perltidy.1p</i>. You can use a <code>locate</code> and/or <code>find</code> command to find and remove these files. After installation, you can verify that the new version of perltidy is working with the <code>perltidy -v</code> command.</p>
+<pre><code>    perl pm2pl
+</code></pre>
 
-</dd>
-</dl>
+<p>which will combine the pieces of perltidy into a single script named
+<code>perltidy</code> in the current directory.  This script should be 
+fully functional.  Try it out on a handy perl script, for example</p>
 
-<h1 id="Two-Installation-Methods---Overview">Two Installation Methods - Overview</h1>
+<pre><code>perl perltidy Makefile.PL
+</code></pre>
 
-<p>These are generic instructions. Some system-specific notes and hints are given in later sections.</p>
+<p>This should create <code>Makefile.PL.tdy</code>.</p></li>
+<li><p>After Installation</p>
 
-<p>Two separate installation methods are possible.</p>
+<p>After installation by either method, verify that the installation worked
+and that the correct new version is being by entering:</p>
 
-<dl>
+<pre><code>perltidy -v
+</code></pre>
 
-<dt id="Method-1:-Standard-Installation-Method">Method 1: Standard Installation Method</dt>
-<dd>
+<p>If the version number disagrees with the version number embedded in the
+distribution file name, search for and remove the old version.
+For example, under a Unix system, the command <code>which perltidy</code> might 
+show where it is.  Also, see the above notes on uninstalling older
+versions.</p>
 
-<p>The standard method based on MakeMaker should work in a normal perl environment. This is the recommended installation procedure for systems which support it.</p>
+<p>On a Unix system running the <code>bash</code> shell, if you had a previous
+installation of perltidy, you may have to use </p>
 
-<pre><code>        perl Makefile.PL
-        make
-        make test
-        make install</code></pre>
-
-<p>The <code>make</code> command is probably <code>nmake</code> under a Windows system. You may need to become root (or administrator) before doing the <code>make install</code> step.</p>
-
-</dd>
-<dt id="Method-2:-Installation-as-a-single-binary-script">Method 2: Installation as a single binary script</dt>
-<dd>
-
-<p>If you just want to take perltidy for a quick test drive without installing it, or are having trouble installing modules, you can bundle it all in one independent executable script. This might also be helpful on a system for which the Makefile.PL method does not work, or if you are temporarily a guest on some system, or if you want to try hacking a special version of perltidy without messing up your regular version.</p>
-
-<p>You just need to uncompress the source distribution, cd down into it, and enter the command:</p>
-
-<pre><code>        perl pm2pl</code></pre>
-
-<p>which will combine the pieces of perltidy into a single script named <i>perltidy</i> in the current directory. This script should be fully functional. Try it out on a handy perl script, for example</p>
-
-<pre><code>  perl perltidy Makefile.PL</code></pre>
-
-<p>This should create <i>Makefile.PL.tdy</i>.</p>
-
-</dd>
-<dt id="After-Installation">After Installation</dt>
-<dd>
-
-<p>After installation by either method, verify that the installation worked and that the correct new version is being by entering:</p>
-
-<pre><code>  perltidy -v</code></pre>
-
-<p>If the version number disagrees with the version number embedded in the distribution file name, search for and remove the old version. For example, under a Unix system, the command <code>which perltidy</code> might show where it is. Also, see the above notes on uninstalling older versions.</p>
-
-<p>On a Unix system running the <code>bash</code> shell, if you had a previous installation of perltidy, you may have to use</p>
-
-<pre><code> hash -r</code></pre>
+<pre><code>hash -r
+</code></pre>
 
 <p>to get the shell to find the new one.</p>
 
-<p>After <i>perltidy</i> is installed, you can find where it will look for configuration files and environment variables on your system with the command:</p>
+<p>After <code>perltidy</code> is installed, you can find where it will look for
+configuration files and environment variables on your system with
+the command:</p>
 
-<pre><code>  perltidy -dpro</code></pre>
+<pre><code>perltidy -dpro
+</code></pre></li>
+<li><p>How to Uninstall</p>
 
-</dd>
-<dt id="How-to-Uninstall">How to Uninstall</dt>
-<dd>
-
-<p>Unfortunately, the standard Perl installation method does not seem able to do an uninstall.</p>
+<p>Unfortunately, the standard Perl installation method does not seem able
+to do an uninstall.</p>
 
 <p>But try this:</p>
 
-<pre><code>  make uninstall</code></pre>
+<pre><code>make uninstall
+</code></pre>
 
-<p>On some systems, it will give you a list of files to remove by hand. If not, you need to find the script <i>perltidy</i> and its module file <i>Tidy.pm</i>, which will be in a subdirectory named <i>Perl</i> in the site library.</p>
+<p>On some systems, it will give you a list of files to remove by hand.  If
+not, you need to find the script <code>perltidy</code> and its module file
+<code>Tidy.pm</code>, which will be in a subdirectory named <code>Perl</code> in the site
+library.</p>
 
-<p>If you installed perltidy with the alternative method, you should just reverse the steps that you used.</p>
+<p>If you installed perltidy with the alternative method, you should just
+reverse the steps that you used.</p></li>
+</ul>
 
-</dd>
-</dl>
+<h2>Unix Installation Notes</h2>
 
-<h2 id="Unix-Installation-Notes">Unix Installation Notes</h2>
+<ul>
+<li><p>Alternative method - Unix</p>
 
-<dl>
+<p>If the alternative method is used, test the script produced by the
+<code>pm2pl</code> perl script:</p>
 
-<dt id="Alternative-method---Unix">Alternative method - Unix</dt>
-<dd>
+<pre><code>perl ./perltidy somefile.pl
+</code></pre>
 
-<p>If the alternative method is used, test the script produced by the <code>pm2pl</code> perl script:</p>
+<p>where <code>somefile.pl</code> is any convenient test file, such as <code>Makefile.PL</code>
+itself.  Then,</p>
 
-<pre><code>  perl ./perltidy somefile.pl</code></pre>
+<p>1. If the script is not executable, use </p>
 
-<p>where <i>somefile.pl</i> is any convenient test file, such as <i>Makefile.PL</i> itself. Then,</p>
+<pre><code>chmod +x perltidy
+</code></pre>
 
-<p>1. If the script is not executable, use</p>
+<p>2. Verify that the initial line in perltidy works for your system by
+entering:</p>
 
-<pre><code> chmod +x perltidy</code></pre>
+<pre><code>./perltidy -h
+</code></pre>
 
-<p>2. Verify that the initial line in perltidy works for your system by entering:</p>
+<p>which should produce the usage text and then exit.  This should usually
+work, but if it does not, you will need to change the first line in
+<code>perltidy</code> to reflect the location of perl on your system.  On a Unix
+system, you might find the path to perl with the command 'which perl'.</p>
 
-<pre><code> ./perltidy -h</code></pre>
+<p>3. A sample <code>Makefile</code> for this installation method is <code>Makefile.npm</code>.
+Edit it to have the correct paths.</p>
 
-<p>which should produce the usage text and then exit. This should usually work, but if it does not, you will need to change the first line in <i>perltidy</i> to reflect the location of perl on your system. On a Unix system, you might find the path to perl with the command &#39;which perl&#39;.</p>
+<p>You will need to become root unless you change the paths to point to
+somewhere in your home directory.  Then issue the command</p>
 
-<p>3. A sample <i>Makefile</i> for this installation method is <i>Makefile.npm</i>. Edit it to have the correct paths.</p>
+<pre><code>make -f Makefile.npm install
+</code></pre>
 
-<p>You will need to become root unless you change the paths to point to somewhere in your home directory. Then issue the command</p>
-
-<pre><code> make -f Makefile.npm install</code></pre>
-
-<p>This installs perltidy and the man page perltidy.1.</p>
+<p>This installs perltidy and the man page perltidy.1. </p>
 
 <p>5. Test the installation using</p>
 
-<pre><code> perltidy -h</code></pre>
+<pre><code>perltidy -h
+</code></pre>
 
-<p>You should see the usage screen. Then, if you installed the man pages, try</p>
+<p>You should see the usage screen.  Then, if you installed the man pages, 
+try</p>
 
-<pre><code> man perltidy</code></pre>
+<pre><code>man perltidy
+</code></pre>
 
-<p>which should bring up the manual page.</p>
+<p>which should bring up the manual page. </p>
 
-<p>If you ever want to remove perltidy, you can remove perltidy and its man pages by hand or use</p>
+<p>If you ever want to remove perltidy, you can remove perltidy and its man
+pages by hand or use</p>
 
-<pre><code> make uninstall</code></pre>
+<pre><code>make uninstall
+</code></pre></li>
+</ul>
 
-</dd>
-</dl>
+<h2>Windows Installation Notes</h2>
 
-<h2 id="Windows-Installation-Notes">Windows Installation Notes</h2>
+<p>On a Windows 9x/Me system you should CLOSE ANY OPEN APPLICATIONS to
+avoid losing unsaved data in case of trouble.</p>
 
-<p>On a Windows 9x/Me system you should CLOSE ANY OPEN APPLICATIONS to avoid losing unsaved data in case of trouble.</p>
-
-<dl>
-
-<dt id="Standard-Method---Windows">Standard Method - Windows</dt>
-<dd>
+<ul>
+<li><p>Standard Method - Windows</p>
 
 <p>After you unzip the distribution file, the procedure is probably this:</p>
 
-<pre><code>        perl Makefile.PL
-        nmake
-        nmake test
-        nmake install</code></pre>
+<pre><code>    perl Makefile.PL
+    nmake
+    nmake test
+    nmake install
+</code></pre>
 
-<p>You may need to download a copy of <i>unzip</i> to unzip the <i>.zip</i> distribution file; you can get this at http://www.info-zip.org/pub/infozip/UnZip.html</p>
+<p>You may need to download a copy of <code>unzip</code> to unzip the <code>.zip</code> distribution
+file; you can get this at
+http://www.info-zip.org/pub/infozip/UnZip.html</p>
 
-<p>If you have ActiveState Perl, the installation method is outlined at http://aspn.activestate.com//ASPN/Reference/Products/ActivePerl/faq/Windows/ActivePerl-Winfaq9.html#How_can_I_use_modules_from_CPAN_</p>
+<p>If you have ActiveState
+Perl, the installation method is outlined at
+http://aspn.activestate.com//ASPN/Reference/Products/ActivePerl/faq/Windows/ActivePerl-Winfaq9.html#How_can_I_use_modules_from_CPAN_</p>
 
-<p>You may need to download a copy of Microsoft&#39;s <i>nmake</i> program from ftp://ftp.microsoft.com/Softlib/MSLFILES/nmake15.exe</p>
+<p>You may need to download a copy of Microsoft's <code>nmake</code> program from
+ftp://ftp.microsoft.com/Softlib/MSLFILES/nmake15.exe</p>
 
-<p>If you are not familiar with installing modules, or have trouble doing so, and want to start testing perltidy quickly, you may want to use the alternative method instead (next section).</p>
-
-</dd>
-<dt id="Alternative-Method---Windows">Alternative Method - Windows</dt>
-<dd>
+<p>If you are not familiar with installing modules, or have trouble doing
+so, and want to start testing perltidy quickly, you may want to use the
+alternative method instead (next section).</p></li>
+<li><p>Alternative Method - Windows</p>
 
 <p>From the main installation directory, just enter</p>
 
-<pre><code>   perl pm2pl </code></pre>
+<pre><code>perl pm2pl
+</code></pre>
 
-<p>Placing the resulting file <i>perltidy</i> and the example batch file <i>perltidy.bat</i>, located in the <i>examples</i> directory, in your path should work. (You can determine your path by issuing the msdos command <code>PATH</code>). However, the batch file probably will not support file redirection. So, for example, to pipe the long help message through &#39;more&#39;, you might have to invoke perltidy with perl directly, like this:</p>
+<p>Placing the resulting file <code>perltidy</code> and the example batch file
+<code>perltidy.bat</code>, located in the <code>examples</code> directory, in your path should
+work.  (You can determine your path by issuing the msdos command
+<code>PATH</code>).  However, the batch file probably will not support file
+redirection.  So, for example, to pipe the long help message through
+'more', you might have to invoke perltidy with perl directly, like this:</p>
 
-<pre><code> perl \somepath\perltidy -h | more</code></pre>
+<pre><code>perl \somepath\perltidy -h | more
+</code></pre>
 
-<p>The batch file will not work properly with wildcard filenames, but you may use wildcard filenames if you place them in quotes. For example</p>
+<p>The batch file will not work properly with wildcard filenames, but you may
+use wildcard filenames if you place them in quotes.  For example</p>
 
-<pre><code> perltidy &#39;*.pl&#39;</code></pre>
+<pre><code>perltidy '*.pl'
+</code></pre></li>
+</ul>
 
-</dd>
-</dl>
+<h2>VMS Installation Notes</h2>
 
-<h2 id="VMS-Installation-Notes">VMS Installation Notes</h2>
+<ul>
+<li><p>Links to VMS Utilities and Documentation</p>
 
-<dl>
+<p>To install perltidy you will need the following utilities Perl, of
+course, source with VMS goodies available from
+http://www.sidhe.org/vmsperl or binary available from the Compaq OpenVMS
+freeware CD.  To unpack the source either gunzip and vmstar available
+from the Compaq OpenVMS freeware CD or zip available from
+http://www.info-zip.org/</p>
 
-<dt id="Links-to-VMS-Utilities-and-Documentation">Links to VMS Utilities and Documentation</dt>
-<dd>
+<p>To build perltidy you can use either <strong>MMS</strong>, Compaq's VMS equivalent of
+make, or <strong>MMK</strong>, an <strong>MMS</strong> clone available from
+http://www.madgoat.com.</p>
 
-<p>To install perltidy you will need the following utilities Perl, of course, source with VMS goodies available from http://www.sidhe.org/vmsperl or binary available from the Compaq OpenVMS freeware CD. To unpack the source either gunzip and vmstar available from the Compaq OpenVMS freeware CD or zip available from http://www.info-zip.org/</p>
+<p>Information on running perl under VMS can be found at:
+http://w4.lns.cornell.edu/~pvhp/perl/VMS.html</p></li>
+<li><p>Unpack the source:</p>
 
-<p>To build perltidy you can use either <b>MMS</b>, Compaq&#39;s VMS equivalent of make, or <b>MMK</b>, an <b>MMS</b> clone available from http://www.madgoat.com.</p>
+<pre><code>$ unzip -a perl-tidy-yyyymmdd.zip  ! or
 
-<p>Information on running perl under VMS can be found at: http://w4.lns.cornell.edu/~pvhp/perl/VMS.html</p>
 
-</dd>
-<dt id="Unpack-the-source">Unpack the source:</dt>
-<dd>
+$ unzip /text=auto perl-tidy-yyyymmdd.zip ! or
 
-<pre><code> $ unzip -a perl-tidy-yyyymmdd.zip  ! or
 
- $ unzip /text=auto perl-tidy-yyyymmdd.zip ! or
+$ gunzip perl-tidy-yyyymmdd.tgz
+$ vmstar perl-tidy-yyyymmdd.tar
+</code></pre></li>
+<li><p>Build and install perltidy under VMS:</p>
 
- $ gunzip perl-tidy-yyyymmdd.tgz
- $ vmstar perl-tidy-yyyymmdd.tar</code></pre>
-
-</dd>
-<dt id="Build-and-install-perltidy-under-VMS">Build and install perltidy under VMS:</dt>
-<dd>
-
-<pre><code> $ set default [.perl-tidy-yyymmdd]
- $ perl perltidy.pl
- $ mmk
- $ mmk test
- $ mmk install</code></pre>
-
-</dd>
-<dt id="Using-Perltidy-under-VMS">Using Perltidy under VMS</dt>
-<dd>
+<pre><code>$ set default [.perl-tidy-yyymmdd]
+$ perl perltidy.pl
+$ mmk
+$ mmk test
+$ mmk install
+</code></pre></li>
+<li><p>Using Perltidy under VMS</p>
 
 <p>Create a symbol. This should be put in a logon script, eg sylogin.com</p>
 
-<pre><code> $ perltidy == &quot;perl perl_root:[utils]perltidy.&quot;</code></pre>
+<pre><code>$ perltidy == "perl perl_root:[utils]perltidy."
+</code></pre>
 
-<p>Default parameters can be placed in a <i>perltidyrc</i> file. Perltidy looks for one in the following places and uses the first found if the logical <code>PERLTIDY</code> is a file and the file exists then that is used if the logical <code>PERLTIDY</code> is a directory then look for a <i>.perltidyrc</i> file in the directory look for a <i>.perltidyrc</i> file in the user&#39;s home directory</p>
+<p>Default parameters can be placed in a <code>perltidyrc</code> file.  Perltidy
+looks for one in the following places and uses the first found if the
+logical <code>PERLTIDY</code> is a file and the file exists then that is used if the
+logical <code>PERLTIDY</code> is a directory then look for a <code>.perltidyrc</code> file in the
+directory look for a <code>.perltidyrc</code> file in the user's home directory</p>
 
-<p>To see where the search is done and which <i>.perltidyrc</i> is used type</p>
+<p>To see where the search is done and which <code>.perltidyrc</code> is used type</p>
 
-<pre><code> $ perltidy -dpro</code></pre>
+<pre><code>$ perltidy -dpro
+</code></pre>
 
-<p>A system <code>PERLTIDY</code> logical can be defined pointing to a file with a minimal configuration, and users can defined their own logical to use a personal <i>.perltidyrc</i> file.</p>
+<p>A system <code>PERLTIDY</code> logical can be defined pointing to a file with a
+minimal configuration,  and users can defined their own logical to use a
+personal <code>.perltidyrc</code> file.</p>
 
-<pre><code> $ define /system perltidy perl_root:[utils]perltidy.rc</code></pre>
+<pre><code>$ define /system perltidy perl_root:[utils]perltidy.rc
+</code></pre></li>
+<li><p>The -x Parameter</p>
 
-</dd>
-<dt id="The--x-Parameter">The -x Parameter</dt>
-<dd>
+<p>If you have one of the magic incantations at the start of perl scripts,
+so that they can be invoked as a .com file, then you will need to use
+the <strong>-x</strong> parameter which causes perltidy to skip all lines until it
+finds a hash bang line eg <code>#!perl -w</code>.  Since it is such a common
+option this is probably a good thing to put in a <code>.perltidyrc</code> file.</p></li>
+<li><p>VMS File Extensions</p>
 
-<p>If you have one of the magic incantations at the start of perl scripts, so that they can be invoked as a .com file, then you will need to use the <b>-x</b> parameter which causes perltidy to skip all lines until it finds a hash bang line eg <code>#!perl -w</code>. Since it is such a common option this is probably a good thing to put in a <i>.perltidyrc</i> file.</p>
+<p>VMS file extensions will use an underscore character instead of a dot, 
+when necessary, to create a valid filename.  So </p>
 
-</dd>
-<dt id="VMS-File-Extensions">VMS File Extensions</dt>
-<dd>
+<pre><code>  perltidy myfile.pl
+</code></pre>
 
-<p>VMS file extensions will use an underscore character instead of a dot, when necessary, to create a valid filename. So</p>
+<p>will generate the output file <code>myfile.pl_tdy</code> instead of
+<code>myfile.pl.tdy</code>, and so on. </p></li>
+</ul>
 
-<pre><code>      perltidy myfile.pl</code></pre>
+<h1>Troubleshooting / Other Operating Systems</h1>
 
-<p>will generate the output file <i>myfile.pl_tdy</i> instead of <i>myfile.pl.tdy</i>, and so on.</p>
+<p>If there seems to be a problem locating a configuration file, you can see
+what is going on in the config file search with:</p>
 
-</dd>
-</dl>
+<pre><code>perltidy -dpro
+</code></pre>
 
-<h1 id="Troubleshooting-Other-Operating-Systems">Troubleshooting / Other Operating Systems</h1>
+<p>If you want to customize where perltidy looks for configuration files,
+look at the routine 'find_config_file' in module 'Tidy.pm'.  You should
+be able to at least use the '-pro=filename' method under most systems.  </p>
 
-<p>If there seems to be a problem locating a configuration file, you can see what is going on in the config file search with:</p>
+<p>Remember to place quotes (either single or double) around input
+parameters which contain spaces, such as file names.  For example:</p>
 
-<pre><code> perltidy -dpro</code></pre>
+<pre><code>perltidy "file name with spaces"
+</code></pre>
 
-<p>If you want to customize where perltidy looks for configuration files, look at the routine &#39;find_config_file&#39; in module &#39;Tidy.pm&#39;. You should be able to at least use the &#39;-pro=filename&#39; method under most systems.</p>
+<p>Without the quotes, perltidy would look for four files: <code>file</code>,
+<code>name</code>, <code>with</code>, and <code>spaces</code>.</p>
 
-<p>Remember to place quotes (either single or double) around input parameters which contain spaces, such as file names. For example:</p>
+<p>If you develop a system-dependent patch that might be of general
+interest, please let us know.</p>
 
-<pre><code> perltidy &quot;file name with spaces&quot;</code></pre>
+<h1>CONFIGURATION FILE</h1>
 
-<p>Without the quotes, perltidy would look for four files: <i>file</i>, <i>name</i>, <i>with</i>, and <i>spaces</i>.</p>
+<p>You do not need a configuration file, but you may eventually want to
+create one to save typing; the tutorial and man page discuss this.</p>
 
-<p>If you develop a system-dependent patch that might be of general interest, please let us know.</p>
+<h1>SYSTEM TEMPORARY FILES</h1>
 
-<h1 id="CONFIGURATION-FILE">CONFIGURATION FILE</h1>
+<p>Perltidy needs to create a system temporary file when it invokes
+Pod::Html to format pod text under the -html option.  For Unix systems,
+this will normally be a file in /tmp, and for other systems, it will be
+a file in the current working directory named <code>perltidy.TMP</code>.  This file
+will be removed when the run finishes.</p>
 
-<p>You do not need a configuration file, but you may eventually want to create one to save typing; the tutorial and man page discuss this.</p>
+<h1>DOCUMENTATION</h1>
 
-<h1 id="SYSTEM-TEMPORARY-FILES">SYSTEM TEMPORARY FILES</h1>
-
-<p>Perltidy needs to create a system temporary file when it invokes Pod::Html to format pod text under the -html option. For Unix systems, this will normally be a file in /tmp, and for other systems, it will be a file in the current working directory named <i>perltidy.TMP</i>. This file will be removed when the run finishes.</p>
-
-<h1 id="DOCUMENTATION">DOCUMENTATION</h1>
-
-<p>Documentation is contained in <b>.pod</b> format, either in the <i>docs</i> directory or appended to the scripts.</p>
+<p>Documentation is contained in <strong>.pod</strong> format, either in the <code>docs</code> directory
+or appended to the scripts.  </p>
 
 <p>These documents can also be found at http://perltidy.sourceforge.net</p>
 
-<p>Reading the brief tutorial should help you use perltidy effectively. The tutorial can be read interactively with <b>perldoc</b>, for example</p>
+<p>Reading the brief tutorial should help you use perltidy effectively. <br />
+The tutorial can be read interactively with <strong>perldoc</strong>, for
+example</p>
 
-<pre><code>  cd docs
-  perldoc tutorial.pod</code></pre>
+<pre><code>cd docs
+perldoc tutorial.pod
+</code></pre>
 
-<p>or else an <i>html</i> version can be made with <b>pod2html</b>:</p>
+<p>or else an <code>html</code> version can be made with <strong>pod2html</strong>:</p>
 
-<pre><code>  pod2html tutorial.pod &gt;tutorial.html</code></pre>
+<pre><code>pod2html tutorial.pod &gt;tutorial.html
+</code></pre>
 
-<p>If you use the Makefile.PL installation method on a Unix system, the <b>perltidy</b> and <b>Perl::Tidy</b> man pages should automatically be installed. Otherwise, you can extract the man pages with the <b>pod2xxxx</b> utilities, as follows:</p>
+<p>If you use the Makefile.PL installation method on a Unix system, the
+<strong>perltidy</strong> and <strong>Perl::Tidy</strong> man pages should automatically be installed.
+Otherwise, you can extract the man pages with the <strong>pod2xxxx</strong> utilities, as
+follows:</p>
 
-<pre><code>  cd bin
-  pod2text perltidy &gt;perltidy.txt
-  pod2html perltidy &gt;perltidy.html
-  
-  cd lib/Perl
-  pod2text Tidy.pm &gt;Tidy.txt
-  pod2html Tidy.pm &gt;Tidy.html</code></pre>
+<pre><code>cd bin
+pod2text perltidy &gt;perltidy.txt
+pod2html perltidy &gt;perltidy.html
 
-<p>After installation, the installation directory of files may be deleted.</p>
+cd lib/Perl
+pod2text Tidy.pm &gt;Tidy.txt
+pod2html Tidy.pm &gt;Tidy.html
+</code></pre>
 
-<p>Perltidy is still being developed, so please check sourceforge occasionally for updates if you find that it is useful. New releases are announced on freshmeat.net.</p>
+<p>After installation, the installation directory of files may be deleted. </p>
 
-<h1 id="CREDITS">CREDITS</h1>
+<p>Perltidy is still being developed, so please check sourceforge occasionally
+for updates if you find that it is useful.  New releases are announced
+on freshmeat.net.</p>
 
-<p>Thanks to the many programmers who have documented problems, made suggestions and sent patches.</p>
+<h1>CREDITS</h1>
 
-<h1 id="FEEDBACK-BUG-REPORTS">FEEDBACK / BUG REPORTS</h1>
+<p>Thanks to the many programmers who have documented problems, made suggestions and sent patches.  </p>
+
+<h1>FEEDBACK / BUG REPORTS</h1>
 
 <p>If you see ways to improve these notes, please let us know.</p>
 
 <p>A list of current bugs and issues can be found at the CPAN site <a href="https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy">https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy</a></p>
 
-<p>To report a new bug or problem, use the link on this page .</p>
-
-
-</body>
-
-</html>
-
-
+<p>To report a new bug or problem, use the link on this page .  </p>

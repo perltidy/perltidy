@@ -37,7 +37,7 @@ chdir $git_home;
 # add a browse the tar file step
 
 my $logfile = "dev-bin/build.log";
-my $changelog = "local-docs/ChangeLog.pod";
+my $changelog = "CHANGES.md"; 
 my $fh_log;
 
 # These are the main steps, in approximate order, for making a new version
@@ -63,7 +63,6 @@ my $rcode = {
     'DIST' => \&make_dist,
     'CL'   => sub {openurl($changelog)},
     'LOG'  => sub { openurl($logfile) },
-    'DIR'  => sub { openurl("local-docs") },
     'HTML' => sub { openurl("docs/index.html") },
 };
 
@@ -84,10 +83,9 @@ v     - check/update Version Number     status: $rstatus->{'V'}
 tidy  - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc    - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 t     - make Tests			status: $rstatus->{'T'}
-cl    - review/edit ChangeLog.pod       status: $rstatus->{'CL'}
+cl    - review/edit CHANGES.md          status: $rstatus->{'CL'}
 docs  - check and process POD & html    status: $rstatus->{'DOCS'}
 dist  - make a Distribution tar.gz      status: $rstatus->{'DIST'}
-dir   - browse doc files
 log   - view Log file
 html  - view html files
 
@@ -195,11 +193,10 @@ sub make_docs {
 # Need to figure out if make fails.  For now I'm looking for 'Stop' as in
 # this error:
 # make: *** No rule to make target 'tutorial.pod', needed by 'tutorial.html'.  Stop.
+
     my @errors;
     foreach my $file (
         qw(
-        local-docs/ChangeLog.pod
-        local-docs/INSTALL.pod
         lib/Perl/Tidy.pod
         bin/perltidy
         )
@@ -231,13 +228,9 @@ sub make_docs {
     }
 
     # finish up
-    my $result = sys_command("(cd local-docs; make)");
+    my $result = sys_command("(cd docs; make)");
     print $result;
     my $status = $result =~ /Stop\./i ? 'TBD' : 'OK';
-    if ($status eq 'OK') {
-        $result = sys_command("(cd bubba; make)");
-        print $result;
-    }
     $rstatus->{'DOCS'} = $status;
     hitcr();
     return;
@@ -314,7 +307,7 @@ sub update_version_number {
     my $bin_path         = "bin/";
     my @sources          = ( $lib_path . "Tidy.pm", $lib_path . "Tidy.pod",
         $bin_path . "perltidy", );
-    push @sources, "local-docs/ChangeLog.pod";
+    push @sources, "CHANGES.md";
     my @more = qw(
       Tidy/Debugger.pm
       Tidy/DevNull.pm
@@ -596,7 +589,9 @@ sub update_VERSION {
         return;
     }
     my $in_pod;
-    my $is_pod_file = $source_file !~ /\.pm/;
+    my $in_md;
+    my $is_md_file = $source_file eq 'CHANGES.md';
+    my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
         # finish writing after the change
@@ -633,6 +628,22 @@ sub update_VERSION {
                 }
             }
         }
+
+        # looking for VERSION in markdown
+        elsif ($is_md_file) {
+                # CHANGES.md has a line like this:
+                # ## 2018 xx xx
+                if ( $line =~ /## \d\d\d\d/ ) {
+                    $old_VERSION_line = $line;
+                    chomp $old_VERSION_line;
+                    my $spaced_new_VERSION = $new_VERSION;
+                    if ( $spaced_new_VERSION =~ /(\d\d\d\d)(\d\d)(\d\d.*)/ ) {
+                        $spaced_new_VERSION = "$1 $2 $3";
+                    }
+                    $new_VERSION_line = "## $spaced_new_VERSION";
+                    $line             = $new_VERSION_line . "\n";
+                }
+	}
 
         # looking for version in module
         else {
