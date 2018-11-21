@@ -12,6 +12,16 @@ WriteMakefile(
         : ()
     ),
 
-    EXE_FILES => ['bin/perltidy'],
-    dist => { COMPRESS => 'gzip', SUFFIX => 'gz' },
+    EXE_FILES  => ['bin/perltidy'],
+    dist       => { COMPRESS => 'gzip', SUFFIX => 'gz' },
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+        resources   => {
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/perltidy/perltidy.git',
+                web  => 'https://github.com/perltidy/perltidy',
+            },
+        },
+    },
 );
