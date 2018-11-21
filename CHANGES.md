@@ -1,5 +1,9 @@
 # Perltidy Change Log
 
+## 2018 11 20.01
+
+    - Add repository URLs to META files 
+
 ## 2018 11 20
 
     - fix RT#127736 Perl-Tidy-20181119 has the EXE_FILES entry commented out in
