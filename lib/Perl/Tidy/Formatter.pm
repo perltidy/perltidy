@@ -10843,7 +10843,7 @@ sub get_seqno {
                 #--------------------------------------------------------
                 # patch for =~ operator.  We only align this if it
                 # is the first operator in a line, and the line is a simple
-                # statement.  Aligning them within a statement causes
+                # statement.  Aligning them within a statement 
                 # interferes with other good alignments.
                 #--------------------------------------------------------
                 if ( $alignment_type eq '=~' ) {
