@@ -3,6 +3,8 @@
 ## 2018 11 20.01
 
     - Add repository URLs to META files 
+    - Rewrote vertical algnment module.  It is much better at finding
+      patterns in complex code.
 
 ## 2018 11 20
 
