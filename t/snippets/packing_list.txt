@@ -254,3 +254,9 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets13.t	align24.def
+../snippets13.t	align25.def
+../snippets13.t	align26.def
+../snippets13.t	align27.def
+../snippets14.t	else1.def
+../snippets14.t	else2.def

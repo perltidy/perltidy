@@ -16,6 +16,10 @@
 #13 align21.def
 #14 align22.def
 #15 align23.def
+#16 align24.def
+#17 align25.def
+#18 align26.def
+#19 align27.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -126,6 +130,37 @@ my $orig = my $format = "^<<<<< ~~\n";
 my $abc = "abc";
 ----------
 
+        'align24' => <<'----------',
+# Do not align interior fat commas here; differnt container types
+my $p    = TAP::Parser::SubclassTest->new(
+    {
+        exec    => [ $cat            => $file ],
+        sources => { MySourceHandler => { accept_all => 1 } },
+    }
+);
+----------
+
+        'align25' => <<'----------',
+# do not align commas here; different container types
+is_deeply( [ $a,        $a ], [ $b,               $c ] );
+is_deeply( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
+is_deeply( [ \$a,       \$a ], [ \$b,             \$c ] );
+
+----------
+
+        'align26' => <<'----------',
+#  align first of multiple equals
+$SIG{PIPE}=sub{die"writingtoaclosedpipe"};#1=
+$SIG{HUP}=$SIG{BREAK}=$SIG{INT}=$SIG{TERM};#3=
+----------
+
+        'align27' => <<'----------',
+# do not align first equals here (unmatched commas on left side of =)
+my ( $self, $name, $type ) = @_;
+my $html_toc_fh            = $self->{_html_toc_fh};
+my $html_prelim_fh            = $self->{_html_prelim_fh};
+----------
+
         'break5' => <<'----------',
 # do not break at .'s after the ?
 return (
@@ -175,8 +210,8 @@ my $account   = "Insert into accountlines
             source => "align12",
             params => "def",
             expect => <<'#3...........',
-    my $type = shift || "o";
-    my $fname = ( $type eq 'oo' ? 'orte_city' : 'orte' );
+    my $type   = shift || "o";
+    my $fname  = ( $type eq 'oo' ? 'orte_city' : 'orte' );
     my $suffix = ( $coord_system eq 'standard' ? '' : '-orig' );
 #3...........
         },
@@ -321,6 +356,53 @@ $signum[$signal] = $_;
 my $orig = my $format = "^<<<<< ~~\n";
 my $abc  = "abc";
 #15...........
+        },
+
+        'align24.def' => {
+            source => "align24",
+            params => "def",
+            expect => <<'#16...........',
+# Do not align interior fat commas here; differnt container types
+my $p = TAP::Parser::SubclassTest->new(
+    {
+        exec    => [ $cat => $file ],
+        sources => { MySourceHandler => { accept_all => 1 } },
+    }
+);
+#16...........
+        },
+
+        'align25.def' => {
+            source => "align25",
+            params => "def",
+            expect => <<'#17...........',
+# do not align commas here; different container types
+is_deeply( [ $a, $a ], [ $b, $c ] );
+is_deeply( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
+is_deeply( [ \$a, \$a ], [ \$b, \$c ] );
+
+#17...........
+        },
+
+        'align26.def' => {
+            source => "align26",
+            params => "def",
+            expect => <<'#18...........',
+#  align first of multiple equals
+$SIG{PIPE} = sub { die "writingtoaclosedpipe" };      #1=
+$SIG{HUP}  = $SIG{BREAK} = $SIG{INT} = $SIG{TERM};    #3=
+#18...........
+        },
+
+        'align27.def' => {
+            source => "align27",
+            params => "def",
+            expect => <<'#19...........',
+# do not align first equals here (unmatched commas on left side of =)
+my ( $self, $name, $type ) = @_;
+my $html_toc_fh    = $self->{_html_toc_fh};
+my $html_prelim_fh = $self->{_html_prelim_fh};
+#19...........
         },
     };
 

@@ -475,8 +475,8 @@ else                    { $editlblk = "off"; $editlblkchecked = "unchecked" }
             expect => <<'#18...........',
         # -iscl will not allow alignment of hanging side comments (currently)
         $gsmatch = ( $sub >= 50 ) ? "equal" : "lequal"; # Force an equal match for
-               # dev, but be more forgiving
-               # for releases
+             # dev, but be more forgiving
+             # for releases
 #18...........
         },
 
