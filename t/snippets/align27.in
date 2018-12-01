@@ -1,0 +1,4 @@
+# do not align first equals here (unmatched commas on left side of =)
+my ( $self, $name, $type ) = @_;
+my $html_toc_fh            = $self->{_html_toc_fh};
+my $html_prelim_fh            = $self->{_html_prelim_fh};

@@ -1,0 +1,4 @@
+# pad after 'if' when followed by 'elsif'
+if    ( not defined $dir or not length $dir ) { $rslt = ''; }
+elsif ( $dir =~ /^\$\([^\)]+\)\Z(?!\n)/s )    { $rslt = $dir; }
+else                                          { $rslt = vmspath($dir); }

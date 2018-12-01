@@ -1,0 +1,3 @@
+	# no pad after 'if' when followed by 'else'
+        if ( $m = $g[$x][$y] ) { print $$m{v}; $$m{i}->() }
+        else                   { print " " }
