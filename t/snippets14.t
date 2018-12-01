@@ -3,6 +3,7 @@
 # Contents:
 #1 else1.def
 #2 else2.def
+#3 ternary3.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -38,6 +39,16 @@ else                                          { $rslt = vmspath($dir); }
         if ( $m = $g[$x][$y] ) { print $$m{v}; $$m{i}->() }
         else                   { print " " }
 ----------
+
+        'ternary3' => <<'----------',
+# this previously caused trouble because of the = and =~
+push( @aligns,
+      ( ( $a = shift @a ) =~ /[^n]/ ) ? $a
+    : (@isnum) ? 'n'
+    :            'l' )
+  unless $opt_a;
+
+----------
     };
 
     ####################################
@@ -64,6 +75,21 @@ else                                          { $rslt = vmspath($dir); }
         if ( $m = $g[$x][$y] ) { print $$m{v}; $$m{i}->() }
         else                   { print " " }
 #2...........
+        },
+
+        'ternary3.def' => {
+            source => "ternary3",
+            params => "def",
+            expect => <<'#3...........',
+# this previously caused trouble because of the = and =~
+push(
+    @aligns,
+    ( ( $a = shift @a ) =~ /[^n]/ ) ? $a
+    : (@isnum)                      ? 'n'
+    :                                 'l'
+) unless $opt_a;
+
+#3...........
         },
     };
 

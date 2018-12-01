@@ -1,0 +1,8 @@
+# this previously caused trouble because of the = and =~
+push(
+    @aligns,
+    ( ( $a = shift @a ) =~ /[^n]/ ) ? $a
+    : (@isnum)                      ? 'n'
+    :                                 'l'
+) unless $opt_a;
+
