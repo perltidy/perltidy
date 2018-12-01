@@ -209,7 +209,7 @@ EOM
 sub find_input_line_ending {
 
     # Peek at a file and return first line ending character.
-    # Quietly return undef in case of any trouble.
+    # Return undefined value in case of any trouble.
     my ($input_file) = @_;
     my $ending;
 
@@ -254,7 +254,6 @@ sub catfile {
 
     my @parts = @_;
 
-    #BEGIN { eval "require File::Spec"; $missing_file_spec = $@; }
     BEGIN {
         eval { require File::Spec };
         $missing_file_spec = $@;
@@ -267,7 +266,7 @@ sub catfile {
 
     # Perl 5.004 systems may not have File::Spec so we'll make
     # a simple try.  We assume File::Basename is available.
-    # return undef if not successful.
+    # return if not successful.
     my $name      = pop @parts;
     my $path      = join '/', @parts;
     my $test_file = $path . $name;
@@ -2254,39 +2253,6 @@ sub process_command_line {
     }
 }
 
-# This is the original coding, which worked,
-# but I've rewritten it (above) to keep Perl-Critic from complaining
-# Keep for awhile.
-
-=pod
-sub process_command_line {
-
-    my (
-        $perltidyrc_stream,  $is_Windows, $Windows_type,
-        $rpending_complaint, $dump_options_type
-    ) = @_;
-
-    my $use_cache = !defined($perltidyrc_stream) && !$dump_options_type;
-    if ($use_cache) {
-        my $cache_key = join( chr(28), @ARGV );
-        if ( my $result = $process_command_line_cache{$cache_key} ) {
-            my ( $argv, @retvals ) = @{$result};
-            @ARGV = @{$argv};
-            return @retvals;
-        }
-        else {
-            my @retvals = _process_command_line(@_);
-            $process_command_line_cache{$cache_key} = [ \@ARGV, @retvals ]
-              if $retvals[0]->{'memoize'};
-            return @retvals;
-        }
-    }
-    else {
-        return _process_command_line(@_);
-    }
-}
-=cut
-
 # (note the underscore here)
 sub _process_command_line {
 
@@ -2607,11 +2573,13 @@ sub check_options {
         $rOpts->{'check-syntax'} = 0;
     }
 
+    ###########################################################################
     # Added Dec 2017: Deactivating check-syntax for all systems for safety
     # because unexpected results can occur when code in BEGIN blocks is
     # executed.  This flag was included to help check for perltidy mistakes,
     # and may still be useful for debugging.  To activate for testing comment
-    # out the next three lines.
+    # out the next three lines.  Also fix sub 'do_check_syntax' in this file.
+    ###########################################################################
     else {
         $rOpts->{'check-syntax'} = 0;
     }
@@ -3830,7 +3798,6 @@ sub check_syntax {
 
             # the perl version number will be helpful for diagnosing the problem
             $logger_object->write_logfile_entry( $^V . "\n" );
-            ##qx/perl -v $error_redirection/ . "\n" );
         }
     }
     else {

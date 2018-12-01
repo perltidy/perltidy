@@ -1087,15 +1087,13 @@ sub prepare_for_a_new_file {
 
     # variables used to track depths of various containers
     # and report nesting errors
-    $paren_depth          = 0;
-    $brace_depth          = 0;
-    $square_bracket_depth = 0;
-    @current_depth[ 0 .. $#closing_brace_names ] =
-      (0) x scalar @closing_brace_names;
-    $total_depth = 0;
-    @total_depth = ();
-    @nesting_sequence_number[ 0 .. $#closing_brace_names ] =
-      ( 0 .. $#closing_brace_names );
+    $paren_depth                         = 0;
+    $brace_depth                         = 0;
+    $square_bracket_depth                = 0;
+    @current_depth                       = (0) x scalar @closing_brace_names;
+    $total_depth                         = 0;
+    @total_depth                         = ();
+    @nesting_sequence_number             = ( 0 .. @closing_brace_names - 1 );
     @current_sequence_number             = ();
     $paren_type[$paren_depth]            = '';
     $paren_semicolon_count[$paren_depth] = 0;
@@ -4645,7 +4643,7 @@ sub decide_if_code_block {
 
             # find the closing quote; don't worry about escapes
             my $quote_mark = $pre_types[$j];
-            foreach my $k ( $j + 1 .. $#pre_types - 1 ) {
+            foreach my $k ( $j + 1 .. @pre_types - 2 ) {
                 if ( $pre_types[$k] eq $quote_mark ) {
                     $j = $k + 1;
                     my $next = $pre_types[$j];
@@ -4830,7 +4828,7 @@ sub increase_nesting_depth {
     $starting_line_of_current_depth[$aa][ $current_depth[$aa] ] =
       [ $input_line_number, $input_line, $pos ];
 
-    for my $bb ( 0 .. $#closing_brace_names ) {
+    for my $bb ( 0 .. @closing_brace_names - 1 ) {
         next if ( $bb == $aa );
         $depth_array[$aa][$bb][ $current_depth[$aa] ] = $current_depth[$bb];
     }
@@ -4877,7 +4875,7 @@ sub decrease_nesting_depth {
         $statement_type = $nested_statement_type[$aa][ $current_depth[$aa] ];
 
         # check that any brace types $bb contained within are balanced
-        for my $bb ( 0 .. $#closing_brace_names ) {
+        for my $bb ( 0 .. @closing_brace_names - 1 ) {
             next if ( $bb == $aa );
 
             unless ( $depth_array[$aa][$bb][ $current_depth[$aa] ] ==
@@ -4957,7 +4955,7 @@ sub check_final_nesting_depths {
 
     # USES GLOBAL VARIABLES: @current_depth, @starting_line_of_current_depth
 
-    for my $aa ( 0 .. $#closing_brace_names ) {
+    for my $aa ( 0 .. @closing_brace_names - 1 ) {
 
         if ( $current_depth[$aa] ) {
             my $rsl =
@@ -6548,7 +6546,7 @@ sub find_angle_operator_termination {
     #  <$LATEX2HTMLVERSIONS${dd}html[1-9].[0-9].pl>
     #
     # Here are some examples of lines which do not have angle operators:
-    #  return undef unless $self->[2]++ < $#{$self->[1]};
+    #  return unless $self->[2]++ < $#{$self->[1]};
     #  < 2  || @$t >
     #
     # the following line from dlister.pl caused trouble:
@@ -6826,7 +6824,6 @@ sub find_here_doc {
             }
         }
         else {              # found ending quote
-            ##my $j;
             $found_target = 1;
 
             my $tokj;

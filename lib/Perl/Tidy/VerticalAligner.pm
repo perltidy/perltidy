@@ -385,7 +385,7 @@ sub valign_input {
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
-    my $jmax = @{$rfields}-1;
+    my $jmax = @{$rfields} - 1;
 
     my $leading_space_count = get_spaces($indentation);
 
@@ -413,7 +413,7 @@ sub valign_input {
         my $nlines = @group_lines;
         print STDOUT
 "APPEND0: entering lines=$nlines new #fields= $jmax, leading_count=$leading_space_count last_cmt=$last_comment_column force=$is_forced_break, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
-      };
+    };
 
     # Validate cached line if necessary: If we can produce a container
     # with just 2 lines total by combining an existing cached opening
@@ -574,9 +574,9 @@ sub valign_input {
 
     # programming check: (shouldn't happen)
     # an error here implies an incorrect call was made
-    if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields}- 1 ) ) ) {
-        my $nt=@{$rtokens};
-        my $nf=@{$rfields};
+    if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
+        my $nt = @{$rtokens};
+        my $nf = @{$rfields};
         warning(
 "Program bug in Perl::Tidy::VerticalAligner - number of tokens = $nt should be one less than number of fields: $nf)\n"
         );
@@ -635,7 +635,7 @@ sub valign_input {
     }
 
     # Force break after jump to lower level
-    if ( $level_jump < 0 ) {  
+    if ( $level_jump < 0 ) {
         my_flush();
     }
 
@@ -2033,7 +2033,7 @@ sub my_flush {
         my $nlines = @group_lines;
         print STDOUT
 "APPEND0: my_flush called from $a $b $c lines=$nlines, type=$group_type \n";
-      };
+    };
 
     # handle a group of COMMENT lines
     if ( $group_type eq 'COMMENT' ) { my_flush_comment() }
@@ -2060,7 +2060,7 @@ sub my_flush {
                 add_to_group($new_line);
 
                 # flush if no side comment and no matching token. This prevents
-		# this line from pushing sidecoments out to the right.
+                # this line from pushing sidecoments out to the right.
                 if ( no_matching_tokens($new_line) ) { my_flush_code() }
                 next;
             }
@@ -2090,7 +2090,7 @@ sub my_flush {
             # -------------------------------------------------------------
 
             if ( $new_line->get_is_hanging_side_comment() ) {
-               join_hanging_comment( $new_line, $base_line )
+                join_hanging_comment( $new_line, $base_line );
             }
 
             # flush if no side comment and no matching token. This prevents
@@ -2200,6 +2200,7 @@ EOM
     my $kmax      = @{$ridel} - 1;
     my $k         = 0;
     my $jdel_next = $ridel->[$k];
+
     # FIXME:
     if ( $jdel_next < 0 ) { print STDERR "bad jdel_next=$jdel_next\n"; return }
     my $pattern = $rpatterns_old->[0];
@@ -2222,7 +2223,8 @@ EOM
                 my $jdel_last = $jdel_next;
                 $jdel_next = $ridel->[$k];
                 if ( $jdel_next < $jdel_last ) {
-		    # FIXME:
+
+                    # FIXME:
                     print STDERR "bad jdel_next=$jdel_next\n";
                     return;
                 }
@@ -2322,11 +2324,11 @@ sub remove_unmatched_tokens {
         my $rhash   = {};
         my $rtokens = $line->get_rtokens();
         my $i       = 0;
-	my $i_eq;
+        my $i_eq;
         foreach my $tok ( @{$rtokens} ) {
             $rhash->{$tok} = [ $i, undef, undef ];
 
-	    # remember the first equals at line level
+            # remember the first equals at line level
             if ( !defined($i_eq) && $tok =~ /^=(\d+)/ ) {
                 my $lev = $1;
                 if ( $lev eq $group_level ) { $i_eq = $i }
@@ -2365,9 +2367,10 @@ sub remove_unmatched_tokens {
         my $i       = 0;
         my $nl      = 0;
         my $nr      = 0;
- 	my $i_eq    = $i_equals[$jj];
+        my $i_eq    = $i_equals[$jj];
         my @idel;
         my $imax = @{$rtokens} - 2;
+
         for ( my $i = 0 ; $i <= $imax ; $i++ ) {
             my $tok = $rtokens->[$i];
             next if ( $tok eq '#' );    # shouldn't happen
