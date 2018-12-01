@@ -27,7 +27,10 @@ our $VERSION = '20181120.01';
         is_hanging_side_comment   => undef,
         ralignments               => [],
         maximum_line_length       => undef,
-        rvertical_tightness_flags => undef
+        rvertical_tightness_flags => undef,
+        is_terminal_ternary       => undef,
+        is_terminal_else          => undef,
+        j_terminal_match          => undef,
     );
     {
 
@@ -77,6 +80,21 @@ our $VERSION = '20181120.01';
     sub get_rfields     { my $self = shift; return $self->{_rfields} }
     sub get_rpatterns   { my $self = shift; return $self->{_rpatterns} }
     sub get_indentation { my $self = shift; return $self->{_indentation} }
+
+    sub get_j_terminal_match {
+        my $self = shift;
+        return $self->{_j_terminal_match};
+    }
+
+    sub get_is_terminal_else {
+        my $self = shift;
+        return $self->{_is_terminal_else};
+    }
+
+    sub get_is_terminal_ternary {
+        my $self = shift;
+        return $self->{_is_terminal_ternary};
+    }
 
     sub get_leading_space_count {
         my $self = shift;

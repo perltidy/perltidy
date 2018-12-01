@@ -6954,6 +6954,11 @@ EOM
     } ## end sub print_line_of_tokens
 } ## end block print_line_of_tokens
 
+sub consecutive_nonblank_lines {
+    $file_writer_object->get_consecutive_nonblank_lines() +
+      $vertical_aligner_object->get_cached_line_count();
+}
+
 # sub output_line_to_go sends one logical line of tokens on down the
 # pipeline to the VerticalAligner package, breaking the line into continuation
 # lines as necessary.  The line of tokens is ready to go in the "to_go"
@@ -7091,7 +7096,8 @@ sub output_line_to_go {
                 $want_blank =
                      $rOpts->{'blanks-before-blocks'}
                   && $lc >= $rOpts->{'long-block-line-count'}
-                  && $file_writer_object->get_consecutive_nonblank_lines() >=
+                  ##&& $file_writer_object->get_consecutive_nonblank_lines() >=
+                  && consecutive_nonblank_lines() >=
                   $rOpts->{'long-block-line-count'}
                   && (
                     terminal_type( \@types_to_go, \@block_type_to_go, $imin,
@@ -9352,7 +9358,9 @@ sub send_lines_to_vertical_aligner {
             # These are used below to prevent unwanted cross-line alignments.
             # Unbalanced containers already avoid aligning across
             # container boundaries.
-            if ( $tokens_to_go[$i] eq '(' ) {
+            ##if ( $tokens_to_go[$i] eq '(' ) {
+ 	    my $tok=$tokens_to_go[$i];
+            if ( $tok =~ /^[\(\{\[]/ ) { #'(' ) {
 
                 # if container is balanced on this line...
                 my $i_mate = $mate_index_to_go[$i];
@@ -9366,8 +9374,22 @@ sub send_lines_to_vertical_aligner {
                     # more unique.  This name will also be given to any commas
                     # within this container, and it helps avoid undesirable
                     # alignments of different types of containers.
-                    my $name = previous_nonblank_token($i);
-                    $name =~ s/^->//;
+
+		    # Containers beginning with { and [ are given those names
+		    # for uniqueness. That way commas in different containers
+		    # will not match. Here is an example of what this prevents:
+                    #	a => [ 1,       2, 3 ],
+                    #   b => { b1 => 4, b2 => 5 },
+		    # Here is another example of what avoid by labeling the commas properly:
+                    #   is_deeply( [ $a,        $a ], [ $b,               $c ] );
+                    #   is_deeply( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
+    	            #   is_deeply( [ \$a,       \$a ], [ \$b,             \$c ] );
+
+                    my $name = $tok;
+                    if ( $tok eq '(' ) {
+                        $name = previous_nonblank_token($i);
+                        $name =~ s/^->//;
+                    }
                     $container_name[$depth] = "+" . $name;
 
                     # Make the container name even more unique if necessary.
@@ -9410,7 +9432,8 @@ sub send_lines_to_vertical_aligner {
                     }
                 }
             }
-            elsif ( $tokens_to_go[$i] eq ')' ) {
+            ##elsif ( $tokens_to_go[$i] eq ')' ) {
+            elsif ( $tokens_to_go[$i] =~ /^[\)\}\]]/ ) {  
                 $depth-- if $depth > 0;
             }
 
@@ -10844,7 +10867,7 @@ sub get_seqno {
                 # patch for =~ operator.  We only align this if it
                 # is the first operator in a line, and the line is a simple
                 # statement.  Aligning them within a statement 
-                # interferes with other good alignments.
+                # interferes could interfere with other good alignments.
                 #--------------------------------------------------------
                 if ( $alignment_type eq '=~' ) {
                     my $terminal_type = $types_to_go[$i_terminal];
