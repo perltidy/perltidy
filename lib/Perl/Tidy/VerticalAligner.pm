@@ -385,7 +385,7 @@ sub valign_input {
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
-    my $jmax = $#{$rfields};
+    my $jmax = @{$rfields}-1;
 
     my $leading_space_count = get_spaces($indentation);
 
@@ -511,15 +511,14 @@ sub valign_input {
     # add dummy fields for else statement
     # --------------------------------------------------------------------
 
-    my $is_terminal_else;
     if (   $rfields->[0] =~ /^else\s*$/
         && @group_lines
         && $level_jump == 0 )
     {
+
         $j_terminal_match =
           fix_terminal_else( $group_lines[-1], $rfields, $rtokens, $rpatterns );
-        $jmax             = @{$rfields} - 1;
-        $is_terminal_else = 1;
+        $jmax = @{$rfields} - 1;
     }
 
     # --------------------------------------------------------------------
@@ -575,9 +574,11 @@ sub valign_input {
 
     # programming check: (shouldn't happen)
     # an error here implies an incorrect call was made
-    if ( $jmax > 0 && ( $#{$rtokens} != ( $jmax - 1 ) ) ) {
+    if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields}- 1 ) ) ) {
+        my $nt=@{$rtokens};
+        my $nf=@{$rfields};
         warning(
-"Program bug in Perl::Tidy::VerticalAligner - number of tokens = $#{$rtokens} should be one less than number of fields: $#{$rfields})\n"
+"Program bug in Perl::Tidy::VerticalAligner - number of tokens = $nt should be one less than number of fields: $nf)\n"
         );
         report_definite_bug();
     }
@@ -600,7 +601,6 @@ sub valign_input {
         maximum_line_length       => $maximum_line_length_for_level,
         rvertical_tightness_flags => $rvertical_tightness_flags,
         is_terminal_ternary       => $is_terminal_ternary,
-        is_terminal_else          => $is_terminal_else,
         j_terminal_match          => $j_terminal_match,
     );
 
@@ -637,10 +637,6 @@ sub valign_input {
     # Force break after jump to lower level
     if ( $level_jump < 0 ) {  
         my_flush();
-
-      #	my $tok=$rfields->[0];
-      #my $ntoks=@{$rtokens};
-      #	print "BUBBA: jmax=$jmax, ntoks=$ntoks; tok='$tok'; jump=$level_jump\n";
     }
 
     # --------------------------------------------------------------------
@@ -1195,7 +1191,7 @@ sub fix_terminal_else {
     #  if   ( 1 || $x ) { print "ok 13\n"; }
     #  else             { print "not ok 13\n"; }
     #
-    # returns 1 if the else block should be indented
+    # returns a positive value if the else block should be indented
     #
     my ( $old_line, $rfields, $rtokens, $rpatterns ) = @_;
     return unless ($old_line);
@@ -2053,7 +2049,6 @@ sub my_flush {
         initialize_for_new_group();
 
         ##my $has_terminal_ternary = $new_lines[-1]->{_is_terminal_ternary};
-        ##my $has_terminal_else    = $new_lines[-1]->{_is_terminal_else};
 
         # remove unmatched tokens in all lines
         remove_unmatched_tokens( \@new_lines );
