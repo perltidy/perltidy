@@ -2082,7 +2082,8 @@ sub my_flush {
 
 	    # If this line has no matching tokens, then flush out the lines
 	    # BEFORE this line unless both it and the previous line have side
-	    # comments.  This line from pushing side coments out to the right.
+	    # comments.  This prevents this line from pushing side coments out
+	    # to the right.
             elsif ( $new_line->get_jmax() == 1 ) {
 
                 # There are no matching tokens, so now check side comments:
