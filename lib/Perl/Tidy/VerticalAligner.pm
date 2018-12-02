@@ -2012,25 +2012,6 @@ sub my_flush_code {
     initialize_for_new_group();
 }
 
-sub no_matching_tokens {
-
-    # Decide if we can flush due to lack of a match...
-    # For a line with no matching tokens: 
-    # If there is no previous line, flush immediately AFTER this line unless it
-    # has a side comment.
-    # If there is a previous line in the group, flush lines BEFORE this line
-    # unless both have side comments.
-    my ( $new_line, $prev_line ) = @_;
-
-    my $jmax = $new_line->get_jmax();
-    return unless $jmax == 1;
-
-    # There are no matching tokens, so now check side comments:
-    my $prev_comment = $prev_line ? $prev_line->get_rfields()->[-1] : 1;
-    my $side_comment = $new_line->get_rfields()->[-1];
-    return !( $side_comment && $prev_comment );
-}
-
 sub my_flush {
 
     # This is the vertical aligner internal flush, which leaves the cache
@@ -2060,7 +2041,7 @@ sub my_flush {
         ##my $has_terminal_ternary = $new_lines[-1]->{_is_terminal_ternary};
 
         # remove unmatched tokens in all lines
-        remove_unmatched_tokens( \@new_lines );
+        delete_unmatched_tokens( \@new_lines );
 
         foreach my $new_line (@new_lines) {
 
@@ -2068,9 +2049,6 @@ sub my_flush {
             if ( !@group_lines ) {
                 add_to_group($new_line);
 
-                # flush if no side comment and no matching token. This prevents
-                # this line from pushing sidecoments out to the right.
-                if ( no_matching_tokens($new_line) ) { my_flush_code() }
                 next;
             }
 
@@ -2102,11 +2080,16 @@ sub my_flush {
                 join_hanging_comment( $new_line, $base_line );
             }
 
-            # flush if no side comment and no matching token. This prevents
-            # this line from pushing sidecoments out to the right.
-            #elsif ( no_matching_tokens($new_line) ) { my_flush_code() }
-            elsif ( no_matching_tokens( $new_line, $group_lines[-1] ) ) {
-                my_flush_code();
+	    # If this line has no matching tokens, then flush out the lines
+	    # BEFORE this line unless both it and the previous line have side
+	    # comments.  This line from pushing side coments out to the right.
+            elsif ( $new_line->get_jmax() == 1 ) {
+
+                # There are no matching tokens, so now check side comments:
+                my $prev_comment = $group_lines[-1]->get_rfields()->[-1];
+                my $side_comment = $new_line->get_rfields()->[-1];
+                my_flush_code() unless ( $side_comment && $prev_comment );
+
             }
 
             # -------------------------------------------------------------
@@ -2184,7 +2167,7 @@ sub my_flush {
     return;
 }
 
-sub delete_tokens {
+sub delete_selected_tokens {
 
     my ( $line_obj, $ridel ) = @_;
 
@@ -2314,7 +2297,7 @@ EOM
     }
 }
 
-sub remove_unmatched_tokens {
+sub delete_unmatched_tokens {
     my ($rlines) = @_;
 
     # We will look at each line of a collection and compare its alignment
@@ -2407,7 +2390,7 @@ sub remove_unmatched_tokens {
             }
         }
 
-        if (@idel) { delete_tokens( $line, \@idel ) }
+        if (@idel) { delete_selected_tokens( $line, \@idel ) }
 
         # set a break if this is an interior line with possible left matches
         # but no matches to the right.  We do not do this for the last line
