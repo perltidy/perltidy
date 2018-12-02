@@ -2014,12 +2014,21 @@ sub my_flush_code {
 
 sub no_matching_tokens {
 
-    # return true for a line with no matching tokens and no side comment
-    my ($new_line) = @_;
-    my $jmax       = $new_line->get_jmax();
-    my $rfields    = $new_line->get_rfields();
-    my $result     = $jmax == 1 && !$rfields->[$jmax];
-    return ($result);
+    # Decide if we can flush due to lack of a match...
+    # For a line with no matching tokens: 
+    # If there is no previous line, flush immediately AFTER this line unless it
+    # has a side comment.
+    # If there is a previous line in the group, flush lines BEFORE this line
+    # unless both have side comments.
+    my ( $new_line, $prev_line ) = @_;
+
+    my $jmax = $new_line->get_jmax();
+    return unless $jmax == 1;
+
+    # There are no matching tokens, so now check side comments:
+    my $prev_comment = $prev_line ? $prev_line->get_rfields()->[-1] : 1;
+    my $side_comment = $new_line->get_rfields()->[-1];
+    return !( $side_comment && $prev_comment );
 }
 
 sub my_flush {
@@ -2095,7 +2104,10 @@ sub my_flush {
 
             # flush if no side comment and no matching token. This prevents
             # this line from pushing sidecoments out to the right.
-            elsif ( no_matching_tokens($new_line) ) { my_flush_code() }
+            #elsif ( no_matching_tokens($new_line) ) { my_flush_code() }
+            elsif ( no_matching_tokens( $new_line, $group_lines[-1] ) ) {
+                my_flush_code();
+            }
 
             # -------------------------------------------------------------
             # If there is just one previous line, and it has more fields
