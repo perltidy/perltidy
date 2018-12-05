@@ -1031,20 +1031,23 @@ sub keyword_group_scan {
                     }
                 }
 
-                # - Do not put a blank before a line of different level
-                # - Do not put a blank line if we ended the search badly
-                # - Do not put a blank at the end of the file
-                # - Do not put a blank line before a hanging side comment
-                my $level    = $rLL->[$K_first]->[_LEVEL_];
-                my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+                if ( defined($K_first) ) {
 
-                if (   $level == $level_beg
-                    && $ci_level == 0
-                    && !$bad_ending
-                    && $iend < @{$rlines}
-                    && $CODE_type ne 'HSC' )
-                {
-                    $rhash_of_desires->{$iend} = $Opt_blanks_after;
+                    # - Do not put a blank before a line of different level
+                    # - Do not put a blank line if we ended the search badly
+                    # - Do not put a blank at the end of the file
+                    # - Do not put a blank line before a hanging side comment
+                    my $level    = $rLL->[$K_first]->[_LEVEL_];
+                    my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+                    if (   $level == $level_beg
+                        && $ci_level == 0
+                        && !$bad_ending
+                        && $iend < @{$rlines}
+                        && $CODE_type ne 'HSC' )
+                    {
+                        $rhash_of_desires->{$iend} = $Opt_blanks_after;
+                    }
                 }
             }
             $sub_group->();
@@ -1086,6 +1089,8 @@ sub keyword_group_scan {
     my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $i++;
+	$K_first = undef; 
+	$K_last  = undef;
         my $line_type = $line_of_tokens->{_line_type};
         $CODE_type = "";
         if ( $line_type ne 'CODE' ) { $end_group->(); next }
