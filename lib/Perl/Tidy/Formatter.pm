@@ -237,6 +237,7 @@ use vars qw{
   %stack_closing_token
 
   $block_brace_vertical_tightness_pattern
+  $keyword_group_list_pattern
 
   $rOpts_add_newlines
   $rOpts_add_whitespace
@@ -956,6 +957,267 @@ sub prepare_for_new_input_lines {
     return;
 }
 
+sub keyword_group_scan {
+    my $self = shift;
+
+    # Scan all lines looking for runs of consecutive lines beginning with
+    # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
+    # they may be anything.  We will set flags requesting that blanks be
+    # inserted around and withing them according to input parameters.  Note
+    # that we are scanning the lines as they came in in the input stream, so
+    # they are not necessarily well formatted.
+
+    # The output of this sub is a return hash ref whose keys are the indexes of
+    # lines after which we desire a blank line.
+    #     $rhash_of_desires->{$i} >0 means we want a blank line after the line
+    #     at index i
+    my $rhash_of_desires = {};
+
+    return $rhash_of_desires
+      unless ( $rOpts->{'blanks-after-keyword-group'}
+        || $rOpts->{'blanks-before-keyword-group'}
+        || $rOpts->{'blanks-within-keyword-group'} );
+
+    my $Opt_blanks_before = $rOpts->{'blanks-before-keyword-group'};  # '-bbkwg'
+    my $Opt_blanks_after  = $rOpts->{'blanks-after-keyword-group'};   # '-bakwg'
+    my $Opt_blanks_inside = $rOpts->{'blanks-inside-keyword-group'};  # '-bikwg'
+    my $Opt_long_count    = $rOpts->{'long-keyword-group-count'};     # '-lkwgc'
+    my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'};  # '-bac'
+    my $Opt_pattern = $keyword_group_list_pattern;    # '^(my|local|our|use)$';
+
+    my $rlines              = $self->{rlines};
+    my $rLL                 = $self->{rLL};
+    my $K_closing_container = $self->{K_closing_container};
+
+    my ( $ibeg, $iend, $count, $level_beg, $K_closing, @sublist, $K_first,
+        $K_last );
+
+    my $sub_group = sub {
+
+        # Here we place blanks around long sub-groups of keywords 
+        # if requested.
+        return unless ($Opt_blanks_inside);
+
+        my $ib = $sublist[0]->[0];
+        push @sublist, [ $iend + 1, "", 0 ];
+        for ( my $j = 1 ; $j < @sublist ; $j++ ) {
+            my $ie  = $sublist[$j]->[0] - 1;
+            my $num = $sublist[ $j - 1 ]->[2];
+            if ( $num > $Opt_long_count ) {
+                $rhash_of_desires->{ $ib - 1 } = $Opt_blanks_inside
+                  unless $ib == $ibeg;
+                $rhash_of_desires->{$ie} = $Opt_blanks_inside
+                  unless $ie == $iend;
+            }
+            $ib = $ie + 1;
+        }
+    };
+
+    my $CODE_type;
+
+    my $end_group = sub {
+
+	# end a group of keywords
+        my ($bad_ending) = @_;
+        if ( defined($ibeg) && $ibeg >= 0 ) {
+            if ( $count >= $Opt_long_count ) {
+
+                if ( $ibeg > 0 ) {
+                    my $code_type = $rlines->[ $ibeg - 1 ]->{_code_type};
+                    if (   $Opt_blanks_after_comments
+                        || $code_type !~ /(BC|SBC|SBCX)/ )
+                    {
+                        $rhash_of_desires->{ $ibeg - 1 } = $Opt_blanks_before;
+                    }
+                }
+
+                # - Do not put a blank before a line of different level
+                # - Do not put a blank line if we ended the search badly
+                # - Do not put a blank at the end of the file
+                # - Do not put a blank line before a hanging side comment
+                my $level    = $rLL->[$K_first]->[_LEVEL_];
+                my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+                if (   $level == $level_beg
+                    && $ci_level == 0
+                    && !$bad_ending
+                    && $iend < @{$rlines}
+                    && $CODE_type ne 'HSC' )
+                {
+                    $rhash_of_desires->{$iend} = $Opt_blanks_after;
+                }
+            }
+            $sub_group->();
+        }
+
+	# reset for another group
+        $ibeg      = -1;
+        $iend      = undef;
+        $level_beg = -1;
+        $K_closing = undef;
+        @sublist   = ();
+    };
+
+    my $container_check = sub {
+
+	# If the keyword lines ends with an open token, find the closing token
+	# '$K_closing' so that we can easily skip past the contents of the
+	# container.
+        my $KK        = $K_last;
+        my $type_last = $rLL->[$KK]->[_TYPE_];
+        my $tok_last  = $rLL->[$KK]->[_TOKEN_];
+        if ( $type_last eq '#' ) {
+            $KK       = $self->K_previous_nonblank($KK);
+            $tok_last = $rLL->[$KK]->[_TOKEN_];
+        }
+        if ( $KK > $K_first && $tok_last =~ /^[\(\{\[]$/ ) {
+
+            my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            my $lev           = $rLL->[$KK]->[_LEVEL_];
+            if ( $lev == $level_beg ) {
+                $K_closing = $K_closing_container->{$type_sequence};
+            }
+        }
+    };
+
+    $end_group->();
+
+    # loop over all lines of the source
+    my $i = -1;
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $i++;
+        my $line_type = $line_of_tokens->{_line_type};
+        $CODE_type = "";
+        if ( $line_type ne 'CODE' ) { $end_group->(); next }
+        $CODE_type = $line_of_tokens->{_code_type};
+
+        # end any group at a blank, verbatim, or format skipping line
+        if (
+            $CODE_type
+            && (   $CODE_type eq 'BL'
+                || $CODE_type eq 'VB'
+                || $CODE_type eq 'FS' )    #|| $CODE_type eq 'HSC' )
+          )
+        {
+            $end_group->();
+            next;
+        }
+
+        # examine the first token of this line
+        my $rK_range = $line_of_tokens->{_rK_range};
+        ( $K_first, $K_last ) = @{$rK_range};
+        if ( !defined($K_first) ) {
+
+            # Unexpected blank line..
+            # we should have avoided this
+            Warn(
+"Programming Error: Unexpected Blank Line in sub 'keyword_group_scan'. Ignoring"
+            );
+            return $rhash_of_desires;
+        }
+
+        my $level    = $rLL->[$K_first]->[_LEVEL_];
+        my $type     = $rLL->[$K_first]->[_TYPE_];
+        my $token    = $rLL->[$K_first]->[_TOKEN_];
+        my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+        # See if it is a keyword we seek, but
+        # never start a group in a continuation line; the code is badly formatted
+        if (   $ci_level == 0
+            && $type eq 'k'
+            && $token =~ /$Opt_pattern/o )
+        {
+
+            # Continuing a keyword group
+            if ( $ibeg >= 0 && $level == $level_beg ) {
+
+                $iend = $i;
+                $count++;
+
+                # New sub-group?
+                if ( $token ne $sublist[-1]->[1] ) {
+                    push @sublist, [ $i, $token, 1 ];
+                }
+
+                # Continuing current sub-group
+                else { $sublist[-1]->[2]++; }
+
+                # remember if this line ends in an open container
+                $container_check->();
+            }
+
+            # Start new keyword group
+            else {
+
+                # first end old group if any; we might be starting new
+                # keywords at different level
+                if ( $ibeg > 0 ) { $end_group->(); }
+
+                $ibeg      = $i;
+                $iend      = $i;
+                $count     = 1;
+                $level_beg = $level;
+                $container_check->();
+                push @sublist, [ $i, $token, 1 ];
+            }
+            next;
+        }
+
+        # This is not one of our keywords, but we are in a keyword group
+        # so see if we should continue or quit
+        elsif ( $ibeg >= 0 ) {
+
+            # - bail out on a large level change; we may have walked into a
+            #   data structure or anoymous sub code.
+            if ( $level > $level_beg + 1 || $level < $level_beg ) {
+                $end_group->();
+                next;
+            }
+
+            # - keep going on a continuation line of the same level, since
+            #   it is probably a continuation of our previous keyword,
+            # - and keep going past hanging side comments because we never
+            #   want to interrupt them.
+            if ( ( ( $level == $level_beg ) && $ci_level > 0 )
+                || $CODE_type eq 'HSC' )
+            {
+                $iend = $i;
+                next;
+            }
+
+            # - continue if if we are within in a container which started with
+            # the line of the previous keyword.
+            ##if (defined($K_closing) && $K_first<=$K_closing) {$iend=$i; next}
+            if ( defined($K_closing) && $K_first <= $K_closing ) {
+
+                # continue if entire line is within container
+                if ( $K_last <= $K_closing ) { $iend = $i; next }
+
+                # continue at ); or }; or ];
+                if ( $K_first == $K_closing ) {
+                    my $KK = $K_first++;
+                    if ( $rLL->[$KK]->[_TYPE_] eq 'b' ) { $KK++ }
+                    if ( $KK <= $K_last && $rLL->[$KK]->[_TYPE_] eq ';' ) {
+                        $iend = $i;
+                        next;
+                    }
+                }
+                $end_group->(1);
+                next;
+            }
+
+            # - end the group if non of the above
+            $end_group->();
+            next;
+        }
+
+        # not in a keyword group; continue
+        else { next }
+    }
+    $end_group->();
+    return $rhash_of_desires;
+}
+
 sub break_lines {
 
     # Loop over old lines to set new line break points
@@ -966,8 +1228,18 @@ sub break_lines {
     # Flag to prevent blank lines when POD occurs in a format skipping sect.
     my $in_format_skipping_section;
 
+    # set locations for blanks around long runs of keywords
+    my $rwant_blank_line_after = $self->keyword_group_scan();
+
     my $line_type = "";
+    my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
+	$i++;
+
+	# insert blank lines requested for keyword sequences
+        if ( $i > 0 && $rwant_blank_line_after->{ $i - 1 } ) {
+            $self->want_blank_line();
+        }    
 
         my $last_line_type = $line_type;
         $line_type = $line_of_tokens->{_line_type};
@@ -4830,6 +5102,7 @@ sub check_options {
     make_bli_pattern();
     make_block_brace_vertical_tightness_pattern();
     make_blank_line_pattern();
+    make_keyword_group_list_pattern(); 
 
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
@@ -5463,6 +5736,19 @@ sub make_bli_pattern {
     }
 
     $bli_pattern = make_block_pattern( '-blil', $bli_list_string );
+    return;
+}
+
+sub make_keyword_group_list_pattern {
+
+    # turn any input list into a regex for recognizing selected block types
+    $keyword_group_list_pattern = '^(our|local|my|use)$';
+    if ( defined( $rOpts->{'keyword-group-list'} )
+        && $rOpts->{'keyword-group-list'} )
+    {
+        $keyword_group_list_pattern =
+          make_block_pattern( '-kwgl', $rOpts->{'keyword-group-list'} );
+    }
     return;
 }
 
@@ -6953,7 +7239,7 @@ EOM
 } ## end block print_line_of_tokens
 
 sub consecutive_nonblank_lines {
-    $file_writer_object->get_consecutive_nonblank_lines() +
+    return $file_writer_object->get_consecutive_nonblank_lines() +
       $vertical_aligner_object->get_cached_line_count();
 }
 
@@ -7335,9 +7621,6 @@ sub starting_one_line_block {
     # store_token_to_go to put the opening brace in the output stream
     if ( $max_index_to_go < 0 ) {
         Fault("program bug: store_token_to_go called incorrectly\n");
-
-        #warning("program bug: store_token_to_go called incorrectly\n");
-        ##report_definite_bug();
     }
 
     # return if block should be broken
@@ -7961,7 +8244,6 @@ sub pad_token {
             # an editor.  In that case either the user will see and
             # fix the problem or it will be corrected next time the
             # entire file is processed with perltidy.
-            ##next if ( $ipad == 0 && $levels_to_go[$ipad] == 0 );
             next if ( $ipad == 0 && $peak_batch_size <= 1 );
 
 ## THIS PATCH REMOVES THE FOLLOWING POOR PADDING (math.t) with -pbp, BUT
@@ -8449,7 +8731,6 @@ sub set_block_text_accumulator {
     $leading_block_text             = "";
     $leading_block_text_level       = $levels_to_go[$i];
     $leading_block_text_line_number = get_output_line_number();
-    ##$vertical_aligner_object->get_output_line_number();
     $leading_block_text_length_exceeded = 0;
 
     # this will contain the column number of the last character
@@ -8615,7 +8896,6 @@ sub accumulate_block_text {
                     if ( defined( $block_opening_line_number{$type_sequence} ) )
                     {
                         my $output_line_number = get_output_line_number();
-                        ##$vertical_aligner_object->get_output_line_number();
                         $block_line_count =
                           $output_line_number -
                           $block_opening_line_number{$type_sequence} + 1;
@@ -8632,7 +8912,6 @@ sub accumulate_block_text {
                 elsif ( $token eq '{' ) {
 
                     my $line_number = get_output_line_number();
-                    ##$vertical_aligner_object->get_output_line_number();
                     $block_opening_line_number{$type_sequence} = $line_number;
 
                     # set a label for this block, except for
@@ -8864,7 +9143,6 @@ sub add_closing_side_comment {
     #---------------------------------------------------------------
     # Step 2: make the closing side comment if this ends a block
     #---------------------------------------------------------------
-    ##my $have_side_comment = $i_terminal != $max_index_to_go;
     my $have_side_comment = $types_to_go[$max_index_to_go] eq '#';
 
     # if this line might end in a block closure..
@@ -9429,7 +9707,6 @@ sub send_lines_to_vertical_aligner {
                     }
                 }
             }
-            ##elsif ( $tokens_to_go[$i] eq ')' ) {
             elsif ( $tokens_to_go[$i] =~ /^[\)\}\]]/ ) {
                 $depth-- if $depth > 0;
             }
@@ -12895,7 +13172,6 @@ sub pad_array_to_go {
                 if ( $next_nonblank_type =~ /^[\)\}\]R]$/ ) {
                     if ($rOpts_comma_arrow_breakpoints) {
                         $want_comma_break[$depth] = 0;
-                        ##$index_before_arrow[$depth] = -1;
                         next;
                     }
                 }

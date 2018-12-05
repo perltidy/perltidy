@@ -1795,6 +1795,13 @@ sub generate_options {
     $add_option->( 'maximum-consecutive-blank-lines', 'mbl',  '=i' );
     $add_option->( 'keep-old-blank-lines',            'kbl',  '=i' );
 
+    $add_option->( 'blanks-after-comments',       'bac',   '!' );
+    $add_option->( 'keyword-group-list',          'kwgl',  '=s' );
+    $add_option->( 'long-keyword-group-count',    'lkwgc', '=i' );
+    $add_option->( 'blanks-before-keyword-group', 'bbkwg', '=i' );
+    $add_option->( 'blanks-after-keyword-group',  'bakwg', '=i' );
+    $add_option->( 'blanks-inside-keyword-group', 'bikwg', '=i' );
+
     $add_option->( 'blank-lines-after-opening-block',       'blao',  '=i' );
     $add_option->( 'blank-lines-before-closing-block',      'blbc',  '=i' );
     $add_option->( 'blank-lines-after-opening-block-list',  'blaol', '=s' );
@@ -1923,6 +1930,13 @@ sub generate_options {
       blanks-before-comments
       blank-lines-before-subs=1
       blank-lines-before-packages=1
+
+      noblanks-after-comments
+      long-keyword-group-count=5
+      blanks-before-keyword-group=0
+      blanks-after-keyword-group=0
+      blanks-inside-keyword-group=0
+
       block-brace-tightness=0
       block-brace-vertical-tightness=0
       brace-tightness=1
