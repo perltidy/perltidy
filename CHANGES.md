@@ -2,9 +2,14 @@
 
 ## 2018 11 20.01
 
-    - Add repository URLs to META files 
+    - RT#12764, introduced new feature allowing placement of blanks around
+      sequences of selected keywords such as use, my, our, local. This can
+      be activated with the -kgb* series of parameters described in the manual.
+
     - Rewrote vertical algnment module.  It is much better at finding
       patterns in complex code.
+
+    - Add repository URLs to META files 
 
 ## 2018 11 20
 

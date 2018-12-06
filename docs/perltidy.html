@@ -2003,6 +2003,12 @@
 <p>A blank line will be introduced before a full-line comment. This is the default. Use <b>-nbbc</b> or <b>--noblanks-before-comments</b> to prevent such blank lines from being introduced.</p>
 
 </dd>
+<dt id="bac---blanks-after-comments"><b>-bac</b>, <b>--blanks-after-comments</b></dt>
+<dd>
+
+<p>The <b>-bac</b> flag allows blank lines to be inserted after full line comments. This flag does not by itself introduce such lines, but is referenced by the <b>-kgb</b> flags to see if they have permission to do this. The default is not to allow this, <b>-nbac</b>.</p>
+
+</dd>
 <dt id="blbs-n---blank-lines-before-subs-n"><b>-blbs=n</b>, <b>--blank-lines-before-subs=n</b></dt>
 <dd>
 
@@ -2100,6 +2106,139 @@
 <p>Now suppose the script continues to be developed, but at some later date we decide we don&#39;t want these spaces after all. we might expect that running with the flags <b>-blao=0</b> and <b>-blbc=0</b> will undo them. However, by default perltidy retains single blank lines, so the blank lines remain.</p>
 
 <p>We can easily fix this by telling perltidy to ignore old blank lines by including the added parameter <b>-kbl=0</b> and rerunning. Then the unwanted blank lines will be gone. However, this will cause all old blank lines to be ignored, perhaps even some that were added by hand to improve formatting. So please be cautious when using these parameters.</p>
+
+</dd>
+<dt id="Controls-for-blank-lines-around-lines-of-consecutive-keywords"><b>Controls for blank lines around lines of consecutive keywords</b></dt>
+<dd>
+
+<p>It is common in Perl programs to have consecutive statements beginning with a certain common keyword, or one of a certain set of keywords. For example near the top of a program there might be a series of <b>use</b> statements or a series of <b>my</b> declarations. The parameters in this section provide control over the placement of blank lines within and around such groups of statements. These blank lines are called here <b>keyword group blanks</b>, and all of the parameters begin with <b>--keyword-group-blanks*</b>, or <b>-kgb*</b> for short. The default settings do not employ these controls but they can be enabled with the following parameters:</p>
+
+<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>; <b>s</b> is a quoted string</p>
+
+<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>; <b>n</b> is an integer [def 5]</p>
+
+<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>; <b>n</b> is 0, 1, or 2</p>
+
+<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>; <b>n</b> is 0, 1, or 2</p>
+
+<p><b>--keyword-group-blanks-inside=n</b>, or <b>-kgbi=n</b>; <b>n</b> is 0 or 1</p>
+
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>; is an on/off switch</p>
+
+<p>In addition, the following abbreviations are available to simplify usage:</p>
+
+<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=1 -kgba=1 -kgbi=1</b></p>
+
+<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=0 -kgba=0 -kgbi=0</b></p>
+
+<p>Before describing the meaning of the parameters in detail let us look at an example which is formatted with default parameter settings.</p>
+
+<pre><code>        print &quot;Entering test 2\n&quot;;
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+        use charnames qw(greek);
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
+        my @source        = qw(ascii iso8859-1 cp1250);
+        my @destiny       = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+        my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
+        return unless ($str);</code></pre>
+
+<p>using <b>perltidy -kgb</b> gives:</p>
+
+<pre><code>        print &quot;Entering test 2\n&quot;;
+
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+        use charnames qw(greek);
+
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
+        my @source        = qw(ascii iso8859-1 cp1250);
+        my @destiny       = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+        my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
+
+        return unless ($str);</code></pre>
+
+<p>Blank lines have been introduced around the <b>my</b> and <b>use</b> sequences. What happened is that the default keyword list includes <b>my</b> and <b>use</b> but not <b>print</b> and <b>return</b>. So a continuous sequence of nine <b>my</b> and <b>use</b> statements was located. This number exceeds the default threshold of five, so blanks were placed before and after the entire group. Then, since there was also a subsequence of six <b>my</b> lines, a blank line was introduced to separate them.</p>
+
+<p>Now suppose there had been some spaces in the starting script, such as</p>
+
+<pre><code>        print &quot;Entering test 2\n&quot;;
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+
+        use charnames qw(greek);
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
+        my @source        = qw(ascii iso8859-1 cp1250);
+
+        my @destiny     = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets = qw(cp1047 cp37 posix-bc);
+        my $str         = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
+        return unless ($str);</code></pre>
+
+<p>Using just <b>perltidy -kgb</b> would have no effect on this script because the groups each have fewer than the threshold number of statements. If more compact code is desirable there is a parameter <b>-kgbd</b> available which causes perltidy to make a preliminary pass through the input script to delete blank lines between lines with the keywords being sought. This allows keyword groups of maximum possible length to be formed.</p>
+
+<p>So using <b>perltidy -kgbd -kgb</b> on the above script would produce the same output as previously shown.</p>
+
+<p>Finer control over blank placement can be achieved by using the individual parameters rather than the <b>-kgb</b> flag. The individual controls are as follows.</p>
+
+<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used.</p>
+
+<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>, where <b>n</b> is the minimum number of consecutive keyword statements to which these controls apply. The default is <b>n=5</b>.</p>
+
+<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>, specifies whether a blank should appear before the first line of the group, as follows:</p>
+
+<pre><code>   n=0 =&gt; no change to the input file is made 
+   n=1 =&gt; a blank line is introduced if possible
+   n=2 =&gt; an existing blank line will be removed</code></pre>
+
+<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>, likewise specifies whether a blank should appear after the last line of the group, using the same scheme:</p>
+
+<pre><code>   n=0 =&gt; no change to the input file is made [Default]
+   n=1 =&gt; a blank line is introduced if possible 
+   n=2 =&gt; an existing blank line will be removed</code></pre>
+
+<p><b>--keyword-group-blanks-inside=n</b>, or <b>-kgbi=n</b>, specifies whether subgroups of a single statement type with more than the minimum number (as specified with <b>-kgbc=n</b>) may be separated from the other sub-groups with blank lines, where</p>
+
+<pre><code>   n=0 =&gt; no blank internal line is introduced [Default]
+   n=1 =&gt; a blank line is introduced before and after a subgroup</code></pre>
+
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, causes blank lines between two statements with one of the sought keywords to be deleted before groups are formed. This will produce the most compact code and maximum group sizes. To leave these blank lines unchanged use <b>--nokeyword-group-blanks-delete</b>, or <b>-nkgbd</b>. Note that the <b>-kgbd</b> flag only removes blank lines between statements with one of the keywords being sought. Blanks before and after keyword sequences can be controlled with parameters <b>-kgbb</b> and <b>-kgba</b>. Also note that blanks deleted by this flag are not subject to any threshold number. All qualifying blank lines will be deleted.</p>
+
+<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, which is equivalent to setting <b>-kgbb=1 -kgba=1 -kgbi=1</b>. This turns on keyword group formatting with a set of default values.</p>
+
+<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is equivalent to <b>-kgbb=0 -kgba kgbi=0</b>. This flag turns off keyword group blank lines and is the default setting.</p>
+
+<p>Here are a few notes about the functioning of this technique.</p>
+
+<ul>
+
+<li><p>The introduction of blank lines may not occur if it would conflict with other input controls or code validity. For example, a blank line will not be placed within a here-doc or within a section of code marked with format skipping comments.</p>
+
+</li>
+<li><p>A blank line will only be introduced at the end of a group if the next statement is a line of code (as opposed to an __END__ line for example).</p>
+
+</li>
+<li><p>A blank line will not be introduced after a comment line unless the flag <b>--blanks-after-comments</b>, or <b>-bac</b>, is also set.</p>
+
+</li>
+<li><p>The count which is used to determine the group size is not the number of lines but rather the total number of keywords which are found. Individual statements with a certain leading keyword may continue on multiple lines, but if any of these lines is nested more than one level deep then that group will be ended.</p>
+
+</li>
+<li><p>The search for groups of lines with similar leading keywords is based on the input source, not the final formatted source. Consequently, if the source code is badly formatted, it would be best to make a first pass without these options.</p>
+
+</li>
+</ul>
 
 </dd>
 <dt id="mbl-n---maximum-consecutive-blank-lines-n"><b>-mbl=n</b> <b>--maximum-consecutive-blank-lines=n</b></dt>
@@ -2687,7 +2826,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20181120</p>
+<p>This man page documents perltidy version 20181120.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

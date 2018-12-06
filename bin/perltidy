@@ -2660,53 +2660,127 @@ lines will be gone.  However, this will cause all old blank lines to be
 ignored, perhaps even some that were added by hand to improve formatting. So
 please be cautious when using these parameters.
 
-=item Controls for blank lines around lines of consecutive keywords
+=item B<Controls for blank lines around lines of consecutive keywords>
 
 It is common in Perl programs to have consecutive statements beginning with a
-common keyword, or one of a certain set of keywords.  For example near the top
+certain common keyword, or one of a certain set of keywords.  For example near the top
 of a program there might be a series of B<use> statements or a series of B<my>
-declarations.  The parameters in this section can control the placement of
+declarations.  The parameters in this section provide control over the placement of
 blank lines within and around such groups of statements.  These blank lines are
 called here B<keyword group blanks>, and all of the parameters begin with
 B<--keyword-group-blanks*>, or B<-kgb*> for short.  The default settings do not
-use these controls but they can be enabled with the following parameters:
+employ these controls but they can be enabled with the following parameters:
 
- B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string
- B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is an integer [def 5]
- B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> is 0,1, or 2
- B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> is 0,1, or 2
- B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>; B<n> is 0 or 1
- B<--keyword-group-blanks-delete>, or B<-kgbd> is a flag which can be negated
+B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string
+
+B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is an integer [def 5]
+
+B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> is 0, 1, or 2
+
+B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> is 0, 1, or 2
+
+B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>; B<n> is 0 or 1
+
+B<--keyword-group-blanks-delete>,   or B<-kgbd>; is an on/off switch
 
 In addition, the following abbreviations are available to simplify usage:
 
- B<--keyword-group-blanks>, or B<-kgb> means B<-kgbb=1>, B<-kgba=1>, B<kgbi=1>
- B<--nokeyword-group-blanks>, or B<-nkgb> means B<-kgbb=0>, B<-kgba=0>, B<kgbi=0>
+B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=1 -kgba=1 -kgbi=1>
 
-The meaning of these parameters is as follows.
+B<--nokeyword-group-blanks>, or B<-nkgb>, is short for B<-kgbb=0 -kgba=0 -kgbi=0>
 
-The keywords which will be formed into groups are specified with parameter
-B<--keyword-group-blanks-list=s>, or B<-kgbl=s>, where B<s> is a quoted string
+Before describing the meaning of the parameters in detail let us look at an
+example which is formatted with default parameter settings.
+
+        print "Entering test 2\n";
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+        use charnames qw(greek);
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
+        my @source        = qw(ascii iso8859-1 cp1250);
+        my @destiny       = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+        my $str           = join( '', map( chr($_), 0x20 .. 0x7E ) );
+        return unless ($str);
+
+using B<perltidy -kgb> gives:
+
+        print "Entering test 2\n";
+
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+        use charnames qw(greek);
+
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
+        my @source        = qw(ascii iso8859-1 cp1250);
+        my @destiny       = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
+        my $str           = join( '', map( chr($_), 0x20 .. 0x7E ) );
+
+        return unless ($str);
+
+Blank lines have been introduced around the B<my> and B<use> sequences.  What
+happened is that the default keyword list includes B<my> and B<use> but not
+B<print> and B<return>.  So a continuous sequence of nine B<my> and B<use>
+statements was located.  This number exceeds the default threshold of five, so
+blanks were placed before and after the entire group.  Then, since there was
+also a subsequence of six B<my> lines, a blank line was introduced to separate
+them.
+
+Now suppose there had been some spaces in the starting script, such as
+
+        print "Entering test 2\n";
+        use Test;
+        use Encode qw(from_to encode decode
+          encode_utf8 decode_utf8
+          find_encoding is_utf8);
+
+        use charnames qw(greek);
+        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
+        my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
+        my @source        = qw(ascii iso8859-1 cp1250);
+
+        my @destiny     = qw(cp1047 cp37 posix-bc);
+        my @ebcdic_sets = qw(cp1047 cp37 posix-bc);
+        my $str         = join( '', map( chr($_), 0x20 .. 0x7E ) );
+        return unless ($str);
+
+Using just B<perltidy -kgb> would have no effect on this script because the
+groups each have fewer than the threshold number of statements.  If more
+compact code is desirable there is a parameter B<-kgbd> available which 
+causes perltidy to make a preliminary pass through the input script to delete 
+blank lines between lines with the keywords being sought. This allows
+keyword groups of maximum possible length to be formed.  
+
+So using B<perltidy -kgbd -kgb> on the above script would produce the same
+output as previously shown.  
+
+Finer control over blank placement can be achieved by using the individual
+parameters rather than the B<-kgb> flag.  The individual controls are as follows.
+
+B<--keyword-group-blanks-list=s>, or B<-kgbl=s>, where B<s> is a quoted string,
+defines the set of keywords which will be formed into groups.  The string is a
 space separated list of keywords.  The default set is B<s="use require local
 our my sub">, but any list of keywords may be used.  
 
-This minimum group size to which these controls apply is specified with
 B<--keyword-group-blanks-count=n>, or B<-kgbc=n>, where B<n> is the minimum
 number of consecutive keyword statements to which these controls apply.  The
 default is B<n=5>.
 
-When a sequence of B<n> or more of any combination of the above keywords is
-located, then blank lines are introduced (or removed) around and within the
-group according to the following controls:
-
-The parameter B<--keyword-group-blanks-before=n>, or B<-kgbb=n>, specifies whether
+B<--keyword-group-blanks-before=n>, or B<-kgbb=n>, specifies whether
 a blank should appear before the first line of the group, as follows:
 
-   n=0 => no change to the input file is made [Default]
+   n=0 => no change to the input file is made 
    n=1 => a blank line is introduced if possible
    n=2 => an existing blank line will be removed
 
-Likewise, parameter B<--keyword-group-blanks-after=n>, or B<-kgba=n>, specifies
+B<--keyword-group-blanks-after=n>, or B<-kgba=n>, likewise specifies
 whether a blank should appear after the last line of the group, using the same
 scheme:
 
@@ -2714,53 +2788,65 @@ scheme:
    n=1 => a blank line is introduced if possible 
    n=2 => an existing blank line will be removed
 
-If a group of lines consists of more than one of the set of keywords, then any
-subgroups of a single statement type with more than the minimum number (as
+B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>, specifies
+whether subgroups of a single statement type with more than the minimum number (as
 specified with B<-kgbc=n>) may be separated from the other sub-groups with
-blank lines according to the parameter B<--keyword-group-blanks-inside=n>, or
-B<-kgbi=n>, where n has the following meaning: 
+blank lines, where 
 
    n=0 => no blank internal line is introduced [Default]
    n=1 => a blank line is introduced before and after a subgroup
 
-Finally, in the input stream there may be existing blank lines between the keywords
-being sought.  There are two options for treating these existing blank lines.
-One option, specified by the flag B<--keyword-group-blanks-delete>, or
-B<-kgbd>, is to delete them all before forming the groups. This will give the
-most compact code and maximum group sizes.  The other option,
-B<--nokeyword-group-blanks-delete>, or B<-nkgbd>, is to keep them unchanged.
-In this case the maximum group sizes will be smaller.
+B<--keyword-group-blanks-delete>, or B<-kgbd>, causes blank lines between two
+statements with one of the sought keywords to be deleted before groups are
+formed.  This will produce the most compact code and maximum group sizes.  To
+leave these blank lines unchanged use B<--nokeyword-group-blanks-delete>, or
+B<-nkgbd>.  Note that the B<-kgbd> flag only removes blank lines between
+statements with one of the keywords being sought. Blanks before and after
+keyword sequences can be controlled with parameters B<-kgbb> and B<-kgba>.
+Also note that blanks deleted by this flag are not subject to any threshold 
+number.  All qualifying blank lines will be deleted.
 
-To make the input as simple as possible, two abbreviation flags are provided.
-One is B<--keyword-group-blanks>, or B<-kgb>, which is equivalent to B<-kgbb=1>
-and B<kgbb=1> and B<kgbi=1>.  The other is The other is
-B<--nokeyword-group-blanks>, or B<-nkgb>, which is equivalent to B<-kgbb=0> and
-B<kgbb=0> and B<kgbi=0>.  This latter corresponds to the default setting. 
+B<--keyword-group-blanks>, or B<-kgb>, which is equivalent to setting
+B<-kgbb=1 -kgba=1 -kgbi=1>.  This turns on keyword group formatting
+with a set of default values.  
 
-So to turn this option on with default settings the command could either be
-
-  perltidy -kgb filename
-
-or, for compact formatting, 
-
-  perltidy -kgbd -kgb filename
+B<--nokeyword-group-blanks>, or B<-nkgb>, is equivalent to B<-kgbb=0 -kgba kgbi=0>.  
+This flag turns off keyword group blank lines and is the default setting. 
 
 Here are a few notes about the functioning of this technique.  
 
+=over 4
+
+=item *
+
 The introduction of blank lines may not occur if it would conflict with other
 input controls or code validity. For example, a blank line will not be placed
-within a here-doc.  For another example, a blank line will not be introduced
-after a comment line unless the flag B<--blanks-after-comments>, or B<-bac>, is
-also set.
+within a here-doc or within a section of code marked with format skipping comments.
+
+=item *
+
+A blank line will only be introduced at the end of a group if the next statement
+is a line of code (as opposed to an __END__ line for example).
+
+=item *
+
+A blank line will not be introduced after a comment line unless the flag
+B<--blanks-after-comments>, or B<-bac>, is also set.
+
+=item *
 
 The count which is used to determine the group size is not the number of lines
 but rather the total number of keywords which are found.  Individual statements
 with a certain leading keyword may continue on multiple lines, but if any of these
 lines is nested more than one level deep then that group will be ended.
 
+=item *
+
 The search for groups of lines with similar leading keywords is based on the
 input source, not the final formatted source.  Consequently, if the source code
 is badly formatted, it would be best to make a first pass without these options.
+
+=back
 
 =item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>   
 
