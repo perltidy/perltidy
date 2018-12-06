@@ -1,0 +1,14 @@
+print "hello";    # with -kgb, break after this line
+
+use strict;
+use warnings;
+use Test::More tests => 1;
+use Pod::Simple::XHTML;
+my $c = <<EOF;
+=head1 Documentation
+The keyword group dies here
+Do not put a blank line in this here-doc
+EOF
+my $d = $c . "=cut\n";
+exit 1;
+_END_

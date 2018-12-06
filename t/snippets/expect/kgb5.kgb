@@ -1,0 +1,17 @@
+# with -kgb, do not put blank in ternary
+print "Starting\n";    # with -kgb, break after this line
+
+my $A = "1";
+my $B = "0";
+my $C = "1";
+my $D = "1";
+my $result =
+    $A
+  ? $B
+      ? $C
+          ? "+A +B +C"
+          : "+A +B -C"
+      : "+A -B"
+  : "-A";
+my $F = "0";
+print "with -kgb, put blank above this line; result=$result\n";

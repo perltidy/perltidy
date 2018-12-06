@@ -100,6 +100,7 @@
 ../snippets13.t	align27.def
 ../snippets14.t	else1.def
 ../snippets14.t	else2.def
+../snippets14.t	ternary3.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -260,4 +261,15 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets14.t	ternary3.def
+../snippets14.t	align17.def
+../snippets14.t	align18.def
+../snippets14.t	kgb1.def
+../snippets14.t	kgb1.kgb
+../snippets14.t	kgb2.def
+../snippets14.t	kgb2.kgb
+../snippets14.t	kgb3.def
+../snippets14.t	kgb3.kgb
+../snippets14.t	kgb4.def
+../snippets14.t	kgb4.kgb
+../snippets14.t	kgb5.def
+../snippets14.t	kgb5.kgb
