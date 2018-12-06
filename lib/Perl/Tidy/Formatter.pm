@@ -5848,8 +5848,8 @@ sub make_keyword_group_list_pattern {
     # turn any input list into a regex for recognizing selected block types.
     # Here are the defaults:
     $keyword_group_list_pattern = '^((our|local|my|use|require|)$|sub)';
-    if ( defined( $rOpts->{'keyword-group-list'} )
-        && $rOpts->{'keyword-group-list'} )
+    if ( defined( $rOpts->{'keyword-group-blanks-list'} )
+        && $rOpts->{'keyword-group-blanks-list'} )
     {
         $keyword_group_list_pattern =
           make_block_pattern( '-kgbl', $rOpts->{'keyword-group-list'} );
