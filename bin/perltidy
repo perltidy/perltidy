@@ -2525,6 +2525,13 @@ A blank line will be introduced before a full-line comment.  This is the
 default.  Use B<-nbbc> or  B<--noblanks-before-comments> to prevent
 such blank lines from being introduced.
 
+=item B<-bac>,  B<--blanks-after-comments>
+
+The B<-bac> flag allows blank lines to be inserted after full line comments.
+This flag does not by itself introduce such lines, but is referenced by the B<-kgb>
+flags to see if they have permission to do this.
+The default is not to allow this, B<-nbac>.  
+
 =item B<-blbs=n>,  B<--blank-lines-before-subs=n>
 
 The parameter B<-blbs=n> requests that least B<n> blank lines precede a sub
@@ -2652,6 +2659,108 @@ including the added parameter B<-kbl=0> and rerunning. Then the unwanted blank
 lines will be gone.  However, this will cause all old blank lines to be
 ignored, perhaps even some that were added by hand to improve formatting. So
 please be cautious when using these parameters.
+
+=item Controls for blank lines around lines of consecutive keywords
+
+It is common in Perl programs to have consecutive statements beginning with a
+common keyword, or one of a certain set of keywords.  For example near the top
+of a program there might be a series of B<use> statements or a series of B<my>
+declarations.  The parameters in this section can control the placement of
+blank lines within and around such groups of statements.  These blank lines are
+called here B<keyword group blanks>, and all of the parameters begin with
+B<--keyword-group-blanks*>, or B<-kgb*> for short.  The default settings do not
+use these controls but they can be enabled with the following parameters:
+
+ B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string
+ B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is an integer [def 5]
+ B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> is 0,1, or 2
+ B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> is 0,1, or 2
+ B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>; B<n> is 0 or 1
+ B<--keyword-group-blanks-delete>, or B<-kgbd> is a flag which can be negated
+
+In addition, the following abbreviations are available to simplify usage:
+
+ B<--keyword-group-blanks>, or B<-kgb> means B<-kgbb=1>, B<-kgba=1>, B<kgbi=1>
+ B<--nokeyword-group-blanks>, or B<-nkgb> means B<-kgbb=0>, B<-kgba=0>, B<kgbi=0>
+
+The meaning of these parameters is as follows.
+
+The keywords which will be formed into groups are specified with parameter
+B<--keyword-group-blanks-list=s>, or B<-kgbl=s>, where B<s> is a quoted string
+space separated list of keywords.  The default set is B<s="use require local
+our my sub">, but any list of keywords may be used.  
+
+This minimum group size to which these controls apply is specified with
+B<--keyword-group-blanks-count=n>, or B<-kgbc=n>, where B<n> is the minimum
+number of consecutive keyword statements to which these controls apply.  The
+default is B<n=5>.
+
+When a sequence of B<n> or more of any combination of the above keywords is
+located, then blank lines are introduced (or removed) around and within the
+group according to the following controls:
+
+The parameter B<--keyword-group-blanks-before=n>, or B<-kgbb=n>, specifies whether
+a blank should appear before the first line of the group, as follows:
+
+   n=0 => no change to the input file is made [Default]
+   n=1 => a blank line is introduced if possible
+   n=2 => an existing blank line will be removed
+
+Likewise, parameter B<--keyword-group-blanks-after=n>, or B<-kgba=n>, specifies
+whether a blank should appear after the last line of the group, using the same
+scheme:
+
+   n=0 => no change to the input file is made [Default]
+   n=1 => a blank line is introduced if possible 
+   n=2 => an existing blank line will be removed
+
+If a group of lines consists of more than one of the set of keywords, then any
+subgroups of a single statement type with more than the minimum number (as
+specified with B<-kgbc=n>) may be separated from the other sub-groups with
+blank lines according to the parameter B<--keyword-group-blanks-inside=n>, or
+B<-kgbi=n>, where n has the following meaning: 
+
+   n=0 => no blank internal line is introduced [Default]
+   n=1 => a blank line is introduced before and after a subgroup
+
+Finally, in the input stream there may be existing blank lines between the keywords
+being sought.  There are two options for treating these existing blank lines.
+One option, specified by the flag B<--keyword-group-blanks-delete>, or
+B<-kgbd>, is to delete them all before forming the groups. This will give the
+most compact code and maximum group sizes.  The other option,
+B<--nokeyword-group-blanks-delete>, or B<-nkgbd>, is to keep them unchanged.
+In this case the maximum group sizes will be smaller.
+
+To make the input as simple as possible, two abbreviation flags are provided.
+One is B<--keyword-group-blanks>, or B<-kgb>, which is equivalent to B<-kgbb=1>
+and B<kgbb=1> and B<kgbi=1>.  The other is The other is
+B<--nokeyword-group-blanks>, or B<-nkgb>, which is equivalent to B<-kgbb=0> and
+B<kgbb=0> and B<kgbi=0>.  This latter corresponds to the default setting. 
+
+So to turn this option on with default settings the command could either be
+
+  perltidy -kgb filename
+
+or, for compact formatting, 
+
+  perltidy -kgbd -kgb filename
+
+Here are a few notes about the functioning of this technique.  
+
+The introduction of blank lines may not occur if it would conflict with other
+input controls or code validity. For example, a blank line will not be placed
+within a here-doc.  For another example, a blank line will not be introduced
+after a comment line unless the flag B<--blanks-after-comments>, or B<-bac>, is
+also set.
+
+The count which is used to determine the group size is not the number of lines
+but rather the total number of keywords which are found.  Individual statements
+with a certain leading keyword may continue on multiple lines, but if any of these
+lines is nested more than one level deep then that group will be ended.
+
+The search for groups of lines with similar leading keywords is based on the
+input source, not the final formatted source.  Consequently, if the source code
+is badly formatted, it would be best to make a first pass without these options.
 
 =item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>   
 
