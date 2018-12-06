@@ -1795,12 +1795,13 @@ sub generate_options {
     $add_option->( 'maximum-consecutive-blank-lines', 'mbl',  '=i' );
     $add_option->( 'keep-old-blank-lines',            'kbl',  '=i' );
 
-    $add_option->( 'blanks-after-comments',       'bac',   '!' );
-    $add_option->( 'keyword-group-list',          'kwgl',  '=s' );
-    $add_option->( 'long-keyword-group-count',    'lkwgc', '=i' );
-    $add_option->( 'blanks-before-keyword-group', 'bbkwg', '=i' );
-    $add_option->( 'blanks-after-keyword-group',  'bakwg', '=i' );
-    $add_option->( 'blanks-inside-keyword-group', 'bikwg', '=i' );
+    $add_option->( 'blanks-after-comments',       'bac',  '!' );
+    $add_option->( 'keyword-group-blanks-list',   'kgbl', '=s' );
+    $add_option->( 'keyword-group-blanks-count',  'kgbc', '=i' );
+    $add_option->( 'keyword-group-blanks-before', 'kgbb', '=i' );
+    $add_option->( 'keyword-group-blanks-after',  'kgba', '=i' );
+    $add_option->( 'keyword-group-blanks-inside', 'kgbi', '=i' );
+    $add_option->( 'keyword-group-blanks-delete', 'kgbd', '!' );
 
     $add_option->( 'blank-lines-after-opening-block',       'blao',  '=i' );
     $add_option->( 'blank-lines-before-closing-block',      'blbc',  '=i' );
@@ -1912,6 +1913,10 @@ sub generate_options {
 
         'closing-side-comment-else-flag' => [ 0, 2 ],
         'comma-arrow-breakpoints'        => [ 0, 5 ],
+
+        'keyword-group-blanks-before' => [ 0, 2 ],
+        'keyword-group-blanks-after'  => [ 0, 2 ],
+        'keyword-group-blanks-inside' => [ 0, 1 ],
     );
 
     # Note: we could actually allow negative ci if someone really wants it:
@@ -1932,10 +1937,10 @@ sub generate_options {
       blank-lines-before-packages=1
 
       noblanks-after-comments
-      long-keyword-group-count=5
-      blanks-before-keyword-group=0
-      blanks-after-keyword-group=0
-      blanks-inside-keyword-group=0
+      keyword-group-blanks-count=5
+      keyword-group-blanks-before=0
+      keyword-group-blanks-after=0
+      keyword-group-blanks-inside=0
 
       block-brace-tightness=0
       block-brace-vertical-tightness=0
@@ -2074,6 +2079,11 @@ sub generate_options {
         'bbs'                  => [qw(blbs=1 blbp=1)],
         'noblanks-before-subs' => [qw(blbs=0 blbp=0)],
         'nbbs'                 => [qw(blbs=0 blbp=0)],
+
+        'keyword-group-blanks'   => [qw(kgbb=1 kgbi=1 kgba=1)],
+        'kgb'                    => [qw(kgbb=1 kgbi=1 kgba=1)],
+        'nokeyword-group-blanks' => [qw(kgbb=0 kgbi=0 kgba=0)],
+        'nkgb'                   => [qw(kgbb=0 kgbi=0 kgba=0)],
 
         'break-at-old-trinary-breakpoints' => [qw(bot)],
 

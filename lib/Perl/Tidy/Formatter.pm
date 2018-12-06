@@ -960,6 +960,7 @@ sub prepare_for_new_input_lines {
 sub keyword_group_scan {
     my $self = shift;
 
+    # Handle blank lines around keyword groups (kgb* flags)
     # Scan all lines looking for runs of consecutive lines beginning with
     # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
     # they may be anything.  We will set flags requesting that blanks be
@@ -968,33 +969,39 @@ sub keyword_group_scan {
     # they are not necessarily well formatted.
 
     # The output of this sub is a return hash ref whose keys are the indexes of
-    # lines after which we desire a blank line.
-    #     $rhash_of_desires->{$i} >0 means we want a blank line after the line
-    #     at index i
+    # lines after which we desire a blank line.  For line index i,
+    #     $rhash_of_desires->{$i} = 1 means we want a blank line AFTER this line
+    #     $rhash_of_desires->{$i} = 2 means we want THIS blank line removed
     my $rhash_of_desires = {};
 
-    return $rhash_of_desires
-      unless ( $rOpts->{'blanks-after-keyword-group'}
-        || $rOpts->{'blanks-before-keyword-group'}
-        || $rOpts->{'blanks-within-keyword-group'} );
+    my $Opt_blanks_before = $rOpts->{'keyword-group-blanks-before'};   # '-kgbb'
+    my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
+    my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
+    my $Opt_blanks_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
+    my $Opt_long_count    = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
+    my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'}; # '-bac'
+    my $Opt_pattern =
+      $keyword_group_list_pattern;    # like '^(my|local|our|use)$';
 
-    my $Opt_blanks_before = $rOpts->{'blanks-before-keyword-group'};  # '-bbkwg'
-    my $Opt_blanks_after  = $rOpts->{'blanks-after-keyword-group'};   # '-bakwg'
-    my $Opt_blanks_inside = $rOpts->{'blanks-inside-keyword-group'};  # '-bikwg'
-    my $Opt_long_count    = $rOpts->{'long-keyword-group-count'};     # '-lkwgc'
-    my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'};  # '-bac'
-    my $Opt_pattern = $keyword_group_list_pattern;    # '^(my|local|our|use)$';
+    return $rhash_of_desires
+      unless ( $Opt_blanks_before
+        || $Opt_blanks_after
+        || $Opt_blanks_inside
+        || $Opt_blanks_delete );
 
     my $rlines              = $self->{rlines};
     my $rLL                 = $self->{rLL};
     my $K_closing_container = $self->{K_closing_container};
 
-    my ( $ibeg, $iend, $count, $level_beg, $K_closing, @sublist, $K_first,
-        $K_last );
+    # These vars save values for the current group and subgroups:
+    my ( $ibeg, $iend, $count, $level_beg, $K_closing, @sublist, );
 
-    my $sub_group = sub {
+    # These vars will contain values for the most recently seen line:
+    my ( $line_type, $CODE_type, $K_first, $K_last );
 
-        # Here we place blanks around long sub-groups of keywords 
+    my $split_into_sub_groups = sub {
+
+        # Here we place blanks around long sub-groups of keywords
         # if requested.
         return unless ($Opt_blanks_inside);
 
@@ -1003,35 +1010,95 @@ sub keyword_group_scan {
         for ( my $j = 1 ; $j < @sublist ; $j++ ) {
             my $ie  = $sublist[$j]->[0] - 1;
             my $num = $sublist[ $j - 1 ]->[2];
-            if ( $num > $Opt_long_count ) {
-                $rhash_of_desires->{ $ib - 1 } = $Opt_blanks_inside
-                  unless $ib == $ibeg;
-                $rhash_of_desires->{$ie} = $Opt_blanks_inside
-                  unless $ie == $iend;
+            if ( $num >= $Opt_long_count ) {
+                if ($Opt_blanks_inside) {
+                    $rhash_of_desires->{ $ib - 1 } = 1 unless ( $ib == $ibeg );
+                    $rhash_of_desires->{$ie} = 1 unless ( $ie == $iend );
+                }
             }
             $ib = $ie + 1;
         }
     };
 
-    my $CODE_type;
+    my $delete_if_blank = sub {
+        my ($i) = @_;
+        return unless ( $i >= 0 && $i < @{$rlines} );
+        my $line_type = $rlines->[$i]->{_line_type};
+        return if ( $line_type ne 'CODE' );
+        my $code_type = $rlines->[$i]->{_code_type};
+        if ( $code_type eq 'BL' ) { $rhash_of_desires->{$i} = 2; }
+        return;
+    };
+
+    my $delete_inner_blank_lines = sub {
+
+        # mark blank lines for deletion if requested
+        return unless $Opt_blanks_delete;
+
+        # remove trailing blank lines from the list
+        my $i_last_nonblank = $iend;
+        for ( my $i = $iend ; $i >= $ibeg ; $i-- ) {
+            my $line_type = $rlines->[$i]->{_line_type};
+            next if ( $line_type ne 'CODE' );
+            my $code_type = $rlines->[$i]->{_code_type};
+            if ( $code_type ne 'BL' ) {
+                $i_last_nonblank = $i;
+                last;
+            }
+        }
+        $iend = $i_last_nonblank;
+
+        for ( my $i = $ibeg + 1 ; $i <= $iend - 1 ; $i++ ) {
+            $delete_if_blank->($i);
+        }
+    };
 
     my $end_group = sub {
 
-	# end a group of keywords
+        # end a group of keywords
         my ($bad_ending) = @_;
         if ( defined($ibeg) && $ibeg >= 0 ) {
+
+            # first do any blank deletions regardless of the count
+            $delete_inner_blank_lines->();
+
+            # then handle sufficiently large groups
             if ( $count >= $Opt_long_count ) {
 
                 if ( $ibeg > 0 ) {
                     my $code_type = $rlines->[ $ibeg - 1 ]->{_code_type};
+
+                    # patch for hash bang line which is not currently marked as
+                    # a comment
+                    if ( $ibeg == 1 && !$code_type ) {
+                        my $line_text = $rlines->[ $ibeg - 1 ]->{_line_text};
+                        $code_type = 'BC'
+                          if ( $line_text && $line_text =~ /^#/ );
+                    }
+
                     if (   $Opt_blanks_after_comments
                         || $code_type !~ /(BC|SBC|SBCX)/ )
                     {
-                        $rhash_of_desires->{ $ibeg - 1 } = $Opt_blanks_before;
+                        if ( $Opt_blanks_before == 1 ) {
+                            $rhash_of_desires->{ $ibeg - 1 } = 1;
+                            if ( defined( $rhash_of_desires->{$ibeg} )
+                                && $rhash_of_desires->{$ibeg} == 2 )
+                            {
+                                $rhash_of_desires->{$ibeg} = 0;
+                            }
+                        }
+                        elsif ( $Opt_blanks_before == 2 ) {
+                            $delete_if_blank->( $ibeg - 1 );
+                        }
                     }
                 }
 
-                if ( defined($K_first) ) {
+                # We will only put blanks before code lines. We could loosen
+                # this rule a little, but we have to be very careful because
+                # for example we certainly don't want to drop a blank line
+                # after a line like this:
+                #   my $var = <<EOM;
+                if ( $line_type eq 'CODE' && defined($K_first) ) {
 
                     # - Do not put a blank before a line of different level
                     # - Do not put a blank line if we ended the search badly
@@ -1046,14 +1113,19 @@ sub keyword_group_scan {
                         && $iend < @{$rlines}
                         && $CODE_type ne 'HSC' )
                     {
-                        $rhash_of_desires->{$iend} = $Opt_blanks_after;
+                        if ( $Opt_blanks_after == 1 ) {
+                            $rhash_of_desires->{$iend} = 1;
+                        }
+                        elsif ( $Opt_blanks_after == 2 ) {
+                            $delete_if_blank->( $iend + 1 );
+                        }
                     }
                 }
             }
-            $sub_group->();
+            $split_into_sub_groups->();
         }
 
-	# reset for another group
+        # reset for another group
         $ibeg      = -1;
         $iend      = undef;
         $level_beg = -1;
@@ -1063,9 +1135,9 @@ sub keyword_group_scan {
 
     my $container_check = sub {
 
-	# If the keyword lines ends with an open token, find the closing token
-	# '$K_closing' so that we can easily skip past the contents of the
-	# container.
+        # If the keyword lines ends with an open token, find the closing token
+        # '$K_closing' so that we can easily skip past the contents of the
+        # container.
         my $KK        = $K_last;
         my $type_last = $rLL->[$KK]->[_TYPE_];
         my $tok_last  = $rLL->[$KK]->[_TOKEN_];
@@ -1089,22 +1161,35 @@ sub keyword_group_scan {
     my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $i++;
-	$K_first = undef; 
-	$K_last  = undef;
-        my $line_type = $line_of_tokens->{_line_type};
+
         $CODE_type = "";
+        $K_first   = undef;
+        $K_last    = undef;
+        $line_type = $line_of_tokens->{_line_type};
+
+        # always end a group at non-CODE
         if ( $line_type ne 'CODE' ) { $end_group->(); next }
+
         $CODE_type = $line_of_tokens->{_code_type};
 
-        # end any group at a blank, verbatim, or format skipping line
-        if (
-            $CODE_type
-            && (   $CODE_type eq 'BL'
-                || $CODE_type eq 'VB'
-                || $CODE_type eq 'FS' )    #|| $CODE_type eq 'HSC' )
-          )
-        {
+        # end any group at a format skipping line
+        if ( $CODE_type && $CODE_type eq 'FS' ) {
             $end_group->();
+            next;
+        }
+
+        # continue in a verbatim (VB) type; it may be quoted text
+        if ( $CODE_type eq 'VB' ) {
+            if ( $ibeg >= 0 ) { $iend = $i; }
+            next;
+        }
+
+        # continue in blank (BL) types only if we are deleting blanks
+        if ( $CODE_type eq 'BL' ) {
+            if ( $ibeg >= 0 ) {
+                if ($Opt_blanks_delete) { $iend = $i }
+                else                    { $end_group->() }
+            }
             next;
         }
 
@@ -1126,8 +1211,8 @@ sub keyword_group_scan {
         my $token    = $rLL->[$K_first]->[_TOKEN_];
         my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
 
-        # See if it is a keyword we seek, but
-        # never start a group in a continuation line; the code is badly formatted
+        # See if it is a keyword we seek, but never start a group in a
+        # continuation line; the code may be badly formatted.
         if (   $ci_level == 0
             && $type eq 'k'
             && $token =~ /$Opt_pattern/o )
@@ -1192,21 +1277,25 @@ sub keyword_group_scan {
 
             # - continue if if we are within in a container which started with
             # the line of the previous keyword.
-            ##if (defined($K_closing) && $K_first<=$K_closing) {$iend=$i; next}
             if ( defined($K_closing) && $K_first <= $K_closing ) {
 
                 # continue if entire line is within container
                 if ( $K_last <= $K_closing ) { $iend = $i; next }
 
                 # continue at ); or }; or ];
-                if ( $K_first == $K_closing ) {
-                    my $KK = $K_first++;
-                    if ( $rLL->[$KK]->[_TYPE_] eq 'b' ) { $KK++ }
-                    if ( $KK <= $K_last && $rLL->[$KK]->[_TYPE_] eq ';' ) {
-                        $iend = $i;
-                        next;
+                my $KK = $K_closing + 1;
+                if ( $rLL->[$KK]->[_TYPE_] eq ';' ) {
+                    if ( $KK < $K_last ) {
+                        if ( $rLL->[ ++$KK ]->[_TYPE_] eq 'b' ) { ++$KK }
+                        if ( $KK > $K_last || $rLL->[$KK]->[_TYPE_] ne '#' ) {
+                            $end_group->(1);
+                            next;
+                        }
                     }
+                    $iend = $i;
+                    next;
                 }
+
                 $end_group->(1);
                 next;
             }
@@ -1219,6 +1308,8 @@ sub keyword_group_scan {
         # not in a keyword group; continue
         else { next }
     }
+
+    # end of loop over all lines
     $end_group->();
     return $rhash_of_desires;
 }
@@ -1242,9 +1333,12 @@ sub break_lines {
 	$i++;
 
 	# insert blank lines requested for keyword sequences
-        if ( $i > 0 && $rwant_blank_line_after->{ $i - 1 } ) {
+        if (   $i > 0
+            && defined( $rwant_blank_line_after->{ $i - 1 } )
+            && $rwant_blank_line_after->{ $i - 1 } == 1 )
+        {
             $self->want_blank_line();
-        }    
+        }
 
         my $last_line_type = $line_type;
         $line_type = $line_of_tokens->{_line_type};
@@ -1287,7 +1381,12 @@ sub break_lines {
                 # If keep-old-blank-lines is zero, we delete all
                 # old blank lines and let the blank line rules generate any
                 # needed blanks.
-                if ($rOpts_keep_old_blank_lines) {
+
+		# We also delete lines requested by the keyword-group logic
+                my $kgb_keep = !( defined( $rwant_blank_line_after->{$i} )
+                    && $rwant_blank_line_after->{$i} == 2 );
+
+                if ($rOpts_keep_old_blank_lines && $kgb_keep) {
                     $self->flush();
                     $file_writer_object->write_blank_code_line(
                         $rOpts_keep_old_blank_lines == 2 );
@@ -5746,13 +5845,14 @@ sub make_bli_pattern {
 
 sub make_keyword_group_list_pattern {
 
-    # turn any input list into a regex for recognizing selected block types
-    $keyword_group_list_pattern = '^(our|local|my|use)$';
+    # turn any input list into a regex for recognizing selected block types.
+    # Here are the defaults:
+    $keyword_group_list_pattern = '^((our|local|my|use|require|)$|sub)';
     if ( defined( $rOpts->{'keyword-group-list'} )
         && $rOpts->{'keyword-group-list'} )
     {
         $keyword_group_list_pattern =
-          make_block_pattern( '-kwgl', $rOpts->{'keyword-group-list'} );
+          make_block_pattern( '-kgbl', $rOpts->{'keyword-group-list'} );
     }
     return;
 }
