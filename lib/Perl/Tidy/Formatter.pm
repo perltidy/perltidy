@@ -978,7 +978,7 @@ sub keyword_group_scan {
     my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
     my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
     my $Opt_blanks_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
-    my $Opt_long_count    = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
+    my $Opt_threshold_count    = $rOpts->{'keyword-group-blanks-threshold-count'};    # '-kgbt'
 
     # codes for $Opt_blanks_before and $Opt_blanks_after:
     # 0 = never (delete if exist)
@@ -986,7 +986,7 @@ sub keyword_group_scan {
     # 2 = always (insert if missing)
 
     return $rhash_of_desires
-      unless $Opt_long_count > 0
+      unless $Opt_threshold_count > 0
       && ( $Opt_blanks_before != 1
         || $Opt_blanks_after != 1
         || $Opt_blanks_inside
@@ -994,6 +994,8 @@ sub keyword_group_scan {
 
     my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'};  # '-bac'
     my $Opt_pattern               = $keyword_group_list_pattern;
+    my $Opt_repeat_count =
+      $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
 
     my $rlines              = $self->{rlines};
     my $rLL                 = $self->{rLL};
@@ -1004,6 +1006,8 @@ sub keyword_group_scan {
 
     # These vars will contain values for the most recently seen line:
     my ( $line_type, $CODE_type, $K_first, $K_last );
+
+    my $number_of_groups_seen = 0;
 
     my $split_into_sub_groups = sub {
 
@@ -1016,7 +1020,7 @@ sub keyword_group_scan {
         for ( my $j = 1 ; $j < @sublist ; $j++ ) {
             my $ie  = $sublist[$j]->[0] - 1;
             my $num = $sublist[ $j - 1 ]->[2];
-            if ( $num >= $Opt_long_count ) {
+            if ( $num >= $Opt_threshold_count ) {
                 $rhash_of_desires->{ $ib - 1 } = 1 unless ( $ib == $ibeg );
                 $rhash_of_desires->{$ie} = 1 unless ( $ie == $iend );
             }
@@ -1066,7 +1070,9 @@ sub keyword_group_scan {
         if ( defined($ibeg) && $ibeg >= 0 ) {
 
             # then handle sufficiently large groups
-            if ( $count >= $Opt_long_count ) {
+            if ( $count >= $Opt_threshold_count ) {
+
+		$number_of_groups_seen++;
 
                 # do any blank deletions regardless of the count
                 $delete_inner_blank_lines->();
@@ -1166,7 +1172,11 @@ sub keyword_group_scan {
     # loop over all lines of the source
     my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
+
         $i++;
+        last
+          if ( $Opt_repeat_count > 0
+            && $number_of_groups_seen >= $Opt_repeat_count );
 
         $CODE_type = "";
         $K_first   = undef;

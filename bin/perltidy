@@ -2673,7 +2673,7 @@ employ these controls but they can be enabled with the following parameters:
 
 B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string of keywords
 
-B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is a threshold group size
+B<--keyword-group-blanks-threshold-count=n>,  or B<-kgbt=n>; B<n> is a threshold (minimum) group size
 
 B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> = (0, 1, or 2) controls a leading blank
 
@@ -2741,10 +2741,10 @@ defines the set of keywords which will be formed into groups.  The string is a
 space separated list of keywords.  The default set is B<s="use require local
 our my sub">, but any list of keywords may be used.  
 
-B<--keyword-group-blanks-count=n>, or B<-kgbc=n>, where B<n> is the minimum
+B<--keyword-group-blanks-threshold-count=n>, or B<-kgbt=n>, where B<n> is the minimum
 number of consecutive keyword statements to which these controls apply.  The
-default is B<n=5>. The special value B<n=0> can be used to turn off all 
-searching for keyword groups.
+default is B<n=5>. The special value B<n=0> is the same as n=infinity and
+can be used to turn off all searching for keyword groups.
 
 B<--keyword-group-blanks-before=n>, or B<-kgbb=n>, specifies whether
 a blank should appear before the first line of the group, as follows:
@@ -2760,7 +2760,7 @@ scheme (0=delete, 1=stable, 2=insert).
 B<--keyword-group-blanks-inside>, or B<-kgbi>, controls
 the insertion of blank lines between the first and last statement of the entire
 group.  If there is a continuous run of a single statement type with more than
-the minimum threshold number (as specified with B<-kgbc=n>) then this
+the minimum threshold number (as specified with B<-kgbt=n>) then this
 switch causes a blank line be inserted between this
 subgroup and the others. In the example above this happened between the
 B<use> and B<my> statements.
@@ -2771,6 +2771,13 @@ statements are initially scanned, any existing blank lines are included in the
 collection.  Any such orignial blank lines will be deleted before any other
 insertions are made when the parameter B<-kgbd> is set.  The default is not to
 do this, B<-nkgbd>.
+
+B<--keyword-group-blanks-repeat-count=n>, or B<-kgbr=n>, where B<n> is the
+maximum number of times this logic will be applied to any file.  The special
+value B<n=0> is the same as n=infinity which means it will be applied to an
+entire script [Default].  A value B<n=1> could be used to make it apply just
+one time for example.  This might be useful for adjusting just the B<use>
+statements in the top part of a module for example.
 
 B<--keyword-group-blanks>, or B<-kgb>, is an abbreviation equivalent to setting
 B<-kgbb=1 -kgba=1 -kgbi>.  This turns on keyword group formatting with a set of

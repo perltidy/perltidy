@@ -1797,7 +1797,8 @@ sub generate_options {
 
     $add_option->( 'blanks-after-comments',       'bac',  '!' );
     $add_option->( 'keyword-group-blanks-list',   'kgbl', '=s' );
-    $add_option->( 'keyword-group-blanks-count',  'kgbc', '=i' );
+    $add_option->( 'keyword-group-blanks-threshold-count',  'kgbt', '=i' );
+    $add_option->( 'keyword-group-blanks-repeat-count',  'kgbr', '=i' );
     $add_option->( 'keyword-group-blanks-before', 'kgbb', '=i' );
     $add_option->( 'keyword-group-blanks-after',  'kgba', '=i' );
     $add_option->( 'keyword-group-blanks-inside', 'kgbi', '!' );
@@ -1936,7 +1937,8 @@ sub generate_options {
       blank-lines-before-packages=1
 
       noblanks-after-comments
-      keyword-group-blanks-count=5
+      keyword-group-blanks-threshold-count=5
+      keyword-group-blanks-repeat-count=0
       keyword-group-blanks-before=1
       keyword-group-blanks-after=1
       nokeyword-group-blanks-inside
