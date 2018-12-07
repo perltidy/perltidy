@@ -2683,6 +2683,8 @@ B<--keyword-group-blanks-inside>, or B<-kgbi> is a switch for adding blanks betw
 
 B<--keyword-group-blanks-delete>, or B<-kgbd> is a switch for removing initial blank lines between keywords
 
+B<--keyword-group-blanks-repeat-count=n>, or B<-kgbr=n> can limit the number of times this logic is applied
+
 In addition, the following abbreviations are available to for simplified usage:
 
 B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=2 -kgba=2 kgbi>
