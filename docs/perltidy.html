@@ -2121,15 +2121,15 @@
 
 <p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>; <b>n</b> is 0, 1, or 2</p>
 
-<p><b>--keyword-group-blanks-inside=n</b>, or <b>-kgbi=n</b>; <b>n</b> is 0 or 1</p>
+<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b> is an on/off switch</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>; is an on/off switch</p>
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b> is an on/off switch</p>
 
 <p>In addition, the following abbreviations are available to simplify usage:</p>
 
-<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=1 -kgba=1 -kgbi=1</b></p>
+<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=1 -kgba=1 kgbi</b></p>
 
-<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=0 -kgba=0 -kgbi=0</b></p>
+<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=0 -kgba=0 nkgbi</b></p>
 
 <p>Before describing the meaning of the parameters in detail let us look at an example which is formatted with default parameter settings.</p>
 
@@ -2150,45 +2150,23 @@
 <p>using <b>perltidy -kgb</b> gives:</p>
 
 <pre><code>        print &quot;Entering test 2\n&quot;;
-
+                                            &lt;-this blank controlled by -kgbb
         use Test;
         use Encode qw(from_to encode decode
           encode_utf8 decode_utf8
           find_encoding is_utf8);
         use charnames qw(greek);
-
+                                            &lt;-this blank controlled by -kgbi
         my @encodings     = grep( /iso-?8859/, Encode::encodings() );
         my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
         my @source        = qw(ascii iso8859-1 cp1250);
         my @destiny       = qw(cp1047 cp37 posix-bc);
         my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
         my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
-
+                                             &lt;-this blank controlled by -kgba
         return unless ($str);</code></pre>
 
 <p>Blank lines have been introduced around the <b>my</b> and <b>use</b> sequences. What happened is that the default keyword list includes <b>my</b> and <b>use</b> but not <b>print</b> and <b>return</b>. So a continuous sequence of nine <b>my</b> and <b>use</b> statements was located. This number exceeds the default threshold of five, so blanks were placed before and after the entire group. Then, since there was also a subsequence of six <b>my</b> lines, a blank line was introduced to separate them.</p>
-
-<p>Now suppose there had been some spaces in the starting script, such as</p>
-
-<pre><code>        print &quot;Entering test 2\n&quot;;
-        use Test;
-        use Encode qw(from_to encode decode
-          encode_utf8 decode_utf8
-          find_encoding is_utf8);
-
-        use charnames qw(greek);
-        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
-        my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
-        my @source        = qw(ascii iso8859-1 cp1250);
-
-        my @destiny     = qw(cp1047 cp37 posix-bc);
-        my @ebcdic_sets = qw(cp1047 cp37 posix-bc);
-        my $str         = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
-        return unless ($str);</code></pre>
-
-<p>Using just <b>perltidy -kgb</b> would have no effect on this script because the groups each have fewer than the threshold number of statements. If more compact code is desirable there is a parameter <b>-kgbd</b> available which causes perltidy to make a preliminary pass through the input script to delete blank lines between lines with the keywords being sought. This allows keyword groups of maximum possible length to be formed.</p>
-
-<p>So using <b>perltidy -kgbd -kgb</b> on the above script would produce the same output as previously shown.</p>
 
 <p>Finer control over blank placement can be achieved by using the individual parameters rather than the <b>-kgb</b> flag. The individual controls are as follows.</p>
 
@@ -2208,16 +2186,13 @@
    n=1 =&gt; a blank line is introduced if possible 
    n=2 =&gt; an existing blank line will be removed</code></pre>
 
-<p><b>--keyword-group-blanks-inside=n</b>, or <b>-kgbi=n</b>, specifies whether subgroups of a single statement type with more than the minimum number (as specified with <b>-kgbc=n</b>) may be separated from the other sub-groups with blank lines, where</p>
+<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b>, controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbc=n</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
-<pre><code>   n=0 =&gt; no blank internal line is introduced [Default]
-   n=1 =&gt; a blank line is introduced before and after a subgroup</code></pre>
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>.</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, causes blank lines between two statements with one of the sought keywords to be deleted before groups are formed. This will produce the most compact code and maximum group sizes. To leave these blank lines unchanged use <b>--nokeyword-group-blanks-delete</b>, or <b>-nkgbd</b>. Note that the <b>-kgbd</b> flag only removes blank lines between statements with one of the keywords being sought. Blanks before and after keyword sequences can be controlled with parameters <b>-kgbb</b> and <b>-kgba</b>. Also note that blanks deleted by this flag are not subject to any threshold number. All qualifying blank lines will be deleted.</p>
+<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is an abbreviation equivalent to setting <b>-kgbb=1 -kgba=1 -kgbi</b>. This turns on keyword group formatting with a set of default values.</p>
 
-<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, which is equivalent to setting <b>-kgbb=1 -kgba=1 -kgbi=1</b>. This turns on keyword group formatting with a set of default values.</p>
-
-<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is equivalent to <b>-kgbb=0 -kgba kgbi=0</b>. This flag turns off keyword group blank lines and is the default setting.</p>
+<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is equivalent to <b>-kgbb=0 -kgba nkgbi</b>. This flag turns off keyword group blank lines and is the default setting.</p>
 
 <p>Here are a few notes about the functioning of this technique.</p>
 

@@ -978,16 +978,20 @@ sub keyword_group_scan {
     my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
     my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
     my $Opt_blanks_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
-    my $Opt_long_count    = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
-    my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'}; # '-bac'
-    my $Opt_pattern =
-      $keyword_group_list_pattern;    # like '^(my|local|our|use)$';
 
     return $rhash_of_desires
       unless ( $Opt_blanks_before
         || $Opt_blanks_after
-        || $Opt_blanks_inside
+        || $Opt_blanks_inside 
         || $Opt_blanks_delete );
+
+    $Opt_blanks_before = 0 unless defined($Opt_blanks_before);
+    $Opt_blanks_after  = 0 unless defined($Opt_blanks_after);
+
+
+    my $Opt_long_count = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
+    my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'};  # '-bac'
+    my $Opt_pattern               = $keyword_group_list_pattern;
 
     my $rlines              = $self->{rlines};
     my $rLL                 = $self->{rLL};
@@ -1003,7 +1007,7 @@ sub keyword_group_scan {
 
         # Here we place blanks around long sub-groups of keywords
         # if requested.
-        return unless ($Opt_blanks_inside);
+        return unless ( $Opt_blanks_inside );
 
         my $ib = $sublist[0]->[0];
         push @sublist, [ $iend + 1, "", 0 ];
@@ -1011,10 +1015,8 @@ sub keyword_group_scan {
             my $ie  = $sublist[$j]->[0] - 1;
             my $num = $sublist[ $j - 1 ]->[2];
             if ( $num >= $Opt_long_count ) {
-                if ($Opt_blanks_inside) {
-                    $rhash_of_desires->{ $ib - 1 } = 1 unless ( $ib == $ibeg );
-                    $rhash_of_desires->{$ie} = 1 unless ( $ie == $iend );
-                }
+                $rhash_of_desires->{ $ib - 1 } = 1 unless ( $ib == $ibeg );
+                $rhash_of_desires->{$ie} = 1 unless ( $ie == $iend );
             }
             $ib = $ie + 1;
         }
@@ -1022,6 +1024,8 @@ sub keyword_group_scan {
 
     my $delete_if_blank = sub {
         my ($i) = @_;
+
+	# delete line $i if it is blank
         return unless ( $i >= 0 && $i < @{$rlines} );
         my $line_type = $rlines->[$i]->{_line_type};
         return if ( $line_type ne 'CODE' );
@@ -1033,7 +1037,7 @@ sub keyword_group_scan {
     my $delete_inner_blank_lines = sub {
 
         # mark blank lines for deletion if requested
-        return unless $Opt_blanks_delete;
+        return unless ($Opt_blanks_delete );
 
         # remove trailing blank lines from the list
         my $i_last_nonblank = $iend;
@@ -1059,11 +1063,11 @@ sub keyword_group_scan {
         my ($bad_ending) = @_;
         if ( defined($ibeg) && $ibeg >= 0 ) {
 
-            # first do any blank deletions regardless of the count
-            $delete_inner_blank_lines->();
-
             # then handle sufficiently large groups
             if ( $count >= $Opt_long_count ) {
+
+                # do any blank deletions regardless of the count
+                $delete_inner_blank_lines->();
 
                 if ( $ibeg > 0 ) {
                     my $code_type = $rlines->[ $ibeg - 1 ]->{_code_type};
@@ -1179,17 +1183,9 @@ sub keyword_group_scan {
         }
 
         # continue in a verbatim (VB) type; it may be quoted text
-        if ( $CODE_type eq 'VB' ) {
+        # and continue in blank (BL) types 
+        if ( $CODE_type eq 'VB' || $CODE_type eq 'BL') {
             if ( $ibeg >= 0 ) { $iend = $i; }
-            next;
-        }
-
-        # continue in blank (BL) types only if we are deleting blanks
-        if ( $CODE_type eq 'BL' ) {
-            if ( $ibeg >= 0 ) {
-                if ($Opt_blanks_delete) { $iend = $i }
-                else                    { $end_group->() }
-            }
             next;
         }
 

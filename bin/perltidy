@@ -2679,15 +2679,15 @@ B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> is 0, 1, or 2
 
 B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> is 0, 1, or 2
 
-B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>; B<n> is 0 or 1
+B<--keyword-group-blanks-inside>, or B<-kgbi> is an on/off switch
 
-B<--keyword-group-blanks-delete>,   or B<-kgbd>; is an on/off switch
+B<--keyword-group-blanks-delete>, or B<-kgbd> is an on/off switch
 
 In addition, the following abbreviations are available to simplify usage:
 
-B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=1 -kgba=1 -kgbi=1>
+B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=1 -kgba=1 kgbi>
 
-B<--nokeyword-group-blanks>, or B<-nkgb>, is short for B<-kgbb=0 -kgba=0 -kgbi=0>
+B<--nokeyword-group-blanks>, or B<-nkgb>, is short for B<-kgbb=0 -kgba=0 nkgbi>
 
 Before describing the meaning of the parameters in detail let us look at an
 example which is formatted with default parameter settings.
@@ -2709,20 +2709,20 @@ example which is formatted with default parameter settings.
 using B<perltidy -kgb> gives:
 
         print "Entering test 2\n";
-
+                                            <-this blank controlled by -kgbb
         use Test;
         use Encode qw(from_to encode decode
           encode_utf8 decode_utf8
           find_encoding is_utf8);
         use charnames qw(greek);
-
+                                            <-this blank controlled by -kgbi
         my @encodings     = grep( /iso-?8859/, Encode::encodings() );
         my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
         my @source        = qw(ascii iso8859-1 cp1250);
         my @destiny       = qw(cp1047 cp37 posix-bc);
         my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
         my $str           = join( '', map( chr($_), 0x20 .. 0x7E ) );
-
+                                             <-this blank controlled by -kgba
         return unless ($str);
 
 Blank lines have been introduced around the B<my> and B<use> sequences.  What
@@ -2732,34 +2732,6 @@ statements was located.  This number exceeds the default threshold of five, so
 blanks were placed before and after the entire group.  Then, since there was
 also a subsequence of six B<my> lines, a blank line was introduced to separate
 them.
-
-Now suppose there had been some spaces in the starting script, such as
-
-        print "Entering test 2\n";
-        use Test;
-        use Encode qw(from_to encode decode
-          encode_utf8 decode_utf8
-          find_encoding is_utf8);
-
-        use charnames qw(greek);
-        my @encodings     = grep( /iso-?8859/, Encode::encodings() );
-        my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
-        my @source        = qw(ascii iso8859-1 cp1250);
-
-        my @destiny     = qw(cp1047 cp37 posix-bc);
-        my @ebcdic_sets = qw(cp1047 cp37 posix-bc);
-        my $str         = join( '', map( chr($_), 0x20 .. 0x7E ) );
-        return unless ($str);
-
-Using just B<perltidy -kgb> would have no effect on this script because the
-groups each have fewer than the threshold number of statements.  If more
-compact code is desirable there is a parameter B<-kgbd> available which 
-causes perltidy to make a preliminary pass through the input script to delete 
-blank lines between lines with the keywords being sought. This allows
-keyword groups of maximum possible length to be formed.  
-
-So using B<perltidy -kgbd -kgb> on the above script would produce the same
-output as previously shown.  
 
 Finer control over blank placement can be achieved by using the individual
 parameters rather than the B<-kgb> flag.  The individual controls are as follows.
@@ -2788,30 +2760,28 @@ scheme:
    n=1 => a blank line is introduced if possible 
    n=2 => an existing blank line will be removed
 
-B<--keyword-group-blanks-inside=n>, or B<-kgbi=n>, specifies
-whether subgroups of a single statement type with more than the minimum number (as
-specified with B<-kgbc=n>) may be separated from the other sub-groups with
-blank lines, where 
+B<--keyword-group-blanks-inside>, or B<-kgbi>, controls
+the insertion of blank lines between the first and last statement of the entire
+group.  If there is a continuous run of a single statement type with more than
+the minimum threshold number (as specified with B<-kgbc=n>) then this
+switch causes a blank line be inserted between this
+subgroup and the others. In the example above this happened between the
+B<use> and B<my> statements.
 
-   n=0 => no blank internal line is introduced [Default]
-   n=1 => a blank line is introduced before and after a subgroup
+B<--keyword-group-blanks-delete>, or B<-kgbd>, controls the deletion of any
+blank lines that exist in the the group when it is first scanned.  When
+statements are initially scanned, any existing blank lines are included in the
+collection.  Any such orignial blank lines will be deleted before any other
+insertions are made when the parameter B<-kgbd> is set.  The default is not to
+do this, B<-nkgbd>.
 
-B<--keyword-group-blanks-delete>, or B<-kgbd>, causes blank lines between two
-statements with one of the sought keywords to be deleted before groups are
-formed.  This will produce the most compact code and maximum group sizes.  To
-leave these blank lines unchanged use B<--nokeyword-group-blanks-delete>, or
-B<-nkgbd>.  Note that the B<-kgbd> flag only removes blank lines between
-statements with one of the keywords being sought. Blanks before and after
-keyword sequences can be controlled with parameters B<-kgbb> and B<-kgba>.
-Also note that blanks deleted by this flag are not subject to any threshold 
-number.  All qualifying blank lines will be deleted.
+B<--keyword-group-blanks>, or B<-kgb>, is an abbreviation equivalent to setting
+B<-kgbb=1 -kgba=1 -kgbi>.  This turns on keyword group formatting with a set of
+default values.  
 
-B<--keyword-group-blanks>, or B<-kgb>, which is equivalent to setting
-B<-kgbb=1 -kgba=1 -kgbi=1>.  This turns on keyword group formatting
-with a set of default values.  
-
-B<--nokeyword-group-blanks>, or B<-nkgb>, is equivalent to B<-kgbb=0 -kgba kgbi=0>.  
-This flag turns off keyword group blank lines and is the default setting. 
+B<--nokeyword-group-blanks>, or B<-nkgb>, is equivalent to B<-kgbb=0 -kgba
+nkgbi>.  This flag turns off keyword group blank lines and is the default
+setting. 
 
 Here are a few notes about the functioning of this technique.  
 

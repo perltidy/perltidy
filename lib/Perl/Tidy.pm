@@ -1800,7 +1800,7 @@ sub generate_options {
     $add_option->( 'keyword-group-blanks-count',  'kgbc', '=i' );
     $add_option->( 'keyword-group-blanks-before', 'kgbb', '=i' );
     $add_option->( 'keyword-group-blanks-after',  'kgba', '=i' );
-    $add_option->( 'keyword-group-blanks-inside', 'kgbi', '=i' );
+    $add_option->( 'keyword-group-blanks-inside', 'kgbi', '!' );
     $add_option->( 'keyword-group-blanks-delete', 'kgbd', '!' );
 
     $add_option->( 'blank-lines-after-opening-block',       'blao',  '=i' );
@@ -1916,7 +1916,6 @@ sub generate_options {
 
         'keyword-group-blanks-before' => [ 0, 2 ],
         'keyword-group-blanks-after'  => [ 0, 2 ],
-        'keyword-group-blanks-inside' => [ 0, 1 ],
     );
 
     # Note: we could actually allow negative ci if someone really wants it:
@@ -1940,7 +1939,8 @@ sub generate_options {
       keyword-group-blanks-count=5
       keyword-group-blanks-before=0
       keyword-group-blanks-after=0
-      keyword-group-blanks-inside=0
+      nokeyword-group-blanks-inside
+      nokeyword-group-blanks-delete
 
       block-brace-tightness=0
       block-brace-vertical-tightness=0
@@ -2080,10 +2080,10 @@ sub generate_options {
         'noblanks-before-subs' => [qw(blbs=0 blbp=0)],
         'nbbs'                 => [qw(blbs=0 blbp=0)],
 
-        'keyword-group-blanks'   => [qw(kgbb=1 kgbi=1 kgba=1)],
-        'kgb'                    => [qw(kgbb=1 kgbi=1 kgba=1)],
-        'nokeyword-group-blanks' => [qw(kgbb=0 kgbi=0 kgba=0)],
-        'nkgb'                   => [qw(kgbb=0 kgbi=0 kgba=0)],
+        'keyword-group-blanks'   => [qw(kgbb=1 kgbi kgba=1)],
+        'kgb'                    => [qw(kgbb=1 kgbi kgba=1)],
+        'nokeyword-group-blanks' => [qw(kgbb=0 nkgbi kgba=0)],
+        'nkgb'                   => [qw(kgbb=0 nkgbi kgba=0)],
 
         'break-at-old-trinary-breakpoints' => [qw(bot)],
 
