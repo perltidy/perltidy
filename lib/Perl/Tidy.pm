@@ -1937,8 +1937,8 @@ sub generate_options {
 
       noblanks-after-comments
       keyword-group-blanks-count=5
-      keyword-group-blanks-before=0
-      keyword-group-blanks-after=0
+      keyword-group-blanks-before=1
+      keyword-group-blanks-after=1
       nokeyword-group-blanks-inside
       nokeyword-group-blanks-delete
 
@@ -2080,10 +2080,10 @@ sub generate_options {
         'noblanks-before-subs' => [qw(blbs=0 blbp=0)],
         'nbbs'                 => [qw(blbs=0 blbp=0)],
 
-        'keyword-group-blanks'   => [qw(kgbb=1 kgbi kgba=1)],
-        'kgb'                    => [qw(kgbb=1 kgbi kgba=1)],
-        'nokeyword-group-blanks' => [qw(kgbb=0 nkgbi kgba=0)],
-        'nkgb'                   => [qw(kgbb=0 nkgbi kgba=0)],
+        'keyword-group-blanks'   => [qw(kgbb=2 kgbi kgba=2)],
+        'kgb'                    => [qw(kgbb=2 kgbi kgba=2)],
+        'nokeyword-group-blanks' => [qw(kgbb=1 nkgbi kgba=1)],
+        'nkgb'                   => [qw(kgbb=1 nkgbi kgba=1)],
 
         'break-at-old-trinary-breakpoints' => [qw(bot)],
 

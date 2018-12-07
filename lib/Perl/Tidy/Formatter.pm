@@ -978,18 +978,20 @@ sub keyword_group_scan {
     my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
     my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
     my $Opt_blanks_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
+    my $Opt_long_count    = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
+
+    # codes for $Opt_blanks_before and $Opt_blanks_after:
+    # 0 = never (delete if exist)
+    # 1 = stable (keep unchanged)
+    # 2 = always (insert if missing)
 
     return $rhash_of_desires
-      unless ( $Opt_blanks_before
-        || $Opt_blanks_after
-        || $Opt_blanks_inside 
+      unless $Opt_long_count > 0
+      && ( $Opt_blanks_before != 1
+        || $Opt_blanks_after != 1
+        || $Opt_blanks_inside
         || $Opt_blanks_delete );
 
-    $Opt_blanks_before = 0 unless defined($Opt_blanks_before);
-    $Opt_blanks_after  = 0 unless defined($Opt_blanks_after);
-
-
-    my $Opt_long_count = $rOpts->{'keyword-group-blanks-count'};    # '-kgbc'
     my $Opt_blanks_after_comments = $rOpts->{'blanks-after-comments'};  # '-bac'
     my $Opt_pattern               = $keyword_group_list_pattern;
 
@@ -1083,7 +1085,7 @@ sub keyword_group_scan {
                     if (   $Opt_blanks_after_comments
                         || $code_type !~ /(BC|SBC|SBCX)/ )
                     {
-                        if ( $Opt_blanks_before == 1 ) {
+                        if ( $Opt_blanks_before == 2 ) {
                             $rhash_of_desires->{ $ibeg - 1 } = 1;
                             if ( defined( $rhash_of_desires->{$ibeg} )
                                 && $rhash_of_desires->{$ibeg} == 2 )
@@ -1091,7 +1093,7 @@ sub keyword_group_scan {
                                 $rhash_of_desires->{$ibeg} = 0;
                             }
                         }
-                        elsif ( $Opt_blanks_before == 2 ) {
+                        elsif ( $Opt_blanks_before == 0 ) {
                             $delete_if_blank->( $ibeg - 1 );
                         }
                     }
@@ -1117,10 +1119,10 @@ sub keyword_group_scan {
                         && $iend < @{$rlines}
                         && $CODE_type ne 'HSC' )
                     {
-                        if ( $Opt_blanks_after == 1 ) {
+                        if ( $Opt_blanks_after == 2 ) {
                             $rhash_of_desires->{$iend} = 1;
                         }
-                        elsif ( $Opt_blanks_after == 2 ) {
+                        elsif ( $Opt_blanks_after == 0 ) {
                             $delete_if_blank->( $iend + 1 );
                         }
                     }

@@ -2671,23 +2671,23 @@ called here B<keyword group blanks>, and all of the parameters begin with
 B<--keyword-group-blanks*>, or B<-kgb*> for short.  The default settings do not
 employ these controls but they can be enabled with the following parameters:
 
-B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string
+B<--keyword-group-blanks-list=s>,   or B<-kgbl=s>; B<s> is a quoted string of keywords
 
-B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is an integer [def 5]
+B<--keyword-group-blanks-count=n>,  or B<-kgbc=n>; B<n> is a threshold group size
 
-B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> is 0, 1, or 2
+B<--keyword-group-blanks-before=n>, or B<-kgbb=n>; B<n> = (0, 1, or 2) controls a leading blank
 
-B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> is 0, 1, or 2
+B<--keyword-group-blanks-after=n>,  or B<-kgba=n>; B<n> = (0, 1, or 2) controls a trailing blank
 
-B<--keyword-group-blanks-inside>, or B<-kgbi> is an on/off switch
+B<--keyword-group-blanks-inside>, or B<-kgbi> is a switch for adding blanks between subgroups
 
-B<--keyword-group-blanks-delete>, or B<-kgbd> is an on/off switch
+B<--keyword-group-blanks-delete>, or B<-kgbd> is a switch for removing initial blank lines between keywords
 
-In addition, the following abbreviations are available to simplify usage:
+In addition, the following abbreviations are available to for simplified usage:
 
-B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=1 -kgba=1 kgbi>
+B<--keyword-group-blanks>,   or B<-kgb>,  is short for B<-kgbb=2 -kgba=2 kgbi>
 
-B<--nokeyword-group-blanks>, or B<-nkgb>, is short for B<-kgbb=0 -kgba=0 nkgbi>
+B<--nokeyword-group-blanks>, or B<-nkgb>, is short for B<-kgbb=1 -kgba=1 nkgbi>
 
 Before describing the meaning of the parameters in detail let us look at an
 example which is formatted with default parameter settings.
@@ -2709,20 +2709,20 @@ example which is formatted with default parameter settings.
 using B<perltidy -kgb> gives:
 
         print "Entering test 2\n";
-                                            <-this blank controlled by -kgbb
+                                      <----------this blank controlled by -kgbb
         use Test;
         use Encode qw(from_to encode decode
           encode_utf8 decode_utf8
           find_encoding is_utf8);
         use charnames qw(greek);
-                                            <-this blank controlled by -kgbi
+                                      <---------this blank controlled by -kgbi
         my @encodings     = grep( /iso-?8859/, Encode::encodings() );
         my @character_set = ( '0' .. '9', 'A' .. 'Z', 'a' .. 'z' );
         my @source        = qw(ascii iso8859-1 cp1250);
         my @destiny       = qw(cp1047 cp37 posix-bc);
         my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
         my $str           = join( '', map( chr($_), 0x20 .. 0x7E ) );
-                                             <-this blank controlled by -kgba
+                                      <----------this blank controlled by -kgba
         return unless ($str);
 
 Blank lines have been introduced around the B<my> and B<use> sequences.  What
@@ -2743,22 +2743,19 @@ our my sub">, but any list of keywords may be used.
 
 B<--keyword-group-blanks-count=n>, or B<-kgbc=n>, where B<n> is the minimum
 number of consecutive keyword statements to which these controls apply.  The
-default is B<n=5>.
+default is B<n=5>. The special value B<n=0> can be used to turn off all 
+searching for keyword groups.
 
 B<--keyword-group-blanks-before=n>, or B<-kgbb=n>, specifies whether
 a blank should appear before the first line of the group, as follows:
 
-   n=0 => no change to the input file is made 
-   n=1 => a blank line is introduced if possible
-   n=2 => an existing blank line will be removed
+   n=0 => (delete) an existing blank line will be removed
+   n=1 => (stable) no change to the input file is made  [DEFAULT]
+   n=2 => (insert) a blank line is introduced if possible
 
 B<--keyword-group-blanks-after=n>, or B<-kgba=n>, likewise specifies
 whether a blank should appear after the last line of the group, using the same
-scheme:
-
-   n=0 => no change to the input file is made [Default]
-   n=1 => a blank line is introduced if possible 
-   n=2 => an existing blank line will be removed
+scheme (0=delete, 1=stable, 2=insert).
 
 B<--keyword-group-blanks-inside>, or B<-kgbi>, controls
 the insertion of blank lines between the first and last statement of the entire

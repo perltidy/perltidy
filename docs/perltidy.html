@@ -2113,23 +2113,23 @@
 
 <p>It is common in Perl programs to have consecutive statements beginning with a certain common keyword, or one of a certain set of keywords. For example near the top of a program there might be a series of <b>use</b> statements or a series of <b>my</b> declarations. The parameters in this section provide control over the placement of blank lines within and around such groups of statements. These blank lines are called here <b>keyword group blanks</b>, and all of the parameters begin with <b>--keyword-group-blanks*</b>, or <b>-kgb*</b> for short. The default settings do not employ these controls but they can be enabled with the following parameters:</p>
 
-<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>; <b>s</b> is a quoted string</p>
+<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>; <b>s</b> is a quoted string of keywords</p>
 
-<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>; <b>n</b> is an integer [def 5]</p>
+<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>; <b>n</b> is a threshold group size</p>
 
-<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>; <b>n</b> is 0, 1, or 2</p>
+<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>; <b>n</b> = (0, 1, or 2) controls a leading blank</p>
 
-<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>; <b>n</b> is 0, 1, or 2</p>
+<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>; <b>n</b> = (0, 1, or 2) controls a trailing blank</p>
 
-<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b> is an on/off switch</p>
+<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b> is a switch for adding blanks between subgroups</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b> is an on/off switch</p>
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b> is a switch for removing initial blank lines between keywords</p>
 
-<p>In addition, the following abbreviations are available to simplify usage:</p>
+<p>In addition, the following abbreviations are available to for simplified usage:</p>
 
-<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=1 -kgba=1 kgbi</b></p>
+<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=2 -kgba=2 kgbi</b></p>
 
-<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=0 -kgba=0 nkgbi</b></p>
+<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=1 -kgba=1 nkgbi</b></p>
 
 <p>Before describing the meaning of the parameters in detail let us look at an example which is formatted with default parameter settings.</p>
 
@@ -2150,20 +2150,20 @@
 <p>using <b>perltidy -kgb</b> gives:</p>
 
 <pre><code>        print &quot;Entering test 2\n&quot;;
-                                            &lt;-this blank controlled by -kgbb
+                                      &lt;----------this blank controlled by -kgbb
         use Test;
         use Encode qw(from_to encode decode
           encode_utf8 decode_utf8
           find_encoding is_utf8);
         use charnames qw(greek);
-                                            &lt;-this blank controlled by -kgbi
+                                      &lt;---------this blank controlled by -kgbi
         my @encodings     = grep( /iso-?8859/, Encode::encodings() );
         my @character_set = ( &#39;0&#39; .. &#39;9&#39;, &#39;A&#39; .. &#39;Z&#39;, &#39;a&#39; .. &#39;z&#39; );
         my @source        = qw(ascii iso8859-1 cp1250);
         my @destiny       = qw(cp1047 cp37 posix-bc);
         my @ebcdic_sets   = qw(cp1047 cp37 posix-bc);
         my $str           = join( &#39;&#39;, map( chr($_), 0x20 .. 0x7E ) );
-                                             &lt;-this blank controlled by -kgba
+                                      &lt;----------this blank controlled by -kgba
         return unless ($str);</code></pre>
 
 <p>Blank lines have been introduced around the <b>my</b> and <b>use</b> sequences. What happened is that the default keyword list includes <b>my</b> and <b>use</b> but not <b>print</b> and <b>return</b>. So a continuous sequence of nine <b>my</b> and <b>use</b> statements was located. This number exceeds the default threshold of five, so blanks were placed before and after the entire group. Then, since there was also a subsequence of six <b>my</b> lines, a blank line was introduced to separate them.</p>
@@ -2172,19 +2172,15 @@
 
 <p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used.</p>
 
-<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>, where <b>n</b> is the minimum number of consecutive keyword statements to which these controls apply. The default is <b>n=5</b>.</p>
+<p><b>--keyword-group-blanks-count=n</b>, or <b>-kgbc=n</b>, where <b>n</b> is the minimum number of consecutive keyword statements to which these controls apply. The default is <b>n=5</b>. The special value <b>n=0</b> can be used to turn off all searching for keyword groups.</p>
 
 <p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>, specifies whether a blank should appear before the first line of the group, as follows:</p>
 
-<pre><code>   n=0 =&gt; no change to the input file is made 
-   n=1 =&gt; a blank line is introduced if possible
-   n=2 =&gt; an existing blank line will be removed</code></pre>
+<pre><code>   n=0 =&gt; (delete) an existing blank line will be removed
+   n=1 =&gt; (stable) no change to the input file is made  [DEFAULT]
+   n=2 =&gt; (insert) a blank line is introduced if possible</code></pre>
 
-<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>, likewise specifies whether a blank should appear after the last line of the group, using the same scheme:</p>
-
-<pre><code>   n=0 =&gt; no change to the input file is made [Default]
-   n=1 =&gt; a blank line is introduced if possible 
-   n=2 =&gt; an existing blank line will be removed</code></pre>
+<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>, likewise specifies whether a blank should appear after the last line of the group, using the same scheme (0=delete, 1=stable, 2=insert).</p>
 
 <p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b>, controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbc=n</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
