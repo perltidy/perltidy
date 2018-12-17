@@ -1923,7 +1923,7 @@ Here is an example illustrating a welded container within a welded containers:
 
 This format option is quite general but there are some limitations.  
 
-One limitiation is that any line length limit still applies and can cause long
+One limitation is that any line length limit still applies and can cause long
 welded sections to be broken into multiple lines.  
 
 Another limitation is that an opening symbol which delimits quoted text cannot
@@ -2149,7 +2149,7 @@ controls can be used:
 
 The flag B<-sot> is an abbreviation for B<-sop -sohb -sosb>.
 
-The flag B<-sobb> is a abbreviation for B<-bbvt=2 -bbvtl='*'>.  This
+The flag B<-sobb> is an abbreviation for B<-bbvt=2 -bbvtl='*'>.  This
 will case a cascade of opening block braces to appear on a single line,
 although this an uncommon occurrence except in test scripts. 
 

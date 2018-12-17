@@ -129,7 +129,7 @@ command line string.
 If the B<dump_options> parameter is given, it must be the reference to a hash.
 In this case, the parameters contained in any perltidyrc configuration file
 will be placed in this hash and perltidy will return immediately.  This is
-equivalent to running perltidy with --dump-options, except that the perameters
+equivalent to running perltidy with --dump-options, except that the parameters
 are returned in a hash rather than dumped to standard output.  Also, by default
 only the parameters in the perltidyrc file are returned, but this can be
 changed (see the next parameter).  This parameter provides a convenient method
@@ -214,7 +214,7 @@ B<argv> parameter.
 The B<-syn> (B<--check-syntax>) flag may be used with all source and
 destination streams except for standard input and output.  However 
 data streams which are not associated with a filename will 
-be copied to a temporary file before being be passed to Perl.  This
+be copied to a temporary file before being passed to Perl.  This
 use of temporary files can cause somewhat confusing output from Perl.
 
 If the B<-pbp> style is used it will typically be necessary to also
