@@ -2653,6 +2653,43 @@ lines will be gone.  However, this will cause all old blank lines to be
 ignored, perhaps even some that were added by hand to improve formatting. So
 please be cautious when using these parameters.
 
+=item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>   
+
+This parameter specifies the maximum number of consecutive blank lines which
+will be output within code sections of a script.  The default is n=1.  If the
+input file has more than n consecutive blank lines, the number will be reduced
+to n except as noted above for the B<-blbp> and B<-blbs> parameters.  If B<n=0>
+then no blank lines will be output (unless all old blank lines are retained
+with the B<-kbl=2> flag of the next section).
+
+This flag obviously does not apply to pod sections,
+here-documents, and quotes.  
+
+=item B<-kbl=n>,  B<--keep-old-blank-lines=n>
+
+The B<-kbl=n> flag gives you control over how your existing blank lines are
+treated.  
+
+The possible values of B<n> are:
+
+ n=0 ignore all old blank lines
+ n=1 stable: keep old blanks, but limited by the value of the B<-mbl=n> flag
+ n=2 keep all old blank lines, regardless of the value of the B<-mbl=n> flag
+
+The default is B<n=1>.  
+
+=item B<-sob>,  B<--swallow-optional-blank-lines>
+
+This is equivalent to B<kbl=0> and is included for compatibility with
+previous versions.
+
+=item B<-nsob>,  B<--noswallow-optional-blank-lines>
+
+This is equivalent to B<kbl=1> and is included for compatibility with
+previous versions.
+
+=back
+
 =item B<Controls for blank lines around lines of consecutive keywords>
 
 It is common in Perl programs to have consecutive statements beginning with a
@@ -2827,42 +2864,6 @@ is badly formatted, it would be best to make a first pass without these options.
 
 =back
 
-=item B<-mbl=n> B<--maximum-consecutive-blank-lines=n>   
-
-This parameter specifies the maximum number of consecutive blank lines which
-will be output within code sections of a script.  The default is n=1.  If the
-input file has more than n consecutive blank lines, the number will be reduced
-to n except as noted above for the B<-blbp> and B<-blbs> parameters.  If B<n=0>
-then no blank lines will be output (unless all old blank lines are retained
-with the B<-kbl=2> flag of the next section).
-
-This flag obviously does not apply to pod sections,
-here-documents, and quotes.  
-
-=item B<-kbl=n>,  B<--keep-old-blank-lines=n>
-
-The B<-kbl=n> flag gives you control over how your existing blank lines are
-treated.  
-
-The possible values of B<n> are:
-
- n=0 ignore all old blank lines
- n=1 stable: keep old blanks, but limited by the value of the B<-mbl=n> flag
- n=2 keep all old blank lines, regardless of the value of the B<-mbl=n> flag
-
-The default is B<n=1>.  
-
-=item B<-sob>,  B<--swallow-optional-blank-lines>
-
-This is equivalent to B<kbl=0> and is included for compatibility with
-previous versions.
-
-=item B<-nsob>,  B<--noswallow-optional-blank-lines>
-
-This is equivalent to B<kbl=1> and is included for compatibility with
-previous versions.
-
-=back
 
 =head2 Styles
 

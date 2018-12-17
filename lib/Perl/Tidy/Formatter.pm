@@ -965,7 +965,7 @@ sub prepare_for_new_input_lines {
 sub keyword_group_scan {
     my $self = shift;
 
-    # Handle blank lines around keyword groups (kgb* flags)
+    # Manipulate blank lines around keyword groups (kgb* flags)
     # Scan all lines looking for runs of consecutive lines beginning with
     # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
     # they may be anything.  We will set flags requesting that blanks be
@@ -974,9 +974,9 @@ sub keyword_group_scan {
     # they are not necessarily well formatted.
 
     # The output of this sub is a return hash ref whose keys are the indexes of
-    # lines after which we desire a blank line.  For line index i,
-    #     $rhash_of_desires->{$i} = 1 means we want a blank line AFTER this line
-    #     $rhash_of_desires->{$i} = 2 means we want THIS blank line removed
+    # lines after which we desire a blank line.  For line index i:
+    #     $rhash_of_desires->{$i} = 1 means we want a blank line AFTER line $i
+    #     $rhash_of_desires->{$i} = 2 means we want blank line $i removed
     my $rhash_of_desires = {};
 
     my $Opt_blanks_before = $rOpts->{'keyword-group-blanks-before'};   # '-kgbb'
@@ -999,7 +999,10 @@ sub keyword_group_scan {
     if (   $Opt_size_min && $Opt_size_min !~ /^\d+$/
         || $Opt_size_max && $Opt_size_max !~ /^\d+$/ )
     {
-        print STDERR "unexpected value for -kgbs: '$Opt_size'; ignoring\n"; 
+	Warn(<<EOM);
+Unexpected value for -kgbs: '$Opt_size'; expecting 'min' or 'min.max'; 
+ignoring all -kgb flags
+EOM
         return $rhash_of_desires
     }
     $Opt_size_min = 1 unless ($Opt_size_min);
@@ -5947,7 +5950,7 @@ sub make_keyword_group_list_pattern {
         && $rOpts->{'keyword-group-blanks-list'} )
     {
         $keyword_group_list_pattern =
-          make_block_pattern( '-kgbl', $rOpts->{'keyword-group-list'} );
+          make_block_pattern( '-kgbl', $rOpts->{'keyword-group-blanks-list'} );
     }
     return;
 }

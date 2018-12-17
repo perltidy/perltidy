@@ -53,6 +53,7 @@
   <li><a href="#COPYRIGHT">COPYRIGHT</a></li>
   <li><a href="#LICENSE">LICENSE</a></li>
   <li><a href="#DISCLAIMER">DISCLAIMER</a></li>
+  <li><a href="#POD-ERRORS">POD ERRORS</a></li>
 </ul>
 
 <h1 id="NAME">NAME</h1>
@@ -2102,6 +2103,44 @@
 <p>We can easily fix this by telling perltidy to ignore old blank lines by including the added parameter <b>-kbl=0</b> and rerunning. Then the unwanted blank lines will be gone. However, this will cause all old blank lines to be ignored, perhaps even some that were added by hand to improve formatting. So please be cautious when using these parameters.</p>
 
 </dd>
+<dt id="mbl-n---maximum-consecutive-blank-lines-n"><b>-mbl=n</b> <b>--maximum-consecutive-blank-lines=n</b></dt>
+<dd>
+
+<p>This parameter specifies the maximum number of consecutive blank lines which will be output within code sections of a script. The default is n=1. If the input file has more than n consecutive blank lines, the number will be reduced to n except as noted above for the <b>-blbp</b> and <b>-blbs</b> parameters. If <b>n=0</b> then no blank lines will be output (unless all old blank lines are retained with the <b>-kbl=2</b> flag of the next section).</p>
+
+<p>This flag obviously does not apply to pod sections, here-documents, and quotes.</p>
+
+</dd>
+<dt id="kbl-n---keep-old-blank-lines-n"><b>-kbl=n</b>, <b>--keep-old-blank-lines=n</b></dt>
+<dd>
+
+<p>The <b>-kbl=n</b> flag gives you control over how your existing blank lines are treated.</p>
+
+<p>The possible values of <b>n</b> are:</p>
+
+<pre><code> n=0 ignore all old blank lines
+ n=1 stable: keep old blanks, but limited by the value of the B&lt;-mbl=n&gt; flag
+ n=2 keep all old blank lines, regardless of the value of the B&lt;-mbl=n&gt; flag</code></pre>
+
+<p>The default is <b>n=1</b>.</p>
+
+</dd>
+<dt id="sob---swallow-optional-blank-lines"><b>-sob</b>, <b>--swallow-optional-blank-lines</b></dt>
+<dd>
+
+<p>This is equivalent to <b>kbl=0</b> and is included for compatibility with previous versions.</p>
+
+</dd>
+<dt id="nsob---noswallow-optional-blank-lines"><b>-nsob</b>, <b>--noswallow-optional-blank-lines</b></dt>
+<dd>
+
+<p>This is equivalent to <b>kbl=1</b> and is included for compatibility with previous versions.</p>
+
+</dd>
+</dl>
+
+<dl>
+
 <dt id="Controls-for-blank-lines-around-lines-of-consecutive-keywords"><b>Controls for blank lines around lines of consecutive keywords</b></dt>
 <dd>
 
@@ -2215,40 +2254,6 @@
 
 </li>
 </ul>
-
-</dd>
-<dt id="mbl-n---maximum-consecutive-blank-lines-n"><b>-mbl=n</b> <b>--maximum-consecutive-blank-lines=n</b></dt>
-<dd>
-
-<p>This parameter specifies the maximum number of consecutive blank lines which will be output within code sections of a script. The default is n=1. If the input file has more than n consecutive blank lines, the number will be reduced to n except as noted above for the <b>-blbp</b> and <b>-blbs</b> parameters. If <b>n=0</b> then no blank lines will be output (unless all old blank lines are retained with the <b>-kbl=2</b> flag of the next section).</p>
-
-<p>This flag obviously does not apply to pod sections, here-documents, and quotes.</p>
-
-</dd>
-<dt id="kbl-n---keep-old-blank-lines-n"><b>-kbl=n</b>, <b>--keep-old-blank-lines=n</b></dt>
-<dd>
-
-<p>The <b>-kbl=n</b> flag gives you control over how your existing blank lines are treated.</p>
-
-<p>The possible values of <b>n</b> are:</p>
-
-<pre><code> n=0 ignore all old blank lines
- n=1 stable: keep old blanks, but limited by the value of the B&lt;-mbl=n&gt; flag
- n=2 keep all old blank lines, regardless of the value of the B&lt;-mbl=n&gt; flag</code></pre>
-
-<p>The default is <b>n=1</b>.</p>
-
-</dd>
-<dt id="sob---swallow-optional-blank-lines"><b>-sob</b>, <b>--swallow-optional-blank-lines</b></dt>
-<dd>
-
-<p>This is equivalent to <b>kbl=0</b> and is included for compatibility with previous versions.</p>
-
-</dd>
-<dt id="nsob---noswallow-optional-blank-lines"><b>-nsob</b>, <b>--noswallow-optional-blank-lines</b></dt>
-<dd>
-
-<p>This is equivalent to <b>kbl=1</b> and is included for compatibility with previous versions.</p>
 
 </dd>
 </dl>
@@ -2827,6 +2832,26 @@
 <p>This package is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</p>
 
 <p>See the &quot;GNU General Public License&quot; for more details.</p>
+
+<h1 id="POD-ERRORS">POD ERRORS</h1>
+
+<p>Hey! <b>The above document had some coding errors, which are explained below:</b></p>
+
+<dl>
+
+<dt id="Around-line-2693">Around line 2693:</dt>
+<dd>
+
+<p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
+
+</dd>
+<dt id="Around-line-2868">Around line 2868:</dt>
+<dd>
+
+<p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
+
+</dd>
+</dl>
 
 
 </body>
