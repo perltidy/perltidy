@@ -552,7 +552,6 @@ require Cwd;
 
 ( my $boot = $self->{NAME} ) =~ s/:/_/g;
 doit(
-
     sub { @E::ISA = qw/F/ },
     sub { @E::ISA = qw/D/; @C::ISA = qw/F/ },
     sub { @C::ISA = qw//; @A::ISA = qw/K/ },
@@ -561,7 +560,6 @@ doit(
     sub { @H::ISA = qw/G/; @B::ISA = qw/B/ },
     sub { @B::ISA = qw//; @K::ISA = qw/K J I/ },
     sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
-
     return;
 );
 my %extractor_for = (
