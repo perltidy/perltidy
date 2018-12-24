@@ -16,6 +16,8 @@
 #13 kgb4.kgb
 #14 kgb5.def
 #15 kgb5.kgb
+#16 kgbd.def
+#17 kgbd.kgbd
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,8 +35,9 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def' => "",
-        'kgb' => "-kgb",
+        'def'  => "",
+        'kgb'  => "-kgb",
+        'kgbd' => "-kgbd -kgb",
     };
 
     ############################
@@ -261,6 +264,23 @@ my $result =
   : "-A";
 my $F = "0";
 print "with -kgb, put blank above this line; result=$result\n";
+----------
+
+        'kgbd' => <<'----------',
+package A1::B2;
+
+use strict;
+
+require Exporter;
+use A1::Context;
+
+use A1::Database;
+use A1::Bibliotek;
+use A1::Author;
+use A1::Title;
+
+use vars qw($VERSION @ISA @EXPORT);
+$VERSION = 0.01;
 ----------
 
         'ternary3' => <<'----------',
@@ -760,6 +780,47 @@ my $result =
 my $F = "0";
 print "with -kgb, put blank above this line; result=$result\n";
 #15...........
+        },
+
+        'kgbd.def' => {
+            source => "kgbd",
+            params => "def",
+            expect => <<'#16...........',
+package A1::B2;
+
+use strict;
+
+require Exporter;
+use A1::Context;
+
+use A1::Database;
+use A1::Bibliotek;
+use A1::Author;
+use A1::Title;
+
+use vars qw($VERSION @ISA @EXPORT);
+$VERSION = 0.01;
+#16...........
+        },
+
+        'kgbd.kgbd' => {
+            source => "kgbd",
+            params => "kgbd",
+            expect => <<'#17...........',
+package A1::B2;
+
+use strict;
+require Exporter;
+
+use A1::Context;
+use A1::Database;
+use A1::Bibliotek;
+use A1::Author;
+use A1::Title;
+use vars qw($VERSION @ISA @EXPORT);
+
+$VERSION = 0.01;
+#17...........
         },
     };
 

@@ -1,0 +1,14 @@
+package A1::B2;
+
+use strict;
+
+require Exporter;
+use A1::Context;
+
+use A1::Database;
+use A1::Bibliotek;
+use A1::Author;
+use A1::Title;
+
+use vars qw($VERSION @ISA @EXPORT);
+$VERSION = 0.01;

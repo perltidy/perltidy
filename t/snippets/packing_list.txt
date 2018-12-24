@@ -273,3 +273,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets14.t	kgbd.def
+../snippets14.t	kgbd.kgbd
