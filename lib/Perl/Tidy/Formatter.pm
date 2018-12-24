@@ -827,8 +827,6 @@ sub get_valign_batch_count {
 sub Fault {
     my ($msg) = @_;
 
-    # "I've just picked up a fault in the AE35 unit" - 2001: A Space Odyssey ...
-
     # This routine is called for errors that really should not occur
     # except if there has been a bug introduced by a recent program change
     my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
@@ -991,7 +989,7 @@ sub keyword_group_scan {
     #    1.1             1      1    exactly 1
     #    1.3             1      3    1,2, or 3
     #    1..3            1      3    1,2, or 3
-    #    5               5      -    5 or more               
+    #    5               5      -    5 or more
     #    6.              6      -    6 or more
     #    .2              -      2    up to 2
     #    1.0             1      0    nothing
@@ -999,11 +997,11 @@ sub keyword_group_scan {
     if (   $Opt_size_min && $Opt_size_min !~ /^\d+$/
         || $Opt_size_max && $Opt_size_max !~ /^\d+$/ )
     {
-	Warn(<<EOM);
+        Warn(<<EOM);
 Unexpected value for -kgbs: '$Opt_size'; expecting 'min' or 'min.max'; 
 ignoring all -kgb flags
 EOM
-        return $rhash_of_desires
+        return $rhash_of_desires;
     }
     $Opt_size_min = 1 unless ($Opt_size_min);
 
@@ -1023,7 +1021,7 @@ EOM
         || $Opt_blanks_inside
         || $Opt_blanks_delete );
 
-    my $Opt_pattern               = $keyword_group_list_pattern;
+    my $Opt_pattern = $keyword_group_list_pattern;
     my $Opt_repeat_count =
       $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
 
@@ -1052,6 +1050,22 @@ EOM
 
     my $number_of_groups_seen = 0;
 
+    ####################
+    # helper subroutines
+    ####################
+
+    my $insert_blank_after = sub {
+        my ($i) = @_;
+        $rhash_of_desires->{$i} = 1;
+        my $ip = $i + 1;
+        if ( defined( $rhash_of_desires->{$ip} )
+            && $rhash_of_desires->{$ip} == 2 )
+        {
+            $rhash_of_desires->{$ip} = 0;
+        }
+        return;
+    };
+
     my $split_into_sub_groups = sub {
 
         # place blanks around long sub-groups of keywords
@@ -1060,18 +1074,18 @@ EOM
 
         # loop over sub-groups, index k
         push @subgroup, scalar @group;
-	my $kbeg=1;
-	my $kend=@subgroup-1;
+        my $kbeg = 1;
+        my $kend = @subgroup - 1;
         for ( my $k = $kbeg ; $k <= $kend ; $k++ ) {
 
-	    # index j runs through all keywords found
+            # index j runs through all keywords found
             my $j_b = $subgroup[ $k - 1 ];
-            my $j_e = $subgroup[$k]-1;
+            my $j_e = $subgroup[$k] - 1;
 
-	    # index i is the actual line number of a keyword
+            # index i is the actual line number of a keyword
             my ( $i_b, $tok_b, $count_b ) = @{ $group[$j_b] };
             my ( $i_e, $tok_e, $count_e ) = @{ $group[$j_e] };
-            my $num = $count_e - $count_b+1;
+            my $num = $count_e - $count_b + 1;
 
             # This subgroup runs from line $ib to line $ie-1, but may contain
             # blank lines
@@ -1090,11 +1104,11 @@ EOM
                     $nog_e = $count_e - $count_ee + 1 == $num;
                 }
                 if ( $nog_b && $k > $kbeg ) {
-                    $rhash_of_desires->{ $i_b - 1 } = 1;
+                    $insert_blank_after->( $i_b - 1 );
                 }
                 if ( $nog_e && $k < $kend ) {
                     my ( $i_ep, $tok_ep, $count_ep ) = @{ $group[ $j_e + 1 ] };
-                    $rhash_of_desires->{ $i_ep - 1 } = 1;
+                    $insert_blank_after->( $i_ep - 1 );
                 }
             }
         }
@@ -1114,17 +1128,17 @@ EOM
 
     my $delete_inner_blank_lines = sub {
 
-        # always remove unwanted trailing blank lines from our list 
+        # always remove unwanted trailing blank lines from our list
         return unless (@iblanks);
-        while (my $ibl = pop(@iblanks) ){
-            last if ( $ibl < $iend );
+        while ( my $ibl = pop(@iblanks) ) {
+            if ( $ibl < $iend ) { push @iblanks, $ibl; last }
             $iend = $ibl;
         }
 
         # now mark mark interior blank lines for deletion if requested
         return unless ($Opt_blanks_delete);
 
-        while ( my $ibl = pop(@iblanks) ) { $rhash_of_desires->{$ibl} = 2; }
+        while ( my $ibl = pop(@iblanks) ) { $rhash_of_desires->{$ibl} = 2 }
 
     };
 
@@ -1153,18 +1167,14 @@ EOM
                           if ( $line_text && $line_text =~ /^#/ );
                     }
 
-		    # Do not inseert a blank after a comment
-		    # (this could be subject to a flag in the future)
+                    # Do not inseert a blank after a comment
+                    # (this could be subject to a flag in the future)
                     #if (   $Opt_blanks_after_comments != 0
                     #    || $code_type !~ /(BC|SBC|SBCX)/ )
                     if ( $code_type !~ /(BC|SBC|SBCX)/ ) {
                         if ( $Opt_blanks_before == INSERT ) {
-                            $rhash_of_desires->{ $ibeg - 1 } = 1;
-                            if ( defined( $rhash_of_desires->{$ibeg} )
-                                && $rhash_of_desires->{$ibeg} == 2 )
-                            {
-                                $rhash_of_desires->{$ibeg} = 0;
-                            }
+                            $insert_blank_after->( $ibeg - 1 );
+
                         }
                         elsif ( $Opt_blanks_before == DELETE ) {
                             $delete_if_blank->( $ibeg - 1 );
@@ -1193,7 +1203,7 @@ EOM
                         && $CODE_type ne 'HSC' )
                     {
                         if ( $Opt_blanks_after == INSERT ) {
-                            $rhash_of_desires->{$iend} = 1;
+                            $insert_blank_after->($iend);
                         }
                         elsif ( $Opt_blanks_after == DELETE ) {
                             $delete_if_blank->( $iend + 1 );
@@ -1209,12 +1219,12 @@ EOM
         $iend      = undef;
         $level_beg = -1;
         $K_closing = undef;
-        @group   = ();
-        @subgroup   = ();
+        @group     = ();
+        @subgroup  = ();
         @iblanks   = ();
     };
 
-    my $container_check = sub {
+    my $find_container_end = sub {
 
         # If the keyword lines ends with an open token, find the closing token
         # '$K_closing' so that we can easily skip past the contents of the
@@ -1239,8 +1249,8 @@ EOM
     my $add_to_group = sub {
         my ( $i, $token, $level ) = @_;
 
-	# End the previous group if we have reached the maximum
-	# group size
+        # End the previous group if we have reached the maximum
+        # group size
         if ( $Opt_size_max && @group >= $Opt_size_max ) {
             $end_group->();
         }
@@ -1248,27 +1258,31 @@ EOM
         if ( @group == 0 ) {
             $ibeg      = $i;
             $level_beg = $level;
-	    $count = 0;
+            $count     = 0;
         }
 
-	$count++;
+        $count++;
         $iend = $i;
 
         # New sub-group?
         if ( !@group || $token ne $group[-1]->[1] ) {
             push @subgroup, scalar(@group);
+            my $num    = @group;
+            my $oldtok = $num ? $group[-1]->[1] : "";
+
         }
         push @group, [ $i, $token, $count ];
 
         # remember if this line ends in an open container
-        $container_check->();
+        $find_container_end->();
 
         return;
     };
 
-    $end_group->();
-
+    ###################################
     # loop over all lines of the source
+    ###################################
+    $end_group->();
     my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
 
@@ -1304,8 +1318,10 @@ EOM
             if ( $ibeg >= 0 ) {
                 $iend = $i;
                 push @{iblanks}, $i;
-                push @group, [ $i, "", $count ];
 
+                # propagate current subgroup token
+                my $tok = $group[-1]->[1];
+                push @group, [ $i, $tok, $count ];
             }
             next;
         }
@@ -1315,8 +1331,8 @@ EOM
         ( $K_first, $K_last ) = @{$rK_range};
         if ( !defined($K_first) ) {
 
-            # Unexpected blank line..
-            # we should have avoided this
+            # Unexpected blank line..shouldn't happen
+            # $rK_range should be defined for line type CODE
             Warn(
 "Programming Error: Unexpected Blank Line in sub 'keyword_group_scan'. Ignoring"
             );
@@ -1337,7 +1353,7 @@ EOM
 
             # Continuing a keyword group
             if ( $ibeg >= 0 && $level == $level_beg ) {
-		$add_to_group->($i, $token, $level);
+                $add_to_group->( $i, $token, $level );
             }
 
             # Start new keyword group
@@ -1346,7 +1362,7 @@ EOM
                 # first end old group if any; we might be starting new
                 # keywords at different level
                 if ( $ibeg > 0 ) { $end_group->(); }
-		$add_to_group->($i, $token, $level);
+                $add_to_group->( $i, $token, $level );
             }
             next;
         }
@@ -1398,7 +1414,7 @@ EOM
                 next;
             }
 
-            # - end the group if non of the above
+            # - end the group if none of the above
             $end_group->();
             next;
         }
@@ -1411,6 +1427,8 @@ EOM
     $end_group->();
     return $rhash_of_desires;
 }
+
+
 sub break_lines {
 
     # Loop over old lines to set new line break points
