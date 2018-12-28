@@ -2771,7 +2771,7 @@ parameters rather than the B<-kgb> flag.  The individual controls are as follows
 B<--keyword-group-blanks-list=s>, or B<-kgbl=s>, where B<s> is a quoted string,
 defines the set of keywords which will be formed into groups.  The string is a
 space separated list of keywords.  The default set is B<s="use require local
-our my sub">, but any list of keywords may be used.  
+our my sub">, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords.  To include ordinary block comments, include the symbol 'BC'. To include special block comments (which normally begin with '##'), include the symbol 'SBC'.
 
 B<--keyword-group-blanks-size=s>, or B<-kgbs=s>, where B<s> is a string
 describing the number of consecutive keyword statements forming a group.  If

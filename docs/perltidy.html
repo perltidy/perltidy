@@ -2205,7 +2205,7 @@
 
 <p>Finer control over blank placement can be achieved by using the individual parameters rather than the <b>-kgb</b> flag. The individual controls are as follows.</p>
 
-<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used.</p>
+<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords. To include ordinary block comments, include the symbol &#39;BC&#39;. To include special block comments (which normally begin with &#39;##&#39;), include the symbol &#39;SBC&#39;.</p>
 
 <p><b>--keyword-group-blanks-size=s</b>, or <b>-kgbs=s</b>, where <b>s</b> is a string describing the number of consecutive keyword statements forming a group. If <b>s</b> is an integer then it is the minimum number required for a group. A maximum value may also be given with the format <b>s=min.max</b>, where <b>min</b> is the minimum number and <b>max</b> is the maximum number, and the min and max values are separated by one or more dots. No groups will be found if the maximum is less than the minimum. The maximum is unlimited if not given. The default is <b>s=5</b>. Some examples:</p>
 

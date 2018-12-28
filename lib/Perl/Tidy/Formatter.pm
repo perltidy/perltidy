@@ -243,6 +243,7 @@ use vars qw{
 
   $block_brace_vertical_tightness_pattern
   $keyword_group_list_pattern
+  $keyword_group_list_comment_pattern
 
   $rOpts_add_newlines
   $rOpts_add_whitespace
@@ -1021,7 +1022,8 @@ EOM
         || $Opt_blanks_inside
         || $Opt_blanks_delete );
 
-    my $Opt_pattern = $keyword_group_list_pattern;
+    my $Opt_pattern         = $keyword_group_list_pattern;
+    my $Opt_comment_pattern = $keyword_group_list_comment_pattern;
     my $Opt_repeat_count =
       $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
 
@@ -1167,10 +1169,8 @@ EOM
                           if ( $line_text && $line_text =~ /^#/ );
                     }
 
-                    # Do not inseert a blank after a comment
+                    # Do not insert a blank after a comment
                     # (this could be subject to a flag in the future)
-                    #if (   $Opt_blanks_after_comments != 0
-                    #    || $code_type !~ /(BC|SBC|SBCX)/ )
                     if ( $code_type !~ /(BC|SBC|SBCX)/ ) {
                         if ( $Opt_blanks_before == INSERT ) {
                             $insert_blank_after->( $ibeg - 1 );
@@ -1229,6 +1229,7 @@ EOM
         # If the keyword lines ends with an open token, find the closing token
         # '$K_closing' so that we can easily skip past the contents of the
         # container.
+        return if ( $K_last <= $K_first );
         my $KK        = $K_last;
         my $type_last = $rLL->[$KK]->[_TYPE_];
         my $tok_last  = $rLL->[$KK]->[_TOKEN_];
@@ -1267,9 +1268,6 @@ EOM
         # New sub-group?
         if ( !@group || $token ne $group[-1]->[1] ) {
             push @subgroup, scalar(@group);
-            my $num    = @group;
-            my $oldtok = $num ? $group[-1]->[1] : "";
-
         }
         push @group, [ $i, $token, $count ];
 
@@ -1343,6 +1341,30 @@ EOM
         my $type     = $rLL->[$K_first]->[_TYPE_];
         my $token    = $rLL->[$K_first]->[_TOKEN_];
         my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+ 	# see if this is a code type we seek (i.e. comment)
+        if (   $CODE_type
+            && $Opt_comment_pattern
+            && $CODE_type =~ /$Opt_comment_pattern/o )
+        {
+
+            my $tok = $CODE_type;
+
+            # Continuing a group
+            if ( $ibeg >= 0 && $level == $level_beg ) {
+                $add_to_group->( $i, $tok, $level );
+            }
+
+            # Start new group
+            else {
+
+                # first end old group if any; we might be starting new
+                # keywords at different level
+                if ( $ibeg > 0 ) { $end_group->(); }
+                $add_to_group->( $i, $tok, $level );
+            }
+            next;
+        }
 
         # See if it is a keyword we seek, but never start a group in a
         # continuation line; the code may be badly formatted.
@@ -5962,13 +5984,27 @@ sub make_keyword_group_list_pattern {
 
     # turn any input list into a regex for recognizing selected block types.
     # Here are the defaults:
-    ##$keyword_group_list_pattern = '^((our|local|my|use|require|)$|sub)';
-    $keyword_group_list_pattern = '^(our|local|my|use|require|)$';
+    $keyword_group_list_pattern         = '^(our|local|my|use|require|)$';
+    $keyword_group_list_comment_pattern = '';
     if ( defined( $rOpts->{'keyword-group-blanks-list'} )
         && $rOpts->{'keyword-group-blanks-list'} )
     {
+        my @words = split /\s+/, $rOpts->{'keyword-group-blanks-list'};
+        my @keyword_list;
+        my @comment_list;
+        foreach my $word (@words) {
+            if ( $word =~ /^(BC|SBC)$/ ) {
+                push @comment_list, $word;
+                if ( $word eq 'SBC' ) { push @comment_list, 'SBCX' }
+            }
+            else {
+                push @keyword_list, $word;
+            }
+        }
         $keyword_group_list_pattern =
           make_block_pattern( '-kgbl', $rOpts->{'keyword-group-blanks-list'} );
+        $keyword_group_list_comment_pattern =
+          make_block_pattern( '-kgbl', join( ' ', @comment_list ) );
     }
     return;
 }
