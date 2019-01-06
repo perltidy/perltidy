@@ -2226,7 +2226,7 @@
 
 <p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b>, controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbs=s</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>.</p>
+<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>. Note: If old blank lines are being forced to remain with either <b>--freeze-blank-lines</b> or <b>--keep-old-blank-lines=2</b>, then this flag has no effect.</p>
 
 <p><b>--keyword-group-blanks-repeat-count=n</b>, or <b>-kgbr=n</b>, where <b>n</b> is the maximum number of times this logic will be applied to any file. The special value <b>n=0</b> is the same as n=infinity which means it will be applied to an entire script [Default]. A value <b>n=1</b> could be used to make it apply just one time for example. This might be useful for adjusting just the <b>use</b> statements in the top part of a module for example.</p>
 
@@ -2845,7 +2845,7 @@
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-2868">Around line 2868:</dt>
+<dt id="Around-line-2869">Around line 2869:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
