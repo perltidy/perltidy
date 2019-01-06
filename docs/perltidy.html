@@ -2144,7 +2144,7 @@
 <dt id="Controls-for-blank-lines-around-lines-of-consecutive-keywords"><b>Controls for blank lines around lines of consecutive keywords</b></dt>
 <dd>
 
-<p>It is common in Perl programs to have consecutive statements beginning with a certain common keyword, or one of a certain set of keywords. For example near the top of a program there might be a series of <b>use</b> statements or a series of <b>my</b> declarations. The parameters in this section provide control over the placement of blank lines within and around such groups of statements. These blank lines are called here <b>keyword group blanks</b>, and all of the parameters begin with <b>--keyword-group-blanks*</b>, or <b>-kgb*</b> for short. The default settings do not employ these controls but they can be enabled with the following parameters:</p>
+<p>The parameters in this section provide some control over the placement of blank lines within and around groups of statements beginning with selected keywords. These blank lines are called here <b>keyword group blanks</b>, and all of the parameters begin with <b>--keyword-group-blanks*</b>, or <b>-kgb*</b> for short. The default settings do not employ these controls but they can be enabled with the following parameters:</p>
 
 <p><b>-kgbl=s</b> or <b>--keyword-group-blanks-list=s</b>; <b>s</b> is a quoted string of keywords</p>
 
@@ -2226,7 +2226,7 @@
 
 <p><b>-kgbi</b> or <b>--keyword-group-blanks-inside</b> controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbs=s</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
-<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>. Note: If old blank lines are being forced to remain with either <b>--freeze-blank-lines</b> or <b>--keep-old-blank-lines=2</b>, then this flag has no effect.</p>
+<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>.</p>
 
 <p><b>-kgbr=n</b> or <b>--keyword-group-blanks-repeat-count=n</b> specifies <b>n</b>, the maximum number of times this logic will be applied to any file. The special value <b>n=0</b> is the same as n=infinity which means it will be applied to an entire script [Default]. A value <b>n=1</b> could be used to make it apply just one time for example. This might be useful for adjusting just the <b>use</b> statements in the top part of a module for example.</p>
 
@@ -2239,6 +2239,9 @@
 <ul>
 
 <li><p>The introduction of blank lines may not occur if it would conflict with other input controls or code validity. For example, a blank line will not be placed within a here-doc or within a section of code marked with format skipping comments.</p>
+
+</li>
+<li><p>If the flags <b>--freeze-blank-lines</b>, or <b>--keep-old-blank-lines=2</b>, are set, then they have priority over any blank line deletion implied by the <b>-kgb</b> flags of this section.</p>
 
 </li>
 <li><p>A blank line will only be introduced at the end of a group if the next statement is a line of code (as opposed to an __END__ line for example).</p>
@@ -2845,7 +2848,7 @@
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-2872">Around line 2872:</dt>
+<dt id="Around-line-2874">Around line 2874:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>

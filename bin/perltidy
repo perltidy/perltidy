@@ -2692,11 +2692,8 @@ previous versions.
 
 =item B<Controls for blank lines around lines of consecutive keywords>
 
-It is common in Perl programs to have consecutive statements beginning with a
-certain common keyword, or one of a certain set of keywords.  For example near the top
-of a program there might be a series of B<use> statements or a series of B<my>
-declarations.  The parameters in this section provide control over the placement of
-blank lines within and around such groups of statements.  These blank lines are
+The parameters in this section provide some control over the placement of
+blank lines within and around groups of statements beginning with selected keywords.  These blank lines are
 called here B<keyword group blanks>, and all of the parameters begin with
 B<--keyword-group-blanks*>, or B<-kgb*> for short.  The default settings do not
 employ these controls but they can be enabled with the following parameters:
@@ -2813,8 +2810,7 @@ blank lines that exist in the the group when it is first scanned.  When
 statements are initially scanned, any existing blank lines are included in the
 collection.  Any such orignial blank lines will be deleted before any other
 insertions are made when the parameter B<-kgbd> is set.  The default is not to
-do this, B<-nkgbd>.  Note: If old blank lines are being forced to remain with
-either B<--freeze-blank-lines> or B<--keep-old-blank-lines=2>, then this flag has no effect.
+do this, B<-nkgbd>.  
 
 B<-kgbr=n> or B<--keyword-group-blanks-repeat-count=n> specifies B<n>, the
 maximum number of times this logic will be applied to any file.  The special
@@ -2840,6 +2836,12 @@ Here are a few notes about the functioning of this technique.
 The introduction of blank lines may not occur if it would conflict with other
 input controls or code validity. For example, a blank line will not be placed
 within a here-doc or within a section of code marked with format skipping comments.
+
+=item *
+
+If the flags B<--freeze-blank-lines>, or B<--keep-old-blank-lines=2>, are set,
+then they have priority over any blank line deletion implied by the B<-kgb>
+flags of this section.
 
 =item *
 
