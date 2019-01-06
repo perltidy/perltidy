@@ -2813,7 +2813,8 @@ blank lines that exist in the the group when it is first scanned.  When
 statements are initially scanned, any existing blank lines are included in the
 collection.  Any such orignial blank lines will be deleted before any other
 insertions are made when the parameter B<-kgbd> is set.  The default is not to
-do this, B<-nkgbd>.
+do this, B<-nkgbd>.  Note: If old blank lines are being forced to remain with
+either B<--freeze-blank-lines> or B<--keep-old-blank-lines=2>, then this flag has no effect.
 
 B<--keyword-group-blanks-repeat-count=n>, or B<-kgbr=n>, where B<n> is the
 maximum number of times this logic will be applied to any file.  The special
