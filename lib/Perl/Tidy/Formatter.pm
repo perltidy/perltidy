@@ -1523,6 +1523,9 @@ sub break_lines {
                 my $kgb_keep = !( defined( $rwant_blank_line_after->{$i} )
                     && $rwant_blank_line_after->{$i} == 2 );
 
+		# But the keep-old-blank-lines flag has priority over kgb flags
+		$kgb_keep = 1 if ($rOpts_keep_old_blank_lines == 2 );
+
                 if ($rOpts_keep_old_blank_lines && $kgb_keep) {
                     $self->flush();
                     $file_writer_object->write_blank_code_line(
