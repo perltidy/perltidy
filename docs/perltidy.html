@@ -2146,25 +2146,25 @@
 
 <p>It is common in Perl programs to have consecutive statements beginning with a certain common keyword, or one of a certain set of keywords. For example near the top of a program there might be a series of <b>use</b> statements or a series of <b>my</b> declarations. The parameters in this section provide control over the placement of blank lines within and around such groups of statements. These blank lines are called here <b>keyword group blanks</b>, and all of the parameters begin with <b>--keyword-group-blanks*</b>, or <b>-kgb*</b> for short. The default settings do not employ these controls but they can be enabled with the following parameters:</p>
 
-<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>; <b>s</b> is a quoted string of keywords</p>
+<p><b>-kgbl=s</b> or <b>--keyword-group-blanks-list=s</b>; <b>s</b> is a quoted string of keywords</p>
 
-<p><b>--keyword-group-blanks-size=s</b>, or <b>-kgbs=s</b>; <b>s</b> gives the number of keywords required to form a group.</p>
+<p><b>-kgbs=s</b> or <b>--keyword-group-blanks-size=s</b>; <b>s</b> gives the number of keywords required to form a group.</p>
 
-<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>; <b>n</b> = (0, 1, or 2) controls a leading blank</p>
+<p><b>-kgbb=n</b> or <b>--keyword-group-blanks-before=n</b>; <b>n</b> = (0, 1, or 2) controls a leading blank</p>
 
-<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>; <b>n</b> = (0, 1, or 2) controls a trailing blank</p>
+<p><b>-kgba=n</b> or <b>--keyword-group-blanks-after=n</b>; <b>n</b> = (0, 1, or 2) controls a trailing blank</p>
 
-<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b> is a switch for adding blanks between subgroups</p>
+<p><b>-kgbi</b> or <b>--keyword-group-blanks-inside</b> is a switch for adding blanks between subgroups</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b> is a switch for removing initial blank lines between keywords</p>
+<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> is a switch for removing initial blank lines between keywords</p>
 
-<p><b>--keyword-group-blanks-repeat-count=n</b>, or <b>-kgbr=n</b> can limit the number of times this logic is applied</p>
+<p><b>-kgbr=n</b> or <b>--keyword-group-blanks-repeat-count=n</b> can limit the number of times this logic is applied</p>
 
 <p>In addition, the following abbreviations are available to for simplified usage:</p>
 
-<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is short for <b>-kgbb=2 -kgba=2 kgbi</b></p>
+<p><b>-kgb</b> or <b>--keyword-group-blanks</b> is short for <b>-kgbb=2 -kgba=2 kgbi</b></p>
 
-<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is short for <b>-kgbb=1 -kgba=1 nkgbi</b></p>
+<p><b>-nkgb</b> or <b>--nokeyword-group-blanks</b>, is short for <b>-kgbb=1 -kgba=1 nkgbi</b></p>
 
 <p>Before describing the meaning of the parameters in detail let us look at an example which is formatted with default parameter settings.</p>
 
@@ -2205,9 +2205,9 @@
 
 <p>Finer control over blank placement can be achieved by using the individual parameters rather than the <b>-kgb</b> flag. The individual controls are as follows.</p>
 
-<p><b>--keyword-group-blanks-list=s</b>, or <b>-kgbl=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords. To include ordinary block comments, include the symbol &#39;BC&#39;. To include special block comments (which normally begin with &#39;##&#39;), include the symbol &#39;SBC&#39;.</p>
+<p><b>-kgbl=s</b> or <b>--keyword-group-blanks-list=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords. To include ordinary block comments, include the symbol &#39;BC&#39;. To include special block comments (which normally begin with &#39;##&#39;), include the symbol &#39;SBC&#39;.</p>
 
-<p><b>--keyword-group-blanks-size=s</b>, or <b>-kgbs=s</b>, where <b>s</b> is a string describing the number of consecutive keyword statements forming a group. If <b>s</b> is an integer then it is the minimum number required for a group. A maximum value may also be given with the format <b>s=min.max</b>, where <b>min</b> is the minimum number and <b>max</b> is the maximum number, and the min and max values are separated by one or more dots. No groups will be found if the maximum is less than the minimum. The maximum is unlimited if not given. The default is <b>s=5</b>. Some examples:</p>
+<p><b>-kgbs=s</b> or <b>--keyword-group-blanks-size=s</b>, where <b>s</b> is a string describing the number of consecutive keyword statements forming a group. If <b>s</b> is an integer then it is the minimum number required for a group. A maximum value may also be given with the format <b>s=min.max</b>, where <b>min</b> is the minimum number and <b>max</b> is the maximum number, and the min and max values are separated by one or more dots. No groups will be found if the maximum is less than the minimum. The maximum is unlimited if not given. The default is <b>s=5</b>. Some examples:</p>
 
 <pre><code>    s      min   max         number for group
     3      3     unlimited   3 or more
@@ -2216,23 +2216,23 @@
     1.0    1     0           (no match)
     </code></pre>
 
-<p><b>--keyword-group-blanks-before=n</b>, or <b>-kgbb=n</b>, specifies whether a blank should appear before the first line of the group, as follows:</p>
+<p><b>-kgbb=n</b> or <b>--keyword-group-blanks-before=n</b> specifies whether a blank should appear before the first line of the group, as follows:</p>
 
 <pre><code>   n=0 =&gt; (delete) an existing blank line will be removed
    n=1 =&gt; (stable) no change to the input file is made  [DEFAULT]
    n=2 =&gt; (insert) a blank line is introduced if possible</code></pre>
 
-<p><b>--keyword-group-blanks-after=n</b>, or <b>-kgba=n</b>, likewise specifies whether a blank should appear after the last line of the group, using the same scheme (0=delete, 1=stable, 2=insert).</p>
+<p><b>-kgba=n</b> or <b>--keyword-group-blanks-after=n</b> likewise specifies whether a blank should appear after the last line of the group, using the same scheme (0=delete, 1=stable, 2=insert).</p>
 
-<p><b>--keyword-group-blanks-inside</b>, or <b>-kgbi</b>, controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbs=s</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
+<p><b>-kgbi</b> or <b>--keyword-group-blanks-inside</b> controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbs=s</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
-<p><b>--keyword-group-blanks-delete</b>, or <b>-kgbd</b>, controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>. Note: If old blank lines are being forced to remain with either <b>--freeze-blank-lines</b> or <b>--keep-old-blank-lines=2</b>, then this flag has no effect.</p>
+<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>. Note: If old blank lines are being forced to remain with either <b>--freeze-blank-lines</b> or <b>--keep-old-blank-lines=2</b>, then this flag has no effect.</p>
 
-<p><b>--keyword-group-blanks-repeat-count=n</b>, or <b>-kgbr=n</b>, where <b>n</b> is the maximum number of times this logic will be applied to any file. The special value <b>n=0</b> is the same as n=infinity which means it will be applied to an entire script [Default]. A value <b>n=1</b> could be used to make it apply just one time for example. This might be useful for adjusting just the <b>use</b> statements in the top part of a module for example.</p>
+<p><b>-kgbr=n</b> or <b>--keyword-group-blanks-repeat-count=n</b> specifies <b>n</b>, the maximum number of times this logic will be applied to any file. The special value <b>n=0</b> is the same as n=infinity which means it will be applied to an entire script [Default]. A value <b>n=1</b> could be used to make it apply just one time for example. This might be useful for adjusting just the <b>use</b> statements in the top part of a module for example.</p>
 
-<p><b>--keyword-group-blanks</b>, or <b>-kgb</b>, is an abbreviation equivalent to setting <b>-kgbb=1 -kgba=1 -kgbi</b>. This turns on keyword group formatting with a set of default values.</p>
+<p><b>-kgb</b> or <b>--keyword-group-blanks</b> is an abbreviation equivalent to setting <b>-kgbb=1 -kgba=1 -kgbi</b>. This turns on keyword group formatting with a set of default values.</p>
 
-<p><b>--nokeyword-group-blanks</b>, or <b>-nkgb</b>, is equivalent to <b>-kgbb=0 -kgba nkgbi</b>. This flag turns off keyword group blank lines and is the default setting.</p>
+<p><b>-nkgb</b> or <b>--nokeyword-group-blanks</b> is equivalent to <b>-kgbb=0 -kgba nkgbi</b>. This flag turns off keyword group blank lines and is the default setting.</p>
 
 <p>Here are a few notes about the functioning of this technique.</p>
 
@@ -2244,7 +2244,7 @@
 <li><p>A blank line will only be introduced at the end of a group if the next statement is a line of code (as opposed to an __END__ line for example).</p>
 
 </li>
-<li><p>A blank line will not be introduced after a comment line</p>
+<li><p>Deleting old blank lines with <b>-kgbd</b> is an irreversible operation and is probably most useful for a major code reformatting rather than as a standard operation. Existing blank lines may be serving an important role in controlling vertical alignment.</p>
 
 </li>
 <li><p>The count which is used to determine the group size is not the number of lines but rather the total number of keywords which are found. Individual statements with a certain leading keyword may continue on multiple lines, but if any of these lines is nested more than one level deep then that group will be ended.</p>
@@ -2845,7 +2845,7 @@
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-2869">Around line 2869:</dt>
+<dt id="Around-line-2872">Around line 2872:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
