@@ -2034,6 +2034,18 @@ sub my_flush {
     # handle group(s) of CODE lines
     else {
 
+	# LP FIX PART 1
+	# If we are trying to add extra indentation for -lp formatting,
+	# then we need to try to keep the group intact.  But we have
+	# to set the $extra_indent_ok flag to zero in case some lines
+	# are output separately.  We fix things up at the bottom.
+	# NOTE: this is a workaround but is tentative; we should really look to
+	# see if if extra indentation is possible.
+    	my $rOpt_lp = $rOpts->{'line-up-parentheses'};
+	my $keep_group_intact = $rOpt_lp && $extra_indent_ok;
+	my $extra_indent_ok_save = $extra_indent_ok;
+	$extra_indent_ok = 0;
+
         # we will rebuild alignment line group(s);
         my @new_lines = @group_lines;
         initialize_for_new_group();
@@ -2084,7 +2096,8 @@ sub my_flush {
 	    # BEFORE this line unless both it and the previous line have side
 	    # comments.  This prevents this line from pushing side coments out
 	    # to the right.
-            elsif ( $new_line->get_jmax() == 1 ) {
+            ##elsif ( $new_line->get_jmax() == 1 ) {
+            elsif ( $new_line->get_jmax() == 1 && !$keep_group_intact) {
 
                 # There are no matching tokens, so now check side comments:
                 my $prev_comment = $group_lines[-1]->get_rfields()->[-1];
@@ -2162,6 +2175,13 @@ sub my_flush {
             elsif ( $new_line->{_end_group} ) {
                 my_flush_code();
             }
+        }
+
+	# LP FIX PART 2
+	# if we managed to keep the group intact for -lp formatting,
+	# restore the flag which allows extra indentation
+        if ( $keep_group_intact && @group_lines == @new_lines ) {
+            $extra_indent_ok = $extra_indent_ok_save;
         }
         my_flush_code();
     }

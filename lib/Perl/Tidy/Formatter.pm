@@ -4111,6 +4111,17 @@ sub weld_nested_quotes {
             # FIXME: Are these always correct?
             $weld_len_left_closing{$outer_seqno}  = 1;
             $weld_len_right_opening{$outer_seqno} = 2;
+
+            # QW PATCH 1 (Testing)
+	    # undo CI for welded quotes
+            foreach my $K($Kn  .. $Kt_end ) {
+		$rLL->[$K]->[_CI_LEVEL_]=0;
+	    }
+
+	    # Change the level of a closing qw token to be that of the outer
+	    # containing token. This will allow -lp indentation to function
+	    # correctly in the vertical aligner.
+            $rLL->[$Kt_end]->[_LEVEL_] = $rLL->[$K_closing]->[_LEVEL_];
         }
     }
     return;
@@ -10419,8 +10430,35 @@ sub lookup_opening_indentation {
             $is_leading,          $opening_exists
         );
 
+        my $type_beg      = $types_to_go[$ibeg];
+        my $token_beg     = $tokens_to_go[$ibeg];
+        my $K_beg         = $K_to_go[$ibeg];
+        my $ibeg_weld_fix = $ibeg;
+
+        # QW PATCH 2 (Testing)
+	# At an isolated closing token of a qw quote which is welded to
+	# a following closing token, we will locally change its type to
+	# be the same as its token. This will allow formatting to be the
+	# same as for an ordinary closing token.  
+
+	# For -lp formatting se use $ibeg_weld_fix to get around the problem
+	# that with -lp type formatting the opening and closing tokens to not
+	# have sequence numbers. 
+        if ( $type_beg eq 'q' && $token_beg =~ /^[\)\}\]\>]/ ) {
+            my $K_next_nonblank = $self->K_next_code($K_beg);
+            if ( defined($K_next_nonblank) ) {
+                my $type_sequence = $rLL->[$K_next_nonblank]->[_TYPE_SEQUENCE_];
+                my $token         = $rLL->[$K_next_nonblank]->[_TOKEN_];
+                my $welded        = weld_len_left( $type_sequence, $token );
+                if ($welded) {
+                    $ibeg_weld_fix = $ibeg + ( $K_next_nonblank - $K_beg );
+                    $type_beg      = $token_beg;
+                }
+            }
+        }
+
         # if we are at a closing token of some type..
-        if ( $types_to_go[$ibeg] =~ /^[\)\}\]R]$/ ) {
+        if ( $type_beg =~ /^[\)\}\]\>R]$/ ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -10428,7 +10466,7 @@ sub lookup_opening_indentation {
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
               )
-              = get_opening_indentation( $ibeg, $ri_first, $ri_last,
+              = get_opening_indentation( $ibeg_weld_fix, $ri_first, $ri_last,
                 $rindentation_list );
 
             # First set the default behavior:
@@ -10443,7 +10481,7 @@ sub lookup_opening_indentation {
                 # incorrectly '(' and ')'.  Corrected to be '{' and '}'
                 || (
                        $terminal_type eq '{'
-                    && $types_to_go[$ibeg] eq '}'
+                    && $type_beg eq '}'
                     && ( $nesting_depth_to_go[$iend] + 1 ==
                         $nesting_depth_to_go[$ibeg] )
                 )
@@ -10453,7 +10491,7 @@ sub lookup_opening_indentation {
                 # or without ending '{' and unbalanced, such as
                 #       such as '}->{$operator}'
                 || (
-                    $types_to_go[$ibeg] eq '}'
+                    $type_beg eq '}'
 
                     && (   $types_to_go[$iend] eq '{'
                         || $levels_to_go[$iend] < $levels_to_go[$ibeg] )
@@ -10495,7 +10533,6 @@ sub lookup_opening_indentation {
             # it is the last token before a level decrease.  This will allow
             # a closing token to line up with its opening counterpart, and
             # avoids a indentation jump larger than 1 level.
-            my $K_beg = $K_to_go[$ibeg];
             if (   $types_to_go[$i_terminal] =~ /^[\}\]\)R]$/
                 && $i_terminal == $ibeg
                 && defined($K_beg) )
