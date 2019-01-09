@@ -18,6 +18,8 @@
 #15 kgb5.kgb
 #16 kgbd.def
 #17 kgbd.kgbd
+#18 kgb_tight.def
+#19 gnu5.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -82,6 +84,16 @@ else                                          { $rslt = vmspath($dir); }
 	# no pad after 'if' when followed by 'else'
         if ( $m = $g[$x][$y] ) { print $$m{v}; $$m{i}->() }
         else                   { print " " }
+----------
+
+        'gnu5' => <<'----------',
+        # side comments limit gnu type formatting with l=80; note extra comma
+        push @tests, [
+            "Lowest code point requiring 13 bytes to represent",    # 2**36
+            "\xff\x80\x80\x80\x80\x80\x81\x80\x80\x80\x80\x80\x80",
+            ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
+          ],
+          ;
 ----------
 
         'kgb1' => <<'----------',
@@ -264,6 +276,96 @@ my $result =
   : "-A";
 my $F = "0";
 print "with -kgb, put blank above this line; result=$result\n";
+----------
+
+        'kgb_tight' => <<'----------',
+# a variety of line types for testing -kgb
+use strict;
+use Test;
+use Encode qw(from_to encode decode
+  encode_utf8 decode_utf8
+  find_encoding is_utf8);
+
+use charnames qw(greek);
+our $targetdir = "/usr/local/doc/HTML/Perl";
+
+local (
+    $tocfile,   $loffile,   $lotfile,         $footfile,
+    $citefile,  $idxfile,   $figure_captions, $table_captions,
+    $footnotes, $citations, %font_size,       %index,
+    %done,      $t_title,   $t_author,        $t_date,
+    $t_address, $t_affil,   $changed
+);
+my @UNITCHECKs =
+    B::unitcheck_av->isa("B::AV")
+  ? B::unitcheck_av->ARRAY
+  : ();
+
+my @CHECKs = B::check_av->isa("B::AV") ? B::check_av->ARRAY : ();
+my $dna  = Bio::LiveSeq::DNA->new( -seq => $dnasequence );
+my $min  = 1;
+my $max  = length($dnasequence);
+my $T = $G->_strongly_connected;
+
+my %R = $T->vertex_roots;
+my @C;    # We're not calling the strongly_connected_components()
+	  # Do not separate this hanging side comment from previous
+
+my $G = shift;
+
+my $exon = Bio::LiveSeq::Exon->new(
+    -seq    => $dna,
+    -start  => $min,
+    -end    => $max,
+    -strand => 1
+);
+my @inputs = (
+    0777, 0700, 0470, 0407, 0433, 0400, 0430, 0403, 0111, 0100,
+    0110, 0101, 0731, 0713, 0317, 0371, 0173, 0137
+);
+my $impulse =
+  ( 1 - $factor ) * ( 170 - $u ) +
+  ( 350 / $u**0.65 + 500 / $u**5 ) * $factor;
+my $r = q{
+pm_to_blib: $(TO_INST_PM)
+};
+my $regcomp_re =
+  "(?<routine>ckWARN(?:\\d+)?reg\\w*|vWARN\\d+|$regcomp_fail_re)";
+my $position = List::MoreUtils::firstidx {
+    refaddr $_ == $key
+}
+
+my $alignprogram =
+"/usr/local/etc/bioinfo/fasta2/align -s /usr/local/etc/bioinfo/fasta2/idnaa.mat $fastafile1 $fastafile2 2>/dev/null | $grepcut"
+  ;                                                               # ALIGN
+my $skel_name =
+  ( exists( $xml_tree->{'name'} ) ) ? $xml_tree->{'name'} : "";
+my $grp = GroupGetValues( $conf->{dbh}, $group_id );
+
+my $adm_profile =
+  ProfileGetUser( $conf->{dbh}, $grp->{id_admin}, $group_id );
+my $harness = TAP::Harness->new(
+    { verbosity => 1, formatter_class => "TAP::Formatter::Console" } );
+require File::Temp;
+
+require Time::HiRes;
+
+my ( $fh, $filename ) = File::Temp::tempfile("Time-HiRes-utime-XXXXXXXXX");
+use File::Basename qw[dirname];
+my $dirname = dirname($filename);
+my $CUT         = qr/\n=cut.*$EOP/;
+
+my $pod_or_DATA = qr/
+              ^=(?:head[1-4]|item) .*? $CUT
+            | ^=pod .*? $CUT
+            | ^=for .*? $CUT
+            | ^=begin .*? $CUT
+            | ^__(DATA|END)__\r?\n.*
+            /smx;
+
+require Cwd;
+print "continuing\n";
+exit 1;
 ----------
 
         'kgbd' => <<'----------',
@@ -821,6 +923,113 @@ use vars qw($VERSION @ISA @EXPORT);
 
 $VERSION = 0.01;
 #17...........
+        },
+
+        'kgb_tight.def' => {
+            source => "kgb_tight",
+            params => "def",
+            expect => <<'#18...........',
+# a variety of line types for testing -kgb
+use strict;
+use Test;
+use Encode qw(from_to encode decode
+  encode_utf8 decode_utf8
+  find_encoding is_utf8);
+
+use charnames qw(greek);
+our $targetdir = "/usr/local/doc/HTML/Perl";
+
+local (
+    $tocfile,   $loffile,   $lotfile,         $footfile,
+    $citefile,  $idxfile,   $figure_captions, $table_captions,
+    $footnotes, $citations, %font_size,       %index,
+    %done,      $t_title,   $t_author,        $t_date,
+    $t_address, $t_affil,   $changed
+);
+my @UNITCHECKs =
+    B::unitcheck_av->isa("B::AV")
+  ? B::unitcheck_av->ARRAY
+  : ();
+
+my @CHECKs = B::check_av->isa("B::AV") ? B::check_av->ARRAY : ();
+my $dna    = Bio::LiveSeq::DNA->new( -seq => $dnasequence );
+my $min    = 1;
+my $max    = length($dnasequence);
+my $T      = $G->_strongly_connected;
+
+my %R = $T->vertex_roots;
+my @C;    # We're not calling the strongly_connected_components()
+          # Do not separate this hanging side comment from previous
+
+my $G = shift;
+
+my $exon = Bio::LiveSeq::Exon->new(
+    -seq    => $dna,
+    -start  => $min,
+    -end    => $max,
+    -strand => 1
+);
+my @inputs = (
+    0777, 0700, 0470, 0407, 0433, 0400, 0430, 0403, 0111, 0100,
+    0110, 0101, 0731, 0713, 0317, 0371, 0173, 0137
+);
+my $impulse =
+  ( 1 - $factor ) * ( 170 - $u ) + ( 350 / $u**0.65 + 500 / $u**5 ) * $factor;
+my $r = q{
+pm_to_blib: $(TO_INST_PM)
+};
+my $regcomp_re =
+  "(?<routine>ckWARN(?:\\d+)?reg\\w*|vWARN\\d+|$regcomp_fail_re)";
+my $position = List::MoreUtils::firstidx {
+    refaddr $_ == $key
+}
+
+my $alignprogram =
+"/usr/local/etc/bioinfo/fasta2/align -s /usr/local/etc/bioinfo/fasta2/idnaa.mat $fastafile1 $fastafile2 2>/dev/null | $grepcut"
+  ;    # ALIGN
+my $skel_name =
+  ( exists( $xml_tree->{'name'} ) ) ? $xml_tree->{'name'} : "";
+my $grp = GroupGetValues( $conf->{dbh}, $group_id );
+
+my $adm_profile =
+  ProfileGetUser( $conf->{dbh}, $grp->{id_admin}, $group_id );
+my $harness = TAP::Harness->new(
+    { verbosity => 1, formatter_class => "TAP::Formatter::Console" } );
+require File::Temp;
+
+require Time::HiRes;
+
+my ( $fh, $filename ) = File::Temp::tempfile("Time-HiRes-utime-XXXXXXXXX");
+use File::Basename qw[dirname];
+my $dirname = dirname($filename);
+my $CUT     = qr/\n=cut.*$EOP/;
+
+my $pod_or_DATA = qr/
+              ^=(?:head[1-4]|item) .*? $CUT
+            | ^=pod .*? $CUT
+            | ^=for .*? $CUT
+            | ^=begin .*? $CUT
+            | ^__(DATA|END)__\r?\n.*
+            /smx;
+
+require Cwd;
+print "continuing\n";
+exit 1;
+#18...........
+        },
+
+        'gnu5.def' => {
+            source => "gnu5",
+            params => "def",
+            expect => <<'#19...........',
+        # side comments limit gnu type formatting with l=80; note extra comma
+        push @tests, [
+            "Lowest code point requiring 13 bytes to represent",    # 2**36
+            "\xff\x80\x80\x80\x80\x80\x81\x80\x80\x80\x80\x80\x80",
+            ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
+          ],
+          ;
+#19...........
         },
     };
 

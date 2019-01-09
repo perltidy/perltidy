@@ -1,0 +1,17 @@
+    # test with -wn -gnu
+    foreach my $parameter (
+        qw(
+        set_themes
+        add_themes
+        severity
+        maximum_violations_per_document
+        _non_public_data
+        )
+      )
+    {
+        is(
+            $config->get($parameter),
+            undef,
+            qq<"$parameter" is not defined via get() for $policy_short_name.>,
+        );
+    }

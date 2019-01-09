@@ -378,11 +378,11 @@ if ( $PLATFORM eq 'aix' ) {
             expect => <<'#12...........',
 if ( $PLATFORM eq 'aix' ) {
     skip_symbols( [ qw(
-          Perl_dump_fds
-          Perl_ErrorNo
-          Perl_GetVars
-          PL_sys_intern
-          ) ] );
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
 }
 #12...........
         },
@@ -481,15 +481,15 @@ use_all_ok(
             expect => <<'#18...........',
 # qw weld with -wn
 use_all_ok( qw{
-      PPI
-      PPI::Tokenizer
-      PPI::Lexer
-      PPI::Dumper
-      PPI::Find
-      PPI::Normal
-      PPI::Util
-      PPI::Cache
-      } );
+    PPI
+    PPI::Tokenizer
+    PPI::Lexer
+    PPI::Dumper
+    PPI::Find
+    PPI::Normal
+    PPI::Util
+    PPI::Cache
+} );
 #18...........
         },
 

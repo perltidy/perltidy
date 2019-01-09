@@ -1,8 +1,8 @@
 if ( $PLATFORM eq 'aix' ) {
     skip_symbols( [ qw(
-          Perl_dump_fds
-          Perl_ErrorNo
-          Perl_GetVars
-          PL_sys_intern
-          ) ] );
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
 }
