@@ -2,9 +2,12 @@
 
 ## 2018 11 20.01
 
+    - RT #81852: Improved indentation when quoted word (qw) lists are 
+      nested within other containers using the --weld-nested (-wn) flag.
+
     - RT#12764, introduced new feature allowing placement of blanks around
-      sequences of selected keywords such as use, my, our, local. This can
-      be activated with the -kgb* series of parameters described in the manual.
+      sequences of selected keywords. This can be activated with the -kgb* 
+      series of parameters described in the manual.
 
     - Rewrote vertical algnment module.  It is much better at finding
       patterns in complex code.
