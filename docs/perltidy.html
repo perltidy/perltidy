@@ -2205,7 +2205,7 @@
 
 <p>Finer control over blank placement can be achieved by using the individual parameters rather than the <b>-kgb</b> flag. The individual controls are as follows.</p>
 
-<p><b>-kgbl=s</b> or <b>--keyword-group-blanks-list=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my sub&quot;</b>, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords. To include ordinary block comments, include the symbol &#39;BC&#39;. To include special block comments (which normally begin with &#39;##&#39;), include the symbol &#39;SBC&#39;.</p>
+<p><b>-kgbl=s</b> or <b>--keyword-group-blanks-list=s</b>, where <b>s</b> is a quoted string, defines the set of keywords which will be formed into groups. The string is a space separated list of keywords. The default set is <b>s=&quot;use require local our my&quot;</b>, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords. To include ordinary block comments, include the symbol <b>BC</b>. To include special block comments (which normally begin with &#39;##&#39;), include the symbol <b>SBC</b>.</p>
 
 <p><b>-kgbs=s</b> or <b>--keyword-group-blanks-size=s</b>, where <b>s</b> is a string describing the number of consecutive keyword statements forming a group. If <b>s</b> is an integer then it is the minimum number required for a group. A maximum value may also be given with the format <b>s=min.max</b>, where <b>min</b> is the minimum number and <b>max</b> is the maximum number, and the min and max values are separated by one or more dots. No groups will be found if the maximum is less than the minimum. The maximum is unlimited if not given. The default is <b>s=5</b>. Some examples:</p>
 
@@ -2238,22 +2238,25 @@
 
 <ul>
 
-<li><p>The introduction of blank lines may not occur if it would conflict with other input controls or code validity. For example, a blank line will not be placed within a here-doc or within a section of code marked with format skipping comments.</p>
+<li><p>These parameters are probably more useful as part of a major code reformatting operation rather than as a routine formatting operation.</p>
+
+<p>In particular, note that deleting old blank lines with <b>-kgbd</b> is an irreversible operation so it should be applied with care. Existing blank lines may be serving an important role in controlling vertical alignment.</p>
 
 </li>
-<li><p>If the flags <b>--freeze-blank-lines</b>, or <b>--keep-old-blank-lines=2</b>, are set, then they have priority over any blank line deletion implied by the <b>-kgb</b> flags of this section.</p>
+<li><p>Conflicts which arise among these <b>kgb*</b> parameters and other blank line controls are generally resolved by producing the maximum number of blank lines implied by any parameter.</p>
+
+<p>For example, if the flags <b>--freeze-blank-lines</b>, or <b>--keep-old-blank-lines=2</b>, are set, then they have priority over any blank line deletion implied by the <b>-kgb</b> flags of this section, so no blank lines will be deleted.</p>
+
+<p>For another example, if a keyword group ends at a <b>sub</b> and the flag <b>kgba=0</b> requests no blank line there, but we also have <b>--blank-lines-before-subs=2</b>, then two blank lines will still be introduced before the sub.</p>
 
 </li>
-<li><p>A blank line will only be introduced at the end of a group if the next statement is a line of code (as opposed to an __END__ line for example).</p>
-
-</li>
-<li><p>Deleting old blank lines with <b>-kgbd</b> is an irreversible operation and is probably most useful for a major code reformatting rather than as a standard operation. Existing blank lines may be serving an important role in controlling vertical alignment.</p>
+<li><p>The introduction of blank lines does not occur if it would conflict with other input controls or code validity. For example, a blank line will not be placed within a here-doc or within a section of code marked with format skipping comments. And in general, a blank line will only be introduced at the end of a group if the next statement is a line of code.</p>
 
 </li>
 <li><p>The count which is used to determine the group size is not the number of lines but rather the total number of keywords which are found. Individual statements with a certain leading keyword may continue on multiple lines, but if any of these lines is nested more than one level deep then that group will be ended.</p>
 
 </li>
-<li><p>The search for groups of lines with similar leading keywords is based on the input source, not the final formatted source. Consequently, if the source code is badly formatted, it would be best to make a first pass without these options.</p>
+<li><p>The search for groups of lines with similar leading keywords is based on the input source, not the final formatted source. Consequently, if the source code is badly formatted, it would be best to make a first formatting pass without these options.</p>
 
 </li>
 </ul>
@@ -2848,7 +2851,7 @@
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-2874">Around line 2874:</dt>
+<dt id="Around-line-2881">Around line 2881:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>

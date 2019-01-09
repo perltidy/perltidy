@@ -2692,11 +2692,12 @@ previous versions.
 
 =item B<Controls for blank lines around lines of consecutive keywords>
 
-The parameters in this section provide some control over the placement of
-blank lines within and around groups of statements beginning with selected keywords.  These blank lines are
-called here B<keyword group blanks>, and all of the parameters begin with
-B<--keyword-group-blanks*>, or B<-kgb*> for short.  The default settings do not
-employ these controls but they can be enabled with the following parameters:
+The parameters in this section provide some control over the placement of blank
+lines within and around groups of statements beginning with selected keywords.
+These blank lines are called here B<keyword group blanks>, and all of the
+parameters begin with B<--keyword-group-blanks*>, or B<-kgb*> for short.  The
+default settings do not employ these controls but they can be enabled with the
+following parameters:
 
 B<-kgbl=s> or B<--keyword-group-blanks-list=s>; B<s> is a quoted string of keywords
 
@@ -2768,7 +2769,7 @@ parameters rather than the B<-kgb> flag.  The individual controls are as follows
 B<-kgbl=s> or B<--keyword-group-blanks-list=s>, where B<s> is a quoted string,
 defines the set of keywords which will be formed into groups.  The string is a
 space separated list of keywords.  The default set is B<s="use require local
-our my sub">, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords.  To include ordinary block comments, include the symbol 'BC'. To include special block comments (which normally begin with '##'), include the symbol 'SBC'.
+our my">, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords.  To include ordinary block comments, include the symbol B<BC>. To include static block comments (which normally begin with '##'), include the symbol B<SBC>.
 
 B<-kgbs=s> or B<--keyword-group-blanks-size=s>, where B<s> is a string
 describing the number of consecutive keyword statements forming a group.  If
@@ -2833,43 +2834,49 @@ Here are a few notes about the functioning of this technique.
 
 =item *
 
-The introduction of blank lines may not occur if it would conflict with other
+These parameters are probably more useful as part of a major code reformatting
+operation rather than as a routine formatting operation.
+
+In particular, note that deleting old blank lines with B<-kgbd> is an
+irreversible operation so it should be applied with care.  Existing blank lines
+may be serving an important role in controlling vertical alignment.
+
+=item *
+
+Conflicts which arise among these B<kgb*> parameters and other blank line
+controls are generally resolved by producing the maximum number of blank lines
+implied by any parameter.
+
+For example, if the flags B<--freeze-blank-lines>, or
+B<--keep-old-blank-lines=2>, are set, then they have priority over any blank
+line deletion implied by the B<-kgb> flags of this section, so no blank lines
+will be deleted.
+
+For another example, if a keyword group ends at a B<sub> and the flag B<kgba=0> requests no blank line there, but we also have B<--blank-lines-before-subs=2>, then two blank lines will still be introduced before the sub.
+
+=item *
+
+The introduction of blank lines does not occur if it would conflict with other
 input controls or code validity. For example, a blank line will not be placed
-within a here-doc or within a section of code marked with format skipping comments.
-
-=item *
-
-If the flags B<--freeze-blank-lines>, or B<--keep-old-blank-lines=2>, are set,
-then they have priority over any blank line deletion implied by the B<-kgb>
-flags of this section.
-
-=item *
-
-A blank line will only be introduced at the end of a group if the next statement
-is a line of code (as opposed to an __END__ line for example).
-
-=item *
-
-Deleting old blank lines with B<-kgbd> is an irreversible operation and is
-probably most useful for a major code reformatting rather than as a standard
-operation.  Existing blank lines may be serving an important role in
-controlling vertical alignment.
+within a here-doc or within a section of code marked with format skipping
+comments.  And in general, a blank line will only be introduced at the end of a
+group if the next statement is a line of code. 
 
 =item *
 
 The count which is used to determine the group size is not the number of lines
 but rather the total number of keywords which are found.  Individual statements
-with a certain leading keyword may continue on multiple lines, but if any of these
-lines is nested more than one level deep then that group will be ended.
+with a certain leading keyword may continue on multiple lines, but if any of
+these lines is nested more than one level deep then that group will be ended.
 
 =item *
 
 The search for groups of lines with similar leading keywords is based on the
 input source, not the final formatted source.  Consequently, if the source code
-is badly formatted, it would be best to make a first pass without these options.
+is badly formatted, it would be best to make a first formatting pass without
+these options.
 
 =back
-
 
 =head2 Styles
 
