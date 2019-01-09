@@ -10,7 +10,17 @@
       series of parameters described in the manual.
 
     - Rewrote vertical algnment module.  It is much better at finding
-      patterns in complex code.
+      patterns in complex code. For example,
+
+	OLD:
+           /^-std$/ && do { $std       = 1;     next; };
+           /^--$/   && do { @link_args = @argv; last; };
+           /^-I(.*)/ && do { $path = $1 || shift @argv; next; };
+
+	NEW:
+           /^-std$/  && do { $std       = 1;                 next; };
+           /^--$/    && do { @link_args = @argv;             last; };
+           /^-I(.*)/ && do { $path      = $1 || shift @argv; next; };
 
     - Add repository URLs to META files 
 
