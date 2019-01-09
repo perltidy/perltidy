@@ -2385,10 +2385,10 @@ sub respace_tokens {
             # These are not yet used but could be useful
             else {
                 if ( $token eq '?' ) {
-                    $K_opening_ternary->{$type_sequence} = $KK;
+                    $K_opening_ternary->{$type_sequence} = $KK_new;
                 }
                 elsif ( $token eq ':' ) {
-                    $K_closing_ternary->{$type_sequence} = $KK;
+                    $K_closing_ternary->{$type_sequence} = $KK_new;
                 }
                 else {
                     # shouldn't happen
