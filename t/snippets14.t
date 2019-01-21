@@ -392,7 +392,6 @@ push( @aligns,
     : (@isnum) ? 'n'
     :            'l' )
   unless $opt_a;
-
 ----------
     };
 
@@ -433,7 +432,6 @@ push(
     : (@isnum)                      ? 'n'
     :                                 'l'
 ) unless $opt_a;
-
 #3...........
         },
 

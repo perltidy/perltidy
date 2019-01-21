@@ -116,6 +116,9 @@
 ../snippets14.t	kgbd.def
 ../snippets14.t	kgbd.kgbd
 ../snippets14.t	kgb_tight.def
+../snippets14.t	gnu5.def
+../snippets15.t	gnu5.gnu
+../snippets15.t	wngnu1.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -276,6 +279,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets14.t	gnu5.def
-../snippets15.t	gnu5.gnu
-../snippets15.t	wngnu1.def

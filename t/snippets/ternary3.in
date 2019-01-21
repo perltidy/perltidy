@@ -4,4 +4,3 @@ push( @aligns,
     : (@isnum) ? 'n'
     :            'l' )
   unless $opt_a;
-
