@@ -3201,6 +3201,34 @@ available line length, the formatting will violate the requested brace style.
 If this happens, reformatting the script a second time should correct
 the problem.
 
+Sometimes it might be desirable to convert a script to have one-line blocks
+whenever possible.  Although there is currently no flag for this, a simple
+workaround is to execute perltidy twice, once with the flag B<-noadd-newlines>
+and then once again with normal parameters, like this:  
+
+     cat infile | perltidy -nanl | perltidy >outfile
+
+When executed on this snippet
+
+    if ( $? == -1 ) {
+        die "failed to execute: $!\n";
+    }
+    if ( $? == -1 ) {
+        print "Had enough.\n";
+        die "failed to execute: $!\n";
+    }
+
+the result is
+
+    if ( $? == -1 ) { die "failed to execute: $!\n"; }
+    if ( $? == -1 ) {
+        print "Had enough.\n";
+        die "failed to execute: $!\n";
+    }
+
+This shows that blocks with a single statement become one-line blocks.
+
+
 =item  Debugging 
 
 The following flags are available for debugging:
