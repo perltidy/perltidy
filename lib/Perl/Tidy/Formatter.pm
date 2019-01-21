@@ -1458,6 +1458,20 @@ sub break_lines {
     my $self   = shift;
     my $rlines = $self->{rlines};
 
+    # TESTING: trim ending blank lines.  Works but flag not yet implemented.
+    my $Opt_trim_ending_blank_lines = 0;
+    if ($Opt_trim_ending_blank_lines) {
+        while ( my $line_of_tokens = pop @{$rlines} ) {
+            my $line_type = $line_of_tokens->{_line_type};
+            if ( $line_type eq 'CODE' ) {
+                my $CODE_type = $line_of_tokens->{_code_type};
+                next if ( $CODE_type eq 'BL' );
+            }
+            push @{$rlines}, $line_of_tokens;
+            last;
+        }
+    }
+
     # Flag to prevent blank lines when POD occurs in a format skipping sect.
     my $in_format_skipping_section;
 
@@ -2502,8 +2516,14 @@ sub respace_tokens {
             # on a token which has been stored.
             my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', ' ' );
 
-            # Convert the existing blank to a semicolon
-            $rLL_new->[$Ktop]->[_TOKEN_] = '';    # zero length
+            # TESTING: works, but needs flag implemented
+            # Convert the existing blank to:
+            #   a phantom semicolon for one_line_block option = 0 or 1
+            #   a real semicolon    for one_line_block option = 2
+	    my $Opt_semicolons_in_one_line_blocks = 1;
+            my $tok = $Opt_semicolons_in_one_line_blocks == 2 ? ';' : '';
+
+            $rLL_new->[$Ktop]->[_TOKEN_] = $tok;   # zero length if phantom
             $rLL_new->[$Ktop]->[_TYPE_]  = ';';
             $rLL_new->[$Ktop]->[_SLEVEL_] =
               $rLL->[$KK]->[_SLEVEL_];
@@ -7648,6 +7668,11 @@ sub output_line_to_go {
                 my $lc = $nonblank_lines_at_depth[$last_line_leading_level];
                 if ( !defined($lc) ) { $lc = 0 }
 
+		# TESTING patch for RT #128216 
+                if ( $levels_to_go[$imin] != $last_line_leading_level ) {
+                    $lc = 0;
+                }
+
                 $want_blank =
                      $rOpts->{'blanks-before-blocks'}
                   && $lc >= $rOpts->{'long-block-line-count'}
@@ -10452,13 +10477,13 @@ sub lookup_opening_indentation {
                 my $welded        = weld_len_left( $type_sequence, $token );
                 if ($welded) {
                     $ibeg_weld_fix = $ibeg + ( $K_next_nonblank - $K_beg );
-                    $type_beg      = $token_beg;
+                    $type_beg      = ')'; ##$token_beg;
                 }
             }
         }
 
         # if we are at a closing token of some type..
-        if ( $type_beg =~ /^[\)\}\]\>R]$/ ) {
+        if ( $type_beg =~ /^[\)\}\]R]$/ ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
