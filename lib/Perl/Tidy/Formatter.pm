@@ -1458,19 +1458,25 @@ sub break_lines {
     my $self   = shift;
     my $rlines = $self->{rlines};
 
-    # TESTING: trim ending blank lines.  Works but flag not yet implemented.
-    my $Opt_trim_ending_blank_lines = 0;
-    if ($Opt_trim_ending_blank_lines) {
-        while ( my $line_of_tokens = pop @{$rlines} ) {
-            my $line_type = $line_of_tokens->{_line_type};
-            if ( $line_type eq 'CODE' ) {
-                my $CODE_type = $line_of_tokens->{_code_type};
-                next if ( $CODE_type eq 'BL' );
-            }
-            push @{$rlines}, $line_of_tokens;
-            last;
-        }
-    }
+    # Note for RT#118553, leave only one newline at the end of a file.
+    # Example code to do this is in comments below:
+    # my $Opt_trim_ending_blank_lines = 0;
+    # if ($Opt_trim_ending_blank_lines) {
+    #     while ( my $line_of_tokens = pop @{$rlines} ) {
+    #         my $line_type = $line_of_tokens->{_line_type};
+    #         if ( $line_type eq 'CODE' ) {
+    #             my $CODE_type = $line_of_tokens->{_code_type};
+    #             next if ( $CODE_type eq 'BL' );
+    #         }
+    #         push @{$rlines}, $line_of_tokens;
+    #         last;
+    #     }
+    # }
+
+    # But while this would be a trivial update, it would have very undesirable
+    # side effects when perltidy is run from within an editor on a small snippet.
+    # So this is best done with a separate filter, such 
+    # as 'delete_ending_blank_lines.pl' in the examples folder.  
 
     # Flag to prevent blank lines when POD occurs in a format skipping sect.
     my $in_format_skipping_section;
@@ -7668,7 +7674,7 @@ sub output_line_to_go {
                 my $lc = $nonblank_lines_at_depth[$last_line_leading_level];
                 if ( !defined($lc) ) { $lc = 0 }
 
-		# TESTING patch for RT #128216 
+		# patch for RT #128216: no blank line inserted at a level change
                 if ( $levels_to_go[$imin] != $last_line_leading_level ) {
                     $lc = 0;
                 }

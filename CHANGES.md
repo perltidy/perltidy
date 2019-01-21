@@ -2,8 +2,25 @@
 
 ## 2018 11 20.01
 
+    - RT #128216, very minor update to prevent inserting unwanted blank line at
+      indentation level change.  This should not change existing scripts.
+
     - RT #81852: Improved indentation when quoted word (qw) lists are 
       nested within other containers using the --weld-nested (-wn) flag.
+      The example given previously (below) is now closer to what it would
+      be with a simple list instead of qw:
+
+      # perltidy -wn
+      use_all_ok( qw{
+          PPI
+          PPI::Tokenizer
+          PPI::Lexer
+          PPI::Dumper
+          PPI::Find
+          PPI::Normal
+          PPI::Util
+          PPI::Cache
+      } );
 
     - RT#12764, introduced new feature allowing placement of blanks around
       sequences of selected keywords. This can be activated with the -kgb* 
@@ -23,6 +40,10 @@
            /^-I(.*)/ && do { $path      = $1 || shift @argv; next; };
 
     - Add repository URLs to META files 
+
+    - RT #118553, "leave only one newline at end of file". This option was not 
+      added because of undesirable side effects, but a new filter script
+      was added which can do this, "examples/delete_ending_blank_lines.pl".  
 
 ## 2018 11 20
 
