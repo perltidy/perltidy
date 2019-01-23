@@ -277,6 +277,7 @@ use vars qw{
   $rOpts_stack_closing_block_brace
   $rOpts_space_backslash_quote
   $rOpts_whitespace_cycle
+  $rOpts_one_line_block_semicolons
 
   %is_opening_type
   %is_closing_type
@@ -2522,12 +2523,10 @@ sub respace_tokens {
             # on a token which has been stored.
             my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', ' ' );
 
-            # TESTING: works, but needs flag implemented
             # Convert the existing blank to:
             #   a phantom semicolon for one_line_block option = 0 or 1
             #   a real semicolon    for one_line_block option = 2
-	    my $Opt_semicolons_in_one_line_blocks = 1;
-            my $tok = $Opt_semicolons_in_one_line_blocks == 2 ? ';' : '';
+            my $tok = $rOpts_one_line_block_semicolons == 2 ? ';' : '';
 
             $rLL_new->[$Ktop]->[_TOKEN_] = $tok;   # zero length if phantom
             $rLL_new->[$Ktop]->[_TYPE_]  = ';';
@@ -5691,14 +5690,15 @@ EOM
       $rOpts->{'closing-side-comment-else-flag'};
     $rOpts_closing_side_comment_maximum_text =
       $rOpts->{'closing-side-comment-maximum-text'};
-    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
-    $rOpts_delete_old_whitespace    = $rOpts->{'delete-old-whitespace'};
-    $rOpts_fuzzy_line_length        = $rOpts->{'fuzzy-line-length'};
-    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
-    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
-    $rOpts_maximum_fields_per_table = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
-    $rOpts_whitespace_cycle         = $rOpts->{'whitespace-cycle'};
+    $rOpts_continuation_indentation  = $rOpts->{'continuation-indentation'};
+    $rOpts_delete_old_whitespace     = $rOpts->{'delete-old-whitespace'};
+    $rOpts_fuzzy_line_length         = $rOpts->{'fuzzy-line-length'};
+    $rOpts_indent_columns            = $rOpts->{'indent-columns'};
+    $rOpts_line_up_parentheses       = $rOpts->{'line-up-parentheses'};
+    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
+    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
+    $rOpts_whitespace_cycle          = $rOpts->{'whitespace-cycle'};
+    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
 
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
@@ -7822,6 +7822,9 @@ sub output_line_to_go {
             $do_not_pad = correct_lp_indentation( $ri_first, $ri_last );
         }
         $self->unmask_phantom_semicolons( $ri_first, $ri_last );
+        if ( $rOpts_one_line_block_semicolons == 0 ) {
+            $self->delete_one_line_semicolons( $ri_first, $ri_last );
+        }
         $self->send_lines_to_vertical_aligner( $ri_first, $ri_last,
             $do_not_pad );
 
@@ -14829,6 +14832,66 @@ sub undo_forced_breakpoint_stack {
             print STDERR "$n ($ibeg:$iend) $text\n";
         }
         print STDERR "----\n";
+        return;
+    }
+
+    sub delete_one_line_semicolons {
+
+        my ( $self, $ri_beg, $ri_end ) = @_;
+        my $rLL                 = $self->{rLL};
+        my $K_opening_container = $self->{K_opening_container};
+
+	# Walk down the lines of this batch and delete any semicolons
+	# terminating one-line blocks;
+        my $nmax = @{$ri_end} - 1;
+
+        foreach my $n ( 0 .. $nmax ) {
+            my $i_beg    = $ri_beg->[$n];
+            my $i_e      = $ri_end->[$n];
+            my $K_beg    = $K_to_go[$i_beg];
+            my $K_e      = $K_to_go[$i_e];
+            my $K_end    = $K_e;
+            my $type_end = $rLL->[$K_end]->[_TYPE_];
+            if ( $type_end eq '#' ) {
+                $K_end = $self->K_previous_nonblank($K_end);
+                if ( defined($K_end) ) { $type_end = $rLL->[$K_end]->[_TYPE_]; }
+            }
+
+	    # we are looking for a line ending in closing brace
+            next
+              unless ( $type_end eq '}' && $rLL->[$K_end]->[_TOKEN_] eq '}' );
+
+	    # ...and preceded by a semicolon on the same line
+            my $K_semicolon = $self->K_previous_nonblank($K_end);
+            my $i_semicolon = $i_beg + ( $K_semicolon - $K_beg );
+            next if ( $i_semicolon <= $i_beg );
+            next unless ( $rLL->[$K_semicolon]->[_TYPE_] eq ';' );
+
+	    # safety check - shouldn't happen
+	    if ($types_to_go[$i_semicolon] ne ';') {
+		print STDERR "unexpected type looking for semicolon, ignoring\n";
+		next;
+	    }
+
+	    # ... with the corresponding opening brace on the same line
+            my $type_sequence = $rLL->[$K_end]->[_TYPE_SEQUENCE_];
+            my $K_opening     = $K_opening_container->{$type_sequence};
+            my $i_opening     = $i_beg + ( $K_opening - $K_beg );
+            next if ( $i_opening < $i_beg );
+
+	    # ... and only one semicolon between these braces
+	    my $semicolon_count=0;
+            foreach my $K ( $K_opening + 1 .. $K_semicolon-1 ) {
+		if ($rLL->[$K]->[_TYPE_] eq ';') {
+			$semicolon_count++;
+			last;
+		}
+            }
+	    next if ($semicolon_count);
+
+	    # ...ok, then make the semicolon invisible
+            $tokens_to_go[$i_semicolon] = "";
+        }
         return;
     }
 

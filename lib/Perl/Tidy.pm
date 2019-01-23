@@ -1767,6 +1767,7 @@ sub generate_options {
     $add_option->( 'break-after-all-operators',               'baao',  '!' );
     $add_option->( 'break-before-all-operators',              'bbao',  '!' );
     $add_option->( 'keep-interior-semicolons',                'kis',   '!' );
+    $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -1990,6 +1991,7 @@ sub generate_options {
       notabs
       nowarning-output
       character-encoding=none
+      one-line-block-semicolons=1
       outdent-labels
       outdent-long-quotes
       outdent-long-comments

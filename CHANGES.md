@@ -2,6 +2,13 @@
 
 ## 2018 11 20.01
 
+    - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n) 
+      to control semicolons in one-line blocks.  The values of n are:
+        n=0 means no semicolons termininating simple one-line blocks
+        n=1 means stable; do not change from input file [DEFAULT and current]
+        n=2 means always add semicolons in one-line blocks
+      The current behavior corresponds to the default n=1.
+
     - RT #128216, very minor update to prevent inserting unwanted blank line at
       indentation level change.  This should not change existing scripts.
 
