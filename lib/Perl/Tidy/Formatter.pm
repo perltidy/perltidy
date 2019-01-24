@@ -2413,7 +2413,7 @@ sub respace_tokens {
                 }
                 else {
                     # shouldn't happen
-                    print STDERR "Ugh: shouldn't happen\n";
+                    Fault("Ugh: shouldn't happen");
                 }
             }
         }
@@ -7910,7 +7910,7 @@ sub starting_one_line_block {
 
     my $jmax_check = @{$rtoken_array};
     if ( $jmax_check < $jmax ) {
-        print STDERR "jmax=$jmax > $jmax_check\n";
+        Fault("jmax=$jmax > $jmax_check");
     }
 
     # kill any current block - we can only go 1 deep
@@ -14869,7 +14869,7 @@ sub undo_forced_breakpoint_stack {
 
 	    # safety check - shouldn't happen
 	    if ($types_to_go[$i_semicolon] ne ';') {
-		print STDERR "unexpected type looking for semicolon, ignoring\n";
+		Fault("unexpected type looking for semicolon, ignoring");
 		next;
 	    }
 
