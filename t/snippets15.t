@@ -3,6 +3,9 @@
 # Contents:
 #1 gnu5.gnu
 #2 wngnu1.def
+#3 olbs.def
+#4 olbs.olbs0
+#5 olbs.olbs2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,8 +23,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def' => "",
-        'gnu' => "-gnu",
+        'def'   => "",
+        'gnu'   => "-gnu",
+        'olbs0' => "-olbs=0",
+        'olbs2' => "-olbs=2",
     };
 
     ############################
@@ -37,6 +42,15 @@ BEGIN {
             ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
           ],
           ;
+----------
+
+        'olbs' => <<'----------',
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
 ----------
 
         'wngnu1' => <<'----------',
@@ -101,6 +115,45 @@ BEGIN {
         );
     }
 #2...........
+        },
+
+        'olbs.def' => {
+            source => "olbs",
+            params => "def",
+            expect => <<'#3...........',
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+#3...........
+        },
+
+        'olbs.olbs0' => {
+            source => "olbs",
+            params => "olbs0",
+            expect => <<'#4...........',
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+#4...........
+        },
+
+        'olbs.olbs2' => {
+            source => "olbs",
+            params => "olbs2",
+            expect => <<'#5...........',
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+#5...........
         },
     };
 

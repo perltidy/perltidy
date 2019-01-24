@@ -2318,6 +2318,66 @@
 </dd>
 </dl>
 
+<dl>
+
+<dt id="One-line-blocks">One-line blocks</dt>
+<dd>
+
+<p>There are a few points to note regarding one-line blocks. A one-line block is something like this,</p>
+
+<pre><code>        if ($x &gt; 0) { $y = 1 / $x }  </code></pre>
+
+<p>where the contents within the curly braces is short enough to fit on a single line.</p>
+
+<p>With few exceptions, perltidy retains existing one-line blocks, if it is possible within the line-length constraint, but it does not attempt to form new ones. In other words, perltidy will try to follow the one-line block style of the input file.</p>
+
+<p>If an existing one-line block is longer than the maximum line length, however, it will be broken into multiple lines. When this happens, perltidy checks for and adds any optional terminating semicolon (unless the <b>-nasc</b> option is used) if the block is a code block.</p>
+
+<p>The main exception is that perltidy will attempt to form new one-line blocks following the keywords <code>map</code>, <code>eval</code>, and <code>sort</code>, because these code blocks are often small and most clearly displayed in a single line.</p>
+
+<p>One-line block rules can conflict with the cuddled-else option. When the cuddled-else option is used, perltidy retains existing one-line blocks, even if they do not obey cuddled-else formatting.</p>
+
+<p>Occasionally, when one-line blocks get broken because they exceed the available line length, the formatting will violate the requested brace style. If this happens, reformatting the script a second time should correct the problem.</p>
+
+<p>Sometimes it might be desirable to convert a script to have one-line blocks whenever possible. Although there is currently no flag for this, a simple workaround is to execute perltidy twice, once with the flag <b>-noadd-newlines</b> and then once again with normal parameters, like this:</p>
+
+<pre><code>     cat infile | perltidy -nanl | perltidy &gt;outfile</code></pre>
+
+<p>When executed on this snippet</p>
+
+<pre><code>    if ( $? == -1 ) {
+        die &quot;failed to execute: $!\n&quot;;
+    }
+    if ( $? == -1 ) {
+        print &quot;Had enough.\n&quot;;
+        die &quot;failed to execute: $!\n&quot;;
+    }</code></pre>
+
+<p>the result is</p>
+
+<pre><code>    if ( $? == -1 ) { die &quot;failed to execute: $!\n&quot;; }
+    if ( $? == -1 ) {
+        print &quot;Had enough.\n&quot;;
+        die &quot;failed to execute: $!\n&quot;;
+    }</code></pre>
+
+<p>This shows that blocks with a single statement become one-line blocks.</p>
+
+</dd>
+<dt id="olbs-n---one-line-block-semicolons-n"><b>-olbs=n</b>, <b>--one-line-block-semicolons=n</b></dt>
+<dd>
+
+<p>This flag controls the placement of semicolons at the end of one-line blocks. Semicolons are optional before a closing block brace, and frequently they are omitted at the end of a one-line block containing just a single statement. By default, perltidy follows the input file regarding these semicolons, but this behavior can be controlled by this flag. The values of n are:</p>
+
+<pre><code>  n=0 remove terminal semicolons in one-line blocks having a single statement
+  n=1 stable; keep input file placement of terminal semicolons [DEFAULT ]
+  n=2 add terminal semicolons in all one-line blocks</code></pre>
+
+<p>Note that the <b>n=2</b> option has no effect if adding semicolons is prohibited with the <b>-nasc</b> flag. Also not that while <b>n=2</b> adds missing semicolons to all one-line blocks, regardless of complexity, the <b>n=0</b> option only removes ending semicolons which terminate one-line blocks containing just one semicolon. So these two options are not exact inverses.</p>
+
+</dd>
+</dl>
+
 <h2 id="Controlling-Vertical-Alignment">Controlling Vertical Alignment</h2>
 
 <p>Vertical alignment refers to lining up certain symbols in list of consecutive similar lines to improve readability. For example, the &quot;fat commas&quot; are aligned in the following statement:</p>
@@ -2465,50 +2525,6 @@
 <p>A similar technique can be used with <b>--extrude</b> instead of <b>--mangle</b> to make the minimum number of one-line blocks.</p>
 
 <p>Another use for <b>--mangle</b> is to combine it with <b>-dac</b> to reduce the file size of a perl script.</p>
-
-</dd>
-<dt id="One-line-blocks">One-line blocks</dt>
-<dd>
-
-<p>There are a few points to note regarding one-line blocks. A one-line block is something like this,</p>
-
-<pre><code>        if ($x &gt; 0) { $y = 1 / $x }  </code></pre>
-
-<p>where the contents within the curly braces is short enough to fit on a single line.</p>
-
-<p>With few exceptions, perltidy retains existing one-line blocks, if it is possible within the line-length constraint, but it does not attempt to form new ones. In other words, perltidy will try to follow the one-line block style of the input file.</p>
-
-<p>If an existing one-line block is longer than the maximum line length, however, it will be broken into multiple lines. When this happens, perltidy checks for and adds any optional terminating semicolon (unless the <b>-nasc</b> option is used) if the block is a code block.</p>
-
-<p>The main exception is that perltidy will attempt to form new one-line blocks following the keywords <code>map</code>, <code>eval</code>, and <code>sort</code>, because these code blocks are often small and most clearly displayed in a single line.</p>
-
-<p>One-line block rules can conflict with the cuddled-else option. When the cuddled-else option is used, perltidy retains existing one-line blocks, even if they do not obey cuddled-else formatting.</p>
-
-<p>Occasionally, when one-line blocks get broken because they exceed the available line length, the formatting will violate the requested brace style. If this happens, reformatting the script a second time should correct the problem.</p>
-
-<p>Sometimes it might be desirable to convert a script to have one-line blocks whenever possible. Although there is currently no flag for this, a simple workaround is to execute perltidy twice, once with the flag <b>-noadd-newlines</b> and then once again with normal parameters, like this:</p>
-
-<pre><code>     cat infile | perltidy -nanl | perltidy &gt;outfile</code></pre>
-
-<p>When executed on this snippet</p>
-
-<pre><code>    if ( $? == -1 ) {
-        die &quot;failed to execute: $!\n&quot;;
-    }
-    if ( $? == -1 ) {
-        print &quot;Had enough.\n&quot;;
-        die &quot;failed to execute: $!\n&quot;;
-    }</code></pre>
-
-<p>the result is</p>
-
-<pre><code>    if ( $? == -1 ) { die &quot;failed to execute: $!\n&quot;; }
-    if ( $? == -1 ) {
-        print &quot;Had enough.\n&quot;;
-        die &quot;failed to execute: $!\n&quot;;
-    }</code></pre>
-
-<p>This shows that blocks with a single statement become one-line blocks.</p>
 
 </dd>
 <dt id="Debugging">Debugging</dt>
@@ -2876,6 +2892,18 @@
 
 </dd>
 <dt id="Around-line-2881">Around line 2881:</dt>
+<dd>
+
+<p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
+
+</dd>
+<dt id="Around-line-2939">Around line 2939:</dt>
+<dd>
+
+<p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
+
+</dd>
+<dt id="Around-line-3020">Around line 3020:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
