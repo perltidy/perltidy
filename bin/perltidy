@@ -175,7 +175,9 @@ Show summary of usage and exit.
 
 Name of the output file (only if a single input file is being
 processed).  If no output file is specified, and output is not
-redirected to the standard output, the output will go to F<filename.tdy>.
+redirected to the standard output (see B<-st>), the output will go to
+F<filename.tdy>. [Note: - does not redirect to standard output. Use
+B<-st> instead.]
 
 =item	B<-st>,    B<--standard-output>
 
