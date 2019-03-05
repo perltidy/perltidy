@@ -1781,6 +1781,7 @@ sub generate_options {
     ########################################
     $add_option->( 'break-at-old-keyword-breakpoints',   'bok', '!' );
     $add_option->( 'break-at-old-logical-breakpoints',   'bol', '!' );
+    $add_option->( 'break-at-old-method-breakpoints',    'bom', '!' );
     $add_option->( 'break-at-old-ternary-breakpoints',   'bot', '!' );
     $add_option->( 'break-at-old-attribute-breakpoints', 'boa', '!' );
     $add_option->( 'ignore-old-breakpoints',             'iob', '!' );
@@ -3643,6 +3644,7 @@ Following Old Breakpoints
  -kis    keep interior semicolons.  Allows multiple statements per line.
  -boc    break at old comma breaks: turns off all automatic list formatting
  -bol    break at old logical breakpoints: or, and, ||, && (default)
+ -bom    break at old method call breakpoints: ->
  -bok    break at old list keyword breakpoints such as map, sort (default)
  -bot    break at old conditional (ternary ?:) operator breakpoints (default)
  -boa    break at old attribute breakpoints 

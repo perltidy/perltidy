@@ -2440,6 +2440,26 @@ or C<or>, then the container will remain broken.  Also, breaks
 at internal keywords C<if> and C<unless> will normally be retained.
 To prevent this, and thus form longer lines, use B<-nbol>.
 
+=item B<-bom>,  B<--break-at-old-method-breakpoints>
+
+By default, a method call arrow C<-E<gt>> is considered a candidate for
+a breakpoint, but method chains will fill to the line width before a break is
+considered.  With B<-bom>, breaks before the arrow are preserved, so if you
+have preformatted a method chain:
+
+  my $q = $rs
+    ->related_resultset('CDs')
+    ->related_resultset('Tracks')
+    ->search({
+      'track.id' => {-ident => 'none_search.id'},
+    })->as_query;
+
+It will B<keep> these breaks, rather than become this:
+
+  my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search({
+      'track.id' => {-ident => 'none_search.id'},
+    })->as_query;
+
 =item B<-bok>,  B<--break-at-old-keyword-breakpoints>
 
 By default, perltidy will retain a breakpoint before keywords which may
