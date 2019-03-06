@@ -3,6 +3,8 @@
 # Contents:
 #1 gnu5.gnu
 #2 wngnu1.def
+#3 break_old_methods.break_old_methods
+#4 break_old_methods.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,14 +22,25 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def' => "",
-        'gnu' => "-gnu",
+        'break_old_methods' => "--break-at-old-method-breakpoints",
+        'def'               => "",
+        'gnu'               => "-gnu",
     };
 
     ############################
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'break_old_methods' => <<'----------',
+my $q = $rs
+   ->related_resultset('CDs')
+   ->related_resultset('Tracks')
+   ->search({
+      'track.id' => { -ident => 'none_search.id' },
+   })
+   ->as_query;
+----------
 
         'gnu5' => <<'----------',
         # side comments limit gnu type formatting with l=80; note extra comma
@@ -101,6 +114,33 @@ BEGIN {
         );
     }
 #2...........
+        },
+
+        'break_old_methods.break_old_methods' => {
+            source => "break_old_methods",
+            params => "break_old_methods",
+            expect => <<'#3...........',
+my $q = $rs
+  ->related_resultset('CDs')
+  ->related_resultset('Tracks')
+  ->search(
+    {
+        'track.id' => { -ident => 'none_search.id' },
+    }
+)->as_query;
+#3...........
+        },
+
+        'break_old_methods.def' => {
+            source => "break_old_methods",
+            params => "def",
+            expect => <<'#4...........',
+my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search(
+    {
+        'track.id' => { -ident => 'none_search.id' },
+    }
+)->as_query;
+#4...........
         },
     };
 
