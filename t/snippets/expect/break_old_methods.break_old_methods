@@ -1,0 +1,8 @@
+my $q = $rs
+  ->related_resultset('CDs')
+  ->related_resultset('Tracks')
+  ->search(
+    {
+        'track.id' => { -ident => 'none_search.id' },
+    }
+)->as_query;

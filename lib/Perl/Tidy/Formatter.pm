@@ -254,6 +254,7 @@ use vars qw{
   $rOpts_break_at_old_keyword_breakpoints
   $rOpts_break_at_old_comma_breakpoints
   $rOpts_break_at_old_logical_breakpoints
+  $rOpts_break_at_old_method_breakpoints
   $rOpts_break_at_old_ternary_breakpoints
   $rOpts_break_at_old_attribute_breakpoints
   $rOpts_closing_side_comment_else_flag
@@ -5686,6 +5687,8 @@ EOM
       $rOpts->{'break-at-old-keyword-breakpoints'};
     $rOpts_break_at_old_logical_breakpoints =
       $rOpts->{'break-at-old-logical-breakpoints'};
+    $rOpts_break_at_old_method_breakpoints =
+      $rOpts->{'break-at-old-method-breakpoints'};
     $rOpts_closing_side_comment_else_flag =
       $rOpts->{'closing-side-comment-else-flag'};
     $rOpts_closing_side_comment_maximum_text =
@@ -12862,14 +12865,20 @@ sub pad_array_to_go {
                 set_forced_breakpoint( $i - 1 );
             } ## end if ( $type eq 'k' && $i...)
 
+            # remember locations of -> if this is a pre-broken method chain
+            if ( $type eq '->' ) {
+                set_forced_breakpoint($i - 1)
+                  if ( ( $i == $i_line_start )
+                    && $rOpts_break_at_old_method_breakpoints );
+            } ## end if ( $type eq '->' )
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
-            if ( $type eq '||' ) {
+            elsif ( $type eq '||' ) {
                 push @{ $rand_or_list[$depth][2] }, $i;
                 ++$has_old_logical_breakpoints[$depth]
                   if ( ( $i == $i_line_start || $i == $i_line_end )
                     && $rOpts_break_at_old_logical_breakpoints );
-            } ## end if ( $type eq '||' )
+            } ## end elsif ( $type eq '||' )
             elsif ( $type eq '&&' ) {
                 push @{ $rand_or_list[$depth][3] }, $i;
                 ++$has_old_logical_breakpoints[$depth]

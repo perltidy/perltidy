@@ -119,6 +119,8 @@
 ../snippets14.t	gnu5.def
 ../snippets15.t	gnu5.gnu
 ../snippets15.t	wngnu1.def
+../snippets15.t	break_old_methods.break_old_methods
+../snippets15.t	break_old_methods.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def

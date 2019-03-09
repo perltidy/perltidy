@@ -34,6 +34,16 @@ BEGIN {
     ############################
     $rsources = {
 
+        'break_old_methods' => <<'----------',
+my $q = $rs
+   ->related_resultset('CDs')
+   ->related_resultset('Tracks')
+   ->search({
+      'track.id' => { -ident => 'none_search.id' },
+   })
+   ->as_query;
+----------
+
         'gnu5' => <<'----------',
         # side comments limit gnu type formatting with l=80; note extra comma
         push @tests, [
