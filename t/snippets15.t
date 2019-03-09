@@ -6,6 +6,8 @@
 #3 olbs.def
 #4 olbs.olbs0
 #5 olbs.olbs2
+#6 break_old_methods.break_old_methods
+#7 break_old_methods.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,10 +25,11 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'   => "",
-        'gnu'   => "-gnu",
-        'olbs0' => "-olbs=0",
-        'olbs2' => "-olbs=2",
+        'break_old_methods' => "--break-at-old-method-breakpoints",
+        'def'               => "",
+        'gnu'               => "-gnu",
+        'olbs0'             => "-olbs=0",
+        'olbs2'             => "-olbs=2",
     };
 
     ############################
@@ -164,6 +167,33 @@ for $x ( 1, 2 ) { s/(.*)/+$1/; }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
 if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
 #5...........
+        },
+
+        'break_old_methods.break_old_methods' => {
+            source => "break_old_methods",
+            params => "break_old_methods",
+            expect => <<'#6...........',
+my $q = $rs
+  ->related_resultset('CDs')
+  ->related_resultset('Tracks')
+  ->search(
+    {
+        'track.id' => { -ident => 'none_search.id' },
+    }
+)->as_query;
+#6...........
+        },
+
+        'break_old_methods.def' => {
+            source => "break_old_methods",
+            params => "def",
+            expect => <<'#7...........',
+my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search(
+    {
+        'track.id' => { -ident => 'none_search.id' },
+    }
+)->as_query;
+#7...........
         },
     };
 
