@@ -3,8 +3,9 @@
 # Contents:
 #1 gnu5.gnu
 #2 wngnu1.def
-#3 break_old_methods.break_old_methods
-#4 break_old_methods.def
+#3 olbs.def
+#4 olbs.olbs0
+#5 olbs.olbs2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -22,9 +23,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'break_old_methods' => "--break-at-old-method-breakpoints",
-        'def'               => "",
-        'gnu'               => "-gnu",
+        'def'   => "",
+        'gnu'   => "-gnu",
+        'olbs0' => "-olbs=0",
+        'olbs2' => "-olbs=2",
     };
 
     ############################
@@ -50,6 +52,15 @@ my $q = $rs
             ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
           ],
           ;
+----------
+
+        'olbs' => <<'----------',
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
 ----------
 
         'wngnu1' => <<'----------',
@@ -116,31 +127,43 @@ my $q = $rs
 #2...........
         },
 
-        'break_old_methods.break_old_methods' => {
-            source => "break_old_methods",
-            params => "break_old_methods",
+        'olbs.def' => {
+            source => "olbs",
+            params => "def",
             expect => <<'#3...........',
-my $q = $rs
-  ->related_resultset('CDs')
-  ->related_resultset('Tracks')
-  ->search(
-    {
-        'track.id' => { -ident => 'none_search.id' },
-    }
-)->as_query;
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
 #3...........
         },
 
-        'break_old_methods.def' => {
-            source => "break_old_methods",
-            params => "def",
+        'olbs.olbs0' => {
+            source => "olbs",
+            params => "olbs0",
             expect => <<'#4...........',
-my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search(
-    {
-        'track.id' => { -ident => 'none_search.id' },
-    }
-)->as_query;
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }
+for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
 #4...........
+        },
+
+        'olbs.olbs2' => {
+            source => "olbs",
+            params => "olbs2",
+            expect => <<'#5...........',
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }
+for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
+if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+#5...........
         },
     };
 
