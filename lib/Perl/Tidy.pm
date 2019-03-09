@@ -1297,7 +1297,7 @@ EOM
                 if (   $rOpts->{'character-encoding'}
                     && $rOpts->{'character-encoding'} eq 'utf8' )
                 {
-                    binmode $fout, ":encoding(UTF-8)";
+                    binmode $fout, ":raw:encoding(UTF-8)";
                 }
                 else { binmode $fout }
             }
