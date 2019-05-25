@@ -12867,9 +12867,6 @@ sub pad_array_to_go {
 
             # remember locations of -> if this is a pre-broken method chain
             if ( $type eq '->' ) {
-##                set_forced_breakpoint($i - 1)
-##                  if ( ( $i == $i_line_start )
-##                    && $rOpts_break_at_old_method_breakpoints );
                 if ($rOpts_break_at_old_method_breakpoints) {
 
 		    # Case 1: look for lines with leading pointers
@@ -12882,7 +12879,7 @@ sub pad_array_to_go {
 
 		        # look for old lines with leading ')->' or ') ->'
 			# and, when found, force a break before the
-			# opening paren and previous closing paren.
+			# opening paren and after the previous closing paren.
                         if (
                             $types_to_go[$i_line_start] eq '}'
                             && (   $i == $i_line_start + 1
