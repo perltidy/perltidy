@@ -165,7 +165,7 @@
 <dt id="o-filename---outfile-filename"><b>-o</b>=filename, <b>--outfile</b>=filename</dt>
 <dd>
 
-<p>Name of the output file (only if a single input file is being processed). If no output file is specified, and output is not redirected to the standard output, the output will go to <i>filename.tdy</i>.</p>
+<p>Name of the output file (only if a single input file is being processed). If no output file is specified, and output is not redirected to the standard output (see <b>-st</b>), the output will go to <i>filename.tdy</i>. [Note: - does not redirect to standard output. Use <b>-st</b> instead.]</p>
 
 </dd>
 <dt id="st---standard-output"><b>-st</b>, <b>--standard-output</b></dt>
@@ -1928,6 +1928,37 @@
 <p>By default, if a logical expression is broken at a <code>&amp;&amp;</code>, <code>||</code>, <code>and</code>, or <code>or</code>, then the container will remain broken. Also, breaks at internal keywords <code>if</code> and <code>unless</code> will normally be retained. To prevent this, and thus form longer lines, use <b>-nbol</b>.</p>
 
 </dd>
+<dt id="bom---break-at-old-method-breakpoints"><b>-bom</b>, <b>--break-at-old-method-breakpoints</b></dt>
+<dd>
+
+<p>By default, a method call arrow <code>-&gt;</code> is considered a candidate for a breakpoint, but method chains will fill to the line width before a break is considered. With <b>-bom</b>, breaks before the arrow are preserved, so if you have preformatted a method chain:</p>
+
+<pre><code>  my $q = $rs
+    -&gt;related_resultset(&#39;CDs&#39;)
+    -&gt;related_resultset(&#39;Tracks&#39;)
+    -&gt;search({
+      &#39;track.id&#39; =&gt; {-ident =&gt; &#39;none_search.id&#39;},
+    })-&gt;as_query;</code></pre>
+
+<p>It will <b>keep</b> these breaks, rather than become this:</p>
+
+<pre><code>  my $q = $rs-&gt;related_resultset(&#39;CDs&#39;)-&gt;related_resultset(&#39;Tracks&#39;)-&gt;search({
+      &#39;track.id&#39; =&gt; {-ident =&gt; &#39;none_search.id&#39;},
+    })-&gt;as_query;</code></pre>
+
+<p>This flag will also look for and keep a &#39;cuddled&#39; style of calls, in which lines begin with a closing paren followed by a call arrow, as in this example:</p>
+
+<pre><code>  my $q = $rs-&gt;related_resultset(
+      &#39;CDs&#39;
+  )-&gt;related_resultset(
+      &#39;Tracks&#39;
+  )-&gt;search( {
+      &#39;track.id&#39; =&gt; { -ident =&gt; &#39;none_search.id&#39; },
+  } )-&gt;as_query;</code></pre>
+
+<p>You may want to include the <b>-weld-nested-containers</b> flag in this case to keep nested braces and parens together, as in the last line.</p>
+
+</dd>
 <dt id="bok---break-at-old-keyword-breakpoints"><b>-bok</b>, <b>--break-at-old-keyword-breakpoints</b></dt>
 <dd>
 
@@ -2885,25 +2916,25 @@
 
 <dl>
 
-<dt id="Around-line-2693">Around line 2693:</dt>
+<dt id="Around-line-2731">Around line 2731:</dt>
 <dd>
 
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-2881">Around line 2881:</dt>
+<dt id="Around-line-2919">Around line 2919:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>
 
 </dd>
-<dt id="Around-line-2939">Around line 2939:</dt>
+<dt id="Around-line-2977">Around line 2977:</dt>
 <dd>
 
 <p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
-<dt id="Around-line-3020">Around line 3020:</dt>
+<dt id="Around-line-3058">Around line 3058:</dt>
 <dd>
 
 <p>You forgot a &#39;=back&#39; before &#39;=head2&#39;</p>

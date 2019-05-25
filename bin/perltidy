@@ -2460,6 +2460,22 @@ It will B<keep> these breaks, rather than become this:
       'track.id' => {-ident => 'none_search.id'},
     })->as_query;
 
+This flag will also look for and keep a 'cuddled' style of calls, 
+in which lines begin with a closing paren followed by a call arrow, 
+as in this example:
+
+  my $q = $rs->related_resultset(
+      'CDs'
+  )->related_resultset(
+      'Tracks'
+  )->search( {
+      'track.id' => { -ident => 'none_search.id' },
+  } )->as_query;
+
+You may want to include the B<-weld-nested-containers> flag in this case to keep 
+nested braces and parens together, as in the last line.
+
+
 =item B<-bok>,  B<--break-at-old-keyword-breakpoints>
 
 By default, perltidy will retain a breakpoint before keywords which may

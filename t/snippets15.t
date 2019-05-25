@@ -8,6 +8,8 @@
 #5 olbs.olbs2
 #6 break_old_methods.break_old_methods
 #7 break_old_methods.def
+#8 bom1.bom
+#9 bom1.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -25,6 +27,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'bom'               => "-bom -wn",
         'break_old_methods' => "--break-at-old-method-breakpoints",
         'def'               => "",
         'gnu'               => "-gnu",
@@ -36,6 +39,20 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bom1' => <<'----------',
+# keep cuddled call chain with -bom
+return Mojo::Promise->resolve(
+    $query_params
+)->then(
+    &_reveal_event
+)->then(sub ($code) {
+    return $c->render(text => '', status => $code);
+})->catch(sub {
+    # 1. return error
+    return $c->render(json => {}, status => 400);
+});
+----------
 
         'break_old_methods' => <<'----------',
 my $q = $rs
@@ -194,6 +211,43 @@ my $q = $rs->related_resultset('CDs')->related_resultset('Tracks')->search(
     }
 )->as_query;
 #7...........
+        },
+
+        'bom1.bom' => {
+            source => "bom1",
+            params => "bom",
+            expect => <<'#8...........',
+# keep cuddled call chain with -bom
+return Mojo::Promise->resolve(
+    $query_params
+)->then(
+    &_reveal_event
+)->then( sub ($code) {
+    return $c->render( text => '', status => $code );
+} )->catch( sub {
+
+    # 1. return error
+    return $c->render( json => {}, status => 400 );
+} );
+#8...........
+        },
+
+        'bom1.def' => {
+            source => "bom1",
+            params => "def",
+            expect => <<'#9...........',
+# keep cuddled call chain with -bom
+return Mojo::Promise->resolve($query_params)->then(&_reveal_event)->then(
+    sub ($code) {
+        return $c->render( text => '', status => $code );
+    }
+)->catch(
+    sub {
+        # 1. return error
+        return $c->render( json => {}, status => 400 );
+    }
+);
+#9...........
         },
     };
 

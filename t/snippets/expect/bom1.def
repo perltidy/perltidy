@@ -1,0 +1,11 @@
+# keep cuddled call chain with -bom
+return Mojo::Promise->resolve($query_params)->then(&_reveal_event)->then(
+    sub ($code) {
+        return $c->render( text => '', status => $code );
+    }
+)->catch(
+    sub {
+        # 1. return error
+        return $c->render( json => {}, status => 400 );
+    }
+);

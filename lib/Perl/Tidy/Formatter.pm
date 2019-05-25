@@ -12867,10 +12867,36 @@ sub pad_array_to_go {
 
             # remember locations of -> if this is a pre-broken method chain
             if ( $type eq '->' ) {
-                set_forced_breakpoint($i - 1)
-                  if ( ( $i == $i_line_start )
-                    && $rOpts_break_at_old_method_breakpoints );
+##                set_forced_breakpoint($i - 1)
+##                  if ( ( $i == $i_line_start )
+##                    && $rOpts_break_at_old_method_breakpoints );
+                if ($rOpts_break_at_old_method_breakpoints) {
+
+		    # Case 1: look for lines with leading pointers
+                    if ( $i == $i_line_start ) {
+                        set_forced_breakpoint( $i - 1 );
+                    }
+
+		    # Case 2: look for cuddled pointer calls
+                    else {
+
+		        # look for old lines with leading ')->' or ') ->'
+			# and, when found, force a break before the
+			# opening paren and previous closing paren.
+                        if (
+                            $types_to_go[$i_line_start] eq '}'
+                            && (   $i == $i_line_start + 1
+                                || $i == $i_line_start + 2
+                                && $types_to_go[ $i - 1 ] eq 'b' )
+                          )
+                        {
+                            set_forced_breakpoint( $i_line_start - 1 );
+                            set_forced_breakpoint($mate_index_to_go[$i_line_start]);
+                        }
+                    }
+                }
             } ## end if ( $type eq '->' )
+
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
             elsif ( $type eq '||' ) {

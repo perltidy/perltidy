@@ -2,6 +2,13 @@
 
 ## 2018 11 20.01
 
+    - added option -bom  (--break-at-old-method-breakpoints) by
+      merrillymeredith which preserves breakpoints of method chains
+
+    - merged patch to fix Windows EOL translation error with UTF-8 written by
+      Ron Ivy. This update prevents automatic conversion to 'DOS' CRLF line
+      endings.
+
     - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n) 
       to control semicolons in one-line blocks.  The values of n are:
         n=0 means no semicolons termininating simple one-line blocks
