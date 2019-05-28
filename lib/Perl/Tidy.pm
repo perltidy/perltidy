@@ -727,7 +727,7 @@ EOM
 
     while ( my $input_file = shift @ARGV ) {
         my $fileroot;
-        my $input_file_permissions;
+        my @input_file_stat; 
 
         #---------------------------------------------------------------
         # prepare this input stream
@@ -795,8 +795,8 @@ EOM
             }
 
             # we should have a valid filename now
-            $fileroot               = $input_file;
-            $input_file_permissions = ( stat $input_file )[2] & oct(7777);
+            $fileroot        = $input_file;
+            @input_file_stat = stat($input_file); 
 
             if ( $^O eq 'VMS' ) {
                 ( $fileroot, $dot ) = check_vms_filename($fileroot);
@@ -918,9 +918,7 @@ EOM
                 }
 
                 # do not overwrite input file with -o
-                if ( defined($input_file_permissions)
-                    && ( $output_file eq $input_file ) )
-                {
+                if ( @input_file_stat && ( $output_file eq $input_file ) ) {
                     Die("Use 'perltidy -b $input_file' to modify in-place\n");
                 }
             }
@@ -1318,13 +1316,52 @@ EOM
 
         # set output file permissions
         if ( $output_file && -f $output_file && !-l $output_file ) {
-            if ($input_file_permissions) {
+            if ( @input_file_stat ) {
 
-                # give output script same permissions as input script, but
-                # make it user-writable or else we can't run perltidy again.
-                # Thus we retain whatever executable flags were set.
+		# Set file ownership and permissions
                 if ( $rOpts->{'format'} eq 'tidy' ) {
-                    chmod( $input_file_permissions | oct(600), $output_file );
+                    my ( $mode_i, $uid_i, $gid_i ) =
+                      @input_file_stat[ 2, 4, 5 ];
+                    my ( $uid_o, $gid_o ) = ( stat($output_file) )[ 4, 5 ];
+                    my $input_file_permissions  = $mode_i & oct(7777);
+                    my $output_file_permissions = $input_file_permissions;
+
+		    #rt128477: avoid inconsistent owner/group and suid/sgid
+                    if ( $uid_i != $uid_o || $gid_i != $gid_o ) {
+
+ 			# try to change owner and group to match input file if in -b mode
+			# note: chown returns number of files successfully changed
+                        if ( $in_place_modify
+                            && chown( $uid_i, $gid_i, $output_file ) )
+                        {
+			     # owner/group successfully changed
+                        }
+                        else {
+
+                            # owner or group differ: do not copy suid and sgid
+                            $output_file_permissions = $mode_i & oct(777);
+                            if ( $input_file_permissions != $output_file_permissions ) {
+                                Warn(
+"Unable to copy setuid and/or setgid bits for output file '$output_file'\n"
+                                );
+                            }
+                        }
+                    }
+
+		    # The output file must be user writable if we are not in -b
+		    # mode; otherwise a rerun of perltidy will fail.  
+                    if ( !$in_place_modify ) {
+                        $output_file_permissions |= oct(600);
+                    }
+
+                    if ( !chmod( $output_file_permissions, $output_file ) ) {
+
+                        # couldn't change file permissions
+			my $operm = sprintf "%04o", $output_file_permissions;
+                        Warn(
+"Unable to set permissions for output file '$output_file' to $operm\n"
+                        );
+                    }
                 }
 
                 # else use default permissions for html and any other format

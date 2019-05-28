@@ -2,6 +2,11 @@
 
 ## 2018 11 20.01
 
+    - rt #128477: Prevent inconsistent owner/group and setuid/setgid bits. 
+      In the -b (--backup-and-modify-in-place) mode, an attempt is made to set ownership
+      of the output file equal to the input file, if they differ.  
+      In all cases, if the final output file ownership differs from input file, any setuid/setgid bits are cleared.
+
     - added option -bom  (--break-at-old-method-breakpoints) by
       merrillymeredith which preserves breakpoints of method chains
 
