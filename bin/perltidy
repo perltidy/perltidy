@@ -2728,7 +2728,7 @@ previous versions.
 
 =back
 
-=item B<Controls for blank lines around lines of consecutive keywords>
+B<Controls for blank lines around lines of consecutive keywords>
 
 The parameters in this section provide some control over the placement of blank
 lines within and around groups of statements beginning with selected keywords.
@@ -2972,7 +2972,6 @@ after the -pbp parameter.  For example,
         : ' elsewhere in this document'
       );
 
-=back
 
 =item  One-line blocks 
 
@@ -3053,6 +3052,8 @@ with the B<-nasc> flag.  Also not that while B<n=2> adds missing semicolons to
 all one-line blocks, regardless of complexity, the B<n=0> option only removes
 ending semicolons which terminate one-line blocks containing just one
 semicolon.  So these two options are not exact inverses.
+
+=back
 
 
 =head2 Controlling Vertical Alignment
