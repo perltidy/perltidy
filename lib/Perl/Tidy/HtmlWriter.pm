@@ -620,9 +620,9 @@ sub set_default_properties {
 
     set_default_color( "html-color-$short_to_long_names{$short_name}", $color );
     my $key;
-    $key = "html-bold-$short_to_long_names{$short_name}";
+    $key           = "html-bold-$short_to_long_names{$short_name}";
     $rOpts->{$key} = ( defined $rOpts->{$key} ) ? $rOpts->{$key} : $bold;
-    $key = "html-italic-$short_to_long_names{$short_name}";
+    $key           = "html-italic-$short_to_long_names{$short_name}";
     $rOpts->{$key} = ( defined $rOpts->{$key} ) ? $rOpts->{$key} : $italic;
     return;
 }

@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2018 by Steve Hancock
+#    Copyright (c) 2000-2019 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -727,7 +727,7 @@ EOM
 
     while ( my $input_file = shift @ARGV ) {
         my $fileroot;
-        my @input_file_stat; 
+        my @input_file_stat;
 
         #---------------------------------------------------------------
         # prepare this input stream
@@ -796,7 +796,7 @@ EOM
 
             # we should have a valid filename now
             $fileroot        = $input_file;
-            @input_file_stat = stat($input_file); 
+            @input_file_stat = stat($input_file);
 
             if ( $^O eq 'VMS' ) {
                 ( $fileroot, $dot ) = check_vms_filename($fileroot);
@@ -1316,9 +1316,9 @@ EOM
 
         # set output file permissions
         if ( $output_file && -f $output_file && !-l $output_file ) {
-            if ( @input_file_stat ) {
+            if (@input_file_stat) {
 
-		# Set file ownership and permissions
+                # Set file ownership and permissions
                 if ( $rOpts->{'format'} eq 'tidy' ) {
                     my ( $mode_i, $uid_i, $gid_i ) =
                       @input_file_stat[ 2, 4, 5 ];
@@ -1326,21 +1326,23 @@ EOM
                     my $input_file_permissions  = $mode_i & oct(7777);
                     my $output_file_permissions = $input_file_permissions;
 
-		    #rt128477: avoid inconsistent owner/group and suid/sgid
+                    #rt128477: avoid inconsistent owner/group and suid/sgid
                     if ( $uid_i != $uid_o || $gid_i != $gid_o ) {
 
- 			# try to change owner and group to match input file if in -b mode
-			# note: chown returns number of files successfully changed
+               # try to change owner and group to match input file if in -b mode
+               # note: chown returns number of files successfully changed
                         if ( $in_place_modify
                             && chown( $uid_i, $gid_i, $output_file ) )
                         {
-			     # owner/group successfully changed
+                            # owner/group successfully changed
                         }
                         else {
 
                             # owner or group differ: do not copy suid and sgid
                             $output_file_permissions = $mode_i & oct(777);
-                            if ( $input_file_permissions != $output_file_permissions ) {
+                            if ( $input_file_permissions !=
+                                $output_file_permissions )
+                            {
                                 Warn(
 "Unable to copy setuid and/or setgid bits for output file '$output_file'\n"
                                 );
@@ -1348,8 +1350,11 @@ EOM
                         }
                     }
 
-		    # The output file must be user writable if we are not in -b
-		    # mode; otherwise a rerun of perltidy will fail.  
+                    # Make the output file writable unless we are in -b mode.
+                    # The issue is that perltidy currently does not unlink
+                    # existing output files before writing to them, so if an
+                    # existing output file (like xxxxx.tdy) is read-only then
+                    # perltidy will fail.
                     if ( !$in_place_modify ) {
                         $output_file_permissions |= oct(600);
                     }
@@ -1357,7 +1362,7 @@ EOM
                     if ( !chmod( $output_file_permissions, $output_file ) ) {
 
                         # couldn't change file permissions
-			my $operm = sprintf "%04o", $output_file_permissions;
+                        my $operm = sprintf "%04o", $output_file_permissions;
                         Warn(
 "Unable to set permissions for output file '$output_file' to $operm\n"
                         );
@@ -1834,13 +1839,13 @@ sub generate_options {
     $add_option->( 'maximum-consecutive-blank-lines', 'mbl',  '=i' );
     $add_option->( 'keep-old-blank-lines',            'kbl',  '=i' );
 
-    $add_option->( 'keyword-group-blanks-list',            'kgbl', '=s' );
-    $add_option->( 'keyword-group-blanks-size',            'kgbs', '=s' );
-    $add_option->( 'keyword-group-blanks-repeat-count',    'kgbr', '=i' );
-    $add_option->( 'keyword-group-blanks-before',          'kgbb', '=i' );
-    $add_option->( 'keyword-group-blanks-after',           'kgba', '=i' );
-    $add_option->( 'keyword-group-blanks-inside',          'kgbi', '!' );
-    $add_option->( 'keyword-group-blanks-delete',          'kgbd', '!' );
+    $add_option->( 'keyword-group-blanks-list',         'kgbl', '=s' );
+    $add_option->( 'keyword-group-blanks-size',         'kgbs', '=s' );
+    $add_option->( 'keyword-group-blanks-repeat-count', 'kgbr', '=i' );
+    $add_option->( 'keyword-group-blanks-before',       'kgbb', '=i' );
+    $add_option->( 'keyword-group-blanks-after',        'kgba', '=i' );
+    $add_option->( 'keyword-group-blanks-inside',       'kgbi', '!' );
+    $add_option->( 'keyword-group-blanks-delete',       'kgbd', '!' );
 
     $add_option->( 'blank-lines-after-opening-block',       'blao',  '=i' );
     $add_option->( 'blank-lines-before-closing-block',      'blbc',  '=i' );
@@ -3563,7 +3568,7 @@ sub show_version {
     print STDOUT <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2018, Steve Hancock
+Copyright 2000-2019, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.

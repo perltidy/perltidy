@@ -1344,7 +1344,7 @@ EOM
         my $token    = $rLL->[$K_first]->[_TOKEN_];
         my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
 
- 	# see if this is a code type we seek (i.e. comment)
+        # see if this is a code type we seek (i.e. comment)
         if (   $CODE_type
             && $Opt_comment_pattern
             && $CODE_type =~ /$Opt_comment_pattern/o )
@@ -1452,7 +1452,6 @@ EOM
     return $rhash_of_desires;
 }
 
-
 sub break_lines {
 
     # Loop over old lines to set new line break points
@@ -1475,10 +1474,10 @@ sub break_lines {
     #     }
     # }
 
-    # But while this would be a trivial update, it would have very undesirable
-    # side effects when perltidy is run from within an editor on a small snippet.
-    # So this is best done with a separate filter, such 
-    # as 'delete_ending_blank_lines.pl' in the examples folder.  
+   # But while this would be a trivial update, it would have very undesirable
+   # side effects when perltidy is run from within an editor on a small snippet.
+   # So this is best done with a separate filter, such
+   # as 'delete_ending_blank_lines.pl' in the examples folder.
 
     # Flag to prevent blank lines when POD occurs in a format skipping sect.
     my $in_format_skipping_section;
@@ -1487,11 +1486,11 @@ sub break_lines {
     my $rwant_blank_line_after = $self->keyword_group_scan();
 
     my $line_type = "";
-    my $i = -1;
+    my $i         = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
-	$i++;
+        $i++;
 
-	# insert blank lines requested for keyword sequences
+        # insert blank lines requested for keyword sequences
         if (   $i > 0
             && defined( $rwant_blank_line_after->{ $i - 1 } )
             && $rwant_blank_line_after->{ $i - 1 } == 1 )
@@ -1541,14 +1540,14 @@ sub break_lines {
                 # old blank lines and let the blank line rules generate any
                 # needed blanks.
 
-		# We also delete lines requested by the keyword-group logic
+                # We also delete lines requested by the keyword-group logic
                 my $kgb_keep = !( defined( $rwant_blank_line_after->{$i} )
                     && $rwant_blank_line_after->{$i} == 2 );
 
-		# But the keep-old-blank-lines flag has priority over kgb flags
-		$kgb_keep = 1 if ($rOpts_keep_old_blank_lines == 2 );
+                # But the keep-old-blank-lines flag has priority over kgb flags
+                $kgb_keep = 1 if ( $rOpts_keep_old_blank_lines == 2 );
 
-                if ($rOpts_keep_old_blank_lines && $kgb_keep) {
+                if ( $rOpts_keep_old_blank_lines && $kgb_keep ) {
                     $self->flush();
                     $file_writer_object->write_blank_code_line(
                         $rOpts_keep_old_blank_lines == 2 );
@@ -2529,7 +2528,7 @@ sub respace_tokens {
             #   a real semicolon    for one_line_block option = 2
             my $tok = $rOpts_one_line_block_semicolons == 2 ? ';' : '';
 
-            $rLL_new->[$Ktop]->[_TOKEN_] = $tok;   # zero length if phantom
+            $rLL_new->[$Ktop]->[_TOKEN_] = $tok;    # zero length if phantom
             $rLL_new->[$Ktop]->[_TYPE_]  = ';';
             $rLL_new->[$Ktop]->[_SLEVEL_] =
               $rLL->[$KK]->[_SLEVEL_];
@@ -4139,14 +4138,14 @@ sub weld_nested_quotes {
             $weld_len_right_opening{$outer_seqno} = 2;
 
             # QW PATCH 1 (Testing)
-	    # undo CI for welded quotes
-            foreach my $K($Kn  .. $Kt_end ) {
-		$rLL->[$K]->[_CI_LEVEL_]=0;
-	    }
+            # undo CI for welded quotes
+            foreach my $K ( $Kn .. $Kt_end ) {
+                $rLL->[$K]->[_CI_LEVEL_] = 0;
+            }
 
-	    # Change the level of a closing qw token to be that of the outer
-	    # containing token. This will allow -lp indentation to function
-	    # correctly in the vertical aligner.
+            # Change the level of a closing qw token to be that of the outer
+            # containing token. This will allow -lp indentation to function
+            # correctly in the vertical aligner.
             $rLL->[$Kt_end]->[_LEVEL_] = $rLL->[$K_closing]->[_LEVEL_];
         }
     }
@@ -5383,7 +5382,7 @@ sub check_options {
     make_bli_pattern();
     make_block_brace_vertical_tightness_pattern();
     make_blank_line_pattern();
-    make_keyword_group_list_pattern(); 
+    make_keyword_group_list_pattern();
 
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
@@ -7677,7 +7676,7 @@ sub output_line_to_go {
                 my $lc = $nonblank_lines_at_depth[$last_line_leading_level];
                 if ( !defined($lc) ) { $lc = 0 }
 
-		# patch for RT #128216: no blank line inserted at a level change
+                # patch for RT #128216: no blank line inserted at a level change
                 if ( $levels_to_go[$imin] != $last_line_leading_level ) {
                     $lc = 0;
                 }
@@ -9036,9 +9035,9 @@ sub set_block_text_accumulator {
     if ( $accumulating_text_for_block !~ /^els/ ) {
         $rleading_block_if_elsif_text = [];
     }
-    $leading_block_text             = "";
-    $leading_block_text_level       = $levels_to_go[$i];
-    $leading_block_text_line_number = get_output_line_number();
+    $leading_block_text                 = "";
+    $leading_block_text_level           = $levels_to_go[$i];
+    $leading_block_text_line_number     = get_output_line_number();
     $leading_block_text_length_exceeded = 0;
 
     # this will contain the column number of the last character
@@ -9957,16 +9956,16 @@ sub send_lines_to_vertical_aligner {
                     # within this container, and it helps avoid undesirable
                     # alignments of different types of containers.
 
-                # Containers beginning with { and [ are given those names
-                # for uniqueness. That way commas in different containers
-                # will not match. Here is an example of what this prevents:
-                #	a => [ 1,       2, 3 ],
-                #   b => { b1 => 4, b2 => 5 },
-		# Here is another example of what we avoid by labeling the
-		# commas properly:
-                #   is_d( [ $a,        $a ], [ $b,               $c ] );
-                #   is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
-                #   is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
+                 # Containers beginning with { and [ are given those names
+                 # for uniqueness. That way commas in different containers
+                 # will not match. Here is an example of what this prevents:
+                 #	a => [ 1,       2, 3 ],
+                 #   b => { b1 => 4, b2 => 5 },
+                 # Here is another example of what we avoid by labeling the
+                 # commas properly:
+                 #   is_d( [ $a,        $a ], [ $b,               $c ] );
+                 #   is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
+                 #   is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
 
                     my $name = $tok;
                     if ( $tok eq '(' ) {
@@ -10473,14 +10472,14 @@ sub lookup_opening_indentation {
         my $ibeg_weld_fix = $ibeg;
 
         # QW PATCH 2 (Testing)
-	# At an isolated closing token of a qw quote which is welded to
-	# a following closing token, we will locally change its type to
-	# be the same as its token. This will allow formatting to be the
-	# same as for an ordinary closing token.  
+        # At an isolated closing token of a qw quote which is welded to
+        # a following closing token, we will locally change its type to
+        # be the same as its token. This will allow formatting to be the
+        # same as for an ordinary closing token.
 
-	# For -lp formatting se use $ibeg_weld_fix to get around the problem
-	# that with -lp type formatting the opening and closing tokens to not
-	# have sequence numbers. 
+        # For -lp formatting se use $ibeg_weld_fix to get around the problem
+        # that with -lp type formatting the opening and closing tokens to not
+        # have sequence numbers.
         if ( $type_beg eq 'q' && $token_beg =~ /^[\)\}\]\>]/ ) {
             my $K_next_nonblank = $self->K_next_code($K_beg);
             if ( defined($K_next_nonblank) ) {
@@ -10489,7 +10488,7 @@ sub lookup_opening_indentation {
                 my $welded        = weld_len_left( $type_sequence, $token );
                 if ($welded) {
                     $ibeg_weld_fix = $ibeg + ( $K_next_nonblank - $K_beg );
-                    $type_beg      = ')'; ##$token_beg;
+                    $type_beg = ')';    ##$token_beg;
                 }
             }
         }
@@ -12869,17 +12868,17 @@ sub pad_array_to_go {
             if ( $type eq '->' ) {
                 if ($rOpts_break_at_old_method_breakpoints) {
 
-		    # Case 1: look for lines with leading pointers
+                    # Case 1: look for lines with leading pointers
                     if ( $i == $i_line_start ) {
                         set_forced_breakpoint( $i - 1 );
                     }
 
-		    # Case 2: look for cuddled pointer calls
+                    # Case 2: look for cuddled pointer calls
                     else {
 
-		        # look for old lines with leading ')->' or ') ->'
-			# and, when found, force a break before the
-			# opening paren and after the previous closing paren.
+                        # look for old lines with leading ')->' or ') ->'
+                        # and, when found, force a break before the
+                        # opening paren and after the previous closing paren.
                         if (
                             $types_to_go[$i_line_start] eq '}'
                             && (   $i == $i_line_start + 1
@@ -12888,7 +12887,8 @@ sub pad_array_to_go {
                           )
                         {
                             set_forced_breakpoint( $i_line_start - 1 );
-                            set_forced_breakpoint($mate_index_to_go[$i_line_start]);
+                            set_forced_breakpoint(
+                                $mate_index_to_go[$i_line_start] );
                         }
                     }
                 }
@@ -14873,8 +14873,8 @@ sub undo_forced_breakpoint_stack {
         my $rLL                 = $self->{rLL};
         my $K_opening_container = $self->{K_opening_container};
 
-	# Walk down the lines of this batch and delete any semicolons
-	# terminating one-line blocks;
+        # Walk down the lines of this batch and delete any semicolons
+        # terminating one-line blocks;
         my $nmax = @{$ri_end} - 1;
 
         foreach my $n ( 0 .. $nmax ) {
@@ -14889,39 +14889,39 @@ sub undo_forced_breakpoint_stack {
                 if ( defined($K_end) ) { $type_end = $rLL->[$K_end]->[_TYPE_]; }
             }
 
-	    # we are looking for a line ending in closing brace
+            # we are looking for a line ending in closing brace
             next
               unless ( $type_end eq '}' && $rLL->[$K_end]->[_TOKEN_] eq '}' );
 
-	    # ...and preceded by a semicolon on the same line
+            # ...and preceded by a semicolon on the same line
             my $K_semicolon = $self->K_previous_nonblank($K_end);
             my $i_semicolon = $i_beg + ( $K_semicolon - $K_beg );
             next if ( $i_semicolon <= $i_beg );
             next unless ( $rLL->[$K_semicolon]->[_TYPE_] eq ';' );
 
-	    # safety check - shouldn't happen
-	    if ($types_to_go[$i_semicolon] ne ';') {
-		Fault("unexpected type looking for semicolon, ignoring");
-		next;
-	    }
+            # safety check - shouldn't happen
+            if ( $types_to_go[$i_semicolon] ne ';' ) {
+                Fault("unexpected type looking for semicolon, ignoring");
+                next;
+            }
 
-	    # ... with the corresponding opening brace on the same line
+            # ... with the corresponding opening brace on the same line
             my $type_sequence = $rLL->[$K_end]->[_TYPE_SEQUENCE_];
             my $K_opening     = $K_opening_container->{$type_sequence};
             my $i_opening     = $i_beg + ( $K_opening - $K_beg );
             next if ( $i_opening < $i_beg );
 
-	    # ... and only one semicolon between these braces
-	    my $semicolon_count=0;
-            foreach my $K ( $K_opening + 1 .. $K_semicolon-1 ) {
-		if ($rLL->[$K]->[_TYPE_] eq ';') {
-			$semicolon_count++;
-			last;
-		}
+            # ... and only one semicolon between these braces
+            my $semicolon_count = 0;
+            foreach my $K ( $K_opening + 1 .. $K_semicolon - 1 ) {
+                if ( $rLL->[$K]->[_TYPE_] eq ';' ) {
+                    $semicolon_count++;
+                    last;
+                }
             }
-	    next if ($semicolon_count);
+            next if ($semicolon_count);
 
-	    # ...ok, then make the semicolon invisible
+            # ...ok, then make the semicolon invisible
             $tokens_to_go[$i_semicolon] = "";
         }
         return;
