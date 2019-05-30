@@ -109,7 +109,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20181120.01';
+    $VERSION = '20190601';
 }
 
 sub streamhandle {
@@ -1350,11 +1350,18 @@ EOM
                         }
                     }
 
-                    # Make the output file writable unless we are in -b mode.
-                    # The issue is that perltidy currently does not unlink
-                    # existing output files before writing to them, so if an
-                    # existing output file (like xxxxx.tdy) is read-only then
-                    # perltidy will fail.
+		    # Make the output file writable unless we are in -b mode.
+		    # The reason is that perltidy does not unlink existing
+		    # output files before writing to them, for safety, so if an
+		    # existing output file is marked not writable then perltidy
+		    # will stop. This can prevent a disaster for a user who
+		    # accidentally enters "-o important_data", but it also
+		    # means that perltidy may fail when rerun with its default
+		    # output file unless it marks its own output files
+		    # writable. The alternative, of always unlinking the
+		    # designated output file, is unsafe, except in -b mode,
+		    # where there is an assumption that a previous backup can
+		    # be unlinked even if not writable.
                     if ( !$in_place_modify ) {
                         $output_file_permissions |= oct(600);
                     }
