@@ -12,7 +12,7 @@
 
     - Merged patch to fix Windows EOL translation error with UTF-8 written by
       Ron Ivy. This update prevents automatic conversion to 'DOS' CRLF line
-      endings.
+      endings.  Also, Windows system testing at the appveyor site is working again.
 
     - RT #128280, added flag --one-line-block-semicolons=n (-olbs=n) 
       to control semicolons in one-line blocks.  The values of n are:
