@@ -12,6 +12,7 @@ docs/Tidy.html
 docs/tutorial.html
 examples/bbtidy.pl
 examples/break_long_quotes.pl
+examples/delete_ending_blank_lines.pl
 examples/ex_mp.pl
 examples/filter_example.in
 examples/filter_example.pl
@@ -57,6 +58,8 @@ t/snippets10.t
 t/snippets11.t
 t/snippets12.t
 t/snippets13.t
+t/snippets14.t
+t/snippets15.t
 t/snippets2.t
 t/snippets3.t
 t/snippets4.t
@@ -65,6 +68,7 @@ t/snippets6.t
 t/snippets7.t
 t/snippets8.t
 t/snippets9.t
+t/test-eol.t
 t/test.t
 t/testsa.t
 t/testss.t

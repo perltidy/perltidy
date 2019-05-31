@@ -1350,20 +1350,20 @@ EOM
                         }
                     }
 
-		    # Make the output file for read + write unless we are in -b mode.
-		    # Explanation: perltidy does not unlink existing output
-		    # files before writing to them, for safety.  If a designated
-		    # output file exists and is not writable, perltidy will halt.
-                    # This can prevent a data loss if a user 
-		    # accidentally enters "perltidy infile -o
-		    # important_ro_file", or "perltidy infile -st
-		    # >important_ro_file". But it also means that perltidy can
-		    # get locked out of rerunning unless it marks its own
-		    # output files writable. The alternative, of always
-		    # unlinking the designated output
-		    # file, is less safe and not always possible, except in -b
-		    # mode, where there is an assumption that a previous backup
-		    # can be unlinked even if not writable.
+                    # Make the output file for rw unless we are in -b mode.
+                    # Explanation: perltidy does not unlink existing output
+                    # files before writing to them, for safety.  If a
+                    # designated output file exists and is not writable,
+                    # perltidy will halt.  This can prevent a data loss if a
+                    # user accidentally enters "perltidy infile -o
+                    # important_ro_file", or "perltidy infile -st
+                    # >important_ro_file". But it also means that perltidy can
+                    # get locked out of rerunning unless it marks its own
+                    # output files writable. The alternative, of always
+                    # unlinking the designated output file, is less safe and
+                    # not always possible, except in -b mode, where there is an
+                    # assumption that a previous backup can be unlinked even if
+                    # not writable.
                     if ( !$in_place_modify ) {
                         $output_file_permissions |= oct(600);
                     }

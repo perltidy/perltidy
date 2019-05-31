@@ -43,7 +43,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK V PC TIDY T CL DOCS DIST)];
+my $rsteps = [qw( CHK V PC TIDY T CL DOCS MANIFEST DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -60,6 +60,7 @@ my $rcode = {
     'TIDY'  => \&run_tidyall,
     'T'    => \&make_tests,
     'DOCS'  => \&make_docs,
+    'MANIFEST' => \&make_manifest,
     'DIST' => \&make_dist,
     'CL'   => sub {openurl($changelog)},
     'LOG'  => sub { openurl($logfile) },
@@ -77,17 +78,18 @@ sub main {
 Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 
-A     - run All Steps...
-chk   - view release CHecKlist          status: $rstatus->{'CHK'}
-v     - check/update Version Number     status: $rstatus->{'V'}
-tidy  - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
-pc    - run PerlCritic (critic only)    status: $rstatus->{'PC'}
-t     - make Tests			status: $rstatus->{'T'}
-cl    - review/edit CHANGES.md          status: $rstatus->{'CL'}
-docs  - check and process POD & html    status: $rstatus->{'DOCS'}
-dist  - make a Distribution tar.gz      status: $rstatus->{'DIST'}
-log   - view Log file
-html  - view html files
+A        - run All Steps...
+chk      - view release CHecKlist          status: $rstatus->{'CHK'}
+v        - check/update Version Number     status: $rstatus->{'V'}
+tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
+pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
+t        - make Tests			   status: $rstatus->{'T'}
+cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
+manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
+docs     - check and process POD & html    status: $rstatus->{'DOCS'}
+dist     - make a Distribution tar.gz      status: $rstatus->{'DIST'}
+log      - view Log file
+html     - view html files
 
 q,x   - eXit
 
@@ -232,6 +234,17 @@ sub make_docs {
     print $result;
     my $status = $result =~ /Stop\./i ? 'TBD' : 'OK';
     $rstatus->{'DOCS'} = $status;
+    hitcr();
+    return;
+}
+
+sub make_manifest {
+
+    # FIXME: show differences between old and new manifest
+    my $result = sys_command("make manifest");
+    print $result;
+    my $status = "OK";
+    $rstatus->{'MANIFEST'} = $status;
     hitcr();
     return;
 }
