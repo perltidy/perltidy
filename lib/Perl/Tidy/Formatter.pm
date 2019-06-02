@@ -11535,19 +11535,20 @@ sub get_seqno {
                     $alignment_type = $vert_last_nonblank_type;
                 }
 
-                #--------------------------------------------------------
-                # patch for =~ operator.  We only align this if it
-                # is the first operator in a line, and the line is a simple
-                # statement.  Aligning them within a statement
-                # interferes could interfere with other good alignments.
-                #--------------------------------------------------------
-                if ( $alignment_type eq '=~' ) {
-                    my $terminal_type = $types_to_go[$i_terminal];
-                    if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
-                    {
-                        $alignment_type = "";
-                    }
-                }
+##                #--------------------------------------------------------
+##		  # DEACTIVATED; DOES NOT SEEM NEEDED WITH NEW VERTICAL ALIGNER
+##                # patch for =~ operator.  We only align this if it
+##                # is the first operator in a line, and the line is a simple
+##                # statement.  Aligning them within a statement
+##                # could interfere with other good alignments.
+##                #--------------------------------------------------------
+##                if ( $alignment_type eq '=~' ) {
+##                    my $terminal_type = $types_to_go[$i_terminal];
+##                    if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
+##                    {
+##                        $alignment_type = "";
+##                    }
+##                }
 
                 #--------------------------------------------------------
                 # then store the value
