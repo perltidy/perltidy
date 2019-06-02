@@ -1,0 +1,11 @@
+# tests for 'delete_needless_parens'
+# align all '='s; but do not align parens
+my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
+my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
+my $img = new Gimp::Image( $w, $h, RGB );
+
+# keep leading paren after if as alignment for padding
+eval {
+    if   ( $a->{'abc'} eq 'ABC' ) { no_op(23) }
+    else                          { no_op(42) }
+};

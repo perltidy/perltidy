@@ -10,6 +10,7 @@
 #7 break_old_methods.def
 #8 bom1.bom
 #9 bom1.def
+#10 align28.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -39,6 +40,20 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align28' => <<'----------',
+# tests for 'delete_needless_parens'
+# align all '='s; but do not align parens
+my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
+my $h = $rows * $cell_h + ( $rows + 1 ) * $border;
+my $img = new Gimp::Image( $w, $h, RGB );
+
+# keep leading paren after if as alignment for padding
+eval {
+    if   ( $a->{'abc'} eq 'ABC' ) { no_op(23) }
+    else                          { no_op(42) }
+};
+----------
 
         'bom1' => <<'----------',
 # keep cuddled call chain with -bom
@@ -248,6 +263,24 @@ return Mojo::Promise->resolve($query_params)->then(&_reveal_event)->then(
     }
 );
 #9...........
+        },
+
+        'align28.def' => {
+            source => "align28",
+            params => "def",
+            expect => <<'#10...........',
+# tests for 'delete_needless_parens'
+# align all '='s; but do not align parens
+my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
+my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
+my $img = new Gimp::Image( $w, $h, RGB );
+
+# keep leading paren after if as alignment for padding
+eval {
+    if   ( $a->{'abc'} eq 'ABC' ) { no_op(23) }
+    else                          { no_op(42) }
+};
+#10...........
         },
     };
 
