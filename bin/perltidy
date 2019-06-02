@@ -3735,7 +3735,7 @@ perlstyle(1), Perl::Tidy(3)
 
 =head1 VERSION
 
-This man page documents perltidy version 20190601
+This man page documents perltidy version 20190601.01
 
 =head1 BUG REPORTS
 

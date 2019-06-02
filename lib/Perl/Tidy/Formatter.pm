@@ -12,7 +12,7 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20190601';
+our $VERSION = '20190601.01';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -9707,6 +9707,8 @@ sub send_lines_to_vertical_aligner {
         my $ibeg = $ri_first->[$n];
         my $iend = $ri_last->[$n];
 
+        delete_needless_alignments($ibeg, $iend ); 
+
         my ( $rtokens, $rfields, $rpatterns ) =
           make_alignment_patterns( $ibeg, $iend );
 
@@ -9898,6 +9900,69 @@ sub send_lines_to_vertical_aligner {
             # treat an 'undef' similar to numbers and quotes
             'undef' => 'Q',
         );
+    }
+
+    sub delete_needless_alignments {
+        my ( $ibeg, $iend ) = @_;
+
+        # Remove unwanted paren alignments.  Excess alignment of parens
+        # can prevent other good alignments.  For example, note the parens in
+        # the first two rows of the following snippet.  They would normally get
+        # marked for alignment and aligned as follows:
+
+        #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
+        #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
+        #    my $img = new Gimp::Image( $w, $h, RGB );
+
+        # This causes unnecessary paren alignment and prevents the third equals
+        # from aligning. If we remove the unwanted alignments we get:
+
+        #    my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
+        #    my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
+        #    my $img = new Gimp::Image( $w, $h, RGB );
+
+        # A rule for doing this which works well is to remove alignment of
+        # parens whose containers do not contain other aligning tokens, with
+        # the exception that we always keep alignment of the first opening
+        # paren on a line (for things like 'if' and 'elsif' statements).
+
+	# First mark a location of a paren we should keep, such as one following
+	# something like a leading 'if', 'elsif',..
+        my $i_good_paren = -1;
+        if ( $iend > $ibeg ) {
+            if ( $types_to_go[$ibeg] eq 'k' ) {
+                $i_good_paren = $ibeg + 1;
+                if ( $types_to_go[$i_good_paren] eq 'b' ) {
+                    $i_good_paren++;
+                }
+            }
+        }
+
+        my @imatch_list;
+
+        for my $i ( $ibeg .. $iend ) {
+            if ( $matching_token_to_go[$i] ne '' ) {
+                push @imatch_list, $i;
+
+            }
+            if ( $tokens_to_go[$i] eq ')' ) {
+
+                # undo the corresponding opening paren if:
+		# - it is at the top of the stack 
+                # - and not the first overall opening paren
+                # - does not follow a leading keyword on this line
+                my $imate = $mate_index_to_go[$i];
+                if (   @imatch_list
+                    && $imatch_list[-1] eq $imate
+                    && ( $ibeg > 1 || @imatch_list > 1 )
+                    && $imate > $i_good_paren )
+                {
+                    $matching_token_to_go[$imate] = '';
+                    pop @imatch_list;
+                }
+            }
+        }
+        return;
     }
 
     sub make_alignment_patterns {

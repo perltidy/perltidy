@@ -58,9 +58,9 @@ my $rcode = {
     'V'    => \&update_version_number,
     'PC'   => \&run_perl_critic,
     'TIDY'  => \&run_tidyall,
+    'MANIFEST' => \&make_manifest,
     'T'    => \&make_tests,
     'DOCS'  => \&make_docs,
-    'MANIFEST' => \&make_manifest,
     'DIST' => \&make_dist,
     'CL'   => sub {openurl($changelog)},
     'LOG'  => sub { openurl($logfile) },
@@ -83,9 +83,9 @@ chk      - view release CHecKlist          status: $rstatus->{'CHK'}
 v        - check/update Version Number     status: $rstatus->{'V'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
+manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 t        - make Tests			   status: $rstatus->{'T'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
-manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 docs     - check and process POD & html    status: $rstatus->{'DOCS'}
 dist     - make a Distribution tar.gz      status: $rstatus->{'DIST'}
 log      - view Log file
@@ -116,6 +116,23 @@ sub autopilot {
             return if (!ifyes("Step '$step' Done; Continue [Y/N]"));
         }
     }
+    return;
+}
+
+sub post_result {
+    my ($fout) = @_;
+
+    # copy contents of a text file to log and display it
+    my $fh;
+    if ( !open( $fh, '<', $fout ) ) {
+        hitcr("Strange: cannot open '$fout': $!.");
+        return;
+    }
+    my @lines = <$fh>;
+    foreach my $line (@lines) { $fh_log->print($line) }
+    $fh->close();
+    openurl("$fout");
+    hitcr();
     return;
 }
 
@@ -240,12 +257,11 @@ sub make_docs {
 
 sub make_manifest {
 
-    # FIXME: show differences between old and new manifest
-    my $result = sys_command("make manifest");
-    print $result;
+    my $fout   = "tmp/manifest.out";
+    my $result = sys_command("make manifest >$fout 2>$fout");
     my $status = "OK";
     $rstatus->{'MANIFEST'} = $status;
-    hitcr();
+    post_result($fout);
     return;
 }
 
