@@ -794,10 +794,10 @@ $_, $val
         given ( [ 9, "a", 11 ] ) {
             when (qr/\d/) {
                 given ($count) {
-                    when (1) { ok( $count == 1 ) }
-                    else     { ok( $count != 1 ) }
+                    when (1)          { ok( $count == 1 ) }
+                    else              { ok( $count != 1 ) }
                     when ( [ 5, 6 ] ) { ok(0) }
-                    else { ok(1) }
+                    else              { ok(1) }
                 }
             }
             ok(1) when 11;

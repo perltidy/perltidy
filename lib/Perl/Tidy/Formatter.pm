@@ -11535,20 +11535,25 @@ sub get_seqno {
                     $alignment_type = $vert_last_nonblank_type;
                 }
 
-##                #--------------------------------------------------------
-##		  # DEACTIVATED; DOES NOT SEEM NEEDED WITH NEW VERTICAL ALIGNER
-##                # patch for =~ operator.  We only align this if it
-##                # is the first operator in a line, and the line is a simple
-##                # statement.  Aligning them within a statement
-##                # could interfere with other good alignments.
-##                #--------------------------------------------------------
-##                if ( $alignment_type eq '=~' ) {
-##                    my $terminal_type = $types_to_go[$i_terminal];
-##                    if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
-##                    {
-##                        $alignment_type = "";
-##                    }
-##                }
+                #--------------------------------------------------------
+                # patch for =~ operator.  We only align this if it
+                # is the first operator in a line, and the line is a simple
+                # statement.  Aligning them within a statement
+                # could interfere with other good alignments.
+                #--------------------------------------------------------
+                if ( $alignment_type eq '=~' ) {
+                    ##my $terminal_type = $types_to_go[$i_terminal];
+                    ##if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
+		    ## TEMPORARY PATCH: allow =~ except in an 'elsif' statement
+		    ## BUBBA FIXME: This prevents loss of padding in if/elsif lines, but the
+		    ## Vertical aligner should be updated to handle this automatically.
+		    ## Then this section can be removed
+                    if (   $types_to_go[$ibeg] eq 'k'
+                        && $tokens_to_go[$ibeg] eq 'elsif' )
+                    {
+                        $alignment_type = "";
+                    }
+                }
 
                 #--------------------------------------------------------
                 # then store the value

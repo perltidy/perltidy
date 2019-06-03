@@ -11,6 +11,8 @@
 #8 bom1.bom
 #9 bom1.def
 #10 align28.def
+#11 align29.def
+#12 align30.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -53,6 +55,21 @@ eval {
     if   ( $a->{'abc'} eq 'ABC' ) { no_op(23) }
     else                          { no_op(42) }
 };
+----------
+
+        'align29' => <<'----------',
+# alignment with lots of commas
+is( floor(1.23441242), 1, "Basic floor(1.23441242) test" );
+is( fmod( 3.5, 2.0 ), 1.5, "Basic fmod(3.5, 2.0) test" );
+is( join( " ", frexp(1) ), "0.5 1", "Basic frexp(1) test" );
+is( ldexp( 0, 1 ), 0, "Basic ldexp(0,1) test" );
+is( log10(1),  0, "Basic log10(1) test" );
+----------
+
+        'align30' => <<'----------',
+# commas on lhs align, commas on rhs do not (different subs)
+($x,$y,$z)=spherical_to_cartesian($rho,$theta,$phi);
+($rho_c,$theta,$z)=spherical_to_cylindrical($rho_s,$theta,$phi);
 ----------
 
         'bom1' => <<'----------',
@@ -281,6 +298,29 @@ eval {
     else                          { no_op(42) }
 };
 #10...........
+        },
+
+        'align29.def' => {
+            source => "align29",
+            params => "def",
+            expect => <<'#11...........',
+# alignment with lots of commas
+is( floor(1.23441242),     1,       "Basic floor(1.23441242) test" );
+is( fmod( 3.5, 2.0 ),      1.5,     "Basic fmod(3.5, 2.0) test" );
+is( join( " ", frexp(1) ), "0.5 1", "Basic frexp(1) test" );
+is( ldexp( 0, 1 ),         0,       "Basic ldexp(0,1) test" );
+is( log10(1),              0,       "Basic log10(1) test" );
+#11...........
+        },
+
+        'align30.def' => {
+            source => "align30",
+            params => "def",
+            expect => <<'#12...........',
+# commas on lhs align, commas on rhs do not (different subs)
+( $x,     $y,     $z ) = spherical_to_cartesian( $rho, $theta, $phi );
+( $rho_c, $theta, $z ) = spherical_to_cylindrical( $rho_s, $theta, $phi );
+#12...........
         },
     };
 

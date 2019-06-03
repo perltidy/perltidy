@@ -126,6 +126,7 @@
 ../snippets15.t	break_old_methods.def
 ../snippets15.t	bom1.bom
 ../snippets15.t	bom1.def
+../snippets15.t	align28.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -286,4 +287,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets15.t	align28.def
+../snippets15.t	align29.def
+../snippets15.t	align30.def

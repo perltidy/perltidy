@@ -1,0 +1,6 @@
+# alignment with lots of commas
+is( floor(1.23441242),     1,       "Basic floor(1.23441242) test" );
+is( fmod( 3.5, 2.0 ),      1.5,     "Basic fmod(3.5, 2.0) test" );
+is( join( " ", frexp(1) ), "0.5 1", "Basic frexp(1) test" );
+is( ldexp( 0, 1 ),         0,       "Basic ldexp(0,1) test" );
+is( log10(1),              0,       "Basic log10(1) test" );

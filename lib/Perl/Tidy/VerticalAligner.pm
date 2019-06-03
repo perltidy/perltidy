@@ -2307,7 +2307,7 @@ EOM
 
             #print "tok=$tok, lev=$lev, gl=$group_level, i=$i, ieq=$i_eq\n";
             return if ( defined($i_eq) && $i < $i_eq );
-            return if ( $lev >= $group_level );
+            return if ( $lev <= $group_level );
         }
 
         # most operators with an equals sign should be retained if at

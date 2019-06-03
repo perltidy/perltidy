@@ -1,0 +1,3 @@
+# commas on lhs align, commas on rhs do not (different subs)
+($x,$y,$z)=spherical_to_cartesian($rho,$theta,$phi);
+($rho_c,$theta,$z)=spherical_to_cylindrical($rho_s,$theta,$phi);

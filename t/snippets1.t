@@ -287,7 +287,7 @@ if (
             expect => <<'#5...........',
 # removed 'eq' and '=~' from alignment tokens to get alignment of '?'s
 my $salute =
-    $name eq $EMPTY_STR                      ? 'Customer'
+    $name eq $EMPTY_STR ? 'Customer'
   : $name =~ m/\A((?:Sir|Dame) \s+ \S+) /xms ? $1
   : $name =~ m/(.*), \s+ Ph[.]?D \z     /xms ? "Dr $1"
   :                                            $name;
