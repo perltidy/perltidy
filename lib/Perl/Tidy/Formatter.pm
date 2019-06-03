@@ -9871,6 +9871,7 @@ sub send_lines_to_vertical_aligner {
 
     my %block_type_map;
     my %keyword_map;
+    my %operator_map;
 
     BEGIN {
 
@@ -9900,15 +9901,31 @@ sub send_lines_to_vertical_aligner {
             # treat an 'undef' similar to numbers and quotes
             'undef' => 'Q',
         );
+
+        # map certain operators to the same class for pattern matching
+        %operator_map = (
+	   '!~' => '=~',
+	   '+=' => '+=',
+	   '-=' => '+=',
+	   '*=' => '+=',
+	   '/=' => '+=',
+	);
     }
 
     sub delete_needless_alignments {
         my ( $ibeg, $iend ) = @_;
 
-        # Remove unwanted paren alignments.  Excess alignment of parens
-        # can prevent other good alignments.  For example, note the parens in
-        # the first two rows of the following snippet.  They would normally get
-        # marked for alignment and aligned as follows:
+        # Remove unwanted alignments.  This routine is a place to remove alignments
+        # which might cause problems at later stages.  There are currently
+	# two types of fixes:
+
+	# 1. Remove excess parens
+	# 2. Remove alignments within 'elsif' conditions
+
+	# Patch #1: Excess alignment of parens can prevent other good
+	# alignments.  For example, note the parens in the first two rows of
+	# the following snippet.  They would normally get marked for alignment
+	# and aligned as follows:
 
         #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
         #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
@@ -9926,29 +9943,53 @@ sub send_lines_to_vertical_aligner {
         # the exception that we always keep alignment of the first opening
         # paren on a line (for things like 'if' and 'elsif' statements).
 
-	# First mark a location of a paren we should keep, such as one following
-	# something like a leading 'if', 'elsif',..
+	# Setup needed constants
         my $i_good_paren = -1;
+        my $imin_match   = $iend + 1;
+        my $i_elsif_close = $ibeg - 1;
+        my $i_elsif_open  = $iend + 1;
         if ( $iend > $ibeg ) {
             if ( $types_to_go[$ibeg] eq 'k' ) {
+
+		# Paren patch: mark a location of a paren we should keep, such
+		# as one following something like a leading 'if', 'elsif',..
                 $i_good_paren = $ibeg + 1;
                 if ( $types_to_go[$i_good_paren] eq 'b' ) {
                     $i_good_paren++;
                 }
+
+		# 'elsif' patch: remember the range of the parens of an elsif,
+		# and do not make alignments within them because this can cause
+		# loss of padding and overall brace alignment in the vertical
+		# aligner.
+                if (   $tokens_to_go[$ibeg] eq 'elsif'
+                    && $i_good_paren < $iend
+                    && $tokens_to_go[$i_good_paren] eq '(' )
+                {
+                    $i_elsif_open  = $i_good_paren;
+                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
+                }
             }
         }
 
+	# Loop to make the fixes on this line
         my @imatch_list;
-
         for my $i ( $ibeg .. $iend ) {
+
             if ( $matching_token_to_go[$i] ne '' ) {
+
+            	# Patch #2: undo alignment within elsif parens
+                if ( $i > $i_elsif_open && $i < $i_elsif_close ) {
+                    $matching_token_to_go[$i] = '';
+                    next;
+                }
                 push @imatch_list, $i;
 
             }
             if ( $tokens_to_go[$i] eq ')' ) {
 
-                # undo the corresponding opening paren if:
-		# - it is at the top of the stack 
+                # Patch #1: undo the corresponding opening paren if:
+                # - it is at the top of the stack
                 # - and not the first overall opening paren
                 # - does not follow a leading keyword on this line
                 my $imate = $mate_index_to_go[$i];
@@ -10090,7 +10131,8 @@ sub send_lines_to_vertical_aligner {
                 my $tok = my $raw_tok = $matching_token_to_go[$i];
 
                 # map similar items
-                if ( $tok eq '!~' ) { $tok = '=~' }
+                my $tok_map = $operator_map{$tok};
+                $tok = $tok_map if ($tok_map);
 
                 # make separators in different nesting depths unique
                 # by appending the nesting depth digit.
@@ -11533,26 +11575,6 @@ sub get_seqno {
 
                 {
                     $alignment_type = $vert_last_nonblank_type;
-                }
-
-                #--------------------------------------------------------
-                # patch for =~ operator.  We only align this if it
-                # is the first operator in a line, and the line is a simple
-                # statement.  Aligning them within a statement
-                # could interfere with other good alignments.
-                #--------------------------------------------------------
-                if ( $alignment_type eq '=~' ) {
-                    ##my $terminal_type = $types_to_go[$i_terminal];
-                    ##if ( $count > 0 || $max_line > 0 || $terminal_type ne ';' )
-		    ## TEMPORARY PATCH: allow =~ except in an 'elsif' statement
-		    ## BUBBA FIXME: This prevents loss of padding in if/elsif lines, but the
-		    ## Vertical aligner should be updated to handle this automatically.
-		    ## Then this section can be removed
-                    if (   $types_to_go[$ibeg] eq 'k'
-                        && $tokens_to_go[$ibeg] eq 'elsif' )
-                    {
-                        $alignment_type = "";
-                    }
                 }
 
                 #--------------------------------------------------------
