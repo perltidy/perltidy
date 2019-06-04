@@ -13,6 +13,8 @@
 #10 align28.def
 #11 align29.def
 #12 align30.def
+#13 git09.def
+#14 git09.git09
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,6 +35,7 @@ BEGIN {
         'bom'               => "-bom -wn",
         'break_old_methods' => "--break-at-old-method-breakpoints",
         'def'               => "",
+        'git09'             => "-ce -cbl=map,sort,grep",
         'gnu'               => "-gnu",
         'olbs0'             => "-olbs=0",
         'olbs2'             => "-olbs=2",
@@ -94,6 +97,17 @@ my $q = $rs
       'track.id' => { -ident => 'none_search.id' },
    })
    ->as_query;
+----------
+
+        'git09' => <<'----------',
+# no one-line block for first map with -ce -cbl=map,sort,grep
+@sorted = map {
+    $_->[0]
+} sort {
+    $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0] 
+} map {
+    [$_, length($_)]
+} @unsorted;
 ----------
 
         'gnu5' => <<'----------',
@@ -321,6 +335,33 @@ is( log10(1),              0,       "Basic log10(1) test" );
 ( $x,     $y,     $z ) = spherical_to_cartesian( $rho, $theta, $phi );
 ( $rho_c, $theta, $z ) = spherical_to_cylindrical( $rho_s, $theta, $phi );
 #12...........
+        },
+
+        'git09.def' => {
+            source => "git09",
+            params => "def",
+            expect => <<'#13...........',
+# no one-line block for first map with -ce -cbl=map,sort,grep
+@sorted =
+  map  { $_->[0] }
+  sort { $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0] }
+  map  { [ $_, length($_) ] } @unsorted;
+#13...........
+        },
+
+        'git09.git09' => {
+            source => "git09",
+            params => "git09",
+            expect => <<'#14...........',
+# no one-line block for first map with -ce -cbl=map,sort,grep
+@sorted = map {
+    $_->[0]
+} sort {
+    $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0]
+} map {
+    [ $_, length($_) ]
+} @unsorted;
+#14...........
         },
     };
 
