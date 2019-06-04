@@ -204,6 +204,7 @@ use vars qw{
   %is_anon_sub_1_brace_follower
   %is_sort_map_grep
   %is_sort_map_grep_eval
+  %want_one_line_block
   %is_sort_map_grep_eval_do
   %is_block_without_semicolon
   %is_if_unless
@@ -5384,6 +5385,10 @@ sub check_options {
     make_blank_line_pattern();
     make_keyword_group_list_pattern();
 
+    # Make initial list of desired one line block types
+    # They will be modified by 'prepare_cuddled_block_types'
+    %want_one_line_block = %is_sort_map_grep_eval;
+
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
         dump_cuddled_block_list(*STDOUT);
@@ -5887,6 +5892,10 @@ sub bad_pattern {
                 $word_count++;
                 $rcuddled_block_types->{$start}->{$word} =
                   1;    #"$string_count.$word_count";
+
+		# git#9: Remove this word from the list of desired one-line
+		# blocks
+		$want_one_line_block{$word} = 0;
             }
         }
         return;
@@ -8113,20 +8122,8 @@ sub starting_one_line_block {
     # we keep old one-line blocks but do not form new ones. It is not
     # always a good idea to make as many one-line blocks as possible,
     # so other types are not done.  The user can always use -mangle.
-    if ( $is_sort_map_grep_eval{$block_type} ) {
-
-	# Patch for issue git#9: do not try to form new one line blocks for a
-	# cuddled block type. For example, for flags -ce and
-	# -cbl='map,sort,grep'
-        if (   $rOpts->{'cuddled-else'}
-            && %$rcuddled_block_types
-            && $rcuddled_block_types->{'*'}->{$block_type} )
-        {
-            # this is a cuddled type
-        }
-        else {
-            create_one_line_block( $i_start, 1 );
-        }
+    if ( $want_one_line_block{$block_type} ) {
+        create_one_line_block( $i_start, 1 );
     }
     return 0;
 }
