@@ -8116,8 +8116,15 @@ sub starting_one_line_block {
     if ( $is_sort_map_grep_eval{$block_type} ) {
 
 	# Patch for issue git#9: do not try to form new one line blocks for a
-	# cuddled block type. For example, for flags -ce and -cbl='map,sort,grep'
-        if ( !$rcuddled_block_types->{'*'}->{$block_type} ) {
+	# cuddled block type. For example, for flags -ce and
+	# -cbl='map,sort,grep'
+        if (   $rOpts->{'cuddled-else'}
+            && %$rcuddled_block_types
+            && $rcuddled_block_types->{'*'}->{$block_type} )
+        {
+            # this is a cuddled type
+        }
+        else {
             create_one_line_block( $i_start, 1 );
         }
     }
