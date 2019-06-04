@@ -2,6 +2,10 @@
 
 ## 2019 06 01.01
 
+    - some improved vertical alignments
+
+## 2019 06 01
+
     - rt #128477: Prevent inconsistent owner/group and setuid/setgid bits. 
       In the -b (--backup-and-modify-in-place) mode, an attempt is made to set ownership
       of the output file equal to the input file, if they differ.

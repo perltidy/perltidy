@@ -8114,7 +8114,12 @@ sub starting_one_line_block {
     # always a good idea to make as many one-line blocks as possible,
     # so other types are not done.  The user can always use -mangle.
     if ( $is_sort_map_grep_eval{$block_type} ) {
-        create_one_line_block( $i_start, 1 );
+
+	# Patch for issue git#9: do not try to form new one line blocks for a
+	# cuddled block type. For example, for flags -ce and -cbl='map,sort,grep'
+        if ( !$rcuddled_block_types->{'*'}->{$block_type} ) {
+            create_one_line_block( $i_start, 1 );
+        }
     }
     return 0;
 }
