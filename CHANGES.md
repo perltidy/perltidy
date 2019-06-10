@@ -2,6 +2,10 @@
 
 ## 2019 06 01.01
 
+    - fixed issue git#9: if the -ce (--cuddled-else) flag is used,
+      do not try to form new one line blocks for a block type 
+      specified with -cbl, particularly map, sort, grep
+
     - some improved vertical alignments
 
 ## 2019 06 01

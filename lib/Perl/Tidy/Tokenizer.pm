@@ -4718,6 +4718,7 @@ sub report_unexpected {
               write_on_underline( $underline, $pos_prev - $offset, '-' x $num );
             $trailer = " (previous token underlined)";
         }
+        $underline =~ s/\s+$//;
         warning( $numbered_line . "\n" );
         warning( $underline . "\n" );
         warning( $msg . $trailer . "\n" );
