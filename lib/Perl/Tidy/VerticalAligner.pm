@@ -2324,41 +2324,57 @@ EOM
 sub delete_unmatched_tokens {
     my ($rlines) = @_;
 
-    # We will look at each line of a collection and compare its alignment
-    # tokens with its neighbors.  If it has alignment tokens which do not match
-    # either neighbor, then we will usually remove them.  This will
-    # simplify later work and improve chances of aligning.
+    # This is a preliminary step in vertical alignment in which we remove as
+    # many obviously un-needed alignment tokens as possible.  This will prevent
+    # them from interfering with the final alignment. 
 
     return unless @{$rlines};
     my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
-    # ignore hanging side comments
+    # ignore hanging side comments in these operations
     my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
     my $rnew_lines = \@filtered;
     my @i_equals;
+    my @min_levels;
 
-    # Step 1: create a hash of tokens for each line
+    my %token_line_count;
+    my %is_good_tok;
+
+    # Step 1A: create a hash of tokens for each line
     my $rline_hashes = [];
     foreach my $line ( @{$rnew_lines} ) {
+	my %seen;
         my $rhash   = {};
         my $rtokens = $line->get_rtokens();
         my $i       = 0;
         my $i_eq;
+        my $lev_min;
         foreach my $tok ( @{$rtokens} ) {
-            $rhash->{$tok} = [ $i, undef, undef ];
+            my $lev=0; 
+	    my $raw_tok="";
+	    my $desc="";
+	    if ($tok =~ /^(\D+)(\d+)(.*)/) { $raw_tok=$1; $lev = $2; $desc=$3}
+            if ( !$seen{$tok} ) {
+                $seen{$tok}++;
+                $token_line_count{$tok}++;
+            }
+	    if (!defined($lev_min) || $lev < $lev_min) {$lev_min=$lev}
+
+            $rhash->{$tok} = [ $i, undef, undef, $lev ];
 
             # remember the first equals at line level
-            if ( !defined($i_eq) && $tok =~ /^=(\d+)/ ) {
-                my $lev = $1;
+            if ( !defined($i_eq) && $raw_tok eq '=') {
                 if ( $lev eq $group_level ) { $i_eq = $i }
             }
             $i++;
         }
         push @{$rline_hashes}, $rhash;
         push @i_equals, $i_eq;
+        push @min_levels, $lev_min;
     }
 
-    # Step 2: compare each line pair and record matches
+    # Step 1B: compare each line pair and record matches
+    my $rtok_hash = {};
     for ( my $jl = 0 ; $jl < @{$rline_hashes} - 1 ; $jl++ ) {
         my $jr      = $jl + 1;
         my $rhash_l = $rline_hashes->[$jl];
@@ -2373,13 +2389,27 @@ sub delete_unmatched_tokens {
                 my $ir = $rhash_r->{$tok}->[0];
                 $rhash_l->{$tok}->[2] = $ir;
                 $rhash_r->{$tok}->[1] = $il;
+                if ( $tok ne '#' ) {
+                    push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
+                }
             }
         }
     }
 
-    # Step 3: remove unmatched tokens
+    # Step 1C: Look for if/else/elsif and ternary blocks
+    my $is_full_block; 
+    my $nlines = @{$rnew_lines};
+    my $jmax = $nlines - 1;
+    foreach my $tok ( keys %token_line_count ) {
+        if ( $token_line_count{$tok} == $nlines ) {
+            if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
+		$is_full_block = 1;
+            }
+        }
+    }
+
+    # Step 1D: remove unwanted alignment tokens
     my $jj   = 0;
-    my $jmax = @{$rnew_lines} - 1;
     foreach my $line ( @{$rnew_lines} ) {
         my $rtokens = $line->get_rtokens();
         my $rhash   = $rline_hashes->[$jj];
@@ -2396,9 +2426,17 @@ sub delete_unmatched_tokens {
             my ( $il, $ir ) = @{ $rhash->{$tok} }[ 1, 2 ];
             $nl++ if defined($il);
             $nr++ if defined($ir);
+
+	    # always remove unmatched tokens
+            my $delete_me = !defined($il) && !defined($ir);
+
+	    # also, if this is a complete ternary or if/elsif/else block,
+	    # remove all alignments which are not also in every line
+            $delete_me ||=
+              ( $is_full_block && $token_line_count{$tok} < $nlines );
+
             if (
-                   !defined($il)
-                && !defined($ir)
+		$delete_me
                 && is_deletable_token( $tok, $i, $imax, $jj, $i_eq )
 
                 # Patch: do not touch the first line of a terminal match,
@@ -2426,9 +2464,7 @@ sub delete_unmatched_tokens {
         $jj++;
     }
 
-    #use Data::Dumper;
-    #print Data::Dumper->Dump( [$rline_hashes] );
-    return;
+    return; 
 }
 
 sub decide_if_aligned_pair {

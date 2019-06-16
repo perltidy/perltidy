@@ -269,11 +269,15 @@ EOM
         }
     }
 
+    my $diff_msg = "no differences";
+    if ( -e $diff_file ) {
+        $diff_msg = <<EOM;
+Look at each differences in '$diff_file'
+The full old ouput for 'somefile.def' is in expect/somefile.def
+The full new ouput for 'somefile.def' is in tmp/somefile.def
+EOM
 
-    my $diff_msg =
-      -e $diff_file
-      ? "Look at differences in '$diff_file'"
-      : "no differences";
+    }
 
     print <<EOM;
 $diff_msg
