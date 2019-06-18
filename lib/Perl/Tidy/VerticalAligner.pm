@@ -2337,13 +2337,13 @@ sub delete_unmatched_tokens {
     my @i_equals;
     my @min_levels;
 
-    my %token_line_count;
+    my $jmax = @{$rnew_lines}-1;
+
     my %is_good_tok;
 
-    # Step 1A: create a hash of tokens for each line
+    # create a hash of tokens for each line
     my $rline_hashes = [];
     foreach my $line ( @{$rnew_lines} ) {
-	my %seen;
         my $rhash   = {};
         my $rtokens = $line->get_rtokens();
         my $i       = 0;
@@ -2354,10 +2354,6 @@ sub delete_unmatched_tokens {
 	    my $raw_tok="";
 	    my $desc="";
 	    if ($tok =~ /^(\D+)(\d+)(.*)/) { $raw_tok=$1; $lev = $2; $desc=$3}
-            if ( !$seen{$tok} ) {
-                $seen{$tok}++;
-                $token_line_count{$tok}++;
-            }
 	    if (!defined($lev_min) || $lev < $lev_min) {$lev_min=$lev}
 
             $rhash->{$tok} = [ $i, undef, undef, $lev ];
@@ -2373,13 +2369,16 @@ sub delete_unmatched_tokens {
         push @min_levels, $lev_min;
     }
 
-    # Step 1B: compare each line pair and record matches
+    # compare each line pair and record matches
     my $rtok_hash = {};
-    for ( my $jl = 0 ; $jl < @{$rline_hashes} - 1 ; $jl++ ) {
+    my $nr        = 0;
+    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+	my $nl = $nr;
+	$nr = 0;
         my $jr      = $jl + 1;
         my $rhash_l = $rline_hashes->[$jl];
         my $rhash_r = $rline_hashes->[$jr];
-        my $count   = 0;
+        my $count   = 0; # UNUSED NOW?
         my $ntoks   = 0;
         foreach my $tok ( keys %{$rhash_l} ) {
             $ntoks++;
@@ -2391,78 +2390,104 @@ sub delete_unmatched_tokens {
                 $rhash_r->{$tok}->[1] = $il;
                 if ( $tok ne '#' ) {
                     push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
+		    $nr++;
                 }
             }
         }
-    }
 
-    # Step 1C: Look for if/else/elsif and ternary blocks
-    my $is_full_block; 
-    my $nlines = @{$rnew_lines};
-    my $jmax = $nlines - 1;
-    foreach my $tok ( keys %token_line_count ) {
-        if ( $token_line_count{$tok} == $nlines ) {
-            if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
-		$is_full_block = 1;
-            }
+	# Set a line break if no matching tokens between these lines
+        if ( $nr == 0 && $nl > 0 ) {
+            $rnew_lines->[$jl]->{_end_group} = 1;
         }
     }
 
-    # Step 1D: remove unwanted alignment tokens
-    my $jj   = 0;
-    foreach my $line ( @{$rnew_lines} ) {
-        my $rtokens = $line->get_rtokens();
-        my $rhash   = $rline_hashes->[$jj];
-        my $i       = 0;
-        my $nl      = 0;
-        my $nr      = 0;
-        my $i_eq    = $i_equals[$jj];
-        my @idel;
-        my $imax = @{$rtokens} - 2;
+    # find subgroups
+    my @subgroups;
+    push @subgroups, [ 0, $jmax ];
+    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+        if ( $rnew_lines->[$jl]->{_end_group} ) {
+            $subgroups[-1]->[1] = $jl;
+            push @subgroups, [ $jl + 1, $jmax ];
+        }
+    }
 
-        for ( my $i = 0 ; $i <= $imax ; $i++ ) {
-            my $tok = $rtokens->[$i];
-            next if ( $tok eq '#' );    # shouldn't happen
-            my ( $il, $ir ) = @{ $rhash->{$tok} }[ 1, 2 ];
-            $nl++ if defined($il);
-            $nr++ if defined($ir);
+    # Loop to process each subgroups
+    foreach my $item (@subgroups) {
+        my ( $jbeg, $jend ) = @{$item};
 
-	    # always remove unmatched tokens
-            my $delete_me = !defined($il) && !defined($ir);
-
-	    # also, if this is a complete ternary or if/elsif/else block,
-	    # remove all alignments which are not also in every line
-            $delete_me ||=
-              ( $is_full_block && $token_line_count{$tok} < $nlines );
-
-            if (
-		$delete_me
-                && is_deletable_token( $tok, $i, $imax, $jj, $i_eq )
-
-                # Patch: do not touch the first line of a terminal match,
-                # such as below, because j_terminal has already been set.
-                #    if ($tag) { $tago = "<$tag>"; $tagc = "</$tag>"; }
-                #    else      { $tago = $tagc = ''; }
-                # But see snippets 'else1.t' and 'else2.t'
-                && !( $jj == 0 && $has_terminal_match && $jmax == 1 )
-
-              )
-            {
-                push @idel, $i;
+        # look for complete ternary or if/elsif/else blocks
+        my $nlines = $jend - $jbeg + 1;
+        my %token_line_count;
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            my %seen;
+            my $line    = $rnew_lines->[$jj];
+            my $rtokens = $line->get_rtokens();
+            foreach my $tok ( @{$rtokens} ) {
+                if ( !$seen{$tok} ) {
+                    $seen{$tok}++;
+                    $token_line_count{$tok}++;
+                }
             }
         }
 
-        if (@idel) { delete_selected_tokens( $line, \@idel ) }
-
-        # set a break if this is an interior line with possible left matches
-        # but no matches to the right.  We do not do this for the last line
-        # because it could be followed by hanging side comments filtered out
-        # above.
-        if ( $nr == 0 && $nl > 0 && $jj < @{$rnew_lines} - 1 ) {
-            $rnew_lines->[$jj]->{_end_group} = 1;
+        # Look for if/else/elsif and ternary blocks
+        my $is_full_block; 
+        foreach my $tok ( keys %token_line_count ) {
+            if ( $token_line_count{$tok} == $nlines ) {
+                if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
+    		    $is_full_block = 1;
+                }
+            }
         }
-        $jj++;
-    }
+
+        # Leave two lines alone unless they are an if/else or ternary pair.
+        # Alignment of just two lines can be annoying, so it is best to let the
+        # two-line rules decide if they should be aligned.
+        next if ( $nlines <= 2 && !$is_full_block );
+
+        # remove unwanted alignment tokens
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            my $line    = $rnew_lines->[$jj];
+            my $rtokens = $line->get_rtokens();
+            my $rhash   = $rline_hashes->[$jj];
+            my $i       = 0;
+            my $i_eq    = $i_equals[$jj];
+            my @idel;
+            my $imax = @{$rtokens} - 2;
+
+            for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                my $tok = $rtokens->[$i];
+                next if ( $tok eq '#' );    # shouldn't happen
+                my ( $il, $ir ) = @{ $rhash->{$tok} }[ 1, 2 ];
+
+                # always remove unmatched tokens
+                my $delete_me = !defined($il) && !defined($ir);
+
+                # also, if this is a complete ternary or if/elsif/else block,
+                # remove all alignments which are not also in every line
+                $delete_me ||=
+                  ( $is_full_block && $token_line_count{$tok} < $nlines );
+
+                if (
+                    $delete_me
+                    && is_deletable_token( $tok, $i, $imax, $jj, $i_eq )
+
+                    # Patch: do not touch the first line of a terminal match,
+                    # such as below, because j_terminal has already been set.
+                    #    if ($tag) { $tago = "<$tag>"; $tagc = "</$tag>"; }
+                    #    else      { $tago = $tagc = ''; }
+                    # But see snippets 'else1.t' and 'else2.t'
+                    && !( $jj == $jbeg && $has_terminal_match && $nlines == 2 )
+
+                  )
+                {
+                    push @idel, $i;
+                }
+            }
+
+            if (@idel) { delete_selected_tokens( $line, \@idel ) }
+        }
+    }    # End loop over subgroups
 
     return; 
 }

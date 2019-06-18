@@ -73,6 +73,11 @@ is( log10(1),  0, "Basic log10(1) test" );
 # commas on lhs align, commas on rhs do not (different subs)
 ($x,$y,$z)=spherical_to_cartesian($rho,$theta,$phi);
 ($rho_c,$theta,$z)=spherical_to_cylindrical($rho_s,$theta,$phi);
+( $r2, $theta2, $z2 )=cartesian_to_cylindrical( $x1, $y1, $z1 );
+
+# two-line if/elsif gets aligned 
+if($i==$depth){$_++;}
+elsif($i>$depth){$_=0;}
 ----------
 
         'bom1' => <<'----------',
@@ -332,8 +337,13 @@ is( log10(1),              0,       "Basic log10(1) test" );
             params => "def",
             expect => <<'#12...........',
 # commas on lhs align, commas on rhs do not (different subs)
-( $x,     $y,     $z ) = spherical_to_cartesian( $rho, $theta, $phi );
-( $rho_c, $theta, $z ) = spherical_to_cylindrical( $rho_s, $theta, $phi );
+( $x,     $y,      $z )  = spherical_to_cartesian( $rho, $theta, $phi );
+( $rho_c, $theta,  $z )  = spherical_to_cylindrical( $rho_s, $theta, $phi );
+( $r2,    $theta2, $z2 ) = cartesian_to_cylindrical( $x1, $y1, $z1 );
+
+# two-line if/elsif gets aligned
+if    ( $i == $depth ) { $_++; }
+elsif ( $i > $depth )  { $_ = 0; }
 #12...........
         },
 

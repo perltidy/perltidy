@@ -150,8 +150,9 @@ is_deeply( [ \$a,       \$a ], [ \$b,             \$c ] );
 
         'align26' => <<'----------',
 #  align first of multiple equals
-$SIG{PIPE}=sub{die"writingtoaclosedpipe"};#1=
-$SIG{HUP}=$SIG{BREAK}=$SIG{INT}=$SIG{TERM};#3=
+$SIG{PIPE}=sub{die"writingtoaclosedpipe"};
+$SIG{BREAK}=$SIG{INT}=$SIG{TERM};
+$SIG{HUP}=\&some_handler;
 ----------
 
         'align27' => <<'----------',
@@ -389,8 +390,9 @@ is_deeply( [ \$a, \$a ], [ \$b, \$c ] );
             params => "def",
             expect => <<'#18...........',
 #  align first of multiple equals
-$SIG{PIPE} = sub { die "writingtoaclosedpipe" };      #1=
-$SIG{HUP}  = $SIG{BREAK} = $SIG{INT} = $SIG{TERM};    #3=
+$SIG{PIPE}  = sub { die "writingtoaclosedpipe" };
+$SIG{BREAK} = $SIG{INT} = $SIG{TERM};
+$SIG{HUP}   = \&some_handler;
 #18...........
         },
 

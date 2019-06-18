@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-use strict;                # with -kgb, no break after hash bang
+use strict;    # with -kgb, no break after hash bang
 our ( @Changed, $TAP );    # break after isolated 'our'
 use File::Compare;
 use Symbol;
