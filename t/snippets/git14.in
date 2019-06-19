@@ -1,0 +1,5 @@
+# git#14; do not break at trailing 'or'
+$second = {
+    key1 => 'aaa',
+    key2 => 'bbb',
+} if $flag1 or $flag2;

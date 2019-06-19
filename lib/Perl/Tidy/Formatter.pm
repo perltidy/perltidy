@@ -15879,17 +15879,20 @@ sub undo_forced_breakpoint_stack {
                           unless (
                             $this_line_is_semicolon_terminated
                             && (
+                                $type_ibeg_1 eq '}'
+                                || (
 
-                                # following 'if' or 'unless' or 'or'
-                                $type_ibeg_1 eq 'k'
-                                && $is_if_unless{ $tokens_to_go[$ibeg_1] }
+                                    # following 'if' or 'unless' or 'or'
+                                    $type_ibeg_1 eq 'k'
+                                    && $is_if_unless{ $tokens_to_go[$ibeg_1] }
 
-                                # important: only combine a very simple or
-                                # statement because the step below may have
-                                # combined a trailing 'and' with this or,
-                                # and we do not want to then combine
-                                # everything together
-                                && ( $iend_2 - $ibeg_2 <= 7 )
+                                    # important: only combine a very simple or
+                                    # statement because the step below may have
+                                    # combined a trailing 'and' with this or,
+                                    # and we do not want to then combine
+                                    # everything together
+                                    && ( $iend_2 - $ibeg_2 <= 7 )
+                                )
                             )
                           );
 
