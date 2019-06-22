@@ -2,7 +2,7 @@
 
 ## 2019 06 01.01
 
-    - fixed for RT#129850; concerning a space between a closing block brace and
+    - fixed RT#129850; concerning a space between a closing block brace and
       opening bracket or brace, as occurs before the '[' in this line:
 
        my @addunix = map { File::Spec::Unix->catfile( @ROOT, @$_ ) } ['b'];
