@@ -1849,7 +1849,7 @@ sub initialize_whitespace_hashes {
     $binary_ws_rules{'t'}{'L'} = WS_NO;
     $binary_ws_rules{'t'}{'{'} = WS_NO;
     $binary_ws_rules{'}'}{'L'} = WS_NO;
-    $binary_ws_rules{'}'}{'{'} = WS_NO;
+    $binary_ws_rules{'}'}{'{'} = WS_OPTIONAL; # RT#129850; was WS_NO
     $binary_ws_rules{'$'}{'L'} = WS_NO;
     $binary_ws_rules{'$'}{'{'} = WS_NO;
     $binary_ws_rules{'@'}{'L'} = WS_NO;
