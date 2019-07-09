@@ -5673,6 +5673,25 @@ EOM
         '?' => ':',
     );
 
+    if ( $rOpts->{'ignore-old-breakpoints'} ) {
+        if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
+            Warn("Conflicting parameters: -iob and -bom; -bom will be ignored\n"
+            );
+        }
+        if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
+            Warn("Conflicting parameters: -iob and -boc; -boc will be ignored\n"
+            );
+        }
+
+	# Note: there are additional parameters that can be made inactive by
+	# -iob, but they are on by default so we would generate excessive
+	# warnings if we noted them. They are:
+        # $rOpts->{'break-at-old-keyword-breakpoints'}
+        # $rOpts->{'break-at-old-logical-breakpoints'}
+        # $rOpts->{'break-at-old-ternary-breakpoints'}
+        # $rOpts->{'break-at-old-attribute-breakpoints'}
+    }
+
     # frequently used parameters
     $rOpts_add_newlines          = $rOpts->{'add-newlines'};
     $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
