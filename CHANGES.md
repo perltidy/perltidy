@@ -2,6 +2,9 @@
 
 ## 2019 06 01.01
 
+    - added warning message for RT#130008, which warns of conflicting input
+      parameters -iob and -bom or -boc.
+
     - fixed RT#129850; concerning a space between a closing block brace and
       opening bracket or brace, as occurs before the '[' in this line:
 
