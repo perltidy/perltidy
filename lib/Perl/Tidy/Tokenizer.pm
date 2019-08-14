@@ -6274,7 +6274,7 @@ sub scan_identifier_do {
             $attrs = $2;
 
             # If we also found the sub name on this call then append PROTO.
-            # This is not necessary but for compatability with previous
+            # This is not necessary but for compatibility with previous
             # versions when the -csc flag is used:
             if ( $match && $proto ) {
                 $tok .= $proto;

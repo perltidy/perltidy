@@ -105,7 +105,7 @@ BEGIN {
 
     # To make the number continually increasing, the Development Number is a 2
     # digit number starting at 01 after a release is continually bumped along
-    # at significant points during developement. If it ever reaches 99 then the
+    # at significant points during development. If it ever reaches 99 then the
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
@@ -3625,7 +3625,7 @@ I/O control
 
 Basic Options:
  -i=n    use n columns per indentation level (default n=4)
- -t      tabs: use one tab character per indentation level, not recommeded
+ -t      tabs: use one tab character per indentation level, not recommended
  -nt     no tabs: use n spaces per indentation level (default)
  -et=n   entab leading whitespace n spaces per tab; not recommended
  -io     "indent only": just do indentation, no other formatting.

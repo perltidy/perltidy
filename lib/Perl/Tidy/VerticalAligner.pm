@@ -2287,7 +2287,7 @@ EOM
 
     sub is_deletable_token {
 
-        # Determine if an token with no match possibility can be removed to
+        # Determine if a token with no match possibility can be removed to
         # improve chances of making an alignment.
         my ( $token, $i, $imax, $jline, $i_eq ) = @_;
 
