@@ -2798,7 +2798,7 @@
 
 <h2 id="Specifying-File-Extensions">Specifying File Extensions</h2>
 
-<p>Several parameters allow default file extensions to be overridden. For example, a backup file extension may be specified with <b>-bext=ext</b>, where <b>ext</b> is some new extension. In order to provides the user some flexibility, the following convention is used in all cases to decide if a leading &#39;.&#39; should be used. If the extension <code>ext</code> begins with <code>A-Z</code>, <code>a-z</code>, or <code>0-9</code>, then it will be appended to the filename with an intermediate &#39;.&#39; (or perhaps an &#39;_&#39; on VMS systems). Otherwise, it will be appended directly.</p>
+<p>Several parameters allow default file extensions to be overridden. For example, a backup file extension may be specified with <b>-bext=ext</b>, where <b>ext</b> is some new extension. In order to provides the user some flexibility, the following convention is used in all cases to decide if a leading &#39;.&#39; should be used. If the extension <code>ext</code> begins with <code>A-Z</code>, <code>a-z</code>, or <code>0-9</code>, then it will be appended to the filename with an intermediate &#39;.&#39; (or perhaps a &#39;_&#39; on VMS systems). Otherwise, it will be appended directly.</p>
 
 <p>For example, suppose the file is <i>somefile.pl</i>. For <code>-bext=old</code>, a &#39;.&#39; is added to give <i>somefile.pl.old</i>. For <code>-bext=.old</code>, no additional &#39;.&#39; is added, so again the backup file is <i>somefile.pl.old</i>. For <code>-bext=~</code>, then no dot is added, and the backup file will be <i>somefile.pl~</i> .</p>
 
