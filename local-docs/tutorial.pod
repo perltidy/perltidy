@@ -165,7 +165,7 @@ and in this case, each of the output files will be have a name equal to
 the input file with the extension F<.tdy> appended.  If you decide that
 the formatting is acceptable, you will want to backup your originals and
 then remove the F<.tdy> extensions from the reformatted files.  There is
-an powerful perl script called C<rename> that can be used for this
+a powerful perl script called C<rename> that can be used for this
 purpose; if you don't have it, you can find it for example in B<The Perl
 Cookbook>.
 

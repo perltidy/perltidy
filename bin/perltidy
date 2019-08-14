@@ -3643,7 +3643,7 @@ where B<ext> is some new extension.  In order to provides the user some
 flexibility, the following convention is used in all cases to decide if
 a leading '.' should be used.  If the extension C<ext> begins with
 C<A-Z>, C<a-z>, or C<0-9>, then it will be appended to the filename with
-an intermediate '.' (or perhaps an '_' on VMS systems).  Otherwise, it
+an intermediate '.' (or perhaps a '_' on VMS systems).  Otherwise, it
 will be appended directly.  
 
 For example, suppose the file is F<somefile.pl>.  For C<-bext=old>, a '.' is

@@ -971,7 +971,7 @@ sub keyword_group_scan {
     # Scan all lines looking for runs of consecutive lines beginning with
     # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
     # they may be anything.  We will set flags requesting that blanks be
-    # inserted around and withing them according to input parameters.  Note
+    # inserted around and within them according to input parameters.  Note
     # that we are scanning the lines as they came in in the input stream, so
     # they are not necessarily well formatted.
 
@@ -10703,7 +10703,7 @@ sub lookup_opening_indentation {
             # undo continuation indentation of a terminal closing token if
             # it is the last token before a level decrease.  This will allow
             # a closing token to line up with its opening counterpart, and
-            # avoids a indentation jump larger than 1 level.
+            # avoids an indentation jump larger than 1 level.
             if (   $types_to_go[$i_terminal] =~ /^[\}\]\)R]$/
                 && $i_terminal == $ibeg
                 && defined($K_beg) )
@@ -16656,7 +16656,7 @@ sub set_continuation_breaks {
 
                     # RT #104427: Dont break before opening sub brace because
                     # sub block breaks handled at higher level, unless
-                    # it looks like the preceeding list is long and broken
+                    # it looks like the preceding list is long and broken
                     && !(
                         $next_nonblank_block_type =~ /^sub\b/
                         && ( $nesting_depth_to_go[$i_begin] ==

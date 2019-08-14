@@ -372,7 +372,7 @@ A Release VERSION is an integer, the approximate YYMMDD of the release.
 A Development VERSION is (Last Release).(Development Number)
 
 The Development Number is a 2 digit number starting at 01 after a release is
-continually bumped along at significant points during developement. 
+continually bumped along at significant points during development.
 
 The VERSION reported by Perl::Tidy.pm is '$reported_VERSION'
 What would you like to do?

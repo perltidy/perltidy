@@ -375,7 +375,7 @@
 ## 2017 05 21
 
     - Fixed debian #862667: failure to check for perltidy.ERR deletion can lead 
-      to overwriting abritrary files by symlink attack. Perltidy was continuing 
+      to overwriting arbitrary files by symlink attack. Perltidy was continuing
       to write files after an unlink failure.  Thanks to Don Armstrong 
       for a patch.
 
@@ -398,7 +398,7 @@
       with --backup-and-modify-in-place. Thanks to Heinz Knutzen for this patch.
 
     - Fixed minor formatting issue where one-line blocks for subs with signatures 
-      were unnecesarily broken
+      were unnecessarily broken
 
     - RT #32905, patch to fix utf-8 error when output was STDOUT. 
 
@@ -477,7 +477,7 @@
     
      - Fixed RT #107832 and #106492, lack of vertical alignment of two lines
        when -boc flag (break at old commas) is set.  This bug was 
-       inadvertantly introduced in previous bug fix RT #98902. 
+       inadvertently introduced in previous bug fix RT #98902. 
 
      - Some common extensions to Perl syntax are handled better.
        In particular, the following snippet is now foratted cleanly:
@@ -563,7 +563,7 @@
     - Fixed RT #96101; Closing brace of anonymous sub in a list was being
       indented.  For example, the closing brace of the anonymous sub below 
       will now be lined up with the word 'callback'.  This problem 
-      occured if there was no comma after the closing brace of the anonymous sub.  
+      occurred if there was no comma after the closing brace of the anonymous sub.
       This update may cause minor changes to formatting of code with lists 
       of anonymous subs, especially TK code.
       
@@ -1277,7 +1277,7 @@
          : undef;
 
     -Text following un-parenthesized if/unless/while/until statements get a
-    full level of indentation.  Suggested by Jeff Armstorng and others. 
+    full level of indentation.  Suggested by Jeff Armstrong and others.
     OLD:
        return $ship->chargeWeapons("phaser-canon")
          if $encounter->description eq 'klingon'
@@ -2054,7 +2054,7 @@
      external calls to Tidy.pm module.  Fixed incorrect html title when
      Tidy.pm is called with IO::Scalar or IO::Array source.
 
-    -Output file permissons are now set as follows.  An output script file
+    -Output file permissions are now set as follows.  An output script file
      gets the same permission as the input file, except that owner
      read/write permission is added (otherwise, perltidy could not be
      rerun).  Html output files use system defaults.  Previously chmod 0755
@@ -3018,7 +3018,7 @@
     -I updated the tokenizer to allow $#+ and $#-, which seem to be new to
     Perl 5.6.  Some experimenting with a recent version of Perl indicated
     that it allows these non-alphanumeric '$#' array maximum index
-    varaibles: $#: $#- $#+ so I updated the parser accordingly.  Only $#:
+    variables: $#: $#- $#+ so I updated the parser accordingly.  Only $#:
     seems to be valid in older versions of Perl.
 
     -Fixed a rare formatting problem with -lp (and -gnu) which caused
