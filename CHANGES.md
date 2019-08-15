@@ -2,6 +2,16 @@
 
 ## 2019 06 01.01
 
+    - fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
+      status if it wrote to the standard error output. Prevously only fatal
+      run errors produced a non-zero exit flag. Now, even non-fatal messages
+      requested with the -w flag will cause a non-zero exit flag.  The exit
+      flag now has these values:
+
+         0 = no errors
+         1 = fatal error
+         2 = non-fatal error
+
     - added warning message for RT#130008, which warns of conflicting input
       parameters -iob and -bom or -boc.
 

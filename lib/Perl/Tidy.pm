@@ -86,6 +86,7 @@ use vars qw{
   $missing_file_spec
   $fh_stderr
   $rOpts_character_encoding
+  $Warn_count
 };
 
 @ISA    = qw( Exporter );
@@ -403,7 +404,7 @@ EOM
         $fh_stderr = *STDERR;
     }
 
-    sub Warn { my $msg = shift; $fh_stderr->print($msg); return }
+    sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
     sub Exit {
         my $flag = shift;
@@ -1430,8 +1431,25 @@ EOM
           if $logger_object;
     }    # end of main loop to process all files
 
+    # Fix for RT #130297: return a true value if anything was written to the
+    # standard error output, even non-fatal warning messages, otherwise return
+    # false. 
+
+    # To allow the caller to determine the error severity, these exit codes are
+    # returned:
+    #    0 - successful run without errors
+    #    1 - run terminated with a fatal error
+    #    2 - successful run but with non-fatal warning messages
+
+    # Note that if perltidy is run with multiple files, any single file with
+    # errors or warnings will write a line like 
+    #        '## Please see file testing.t.ERR' 
+    # to standard output for each file with errors, so the flag will be true,
+    # even only some of the multiple files may have had errors.
+
   NORMAL_EXIT:
-    return 0;
+    my $ret = $Warn_count ? 2 : 0;
+    return $ret;
 
   ERROR_EXIT:
     return 1;

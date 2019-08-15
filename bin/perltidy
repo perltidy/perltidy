@@ -13,7 +13,11 @@ if ( $^O =~ /Mac/ ) {
     );
 }
 
-Perl::Tidy::perltidy( argv => $arg_string );
+# Exit codes returned by perltidy:
+#    0 - successful run without errors
+#    1 - run terminated with a fatal error
+#    2 - successful run but with non-fatal warning messages
+exit Perl::Tidy::perltidy( argv => $arg_string );
 
 __END__
 
