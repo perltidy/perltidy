@@ -11,8 +11,9 @@ our $VERSION = '20190601.01';
 
 sub new {
 
-    my ( $class, $rOpts, $log_file, $warning_file, $fh_stderr, $saw_extrude ) =
-      @_;
+    my ( $class, $rOpts, $log_file, $warning_file, $fh_stderr, $saw_extrude,
+        $filename_stamp )
+      = @_;
 
     my $fh_warnings = $rOpts->{'standard-error-output'} ? $fh_stderr : undef;
 
@@ -51,6 +52,7 @@ sub new {
         _saw_brace_error => 0,
         _saw_extrude     => $saw_extrude,
         _output_array    => [],
+        _filename_stamp => $filename_stamp ? $filename_stamp . ':' : "",
     }, $class;
 }
 
@@ -290,7 +292,7 @@ sub complain {
     return;
 }
 
-sub warning {
+sub OLD_warning {
 
     # report errors to .ERR file (or stdout)
     my ( $self, $msg ) = @_;
@@ -332,6 +334,92 @@ sub warning {
 
         if ( $warning_count == $WARNING_LIMIT ) {
             $fh_warnings->print("No further warnings will be given\n");
+        }
+    }
+    return;
+}
+
+sub warning {
+
+    # report errors to .ERR file (or stdout)
+    my ( $self, $msg ) = @_;
+
+    #use constant WARNING_LIMIT => 50;
+    my $WARNING_LIMIT = 50;
+
+    my $rOpts = $self->{_rOpts};
+    unless ( $rOpts->{'quiet'} ) {
+
+        my $warning_count = $self->{_warning_count};
+        my $fh_warnings   = $self->{_fh_warnings};
+        if ( !$fh_warnings ) {
+            my $warning_file = $self->{_warning_file};
+            ( $fh_warnings, my $filename ) =
+              Perl::Tidy::streamhandle( $warning_file, 'w' );
+            $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
+            Perl::Tidy::Warn("## Please see file $filename\n")
+              unless ref($warning_file);
+            $self->{_fh_warnings} = $fh_warnings;
+            $fh_warnings->print("Perltidy version is $Perl::Tidy::VERSION\n");
+        }
+
+        my $filename_stamp = $self->{_filename_stamp};
+
+        if ( $warning_count < $WARNING_LIMIT ) {
+
+            if ( !$warning_count ) {
+
+                # On first error always write a line with the filename.  Note
+                # that the filename will be 'perltidy' if input is from stdin
+                # or from a data structure.
+                if ($filename_stamp) {
+                    $fh_warnings->print(
+                        "\n$filename_stamp Begin Error Output Stream\n");
+                }
+
+                # Turn off filename stamping unless error output is directed
+                # to the standard error output (with -se flag)
+                if ( !$rOpts->{'standard-error-output'} ) {
+                    $filename_stamp = "";
+                    $self->{_filename_stamp} = $filename_stamp;
+                }
+            }
+
+            if ( $self->get_use_prefix() > 0 ) {
+                $self->write_logfile_entry("WARNING: $msg");
+
+                # add prefix 'filename:line_no: ' to message lines
+                my $input_line_number =
+                  Perl::Tidy::Tokenizer::get_input_line_number();
+                if ( !defined($input_line_number) ) { $input_line_number = -1 }
+                my $pre_string = $filename_stamp . $input_line_number . ': ';
+                chomp $msg;
+                $msg =~ s/\n/\n$pre_string/g;
+                $msg = $pre_string . $msg . "\n";
+
+                $fh_warnings->print($msg);
+
+            }
+            else {
+                $self->write_logfile_entry($msg);
+
+                # add prefix 'filename: ' to message lines
+                if ($filename_stamp) {
+                    my $pre_string = $filename_stamp . " ";
+                    chomp $msg;
+                    $msg =~ s/\n/\n$pre_string/g;
+                    $msg = $pre_string . $msg . "\n";
+                }
+
+                $fh_warnings->print($msg);
+            }
+        }
+        $warning_count++;
+        $self->{_warning_count} = $warning_count;
+
+        if ( $warning_count == $WARNING_LIMIT ) {
+            $fh_warnings->print(
+                $filename_stamp . "No further warnings will be given\n" );
         }
     }
     return;

@@ -2,6 +2,13 @@
 
 ## 2019 06 01.01
 
+    - fixed issue RT#130304: standard error output should include filename.
+      When perltidy error messages are directed to the standard error output with
+      -se or --standard-error-output, the message lines now have a prefix with
+      'filename:' for clarification when multiple files are processed.  If an
+      input filename is not known, for example when input is from the standard
+      input or a data structure, then displayed filename is 'perltidy'.
+
     - fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
       status if it wrote to the standard error output. Prevously only fatal
       run errors produced a non-zero exit flag. Now, even non-fatal messages

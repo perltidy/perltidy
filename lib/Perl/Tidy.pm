@@ -999,7 +999,7 @@ EOM
 
         my $logger_object =
           Perl::Tidy::Logger->new( $rOpts, $log_file, $warning_file,
-            $fh_stderr, $saw_extrude );
+            $fh_stderr, $saw_extrude, $fileroot );
         write_logfile_header(
             $rOpts,        $logger_object, $config_file,
             $rraw_options, $Windows_type,  $readable_options,
