@@ -292,53 +292,6 @@ sub complain {
     return;
 }
 
-sub OLD_warning {
-
-    # report errors to .ERR file (or stdout)
-    my ( $self, $msg ) = @_;
-
-    #use constant WARNING_LIMIT => 50;
-    my $WARNING_LIMIT = 50;
-
-    my $rOpts = $self->{_rOpts};
-    unless ( $rOpts->{'quiet'} ) {
-
-        my $warning_count = $self->{_warning_count};
-        my $fh_warnings   = $self->{_fh_warnings};
-        if ( !$fh_warnings ) {
-            my $warning_file = $self->{_warning_file};
-            ( $fh_warnings, my $filename ) =
-              Perl::Tidy::streamhandle( $warning_file, 'w' );
-            $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
-            Perl::Tidy::Warn("## Please see file $filename\n")
-              unless ref($warning_file);
-            $self->{_fh_warnings} = $fh_warnings;
-            $fh_warnings->print("Perltidy version is $Perl::Tidy::VERSION\n");
-        }
-
-        if ( $warning_count < $WARNING_LIMIT ) {
-            if ( $self->get_use_prefix() > 0 ) {
-                my $input_line_number =
-                  Perl::Tidy::Tokenizer::get_input_line_number();
-                if ( !defined($input_line_number) ) { $input_line_number = -1 }
-                $fh_warnings->print("$input_line_number:\t$msg");
-                $self->write_logfile_entry("WARNING: $msg");
-            }
-            else {
-                $fh_warnings->print($msg);
-                $self->write_logfile_entry($msg);
-            }
-        }
-        $warning_count++;
-        $self->{_warning_count} = $warning_count;
-
-        if ( $warning_count == $WARNING_LIMIT ) {
-            $fh_warnings->print("No further warnings will be given\n");
-        }
-    }
-    return;
-}
-
 sub warning {
 
     # report errors to .ERR file (or stdout)
