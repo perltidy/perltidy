@@ -729,12 +729,14 @@ EOM
     while ( my $input_file = shift @ARGV ) {
         my $fileroot;
         my @input_file_stat;
+	my $display_name;
 
         #---------------------------------------------------------------
         # prepare this input stream
         #---------------------------------------------------------------
         if ($source_stream) {
-            $fileroot = "perltidy";
+            $fileroot     = "perltidy";
+            $display_name = "<source_stream>";
 
             # If the source is from an array or string, then .LOG output
             # is only possible if a logfile stream is specified.  This prevents
@@ -744,11 +746,13 @@ EOM
             }
         }
         elsif ( $input_file eq '-' ) {    # '-' indicates input from STDIN
-            $fileroot = "perltidy";       # root name to use for .ERR, .LOG, etc
+            $fileroot     = "perltidy";   # root name to use for .ERR, .LOG, etc
+            $display_name = "<stdin>";
             $in_place_modify = 0;
         }
         else {
-            $fileroot = $input_file;
+            $fileroot     = $input_file;
+            $display_name = $input_file;
             unless ( -e $input_file ) {
 
                 # file doesn't exist - check for a file glob
@@ -999,7 +1003,7 @@ EOM
 
         my $logger_object =
           Perl::Tidy::Logger->new( $rOpts, $log_file, $warning_file,
-            $fh_stderr, $saw_extrude, $fileroot );
+            $fh_stderr, $saw_extrude, $display_name );
         write_logfile_header(
             $rOpts,        $logger_object, $config_file,
             $rraw_options, $Windows_type,  $readable_options,
