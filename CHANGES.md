@@ -2,6 +2,9 @@
 
 ## 2019 06 01.01
 
+    - fixed issue RT#130344: false warning "operator in print statement" 
+      for "use lib". 
+
     - fixed issue RT#130304: standard error output should include filename.
       When perltidy error messages are directed to the standard error output with
       -se or --standard-error-output, the message lines now have a prefix with

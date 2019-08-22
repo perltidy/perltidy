@@ -4225,7 +4225,13 @@ sub operator_expected {
         # could change the interpretation of the statement.
         else {
             if ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
-                complain("operator in print statement not recommended\n");
+
+		# Do not complain in 'use' statements, which have special syntax. 
+                # For example, from RT#130344:
+                #   use lib $FindBin::Bin . '/lib';
+		if ($statement_type ne 'use') {
+                    complain("operator in print statement not recommended\n");
+		}
                 $op_expected = OPERATOR;
             }
         }

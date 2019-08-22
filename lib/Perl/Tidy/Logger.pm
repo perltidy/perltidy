@@ -12,7 +12,7 @@ our $VERSION = '20190601.01';
 sub new {
 
     my ( $class, $rOpts, $log_file, $warning_file, $fh_stderr, $saw_extrude,
-        $filename_stamp )
+        $display_name )
       = @_;
 
     my $fh_warnings = $rOpts->{'standard-error-output'} ? $fh_stderr : undef;
@@ -52,7 +52,7 @@ sub new {
         _saw_brace_error => 0,
         _saw_extrude     => $saw_extrude,
         _output_array    => [],
-        _filename_stamp => $filename_stamp ? $filename_stamp . ':' : "",
+        _filename_stamp => $display_name ? $display_name . ':' : "",
     }, $class;
 }
 
