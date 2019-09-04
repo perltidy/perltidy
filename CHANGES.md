@@ -2,6 +2,14 @@
 
 ## 2019 06 01.01
 
+    - implement issue RT#130425: check mode.  A new flag '--assert-unchanged'
+      will cause an error message if the output script is not identical to
+      the input script. 
+
+    - iteration speedup for unchanged code.  Previously, when iterations were
+      requested, at least two formatting passes were made. Now just a single pass
+      is made if the formatted code is identical to the input code.
+
     - fixed issue RT#130344: false warning "operator in print statement" 
       for "use lib". 
 
