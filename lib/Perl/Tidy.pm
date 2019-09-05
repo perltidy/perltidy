@@ -1267,7 +1267,7 @@ EOM
             }
             if ( $rOpts->{'assert-untidy'} ) {
                 my $digest_output = $md5_hex->($buf);
-                if ( $digest_output ne $digest_input ) {
+                if ( $digest_output eq $digest_input ) {
                     $logger_object->warning(
 "assertion failure: '--assert-untidy' is set but output equals input\n"
                     );
