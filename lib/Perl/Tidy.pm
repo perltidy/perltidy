@@ -881,7 +881,8 @@ EOM
             $prefilter
             || (   $rOpts_character_encoding
                 && $rOpts_character_encoding eq 'utf8' )
-            || $rOpts->{'assert-unchanged'}
+            || $rOpts->{'assert-tidy'}
+            || $rOpts->{'assert-untidy'}
             || $do_convergence_test
           )
         {
@@ -907,7 +908,7 @@ EOM
             }
 
             # MD5 sum of input file is evaluated before any prefilter
-            if ( $rOpts->{'assert-unchanged'} ) {
+            if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
                 $digest_input = $md5_hex->($buf);
             }
 
@@ -1020,7 +1021,10 @@ EOM
         $line_separator = "\n" unless defined($line_separator);
 
         my ( $sink_object, $postfilter_buffer );
-        if ( $postfilter || $rOpts->{'assert-unchanged'} ) {
+        if (   $postfilter
+            || $rOpts->{'assert-tidy'}
+            || $rOpts->{'assert-untidy'} )
+        {
             $sink_object =
               Perl::Tidy::LineSink->new( \$postfilter_buffer, $tee_file,
                 $line_separator, $rOpts, $rpending_logfile_message, $binmode );
@@ -1238,7 +1242,10 @@ EOM
         #---------------------------------------------------------------
         # Perform any postfilter operation
         #---------------------------------------------------------------
-        if ( $postfilter || $rOpts->{'assert-unchanged'} ) {
+        if (   $postfilter
+            || $rOpts->{'assert-tidy'}
+            || $rOpts->{'assert-untidy'} )
+        {
             $sink_object->close_output_file();
             $sink_object =
               Perl::Tidy::LineSink->new( $output_file, $tee_file,
@@ -1250,11 +1257,19 @@ EOM
               : $postfilter_buffer;
 
             # Check if file changed if requested, but only after any postfilter
-            if ( $rOpts->{'assert-unchanged'} ) {
+            if ( $rOpts->{'assert-tidy'} ) {
                 my $digest_output = $md5_hex->($buf);
                 if ( $digest_output ne $digest_input ) {
                     $logger_object->warning(
-"assertion failure: '--assert-unchanged' is set but output differs from input\n"
+"assertion failure: '--assert-tidy' is set but output differs from input\n"
+                    );
+                }
+            }
+            if ( $rOpts->{'assert-untidy'} ) {
+                my $digest_output = $md5_hex->($buf);
+                if ( $digest_output ne $digest_input ) {
+                    $logger_object->warning(
+"assertion failure: '--assert-untidy' is set but output equals input\n"
                     );
                 }
             }
@@ -1750,7 +1765,8 @@ sub generate_options {
     $add_option->( 'tabs',                         't',    '!' );
     $add_option->( 'default-tabsize',              'dt',   '=i' );
     $add_option->( 'extended-syntax',              'xs',   '!' );
-    $add_option->( 'assert-unchanged',             'auc',  '!' );
+    $add_option->( 'assert-tidy',                  'ast',  '!' );
+    $add_option->( 'assert-untidy',                'asu',  '!' );
 
     ########################################
     $category = 2;    # Code indentation control

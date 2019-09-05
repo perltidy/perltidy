@@ -359,11 +359,22 @@ error messages, perltidy skips files identified by the system as non-text.
 However, valid perl scripts containing binary data may sometimes be identified
 as non-text, and this flag forces perltidy to process them.
 
-=item B<-auc>,   B<--assert-unchanged>      
+=item B<-ast>,   B<--assert-tidy>      
 
-This flag asserts that the input and output files are identical, and produces
-an error message if they are not.  It has no other effect on the functioning of
-perltidy.  This can be used to identify files which do not need to be updated.  
+This flag asserts that the input and output code streams are identical, or in
+other words that the input code is already 'tidy' according to the formatting
+parameters.  If this is not the case, an error message noting this is produced.
+The test for this is made by comparing an MD5 hash value for the input and
+output code streams. This flag has no other effect on the functioning of
+perltidy.  This might be useful for certain code maintenance operations.
+
+=item B<-asu>,   B<--assert-untidy>      
+
+This flag asserts that the input and output code streams are different, or in
+other words that the input code is 'untidy' according to the formatting
+parameters.  If this is not the case, an error message noting this is produced.
+This flag has no other effect on the functioning of perltidy.
+
 
 =back
 

@@ -2,9 +2,10 @@
 
 ## 2019 06 01.01
 
-    - implement issue RT#130425: check mode.  A new flag '--assert-unchanged'
+    - implement issue RT#130425: check mode.  A new flag '--assert-tidy'
       will cause an error message if the output script is not identical to
-      the input script. 
+      the input script. For completeness, the opposite flag '--assert-untidy'
+      has also been added.
 
     - iteration speedup for unchanged code.  Previously, when iterations were
       requested, at least two formatting passes were made. Now just a single pass
