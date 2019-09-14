@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20190601.01';
+our $VERSION = '20190915';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -2326,7 +2326,7 @@ sub delete_unmatched_tokens {
 
     # This is a preliminary step in vertical alignment in which we remove as
     # many obviously un-needed alignment tokens as possible.  This will prevent
-    # them from interfering with the final alignment. 
+    # them from interfering with the final alignment.
 
     return unless @{$rlines};
     my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
@@ -2337,7 +2337,7 @@ sub delete_unmatched_tokens {
     my @i_equals;
     my @min_levels;
 
-    my $jmax = @{$rnew_lines}-1;
+    my $jmax = @{$rnew_lines} - 1;
 
     my %is_good_tok;
 
@@ -2350,22 +2350,26 @@ sub delete_unmatched_tokens {
         my $i_eq;
         my $lev_min;
         foreach my $tok ( @{$rtokens} ) {
-            my $lev=0; 
-	    my $raw_tok="";
-	    my $desc="";
-	    if ($tok =~ /^(\D+)(\d+)(.*)/) { $raw_tok=$1; $lev = $2; $desc=$3}
-	    if (!defined($lev_min) || $lev < $lev_min) {$lev_min=$lev}
+            my $lev     = 0;
+            my $raw_tok = "";
+            my $desc    = "";
+            if ( $tok =~ /^(\D+)(\d+)(.*)/ ) {
+                $raw_tok = $1;
+                $lev     = $2;
+                $desc    = $3;
+            }
+            if ( !defined($lev_min) || $lev < $lev_min ) { $lev_min = $lev }
 
             $rhash->{$tok} = [ $i, undef, undef, $lev ];
 
             # remember the first equals at line level
-            if ( !defined($i_eq) && $raw_tok eq '=') {
+            if ( !defined($i_eq) && $raw_tok eq '=' ) {
                 if ( $lev eq $group_level ) { $i_eq = $i }
             }
             $i++;
         }
         push @{$rline_hashes}, $rhash;
-        push @i_equals, $i_eq;
+        push @i_equals,   $i_eq;
         push @min_levels, $lev_min;
     }
 
@@ -2373,12 +2377,12 @@ sub delete_unmatched_tokens {
     my $rtok_hash = {};
     my $nr        = 0;
     for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
-	my $nl = $nr;
-	$nr = 0;
+        my $nl = $nr;
+        $nr = 0;
         my $jr      = $jl + 1;
         my $rhash_l = $rline_hashes->[$jl];
         my $rhash_r = $rline_hashes->[$jr];
-        my $count   = 0; # UNUSED NOW?
+        my $count   = 0;                      # UNUSED NOW?
         my $ntoks   = 0;
         foreach my $tok ( keys %{$rhash_l} ) {
             $ntoks++;
@@ -2390,12 +2394,12 @@ sub delete_unmatched_tokens {
                 $rhash_r->{$tok}->[1] = $il;
                 if ( $tok ne '#' ) {
                     push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
-		    $nr++;
+                    $nr++;
                 }
             }
         }
 
-	# Set a line break if no matching tokens between these lines
+        # Set a line break if no matching tokens between these lines
         if ( $nr == 0 && $nl > 0 ) {
             $rnew_lines->[$jl]->{_end_group} = 1;
         }
@@ -2431,11 +2435,11 @@ sub delete_unmatched_tokens {
         }
 
         # Look for if/else/elsif and ternary blocks
-        my $is_full_block; 
+        my $is_full_block;
         foreach my $tok ( keys %token_line_count ) {
             if ( $token_line_count{$tok} == $nlines ) {
                 if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
-    		    $is_full_block = 1;
+                    $is_full_block = 1;
                 }
             }
         }
@@ -2489,7 +2493,7 @@ sub delete_unmatched_tokens {
         }
     }    # End loop over subgroups
 
-    return; 
+    return;
 }
 
 sub decide_if_aligned_pair {

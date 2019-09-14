@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20190601.01';
+    $VERSION = '20190915';
 }
 
 sub streamhandle {
@@ -1475,11 +1475,10 @@ EOM
     # standard error output, even non-fatal warning messages, otherwise return
     # false.
 
-    # To allow the caller to determine the error severity, these exit codes are
-    # returned:
-    #    0 - successful run without errors
-    #    1 - run terminated with a fatal error
-    #    2 - successful run but with non-fatal warning messages
+    # These exit codes are returned:
+    #  0 = perltidy ran to completion with no errors
+    #  1 = perltidy could not run to completion due to errors
+    #  2 = perltidy ran to completion with error messages
 
     # Note that if perltidy is run with multiple files, any single file with
     # errors or warnings will write a line like

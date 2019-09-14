@@ -8,7 +8,7 @@
 package Perl::Tidy::LineSource;
 use strict;
 use warnings;
-our $VERSION = '20190601.01';
+our $VERSION = '20190915';
 
 sub new {
 

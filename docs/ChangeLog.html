@@ -1,5 +1,58 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2019 09 15</h2>
+
+<pre><code>- implement issue RT#130425: check mode.  A new flag '--assert-tidy'
+  will cause an error message if the output script is not identical to
+  the input script. For completeness, the opposite flag '--assert-untidy'
+  has also been added.
+
+- iteration speedup for unchanged code.  Previously, when iterations were
+  requested, at least two formatting passes were made. Now just a single pass
+  is made if the formatted code is identical to the input code.
+
+- fixed issue RT#130344: false warning "operator in print statement" 
+  for "use lib". 
+
+- fixed issue RT#130304: standard error output should include filename.
+  When perltidy error messages are directed to the standard error output 
+  with -se or --standard-error-output, the message lines now have a prefix 
+  'filename:' for clarification in case multiple files 
+  are processed, where 'filename' is the name of the input file.  If 
+  input is from the standard input the displayed filename is '&lt;stdin&gt;', 
+  and if it is from a data structure then displayed filename 
+  is '&lt;source_stream&gt;'.
+
+- fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
+  status if it wrote to the standard error output. Prevously only fatal
+  run errors produced a non-zero exit flag. Now, even non-fatal messages
+  requested with the -w flag will cause a non-zero exit flag.  The exit
+  flag now has these values:
+
+     0 = no errors
+     1 = perltidy could not run to completion due to errors
+     2 = perltidy ran to completion with error messages
+
+- added warning message for RT#130008, which warns of conflicting input
+  parameters -iob and -bom or -boc.
+
+- fixed RT#129850; concerning a space between a closing block brace and
+  opening bracket or brace, as occurs before the '[' in this line:
+
+   my @addunix = map { File::Spec::Unix-&gt;catfile( @ROOT, @$_ ) } ['b'];
+
+  Formerly, any space was removed. Now it is optional, and the output will
+  follow the input.
+
+- fixed issue git#13, needless trailing whitespace in error message
+
+- fixed issue git#9: if the -ce (--cuddled-else) flag is used,
+  do not try to form new one line blocks for a block type 
+  specified with -cbl, particularly map, sort, grep
+
+- some improved vertical alignments
+</code></pre>
+
 <h2>2019 06 01</h2>
 
 <pre><code>- rt #128477: Prevent inconsistent owner/group and setuid/setgid bits. 
@@ -468,7 +521,7 @@ NEW:
 
  - Fixed RT #107832 and #106492, lack of vertical alignment of two lines
    when -boc flag (break at old commas) is set.  This bug was 
-   inadvertently introduced in previous bug fix RT #98902.
+   inadvertently introduced in previous bug fix RT #98902. 
 
  - Some common extensions to Perl syntax are handled better.
    In particular, the following snippet is now foratted cleanly:

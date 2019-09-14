@@ -47,6 +47,7 @@
   <li><a href="#SWITCHES-WHICH-MAY-BE-NEGATED">SWITCHES WHICH MAY BE NEGATED</a></li>
   <li><a href="#LIMITATIONS">LIMITATIONS</a></li>
   <li><a href="#FILES">FILES</a></li>
+  <li><a href="#ERROR-HANDLING">ERROR HANDLING</a></li>
   <li><a href="#SEE-ALSO">SEE ALSO</a></li>
   <li><a href="#VERSION">VERSION</a></li>
   <li><a href="#BUG-REPORTS">BUG REPORTS</a></li>
@@ -303,6 +304,18 @@
 <dd>
 
 <p>Force perltidy to process binary files. To avoid producing excessive error messages, perltidy skips files identified by the system as non-text. However, valid perl scripts containing binary data may sometimes be identified as non-text, and this flag forces perltidy to process them.</p>
+
+</dd>
+<dt id="ast---assert-tidy"><b>-ast</b>, <b>--assert-tidy</b></dt>
+<dd>
+
+<p>This flag asserts that the input and output code streams are identical, or in other words that the input code is already &#39;tidy&#39; according to the formatting parameters. If this is not the case, an error message noting this is produced. This error message will cause the process to return a non-zero exit code. The test for this is made by comparing an MD5 hash value for the input and output code streams. This flag has no other effect on the functioning of perltidy. This might be useful for certain code maintenance operations.</p>
+
+</dd>
+<dt id="asu---assert-untidy"><b>-asu</b>, <b>--assert-untidy</b></dt>
+<dd>
+
+<p>This flag asserts that the input and output code streams are different, or in other words that the input code is &#39;untidy&#39; according to the formatting parameters. If this is not the case, an error message noting this is produced. This flag has no other effect on the functioning of perltidy.</p>
 
 </dd>
 </dl>
@@ -2867,13 +2880,23 @@
 </dd>
 </dl>
 
+<h1 id="ERROR-HANDLING">ERROR HANDLING</h1>
+
+<p>An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.</p>
+
+<p>A exit value of 0 indicates that perltidy ran to completion with no error messages.</p>
+
+<p>An exit value of 1 indicates that the process had to be terminated early due to errors in the input parameters. This can happen for example if a parameter is misspelled or given an invalid value. Error messages in the standard error output will indicate the cause of any problem.</p>
+
+<p>An exit value of 2 indicates that perltidy ran to completion but there there are warning messages in the standard error output related to parameter errors or conflicts and/or warning messages in the perltidy error file(s) relating to possible syntax errors in the source code being tidied.</p>
+
 <h1 id="SEE-ALSO">SEE ALSO</h1>
 
 <p>perlstyle(1), Perl::Tidy(3)</p>
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20190601</p>
+<p>This man page documents perltidy version 20190915</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

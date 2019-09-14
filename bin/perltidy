@@ -14,9 +14,9 @@ if ( $^O =~ /Mac/ ) {
 }
 
 # Exit codes returned by perltidy:
-#    0 - successful run without errors
-#    1 - run terminated with a fatal error
-#    2 - successful run but with non-fatal warning messages
+#    0 = no errors
+#    1 = perltidy could not run to completion due to errors
+#    2 = perltidy ran to completion with error messages
 exit Perl::Tidy::perltidy( argv => $arg_string );
 
 __END__
@@ -364,6 +364,7 @@ as non-text, and this flag forces perltidy to process them.
 This flag asserts that the input and output code streams are identical, or in
 other words that the input code is already 'tidy' according to the formatting
 parameters.  If this is not the case, an error message noting this is produced.
+This error message will cause the process to return a non-zero exit code.
 The test for this is made by comparing an MD5 hash value for the input and
 output code streams. This flag has no other effect on the functioning of
 perltidy.  This might be useful for certain code maintenance operations.
@@ -3750,13 +3751,29 @@ F<somefile.tdy.tdy.tdy>.
 
 =back
 
+=head1 ERROR HANDLING
+
+An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.
+
+A exit value of 0 indicates that perltidy ran to completion with no error messages.
+
+An exit value of 1 indicates that the process had to be terminated early due to
+errors in the input parameters.  This can happen for example if a parameter is
+misspelled or given an invalid value.  Error messages in the standard
+error output will indicate the cause of any problem.  
+
+An exit value of 2 indicates that perltidy ran to completion but there there
+are warning messages in the standard error output related to parameter errors or
+conflicts and/or warning messages in the perltidy error file(s) relating to
+possible syntax errors in the source code being tidied. 
+
 =head1 SEE ALSO
 
 perlstyle(1), Perl::Tidy(3)
 
 =head1 VERSION
 
-This man page documents perltidy version 20190601.01
+This man page documents perltidy version 20190915
 
 =head1 BUG REPORTS
 

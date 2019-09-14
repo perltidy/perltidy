@@ -12,7 +12,7 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20190601.01';
+our $VERSION = '20190915';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -645,12 +645,12 @@ sub new {
     $gnu_position_predictor = 0;    # where the current token is predicted to be
     $max_gnu_stack_index    = 0;
     $max_gnu_item_index     = -1;
-    $gnu_stack[0] = new_lp_indentation_item( 0, -1, -1, 0, 0 );
-    @gnu_item_list                   = ();
-    $last_output_indentation         = 0;
-    $last_indentation_written        = 0;
-    $last_unadjusted_indentation     = 0;
-    $last_leading_token              = "";
+    $gnu_stack[0]                = new_lp_indentation_item( 0, -1, -1, 0, 0 );
+    @gnu_item_list               = ();
+    $last_output_indentation     = 0;
+    $last_indentation_written    = 0;
+    $last_unadjusted_indentation = 0;
+    $last_leading_token          = "";
     $last_output_short_opening_token = 0;
 
     $saw_VERSION_in_this_file = !$rOpts->{'pass-version-line'};
@@ -1586,7 +1586,7 @@ sub break_lines {
                 # out of __END__ and __DATA__ sections, because
                 # the user may be using this section for any purpose whatsoever
                 if ( $rOpts->{'delete-pod'} ) { $skip_line = 1; }
-                if ( $rOpts->{'tee-pod'} )    { $tee_line  = 1; }
+                if ( $rOpts->{'tee-pod'} )    { $tee_line = 1; }
                 if ( $rOpts->{'trim-pod'} )   { $input_line =~ s/\s+$// }
                 if (   !$skip_line
                     && !$in_format_skipping_section
@@ -1849,7 +1849,7 @@ sub initialize_whitespace_hashes {
     $binary_ws_rules{'t'}{'L'} = WS_NO;
     $binary_ws_rules{'t'}{'{'} = WS_NO;
     $binary_ws_rules{'}'}{'L'} = WS_NO;
-    $binary_ws_rules{'}'}{'{'} = WS_OPTIONAL; # RT#129850; was WS_NO
+    $binary_ws_rules{'}'}{'{'} = WS_OPTIONAL;    # RT#129850; was WS_NO
     $binary_ws_rules{'$'}{'L'} = WS_NO;
     $binary_ws_rules{'$'}{'{'} = WS_NO;
     $binary_ws_rules{'@'}{'L'} = WS_NO;
@@ -5683,9 +5683,9 @@ EOM
             );
         }
 
-	# Note: there are additional parameters that can be made inactive by
-	# -iob, but they are on by default so we would generate excessive
-	# warnings if we noted them. They are:
+        # Note: there are additional parameters that can be made inactive by
+        # -iob, but they are on by default so we would generate excessive
+        # warnings if we noted them. They are:
         # $rOpts->{'break-at-old-keyword-breakpoints'}
         # $rOpts->{'break-at-old-logical-breakpoints'}
         # $rOpts->{'break-at-old-ternary-breakpoints'}
@@ -5912,9 +5912,9 @@ sub bad_pattern {
                 $rcuddled_block_types->{$start}->{$word} =
                   1;    #"$string_count.$word_count";
 
-		# git#9: Remove this word from the list of desired one-line
-		# blocks
-		$want_one_line_block{$word} = 0;
+                # git#9: Remove this word from the list of desired one-line
+                # blocks
+                $want_one_line_block{$word} = 0;
             }
         }
         return;
@@ -9735,7 +9735,7 @@ sub send_lines_to_vertical_aligner {
         my $ibeg = $ri_first->[$n];
         my $iend = $ri_last->[$n];
 
-        delete_needless_alignments($ibeg, $iend ); 
+        delete_needless_alignments( $ibeg, $iend );
 
         my ( $rtokens, $rfields, $rpatterns ) =
           make_alignment_patterns( $ibeg, $iend );
@@ -9932,28 +9932,28 @@ sub send_lines_to_vertical_aligner {
 
         # map certain operators to the same class for pattern matching
         %operator_map = (
-	   '!~' => '=~',
-	   '+=' => '+=',
-	   '-=' => '+=',
-	   '*=' => '+=',
-	   '/=' => '+=',
-	);
+            '!~' => '=~',
+            '+=' => '+=',
+            '-=' => '+=',
+            '*=' => '+=',
+            '/=' => '+=',
+        );
     }
 
     sub delete_needless_alignments {
         my ( $ibeg, $iend ) = @_;
 
-        # Remove unwanted alignments.  This routine is a place to remove alignments
-        # which might cause problems at later stages.  There are currently
-	# two types of fixes:
+     # Remove unwanted alignments.  This routine is a place to remove alignments
+     # which might cause problems at later stages.  There are currently
+     # two types of fixes:
 
-	# 1. Remove excess parens
-	# 2. Remove alignments within 'elsif' conditions
+        # 1. Remove excess parens
+        # 2. Remove alignments within 'elsif' conditions
 
-	# Patch #1: Excess alignment of parens can prevent other good
-	# alignments.  For example, note the parens in the first two rows of
-	# the following snippet.  They would normally get marked for alignment
-	# and aligned as follows:
+        # Patch #1: Excess alignment of parens can prevent other good
+        # alignments.  For example, note the parens in the first two rows of
+        # the following snippet.  They would normally get marked for alignment
+        # and aligned as follows:
 
         #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
         #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
@@ -9971,25 +9971,25 @@ sub send_lines_to_vertical_aligner {
         # the exception that we always keep alignment of the first opening
         # paren on a line (for things like 'if' and 'elsif' statements).
 
-	# Setup needed constants
-        my $i_good_paren = -1;
-        my $imin_match   = $iend + 1;
+        # Setup needed constants
+        my $i_good_paren  = -1;
+        my $imin_match    = $iend + 1;
         my $i_elsif_close = $ibeg - 1;
         my $i_elsif_open  = $iend + 1;
         if ( $iend > $ibeg ) {
             if ( $types_to_go[$ibeg] eq 'k' ) {
 
-		# Paren patch: mark a location of a paren we should keep, such
-		# as one following something like a leading 'if', 'elsif',..
+                # Paren patch: mark a location of a paren we should keep, such
+                # as one following something like a leading 'if', 'elsif',..
                 $i_good_paren = $ibeg + 1;
                 if ( $types_to_go[$i_good_paren] eq 'b' ) {
                     $i_good_paren++;
                 }
 
-		# 'elsif' patch: remember the range of the parens of an elsif,
-		# and do not make alignments within them because this can cause
-		# loss of padding and overall brace alignment in the vertical
-		# aligner.
+                # 'elsif' patch: remember the range of the parens of an elsif,
+                # and do not make alignments within them because this can cause
+                # loss of padding and overall brace alignment in the vertical
+                # aligner.
                 if (   $tokens_to_go[$ibeg] eq 'elsif'
                     && $i_good_paren < $iend
                     && $tokens_to_go[$i_good_paren] eq '(' )
@@ -10000,13 +10000,13 @@ sub send_lines_to_vertical_aligner {
             }
         }
 
-	# Loop to make the fixes on this line
+        # Loop to make the fixes on this line
         my @imatch_list;
         for my $i ( $ibeg .. $iend ) {
 
             if ( $matching_token_to_go[$i] ne '' ) {
 
-            	# Patch #2: undo alignment within elsif parens
+                # Patch #2: undo alignment within elsif parens
                 if ( $i > $i_elsif_open && $i < $i_elsif_close ) {
                     $matching_token_to_go[$i] = '';
                     next;

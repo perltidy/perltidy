@@ -183,9 +183,13 @@
 
 <h1 id="ERROR-HANDLING">ERROR HANDLING</h1>
 
-<p>Perltidy will return with an error flag indicating if the process had to be terminated early due to errors in the input parameters. This can happen for example if a parameter is misspelled or given an invalid value. The calling program should check this flag because if it is set the destination stream will be empty or incomplete and should be ignored. Error messages in the <b>stderr</b> stream will indicate the cause of any problem.</p>
+<p>An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of the result.</p>
 
-<p>If the error flag is not set then perltidy ran to completion. However there may still be warning messages in the <b>stderr</b> stream related to control parameters, and there may be warning messages in the <b>errorfile</b> stream relating to possible syntax errors in the source code being tidied.</p>
+<p>A exit value of 0 indicates that perltidy ran to completion with no error messages.</p>
+
+<p>An exit value of 1 indicates that the process had to be terminated early due to errors in the input parameters. This can happen for example if a parameter is misspelled or given an invalid value. The calling program should check for this flag because if it is set the destination stream will be empty or incomplete and should be ignored. Error messages in the <b>stderr</b> stream will indicate the cause of any problem.</p>
+
+<p>An exit value of 2 indicates that perltidy ran to completion but there there are warning messages in the <b>stderr</b> stream related to parameter errors or conflicts and/or warning messages in the <b>errorfile</b> stream relating to possible syntax errors in the source code being tidied.</p>
 
 <p>In the event of a catastrophic error for which recovery is not possible <b>perltidy</b> terminates by making calls to <b>croak</b> or <b>confess</b> to help the programmer localize the problem. These should normally only occur during program development.</p>
 
@@ -349,7 +353,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents Perl::Tidy version 20190601</p>
+<p>This man page documents Perl::Tidy version 20190915</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

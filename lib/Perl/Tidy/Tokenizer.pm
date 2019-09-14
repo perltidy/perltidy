@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20190601.01';
+our $VERSION = '20190915';
 
 use Perl::Tidy::LineBuffer;
 
@@ -3221,7 +3221,7 @@ EOM
                 elsif (
                        ( $next_nonblank_token eq ':' )
                     && ( $rtokens->[ $i_next + 1 ] ne ':' )
-                    && ( $i_next <= $max_token_index )      # colon on same line
+                    && ( $i_next <= $max_token_index )    # colon on same line
                     && label_ok()
                   )
                 {
@@ -4226,12 +4226,12 @@ sub operator_expected {
         else {
             if ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
 
-		# Do not complain in 'use' statements, which have special syntax. 
-                # For example, from RT#130344:
-                #   use lib $FindBin::Bin . '/lib';
-		if ($statement_type ne 'use') {
+               # Do not complain in 'use' statements, which have special syntax.
+               # For example, from RT#130344:
+               #   use lib $FindBin::Bin . '/lib';
+                if ( $statement_type ne 'use' ) {
                     complain("operator in print statement not recommended\n");
-		}
+                }
                 $op_expected = OPERATOR;
             }
         }

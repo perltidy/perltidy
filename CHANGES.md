@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2019 06 01.01
+## 2019 09 15
 
     - implement issue RT#130425: check mode.  A new flag '--assert-tidy'
       will cause an error message if the output script is not identical to
@@ -15,11 +15,13 @@
       for "use lib". 
 
     - fixed issue RT#130304: standard error output should include filename.
-      When perltidy error messages are directed to the standard error output with
-      -se or --standard-error-output, the message lines now have a prefix with
-      'filename:' for clarification when multiple files are processed.  If an
-      input filename is not known, for example when input is from the standard
-      input or a data structure, then displayed filename is 'perltidy'.
+      When perltidy error messages are directed to the standard error output 
+      with -se or --standard-error-output, the message lines now have a prefix 
+      'filename:' for clarification in case multiple files 
+      are processed, where 'filename' is the name of the input file.  If 
+      input is from the standard input the displayed filename is '<stdin>', 
+      and if it is from a data structure then displayed filename 
+      is '<source_stream>'.
 
     - fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
       status if it wrote to the standard error output. Prevously only fatal
@@ -28,8 +30,8 @@
       flag now has these values:
 
          0 = no errors
-         1 = fatal error
-         2 = non-fatal error
+         1 = perltidy could not run to completion due to errors
+         2 = perltidy ran to completion with error messages
 
     - added warning message for RT#130008, which warns of conflicting input
       parameters -iob and -bom or -boc.
@@ -40,7 +42,7 @@
        my @addunix = map { File::Spec::Unix->catfile( @ROOT, @$_ ) } ['b'];
 
       Formerly, any space was removed. Now it is optional, and the output will
-      follow the input.  
+      follow the input.
 
     - fixed issue git#13, needless trailing whitespace in error message
 
