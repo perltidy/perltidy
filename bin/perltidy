@@ -3757,15 +3757,20 @@ An exit value of 0, 1, or 2 is returned by perltidy to indicate the status of th
 
 A exit value of 0 indicates that perltidy ran to completion with no error messages.
 
-An exit value of 1 indicates that the process had to be terminated early due to
-errors in the input parameters.  This can happen for example if a parameter is
-misspelled or given an invalid value.  Error messages in the standard
-error output will indicate the cause of any problem.  
+A non-zero exit value indicates some kind of problem was detected. 
 
-An exit value of 2 indicates that perltidy ran to completion but there there
-are warning messages in the standard error output related to parameter errors or
-conflicts and/or warning messages in the perltidy error file(s) relating to
-possible syntax errors in the source code being tidied. 
+An exit value of 1 indicates that perltidy terminated prematurely, usually due
+to some kind of errors in the input parameters.  This can happen for example if
+a parameter is misspelled or given an invalid value.  Error messages in the
+standard error output will indicate the cause of any problem.  If perltidy
+terminates prematurely then no output files will be produced.
+
+An exit value of 2 indicates that perltidy was able to run to completion but
+there there are (1) warning messages in the standard error output related to
+parameter errors or problems and/or (2) warning messages in the perltidy error
+file(s) relating to possible syntax errors in one or more of the source
+script(s) being tidied.  When multiple files are being processed, an error
+detected in any single file will produce this type of exit condition.
 
 =head1 SEE ALSO
 

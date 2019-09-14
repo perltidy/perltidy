@@ -2,15 +2,6 @@
 
 ## 2019 09 15
 
-    - implement issue RT#130425: check mode.  A new flag '--assert-tidy'
-      will cause an error message if the output script is not identical to
-      the input script. For completeness, the opposite flag '--assert-untidy'
-      has also been added.
-
-    - iteration speedup for unchanged code.  Previously, when iterations were
-      requested, at least two formatting passes were made. Now just a single pass
-      is made if the formatted code is identical to the input code.
-
     - fixed issue RT#130344: false warning "operator in print statement" 
       for "use lib". 
 
@@ -22,6 +13,12 @@
       input is from the standard input the displayed filename is '<stdin>', 
       and if it is from a data structure then displayed filename 
       is '<source_stream>'.
+
+    - implement issue RT#130425: check mode.  A new flag '--assert-tidy'
+      will cause an error message if the output script is not identical to
+      the input script. For completeness, the opposite flag '--assert-untidy'
+      has also been added.  The next item, RT#130297, insures that the script
+      will exit with a non-zero exit flag if the assertion fails.
 
     - fixed issue RT#130297; the perltidy script now exits with a nonzero exit 
       status if it wrote to the standard error output. Prevously only fatal
@@ -49,6 +46,10 @@
     - fixed issue git#9: if the -ce (--cuddled-else) flag is used,
       do not try to form new one line blocks for a block type 
       specified with -cbl, particularly map, sort, grep
+
+    - iteration speedup for unchanged code.  Previously, when iterations were
+      requested, at least two formatting passes were made. Now just a single pass
+      is made if the formatted code is identical to the input code.
 
     - some improved vertical alignments
 
