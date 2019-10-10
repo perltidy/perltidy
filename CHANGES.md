@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2019 09 15
+## 2019 09 15.01
 
     - fixed issue RT#130344: false warning "operator in print statement" 
       for "use lib". 
