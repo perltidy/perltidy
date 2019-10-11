@@ -1,0 +1,11 @@
+sub get_val () {
+
+}
+
+method get_value () {
+
+}
+
+fun get_other_value () {
+
+}

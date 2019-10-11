@@ -291,3 +291,10 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets15.t	git14.def
+../snippets15.t	sal.def
+../snippets15.t	sal.sal
+../snippets15.t	spp.def
+../snippets15.t	spp.spp0
+../snippets16.t	spp.spp1
+../snippets16.t	spp.spp2

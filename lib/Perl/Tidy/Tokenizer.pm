@@ -114,6 +114,8 @@ use vars qw{
   %is_keyword_taking_list
   %is_keyword_taking_optional_args
   %is_q_qq_qw_qx_qr_s_y_tr_m
+  %is_sub
+  %is_package
 };
 
 # possible values of operator_expected()
@@ -141,6 +143,28 @@ use constant MAX_NAG_MESSAGES => 6;
 sub DESTROY {
     my $self = shift;
     $self->_decrement_count();
+    return;
+}
+
+sub check_options {
+
+    # Check Tokenizer parameters
+    my $rOpts = shift;
+
+    %is_sub = ( );
+    $is_sub{'sub'} = 1;
+
+    # Install any aliases to 'sub'
+    if ( $rOpts->{'sub-alias-list'} ) {
+
+        # Note that any 'sub-alias-list' has been preprocessed to
+        # be a trimmed, space-separated list which includes 'sub'
+        # for example, it might be 'sub method fun'
+        my @sub_alias_list = split /\s+/, $rOpts->{'sub-alias-list'};
+        foreach my $word (@sub_alias_list) {
+            $is_sub{$word} = 1;
+        }
+    }
     return;
 }
 
@@ -2441,10 +2465,6 @@ sub prepare_for_a_new_file {
     @_ = qw(use require);
     @is_use_require{@_} = (1) x scalar(@_);
 
-    my %is_sub_package;
-    @_ = qw(sub package);
-    @is_sub_package{@_} = (1) x scalar(@_);
-
     # This hash holds the hash key in $tokenizer_self for these keywords:
     my %is_format_END_DATA = (
         'format'   => '_in_format',
@@ -2860,7 +2880,7 @@ EOM
             # but do not start on blanks and comments
             if ( $id_scan_state && $pre_type !~ /[b#]/ ) {
 
-                if ( $id_scan_state =~ /^(sub|package)/ ) {
+                if ( $is_sub{$id_scan_state} || $is_package{$id_scan_state} ) {
                     scan_id();
                 }
                 else {
@@ -3236,7 +3256,7 @@ EOM
                 }
 
                 #      'sub' || 'package'
-                elsif ( $is_sub_package{$tok_kw} ) {
+                elsif ( $is_sub{$tok_kw} || $is_package{$tok_kw} ) {
                     error_if_expecting_OPERATOR()
                       if ( $expecting == OPERATOR );
                     scan_id();
@@ -3709,7 +3729,7 @@ EOM
             if ( $type eq ';' && $tok =~ /\w/ ) { $fix_type = 'k' }
 
             # output anonymous 'sub' as keyword
-            if ( $type eq 't' && $tok eq 'sub' ) { $fix_type = 'k' }
+            if ( $type eq 't' && $is_sub{$tok} ) { $fix_type = 'k' }
 
             # -----------------------------------------------------------------
 
@@ -4522,6 +4542,13 @@ sub code_block_type {
         && $last_nonblank_token =~ /^(sub|package)\b/ )
     {
         return $last_nonblank_token;
+    }
+
+    # or a sub alias
+    elsif (( $last_nonblank_type eq 'i' || $last_nonblank_type eq 't' )
+        && ( $is_sub{$last_nonblank_token} ) )
+    {
+        return 'sub';
     }
 
     elsif ( $statement_type =~ /^(sub|package)\b/ ) {
@@ -5531,7 +5558,7 @@ sub scan_id_do {
     # handle non-blank line; identifier, if any, must follow
     unless ($blank_line) {
 
-        if ( $id_scan_state eq 'sub' ) {
+        if ( $is_sub{$id_scan_state} ) {
             ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
                 $input_line, $i,             $i_beg,
                 $tok,        $type,          $rtokens,
@@ -5539,7 +5566,7 @@ sub scan_id_do {
             );
         }
 
-        elsif ( $id_scan_state eq 'package' ) {
+        elsif ( $is_package{$id_scan_state} ) {
             ( $i, $tok, $type ) =
               do_scan_package( $input_line, $i, $i_beg, $tok, $type, $rtokens,
                 $rtoken_map, $max_token_index );
@@ -7762,6 +7789,12 @@ BEGIN {
 
     @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
+
+    @q = qw(sub);
+    @is_sub{@q} = (1) x scalar(@q);
+
+    @q = qw(package);
+    @is_package{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
     my @special_keywords = qw(

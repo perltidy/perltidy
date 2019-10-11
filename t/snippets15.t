@@ -15,6 +15,11 @@
 #12 align30.def
 #13 git09.def
 #14 git09.git09
+#15 git14.def
+#16 sal.def
+#17 sal.sal
+#18 spp.def
+#19 spp.spp0
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -39,6 +44,10 @@ BEGIN {
         'gnu'               => "-gnu",
         'olbs0'             => "-olbs=0",
         'olbs2'             => "-olbs=2",
+        'sal'               => <<'----------',
+-sal='method fun'
+----------
+        'spp0' => "-spp=0",
     };
 
     ############################
@@ -115,6 +124,14 @@ my $q = $rs
 } @unsorted;
 ----------
 
+        'git14' => <<'----------',
+# git#14; do not break at trailing 'or'
+$second = {
+    key1 => 'aaa',
+    key2 => 'bbb',
+} if $flag1 or $flag2;
+----------
+
         'gnu5' => <<'----------',
         # side comments limit gnu type formatting with l=80; note extra comma
         push @tests, [
@@ -132,6 +149,28 @@ if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
 if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked"; }
+----------
+
+        'sal' => <<'----------',
+sub get_val () {
+
+}
+
+method get_value () {
+
+}
+
+fun get_other_value () {
+
+}
+----------
+
+        'spp' => <<'----------',
+sub get_val() { }
+
+sub get_Val  () { }
+
+sub Get_val		() { }
 ----------
 
         'wngnu1' => <<'----------',
@@ -372,6 +411,78 @@ elsif ( $i > $depth )  { $_ = 0; }
     [ $_, length($_) ]
 } @unsorted;
 #14...........
+        },
+
+        'git14.def' => {
+            source => "git14",
+            params => "def",
+            expect => <<'#15...........',
+# git#14; do not break at trailing 'or'
+$second = {
+    key1 => 'aaa',
+    key2 => 'bbb',
+} if $flag1 or $flag2;
+#15...........
+        },
+
+        'sal.def' => {
+            source => "sal",
+            params => "def",
+            expect => <<'#16...........',
+sub get_val () {
+
+}
+
+method get_value() {
+
+}
+
+fun get_other_value() {
+
+}
+#16...........
+        },
+
+        'sal.sal' => {
+            source => "sal",
+            params => "sal",
+            expect => <<'#17...........',
+sub get_val () {
+
+}
+
+method get_value () {
+
+}
+
+fun get_other_value () {
+
+}
+#17...........
+        },
+
+        'spp.def' => {
+            source => "spp",
+            params => "def",
+            expect => <<'#18...........',
+sub get_val() { }
+
+sub get_Val () { }
+
+sub Get_val () { }
+#18...........
+        },
+
+        'spp.spp0' => {
+            source => "spp",
+            params => "spp0",
+            expect => <<'#19...........',
+sub get_val() { }
+
+sub get_Val() { }
+
+sub Get_val() { }
+#19...........
         },
     };
 

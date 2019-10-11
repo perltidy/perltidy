@@ -684,6 +684,7 @@ EOM
     }
 
     Perl::Tidy::Formatter::check_options($rOpts);
+    Perl::Tidy::Tokenizer::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
         Perl::Tidy::HtmlWriter->check_options($rOpts);
     }
@@ -1766,6 +1767,7 @@ sub generate_options {
     $add_option->( 'extended-syntax',              'xs',   '!' );
     $add_option->( 'assert-tidy',                  'ast',  '!' );
     $add_option->( 'assert-untidy',                'asu',  '!' );
+    $add_option->( 'sub-alias-list',               'sal',  '=s' );
 
     ########################################
     $category = 2;    # Code indentation control
@@ -1810,6 +1812,7 @@ sub generate_options {
     $add_option->( 'trim-pod',                                  'trp',   '!' );
     $add_option->( 'want-left-space',                           'wls',   '=s' );
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
+    $add_option->( 'space-prototype-paren',                     'spp',  '=i' );
 
     ########################################
     $category = 4;    # Comment controls
@@ -2028,6 +2031,8 @@ sub generate_options {
 
         'keyword-group-blanks-before' => [ 0, 2 ],
         'keyword-group-blanks-after'  => [ 0, 2 ],
+
+        'space-prototype-paren' => [ 0, 2 ],
     );
 
     # Note: we could actually allow negative ci if someone really wants it:
@@ -2116,6 +2121,7 @@ sub generate_options {
       short-concatenation-item-length=8
       space-for-semicolon
       space-backslash-quote=1
+      space-prototype-paren=1
       square-bracket-tightness=1
       square-bracket-vertical-tightness-closing=0
       square-bracket-vertical-tightness=0
@@ -2839,6 +2845,33 @@ EOM
     }
     else {
         $rOpts->{'default-tabsize'} = 8;
+    }
+
+    # Check and clean up any sub-alias-list
+    if ( $rOpts->{'sub-alias-list'} ) {
+        my $sub_alias_string = $rOpts->{'sub-alias-list'};
+        $sub_alias_string =~ s/,/ /g;    # allow commas
+        $sub_alias_string =~ s/^\s+//;
+        $sub_alias_string =~ s/\s+$//;
+        my @sub_alias_list     = split /\s+/, $sub_alias_string;
+        my @filtered_word_list = ('sub');
+        my %seen;
+
+        # include 'sub' for later convenience
+        $seen{sub}++;
+        foreach my $word (@sub_alias_list) {
+            if ($word) {
+                if ( $word !~ /^\w[\w\d]*$/ ) {
+                    Warn("unexpected sub alias '$word' - ignoring\n");
+                }
+                if ( !$seen{$word} ) {
+                    $seen{$word}++;
+                    push @filtered_word_list, $word;
+                }
+            }
+        }
+        my $joined_words = join ' ', @filtered_word_list;
+        $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
     }
 
     # Define $tabsize, the number of spaces per tab for use in

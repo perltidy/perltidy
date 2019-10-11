@@ -318,6 +318,18 @@
 <p>This flag asserts that the input and output code streams are different, or in other words that the input code is &#39;untidy&#39; according to the formatting parameters. If this is not the case, an error message noting this is produced. This flag has no other effect on the functioning of perltidy.</p>
 
 </dd>
+<dt id="sal-s---sub-alias-list-s"><b>-sal=s</b>, <b>--sub-alias-list=s</b></dt>
+<dd>
+
+<p>This flag causes one or more words to be treated the same as if they were the keyword &#39;sub&#39;. The string <b>s</b> contains one or more alias words, separated by spaces or commas.</p>
+
+<p>For example,</p>
+
+<pre><code>        perltidy -sal=&#39;method fun _sub M4&#39; </code></pre>
+
+<p>will cause the perltidy to treate the words &#39;method&#39;, &#39;fun&#39;, &#39;_sub&#39; and &#39;M4&#39; to be treated the same as if they were &#39;sub&#39;. Note that if the alias words are separated by spaces then the string of words should be placed in quotes.</p>
+
+</dd>
 </dl>
 
 <h1 id="FORMATTING-OPTIONS">FORMATTING OPTIONS</h1>
@@ -845,6 +857,26 @@
   myfunc ( $a, $b, $c );   # -sfp</code></pre>
 
 <p>You will probably also want to use the flag <b>-skp</b> (previous item) too.</p>
+
+</dd>
+<dt id="spp-n-or---space-prototype-paren-n"><b>-spp=n</b> or <b>--space-prototype-paren=n</b></dt>
+<dd>
+
+<p>This flag can be used to control whether a function prototype is preceded by a space. For example, the following prototype does not have a space.</p>
+
+<pre><code>      sub usage();</code></pre>
+
+<p>This integer <b>n</b> may have the value 0, 1, or 2 as follows:</p>
+
+<pre><code>    -spp=0 means no space before the paren
+    -spp=1 means follow the example of the source code [DEFAULT]
+    -spp=2 means always put a space before the paren</code></pre>
+
+<p>The default is <b>-spp=1</b>, meaning that a space will be used if and only if there is one in the source code. Given the above line of code, the result of applying the different options would be:</p>
+
+<pre><code>        sub usage();    # n=0 [no space]
+        sub usage();    # n=1 [default; follows input]
+        sub usage ();   # n=2 [space]</code></pre>
 
 </dd>
 <dt id="Trimming-whitespace-around-qw-quotes">Trimming whitespace around <code>qw</code> quotes</dt>
@@ -2898,7 +2930,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20190915</p>
+<p>This man page documents perltidy version 20190915.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

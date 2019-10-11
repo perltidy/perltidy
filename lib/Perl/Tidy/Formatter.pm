@@ -2937,6 +2937,17 @@ sub respace_tokens {
                 }
 
                 if ( $token =~ /$SUB_PATTERN/ ) {
+
+		    # -spp = 0 : no space before opening prototype paren
+		    # -spp = 1 : stable (follow input spacing)
+		    # -spp = 2 : always space before opening prototype paren
+                    my $spp = $rOpts->{'space-prototype-paren'};
+                    if ( defined($spp) ) {
+                        if    ( $spp == 0 ) { $token =~ s/\s+\(/\(/; }
+                        elsif ( $spp == 2 ) { $token =~ s/\(/ (/; }
+                    }
+
+		    # one space max, and no tabs
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
@@ -5380,6 +5391,7 @@ sub check_options {
         }
     }
 
+    make_sub_matching_pattern();
     make_bli_pattern();
     make_block_brace_vertical_tightness_pattern();
     make_blank_line_pattern();
@@ -6036,6 +6048,23 @@ sub make_closing_side_comment_list_pattern {
           make_block_pattern( '-cscl', $rOpts->{'closing-side-comment-list'} );
     }
     return;
+}
+
+sub make_sub_matching_pattern {
+
+    $SUB_PATTERN  = '^sub\s+(::|\w)';
+    $ASUB_PATTERN = '^sub$';
+
+    if ( $rOpts->{'sub-alias-list'} ) {
+
+        # Note that any 'sub-alias-list' has been preprocessed to
+        # be a trimmed, space-separated list which includes 'sub'
+        # for example, it might be 'sub method fun'
+        my $sub_alias_list = $rOpts->{'sub-alias-list'};
+        $sub_alias_list =~ s/\s+/\|/g;
+        $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
+        $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
+    }
 }
 
 sub make_bli_pattern {

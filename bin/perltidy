@@ -376,6 +376,16 @@ other words that the input code is 'untidy' according to the formatting
 parameters.  If this is not the case, an error message noting this is produced.
 This flag has no other effect on the functioning of perltidy.
 
+=item B<-sal=s>,   B<--sub-alias-list=s>      
+
+This flag causes one or more words to be treated the same as if they were the keyword 'sub'.  The string B<s> contains one or more alias words, separated by spaces or commas.
+
+For example,
+
+        perltidy -sal='method fun _sub M4' 
+
+will cause the perltidy to treate the words 'method', 'fun', '_sub' and 'M4' to be treated the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
+
 
 =back
 
@@ -1069,6 +1079,25 @@ B<-sfp>  or B<--space-function-paren>
   myfunc ( $a, $b, $c );   # -sfp
 
 You will probably also want to use the flag B<-skp> (previous item) too.
+
+=item B<-spp=n>  or B<--space-prototype-paren=n>
+
+This flag can be used to control whether a function prototype is preceded by a space.  For example, the following prototype does not have a space.
+
+      sub usage();
+
+This integer B<n> may have the value 0, 1, or 2 as follows:
+
+    -spp=0 means no space before the paren
+    -spp=1 means follow the example of the source code [DEFAULT]
+    -spp=2 means always put a space before the paren
+
+The default is B<-spp=1>, meaning that a space will be used if and only if there is one in the source code.  Given the above line of code, the result of
+applying the different options would be:
+
+        sub usage();    # n=0 [no space]
+        sub usage();    # n=1 [default; follows input]
+        sub usage ();   # n=2 [space]
 
 =item Trimming whitespace around C<qw> quotes
 
