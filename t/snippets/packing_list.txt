@@ -138,6 +138,7 @@
 ../snippets15.t	spp.spp0
 ../snippets16.t	spp.spp1
 ../snippets16.t	spp.spp2
+../snippets16.t	git16.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -298,4 +299,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets16.t	git16.def
+../snippets16.t	git10.def
+../snippets16.t	git10.git10

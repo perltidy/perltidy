@@ -3948,6 +3948,36 @@ sub weld_nested_containers {
         # Do not weld if this makes our line too long
         $do_not_weld ||= $excess_length_to_K->($Kinner_opening) > 0;
 
+        # DO-NOT-WELD RULE 4; implemented for git#10:
+	# Do not weld an opening -ce brace if the next container is on a single
+	# line, different from the opening brace. (This is very rare).  For
+	# example, given the following with -ce, we will avoid joining the {
+	# and [
+          
+        #  } else {
+        #      [ $_, length($_) ]
+        #  }
+ 	 
+	# because this would produce a terminal one-line block:
+
+        #  } else { [ $_, length($_) ]  }
+
+	# which may not be what is desired. But given this input:
+
+        #  } else { [ $_, length($_) ]  }
+
+	# then we will do the weld and retain the one-line block
+        if ( $rOpts->{'cuddled-else'} ) {
+            my $block_type = $rLL->[$Kouter_opening]->[_BLOCK_TYPE_];
+            if ( $block_type && $rcuddled_block_types->{'*'}->{$block_type} ) {
+                my $io_line = $inner_opening->[_LINE_INDEX_];
+                my $ic_line = $inner_closing->[_LINE_INDEX_];
+                my $oo_line = $outer_opening->[_LINE_INDEX_];
+                $do_not_weld ||=
+                  ( $oo_line < $io_line && $ic_line == $io_line );
+            }
+        }
+
         if ($do_not_weld) {
 
             # After neglecting a pair, we start measuring from start of point io

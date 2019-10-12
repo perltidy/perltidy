@@ -30,6 +30,8 @@
 
     - fixed issue git#16, minor vertical alignment issue.
 
+    - fixed issue git#10, minor conflict of -wn and -ce
+
 ## 2019 09 15
 
     - fixed issue RT#130344: false warning "operator in print statement" 

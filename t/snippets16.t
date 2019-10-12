@@ -4,6 +4,8 @@
 #1 spp.spp1
 #2 spp.spp2
 #3 git16.def
+#4 git10.def
+#5 git10.git10
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -21,15 +23,27 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'  => "",
-        'spp1' => "-spp=1",
-        'spp2' => "-spp=2",
+        'def'   => "",
+        'git10' => "-wn -ce -cbl=sort,map,grep",
+        'spp1'  => "-spp=1",
+        'spp2'  => "-spp=2",
     };
 
     ############################
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'git10' => <<'----------',
+# perltidy -wn -ce -cbl=sort,map,grep
+@sorted = map {
+    $_->[0]
+} sort {
+    $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0]
+} map {
+    [ $_, length($_) ]
+} @unsorted;
+----------
 
         'git16' => <<'----------',
 # git#16, two equality lines with fat commas on the right
@@ -83,6 +97,33 @@ sub Get_val () { }
 my $Package   = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
 my %Structure = $Self->PackageParse( String => $Package );
 #3...........
+        },
+
+        'git10.def' => {
+            source => "git10",
+            params => "def",
+            expect => <<'#4...........',
+# perltidy -wn -ce -cbl=sort,map,grep
+@sorted =
+  map  { $_->[0] }
+  sort { $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0] }
+  map  { [ $_, length($_) ] } @unsorted;
+#4...........
+        },
+
+        'git10.git10' => {
+            source => "git10",
+            params => "git10",
+            expect => <<'#5...........',
+# perltidy -wn -ce -cbl=sort,map,grep
+@sorted = map {
+    $_->[0]
+} sort {
+    $a->[1] <=> $b->[1] or $a->[0] cmp $b->[0]
+} map {
+    [ $_, length($_) ]
+} @unsorted;
+#5...........
         },
     };
 
