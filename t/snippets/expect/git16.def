@@ -1,0 +1,3 @@
+# git#16, two equality lines with fat commas on the right
+my $Package   = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
+my %Structure = $Self->PackageParse( String => $Package );

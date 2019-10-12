@@ -1628,7 +1628,10 @@ sub salvage_equality_matches {
     # decision here, but for now this is not available.
     for ( my $j = 1 ; $j < $jmax_new - 1 ; $j++ ) {
         my $new_tok           = $rtokens->[$j];
-        my $is_good_alignment = ( $new_tok =~ /^(=|\?|if|unless|\|\||\&\&)/ );
+
+	# git#16: do not consider fat commas as good aligmnents here
+        my $is_good_alignment =
+          ( $new_tok =~ /^(=|\?|if|unless|\|\||\&\&)/ && $new_tok !~ /^=>/ );
         return if ($is_good_alignment);
     }
 

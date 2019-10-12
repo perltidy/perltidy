@@ -131,6 +131,13 @@
 ../snippets15.t	align30.def
 ../snippets15.t	git09.def
 ../snippets15.t	git09.git09
+../snippets15.t	git14.def
+../snippets15.t	sal.def
+../snippets15.t	sal.sal
+../snippets15.t	spp.def
+../snippets15.t	spp.spp0
+../snippets16.t	spp.spp1
+../snippets16.t	spp.spp2
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -291,10 +298,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets15.t	git14.def
-../snippets15.t	sal.def
-../snippets15.t	sal.sal
-../snippets15.t	spp.def
-../snippets15.t	spp.spp0
-../snippets16.t	spp.spp1
-../snippets16.t	spp.spp2
+../snippets16.t	git16.def

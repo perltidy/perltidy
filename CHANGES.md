@@ -28,6 +28,7 @@
         sub usage();    # i=1 [default; follows input]
         sub usage ();   # i=2 [space]
 
+    - fixed issue git#16, minor vertical alignment issue.
 
 ## 2019 09 15
 

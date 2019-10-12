@@ -3,6 +3,7 @@
 # Contents:
 #1 spp.spp1
 #2 spp.spp2
+#3 git16.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,6 +21,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'def'  => "",
         'spp1' => "-spp=1",
         'spp2' => "-spp=2",
     };
@@ -28,6 +30,12 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'git16' => <<'----------',
+# git#16, two equality lines with fat commas on the right
+my $Package = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
+my %Structure = $Self->PackageParse( String => $Package );
+----------
 
         'spp' => <<'----------',
 sub get_val() { }
@@ -65,6 +73,16 @@ sub get_Val () { }
 
 sub Get_val () { }
 #2...........
+        },
+
+        'git16.def' => {
+            source => "git16",
+            params => "def",
+            expect => <<'#3...........',
+# git#16, two equality lines with fat commas on the right
+my $Package   = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
+my %Structure = $Self->PackageParse( String => $Package );
+#3...........
         },
     };
 
