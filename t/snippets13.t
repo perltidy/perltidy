@@ -116,6 +116,14 @@ $t = 1000000;
 # two lines with large gap but same lhs pattern so align equals
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
+
+# two lines with 3 alignment tokens
+$expect = "1$expect" if $expect =~ /^e/i;
+$p = "1$p" if defined $p and $p =~ /^e/i;
+
+# two lines where alignment causes a large gap
+is( eval { sysopen( my $ro, $foo, &O_RDONLY | $TAINT0 ) }, undef );
+is( $@, '' );
 ----------
 
         'align22' => <<'----------',
@@ -336,6 +344,14 @@ $t = 1000000;
 # two lines with large gap but same lhs pattern so align equals
 local (@pieces)            = split( /\./, $filename, 2 );
 local ($just_dir_and_base) = $pieces[0];
+
+# two lines with 3 alignment tokens
+$expect = "1$expect" if $expect           =~ /^e/i;
+$p      = "1$p"      if defined $p and $p =~ /^e/i;
+
+# two lines where alignment causes a large gap
+is( eval { sysopen( my $ro, $foo, &O_RDONLY | $TAINT0 ) }, undef );
+is( $@,                                                    '' );
 #13...........
         },
 

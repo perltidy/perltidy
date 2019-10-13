@@ -2447,10 +2447,9 @@ sub delete_unmatched_tokens {
             }
         }
 
-        # Leave two lines alone unless they are an if/else or ternary pair.
-        # Alignment of just two lines can be annoying, so it is best to let the
-        # two-line rules decide if they should be aligned.
-        next if ( $nlines <= 2 && !$is_full_block );
+	# OLD: Leave two lines alone unless they are an if/else or ternary.
+	# NEW: Treat two lines the same as longer runs; results are better. 
+        ## next if ( $nlines <= 2 && !$is_full_block );
 
         # remove unwanted alignment tokens
         for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {

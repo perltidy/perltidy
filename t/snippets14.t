@@ -750,7 +750,7 @@ sub next_sibling {
             params => "def",
             expect => <<'#10...........',
 #!/usr/bin/perl -w
-use strict;    # with -kgb, no break after hash bang
+use strict;                # with -kgb, no break after hash bang
 our ( @Changed, $TAP );    # break after isolated 'our'
 use File::Compare;
 use Symbol;
@@ -773,7 +773,7 @@ print "break before this line\n";
             params => "kgb",
             expect => <<'#11...........',
 #!/usr/bin/perl -w
-use strict;    # with -kgb, no break after hash bang
+use strict;                # with -kgb, no break after hash bang
 our ( @Changed, $TAP );    # break after isolated 'our'
 
 use File::Compare;

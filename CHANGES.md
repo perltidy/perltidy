@@ -2,7 +2,7 @@
 
 ## 2019 09 15.01
 
-    - implement issue RT#130640: Allow different subroutine keywords.
+    - Implement issue RT#130640: Allow different subroutine keywords.
       Added a flag --sub-alias-list=s or -sal=s, where s is a string with
       one or more aliases for 'sub', separated by spaces or commas.  
       For example,
@@ -28,9 +28,12 @@
         sub usage();    # i=1 [default; follows input]
         sub usage ();   # i=2 [space]
 
-    - fixed issue git#16, minor vertical alignment issue.
+    - Fixed issue git#16, minor vertical alignment issue.
 
-    - fixed issue git#10, minor conflict of -wn and -ce
+    - Fixed issue git#10, minor conflict of -wn and -ce
+
+    - Improved some vertical alignments involving two lines.
+
 
 ## 2019 09 15
 
