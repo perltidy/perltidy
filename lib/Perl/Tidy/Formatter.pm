@@ -10127,6 +10127,7 @@ sub send_lines_to_vertical_aligner {
         my $j = 0;    # field index
 
         $patterns[0] = "";
+	my %token_count; 
         for my $i ( $ibeg .. $iend ) {
 
             # Keep track of containers balanced on this line only.
@@ -10276,6 +10277,23 @@ sub send_lines_to_vertical_aligner {
                     if ( $block_type =~ /^[A-Z]+$/ ) { $block_type = 'BEGIN' }
 
                     $tok .= $block_type;
+                }
+
+		# Mark multiple copies of certain tokens with the copy number
+		# This will allow the aligner to decide if they are matched.
+		# For now, only do this for equals. For example, the two
+		# equals on the next line will be labeled '=0' and '=0.2'.
+		# Later, the '=0.2' will be ignored in alignment because it
+		# has no match.
+
+		# $|          = $debug = 1 if $opt_d;
+		# $full_index = 1          if $opt_i;
+		
+                if ( $raw_tok eq '=' ) {
+                    $token_count{$tok}++;
+                    if ( $token_count{$tok} > 1 ) {
+                        $tok .= '.' . $token_count{$tok};
+                    }
                 }
 
                 # concatenate the text of the consecutive tokens to form

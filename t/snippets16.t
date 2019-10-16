@@ -6,6 +6,7 @@
 #3 git16.def
 #4 git10.def
 #5 git10.git10
+#6 multiple_equals.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -49,6 +50,17 @@ BEGIN {
 # git#16, two equality lines with fat commas on the right
 my $Package = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
 my %Structure = $Self->PackageParse( String => $Package );
+----------
+
+        'multiple_equals' => <<'----------',
+# ignore second '=' here
+$|          = $debug = 1 if $opt_d;
+$full_index = 1          if $opt_i;
+$query_all  = $opt_A     if $opt_A;
+
+# align multiple '='s here
+$start   = $end     = $len = $ismut = $number = $allele_ori = $allele_mut =
+  $proof = $xxxxreg = $reg = $dist  = '';
 ----------
 
         'spp' => <<'----------',
@@ -124,6 +136,21 @@ my %Structure = $Self->PackageParse( String => $Package );
     [ $_, length($_) ]
 } @unsorted;
 #5...........
+        },
+
+        'multiple_equals.def' => {
+            source => "multiple_equals",
+            params => "def",
+            expect => <<'#6...........',
+# ignore second '=' here
+$|          = $debug = 1 if $opt_d;
+$full_index = 1          if $opt_i;
+$query_all  = $opt_A     if $opt_A;
+
+# align multiple '='s here
+$start   = $end     = $len = $ismut = $number = $allele_ori = $allele_mut =
+  $proof = $xxxxreg = $reg = $dist  = '';
+#6...........
         },
     };
 

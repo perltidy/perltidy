@@ -9,7 +9,7 @@
 
         perltidy -sal='method fun' 
 
-      will cause the perltidy to treate the words 'method' and 'fun' to be
+      will cause the perltidy to treat the words 'method' and 'fun' to be
       treated the same as if they were 'sub'.
 
     - Added flag --space-prototype-paren=i, or -spp=i, to control spacing 
