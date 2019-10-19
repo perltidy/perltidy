@@ -2511,67 +2511,113 @@ sub delete_unmatched_tokens {
     return;
 }
 
-sub decide_if_aligned_pair {
+{    # decide_if_aligned_pair
 
-    # Do not try to align two lines which are not really similar
-    return unless ( @group_lines == 2 );
-    return if ($is_matching_terminal_line);
+    my %is_if_or;
 
-    my $group_list_type = $group_lines[0]->get_list_type();
+    BEGIN {
 
-    my $rtokens        = $group_lines[0]->get_rtokens();
-    my $leading_equals = ( $rtokens->[0] =~ /=/ );
-
-   # A marginal match is a match which has different patterns. Normally, we
-   # should not allow exactly two lines to match if marginal. But we will modify
-   # this rule for two lines with a leading equals-like operator such that we
-   # match if the patterns to the left of the equals are the same. So for
-   # example the following two lines are a marginal match but have the same
-   # left side patterns, so we will align the equals.
-   #     my $orig = my $format = "^<<<<< ~~\n";
-   #     my $abc  = "abc";
-   # But these have a different left pattern so they will not be aligned
-   #     $xmldoc .= $`;
-   #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
-    my $is_marginal = $marginal_match;
-    if ( $leading_equals && $is_marginal ) {
-        my $rpatterns0 = $group_lines[0]->get_rpatterns();
-        my $rpatterns1 = $group_lines[1]->get_rpatterns();
-        my $pat0       = $rpatterns0->[0];
-        my $pat1       = $rpatterns1->[0];
-        $is_marginal = $pat0 ne $pat1;
+        my @q = qw(
+          if or ||
+        );
+        @is_if_or{@q} = (1) x scalar(@q);
     }
 
-    my $do_not_align = (
+    sub decide_if_aligned_pair {
 
-        # always align lists
-        !$group_list_type
+        # Do not try to align two lines which are not really similar
+        return unless ( @group_lines == 2 );
+        return if ($is_matching_terminal_line);
 
-          && (
+        my $group_list_type = $group_lines[0]->get_list_type();
 
-            # don't align if it was just a marginal match
-            $is_marginal    ##$marginal_match
+        my $rtokens        = $group_lines[0]->get_rtokens();
+        my $leading_equals = ( $rtokens->[0] =~ /=/ );
+        my $is_marginal    = $marginal_match;
 
-            # don't align two lines with big gap
-            || $group_maximum_gap > 12
+        # A marginal match is a match which has different patterns. Normally,
+        # we should not allow exactly two lines to match if marginal. But
+        # we can allow matching in some specific cases:
 
-            # or lines with differing number of alignment tokens
-            || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
-                && !$leading_equals )
-          )
-    );
+        if ($is_marginal) {
 
-    # But try to convert them into a simple comment group if the first line
-    # a has side comment
-    my $rfields             = $group_lines[0]->get_rfields();
-    my $maximum_field_index = $group_lines[0]->get_jmax();
-    if ( $do_not_align
-        && ( length( $rfields->[$maximum_field_index] ) > 0 ) )
-    {
-        combine_fields();
-        $do_not_align = 0;
+            # Two lines with a leading equals-like operator are allowed to
+            # align if the patterns to the left of the equals are the same. So
+            # for example the following two lines are a marginal match but have
+            # the same left side patterns, so we will align the equals.
+            #     my $orig = my $format = "^<<<<< ~~\n";
+            #     my $abc  = "abc";
+            # But these have a different left pattern so they will not be
+            # aligned
+            #     $xmldoc .= $`;
+            #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
+
+            if ($leading_equals) {
+                my $rpatterns0 = $group_lines[0]->get_rpatterns();
+                my $rpatterns1 = $group_lines[1]->get_rpatterns();
+                my $pat0       = $rpatterns0->[0];
+                my $pat1       = $rpatterns1->[0];
+                $is_marginal = $pat0 ne $pat1;
+            }
+
+            # Allow two marginal lines with 'if' or 'or' to align if:
+            # (*) there is just one alignment token
+            # (*) both lines are semicolon-terminated, and
+            else {
+
+                my $leading_raw_tok = "";
+                if ( $rtokens->[0] =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
+                    $leading_raw_tok = $1;
+                }
+
+                if ( $is_if_or{$leading_raw_tok} ) {
+
+                    my $jmax0 = $group_lines[0]->get_jmax();
+                    my $jmax1 = $group_lines[1]->get_jmax();
+                    if ( $jmax0 == 2 && $jmax1 == $jmax0 ) {
+                        my $rpatterns0 = $group_lines[0]->get_rpatterns();
+                        my $rpatterns1 = $group_lines[1]->get_rpatterns();
+                        my $pat0       = $rpatterns0->[ $jmax0 - 1 ];
+                        my $pat1       = $rpatterns1->[ $jmax1 - 1 ];
+                        if ( $pat0 =~ /;b?$/ && $pat1 =~ /;b?$/ ) {
+                            $is_marginal = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        my $do_not_align = (
+
+            # always align lists
+            !$group_list_type
+
+              && (
+
+                # don't align if it was just a marginal match
+                $is_marginal    ##$marginal_match
+
+                # don't align two lines with big gap
+                || $group_maximum_gap > 12
+
+                # or lines with differing number of alignment tokens
+                || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
+                    && !$leading_equals )
+              )
+        );
+
+        # But try to convert them into a simple comment group if the first line
+        # a has side comment
+        my $rfields             = $group_lines[0]->get_rfields();
+        my $maximum_field_index = $group_lines[0]->get_jmax();
+        if ( $do_not_align
+            && ( length( $rfields->[$maximum_field_index] ) > 0 ) )
+        {
+            combine_fields();
+            $do_not_align = 0;
+        }
+        return $do_not_align;
     }
-    return $do_not_align;
 }
 
 sub adjust_side_comment {
