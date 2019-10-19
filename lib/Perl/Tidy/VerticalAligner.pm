@@ -2300,15 +2300,28 @@ EOM
         #     sub banner  { crlf; report( shift, '/', shift ); crlf }
         # is decorated as follows:
         #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
-        my ( $tok, $lev, $tag ) = ( $token, 0, "" );
-        if ( $tok =~ /^(\D+)(\d+)(.*)$/ ) { $tok = $1; $lev = $2; $tag = $3 }
-        ##print "$token >> $tok   $lev   $tag\n";
+
+	# An optional token count may be appended with a leading dot.
+	# Currently this is only done for '=' tokens but this could change.
+	# For example, consider the following line:
+        #   $nport   = $port = shift || $name;
+	# The first '=' may either be '=0' or '=0.1' [level 0, first equals]
+	# The second '=' will be '=0.2' [level 0, second equals]
+
+        my ( $tok, $lev, $tag, $tok_count ) = ( $token, 0, "", 1 );
+        if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
+            $tok       = $1;
+            $lev       = $2;
+            $tag       = $3;
+            $tok_count = $5 if ($5);
+        }
+	
+	# okay to delete second and higher copies of a token
+        if ( $tok_count > 1 ) { return 1 }
 
         # only remove lower level commas
-        ##if ( $tok eq ',' ) { return unless $lev > $group_level; }
         if ( $tok eq ',' ) {
 
-            #print "tok=$tok, lev=$lev, gl=$group_level, i=$i, ieq=$i_eq\n";
             return if ( defined($i_eq) && $i < $i_eq );
             return if ( $lev <= $group_level );
         }
@@ -2540,7 +2553,6 @@ sub decide_if_aligned_pair {
             $is_marginal    ##$marginal_match
 
             # don't align two lines with big gap
-            # NOTE: I am not sure if this test is actually functional any longer
             || $group_maximum_gap > 12
 
             # or lines with differing number of alignment tokens
