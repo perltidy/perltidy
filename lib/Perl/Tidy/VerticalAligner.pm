@@ -2514,6 +2514,7 @@ sub delete_unmatched_tokens {
 {    # decide_if_aligned_pair
 
     my %is_if_or;
+    my %is_assignment;
 
     BEGIN {
 
@@ -2521,6 +2522,14 @@ sub delete_unmatched_tokens {
           if or ||
         );
         @is_if_or{@q} = (1) x scalar(@q);
+
+        @q = qw(
+          = **= += *= &= <<= &&=
+          -= /= |= >>= ||= //=
+          .= %= ^=
+          x=
+        );
+        @is_assignment{@q} = (1) x scalar(@q);
     }
 
     sub decide_if_aligned_pair {
@@ -2529,21 +2538,74 @@ sub delete_unmatched_tokens {
         return unless ( @group_lines == 2 );
         return if ($is_matching_terminal_line);
 
+        # always align lists
         my $group_list_type = $group_lines[0]->get_list_type();
+        return 0 if ($group_list_type);
 
+        my $jmax0          = $group_lines[0]->get_jmax();
+        my $jmax1          = $group_lines[1]->get_jmax();
         my $rtokens        = $group_lines[0]->get_rtokens();
         my $leading_equals = ( $rtokens->[0] =~ /=/ );
-        my $is_marginal    = $marginal_match;
+
+        # scan the tokens on the second line
+        my $rtokens1        = $group_lines[1]->get_rtokens();
+        my $all_group_level = 1;
+        my $saw_if_or;
+        my $raw_tokb = "";
+        for ( my $j = 0 ; $j < $jmax1 - 1 ; $j++ ) {
+            my $tok = $rtokens1->[$j];
+            if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
+                my $raw_tok = $1;
+                my $lev     = $2;
+                my $tag     = $3;
+                ## $tok_count = $5 if ($5);
+                if ( $j == 0 ) { $raw_tokb = $raw_tok }
+                $saw_if_or ||= $is_if_or{$raw_tok};
+
+                if ( !$tag ) {
+
+                    # mark line as variable level if we see any untagged
+                    # higher level tokens
+                    $all_group_level &&= ( $lev == $group_level );
+                }
+            }
+        }
 
         # A marginal match is a match which has different patterns. Normally,
         # we should not allow exactly two lines to match if marginal. But
-        # we can allow matching in some specific cases:
+        # we can allow matching in some specific cases.
+        my $is_marginal = $marginal_match;
 
-        if ($is_marginal) {
+        # See if the lines end with semicolons...
+        my $rpatterns0 = $group_lines[0]->get_rpatterns();
+        my $rpatterns1 = $group_lines[1]->get_rpatterns();
+        my $sc_term0;
+        my $sc_term1;
+        if ( $jmax0 < 1 || $jmax1 < 1 ) {
+
+            # shouldn't happen
+        }
+        else {
+            my $pat0 = $rpatterns0->[ $jmax0 - 1 ];
+            my $pat1 = $rpatterns1->[ $jmax1 - 1 ];
+            $sc_term0 = $pat0 =~ /;b?$/;
+            $sc_term1 = $pat1 =~ /;b?$/;
+        }
+
+        # lines not terminated similarly are always considered marginal
+        $is_marginal ||= ( $sc_term0 ne $sc_term1 );
+
+        # Undo the marginal match flag in certain cases,
+        # but only if all matching tokens are at group level.
+        if ( $is_marginal && $all_group_level ) {
+
+            #######################################################
+            # Look for some kind of assignment at the leading token
+            #######################################################
 
             # Two lines with a leading equals-like operator are allowed to
-            # align if the patterns to the left of the equals are the same. So
-            # for example the following two lines are a marginal match but have
+            # align if the patterns to the left of the equals are the same.
+            # For example the following two lines are a marginal match but have
             # the same left side patterns, so we will align the equals.
             #     my $orig = my $format = "^<<<<< ~~\n";
             #     my $abc  = "abc";
@@ -2552,59 +2614,71 @@ sub delete_unmatched_tokens {
             #     $xmldoc .= $`;
             #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
 
-            if ($leading_equals) {
-                my $rpatterns0 = $group_lines[0]->get_rpatterns();
-                my $rpatterns1 = $group_lines[1]->get_rpatterns();
-                my $pat0       = $rpatterns0->[0];
-                my $pat1       = $rpatterns1->[0];
+            # First line semicolon terminated but second not, usually ok:
+            #               my $want = "'ab', 'a', 'b'";
+            #               my $got  = join( ", ",
+            #                    map { defined($_) ? "'$_'" : "undef" }
+            #                          @got );
+            #  First line not semicolon terminated, Not OK to match:
+            #   $$href{-NUM_TEXT_FILES} = $$href{-NUM_BINARY_FILES} =
+            #      $$href{-NUM_DIRS} = 0;
+            my $pat0 = $rpatterns0->[0];
+            my $pat1 = $rpatterns1->[0];
+            if ( $is_assignment{$raw_tokb} ) {
+
+		# undo marginal flag if first line is semicolon terminated 
+		# and leading patters match
+                if ($sc_term0) {    # && $sc_term1) {
+                    $is_marginal = $pat0 ne $pat1;
+                }
+            }
+            elsif ( $raw_tokb eq '=>' ) {
+
+		# undo marginal flag if patterns match
                 $is_marginal = $pat0 ne $pat1;
             }
+            elsif ( $raw_tokb eq '=~' ) {
 
-            # Allow two marginal lines with 'if' or 'or' to align if:
-            # (*) there is just one alignment token
-            # (*) both lines are semicolon-terminated, and
-            else {
-
-                my $leading_raw_tok = "";
-                if ( $rtokens->[0] =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
-                    $leading_raw_tok = $1;
+                # undo marginal flag if both lines are semicolon terminated
+		# and leading patters match
+                if ( $sc_term1 && $sc_term0 ) {
+                    $is_marginal = $pat0 ne $pat1;
                 }
+            }
 
-                if ( $is_if_or{$leading_raw_tok} ) {
+            ######################################################
+            # Next check for an 'if' or 'or' anywhere in the line
+            ######################################################
 
-                    my $jmax0 = $group_lines[0]->get_jmax();
-                    my $jmax1 = $group_lines[1]->get_jmax();
-                    if ( $jmax0 == 2 && $jmax1 == $jmax0 ) {
-                        my $rpatterns0 = $group_lines[0]->get_rpatterns();
-                        my $rpatterns1 = $group_lines[1]->get_rpatterns();
-                        my $pat0       = $rpatterns0->[ $jmax0 - 1 ];
-                        my $pat1       = $rpatterns1->[ $jmax1 - 1 ];
-                        if ( $pat0 =~ /;b?$/ && $pat1 =~ /;b?$/ ) {
-                            $is_marginal = 0;
-                        }
-                    }
+            # A trailing 'if' and 'or' is considered a good match
+            # For example, we can align these:
+            #  return -1     if $_[0] =~ m/^CHAPT|APPENDIX/;
+            #  return $1 + 0 if $_[0] =~ m/^SECT(\d*)$/;
+
+            # or
+            #  $d_in_m[2] = 29          if ( &Date_LeapYear($y) );
+            #  $d         = $d_in_m[$m] if ( $d > $d_in_m[$m] );
+
+            if ($saw_if_or) {
+
+                # undo marginal flag if both lines are semicolon terminated
+                if ( $sc_term0 && $sc_term1 ) {
+                    $is_marginal = 0;
                 }
             }
         }
 
-        my $do_not_align = (
+        my $do_not_align =
 
-            # always align lists
-            !$group_list_type
+          # don't align if it was just a marginal match
+          $is_marginal
 
-              && (
+          # don't align two lines with big gap
+          || $group_maximum_gap > 12
 
-                # don't align if it was just a marginal match
-                $is_marginal    ##$marginal_match
-
-                # don't align two lines with big gap
-                || $group_maximum_gap > 12
-
-                # or lines with differing number of alignment tokens
-                || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
-                    && !$leading_equals )
-              )
-        );
+          # or lines with differing number of alignment tokens
+          || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
+            && !$leading_equals );
 
         # But try to convert them into a simple comment group if the first line
         # a has side comment

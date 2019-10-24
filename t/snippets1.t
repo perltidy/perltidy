@@ -482,7 +482,7 @@ sub is_miniwhile {    # check for one-line loop (`foo() while $y--')
             expect => <<'#19...........',
         # original is broken:
         $a = 1
-          if $l  and !$r
+          if $l and !$r
           or !$l and $r;
 #19...........
         },
