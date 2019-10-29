@@ -2581,6 +2581,12 @@ sub delete_unmatched_tokens {
         #   is_deeply( $foo->hash_int, {}, "hash_int - correct contents" );
         $is_marginal ||= ( $all_high_level && $raw_tokb eq '{' );
 
+        # lines with differing number of alignment tokens are marginal
+        # except for assignments
+        $is_marginal ||=
+          ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
+          && !$is_assignment{$raw_tokb};
+
         # See if the lines end with semicolons...
         my $rpatterns0 = $group_lines[0]->get_rpatterns();
         my $rpatterns1 = $group_lines[1]->get_rpatterns();
@@ -2681,14 +2687,8 @@ sub delete_unmatched_tokens {
             }
         }
 
-        my $do_not_align =
-
-          # don't align if it was just a marginal match
-          $is_marginal
-
-          # or lines with differing number of alignment tokens
-          || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
-            && !$leading_equals );
+        # don't align if it was just a marginal match
+        my $do_not_align = $is_marginal;
 
         # But try to convert them into a simple comment group if the first line
         # a has side comment

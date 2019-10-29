@@ -273,7 +273,7 @@ sub catfile {
     my $test_file = $path . $name;
     my ( $test_name, $test_path ) = fileparse($test_file);
     return $test_file if ( $test_name eq $name );
-    return if ( $^O eq 'VMS' );
+    return            if ( $^O eq 'VMS' );
 
     # this should work at least for Windows and Unix:
     $test_file = $path . '/' . $name;
@@ -1812,7 +1812,7 @@ sub generate_options {
     $add_option->( 'trim-pod',                                  'trp',   '!' );
     $add_option->( 'want-left-space',                           'wls',   '=s' );
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
-    $add_option->( 'space-prototype-paren',                     'spp',  '=i' );
+    $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
 
     ########################################
     $category = 4;    # Comment controls

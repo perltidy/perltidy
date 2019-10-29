@@ -151,7 +151,7 @@ sub check_options {
     # Check Tokenizer parameters
     my $rOpts = shift;
 
-    %is_sub = ( );
+    %is_sub = ();
     $is_sub{'sub'} = 1;
 
     # Install any aliases to 'sub'
@@ -6193,7 +6193,7 @@ sub scan_identifier_do {
                 # In something like '$${' we have type '$$' (and only
                 # part of an identifier)
                 && !( $identifier =~ /\$$/ && $tok eq '{' )
-                && ( $identifier !~ /^(sub |package )$/ )
+                && ( $identifier  !~ /^(sub |package )$/ )
               )
             {
                 $type = 'i';
