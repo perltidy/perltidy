@@ -2686,9 +2686,6 @@ sub delete_unmatched_tokens {
           # don't align if it was just a marginal match
           $is_marginal
 
-          # don't align two lines with big gap
-          || $group_maximum_gap > 12
-
           # or lines with differing number of alignment tokens
           || ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
             && !$leading_equals );
