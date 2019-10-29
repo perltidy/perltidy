@@ -1627,9 +1627,9 @@ sub salvage_equality_matches {
     # If we had a peek at the subsequent line we could make a much better
     # decision here, but for now this is not available.
     for ( my $j = 1 ; $j < $jmax_new - 1 ; $j++ ) {
-        my $new_tok           = $rtokens->[$j];
+        my $new_tok = $rtokens->[$j];
 
-	# git#16: do not consider fat commas as good aligmnents here
+        # git#16: do not consider fat commas as good aligmnents here
         my $is_good_alignment =
           ( $new_tok =~ /^(=|\?|if|unless|\|\||\&\&)/ && $new_tok !~ /^=>/ );
         return if ($is_good_alignment);
@@ -2301,12 +2301,12 @@ EOM
         # is decorated as follows:
         #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
 
-	# An optional token count may be appended with a leading dot.
-	# Currently this is only done for '=' tokens but this could change.
-	# For example, consider the following line:
+        # An optional token count may be appended with a leading dot.
+        # Currently this is only done for '=' tokens but this could change.
+        # For example, consider the following line:
         #   $nport   = $port = shift || $name;
-	# The first '=' may either be '=0' or '=0.1' [level 0, first equals]
-	# The second '=' will be '=0.2' [level 0, second equals]
+        # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
+        # The second '=' will be '=0.2' [level 0, second equals]
 
         my ( $tok, $lev, $tag, $tok_count ) = ( $token, 0, "", 1 );
         if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
@@ -2315,8 +2315,8 @@ EOM
             $tag       = $3;
             $tok_count = $5 if ($5);
         }
-	
-	# okay to delete second and higher copies of a token
+
+        # okay to delete second and higher copies of a token
         if ( $tok_count > 1 ) { return 1 }
 
         # only remove lower level commas
@@ -2460,8 +2460,8 @@ sub delete_unmatched_tokens {
             }
         }
 
-	# OLD: Leave two lines alone unless they are an if/else or ternary.
-	# NEW: Treat two lines the same as longer runs; results are better. 
+        # OLD: Leave two lines alone unless they are an if/else or ternary.
+        # NEW: Treat two lines the same as longer runs; results are better.
         ## next if ( $nlines <= 2 && !$is_full_block );
 
         # remove unwanted alignment tokens
@@ -2511,7 +2511,7 @@ sub delete_unmatched_tokens {
     return;
 }
 
-{    # decide_if_aligned_pair
+{        # decide_if_aligned_pair
 
     my %is_if_or;
     my %is_assignment;
@@ -2548,8 +2548,11 @@ sub delete_unmatched_tokens {
         my $leading_equals = ( $rtokens->[0] =~ /=/ );
 
         # scan the tokens on the second line
-        my $rtokens1        = $group_lines[1]->get_rtokens();
+        # $all_group_level => all non-tagged tokens are at group level
+        # $all_high_level  => all non-tagged tokens are above group level
         my $all_group_level = 1;
+        my $all_high_level  = 1;
+        my $rtokens1        = $group_lines[1]->get_rtokens();
         my $saw_if_or;
         my $raw_tokb = "";
         for ( my $j = 0 ; $j < $jmax1 - 1 ; $j++ ) {
@@ -2562,12 +2565,8 @@ sub delete_unmatched_tokens {
                 if ( $j == 0 ) { $raw_tokb = $raw_tok }
                 $saw_if_or ||= $is_if_or{$raw_tok};
 
-                if ( !$tag ) {
-
-                    # mark line as variable level if we see any untagged
-                    # higher level tokens
-                    $all_group_level &&= ( $lev == $group_level );
-                }
+                $all_high_level  &&= ( $lev > $group_level && !$tag );
+                $all_group_level &&= ( $lev == $group_level || $tag );
             }
         }
 
@@ -2575,6 +2574,12 @@ sub delete_unmatched_tokens {
         # we should not allow exactly two lines to match if marginal. But
         # we can allow matching in some specific cases.
         my $is_marginal = $marginal_match;
+
+        # A line leading '{' and all high level tokens is marginal. For
+        # example, do not align the {} here:
+        #   $foo->hash_int( {} );
+        #   is_deeply( $foo->hash_int, {}, "hash_int - correct contents" );
+        $is_marginal ||= ( $all_high_level && $raw_tokb eq '{' );
 
         # See if the lines end with semicolons...
         my $rpatterns0 = $group_lines[0]->get_rpatterns();
@@ -2592,8 +2597,16 @@ sub delete_unmatched_tokens {
             $sc_term1 = $pat1 =~ /;b?$/;
         }
 
-        # lines not terminated similarly are always considered marginal
-        $is_marginal ||= ( $sc_term0 ne $sc_term1 );
+        if ( !$is_marginal && !$sc_term0 ) {
+
+            # First line of assignment should be semicolon terminated.
+            # For example, do not align here:
+            #  $$href{-NUM_TEXT_FILES} = $$href{-NUM_BINARY_FILES} =
+            #    $$href{-NUM_DIRS} = 0;
+            if ( $is_assignment{$raw_tokb} ) {
+                $is_marginal = 1;
+            }
+        }
 
         # Undo the marginal match flag in certain cases,
         # but only if all matching tokens are at group level.
@@ -2626,21 +2639,21 @@ sub delete_unmatched_tokens {
             my $pat1 = $rpatterns1->[0];
             if ( $is_assignment{$raw_tokb} ) {
 
-		# undo marginal flag if first line is semicolon terminated 
-		# and leading patters match
+                # undo marginal flag if first line is semicolon terminated
+                # and leading patters match
                 if ($sc_term0) {    # && $sc_term1) {
                     $is_marginal = $pat0 ne $pat1;
                 }
             }
             elsif ( $raw_tokb eq '=>' ) {
 
-		# undo marginal flag if patterns match
+                # undo marginal flag if patterns match
                 $is_marginal = $pat0 ne $pat1;
             }
             elsif ( $raw_tokb eq '=~' ) {
 
                 # undo marginal flag if both lines are semicolon terminated
-		# and leading patters match
+                # and leading patters match
                 if ( $sc_term1 && $sc_term0 ) {
                     $is_marginal = $pat0 ne $pat1;
                 }
