@@ -356,7 +356,7 @@ return $pdl->slice(
             expect => <<'#2...........',
 my @sorted = map { $_->[0] }
   sort { $a->[1] <=> $b->[1] }
-  map  { [ $_, rand ] } @list;
+  map { [ $_, rand ] } @list;
 #2...........
         },
 

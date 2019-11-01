@@ -11530,7 +11530,7 @@ sub get_seqno {
             $vert_last_nonblank_block_type        = '';
 
             # look at each token in this output line..
-            my $count = 0;
+	    my $level_beg = $levels_to_go[$ibeg];
             foreach my $i ( $ibeg .. $iend ) {
                 my $alignment_type = '';
                 my $type           = $types_to_go[$i];
@@ -11637,6 +11637,23 @@ sub get_seqno {
                           /^(if|unless|elsif)$/;
                     }
 
+		    # Skip empty containers like '{}' and '()'
+		    # which are at a higher level than the line beginning
+                    my $seqno = $type_sequence_to_go[$i];
+                    if (   $seqno
+                        && $i < $iend
+                        && $levels_to_go[$i] > $level_beg )
+                    {
+                        my $ip = $i + 1;
+                        if ( $tokens_to_go[$ip] eq 'b' ) { $ip++ }
+                        if (   $ip <= $iend
+                            && $type_sequence_to_go[$ip]
+                            && $type_sequence_to_go[$ip] == $seqno )
+                        {
+                            $alignment_type = "";
+                        }
+                    }
+
                     # be sure the alignment tokens are unique
                     # This didn't work well: reason not determined
                     # if ($token ne $type) {$alignment_type .= $type}
@@ -11686,7 +11703,6 @@ sub get_seqno {
                 # then store the value
                 #--------------------------------------------------------
                 $matching_token_to_go[$i] = $alignment_type;
-                $count++ if ($alignment_type);
                 if ( $type ne 'b' ) {
                     $vert_last_nonblank_type       = $type;
                     $vert_last_nonblank_token      = $token;

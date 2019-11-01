@@ -2273,6 +2273,38 @@ EOM
     return;
 }
 
+sub decode_alignment_token {
+
+    # Unpack the values packed in an alignment token
+    #
+    # Usage:
+    #        my ( $raw_tok, $lev, $tag, $tok_count ) =
+    #          decode_alignment_token($token);
+
+    # Alignment tokens have a trailing decimal level and optional tag (for
+    # commas):
+    # For example, the first comma in the following line
+    #     sub banner  { crlf; report( shift, '/', shift ); crlf }
+    # is decorated as follows:
+    #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
+
+    # An optional token count may be appended with a leading dot.
+    # Currently this is only done for '=' tokens but this could change.
+    # For example, consider the following line:
+    #   $nport   = $port = shift || $name;
+    # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
+    # The second '=' will be '=0.2' [level 0, second equals]
+    my ($tok) = @_;
+    my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, "", 1 );
+    if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
+        $raw_tok   = $1;
+        $lev       = $2;
+        $tag       = $3 if ($3);
+        $tok_count = $5 if ($5);
+    }
+    return ( $raw_tok, $lev, $tag, $tok_count );
+}
+
 {    # sub is_deletable_token
 
     my %is_deletable_equals;
@@ -2294,33 +2326,14 @@ EOM
         # improve chances of making an alignment.
         my ( $token, $i, $imax, $jline, $i_eq ) = @_;
 
-        # Strip off the level and other stuff appended to the token.
-        # Tokens have a trailing decimal level and optional tag (for commas):
-        # For example, the first comma in the following line
-        #     sub banner  { crlf; report( shift, '/', shift ); crlf }
-        # is decorated as follows:
-        #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
-
-        # An optional token count may be appended with a leading dot.
-        # Currently this is only done for '=' tokens but this could change.
-        # For example, consider the following line:
-        #   $nport   = $port = shift || $name;
-        # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
-        # The second '=' will be '=0.2' [level 0, second equals]
-
-        my ( $tok, $lev, $tag, $tok_count ) = ( $token, 0, "", 1 );
-        if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
-            $tok       = $1;
-            $lev       = $2;
-            $tag       = $3;
-            $tok_count = $5 if ($5);
-        }
+        my ( $raw_tok, $lev, $tag, $tok_count ) =
+          decode_alignment_token($token);
 
         # okay to delete second and higher copies of a token
         if ( $tok_count > 1 ) { return 1 }
 
         # only remove lower level commas
-        if ( $tok eq ',' ) {
+        if ( $raw_tok eq ',' ) {
 
             return if ( defined($i_eq) && $i < $i_eq );
             return if ( $lev <= $group_level );
@@ -2328,8 +2341,9 @@ EOM
 
         # most operators with an equals sign should be retained if at
         # same level as this statement
-        elsif ( $tok =~ /=/ ) {
-            return unless ( $lev > $group_level || $is_deletable_equals{$tok} );
+        elsif ( $raw_tok =~ /=/ ) {
+            return
+              unless ( $lev > $group_level || $is_deletable_equals{$raw_tok} );
         }
 
         # otherwise, ok to delete the token
@@ -2366,14 +2380,8 @@ sub delete_unmatched_tokens {
         my $i_eq;
         my $lev_min;
         foreach my $tok ( @{$rtokens} ) {
-            my $lev     = 0;
-            my $raw_tok = "";
-            my $desc    = "";
-            if ( $tok =~ /^(\D+)(\d+)(.*)/ ) {
-                $raw_tok = $1;
-                $lev     = $2;
-                $desc    = $3;
-            }
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
             if ( !defined($lev_min) || $lev < $lev_min ) { $lev_min = $lev }
 
             $rhash->{$tok} = [ $i, undef, undef, $lev ];
@@ -2548,25 +2556,15 @@ sub delete_unmatched_tokens {
         my $leading_equals = ( $rtokens->[0] =~ /=/ );
 
         # scan the tokens on the second line
-        # $all_group_level => all non-tagged tokens are at group level
-        # $all_high_level  => all non-tagged tokens are above group level
-        my $all_group_level = 1;
-        my $all_high_level  = 1;
-        my $rtokens1        = $group_lines[1]->get_rtokens();
-        my $saw_if_or;
-        my $raw_tokb = "";
+        my $rtokens1 = $group_lines[1]->get_rtokens();
+        my $saw_if_or;    # if we saw an 'if' or 'or' at group level
+        my $raw_tokb = "";    # first token seen at group level
         for ( my $j = 0 ; $j < $jmax1 - 1 ; $j++ ) {
-            my $tok = $rtokens1->[$j];
-            if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
-                my $raw_tok = $1;
-                my $lev     = $2;
-                my $tag     = $3;
-                ## $tok_count = $5 if ($5);
-                if ( $j == 0 ) { $raw_tokb = $raw_tok }
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token( $rtokens1->[$j] );
+            if ( $raw_tok && $lev == $group_level ) {
+                if ( !$raw_tokb ) { $raw_tokb = $raw_tok }
                 $saw_if_or ||= $is_if_or{$raw_tok};
-
-                $all_high_level  &&= ( $lev > $group_level && !$tag );
-                $all_group_level &&= ( $lev == $group_level || $tag );
             }
         }
 
@@ -2575,18 +2573,12 @@ sub delete_unmatched_tokens {
         # we can allow matching in some specific cases.
         my $is_marginal = $marginal_match;
 
-        # A line leading '{' and all high level tokens is marginal. For
-        # example, do not align the {} here:
-        #   $foo->hash_int( {} );
-        #   is_deeply( $foo->hash_int, {}, "hash_int - correct contents" );
-        $is_marginal ||= ( $all_high_level && $raw_tokb eq '{' );
-
         # lines with differing number of alignment tokens are marginal
-        # except for assignments
         $is_marginal ||=
-          ( $previous_maximum_jmax_seen != $previous_minimum_jmax_seen )
+          $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
           && !$is_assignment{$raw_tokb};
 
+        # We will use the line endings to help decide on alignments...
         # See if the lines end with semicolons...
         my $rpatterns0 = $group_lines[0]->get_rpatterns();
         my $rpatterns1 = $group_lines[1]->get_rpatterns();
@@ -2614,13 +2606,17 @@ sub delete_unmatched_tokens {
             }
         }
 
-        # Undo the marginal match flag in certain cases,
-        # but only if all matching tokens are at group level.
-        if ( $is_marginal && $all_group_level ) {
+        # Try to avoid some undesirable alignments of opening tokens
+        # for example, the space between grep and { here:
+        #  return map { ( $_ => $_ ) }
+        #    grep     { /$handles/ } $self->_get_delegate_method_list;
+        $is_marginal ||=
+             ( $raw_tokb eq '(' || $raw_tokb eq '{' )
+          && $jmax1 == 2
+          && $sc_term0 ne $sc_term1;
 
-            #######################################################
-            # Look for some kind of assignment at the leading token
-            #######################################################
+        # Undo the marginal match flag in certain cases,
+        if ($is_marginal) {
 
             # Two lines with a leading equals-like operator are allowed to
             # align if the patterns to the left of the equals are the same.
@@ -2643,6 +2639,10 @@ sub delete_unmatched_tokens {
             #      $$href{-NUM_DIRS} = 0;
             my $pat0 = $rpatterns0->[0];
             my $pat1 = $rpatterns1->[0];
+
+            ##########################################################
+            # Turn off the marginal flag for some types of assignments
+            ##########################################################
             if ( $is_assignment{$raw_tokb} ) {
 
                 # undo marginal flag if first line is semicolon terminated
@@ -2666,10 +2666,10 @@ sub delete_unmatched_tokens {
             }
 
             ######################################################
-            # Next check for an 'if' or 'or' anywhere in the line
+            # Turn off the marginal flag if we saw an 'if' or 'or'
             ######################################################
 
-            # A trailing 'if' and 'or' is considered a good match
+            # A trailing 'if' and 'or' often gives a good alignment
             # For example, we can align these:
             #  return -1     if $_[0] =~ m/^CHAPT|APPENDIX/;
             #  return $1 + 0 if $_[0] =~ m/^SECT(\d*)$/;
@@ -2687,7 +2687,10 @@ sub delete_unmatched_tokens {
             }
         }
 
-        # don't align if it was just a marginal match
+        ###############################
+        # Set the return flag:
+        # Don't align if still marginal
+        ###############################
         my $do_not_align = $is_marginal;
 
         # But try to convert them into a simple comment group if the first line
