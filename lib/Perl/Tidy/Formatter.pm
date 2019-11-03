@@ -11602,7 +11602,7 @@ sub get_seqno {
 
                 # align before one of these types..
                 # Note: add '.' after new vertical aligner is operational
-                elsif ( $is_vertical_alignment_type{$type} ) {
+                elsif ( $is_vertical_alignment_type{$type} && $token ne '[') {
                     $alignment_type = $token;
 
                     # Do not align a terminal token.  Although it might
