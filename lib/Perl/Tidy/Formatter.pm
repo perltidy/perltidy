@@ -2938,16 +2938,16 @@ sub respace_tokens {
 
                 if ( $token =~ /$SUB_PATTERN/ ) {
 
-		    # -spp = 0 : no space before opening prototype paren
-		    # -spp = 1 : stable (follow input spacing)
-		    # -spp = 2 : always space before opening prototype paren
+                    # -spp = 0 : no space before opening prototype paren
+                    # -spp = 1 : stable (follow input spacing)
+                    # -spp = 2 : always space before opening prototype paren
                     my $spp = $rOpts->{'space-prototype-paren'};
                     if ( defined($spp) ) {
                         if    ( $spp == 0 ) { $token =~ s/\s+\(/\(/; }
                         elsif ( $spp == 2 ) { $token =~ s/\(/ (/; }
                     }
 
-		    # one space max, and no tabs
+                    # one space max, and no tabs
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
@@ -3949,24 +3949,24 @@ sub weld_nested_containers {
         $do_not_weld ||= $excess_length_to_K->($Kinner_opening) > 0;
 
         # DO-NOT-WELD RULE 4; implemented for git#10:
-	# Do not weld an opening -ce brace if the next container is on a single
-	# line, different from the opening brace. (This is very rare).  For
-	# example, given the following with -ce, we will avoid joining the {
-	# and [
-          
+        # Do not weld an opening -ce brace if the next container is on a single
+        # line, different from the opening brace. (This is very rare).  For
+        # example, given the following with -ce, we will avoid joining the {
+        # and [
+
         #  } else {
         #      [ $_, length($_) ]
         #  }
- 	 
-	# because this would produce a terminal one-line block:
+
+        # because this would produce a terminal one-line block:
 
         #  } else { [ $_, length($_) ]  }
 
-	# which may not be what is desired. But given this input:
+        # which may not be what is desired. But given this input:
 
         #  } else { [ $_, length($_) ]  }
 
-	# then we will do the weld and retain the one-line block
+        # then we will do the weld and retain the one-line block
         if ( $rOpts->{'cuddled-else'} ) {
             my $block_type = $rLL->[$Kouter_opening]->[_BLOCK_TYPE_];
             if ( $block_type && $rcuddled_block_types->{'*'}->{$block_type} ) {
@@ -5232,7 +5232,7 @@ sub token_sequence_length {
     # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
     # returns 0 if $ibeg > $iend (shouldn't happen)
     my ( $ibeg, $iend ) = @_;
-    return 0 if ( $iend < 0 || $ibeg > $iend );
+    return 0                                  if ( $iend < 0 || $ibeg > $iend );
     return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
     return $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
 }
@@ -10127,7 +10127,7 @@ sub send_lines_to_vertical_aligner {
         my $j = 0;    # field index
 
         $patterns[0] = "";
-	my %token_count; 
+        my %token_count;
         for my $i ( $ibeg .. $iend ) {
 
             # Keep track of containers balanced on this line only.
@@ -10197,13 +10197,20 @@ sub send_lines_to_vertical_aligner {
                     # if we are not aligning on this paren...
                     if ( $matching_token_to_go[$i] eq '' ) {
 
-                        # Sum length from previous alignment, or start of line.
-                        my $len =
-                          ( $i_start == $ibeg )
-                          ? total_line_length( $i_start, $i - 1 )
-                          : token_sequence_length( $i_start, $i - 1 );
+                        # Sum length from previous alignment
+                        my $len = token_sequence_length( $i_start, $i - 1 );
+                        if ( $i_start == $ibeg ) {
 
-                        # tack length onto the container name to make unique
+                            # For first token, use distance from start of line
+                            # but subtract off the indentation due to level.
+                            # Otherwise, results could vary with indentation.
+                            $len += leading_spaces_to_go($ibeg) -
+                              $levels_to_go[$i_start] * $rOpts_indent_columns;
+                            if ( $len < 0 ) { $len = 0 }
+                        }
+
+                        # tack this length onto the container name to try
+                        # to make a unique token name
                         $container_name[$depth] .= "-" . $len;
                     }
                 }
@@ -10279,17 +10286,17 @@ sub send_lines_to_vertical_aligner {
                     $tok .= $block_type;
                 }
 
-		# Mark multiple copies of certain tokens with the copy number
-		# This will allow the aligner to decide if they are matched.
-		# For now, only do this for equals. For example, the two
-		# equals on the next line will be labeled '=0' and '=0.2'.
-		# Later, the '=0.2' will be ignored in alignment because it
-		# has no match.
+                # Mark multiple copies of certain tokens with the copy number
+                # This will allow the aligner to decide if they are matched.
+                # For now, only do this for equals. For example, the two
+                # equals on the next line will be labeled '=0' and '=0.2'.
+                # Later, the '=0.2' will be ignored in alignment because it
+                # has no match.
 
-		# $|          = $debug = 1 if $opt_d;
-		# $full_index = 1          if $opt_i;
-		
-                if ( $raw_tok eq '=' ) {
+                # $|          = $debug = 1 if $opt_d;
+                # $full_index = 1          if $opt_i;
+
+                if ( $raw_tok eq '=' || $raw_tok eq '=>' ) {
                     $token_count{$tok}++;
                     if ( $token_count{$tok} > 1 ) {
                         $tok .= '.' . $token_count{$tok};
@@ -11530,7 +11537,7 @@ sub get_seqno {
             $vert_last_nonblank_block_type        = '';
 
             # look at each token in this output line..
-	    my $level_beg = $levels_to_go[$ibeg];
+            my $level_beg = $levels_to_go[$ibeg];
             foreach my $i ( $ibeg .. $iend ) {
                 my $alignment_type = '';
                 my $type           = $types_to_go[$i];
@@ -11637,8 +11644,8 @@ sub get_seqno {
                           /^(if|unless|elsif)$/;
                     }
 
-		    # Skip empty containers like '{}' and '()'
-		    # which are at a higher level than the line beginning
+                    # Skip empty containers like '{}' and '()'
+                    # which are at a higher level than the line beginning
                     my $seqno = $type_sequence_to_go[$i];
                     if (   $seqno
                         && $i < $iend

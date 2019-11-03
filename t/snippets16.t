@@ -7,6 +7,7 @@
 #4 git10.def
 #5 git10.git10
 #6 multiple_equals.def
+#7 align31.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -34,6 +35,14 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align31' => <<'----------',
+# do not align the commas
+$w->insert(
+    ListBox => origin => [ 270, 160 ],
+    size    => [ 200,           55 ],
+);
+----------
 
         'git10' => <<'----------',
 # perltidy -wn -ce -cbl=sort,map,grep
@@ -151,6 +160,18 @@ $query_all  = $opt_A     if $opt_A;
 $start = $end = $len = $ismut = $number = $allele_ori = $allele_mut =
   $proof = $xxxxreg = $reg = $dist = '';
 #6...........
+        },
+
+        'align31.def' => {
+            source => "align31",
+            params => "def",
+            expect => <<'#7...........',
+# do not align the commas
+$w->insert(
+    ListBox => origin => [ 270, 160 ],
+    size    => [ 200, 55 ],
+);
+#7...........
         },
     };
 

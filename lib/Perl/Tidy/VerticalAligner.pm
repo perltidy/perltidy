@@ -2384,7 +2384,10 @@ sub delete_unmatched_tokens {
               decode_alignment_token($tok);
             if ( !defined($lev_min) || $lev < $lev_min ) { $lev_min = $lev }
 
-            $rhash->{$tok} = [ $i, undef, undef, $lev ];
+	    # Possible future upgrade: for multiple matches, 
+            # record [$i1, $i2, ..] instead of $i
+            $rhash->{$tok} =
+              [ $i, undef, undef, $raw_tok, $lev, $tag, $tok_count ];
 
             # remember the first equals at line level
             if ( !defined($i_eq) && $raw_tok eq '=' ) {
@@ -2481,11 +2484,13 @@ sub delete_unmatched_tokens {
             my $i_eq    = $i_equals[$jj];
             my @idel;
             my $imax = @{$rtokens} - 2;
+            my $deletion_level;
 
             for ( my $i = 0 ; $i <= $imax ; $i++ ) {
                 my $tok = $rtokens->[$i];
                 next if ( $tok eq '#' );    # shouldn't happen
-                my ( $il, $ir ) = @{ $rhash->{$tok} }[ 1, 2 ];
+                my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
+                  @{ $rhash->{$tok} };
 
                 # always remove unmatched tokens
                 my $delete_me = !defined($il) && !defined($ir);
@@ -2494,6 +2499,21 @@ sub delete_unmatched_tokens {
                 # remove all alignments which are not also in every line
                 $delete_me ||=
                   ( $is_full_block && $token_line_count{$tok} < $nlines );
+
+                # remove tagged alignment tokens following a => deletion until
+                # a lower level is reached because the tags will now be
+                # incorrect. For example, this will prevent aligning
+                # commas as follows after deleting the second =>
+                #    $w->insert(
+                #	ListBox => origin => [ 270, 160 ],
+                #	size    => [ 200,           55 ],
+                #    );
+                if ( defined($deletion_level) ) {
+                    if ( $lev >= $deletion_level ) {
+                        $delete_me ||= $tag;
+                    }
+                    else { $deletion_level = undef }
+                }
 
                 if (
                     $delete_me
@@ -2509,6 +2529,11 @@ sub delete_unmatched_tokens {
                   )
                 {
                     push @idel, $i;
+                    if ( $raw_tok eq '=>' ) {
+                        $deletion_level = $lev
+                          if ( !defined($deletion_level)
+                            || $lev < $deletion_level );
+                    }
                 }
             }
 
