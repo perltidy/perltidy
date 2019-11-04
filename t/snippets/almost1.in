@@ -1,0 +1,3 @@
+# not a good alignment
+my $realname     = catfile( $dir,                  $file );
+my $display_name = defined $disp ? catfile( $disp, $file ) : $file;

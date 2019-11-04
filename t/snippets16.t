@@ -8,6 +8,9 @@
 #5 git10.git10
 #6 multiple_equals.def
 #7 align31.def
+#8 almost1.def
+#9 almost2.def
+#10 almost3.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -42,6 +45,27 @@ $w->insert(
     ListBox => origin => [ 270, 160 ],
     size    => [ 200,           55 ],
 );
+----------
+
+        'almost1' => <<'----------',
+# not a good alignment
+my $realname     = catfile( $dir,                  $file );
+my $display_name = defined $disp ? catfile( $disp, $file ) : $file;
+----------
+
+        'almost2' => <<'----------',
+# not a good alignment
+my $substname = ( $indtot > 1            ? $indname . $indno : $indname );
+my $incname   = $indname . ( $indtot > 1 ? $indno            : "" );
+----------
+
+        'almost3' => <<'----------',
+# not a good alignment
+sub head {
+    match_on_type @_ => Null => sub { die "Cannot get head of Null" },
+      ArrayRef       => sub         { $_->[0] };
+}
+
 ----------
 
         'git10' => <<'----------',
@@ -172,6 +196,39 @@ $w->insert(
     size    => [ 200, 55 ],
 );
 #7...........
+        },
+
+        'almost1.def' => {
+            source => "almost1",
+            params => "def",
+            expect => <<'#8...........',
+# not a good alignment
+my $realname     = catfile( $dir, $file );
+my $display_name = defined $disp ? catfile( $disp, $file ) : $file;
+#8...........
+        },
+
+        'almost2.def' => {
+            source => "almost2",
+            params => "def",
+            expect => <<'#9...........',
+# not a good alignment
+my $substname = ( $indtot > 1 ? $indname . $indno : $indname );
+my $incname   = $indname . ( $indtot > 1 ? $indno : "" );
+#9...........
+        },
+
+        'almost3.def' => {
+            source => "almost3",
+            params => "def",
+            expect => <<'#10...........',
+# not a good alignment
+sub head {
+    match_on_type @_ => Null => sub { die "Cannot get head of Null" },
+      ArrayRef => sub { $_->[0] };
+}
+
+#10...........
         },
     };
 

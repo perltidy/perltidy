@@ -1,0 +1,3 @@
+# not a good alignment
+my $substname = ( $indtot > 1 ? $indname . $indno : $indname );
+my $incname   = $indname . ( $indtot > 1 ? $indno : "" );

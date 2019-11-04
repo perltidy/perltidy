@@ -2384,7 +2384,7 @@ sub delete_unmatched_tokens {
               decode_alignment_token($tok);
             if ( !defined($lev_min) || $lev < $lev_min ) { $lev_min = $lev }
 
-	    # Possible future upgrade: for multiple matches, 
+            # Possible future upgrade: for multiple matches,
             # record [$i1, $i2, ..] instead of $i
             $rhash->{$tok} =
               [ $i, undef, undef, $raw_tok, $lev, $tag, $tok_count ];
@@ -2471,10 +2471,6 @@ sub delete_unmatched_tokens {
             }
         }
 
-        # OLD: Leave two lines alone unless they are an if/else or ternary.
-        # NEW: Treat two lines the same as longer runs; results are better.
-        ## next if ( $nlines <= 2 && !$is_full_block );
-
         # remove unwanted alignment tokens
         for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
             my $line    = $rnew_lines->[$jj];
@@ -2484,7 +2480,7 @@ sub delete_unmatched_tokens {
             my $i_eq    = $i_equals[$jj];
             my @idel;
             my $imax = @{$rtokens} - 2;
-            my $deletion_level;
+            my $delete_above_level;
 
             for ( my $i = 0 ; $i <= $imax ; $i++ ) {
                 my $tok = $rtokens->[$i];
@@ -2500,19 +2496,21 @@ sub delete_unmatched_tokens {
                 $delete_me ||=
                   ( $is_full_block && $token_line_count{$tok} < $nlines );
 
-                # remove tagged alignment tokens following a => deletion until
-                # a lower level is reached because the tags will now be
-                # incorrect. For example, this will prevent aligning
-                # commas as follows after deleting the second =>
+                # Remove all tokens above a certain level following a previous
+                # deletion.  For example, we have to remove tagged higher level
+                # alignment tokens following a => deletion because the tags of
+                # higher level tokens will now be incorrect. For example, this
+                # will prevent aligning commas as follows after deleting the
+                # second =>
                 #    $w->insert(
                 #	ListBox => origin => [ 270, 160 ],
                 #	size    => [ 200,           55 ],
                 #    );
-                if ( defined($deletion_level) ) {
-                    if ( $lev >= $deletion_level ) {
-                        $delete_me ||= $tag;
+                if ( defined($delete_above_level) ) {
+                    if ( $lev > $delete_above_level ) {
+                        $delete_me ||= 1;    #$tag;
                     }
-                    else { $deletion_level = undef }
+                    else { $delete_above_level = undef }
                 }
 
                 if (
@@ -2529,10 +2527,18 @@ sub delete_unmatched_tokens {
                   )
                 {
                     push @idel, $i;
-                    if ( $raw_tok eq '=>' ) {
-                        $deletion_level = $lev
-                          if ( !defined($deletion_level)
-                            || $lev < $deletion_level );
+                    if ( !defined($delete_above_level)
+                        || $lev < $delete_above_level )
+                    {
+
+                        # delete all following higher level alignments
+                        $delete_above_level = $lev;
+
+                        # but keep deleting after => to next lower level
+                        # to avoid some bizarre alignments
+                        if ( $raw_tok eq '=>' ) {
+                            $delete_above_level = $lev - 1;
+                        }
                     }
                 }
             }
