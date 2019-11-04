@@ -11470,8 +11470,10 @@ sub get_seqno {
 
 {
     my %is_vertical_alignment_type;
+    my %is_not_vertical_alignment_token;
     my %is_vertical_alignment_keyword;
     my %is_terminal_alignment_type;
+    my %is_low_level_alignment_token;
 
     BEGIN {
 
@@ -11484,9 +11486,18 @@ sub get_seqno {
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
-        # only align these at end of line
+        # These 'tokens' are not aligned. We need this to remove [ 
+        # from the above list because it has type ='{'
+        @q = qw([);
+        @is_not_vertical_alignment_token{@q} = (1) x scalar(@q);
+
+        # these are the only types aligned at a line end
         @q = qw(&& ||);
         @is_terminal_alignment_type{@q} = (1) x scalar(@q);
+
+        # these tokens only align at line level
+        @q = ( '{', '(' );
+        @is_low_level_alignment_token{@q} = (1) x scalar(@q);
 
         # eq and ne were removed from this list to improve alignment chances
         @q = qw(if unless and or err for foreach while until);
@@ -11602,7 +11613,9 @@ sub get_seqno {
 
                 # align before one of these types..
                 # Note: add '.' after new vertical aligner is operational
-                elsif ( $is_vertical_alignment_type{$type} && $token ne '[') {
+                elsif ( $is_vertical_alignment_type{$type}
+                    && !$is_not_vertical_alignment_token{$token} )
+                {
                     $alignment_type = $token;
 
                     # Do not align a terminal token.  Although it might
@@ -11635,29 +11648,23 @@ sub get_seqno {
                         $alignment_type = "";
                     }
 
+                    # Certain tokens only align at the same level as the
+                    # initial line level
+                    if (   $is_low_level_alignment_token{$token}
+                        && $levels_to_go[$i] != $level_beg )
+                    {
+                        $alignment_type = "";
+                    }
+
                     # For a paren after keyword, only align something like this:
                     #    if    ( $a ) { &a }
                     #    elsif ( $b ) { &b }
-                    if ( $token eq '(' && $vert_last_nonblank_type eq 'k' ) {
-                        $alignment_type = ""
-                          unless $vert_last_nonblank_token =~
-                          /^(if|unless|elsif)$/;
-                    }
+                    if ( $token eq '(' ) {
 
-                    # Skip empty containers like '{}' and '()'
-                    # which are at a higher level than the line beginning
-                    my $seqno = $type_sequence_to_go[$i];
-                    if (   $seqno
-                        && $i < $iend
-                        && $levels_to_go[$i] > $level_beg )
-                    {
-                        my $ip = $i + 1;
-                        if ( $tokens_to_go[$ip] eq 'b' ) { $ip++ }
-                        if (   $ip <= $iend
-                            && $type_sequence_to_go[$ip]
-                            && $type_sequence_to_go[$ip] == $seqno )
-                        {
-                            $alignment_type = "";
+                        if ( $vert_last_nonblank_type eq 'k' ) {
+                            $alignment_type = ""
+                              unless $vert_last_nonblank_token =~
+                              /^(if|unless|elsif)$/;
                         }
                     }
 
