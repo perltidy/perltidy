@@ -1,0 +1,2 @@
+# rt130394: keep on one line
+$factorial = sub { reduce { $a * $b } 1 .. 11 };

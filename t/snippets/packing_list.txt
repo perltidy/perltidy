@@ -143,6 +143,9 @@
 ../snippets16.t	git10.git10
 ../snippets16.t	multiple_equals.def
 ../snippets16.t	align31.def
+../snippets16.t	almost1.def
+../snippets16.t	almost2.def
+../snippets16.t	almost3.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -303,6 +306,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets16.t	almost1.def
-../snippets16.t	almost2.def
-../snippets16.t	almost3.def
+../snippets16.t	rt130394.def

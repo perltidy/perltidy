@@ -11,6 +11,7 @@
 #8 almost1.def
 #9 almost2.def
 #10 almost3.def
+#11 rt130394.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -94,6 +95,11 @@ $query_all  = $opt_A     if $opt_A;
 # not aligning multiple '='s here
 $start   = $end     = $len = $ismut = $number = $allele_ori = $allele_mut =
   $proof = $xxxxreg = $reg = $dist  = '';
+----------
+
+        'rt130394' => <<'----------',
+# rt130394: keep on one line
+$factorial = sub { reduce { $a * $b } 1 .. 11 };
 ----------
 
         'spp' => <<'----------',
@@ -229,6 +235,15 @@ sub head {
 }
 
 #10...........
+        },
+
+        'rt130394.def' => {
+            source => "rt130394",
+            params => "def",
+            expect => <<'#11...........',
+# rt130394: keep on one line
+$factorial = sub { reduce { $a * $b } 1 .. 11 };
+#11...........
         },
     };
 

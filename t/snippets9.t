@@ -350,11 +350,7 @@ else     { 3; }
             params => "def",
             expect => <<'#13...........',
 # for-loop in a parenthesized block-map triggered an error message
-map( {
-        foreach my $item ( '0', '1' ) {
-            print $item;
-        }
-} qw(a b c) );
+map( { foreach my $item ( '0', '1' ) { print $item} } qw(a b c) );
 #13...........
         },
 
