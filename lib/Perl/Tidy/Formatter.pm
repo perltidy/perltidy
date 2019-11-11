@@ -767,7 +767,7 @@ sub new {
           undef,    # for undoing phantom semicolons if iterating
         rpaired_to_inner_container => {},
         rbreak_container           => {},    # prevent one-line blocks
-        rnobreak_container         => {},    # blocks not forced open
+        rshort_nested              => {},    # blocks not forced open
         rvalid_self_keys           => [],    # for checking
         valign_batch_count         => 0,
     };
@@ -3599,18 +3599,25 @@ sub map_containers {
     }
 }
 
-sub mark_short_blocks {
+sub mark_short_nested_blocks {
 
-    # This routine looks at the entire file and marks any short
-    # code blocks which lie within other containers and should not
-    # be broken.  The results are stored in the hash
-    #     $rnobreak_container->{$type_sequence}
-    # which will be true if the container should remain intact
+    # This routine looks at the entire file and marks any short nested blocks
+    # which should not be broken.  The results are stored in the hash
+    #     $rshort_nested->{$type_sequence}
+    # which will be true if the container should remain intact.
     #
-    # For example, consider the following line
+    # For example, consider the following line:
     #   sub cxt_two { sort { $a <=> $b } test_if_list() }
-    # Normally, the sort block will force the sub block to break open
-    # but we will set a flag for the sort braces to prevent this.
+    # The 'sort' block is short and nested within an outer sub block.
+    # Normally, the existance of the 'sort' block will force the sub block to
+    # break open, but this is not always desirable. Here we will set a flag for
+    # the sort block to prevent this.  To give the user control, we will
+    # follow the input file formatting.  If either of the blocks is broken in
+    # the input file then we will allow it to remain broken. Otherwise we will
+    # set a flag to keep it together in later formatting steps.
+
+    # The flag which is set here will be checked in two places:
+    # 'sub print_line_of_tokens' and 'sub starting_one_line_block'
 
     my $self = shift;
     my $rLL  = $self->{rLL};
@@ -3618,8 +3625,8 @@ sub mark_short_blocks {
 
     my $K_opening_container = $self->{K_opening_container};
     my $K_closing_container = $self->{K_closing_container};
-    my $rbreak_container    = $self->{rnobreak_container};
-    my $rnobreak_container  = $self->{rnobreak_container};
+    my $rbreak_container    = $self->{rbreak_container};
+    my $rshort_nested       = $self->{rshort_nested};
     my $rcontainer_map      = $self->{rcontainer_map};
     my $rlines              = $self->{rlines};
 
@@ -3651,7 +3658,7 @@ sub mark_short_blocks {
           $rLL->[$K_opening]->[_LINE_INDEX_];
     };
 
-    # loop over containers
+    # loop over all containers
     my $level = 0;
     my $KK    = 0;
     my @open_block_stack;
@@ -3660,54 +3667,80 @@ sub mark_short_blocks {
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
-            Fault("sequence = $type_sequence not defined");
+
+            # an error here is most likely due to a recent programming change
+            Fault("sequence = $type_sequence not defined; programming error");
         }
 
-        # We are looking for code blocks
+        # We are just looking for code blocks
         my $token = $rtoken_vars->[_TOKEN_];
         my $type  = $rtoken_vars->[_TYPE_];
         next unless ( $type eq $token );
         my $block_type = $rtoken_vars->[_BLOCK_TYPE_];
         next unless ($block_type);
+
+        # keep track of all block braces seen on the current line
         my $iline_last = $iline;
         $iline = $rLL->[$KK]->[_LINE_INDEX_];
-
         if ( $iline != $iline_last ) { @open_block_stack = () }
         if ( $token eq '}' ) {
             if (@open_block_stack) { pop @open_block_stack }
         }
         next unless ( $token eq '{' );
         push @open_block_stack, $type_sequence;
+
+        # now look at this opening block
         my $K_opening = $K_opening_container->{$type_sequence};
         my $K_closing = $K_closing_container->{$type_sequence};
         next unless ( defined($K_opening) && defined($K_closing) );
         my $rK_range = $rlines->[$iline]->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
 
-        # we require a code block to be within another block on the same line
+        # we require this code block to be within an outer block on the same
+        # line, so check the stack (this block will be on the stack top)
         next unless ( @open_block_stack > 1 );
-        my $type_sequence_outer  = $open_block_stack[-2];    
+        my $type_sequence_outer = $open_block_stack[-2];
         next unless ($type_sequence_outer);
+
+        # we have an outer containing block on this line; make sure
+        # it looks ok
         my $K_opening_outer = $K_opening_container->{$type_sequence_outer};
         my $K_closing_outer = $K_closing_container->{$type_sequence_outer};
         next unless ( defined($K_opening_outer) && defined($K_closing_outer) );
         my $block_type_outer = $rLL->[$K_opening_outer]->[_BLOCK_TYPE_];
-        next unless ($block_type_outer);
+        next unless ($block_type_outer);    # shouldn't happen
 
-        # be sure the outer containing block is entirely on one line...
-	# this implies that it is on the same line as the block of interest
+        # We require that the outer containing block be entirely on one line...
+        # note that this implies that it is on the same line as the block of
+        # interest
         next if ( $is_broken_block->($type_sequence_outer) );
 
-	# The outer block must not be so long that it will break open ...
-	# this is a little tricky, but we will do an approximate check.  We
-	# require the length from the old line start to the end of the outer
-	# container to be less than the allocated length.  If this is
-	# incorrect, the container will break.  In that case, the formatting
-	# may be messed up but will be corrected on the next pass.
+        # We also require that the outer block not be so long that it will
+        # break open ... this is tricky, because we are still formatting, but
+        # we will do an approximate check.
+
+        # A fairly safe choice is to require the length from the old line start
+        # to the end of the outer container to be less than the allocated
+        # length.  But if the old line length is really long, then we may
+        # needlessly introduce breaks. So we will try to improve this by
+        # looking at the first nonblank token before the first opening brace.
+        # If it is a closing paren, then we may be at an if statement or
+        # similar, so we will make the safe choice.  Otherwise, we will use it.
+
+        # There is a risk that the formatting will get messed up if we make
+        # a bad choice. But it should be corrected on the next formatting pass.
+
+        my $K_break      = $Kfirst;
+        my $seqno_brace1 = $open_block_stack[0];
+        my $K_brace1     = $K_opening_container->{$seqno_brace1};
+        my $Kp           = $self->K_previous_nonblank($K_brace1);
+        if ( defined($Kp) && $Kp > $Kfirst && $Kp ne ')' ) { $K_break = $Kp }
+        ##if ( $K_brace1 && $K_brace1 - 2 > $Kfirst ) { $K_break = $K_brace1 - 2 }
+
         $starting_lentot =
-          $Kfirst <= 0
+          $K_break <= 0
           ? 0
-          : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+          : $rLL->[ $K_break - 1 ]->[_CUMULATIVE_LENGTH_];
         $starting_indent = 0;
         if ( !$rOpts_variable_maximum_line_length ) {
             my $level = $rLL->[$Kfirst]->[_LEVEL_];
@@ -3715,8 +3748,8 @@ sub mark_short_blocks {
         }
         next if ( $excess_length_to_K->($K_closing_outer) > 0 );
 
-        # OK, mark this as a small interior container
-        $rnobreak_container->{$type_sequence} = 1;
+        # Looks OK, we can mark this as a short nested block
+        $rshort_nested->{$type_sequence} = 1;
     }
     return;
 }
@@ -4672,8 +4705,8 @@ sub finish_formatting {
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
 
-    # Locate small blocks which should not be broken
-    $self->mark_short_blocks();
+    # Locate small nested blocks which should not be broken
+    $self->mark_short_nested_blocks();
 
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
@@ -7070,9 +7103,9 @@ EOM
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $K_first, $K_last ) = @{$rK_range};
 
-        my $rLL                = $self->{rLL};
-        my $rbreak_container   = $self->{rbreak_container};
-        my $rnobreak_container = $self->{rnobreak_container};
+        my $rLL              = $self->{rLL};
+        my $rbreak_container = $self->{rbreak_container};
+        my $rshort_nested    = $self->{rshort_nested};
 
         if ( !defined($K_first) ) {
 
@@ -7404,13 +7437,13 @@ EOM
               (      $type eq '{'
                   && $token eq '{'
                   && $block_type
-                  && !$rnobreak_container->{$type_sequence}
+                  && !$rshort_nested->{$type_sequence}
                   && $block_type ne 't' );
             my $is_closing_BLOCK =
               (      $type eq '}'
                   && $token eq '}'
                   && $block_type
-                  && !$rnobreak_container->{$type_sequence}
+                  && !$rshort_nested->{$type_sequence}
                   && $block_type ne 't' );
 
             if (   $side_comment_follows
@@ -8176,8 +8209,8 @@ sub starting_one_line_block {
     # within a one-line block if the block contains multiple statements.
 
     my ( $self, $j, $jmax, $level, $slevel, $ci_level, $rtoken_array ) = @_;
-    my $rbreak_container   = $self->{rbreak_container};
-    my $rnobreak_container = $self->{rnobreak_container};
+    my $rbreak_container = $self->{rbreak_container};
+    my $rshort_nested    = $self->{rshort_nested};
 
     my $jmax_check = @{$rtoken_array};
     if ( $jmax_check < $jmax ) {
@@ -8299,7 +8332,7 @@ sub starting_one_line_block {
 
         # ignore some small blocks
         my $type_sequence = $rtoken_array->[$i]->[_TYPE_SEQUENCE_];
-        my $nobreak       = $rnobreak_container->{$type_sequence};
+        my $nobreak       = $rshort_nested->{$type_sequence};
 
         # Return false result if we exceed the maximum line length,
         if ( $pos > maximum_line_length($i_start) ) {

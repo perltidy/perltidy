@@ -2,6 +2,14 @@
 
 ## 2019 09 15.01
 
+    - Fixed issue RT#130394: Allow short nested blocks.  Given the following
+
+        $factorial = sub { reduce { $a * $b } 1 .. 11 };
+   
+      Previous versions would always break the sub block because it
+      contains another block (the reduce block).  The fix keeps
+      short one-line blocks such as this intact.
+
     - Implement issue RT#130640: Allow different subroutine keywords.
       Added a flag --sub-alias-list=s or -sal=s, where s is a string with
       one or more aliases for 'sub', separated by spaces or commas.  
