@@ -3607,7 +3607,9 @@ sub mark_short_nested_blocks {
     # which will be true if the container should remain intact.
     #
     # For example, consider the following line:
+
     #   sub cxt_two { sort { $a <=> $b } test_if_list() }
+
     # The 'sort' block is short and nested within an outer sub block.
     # Normally, the existance of the 'sort' block will force the sub block to
     # break open, but this is not always desirable. Here we will set a flag for
@@ -3659,8 +3661,7 @@ sub mark_short_nested_blocks {
     };
 
     # loop over all containers
-    my $level = 0;
-    my $KK    = 0;
+    my $KK = 0;
     my @open_block_stack;
     my $iline = -1;
     while ( defined( $KK = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_] ) ) {
@@ -3672,84 +3673,59 @@ sub mark_short_nested_blocks {
             Fault("sequence = $type_sequence not defined; programming error");
         }
 
-        # We are just looking for code blocks
+        # We are just looking at code blocks
         my $token = $rtoken_vars->[_TOKEN_];
         my $type  = $rtoken_vars->[_TYPE_];
         next unless ( $type eq $token );
         my $block_type = $rtoken_vars->[_BLOCK_TYPE_];
         next unless ($block_type);
 
-        # keep track of all block braces seen on the current line
+        # Keep a stack of all acceptable block braces seen.
+        # Only consider blocks entirely on one line so dump the stack when line
+        # changes.
         my $iline_last = $iline;
         $iline = $rLL->[$KK]->[_LINE_INDEX_];
         if ( $iline != $iline_last ) { @open_block_stack = () }
+
         if ( $token eq '}' ) {
             if (@open_block_stack) { pop @open_block_stack }
         }
         next unless ( $token eq '{' );
-        push @open_block_stack, $type_sequence;
 
-        # now look at this opening block
+        # block must be balanced (bad scripts may be unbalanced)
         my $K_opening = $K_opening_container->{$type_sequence};
         my $K_closing = $K_closing_container->{$type_sequence};
         next unless ( defined($K_opening) && defined($K_closing) );
-        my $rK_range = $rlines->[$iline]->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
 
-        # we require this code block to be within an outer block on the same
-        # line, so check the stack (this block will be on the stack top)
-        next unless ( @open_block_stack > 1 );
-        my $type_sequence_outer = $open_block_stack[-2];
-        next unless ($type_sequence_outer);
+        # require that this block be entirely on one line
+        next if ( $is_broken_block->($type_sequence) );
 
-        # we have an outer containing block on this line; make sure
-        # it looks ok
-        my $K_opening_outer = $K_opening_container->{$type_sequence_outer};
-        my $K_closing_outer = $K_closing_container->{$type_sequence_outer};
-        next unless ( defined($K_opening_outer) && defined($K_closing_outer) );
-        my $block_type_outer = $rLL->[$K_opening_outer]->[_BLOCK_TYPE_];
-        next unless ($block_type_outer);    # shouldn't happen
-
-        # We require that the outer containing block be entirely on one line...
-        # note that this implies that it is on the same line as the block of
-        # interest
-        next if ( $is_broken_block->($type_sequence_outer) );
-
-        # We also require that the outer block not be so long that it will
-        # break open ... this is tricky, because we are still formatting, but
-        # we will do an approximate check.
-
-        # A fairly safe choice is to require the length from the old line start
-        # to the end of the outer container to be less than the allocated
-        # length.  But if the old line length is really long, then we may
-        # needlessly introduce breaks. So we will try to improve this by
-        # looking at the first nonblank token before the first opening brace.
-        # If it is a closing paren, then we may be at an if statement or
-        # similar, so we will make the safe choice.  Otherwise, we will use it.
-
-        # There is a risk that the formatting will get messed up if we make
-        # a bad choice. But it should be corrected on the next formatting pass.
-
-        my $K_break      = $Kfirst;
-        my $seqno_brace1 = $open_block_stack[0];
-        my $K_brace1     = $K_opening_container->{$seqno_brace1};
-        my $Kp           = $self->K_previous_nonblank($K_brace1);
-        if ( defined($Kp) && $Kp > $Kfirst && $Kp ne ')' ) { $K_break = $Kp }
-        ##if ( $K_brace1 && $K_brace1 - 2 > $Kfirst ) { $K_break = $K_brace1 - 2 }
-
+        # See if this block fits on one line of allowed length (which may
+        # be different from the input script)
         $starting_lentot =
-          $K_break <= 0
-          ? 0
-          : $rLL->[ $K_break - 1 ]->[_CUMULATIVE_LENGTH_];
+          $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
         $starting_indent = 0;
         if ( !$rOpts_variable_maximum_line_length ) {
-            my $level = $rLL->[$Kfirst]->[_LEVEL_];
+            my $level = $rLL->[$KK]->[_LEVEL_];
             $starting_indent = $rOpts_indent_columns * $level;
         }
-        next if ( $excess_length_to_K->($K_closing_outer) > 0 );
 
-        # Looks OK, we can mark this as a short nested block
+        # Dump the stack if block is too long and skip this block
+        if ( $excess_length_to_K->($K_closing) > 0 ) {
+            @open_block_stack = ();
+            next;
+        }
+
+        # OK, Block passes tests, remember it
+        push @open_block_stack, $type_sequence;
+
+        # We are only marking nested code blocks,
+        # so check for a previous block on the stack
+        next unless ( @open_block_stack > 1 );
+
+        # Looks OK, mark this as a short nested block
         $rshort_nested->{$type_sequence} = 1;
+
     }
     return;
 }
