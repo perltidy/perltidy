@@ -3566,12 +3566,12 @@ sub map_containers {
     my @stack;    # stack of container sequence numbers
     my $KNEXT = 0;
     while ( defined($KNEXT) ) {
-	my $KK = $KNEXT;
+        my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
-	    next if ($KK == 0);  # first token in file may not be container
+            next if ( $KK == 0 );    # first token in file may not be container
             Fault("sequence = $type_sequence not defined at K=$KK");
         }
 
@@ -3669,13 +3669,13 @@ sub mark_short_nested_blocks {
     my @open_block_stack;
     my $iline = -1;
     my $KNEXT = 0;
-    while ( defined ($KNEXT) ) {
-	my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_]; 
+    while ( defined($KNEXT) ) {
+        my $KK = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
-	    next if ($KK == 0);  # first token in file may not be container
+            next if ( $KK == 0 );    # first token in file may not be container
 
             # an error here is most likely due to a recent programming change
             Fault("sequence = $type_sequence not defined at K=$KK");
@@ -3845,13 +3845,13 @@ sub weld_cuddled_blocks {
     # loop over structure items to find cuddled pairs
     my $level = 0;
     my $KNEXT = 0;
-    while ( defined ($KNEXT) ) {
-	my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_]; 
+    while ( defined($KNEXT) ) {
+        my $KK = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
         my $rtoken_vars   = $rLL->[$KK];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
-	    next if ($KK == 0);  # first token in file may not be container
+            next if ( $KK == 0 );    # first token in file may not be container
             Fault("sequence = $type_sequence not defined at K=$KK");
         }
 
@@ -4323,12 +4323,12 @@ sub weld_nested_quotes {
     # look for single qw quotes nested in containers
     my $KNEXT = 0;
     while ( defined($KNEXT) ) {
-	my $KK = $KNEXT;
+        my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
         my $rtoken_vars = $rLL->[$KK];
         my $outer_seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$outer_seqno ) {
-	    next if ($KK == 0);  # first token in file may not be container
+            next if ( $KK == 0 );    # first token in file may not be container
             Fault("sequence = $outer_seqno not defined at K=$KK");
         }
 
@@ -11012,7 +11012,7 @@ sub lookup_opening_indentation {
             {
                 my $K_next_nonblank = $self->K_next_code($K_beg);
 
-		# Patch for RT#131115: honor -bli flag at closing brace
+                # Patch for RT#131115: honor -bli flag at closing brace
                 my $is_bli =
                      $rOpts_brace_left_and_indent
                   && $block_type_to_go[$i_terminal]
