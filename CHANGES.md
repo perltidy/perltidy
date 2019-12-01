@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2019 09 15.01
+## 2019 12 07
 
     - Fixed issue RT#131115: -bli option not working correctly.
       Closing braces were not indented in some cases due to a glitch
@@ -16,7 +16,7 @@
 
     - Implement issue RT#130640: Allow different subroutine keywords.
       Added a flag --sub-alias-list=s or -sal=s, where s is a string with
-      one or more aliases for 'sub', separated by spaces or commas.  
+      one or more aliases for 'sub', separated by spaces or commas.
       For example,
 
         perltidy -sal='method fun' 

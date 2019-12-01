@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20190915.01';
+our $VERSION = '20191207';
 
 use Perl::Tidy::LineBuffer;
 
@@ -6193,7 +6193,7 @@ sub scan_identifier_do {
                 # In something like '$${' we have type '$$' (and only
                 # part of an identifier)
                 && !( $identifier =~ /\$$/ && $tok eq '{' )
-                && ( $identifier  !~ /^(sub |package )$/ )
+                && ( $identifier !~ /^(sub |package )$/ )
               )
             {
                 $type = 'i';

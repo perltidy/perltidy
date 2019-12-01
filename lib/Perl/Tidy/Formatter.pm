@@ -12,7 +12,7 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20190915.01';
+our $VERSION = '20191207';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -3601,6 +3601,7 @@ sub map_containers {
     else {
         # ok
     }
+    return;
 }
 
 sub mark_short_nested_blocks {
@@ -6295,6 +6296,7 @@ sub make_sub_matching_pattern {
         $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
         $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
     }
+    return;
 }
 
 sub make_bli_pattern {
