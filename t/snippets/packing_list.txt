@@ -146,6 +146,7 @@
 ../snippets16.t	almost1.def
 ../snippets16.t	almost2.def
 ../snippets16.t	almost3.def
+../snippets16.t	rt130394.def
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -306,4 +307,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets16.t	rt130394.def
+../snippets16.t	rt131115.def
+../snippets16.t	rt131115.rt131115

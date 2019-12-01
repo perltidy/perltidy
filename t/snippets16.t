@@ -12,6 +12,8 @@
 #9 almost2.def
 #10 almost3.def
 #11 rt130394.def
+#12 rt131115.def
+#13 rt131115.rt131115
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,10 +31,11 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'   => "",
-        'git10' => "-wn -ce -cbl=sort,map,grep",
-        'spp1'  => "-spp=1",
-        'spp2'  => "-spp=2",
+        'def'      => "",
+        'git10'    => "-wn -ce -cbl=sort,map,grep",
+        'rt131115' => "-bli",
+        'spp1'     => "-spp=1",
+        'spp2'     => "-spp=2",
     };
 
     ############################
@@ -100,6 +103,16 @@ $start   = $end     = $len = $ismut = $number = $allele_ori = $allele_mut =
         'rt130394' => <<'----------',
 # rt130394: keep on one line
 $factorial = sub { reduce { $a * $b } 1 .. 11 };
+----------
+
+        'rt131115' => <<'----------',
+# closing braces to be inteded with -bli
+sub a {
+    my %uniq;
+    foreach my $par (@_) {
+        $uniq{$par} = 1;
+    }
+}
 ----------
 
         'spp' => <<'----------',
@@ -244,6 +257,36 @@ sub head {
 # rt130394: keep on one line
 $factorial = sub { reduce { $a * $b } 1 .. 11 };
 #11...........
+        },
+
+        'rt131115.def' => {
+            source => "rt131115",
+            params => "def",
+            expect => <<'#12...........',
+# closing braces to be inteded with -bli
+sub a {
+    my %uniq;
+    foreach my $par (@_) {
+        $uniq{$par} = 1;
+    }
+}
+#12...........
+        },
+
+        'rt131115.rt131115' => {
+            source => "rt131115",
+            params => "rt131115",
+            expect => <<'#13...........',
+# closing braces to be inteded with -bli
+sub a
+  {
+    my %uniq;
+    foreach my $par (@_)
+      {
+        $uniq{$par} = 1;
+      }
+  }
+#13...........
         },
     };
 

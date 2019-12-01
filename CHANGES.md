@@ -2,6 +2,10 @@
 
 ## 2019 09 15.01
 
+    - Fixed issue RT#131115: -bli option not working correctly.
+      Closing braces were not indented in some cases due to a glitch
+      introduced in version 20181120.
+
     - Fixed issue RT#130394: Allow short nested blocks.  Given the following
 
         $factorial = sub { reduce { $a * $b } 1 .. 11 };

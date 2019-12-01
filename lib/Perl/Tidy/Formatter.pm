@@ -11009,7 +11009,14 @@ sub lookup_opening_indentation {
                 && defined($K_beg) )
             {
                 my $K_next_nonblank = $self->K_next_code($K_beg);
-                if ( defined($K_next_nonblank) ) {
+
+		# Patch for RT#131115: honor -bli flag at closing brace
+                my $is_bli =
+                     $rOpts_brace_left_and_indent
+                  && $block_type_to_go[$i_terminal]
+                  && $block_type_to_go[$i_terminal] =~ /$bli_pattern/o;
+
+                if ( !$is_bli && defined($K_next_nonblank) ) {
                     my $lev        = $rLL->[$K_beg]->[_LEVEL_];
                     my $level_next = $rLL->[$K_next_nonblank]->[_LEVEL_];
                     $adjust_indentation = 1 if ( $level_next < $lev );

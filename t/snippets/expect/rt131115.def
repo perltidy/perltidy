@@ -1,0 +1,7 @@
+# closing braces to be inteded with -bli
+sub a {
+    my %uniq;
+    foreach my $par (@_) {
+        $uniq{$par} = 1;
+    }
+}
