@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2019 12 07
+## 2019 12 03
 
     - Fixed issue RT#131115: -bli option not working correctly.
       Closing braces were not indented in some cases due to a glitch
