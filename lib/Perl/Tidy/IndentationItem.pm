@@ -8,7 +8,7 @@
 package Perl::Tidy::IndentationItem;
 use strict;
 use warnings;
-our $VERSION = '20191203';
+our $VERSION = '20191203.01';
 
 sub new {
 

@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20191203';
+    $VERSION = '20191203.01';
 }
 
 sub streamhandle {

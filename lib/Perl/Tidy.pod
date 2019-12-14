@@ -414,7 +414,7 @@ C<write_debug_entry> in Tidy.pm.
 
 =head1 VERSION
 
-This man page documents Perl::Tidy version 20191203
+This man page documents Perl::Tidy version 20191203.01
 
 =head1 LICENSE
 
