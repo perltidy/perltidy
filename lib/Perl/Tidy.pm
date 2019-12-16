@@ -1177,7 +1177,6 @@ EOM
                     $rpending_logfile_message );
 
                 # stop iterations if errors or converged
-                #my $stop_now = $logger_object->{_warning_count};
                 my $stop_now = $tokenizer->report_tokenization_errors();
                 if ($stop_now) {
                     $convergence_log_message = <<EOM;

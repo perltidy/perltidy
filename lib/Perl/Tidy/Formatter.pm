@@ -1723,6 +1723,12 @@ sub write_line {
         if ( $jmax >= 0 ) {
             $Kfirst = defined($Klimit) ? $Klimit + 1 : 0;
             foreach my $j ( 0 .. $jmax ) {
+
+                # Clip negative nesting depths to zero to avoid problems.
+                # Negative values can occur in files with unbalanced containers
+                my $slevel = $rslevels->[$j];
+                if ( $slevel < 0 ) { $slevel = 0 }
+
                 my @tokary;
                 @tokary[
                   _TOKEN_,                 _TYPE_,
@@ -1737,7 +1743,7 @@ sub write_line {
                     $rblock_type->[$j],            $rcontainer_type->[$j],
                     $rcontainer_environment->[$j], $rtype_sequence->[$j],
                     $rlevels->[$j],                $rlevels->[$j],
-                    $rslevels->[$j],               $rci_levels->[$j],
+                    $slevel,                       $rci_levels->[$j],
                     $input_line_no,
                   );
                 push @{$rLL}, \@tokary;
@@ -7854,9 +7860,6 @@ sub output_line_to_go {
     };
 
     # Do not end line in a weld
-    # TODO: Move this fix into the routine?
-    #my $jnb = $max_index_to_go;
-    #if ( $jnb > 0 && $types_to_go[$jnb] eq 'b' ) { $jnb-- }
     return if ( weld_len_right_to_go($max_index_to_go) );
 
     # just set a tentative breakpoint if we might be in a one-line block
@@ -7864,10 +7867,6 @@ sub output_line_to_go {
         set_forced_breakpoint($max_index_to_go);
         return;
     }
-
-##    my $cscw_block_comment;
-##    $cscw_block_comment = $self->add_closing_side_comment()
-##      if ( $rOpts->{'closing-side-comments'} && $max_index_to_go >= 0 );
 
     my $comma_arrow_count_contained = match_opening_and_closing_tokens();
 
@@ -7932,7 +7931,6 @@ sub output_line_to_go {
             my $leading_type  = $types_to_go[$imin];
 
             # blank lines before subs except declarations and one-liners
-            # MCONVERSION LOCATION - for sub tokenization change
             if ( $leading_token =~ /^(sub\s)/ && $leading_type eq 'i' ) {
                 $want_blank = $rOpts->{'blank-lines-before-subs'}
                   if (
@@ -7942,7 +7940,6 @@ sub output_line_to_go {
             }
 
             # break before all package declarations
-            # MCONVERSION LOCATION - for tokenizaton change
             elsif ($leading_token =~ /^(package\s)/
                 && $leading_type eq 'i' )
             {
@@ -8096,7 +8093,7 @@ sub output_line_to_go {
             ( $ri_first, $ri_last, my $colon_count ) =
               set_continuation_breaks($saw_good_break);
 
-            break_all_chain_tokens( $ri_first, $ri_last );
+            $self->break_all_chain_tokens( $ri_first, $ri_last );
 
             break_equals( $ri_first, $ri_last );
 
@@ -8107,7 +8104,7 @@ sub output_line_to_go {
                   recombine_breakpoints( $ri_first, $ri_last );
             }
 
-            insert_final_breaks( $ri_first, $ri_last ) if $colon_count;
+            $self->insert_final_breaks( $ri_first, $ri_last ) if $colon_count;
         }
 
         # do corrector step if -lp option is used
@@ -16452,7 +16449,7 @@ sub break_all_chain_tokens {
     # statement.  If we see a break at any one, break at all similar tokens
     # within the same container.
     #
-    my ( $ri_left, $ri_right ) = @_;
+    my ( $self, $ri_left, $ri_right ) = @_;
 
     my %saw_chain_type;
     my %left_chain_type;
@@ -16524,7 +16521,7 @@ sub break_all_chain_tokens {
             if ( $left_chain_type{$type} ) {
                 next if $nobreak_to_go[ $itest - 1 ];
                 foreach my $i ( @{ $left_chain_type{$type} } ) {
-                    next unless in_same_container( $i, $itest );
+                    next unless $self->is_in_same_container( $i, $itest );
                     push @insert_list, $itest - 1;
 
                     # Break at matching ? if this : is at a different level.
@@ -16551,7 +16548,7 @@ sub break_all_chain_tokens {
             if ( $right_chain_type{$type} ) {
                 next if $nobreak_to_go[$itest];
                 foreach my $i ( @{ $right_chain_type{$type} } ) {
-                    next unless in_same_container( $i, $itest );
+                    next unless $self->is_in_same_container( $i, $itest );
                     push @insert_list, $itest;
 
                     # break at matching ? if this : is at a different level
@@ -16690,7 +16687,7 @@ sub break_equals {
 
 sub insert_final_breaks {
 
-    my ( $ri_left, $ri_right ) = @_;
+    my ( $self, $ri_left, $ri_right ) = @_;
 
     my $nmax = @{$ri_right} - 1;
 
@@ -16709,7 +16706,7 @@ sub insert_final_breaks {
     }
 
     # For long ternary chains,
-    # if the first : we see has its # ? is in the interior
+    # if the first : we see has its ? is in the interior
     # of a preceding line, then see if there are any good
     # breakpoints before the ?.
     if ( $i_first_colon > 0 ) {
@@ -16736,20 +16733,12 @@ sub insert_final_breaks {
                            $type eq ','
                         || $type eq 'k' && ( $nmax > 1 && $token eq 'return' )
                     )
-                    && in_same_container( $ii, $i_question )
+                    && $self->is_in_same_container( $ii, $i_question )
                   )
                 {
                     push @insert_list, $ii;
                     last;
                 }
-
-##                # For now, a good break is either a comma or a 'return'.
-##                if ( ( $type eq ',' || $type eq 'k' && $token eq 'return' )
-##                    && in_same_container( $ii, $i_question ) )
-##                {
-##                    push @insert_list, $ii;
-##                    last;
-##                }
             }
 
             # insert any new break points
@@ -16761,42 +16750,82 @@ sub insert_final_breaks {
     return;
 }
 
-sub in_same_container {
+sub is_in_same_container {
 
     # check to see if tokens at i1 and i2 are in the
     # same container, and not separated by a comma, ? or :
-    # FIXME: this can be written more efficiently now
-    my ( $i1, $i2 ) = @_;
-    my $type  = $types_to_go[$i1];
-    my $depth = $nesting_depth_to_go[$i1];
-    return unless ( $nesting_depth_to_go[$i2] == $depth );
-    if ( $i2 < $i1 ) { ( $i1, $i2 ) = ( $i2, $i1 ) }
+    my ( $self, $i1, $i2 ) = @_;
+    my $K1        = $K_to_go[$i1];
+    my $K2        = $K_to_go[$i2];
+    my $is_in_new = $self->in_same_container( $K1, $K2 );
+    return $is_in_new;
+}
 
-    ###########################################################
-    # This is potentially a very slow routine and not critical.
-    # For safety just give up for large differences.
-    # See test file 'infinite_loop.txt'
-    # TODO: replace this loop with a data structure
-    ###########################################################
-    return if ( $i2 - $i1 > 200 );
+{
+    my $ris_break_token;
+    my $ris_comma_token;
 
-    foreach my $i ( $i1 + 1 .. $i2 - 1 ) {
-        next   if ( $nesting_depth_to_go[$i] > $depth );
-        return if ( $nesting_depth_to_go[$i] < $depth );
+    BEGIN {
 
-        my $tok = $tokens_to_go[$i];
-        $tok = ',' if $tok eq '=>';    # treat => same as ,
+        # all cases break on commas at same level
+        my @q = qw( => );
+        push @q, ',';
+        @{$ris_comma_token}{@q} = (1) x scalar(@q);
 
+        # Non-ternary text also breaks on: ? : || or  at same level
         # Example: we would not want to break at any of these .'s
         #  : "<A HREF=\"#item_" . htmlify( 0, $s2 ) . "\">$str</A>"
-        if ( $type ne ':' ) {
-            return if ( $tok =~ /^[\,\:\?]$/ ) || $tok eq '||' || $tok eq 'or';
-        }
-        else {
-            return if ( $tok =~ /^[\,]$/ );
-        }
+        push @q, qw( => or || ? : );
+        @{$ris_break_token}{@q} = (1) x scalar(@q);
     }
-    return 1;
+
+    sub in_same_container {
+
+        # check to see if tokens at i1 and i2 are in the same container,
+        # and not separated by certain characters: => , ? : || or
+        my ( $self, $K1, $K2 ) = @_;
+        if ( $K2 < $K1 ) { ( $K1, $K2 ) = ( $K2, $K1 ) }
+        my $rLL     = $self->{rLL};
+        my $depth_1 = $rLL->[$K1]->[_SLEVEL_];
+        return if ( $depth_1 < 0 );
+        return unless ( $rLL->[$K2]->[_SLEVEL_] == $depth_1 );
+        my $type_1 = $rLL->[$K1]->[_TYPE_];
+        my $rbreak = ( $type_1 ne ':' ) ? $ris_break_token : $ris_comma_token;
+
+        # Fast preliminary loop to verify that tokens are in the same container
+        my $KK = $K1;
+        while (1) {
+            $KK = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+            last if !defined($KK);
+            last if ( $KK >= $K2 );
+            my $depth_K = $rLL->[$KK]->[_SLEVEL_];
+            return if ( $depth_K < $depth_1 );
+            next   if ( $depth_K > $depth_1 );
+            if ( $type_1 ne ':' ) {
+                my $tok_K = $rLL->[$KK]->[_TOKEN_];
+                return if ( $tok_K eq '?' || $tok_K eq ':' );
+            }
+        }
+
+        # Slow loop checking for certain characters
+
+        ###########################################################
+        # This is potentially a slow routine and not critical.
+        # For safety just give up for large differences.
+        # See test file 'infinite_loop.txt'
+        ###########################################################
+        return if ( $K2 - $K1 > 200 );
+
+        foreach my $K ( $K1 + 1 .. $K2 - 1 ) {
+
+            my $depth_K = $rLL->[$K]->[_SLEVEL_];
+            next   if ( $depth_K > $depth_1 );
+            return if ( $depth_K < $depth_1 );    # shouldn't happen (see above)
+            my $tok = $rLL->[$K]->[_TOKEN_];
+            return if ( $rbreak->{$tok} );
+        }
+        return 1;
+    }
 }
 
 sub set_continuation_breaks {
