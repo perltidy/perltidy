@@ -2767,7 +2767,7 @@ sub respace_tokens {
                 # or we are deleting all whitespace
                 # Note that whitespace flag is a flag indicating whether a
                 # white space BEFORE the token is needed
-                next if ( $KK >= $Kmax );    # skip terminal blank
+                next if ( $KK >= $Klast );    # skip terminal blank
                 my $Knext = $KK + 1;
                 my $ws    = $rwhitespace_flags->[$Knext];
                 if (   $ws == -1
@@ -8144,11 +8144,6 @@ sub output_line_to_go {
 
     prepare_for_new_input_lines();
 
-##    # output any new -cscw block comment
-##    if ($cscw_block_comment) {
-##        $self->flush();
-##        $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
-##    }
     return;
 }
 
@@ -16521,7 +16516,7 @@ sub break_all_chain_tokens {
             if ( $left_chain_type{$type} ) {
                 next if $nobreak_to_go[ $itest - 1 ];
                 foreach my $i ( @{ $left_chain_type{$type} } ) {
-                    next unless $self->is_in_same_container( $i, $itest );
+                    next unless $self->in_same_container_i( $i, $itest );
                     push @insert_list, $itest - 1;
 
                     # Break at matching ? if this : is at a different level.
@@ -16548,7 +16543,7 @@ sub break_all_chain_tokens {
             if ( $right_chain_type{$type} ) {
                 next if $nobreak_to_go[$itest];
                 foreach my $i ( @{ $right_chain_type{$type} } ) {
-                    next unless $self->is_in_same_container( $i, $itest );
+                    next unless $self->in_same_container_i( $i, $itest );
                     push @insert_list, $itest;
 
                     # break at matching ? if this : is at a different level
@@ -16733,7 +16728,7 @@ sub insert_final_breaks {
                            $type eq ','
                         || $type eq 'k' && ( $nmax > 1 && $token eq 'return' )
                     )
-                    && $self->is_in_same_container( $ii, $i_question )
+                    && $self->in_same_container_i( $ii, $i_question )
                   )
                 {
                     push @insert_list, $ii;
@@ -16750,45 +16745,47 @@ sub insert_final_breaks {
     return;
 }
 
-sub is_in_same_container {
+sub in_same_container_i {
 
     # check to see if tokens at i1 and i2 are in the
     # same container, and not separated by a comma, ? or :
+    # This is an interface between the _to_go arrays to the rLL array
     my ( $self, $i1, $i2 ) = @_;
-    my $K1        = $K_to_go[$i1];
-    my $K2        = $K_to_go[$i2];
-    my $is_in_new = $self->in_same_container( $K1, $K2 );
-    return $is_in_new;
+    return $self->in_same_container_K( $K_to_go[$i1], $K_to_go[$i2] );
 }
 
-{
+{    # sub in_same_container_K
     my $ris_break_token;
     my $ris_comma_token;
 
     BEGIN {
 
-        # all cases break on commas at same level
+        # all cases break on seeing commas at same level
         my @q = qw( => );
         push @q, ',';
         @{$ris_comma_token}{@q} = (1) x scalar(@q);
 
-        # Non-ternary text also breaks on: ? : || or  at same level
+        # Non-ternary text also breaks on seeing any of qw(? : || or )
         # Example: we would not want to break at any of these .'s
         #  : "<A HREF=\"#item_" . htmlify( 0, $s2 ) . "\">$str</A>"
-        push @q, qw( => or || ? : );
+        push @q, qw( or || ? : );
         @{$ris_break_token}{@q} = (1) x scalar(@q);
     }
 
-    sub in_same_container {
+    sub in_same_container_K {
 
-        # check to see if tokens at i1 and i2 are in the same container,
+        # Check to see if tokens at K1 and K2 are in the same container,
         # and not separated by certain characters: => , ? : || or
+        # This version uses the newer $rLL data structure
+
         my ( $self, $K1, $K2 ) = @_;
         if ( $K2 < $K1 ) { ( $K1, $K2 ) = ( $K2, $K1 ) }
         my $rLL     = $self->{rLL};
         my $depth_1 = $rLL->[$K1]->[_SLEVEL_];
         return if ( $depth_1 < 0 );
         return unless ( $rLL->[$K2]->[_SLEVEL_] == $depth_1 );
+
+        # Select character set to scan for
         my $type_1 = $rLL->[$K1]->[_TYPE_];
         my $rbreak = ( $type_1 ne ':' ) ? $ris_break_token : $ris_comma_token;
 
@@ -17537,4 +17534,3 @@ sub compare_indentation_levels {
     return;
 }
 1;
-
