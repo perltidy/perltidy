@@ -3025,26 +3025,36 @@ sub respace_tokens {
                   )
                 {
 
-                    my $has_side_comment;
+                    # This looks like a deletable semicolon, but even if a
+                    # semicolon can be deleted it is necessarily best to do so.
+                    # We apply these additional rules for deletion:
+                    # - Always ok to delete a ';' at the end of a line
+                    # - Never delete a ';' before a '#' because it would
+                    #   promote it to a block comment.
+                    # - If a semicolon is not at the end of line, then only
+                    #   delete if it is followed by another semicolon or closing
+                    #   token.  This includes the comment rule.  It may take
+                    #   two passes to get to a final state, but it is a little
+                    #   safer.  For example, keep the first semicolon here:
+                    #      eval { sub bubba { ok(0) }; ok(0) } || ok(1);
+                    #   It is not required but adds some clarity.
+                    my $ok_to_delete = 1;
                     if ( $KK < $Klast ) {
                         my $Kn = $self->K_next_nonblank($KK);
                         my $next_nonblank_token_type = "";
                         if ( defined($Kn) && $Kn <= $Klast ) {
                             $next_nonblank_token_type = $rLL->[$Kn]->[_TYPE_];
-                            $has_side_comment =
-                              $next_nonblank_token_type eq '#';
+                            $ok_to_delete = $next_nonblank_token_type eq ';'
+                              || $next_nonblank_token_type eq '}';
                         }
                     }
 
-                    # don't delete ; before a # because it would promote it
-                    # to a block comment
-                    if ( !$has_side_comment ) {
+                    if ($ok_to_delete) {
                         note_deleted_semicolon();
                         next;
                     }
                     else {
-                        write_logfile_entry(
-                            "Extra ';' at line $input_line_number\n");
+                        write_logfile_entry("Extra ';'\n");
                     }
                 }
             }
