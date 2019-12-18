@@ -14,6 +14,8 @@
 #11 rt130394.def
 #12 rt131115.def
 #13 rt131115.rt131115
+#14 ndsm1.def
+#15 ndsm1.ndsm
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,6 +35,7 @@ BEGIN {
     $rparams = {
         'def'      => "",
         'git10'    => "-wn -ce -cbl=sort,map,grep",
+        'ndsm'     => "-ndsm",
         'rt131115' => "-bli",
         'spp1'     => "-spp=1",
         'spp2'     => "-spp=2",
@@ -98,6 +101,16 @@ $query_all  = $opt_A     if $opt_A;
 # not aligning multiple '='s here
 $start   = $end     = $len = $ismut = $number = $allele_ori = $allele_mut =
   $proof = $xxxxreg = $reg = $dist  = '';
+----------
+
+        'ndsm1' => <<'----------',
+;;;;; # 1 trapped semicolon 
+sub numerically {$a <=> $b};
+;;;;; 
+sub Numerically {$a <=> $b};  # trapped semicolon
+@: = qw;2c72656b636168 
+  2020202020 
+  ;; __;
 ----------
 
         'rt130394' => <<'----------',
@@ -287,6 +300,44 @@ sub a
       }
   }
 #13...........
+        },
+
+        'ndsm1.def' => {
+            source => "ndsm1",
+            params => "def",
+            expect => <<'#14...........',
+;    # 1 trapped semicolon
+sub numerically { $a <=> $b }
+
+sub Numerically { $a <=> $b };    # trapped semicolon
+@: = qw;2c72656b636168
+  2020202020
+  ;;
+__;
+#14...........
+        },
+
+        'ndsm1.ndsm' => {
+            source => "ndsm1",
+            params => "ndsm",
+            expect => <<'#15...........',
+;
+;
+;
+;
+;    # 1 trapped semicolon
+sub numerically { $a <=> $b };
+;
+;
+;
+;
+;
+sub Numerically { $a <=> $b };    # trapped semicolon
+@: = qw;2c72656b636168
+  2020202020
+  ;;
+__;
+#15...........
         },
     };
 

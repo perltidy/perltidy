@@ -2389,8 +2389,10 @@ sub respace_tokens {
     # A sub to store one token in the new array
     # All new tokens must be stored by this sub so that it can update
     # all data structures on the fly.
-    my $last_nonblank_type = ';';
-    my $store_token        = sub {
+    my $last_nonblank_type       = ';';
+    my $last_nonblank_token      = ';';
+    my $last_nonblank_block_type = '';
+    my $store_token              = sub {
         my ($item) = @_;
 
         # This will be the index of this item in the new array
@@ -2437,7 +2439,11 @@ sub respace_tokens {
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
         my $type = $item->[_TYPE_];
-        if ( $type ne 'b' ) { $last_nonblank_type = $type }
+        if ( $type && $type ne 'b' && $type ne '#' ) {
+            $last_nonblank_type       = $type;
+            $last_nonblank_token      = $item->[_TOKEN_];
+            $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
+        }
 
         # and finally, add this item to the new array
         push @{$rLL_new}, $item;
@@ -2995,6 +3001,52 @@ sub respace_tokens {
                 # This is ready to go but is commented out because there is
                 # still identical logic in sub break_lines.
                 # $check_Q->($KK, $Kfirst);
+            }
+
+            # handle semicolons
+            elsif ( $type eq ';' ) {
+
+                # Remove unnecessary semicolons, but not after bare
+                # blocks, where it could be unsafe if the brace is
+                # mistokenized.
+                if (
+                    $rOpts->{'delete-semicolons'}
+                    && (
+                        (
+                            $last_nonblank_type eq '}'
+                            && (
+                                $is_block_without_semicolon{
+                                    $last_nonblank_block_type}
+                                || $last_nonblank_block_type =~ /$SUB_PATTERN/
+                                || $last_nonblank_block_type =~ /^\w+:$/ )
+                        )
+                        || $last_nonblank_type eq ';'
+                    )
+                  )
+                {
+
+                    my $has_side_comment;
+                    if ( $KK < $Klast ) {
+                        my $Kn = $self->K_next_nonblank($KK);
+                        my $next_nonblank_token_type = "";
+                        if ( defined($Kn) && $Kn <= $Klast ) {
+                            $next_nonblank_token_type = $rLL->[$Kn]->[_TYPE_];
+                            $has_side_comment =
+                              $next_nonblank_token_type eq '#';
+                        }
+                    }
+
+                    # don't delete ; before a # because it would promote it
+                    # to a block comment
+                    if ( !$has_side_comment ) {
+                        note_deleted_semicolon();
+                        next;
+                    }
+                    else {
+                        write_logfile_entry(
+                            "Extra ';' at line $input_line_number\n");
+                    }
+                }
             }
 
             elsif ($type_sequence) {
@@ -4624,6 +4676,15 @@ sub resync_lines_and_tokens {
                 $line_of_tokens->{_line_text} =~ s/\s+$//;
             }
             $line_of_tokens->{_rK_range} = [ $Kfirst, $Klast ];
+
+            # Deleting semicolons can create new empty code lines
+            # which should be marked as blank
+            if ( !defined($Kfirst) ) {
+                my $code_type = $line_of_tokens->{_code_type};
+                if ( !$code_type ) {
+                    $line_of_tokens->{_code_type} = 'BL';
+                }
+            }
         }
     }
 
@@ -5526,7 +5587,7 @@ sub wrapup {
             write_logfile_entry(
                 "   Last at input line $last_deleted_semicolon_at\n");
         }
-        write_logfile_entry("  (Use -ndsc to prevent semicolon deletion)\n");
+        write_logfile_entry("  (Use -ndsm to prevent semicolon deletion)\n");
         write_logfile_entry("\n");
     }
 
@@ -7723,40 +7784,6 @@ EOM
                     destroy_one_line_block();
                 }
 
-                # Remove unnecessary semicolons, but not after bare
-                # blocks, where it could be unsafe if the brace is
-                # mistokenized.
-                if (
-                    (
-                        $last_nonblank_token eq '}'
-                        && (
-                            $is_block_without_semicolon{
-                                $last_nonblank_block_type}
-                            || $last_nonblank_block_type =~ /$SUB_PATTERN/
-                            || $last_nonblank_block_type =~ /^\w+:$/ )
-                    )
-                    || $last_nonblank_type eq ';'
-                  )
-                {
-
-                    if (
-                        $rOpts->{'delete-semicolons'}
-
-                        # don't delete ; before a # because it would promote it
-                        # to a block comment
-                        && ( $next_nonblank_token_type ne '#' )
-                      )
-                    {
-                        note_deleted_semicolon();
-                        $self->output_line_to_go()
-                          unless ( $no_internal_newlines
-                            || $index_start_one_line_block != UNDEFINED_INDEX );
-                        next;
-                    }
-                    else {
-                        write_logfile_entry("Extra ';'\n");
-                    }
-                }
                 $self->store_token_to_go();
 
                 $self->output_line_to_go()
@@ -8164,7 +8191,7 @@ sub note_deleted_semicolon {
         $first_deleted_semicolon_at = $last_deleted_semicolon_at;
     }
     $deleted_semicolon_count++;
-    write_logfile_entry("Deleted unnecessary ';'\n");    # i hope ;)
+    write_logfile_entry("Deleted unnecessary ';' at line $input_line_number\n");
     return;
 }
 
