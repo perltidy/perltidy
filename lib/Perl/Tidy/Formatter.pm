@@ -3041,9 +3041,9 @@ sub respace_tokens {
                     my $ok_to_delete = 1;
                     if ( $KK < $Klast ) {
                         my $Kn = $self->K_next_nonblank($KK);
-                        my $next_nonblank_token_type = "";
                         if ( defined($Kn) && $Kn <= $Klast ) {
-                            $next_nonblank_token_type = $rLL->[$Kn]->[_TYPE_];
+                            my $next_nonblank_token_type =
+                              $rLL->[$Kn]->[_TYPE_];
                             $ok_to_delete = $next_nonblank_token_type eq ';'
                               || $next_nonblank_token_type eq '}';
                         }
@@ -7970,10 +7970,7 @@ sub output_line_to_go {
             # blank lines before subs except declarations and one-liners
             if ( $leading_token =~ /^(sub\s)/ && $leading_type eq 'i' ) {
                 $want_blank = $rOpts->{'blank-lines-before-subs'}
-                  if (
-                    terminal_type( \@types_to_go, \@block_type_to_go, $imin,
-                        $imax ) !~ /^[\;\}]$/
-                  );
+                  if ( $self->terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
             }
 
             # break before all package declarations
@@ -7986,10 +7983,7 @@ sub output_line_to_go {
             # break before certain key blocks except one-liners
             if ( $leading_token =~ /^(BEGIN|END)$/ && $leading_type eq 'k' ) {
                 $want_blank = $rOpts->{'blank-lines-before-subs'}
-                  if (
-                    terminal_type( \@types_to_go, \@block_type_to_go, $imin,
-                        $imax ) ne '}'
-                  );
+                  if ( $self->terminal_type_i( $imin, $imax ) ne '}' );
             }
 
             # Break before certain block types if we haven't had a
@@ -8012,10 +8006,7 @@ sub output_line_to_go {
                   && $lc >= $rOpts->{'long-block-line-count'}
                   && consecutive_nonblank_lines() >=
                   $rOpts->{'long-block-line-count'}
-                  && (
-                    terminal_type( \@types_to_go, \@block_type_to_go, $imin,
-                        $imax ) ne '}'
-                  );
+                  && $self->terminal_type_i( $imin, $imax ) ne '}';
             }
 
             # Check for blank lines wanted before a closing brace
@@ -8128,7 +8119,7 @@ sub output_line_to_go {
         else {
 
             ( $ri_first, $ri_last, my $colon_count ) =
-              set_continuation_breaks($saw_good_break);
+              $self->set_continuation_breaks($saw_good_break);
 
             $self->break_all_chain_tokens( $ri_first, $ri_last );
 
@@ -8676,7 +8667,7 @@ sub pad_token {
         #           &Error_OutOfRange;
         #       }
         #
-        my ( $ri_first, $ri_last ) = @_;
+        my ( $self, $ri_first, $ri_last ) = @_;
         my $max_line = @{$ri_first} - 1;
 
         # FIXME: move these declarations below
@@ -9016,11 +9007,7 @@ sub pad_token {
                     my $i2 = $ri_last->[$l];
                     if ( $types_to_go[$i2] eq '#' ) {
                         my $i1 = $ri_first->[$l];
-                        next
-                          if (
-                            terminal_type( \@types_to_go, \@block_type_to_go,
-                                $i1, $i2 ) eq ','
-                          );
+                        next if $self->terminal_type_i( $i1, $i2 ) eq ',';
                     }
                 }
 
@@ -10032,7 +10019,7 @@ sub send_lines_to_vertical_aligner {
 
     undo_ci( $ri_first, $ri_last );
 
-    set_logical_padding( $ri_first, $ri_last );
+    $self->set_logical_padding( $ri_first, $ri_last );
 
     # loop to prepare each line for shipment
     my $n_last_line = @{$ri_first} - 1;
@@ -10079,7 +10066,7 @@ sub send_lines_to_vertical_aligner {
           $nesting_depth_to_go[ $iend + 1 ] - $nesting_depth_to_go[$ibeg];
 
         my $rvertical_tightness_flags =
-          set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
+          $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
             $ri_first, $ri_last );
 
         # flush an outdented line to avoid any unwanted vertical alignment
@@ -10879,7 +10866,7 @@ sub lookup_opening_indentation {
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) =
-          terminal_type( \@types_to_go, \@block_type_to_go, $ibeg, $iend );
+          $self->terminal_type_i( $ibeg, $iend );
 
         my $is_outdented_line = 0;
 
@@ -11433,7 +11420,7 @@ sub lookup_opening_indentation {
 
 sub set_vertical_tightness_flags {
 
-    my ( $n, $n_last_line, $ibeg, $iend, $ri_first, $ri_last ) = @_;
+    my ( $self, $n, $n_last_line, $ibeg, $iend, $ri_first, $ri_last ) = @_;
 
     # Define vertical tightness controls for the nth line of a batch.
     # We create an array of parameters which tell the vertical aligner
@@ -11637,10 +11624,8 @@ sub set_vertical_tightness_flags {
 
             my $is_semicolon_terminated;
             if ( $n + 1 == $n_last_line ) {
-                my ( $terminal_type, $i_terminal ) = terminal_type(
-                    \@types_to_go, \@block_type_to_go,
-                    $ibeg_next,    $iend_next
-                );
+                my ( $terminal_type, $i_terminal ) =
+                  $self->terminal_type_i( $ibeg_next, $iend_next );
                 $is_semicolon_terminated = $terminal_type eq ';'
                   && $nesting_depth_to_go[$iend_next] <
                   $nesting_depth_to_go[$ibeg_next];
@@ -11998,46 +11983,102 @@ sub get_seqno {
     }
 }
 
-sub terminal_type {
+sub terminal_type_i {
 
     #    returns type of last token on this line (terminal token), as follows:
     #    returns # for a full-line comment
     #    returns ' ' for a blank line
     #    otherwise returns final token type
 
-    my ( $rtype, $rblock_type, $ibeg, $iend ) = @_;
+    my ( $self, $ibeg, $iend ) = @_;
 
-    # check for full-line comment..
-    if ( $rtype->[$ibeg] eq '#' ) {
-        return wantarray ? ( $rtype->[$ibeg], $ibeg ) : $rtype->[$ibeg];
-    }
-    else {
+    # Start at the end and work backwards
+    my $i      = $iend;
+    my $type_i = $types_to_go[$i];
 
-        # start at end and walk backwards..
-        for ( my $i = $iend ; $i >= $ibeg ; $i-- ) {
-
-            # skip past any side comment and blanks
-            next if ( $rtype->[$i] eq 'b' );
-            next if ( $rtype->[$i] eq '#' );
-
-            # found it..make sure it is a BLOCK termination,
-            # but hide a terminal } after sort/grep/map because it is not
-            # necessarily the end of the line.  (terminal.t)
-            my $terminal_type = $rtype->[$i];
-            if (
-                $terminal_type eq '}'
-                && ( !$rblock_type->[$i]
-                    || ( $is_sort_map_grep_eval_do{ $rblock_type->[$i] } ) )
-              )
-            {
-                $terminal_type = 'b';
-            }
-            return wantarray ? ( $terminal_type, $i ) : $terminal_type;
+    # Check for side comment
+    if ( $type_i eq '#' ) {
+        $i--;
+        if ( $i < $ibeg ) {
+            return wantarray ? ( $type_i, $ibeg ) : $type_i;
         }
-
-        # empty line
-        return wantarray ? ( ' ', $ibeg ) : ' ';
+        $type_i = $types_to_go[$i];
     }
+
+    # Skip past a blank
+    if ( $type_i eq 'b' ) {
+        $i--;
+        if ( $i < $ibeg ) {
+            return wantarray ? ( $type_i, $ibeg ) : $type_i;
+        }
+        $type_i = $types_to_go[$i];
+    }
+
+    # Found it..make sure it is a BLOCK termination,
+    # but hide a terminal } after sort/grep/map because it is not
+    # necessarily the end of the line.  (terminal.t)
+    my $block_type = $block_type_to_go[$i];
+    if (
+        $type_i eq '}'
+        && ( !$block_type
+            || ( $is_sort_map_grep_eval_do{$block_type} ) )
+      )
+    {
+        $type_i = 'b';
+    }
+    return wantarray ? ( $type_i, $i ) : $type_i;
+}
+
+sub terminal_type_K {
+
+    #    returns type of last token on this line (terminal token), as follows:
+    #    returns # for a full-line comment
+    #    returns ' ' for a blank line
+    #    otherwise returns final token type
+
+    my ( $self, $Kbeg, $Kend ) = @_;
+    my $rLL = $self->{rLL};
+
+    if ( !defined($Kend) ) {
+        Fault("Error in terminal_type_K: Kbeg=$Kbeg > $Kend=Kend");
+    }
+
+    # Start at the end and work backwards
+    my $K      = $Kend;
+    my $type_K = $rLL->[$K]->[_TYPE_];
+
+    # Check for side comment
+    if ( $type_K eq '#' ) {
+        $K--;
+        if ( $K < $Kbeg ) {
+            return wantarray ? ( $type_K, $Kbeg ) : $type_K;
+        }
+        $type_K = $rLL->[$K]->[_TYPE_];
+    }
+
+    # Skip past a blank
+    if ( $type_K eq 'b' ) {
+        $K--;
+        if ( $K < $Kbeg ) {
+            return wantarray ? ( $type_K, $Kbeg ) : $type_K;
+        }
+        $type_K = $rLL->[$K]->[_TYPE_];
+    }
+
+    # found it..make sure it is a BLOCK termination,
+    # but hide a terminal } after sort/grep/map because it is not
+    # necessarily the end of the line.  (terminal.t)
+    my $block_type = $rLL->[$K]->[_BLOCK_TYPE_];
+    if (
+        $type_K eq '}'
+        && ( !$block_type
+            || ( $is_sort_map_grep_eval_do{$block_type} ) )
+      )
+    {
+        $type_K = 'b';
+    }
+    return wantarray ? ( $type_K, $K ) : $type_K;
+
 }
 
 {    # set_bond_strengths
@@ -16854,7 +16895,7 @@ sub in_same_container_i {
 
             my $depth_K = $rLL->[$K]->[_SLEVEL_];
             next   if ( $depth_K > $depth_1 );
-            return if ( $depth_K < $depth_1 );    # shouldn't happen (see above)
+            return if ( $depth_K < $depth_1 );    # redundant, checked above
             my $tok = $rLL->[$K]->[_TOKEN_];
             return if ( $rbreak->{$tok} );
         }
@@ -16892,10 +16933,10 @@ sub set_continuation_breaks {
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
 
-    my $saw_good_break = shift;
-    my @i_first        = ();      # the first index to output
-    my @i_last         = ();      # the last index to output
-    my @i_colon_breaks = ();      # needed to decide if we have to break at ?'s
+    my ( $self, $saw_good_break ) = @_;
+    my @i_first        = ();    # the first index to output
+    my @i_last         = ();    # the last index to output
+    my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
 
     set_bond_strengths();
@@ -16904,7 +16945,7 @@ sub set_continuation_breaks {
     my $imax = $max_index_to_go;
     if ( $types_to_go[$imin] eq 'b' ) { $imin++ }
     if ( $types_to_go[$imax] eq 'b' ) { $imax-- }
-    my $i_begin = $imin;          # index for starting next iteration
+    my $i_begin = $imin;        # index for starting next iteration
 
     my $leading_spaces          = leading_spaces_to_go($imin);
     my $line_count              = 0;
@@ -17321,11 +17362,9 @@ sub set_continuation_breaks {
 
             # do not break if statement is broken by side comment
             next
-              if (
-                $tokens_to_go[$max_index_to_go] eq '#'
-                && terminal_type( \@types_to_go, \@block_type_to_go, 0,
-                    $max_index_to_go ) !~ /^[\;\}]$/
-              );
+              if ( $tokens_to_go[$max_index_to_go] eq '#'
+                && $self->terminal_type_i( 0, $max_index_to_go ) !~
+                /^[\;\}]$/ );
 
             # no break needed if matching : is also on the line
             next
