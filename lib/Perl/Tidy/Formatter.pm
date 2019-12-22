@@ -7064,38 +7064,6 @@ EOM
         return;
     }
 
-    sub insert_new_token_to_go {
-
-        # insert a new token into the output stream.  use same level as
-        # previous token; assumes a character at max_index_to_go.
-        my ( $self, @args ) = @_;
-        save_current_token();
-        ( $token, $type, $slevel, $no_internal_newlines ) = @args;
-
-        if ( $max_index_to_go == UNDEFINED_INDEX ) {
-            warning("code bug: bad call to insert_new_token_to_go\n");
-        }
-        $level = $levels_to_go[$max_index_to_go];
-
-        # FIXME: it seems to be necessary to use the next, rather than
-        # previous, value of this variable when creating a new blank (align.t)
-        #my $slevel         = $nesting_depth_to_go[$max_index_to_go];
-        $ci_level              = $ci_levels_to_go[$max_index_to_go];
-        $container_environment = $container_environment_to_go[$max_index_to_go];
-        $in_continued_quote    = 0;
-        $block_type            = "";
-        $type_sequence         = "";
-
-        # store an undef for the K value to catch unexpected usage
-        # This routine is only called by add_closing_side_comments, and
-        # eventually that call will be eliminated.
-        $Ktoken_vars = undef;
-
-        $self->store_token_to_go();
-        restore_current_token();
-        return;
-    }
-
     sub copy_hash {
         my ($rold_token_hash) = @_;
         my %new_token_hash =
@@ -9756,7 +9724,7 @@ sub add_closing_side_comment {
     my $self = shift;
 
     # add closing side comments after closing block braces if -csc used
-    my $cscw_block_comment;
+    my ( $closing_side_comment, $cscw_block_comment );
 
     #---------------------------------------------------------------
     # Step 1: loop through all tokens of this line to accumulate
@@ -9928,37 +9896,14 @@ sub add_closing_side_comment {
         # handle case of NO existing closing side comment
         else {
 
-        # Remove any existing blank and add another below.
-        # This is a tricky point. A side comment needs to have the same level
-        # as the preceding closing brace or else the line will not get the right
-        # indentation. So even if we have a blank, we are going to replace it.
-            if ( $types_to_go[$max_index_to_go] eq 'b' ) {
-                unstore_token_to_go();
-            }
-
-            # insert the new side comment into the output token stream
-            my $type          = '#';
-            my $block_type    = '';
-            my $type_sequence = '';
-            my $container_environment =
-              $container_environment_to_go[$max_index_to_go];
-            my $level                = $levels_to_go[$max_index_to_go];
-            my $slevel               = $nesting_depth_to_go[$max_index_to_go];
-            my $no_internal_newlines = 0;
-
-            my $ci_level           = $ci_levels_to_go[$max_index_to_go];
-            my $in_continued_quote = 0;
-
-            # insert a blank token
-            $self->insert_new_token_to_go( ' ', 'b', $slevel,
-                $no_internal_newlines );
-
-            # then the side comment
-            $self->insert_new_token_to_go( $token, $type, $slevel,
-                $no_internal_newlines );
+            # To avoid inserting a new token in the token arrays, we
+            # will just return the new side comment so that it can be
+            # inserted just before it is needed in the call to the
+            # vertical aligner.
+            $closing_side_comment = $token;
         }
     }
-    return $cscw_block_comment;
+    return ( $closing_side_comment, $cscw_block_comment );
 }
 
 sub previous_nonblank_token {
@@ -9987,9 +9932,10 @@ sub send_lines_to_vertical_aligner {
 
     my $valign_batch_number = $self->increment_valign_batch_count();
 
-    my $cscw_block_comment;
+    my ( $cscw_block_comment, $closing_side_comment );
     if ( $rOpts->{'closing-side-comments'} && $max_index_to_go >= 0 ) {
-        $cscw_block_comment = $self->add_closing_side_comment();
+        ( $closing_side_comment, $cscw_block_comment ) =
+          $self->add_closing_side_comment();
 
         # Add or update any closing side comment
         if ( $types_to_go[$max_index_to_go] eq '#' ) {
@@ -10116,6 +10062,11 @@ sub send_lines_to_vertical_aligner {
               #     : ( $Is_NetWare ? "echo$$" : "./echo$$" )
               # );
               && !grep { /^[\?\:]$/ } @types_to_go[ $ibeg + 1 .. $iend ];
+        }
+
+        # add any closing side comment
+        if ( $closing_side_comment && @{$rfields} ) {
+            $rfields->[-1] .= " $closing_side_comment";
         }
 
         # send this new line down the pipe
