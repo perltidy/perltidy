@@ -1199,8 +1199,6 @@ sub fix_terminal_else {
     my $jmax = @{$rfields} - 1;
     return unless ( $jmax > 0 );
 
-    #my $old_line    = $group_lines[-1];
-
     # check for balanced else block following if/elsif/unless
     my $rfields_old = $old_line->get_rfields();
 

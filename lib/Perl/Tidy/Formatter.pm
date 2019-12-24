@@ -2997,10 +2997,7 @@ sub respace_tokens {
 
             # check a quote for problems
             elsif ( $type eq 'Q' ) {
-
-                # This is ready to go but is commented out because there is
-                # still identical logic in sub break_lines.
-                # $check_Q->($KK, $Kfirst);
+                $check_Q->( $KK, $Kfirst );
             }
 
             # handle semicolons
@@ -7430,40 +7427,6 @@ EOM
             $next_nonblank_token_type =
               $rinput_token_array->[$j_next]->[_TYPE_];
 
-            ######################
-            # MAYBE MOVE ELSEWHERE?
-            ######################
-            if ( $type eq 'Q' ) {
-                note_embedded_tab() if ( $token =~ "\t" );
-
-                # make note of something like '$var = s/xxx/yyy/;'
-                # in case it should have been '$var =~ s/xxx/yyy/;'
-                if (
-                       $token =~ /^(s|tr|y|m|\/)/
-                    && $last_nonblank_token =~ /^(=|==|!=)$/
-
-                    # preceded by simple scalar
-                    && $last_last_nonblank_type eq 'i'
-                    && $last_last_nonblank_token =~ /^\$/
-
-                    # followed by some kind of termination
-                    # (but give complaint if we can's see far enough ahead)
-                    && $next_nonblank_token =~ /^[; \)\}]$/
-
-                    # scalar is not declared
-                    && !(
-                           $types_to_go[0] eq 'k'
-                        && $tokens_to_go[0] =~ /^(my|our|local)$/
-                    )
-                  )
-                {
-                    my $guess = substr( $last_nonblank_token, 0, 1 ) . '~';
-                    complain(
-"Note: be sure you want '$last_nonblank_token' instead of '$guess' here\n"
-                    );
-                }
-            }
-
             # Do not allow breaks which would promote a side comment to a
             # block comment.  In order to allow a break before an opening
             # or closing BLOCK, followed by a side comment, those sections
@@ -11287,11 +11250,10 @@ sub lookup_opening_indentation {
         # updated per bug report in alex_bug.pl: we must not
         # mess with the indentation of closing logical braces so
         # we must treat something like '} else {' as if it were
-        # an isolated brace my $is_isolated_block_brace = (
-        # $iend == $ibeg ) && $block_type_to_go[$ibeg];
+        # an isolated brace
         #############################################################
         my $is_isolated_block_brace = $block_type_to_go[$ibeg]
-          && ( $iend == $ibeg
+          && ( $i_terminal == $ibeg
             || $is_if_elsif_else_unless_while_until_for_foreach{
                 $block_type_to_go[$ibeg]
             } );
