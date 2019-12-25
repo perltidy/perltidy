@@ -2439,6 +2439,12 @@ sub respace_tokens {
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
         my $type = $item->[_TYPE_];
+
+        # trim side comments
+        if ( $type eq '#' ) {
+            $item->[_TOKEN_] =~ s/\s*$//;
+        }
+
         if ( $type && $type ne 'b' && $type ne '#' ) {
             $last_nonblank_type       = $type;
             $last_nonblank_token      = $item->[_TOKEN_];
@@ -7387,10 +7393,6 @@ EOM
 
             if ( $type eq '#' ) {
 
-                # trim trailing whitespace
-                # (there is no option at present to prevent this)
-                $token =~ s/\s*$//;
-
                 if (
                     $rOpts->{'delete-side-comments'}
 
@@ -8554,7 +8556,8 @@ sub undo_lp_ci {
 sub pad_token {
 
     # insert $pad_spaces before token number $ipad
-    my ( $ipad, $pad_spaces ) = @_;
+    my ( $self, $ipad, $pad_spaces ) = @_;
+    my $rLL = $self->{rLL};
     if ( $pad_spaces > 0 ) {
         $tokens_to_go[$ipad] = ' ' x $pad_spaces . $tokens_to_go[$ipad];
     }
@@ -8566,6 +8569,9 @@ sub pad_token {
         # shouldn't happen
         return;
     }
+
+    # Keep token arrays in sync
+    $self->sync_token_K($ipad);
 
     $token_lengths_to_go[$ipad] += $pad_spaces;
     foreach my $i ( $ipad .. $max_index_to_go ) {
@@ -9007,7 +9013,7 @@ sub pad_token {
                     if ( $pad_spaces == -1 ) {
                         if ( $ipad > $ibeg && $types_to_go[ $ipad - 1 ] eq 'b' )
                         {
-                            pad_token( $ipad - 1, $pad_spaces );
+                            $self->pad_token( $ipad - 1, $pad_spaces );
                         }
                     }
                     $pad_spaces = 0;
@@ -9019,7 +9025,7 @@ sub pad_token {
                     my $length_t = total_line_length( $ibeg, $iend );
                     if ( $pad_spaces + $length_t <= maximum_line_length($ibeg) )
                     {
-                        pad_token( $ipad, $pad_spaces );
+                        $self->pad_token( $ipad, $pad_spaces );
                     }
                 }
             }
@@ -9853,7 +9859,10 @@ sub add_closing_side_comment {
             }
 
             # switch to the new csc (unless we deleted it!)
-            $tokens_to_go[$max_index_to_go] = $token if $token;
+            if ($token) {
+                $tokens_to_go[$max_index_to_go] = $token;
+                $self->sync_token_K($max_index_to_go);
+            }
         }
 
         # handle case of NO existing closing side comment
@@ -15271,6 +15280,20 @@ sub undo_forced_breakpoint_stack {
     return;
 }
 
+sub sync_token_K {
+    my ( $self, $i ) = @_;
+
+    # Keep tokens in the rLL array in sync with the _to_go array
+    my $rLL = $self->{rLL};
+    my $K   = $K_to_go[$i];
+    if ( defined($K) ) {
+        $rLL->[$K]->[_TOKEN_] = $tokens_to_go[$i];
+    }
+    else {
+        # shouldn't happen
+    }
+}
+
 {    # begin recombine_breakpoints
 
     my %is_amp_amp;
@@ -15394,6 +15417,7 @@ sub undo_forced_breakpoint_stack {
             if ( $types_to_go[$i] eq ';' && $tokens_to_go[$i] eq '' ) {
 
                 $tokens_to_go[$i] = $want_left_space{';'} == WS_NO ? ';' : ' ;';
+                $self->sync_token_K($i);
 
                 my $line_number = 1 + $self->get_old_line_index( $K_to_go[$i] );
                 note_added_semicolon($line_number);
