@@ -568,12 +568,12 @@ my %extractor_for = (
     regex     => [ $ws, $pod_or_DATA, $id, $exql ],
     string    => [ $ws, $pod_or_DATA, $id, $exql ],
     code => [
-        $ws,            { DONT_MATCH => $pod_or_DATA },
+        $ws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
     code_no_comments => [
         { DONT_MATCH => $comment },
-        $ncws,          { DONT_MATCH => $pod_or_DATA },
+        $ncws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
     executable => [ $ws, { DONT_MATCH => $pod_or_DATA } ],
@@ -687,12 +687,12 @@ my %extractor_for = (
     regex     => [ $ws, $pod_or_DATA, $id, $exql ],
     string    => [ $ws, $pod_or_DATA, $id, $exql ],
     code => [
-        $ws,            { DONT_MATCH => $pod_or_DATA },
+        $ws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
     code_no_comments => [
         { DONT_MATCH => $comment },
-        $ncws,          { DONT_MATCH => $pod_or_DATA },
+        $ncws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
     executable => [ $ws, { DONT_MATCH => $pod_or_DATA } ],

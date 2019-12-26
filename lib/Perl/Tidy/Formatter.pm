@@ -112,7 +112,6 @@ use vars qw{
   @levels_to_go
   @leading_spaces_to_go
   @reduced_spaces_to_go
-  @matching_token_to_go
   @mate_index_to_go
   @ci_levels_to_go
   @nesting_depth_to_go
@@ -664,7 +663,6 @@ sub new {
     @summed_lengths_to_go        = ();    # line length to start of ith token
     @token_lengths_to_go         = ();
     @levels_to_go                = ();
-    @matching_token_to_go        = ();
     @mate_index_to_go            = ();
     @ci_levels_to_go             = ();
     @nesting_depth_to_go         = (0);
@@ -7011,7 +7009,6 @@ EOM
         $container_environment_to_go[$max_index_to_go] = $container_environment;
         $ci_levels_to_go[$max_index_to_go]             = $ci_level;
         $mate_index_to_go[$max_index_to_go]            = -1;
-        $matching_token_to_go[$max_index_to_go]        = '';
         $bond_strength_to_go[$max_index_to_go]         = 0;
 
         # Note: negative levels are currently retained as a diagnostic so that
@@ -9917,10 +9914,11 @@ sub send_lines_to_vertical_aligner {
 
     my $rindentation_list = [0];    # ref to indentations for each line
 
-    # define the array @matching_token_to_go for the output tokens
+    # define the array @{$ralignment_type_to_go} for the output tokens
     # which will be non-blank for each special token (such as =>)
     # for which alignment is required.
-    set_vertical_alignment_markers( $ri_first, $ri_last );
+    my $ralignment_type_to_go =
+      $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
     # flush if necessary to avoid unwanted alignment
     my $must_flush = 0;
@@ -9946,10 +9944,12 @@ sub send_lines_to_vertical_aligner {
         my $ibeg = $ri_first->[$n];
         my $iend = $ri_last->[$n];
 
-        delete_needless_alignments( $ibeg, $iend );
+        $self->delete_needless_alignments( $ibeg, $iend,
+            $ralignment_type_to_go );
 
         my ( $rtokens, $rfields, $rpatterns ) =
-          make_alignment_patterns( $ibeg, $iend );
+          $self->make_alignment_patterns( $ibeg, $iend,
+            $ralignment_type_to_go );
 
         # Set flag to show how much level changes between this line
         # and the next line, if we have it.
@@ -10157,11 +10157,11 @@ sub send_lines_to_vertical_aligner {
     }
 
     sub delete_needless_alignments {
-        my ( $ibeg, $iend ) = @_;
+        my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
 
-     # Remove unwanted alignments.  This routine is a place to remove alignments
-     # which might cause problems at later stages.  There are currently
-     # two types of fixes:
+        # Remove unwanted alignments.  This routine is a place to remove
+        # alignments which might cause problems at later stages.  There are
+        # currently two types of fixes:
 
         # 1. Remove excess parens
         # 2. Remove alignments within 'elsif' conditions
@@ -10220,11 +10220,11 @@ sub send_lines_to_vertical_aligner {
         my @imatch_list;
         for my $i ( $ibeg .. $iend ) {
 
-            if ( $matching_token_to_go[$i] ne '' ) {
+            if ( $ralignment_type_to_go->[$i] ne '' ) {
 
                 # Patch #2: undo alignment within elsif parens
                 if ( $i > $i_elsif_open && $i < $i_elsif_close ) {
-                    $matching_token_to_go[$i] = '';
+                    $ralignment_type_to_go->[$i] = '';
                     next;
                 }
                 push @imatch_list, $i;
@@ -10242,7 +10242,7 @@ sub send_lines_to_vertical_aligner {
                     && ( $ibeg > 1 || @imatch_list > 1 )
                     && $imate > $i_good_paren )
                 {
-                    $matching_token_to_go[$imate] = '';
+                    $ralignment_type_to_go->[$imate] = '';
                     pop @imatch_list;
                 }
             }
@@ -10271,7 +10271,7 @@ sub send_lines_to_vertical_aligner {
         # @patterns - a modified list of token types, one for each alignment
         #   field.  These should normally each match before alignment is
         #   allowed, even when the alignment tokens match.
-        my ( $ibeg, $iend ) = @_;
+        my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
         my @tokens   = ();
         my @fields   = ();
         my @patterns = ();
@@ -10352,7 +10352,7 @@ sub send_lines_to_vertical_aligner {
                     # matches.
 
                     # if we are not aligning on this paren...
-                    if ( $matching_token_to_go[$i] eq '' ) {
+                    if ( $ralignment_type_to_go->[$i] eq '' ) {
 
                         # Sum length from previous alignment
                         my $len = token_sequence_length( $i_start, $i - 1 );
@@ -10378,9 +10378,9 @@ sub send_lines_to_vertical_aligner {
 
             # if we find a new synchronization token, we are done with
             # a field
-            if ( $i > $i_start && $matching_token_to_go[$i] ne '' ) {
+            if ( $i > $i_start && $ralignment_type_to_go->[$i] ne '' ) {
 
-                my $tok = my $raw_tok = $matching_token_to_go[$i];
+                my $tok = my $raw_tok = $ralignment_type_to_go->[$i];
 
                 # map similar items
                 my $tok_map = $operator_map{$tok};
@@ -11672,17 +11672,19 @@ sub get_seqno {
         # vertical alignment markers (such as an '=').
         #
         # Method: We look at each token $i in this output batch and set
-        # $matching_token_to_go[$i] equal to those tokens at which we would
+        # $ralignment_type_to_go->[$i] equal to those tokens at which we would
         # accept vertical alignment.
 
-        my ( $ri_first, $ri_last ) = @_;
+        my ( $self, $ri_first, $ri_last ) = @_;
+
+        my $ralignment_type_to_go;
+        for my $i ( 0 .. $max_index_to_go ) {
+            $ralignment_type_to_go->[$i] = '';
+        }
 
         # nothing to do if we aren't allowed to change whitespace
         if ( !$rOpts_add_whitespace ) {
-            for my $i ( 0 .. $max_index_to_go ) {
-                $matching_token_to_go[$i] = '';
-            }
-            return;
+            return $ralignment_type_to_go;
         }
 
         # remember the index of last nonblank token before any sidecomment
@@ -11716,19 +11718,12 @@ sub get_seqno {
                 my $block_type     = $block_type_to_go[$i];
                 my $token          = $tokens_to_go[$i];
 
-                # check for flag indicating that we should not align
-                # this token
-                if ( $matching_token_to_go[$i] ) {
-                    $matching_token_to_go[$i] = '';
-                    next;
-                }
-
                 # do not align tokens at lower level then start of line
                 # except for side comments
                 if (   $levels_to_go[$i] < $levels_to_go[$ibeg]
                     && $types_to_go[$i] ne '#' )
                 {
-                    $matching_token_to_go[$i] = '';
+                    $ralignment_type_to_go->[$i] = '';
                     next;
                 }
 
@@ -11893,7 +11888,7 @@ sub get_seqno {
                 #--------------------------------------------------------
                 # then store the value
                 #--------------------------------------------------------
-                $matching_token_to_go[$i] = $alignment_type;
+                $ralignment_type_to_go->[$i] = $alignment_type;
                 if ( $type ne 'b' ) {
                     $vert_last_nonblank_type       = $type;
                     $vert_last_nonblank_token      = $token;
@@ -11901,7 +11896,7 @@ sub get_seqno {
                 }
             }
         }
-        return;
+        return $ralignment_type_to_go;
     }
 }
 
@@ -14733,7 +14728,6 @@ sub find_token_starting_list {
                 my $i_break = $rcomma_index->[0];
                 set_forced_breakpoint($i_break);
                 ${$rdo_not_break_apart} = 1;
-                set_non_alignment_flags( $comma_count, $rcomma_index );
                 return;
 
             }
@@ -14766,7 +14760,6 @@ sub find_token_starting_list {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
-                set_non_alignment_flags( $comma_count, $rcomma_index );
                 return;
             }
 
@@ -14866,7 +14859,6 @@ sub find_token_starting_list {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
-                set_non_alignment_flags( $comma_count, $rcomma_index );
             }
             return;
         }
@@ -14891,17 +14883,6 @@ sub find_token_starting_list {
         }
         return;
     }
-}
-
-sub set_non_alignment_flags {
-
-    # set flag which indicates that these commas should not be
-    # aligned
-    my ( $comma_count, $rcomma_index ) = @_;
-    foreach ( 0 .. $comma_count - 1 ) {
-        $matching_token_to_go[ $rcomma_index->[$_] ] = 1;
-    }
-    return;
 }
 
 sub study_list_complexity {
