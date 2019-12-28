@@ -3997,44 +3997,5 @@ sub do_syntax_check {
     return;
 }
 
-=pod
-sub do_syntax_check {
-    my ( $stream, $flags, $error_redirection ) = @_;
-
-    ############################################################
-    # This code is not reachable because syntax check is deactivated,
-    # but it is retained for reference.
-    ############################################################
-
-    # We need a named input file for executing perl
-    my ( $stream_filename, $is_tmpfile ) = get_stream_as_named_file($stream);
-
-    # TODO: Need to add name of file to log somewhere
-    # otherwise Perl output is hard to read
-    if ( !$stream_filename ) { return $stream_filename, "" }
-
-    # We have to quote the filename in case it has unusual characters
-    # or spaces.  Example: this filename #CM11.pm# gives trouble.
-    my $quoted_stream_filename = '"' . $stream_filename . '"';
-
-    # Under VMS something like -T will become -t (and an error) so we
-    # will put quotes around the flags.  Double quotes seem to work on
-    # Unix/Windows/VMS, but this may not work on all systems.  (Single
-    # quotes do not work under Windows).  It could become necessary to
-    # put double quotes around each flag, such as:  -"c"  -"T"
-    # We may eventually need some system-dependent coding here.
-    $flags = '"' . $flags . '"';
-
-    # now wish for luck...
-    my $msg = qx/perl $flags $quoted_stream_filename $error_redirection/; 
-
-    if ($is_tmpfile) {
-        unlink $stream_filename
-          or Perl::Tidy::Die("couldn't unlink stream $stream_filename: $!\n");
-    }
-    return $stream_filename, $msg;
-}
-=cut
-
 1;
 

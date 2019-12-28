@@ -3305,23 +3305,6 @@ sub respace_tokens {
             }
         }
 
-=pod
-        # NOTE: This does not work yet. Version in print-line-of-tokens 
-        # is Still used until fixed
-
-        # compare input/output indentation except for continuation lines
-        # (because they have an unknown amount of initial blank space)
-        # and lines which are quotes (because they may have been outdented)
-        # Note: this test is placed here because we know the continuation flag
-        # at this point, which allows us to avoid non-meaningful checks.
-        my $structural_indentation_level = $rLL->[$Kfirst]->[_LEVEL_];
-        compare_indentation_levels( $guessed_indentation_level,
-            $structural_indentation_level )
-          unless ( $rLL->[$Kfirst]->[_CI_LEVEL_] > 0
-            || $guessed_indentation_level == 0
-            && $rLL->[$Kfirst]->[_TYPE_] eq 'Q' );
-=cut
-
         #   Patch needed for MakeMaker.  Do not break a statement
         #   in which $VERSION may be calculated.  See MakeMaker.pm;
         #   this is based on the coding in it.
@@ -7273,12 +7256,9 @@ EOM
             return;
         }
 
-        # TODO: Move to sub scan_comments
         # compare input/output indentation except for continuation lines
         # (because they have an unknown amount of initial blank space)
         # and lines which are quotes (because they may have been outdented)
-        # Note: this test is placed here because we know the continuation flag
-        # at this point, which allows us to avoid non-meaningful checks.
         my $structural_indentation_level = $rinput_token_array->[0]->[_LEVEL_];
         compare_indentation_levels( $guessed_indentation_level,
             $structural_indentation_level )
@@ -8074,8 +8054,17 @@ sub output_line_to_go {
         if ( $rOpts_one_line_block_semicolons == 0 ) {
             $self->delete_one_line_semicolons( $ri_first, $ri_last );
         }
-        $self->send_lines_to_vertical_aligner( $ri_first, $ri_last,
-            $do_not_pad );
+
+        # The line breaks for this batch of code have been finalized;
+        my $rlines_i;
+        for ( my $n = 0 ; $n < @{$ri_first} ; $n++ ) {
+            push @{$rlines_i}, [ $ri_first->[$n], $ri_last->[$n] ];
+        }
+        my $rcall_hash = {
+            rlines_i   => $rlines_i,
+            do_not_pad => $do_not_pad,
+        };
+        $self->send_lines_to_vertical_aligner($rcall_hash);
 
         # Insert any requested blank lines after an opening brace.  We have to
         # skip back before any side comment to find the terminal token
@@ -9897,7 +9886,20 @@ sub previous_nonblank_token {
 
 sub send_lines_to_vertical_aligner {
 
-    my ( $self, $ri_first, $ri_last, $do_not_pad ) = @_;
+    my ( $self, $rcall_hash ) = @_;
+
+    my $do_not_pad = $rcall_hash->{do_not_pad};
+    my $rlines_i   = $rcall_hash->{rlines_i};
+    if ( !@{$rlines_i} ) {
+        Fault("Error in send_lines_to_vertical_aligner: no lines");
+        return;
+    }
+    my ( $ri_first, $ri_last );
+    foreach my $rline ( @{$rlines_i} ) {
+        my ( $ibeg, $iend ) = @{$rline};
+        push @{$ri_first}, $ibeg;
+        push @{$ri_last},  $iend;
+    }
 
     my $valign_batch_number = $self->increment_valign_batch_count();
 
@@ -10729,6 +10731,11 @@ sub lookup_opening_indentation {
     #   -and its offset (number of columns) from the start of the line
 
     my ( $i_opening, $ri_start, $ri_last, $rindentation_list ) = @_;
+
+    if ( !@{$ri_last} ) {
+        warning("Error in opening_indentation: no lines");
+        return;
+    }
 
     my $nline = $rindentation_list->[0];    # line number of previous lookup
 
