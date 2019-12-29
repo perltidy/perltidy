@@ -10038,8 +10038,8 @@ sub send_lines_to_vertical_aligner {
               && !grep { /^[\?\:]$/ } @types_to_go[ $ibeg + 1 .. $iend ];
         }
 
-        # add any closing side comment
-        if ( $closing_side_comment && @{$rfields} ) {
+        # add any closing side comment to the last line
+        if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
             $rfields->[-1] .= " $closing_side_comment";
         }
 
