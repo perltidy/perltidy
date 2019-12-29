@@ -6419,6 +6419,7 @@ sub scan_identifier_do {
                 $statement_type = $tok;
             }
             elsif ($next_nonblank_token) {      # EOF technically ok
+		$subname = "" unless defined($subname);
                 warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
                 );
