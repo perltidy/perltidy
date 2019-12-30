@@ -16,6 +16,7 @@
 #13 rt131115.rt131115
 #14 ndsm1.def
 #15 ndsm1.ndsm
+#16 rt131288.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -126,6 +127,11 @@ sub a {
         $uniq{$par} = 1;
     }
 }
+----------
+
+        'rt131288' => <<'----------',
+sub OptArgs2::STYLE_FULL { 3 }
+$style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage', 'usage: ' . $usage . "\n";
 ----------
 
         'spp' => <<'----------',
@@ -338,6 +344,16 @@ sub Numerically { $a <=> $b };    # trapped semicolon
   ;;
 __;
 #15...........
+        },
+
+        'rt131288.def' => {
+            source => "rt131288",
+            params => "def",
+            expect => <<'#16...........',
+sub OptArgs2::STYLE_FULL { 3 }
+$style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+  'usage: ' . $usage . "\n";
+#16...........
         },
     };
 

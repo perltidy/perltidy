@@ -1,0 +1,2 @@
+sub OptArgs2::STYLE_FULL { 3 }
+$style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage', 'usage: ' . $usage . "\n";

@@ -2055,8 +2055,17 @@ sub prepare_for_a_new_file {
             {
                 $is_pattern = 0;
             }
+
+	    # patch for RT#131288, user constant function without prototype
+	    # last type is 'U' followed by ?. 
+            elsif (   $last_nonblank_type =~ /^[FUY]$/ ) {
+                $is_pattern = 0;
+	    }
             elsif ( $expecting == UNKNOWN ) {
 
+		# FIXME: Can a bare ? still be a pattern delimiter in modern
+		# versions of Perl? Need to research this and decide what
+		# to do.
                 my $msg;
                 ( $is_pattern, $msg ) =
                   guess_if_pattern_or_conditional( $i, $rtokens, $rtoken_map,

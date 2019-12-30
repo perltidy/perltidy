@@ -2,6 +2,8 @@
 
 ## 2019 12 03.01
 
+    - Fixed issue RT#131288: parse error for un-prototyped constant function
+      followed by ternary.
 
 ## 2019 12 03
 
