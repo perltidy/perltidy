@@ -282,8 +282,10 @@ system
             source => "rt125012",
             params => "rt125012",
             expect => <<'#7...........',
-++$_ for values%_;
-system qq{};
+++$_ for
+  values%_;
+system
+  qq{};
 #7...........
         },
 

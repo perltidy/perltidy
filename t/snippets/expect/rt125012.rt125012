@@ -1,2 +1,4 @@
-++$_ for values%_;
-system qq{};
+++$_ for
+  values%_;
+system
+  qq{};

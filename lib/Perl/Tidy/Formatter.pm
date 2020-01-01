@@ -1570,6 +1570,12 @@ sub break_lines {
                 next;
             }
 
+            # Handle block comment to be deleted
+            elsif ( $CODE_type eq 'DEL' ) {
+                $self->flush();
+                next;
+            }
+
             # Handle all other lines of code
             $self->print_line_of_tokens($line_of_tokens);
         }
@@ -7195,8 +7201,6 @@ EOM
         ######################################
         if ($is_comment) {
 
-            if ( $rOpts->{'delete-block-comments'} ) { return }
-
             if ( $rOpts->{'tee-block-comments'} ) {
                 $file_writer_object->tee_on();
             }
@@ -8055,16 +8059,49 @@ sub output_line_to_go {
             $self->delete_one_line_semicolons( $ri_first, $ri_last );
         }
 
-        # The line breaks for this batch of code have been finalized;
-        my $rlines_i;
+        # The line breaks for this batch of code have been finalized. Now we
+        # can to package the results for further processing.  We will switch
+        # from the local '_to_go' buffer arrays (i-index) back to the global
+        # token arrays (K-index) at this point.
+        my $rlines_K;
+        my $index_error;
         for ( my $n = 0 ; $n < @{$ri_first} ; $n++ ) {
-            push @{$rlines_i}, [ $ri_first->[$n], $ri_last->[$n] ];
+            my $ibeg = $ri_first->[$n];
+            my $Kbeg = $K_to_go[$ibeg];
+            my $iend = $ri_last->[$n];
+            my $Kend = $K_to_go[$iend];
+            if ( $iend - $ibeg != $Kend - $Kbeg ) {
+                $index_error = $n unless defined($index_error);
+            }
+            push @{$rlines_K},
+              [ $Kbeg, $Kend, $forced_breakpoint_to_go[$iend] ];
         }
-        my $rcall_hash = {
-            rlines_i   => $rlines_i,
+
+        # Check correctness of the mapping between the i and K token indexes
+        if ( defined($index_error) ) {
+
+            # Temporary debug code - should never get here
+            for ( my $n = 0 ; $n < @{$ri_first} ; $n++ ) {
+                my $ibeg  = $ri_first->[$n];
+                my $Kbeg  = $K_to_go[$ibeg];
+                my $iend  = $ri_last->[$n];
+                my $Kend  = $K_to_go[$iend];
+                my $idiff = $iend - $ibeg;
+                my $Kdiff = $Kend - $Kbeg;
+                print STDERR <<EOM;
+line $n, irange $ibeg-$iend = $idiff, Krange $Kbeg-$Kend = $Kdiff;
+EOM
+            }
+            Fault("Index error at line $index_error; i and K ranges differ");
+        }
+
+        my $rbatch_hash = {
+            rlines_K   => $rlines_K,
             do_not_pad => $do_not_pad,
+            ibeg0      => $ri_first->[0],
         };
-        $self->send_lines_to_vertical_aligner($rcall_hash);
+
+        $self->send_lines_to_vertical_aligner($rbatch_hash);
 
         # Insert any requested blank lines after an opening brace.  We have to
         # skip back before any side comment to find the terminal token
@@ -9886,32 +9923,53 @@ sub previous_nonblank_token {
 
 sub send_lines_to_vertical_aligner {
 
-    my ( $self, $rcall_hash ) = @_;
+    my ( $self, $rbatch_hash ) = @_;
 
-    my $do_not_pad = $rcall_hash->{do_not_pad};
-    my $rlines_i   = $rcall_hash->{rlines_i};
-    if ( !@{$rlines_i} ) {
-        Fault("Error in send_lines_to_vertical_aligner: no lines");
+   # This routine receives a batch of code for which the final line breaks
+   # have been defined. Here we prepare the lines for passing to the vertical
+   # aligner.  We do the following tasks:
+   # - mark certain vertical alignment tokens tokens, such as '=', in each line.
+   # - make minor indentation adjustments
+   # - insert extra blank spaces to help display certain logical constructions
+
+    my $rlines_K = $rbatch_hash->{rlines_K};
+    if ( !@{$rlines_K} ) {
+        Fault("Unexpected call with no lines");
         return;
     }
+    my $n_last_line = @{$rlines_K} - 1;
+    my $do_not_pad  = $rbatch_hash->{do_not_pad};
+
+    my $rLL    = $self->{rLL};
+    my $Klimit = $self->{Klimit};
+
+    my ( $Kbeg_next, $Kend_next ) = @{ $rlines_K->[0] };
+    my $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
+    my $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
+    my $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
+
+    # Construct indexes to the global_to_go arrays so that called routines can
+    # still access those arrays. This might eventually be removed
+    # when all called routines have been converted to access token values
+    # in the rLL array instead.
+    my $ibeg0 = $rbatch_hash->{ibeg0};
+    my $Kbeg0 = $Kbeg_next;
     my ( $ri_first, $ri_last );
-    foreach my $rline ( @{$rlines_i} ) {
-        my ( $ibeg, $iend ) = @{$rline};
+    foreach my $rline ( @{$rlines_K} ) {
+        my ( $Kbeg, $Kend ) = @{$rline};
+        my $ibeg = $ibeg0 + $Kbeg - $Kbeg0;
+        my $iend = $ibeg0 + $Kend - $Kbeg0;
         push @{$ri_first}, $ibeg;
         push @{$ri_last},  $iend;
     }
+    #####################################################################
 
     my $valign_batch_number = $self->increment_valign_batch_count();
 
     my ( $cscw_block_comment, $closing_side_comment );
-    if ( $rOpts->{'closing-side-comments'} && $max_index_to_go >= 0 ) {
+    if ( $rOpts->{'closing-side-comments'} ) {
         ( $closing_side_comment, $cscw_block_comment ) =
           $self->add_closing_side_comment();
-
-        # Add or update any closing side comment
-        if ( $types_to_go[$max_index_to_go] eq '#' ) {
-            $ri_last->[-1] = $max_index_to_go;
-        }
     }
 
     my $rindentation_list = [0];    # ref to indentations for each line
@@ -9922,16 +9980,11 @@ sub send_lines_to_vertical_aligner {
     my $ralignment_type_to_go =
       $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
-    # flush if necessary to avoid unwanted alignment
-    my $must_flush = 0;
-    if ( @{$ri_first} > 1 ) {
-
-        # flush before a long if statement
-        if ( $types_to_go[0] eq 'k' && $tokens_to_go[0] =~ /^(if|unless)$/ ) {
-            $must_flush = 1;
-        }
-    }
-    if ($must_flush) {
+    # flush before a long if statement to avoid unwanted alignment
+    if (   $n_last_line > 0
+        && $type_beg_next eq 'k'
+        && $token_beg_next =~ /^(if|unless)$/ )
+    {
         Perl::Tidy::VerticalAligner::flush();
     }
 
@@ -9940,11 +9993,53 @@ sub send_lines_to_vertical_aligner {
     $self->set_logical_padding( $ri_first, $ri_last );
 
     # loop to prepare each line for shipment
-    my $n_last_line = @{$ri_first} - 1;
     my $in_comma_list;
+    my ( $Kbeg, $type_beg, $token_beg );
+    my ( $Kend, $type_end );
     for my $n ( 0 .. $n_last_line ) {
-        my $ibeg = $ri_first->[$n];
-        my $iend = $ri_last->[$n];
+
+        my $ibeg              = $ri_first->[$n];
+        my $iend              = $ri_last->[$n];
+        my $rline             = $rlines_K->[$n];
+        my $forced_breakpoint = $rline->[2];
+
+        # we may need to look at variables on three consecutive lines ...
+
+        # Some vars on line [n-1], if any:
+        my $Kbeg_last      = $Kbeg;
+        my $type_beg_last  = $type_beg;
+        my $token_beg_last = $token_beg;
+        my $Kend_last      = $Kend;
+        my $type_end_last  = $type_end;
+
+        # Some vars on line [n]:
+        $Kbeg      = $Kbeg_next;
+        $type_beg  = $type_beg_next;
+        $token_beg = $token_beg_next;
+        $Kend      = $Kend_next;
+        $type_end  = $type_end_next;
+
+        # We use two slightly different definitions of level jump at the end
+        # of line:
+        #  $ljump is the level jump needed by 'sub set_adjusted_indentation'
+        #  $level_jump is the level jump needed by the vertical aligner.
+        my $ljump = 0;    # level jump at end of line
+
+        # Get some vars on line [n+1], if any:
+        if ( $n < $n_last_line ) {
+            ( $Kbeg_next, $Kend_next ) =
+              @{ $rlines_K->[ $n + 1 ] };
+            $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
+            $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
+            $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
+            $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+        }
+
+        # level jump at end of line for the vertical aligner:
+        my $level_jump =
+          $Kend >= $Klimit
+          ? 0
+          : $rLL->[ $Kend + 1 ]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
 
         $self->delete_needless_alignments( $ibeg, $iend,
             $ralignment_type_to_go );
@@ -9952,14 +10047,6 @@ sub send_lines_to_vertical_aligner {
         my ( $rtokens, $rfields, $rpatterns ) =
           $self->make_alignment_patterns( $ibeg, $iend,
             $ralignment_type_to_go );
-
-        # Set flag to show how much level changes between this line
-        # and the next line, if we have it.
-        my $ljump = 0;
-        if ( $n < $n_last_line ) {
-            my $ibegp = $ri_first->[ $n + 1 ];
-            $ljump = $levels_to_go[$ibegp] - $levels_to_go[$iend];
-        }
 
         my ( $indentation, $lev, $level_end, $terminal_type,
             $is_semicolon_terminated, $is_outdented_line )
@@ -9970,20 +10057,17 @@ sub send_lines_to_vertical_aligner {
         my $outdent_long_lines = (
 
             # which are long quotes, if allowed
-            ( $types_to_go[$ibeg] eq 'Q' && $rOpts->{'outdent-long-quotes'} )
+            ( $type_beg eq 'Q' && $rOpts->{'outdent-long-quotes'} )
 
             # which are long block comments, if allowed
               || (
-                   $types_to_go[$ibeg] eq '#'
+                   $type_beg eq '#'
                 && $rOpts->{'outdent-long-comments'}
 
                 # but not if this is a static block comment
                 && !$is_static_block_comment
               )
         );
-
-        my $level_jump =
-          $nesting_depth_to_go[ $iend + 1 ] - $nesting_depth_to_go[$ibeg];
 
         my $rvertical_tightness_flags =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
@@ -10008,50 +10092,54 @@ sub send_lines_to_vertical_aligner {
         # );
         #
         my $is_terminal_ternary = 0;
-        if (   $tokens_to_go[$ibeg] eq ':'
-            || $n > 0 && $tokens_to_go[ $ri_last->[ $n - 1 ] ] eq ':' )
-        {
-            my $last_leading_type = ":";
-            if ( $n > 0 ) {
-                my $iprev = $ri_first->[ $n - 1 ];
-                $last_leading_type = $types_to_go[$iprev];
-            }
+
+        if ( $type_beg eq ':' || $n > 0 && $type_end_last eq ':' ) {
+            my $last_leading_type = $n > 0 ? $type_beg_last : ':';
             if (   $terminal_type ne ';'
                 && $n_last_line > $n
                 && $level_end == $lev )
             {
-                my $inext = $ri_first->[ $n + 1 ];
-                $level_end     = $levels_to_go[$inext];
-                $terminal_type = $types_to_go[$inext];
+                $level_end     = $rLL->[$Kbeg_next]->[_LEVEL_];
+                $terminal_type = $rLL->[$Kbeg_next]->[_TYPE_];
             }
+            if (
+                $last_leading_type eq ':'
+                && (   ( $terminal_type eq ';' && $level_end <= $lev )
+                    || ( $terminal_type ne ':' && $level_end < $lev ) )
+              )
+            {
 
-            $is_terminal_ternary = $last_leading_type eq ':'
-              && ( ( $terminal_type eq ';' && $level_end <= $lev )
-                || ( $terminal_type ne ':' && $level_end < $lev ) )
+                # the terminal term must not contain any ternary terms, as in
+                # my $ECHO = (
+                #       $Is_MSWin32 ? ".\\echo$$"
+                #     : $Is_MacOS   ? ":echo$$"
+                #     : ( $Is_NetWare ? "echo$$" : "./echo$$" )
+                # );
+                $is_terminal_ternary = 1;
 
-              # the terminal term must not contain any ternary terms, as in
-              # my $ECHO = (
-              #       $Is_MSWin32 ? ".\\echo$$"
-              #     : $Is_MacOS   ? ":echo$$"
-              #     : ( $Is_NetWare ? "echo$$" : "./echo$$" )
-              # );
-              && !grep { /^[\?\:]$/ } @types_to_go[ $ibeg + 1 .. $iend ];
+                my $KP = $rLL->[$Kbeg]->[_KNEXT_SEQ_ITEM_];
+                while ( defined($KP) && $KP <= $Kend ) {
+                    my $type_KP = $rLL->[$KP]->[_TYPE_];
+                    if ( $type_KP eq '?' || $type_KP eq ':' ) {
+                        $is_terminal_ternary = 0;
+                        last;
+                    }
+                    $KP = $rLL->[$KP]->[_KNEXT_SEQ_ITEM_];
+                }
+            }
         }
 
-        # add any closing side comment to the last line
+        # add any new closing side comment to the last line
         if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
             $rfields->[-1] .= " $closing_side_comment";
         }
 
         # send this new line down the pipe
-        my $forced_breakpoint = $forced_breakpoint_to_go[$iend];
-
         my $rvalign_hash = {};
-        $rvalign_hash->{level}       = $lev;
-        $rvalign_hash->{level_end}   = $level_end;
-        $rvalign_hash->{indentation} = $indentation;
-        $rvalign_hash->{is_forced_break} =
-          $forced_breakpoint_to_go[$iend] || $in_comma_list;
+        $rvalign_hash->{level}           = $lev;
+        $rvalign_hash->{level_end}       = $level_end;
+        $rvalign_hash->{indentation}     = $indentation;
+        $rvalign_hash->{is_forced_break} = $forced_breakpoint || $in_comma_list;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
         $rvalign_hash->{is_terminal_statement}     = $is_semicolon_terminated;
@@ -10064,8 +10152,7 @@ sub send_lines_to_vertical_aligner {
         Perl::Tidy::VerticalAligner::valign_input( $rvalign_hash, $rfields,
             $rtokens, $rpatterns );
 
-        $in_comma_list =
-          $tokens_to_go[$iend] eq ',' && $forced_breakpoint_to_go[$iend];
+        $in_comma_list = $type_end eq ',' && $forced_breakpoint;
 
         # flush an outdented line to avoid any unwanted vertical alignment
         Perl::Tidy::VerticalAligner::flush() if ($is_outdented_line);
@@ -10084,16 +10171,16 @@ sub send_lines_to_vertical_aligner {
         $last_output_short_opening_token
 
           # line ends in opening token
-          = $types_to_go[$iend] =~ /^[\{\(\[L]$/
+          = $type_end =~ /^[\{\(\[L]$/
 
           # and either
           && (
             # line has either single opening token
-            $iend == $ibeg
+            $Kend == $Kbeg
 
             # or is a single token followed by opening token.
             # Note that sub identifiers have blanks like 'sub doit'
-            || ( $iend - $ibeg <= 2 && $tokens_to_go[$ibeg] !~ /\s+/ )
+            || ( $Kend - $Kbeg <= 2 && $token_beg !~ /\s+/ )
           )
 
           # and limit total to 10 character widths
