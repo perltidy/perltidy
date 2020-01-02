@@ -32,6 +32,8 @@ sub new {
       : 50;
     if ( $logfile_gap == 0 ) { $logfile_gap = 1 }
 
+    my $filename_stamp    = $display_name ? $display_name . ':' : "??";
+    my $input_stream_name = $display_name ? $display_name       : "??";
     return bless {
         _log_file                      => $log_file,
         _logfile_gap                   => $logfile_gap,
@@ -48,12 +50,18 @@ sub new {
         _warning_file                  => $warning_file,
         _warning_count                 => 0,
         _complaint_count               => 0,
-        _saw_code_bug    => -1,             # -1=no 0=maybe 1=for sure
-        _saw_brace_error => 0,
-        _saw_extrude     => $saw_extrude,
-        _output_array    => [],
-        _filename_stamp => $display_name ? $display_name . ':' : "",
+        _saw_code_bug      => -1,                   # -1=no 0=maybe 1=for sure
+        _saw_brace_error   => 0,
+        _saw_extrude       => $saw_extrude,
+        _output_array      => [],
+        _input_stream_name => $input_stream_name,
+        _filename_stamp    => $filename_stamp,
     }, $class;
+}
+
+sub get_input_stream_name {
+    my $self = shift;
+    return $self->{_input_stream_name};
 }
 
 sub get_warning_count {

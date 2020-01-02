@@ -836,10 +836,12 @@ sub Fault {
     my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
     my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my $input_stream_name = $logger_object->get_input_stream_name();
 
     Die(<<EOM);
 ==============================================================================
-Fault detected at line $line0 of sub '$subroutine1'
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
 in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
@@ -7134,11 +7136,8 @@ EOM
 
         if ( !defined($K_first) ) {
 
-            # Unexpected blank line..
-            # Calling routine was supposed to handle this
-            Warn(
-"Programming Error: Unexpected Blank Line in print_line_of_tokens. Ignoring"
-            );
+            # Empty line: This can happen if tokens are deleted, for example
+            # with the -mangle parameter
             return;
         }
 
@@ -8440,7 +8439,7 @@ sub undo_ci {
     #        map { $_, $lookup->{$_} }
     #        sort { $a <=> $b }
     #        grep { $lookup->{$_} ne $default } keys %$lookup );
-    my ( $ri_first, $ri_last ) = @_;
+    my ( $self, $ri_first, $ri_last ) = @_;
     my ( $line_1, $line_2, $lev_last );
     my $this_line_is_semicolon_terminated;
     my $max_line = @{$ri_first} - 1;
@@ -8810,7 +8809,7 @@ sub pad_token {
                     # find any unclosed container
                     next
                       unless ( $type_sequence_to_go[$i]
-                        && $mate_index_to_go[$i] > $iend );
+                        && $self->mate_index_to_go($i) > $iend );
 
                     # find next nonblank token to pad
                     $ipad = $inext_to_go[$i];
@@ -9762,7 +9761,7 @@ sub add_closing_side_comment {
         # ..and the corresponding opening brace must is not in this batch
         # (because we do not need to tag one-line blocks, although this
         # should also be caught with a positive -csci value)
-        && $mate_index_to_go[$i_terminal] < 0
+        && $self->mate_index_to_go($i_terminal) < 0
 
         # ..and either
         && (
@@ -9988,7 +9987,7 @@ sub send_lines_to_vertical_aligner {
         Perl::Tidy::VerticalAligner::flush();
     }
 
-    undo_ci( $ri_first, $ri_last );
+    $self->undo_ci( $ri_first, $ri_last );
 
     $self->set_logical_padding( $ri_first, $ri_last );
 
@@ -10190,7 +10189,7 @@ sub send_lines_to_vertical_aligner {
 
     # remember indentation of lines containing opening containers for
     # later use by sub set_adjusted_indentation
-    save_opening_indentation( $ri_first, $ri_last, $rindentation_list );
+    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list );
 
     # output any new -cscw block comment
     if ($cscw_block_comment) {
@@ -10300,7 +10299,7 @@ sub send_lines_to_vertical_aligner {
                     && $tokens_to_go[$i_good_paren] eq '(' )
                 {
                     $i_elsif_open  = $i_good_paren;
-                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
+                    $i_elsif_close = $self->mate_index_to_go($i_good_paren);
                 }
             }
         }
@@ -10325,7 +10324,7 @@ sub send_lines_to_vertical_aligner {
                 # - it is at the top of the stack
                 # - and not the first overall opening paren
                 # - does not follow a leading keyword on this line
-                my $imate = $mate_index_to_go[$i];
+                my $imate = $self->mate_index_to_go($i);
                 if (   @imatch_list
                     && $imatch_list[-1] eq $imate
                     && ( $ibeg > 1 || @imatch_list > 1 )
@@ -10384,7 +10383,7 @@ sub send_lines_to_vertical_aligner {
             if ( $tok =~ /^[\(\{\[]/ ) {    #'(' ) {
 
                 # if container is balanced on this line...
-                my $i_mate = $mate_index_to_go[$i];
+                my $i_mate = $self->mate_index_to_go($i);
                 if ( $i_mate > $i && $i_mate <= $iend ) {
                     $depth++;
                     my $seqno = $type_sequence_to_go[$i];
@@ -10707,7 +10706,7 @@ sub send_lines_to_vertical_aligner {
         # saves indentations of lines of all unmatched opening tokens.
         # These will be used by sub get_opening_indentation.
 
-        my ( $ri_first, $ri_last, $rindentation_list ) = @_;
+        my ( $self, $ri_first, $ri_last, $rindentation_list ) = @_;
 
         # we no longer need indentations of any saved indentations which
         # are unmatched closing tokens in this batch, because we will
@@ -10752,7 +10751,7 @@ sub get_opening_indentation {
     #    which matches the token at index $i_opening
     #   -and its offset (number of columns) from the start of the line
     #
-    my ( $i_closing, $ri_first, $ri_last, $rindentation_list ) = @_;
+    my ( $self, $i_closing, $ri_first, $ri_last, $rindentation_list ) = @_;
 
     # first, see if the opening token is in the current batch
     my $i_opening = $mate_index_to_go[$i_closing];
@@ -10972,8 +10971,8 @@ sub lookup_opening_indentation {
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
               )
-              = get_opening_indentation( $ibeg_weld_fix, $ri_first, $ri_last,
-                $rindentation_list );
+              = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
+                $ri_last, $rindentation_list );
 
             # First set the default behavior:
             if (
@@ -11071,8 +11070,8 @@ sub lookup_opening_indentation {
                         $opening_indentation, $opening_offset,
                         $is_leading,          $opening_exists
                       )
-                      = get_opening_indentation( $ibeg, $ri_first, $ri_last,
-                        $rindentation_list );
+                      = $self->get_opening_indentation( $ibeg, $ri_first,
+                        $ri_last, $rindentation_list );
                     my $indentation = $leading_spaces_to_go[$ibeg];
                     if ( defined($opening_indentation)
                         && get_spaces($indentation) >
@@ -11095,7 +11094,7 @@ sub lookup_opening_indentation {
                     $opening_indentation, $opening_offset,
                     $is_leading,          $opening_exists
                   )
-                  = get_opening_indentation( $ibeg, $ri_first, $ri_last,
+                  = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
                     $rindentation_list );
                 my $indentation = $leading_spaces_to_go[$ibeg];
                 if ( defined($opening_indentation)
@@ -11170,7 +11169,7 @@ sub lookup_opening_indentation {
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
               )
-              = get_opening_indentation( $ibeg, $ri_first, $ri_last,
+              = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
                 $rindentation_list );
             if ($is_leading) { $adjust_indentation = 2; }
         }
@@ -11432,6 +11431,73 @@ sub lookup_opening_indentation {
         return ( $indentation, $lev, $level_end, $terminal_type,
             $is_semicolon_terminated, $is_outdented_line );
     }
+}
+
+sub mate_index_to_go {
+    my ( $self, $i ) = @_;
+
+    # Return the matching index of a container or ternary pair
+    # This is an alternative to the array @mate_index_to_go
+    my $K      = $K_to_go[$i];
+    my $K_mate = $self->K_mate_index($K);
+    my $i_mate = -1;
+    if ( defined($K_mate) ) {
+        $i_mate = $i + ( $K_mate - $K );
+        if ( $i_mate < 0 || $i_mate > $max_index_to_go ) {
+            $i_mate = -1;
+        }
+    }
+    my $i_mate_alt = $mate_index_to_go[$i];
+
+    # Debug code to eventually be removed
+    if ( 0 && $i_mate_alt != $i_mate ) {
+        my $tok       = $tokens_to_go[$i];
+        my $type      = $types_to_go[$i];
+        my $tok_mate  = '*';
+        my $type_mate = '*';
+        if ( $i_mate >= 0 && $i_mate <= $max_index_to_go ) {
+            $tok_mate  = $tokens_to_go[$i_mate];
+            $type_mate = $types_to_go[$i_mate];
+        }
+        my $seq  = $type_sequence_to_go[$i];
+        my $file = $logger_object->get_input_stream_name();
+
+        Warn(
+"mate_index: file '$file': i=$i, imate=$i_mate, should be $i_mate_alt, K=$K, K_mate=$K_mate\ntype=$type, tok=$tok, seq=$seq, max=$max_index_to_go, tok_mate=$tok_mate, type_mate=$type_mate"
+        );
+    }
+    return $i_mate;
+}
+
+sub K_mate_index {
+    my ( $self, $K ) = @_;
+    return unless defined($K);
+    my $rLL   = $self->{rLL};
+    my $seqno = $rLL->[$K]->[_TYPE_SEQUENCE_];
+    return unless ($seqno);
+    my $K_opening_container = $self->{K_opening_container};
+    my $K_closing_container = $self->{K_closing_container};
+    my $K_opening_ternary   = $self->{K_opening_ternary};
+    my $K_closing_ternary   = $self->{K_closing_ternary};
+    my $K_mate;
+
+    if ( defined( $K_opening_container->{$seqno} ) ) {
+        if ( $K == $K_opening_container->{$seqno} ) {
+            $K_mate = $K_closing_container->{$seqno};
+        }
+        else {
+            $K_mate = $K_opening_container->{$seqno};
+        }
+    }
+    elsif ( defined( $K_opening_ternary->{$seqno} ) ) {
+        if ( $K == $K_opening_ternary->{$seqno} ) {
+            $K_mate = $K_closing_ternary->{$seqno};
+        }
+        else {
+            $K_mate = $K_opening_ternary->{$seqno};
+        }
+    }
+    return $K_mate;
 }
 
 sub set_vertical_tightness_flags {
