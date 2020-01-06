@@ -11437,7 +11437,7 @@ sub mate_index_to_go {
     my ( $self, $i ) = @_;
 
     # Return the matching index of a container or ternary pair
-    # This is an alternative to the array @mate_index_to_go
+    # This is equivalent to the array @mate_index_to_go
     my $K      = $K_to_go[$i];
     my $K_mate = $self->K_mate_index($K);
     my $i_mate = -1;
@@ -11470,34 +11470,27 @@ sub mate_index_to_go {
 }
 
 sub K_mate_index {
+
+    # Given the index K of an opening or closing container,  or ?/: ternary pair,
+    # return the index K of the other member of the pair.
     my ( $self, $K ) = @_;
     return unless defined($K);
     my $rLL   = $self->{rLL};
     my $seqno = $rLL->[$K]->[_TYPE_SEQUENCE_];
     return unless ($seqno);
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
-    my $K_opening_ternary   = $self->{K_opening_ternary};
-    my $K_closing_ternary   = $self->{K_closing_ternary};
-    my $K_mate;
 
-    if ( defined( $K_opening_container->{$seqno} ) ) {
-        if ( $K == $K_opening_container->{$seqno} ) {
-            $K_mate = $K_closing_container->{$seqno};
-        }
-        else {
-            $K_mate = $K_opening_container->{$seqno};
-        }
+    my $K_opening = $self->{K_opening_container}->{$seqno};
+    if ( defined($K_opening) ) {
+        if ( $K != $K_opening ) { return $K_opening }
+        return $self->{K_closing_container}->{$seqno};
     }
-    elsif ( defined( $K_opening_ternary->{$seqno} ) ) {
-        if ( $K == $K_opening_ternary->{$seqno} ) {
-            $K_mate = $K_closing_ternary->{$seqno};
-        }
-        else {
-            $K_mate = $K_opening_ternary->{$seqno};
-        }
+
+    $K_opening = $self->{K_opening_ternary}->{$seqno};
+    if ( defined($K_opening) ) {
+        if ( $K != $K_opening ) { return $K_opening }
+        return $self->{K_closing_ternary}->{$seqno};
     }
-    return $K_mate;
+    return;
 }
 
 sub set_vertical_tightness_flags {
