@@ -364,6 +364,11 @@ sub get_saw_brace_error {
     }
 }
 
+sub get_unexpected_error_count {
+    my ($self) = shift;
+    return $self->{_unexpected_error_count};
+}
+
 # interface to Perl::Tidy::Diagnostics routines
 sub write_diagnostics {
     my $msg = shift;

@@ -1178,6 +1178,7 @@ EOM
 
                 # stop iterations if errors or converged
                 my $stop_now = $tokenizer->report_tokenization_errors();
+    		$stop_now ||= $tokenizer->get_unexpected_error_count();
                 if ($stop_now) {
                     $convergence_log_message = <<EOM;
 Stopping iterations because of severe errors.                       
