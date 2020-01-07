@@ -1,23 +1,36 @@
 # Perltidy Change Log
 
-## 2019 12 03.01
+## 2020 01 10
 
-    - Added a flag to control the feature RT#130394, allow short nested blocks,
-      introduced in the previous release.  This feature breaks existing RPerl
-      installations, so a control flag has been introduced and the feature is
+    - This release adds a flag to control the feature RT#130394 (allow short nested blocks)
+      introduced in the previous release.  Unfortunately that feature breaks existing 
+      RPerl installations, so a control flag has been introduced and that feature is now
       off by default.  The flag is:
 
-      --one-line-block-nesting=i, or -olbn=i, where: 
+      --one-line-block-nesting=n, or -olbn=n, where n is an integer as follows: 
 
-      -olbn=0 do not allow nested one-line blocks [DEFAULT]
-      -olbn=1 allow nested-one line blocks
+      -olbn=0 break nested one-line blocks into multiple lines [new DEFAULT]
+      -olbn=1 stable; keep existing nested-one line blocks intact
 
-    - Fixed issue RT#131288: parse error for un-prototyped constant function
-      followed by ternary.
+      For example, consider this input line:
 
-    - Fixed issue RT#131360, installation documentation.  Metacpan generates
-      instructions for the perltidy binary which are incorrect. The binary
-      comes with Perl::Tidy. They can both be installed with 'cpanm Perl::Tidy'
+         foreach (@list) { if ($_ eq $asked_for) { last } ++$found }
+
+      The default behavior (-olbn=0) is to break it into multiple lines:
+
+         foreach (@list) {
+                if ( $_ eq $asked_for ) { last }
+                ++$found;
+         }
+
+      To keep nested one-line blocks like this on a single line you can add the parameter -olbn=1.
+
+    - Fixed issue RT#131288: parse error for un-prototyped constant function without parenthesized
+      call parameters followed by ternary.
+
+    - Fixed issue RT#131360, installation documentation.  Added a note that the binary 
+      'perltidy' comes with the Perl::Tidy module. They can both normally be installed with 
+      'cpanm Perl::Tidy'
 
 
 ## 2019 12 03

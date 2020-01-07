@@ -3105,25 +3105,27 @@ semicolon.  So these two options are not exact inverses.
 
 =item B<-olbn=n>, B<--one-line-block-nesting=n>
 
-One-line blocks which themselves contain code blocks will normally be broken
-into multiple lines.  This behavior can be controlled with this flag.  The
-values of n are:
+Nested one-line blocks are lines with code blocks which themselves contain code
+blocks.  For example, the following line is a nested one-line block.
 
-  n=0 do not allow nested one-line blocks [DEFAULT]
-  n=1 stable: keep existing nested-one line blocks
+         foreach (@list) { if ($_ eq $asked_for) { last } ++$found }
 
-For example, given the following line:
+The default behavior is to break such lines into multiple lines, but this
+behavior can be controlled with this flag.  The values of n are:
 
-    sub nospacesplit { map { /^\s*$/ ? () : $_ } split $_[0], $_[1] }
+  n=0 break nested one-line blocks into multiple lines [DEFAULT]
+  n=1 stable: keep existing nested-one line blocks intact
 
+For the above example, the default formatting (B<-olbn=0>) is
 
-the default behavior (B<-olbn=0>) is to break it into multiple lines:
-
-    sub nospacesplit {
-        map { /^\s*$/ ? () : $_ } split $_[0], $_[1];
+    foreach (@list) {
+        if ( $_ eq $asked_for ) { last }
+        ++$found;
     }
 
-The line will be left intact with B<-olbn=1>.
+If the parameter B<-olbn=1> is given, then the line will be left intact if it
+is a single line in the source, or it will be broken into multiple lines if it 
+is broken in multiple lines in the source.
 
 
 =back
@@ -3829,11 +3831,11 @@ perlstyle(1), Perl::Tidy(3)
 
 =head1 INSTALLATION
 
-The perltidy binary uses the Perl::Tidy module and is installed when that module is installed.  On many systems, the command 'cpanm Perl::Tidy' will install them.
+The perltidy binary uses the Perl::Tidy module and is installed when that module is installed.  Module installation is system-dependent.  On some systems, the command 'cpanm Perl::Tidy' will work.
 
 =head1 VERSION
 
-This man page documents perltidy version 20191203.01
+This man page documents perltidy version 20200110
 
 =head1 BUG REPORTS
 
@@ -3845,7 +3847,7 @@ The source code repository is at L<https://github.com/perltidy/perltidy>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2018 by Steve Hancock
+Copyright (c) 2000-2020 by Steve Hancock
 
 =head1 LICENSE
 

@@ -419,7 +419,7 @@ On many systems, the command 'cpanm Perl::Tidy' will install both the module Per
 
 =head1 VERSION
 
-This man page documents Perl::Tidy version 20191203.01
+This man page documents Perl::Tidy version 20200110
 
 =head1 LICENSE
 
