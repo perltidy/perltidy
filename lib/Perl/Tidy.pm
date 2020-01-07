@@ -1178,7 +1178,7 @@ EOM
 
                 # stop iterations if errors or converged
                 my $stop_now = $tokenizer->report_tokenization_errors();
-    		$stop_now ||= $tokenizer->get_unexpected_error_count();
+                $stop_now ||= $tokenizer->get_unexpected_error_count();
                 if ($stop_now) {
                     $convergence_log_message = <<EOM;
 Stopping iterations because of severe errors.                       
@@ -1881,6 +1881,7 @@ sub generate_options {
     $add_option->( 'break-before-all-operators',              'bbao',  '!' );
     $add_option->( 'keep-interior-semicolons',                'kis',   '!' );
     $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
+    $add_option->( 'one-line-block-nesting',                  'olbn',  '=i' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -2108,6 +2109,7 @@ sub generate_options {
       nowarning-output
       character-encoding=none
       one-line-block-semicolons=1
+      one-line-block-nesting=0
       outdent-labels
       outdent-long-quotes
       outdent-long-comments

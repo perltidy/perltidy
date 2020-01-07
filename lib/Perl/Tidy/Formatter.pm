@@ -3690,6 +3690,8 @@ sub mark_short_nested_blocks {
     my $rLL  = $self->{rLL};
     return unless ( defined($rLL) && @{$rLL} );
 
+    return unless ( $rOpts->{'one-line-block-nesting'} );
+
     my $K_opening_container = $self->{K_opening_container};
     my $K_closing_container = $self->{K_closing_container};
     my $rbreak_container    = $self->{rbreak_container};
@@ -11471,8 +11473,8 @@ sub mate_index_to_go {
 
 sub K_mate_index {
 
-    # Given the index K of an opening or closing container,  or ?/: ternary pair,
-    # return the index K of the other member of the pair.
+   # Given the index K of an opening or closing container,  or ?/: ternary pair,
+   # return the index K of the other member of the pair.
     my ( $self, $K ) = @_;
     return unless defined($K);
     my $rLL   = $self->{rLL};
@@ -15426,6 +15428,7 @@ sub sync_token_K {
     else {
         # shouldn't happen
     }
+    return;
 }
 
 {    # begin recombine_breakpoints

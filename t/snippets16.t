@@ -17,6 +17,7 @@
 #14 ndsm1.def
 #15 ndsm1.ndsm
 #16 rt131288.def
+#17 rt130394.rt130394
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -37,6 +38,7 @@ BEGIN {
         'def'      => "",
         'git10'    => "-wn -ce -cbl=sort,map,grep",
         'ndsm'     => "-ndsm",
+        'rt130394' => "-olbn=1",
         'rt131115' => "-bli",
         'spp1'     => "-spp=1",
         'spp2'     => "-spp=2",
@@ -115,7 +117,7 @@ sub Numerically {$a <=> $b};  # trapped semicolon
 ----------
 
         'rt130394' => <<'----------',
-# rt130394: keep on one line
+# rt130394: keep on one line with -olbn=1
 $factorial = sub { reduce { $a * $b } 1 .. 11 };
 ----------
 
@@ -273,8 +275,10 @@ sub head {
             source => "rt130394",
             params => "def",
             expect => <<'#11...........',
-# rt130394: keep on one line
-$factorial = sub { reduce { $a * $b } 1 .. 11 };
+# rt130394: keep on one line with -olbn=1
+$factorial = sub {
+    reduce { $a * $b } 1 .. 11;
+};
 #11...........
         },
 
@@ -354,6 +358,15 @@ sub OptArgs2::STYLE_FULL { 3 }
 $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
   'usage: ' . $usage . "\n";
 #16...........
+        },
+
+        'rt130394.rt130394' => {
+            source => "rt130394",
+            params => "rt130394",
+            expect => <<'#17...........',
+# rt130394: keep on one line with -olbn=1
+$factorial = sub { reduce { $a * $b } 1 .. 11 };
+#17...........
         },
     };
 

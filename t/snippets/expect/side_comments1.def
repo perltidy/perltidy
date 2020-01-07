@@ -3,10 +3,7 @@
         {
             {
                 {
-                    {
-                        ${msg} = "Hello World!";
-                        print "My message: ${msg}\n";
-                    }
+                    { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
                 }    #end level 4
             }    # end level 3
         }    # end level 2

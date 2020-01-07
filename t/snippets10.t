@@ -427,10 +427,7 @@ sub arrange_topframe {
         {
             {
                 {
-                    {
-                        ${msg} = "Hello World!";
-                        print "My message: ${msg}\n";
-                    }
+                    { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
                 }    #end level 4
             }    # end level 3
         }    # end level 2
@@ -532,7 +529,9 @@ b_const      ~~ a_const;
 { 1 => 2 } ~~ { 2 => 3 };
 { 2 => 3 } ~~ { 1 => 2 };
 \%main:: ~~ { map { $_ => 'x' } keys %main:: };
-{ map { $_ => 'x' } keys %main:: }
+{
+    map { $_ => 'x' } keys %main::
+}
 ~~ \%main::;
 \%hash                  ~~ \%tied_hash;
 \%tied_hash             ~~ \%hash;

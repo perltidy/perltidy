@@ -1,2 +1,4 @@
-# rt130394: keep on one line
-$factorial = sub { reduce { $a * $b } 1 .. 11 };
+# rt130394: keep on one line with -olbn=1
+$factorial = sub {
+    reduce { $a * $b } 1 .. 11;
+};

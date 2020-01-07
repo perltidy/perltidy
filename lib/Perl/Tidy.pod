@@ -412,6 +412,11 @@ C<write_debug_entry> in Tidy.pm.
 
   &perltidy
 
+=head1 INSTALLATION
+
+On many systems, the command 'cpanm Perl::Tidy' will install both the module Perl::Tidy and a binary perltidy.
+
+
 =head1 VERSION
 
 This man page documents Perl::Tidy version 20191203.01

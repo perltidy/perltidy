@@ -2100,9 +2100,9 @@ sub my_flush {
             elsif ( $new_line->get_jmax() == 1 && !$keep_group_intact ) {
 
                 # There are no matching tokens, so now check side comments.
-		# Programming note: accessing arrays with index -1 is 
-		# risky in Perl, but we have verified there is at least one
-		# line in the group and that there is at least one field.
+                # Programming note: accessing arrays with index -1 is
+                # risky in Perl, but we have verified there is at least one
+                # line in the group and that there is at least one field.
                 my $prev_comment = $group_lines[-1]->get_rfields()->[-1];
                 my $side_comment = $new_line->get_rfields()->[-1];
                 my_flush_code() unless ( $side_comment && $prev_comment );

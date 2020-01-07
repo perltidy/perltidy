@@ -49,6 +49,7 @@
   <li><a href="#FILES">FILES</a></li>
   <li><a href="#ERROR-HANDLING">ERROR HANDLING</a></li>
   <li><a href="#SEE-ALSO">SEE ALSO</a></li>
+  <li><a href="#INSTALLATION">INSTALLATION</a></li>
   <li><a href="#VERSION">VERSION</a></li>
   <li><a href="#BUG-REPORTS">BUG REPORTS</a></li>
   <li><a href="#COPYRIGHT">COPYRIGHT</a></li>
@@ -2441,6 +2442,27 @@
 <p>Note that the <b>n=2</b> option has no effect if adding semicolons is prohibited with the <b>-nasc</b> flag. Also not that while <b>n=2</b> adds missing semicolons to all one-line blocks, regardless of complexity, the <b>n=0</b> option only removes ending semicolons which terminate one-line blocks containing just one semicolon. So these two options are not exact inverses.</p>
 
 </dd>
+<dt id="olbn-n---one-line-block-nesting-n"><b>-olbn=n</b>, <b>--one-line-block-nesting=n</b></dt>
+<dd>
+
+<p>One-line blocks which themselves contain code blocks will normally be broken into multiple lines. This behavior can be controlled with this flag. The values of n are:</p>
+
+<pre><code>  n=0 do not allow nested one-line blocks [DEFAULT]
+  n=1 stable: keep existing nested-one line blocks</code></pre>
+
+<p>For example, given the following line:</p>
+
+<pre><code>    sub nospacesplit { map { /^\s*$/ ? () : $_ } split $_[0], $_[1] }</code></pre>
+
+<p>the default behavior (<b>-olbn=0</b>) is to break it into multiple lines:</p>
+
+<pre><code>    sub nospacesplit {
+        map { /^\s*$/ ? () : $_ } split $_[0], $_[1];
+    }</code></pre>
+
+<p>The line will be left intact with <b>-olbn=1</b>.</p>
+
+</dd>
 </dl>
 
 <h2 id="Controlling-Vertical-Alignment">Controlling Vertical Alignment</h2>
@@ -2928,9 +2950,13 @@
 
 <p>perlstyle(1), Perl::Tidy(3)</p>
 
+<h1 id="INSTALLATION">INSTALLATION</h1>
+
+<p>The perltidy binary uses the Perl::Tidy module and is installed when that module is installed. On many systems, the command &#39;cpanm Perl::Tidy&#39; will install them.</p>
+
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20191203</p>
+<p>This man page documents perltidy version 20191203.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
