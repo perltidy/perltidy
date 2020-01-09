@@ -3831,7 +3831,7 @@ perlstyle(1), Perl::Tidy(3)
 
 =head1 INSTALLATION
 
-The perltidy binary uses the Perl::Tidy module and is installed when that module is installed.  Module installation is system-dependent.  On some systems, the command 'cpanm Perl::Tidy' will work.
+The perltidy binary uses the Perl::Tidy module and is installed when that module is installed.  The module name is case-sensitive.  For example, the basic command for installing with cpanm is 'cpanm Perl::Tidy'.
 
 =head1 VERSION
 

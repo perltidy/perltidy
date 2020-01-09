@@ -7,6 +7,7 @@
     - compare results of the current version with previous version
 - review tickets at sourceforge (hardly used now, but possible)
 - review/update the ChangeLog.pod file
+- be sure RPerl still works
 - Review code, especially any ## commented out sections and "FIXME's"
 - run perlver on all modules to check minimum version; should be 5.8.0
   - The first line in Tidy.pm has the required version of Perl

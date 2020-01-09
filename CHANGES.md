@@ -3,27 +3,27 @@
 ## 2020 01 10
 
     - This release adds a flag to control the feature RT#130394 (allow short nested blocks)
-      introduced in the previous release.  Unfortunately that feature breaks existing 
+      introduced in the previous release.  Unfortunately that feature breaks 
       RPerl installations, so a control flag has been introduced and that feature is now
       off by default.  The flag is:
 
       --one-line-block-nesting=n, or -olbn=n, where n is an integer as follows: 
 
       -olbn=0 break nested one-line blocks into multiple lines [new DEFAULT]
-      -olbn=1 stable; keep existing nested-one line blocks intact
+      -olbn=1 stable; keep existing nested-one line blocks intact [previous DEFAULT]
 
       For example, consider this input line:
 
-         foreach (@list) { if ($_ eq $asked_for) { last } ++$found }
+        foreach (@list) { if ($_ eq $asked_for) { last } ++$found }
 
-      The default behavior (-olbn=0) is to break it into multiple lines:
+      The new default behavior (-olbn=0), and behavior prior to version 20191203, is to break it into multiple lines:
 
-         foreach (@list) {
-                if ( $_ eq $asked_for ) { last }
-                ++$found;
-         }
+        foreach (@list) {
+            if ( $_ eq $asked_for ) { last }
+            ++$found;
+        }
 
-      To keep nested one-line blocks like this on a single line you can add the parameter -olbn=1.
+      To keep nested one-line blocks such as this on a single line you can add the parameter -olbn=1.
 
     - Fixed issue RT#131288: parse error for un-prototyped constant function without parenthesized
       call parameters followed by ternary.

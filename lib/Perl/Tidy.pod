@@ -414,8 +414,7 @@ C<write_debug_entry> in Tidy.pm.
 
 =head1 INSTALLATION
 
-On many systems, the command 'cpanm Perl::Tidy' will install both the module Perl::Tidy and a binary perltidy.
-
+The module 'Perl::Tidy' comes with a binary 'perltidy' which is installed when the module is installed.  The module name is case-sensitive.  For example, the basic command for installing with cpanm is 'cpanm Perl::Tidy'.
 
 =head1 VERSION
 
