@@ -1,0 +1,13 @@
+# parsing stuff like 'x17' before fat comma
+my %bb = (
+    123 x 18 => '123x18',
+    123 x 19 => '123 x19',
+    123 x 20 => '123x 20',
+    2 x 7    => '2 x 7',
+    x40      => 'x40',
+    'd' x 17 => "'d' x17",
+    c x17    => 'c x17',
+);
+foreach my $key ( keys %bb ) {
+    print "key='$key' => $bb{$key}\n";
+}

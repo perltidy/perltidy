@@ -3067,7 +3067,36 @@ EOM
                             $type = 'v';
                             report_v_string($tok);
                         }
-                        else { $type = 'w' }
+                        else {
+
+                           # Bareword followed by a fat comma ... see 'git18.in'
+                           # If tok is something like 'x17' then it could
+                           # actually be operator x followed by number 17.
+                           # For example, here:
+                           #     123x17 => [ 792, 1224 ],
+                           # (a key of 123 repeated 17 times, perhaps not
+                           # what was intended). We will mark x17 as type
+                           # 'n' and it will be split. If the previous token
+                           # was also a bareword then it is not very clear is
+                           # going on.  In this case we will not be sure that
+                           # an operator is expected, so we just mark it as a
+                           # bareword.  Perl is a little murky in what it does
+                           # with stuff like this, and its behavior can change
+                           # over time.  Something like
+                           #    a x18 => [792, 1224], will compile as
+                           # a key with 18 a's.  But something like
+                           #    push @array, a x18;
+                           # is a syntax error.
+                            if ( $expecting == OPERATOR && $tok =~ /^x\d+$/ ) {
+                                $type = 'n';
+                            }
+                            else {
+
+                                # git #18
+                                $type = 'w';
+                                error_if_expecting_OPERATOR();
+                            }
+                        }
 
                         next;
                     }

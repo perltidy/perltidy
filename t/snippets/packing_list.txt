@@ -152,6 +152,7 @@
 ../snippets16.t	ndsm1.def
 ../snippets16.t	ndsm1.ndsm
 ../snippets16.t	rt131288.def
+../snippets16.t	rt130394.rt130394
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -312,4 +313,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets16.t	rt130394.rt130394
+../snippets16.t	git18.def

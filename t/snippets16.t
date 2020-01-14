@@ -18,6 +18,7 @@
 #15 ndsm1.ndsm
 #16 rt131288.def
 #17 rt130394.rt130394
+#18 git18.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -93,6 +94,22 @@ sub head {
 # git#16, two equality lines with fat commas on the right
 my $Package = $Self->RepositoryGet( %Param, Result => 'SCALAR' );
 my %Structure = $Self->PackageParse( String => $Package );
+----------
+
+        'git18' => <<'----------',
+# parsing stuff like 'x17' before fat comma
+my %bb = (
+    123x18 => '123x18',
+    123 x19 => '123 x19', 
+    123x 20 => '123x 20',
+    2 x 7    => '2 x 7', 
+    x40      => 'x40',
+    'd' x17    => "'d' x17",
+    c x17    => 'c x17', 
+);
+foreach my $key ( keys %bb ) {
+    print "key='$key' => $bb{$key}\n";
+}
 ----------
 
         'multiple_equals' => <<'----------',
@@ -367,6 +384,26 @@ $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
 # rt130394: keep on one line with -olbn=1
 $factorial = sub { reduce { $a * $b } 1 .. 11 };
 #17...........
+        },
+
+        'git18.def' => {
+            source => "git18",
+            params => "def",
+            expect => <<'#18...........',
+# parsing stuff like 'x17' before fat comma
+my %bb = (
+    123 x 18 => '123x18',
+    123 x 19 => '123 x19',
+    123 x 20 => '123x 20',
+    2 x 7    => '2 x 7',
+    x40      => 'x40',
+    'd' x 17 => "'d' x17",
+    c x17    => 'c x17',
+);
+foreach my $key ( keys %bb ) {
+    print "key='$key' => $bb{$key}\n";
+}
+#18...........
         },
     };
 
