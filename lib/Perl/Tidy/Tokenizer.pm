@@ -1511,7 +1511,7 @@ sub prepare_for_a_new_file {
                 $rtoken_map, $rtoken_type, $input_line );
             if ( $i_tok == 0 ) {
                 interrupt_logfile();
-                warning("Missing ';' above?\n");
+                warning("Missing ';' or ',' above?\n");
                 resume_logfile();
             }
             return 1;
