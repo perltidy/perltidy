@@ -6537,39 +6537,55 @@ sub numerator_expected {
     return $numerator_expected;
 }
 
-sub pattern_expected {
+{
+    my %pattern_test; 
 
-    # This is the start of a filter for a possible pattern.
-    # It looks at the token after a possible pattern and tries to
-    # determine if that token could end a pattern.
-    # returns -
-    #   1 - yes
-    #   0 - can't tell
-    #  -1 - no
-    my ( $i, $rtokens, $max_token_index ) = @_;
-    my $is_pattern = 0;
+    BEGIN {
 
-    my $next_token = $rtokens->[ $i + 1 ];
-    if ( $next_token =~ /^[msixpodualgc]/ ) { $i++; }   # skip possible modifier
-    my ( $next_nonblank_token, $i_next ) =
-      find_next_nonblank_token( $i, $rtokens, $max_token_index );
+        # list of tokens which may follow a pattern
+        # (can probably be expanded)
+        # Note that we will not have formed binaries at this point, so we will
+        # see '&' instead of '&&' and '|' instead of '||'
 
-    # list of tokens which may follow a pattern
-    # (can probably be expanded)
-    if ( $next_nonblank_token =~ /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/ )
-    {
-        $is_pattern = 1;
+        # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/ )
+        my @q = qw( & && | || and or while if unless);
+	push @q, ')', '}', ',', ';';
+        @{pattern_test}{@q} = (1) x scalar(@q);
     }
-    else {
 
-        if ( $next_nonblank_token =~ /^\s*$/ ) {
-            $is_pattern = 0;
+    sub pattern_expected {
+
+        # This a filter for a possible pattern.
+        # It looks at the token after a possible pattern and tries to
+        # determine if that token could end a pattern.
+        # returns -
+        #   1 - yes
+        #   0 - can't tell
+        #  -1 - no
+        my ( $i, $rtokens, $max_token_index ) = @_;
+        my $is_pattern = 0;
+
+        my $next_token = $rtokens->[ $i + 1 ];
+        if ( $next_token =~ /^[msixpodualgc]/ ) {
+            $i++;
+        }    # skip possible modifier
+        my ( $next_nonblank_token, $i_next ) =
+          find_next_nonblank_token( $i, $rtokens, $max_token_index );
+
+        if ( $pattern_test{$next_nonblank_token} ) { 
+            $is_pattern = 1;
         }
         else {
-            $is_pattern = -1;
+
+            if ( $next_nonblank_token =~ /^\s*$/ ) {
+                $is_pattern = 0;
+            }
+            else {
+                $is_pattern = -1;
+            }
         }
+        return $is_pattern;
     }
-    return $is_pattern;
 }
 
 sub find_next_nonblank_token_on_this_line {
