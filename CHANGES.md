@@ -1,5 +1,9 @@
 # Perltidy Change Log
 
+## 2020 01 10.01
+
+    - Fix for git#18, added warning for missing comma before unknown bare word.
+
 ## 2020 01 10
 
     - This release adds a flag to control the feature RT#130394 (allow short nested blocks)

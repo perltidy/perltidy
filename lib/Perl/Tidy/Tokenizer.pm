@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20200110';
+our $VERSION = '20200110.01';
 
 use Perl::Tidy::LineBuffer;
 
@@ -6538,18 +6538,17 @@ sub numerator_expected {
 }
 
 {
-    my %pattern_test; 
+    my %pattern_test;
 
     BEGIN {
 
-        # list of tokens which may follow a pattern
-        # (can probably be expanded)
-        # Note that we will not have formed binaries at this point, so we will
-        # see '&' instead of '&&' and '|' instead of '||'
+	# List of tokens which may follow a pattern.  Note that we will not
+	# have formed digraphs at this point, so we will see '&' instead of
+	# '&&' and '|' instead of '||'
 
-        # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/ )
-        my @q = qw( & && | || and or while if unless);
-	push @q, ')', '}', ',', ';';
+        # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
+        my @q = qw( & && | || ? : + - * and or while if unless);
+        push @q, ')', '}', ']', '>', ',', ';';
         @{pattern_test}{@q} = (1) x scalar(@q);
     }
 
@@ -6572,7 +6571,7 @@ sub numerator_expected {
         my ( $next_nonblank_token, $i_next ) =
           find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
-        if ( $pattern_test{$next_nonblank_token} ) { 
+        if ( $pattern_test{$next_nonblank_token} ) {
             $is_pattern = 1;
         }
         else {
