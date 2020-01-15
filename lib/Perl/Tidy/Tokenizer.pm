@@ -5707,7 +5707,7 @@ sub do_scan_package {
     pos($input_line) = $pos_beg;
 
     # handle non-blank line; package name, if any, must follow
-    if ( $input_line =~ m/\G\s*((?:\w*(?:'|::))*\w+)/gc ) {
+    if ( $input_line =~ m/\G\s*((?:\w*(?:'|::))*\w*)/gc ) {
         $package = $1;
         $package = ( defined($1) && $1 ) ? $1 : 'main';
         $package =~ s/\'/::/g;
