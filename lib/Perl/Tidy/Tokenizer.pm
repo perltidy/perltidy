@@ -687,7 +687,7 @@ sub get_line {
             write_logfile_entry("Exiting POD section\n");
             $tokenizer_self->{_in_pod} = 0;
         }
-        if ( $input_line =~ /^\#\!.*perl\b/ ) {
+        if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->{_in_end} ) {
             warning(
                 "Hash-bang in pod can cause older versions of perl to fail! \n"
             );
