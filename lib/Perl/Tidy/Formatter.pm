@@ -12404,11 +12404,11 @@ sub terminal_type_K {
         $left_bond_strength{'and'}  = VERY_WEAK - 0.01;
         $left_bond_strength{'or'}   = VERY_WEAK - 0.02;
         $left_bond_strength{'err'}  = VERY_WEAK - 0.02;
-        $left_bond_strength{'xor'}  = NOMINAL;
+        $left_bond_strength{'xor'}  = VERY_WEAK - 0.01;
         $right_bond_strength{'and'} = NOMINAL;
         $right_bond_strength{'or'}  = NOMINAL;
         $right_bond_strength{'err'} = NOMINAL;
-        $right_bond_strength{'xor'} = STRONG;
+        $right_bond_strength{'xor'} = NOMINAL;
 
         #---------------------------------------------------------------
         # Bond Strength BEGIN Section 2.
@@ -16412,8 +16412,10 @@ sub sync_token_K {
                           unless $old_breakpoint_to_go[$iend_1];
                     }
 
-                    # handle leading 'and'
-                    elsif ( $tokens_to_go[$ibeg_2] eq 'and' ) {
+                    # handle leading 'and' and 'xor'
+                    elsif ($tokens_to_go[$ibeg_2] eq 'and'
+                        || $tokens_to_go[$ibeg_2] eq 'xor' )
+                    {
 
                         # Decide if we will combine a single terminal 'and'
                         # after an 'if' or 'unless'.
