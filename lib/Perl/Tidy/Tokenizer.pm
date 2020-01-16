@@ -6542,9 +6542,9 @@ sub numerator_expected {
 
     BEGIN {
 
-	# List of tokens which may follow a pattern.  Note that we will not
-	# have formed digraphs at this point, so we will see '&' instead of
-	# '&&' and '|' instead of '||'
+        # List of tokens which may follow a pattern.  Note that we will not
+        # have formed digraphs at this point, so we will see '&' instead of
+        # '&&' and '|' instead of '||'
 
         # /(\)|\}|\;|\&\&|\|\||and|or|while|if|unless)/
         my @q = qw( & && | || ? : + - * and or while if unless);
@@ -6792,8 +6792,45 @@ sub scan_number_do {
     # handle octal, hex, binary
     if ( !defined($number) ) {
         pos($input_line) = $pos_beg;
-        if ( $input_line =~
-            /\G[+-]?0(([xX][0-9a-fA-F_]+)|([0-7_]+)|([bB][01_]+))/g )
+
+        # Perl 5.22 added floating point literals, like '0x0.b17217f7d1cf78p0'
+        # For reference, the format prior to hex floating point is:
+        #   /\G[+-]?0(([xX][0-9a-fA-F_]+)|([0-7_]+)|([bB][01_]+))/g )
+        #             (hex)               (octal)   (binary)
+        if (
+            $input_line =~
+
+            /\G[+-]?0(                   # leading [signed] 0
+
+           # a hex float, i.e. '0x0.b17217f7d1cf78p0'
+           ([xX][0-9a-fA-F_]*            # X and optional leading digits
+           (\.([0-9a-fA-F][0-9a-fA-F_]*)?)?   # optional decimal and fraction
+           [Pp][+-]?[0-9a-fA-F]          # REQUIRED exponent with digit
+           [0-9a-fA-F_]*)                # optional Additional exponent digits
+
+	   # or hex integer
+           |([xX][0-9a-fA-F_]+)        
+
+	   # or octal fraction
+           |([0-7_]+               # string of octal digits 
+           (\.([0-7][0-7_]*)?)?    # optional decimal and fraction
+           [Pp][+-]?[0-7]          # REQUIRED exponent, no underscore
+           [0-7_]*)                # Additonal exponent digits, with underscores
+
+           # or octal integer
+           |([0-7_]+)               # string of octal digits 
+
+           # or a binary float
+           |([bB][01_]*            # 'b' with string of binary digits 
+           (\.([01][01_]*)?)?      # optional decimal and fraction
+           [Pp][+-]?[01]           # Required exponent indicator, no underscore
+           [01_]*)                 # additional exponent bits
+
+	   # or binary integer
+           |([bB][01_]+)           # 'b' with string of binary digits 
+
+           )/gx
+          )
         {
             $pos = pos($input_line);
             my $numc = $pos - $pos_beg;
