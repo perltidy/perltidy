@@ -2776,8 +2776,13 @@ sub prepare_for_a_new_file {
                         }
 
                         # For an 'e' quote modifier we must scan the replacement
-                        # text for here-doc targets.
-                        if ($saw_modifier_e) {
+                        # text for here-doc targets...
+                        # but if the modifier starts a new line we can skip
+                        # this because either the here doc will be fully
+                        # contained in the replacement text (so we can
+                        # ignore it) or Perl will not find it.  
+                        # See test 'here2.in'.
+                        if ( $saw_modifier_e && $i_tok >= 0 ) {
 
                             my $rht = scan_replacement_text($qs1);
 

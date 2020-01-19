@@ -19,6 +19,7 @@
 #16 rt131288.def
 #17 rt130394.rt130394
 #18 git18.def
+#19 here2.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -110,6 +111,15 @@ my %bb = (
 foreach my $key ( keys %bb ) {
     print "key='$key' => $bb{$key}\n";
 }
+----------
+
+        'here2' => <<'----------',
+$_ = "";
+s|(?:)|"${\<<END}"
+ok $test - here2.in "" in multiline s///e outside eval
+END
+|e;
+print $_ || "not ok $test\n";
 ----------
 
         'multiple_equals' => <<'----------',
@@ -404,6 +414,19 @@ foreach my $key ( keys %bb ) {
     print "key='$key' => $bb{$key}\n";
 }
 #18...........
+        },
+
+        'here2.def' => {
+            source => "here2",
+            params => "def",
+            expect => <<'#19...........',
+$_ = "";
+s|(?:)|"${\<<END}"
+ok $test - here2.in "" in multiline s///e outside eval
+END
+|e;
+print $_ || "not ok $test\n";
+#19...........
         },
     };
 

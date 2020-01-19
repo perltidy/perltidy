@@ -1,0 +1,6 @@
+$_ = "";
+s|(?:)|"${\<<END}"
+ok $test - here2.in "" in multiline s///e outside eval
+END
+|e;
+print $_ || "not ok $test\n";
