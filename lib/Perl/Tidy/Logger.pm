@@ -316,7 +316,8 @@ sub warning {
         if ( !$fh_warnings ) {
             my $warning_file = $self->{_warning_file};
             ( $fh_warnings, my $filename ) =
-              Perl::Tidy::streamhandle( $warning_file, 'w' );
+              Perl::Tidy::streamhandle( $warning_file, 'w',
+                $rOpts->{'character-encoding'} );
             $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
             Perl::Tidy::Warn("## Please see file $filename\n")
               unless ref($warning_file);
@@ -501,7 +502,8 @@ sub finish {
 
     if ($save_logfile) {
         my $log_file = $self->{_log_file};
-        my ( $fh, $filename ) = Perl::Tidy::streamhandle( $log_file, 'w' );
+        my ( $fh, $filename ) = Perl::Tidy::streamhandle( $log_file, 'w',
+            $rOpts->{'character-encoding'} );
         if ($fh) {
             my $routput_array = $self->{_output_array};
             foreach ( @{$routput_array} ) { $fh->print($_) }
@@ -513,4 +515,3 @@ sub finish {
     return;
 }
 1;
-

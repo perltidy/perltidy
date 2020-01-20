@@ -131,7 +131,13 @@ sub streamhandle {
     # object               object
     #                      (check for 'print' method for 'w' mode)
     #                      (check for 'getline' method for 'r' mode)
-    my ( $filename, $mode ) = @_;
+
+    # An optional flag $character_encoding may be given.
+    # The current options are:
+    # 1. '' or 'none' -> the file will not use binary encoding
+    # 2. 'utf8' -> the file will be utf8 encoded
+    # 3. Any other string: use simple binmode
+    my ( $filename, $mode, $character_encoding ) = @_;
 
     my $ref = ref($filename);
     my $New;
@@ -140,10 +146,10 @@ sub streamhandle {
     # handle a reference
     if ($ref) {
         if ( $ref eq 'ARRAY' ) {
-            $New = sub { Perl::Tidy::IOScalarArray->new(@_) };
+            $New = sub { Perl::Tidy::IOScalarArray->new( $filename, $mode ) };
         }
         elsif ( $ref eq 'SCALAR' ) {
-            $New = sub { Perl::Tidy::IOScalar->new(@_) };
+            $New = sub { Perl::Tidy::IOScalar->new( $filename, $mode ) };
         }
         else {
 
@@ -198,11 +204,28 @@ EOM
             $New = sub { $mode eq 'w' ? *STDOUT : *STDIN }
         }
         else {
-            $New = sub { IO::File->new(@_) };
+            $New = sub { IO::File->new( $filename, $mode ) };
         }
     }
     $fh = $New->( $filename, $mode )
       or Warn("Couldn't open file:$filename in mode:$mode : $!\n");
+
+    if ( $fh && $character_encoding && $character_encoding ne 'none' ) {
+
+        if ( $character_encoding eq 'utf8' ) {
+            if ( ref($fh) eq 'IO::File' ) {
+                $fh->binmode(":raw:encoding(UTF-8)");
+            }
+            elsif ( $fh eq '-' ) {
+                binmode STDOUT, ":raw:encoding(UTF-8)";
+            }
+        }
+
+        # Patch for RT 122030
+        elsif ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
+
+        elsif ( $fh eq '-' ) { binmode STDOUT }
+    }
 
     return $fh, ( $ref or $filename );
 }

@@ -2,6 +2,8 @@
 
 ## 2020 01 10.01
 
+    - When -utf8 is used, any error output is encoded as utf8
+
     - Fix for git#19, adjust line break around an 'xor'
 
     - Fix for git#18, added warning for missing comma before unknown bare word.
