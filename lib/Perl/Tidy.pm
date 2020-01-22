@@ -1042,6 +1042,7 @@ EOM
         # through the -ple or -ole flags
         my $binmode = defined($line_separator)
           || defined($rOpts_character_encoding);
+        $binmode = 1;  ## TESTING
         $line_separator = "\n" unless defined($line_separator);
 
         my ( $sink_object, $postfilter_buffer );
