@@ -1,0 +1,13 @@
+# Test deleting comments and pod
+$1=2;
+sub f { # a side comment
+ # a hanging side comment
+
+# a block comment
+}
+
+=pod
+bonjour!
+=cut
+
+$i++;
