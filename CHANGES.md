@@ -2,6 +2,8 @@
 
 ## 2020 01 10.01
 
+    - Fix RT#132059, the -dac parameter was not working and caused an error exit
+
     - When -utf8 is used, any error output is encoded as utf8
 
     - Fix for git#19, adjust line break around an 'xor'
