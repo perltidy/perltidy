@@ -40,3 +40,10 @@
 - Update CPAN tickets
 - Upload release to sourceforge
 - Update web sites
+- Be sure to run the RUNME.sh file to tag this version and also push the tags to github. Check that the tags are uploaded at:
+
+   https://github.com/perltidy/perltidy/tags
+
+- If you forget, or need to modify tags, see the directions in the book:
+
+   https://git-scm.com/book/en/v2/Git-Basics-Tagging

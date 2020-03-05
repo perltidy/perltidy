@@ -38,6 +38,21 @@ perltidy is untangling complex ternary statements. Use the iteration parameter
 **-it=2** if it is important that the results be unchanged on subsequent passes,
 but note that this doubles the run time.
 
+## Perltidy does not look for here-document targets inside of quoted strings
+
+For example, consider the following script
+
+```
+print "${ \<<END1 }${ \<<END2 }";
+Hello 
+END1
+World 
+END2
+```
+
+Perltidy will not look for the here-doc targets within the quotes, so it
+will not format the script correctly.
+
 ## Latest Bug and Wishlist at CPAN:
 
 For the latest list of bugs and feature requests at CPAN see:

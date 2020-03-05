@@ -1,3 +1,4 @@
+.pre-commit-hooks.yaml
 bin/perltidy
 BUGS.md
 CHANGES.md
@@ -61,6 +62,7 @@ t/snippets13.t
 t/snippets14.t
 t/snippets15.t
 t/snippets16.t
+t/snippets17.t
 t/snippets2.t
 t/snippets3.t
 t/snippets4.t

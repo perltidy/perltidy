@@ -7752,8 +7752,11 @@ EOM
         # we have to flush ..
         if (
 
-            # if there is a side comment
-            ( ( $type eq '#' ) && !$rOpts->{'delete-side-comments'} )
+	    # if there is a side comment...
+            # Even if we deleted it! Otherwise,
+	    # i-K indexing will have a gap and be incorrect ( see RT #132059)
+            ## ( ( $type eq '#' ) && !$rOpts->{'delete-side-comments'} )
+            $type eq '#'
 
             # if this line ends in a quote
             # NOTE: This is critically important for insuring that quoted lines

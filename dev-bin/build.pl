@@ -573,6 +573,10 @@ git add -A  [or whatever]
 git commit
 git tag -a $new_VERSION;
 
+You should also push any new tags:
+
+git push origin --tags
+
 To avoid error, I put this last command in a script $runme 
 EOM
         hitcr();
@@ -586,6 +590,7 @@ sub make_tag_script {
         print RUN <<EOM;
 #!/bin/sh
 git tag -a $new_VERSION
+git push origin --tags
 unlink \$0;
 EOM
     }
