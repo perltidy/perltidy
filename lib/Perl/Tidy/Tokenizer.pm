@@ -230,6 +230,7 @@ sub new {
         _in_pod                             => 0,
         _in_attribute_list                  => 0,
         _in_quote                           => 0,
+        _in_prototype_or_signature          => 0,
         _quote_target                       => "",
         _line_start_quote                   => -1,
         _starting_level                     => $args{starting_level},
@@ -610,6 +611,7 @@ sub get_line {
         _square_bracket_depth => $square_bracket_depth,
         _paren_depth          => $paren_depth,
         _quote_character      => '',
+        _in_prototype_or_signature => $tokenizer_self->{_in_prototype_or_signature},
     };
 
     # must print line unchanged if we are in a here document
@@ -820,6 +822,7 @@ sub get_line {
 
     # Now finish defining the return structure and return it
     $line_of_tokens->{_ending_in_quote} = $tokenizer_self->{_in_quote};
+    $line_of_tokens->{_in_prototype_or_signature} = $tokenizer_self->{_in_prototype_or_signature};
 
     # handle severe error (binary data in script)
     if ( $tokenizer_self->{_in_error} ) {
@@ -1472,6 +1475,7 @@ sub prepare_for_a_new_file {
         ( $i, $tok, $type, $id_scan_state, $identifier ) =
           scan_identifier_do( $i, $id_scan_state, $identifier, $rtokens,
             $max_token_index, $expecting, $paren_type[$paren_depth] );
+
         return;
     }
 
@@ -4198,6 +4202,10 @@ EOM
         if ( $num > 0 ) {
             push( @tokens, substr( $input_line, $rtoken_map->[$im], $num ) );
         }
+
+        my $in_prototype_or_signature = ( scalar grep { m/^sub/ } @container_type ) ? 1 : 0;
+
+        $tokenizer_self->{_in_prototype_or_signature} = $in_prototype_or_signature;
 
         $tokenizer_self->{_in_attribute_list} = $in_attribute_list;
         $tokenizer_self->{_in_quote}          = $in_quote;

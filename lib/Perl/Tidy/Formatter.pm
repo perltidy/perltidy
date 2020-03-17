@@ -1650,6 +1650,8 @@ sub break_lines {
           _level_0
           _nesting_blocks_0
           _nesting_tokens_0
+
+          _in_prototype_or_signature
         );
 
         @valid_line_hash{@valid_line_keys} = (1) x scalar(@valid_line_keys);
@@ -1693,6 +1695,8 @@ sub write_line {
         _quote_character
         _square_bracket_depth
         _starting_in_quote
+
+        _in_prototype_or_signature
         )
       )
     {
@@ -7612,6 +7616,12 @@ EOM
                 # tokens
                 if ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
+
+                    if ( $line_of_tokens->{_in_prototype_or_signature} ) {
+                      $rbrace_follower->{')'} = 1;
+                    } else {
+                      delete $rbrace_follower->{')'};
+                    }
                 }
                 elsif ( $block_type =~ /^(if|elsif|unless)$/ ) {
                     $rbrace_follower = \%is_if_brace_follower;
