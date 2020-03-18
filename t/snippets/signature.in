@@ -1,0 +1,21 @@
+# git22: Preserve function signature on a single line
+# This behavior is controlled by 'sub weld_signature_parens'
+
+sub foo($x, $y="abcd") {
+  $x.$y;
+}
+
+# do not break after closing do brace
+sub foo($x, $y=do{{}}, $z=42, $w=do{"abcd"}) {
+  $x.$y.$z;
+}
+
+# This signature should get put back on one line
+sub t022 (
+    $p = do { $z += 10; 222 }, $a = do { $z++; 333 }
+) { "$p/$a" }
+
+# anonymous sub with signature
+my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
+    ...;
+};

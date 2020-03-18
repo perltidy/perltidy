@@ -3843,6 +3843,8 @@ sub weld_containers {
 
     $self->weld_cuddled_blocks();
 
+    $self->weld_signature_parens();
+
     return;
 }
 
@@ -3856,6 +3858,90 @@ sub cumulative_length_after_K {
     my ( $self, $KK ) = @_;
     my $rLL = $self->{rLL};
     return $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+}
+
+sub weld_signature_parens {
+    my $self = shift;
+
+    # This routine fixes a problem in which an unwanted line break can
+    # be inserted between a closing block brace and a closing sub signature
+    # paren.  This is a fix for issue git#22.
+
+    # For example, in the following snippet:
+    #  sub foo ( $self, $$opts = do { ... } ) { $something=1 }
+    # we do not want a break after the closing do brace
+
+    # Method: Look through the file for closing sub signature parens which
+    # follow closing braces, and weld any such parens to those braces so that
+    # they do not get separated.
+
+    # We want to do the following steps:
+    # 1. look for an opening sub brace,
+    # 2. look back one nonblank character for a closing paren [the signature]
+    # 3. if we find one, look back one more character for any closing brace,
+    # 4. and if we find one, then 'weld' that closing brace to that closing
+    # paren.
+
+    # Note that some good test cases are in 'signatures.t' in a perl
+    # distribution
+
+    # TODO: Improve efficiency by creating a list of K values of opening sub
+    # braces in advance, and just loop through them rather than all containers.
+
+    my $rLL = $self->{rLL};
+    return unless ( defined($rLL) && @{$rLL} );
+
+    # Loop over all container items in the file
+    my $KNEXT         = 0;
+    my $KK            = 0;
+    my $token         = "";
+    my $type_sequence = "";
+    while ( defined($KNEXT) ) {
+        my $KLAST              = $KK;
+        my $token_last         = $token;
+        my $type_sequence_last = $type_sequence;
+
+        $KK    = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+        my $rtoken_vars = $rLL->[$KK];
+        $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+        $token         = $rtoken_vars->[_TOKEN_];
+        my $block_type = $rtoken_vars->[_BLOCK_TYPE_];
+
+        # 1. look for an opening sub brace...
+        # 2. following a closing paren (with possible blank between)...
+        if (
+               $is_opening_token{$token}
+            && $KLAST
+            && $KK - $KLAST <= 2
+            && $token_last eq ')'
+            && (   $block_type =~ /$SUB_PATTERN/
+                || $block_type =~ /$ASUB_PATTERN/ )
+          )
+        {
+
+            # any intervening char must be a blank
+            if ( $KK - $KLAST == 2 ) {
+                if ( $rLL->[ $KK - 1 ]->[_TYPE_] ne 'b' ) {
+                    next;
+                }
+            }
+
+            # 3. following a closing block brace of any kind...
+            my $Kp = $self->K_previous_nonblank($KLAST);
+            if ($Kp) {
+                my $block_type_p = $rLL->[$Kp]->[_BLOCK_TYPE_];
+                if ($block_type_p) {
+
+                    # 4. Found it; set the weld flag for this brace.
+                    # It will be checked in sub output_line_to_go
+                    my $type_sequence_p = $rLL->[$Kp]->[_TYPE_SEQUENCE_];
+                    $weld_len_right_closing{$type_sequence_p} = 1;
+                }
+            }
+        }
+    }
+    return;
 }
 
 sub weld_cuddled_blocks {

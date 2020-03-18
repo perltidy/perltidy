@@ -49,7 +49,7 @@ my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
 
 my $rcode = {
-    'A'   => \&autopilot,
+    ## 'A'   => \&autopilot,   # can be confusing, deactivated
     'CHK' => sub {
         openurl("local-docs/Release-Checklist.md")
           unless $rstatus->{CHK} eq 'OK';
@@ -73,12 +73,12 @@ $fh_log->close();
 
 sub main {
     while (1) {
+##A        - run All Steps...
         print <<EOM;
 -------------------------------------------
 Perltidy Build Main Menu - Case Insensitive
 -------------------------------------------
 
-A        - run All Steps...
 chk      - view release CHecKlist          status: $rstatus->{'CHK'}
 v        - check/update Version Number     status: $rstatus->{'V'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}

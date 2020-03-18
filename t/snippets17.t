@@ -3,6 +3,7 @@
 # Contents:
 #1 rt132059.def
 #2 rt132059.rt132059
+#3 signature.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -43,6 +44,30 @@ bonjour!
 =cut
 
 $i++;
+----------
+
+        'signature' => <<'----------',
+# git22: Preserve function signature on a single line
+# This behavior is controlled by 'sub weld_signature_parens'
+
+sub foo($x, $y="abcd") {
+  $x.$y;
+}
+
+# do not break after closing do brace
+sub foo($x, $y=do{{}}, $z=42, $w=do{"abcd"}) {
+  $x.$y.$z;
+}
+
+# This signature should get put back on one line
+sub t022 (
+    $p = do { $z += 10; 222 }, $a = do { $z++; 333 }
+) { "$p/$a" }
+
+# anonymous sub with signature
+my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
+    ...;
+};
 ----------
     };
 
@@ -85,6 +110,34 @@ sub f {
 
 $i++;
 #2...........
+        },
+
+        'signature.def' => {
+            source => "signature",
+            params => "def",
+            expect => <<'#3...........',
+# git22: Preserve function signature on a single line
+# This behavior is controlled by 'sub weld_signature_parens'
+
+sub foo ( $x, $y = "abcd" ) {
+    $x . $y;
+}
+
+# do not break after closing do brace
+sub foo ( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
+    $x . $y . $z;
+}
+
+# This signature should get put back on one line
+sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) {
+    "$p/$a";
+}
+
+# anonymous sub with signature
+my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
+    ...;
+};
+#3...........
         },
     };
 
