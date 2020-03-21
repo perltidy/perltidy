@@ -959,18 +959,20 @@ EOM
         # Case 3. Decode with a specific encoding
         else {
             $encoding_in = $rOpts->{'character-encoding'};
-            eval {
-                $buf = Encode::decode( $encoding_in, $buf,
-                    Encode::FB_CROAK | Encode::LEAVE_SRC );
-            };
-            if ($@) {
+            if ( !utf8::is_utf8($buf) ) {
+                eval {
+                    $buf = Encode::decode( $encoding_in, $buf,
+                        Encode::FB_CROAK | Encode::LEAVE_SRC );
+                };
+                if ($@) {
 
-                # Quit if we cannot decode by the requested encoding;
-                # Something is not right.
-                Warn(
+                    # Quit if we cannot decode by the requested encoding;
+                    # Something is not right.
+                    Warn(
 "skipping file: $input_file: Unable to decode source as $encoding_in\n"
-                );
-                next;
+                    );
+                    next;
+                }
             }
         }
 
