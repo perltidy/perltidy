@@ -970,10 +970,6 @@ EOM
         # Case 4. Decode with a specific encoding
         else {
             $encoding_in = $rOpts_character_encoding;
-
-            # a string or string ref passed to by a module call may or
-            # may not have already been decoded, so we have to be careful
-            # not to try to do it again.
             eval {
                 $buf = Encode::decode( $encoding_in, $buf,
                     Encode::FB_CROAK | Encode::LEAVE_SRC );
@@ -983,7 +979,7 @@ EOM
                 # Quit if we cannot decode by the requested encoding;
                 # Something is not right.
                 Warn(
-"skipping file: $input_file: Unable to decode source as $encoding_in\n"
+"skipping file: $display_name: Unable to decode source as $encoding_in\n"
                 );
                 next;
             }

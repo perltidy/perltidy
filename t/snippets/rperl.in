@@ -1,0 +1,7 @@
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F { { my number $RETURN_TYPE }; ( my integer $multiplicand, my number $multiplier ) = @ARG; return $multiplicand * $multiplier; }
+
+sub empty_method { { my void::method $RETURN_TYPE }; return 2; }
+
+sub foo_subroutine_in_main { { my void $RETURN_TYPE }; print 'Howdy from foo_subroutine_in_main()...', "\n"; return; }

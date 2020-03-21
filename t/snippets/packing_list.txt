@@ -158,6 +158,8 @@
 ../snippets17.t	rt132059.def
 ../snippets17.t	rt132059.rt132059
 ../snippets17.t	signature.def
+../snippets17.t	rperl.def
+../snippets17.t	rperl.rperl
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def

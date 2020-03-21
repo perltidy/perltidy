@@ -4,6 +4,8 @@
 #1 rt132059.def
 #2 rt132059.rt132059
 #3 signature.def
+#4 rperl.def
+#5 rperl.rperl
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -22,6 +24,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'      => "",
+        'rperl'    => "-l=0",
         'rt132059' => "-dac",
     };
 
@@ -29,6 +32,16 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'rperl' => <<'----------',
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F { { my number $RETURN_TYPE }; ( my integer $multiplicand, my number $multiplier ) = @ARG; return $multiplicand * $multiplier; }
+
+sub empty_method { { my void::method $RETURN_TYPE }; return 2; }
+
+sub foo_subroutine_in_main { { my void $RETURN_TYPE }; print 'Howdy from foo_subroutine_in_main()...', "\n"; return; }
+----------
 
         'rt132059' => <<'----------',
 # Test deleting comments and pod
@@ -138,6 +151,56 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
     ...;
 };
 #3...........
+        },
+
+        'rperl.def' => {
+            source => "rperl",
+            params => "def",
+            expect => <<'#4...........',
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F {
+    { my number $RETURN_TYPE };
+    ( my integer $multiplicand, my number $multiplier ) = @ARG;
+    return $multiplicand * $multiplier;
+}
+
+sub empty_method {
+    { my void::method $RETURN_TYPE };
+    return 2;
+}
+
+sub foo_subroutine_in_main {
+    { my void $RETURN_TYPE };
+    print 'Howdy from foo_subroutine_in_main()...', "\n";
+    return;
+}
+#4...........
+        },
+
+        'rperl.rperl' => {
+            source => "rperl",
+            params => "rperl",
+            expect => <<'#5...........',
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F {
+    { my number $RETURN_TYPE };
+    ( my integer $multiplicand, my number $multiplier ) = @ARG;
+    return $multiplicand * $multiplier;
+}
+
+sub empty_method {
+    { my void::method $RETURN_TYPE };
+    return 2;
+}
+
+sub foo_subroutine_in_main {
+    { my void $RETURN_TYPE };
+    print 'Howdy from foo_subroutine_in_main()...', "\n";
+    return;
+}
+#5...........
         },
     };
 
