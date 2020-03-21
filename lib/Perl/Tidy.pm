@@ -85,7 +85,6 @@ use vars qw{
   @EXPORT
   $missing_file_spec
   $fh_stderr
-  $rOpts_character_encoding
   $Warn_count
 };
 
@@ -94,6 +93,7 @@ use vars qw{
 
 use Cwd;
 use Encode ();
+use Encode::Guess;
 use IO::File;
 use File::Basename;
 use File::Copy;
@@ -132,12 +132,15 @@ sub streamhandle {
     #                      (check for 'print' method for 'w' mode)
     #                      (check for 'getline' method for 'r' mode)
 
-    # An optional flag $character_encoding may be given.
-    # The current options are:
-    # 1. '' or 'none' -> the file will not use binary encoding
-    # 2. 'utf8' -> the file will be utf8 encoded
-    # 3. Any other string: use simple binmode
-    my ( $filename, $mode, $character_encoding ) = @_;
+    # An optional flag $is_encoded_data may be given, as follows:
+
+    # Case 1. Any non-empty string: encoded data is being transferred, set
+    # encoding to be utf8 for files and for stdin.
+
+    # Case 2. Not given, or an empty string: unencoded binary data is being
+    # transferred, set binary mode for files and for stdin.
+
+    my ( $filename, $mode, $is_encoded_data ) = @_;
 
     my $ref = ref($filename);
     my $New;
@@ -207,12 +210,16 @@ EOM
             $New = sub { IO::File->new( $filename, $mode ) };
         }
     }
-    $fh = $New->( $filename, $mode )
-      or Warn("Couldn't open file:$filename in mode:$mode : $!\n");
+    $fh = $New->( $filename, $mode );
+    if ( !$fh ) {
 
-    if ( $fh && $character_encoding && $character_encoding ne 'none' ) {
+        Warn("Couldn't open file:$filename in mode:$mode : $!\n");
 
-        if ( $character_encoding eq 'utf8' ) {
+    }
+    else {
+
+        # Case 1: handle encoded data
+        if ($is_encoded_data) {
             if ( ref($fh) eq 'IO::File' ) {
                 $fh->binmode(":raw:encoding(UTF-8)");
             }
@@ -221,10 +228,11 @@ EOM
             }
         }
 
-        # Patch for RT 122030
-        elsif ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
-
-        elsif ( $fh eq '-' ) { binmode STDOUT }
+        # Case 2: handle unencoded data
+        else {
+            if    ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
+            elsif ( $fh eq '-' )             { binmode STDOUT }
+        }
     }
 
     return $fh, ( $ref or $filename );
@@ -640,8 +648,6 @@ EOM
         user => '',
     );
 
-    $rOpts_character_encoding = $rOpts->{'character-encoding'};
-
     # be sure we have a valid output format
     unless ( exists $default_file_extension{ $rOpts->{'format'} } ) {
         my $formats = join ' ',
@@ -898,55 +904,102 @@ EOM
         my %saw_md5;
         my $digest_input = 0;
 
+        my $buf = '';
+        while ( my $line = $source_object->get_line() ) {
+            $buf .= $line;
+        }
+
+        # Decode the input file as requested. There are 3 cases:
+        my $encoding_in = "";
+
+        # Case 1. No input stream encoding.  This is appropriate
+        # for single-byte encodings like ascii, latin-1, etc
+        if (  !$rOpts->{'character-encoding'}
+            || $rOpts->{'character-encoding'} eq 'none' )
+        {
+
+            # nothing to do
+
+        }
+
+        # Case 2. guess input stream encoding if requested
+        elsif ( $rOpts->{'character-encoding'} =~ /^guess$/i ) {
+
+            # Use a very simple guessing strategy: if the guess is utf8, we
+            # test decoding with it and use it if successful. Otherwise, we
+            # proceed assuming the characters are encoded as single bytes.  I
+            # have found that anything more complicated may sometimes work but
+            # may also lead to the disaster of using an incorrect decoding.
+            my $buf_in = $buf;
+
+            my $decoder = guess_encoding( $buf_in, 'utf8' );
+            if ( ref($decoder) ) {
+                $encoding_in = $decoder->name;
+                if ( $encoding_in !~ /^(UTF-8|utf8)$/ ) {
+                    $encoding_in = "";
+                    $buf         = $buf_in;
+                }
+                else {
+
+                    eval { $buf = $decoder->decode($buf_in); };
+                    if ($@) {
+
+                        # Note that a guess failed, but keep going
+                        # This warning can eventually be removed
+                        Warn(
+"file: $input_file: bad guess to decode source as $encoding_in\n"
+                        );
+                        $encoding_in = "";
+                        $buf         = $buf_in;
+                    }
+                }
+            }
+        }
+
+        # Case 3. Decode with a specific encoding
+        else {
+            $encoding_in = $rOpts->{'character-encoding'};
+            eval {
+                $buf = Encode::decode( $encoding_in, $buf,
+                    Encode::FB_CROAK | Encode::LEAVE_SRC );
+            };
+            if ($@) {
+
+                # Quit if we cannot decode by the requested encoding;
+                # Something is not right.
+                Warn(
+"skipping file: $input_file: Unable to decode source as $encoding_in\n"
+                );
+                next;
+            }
+        }
+
+        # Set the encoding to be used for all further i/o: If we have
+        # decoded the data with any format, then we must continue to
+        # read and write it as encoded data, and we will normalize these
+        # operations with utf8.  If we have not decoded the data, then
+        # we must not treat it as encoded data.
+        my $is_encoded_data = $encoding_in ? 'utf8' : "";
+
+        # MD5 sum of input file is evaluated before any prefilter
+        if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
+            $digest_input = $md5_hex->($buf);
+        }
+
         # Prefilters and postfilters: The prefilter is a code reference
         # that will be applied to the source before tidying, and the
         # postfilter is a code reference to the result before outputting.
-        if (
-            $prefilter
-            || (   $rOpts_character_encoding
-                && $rOpts_character_encoding eq 'utf8' )
-            || $rOpts->{'assert-tidy'}
-            || $rOpts->{'assert-untidy'}
-            || $do_convergence_test
-          )
-        {
-            my $buf = '';
-            while ( my $line = $source_object->get_line() ) {
-                $buf .= $line;
-            }
 
-            if (   $rOpts_character_encoding
-                && $rOpts_character_encoding eq 'utf8'
-                && !utf8::is_utf8($buf) )
-            {
-                eval {
-                    $buf = Encode::decode( 'UTF-8', $buf,
-                        Encode::FB_CROAK | Encode::LEAVE_SRC );
-                };
-                if ($@) {
-                    Warn(
-"skipping file: $input_file: Unable to decode source as UTF-8\n"
-                    );
-                    next;
-                }
-            }
-
-            # MD5 sum of input file is evaluated before any prefilter
-            if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
-                $digest_input = $md5_hex->($buf);
-            }
-
-            $buf = $prefilter->($buf) if $prefilter;
+        $buf = $prefilter->($buf) if $prefilter;
 
         # starting MD5 sum for convergence test is evaluated after any prefilter
-            if ($do_convergence_test) {
-                my $digest = $md5_hex->($buf);
-                $saw_md5{$digest} = 1;
-            }
-
-            $source_object = Perl::Tidy::LineSource->new( \$buf, $rOpts,
-                $rpending_logfile_message );
+        if ($do_convergence_test) {
+            my $digest = $md5_hex->($buf);
+            $saw_md5{$digest} = 1;
         }
+
+        $source_object = Perl::Tidy::LineSource->new( \$buf, $rOpts,
+            $rpending_logfile_message );
 
         # register this file name with the Diagnostics package
         $diagnostics_object->set_input_file($input_file)
@@ -1037,12 +1090,6 @@ EOM
             $line_separator = find_input_line_ending($input_file);
         }
 
-        # Eventually all I/O may be done with binmode, but for now it is
-        # only done when a user requests a particular line separator
-        # through the -ple or -ole flags
-        my $binmode = defined($line_separator)
-          || defined($rOpts_character_encoding);
-        $binmode = 1;  ## TESTING
         $line_separator = "\n" unless defined($line_separator);
 
         my ( $sink_object, $postfilter_buffer );
@@ -1052,12 +1099,14 @@ EOM
         {
             $sink_object =
               Perl::Tidy::LineSink->new( \$postfilter_buffer, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message, $binmode );
+                $line_separator, $rOpts, $rpending_logfile_message,
+                $is_encoded_data );
         }
         else {
             $sink_object =
               Perl::Tidy::LineSink->new( $output_file, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message, $binmode );
+                $line_separator, $rOpts, $rpending_logfile_message,
+                $is_encoded_data );
         }
 
         #---------------------------------------------------------------
@@ -1070,7 +1119,7 @@ EOM
 
         my $logger_object =
           Perl::Tidy::Logger->new( $rOpts, $log_file, $warning_file,
-            $fh_stderr, $saw_extrude, $display_name );
+            $fh_stderr, $saw_extrude, $display_name, $is_encoded_data );
         write_logfile_header(
             $rOpts,        $logger_object, $config_file,
             $rraw_options, $Windows_type,  $readable_options,
@@ -1108,7 +1157,7 @@ EOM
                 $sink_object =
                   Perl::Tidy::LineSink->new( \$sink_buffer, $tee_file,
                     $line_separator, $rOpts, $rpending_logfile_message,
-                    $binmode );
+                    $is_encoded_data );
             }
             else {
                 $sink_object = $sink_object_final;
@@ -1274,7 +1323,8 @@ EOM
             $sink_object->close_output_file();
             $sink_object =
               Perl::Tidy::LineSink->new( $output_file, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message, $binmode );
+                $line_separator, $rOpts, $rpending_logfile_message,
+                $is_encoded_data );
 
             my $buf =
                 $postfilter
@@ -1353,18 +1403,17 @@ EOM
             # everything if we closed it.
             seek( $output_file, 0, 0 )
               or Die("unable to rewind a temporary file for -b option: $!\n");
+
+            # TODO: maybe use streamhandle here
             my $fout = IO::File->new("> $input_file")
               or Die(
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $!\n"
               );
-            if ($binmode) {
-                if (   $rOpts->{'character-encoding'}
-                    && $rOpts->{'character-encoding'} eq 'utf8' )
-                {
-                    binmode $fout, ":raw:encoding(UTF-8)";
-                }
-                else { binmode $fout }
+            if ($is_encoded_data) {
+                binmode $fout, ":raw:encoding(UTF-8)";
             }
+            else { binmode $fout }
+
             my $line;
             while ( $line = $output_file->getline() ) {
                 $fout->print($line);
@@ -1395,8 +1444,9 @@ EOM
                     #rt128477: avoid inconsistent owner/group and suid/sgid
                     if ( $uid_i != $uid_o || $gid_i != $gid_o ) {
 
-               # try to change owner and group to match input file if in -b mode
-               # note: chown returns number of files successfully changed
+                        # try to change owner and group to match input file if
+                        # in -b mode.  Note: chown returns number of files
+                        # successfully changed.
                         if ( $in_place_modify
                             && chown( $uid_i, $gid_i, $output_file ) )
                         {
@@ -2027,10 +2077,7 @@ sub generate_options {
     %option_range = (
         'format'             => [ 'tidy', 'html', 'user' ],
         'output-line-ending' => [ 'dos',  'win',  'mac', 'unix' ],
-        'character-encoding' => [ 'none', 'utf8' ],
-
-        'space-backslash-quote' => [ 0, 2 ],
-
+        'space-backslash-quote'    => [ 0, 2 ],
         'block-brace-tightness'    => [ 0, 2 ],
         'brace-tightness'          => [ 0, 2 ],
         'paren-tightness'          => [ 0, 2 ],
@@ -2207,8 +2254,9 @@ sub generate_options {
         'cb'             => [qw(cuddled-else)],
         'cuddled-blocks' => [qw(cuddled-else)],
 
-        'utf8' => [qw(character-encoding=utf8)],
-        'UTF8' => [qw(character-encoding=utf8)],
+        'utf8'  => [qw(character-encoding=utf8)],
+        'UTF8'  => [qw(character-encoding=utf8)],
+        'guess' => [qw(character-encoding=guess)],
 
         'swallow-optional-blank-lines'   => [qw(kbl=0)],
         'noswallow-optional-blank-lines' => [qw(kbl=1)],

@@ -12,7 +12,7 @@ our $VERSION = '20200110.01';
 sub new {
 
     my ( $class, $rOpts, $log_file, $warning_file, $fh_stderr, $saw_extrude,
-        $display_name )
+        $display_name, $is_encoded_data )
       = @_;
 
     my $fh_warnings = $rOpts->{'standard-error-output'} ? $fh_stderr : undef;
@@ -50,6 +50,7 @@ sub new {
         _warning_file                  => $warning_file,
         _warning_count                 => 0,
         _complaint_count               => 0,
+        _is_encoded_data               => $is_encoded_data,
         _saw_code_bug      => -1,                   # -1=no 0=maybe 1=for sure
         _saw_brace_error   => 0,
         _saw_extrude       => $saw_extrude,
@@ -311,13 +312,13 @@ sub warning {
     my $rOpts = $self->{_rOpts};
     unless ( $rOpts->{'quiet'} ) {
 
-        my $warning_count = $self->{_warning_count};
-        my $fh_warnings   = $self->{_fh_warnings};
+        my $warning_count   = $self->{_warning_count};
+        my $fh_warnings     = $self->{_fh_warnings};
+        my $is_encoded_data = $self->{_is_encoded_data};
         if ( !$fh_warnings ) {
             my $warning_file = $self->{_warning_file};
             ( $fh_warnings, my $filename ) =
-              Perl::Tidy::streamhandle( $warning_file, 'w',
-                $rOpts->{'character-encoding'} );
+              Perl::Tidy::streamhandle( $warning_file, 'w', $is_encoded_data );
             $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
             Perl::Tidy::Warn("## Please see file $filename\n")
               unless ref($warning_file);
@@ -501,9 +502,10 @@ sub finish {
     $self->ask_user_for_bug_report( $infile_syntax_ok, $formatter );
 
     if ($save_logfile) {
-        my $log_file = $self->{_log_file};
-        my ( $fh, $filename ) = Perl::Tidy::streamhandle( $log_file, 'w',
-            $rOpts->{'character-encoding'} );
+        my $log_file        = $self->{_log_file};
+        my $is_encoded_data = $self->{_is_encoded_data};
+        my ( $fh, $filename ) =
+          Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );
         if ($fh) {
             my $routput_array = $self->{_output_array};
             foreach ( @{$routput_array} ) { $fh->print($_) }
@@ -515,3 +517,4 @@ sub finish {
     return;
 }
 1;
+

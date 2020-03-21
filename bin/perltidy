@@ -587,21 +587,46 @@ this flag is in effect.
 
 =item B<-enc=s>,  B<--character-encoding=s>
 
-where B<s>=B<none> or B<utf8>.  This flag tells perltidy the character encoding
-of both the input and output character streams.  The value B<utf8> causes the
-stream to be read and written as UTF-8.  The value B<none> causes the stream to
-be processed without special encoding assumptions.  At present there is no
-automatic detection of character encoding (even if there is a C<'use utf8'>
-statement in your code) so this flag must be set for streams encoded in UTF-8.
-Incorrectly setting this parameter can cause data corruption, so please
-carefully check the output.
+This flag indicates the character encoding, if any, of the input data stream.
+Perltidy does not look for the encoding directives in the soure stream, such
+as B<use utf8>, and instead relies on this flag to determine the encoding.
+(It has to be this way because perltidy is often working on snippets of code
+rather than a complete file).
 
-The default is B<none>.  
+The possible values for B<s> are (1) the name of an encoding recognized by the
+Encode.pm module, (2) B<none> if no encoding is used, or (3) <guess> if
+perltidy should guess.  
 
-The abbreviations B<-utf8> or B<-UTF8> are equivalent to B<-enc=utf8>.
-So to process a file named B<file.pl> which is encoded in UTF-8 you can use:
+For example, the value B<utf8> causes the stream to be read and written as
+UTF-8.  If the input stream cannot be decoded with a specified encoding then
+processing is not done.  
+
+The value B<none> causes the stream to be processed without special encoding
+assumptions.  This is appropriate for files which are written in single-byte
+character encodings such as latin-1.  
+
+The value B<guess> tells perltidy to guess between either utf8 encoding or no
+encoding (meaning one character per byte).  The guess uses the Encode::Guess
+module and this restricted range of guesses covers the most common cases.
+Testing showed that considering any greater number of encodings as guess
+suspects is too risky.
+
+The current default is B<none>.  
+
+The abbreviations B<-utf8> or B<-UTF8> are equivalent to B<-enc=utf8>, and the
+abbreviation B<-guess> is equivalent to <-enc=guess>.  So to process a file
+named B<file.pl> which is encoded in UTF-8 you can use:
 
    perltidy -utf8 file.pl
+
+or
+   perltidy -guess file.pl
+
+To process a file in B<euc-jp> you could use
+   
+   perltidy -enc=euc-jp file.pl
+
+A perltidy output file is unencoded if the input file is unencoded, and otherwise it is encoded as B<utf8>, even if the input encoding was not B<utf8>.
 
 =item B<-ole=s>,  B<--output-line-ending=s>
 

@@ -13,7 +13,7 @@ our $VERSION = '20200110.01';
 sub new {
 
     my ( $class, $output_file, $tee_file, $line_separator, $rOpts,
-        $rpending_logfile_message, $binmode )
+        $rpending_logfile_message, $is_encoded_data )
       = @_;
     my $fh     = undef;
     my $fh_tee = undef;
@@ -21,26 +21,10 @@ sub new {
     my $output_file_open = 0;
 
     if ( $rOpts->{'format'} eq 'tidy' ) {
-        ( $fh, $output_file ) = Perl::Tidy::streamhandle( $output_file, 'w' );
+        ( $fh, $output_file ) =
+          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
         unless ($fh) { Perl::Tidy::Die("Cannot write to output stream\n"); }
         $output_file_open = 1;
-        if ($binmode) {
-            if (   $rOpts->{'character-encoding'}
-                && $rOpts->{'character-encoding'} eq 'utf8' )
-            {
-                if ( ref($fh) eq 'IO::File' ) {
-                    $fh->binmode(":raw:encoding(UTF-8)");
-                }
-                elsif ( $output_file eq '-' ) {
-                    binmode STDOUT, ":raw:encoding(UTF-8)";
-                }
-            }
-
-            # Patch for RT 122030
-            elsif ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
-
-            elsif ( $output_file eq '-' ) { binmode STDOUT }
-        }
     }
 
     # in order to check output syntax when standard output is used,
@@ -68,7 +52,7 @@ EOM
         _tee_file         => $tee_file,
         _tee_file_opened  => 0,
         _line_separator   => $line_separator,
-        _binmode          => $binmode,
+        _is_encoded_data  => $is_encoded_data,
     }, $class;
 }
 
@@ -104,12 +88,16 @@ sub tee_off {
 }
 
 sub really_open_tee_file {
-    my $self     = shift;
-    my $tee_file = $self->{_tee_file};
-    my $fh_tee;
-    $fh_tee = IO::File->new(">$tee_file")
-      or Perl::Tidy::Die("couldn't open TEE file $tee_file: $!\n");
-    binmode $fh_tee if $self->{_binmode};
+    my $self            = shift;
+    my $tee_file        = $self->{_tee_file};
+    my $is_encoded_data = $self->{_is_encoded_data};
+
+    my ( $fh_tee, $filename ) =
+      Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
+    if ( !$fh_tee ) {
+        Perl::Tidy::Die("couldn't open TEE file $tee_file: $!\n");
+    }
+
     $self->{_tee_file_opened} = 1;
     $self->{_fh_tee}          = $fh_tee;
     return;

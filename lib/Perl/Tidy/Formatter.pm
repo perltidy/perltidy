@@ -6007,13 +6007,6 @@ EOM
         $rOpts->{'long-block-line-count'} = 1000000;
     }
 
-    my $enc = $rOpts->{'character-encoding'};
-    if ( $enc && $enc !~ /^(none|utf8)$/i ) {
-        Die(<<EOM);
-Unrecognized character-encoding '$enc'; expecting one of: (none, utf8)
-EOM
-    }
-
     my $ole = $rOpts->{'output-line-ending'};
     if ($ole) {
         my %endings = (

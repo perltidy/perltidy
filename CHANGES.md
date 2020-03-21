@@ -2,6 +2,12 @@
 
 ## 2020 01 10.01
 
+    - Added --character-encoding=guess or -guess to have perltidy guess
+      if a file is encoded as -utf8 or some older single-byte encoding. This
+      is useful when processing a mixture of file types, such as utf8 and 
+      latin-1.  Also, specific encodings of input files other than utf8 may
+      now be given, for example --character-encoding=euc-jp.
+
     - Fix for git#22, Preserve function signature on a single line. An
       unwanted line break was being introduced when a closing signature paren
       followed a closing do brace.
