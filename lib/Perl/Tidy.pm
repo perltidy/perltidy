@@ -909,83 +909,83 @@ EOM
             $buf .= $line;
         }
 
-        # Decode the input file as requested. There are 3 cases:
-        my $encoding_in = "";
+        # Decode the input stream if necessary requested
+        my $encoding_in              = "";
+        my $rOpts_character_encoding = $rOpts->{'character-encoding'};
 
-        # Case 1. No input stream encoding.  This is appropriate
+        # Case 1. See if we already have an encoded string. In that
+        # case, we have to ignore any encoding flag.
+        if ( utf8::is_utf8($buf) ) {
+            $encoding_in = "utf8";
+        }
+
+        # Case 2. No input stream encoding requested.  This is appropriate
         # for single-byte encodings like ascii, latin-1, etc
-        if (  !$rOpts->{'character-encoding'}
-            || $rOpts->{'character-encoding'} eq 'none' )
+        elsif ( !$rOpts_character_encoding
+            || $rOpts_character_encoding eq 'none' )
         {
 
             # nothing to do
-
         }
 
-        # Case 2. guess input stream encoding if requested
-        elsif ( $rOpts->{'character-encoding'} =~ /^guess$/i ) {
+        # Case 3. guess input stream encoding if requested
+        elsif ( $rOpts_character_encoding =~ /^guess$/i ) {
 
-            # First check if the module has been passed an encoded string
-            if ( utf8::is_utf8($buf) ) {
-                $encoding_in = "utf8";
-            }
+            # The guessing strategy is simple: use Encode::Guess to guess
+            # an encoding.  If and only if the guess is utf8, try decoding and
+            # use it if successful.  Otherwise, we proceed assuming the
+            # characters are encoded as single bytes (same as if 'none' had
+            # been specified as the encoding).
 
-            else {
+            # In testing I have found that including additional guess 'suspect'
+            # encodings sometimes works but can sometimes lead to disaster by
+            # using an incorrect decoding.  The user can always specify a
+            # specific input encoding.
+            my $buf_in = $buf;
 
-                # Use a very simple guessing strategy: if the guess is utf8,
-                # we test decoding with it and use it if successful.
-                # Otherwise, we proceed assuming the characters are encoded as
-                # single bytes.  I have found that anything more complicated
-                # may sometimes work but may also lead to the disaster of
-                # using an incorrect decoding.
-                my $buf_in = $buf;
+            my $decoder = guess_encoding( $buf_in, 'utf8' );
+            if ( ref($decoder) ) {
+                $encoding_in = $decoder->name;
+                if ( $encoding_in !~ /^(UTF-8|utf8)$/ ) {
+                    $encoding_in = "";
+                    $buf         = $buf_in;
+                }
+                else {
 
-                my $decoder = guess_encoding( $buf_in, 'utf8' );
-                if ( ref($decoder) ) {
-                    $encoding_in = $decoder->name;
-                    if ( $encoding_in !~ /^(UTF-8|utf8)$/ ) {
+                    eval { $buf = $decoder->decode($buf_in); };
+                    if ($@) {
+
+                        # Note that a guess failed, but keep going
+                        # This warning can eventually be removed
+                        Warn(
+"file: $input_file: bad guess to decode source as $encoding_in\n"
+                        );
                         $encoding_in = "";
                         $buf         = $buf_in;
-                    }
-                    else {
-
-                        eval { $buf = $decoder->decode($buf_in); };
-                        if ($@) {
-
-                            # Note that a guess failed, but keep going
-                            # This warning can eventually be removed
-                            Warn(
-"file: $input_file: bad guess to decode source as $encoding_in\n"
-                            );
-                            $encoding_in = "";
-                            $buf         = $buf_in;
-                        }
                     }
                 }
             }
         }
 
-        # Case 3. Decode with a specific encoding
+        # Case 4. Decode with a specific encoding
         else {
-            $encoding_in = $rOpts->{'character-encoding'};
+            $encoding_in = $rOpts_character_encoding;
 
             # a string or string ref passed to by a module call may or
             # may not have already been decoded, so we have to be careful
             # not to try to do it again.
-            if ( !utf8::is_utf8($buf) ) {
-                eval {
-                    $buf = Encode::decode( $encoding_in, $buf,
-                        Encode::FB_CROAK | Encode::LEAVE_SRC );
-                };
-                if ($@) {
+            eval {
+                $buf = Encode::decode( $encoding_in, $buf,
+                    Encode::FB_CROAK | Encode::LEAVE_SRC );
+            };
+            if ($@) {
 
-                    # Quit if we cannot decode by the requested encoding;
-                    # Something is not right.
-                    Warn(
+                # Quit if we cannot decode by the requested encoding;
+                # Something is not right.
+                Warn(
 "skipping file: $input_file: Unable to decode source as $encoding_in\n"
-                    );
-                    next;
-                }
+                );
+                next;
             }
         }
 
