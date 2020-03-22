@@ -2195,7 +2195,7 @@ sub generate_options {
       nostatic-side-comments
       notabs
       nowarning-output
-      character-encoding=none
+      character-encoding=guess
       one-line-block-semicolons=1
       one-line-block-nesting=0
       outdent-labels

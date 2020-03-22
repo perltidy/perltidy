@@ -611,7 +611,7 @@ module and this restricted range of guesses covers the most common cases.
 Testing showed that considering any greater number of encodings as guess
 suspects is too risky.
 
-The current default is B<none>.  
+The current default is B<guess>.  
 
 The abbreviations B<-utf8> or B<-UTF8> are equivalent to B<-enc=utf8>, and the
 abbreviation B<-guess> is equivalent to <-enc=guess>.  So to process a file
