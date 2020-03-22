@@ -992,6 +992,11 @@ EOM
         # we must not treat it as encoded data.
         my $is_encoded_data = $encoding_in ? 'utf8' : "";
 
+        # Delete any Byte Order Mark (BOM), which can cause trouble
+        if ($is_encoded_data) {
+	    $buf =~ s/^\x{FEFF}//;
+        }
+
         # MD5 sum of input file is evaluated before any prefilter
         if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
             $digest_input = $md5_hex->($buf);
