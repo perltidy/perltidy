@@ -1153,7 +1153,8 @@ EOM
         my $debugger_object = undef;
         if ( $rOpts->{DEBUG} ) {
             $debugger_object =
-              Perl::Tidy::Debugger->new( $fileroot . $dot . "DEBUG" );
+              Perl::Tidy::Debugger->new( $fileroot . $dot . "DEBUG",
+                $is_encoded_data );
         }
 
         #---------------------------------------------------------------

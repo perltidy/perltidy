@@ -11,21 +11,24 @@ our $VERSION = '20200110.01';
 
 sub new {
 
-    my ( $class, $filename ) = @_;
+    my ( $class, $filename, $is_encoded_data ) = @_;
 
     return bless {
         _debug_file        => $filename,
         _debug_file_opened => 0,
         _fh                => undef,
+        _is_encoded_data   => $is_encoded_data,
     }, $class;
 }
 
 sub really_open_debug_file {
 
-    my $self       = shift;
-    my $debug_file = $self->{_debug_file};
-    my $fh;
-    unless ( $fh = IO::File->new("> $debug_file") ) {
+    my $self            = shift;
+    my $debug_file      = $self->{_debug_file};
+    my $is_encoded_data = $self->{_is_encoded_data};
+    my ( $fh, $filename ) =
+      Perl::Tidy::streamhandle( $debug_file, 'w', $is_encoded_data );
+    if ( !$fh ) {
         Perl::Tidy::Warn("can't open $debug_file: $!\n");
     }
     $self->{_debug_file_opened} = 1;
@@ -122,4 +125,3 @@ sub write_debug_entry {
     return;
 }
 1;
-
