@@ -2273,7 +2273,8 @@ sub prepare_for_a_new_file {
                 # because we also have to be sure that previous token is
                 # a type character ($,@,%).
                 if ( $last_nonblank_token eq '{'
-                    && ( $next_tok =~ /^[A-Za-z_]/ ) )
+                    && ( $next_tok !~ /^\d/ ) 
+                    && ( $next_tok =~ /^\w/ ) )
                 {
 
                     if ( $next_tok eq 'W' ) {
@@ -4279,7 +4280,7 @@ sub operator_expected {
     if ( $last_nonblank_type eq 'Z' ) {
 
         # angle.t
-        if ( $last_nonblank_token =~ /^[A-Za-z_]/ ) {
+        if ( $last_nonblank_token =~ /^\w/ ) {
             $op_expected = UNKNOWN;
         }
 
