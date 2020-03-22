@@ -5790,7 +5790,7 @@ sub scan_identifier_do {
     my $in_prototype_or_signature = $container_type =~ /^sub/;
 
     # these flags will be used to help figure out the type:
-    my $saw_alpha = ( $tok =~ /^[A-Za-z_]/ );
+    my $saw_alpha = ( $tok =~ /^\w/ );
     my $saw_type;
 
     # allow old package separator (') except in 'use' statement
@@ -5826,7 +5826,7 @@ sub scan_identifier_do {
         elsif ( $tok eq '::' ) {
             $id_scan_state = 'A';
         }
-        elsif ( $tok =~ /^[A-Za-z_]/ ) {
+        elsif ( $tok =~ /^\w/ ) {
             $id_scan_state = ':';
         }
         elsif ( $tok eq '->' ) {
@@ -5877,7 +5877,7 @@ sub scan_identifier_do {
             elsif ( ( $tok =~ /^[\@\%\&\*]$/ ) && $identifier =~ /\-\>$/ ) {
                 $identifier .= $tok;
             }
-            elsif ( $tok =~ /^[A-Za-z_]/ ) {    # alphanumeric ..
+            elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
                 $saw_alpha     = 1;
                 $id_scan_state = ':';           # now need ::
                 $identifier .= $tok;
@@ -5894,11 +5894,6 @@ sub scan_identifier_do {
                 #  sub howdy::123::bubba{ print "bubba $54321!\n" }
                 #  howdy::123::bubba();
                 #
-            }
-            elsif ( $tok =~ /^[0-9]/ ) {    # numeric
-                $saw_alpha     = 1;
-                $id_scan_state = ':';       # now need ::
-                $identifier .= $tok;
             }
             elsif ( $tok eq '::' ) {
                 $id_scan_state = 'A';
@@ -6053,18 +6048,13 @@ sub scan_identifier_do {
         }
         elsif ( $id_scan_state eq '&' ) {    # starting sub call?
 
-            if ( $tok =~ /^[\$A-Za-z_]/ ) {    # alphanumeric ..
+            if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
                 $id_scan_state = ':';          # now need ::
                 $saw_alpha     = 1;
                 $identifier .= $tok;
             }
             elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
                 $id_scan_state = ':';                 # now need ::
-                $saw_alpha     = 1;
-                $identifier .= $tok;
-            }
-            elsif ( $tok =~ /^[0-9]/ ) {    # numeric..see comments above
-                $id_scan_state = ':';       # now need ::
                 $saw_alpha     = 1;
                 $identifier .= $tok;
             }
@@ -6109,17 +6099,12 @@ sub scan_identifier_do {
         }
         elsif ( $id_scan_state eq 'A' ) {    # looking for alpha (after ::)
 
-            if ( $tok =~ /^[A-Za-z_]/ ) {    # found it
+            if ( $tok =~ /^\w/ ) {    # found it
                 $identifier .= $tok;
                 $id_scan_state = ':';        # now need ::
                 $saw_alpha     = 1;
             }
             elsif ( $tok eq "'" && $allow_tick ) {
-                $identifier .= $tok;
-                $id_scan_state = ':';        # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok =~ /^[0-9]/ ) {     # numeric..see comments above
                 $identifier .= $tok;
                 $id_scan_state = ':';        # now need ::
                 $saw_alpha     = 1;
@@ -6144,12 +6129,8 @@ sub scan_identifier_do {
                 $identifier .= $tok;
                 $id_scan_state = 'A';        # now require alpha
             }
-            elsif ( $tok =~ /^[A-Za-z_]/ ) {    # more alphanumeric is ok here
-                $identifier .= $tok;
-                $id_scan_state = ':';           # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok =~ /^[0-9]/ ) {        # numeric..see comments above
+            ##elsif ( $tok =~ /^[A-Za-z_]/ ) {    # more alphanumeric is ok here
+            elsif ( $tok =~ /^\w/ ) {    # more alphanumeric is ok here
                 $identifier .= $tok;
                 $id_scan_state = ':';           # now need ::
                 $saw_alpha     = 1;
