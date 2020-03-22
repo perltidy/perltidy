@@ -6719,7 +6719,13 @@ EOM
         #
         # Note: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
+
+	# Uses these global hashes:
+        # $is_sort_grep_map,  $is_trigraph, $is_for_foreach
+
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
+
+        my $tokenr_is_bareword = ( $tokenr =~ /^\w/ && $tokenr !~ /^\d/ );
 
         my $result =
 
@@ -6738,13 +6744,15 @@ EOM
           # do not combine a number with a concatenation dot
           # example: pom.caputo:
           # $vt100_compatible ? "\e[0;0H" : ('-' x 78 . "\n");
-          || ( ( $typel eq 'n' ) && ( $tokenr eq '.' ) )
-          || ( ( $typer eq 'n' ) && ( $tokenl eq '.' ) )
+          || ( $typel eq 'n' && $tokenr eq '.' )
+          || ( $typer eq 'n' && $tokenl eq '.' )
 
           # do not join a minus with a bare word, because you might form
           # a file test operator.  Example from Complex.pm:
           # if (CORE::abs($z - i) < $eps); "z-i" would be taken as a file test.
-          || ( ( $tokenl eq '-' ) && ( $tokenr =~ /^[_A-Za-z]$/ ) )
+          || ( $tokenl eq '-'
+            && $tokenr_is_bareword
+            && length($tokenr) == 1 )
 
           # do not join a bare word with a minus, like between 'Send' and
           # '-recipients' here <<snippets/space3.in>>
@@ -6753,7 +6761,7 @@ EOM
           #     -data => $data;
           # This is the safest thing to do. If we had the token to the right of
           # the minus we could do a better check.
-          || ( ( $tokenr eq '-' ) && ( $typel eq 'w' ) )
+          || ( $tokenr eq '-' && $typel eq 'w' )
 
           # and something like this could become ambiguous without space
           # after the '-':
@@ -6761,8 +6769,9 @@ EOM
           #   $a = $b - III;
           # and even this:
           #   $a = - III;
-          || ( ( $tokenl eq '-' )
-            && ( $typer =~ /^[wC]$/ && $tokenr =~ /^[_A-Za-z]/ ) )
+          || ( $tokenl eq '-'
+            && $typer =~ /^[wC]$/
+            && $tokenr_is_bareword )
 
           # '= -' should not become =- or you will get a warning
           # about reversed -=
@@ -6770,12 +6779,13 @@ EOM
 
           # keep a space between a quote and a bareword to prevent the
           # bareword from becoming a quote modifier.
-          || ( ( $typel eq 'Q' ) && ( $tokenr =~ /^[a-zA-Z_]/ ) )
+          || ( $typel eq 'Q' && $tokenr_is_bareword )
 
           # keep a space between a token ending in '$' and any word;
           # this caused trouble:  "die @$ if $@"
-          || ( ( $typel eq 'i' && $tokenl =~ /\$$/ )
-            && ( $tokenr =~ /^[a-zA-Z_]/ ) )
+          || ( $typel eq 'i'
+            && $tokenl =~ /\$$/
+            && $tokenr_is_bareword )
 
           # perl is very fussy about spaces before <<
           || ( $tokenr =~ /^\<\</ )
@@ -6791,7 +6801,7 @@ EOM
 
           # don't combine $$ or $# with any alphanumeric
           # (testfile mangle.t with --mangle)
-          || ( ( $tokenl =~ /^\$[\$\#]$/ ) && ( $tokenr =~ /^\w/ ) )
+          || ( $tokenl =~ /^\$[\$\#]$/ && $tokenr =~ /^\w/ )
 
           # retain any space after possible filehandle
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
@@ -6816,8 +6826,8 @@ EOM
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          || ( ( $typer =~ /^(pp|mm)$/ )     && ( $tokenl !~ /^[\;\{\(\[]/ ) )
-          || ( ( $typel =~ /^(\+\+|\-\-)$/ ) && ( $tokenr !~ /^[\;\}\)\]]/ ) )
+          || ( $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/ )
+          || ( $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/ )
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -6835,7 +6845,7 @@ EOM
 
           # don't stick numbers next to left parens, as in:
           #use Mail::Internet 1.28 (); (see Entity.pm, Head.pm, Test.pm)
-          || ( ( $typel eq 'n' ) && ( $tokenr eq '(' ) )
+          || ( $typel eq 'n' && $tokenr eq '(' )
 
           # We must be sure that a space between a ? and a quoted string
           # remains if the space before the ? remains.  [Loca.pm, lockarea]
@@ -6850,7 +6860,7 @@ EOM
           # it may turn into a function evaluation, like here
           # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
           #    $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
-          || ( ( $typel eq '&' ) && ( $tokenr =~ /^[a-zA-Z_]/ ) )
+          || ( $typel eq '&' && $tokenr_is_bareword )
 
           # space stacked labels  (TODO: check if really necessary)
           || ( $typel eq 'J' && $typer eq 'J' )

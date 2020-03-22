@@ -6129,7 +6129,6 @@ sub scan_identifier_do {
                 $identifier .= $tok;
                 $id_scan_state = 'A';        # now require alpha
             }
-            ##elsif ( $tok =~ /^[A-Za-z_]/ ) {    # more alphanumeric is ok here
             elsif ( $tok =~ /^\w/ ) {    # more alphanumeric is ok here
                 $identifier .= $tok;
                 $id_scan_state = ':';           # now need ::
