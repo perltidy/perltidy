@@ -1421,15 +1421,13 @@ EOM
             seek( $output_file, 0, 0 )
               or Die("unable to rewind a temporary file for -b option: $!\n");
 
-            # TODO: maybe use streamhandle here
-            my $fout = IO::File->new("> $input_file")
-              or Die(
+            my ( $fout, $iname ) =
+              Perl::Tidy::streamhandle( $input_file, 'w', $is_encoded_data );
+            if ( !$fout ) {
+                Die(
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $!\n"
-              );
-            if ($is_encoded_data) {
-                binmode $fout, ":raw:encoding(UTF-8)";
+                );
             }
-            else { binmode $fout }
 
             my $line;
             while ( $line = $output_file->getline() ) {
