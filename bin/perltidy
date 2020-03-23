@@ -590,8 +590,8 @@ this flag is in effect.
 This flag indicates the character encoding, if any, of the input data stream.
 Perltidy does not look for the encoding directives in the soure stream, such
 as B<use utf8>, and instead relies on this flag to determine the encoding.
-(It has to be this way because perltidy is often working on snippets of code
-rather than a complete file).
+(Note that perltidy often works on snippets of code rather than complete files
+so it cannot rely on B<use utf8> directives).
 
 The possible values for B<s> are (1) the name of an encoding recognized by the
 Encode.pm module, (2) B<none> if no encoding is used, or (3) <guess> if

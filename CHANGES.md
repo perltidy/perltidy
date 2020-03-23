@@ -8,6 +8,13 @@
       latin-1.  Also, specific encodings of input files other than utf8 may
       now be given, for example --character-encoding=euc-jp.
 
+      The default encoding has been set to be 'guess' instead of 'none'. I
+      do not like to change defaults, but this seems like the best 
+      default choice, since it should make perltidy
+      work properly with both older latin-1 and newer utf8 files.  I have done
+      extensive testing and haven't found any problems, but I will open
+      an issue at git for comments in case this causes problems.
+
     - Fix for git#22, Preserve function signature on a single line. An
       unwanted line break was being introduced when a closing signature paren
       followed a closing do brace.
