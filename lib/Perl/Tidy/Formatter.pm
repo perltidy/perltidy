@@ -13252,17 +13252,17 @@ sub pad_array_to_go {
                 my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiU]$/;
 
                 set_comma_breakpoints_do(
-                    $dd,
-                    $opening_structure_index_stack[$dd],
-                    $i,
-                    $item_count_stack[$dd],
-                    $identifier_count_stack[$dd],
-                    $comma_index[$dd],
-                    $next_nonblank_type,
-                    $container_type[$dd],
-                    $interrupted_list[$dd],
-                    \$do_not_break_apart,
-                    $must_break_open,
+                    depth               => $dd,
+                    i_opening_paren     => $opening_structure_index_stack[$dd],
+                    i_closing_paren     => $i,
+                    item_count          => $item_count_stack[$dd],
+                    identifier_count    => $identifier_count_stack[$dd],
+                    rcomma_index        => $comma_index[$dd],
+                    next_nonblank_type  => $next_nonblank_type,
+                    list_type           => $container_type[$dd],
+                    interrupted         => $interrupted_list[$dd],
+                    rdo_not_break_apart => \$do_not_break_apart,
+                    must_break_open     => $must_break_open,
                 );
                 $bp_count           = $forced_breakpoint_count - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
@@ -14432,12 +14432,18 @@ sub find_token_starting_list {
         # Given a list with some commas, set breakpoints at some of the
         # commas, if necessary, to make it easy to read.  This list is
         # an example:
-        my (
-            $depth,               $i_opening_paren,  $i_closing_paren,
-            $item_count,          $identifier_count, $rcomma_index,
-            $next_nonblank_type,  $list_type,        $interrupted,
-            $rdo_not_break_apart, $must_break_open,
-        ) = @_;
+        my %call_hash           = @_;
+        my $depth               = $call_hash{depth};
+        my $i_opening_paren     = $call_hash{i_opening_paren};
+        my $i_closing_paren     = $call_hash{i_closing_paren};
+        my $item_count          = $call_hash{item_count};
+        my $identifier_count    = $call_hash{identifier_count};
+        my $rcomma_index        = $call_hash{rcomma_index};
+        my $next_nonblank_type  = $call_hash{next_nonblank_type};
+        my $list_type           = $call_hash{list_type};
+        my $interrupted         = $call_hash{interrupted};
+        my $rdo_not_break_apart = $call_hash{rdo_not_break_apart};
+        my $must_break_open     = $call_hash{must_break_open};
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );
