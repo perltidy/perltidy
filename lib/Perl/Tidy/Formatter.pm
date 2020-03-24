@@ -14434,18 +14434,20 @@ sub find_token_starting_list {
 
         # Given a list with some commas, set breakpoints at some of the
         # commas, if necessary, to make it easy to read.
-        my %call_hash           = @_;
-        my $depth               = $call_hash{depth};
-        my $i_opening_paren     = $call_hash{i_opening_paren};
-        my $i_closing_paren     = $call_hash{i_closing_paren};
-        my $item_count          = $call_hash{item_count};
-        my $identifier_count    = $call_hash{identifier_count};
-        my $rcomma_index        = $call_hash{rcomma_index};
-        my $next_nonblank_type  = $call_hash{next_nonblank_type};
-        my $list_type           = $call_hash{list_type};
-        my $interrupted         = $call_hash{interrupted};
-        my $rdo_not_break_apart = $call_hash{rdo_not_break_apart};
-        my $must_break_open     = $call_hash{must_break_open};
+
+        my %input_hash = @_;
+
+        my $depth               = $input_hash{depth};
+        my $i_opening_paren     = $input_hash{i_opening_paren};
+        my $i_closing_paren     = $input_hash{i_closing_paren};
+        my $item_count          = $input_hash{item_count};
+        my $identifier_count    = $input_hash{identifier_count};
+        my $rcomma_index        = $input_hash{rcomma_index};
+        my $next_nonblank_type  = $input_hash{next_nonblank_type};
+        my $list_type           = $input_hash{list_type};
+        my $interrupted         = $input_hash{interrupted};
+        my $rdo_not_break_apart = $input_hash{rdo_not_break_apart};
+        my $must_break_open     = $input_hash{must_break_open};
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );

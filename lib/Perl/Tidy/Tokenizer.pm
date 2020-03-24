@@ -6289,16 +6289,17 @@ sub scan_identifier_do {
         # $in_attribute_list, %saw_function_definition,
         # $statement_type
 
-        my (%call_hash)     = @_;
-        my $input_line      = $call_hash{input_line};
-        my $i               = $call_hash{i};
-        my $i_beg           = $call_hash{i_beg};
-        my $tok             = $call_hash{tok};
-        my $type            = $call_hash{type};
-        my $rtokens         = $call_hash{rtokens};
-        my $rtoken_map      = $call_hash{rtoken_map};
-        my $id_scan_state   = $call_hash{id_scan_state};
-        my $max_token_index = $call_hash{max_token_index};
+        my %input_hash = @_;
+
+        my $input_line      = $input_hash{input_line};
+        my $i               = $input_hash{i};
+        my $i_beg           = $input_hash{i_beg};
+        my $tok             = $input_hash{tok};
+        my $type            = $input_hash{type};
+        my $rtokens         = $input_hash{rtokens};
+        my $rtoken_map      = $input_hash{rtoken_map};
+        my $id_scan_state   = $input_hash{id_scan_state};
+        my $max_token_index = $input_hash{max_token_index};
 
         $id_scan_state = "";    # normally we get everything in one call
         my $subname = undef;
