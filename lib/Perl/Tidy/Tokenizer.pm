@@ -5614,9 +5614,15 @@ sub scan_id_do {
 
         if ( $is_sub{$id_scan_state} ) {
             ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
-                $input_line, $i,             $i_beg,
-                $tok,        $type,          $rtokens,
-                $rtoken_map, $id_scan_state, $max_token_index
+                input_line      => $input_line,
+                i               => $i,
+                i_beg           => $i_beg,
+                tok             => $tok,
+                type            => $type,
+                rtokens         => $rtokens,
+                rtoken_map      => $rtoken_map,
+                id_scan_state   => $id_scan_state,
+                max_token_index => $max_token_index
             );
         }
 
@@ -6283,11 +6289,17 @@ sub scan_identifier_do {
         # $in_attribute_list, %saw_function_definition,
         # $statement_type
 
-        my (
-            $input_line, $i,             $i_beg,
-            $tok,        $type,          $rtokens,
-            $rtoken_map, $id_scan_state, $max_token_index
-        ) = @_;
+        my (%call_hash)     = @_;
+        my $input_line      = $call_hash{input_line};
+        my $i               = $call_hash{i};
+        my $i_beg           = $call_hash{i_beg};
+        my $tok             = $call_hash{tok};
+        my $type            = $call_hash{type};
+        my $rtokens         = $call_hash{rtokens};
+        my $rtoken_map      = $call_hash{rtoken_map};
+        my $id_scan_state   = $call_hash{id_scan_state};
+        my $max_token_index = $call_hash{max_token_index};
+
         $id_scan_state = "";    # normally we get everything in one call
         my $subname = undef;
         my $package = undef;
