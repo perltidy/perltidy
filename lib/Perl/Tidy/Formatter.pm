@@ -245,40 +245,15 @@ use vars qw{
   $keyword_group_list_pattern
   $keyword_group_list_comment_pattern
 
-  $rOpts_add_newlines
-  $rOpts_add_whitespace
-  $rOpts_block_brace_tightness
-  $rOpts_block_brace_vertical_tightness
   $rOpts_brace_left_and_indent
-  $rOpts_comma_arrow_breakpoints
-  $rOpts_break_at_old_keyword_breakpoints
-  $rOpts_break_at_old_comma_breakpoints
-  $rOpts_break_at_old_logical_breakpoints
-  $rOpts_break_at_old_method_breakpoints
-  $rOpts_break_at_old_ternary_breakpoints
-  $rOpts_break_at_old_attribute_breakpoints
-  $rOpts_closing_side_comment_else_flag
   $rOpts_closing_side_comment_maximum_text
   $rOpts_continuation_indentation
-  $rOpts_delete_old_whitespace
-  $rOpts_fuzzy_line_length
+  $rOpts_ignore_side_comment_lengths
   $rOpts_indent_columns
   $rOpts_line_up_parentheses
-  $rOpts_maximum_fields_per_table
   $rOpts_maximum_line_length
   $rOpts_variable_maximum_line_length
-  $rOpts_short_concatenation_item_length
-  $rOpts_keep_old_blank_lines
-  $rOpts_ignore_old_breakpoints
-  $rOpts_format_skipping
-  $rOpts_space_function_paren
-  $rOpts_space_keyword_paren
-  $rOpts_keep_interior_semicolons
-  $rOpts_ignore_side_comment_lengths
-  $rOpts_stack_closing_block_brace
-  $rOpts_space_backslash_quote
   $rOpts_whitespace_cycle
-  $rOpts_one_line_block_semicolons
 
   %is_opening_type
   %is_closing_type
@@ -1448,8 +1423,9 @@ sub break_lines {
 
     # Loop over old lines to set new line break points
 
-    my $self   = shift;
-    my $rlines = $self->{rlines};
+    my $self                       = shift;
+    my $rlines                     = $self->{rlines};
+    my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
 
     # Note for RT#118553, leave only one newline at the end of a file.
     # Example code to do this is in comments below:
@@ -1909,6 +1885,11 @@ sub set_whitespace_flags {
     my $self = shift;
     my $rLL  = $self->{rLL};
 
+    my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
+    my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
+    my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
+    my $rOpts_space_function_paren  = $rOpts->{'space-function-paren'};
+
     my $rwhitespace_flags = [];
 
     my ( $last_token, $last_type, $last_block_type, $last_input_line_no,
@@ -2347,6 +2328,10 @@ sub respace_tokens {
     my $KK      = 0;
     my $rtoken_vars;
     my $Kmax = @{$rLL} - 1;
+
+    my $rOpts_add_whitespace            = $rOpts->{'add-whitespace'};
+    my $rOpts_delete_old_whitespace     = $rOpts->{'delete-old-whitespace'};
+    my $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
 
     # Set the whitespace flags, which indicate the token spacing preference.
     my $rwhitespace_flags = $self->set_whitespace_flags();
@@ -3159,6 +3144,9 @@ sub respace_tokens {
         my $rLL    = $self->{rLL};
         my $Klimit = $self->{Klimit};
 
+        my $rOpts_add_newlines    = $rOpts->{'add-newlines'};
+        my $rOpts_format_skipping = $rOpts->{'format-skipping'};
+
         my $CODE_type            = $rOpts->{'indent-only'} ? 'IO' : "";
         my $no_internal_newlines = 1 - $rOpts_add_newlines;
         if ( !$CODE_type && $no_internal_newlines ) { $CODE_type = 'NIN' }
@@ -3720,6 +3708,8 @@ sub mark_short_nested_blocks {
     my @open_block_stack;
     my $iline = -1;
     my $KNEXT = 0;
+    my $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -3802,7 +3792,7 @@ sub weld_containers {
     %weld_len_right_opening = ();
 
     return if ( $rOpts->{'indent-only'} );
-    return unless ($rOpts_add_newlines);
+    return unless ( $rOpts->{'add-newlines'} );
 
     if ( $rOpts->{'weld-nested-containers'} ) {
 
@@ -4114,6 +4104,9 @@ sub weld_nested_containers {
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
 
+    my $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
+
     # This array will hold the sequence numbers of the tokens to be welded.
     my @welds;
 
@@ -4424,6 +4417,9 @@ sub weld_nested_quotes {
     my $K_opening_container = $self->{K_opening_container};
     my $K_closing_container = $self->{K_closing_container};
     my $rlines              = $self->{rlines};
+
+    my $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
 
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
@@ -6078,53 +6074,19 @@ EOM
         # $rOpts->{'break-at-old-attribute-breakpoints'}
     }
 
-    # frequently used parameters
-    $rOpts_add_newlines          = $rOpts->{'add-newlines'};
-    $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
-    $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
-    $rOpts_block_brace_vertical_tightness =
-      $rOpts->{'block-brace-vertical-tightness'};
-    $rOpts_brace_left_and_indent   = $rOpts->{'brace-left-and-indent'};
-    $rOpts_comma_arrow_breakpoints = $rOpts->{'comma-arrow-breakpoints'};
-    $rOpts_break_at_old_ternary_breakpoints =
-      $rOpts->{'break-at-old-ternary-breakpoints'};
-    $rOpts_break_at_old_attribute_breakpoints =
-      $rOpts->{'break-at-old-attribute-breakpoints'};
-    $rOpts_break_at_old_comma_breakpoints =
-      $rOpts->{'break-at-old-comma-breakpoints'};
-    $rOpts_break_at_old_keyword_breakpoints =
-      $rOpts->{'break-at-old-keyword-breakpoints'};
-    $rOpts_break_at_old_logical_breakpoints =
-      $rOpts->{'break-at-old-logical-breakpoints'};
-    $rOpts_break_at_old_method_breakpoints =
-      $rOpts->{'break-at-old-method-breakpoints'};
-    $rOpts_closing_side_comment_else_flag =
-      $rOpts->{'closing-side-comment-else-flag'};
+    # very frequently used parameters made global for efficiency
+    $rOpts_brace_left_and_indent = $rOpts->{'brace-left-and-indent'};
     $rOpts_closing_side_comment_maximum_text =
       $rOpts->{'closing-side-comment-maximum-text'};
-    $rOpts_continuation_indentation  = $rOpts->{'continuation-indentation'};
-    $rOpts_delete_old_whitespace     = $rOpts->{'delete-old-whitespace'};
-    $rOpts_fuzzy_line_length         = $rOpts->{'fuzzy-line-length'};
-    $rOpts_indent_columns            = $rOpts->{'indent-columns'};
-    $rOpts_line_up_parentheses       = $rOpts->{'line-up-parentheses'};
-    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
-    $rOpts_whitespace_cycle          = $rOpts->{'whitespace-cycle'};
-    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
-
-    $rOpts_variable_maximum_line_length =
-      $rOpts->{'variable-maximum-line-length'};
-    $rOpts_short_concatenation_item_length =
-      $rOpts->{'short-concatenation-item-length'};
-
-    $rOpts_keep_old_blank_lines     = $rOpts->{'keep-old-blank-lines'};
-    $rOpts_ignore_old_breakpoints   = $rOpts->{'ignore-old-breakpoints'};
-    $rOpts_format_skipping          = $rOpts->{'format-skipping'};
-    $rOpts_space_function_paren     = $rOpts->{'space-function-paren'};
-    $rOpts_space_keyword_paren      = $rOpts->{'space-keyword-paren'};
-    $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
+    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
     $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
+    $rOpts_indent_columns      = $rOpts->{'indent-columns'};
+    $rOpts_line_up_parentheses = $rOpts->{'line-up-parentheses'};
+    $rOpts_maximum_line_length = $rOpts->{'maximum-line-length'};
+    $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
+    $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -6178,8 +6140,6 @@ EOM
         '}' => $rOpts->{'stack-closing-hash-brace'},
         ']' => $rOpts->{'stack-closing-square-bracket'},
     );
-    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
-    $rOpts_space_backslash_quote     = $rOpts->{'space-backslash-quote'};
     return;
 }
 
@@ -7235,6 +7195,13 @@ EOM
         my $rbreak_container = $self->{rbreak_container};
         my $rshort_nested    = $self->{rshort_nested};
 
+        my $rOpts_add_newlines = $rOpts->{'add-newlines'};
+        my $rOpts_break_at_old_comma_breakpoints =
+          $rOpts->{'break-at-old-comma-breakpoints'};
+        my $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
+        my $rOpts_keep_interior_semicolons =
+          $rOpts->{'keep-interior-semicolons'};
+
         if ( !defined($K_first) ) {
 
             # Empty line: This can happen if tokens are deleted, for example
@@ -7902,6 +7869,11 @@ sub output_line_to_go {
 
     my $self = shift;
     my $rLL  = $self->{rLL};
+
+    my $rOpts_add_newlines              = $rOpts->{'add-newlines'};
+    my $rOpts_comma_arrow_breakpoints   = $rOpts->{'comma-arrow-breakpoints'};
+    my $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
+    my $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
 
     # debug stuff; this routine can be called from many points
     FORMATTER_DEBUG_FLAG_OUTPUT && do {
@@ -9689,7 +9661,6 @@ sub make_else_csc_text {
 
     # create additional -csc text for an 'else' and optionally 'elsif',
     # depending on the value of switch
-    # $rOpts_closing_side_comment_else_flag:
     #
     #  = 0 add 'if' text to trailing else
     #  = 1 same as 0 plus:
@@ -9702,6 +9673,9 @@ sub make_else_csc_text {
     #
     my ( $i_terminal, $block_type, $block_leading_text, $rif_elsif_text ) = @_;
     my $csc_text = $block_leading_text;
+
+    my $rOpts_closing_side_comment_else_flag =
+      $rOpts->{'closing-side-comment-else-flag'};
 
     if (   $block_type eq 'elsif'
         && $rOpts_closing_side_comment_else_flag == 0 )
@@ -11621,6 +11595,11 @@ sub set_vertical_tightness_flags {
 
     my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0 ];
 
+    my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
+    my $rOpts_block_brace_vertical_tightness =
+      $rOpts->{'block-brace-vertical-tightness'};
+    my $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
+
     #--------------------------------------------------------------
     # Vertical Tightness Flags Section 1:
     # Handle Lines 1 .. n-1 but not the last line
@@ -11933,6 +11912,8 @@ sub get_seqno {
         # accept vertical alignment.
 
         my ( $self, $ri_first, $ri_last ) = @_;
+
+        my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
 
         my $ralignment_type_to_go;
         for my $i ( 0 .. $max_index_to_go ) {
@@ -12695,6 +12676,9 @@ sub terminal_type_K {
         # patch-its always ok to break at end of line
         $nobreak_to_go[$max_index_to_go] = 0;
 
+        my $rOpts_short_concatenation_item_length =
+          $rOpts->{'short-concatenation-item-length'};
+
         # we start a new set of bias values for each line
         my %bias;
         @bias{@bias_tokens} = (0) x scalar(@bias_tokens);
@@ -13425,6 +13409,19 @@ sub pad_array_to_go {
         # items can be vertically aligned.  The output of this routine is
         # stored in the array @forced_breakpoint_to_go, which is used to set
         # final breakpoints.
+        my $rOpts_break_at_old_attribute_breakpoints =
+          $rOpts->{'break-at-old-attribute-breakpoints'};
+        my $rOpts_break_at_old_comma_breakpoints =
+          $rOpts->{'break-at-old-comma-breakpoints'};
+        my $rOpts_break_at_old_keyword_breakpoints =
+          $rOpts->{'break-at-old-keyword-breakpoints'};
+        my $rOpts_break_at_old_logical_breakpoints =
+          $rOpts->{'break-at-old-logical-breakpoints'};
+        my $rOpts_break_at_old_method_breakpoints =
+          $rOpts->{'break-at-old-method-breakpoints'};
+        my $rOpts_break_at_old_ternary_breakpoints =
+          $rOpts->{'break-at-old-ternary-breakpoints'};
+        my $rOpts_comma_arrow_breakpoints = $rOpts->{'comma-arrow-breakpoints'};
 
         $starting_depth = $nesting_depth_to_go[0];
 
@@ -14436,8 +14433,7 @@ sub find_token_starting_list {
     sub set_comma_breakpoints_do {
 
         # Given a list with some commas, set breakpoints at some of the
-        # commas, if necessary, to make it easy to read.  This list is
-        # an example:
+        # commas, if necessary, to make it easy to read.
         my %call_hash           = @_;
         my $depth               = $call_hash{depth};
         my $i_opening_paren     = $call_hash{i_opening_paren};
@@ -14453,6 +14449,12 @@ sub find_token_starting_list {
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );
+
+        my $rOpts_break_at_old_comma_breakpoints =
+          $rOpts->{'break-at-old-comma-breakpoints'};
+        my $rOpts_maximum_fields_per_table =
+          $rOpts->{'maximum-fields-per-table'};
+
         my $i_first_comma     = $rcomma_index->[0];
         my $i_true_last_comma = $rcomma_index->[ $item_count - 1 ];
         my $i_last_comma      = $i_true_last_comma;
@@ -15161,7 +15163,7 @@ sub study_list_complexity {
     my ( $ri_term_begin, $ri_term_end, $ritem_lengths, $max_width ) = @_;
     my $item_count            = @{$ri_term_begin};
     my $complex_item_count    = 0;
-    my $number_of_fields_best = $rOpts_maximum_fields_per_table;
+    my $number_of_fields_best = $rOpts->{'maximum-fields-per-table'};
     my $i_max                 = @{$ritem_lengths} - 1;
     ##my @item_complexity;
 
@@ -15683,6 +15685,9 @@ sub sync_token_K {
         # $ri_beg = ref to array of BEGinning indexes of each line
         # $ri_end = ref to array of ENDing indexes of each line
         my ( $ri_beg, $ri_end ) = @_;
+
+        my $rOpts_short_concatenation_item_length =
+          $rOpts->{'short-concatenation-item-length'};
 
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
@@ -17118,10 +17123,13 @@ sub set_continuation_breaks {
     # a break.  This signals later routines not to undo the breakpoint.
 
     my ( $self, $saw_good_break ) = @_;
+
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
+
+    my $rOpts_fuzzy_line_length = $rOpts->{'fuzzy-line-length'};
 
     set_bond_strengths();
 
