@@ -291,8 +291,6 @@ use vars qw{
   %binary_ws_rules
   %want_left_space
   %want_right_space
-  %is_digraph
-  %is_trigraph
   $bli_pattern
   $bli_list_string
   %is_closing_type
@@ -339,15 +337,6 @@ BEGIN {
     $bli_list_string = 'if else elsif unless while for foreach do : sub';
 
     my @q;
-
-    @q = qw(
-      .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
-      <= >= == =~ !~ != ++ -- /= x=
-    );
-    @is_digraph{@q} = (1) x scalar(@q);
-
-    @q = qw( ... **= <<= >>= &&= ||= //= <=> <<~ );
-    @is_trigraph{@q} = (1) x scalar(@q);
 
     @q = qw(
       = **= += *= &= <<= &&=
@@ -6697,6 +6686,8 @@ EOM
 
     my %is_sort_grep_map;
     my %is_for_foreach;
+    my %is_digraph;
+    my %is_trigraph;
 
     BEGIN {
 
@@ -6707,6 +6698,14 @@ EOM
         @q = qw(for foreach);
         @is_for_foreach{@q} = (1) x scalar(@q);
 
+        @q = qw(
+          .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
+          <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
+        );
+        @is_digraph{@q} = (1) x scalar(@q);
+
+        @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~);
+        @is_trigraph{@q} = (1) x scalar(@q);
     }
 
     sub is_essential_whitespace {
@@ -6723,8 +6722,6 @@ EOM
         #
         # Note: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
-
-        # Uses global hashe: $is_trigraph
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
@@ -6751,7 +6748,8 @@ EOM
           # example: pom.caputo:
           # $vt100_compatible ? "\e[0;0H" : ('-' x 78 . "\n");
           || $typel eq 'n' && $tokenr eq '.'
-          || $typer eq 'n' && $tokenl eq '.'
+          || $typer eq 'n'
+          && $tokenl eq '.'
 
           # cases of a space before a bareword...
           || (
@@ -6850,8 +6848,9 @@ EOM
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          || $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
-          || $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
+          || $typer  =~ /^(pp|mm)$/ && $tokenl !~ /^[\;\{\(\[]/
+          || $typel  =~ /^(\+\+|\-\-)$/
+          && $tokenr !~ /^[\;\}\)\]]/
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -7852,9 +7851,9 @@ EOM
         # we have to flush ..
         if (
 
-	    # if there is a side comment...
+            # if there is a side comment...
             # Even if we deleted it! Otherwise,
-	    # i-K indexing will have a gap and be incorrect ( see RT #132059)
+            # i-K indexing will have a gap and be incorrect ( see RT #132059)
             ## ( ( $type eq '#' ) && !$rOpts->{'delete-side-comments'} )
             $type eq '#'
 
