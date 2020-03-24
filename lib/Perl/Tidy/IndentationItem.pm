@@ -14,12 +14,16 @@ sub new {
 
     # Create an 'indentation_item' which describes one level of leading
     # whitespace when the '-lp' indentation is used.
-    my (
-        $class,               $spaces,           $level,
-        $ci_level,            $available_spaces, $index,
-        $gnu_sequence_number, $align_paren,      $stack_depth,
-        $starting_index,
-    ) = @_;
+    my ( $class, %call_hash ) = @_;
+    my $spaces              = $call_hash{spaces};
+    my $level               = $call_hash{level};
+    my $ci_level            = $call_hash{ci_level};
+    my $available_spaces    = $call_hash{available_spaces};
+    my $index               = $call_hash{index};
+    my $gnu_sequence_number = $call_hash{gnu_sequence_number};
+    my $align_paren         = $call_hash{align_paren};
+    my $stack_depth         = $call_hash{stack_depth};
+    my $starting_index      = $call_hash{starting_index};
 
     my $closed            = -1;
     my $arrow_count       = 0;

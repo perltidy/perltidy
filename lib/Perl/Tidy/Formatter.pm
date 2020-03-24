@@ -4949,11 +4949,15 @@ sub new_lp_indentation_item {
     if ( $level >= 0 ) { $index = ++$max_gnu_item_index; }
 
     my $item = Perl::Tidy::IndentationItem->new(
-        $spaces,      $level,
-        $ci_level,    $available_spaces,
-        $index,       $gnu_sequence_number,
-        $align_paren, $max_gnu_stack_index,
-        $line_start_index_to_go,
+        spaces              => $spaces,
+        level               => $level,
+        ci_level            => $ci_level,
+        available_spaces    => $available_spaces,
+        index               => $index,
+        gnu_sequence_number => $gnu_sequence_number,
+        align_paren         => $align_paren,
+        stack_depth         => $max_gnu_stack_index,
+        starting_index      => $line_start_index_to_go,
     );
 
     if ( $level >= 0 ) {
