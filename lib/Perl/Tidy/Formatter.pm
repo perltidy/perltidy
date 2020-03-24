@@ -6724,12 +6724,14 @@ EOM
         # Note: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
 
-	# Uses these global hashes:
-        # $is_sort_grep_map,  $is_trigraph, $is_for_foreach
+        # Uses global hashe: $is_trigraph
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
-        my $tokenr_is_bareword = ( $tokenr =~ /^\w/ && $tokenr !~ /^\d/ );
+        my $tokenr_is_bareword   = $tokenr =~ /^\w/ && $tokenr !~ /^\d/;
+        my $tokenr_is_open_paren = $tokenr eq '(';
+        my $token_joined         = $tokenl . $tokenr;
+        my $tokenl_is_dash       = $tokenl eq '-';
 
         my $result =
 
@@ -6748,15 +6750,52 @@ EOM
           # do not combine a number with a concatenation dot
           # example: pom.caputo:
           # $vt100_compatible ? "\e[0;0H" : ('-' x 78 . "\n");
-          || ( $typel eq 'n' && $tokenr eq '.' )
-          || ( $typer eq 'n' && $tokenl eq '.' )
+          || $typel eq 'n' && $tokenr eq '.'
+          || $typer eq 'n' && $tokenl eq '.'
 
-          # do not join a minus with a bare word, because you might form
-          # a file test operator.  Example from Complex.pm:
-          # if (CORE::abs($z - i) < $eps); "z-i" would be taken as a file test.
-          || ( $tokenl eq '-'
-            && $tokenr_is_bareword
-            && length($tokenr) == 1 )
+          # cases of a space before a bareword...
+          || (
+            $tokenr_is_bareword && (
+
+                # do not join a minus with a bare word, because you might form
+                # a file test operator.  Example from Complex.pm:
+                # if (CORE::abs($z - i) < $eps);
+                # "z-i" would be taken as a file test.
+                $tokenl_is_dash && length($tokenr) == 1
+
+                # and something like this could become ambiguous without space
+                # after the '-':
+                #   use constant III=>1;
+                #   $a = $b - III;
+                # and even this:
+                #   $a = - III;
+                || $tokenl_is_dash && $typer =~ /^[wC]$/
+
+                # keep a space between a quote and a bareword to prevent the
+                # bareword from becoming a quote modifier.
+                || $typel eq 'Q'
+
+                # keep a space between a token ending in '$' and any word;
+                # this caused trouble:  "die @$ if $@"
+                || $typel eq 'i' && $tokenl =~ /\$$/
+
+               # do not remove space between an '&' and a bare word because
+               # it may turn into a function evaluation, like here
+               # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
+               #    $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
+                || $typel eq '&'
+
+                # don't combine $$ or $# with any alphanumeric
+                # (testfile mangle.t with --mangle)
+                || $tokenl =~ /^\$[\$\#]$/
+
+            )
+          )    ## end $tokenr_is_bareword
+
+          # OLD, not used
+          # '= -' should not become =- or you will get a warning
+          # about reversed -=
+          # || ($tokenr eq '-')
 
           # do not join a bare word with a minus, like between 'Send' and
           # '-recipients' here <<snippets/space3.in>>
@@ -6765,73 +6804,54 @@ EOM
           #     -data => $data;
           # This is the safest thing to do. If we had the token to the right of
           # the minus we could do a better check.
-          || ( $tokenr eq '-' && $typel eq 'w' )
-
-          # and something like this could become ambiguous without space
-          # after the '-':
-          #   use constant III=>1;
-          #   $a = $b - III;
-          # and even this:
-          #   $a = - III;
-          || ( $tokenl eq '-'
-            && $typer =~ /^[wC]$/
-            && $tokenr_is_bareword )
-
-          # '= -' should not become =- or you will get a warning
-          # about reversed -=
-          # || ($tokenr eq '-')
-
-          # keep a space between a quote and a bareword to prevent the
-          # bareword from becoming a quote modifier.
-          || ( $typel eq 'Q' && $tokenr_is_bareword )
-
-          # keep a space between a token ending in '$' and any word;
-          # this caused trouble:  "die @$ if $@"
-          || ( $typel eq 'i'
-            && $tokenl =~ /\$$/
-            && $tokenr_is_bareword )
+          || $tokenr eq '-' && $typel eq 'w'
 
           # perl is very fussy about spaces before <<
-          || ( $tokenr =~ /^\<\</ )
+          || $tokenr =~ /^\<\</
 
           # avoid combining tokens to create new meanings. Example:
           #     $a+ +$b must not become $a++$b
-          || ( $is_digraph{ $tokenl . $tokenr } )
-          || ( $is_trigraph{ $tokenl . $tokenr } )
+          || ( $is_digraph{$token_joined} )
+          || $is_trigraph{$token_joined}
 
           # another example: do not combine these two &'s:
           #     allow_options & &OPT_EXECCGI
-          || ( $is_digraph{ $tokenl . substr( $tokenr, 0, 1 ) } )
-
-          # don't combine $$ or $# with any alphanumeric
-          # (testfile mangle.t with --mangle)
-          || ( $tokenl =~ /^\$[\$\#]$/ && $tokenr =~ /^\w/ )
+          || $is_digraph{ $tokenl . substr( $tokenr, 0, 1 ) }
 
           # retain any space after possible filehandle
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
-          || ( $typel eq 'Z' )
+          || $typel eq 'Z'
 
           # Perl is sensitive to whitespace after the + here:
           #  $b = xvals $a + 0.1 * yvals $a;
-          || ( $typell eq 'Z' && $typel =~ /^[\/\?\+\-\*]$/ )
+          || $typell eq 'Z' && $typel =~ /^[\/\?\+\-\*]$/
 
-          # keep paren separate in 'use Foo::Bar ()'
-          || ( $tokenr eq '('
-            && $typel eq 'w'
-            && $typell eq 'k'
-            && $tokenll eq 'use' )
+          || (
+            $tokenr_is_open_paren && (
 
-          # keep any space between filehandle and paren:
-          # file mangle.t with --mangle:
-          || ( $typel eq 'Y' && $tokenr eq '(' )
+                # keep paren separate in 'use Foo::Bar ()'
+                ( $typel eq 'w' && $typell eq 'k' && $tokenll eq 'use' )
+
+                # keep any space between filehandle and paren:
+                # file mangle.t with --mangle:
+                || $typel eq 'Y'
+
+                # must have space between grep and left paren; "grep(" will fail
+                || $is_sort_grep_map{$tokenl}
+
+                # don't stick numbers next to left parens, as in:
+                #use Mail::Internet 1.28 (); (see Entity.pm, Head.pm, Test.pm)
+                || $typel eq 'n'
+            )
+          )    ## end $tokenr_is_open_paren
 
           # retain any space after here doc operator ( hereerr.t)
-          || ( $typel eq 'h' )
+          || $typel eq 'h'
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          || ( $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/ )
-          || ( $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/ )
+          || $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
+          || $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -6844,13 +6864,6 @@ EOM
             && $tokenr =~ /^\$/
           )
 
-          # must have space between grep and left paren; "grep(" will fail
-          || ( $tokenr eq '(' && $is_sort_grep_map{$tokenl} )
-
-          # don't stick numbers next to left parens, as in:
-          #use Mail::Internet 1.28 (); (see Entity.pm, Head.pm, Test.pm)
-          || ( $typel eq 'n' && $tokenr eq '(' )
-
           # We must be sure that a space between a ? and a quoted string
           # remains if the space before the ? remains.  [Loca.pm, lockarea]
           # ie,
@@ -6860,14 +6873,8 @@ EOM
           # Not really required:
           ## || ( ( $typel eq '?' ) && ( $typer eq 'Q' ) )
 
-          # do not remove space between an '&' and a bare word because
-          # it may turn into a function evaluation, like here
-          # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
-          #    $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
-          || ( $typel eq '&' && $tokenr_is_bareword )
-
           # space stacked labels  (TODO: check if really necessary)
-          || ( $typel eq 'J' && $typer eq 'J' )
+          || $typel eq 'J' && $typer eq 'J'
 
           ;    # the value of this long logic sequence is the result we want
 ##if ($typel eq 'j') {print STDERR "typel=$typel typer=$typer result='$result'\n"}
