@@ -4235,8 +4235,8 @@ sub weld_nested_containers {
 
         my $iline_ic = $inner_closing->[_LINE_INDEX_];
 
-        # DO-NOT-WELD RULE 2:
-        # Do not weld an opening paren to an inner one line brace block
+        # DO-NOT-WELD RULE 2a:
+        # Do not weld an opening paren to an inner one line sub block
         # We will just use old line numbers for this test and require
         # iterations if necessary for convergence
 
@@ -4263,7 +4263,28 @@ sub weld_nested_containers {
             my $token_oo      = $outer_opening->[_TOKEN_];
             my $block_type_io = $inner_opening->[_BLOCK_TYPE_];
             my $token_io      = $inner_opening->[_TOKEN_];
-            $do_not_weld ||= $token_oo eq '(' && $token_io eq '{';
+            my $type_io       = $inner_opening->[_TYPE_];
+            $do_not_weld ||=
+                 $token_oo eq '('
+              && $token_io eq '{'
+              && $block_type_io =~ /$SUB_PATTERN/
+              || $block_type_io =~ /$ASUB_PATTERN/;
+        }
+
+        # DO-NOT-WELD RULE 2b:
+	# Do not weld to open hash brace which is not separated from its closing
+	# brace by two lines.  We want to avoid something like this
+        #                foreach
+        #                  (@{$numbers{$num}->{$num . $rowcode . $colcode}})
+        #  and prefer this:
+        #            $Self->_Add(
+        #                $SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
+        # instead of this:
+        #            $Self->_Add($SortOrderDisplay{$Field
+        #                  ->GenerateFieldForSelectSQL()});
+        if ( $iline_ic - $iline_io < 2 ) {
+            my $type_io = $inner_opening->[_TYPE_];
+            $do_not_weld ||= $type_io eq 'L';
         }
 
         # DO-NOT-WELD RULE 3:
@@ -12566,6 +12587,10 @@ sub terminal_type_K {
         # will be after the opening paren rather than at the arrow:
         #    $a->$b($c);
         $binary_bond_strength{'i'}{'->'} = 1.45 * STRONG;
+
+	# Note that the following alternative strength would make the break at the
+	# '->' rather than opening the '('.  Both have advantages and disadvantages.
+        # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
 
         $binary_bond_strength{'))'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
         $binary_bond_strength{']]'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
