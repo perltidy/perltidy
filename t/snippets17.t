@@ -231,9 +231,7 @@ sub foo_subroutine_in_main {
 
                     # rule 2a forerly applied to all blocks, but now only
                     # applies to subs, so this weld is now okay with -wn
-                    f(
-                        do { 1; !!( my $x = bless [] ); }
-                    );
+                    f( do { 1; !!( my $x = bless [] ); } );
 #6...........
         },
 

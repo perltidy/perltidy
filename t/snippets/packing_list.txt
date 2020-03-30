@@ -160,6 +160,8 @@
 ../snippets17.t	signature.def
 ../snippets17.t	rperl.def
 ../snippets17.t	rperl.rperl
+../snippets17.t	wn7.def
+../snippets17.t	wn7.wn
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -320,5 +322,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets17.t	wn7.def
-../snippets17.t	wn7.wn

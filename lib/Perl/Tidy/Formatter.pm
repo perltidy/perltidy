@@ -3822,7 +3822,9 @@ sub weld_containers {
 
     $self->weld_cuddled_blocks();
 
-    $self->weld_signature_parens();
+    # Deactivated; sub tight_paren_follows() does this now
+    # FIXME: to be deleted
+    ## $self->weld_signature_parens();
 
     return;
 }
@@ -3841,6 +3843,9 @@ sub cumulative_length_after_K {
 
 sub weld_signature_parens {
     my $self = shift;
+
+    # FIXME: this routine has been replaced by sub tight_following_paren
+    # and can be removed
 
     # This routine fixes a problem in which an unwanted line break can
     # be inserted between a closing block brace and a closing sub signature
@@ -4272,16 +4277,16 @@ sub weld_nested_containers {
         }
 
         # DO-NOT-WELD RULE 2b:
-	# Do not weld to open hash brace which is not separated from its closing
-	# brace by two lines.  We want to avoid something like this
+        # Do not weld to open hash brace which is not separated from its
+        # closing brace by two lines.  We want to avoid something like this
         #                foreach
         #                  (@{$numbers{$num}->{$num . $rowcode . $colcode}})
         #  and prefer this:
-        #            $Self->_Add(
-        #                $SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
+        #        $Self->_Add(
+        #            $SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
         # instead of this:
-        #            $Self->_Add($SortOrderDisplay{$Field
-        #                  ->GenerateFieldForSelectSQL()});
+        #        $Self->_Add($SortOrderDisplay{$Field
+        #              ->GenerateFieldForSelectSQL()});
         if ( $iline_ic - $iline_io < 2 ) {
             my $type_io = $inner_opening->[_TYPE_];
             $do_not_weld ||= $type_io eq 'L';
@@ -7184,6 +7189,125 @@ EOM
         return ( $val1 && $val2 || !$val1 && !$val2 );
     }
 
+    sub tight_paren_follows {
+
+	# We are at the closing brace of a 'do' block.  See if this brace is
+	# followed by a closing paren, and if so, set a flag which indicates
+	# that we do not want a line break between the '}' and ')'.  We do not
+	# want a line break if the expression within parens is fairly 'simple'.
+
+	# 'Simple' is hard to define, but for now will consider the expression
+	# to be simple if either it is a sub signature, or there are (1) no
+	# other container tokens and (2) no commas between the opening paren
+	# and brace. 
+
+        # For example the following expression is simple because there is just the
+	# keyword 'do' between the '(' and the '{', so we do not add line break:
+	# 'do' block is the only expression within the parens:
+
+        #    if ( do { $2 !~ /&/ } ) { ... }
+
+        # (Note: in this case the weld option -wn will accomplish the same effect)
+
+	# For anything more complex than this, we also require that the expression
+	# be on one line in the input.
+
+	# For example, we will set the flag for the following expression
+	# written in one line:
+	# example:
+
+        #   $self->debug( 'Error: ' . do { local $/; <$err> } );
+
+	# but not if it is on multiple lines on input, since the user may prefer
+	# it on multiple lines:
+
+        #   $self->debug(
+        #       'Error: ' . do { local $/; <$err> }
+        #   );
+
+        # The following will not be simple by these rules (comma between the '('
+	# and the '{':
+
+        #    for my $to ( 'tmp', do { \my $o } ) {
+
+	# and this will not be simple (extra parens between the '(' and '{]):
+
+        #  if (  !defined($warnings::VERSION)
+        #    || do { no warnings "numeric"; $warnings::VERSION < 1.03 } )
+
+        # Subscript notation:
+        # _i = inner container (braces in this case)
+        # _o = outer container (parens in this case)
+        # _io = inner opening = '{'
+        # _ic = inner closing = '}'
+        # _oo = outer opening = '('
+        # _oc = outer closing = ')'
+
+        my ( $self, $K_ic ) = @_;
+        return unless defined($K_ic);
+        my $rLL = $self->{rLL};
+
+        # we should only be called at a closing block
+        my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
+        return unless ($seqno_i);    # shouldn't happen;
+
+        # Look at next nonblank, see if it is a ')'
+        my $K_oc = $self->K_next_nonblank($K_ic);
+        return unless defined($K_oc);
+        my $token_next = $rLL->[$K_oc]->[_TOKEN_];
+        return unless ( $token_next eq ')' );
+
+        my $seqno_o = $rLL->[$K_oc]->[_TYPE_SEQUENCE_];
+        my $K_io    = $self->{K_opening_container}->{$seqno_i};
+        my $K_oo    = $self->{K_opening_container}->{$seqno_o};
+
+        # Never break a simple parenthesized do of the form ( do { ... } )
+        my $K_test = $self->K_next_nonblank($K_oo);
+        if ( $K_test < $K_io )  { $K_test = $self->K_next_nonblank($K_test); }
+        if ( $K_test == $K_io ) { return 1 }
+
+        # Never break before a closing signature paren. 
+        # This is a fix for issue git#22.
+        $K_test = $self->K_next_nonblank($K_oc);
+        my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
+        if (
+            $block_type
+            && (   $block_type =~ /$SUB_PATTERN/
+                || $block_type =~ /$ASUB_PATTERN/ )
+          )
+        {
+            return 1;
+        }
+
+	# If there are intervening container item(s) between the outer '(' and
+	# the innier '{' then this is considered a complex statement
+        $K_test = $rLL->[$K_oo]->[_KNEXT_SEQ_ITEM_];
+        if ( $K_test != $K_io ) {
+            return;
+        }
+
+        # see if this is one line on input and possibly on output
+        return if ( $K_oo < $K_to_go[0] );
+
+	# require input on one line for anything more complex unless signature
+        if ( !$rOpts->{'ignore-old-breakpoints'} ) {
+            my $iline_oo = $rLL->[$K_oo]->[_LINE_INDEX_];
+            my $iline_oc = $rLL->[$K_oc]->[_LINE_INDEX_];
+            return if ( $iline_oo != $iline_oc );
+        }
+
+	# If there are any commas between the '(' and '{' then the expression
+	# is considered complex.  This is a potentially slow test so we save it
+	# for last.
+        for ( my $KK = $K_oo + 1 ; $KK < $K_io ; $KK++ ) {
+            my $type = $rLL->[$KK]->[_TYPE_];
+            return if ( $type eq ',' );
+        }
+
+	# Not a complex expression
+        return 1;
+    }
+
     sub print_line_of_tokens {
 
         my ( $self, $line_of_tokens ) = @_;
@@ -7699,6 +7823,9 @@ EOM
                 # tokens
                 if ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
+                    if ( $self->tight_paren_follows($Ktoken_vars) ) {
+                        $rbrace_follower = { ')' => 1 };
+                    }
                 }
                 elsif ( $block_type =~ /^(if|elsif|unless)$/ ) {
                     $rbrace_follower = \%is_if_brace_follower;
@@ -12588,9 +12715,9 @@ sub terminal_type_K {
         #    $a->$b($c);
         $binary_bond_strength{'i'}{'->'} = 1.45 * STRONG;
 
-	# Note that the following alternative strength would make the break at the
-	# '->' rather than opening the '('.  Both have advantages and disadvantages.
-        # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
+    # Note that the following alternative strength would make the break at the
+    # '->' rather than opening the '('.  Both have advantages and disadvantages.
+    # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
 
         $binary_bond_strength{'))'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
         $binary_bond_strength{']]'}{'->'} = 0.1 * STRONG + 0.9 * NOMINAL;
