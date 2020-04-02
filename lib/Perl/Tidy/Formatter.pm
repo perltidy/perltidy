@@ -6096,6 +6096,8 @@ EOM
         # warnings if we noted them. They are:
         # $rOpts->{'break-at-old-keyword-breakpoints'}
         # $rOpts->{'break-at-old-logical-breakpoints'}
+        # $rOpts->{'break-at-old-method-breakpoints'}
+        # $rOpts->{'break-at-old-semicolon-breakpoints'}
         # $rOpts->{'break-at-old-ternary-breakpoints'}
         # $rOpts->{'break-at-old-attribute-breakpoints'}
     }
@@ -6947,6 +6949,212 @@ EOM
     }    # End sub
 }
 
+# NOTE: This sub is not used
+sub boolean_equals {
+    my ( $val1, $val2 ) = @_;
+    return ( $val1 && $val2 || !$val1 && !$val2 );
+}
+
+sub tight_paren_follows {
+
+    my ( $self, $K_to_go_0, $K_ic ) = @_;
+
+    # Input parameters:
+    #   $K_to_go_0 = first token index K of this output batch (=K_to_go[0])
+    #   $K_ic = index of the closing do brace (=K_to_go[$max_index_to_go])
+    # Return parameter:
+    #   false if we want a break after the closing do brace
+    #   true if we do not want a break after the closing do brace
+
+    # We are at the closing brace of a 'do' block.  See if this brace is
+    # followed by a closing paren, and if so, set a flag which indicates
+    # that we do not want a line break between the '}' and ')'.  We do not
+    # want a line break if the expression within parens is fairly 'simple'.
+
+    # 'Simple' is hard to define, but for now will consider the expression
+    # to be simple if either it is a sub signature, or there are (1) no
+    # other container tokens and (2) no commas between the opening paren
+    # and brace.
+
+    # For example the following expression is simple because there is just the
+    # keyword 'do' between the '(' and the '{', so we do not add line break:
+    # 'do' block is the only expression within the parens:
+
+    #    if ( do { $2 !~ /&/ } ) { ... }
+
+    # (Note: in this case the weld option -wn will accomplish the same effect)
+
+    # For anything more complex than this, we also require that the expression
+    # be on one line in the input.
+
+    # For example, we will set the flag for the following expression
+    # written in one line:
+    # example:
+
+    #   $self->debug( 'Error: ' . do { local $/; <$err> } );
+
+    # but not if it is on multiple lines on input, since the user may prefer
+    # it on multiple lines:
+
+    #   $self->debug(
+    #       'Error: ' . do { local $/; <$err> }
+    #   );
+
+    # The following will not be simple by these rules (comma between the '('
+    # and the '{':
+
+    #    for my $to ( 'tmp', do { \my $o } ) {
+
+    # and this will not be simple (extra parens between the '(' and '{]):
+
+    #  if (  !defined($warnings::VERSION)
+    #    || do { no warnings "numeric"; $warnings::VERSION < 1.03 } )
+
+    # Subscript notation:
+    # _i = inner container (braces in this case)
+    # _o = outer container (parens in this case)
+    # _io = inner opening = '{'
+    # _ic = inner closing = '}'
+    # _oo = outer opening = '('
+    # _oc = outer closing = ')'
+
+    # uses Global vars:  $rOpts, $SUB_PATTERN, $ASUB_PATTERN
+
+    return unless defined($K_ic);
+    my $rLL = $self->{rLL};
+
+    # we should only be called at a closing block
+    my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
+    return unless ($seqno_i);    # shouldn't happen;
+
+    # Look at next nonblank, see if it is a ')'
+    my $K_oc = $self->K_next_nonblank($K_ic);
+    return unless defined($K_oc);
+    my $token_next = $rLL->[$K_oc]->[_TOKEN_];
+    return unless ( $token_next eq ')' );
+
+    my $seqno_o = $rLL->[$K_oc]->[_TYPE_SEQUENCE_];
+    my $K_io    = $self->{K_opening_container}->{$seqno_i};
+    my $K_oo    = $self->{K_opening_container}->{$seqno_o};
+
+    # Never break a simple parenthesized do of the form ( do { ... } )
+    my $K_test = $self->K_next_nonblank($K_oo);
+    if ( $K_test < $K_io )  { $K_test = $self->K_next_nonblank($K_test); }
+    if ( $K_test == $K_io ) { return 1 }
+
+    # Never break before a closing signature paren.
+    # This is a fix for issue git#22.
+    # sub xxx ( ... do {  ... } ) {
+    $K_test = $self->K_next_nonblank($K_oc);
+    my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
+    if (
+           $block_type
+        && $rLL->[$K_test]->[_TYPE_] eq '{'
+        && (   $block_type =~ /$SUB_PATTERN/
+            || $block_type =~ /$ASUB_PATTERN/ )
+      )
+    {
+        return 1;
+    }
+
+    # If there are intervening container item(s) between the outer '(' and
+    # the innier '{' then this is considered a complex statement
+    $K_test = $rLL->[$K_oo]->[_KNEXT_SEQ_ITEM_];
+    if ( $K_test != $K_io ) {
+        return;
+    }
+
+    # see if this is one line on input and possibly on output
+    return if ( $K_oo < $K_to_go_0 );
+
+    # require input on one line for anything more complex unless signature
+    if ( !$rOpts->{'ignore-old-breakpoints'} ) {
+        my $iline_oo = $rLL->[$K_oo]->[_LINE_INDEX_];
+        my $iline_oc = $rLL->[$K_oc]->[_LINE_INDEX_];
+        return if ( $iline_oo != $iline_oc );
+    }
+
+    # If there are any commas between the '(' and '{' then the expression
+    # is considered complex.  This is a potentially slow test so we save it
+    # for last.
+    for ( my $KK = $K_oo + 1 ; $KK < $K_io ; $KK++ ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        return if ( $type eq ',' );
+    }
+
+    # Not a complex expression
+    return 1;
+}
+
+sub token_length {
+
+    # Returns the length of a token, given:
+    #  $token=text of the token
+    #  $type = type
+    #  $not_first_token = should be TRUE if this is not the first token of
+    #   the line.  It might the index of this token in an array.  It is
+    #   used to test for a side comment vs a block comment.
+
+    # uses Global vars:  $rOpts_ignore_side_comment_lengths
+
+    my ( $token, $type, $not_first_token ) = @_;
+    my $token_length = length($token);
+
+    # We mark lengths of side comments as just 1 if we are
+    # ignoring their lengths when setting line breaks.
+    $token_length = 1
+      if ( $rOpts_ignore_side_comment_lengths
+        && $not_first_token
+        && $type eq '#' );
+    return $token_length;
+}
+
+sub copy_hash {
+
+    # NOTE: This sub is not currently used
+    my ($rold_token_hash) = @_;
+    my %new_token_hash =
+      map { ( $_, $rold_token_hash->{$_} ) } keys %{$rold_token_hash};
+    return \%new_token_hash;
+}
+
+sub copy_array {
+    my ($rold) = @_;
+    my @new = map { $_ } @{$rold};
+    return \@new;
+}
+
+sub copy_token_as_type {
+    my ( $rold_token, $type, $token ) = @_;
+    if ( $type eq 'b' ) {
+        $token = " " unless defined($token);
+    }
+    elsif ( $type eq 'q' ) {
+        $token = '' unless defined($token);
+    }
+    elsif ( $type eq '->' ) {
+        $token = '->' unless defined($token);
+    }
+    elsif ( $type eq ';' ) {
+        $token = ';' unless defined($token);
+    }
+    else {
+        Fault(
+"Programming error: copy_token_as has type $type but should be 'b' or 'q'"
+        );
+    }
+    my $rnew_token = copy_array($rold_token);
+    $rnew_token->[_TYPE_]                  = $type;
+    $rnew_token->[_TOKEN_]                 = $token;
+    $rnew_token->[_BLOCK_TYPE_]            = '';
+    $rnew_token->[_CONTAINER_TYPE_]        = '';
+    $rnew_token->[_CONTAINER_ENVIRONMENT_] = '';
+    $rnew_token->[_TYPE_SEQUENCE_]         = '';
+    return $rnew_token;
+}
+
+
+
 {        # begin print_line_of_tokens
 
     my $rinput_token_array;    # Current working array
@@ -7037,28 +7245,6 @@ EOM
         }
     }
 
-    sub token_length {
-
-        # Returns the length of a token, given:
-        #  $token=text of the token
-        #  $type = type
-        #  $not_first_token = should be TRUE if this is not the first token of
-        #   the line.  It might the index of this token in an array.  It is
-        #   used to test for a side comment vs a block comment.
-        # Note: Eventually this should be the only routine determining the
-        # length of a token in this package.
-        my ( $token, $type, $not_first_token ) = @_;
-        my $token_length = length($token);
-
-        # We mark lengths of side comments as just 1 if we are
-        # ignoring their lengths when setting line breaks.
-        $token_length = 1
-          if ( $rOpts_ignore_side_comment_lengths
-            && $not_first_token
-            && $type eq '#' );
-        return $token_length;
-    }
-
     sub rtoken_length {
 
         # return length of ith token in @{$rtokens}
@@ -7140,172 +7326,6 @@ EOM
 "STORE: from $a $c: storing token $token type $type lev=$level slev=$slevel at $max_index_to_go\n";
         };
         return;
-    }
-
-    sub copy_hash {
-        my ($rold_token_hash) = @_;
-        my %new_token_hash =
-          map { ( $_, $rold_token_hash->{$_} ) } keys %{$rold_token_hash};
-        return \%new_token_hash;
-    }
-
-    sub copy_array {
-        my ($rold) = @_;
-        my @new = map { $_ } @{$rold};
-        return \@new;
-    }
-
-    sub copy_token_as_type {
-        my ( $rold_token, $type, $token ) = @_;
-        if ( $type eq 'b' ) {
-            $token = " " unless defined($token);
-        }
-        elsif ( $type eq 'q' ) {
-            $token = '' unless defined($token);
-        }
-        elsif ( $type eq '->' ) {
-            $token = '->' unless defined($token);
-        }
-        elsif ( $type eq ';' ) {
-            $token = ';' unless defined($token);
-        }
-        else {
-            Fault(
-"Programming error: copy_token_as has type $type but should be 'b' or 'q'"
-            );
-        }
-        my $rnew_token = copy_array($rold_token);
-        $rnew_token->[_TYPE_]                  = $type;
-        $rnew_token->[_TOKEN_]                 = $token;
-        $rnew_token->[_BLOCK_TYPE_]            = '';
-        $rnew_token->[_CONTAINER_TYPE_]        = '';
-        $rnew_token->[_CONTAINER_ENVIRONMENT_] = '';
-        $rnew_token->[_TYPE_SEQUENCE_]         = '';
-        return $rnew_token;
-    }
-
-    sub boolean_equals {
-        my ( $val1, $val2 ) = @_;
-        return ( $val1 && $val2 || !$val1 && !$val2 );
-    }
-
-    sub tight_paren_follows {
-
-	# We are at the closing brace of a 'do' block.  See if this brace is
-	# followed by a closing paren, and if so, set a flag which indicates
-	# that we do not want a line break between the '}' and ')'.  We do not
-	# want a line break if the expression within parens is fairly 'simple'.
-
-	# 'Simple' is hard to define, but for now will consider the expression
-	# to be simple if either it is a sub signature, or there are (1) no
-	# other container tokens and (2) no commas between the opening paren
-	# and brace. 
-
-        # For example the following expression is simple because there is just the
-	# keyword 'do' between the '(' and the '{', so we do not add line break:
-	# 'do' block is the only expression within the parens:
-
-        #    if ( do { $2 !~ /&/ } ) { ... }
-
-        # (Note: in this case the weld option -wn will accomplish the same effect)
-
-	# For anything more complex than this, we also require that the expression
-	# be on one line in the input.
-
-	# For example, we will set the flag for the following expression
-	# written in one line:
-	# example:
-
-        #   $self->debug( 'Error: ' . do { local $/; <$err> } );
-
-	# but not if it is on multiple lines on input, since the user may prefer
-	# it on multiple lines:
-
-        #   $self->debug(
-        #       'Error: ' . do { local $/; <$err> }
-        #   );
-
-        # The following will not be simple by these rules (comma between the '('
-	# and the '{':
-
-        #    for my $to ( 'tmp', do { \my $o } ) {
-
-	# and this will not be simple (extra parens between the '(' and '{]):
-
-        #  if (  !defined($warnings::VERSION)
-        #    || do { no warnings "numeric"; $warnings::VERSION < 1.03 } )
-
-        # Subscript notation:
-        # _i = inner container (braces in this case)
-        # _o = outer container (parens in this case)
-        # _io = inner opening = '{'
-        # _ic = inner closing = '}'
-        # _oo = outer opening = '('
-        # _oc = outer closing = ')'
-
-        my ( $self, $K_ic ) = @_;
-        return unless defined($K_ic);
-        my $rLL = $self->{rLL};
-
-        # we should only be called at a closing block
-        my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
-        return unless ($seqno_i);    # shouldn't happen;
-
-        # Look at next nonblank, see if it is a ')'
-        my $K_oc = $self->K_next_nonblank($K_ic);
-        return unless defined($K_oc);
-        my $token_next = $rLL->[$K_oc]->[_TOKEN_];
-        return unless ( $token_next eq ')' );
-
-        my $seqno_o = $rLL->[$K_oc]->[_TYPE_SEQUENCE_];
-        my $K_io    = $self->{K_opening_container}->{$seqno_i};
-        my $K_oo    = $self->{K_opening_container}->{$seqno_o};
-
-        # Never break a simple parenthesized do of the form ( do { ... } )
-        my $K_test = $self->K_next_nonblank($K_oo);
-        if ( $K_test < $K_io )  { $K_test = $self->K_next_nonblank($K_test); }
-        if ( $K_test == $K_io ) { return 1 }
-
-        # Never break before a closing signature paren. 
-        # This is a fix for issue git#22.
-        $K_test = $self->K_next_nonblank($K_oc);
-        my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
-        if (
-            $block_type
-            && (   $block_type =~ /$SUB_PATTERN/
-                || $block_type =~ /$ASUB_PATTERN/ )
-          )
-        {
-            return 1;
-        }
-
-	# If there are intervening container item(s) between the outer '(' and
-	# the innier '{' then this is considered a complex statement
-        $K_test = $rLL->[$K_oo]->[_KNEXT_SEQ_ITEM_];
-        if ( $K_test != $K_io ) {
-            return;
-        }
-
-        # see if this is one line on input and possibly on output
-        return if ( $K_oo < $K_to_go[0] );
-
-	# require input on one line for anything more complex unless signature
-        if ( !$rOpts->{'ignore-old-breakpoints'} ) {
-            my $iline_oo = $rLL->[$K_oo]->[_LINE_INDEX_];
-            my $iline_oc = $rLL->[$K_oc]->[_LINE_INDEX_];
-            return if ( $iline_oo != $iline_oc );
-        }
-
-	# If there are any commas between the '(' and '{' then the expression
-	# is considered complex.  This is a potentially slow test so we save it
-	# for last.
-        for ( my $KK = $K_oo + 1 ; $KK < $K_io ; $KK++ ) {
-            my $type = $rLL->[$KK]->[_TYPE_];
-            return if ( $type eq ',' );
-        }
-
-	# Not a complex expression
-        return 1;
     }
 
     sub print_line_of_tokens {
@@ -7823,7 +7843,7 @@ EOM
                 # tokens
                 if ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
-                    if ( $self->tight_paren_follows($Ktoken_vars) ) {
+                    if ( $self->tight_paren_follows($K_to_go[0], $Ktoken_vars) ) {
                         $rbrace_follower = { ')' => 1 };
                     }
                 }
@@ -13571,6 +13591,8 @@ sub pad_array_to_go {
           $rOpts->{'break-at-old-logical-breakpoints'};
         my $rOpts_break_at_old_method_breakpoints =
           $rOpts->{'break-at-old-method-breakpoints'};
+        my $rOpts_break_at_old_semicolon_breakpoints =
+          $rOpts->{'break-at-old-semicolon-breakpoints'};
         my $rOpts_break_at_old_ternary_breakpoints =
           $rOpts->{'break-at-old-ternary-breakpoints'};
         my $rOpts_comma_arrow_breakpoints = $rOpts->{'comma-arrow-breakpoints'};
@@ -13755,6 +13777,14 @@ sub pad_array_to_go {
                     }
                 }
             } ## end if ( $type eq '->' )
+
+            elsif ( $type eq ';' ) {
+                if (   $i == $i_line_start
+                    && $rOpts_break_at_old_semicolon_breakpoints )
+                {
+                    set_forced_breakpoint( $i - 1 );
+                }
+            }
 
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.

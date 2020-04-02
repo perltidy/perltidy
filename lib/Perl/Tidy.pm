@@ -1985,6 +1985,7 @@ sub generate_options {
     $add_option->( 'break-at-old-keyword-breakpoints',   'bok', '!' );
     $add_option->( 'break-at-old-logical-breakpoints',   'bol', '!' );
     $add_option->( 'break-at-old-method-breakpoints',    'bom', '!' );
+    $add_option->( 'break-at-old-semicolon-breakpoints', 'bos', '!' );
     $add_option->( 'break-at-old-ternary-breakpoints',   'bot', '!' );
     $add_option->( 'break-at-old-attribute-breakpoints', 'boa', '!' );
     $add_option->( 'ignore-old-breakpoints',             'iob', '!' );

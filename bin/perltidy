@@ -2551,6 +2551,25 @@ as in this example:
 You may want to include the B<-weld-nested-containers> flag in this case to keep 
 nested braces and parens together, as in the last line.
 
+=item B<-bos>,  B<--break-at-old-semicolon-breakpoints>
+
+Semicolons are normally placed at the end of a statement.  This means that formatted lines do not normally begin with semicolons.  If the input stream has some lines which begin with semicolons, these can be retained by setting this flag.  For example, consider
+the following two-line input snippet:
+
+  $z = sqrt($x**2 + $y**2)
+  ;
+
+The default formatting will be:
+
+  $z = sqrt( $x**2 + $y**2 );
+
+The result using B<perltidy -bos> keeps the isolated semicolon:
+
+  $z = sqrt( $x**2 + $y**2 )
+    ;
+
+The default is not to do this, B<-nbos>. 
+
 
 =item B<-bok>,  B<--break-at-old-keyword-breakpoints>
 

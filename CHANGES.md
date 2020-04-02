@@ -2,6 +2,9 @@
 
 ## 2020 01 10.01
 
+    - add option --break-at-old-semicolon-breakpoints', -bos, requested 
+      in RT#131644.  This flag will keep lines beginning with a semicolon.
+
     - Added --character-encoding=guess or -guess to have perltidy guess
       if a file is encoded as -utf8 or some older single-byte encoding. This
       is useful when processing a mixture of file types, such as utf8 and 
