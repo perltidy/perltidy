@@ -4174,9 +4174,8 @@ sub weld_nested_containers {
 
         if ( $iline_ic == $iline_io ) {
 
-            my $token_oo      = $outer_opening->[_TOKEN_];
-            my $block_type_io = $inner_opening->[_BLOCK_TYPE_];
-            my $token_io      = $inner_opening->[_TOKEN_];
+            my $token_oo = $outer_opening->[_TOKEN_];
+            my $token_io = $inner_opening->[_TOKEN_];
             $do_not_weld ||= $token_oo eq '(' && $token_io ne '(';
         }
 
@@ -7041,9 +7040,7 @@ sub copy_token_as_type {
     return $rnew_token;
 }
 
-
-
-{        # begin print_line_of_tokens
+{    # begin print_line_of_tokens
 
     my $rinput_token_array;    # Current working array
     my $rinput_K_array;        # Future working array
@@ -7731,7 +7728,9 @@ EOM
                 # tokens
                 if ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
-                    if ( $self->tight_paren_follows($K_to_go[0], $Ktoken_vars) ) {
+                    if ( $self->tight_paren_follows( $K_to_go[0], $Ktoken_vars )
+                      )
+                    {
                         $rbrace_follower = { ')' => 1 };
                     }
                 }
