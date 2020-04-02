@@ -4109,6 +4109,329 @@ sub weld_nested_containers {
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
 
+    # This array will hold the sequence numbers of the tokens to be welded.
+    my @welds;
+
+    # Variables needed for estimating line lengths
+    my $starting_indent;
+    my $starting_lentot;
+
+    # A tolerance to the length for length estimates.  In some rare cases
+    # this can avoid problems where a final weld slightly exceeds the
+    # line length and gets broken in a bad spot.
+    my $length_tol = 1;
+
+    my $excess_length_to_K = sub {
+        my ($K) = @_;
+
+        # Estimate the length from the line start to a given token
+        my $length = $self->cumulative_length_before_K($K) - $starting_lentot;
+        my $excess_length =
+          $starting_indent + $length + $length_tol - $rOpts_maximum_line_length;
+        return ($excess_length);
+    };
+
+    my $length_to_opening_seqno = sub {
+        my ($seqno) = @_;
+        my $KK      = $K_opening_container->{$seqno};
+        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+        return $lentot;
+    };
+
+    my $length_to_closing_seqno = sub {
+        my ($seqno) = @_;
+        my $KK      = $K_closing_container->{$seqno};
+        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+        return $lentot;
+    };
+
+    # Abbreviations:
+    #  _oo=outer opening, i.e. first of  { {
+    #  _io=inner opening, i.e. second of { {
+    #  _oc=outer closing, i.e. second of } {
+    #  _ic=inner closing, i.e. first of  } }
+
+    my $previous_pair;
+
+    # We are working from outermost to innermost pairs so that
+    # level changes will be complete when we arrive at the inner pairs.
+
+    while ( my $item = pop( @{$rnested_pairs} ) ) {
+        my ( $inner_seqno, $outer_seqno ) = @{$item};
+
+        my $Kouter_opening = $K_opening_container->{$outer_seqno};
+        my $Kinner_opening = $K_opening_container->{$inner_seqno};
+        my $Kouter_closing = $K_closing_container->{$outer_seqno};
+        my $Kinner_closing = $K_closing_container->{$inner_seqno};
+
+        my $outer_opening = $rLL->[$Kouter_opening];
+        my $inner_opening = $rLL->[$Kinner_opening];
+        my $outer_closing = $rLL->[$Kouter_closing];
+        my $inner_closing = $rLL->[$Kinner_closing];
+
+        my $iline_oo = $outer_opening->[_LINE_INDEX_];
+        my $iline_io = $inner_opening->[_LINE_INDEX_];
+
+        # Set flag saying if this pair starts a new weld
+        my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
+
+        # Set flag saying if this pair is adjacent to the previous nesting pair
+        # (even if previous pair was rejected as a weld)
+        my $touch_previous_pair =
+          defined($previous_pair) && $outer_seqno == $previous_pair->[0];
+        $previous_pair = $item;
+
+        # Set a flag if we should not weld. It sometimes looks best not to weld
+        # when the opening and closing tokens are very close.  However, there
+        # is a danger that we will create a "blinker", which oscillates between
+        # two semi-stable states, if we do not weld.  So the rules for
+        # not welding have to be carefully defined and tested.
+        my $do_not_weld;
+        if ( !$touch_previous_pair ) {
+
+            # If this pair is not adjacent to the previous pair (skipped or
+            # not), then measure lengths from the start of line of oo
+
+            my $rK_range = $rlines->[$iline_oo]->{_rK_range};
+            my ( $Kfirst, $Klast ) = @{$rK_range};
+            $starting_lentot =
+              $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+            $starting_indent = 0;
+            if ( !$rOpts_variable_maximum_line_length ) {
+                my $level = $rLL->[$Kfirst]->[_LEVEL_];
+                $starting_indent = $rOpts_indent_columns * $level;
+            }
+
+            # DO-NOT-WELD RULE 1:
+            # Do not weld something that looks like the start of a two-line
+            # function call, like this: <<snippets/wn6.in>>
+            #    $trans->add_transformation(
+            #        PDL::Graphics::TriD::Scale->new( $sx, $sy, $sz ) );
+            # We will look for a semicolon after the closing paren.
+
+            # We want to weld something complex, like this though
+            # my $compass = uc( opposite_direction( line_to_canvas_direction(
+            #     @{ $coords[0] }, @{ $coords[1] } ) ) );
+            # Otherwise we will get a 'blinker'. For example, the following
+            # would become a blinker without this rule:
+            #        $Self->_Add( $SortOrderDisplay{ $Field
+            #              ->GenerateFieldForSelectSQL() } );
+
+            my $iline_oc = $outer_closing->[_LINE_INDEX_];
+            if ( $iline_oc <= $iline_oo + 1 ) {
+
+                # Look for following semicolon...
+                my $Knext_nonblank = $self->K_next_nonblank($Kouter_closing);
+                my $next_nonblank_type =
+                  defined($Knext_nonblank)
+                  ? $rLL->[$Knext_nonblank]->[_TYPE_]
+                  : 'b';
+                if ( $next_nonblank_type eq ';' ) {
+
+                    # Then do not weld if no other containers between inner
+                    # opening and closing.
+                    my $Knext_seq_item = $inner_opening->[_KNEXT_SEQ_ITEM_];
+                    if ( $Knext_seq_item == $Kinner_closing ) {
+                        $do_not_weld ||= 1;
+                    }
+                }
+            }
+        }
+
+        my $iline_ic = $inner_closing->[_LINE_INDEX_];
+
+        # DO-NOT-WELD RULE 2:
+        # Do not weld an opening paren to an inner one line brace block
+        # We will just use old line numbers for this test and require
+        # iterations if necessary for convergence
+
+        # For example, otherwise we could cause the opening paren
+        # in the following example to separate from the caller name
+        # as here:
+
+        #    $_[0]->code_handler
+        #     	( sub { $more .= $_[1] . ":" . $_[0] . "\n" } );
+
+        # Here is another example where we do not want to weld:
+        #  $wrapped->add_around_modifier(
+        #    sub { push @tracelog => 'around 1'; $_[0]->(); } );
+
+        # If the one line sub block gets broken due to length or by the
+        # user, then we can weld.  The result will then be:
+        # $wrapped->add_around_modifier( sub {
+        #    push @tracelog => 'around 1';
+        #    $_[0]->();
+        # } );
+
+        if ( $iline_ic == $iline_io ) {
+
+            my $token_oo      = $outer_opening->[_TOKEN_];
+            my $block_type_io = $inner_opening->[_BLOCK_TYPE_];
+            my $token_io      = $inner_opening->[_TOKEN_];
+            $do_not_weld ||= $token_oo eq '(' && $token_io ne '(';
+        }
+
+        # DO-NOT-WELD RULE 3:
+        # Do not weld if this makes our line too long
+        $do_not_weld ||= $excess_length_to_K->($Kinner_opening) > 0;
+
+        # DO-NOT-WELD RULE 4; implemented for git#10:
+        # Do not weld an opening -ce brace if the next container is on a single
+        # line, different from the opening brace. (This is very rare).  For
+        # example, given the following with -ce, we will avoid joining the {
+        # and [
+
+        #  } else {
+        #      [ $_, length($_) ]
+        #  }
+
+        # because this would produce a terminal one-line block:
+
+        #  } else { [ $_, length($_) ]  }
+
+        # which may not be what is desired. But given this input:
+
+        #  } else { [ $_, length($_) ]  }
+
+        # then we will do the weld and retain the one-line block
+        if ( $rOpts->{'cuddled-else'} ) {
+            my $block_type = $rLL->[$Kouter_opening]->[_BLOCK_TYPE_];
+            if ( $block_type && $rcuddled_block_types->{'*'}->{$block_type} ) {
+                my $io_line = $inner_opening->[_LINE_INDEX_];
+                my $ic_line = $inner_closing->[_LINE_INDEX_];
+                my $oo_line = $outer_opening->[_LINE_INDEX_];
+                $do_not_weld ||=
+                  ( $oo_line < $io_line && $ic_line == $io_line );
+            }
+        }
+
+        if ($do_not_weld) {
+
+            # After neglecting a pair, we start measuring from start of point io
+            $starting_lentot =
+              $self->cumulative_length_before_K($Kinner_opening);
+            $starting_indent = 0;
+            if ( !$rOpts_variable_maximum_line_length ) {
+                my $level = $inner_opening->[_LEVEL_];
+                $starting_indent = $rOpts_indent_columns * $level;
+            }
+
+            # Normally, a broken pair should not decrease indentation of
+            # intermediate tokens:
+            ##      if ( $last_pair_broken ) { next }
+            # However, for long strings of welded tokens, such as '{{{{{{...'
+            # we will allow broken pairs to also remove indentation.
+            # This will keep very long strings of opening and closing
+            # braces from marching off to the right.  We will do this if the
+            # number of tokens in a weld before the broken weld is 4 or more.
+            # This rule will mainly be needed for test scripts, since typical
+            # welds have fewer than about 4 welded tokens.
+            if ( !@welds || @{ $welds[-1] } < 4 ) { next }
+        }
+
+        # otherwise start new weld ...
+        elsif ($starting_new_weld) {
+            push @welds, $item;
+        }
+
+        # ... or extend current weld
+        else {
+            unshift @{ $welds[-1] }, $inner_seqno;
+        }
+
+        # After welding, reduce the indentation level if all intermediate tokens
+        my $dlevel = $outer_opening->[_LEVEL_] - $inner_opening->[_LEVEL_];
+        if ( $dlevel != 0 ) {
+            my $Kstart = $Kinner_opening;
+            my $Kstop  = $Kinner_closing;
+            for ( my $KK = $Kstart ; $KK <= $Kstop ; $KK++ ) {
+                $rLL->[$KK]->[_LEVEL_] += $dlevel;
+            }
+        }
+    }
+
+    # Define weld lengths needed later to set line breaks
+    foreach my $item (@welds) {
+
+        # sweep from inner to outer
+
+        my $inner_seqno;
+        my $len_close = 0;
+        my $len_open  = 0;
+        foreach my $outer_seqno ( @{$item} ) {
+            if ($inner_seqno) {
+
+                my $dlen_opening =
+                  $length_to_opening_seqno->($inner_seqno) -
+                  $length_to_opening_seqno->($outer_seqno);
+
+                my $dlen_closing =
+                  $length_to_closing_seqno->($outer_seqno) -
+                  $length_to_closing_seqno->($inner_seqno);
+
+                $len_open  += $dlen_opening;
+                $len_close += $dlen_closing;
+
+            }
+
+            $weld_len_left_closing{$outer_seqno}  = $len_close;
+            $weld_len_right_opening{$outer_seqno} = $len_open;
+
+            $inner_seqno = $outer_seqno;
+        }
+
+        # sweep from outer to inner
+        foreach my $seqno ( reverse @{$item} ) {
+            $weld_len_right_closing{$seqno} =
+              $len_close - $weld_len_left_closing{$seqno};
+            $weld_len_left_opening{$seqno} =
+              $len_open - $weld_len_right_opening{$seqno};
+        }
+    }
+
+    #####################################
+    # DEBUG
+    #####################################
+    if (0) {
+        my $count = 0;
+        local $" = ')(';
+        foreach my $weld (@welds) {
+            print "\nWeld number $count has seq: (@{$weld})\n";
+            foreach my $seq ( @{$weld} ) {
+                print <<EOM;
+	seq=$seq
+        left_opening=$weld_len_left_opening{$seq};
+        right_opening=$weld_len_right_opening{$seq};
+        left_closing=$weld_len_left_closing{$seq};
+        right_closing=$weld_len_right_closing{$seq};
+EOM
+            }
+
+            $count++;
+        }
+    }
+    return;
+}
+
+sub OLD_weld_nested_containers {
+    my $self = shift;
+
+    # This routine implements the -wn flag by "welding together"
+    # the nested closing and opening tokens which were previously
+    # identified by sub 'find_nested_pairs'.  "welding" simply
+    # involves setting certain hash values which will be checked
+    # later during formatting.
+
+    my $rLL                 = $self->{rLL};
+    my $Klimit              = $self->get_rLL_max_index();
+    my $rnested_pairs       = $self->{rnested_pairs};
+    my $rlines              = $self->{rlines};
+    my $K_opening_container = $self->{K_opening_container};
+    my $K_closing_container = $self->{K_closing_container};
+
+    # Return unless there are nested pairs to weld
+    return unless defined($rnested_pairs) && @{$rnested_pairs};
+
     my $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
 
