@@ -87,13 +87,10 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
 ----------
 
         'wn7' => <<'----------',
-		    # illustrate wn rule 2b: do not weld to opening hash brace
-		    # if closing brace is not >=2 lines away
-                    $Self->_Add($SortOrderDisplay{$Field
-                           ->GenerateFieldForSelectSQL()});
+		    # do not weld paren to opening one-line non-paren container
+                    $Self->_Add($SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
 
-		    # rule 2a forerly applied to all blocks, but now only
-		    # applies to subs, so this weld is now okay with -wn
+		    # this weld is now okay with -wn
 		    f(
 		      do { 1; !!(my $x = bless []); }
 		    );
@@ -223,14 +220,12 @@ sub foo_subroutine_in_main {
             source => "wn7",
             params => "def",
             expect => <<'#6...........',
-                    # illustrate wn rule 2b: do not weld to opening hash brace
-                    # if closing brace is not >=2 lines away
+                    # do not weld paren to opening one-line non-paren container
                     $Self->_Add(
                         $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
                     );
 
-                    # rule 2a forerly applied to all blocks, but now only
-                    # applies to subs, so this weld is now okay with -wn
+                    # this weld is now okay with -wn
                     f( do { 1; !!( my $x = bless [] ); } );
 #6...........
         },
@@ -239,14 +234,12 @@ sub foo_subroutine_in_main {
             source => "wn7",
             params => "wn",
             expect => <<'#7...........',
-                    # illustrate wn rule 2b: do not weld to opening hash brace
-                    # if closing brace is not >=2 lines away
+                    # do not weld paren to opening one-line non-paren container
                     $Self->_Add(
                         $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
                     );
 
-                    # rule 2a forerly applied to all blocks, but now only
-                    # applies to subs, so this weld is now okay with -wn
+                    # this weld is now okay with -wn
                     f( do { 1; !!( my $x = bless [] ); } );
 #7...........
         },
