@@ -6926,13 +6926,16 @@ sub tight_paren_follows {
 
     # Never break a simple parenthesized do of the form ( do { ... } )
     my $K_test = $self->K_next_nonblank($K_oo);
-    if ( $K_test < $K_io )  { $K_test = $self->K_next_nonblank($K_test); }
+    return unless defined($K_test);
+    if ( $K_test < $K_io ) { $K_test = $self->K_next_nonblank($K_test); }
+    return unless defined($K_test);
     if ( $K_test == $K_io ) { return 1 }
 
     # Never break before a closing signature paren.
     # This is a fix for issue git#22.
     # sub xxx ( ... do {  ... } ) {
     $K_test = $self->K_next_nonblank($K_oc);
+    return unless defined($K_test);
     my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
     if (
            $block_type
@@ -6947,6 +6950,7 @@ sub tight_paren_follows {
     # If there are intervening container item(s) between the outer '(' and
     # the innier '{' then this is considered a complex statement
     $K_test = $rLL->[$K_oo]->[_KNEXT_SEQ_ITEM_];
+    return unless defined($K_test);
     if ( $K_test != $K_io ) {
         return;
     }
