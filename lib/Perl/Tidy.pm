@@ -912,6 +912,7 @@ EOM
         # Decode the input stream if necessary requested
         my $encoding_in              = "";
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
+        my $encoding_log_message;
 
         # Case 1. See if we already have an encoded string. In that
         # case, we have to ignore any encoding flag.
@@ -949,11 +950,18 @@ EOM
                 if ( $encoding_in !~ /^(UTF-8|utf8)$/ ) {
                     $encoding_in = "";
                     $buf         = $buf_in;
+                    $encoding_log_message .= <<EOM;
+Guessed encoding '$encoding_in' is not utf8; no encoding will be used
+EOM
                 }
                 else {
 
                     eval { $buf = $decoder->decode($buf_in); };
                     if ($@) {
+
+                        $encoding_log_message .= <<EOM;
+Guessed encoding '$encoding_in' but decoding was unsuccessful; no encoding is used
+EOM
 
                         # Note that a guess failed, but keep going
                         # This warning can eventually be removed
@@ -962,6 +970,11 @@ EOM
                         );
                         $encoding_in = "";
                         $buf         = $buf_in;
+                    }
+                    else {
+                        $encoding_log_message .= <<EOM;
+Guessed encoding '$encoding_in' successfully decoded
+EOM
                     }
                 }
             }
@@ -983,6 +996,11 @@ EOM
                 );
                 next;
             }
+            else {
+                $encoding_log_message .= <<EOM;
+Specified encoding '$encoding_in' successfully decoded
+EOM
+            }
         }
 
         # Set the encoding to be used for all further i/o: If we have
@@ -994,7 +1012,7 @@ EOM
 
         # Delete any Byte Order Mark (BOM), which can cause trouble
         if ($is_encoded_data) {
-	    $buf =~ s/^\x{FEFF}//;
+            $buf =~ s/^\x{FEFF}//;
         }
 
         # MD5 sum of input file is evaluated before any prefilter
@@ -1140,6 +1158,9 @@ EOM
             $rOpts,        $logger_object, $config_file,
             $rraw_options, $Windows_type,  $readable_options,
         );
+        $logger_object->write_logfile_entry($encoding_log_message)
+          if $encoding_log_message;
+
         if ( ${$rpending_logfile_message} ) {
             $logger_object->write_logfile_entry( ${$rpending_logfile_message} );
         }
