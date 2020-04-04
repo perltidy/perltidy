@@ -1029,7 +1029,7 @@ EOM
         # starting MD5 sum for convergence test is evaluated after any prefilter
         if ($do_convergence_test) {
             my $digest = $md5_hex->($buf);
-            $saw_md5{$digest} = 1;
+            $saw_md5{$digest} = 0;
         }
 
         $source_object = Perl::Tidy::LineSource->new( \$buf, $rOpts,
@@ -1298,7 +1298,7 @@ EOM
                 elsif ($do_convergence_test) {
 
                     my $digest = $md5_hex->($sink_buffer);
-                    if ( !$saw_md5{$digest} ) {
+                    if ( !defined($saw_md5{$digest}) ) {
                         $saw_md5{$digest} = $iter;
                     }
                     else {
