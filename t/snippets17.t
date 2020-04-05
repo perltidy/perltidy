@@ -8,6 +8,8 @@
 #5 rperl.rperl
 #6 wn7.def
 #7 wn7.wn
+#8 wn8.def
+#9 wn8.wn
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -94,6 +96,25 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
 		    f(
 		      do { 1; !!(my $x = bless []); }
 		    );
+----------
+
+        'wn8' => <<'----------',
+	    # Former -wn blinkers, which oscillated between two states
+
+	    # fixed RULE 1 only applies to '('
+            my $res = eval { { $die_on_fetch, 0 } };
+
+            my $res = eval {
+                { $die_on_fetch, 0 }
+            };
+
+	    # fixed RULE 2 applies to any inner opening token
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+
+            $app->FORM->{'appbar1'}->set_status(_(
+                 "Cannot delete zone $name: sub-zones or appellations exist."));
 ----------
     };
 
@@ -242,6 +263,54 @@ sub foo_subroutine_in_main {
                     # this weld is now okay with -wn
                     f( do { 1; !!( my $x = bless [] ); } );
 #7...........
+        },
+
+        'wn8.def' => {
+            source => "wn8",
+            params => "def",
+            expect => <<'#8...........',
+            # Former -wn blinkers, which oscillated between two states
+
+            # fixed RULE 1 only applies to '('
+            my $res = eval {
+                { $die_on_fetch, 0 }
+            };
+
+            my $res = eval {
+                { $die_on_fetch, 0 }
+            };
+
+            # fixed RULE 2 applies to any inner opening token
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+#8...........
+        },
+
+        'wn8.wn' => {
+            source => "wn8",
+            params => "wn",
+            expect => <<'#9...........',
+            # Former -wn blinkers, which oscillated between two states
+
+            # fixed RULE 1 only applies to '('
+            my $res = eval { { $die_on_fetch, 0 } };
+
+            my $res = eval { { $die_on_fetch, 0 } };
+
+            # fixed RULE 2 applies to any inner opening token
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+#9...........
         },
     };
 

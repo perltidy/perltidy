@@ -322,3 +322,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets17.t	wn8.def
+../snippets17.t	wn8.wn

@@ -4127,7 +4127,8 @@ sub weld_nested_containers {
             #              ->GenerateFieldForSelectSQL() } );
 
             my $iline_oc = $outer_closing->[_LINE_INDEX_];
-            if ( $iline_oc <= $iline_oo + 1 ) {
+            my $token_oo = $outer_opening->[_TOKEN_];
+            if ( $iline_oc <= $iline_oo + 1 && $token_oo eq '(') {
 
                 # Look for following semicolon...
                 my $Knext_nonblank = $self->K_next_nonblank($Kouter_closing);
@@ -4135,7 +4136,7 @@ sub weld_nested_containers {
                   defined($Knext_nonblank)
                   ? $rLL->[$Knext_nonblank]->[_TYPE_]
                   : 'b';
-                if ( $next_nonblank_type eq ';' ) {
+                if ( $next_nonblank_type eq ';') {
 
                     # Then do not weld if no other containers between inner
                     # opening and closing.
@@ -4175,8 +4176,7 @@ sub weld_nested_containers {
         if ( $iline_ic == $iline_io ) {
 
             my $token_oo = $outer_opening->[_TOKEN_];
-            my $token_io = $inner_opening->[_TOKEN_];
-            $do_not_weld ||= $token_oo eq '(' && $token_io ne '(';
+            $do_not_weld ||= $token_oo eq '(';
         }
 
         # DO-NOT-WELD RULE 3:

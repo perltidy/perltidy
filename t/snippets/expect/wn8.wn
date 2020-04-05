@@ -1,0 +1,15 @@
+            # Former -wn blinkers, which oscillated between two states
+
+            # fixed RULE 1 only applies to '('
+            my $res = eval { { $die_on_fetch, 0 } };
+
+            my $res = eval { { $die_on_fetch, 0 } };
+
+            # fixed RULE 2 applies to any inner opening token
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
+
+            $app->FORM->{'appbar1'}->set_status(
+                _("Cannot delete zone $name: sub-zones or appellations exist.")
+            );
