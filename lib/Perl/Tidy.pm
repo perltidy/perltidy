@@ -1317,6 +1317,9 @@ EOM
                             $diagnostics_object->write_diagnostics(
                                 $convergence_log_message)
                               if $diagnostics_object;
+
+			    # Uncomment to search for blinking states
+                	    # Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
                         }
                         else {
                             $convergence_log_message = <<EOM;
