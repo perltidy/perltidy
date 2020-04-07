@@ -1,0 +1,2 @@
+        $top_label->set_text( gettext("check permissions.") )
+          ;

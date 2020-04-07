@@ -12,6 +12,8 @@
 #9 wn8.wn
 #10 pbp6.def
 #11 pbp6.pbp
+#12 bos.bos
+#13 bos.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,6 +31,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'bos'      => "-bos",
         'def'      => "",
         'pbp'      => "-pbp -nst -nse",
         'rperl'    => "-l=0",
@@ -40,6 +43,11 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bos' => <<'----------',
+        $top_label->set_text( gettext("check permissions.") )
+          ;
+----------
 
         'pbp6' => <<'----------',
 	# These formerly blinked with -pbp
@@ -389,6 +397,23 @@ sub foo_subroutine_in_main {
             * 60;
 
 #11...........
+        },
+
+        'bos.bos' => {
+            source => "bos",
+            params => "bos",
+            expect => <<'#12...........',
+        $top_label->set_text( gettext("check permissions.") )
+          ;
+#12...........
+        },
+
+        'bos.def' => {
+            source => "bos",
+            params => "def",
+            expect => <<'#13...........',
+        $top_label->set_text( gettext("check permissions.") );
+#13...........
         },
     };
 

@@ -5977,14 +5977,16 @@ EOM
             Warn("Conflicting parameters: -iob and -boc; -boc will be ignored\n"
             );
         }
+        if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
+            Warn("Conflicting parameters: -iob and -bos; -bos will be ignored\n"
+            );
+        }
 
         # Note: there are additional parameters that can be made inactive by
         # -iob, but they are on by default so we would generate excessive
         # warnings if we noted them. They are:
         # $rOpts->{'break-at-old-keyword-breakpoints'}
         # $rOpts->{'break-at-old-logical-breakpoints'}
-        # $rOpts->{'break-at-old-method-breakpoints'}
-        # $rOpts->{'break-at-old-semicolon-breakpoints'}
         # $rOpts->{'break-at-old-ternary-breakpoints'}
         # $rOpts->{'break-at-old-attribute-breakpoints'}
     }
@@ -15769,6 +15771,8 @@ sub sync_token_K {
 
         my $rOpts_short_concatenation_item_length =
           $rOpts->{'short-concatenation-item-length'};
+        my $rOpts_break_at_old_semicolon_breakpoints =
+          $rOpts->{'break-at-old-semicolon-breakpoints'};
 
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
@@ -15887,6 +15891,10 @@ sub sync_token_K {
                 # If line $n is the last line, we set some flags and
                 # do any special checks for it
                 if ( $n == $nmax ) {
+
+                    next
+                      if ( $type_ibeg_2 eq ';'
+                        && $rOpts_break_at_old_semicolon_breakpoints );
 
                     # a terminal '{' should stay where it is
                     # unless preceded by a fat comma
