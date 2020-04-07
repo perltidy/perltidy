@@ -10,6 +10,8 @@
 #7 wn7.wn
 #8 wn8.def
 #9 wn8.wn
+#10 pbp6.def
+#11 pbp6.pbp
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,6 +30,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'      => "",
+        'pbp'      => "-pbp -nst -nse",
         'rperl'    => "-l=0",
         'rt132059' => "-dac",
         'wn'       => "-wn",
@@ -37,6 +40,23 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'pbp6' => <<'----------',
+	# These formerly blinked with -pbp
+        return $width1*$common_length*(
+          $W*atan2(1,$W)
+        + $H*atan2(1,$H)
+        - $RTHSQPWSQ*atan2(1,$RTHSQPWSQ)
+        + 0.25*log(
+         ($WSQP1*$HSQP1)/(1+$WSQ+$HSQ)
+         *($WSQ*(1+$WSQ+$HSQ)/($WSQP1*$HSQPWSQ))**$WSQ
+         *($HSQ*(1+$WSQ+$HSQ)/($HSQP1*$HSQPWSQ))**$HSQ
+         )
+         )/($W*$pi);
+
+        my $oldSec = ( 60 * $session->{originalStartHour} + $session->{originalStartMin} ) * 60;
+
+----------
 
         'rperl' => <<'----------',
 # Some test cases for RPerl, https://github.com/wbraswell/rperl/
@@ -311,6 +331,64 @@ sub foo_subroutine_in_main {
                 _("Cannot delete zone $name: sub-zones or appellations exist.")
             );
 #9...........
+        },
+
+        'pbp6.def' => {
+            source => "pbp6",
+            params => "def",
+            expect => <<'#10...........',
+        # These formerly blinked with -pbp
+        return $width1 *
+          $common_length *
+          (
+            $W * atan2( 1, $W ) +
+              $H * atan2( 1, $H ) -
+              $RTHSQPWSQ * atan2( 1, $RTHSQPWSQ ) +
+              0.25 * log(
+                ( $WSQP1 * $HSQP1 ) /
+                  ( 1 + $WSQ + $HSQ ) *
+                  ( $WSQ * ( 1 + $WSQ + $HSQ ) / ( $WSQP1 * $HSQPWSQ ) )
+                  **$WSQ *
+                  ( $HSQ * ( 1 + $WSQ + $HSQ ) / ( $HSQP1 * $HSQPWSQ ) )**$HSQ
+              )
+          ) /
+          ( $W * $pi );
+
+        my $oldSec =
+          ( 60 * $session->{originalStartHour} + $session->{originalStartMin} )
+          * 60;
+
+#10...........
+        },
+
+        'pbp6.pbp' => {
+            source => "pbp6",
+            params => "pbp",
+            expect => <<'#11...........',
+        # These formerly blinked with -pbp
+        return
+            $width1 * $common_length
+            * (
+                  $W * atan2( 1, $W )
+                + $H * atan2( 1, $H )
+                - $RTHSQPWSQ * atan2( 1, $RTHSQPWSQ )
+                + 0.25 * log(
+                  ( $WSQP1 * $HSQP1 )
+                / ( 1 + $WSQ + $HSQ )
+                    * ( $WSQ * ( 1 + $WSQ + $HSQ ) / ( $WSQP1 * $HSQPWSQ ) )
+                    **$WSQ
+                    * ( $HSQ * ( 1 + $WSQ + $HSQ ) / ( $HSQP1 * $HSQPWSQ ) )
+                    **$HSQ
+                )
+            )
+            / ( $W * $pi );
+
+        my $oldSec
+            = ( 60 * $session->{originalStartHour}
+                + $session->{originalStartMin} )
+            * 60;
+
+#11...........
         },
     };
 

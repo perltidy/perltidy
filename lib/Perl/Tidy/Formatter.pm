@@ -12861,6 +12861,12 @@ sub terminal_type_K {
                 if ( $next_nonblank_token =~ /^(die|confess|croak|warn)$/ ) {
                     if ( $want_break_before{$token} && $i > 0 ) {
                         $bond_strength_to_go[ $i - 1 ] -= $delta_bias;
+
+                        # keep bond strength of a token and its following blank
+                        # the same
+                        if ( $types_to_go[ $i - 1 ] eq 'b' && $i > 2 ) {
+                            $bond_strength_to_go[ $i - 2 ] -= $delta_bias;
+                        }
                     }
                     else {
                         $bond_str -= $delta_bias;
@@ -17252,6 +17258,7 @@ sub set_continuation_breaks {
         #-------------------------------------------------------
         # BEGINNING of inner loop to find the best next breakpoint
         #-------------------------------------------------------
+	my $strength = NO_BREAK;
         for ( $i_test = $i_begin ; $i_test <= $imax ; $i_test++ ) {
             my $type                     = $types_to_go[$i_test];
             my $token                    = $tokens_to_go[$i_test];
@@ -17261,8 +17268,14 @@ sub set_continuation_breaks {
             my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
             my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
             my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
-            my $strength                 = $bond_strength_to_go[$i_test];
             my $maximum_line_length      = maximum_line_length($i_begin);
+
+	    # adjustments to the previous bond strength may have been made, and
+	    # we must keep the bond strength of a token and its following blank
+	    # the same; 
+            my $last_strength = $strength;
+            $strength = $bond_strength_to_go[$i_test];
+            if ( $type eq 'b' ) { $strength = $last_strength }
 
             # use old breaks as a tie-breaker.  For example to
             # prevent blinkers with -pbp in this code:

@@ -1,0 +1,14 @@
+	# These formerly blinked with -pbp
+        return $width1*$common_length*(
+          $W*atan2(1,$W)
+        + $H*atan2(1,$H)
+        - $RTHSQPWSQ*atan2(1,$RTHSQPWSQ)
+        + 0.25*log(
+         ($WSQP1*$HSQP1)/(1+$WSQ+$HSQ)
+         *($WSQ*(1+$WSQ+$HSQ)/($WSQP1*$HSQPWSQ))**$WSQ
+         *($HSQ*(1+$WSQ+$HSQ)/($HSQP1*$HSQPWSQ))**$HSQ
+         )
+         )/($W*$pi);
+
+        my $oldSec = ( 60 * $session->{originalStartHour} + $session->{originalStartMin} ) * 60;
+
