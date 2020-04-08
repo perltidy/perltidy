@@ -136,11 +136,13 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
                 { $die_on_fetch, 0 }
             };
 
-	    # fixed RULE 2 applies to any inner opening token
+	    # fixed RULE 2 applies to any inner opening token; this is a stable
+	    # state with -wn
             $app->FORM->{'appbar1'}->set_status(
                 _("Cannot delete zone $name: sub-zones or appellations exist.")
             );
 
+	    # fixed RULE 1: this is now a stable state with -wn
             $app->FORM->{'appbar1'}->set_status(_(
                  "Cannot delete zone $name: sub-zones or appellations exist."));
 ----------
@@ -308,11 +310,13 @@ sub foo_subroutine_in_main {
                 { $die_on_fetch, 0 }
             };
 
-            # fixed RULE 2 applies to any inner opening token
+            # fixed RULE 2 applies to any inner opening token; this is a stable
+            # state with -wn
             $app->FORM->{'appbar1'}->set_status(
                 _("Cannot delete zone $name: sub-zones or appellations exist.")
             );
 
+            # fixed RULE 1: this is now a stable state with -wn
             $app->FORM->{'appbar1'}->set_status(
                 _("Cannot delete zone $name: sub-zones or appellations exist.")
             );
@@ -330,14 +334,15 @@ sub foo_subroutine_in_main {
 
             my $res = eval { { $die_on_fetch, 0 } };
 
-            # fixed RULE 2 applies to any inner opening token
+            # fixed RULE 2 applies to any inner opening token; this is a stable
+            # state with -wn
             $app->FORM->{'appbar1'}->set_status(
                 _("Cannot delete zone $name: sub-zones or appellations exist.")
             );
 
-            $app->FORM->{'appbar1'}->set_status(
-                _("Cannot delete zone $name: sub-zones or appellations exist.")
-            );
+            # fixed RULE 1: this is now a stable state with -wn
+            $app->FORM->{'appbar1'}->set_status( _(
+                "Cannot delete zone $name: sub-zones or appellations exist.") );
 #9...........
         },
 

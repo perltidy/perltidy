@@ -4080,6 +4080,7 @@ sub weld_nested_containers {
 
         my $iline_oo = $outer_opening->[_LINE_INDEX_];
         my $iline_io = $inner_opening->[_LINE_INDEX_];
+        my $iline_ic = $inner_closing->[_LINE_INDEX_];
 
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
@@ -4125,10 +4126,21 @@ sub weld_nested_containers {
             # would become a blinker without this rule:
             #        $Self->_Add( $SortOrderDisplay{ $Field
             #              ->GenerateFieldForSelectSQL() } );
+	    # But it is okay to weld a two-line statement if it looks like
+	    # it was already welded, meaning that the two opening containers are
+	    # on a different line that the two closing containers.  This is
+	    # necessary to prevent blinking of something like this with
+	    # perltidy -wn -pbp (starting indentation two levels deep):
+
+            # $top_label->set_text( gettext(
+            #    "Unable to create personal directory - check permissions.") );
 
             my $iline_oc = $outer_closing->[_LINE_INDEX_];
             my $token_oo = $outer_opening->[_TOKEN_];
-            if ( $iline_oc <= $iline_oo + 1 && $token_oo eq '(') {
+            if (   $iline_oc <= $iline_oo + 1
+                && $iline_io == $iline_ic  
+                && $token_oo eq '(' )
+            {
 
                 # Look for following semicolon...
                 my $Knext_nonblank = $self->K_next_nonblank($Kouter_closing);
@@ -4147,8 +4159,6 @@ sub weld_nested_containers {
                 }
             }
         }
-
-        my $iline_ic = $inner_closing->[_LINE_INDEX_];
 
         # DO-NOT-WELD RULE 2:
         # Do not weld an opening paren to an inner one line brace block
