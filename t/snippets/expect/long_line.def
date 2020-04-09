@@ -1,0 +1,21 @@
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body =
+  SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
+  ->value(
+    \SOAP::Data->set_value(
+        SOAP::Data->name(
+            faultcode => qualify( $self->namespace => shift(@parameters) )
+        ),
+        SOAP::Data->name( faultstring => shift(@parameters) ),
+        @parameters
+        ? SOAP::Data->name(
+            detail => do {
+                my $detail = shift(@parameters);
+                ref $detail ? \$detail : $detail;
+            }
+          )
+        : (),
+        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
+    )
+  );

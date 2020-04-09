@@ -1,7 +1,7 @@
-		    # do not weld paren to opening one-line non-paren container
+                    # do not weld paren to opening one-line non-paren container
                     $Self->_Add($SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
 
-		    # this weld is now okay with -wn
-		    f(
-		      do { 1; !!(my $x = bless []); }
-		    );
+                    # this will not get welded with -wn
+                    f(
+                      do { 1; !!(my $x = bless []); }
+                    );

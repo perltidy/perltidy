@@ -4126,19 +4126,19 @@ sub weld_nested_containers {
             # would become a blinker without this rule:
             #        $Self->_Add( $SortOrderDisplay{ $Field
             #              ->GenerateFieldForSelectSQL() } );
-	    # But it is okay to weld a two-line statement if it looks like
-	    # it was already welded, meaning that the two opening containers are
-	    # on a different line that the two closing containers.  This is
-	    # necessary to prevent blinking of something like this with
-	    # perltidy -wn -pbp (starting indentation two levels deep):
+            # But it is okay to weld a two-line statement if it looks like
+            # it was already welded, meaning that the two opening containers are
+            # on a different line that the two closing containers.  This is
+            # necessary to prevent blinking of something like this with
+            # perltidy -wn -pbp (starting indentation two levels deep):
 
             # $top_label->set_text( gettext(
             #    "Unable to create personal directory - check permissions.") );
 
             my $iline_oc = $outer_closing->[_LINE_INDEX_];
             my $token_oo = $outer_opening->[_TOKEN_];
-            if (   $iline_oc <= $iline_oo + 1
-                && $iline_io == $iline_ic  
+            if (   $iline_oc == $iline_oo + 1
+                && $iline_io == $iline_ic
                 && $token_oo eq '(' )
             {
 
@@ -4148,7 +4148,7 @@ sub weld_nested_containers {
                   defined($Knext_nonblank)
                   ? $rLL->[$Knext_nonblank]->[_TYPE_]
                   : 'b';
-                if ( $next_nonblank_type eq ';') {
+                if ( $next_nonblank_type eq ';' ) {
 
                     # Then do not weld if no other containers between inner
                     # opening and closing.
@@ -6867,47 +6867,10 @@ sub tight_paren_follows {
 
     # We are at the closing brace of a 'do' block.  See if this brace is
     # followed by a closing paren, and if so, set a flag which indicates
-    # that we do not want a line break between the '}' and ')'.  We do not
-    # want a line break if the expression within parens is fairly 'simple'.
+    # that we do not want a line break between the '}' and ')'.
 
-    # 'Simple' is hard to define, but for now will consider the expression
-    # to be simple if either it is a sub signature, or there are (1) no
-    # other container tokens and (2) no commas between the opening paren
-    # and brace.
-
-    # For example the following expression is simple because there is just the
-    # keyword 'do' between the '(' and the '{', so we do not add line break:
-    # 'do' block is the only expression within the parens:
-
-    #    if ( do { $2 !~ /&/ } ) { ... }
-
-    # (Note: in this case the weld option -wn will accomplish the same effect)
-
-    # For anything more complex than this, we also require that the expression
-    # be on one line in the input.
-
-    # For example, we will set the flag for the following expression
-    # written in one line:
-    # example:
-
-    #   $self->debug( 'Error: ' . do { local $/; <$err> } );
-
-    # but not if it is on multiple lines on input, since the user may prefer
-    # it on multiple lines:
-
-    #   $self->debug(
-    #       'Error: ' . do { local $/; <$err> }
-    #   );
-
-    # The following will not be simple by these rules (comma between the '('
-    # and the '{':
-
-    #    for my $to ( 'tmp', do { \my $o } ) {
-
-    # and this will not be simple (extra parens between the '(' and '{]):
-
-    #  if (  !defined($warnings::VERSION)
-    #    || do { no warnings "numeric"; $warnings::VERSION < 1.03 } )
+    # xxxxx ( ...... do {  ... } ) {
+    #                          ^-------looking at this brace, K_ic
 
     # Subscript notation:
     # _i = inner container (braces in this case)
@@ -6916,6 +6879,17 @@ sub tight_paren_follows {
     # _ic = inner closing = '}'
     # _oo = outer opening = '('
     # _oc = outer closing = ')'
+
+    #       |--K_oo                 |--K_oc  = outer container
+    # xxxxx ( ...... do {  ...... } ) {
+    #                   |--K_io   |--K_ic    = inner container
+
+    # In general, the safe thing to do is return a 'false' value
+    # if the statement appears to be complex.  This will have
+    # the downstream side-effect of opening up outer containers
+    # to help make complex code readable.  But for simpler
+    # do blocks it can be preferable to keep the code compact
+    # by returning a 'true' value.
 
     # uses Global vars:  $rOpts, $SUB_PATTERN, $ASUB_PATTERN
 
@@ -6926,7 +6900,7 @@ sub tight_paren_follows {
     my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
     return unless ($seqno_i);    # shouldn't happen;
 
-    # Look at next nonblank, see if it is a ')'
+    # This only applies if the next nonblank is a ')'
     my $K_oc = $self->K_next_nonblank($K_ic);
     return unless defined($K_oc);
     my $token_next = $rLL->[$K_oc]->[_TOKEN_];
@@ -6936,56 +6910,88 @@ sub tight_paren_follows {
     my $K_io    = $self->{K_opening_container}->{$seqno_i};
     my $K_oo    = $self->{K_opening_container}->{$seqno_o};
 
-    # Never break a simple parenthesized do of the form ( do { ... } )
-    my $K_test = $self->K_next_nonblank($K_oo);
-    return unless defined($K_test);
-    if ( $K_test < $K_io ) { $K_test = $self->K_next_nonblank($K_test); }
-    return unless defined($K_test);
-    if ( $K_test == $K_io ) { return 1 }
-
-    # Never break before a closing signature paren.
-    # This is a fix for issue git#22.
-    # sub xxx ( ... do {  ... } ) {
-    $K_test = $self->K_next_nonblank($K_oc);
-    return unless defined($K_test);
-    my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
-    if (
-           $block_type
-        && $rLL->[$K_test]->[_TYPE_] eq '{'
-        && (   $block_type =~ /$SUB_PATTERN/
-            || $block_type =~ /$ASUB_PATTERN/ )
-      )
-    {
-        return 1;
+    # RULE 1: Do not break before a closing signature paren
+    # (regardless of complexity).  This is a fix for issue git#22.
+    # Looking for something like:
+    #   sub xxx ( ... do {  ... } ) {
+    #                               ^----- next block_type
+    my $K_test = $self->K_next_nonblank($K_oc);
+    if ( defined($K_test) ) {
+        my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
+        if (
+               $block_type
+            && $rLL->[$K_test]->[_TYPE_] eq '{'
+            && (   $block_type =~ /$SUB_PATTERN/
+                || $block_type =~ /$ASUB_PATTERN/ )
+          )
+        {
+            return 1;
+        }
     }
 
-    # If there are intervening container item(s) between the outer '(' and
-    # the innier '{' then this is considered a complex statement
-    $K_test = $rLL->[$K_oo]->[_KNEXT_SEQ_ITEM_];
-    return unless defined($K_test);
-    if ( $K_test != $K_io ) {
-        return;
-    }
+    # RULE 2: Break if the contents within braces appears to be 'complex'.  We
+    # base this decision on the number of tokens between braces.
 
-    # see if this is one line on input and possibly on output
+    # xxxxx ( ... do {  ... } ) {
+    #                 ^^^^^^
+
+    # Although very simple, it has the advantages of (1) being insensitive to
+    # changes in lengths of identifier names, (2) easy to understand, implement
+    # and test.  A test case for this is 't/snippets/long_line.in'.
+
+    # Example: $K_ic - $K_oo = 9       [Pass Rule 2]
+    # if ( do { $2 !~ /&/ } ) { ... }
+
+    # Example: $K_ic - $K_oo = 10      [Pass Rule 2]
+    # for ( split /\s*={70,}\s*/, do { local $/; <DATA> }) { ... }
+
+    # Example: $K_ic - $K_oo = 20      [Fail Rule 2]
+    # test_zero_args( "do-returned list slice", do { ( 10, 11 )[ 2, 3 ]; });
+
+    return if ( $K_ic - $K_io > 16 );
+
+    # RULE 3: break if the code between the opening '(' and the '{' is 'complex'
+    # As with the previous rule, we decide based on the token count
+
+    # xxxxx ( ... do {  ... } ) {
+    #        ^^^^^^^^
+
+    # Example: $K_ic - $K_oo = 9       [Pass Rule 2]
+    #          $K_io - $K_oo = 4       [Pass Rule 3]
+    # if ( do { $2 !~ /&/ } ) { ... }
+
+    # Example: $K_ic - $K_oo = 10    [Pass rule 2]
+    #          $K_io - $K_oo = 9     [Fail rule 3]
+    # for ( split /\s*={70,}\s*/, do { local $/; <DATA> }) { ... }
+
+    return if ( $K_io - $K_oo > 9 );
+
+    # RULE 4: Break if we have already broken this batch of output tokens
     return if ( $K_oo < $K_to_go_0 );
 
-    # require input on one line for anything more complex unless signature
+    # RULE 5: Break if input is not on one line
+    # For example, we will set the flag for the following expression
+    # written in one line:
+
+    # This has: $K_ic - $K_oo = 10    [Pass rule 2]
+    #           $K_io - $K_oo = 8     [Pass rule 3]
+    #   $self->debug( 'Error: ' . do { local $/; <$err> } );
+
+    # but we break after the brace if it is on multiple lines on input, since
+    # the user may prefer it on multiple lines:
+
+    # [Fail rule 5]
+    #   $self->debug(
+    #       'Error: ' . do { local $/; <$err> }
+    #   );
+
     if ( !$rOpts->{'ignore-old-breakpoints'} ) {
         my $iline_oo = $rLL->[$K_oo]->[_LINE_INDEX_];
         my $iline_oc = $rLL->[$K_oc]->[_LINE_INDEX_];
         return if ( $iline_oo != $iline_oc );
     }
 
-    # If there are any commas between the '(' and '{' then the expression
-    # is considered complex.  This is a potentially slow test so we save it
-    # for last.
-    for ( my $KK = $K_oo + 1 ; $KK < $K_io ; $KK++ ) {
-        my $type = $rLL->[$KK]->[_TYPE_];
-        return if ( $type eq ',' );
-    }
-
-    # Not a complex expression
+    # OK to keep the paren tight
     return 1;
 }
 
@@ -11506,8 +11512,7 @@ sub lookup_opening_indentation {
         my $is_isolated_block_brace = $block_type_to_go[$ibeg]
           && ( $i_terminal == $ibeg
             || $is_if_elsif_else_unless_while_until_for_foreach{
-                $block_type_to_go[$ibeg]
-            } );
+                $block_type_to_go[$ibeg] } );
 
         # only do this for a ':; which is aligned with its leading '?'
         my $is_unaligned_colon = $types_to_go[$ibeg] eq ':' && !$is_leading;
@@ -17276,7 +17281,7 @@ sub set_continuation_breaks {
         #-------------------------------------------------------
         # BEGINNING of inner loop to find the best next breakpoint
         #-------------------------------------------------------
-	my $strength = NO_BREAK;
+        my $strength = NO_BREAK;
         for ( $i_test = $i_begin ; $i_test <= $imax ; $i_test++ ) {
             my $type                     = $types_to_go[$i_test];
             my $token                    = $tokens_to_go[$i_test];
@@ -17288,9 +17293,9 @@ sub set_continuation_breaks {
             my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
             my $maximum_line_length      = maximum_line_length($i_begin);
 
-	    # adjustments to the previous bond strength may have been made, and
-	    # we must keep the bond strength of a token and its following blank
-	    # the same; 
+            # adjustments to the previous bond strength may have been made, and
+            # we must keep the bond strength of a token and its following blank
+            # the same;
             my $last_strength = $strength;
             $strength = $bond_strength_to_go[$i_test];
             if ( $type eq 'b' ) { $strength = $last_strength }

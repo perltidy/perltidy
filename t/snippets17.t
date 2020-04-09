@@ -14,6 +14,8 @@
 #11 pbp6.pbp
 #12 bos.bos
 #13 bos.def
+#14 long_line.def
+#15 long_line.long_line
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,12 +33,13 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bos'      => "-bos",
-        'def'      => "",
-        'pbp'      => "-pbp -nst -nse",
-        'rperl'    => "-l=0",
-        'rt132059' => "-dac",
-        'wn'       => "-wn",
+        'bos'       => "-bos",
+        'def'       => "",
+        'long_line' => "-l=0",
+        'pbp'       => "-pbp -nst -nse",
+        'rperl'     => "-l=0",
+        'rt132059'  => "-dac",
+        'wn'        => "-wn",
     };
 
     ############################
@@ -47,6 +50,12 @@ BEGIN {
         'bos' => <<'----------',
         $top_label->set_text( gettext("check permissions.") )
           ;
+----------
+
+        'long_line' => <<'----------',
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body = SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )->value( \SOAP::Data->set_value( SOAP::Data->name( faultcode => qualify( $self->namespace => shift(@parameters) ) ), SOAP::Data->name( faultstring => shift(@parameters) ), @parameters ? SOAP::Data->name( detail => do { my $detail = shift(@parameters); ref $detail ? \$detail : $detail } ) : (), @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (), ) );
 ----------
 
         'pbp6' => <<'----------',
@@ -117,13 +126,13 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
 ----------
 
         'wn7' => <<'----------',
-		    # do not weld paren to opening one-line non-paren container
+                    # do not weld paren to opening one-line non-paren container
                     $Self->_Add($SortOrderDisplay{$Field->GenerateFieldForSelectSQL()});
 
-		    # this weld is now okay with -wn
-		    f(
-		      do { 1; !!(my $x = bless []); }
-		    );
+                    # this will not get welded with -wn
+                    f(
+                      do { 1; !!(my $x = bless []); }
+                    );
 ----------
 
         'wn8' => <<'----------',
@@ -276,8 +285,10 @@ sub foo_subroutine_in_main {
                         $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
                     );
 
-                    # this weld is now okay with -wn
-                    f( do { 1; !!( my $x = bless [] ); } );
+                    # this will not get welded with -wn
+                    f(
+                        do { 1; !!( my $x = bless [] ); }
+                    );
 #6...........
         },
 
@@ -290,8 +301,10 @@ sub foo_subroutine_in_main {
                         $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
                     );
 
-                    # this weld is now okay with -wn
-                    f( do { 1; !!( my $x = bless [] ); } );
+                    # this will not get welded with -wn
+                    f(
+                        do { 1; !!( my $x = bless [] ); }
+                    );
 #7...........
         },
 
@@ -419,6 +432,55 @@ sub foo_subroutine_in_main {
             expect => <<'#13...........',
         $top_label->set_text( gettext("check permissions.") );
 #13...........
+        },
+
+        'long_line.def' => {
+            source => "long_line",
+            params => "def",
+            expect => <<'#14...........',
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body =
+  SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
+  ->value(
+    \SOAP::Data->set_value(
+        SOAP::Data->name(
+            faultcode => qualify( $self->namespace => shift(@parameters) )
+        ),
+        SOAP::Data->name( faultstring => shift(@parameters) ),
+        @parameters
+        ? SOAP::Data->name(
+            detail => do {
+                my $detail = shift(@parameters);
+                ref $detail ? \$detail : $detail;
+            }
+          )
+        : (),
+        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
+    )
+  );
+#14...........
+        },
+
+        'long_line.long_line' => {
+            source => "long_line",
+            params => "long_line",
+            expect => <<'#15...........',
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body = SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )->value(
+    \SOAP::Data->set_value(
+        SOAP::Data->name( faultcode   => qualify( $self->namespace => shift(@parameters) ) ),
+        SOAP::Data->name( faultstring => shift(@parameters) ),
+        @parameters
+        ? SOAP::Data->name(
+            detail => do { my $detail = shift(@parameters); ref $detail ? \$detail : $detail }
+          )
+        : (),
+        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
+    )
+);
+#15...........
         },
     };
 
