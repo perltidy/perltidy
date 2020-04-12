@@ -372,7 +372,8 @@ sub valign_input {
     # side comments.  Tabs in these fields can mess up the column counting.
     # The log file warns the user if there are any such tabs.
 
-    my ( $rline_hash, $rfields, $rtokens, $rpatterns ) = @_;
+    my ( $rline_hash ) = @_;
+
     my $level                     = $rline_hash->{level};
     my $level_end                 = $rline_hash->{level_end};
     my $indentation               = $rline_hash->{indentation};
@@ -383,6 +384,10 @@ sub valign_input {
     my $do_not_pad                = $rline_hash->{do_not_pad};
     my $rvertical_tightness_flags = $rline_hash->{rvertical_tightness_flags};
     my $level_jump                = $rline_hash->{level_jump};
+    my $rfields                   = $rline_hash->{rfields};
+    my $rtokens                   = $rline_hash->{rtokens};
+    my $rpatterns                 = $rline_hash->{rpatterns};
+    my $rfield_lengths            = $rline_hash->{rfield_lengths};
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1

@@ -248,7 +248,6 @@ use vars qw{
   $rOpts_brace_left_and_indent
   $rOpts_closing_side_comment_maximum_text
   $rOpts_continuation_indentation
-  $rOpts_ignore_side_comment_lengths
   $rOpts_indent_columns
   $rOpts_line_up_parentheses
   $rOpts_maximum_line_length
@@ -303,6 +302,7 @@ BEGIN {
         _LEVEL_TRUE_            => $i++,
         _SLEVEL_                => $i++,
         _TOKEN_                 => $i++,
+        _TOKEN_LENGTH_          => $i++,
         _TYPE_                  => $i++,
         _TYPE_SEQUENCE_         => $i++,
     };
@@ -2329,9 +2329,14 @@ sub respace_tokens {
     my $rtoken_vars;
     my $Kmax = @{$rLL} - 1;
 
+    my $CODE_type = "";
+    my $line_type = "";
+
     my $rOpts_add_whitespace            = $rOpts->{'add-whitespace'};
     my $rOpts_delete_old_whitespace     = $rOpts->{'delete-old-whitespace'};
     my $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
+    my $rOpts_ignore_side_comment_lengths =
+      $rOpts->{'ignore-side-comment-lengths'};
 
     # Set the whitespace flags, which indicate the token spacing preference.
     my $rwhitespace_flags = $self->set_whitespace_flags();
@@ -2409,21 +2414,33 @@ sub respace_tokens {
             }
         }
 
-        # find the length of this token
+        my $type = $item->[_TYPE_];
+
+        # trim comments
+        if ( $type eq '#' ) {
+            $item->[_TOKEN_] =~ s/\s*$//;
+        }
+
+        # Find the length of this token.  Later it may be adjusted if phantom
+        # or ignoring side comment lengths.
         my $token_length = length( $item->[_TOKEN_] );
+
+        # FIXME: Can remove $rOpts_ignore... as global
+        # Mark length of side comments as just 1 if their lengths are ignored
+        if (   $type eq '#'
+            && $rOpts_ignore_side_comment_lengths
+            && ( !$CODE_type || $CODE_type eq 'HSC' ) )
+        {
+            $token_length = 1;
+        }
+
+        $item->[_TOKEN_LENGTH_] = $token_length;
 
         # and update the cumulative length
         $cumulative_length += $token_length;
 
         # Save the length sum to just AFTER this token
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
-
-        my $type = $item->[_TYPE_];
-
-        # trim side comments
-        if ( $type eq '#' ) {
-            $item->[_TOKEN_] =~ s/\s*$//;
-        }
 
         if ( $type && $type ne 'b' && $type ne '#' ) {
             $last_nonblank_type       = $type;
@@ -2527,10 +2544,16 @@ sub respace_tokens {
             # Convert the existing blank to:
             #   a phantom semicolon for one_line_block option = 0 or 1
             #   a real semicolon    for one_line_block option = 2
-            my $tok = $rOpts_one_line_block_semicolons == 2 ? ';' : '';
+            my $tok     = '';
+            my $len_tok = 0;
+            if ( $rOpts_one_line_block_semicolons == 2 ) {
+                $tok     = ';';
+                $len_tok = 1;
+            }
 
-            $rLL_new->[$Ktop]->[_TOKEN_] = $tok;    # zero length if phantom
-            $rLL_new->[$Ktop]->[_TYPE_]  = ';';
+            $rLL_new->[$Ktop]->[_TOKEN_]        = $tok;
+            $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
+            $rLL_new->[$Ktop]->[_TYPE_]         = ';';
             $rLL_new->[$Ktop]->[_SLEVEL_] =
               $rLL->[$KK]->[_SLEVEL_];
 
@@ -2607,8 +2630,6 @@ sub respace_tokens {
 
     # Main loop over all lines of the file
     my $last_K_out;
-    my $CODE_type = "";
-    my $line_type = "";
 
     # Testing option to break qw.  Do not use; it can make a mess.
     my $ALLOW_BREAK_MULTILINE_QW = 0;
@@ -4583,26 +4604,6 @@ EOM
     return;
 }
 
-sub sum_token_lengths {
-    my $self = shift;
-
-    # This has been merged into 'respace_tokens' but retained for reference
-    my $rLL               = $self->{rLL};
-    my $cumulative_length = 0;
-    for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
-
-        # now set the length of this token
-        my $token_length = length( $rLL->[$KK]->[_TOKEN_] );
-
-        $cumulative_length += $token_length;
-
-        # Save the length sum to just AFTER this token
-        $rLL->[$KK]->[_CUMULATIVE_LENGTH_] = $cumulative_length;
-
-    }
-    return;
-}
-
 sub resync_lines_and_tokens {
 
     my $self   = shift;
@@ -6006,11 +6007,9 @@ EOM
     $rOpts_closing_side_comment_maximum_text =
       $rOpts->{'closing-side-comment-maximum-text'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
-    $rOpts_ignore_side_comment_lengths =
-      $rOpts->{'ignore-side-comment-lengths'};
-    $rOpts_indent_columns      = $rOpts->{'indent-columns'};
-    $rOpts_line_up_parentheses = $rOpts->{'line-up-parentheses'};
-    $rOpts_maximum_line_length = $rOpts->{'maximum-line-length'};
+    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
+    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
+    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
     $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
@@ -6961,7 +6960,7 @@ sub tight_paren_follows {
     # if ( do { $2 !~ /&/ } ) { ... }
 
     # Example: $K_ic - $K_oo = 10    [Pass rule 2]
-    #          $K_io - $K_oo = 9     [Fail rule 3]
+    #          $K_io - $K_oo = 9     [Pass rule 3]
     # for ( split /\s*={70,}\s*/, do { local $/; <DATA> }) { ... }
 
     return if ( $K_io - $K_oo > 9 );
@@ -6993,29 +6992,6 @@ sub tight_paren_follows {
 
     # OK to keep the paren tight
     return 1;
-}
-
-sub token_length {
-
-    # Returns the length of a token, given:
-    #  $token=text of the token
-    #  $type = type
-    #  $not_first_token = should be TRUE if this is not the first token of
-    #   the line.  It might the index of this token in an array.  It is
-    #   used to test for a side comment vs a block comment.
-
-    # uses Global vars:  $rOpts_ignore_side_comment_lengths
-
-    my ( $token, $type, $not_first_token ) = @_;
-    my $token_length = length($token);
-
-    # We mark lengths of side comments as just 1 if we are
-    # ignoring their lengths when setting line breaks.
-    $token_length = 1
-      if ( $rOpts_ignore_side_comment_lengths
-        && $not_first_token
-        && $type eq '#' );
-    return $token_length;
 }
 
 sub copy_hash {
@@ -7152,20 +7128,12 @@ EOM
         }
     }
 
-    sub rtoken_length {
-
-        # return length of ith token in @{$rtokens}
-        my ($i) = @_;
-        return token_length( $rinput_token_array->[$i]->[_TOKEN_],
-            $rinput_token_array->[$i]->[_TYPE_], $i );
-    }
-
     # Routine to place the current token into the output stream.
     # Called once per output token.
     sub store_token_to_go {
 
         my ( $self, $side_comment_follows ) = @_;
-
+        my $rLL  = $self->{rLL};
         my $flag = $side_comment_follows ? 1 : $no_internal_newlines;
 
         ++$max_index_to_go;
@@ -7199,8 +7167,26 @@ EOM
           if ( $iprev >= 0 && $type ne 'b' );
         $inext_to_go[$max_index_to_go] = $max_index_to_go + 1;
 
-        $token_lengths_to_go[$max_index_to_go] =
-          token_length( $token, $type, $max_index_to_go );
+        my $length = $rLL->[$Ktoken_vars]->[_TOKEN_LENGTH_];
+
+        # FIXME: Patch for indent-only, in which the entire set of tokens is
+        # turned into type 'q'. Lengths have not been defined because sub
+        # 'respace_tokens' is bypassed. We do not need lengths in this case,
+        # but we will use the character count to have a defined value.  In the
+        # future, it would be nicer to have 'respace_tokens' convert the lines
+        # to quotes and get correct lengths.
+        if ( !defined($length) ) {
+            $length = length($token);
+
+            # FIXME: _TOKEN_LENGTH_ Debug code to be removed eventually
+            if ( 0 && $type ne 'q' || $max_index_to_go != 0 ) {
+
+                Fault(
+"Undefined length for type=$type, tok=$token, index=$max_index_to_go\n"
+                );
+            }
+        }
+        $token_lengths_to_go[$max_index_to_go] = $length;
 
         # We keep a running sum of token lengths from the start of this batch:
         #   summed_lengths_to_go[$i]   = total length to just before token $i
@@ -7372,9 +7358,6 @@ EOM
                 $file_writer_object->write_blank_code_line();
                 $last_line_leading_type = 'b';
             }
-
-            # TRIM COMMENTS -- This could be turned off as a option
-            $rinput_token_array->[0]->[_TOKEN_] =~ s/\s*$//;    # trim right end
 
             if (
                 $rOpts->{'indent-block-comments'}
@@ -8447,7 +8430,7 @@ sub starting_one_line_block {
 
         # old whitespace could be arbitrarily large, so don't use it
         if ( $rtoken_array->[$i]->[_TYPE_] eq 'b' ) { $pos += 1 }
-        else { $pos += rtoken_length($i) }
+        else { $pos += $rtoken_array->[$i]->[_TOKEN_LENGTH_] }
 
         # ignore some small blocks
         my $type_sequence = $rtoken_array->[$i]->[_TYPE_SEQUENCE_];
@@ -8514,7 +8497,7 @@ sub starting_one_line_block {
                 && !$is_sort_map_grep{$block_type} )
             {
 
-                $pos += rtoken_length($i_nonblank);
+                $pos += $rtoken_array->[$i_nonblank]->[_TOKEN_LENGTH_];
 
                 if ( $i_nonblank > $i + 1 ) {
 
@@ -8523,7 +8506,7 @@ sub starting_one_line_block {
                     if ( $rtoken_array->[ $i + 1 ]->[_TYPE_] eq 'b' ) {
                         $pos += 1;
                     }
-                    else { $pos += rtoken_length( $i + 1 ) }
+                    else { $pos += $rtoken_array->[ $i + 1 ]->[_TOKEN_LENGTH_] }
                 }
 
                 if ( $pos >= maximum_line_length($i_start) ) {
@@ -8732,12 +8715,18 @@ sub pad_token {
 
     # insert $pad_spaces before token number $ipad
     my ( $self, $ipad, $pad_spaces ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL     = $self->{rLL};
+    my $KK      = $K_to_go[$ipad];
+    my $tok     = $rLL->[$KK]->[_TOKEN_];
+    my $tok_len = $rLL->[$KK]->[_TOKEN_LENGTH_];
+
     if ( $pad_spaces > 0 ) {
-        $tokens_to_go[$ipad] = ' ' x $pad_spaces . $tokens_to_go[$ipad];
+        $tok = ' ' x $pad_spaces . $tok;
+        $tok_len += $pad_spaces;
     }
     elsif ( $pad_spaces == -1 && $tokens_to_go[$ipad] eq ' ' ) {
-        $tokens_to_go[$ipad] = "";
+        $tok     = "";
+        $tok_len = 0;
     }
     else {
 
@@ -8745,10 +8734,12 @@ sub pad_token {
         return;
     }
 
-    # Keep token arrays in sync
-    $self->sync_token_K($ipad);
+    $tok     = $rLL->[$KK]->[_TOKEN_]        = $tok;
+    $tok_len = $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
 
     $token_lengths_to_go[$ipad] += $pad_spaces;
+    $tokens_to_go[$ipad] = $tok;
+
     foreach my $i ( $ipad .. $max_index_to_go ) {
         $summed_lengths_to_go[ $i + 1 ] += $pad_spaces;
     }
@@ -9868,6 +9859,7 @@ sub make_else_csc_text {
 sub add_closing_side_comment {
 
     my $self = shift;
+    my $rLL  = $self->{rLL};
 
     # add closing side comments after closing block braces if -csc used
     my ( $closing_side_comment, $cscw_block_comment );
@@ -10038,7 +10030,10 @@ sub add_closing_side_comment {
             # switch to the new csc (unless we deleted it!)
             if ($token) {
                 $tokens_to_go[$max_index_to_go] = $token;
-                $self->sync_token_K($max_index_to_go);
+                my $K = $K_to_go[$max_index_to_go];
+                $rLL->[$K]->[_TOKEN_] = $token;
+                $rLL->[$K]->[_TOKEN_LENGTH_] =
+                  length($token);    # NOTE: length no longer important
             }
         }
 
@@ -10198,7 +10193,7 @@ sub send_lines_to_vertical_aligner {
         $self->delete_needless_alignments( $ibeg, $iend,
             $ralignment_type_to_go );
 
-        my ( $rtokens, $rfields, $rpatterns ) =
+        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
           $self->make_alignment_patterns( $ibeg, $iend,
             $ralignment_type_to_go );
 
@@ -10283,9 +10278,28 @@ sub send_lines_to_vertical_aligner {
             }
         }
 
+        # FIXME: _TOKEN_LENGTH_ Debug code to be removed eventually
+        if (0) {
+            my $nfld = @{$rfields};
+            for ( my $k = 0 ; $k < $nfld ; $k++ ) {
+                my $field = $rfields->[$k];
+                my $len   = $rfield_lengths->[$k];
+                my $len2  = length($field);
+                if ( $len != $len2 ) {
+                    if ( $field !~ /^#/ ) {
+                        Warn("len=$len != $len2 for field: '$field'");
+                    }
+                }
+            }
+        }
+
         # add any new closing side comment to the last line
         if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
             $rfields->[-1] .= " $closing_side_comment";
+
+            # NOTE: Patch for csc. We can just use 1 for the length of the csc
+            # because its length should not be a limiting factor from here on.
+            $rfield_lengths->[-1] += 2;
         }
 
         # send this new line down the pipe
@@ -10300,11 +10314,14 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{do_not_pad}                = $do_not_pad;
         $rvalign_hash->{rvertical_tightness_flags} = $rvertical_tightness_flags;
         $rvalign_hash->{level_jump}                = $level_jump;
+        $rvalign_hash->{rfields}                   = $rfields;
+        $rvalign_hash->{rpatterns}                 = $rpatterns;
+        $rvalign_hash->{rtokens}                   = $rtokens;
+        $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
 
         $rvalign_hash->{valign_batch_number} = $valign_batch_number;
 
-        Perl::Tidy::VerticalAligner::valign_input( $rvalign_hash, $rfields,
-            $rtokens, $rpatterns );
+        Perl::Tidy::VerticalAligner::valign_input($rvalign_hash);
 
         $in_comma_list = $type_end eq ',' && $forced_breakpoint;
 
@@ -10493,6 +10510,15 @@ sub send_lines_to_vertical_aligner {
         return;
     }
 
+    my $field_length_sum = sub {
+        my ( $i1, $i2 ) = @_;
+        my $len_field = 0;
+        foreach ( $i1 .. $i2 ) {
+            $len_field += $token_lengths_to_go[$_];
+        }
+        return $len_field;
+    };
+
     sub make_alignment_patterns {
 
         # Here we do some important preliminary work for the
@@ -10515,10 +10541,11 @@ sub send_lines_to_vertical_aligner {
         #   field.  These should normally each match before alignment is
         #   allowed, even when the alignment tokens match.
         my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
-        my @tokens   = ();
-        my @fields   = ();
-        my @patterns = ();
-        my $i_start  = $ibeg;
+        my @tokens        = ();
+        my @fields        = ();
+        my @patterns      = ();
+        my @field_lengths = ();
+        my $i_start       = $ibeg;
 
         my $depth                 = 0;
         my @container_name        = ("");
@@ -10708,6 +10735,8 @@ sub send_lines_to_vertical_aligner {
                 push( @fields,
                     join( '', @tokens_to_go[ $i_start .. $i - 1 ] ) );
 
+                push @field_lengths, $field_length_sum->( $i_start, $i - 1 );
+
                 # store the alignment token for this field
                 push( @tokens, $tok );
 
@@ -10778,7 +10807,8 @@ sub send_lines_to_vertical_aligner {
 
         # done with this line .. join text of tokens to make the last field
         push( @fields, join( '', @tokens_to_go[ $i_start .. $iend ] ) );
-        return ( \@tokens, \@fields, \@patterns );
+        push @field_lengths, $field_length_sum->( $i_start, $iend );
+        return ( \@tokens, \@fields, \@patterns, \@field_lengths );
     }
 
 }    # end make_alignment_patterns
@@ -11603,7 +11633,7 @@ sub mate_index_to_go {
     }
     my $i_mate_alt = $mate_index_to_go[$i];
 
-    # Debug code to eventually be removed
+    # FIXME: Debug code to be removed eventually
     if ( 0 && $i_mate_alt != $i_mate ) {
         my $tok       = $tokens_to_go[$i];
         my $type      = $types_to_go[$i];
@@ -12764,8 +12794,9 @@ sub terminal_type_K {
         @bias{@bias_tokens} = (0) x scalar(@bias_tokens);
         my $code_bias = -.01;    # bias for closing block braces
 
-        my $type  = 'b';
-        my $token = ' ';
+        my $type         = 'b';
+        my $token        = ' ';
+        my $token_length = 1;
         my $last_type;
         my $last_nonblank_type  = $type;
         my $last_nonblank_token = $token;
@@ -12791,6 +12822,7 @@ sub terminal_type_K {
             }
 
             $token               = $tokens_to_go[$i];
+            $token_length        = $token_lengths_to_go[$i];
             $block_type          = $block_type_to_go[$i];
             $i_next              = $i + 1;
             $next_type           = $types_to_go[$i_next];
@@ -13133,8 +13165,7 @@ sub terminal_type_K {
                     if ( $right_key eq '.' ) {
                         unless (
                             $last_nonblank_type eq '.'
-                            && (
-                                length($token) <=
+                            && ( $token_length <=
                                 $rOpts_short_concatenation_item_length )
                             && ( !$is_closing_token{$token} )
                           )
@@ -15624,21 +15655,6 @@ sub undo_forced_breakpoint_stack {
     return;
 }
 
-sub sync_token_K {
-    my ( $self, $i ) = @_;
-
-    # Keep tokens in the rLL array in sync with the _to_go array
-    my $rLL = $self->{rLL};
-    my $K   = $K_to_go[$i];
-    if ( defined($K) ) {
-        $rLL->[$K]->[_TOKEN_] = $tokens_to_go[$i];
-    }
-    else {
-        # shouldn't happen
-    }
-    return;
-}
-
 {    # begin recombine_breakpoints
 
     my %is_amp_amp;
@@ -15742,7 +15758,10 @@ sub sync_token_K {
             next if ($semicolon_count);
 
             # ...ok, then make the semicolon invisible
-            $tokens_to_go[$i_semicolon] = "";
+            $tokens_to_go[$i_semicolon]            = "";
+            $token_lengths_to_go[$i_semicolon]     = 0;
+            $rLL->[$K_semicolon]->[_TOKEN_]        = "";
+            $rLL->[$K_semicolon]->[_TOKEN_LENGTH_] = 0;
         }
         return;
     }
@@ -15754,6 +15773,7 @@ sub sync_token_K {
         # Walk down the lines of this batch and unmask any invisible line-ending
         # semicolons.  They were placed by sub respace_tokens but we only now
         # know if we actually need them.
+        my $rLL = $self->{rLL};
 
         my $nmax = @{$ri_end} - 1;
         foreach my $n ( 0 .. $nmax ) {
@@ -15761,10 +15781,18 @@ sub sync_token_K {
             my $i = $ri_end->[$n];
             if ( $types_to_go[$i] eq ';' && $tokens_to_go[$i] eq '' ) {
 
-                $tokens_to_go[$i] = $want_left_space{';'} == WS_NO ? ';' : ' ;';
-                $self->sync_token_K($i);
-
-                my $line_number = 1 + $self->get_old_line_index( $K_to_go[$i] );
+                my $tok     = ';';
+                my $tok_len = 1;
+                if ( $want_left_space{';'} != WS_NO ) {
+                    $tok     = ' ;';
+                    $tok_len = 2;
+                }
+                $tokens_to_go[$i]        = $tok;
+                $token_lengths_to_go[$i] = $tok_len;
+                my $KK = $K_to_go[$i];
+                $rLL->[$KK]->[_TOKEN_]        = $tok;
+                $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
+                my $line_number = 1 + $self->get_old_line_index($KK);
                 note_added_semicolon($line_number);
             }
         }
