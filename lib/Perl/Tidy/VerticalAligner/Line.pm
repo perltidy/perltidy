@@ -19,6 +19,7 @@ our $VERSION = '20200110.01';
         jmax_original_line        => undef,
         rtokens                   => undef,
         rfields                   => undef,
+        rfield_lengths            => undef,
         rpatterns                 => undef,
         indentation               => undef,
         leading_space_count       => undef,
@@ -76,10 +77,11 @@ our $VERSION = '20200110.01';
         my $self = shift;
         return $self->{_jmax_original_line};
     }
-    sub get_rtokens     { my $self = shift; return $self->{_rtokens} }
-    sub get_rfields     { my $self = shift; return $self->{_rfields} }
-    sub get_rpatterns   { my $self = shift; return $self->{_rpatterns} }
-    sub get_indentation { my $self = shift; return $self->{_indentation} }
+    sub get_rtokens        { my $self = shift; return $self->{_rtokens} }
+    sub get_rfields        { my $self = shift; return $self->{_rfields} }
+    sub get_rfield_lengths { my $self = shift; return $self->{_rfield_lengths} }
+    sub get_rpatterns      { my $self = shift; return $self->{_rpatterns} }
+    sub get_indentation    { my $self = shift; return $self->{_indentation} }
 
     sub get_j_terminal_match {
         my $self = shift;
@@ -210,6 +212,12 @@ our $VERSION = '20200110.01';
     sub set_rfields {
         my ( $self, $val ) = @_;
         $self->{_rfields} = $val;
+        return;
+    }
+
+    sub set_rfield_lengths {
+        my ( $self, $val ) = @_;
+        $self->{_rfield_lengths} = $val;
         return;
     }
 
