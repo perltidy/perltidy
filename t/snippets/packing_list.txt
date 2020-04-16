@@ -168,6 +168,8 @@
 ../snippets17.t	pbp6.pbp
 ../snippets17.t	bos.bos
 ../snippets17.t	bos.def
+../snippets17.t	long_line.def
+../snippets17.t	long_line.long_line
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -328,5 +330,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets17.t	long_line.def
-../snippets17.t	long_line.long_line
+../snippets17.t	align32.def
+../snippets17.t	ternary4.def

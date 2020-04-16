@@ -16,6 +16,8 @@
 #13 bos.def
 #14 long_line.def
 #15 long_line.long_line
+#16 align32.def
+#17 ternary4.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -46,6 +48,13 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align32' => <<'----------',
+# should not get alignment here:
+my $c_sub_khwnd = WindowFromId $k_hwnd, 0x8008;    # FID_CLIENT
+ok $c_sub_khwnd, 'have kids client window';
+ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
+----------
 
         'bos' => <<'----------',
         $top_label->set_text( gettext("check permissions.") )
@@ -123,6 +132,17 @@ sub t022 (
 my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
     ...;
 };
+----------
+
+        'ternary4' => <<'----------',
+# some side comments
+*{"${callpkg}::$sym"} = 
+      $type eq '&' ? \&{"${pkg}::$sym"}    #
+    : $type eq '$' ? \${"${pkg}::$sym"}    #
+    : $type eq '@' ? \@{"${pkg}::$sym"}
+    : $type eq '%' ? \%{"${pkg}::$sym"}    # side comment
+    : $type eq '*' ? *{"${pkg}::$sym"}     #
+    :   do { require Carp; Carp::croak("Can't export symbol: $type$sym") };
 ----------
 
         'wn7' => <<'----------',
@@ -481,6 +501,31 @@ $body = SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_EN
     )
 );
 #15...........
+        },
+
+        'align32.def' => {
+            source => "align32",
+            params => "def",
+            expect => <<'#16...........',
+# should not get alignment here:
+my $c_sub_khwnd = WindowFromId $k_hwnd, 0x8008;    # FID_CLIENT
+ok $c_sub_khwnd, 'have kids client window';
+ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
+#16...........
+        },
+
+        'ternary4.def' => {
+            source => "ternary4",
+            params => "def",
+            expect => <<'#17...........',
+# some side comments
+*{"${callpkg}::$sym"} = $type eq '&' ? \&{"${pkg}::$sym"}    #
+  : $type eq '$'                     ? \${"${pkg}::$sym"}    #
+  : $type eq '@'                     ? \@{"${pkg}::$sym"}
+  : $type eq '%'                     ? \%{"${pkg}::$sym"}    # side comment
+  : $type eq '*'                     ? *{"${pkg}::$sym"}     #
+  :   do { require Carp; Carp::croak("Can't export symbol: $type$sym") };
+#17...........
         },
     };
 
