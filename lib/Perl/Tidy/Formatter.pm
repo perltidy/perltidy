@@ -588,12 +588,14 @@ sub new {
 
     # we are given an object with a write_line() method to take lines
     my %defaults = (
-        sink_object        => undef,
-        diagnostics_object => undef,
-        logger_object      => undef,
+        sink_object          => undef,
+        diagnostics_object   => undef,
+        logger_object        => undef,
+        use_unicode_gcstring => undef,
     );
     my %args = ( %defaults, @args );
 
+    my $use_unicode_gcstring = $args{use_unicode_gcstring};
     $logger_object      = $args{logger_object};
     $diagnostics_object = $args{diagnostics_object};
 
@@ -732,6 +734,7 @@ sub new {
         rshort_nested              => {},    # blocks not forced open
         rvalid_self_keys           => [],    # for checking
         valign_batch_count         => 0,
+        use_unicode_gcstring => $use_unicode_gcstring,
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -2323,6 +2326,15 @@ sub respace_tokens {
     my $Klimit_old                 = $self->{Klimit};
     my $rlines                     = $self->{rlines};
     my $rpaired_to_inner_container = $self->{rpaired_to_inner_container};
+    my $use_unicode_gcstring       = $self->{use_unicode_gcstring};
+
+    # Define a function for evaluating the display width of text
+    my $length_function = sub { return length( $_[0] ) };
+    if ($use_unicode_gcstring) {
+        $length_function = sub {
+            return Unicode::GCString->new( $_[0] )->columns;
+        };
+    }
 
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
@@ -2423,9 +2435,8 @@ sub respace_tokens {
 
         # Find the length of this token.  Later it may be adjusted if phantom
         # or ignoring side comment lengths.
-        my $token_length = length( $item->[_TOKEN_] );
+        my $token_length = $length_function->( $item->[_TOKEN_] );
 
-        # FIXME: Can remove $rOpts_ignore... as global
         # Mark length of side comments as just 1 if their lengths are ignored
         if (   $type eq '#'
             && $rOpts_ignore_side_comment_lengths
