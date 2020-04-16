@@ -758,6 +758,16 @@ EOM
         unshift( @ARGV, '-' ) unless @ARGV;
     }
 
+    # Flag for loading module Unicode::GCString for evaluating text width:
+    #   undef = ok to use but not yet loaded
+    #       0 = do not use; failed to load or not wanted
+    #       1 = successfully loaded and ok to use
+    # The module is not actually loaded unless/until it is needed
+    my $loaded_unicode_gcstring;
+    if ( !$rOpts->{'use-unicode-gcstring'} ) {
+        $loaded_unicode_gcstring = 0;
+    }
+
     #---------------------------------------------------------------
     # Ready to go...
     # main loop to process all files in argument list
@@ -1010,9 +1020,19 @@ EOM
         # we must not treat it as encoded data.
         my $is_encoded_data = $encoding_in ? 'utf8' : "";
 
-        # Delete any Byte Order Mark (BOM), which can cause trouble
+        my $use_unicode_gcstring;
         if ($is_encoded_data) {
+
+            # Delete any Byte Order Mark (BOM), which can cause trouble
             $buf =~ s/^\x{FEFF}//;
+
+            # Try to load Unicode::GCString for defining text display width, if
+            # requested, when the first encoded file is encountered
+            if ( !defined($loaded_unicode_gcstring) ) {
+                eval { require Unicode::GCString };
+                $loaded_unicode_gcstring = !$@;
+            }
+            $use_unicode_gcstring = $loaded_unicode_gcstring;
         }
 
         # MD5 sum of input file is evaluated before any prefilter
@@ -1231,9 +1251,10 @@ EOM
             }
             elsif ( $rOpts->{'format'} eq 'tidy' ) {
                 $formatter = Perl::Tidy::Formatter->new(
-                    logger_object      => $logger_object,
-                    diagnostics_object => $diagnostics_object,
-                    sink_object        => $sink_object,
+                    logger_object        => $logger_object,
+                    diagnostics_object   => $diagnostics_object,
+                    sink_object          => $sink_object,
+                    use_unicode_gcstring => $use_unicode_gcstring,
                 );
             }
             else {
@@ -1298,7 +1319,7 @@ EOM
                 elsif ($do_convergence_test) {
 
                     my $digest = $md5_hex->($sink_buffer);
-                    if ( !defined($saw_md5{$digest}) ) {
+                    if ( !defined( $saw_md5{$digest} ) ) {
                         $saw_md5{$digest} = $iter;
                     }
                     else {
@@ -1318,8 +1339,9 @@ EOM
                                 $convergence_log_message)
                               if $diagnostics_object;
 
-			    # Uncomment to search for blinking states
-                	    # Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
+# Uncomment to search for blinking states
+# Warn( "$display_name: blinking; iter $iter same as for $saw_md5{$digest}\n" );
+
                         }
                         else {
                             $convergence_log_message = <<EOM;
@@ -1842,6 +1864,7 @@ sub generate_options {
     ###########################
     $add_option->( 'backup-and-modify-in-place', 'b',     '!' );
     $add_option->( 'backup-file-extension',      'bext',  '=s' );
+    $add_option->( 'character-encoding',         'enc',   '=s' );
     $add_option->( 'force-read-binary',          'f',     '!' );
     $add_option->( 'format',                     'fmt',   '=s' );
     $add_option->( 'iterations',                 'it',    '=i' );
@@ -1854,8 +1877,8 @@ sub generate_options {
     $add_option->( 'quiet',                      'q',     '!' );
     $add_option->( 'standard-error-output',      'se',    '!' );
     $add_option->( 'standard-output',            'st',    '!' );
+    $add_option->( 'use-unicode-gcstring',       'gcs',   '!' );
     $add_option->( 'warning-output',             'w',     '!' );
-    $add_option->( 'character-encoding',         'enc',   '=s' );
 
     # options which are both toggle switches and values moved here
     # to hide from tidyview (which does not show category 0 flags):
@@ -2182,6 +2205,7 @@ sub generate_options {
       break-at-old-keyword-breakpoints
       comma-arrow-breakpoints=5
       nocheck-syntax
+      character-encoding=guess
       closing-side-comment-interval=6
       closing-side-comment-maximum-text=20
       closing-side-comment-else-flag=0
@@ -2218,7 +2242,6 @@ sub generate_options {
       nostatic-side-comments
       notabs
       nowarning-output
-      character-encoding=guess
       one-line-block-semicolons=1
       one-line-block-nesting=0
       outdent-labels
@@ -2230,6 +2253,7 @@ sub generate_options {
       pass-version-line
       noweld-nested-containers
       recombine
+      use-unicode-gcstring
       valign
       short-concatenation-item-length=8
       space-for-semicolon
