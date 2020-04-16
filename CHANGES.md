@@ -5,18 +5,26 @@
     - add option --break-at-old-semicolon-breakpoints', -bos, requested 
       in RT#131644.  This flag will keep lines beginning with a semicolon.
 
+    - Added --use-unicode-gcstring to control use of Unicode::GCString for
+      evaluating character widths of encoded data.  By default, for encoded files
+      perltidy will now look for Unicode::GCString and, if found, will use it 
+      to evaluate character display widths.  This improves displayed 
+      vertical alignment. This flag is mainly intended for testing.  Perltidy
+      installation does not require Unicode::GCString, so users wanting
+      to use this feature need to install it separately.
+
     - Added --character-encoding=guess or -guess to have perltidy guess
       if a file is encoded as -utf8 or some older single-byte encoding. This
       is useful when processing a mixture of file types, such as utf8 and 
       latin-1.  Also, specific encodings of input files other than utf8 may
-      now be given, for example --character-encoding=euc-jp.
+      now be given, for example --character-encoding=euc-jp.  For a
+      description of the guessing method see the man pages.
 
-      The default encoding has been set to be 'guess' instead of 'none'. I
-      do not like to change defaults, but this seems like the best 
-      default choice, since it should make perltidy
-      work properly with both older latin-1 and newer utf8 files.  I have done
-      extensive testing and haven't found any problems, but I will open
-      an issue at git for comments in case this causes problems.
+      Please Note: The default encoding has been set to be 'guess'
+      instead of 'none'. I do not like to change defaults, but this seems like
+      the right choice, since it should make perltidy work properly with both
+      older latin-1 and newer utf8 files.  I have done extensive testing and
+      so far haven't found any problems.
 
     - Fix for git#22, Preserve function signature on a single line. An
       unwanted line break was being introduced when a closing signature paren
