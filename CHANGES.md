@@ -8,10 +8,12 @@
     - Added --use-unicode-gcstring to control use of Unicode::GCString for
       evaluating character widths of encoded data.  By default, for encoded files
       perltidy will now look for Unicode::GCString and, if found, will use it 
-      to evaluate character display widths.  This improves displayed 
-      vertical alignment. This flag is mainly intended for testing.  Perltidy
-      installation does not require Unicode::GCString, so users wanting
-      to use this feature need to install it separately.
+      to evaluate character display widths.  This can improve displayed
+      vertical alignment for files with wide characters. This flag is mainly intended
+      for testing, but can also prevent the use of this module in the event that some
+      unforseen issue arises.  Perltidy installation does not require
+      Unicode::GCString, so users wanting to use this feature need to install it
+      separately.
 
     - Added --character-encoding=guess or -guess to have perltidy guess
       if a file is encoded as -utf8 or some older single-byte encoding. This

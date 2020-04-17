@@ -1020,7 +1020,8 @@ EOM
         # we must not treat it as encoded data.
         my $is_encoded_data = $encoding_in ? 'utf8' : "";
 
-        my $use_unicode_gcstring;
+       # Define the function to determine the display width of character strings
+        my $length_function = sub { return length( $_[0] ) };
         if ($is_encoded_data) {
 
             # Delete any Byte Order Mark (BOM), which can cause trouble
@@ -1032,7 +1033,11 @@ EOM
                 eval { require Unicode::GCString };
                 $loaded_unicode_gcstring = !$@;
             }
-            $use_unicode_gcstring = $loaded_unicode_gcstring;
+            if ($loaded_unicode_gcstring) {
+                $length_function = sub {
+                    return Unicode::GCString->new( $_[0] )->columns;
+                };
+            }
         }
 
         # MD5 sum of input file is evaluated before any prefilter
@@ -1251,10 +1256,10 @@ EOM
             }
             elsif ( $rOpts->{'format'} eq 'tidy' ) {
                 $formatter = Perl::Tidy::Formatter->new(
-                    logger_object        => $logger_object,
-                    diagnostics_object   => $diagnostics_object,
-                    sink_object          => $sink_object,
-                    use_unicode_gcstring => $use_unicode_gcstring,
+                    logger_object      => $logger_object,
+                    diagnostics_object => $diagnostics_object,
+                    sink_object        => $sink_object,
+                    length_function    => $length_function,
                 );
             }
             else {

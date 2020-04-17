@@ -588,14 +588,14 @@ sub new {
 
     # we are given an object with a write_line() method to take lines
     my %defaults = (
-        sink_object          => undef,
-        diagnostics_object   => undef,
-        logger_object        => undef,
-        use_unicode_gcstring => undef,
+        sink_object        => undef,
+        diagnostics_object => undef,
+        logger_object      => undef,
+        length_function    => sub { return length( $_[0] ) },
     );
     my %args = ( %defaults, @args );
 
-    my $use_unicode_gcstring = $args{use_unicode_gcstring};
+    my $length_function = $args{length_function};
     $logger_object      = $args{logger_object};
     $diagnostics_object = $args{diagnostics_object};
 
@@ -730,11 +730,11 @@ sub new {
         rK_phantom_semicolons =>
           undef,    # for undoing phantom semicolons if iterating
         rpaired_to_inner_container => {},
-        rbreak_container           => {},    # prevent one-line blocks
-        rshort_nested              => {},    # blocks not forced open
-        rvalid_self_keys           => [],    # for checking
+        rbreak_container           => {},              # prevent one-line blocks
+        rshort_nested              => {},              # blocks not forced open
+        rvalid_self_keys           => [],              # for checking
         valign_batch_count         => 0,
-        use_unicode_gcstring => $use_unicode_gcstring,
+        length_function            => $length_function,
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -2326,15 +2326,7 @@ sub respace_tokens {
     my $Klimit_old                 = $self->{Klimit};
     my $rlines                     = $self->{rlines};
     my $rpaired_to_inner_container = $self->{rpaired_to_inner_container};
-    my $use_unicode_gcstring       = $self->{use_unicode_gcstring};
-
-    # Define a function for evaluating the display width of text
-    my $length_function = sub { return length( $_[0] ) };
-    if ($use_unicode_gcstring) {
-        $length_function = sub {
-            return Unicode::GCString->new( $_[0] )->columns;
-        };
-    }
+    my $length_function            = $self->{length_function};
 
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
