@@ -147,9 +147,6 @@ foreach my $sname ( keys %{$rsources} ) {
             stderr      => \$stderr_string,
             errorfile   => \$errorfile_string,    # not used when -se flag is set
         );
-        if ($err) {
-            die "error calling Perl::Tidy with $source + $params\n";
-        }
         if ($stderr_string) {
 	    print STDERR "---------------------\n";
             print STDERR "<<STDERR>>\n$stderr_string\n";
@@ -162,6 +159,9 @@ foreach my $sname ( keys %{$rsources} ) {
 	    print STDERR "---------------------\n";
             die "The above .ERR was received with $source + $params\n";
 	}
+        if ($err) {
+            die "error calling Perl::Tidy with $source + $params\n";
+        }
         my $basename = "$sname.$pname";
         my $ofile    = $opath . $basename;
 

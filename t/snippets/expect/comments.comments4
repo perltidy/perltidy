@@ -1,0 +1,27 @@
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }    # side comment
+                                         # hanging side comment
+ # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+
+
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }    #end level 4
+        }    # end level 3
+    }    # end level 2
+}    # end level 1
+
+
+
+
+# some blank lines follow
+
+
+
+
+

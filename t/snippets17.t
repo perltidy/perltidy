@@ -1,23 +1,25 @@
 # Created with: ./make_t.pl
 
 # Contents:
-#1 rt132059.def
-#2 rt132059.rt132059
-#3 signature.def
-#4 rperl.def
-#5 rperl.rperl
-#6 wn7.def
-#7 wn7.wn
-#8 wn8.def
-#9 wn8.wn
-#10 pbp6.def
-#11 pbp6.pbp
-#12 bos.bos
-#13 bos.def
-#14 long_line.def
-#15 long_line.long_line
-#16 align32.def
-#17 ternary4.def
+#1 align32.def
+#2 bos.bos
+#3 bos.def
+#4 comments.comments1
+#5 comments.comments2
+#6 comments.comments3
+#7 comments.comments4
+#8 comments.def
+#9 long_line.def
+#10 long_line.long_line
+#11 pbp6.def
+#12 pbp6.pbp
+#13 rperl.def
+#14 rperl.rperl
+#15 rt132059.def
+#16 rt132059.rt132059
+#17 signature.def
+#18 ternary4.def
+#19 wn7.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,12 +38,15 @@ BEGIN {
     ###########################################
     $rparams = {
         'bos'       => "-bos",
+        'comments1' => "-fpsc=40 -iscl",
+        'comments2' => "-msc=10",
+        'comments3' => "-mbl=2",
+        'comments4' => "-kbl=2",
         'def'       => "",
         'long_line' => "-l=0",
         'pbp'       => "-pbp -nst -nse",
         'rperl'     => "-l=0",
         'rt132059'  => "-dac",
-        'wn'        => "-wn",
     };
 
     ############################
@@ -59,6 +64,31 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
         'bos' => <<'----------',
         $top_label->set_text( gettext("check permissions.") )
           ;
+----------
+
+        'comments' => <<'----------',
+# test script for side comment and blank line flags
+sub length { return length($_[0]) }    # side comment
+                             # hanging side comment
+                             # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+
+
+# side comments at different indentation levels should not normally be aligned
+{ { { { { ${msg} = "Hello World!"; print "My message: ${msg}\n"; } } #end level 4
+        } # end level 3
+    } # end level 2
+} # end level 1
+
+
+
+
+# some blank lines follow
+
+
+
+
+
 ----------
 
         'long_line' => <<'----------',
@@ -154,27 +184,6 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
                       do { 1; !!(my $x = bless []); }
                     );
 ----------
-
-        'wn8' => <<'----------',
-	    # Former -wn blinkers, which oscillated between two states
-
-	    # fixed RULE 1 only applies to '('
-            my $res = eval { { $die_on_fetch, 0 } };
-
-            my $res = eval {
-                { $die_on_fetch, 0 }
-            };
-
-	    # fixed RULE 2 applies to any inner opening token; this is a stable
-	    # state with -wn
-            $app->FORM->{'appbar1'}->set_status(
-                _("Cannot delete zone $name: sub-zones or appellations exist.")
-            );
-
-	    # fixed RULE 1: this is now a stable state with -wn
-            $app->FORM->{'appbar1'}->set_status(_(
-                 "Cannot delete zone $name: sub-zones or appellations exist."));
-----------
     };
 
     ####################################
@@ -182,207 +191,224 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
     ####################################
     $rtests = {
 
-        'rt132059.def' => {
-            source => "rt132059",
+        'align32.def' => {
+            source => "align32",
             params => "def",
             expect => <<'#1...........',
-# Test deleting comments and pod
-$1 = 2;
-
-sub f {    # a side comment
-           # a hanging side comment
-
-    # a block comment
-}
-
-=pod
-bonjour!
-=cut
-
-$i++;
+# should not get alignment here:
+my $c_sub_khwnd = WindowFromId $k_hwnd, 0x8008;    # FID_CLIENT
+ok $c_sub_khwnd, 'have kids client window';
+ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
 #1...........
         },
 
-        'rt132059.rt132059' => {
-            source => "rt132059",
-            params => "rt132059",
+        'bos.bos' => {
+            source => "bos",
+            params => "bos",
             expect => <<'#2...........',
-$1 = 2;
-
-sub f {
-    
-}
-
-
-$i++;
+        $top_label->set_text( gettext("check permissions.") )
+          ;
 #2...........
         },
 
-        'signature.def' => {
-            source => "signature",
+        'bos.def' => {
+            source => "bos",
             params => "def",
             expect => <<'#3...........',
-# git22: Preserve function signature on a single line
-# This behavior is controlled by 'sub weld_signature_parens'
-
-sub foo ( $x, $y = "abcd" ) {
-    $x . $y;
-}
-
-# do not break after closing do brace
-sub foo ( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
-    $x . $y . $z;
-}
-
-# This signature should get put back on one line
-sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) {
-    "$p/$a";
-}
-
-# anonymous sub with signature
-my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
-    ...;
-};
+        $top_label->set_text( gettext("check permissions.") );
 #3...........
         },
 
-        'rperl.def' => {
-            source => "rperl",
-            params => "def",
+        'comments.comments1' => {
+            source => "comments",
+            params => "comments1",
             expect => <<'#4...........',
-# Some test cases for RPerl, https://github.com/wbraswell/rperl/
-# These must not remain as single lines with default formatting and long lines
-sub multiply_return_F {
-    { my number $RETURN_TYPE };
-    ( my integer $multiplicand, my number $multiplier ) = @ARG;
-    return $multiplicand * $multiplier;
-}
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }  # side comment
+                                       # hanging side comment
+                                       # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-sub empty_method {
-    { my void::method $RETURN_TYPE };
-    return 2;
-}
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }                          #end level 4
+        }                              # end level 3
+    }                                  # end level 2
+}                                      # end level 1
 
-sub foo_subroutine_in_main {
-    { my void $RETURN_TYPE };
-    print 'Howdy from foo_subroutine_in_main()...', "\n";
-    return;
-}
+# some blank lines follow
+
 #4...........
         },
 
-        'rperl.rperl' => {
-            source => "rperl",
-            params => "rperl",
+        'comments.comments2' => {
+            source => "comments",
+            params => "comments2",
             expect => <<'#5...........',
-# Some test cases for RPerl, https://github.com/wbraswell/rperl/
-# These must not remain as single lines with default formatting and long lines
-sub multiply_return_F {
-    { my number $RETURN_TYPE };
-    ( my integer $multiplicand, my number $multiplier ) = @ARG;
-    return $multiplicand * $multiplier;
-}
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }          # side comment
+                                               # hanging side comment
+ # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-sub empty_method {
-    { my void::method $RETURN_TYPE };
-    return 2;
-}
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }          #end level 4
+        }          # end level 3
+    }          # end level 2
+}          # end level 1
 
-sub foo_subroutine_in_main {
-    { my void $RETURN_TYPE };
-    print 'Howdy from foo_subroutine_in_main()...', "\n";
-    return;
-}
+# some blank lines follow
+
 #5...........
         },
 
-        'wn7.def' => {
-            source => "wn7",
-            params => "def",
+        'comments.comments3' => {
+            source => "comments",
+            params => "comments3",
             expect => <<'#6...........',
-                    # do not weld paren to opening one-line non-paren container
-                    $Self->_Add(
-                        $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
-                    );
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }    # side comment
+                                         # hanging side comment
+ # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-                    # this will not get welded with -wn
-                    f(
-                        do { 1; !!( my $x = bless [] ); }
-                    );
+
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }    #end level 4
+        }    # end level 3
+    }    # end level 2
+}    # end level 1
+
+
+# some blank lines follow
+
+
 #6...........
         },
 
-        'wn7.wn' => {
-            source => "wn7",
-            params => "wn",
+        'comments.comments4' => {
+            source => "comments",
+            params => "comments4",
             expect => <<'#7...........',
-                    # do not weld paren to opening one-line non-paren container
-                    $Self->_Add(
-                        $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
-                    );
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }    # side comment
+                                         # hanging side comment
+ # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-                    # this will not get welded with -wn
-                    f(
-                        do { 1; !!( my $x = bless [] ); }
-                    );
+
+
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }    #end level 4
+        }    # end level 3
+    }    # end level 2
+}    # end level 1
+
+
+
+
+# some blank lines follow
+
+
+
+
+
 #7...........
         },
 
-        'wn8.def' => {
-            source => "wn8",
+        'comments.def' => {
+            source => "comments",
             params => "def",
             expect => <<'#8...........',
-            # Former -wn blinkers, which oscillated between two states
+# test script for side comment and blank line flags
+sub length { return length( $_[0] ) }    # side comment
+                                         # hanging side comment
+ # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-            # fixed RULE 1 only applies to '('
-            my $res = eval {
-                { $die_on_fetch, 0 }
-            };
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }    #end level 4
+        }    # end level 3
+    }    # end level 2
+}    # end level 1
 
-            my $res = eval {
-                { $die_on_fetch, 0 }
-            };
+# some blank lines follow
 
-            # fixed RULE 2 applies to any inner opening token; this is a stable
-            # state with -wn
-            $app->FORM->{'appbar1'}->set_status(
-                _("Cannot delete zone $name: sub-zones or appellations exist.")
-            );
-
-            # fixed RULE 1: this is now a stable state with -wn
-            $app->FORM->{'appbar1'}->set_status(
-                _("Cannot delete zone $name: sub-zones or appellations exist.")
-            );
 #8...........
         },
 
-        'wn8.wn' => {
-            source => "wn8",
-            params => "wn",
+        'long_line.def' => {
+            source => "long_line",
+            params => "def",
             expect => <<'#9...........',
-            # Former -wn blinkers, which oscillated between two states
-
-            # fixed RULE 1 only applies to '('
-            my $res = eval { { $die_on_fetch, 0 } };
-
-            my $res = eval { { $die_on_fetch, 0 } };
-
-            # fixed RULE 2 applies to any inner opening token; this is a stable
-            # state with -wn
-            $app->FORM->{'appbar1'}->set_status(
-                _("Cannot delete zone $name: sub-zones or appellations exist.")
-            );
-
-            # fixed RULE 1: this is now a stable state with -wn
-            $app->FORM->{'appbar1'}->set_status( _(
-                "Cannot delete zone $name: sub-zones or appellations exist.") );
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body =
+  SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
+  ->value(
+    \SOAP::Data->set_value(
+        SOAP::Data->name(
+            faultcode => qualify( $self->namespace => shift(@parameters) )
+        ),
+        SOAP::Data->name( faultstring => shift(@parameters) ),
+        @parameters
+        ? SOAP::Data->name(
+            detail => do {
+                my $detail = shift(@parameters);
+                ref $detail ? \$detail : $detail;
+            }
+          )
+        : (),
+        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
+    )
+  );
 #9...........
+        },
+
+        'long_line.long_line' => {
+            source => "long_line",
+            params => "long_line",
+            expect => <<'#10...........',
+# This single line should break into multiple lines, even with -l=0
+# sub 'tight_paren_follows' should break the do block
+$body = SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )->value(
+    \SOAP::Data->set_value(
+        SOAP::Data->name( faultcode   => qualify( $self->namespace => shift(@parameters) ) ),
+        SOAP::Data->name( faultstring => shift(@parameters) ),
+        @parameters
+        ? SOAP::Data->name(
+            detail => do { my $detail = shift(@parameters); ref $detail ? \$detail : $detail }
+          )
+        : (),
+        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
+    )
+);
+#10...........
         },
 
         'pbp6.def' => {
             source => "pbp6",
             params => "def",
-            expect => <<'#10...........',
+            expect => <<'#11...........',
         # These formerly blinked with -pbp
         return $width1 *
           $common_length *
@@ -404,13 +430,13 @@ sub foo_subroutine_in_main {
           ( 60 * $session->{originalStartHour} + $session->{originalStartMin} )
           * 60;
 
-#10...........
+#11...........
         },
 
         'pbp6.pbp' => {
             source => "pbp6",
             params => "pbp",
-            expect => <<'#11...........',
+            expect => <<'#12...........',
         # These formerly blinked with -pbp
         return
             $width1 * $common_length
@@ -434,90 +460,127 @@ sub foo_subroutine_in_main {
                 + $session->{originalStartMin} )
             * 60;
 
-#11...........
-        },
-
-        'bos.bos' => {
-            source => "bos",
-            params => "bos",
-            expect => <<'#12...........',
-        $top_label->set_text( gettext("check permissions.") )
-          ;
 #12...........
         },
 
-        'bos.def' => {
-            source => "bos",
+        'rperl.def' => {
+            source => "rperl",
             params => "def",
             expect => <<'#13...........',
-        $top_label->set_text( gettext("check permissions.") );
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F {
+    { my number $RETURN_TYPE };
+    ( my integer $multiplicand, my number $multiplier ) = @ARG;
+    return $multiplicand * $multiplier;
+}
+
+sub empty_method {
+    { my void::method $RETURN_TYPE };
+    return 2;
+}
+
+sub foo_subroutine_in_main {
+    { my void $RETURN_TYPE };
+    print 'Howdy from foo_subroutine_in_main()...', "\n";
+    return;
+}
 #13...........
         },
 
-        'long_line.def' => {
-            source => "long_line",
-            params => "def",
+        'rperl.rperl' => {
+            source => "rperl",
+            params => "rperl",
             expect => <<'#14...........',
-# This single line should break into multiple lines, even with -l=0
-# sub 'tight_paren_follows' should break the do block
-$body =
-  SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )
-  ->value(
-    \SOAP::Data->set_value(
-        SOAP::Data->name(
-            faultcode => qualify( $self->namespace => shift(@parameters) )
-        ),
-        SOAP::Data->name( faultstring => shift(@parameters) ),
-        @parameters
-        ? SOAP::Data->name(
-            detail => do {
-                my $detail = shift(@parameters);
-                ref $detail ? \$detail : $detail;
-            }
-          )
-        : (),
-        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
-    )
-  );
+# Some test cases for RPerl, https://github.com/wbraswell/rperl/
+# These must not remain as single lines with default formatting and long lines
+sub multiply_return_F {
+    { my number $RETURN_TYPE };
+    ( my integer $multiplicand, my number $multiplier ) = @ARG;
+    return $multiplicand * $multiplier;
+}
+
+sub empty_method {
+    { my void::method $RETURN_TYPE };
+    return 2;
+}
+
+sub foo_subroutine_in_main {
+    { my void $RETURN_TYPE };
+    print 'Howdy from foo_subroutine_in_main()...', "\n";
+    return;
+}
 #14...........
         },
 
-        'long_line.long_line' => {
-            source => "long_line",
-            params => "long_line",
+        'rt132059.def' => {
+            source => "rt132059",
+            params => "def",
             expect => <<'#15...........',
-# This single line should break into multiple lines, even with -l=0
-# sub 'tight_paren_follows' should break the do block
-$body = SOAP::Data->name('~V:Fault')->attr( { 'xmlns' => $SOAP::Constants::NS_ENV } )->value(
-    \SOAP::Data->set_value(
-        SOAP::Data->name( faultcode   => qualify( $self->namespace => shift(@parameters) ) ),
-        SOAP::Data->name( faultstring => shift(@parameters) ),
-        @parameters
-        ? SOAP::Data->name(
-            detail => do { my $detail = shift(@parameters); ref $detail ? \$detail : $detail }
-          )
-        : (),
-        @parameters ? SOAP::Data->name( faultactor => shift(@parameters) ) : (),
-    )
-);
+# Test deleting comments and pod
+$1 = 2;
+
+sub f {    # a side comment
+           # a hanging side comment
+
+    # a block comment
+}
+
+=pod
+bonjour!
+=cut
+
+$i++;
 #15...........
         },
 
-        'align32.def' => {
-            source => "align32",
-            params => "def",
+        'rt132059.rt132059' => {
+            source => "rt132059",
+            params => "rt132059",
             expect => <<'#16...........',
-# should not get alignment here:
-my $c_sub_khwnd = WindowFromId $k_hwnd, 0x8008;    # FID_CLIENT
-ok $c_sub_khwnd, 'have kids client window';
-ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
+$1 = 2;
+
+sub f {
+    
+}
+
+
+$i++;
 #16...........
+        },
+
+        'signature.def' => {
+            source => "signature",
+            params => "def",
+            expect => <<'#17...........',
+# git22: Preserve function signature on a single line
+# This behavior is controlled by 'sub weld_signature_parens'
+
+sub foo ( $x, $y = "abcd" ) {
+    $x . $y;
+}
+
+# do not break after closing do brace
+sub foo ( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
+    $x . $y . $z;
+}
+
+# This signature should get put back on one line
+sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) {
+    "$p/$a";
+}
+
+# anonymous sub with signature
+my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
+    ...;
+};
+#17...........
         },
 
         'ternary4.def' => {
             source => "ternary4",
             params => "def",
-            expect => <<'#17...........',
+            expect => <<'#18...........',
 # some side comments
 *{"${callpkg}::$sym"} = $type eq '&' ? \&{"${pkg}::$sym"}    #
   : $type eq '$'                     ? \${"${pkg}::$sym"}    #
@@ -525,7 +588,23 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
   : $type eq '%'                     ? \%{"${pkg}::$sym"}    # side comment
   : $type eq '*'                     ? *{"${pkg}::$sym"}     #
   :   do { require Carp; Carp::croak("Can't export symbol: $type$sym") };
-#17...........
+#18...........
+        },
+
+        'wn7.def' => {
+            source => "wn7",
+            params => "def",
+            expect => <<'#19...........',
+                    # do not weld paren to opening one-line non-paren container
+                    $Self->_Add(
+                        $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
+                    );
+
+                    # this will not get welded with -wn
+                    f(
+                        do { 1; !!( my $x = bless [] ); }
+                    );
+#19...........
         },
     };
 
