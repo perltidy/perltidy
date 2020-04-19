@@ -1,7 +1,21 @@
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {    #
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
 
 # side comments at different indentation levels should not normally be aligned
 {
@@ -15,4 +29,19 @@ sub length { return length( $_[0] ) }    # side comment
 }    # end level 1
 
 # some blank lines follow
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
+
 

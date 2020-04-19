@@ -4,6 +4,7 @@
 #1 wn7.wn
 #2 wn8.def
 #3 wn8.wn
+#4 comments.comments5
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -21,14 +22,68 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def' => "",
-        'wn'  => "-wn",
+        'comments5' => "-dsc",
+        'def'       => "",
+        'wn'        => "-wn",
     };
 
     ############################
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'comments' => <<'----------',
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
+sub length { return length($_[0]) }    # side comment
+                             # hanging side comment
+                             # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names { #
+# 
+# %name = macro_get_names();  (key=macrohandle, value=macroname)
+#
+##local(%name);  # a static block comment
+   local(%name)=();
+   for (0..$                                          #mac_ver) {
+      $name{$_} = $mac_ext[$idx{$mac_exti[$_]}];
+   }
+   %name;
+} 
+
+
+
+
+# side comments at different indentation levels should not normally be aligned
+{ { { { { ${msg} = "Hello World!"; print "My message: ${msg}\n"; } } #end level 4
+        } # end level 3
+    } # end level 2
+} # end level 1
+
+
+
+# some blank lines follow
+
+
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
+
+
+----------
 
         'wn7' => <<'----------',
                     # do not weld paren to opening one-line non-paren container
@@ -132,6 +187,58 @@ BEGIN {
             $app->FORM->{'appbar1'}->set_status( _(
                 "Cannot delete zone $name: sub-zones or appellations exist.") );
 #3...........
+        },
+
+        'comments.comments5' => {
+            source => "comments",
+            params => "comments5",
+            expect => <<'#4...........',
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
+sub length { return length( $_[0] ) }
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
+
+# side comments at different indentation levels should not normally be aligned
+{
+    {
+        {
+            {
+                { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
+            }
+        }
+    }
+}
+
+# some blank lines follow
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
+
+
+#4...........
         },
     };
 

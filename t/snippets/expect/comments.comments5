@@ -1,11 +1,9 @@
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
-sub length { return length( $_[0] ) }    # side comment
-                                         # hanging side comment
- # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+sub length { return length( $_[0] ) }
 
 # side comments following open brace are not currently treated as hanging side comments
-sub macro_get_names {    #
+sub macro_get_names {
     #
     # %name = macro_get_names();  (key=macrohandle, value=macroname)
     #
@@ -17,30 +15,22 @@ sub macro_get_names {    #
     %name;
 }
 
-
-
-
 # side comments at different indentation levels should not normally be aligned
 {
     {
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }    #end level 4
-        }    # end level 3
-    }    # end level 2
-}    # end level 1
-
-
+            }
+        }
+    }
+}
 
 # some blank lines follow
-
-
 
 =pod
 Some pod before __END__ to delete with -dp
 =cut
-
 
 __END__
 

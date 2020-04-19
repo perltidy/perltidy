@@ -38,8 +38,8 @@ BEGIN {
     ###########################################
     $rparams = {
         'bos'       => "-bos",
-        'comments1' => "-fpsc=40 -iscl",
-        'comments2' => "-msc=10",
+        'comments1' => "-fpsc=40 -iscl -nibc",
+        'comments2' => "-msc=10 -dbc -dp",
         'comments3' => "-mbl=2",
         'comments4' => "-kbl=2",
         'def'       => "",
@@ -67,10 +67,25 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
 ----------
 
         'comments' => <<'----------',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length($_[0]) }    # side comment
                              # hanging side comment
                              # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names { #
+# 
+# %name = macro_get_names();  (key=macrohandle, value=macroname)
+#
+##local(%name);  # a static block comment
+   local(%name)=();
+   for (0..$                                          #mac_ver) {
+      $name{$_} = $mac_ext[$idx{$mac_exti[$_]}];
+   }
+   %name;
+} 
+
 
 
 
@@ -82,11 +97,24 @@ sub length { return length($_[0]) }    # side comment
 
 
 
-
 # some blank lines follow
 
 
 
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
 
 
 ----------
@@ -223,10 +251,24 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
             source => "comments",
             params => "comments1",
             expect => <<'#4...........',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }  # side comment
                                        # hanging side comment
                                        # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {                  #
+#
+# %name = macro_get_names();  (key=macrohandle, value=macroname)
+#
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
 
 # side comments at different indentation levels should not normally be aligned
 {
@@ -241,6 +283,21 @@ sub length { return length( $_[0] ) }  # side comment
 
 # some blank lines follow
 
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
+
+
 #4...........
         },
 
@@ -248,12 +305,19 @@ sub length { return length( $_[0] ) }  # side comment
             source => "comments",
             params => "comments2",
             expect => <<'#5...........',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
 sub length { return length( $_[0] ) }          # side comment
                                                # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-# side comments at different indentation levels should not normally be aligned
+sub macro_get_names {          #
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
+
 {
     {
         {
@@ -264,7 +328,14 @@ sub length { return length( $_[0] ) }          # side comment
     }          # end level 2
 }          # end level 1
 
-# some blank lines follow
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+
 
 #5...........
         },
@@ -273,10 +344,24 @@ sub length { return length( $_[0] ) }          # side comment
             source => "comments",
             params => "comments3",
             expect => <<'#6...........',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {    #
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
 
 
 # side comments at different indentation levels should not normally be aligned
@@ -292,6 +377,22 @@ sub length { return length( $_[0] ) }    # side comment
 
 
 # some blank lines follow
+
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
 
 
 #6...........
@@ -301,10 +402,25 @@ sub length { return length( $_[0] ) }    # side comment
             source => "comments",
             params => "comments4",
             expect => <<'#7...........',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {    #
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
+
 
 
 
@@ -321,11 +437,24 @@ sub length { return length( $_[0] ) }    # side comment
 
 
 
-
 # some blank lines follow
 
 
 
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
 
 
 #7...........
@@ -335,10 +464,24 @@ sub length { return length( $_[0] ) }    # side comment
             source => "comments",
             params => "def",
             expect => <<'#8...........',
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
+# an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# side comments following open brace are not currently treated as hanging side comments
+sub macro_get_names {    #
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+##local(%name);  # a static block comment
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
 
 # side comments at different indentation levels should not normally be aligned
 {
@@ -352,6 +495,21 @@ sub length { return length( $_[0] ) }    # side comment
 }    # end level 1
 
 # some blank lines follow
+
+=pod
+Some pod before __END__ to delete with -dp
+=cut
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+=pod
+Some pod after  __END__ to delete with -dp
+=cut
+
 
 #8...........
         },

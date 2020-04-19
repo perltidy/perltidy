@@ -1,9 +1,16 @@
-# test script for side comment and blank line flags
+#!/usr/bin/perl -w
 sub length { return length( $_[0] ) }          # side comment
                                                # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-# side comments at different indentation levels should not normally be aligned
+sub macro_get_names {          #
+    local (%name) = ();
+    for ( 0 .. $#mac_ver ) {
+        $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+    }
+    %name;
+}
+
 {
     {
         {
@@ -14,5 +21,12 @@ sub length { return length( $_[0] ) }          # side comment
     }          # end level 2
 }          # end level 1
 
-# some blank lines follow
+
+__END__
+
+
+# text following __END__, not a comment
+
+
+
 
