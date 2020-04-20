@@ -7102,35 +7102,6 @@ EOM
         return;
     }
 
-    {
-        my @saved_token;
-
-        sub save_current_token {
-
-            @saved_token = (
-                $block_type,            $ci_level,
-                $container_environment, $container_type,
-                $in_continued_quote,    $level,
-                $no_internal_newlines,  $slevel,
-                $token,                 $type,
-                $type_sequence,         $Ktoken_vars,
-            );
-            return;
-        }
-
-        sub restore_current_token {
-            (
-                $block_type,            $ci_level,
-                $container_environment, $container_type,
-                $in_continued_quote,    $level,
-                $no_internal_newlines,  $slevel,
-                $token,                 $type,
-                $type_sequence,         $Ktoken_vars,
-            ) = @saved_token;
-            return;
-        }
-    }
-
     # Routine to place the current token into the output stream.
     # Called once per output token.
     sub store_token_to_go {
