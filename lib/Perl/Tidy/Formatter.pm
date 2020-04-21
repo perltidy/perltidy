@@ -7043,72 +7043,46 @@ sub copy_token_as_type {
 
 {    # begin print_line_of_tokens
 
-    my $rinput_token_array;    # Current working array
-    my $rinput_K_array;        # Future working array
-
-    my $in_quote;
-    my $guessed_indentation_level;
-
-    # This should be a return variable from extract_token
-    # These local token variables are stored by store_token_to_go:
-    my $Ktoken_vars;
-    my $block_type;
-    my $ci_level;
-    my $container_environment;
-    my $container_type;
+    # variables used by the token extract and store subs which follow
+    my $rinput_K_array;
     my $in_continued_quote;
-    my $level;
     my $no_internal_newlines;
-    my $slevel;
-    my $token;
-    my $type;
-    my $type_sequence;
 
-    # routine to pull the jth token from the line of tokens
+    # routine to get the variables for the jth token of this batch
     sub extract_token {
         my ( $self, $j ) = @_;
 
-        my $rLL = $self->{rLL};
-        $Ktoken_vars = $rinput_K_array->[$j];
+        my $rLL         = $self->{rLL};
+        my $Ktoken_vars = $rinput_K_array->[$j];
+
         if ( !defined($Ktoken_vars) ) {
 
-       # Shouldn't happen: an error here would be due to a recent program change
+            # Shouldn't happen: an error here would be due to a recent program
+            # change
             Fault("undefined index K for j=$j");
         }
+
         my $rtoken_vars = $rLL->[$Ktoken_vars];
-
-        if ( $rtoken_vars->[_TOKEN_] ne $rLL->[$Ktoken_vars]->[_TOKEN_] ) {
-
-       # Shouldn't happen: an error here would be due to a recent program change
-            Fault(<<EOM);
- j=$j, K=$Ktoken_vars, '$rtoken_vars->[_TOKEN_]' ne '$rLL->[$Ktoken_vars]'
-EOM
-        }
-
-        #########################################################
-        # these are now redundant and can eventually be eliminated
-
-        $token                 = $rtoken_vars->[_TOKEN_];
-        $type                  = $rtoken_vars->[_TYPE_];
-        $block_type            = $rtoken_vars->[_BLOCK_TYPE_];
-        $container_type        = $rtoken_vars->[_CONTAINER_TYPE_];
-        $container_environment = $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
-        $type_sequence         = $rtoken_vars->[_TYPE_SEQUENCE_];
-        $level                 = $rtoken_vars->[_LEVEL_];
-        $slevel                = $rtoken_vars->[_SLEVEL_];
-        $ci_level              = $rtoken_vars->[_CI_LEVEL_];
-        #########################################################
-
-        return;
+        return ( $rtoken_vars, $Ktoken_vars );
     }
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
     sub store_token_to_go {
 
-        my ( $self, $side_comment_follows ) = @_;
+        my ( $self, $rtoken_vars, $Ktoken_vars, $side_comment_follows ) = @_;
         my $rLL  = $self->{rLL};
         my $flag = $side_comment_follows ? 1 : $no_internal_newlines;
+
+        my $token                 = $rtoken_vars->[_TOKEN_];
+        my $type                  = $rtoken_vars->[_TYPE_];
+        my $block_type            = $rtoken_vars->[_BLOCK_TYPE_];
+        my $container_type        = $rtoken_vars->[_CONTAINER_TYPE_];
+        my $container_environment = $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
+        my $type_sequence         = $rtoken_vars->[_TYPE_SEQUENCE_];
+        my $level                 = $rtoken_vars->[_LEVEL_];
+        my $slevel                = $rtoken_vars->[_SLEVEL_];
+        my $ci_level              = $rtoken_vars->[_CI_LEVEL_];
 
         ++$max_index_to_go;
         $K_to_go[$max_index_to_go]                     = $Ktoken_vars;
@@ -7149,17 +7123,7 @@ EOM
         # but we will use the character count to have a defined value.  In the
         # future, it would be nicer to have 'respace_tokens' convert the lines
         # to quotes and get correct lengths.
-        if ( !defined($length) ) {
-            $length = length($token);
-
-            # FIXME: _TOKEN_LENGTH_ Debug code to be removed eventually
-            if ( 0 && $type ne 'q' || $max_index_to_go != 0 ) {
-
-                Fault(
-"Undefined length for type=$type, tok=$token, index=$max_index_to_go\n"
-                );
-            }
-        }
+        if ( !defined($length) ) { $length = length($token) }
         $token_lengths_to_go[$max_index_to_go] = $length;
 
         # We keep a running sum of token lengths from the start of this batch:
@@ -7273,27 +7237,22 @@ EOM
         }
 
         # Copy the tokens into local arrays
-        $rinput_token_array = [];
-        $rinput_K_array     = [];
-        $rinput_K_array     = [ ( $K_first .. $K_last ) ];
-        $rinput_token_array = [ map { $rLL->[$_] } @{$rinput_K_array} ];
-        my $jmax = @{$rinput_K_array} - 1;
+        # FIXME: This intermediate array might eventually be eliminated
+        # and instead direct indexing into the K array should be done
+        $rinput_K_array = [ ( $K_first .. $K_last ) ];
+        my $rinput_token_array = [ map { $rLL->[$_] } @{$rinput_K_array} ];
+        my $jmax               = @{$rinput_K_array} - 1;
 
         $in_continued_quote = $starting_in_quote =
           $line_of_tokens->{_starting_in_quote};
-        $in_quote        = $line_of_tokens->{_ending_in_quote};
+        my $in_quote = $line_of_tokens->{_ending_in_quote};
         $ending_in_quote = $in_quote;
-        $guessed_indentation_level =
+        my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
 
         my $j_next;
         my $next_nonblank_token;
         my $next_nonblank_token_type;
-
-        $block_type            = "";
-        $container_type        = "";
-        $container_environment = "";
-        $type_sequence         = "";
 
         ######################################
         # Handle a block (full-line) comment..
@@ -7340,8 +7299,8 @@ EOM
                 && !$is_static_block_comment_without_leading_space
               )
             {
-                $self->extract_token(0);
-                $self->store_token_to_go();
+                my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token(0);
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
                 $self->output_line_to_go();
             }
             else {
@@ -7397,14 +7356,13 @@ EOM
             $line =~ s/\s+$//;
             $line =~ s/^\s+// unless ($in_continued_quote);
 
-            $self->extract_token(0);
-            $token                 = $line;
-            $type                  = 'q';
-            $block_type            = "";
-            $container_type        = "";
-            $container_environment = "";
-            $type_sequence         = "";
-            $self->store_token_to_go();
+            my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token(0);
+            $rtoken_vars = copy_token_as_type( $rtoken_vars, 'q', $line );
+
+            # Patch: length not really important here
+            $rtoken_vars->[_TOKEN_LENGTH_] = length($line);
+
+            $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
             $self->output_line_to_go();
             return;
         }
@@ -7414,8 +7372,9 @@ EOM
         ############################
 
         #######################################################
-        # FIXME: this should become unnecessary
-        # making $j+2 valid simplifies coding
+        # FIXME: Some older coding was simplfied by adding a couple
+        # of extra blanks to the end of the line to make $j+2 references
+        # valid.  This should eventually be unnecessary and removed.
         my $rnew_blank =
           copy_token_as_type( $rinput_token_array->[$jmax], 'b' );
         push @{$rinput_token_array}, $rnew_blank;
@@ -7454,8 +7413,6 @@ EOM
         }
 
         # loop to process the tokens one-by-one
-        $type  = 'b';
-        $token = "";
 
         # We do not want a leading blank if the previous batch just got output
         my $jmin = 0;
@@ -7465,8 +7422,16 @@ EOM
 
         foreach my $j ( $jmin .. $jmax ) {
 
-            # pull out the local values for this token
-            $self->extract_token($j);
+            # pull out some values for this token
+            my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token($j);
+
+            my $token         = $rtoken_vars->[_TOKEN_];
+            my $type          = $rtoken_vars->[_TYPE_];
+            my $block_type    = $rtoken_vars->[_BLOCK_TYPE_];
+            my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+            my $level         = $rtoken_vars->[_LEVEL_];
+            my $slevel        = $rtoken_vars->[_SLEVEL_];
+            my $ci_level      = $rtoken_vars->[_CI_LEVEL_];
 
             if ( $type eq '#' ) {
 
@@ -7539,7 +7504,8 @@ EOM
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
-                $self->store_token_to_go($side_comment_follows);
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars,
+                    $side_comment_follows );
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
@@ -7604,7 +7570,8 @@ EOM
                         $self->output_line_to_go();
 
                         # and now store this token at the start of a new line
-                        $self->store_token_to_go($side_comment_follows);
+                        $self->store_token_to_go( $rtoken_vars, $Ktoken_vars,
+                            $side_comment_follows );
                     }
                 }
 
@@ -7653,7 +7620,7 @@ EOM
                 if ($side_comment_follows) { $no_internal_newlines = 1 }
 
                 # store the closing curly brace
-                $self->store_token_to_go();
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
 
                 # ok, we just stored a closing curly brace.  Often, but
                 # not always, we want to end the line immediately.
@@ -7809,7 +7776,7 @@ EOM
                     destroy_one_line_block();
                 }
 
-                $self->store_token_to_go();
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
 
                 $self->output_line_to_go()
                   unless ( $no_internal_newlines
@@ -7824,13 +7791,13 @@ EOM
                 # no newlines after seeing here-target
                 $no_internal_newlines = 1;
                 destroy_one_line_block();
-                $self->store_token_to_go();
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
             }
 
             # handle all other token types
             else {
 
-                $self->store_token_to_go();
+                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
             }
 
             # remember two previous nonblank OUTPUT tokens
@@ -7848,6 +7815,8 @@ EOM
             $in_continued_quote = 0;
 
         }    # end of loop over all tokens in this 'line_of_tokens'
+
+        my $type = $rLL->[$K_last]->[_TYPE_];
 
         # we have to flush ..
         if (
