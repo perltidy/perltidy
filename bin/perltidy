@@ -1173,7 +1173,7 @@ This can be controlled with the value of B<n> as follows:
     -sbq=1 means follow the example of the source code
     -sbq=2 means always put a space between the backslash and quote
 
-The default is B<-sbq=1>, meaning that a space will be used 0if there is one in the source code.
+The default is B<-sbq=1>, meaning that a space will be used if there is one in the source code.
 
 =item Trimming trailing whitespace from lines of POD
 

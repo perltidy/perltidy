@@ -2359,9 +2359,6 @@ sub respace_tokens {
     # This will be needed if we want to undo them for iterations
     my $rK_phantom_semicolons = [];
 
-    # Temporary hashes for adding semicolons
-    ##my $rKfirst_new               = {};
-
     # a sub to link preceding nodes forward to a new node type
     my $link_back = sub {
         my ( $Ktop, $key ) = @_;
@@ -7372,9 +7369,12 @@ sub copy_token_as_type {
         ############################
 
         #######################################################
-        # FIXME: Some older coding was simplfied by adding a couple
-        # of extra blanks to the end of the line to make $j+2 references
-        # valid.  This should eventually be unnecessary and removed.
+        # NOTE: Some coding has been simplfied by adding a couple of extra
+        # blanks to the end of the line to make $j+2 references valid.  This
+        # simplifies looking for the next nonblank token.
+        # * One place where this assumption is used is below in the calculation
+        # involving $j_next.
+        # * Another place is in sub 'starting_one_line_block'
         my $rnew_blank =
           copy_token_as_type( $rinput_token_array->[$jmax], 'b' );
         push @{$rinput_token_array}, $rnew_blank;
@@ -8407,6 +8407,8 @@ sub starting_one_line_block {
         {
 
             # be sure any trailing comment also fits on the line
+            # NOTE: the indexing here assumes that the rtoken_array has been
+            # padded with two trailing blanks
             my $i_nonblank =
               ( $rtoken_array->[ $i + 1 ]->[_TYPE_] eq 'b' ) ? $i + 2 : $i + 1;
 
