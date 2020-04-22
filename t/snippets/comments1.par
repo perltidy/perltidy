@@ -1,1 +1,1 @@
--fpsc=40 -iscl -nibc
+-fpsc=40 -iscl -nibc -nhsc -ssc

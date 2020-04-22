@@ -38,10 +38,10 @@ BEGIN {
     ###########################################
     $rparams = {
         'bos'       => "-bos",
-        'comments1' => "-fpsc=40 -iscl -nibc",
+        'comments1' => "-fpsc=40 -iscl -nibc -nhsc -ssc",
         'comments2' => "-msc=10 -dbc -dp",
-        'comments3' => "-mbl=2",
-        'comments4' => "-kbl=2",
+        'comments3' => "-mbl=2 -isbc",
+        'comments4' => "-kbl=2 -nolc -osbc",
         'def'       => "",
         'long_line' => "-l=0",
         'pbp'       => "-pbp -nst -nse",
@@ -78,22 +78,50 @@ sub macro_get_names { #
 # 
 # %name = macro_get_names();  (key=macrohandle, value=macroname)
 #
-##local(%name);  # a static block comment
-   local(%name)=();
+##local(%name);  # a static block comment without indentation
+   local(%name)=();  ## a static side comment to test -ssc
+
+ # a spaced block comment to test -isbc
    for (0..$                                          #mac_ver) {
+      # a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
       $name{$_} = $mac_ext[$idx{$mac_exti[$_]}];
+      $vmsfile =~ s/;[\d\-]*$//; # very long side comment; Clip off version number; we can use a newer version as well
+
    }
    %name;
 } 
 
 
 
+    @month_of_year = ( 
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    ##  'Dec', 'Nov'   [a static block comment with indentation]
+        'Nov', 'Dec');
+
+
+{    # this side comment will not align
+    my $IGNORE = 0;    # This is a side comment
+                       # This is a hanging side comment
+                       # And so is this
+
+    # A blank line interrupts the hsc's; this is a block comment
+
+}
 
 # side comments at different indentation levels should not normally be aligned
 { { { { { ${msg} = "Hello World!"; print "My message: ${msg}\n"; } } #end level 4
         } # end level 3
     } # end level 2
 } # end level 1
+
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 
 
@@ -254,20 +282,43 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }  # side comment
-                                       # hanging side comment
-                                       # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
+
+# hanging side comment
+# very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
 # side comments following open brace are not currently treated as hanging side comments
 sub macro_get_names {                  #
 #
 # %name = macro_get_names();  (key=macrohandle, value=macroname)
 #
-##local(%name);  # a static block comment
-    local (%name) = ();
+##local(%name);  # a static block comment without indentation
+    local (%name) = (); ## a static side comment to test -ssc
+
+# a spaced block comment to test -isbc
     for ( 0 .. $#mac_ver ) {
+
+# a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//;     # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
+}
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+##  'Dec', 'Nov'   [a static block comment with indentation]
+    'Nov', 'Dec'
+);
+
+{                                      # this side comment will not align
+    my $IGNORE = 0;                    # This is a side comment
+
+# This is a hanging side comment
+# And so is this
+
+# A blank line interrupts the hsc's; this is a block comment
+
 }
 
 # side comments at different indentation levels should not normally be aligned
@@ -280,6 +331,14 @@ sub macro_get_names {                  #
         }                              # end level 3
     }                                  # end level 2
 }                                      # end level 1
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 # some blank lines follow
 
@@ -311,11 +370,27 @@ sub length { return length( $_[0] ) }          # side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
 sub macro_get_names {          #
-    local (%name) = ();
+    local (%name) = ();          ## a static side comment to test -ssc
+
     for ( 0 .. $#mac_ver ) {
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//
+          ; # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
+}
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    'Nov', 'Dec'
+);
+
+{           # this side comment will not align
+    my $IGNORE = 0;          # This is a side comment
+                             # This is a hanging side comment
+                             # And so is this
+
 }
 
 {
@@ -323,10 +398,18 @@ sub macro_get_names {          #
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }          #end level 4
+            }                #end level 4
         }          # end level 3
     }          # end level 2
 }          # end level 1
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 
 __END__
@@ -352,17 +435,40 @@ sub length { return length( $_[0] ) }    # side comment
 
 # side comments following open brace are not currently treated as hanging side comments
 sub macro_get_names {    #
-    #
-    # %name = macro_get_names();  (key=macrohandle, value=macroname)
-    #
-##local(%name);  # a static block comment
-    local (%name) = ();
+#
+# %name = macro_get_names();  (key=macrohandle, value=macroname)
+#
+##local(%name);  # a static block comment without indentation
+    local (%name) = ();    ## a static side comment to test -ssc
+
+    # a spaced block comment to test -isbc
     for ( 0 .. $#mac_ver ) {
+
+# a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//
+          ; # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
 }
 
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    ##  'Dec', 'Nov'   [a static block comment with indentation]
+    'Nov', 'Dec'
+);
+
+
+{    # this side comment will not align
+    my $IGNORE = 0;    # This is a side comment
+                       # This is a hanging side comment
+                       # And so is this
+
+    # A blank line interrupts the hsc's; this is a block comment
+
+}
 
 # side comments at different indentation levels should not normally be aligned
 {
@@ -370,10 +476,19 @@ sub macro_get_names {    #
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }    #end level 4
+            }          #end level 4
         }    # end level 3
     }    # end level 2
 }    # end level 1
+
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 
 # some blank lines follow
@@ -413,16 +528,38 @@ sub macro_get_names {    #
     #
     # %name = macro_get_names();  (key=macrohandle, value=macroname)
     #
-##local(%name);  # a static block comment
-    local (%name) = ();
+##local(%name);  # a static block comment without indentation
+    local (%name) = ();    ## a static side comment to test -ssc
+
+    # a spaced block comment to test -isbc
     for ( 0 .. $#mac_ver ) {
+
+        # a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//
+          ; # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
 }
 
 
 
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+  ##  'Dec', 'Nov'   [a static block comment with indentation]
+    'Nov', 'Dec'
+);
+
+
+{    # this side comment will not align
+    my $IGNORE = 0;    # This is a side comment
+                       # This is a hanging side comment
+                       # And so is this
+
+    # A blank line interrupts the hsc's; this is a block comment
+
+}
 
 # side comments at different indentation levels should not normally be aligned
 {
@@ -430,10 +567,19 @@ sub macro_get_names {    #
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }    #end level 4
+            }          #end level 4
         }    # end level 3
     }    # end level 2
 }    # end level 1
+
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 
 
@@ -475,12 +621,34 @@ sub macro_get_names {    #
     #
     # %name = macro_get_names();  (key=macrohandle, value=macroname)
     #
-##local(%name);  # a static block comment
-    local (%name) = ();
+##local(%name);  # a static block comment without indentation
+    local (%name) = ();    ## a static side comment to test -ssc
+
+    # a spaced block comment to test -isbc
     for ( 0 .. $#mac_ver ) {
+
+# a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//
+          ; # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
+}
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    ##  'Dec', 'Nov'   [a static block comment with indentation]
+    'Nov', 'Dec'
+);
+
+{           # this side comment will not align
+    my $IGNORE = 0;    # This is a side comment
+                       # This is a hanging side comment
+                       # And so is this
+
+    # A blank line interrupts the hsc's; this is a block comment
+
 }
 
 # side comments at different indentation levels should not normally be aligned
@@ -489,10 +657,18 @@ sub macro_get_names {    #
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }    #end level 4
+            }          #end level 4
         }    # end level 3
     }    # end level 2
 }    # end level 1
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 # some blank lines follow
 

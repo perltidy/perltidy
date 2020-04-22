@@ -1,0 +1,15 @@
+sub message
+  {
+    if ( !defined( $_[0] ) )
+      {
+        print("Hello, World\n");
+      }
+    else
+      {
+        print( $_[0], "\n" );
+      }
+  }
+
+$myfun = sub {
+    print("Hello, World\n");
+};

@@ -1,0 +1,4 @@
+if ( ( my $len_tab = length($tabstr) ) > 0 ) { }    # test -pt
+$width = $col[ $j + $k ] - $col[$j];                # test -sbt
+$obj->{ $parsed_sql->{'table'}[0] };                # test -bt
+%bf = map { $_ => -M $_ } grep {/\.deb$/} dirents '.';    # test -bbt

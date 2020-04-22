@@ -4,11 +4,27 @@ sub length { return length( $_[0] ) }          # side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
 sub macro_get_names {          #
-    local (%name) = ();
+    local (%name) = ();          ## a static side comment to test -ssc
+
     for ( 0 .. $#mac_ver ) {
         $name{$_} = $mac_ext[ $idx{ $mac_exti[$_] } ];
+        $vmsfile =~ s/;[\d\-]*$//
+          ; # very long side comment; Clip off version number; we can use a newer version as well
+
     }
     %name;
+}
+
+@month_of_year = (
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+    'Nov', 'Dec'
+);
+
+{           # this side comment will not align
+    my $IGNORE = 0;          # This is a side comment
+                             # This is a hanging side comment
+                             # And so is this
+
 }
 
 {
@@ -16,10 +32,18 @@ sub macro_get_names {          #
         {
             {
                 { ${msg} = "Hello World!"; print "My message: ${msg}\n"; }
-            }          #end level 4
+            }                #end level 4
         }          # end level 3
     }          # end level 2
 }          # end level 1
+
+#<<<  do not let perltidy touch this
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>>
 
 
 __END__

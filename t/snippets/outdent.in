@@ -1,0 +1,8 @@
+# test -nola -okw
+        my $i;
+      LOOP: while ( $i = <FOTOS> ) {
+            chomp($i);
+            next unless $i;
+            fixit($i);
+        }
+

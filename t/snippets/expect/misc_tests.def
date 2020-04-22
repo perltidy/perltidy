@@ -1,0 +1,5 @@
+for ( @a = @$ap, $u = shift @a ; @a ; $u = $v ) { ... }    # test -sfs
+$i = 1;                                                    #  test -sts
+$i = 0;                                                    ##  =1;  test -ssc
+;                                                          # test -ndsm
+my ( $a, $b, $c ) = @_;                                    # test -nsak="my for"
