@@ -266,7 +266,6 @@ use vars qw{
   %want_left_space
   %want_right_space
   $bli_pattern
-  $bli_list_string
   %is_closing_type
   %is_opening_type
   %is_closing_token
@@ -307,9 +306,6 @@ BEGIN {
         _TYPE_SEQUENCE_         => $i++,
     };
     $NVARS = 1 + _TYPE_SEQUENCE_;
-
-    # default list of block types for which -bli would apply
-    $bli_list_string = 'if else elsif unless while for foreach do : sub';
 
     my @q;
 
@@ -4928,7 +4924,7 @@ sub set_leading_whitespace {
     # opening braces
     if (   $rOpts_brace_left_and_indent
         && $max_index_to_go == 0
-        && $block_type_to_go[$max_index_to_go] =~ /$bli_pattern/o )
+        && $block_type_to_go[$max_index_to_go] =~ /$bli_pattern/ )
     {
         $ci_level++;
     }
@@ -6329,6 +6325,9 @@ sub make_sub_matching_pattern {
 }
 
 sub make_bli_pattern {
+
+    # default list of block types for which -bli would apply
+    my $bli_list_string = 'if else elsif unless while for foreach do : sub';
 
     if ( defined( $rOpts->{'brace-left-and-indent-list'} )
         && $rOpts->{'brace-left-and-indent-list'} )
@@ -11178,7 +11177,7 @@ sub lookup_opening_indentation {
                 my $is_bli =
                      $rOpts_brace_left_and_indent
                   && $block_type_to_go[$i_terminal]
-                  && $block_type_to_go[$i_terminal] =~ /$bli_pattern/o;
+                  && $block_type_to_go[$i_terminal] =~ /$bli_pattern/;
 
                 if ( !$is_bli && defined($K_next_nonblank) ) {
                     my $lev        = $rLL->[$K_beg]->[_LEVEL_];
