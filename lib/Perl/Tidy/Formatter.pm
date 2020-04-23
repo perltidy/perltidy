@@ -5807,7 +5807,7 @@ EOM
     # (at present, including them messes up vertical alignment)
     my @sak = qw(my local our and or err eq ne if else elsif until
       unless while for foreach return switch case given when catch);
-    @space_after_keyword{@sak} = (1) x scalar(@sak);
+    %space_after_keyword = map { $_ => 1 } @sak;
 
     # first remove any or all of these if desired
     if ( my @q = split_words( $rOpts->{'nospace-after-keyword'} ) ) {
