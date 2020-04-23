@@ -1313,7 +1313,7 @@ EOM
         # see if this is a code type we seek (i.e. comment)
         if (   $CODE_type
             && $Opt_comment_pattern
-            && $CODE_type =~ /$Opt_comment_pattern/o )
+            && $CODE_type =~ /$Opt_comment_pattern/ )
         {
 
             my $tok = $CODE_type;
@@ -1338,7 +1338,7 @@ EOM
         # continuation line; the code may be badly formatted.
         if (   $ci_level == 0
             && $type eq 'k'
-            && $token =~ /$Opt_pattern/o )
+            && $token =~ /$Opt_pattern/ )
         {
 
             # Continuing a keyword group
@@ -3211,7 +3211,7 @@ sub respace_tokens {
             # Note: extra space appended to comment simplifies pattern matching
             if ( $is_block_comment
                 && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
-                /$format_skipping_pattern_end/o )
+                /$format_skipping_pattern_end/ )
             {
                 $In_format_skipping_section = 0;
                 write_logfile_entry("Exiting formatting skip section\n");
@@ -3223,7 +3223,7 @@ sub respace_tokens {
         if (   $rOpts_format_skipping
             && $is_block_comment
             && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
-            /$format_skipping_pattern_begin/o )
+            /$format_skipping_pattern_begin/ )
         {
             $In_format_skipping_section = 1;
             write_logfile_entry("Entering formatting skip section\n");
@@ -3246,7 +3246,7 @@ sub respace_tokens {
         my $is_static_block_comment_without_leading_space = 0;
         if (   $is_block_comment
             && $rOpts->{'static-block-comments'}
-            && $input_line =~ /$static_block_comment_pattern/o )
+            && $input_line =~ /$static_block_comment_pattern/ )
         {
             $is_static_block_comment = 1;
             $is_static_block_comment_without_leading_space =
@@ -7439,9 +7439,9 @@ sub copy_token_as_type {
 
                     # delete closing side comments if necessary
                     || (   $rOpts->{'delete-closing-side-comments'}
-                        && $token =~ /$closing_side_comment_prefix_pattern/o
+                        && $token =~ /$closing_side_comment_prefix_pattern/
                         && $last_nonblank_block_type =~
-                        /$closing_side_comment_list_pattern/o )
+                        /$closing_side_comment_list_pattern/ )
                   )
                 {
                     if ( $types_to_go[$max_index_to_go] eq 'b' ) {
@@ -9625,7 +9625,7 @@ sub accumulate_block_text {
             if (   $type eq 'k'
                 && $csc_new_statement_ok
                 && $is_if_elsif_else_unless_while_until_for_foreach{$token}
-                && $token =~ /$closing_side_comment_list_pattern/o )
+                && $token =~ /$closing_side_comment_list_pattern/ )
             {
                 set_block_text_accumulator($i);
             }
@@ -9840,7 +9840,7 @@ sub add_closing_side_comment {
 
         # .. and if this is one of the types of interest
         && $block_type_to_go[$i_terminal] =~
-        /$closing_side_comment_list_pattern/o
+        /$closing_side_comment_list_pattern/
 
         # .. but not an anonymous sub
         # These are not normally of interest, and their closing braces are
@@ -9862,7 +9862,7 @@ sub add_closing_side_comment {
 
             # or the old side comment is a closing side comment
             || $tokens_to_go[$max_index_to_go] =~
-            /$closing_side_comment_prefix_pattern/o
+            /$closing_side_comment_prefix_pattern/
         )
       )
     {
@@ -11866,7 +11866,7 @@ sub set_vertical_tightness_flags {
         && $ibeg eq $iend
         && $types_to_go[$iend] eq '{'
         && $block_type_to_go[$iend] =~
-        /$block_brace_vertical_tightness_pattern/o )
+        /$block_brace_vertical_tightness_pattern/ )
     {
         @{$rvertical_tightness_flags} =
           ( 3, $rOpts_block_brace_vertical_tightness, 0, 1 );
@@ -12037,13 +12037,13 @@ sub get_seqno {
                         # it is a static side comment
                         (
                                $rOpts->{'static-side-comments'}
-                            && $token =~ /$static_side_comment_pattern/o
+                            && $token =~ /$static_side_comment_pattern/
                         )
 
                         # or a closing side comment
                         || (   $vert_last_nonblank_block_type
                             && $token =~
-                            /$closing_side_comment_prefix_pattern/o )
+                            /$closing_side_comment_prefix_pattern/ )
                       )
                     {
                         $alignment_type = $type;
