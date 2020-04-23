@@ -1,6 +1,6 @@
-# Welcome to Perltidy
-
 [![Build Status](https://travis-ci.org/perltidy/perltidy.svg?branch=master)](https://travis-ci.org/perltidy/perltidy)
+
+# Welcome to Perltidy
 
 Perltidy is a tool to indent and reformat scripts written in Perl.
 
