@@ -11,6 +11,14 @@
 #8 tightness.tightness1
 #9 tightness.tightness2
 #10 tightness.tightness3
+#11 braces.braces4
+#12 scbb.def
+#13 scbb.scbb
+#14 space_paren.def
+#15 space_paren.space_paren1
+#16 space_paren.space_paren2
+#17 braces.braces5
+#18 braces.braces6
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,15 +36,23 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'braces4' => "-icb",
+        'braces5' => <<'----------',
+-bli -blil='if'
+----------
+        'braces6'    => "-ce",
         'def'        => "",
         'misc_tests' => <<'----------',
 -sts -ssc -sfs -nsak="my for" -ndsm
 ----------
-        'outdent1'   => "-nola -okw",
-        'sbq0'       => "-sbq=0",
-        'sbq2'       => "-sbq=2",
-        'tightness1' => "-pt=0 -sbt=0 -bt=0 -bbt=0",
-        'tightness2' => <<'----------',
+        'outdent1'     => "-nola -okw",
+        'sbq0'         => "-sbq=0",
+        'sbq2'         => "-sbq=2",
+        'scbb'         => "-scbb",
+        'space_paren1' => "-sfp -skp",
+        'space_paren2' => "-sak=push",
+        'tightness1'   => "-pt=0 -sbt=0 -bt=0 -bbt=0",
+        'tightness2'   => <<'----------',
 -pt=1 -sbt=1 -bt=1 -bbt=1
 
 ----------
@@ -50,6 +66,21 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'braces' => <<'----------',
+sub message {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    }
+    else {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub {
+    print("Hello, World\n");
+};
+----------
 
         'misc_tests' => <<'----------',
 for ( @a = @$ap, $u = shift @a; @a; $u = $v ) { ... } # test -sfs 
@@ -73,6 +104,27 @@ my ( $a, $b, $c ) = @_;    # test -nsak="my for"
         'sbq' => <<'----------',
        $str1=\"string1";
        $str2=\ 'string2';
+----------
+
+        'scbb' => <<'----------',
+    # test -scbb:
+    for $w1 (@w1) {
+        for $w2 (@w2) {
+            for $w3 (@w3) {
+                for $w4 (@w4) {
+                    push( @lines, "$w1 $w2 $w3 $w4\n" );
+                }
+            }
+        }
+    }
+
+----------
+
+        'space_paren' => <<'----------',
+myfunc ( $a, $b, $c );    # test -sfp
+push ( @array, $val );    # test -skp and also -sak='push'
+split( /\|/, $txt );      # test -skp and also -sak='push'
+my ( $v1, $v2 ) = @_;     # test -sak='push'
 ----------
 
         'tightness' => <<'----------',
@@ -202,6 +254,131 @@ $width = $col[$j + $k] - $col[$j];              # test -sbt
 $obj->{$parsed_sql->{'table'}[0]};              # test -bt
 %bf = map {$_ => -M $_} grep {/\.deb$/} dirents '.';    # test -bbt
 #10...........
+        },
+
+        'braces.braces4' => {
+            source => "braces",
+            params => "braces4",
+            expect => <<'#11...........',
+sub message {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+        }
+    else {
+        print( $_[0], "\n" );
+        }
+    }
+
+$myfun = sub {
+    print("Hello, World\n");
+    };
+#11...........
+        },
+
+        'scbb.def' => {
+            source => "scbb",
+            params => "def",
+            expect => <<'#12...........',
+    # test -scbb:
+    for $w1 (@w1) {
+        for $w2 (@w2) {
+            for $w3 (@w3) {
+                for $w4 (@w4) {
+                    push( @lines, "$w1 $w2 $w3 $w4\n" );
+                }
+            }
+        }
+    }
+
+#12...........
+        },
+
+        'scbb.scbb' => {
+            source => "scbb",
+            params => "scbb",
+            expect => <<'#13...........',
+    # test -scbb:
+    for $w1 (@w1) {
+        for $w2 (@w2) {
+            for $w3 (@w3) {
+                for $w4 (@w4) {
+                    push( @lines, "$w1 $w2 $w3 $w4\n" );
+                } } } }
+
+#13...........
+        },
+
+        'space_paren.def' => {
+            source => "space_paren",
+            params => "def",
+            expect => <<'#14...........',
+myfunc( $a, $b, $c );    # test -sfp
+push( @array, $val );    # test -skp and also -sak='push'
+split( /\|/, $txt );     # test -skp and also -sak='push'
+my ( $v1, $v2 ) = @_;    # test -sak='push'
+#14...........
+        },
+
+        'space_paren.space_paren1' => {
+            source => "space_paren",
+            params => "space_paren1",
+            expect => <<'#15...........',
+myfunc ( $a, $b, $c );    # test -sfp
+push ( @array, $val );    # test -skp and also -sak='push'
+split ( /\|/, $txt );     # test -skp and also -sak='push'
+my ( $v1, $v2 ) = @_;     # test -sak='push'
+#15...........
+        },
+
+        'space_paren.space_paren2' => {
+            source => "space_paren",
+            params => "space_paren2",
+            expect => <<'#16...........',
+myfunc( $a, $b, $c );     # test -sfp
+push ( @array, $val );    # test -skp and also -sak='push'
+split( /\|/, $txt );      # test -skp and also -sak='push'
+my ( $v1, $v2 ) = @_;     # test -sak='push'
+#16...........
+        },
+
+        'braces.braces5' => {
+            source => "braces",
+            params => "braces5",
+            expect => <<'#17...........',
+sub message
+{
+    if ( !defined( $_[0] ) )
+      {
+        print("Hello, World\n");
+      }
+    else
+    {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub {
+    print("Hello, World\n");
+};
+#17...........
+        },
+
+        'braces.braces6' => {
+            source => "braces",
+            params => "braces6",
+            expect => <<'#18...........',
+sub message {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    } else {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub {
+    print("Hello, World\n");
+};
+#18...........
         },
     };
 

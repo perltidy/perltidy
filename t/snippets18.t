@@ -39,9 +39,9 @@ BEGIN {
     $rparams = {
         'braces1'   => "-bl -asbl",
         'braces2'   => "-sbl",
-        'braces3'   => "-bli",
+        'braces3'   => "-bli -bbvt=1",
         'comments5' => "-dsc -nsbc",
-        'csc1'      => "-csc -csci=2 -cscb",
+        'csc1'      => "-csc -csci=2 -ncscb",
         'csc2'      => "-dcsc",
         'def'       => "",
         'iob'       => "-iob",
@@ -430,14 +430,11 @@ $myfun = sub {
             params => "braces3",
             expect => <<'#7...........',
 sub message
-  {
-    if ( !defined( $_[0] ) )
-      {
-        print("Hello, World\n");
+  { if ( !defined( $_[0] ) )
+      { print("Hello, World\n");
       }
     else
-      {
-        print( $_[0], "\n" );
+      { print( $_[0], "\n" );
       }
   }
 
@@ -476,7 +473,7 @@ $myfun = sub {
             } ## end if ( !defined( $_[0] ))
             else {
                 print( $_[0], "\n" );
-            } ## end else [ if ( !defined( $_[0] ))]
+            } ## end else [ if ( !defined( $_[0] ))
         } ## end sub message
 #9...........
         },

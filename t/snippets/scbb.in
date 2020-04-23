@@ -1,0 +1,11 @@
+    # test -scbb:
+    for $w1 (@w1) {
+        for $w2 (@w2) {
+            for $w3 (@w3) {
+                for $w4 (@w4) {
+                    push( @lines, "$w1 $w2 $w3 $w4\n" );
+                }
+            }
+        }
+    }
+

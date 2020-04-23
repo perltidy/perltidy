@@ -1,12 +1,9 @@
 sub message
-  {
-    if ( !defined( $_[0] ) )
-      {
-        print("Hello, World\n");
+  { if ( !defined( $_[0] ) )
+      { print("Hello, World\n");
       }
     else
-      {
-        print( $_[0], "\n" );
+      { print( $_[0], "\n" );
       }
   }
 

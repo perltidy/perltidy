@@ -4,7 +4,6 @@ assert-tidy
 assert-untidy
 backlink
 block-brace-vertical-tightness-list
-brace-left-and-indent-list
 break-at-old-attribute-breakpoints
 break-at-old-keyword-breakpoints
 break-at-old-logical-breakpoints
@@ -13,7 +12,6 @@ cachedir
 closing-side-comment-list
 closing-side-comment-prefix
 closing-side-comment-warnings
-closing-side-comments-balanced
 closing-token-indentation
 cuddled-block-list-exclusive
 dump-cuddled-block-list
@@ -97,7 +95,6 @@ html-src-extension
 html-table-of-contents
 html-toc-extension
 htmlroot
-indent-closing-brace
 keyword-group-blanks-list
 libpods
 logfile
@@ -130,10 +127,6 @@ preserve-line-endings
 profile
 quiet
 show-options
-space-after-keyword
-space-function-paren
-space-keyword-paren
-stack-closing-block-brace
 stack-opening-block-brace
 standard-output
 static-block-comment-prefix
