@@ -1,6 +1,8 @@
 # Welcome to Perltidy
 
-Perltidy is a tool to indent and reformat scripts written in Perl5.
+[![Build Status](https://travis-ci.org/perltidy/perltidy.svg?branch=master)](https://travis-ci.org/perltidy/perltidy)
+
+Perltidy is a tool to indent and reformat scripts written in Perl.
 
 Perltidy is free software released under the GNU General Public
 License -- please see the included file "COPYING" for details.
