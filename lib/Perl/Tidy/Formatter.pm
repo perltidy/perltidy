@@ -7039,36 +7039,28 @@ sub copy_token_as_type {
 
 {    # begin print_line_of_tokens
 
-    # variables used by the token extract and store subs which follow
-    my $rinput_K_array;
+    # flags needed by the store routine
     my $in_continued_quote;
     my $no_internal_newlines;
+    my $side_comment_follows;
 
-    # routine to get the variables for the jth token of this batch
-    sub extract_token {
-        my ( $self, $j ) = @_;
-
-        my $rLL         = $self->{rLL};
-        my $Ktoken_vars = $rinput_K_array->[$j];
-
-        if ( !defined($Ktoken_vars) ) {
-
-            # Shouldn't happen: an error here would be due to a recent program
-            # change
-            Fault("undefined index K for j=$j");
-        }
-
-        my $rtoken_vars = $rLL->[$Ktoken_vars];
-        return ( $rtoken_vars, $Ktoken_vars );
-    }
+    # range of K of tokens for the current line, which might be useful
+    # for checking for indexing errors
+    my ( $K_first, $K_last );   
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
     sub store_token_to_go {
 
-        my ( $self, $rtoken_vars, $Ktoken_vars, $side_comment_follows ) = @_;
+        my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
         my $rLL  = $self->{rLL};
         my $flag = $side_comment_follows ? 1 : $no_internal_newlines;
+
+        # the array of tokens can be given if they are different from the
+        # input arrays.
+        if ( !defined($rtoken_vars) ) {
+            $rtoken_vars = $rLL->[$Ktoken_vars];
+        }
 
         my $token                 = $rtoken_vars->[_TOKEN_];
         my $type                  = $rtoken_vars->[_TYPE_];
@@ -7162,26 +7154,26 @@ sub copy_token_as_type {
         # This routine is called once per input line to process all of
         # the tokens on that line.  This is the first stage of
         # beautification.
-        #
-        # Full-line comments and blank lines may be processed immediately.
-        #
-        # For normal lines of code, the tokens are stored one-by-one,
-        # via calls to 'sub store_token_to_go', until a known line break
-        # point is reached.  Then, the batch of collected tokens is
-        # passed along to 'sub output_line_to_go' for further
-        # processing.  This routine decides if there should be
-        # whitespace between each pair of non-white tokens, so later
-        # routines only need to decide on any additional line breaks.
-        # Any whitespace is initially a single space character.  Later,
-        # the vertical aligner may expand that to be multiple space
-        # characters if necessary for alignment.
+
+        # Full-line comments and blank lines may be output immediately.
+  
+	# For normal lines of code, this routine makes initial structural line
+	# breaks, i.e. breaks dictated by code blocks and statements.  Later
+	# routines make further line breaks appropriate for lists and logical
+	# structures.
+
+	# The tokens are copied one-by-one from the global token array $rLL to
+	# a set of '_to_go' arrays for a further processing via calls to 'sub
+	# store_token_to_go', until a structural break point is reached.  Then,
+	# the batch of collected '_to_go' tokens is passed along to 'sub
+	# output_line_to_go' for further processing.  
 
         $input_line_number = $line_of_tokens->{_line_number};
         my $input_line = $line_of_tokens->{_line_text};
         my $CODE_type  = $line_of_tokens->{_code_type};
 
         my $rK_range = $line_of_tokens->{_rK_range};
-        my ( $K_first, $K_last ) = @{$rK_range};
+        ( $K_first, $K_last ) = @{$rK_range};
 
         my $rLL              = $self->{rLL};
         my $rbreak_container = $self->{rbreak_container};
@@ -7202,6 +7194,7 @@ sub copy_token_as_type {
         }
 
         $no_internal_newlines = 1 - $rOpts_add_newlines;
+        $side_comment_follows = 0;
         my $is_comment =
           ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq '#' );
         my $is_static_block_comment_without_leading_space =
@@ -7217,11 +7210,9 @@ sub copy_token_as_type {
 
         # Add interline blank if any
         my $last_old_nonblank_type   = "b";
-        my $first_new_nonblank_type  = "b";
-        my $first_new_nonblank_token = " ";
+        my $first_new_nonblank_token = "";
         if ( $max_index_to_go >= 0 ) {
             $last_old_nonblank_type   = $types_to_go[$max_index_to_go];
-            $first_new_nonblank_type  = $rLL->[$K_first]->[_TYPE_];
             $first_new_nonblank_token = $rLL->[$K_first]->[_TOKEN_];
             if (  !$is_comment
                 && $types_to_go[$max_index_to_go] ne 'b'
@@ -7232,12 +7223,8 @@ sub copy_token_as_type {
             }
         }
 
-        # Copy the tokens into local arrays
-        # FIXME: This intermediate array might eventually be eliminated
-        # and instead direct indexing into the K array should be done
-        $rinput_K_array = [ ( $K_first .. $K_last ) ];
-        my $rinput_token_array = [ map { $rLL->[$_] } @{$rinput_K_array} ];
-        my $jmax               = @{$rinput_K_array} - 1;
+        my $jmax = $K_last - $K_first;
+        my $rtok_first = $rLL->[$K_first];
 
         $in_continued_quote = $starting_in_quote =
           $line_of_tokens->{_starting_in_quote};
@@ -7246,7 +7233,6 @@ sub copy_token_as_type {
         my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
 
-        my $j_next;
         my $next_nonblank_token;
         my $next_nonblank_token_type;
 
@@ -7271,7 +7257,7 @@ sub copy_token_as_type {
                 && $rOpts->{'blanks-before-comments'}
 
                 # if this is NOT an empty comment line
-                && $rinput_token_array->[0]->[_TOKEN_] ne '#'
+                && $rtok_first->[_TOKEN_] ne '#'
 
                 # not after a short line ending in an opening token
                 # because we already have space above this comment.
@@ -7295,14 +7281,14 @@ sub copy_token_as_type {
                 && !$is_static_block_comment_without_leading_space
               )
             {
-                my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token(0);
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+                my $Ktoken_vars = $K_first;
+                $self->store_token_to_go($Ktoken_vars);
                 $self->output_line_to_go();
             }
             else {
                 $self->flush();    # switching to new output stream
                 $file_writer_object->write_code_line(
-                    $rinput_token_array->[0]->[_TOKEN_] . "\n" );
+                    $rtok_first->[_TOKEN_] . "\n" );
                 $last_line_leading_type = '#';
             }
             if ( $rOpts->{'tee-block-comments'} ) {
@@ -7314,13 +7300,13 @@ sub copy_token_as_type {
         # compare input/output indentation except for continuation lines
         # (because they have an unknown amount of initial blank space)
         # and lines which are quotes (because they may have been outdented)
-        my $structural_indentation_level = $rinput_token_array->[0]->[_LEVEL_];
+        my $structural_indentation_level = $rLL->[$K_first]->[_LEVEL_];
         compare_indentation_levels( $guessed_indentation_level,
             $structural_indentation_level )
           unless ( $is_hanging_side_comment
-            || $rinput_token_array->[0]->[_CI_LEVEL_] > 0
+            || $rtok_first->[_CI_LEVEL_] > 0
             || $guessed_indentation_level == 0
-            && $rinput_token_array->[0]->[_TYPE_] eq 'Q' );
+            && $rtok_first->[_TYPE_] eq 'Q' );
 
         ##########################
         # Handle indentation-only
@@ -7338,12 +7324,12 @@ sub copy_token_as_type {
             # we will not allow deleting of closing side comments with -io
             # because the coding would be more complex
             if (   $rOpts->{'delete-side-comments'}
-                && $rinput_token_array->[$jmax]->[_TYPE_] eq '#' )
+                && $rLL->[$K_last]->[_TYPE_] eq '#' )
             {
 
                 $line = "";
-                foreach my $jj ( 0 .. $jmax - 1 ) {
-                    $line .= $rinput_token_array->[$jj]->[_TOKEN_];
+                foreach my $KK ( $K_first .. $K_last - 1 ) {
+                    $line .= $rLL->[$KK]->[_TOKEN_];
                 }
             }
 
@@ -7352,13 +7338,17 @@ sub copy_token_as_type {
             $line =~ s/\s+$//;
             $line =~ s/^\s+// unless ($in_continued_quote);
 
-            my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token(0);
+	    my	$Ktoken_vars = $K_first;
+
+            # We work with a copy of the token variables and change the
+            # first token to be the entire line as a quote variable
+            my $rtoken_vars = $rLL->[$Ktoken_vars];
             $rtoken_vars = copy_token_as_type( $rtoken_vars, 'q', $line );
 
-            # Patch: length not really important here
+            # Patch: length is not really important here
             $rtoken_vars->[_TOKEN_LENGTH_] = length($line);
 
-            $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+            $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             $self->output_line_to_go();
             return;
         }
@@ -7367,24 +7357,11 @@ sub copy_token_as_type {
         # Handle all other lines ...
         ############################
 
-        #######################################################
-        # NOTE: Some coding has been simplfied by adding a couple of extra
-        # blanks to the end of the line to make $j+2 references valid.  This
-        # simplifies looking for the next nonblank token.
-        # * One place where this assumption is used is below in the calculation
-        # involving $j_next.
-        # * Another place is in sub 'starting_one_line_block'
-        my $rnew_blank =
-          copy_token_as_type( $rinput_token_array->[$jmax], 'b' );
-        push @{$rinput_token_array}, $rnew_blank;
-        push @{$rinput_token_array}, $rnew_blank;
-        #######################################################
-
         # If we just saw the end of an elsif block, write nag message
         # if we do not see another elseif or an else.
         if ($looking_for_else) {
 
-            unless ( $rinput_token_array->[0]->[_TOKEN_] =~ /^(elsif|else)$/ ) {
+            unless ( $rLL->[$K_first]->[_TOKEN_] =~ /^(elsif|else)$/ ) {
                 write_logfile_entry("(No else block)\n");
             }
             $looking_for_else = 0;
@@ -7414,16 +7391,15 @@ sub copy_token_as_type {
         # loop to process the tokens one-by-one
 
         # We do not want a leading blank if the previous batch just got output
-        my $jmin = 0;
+        my $Kmin = $K_first;
         if ( $max_index_to_go < 0 && $rLL->[$K_first]->[_TYPE_] eq 'b' ) {
-            $jmin = 1;
+            $Kmin = $K_first + 1;
         }
 
-        foreach my $j ( $jmin .. $jmax ) {
+        foreach my $Ktoken_vars ( $Kmin .. $K_last ) {
 
             # pull out some values for this token
-            my ( $rtoken_vars, $Ktoken_vars ) = $self->extract_token($j);
-
+            my $rtoken_vars   = $rLL->[$Ktoken_vars];
             my $token         = $rtoken_vars->[_TOKEN_];
             my $type          = $rtoken_vars->[_TYPE_];
             my $block_type    = $rtoken_vars->[_BLOCK_TYPE_];
@@ -7462,19 +7438,22 @@ sub copy_token_as_type {
                 $rbrace_follower = undef;
             }
 
-            $j_next =
-              ( $rinput_token_array->[ $j + 1 ]->[_TYPE_] eq 'b' )
-              ? $j + 2
-              : $j + 1;
-            $next_nonblank_token = $rinput_token_array->[$j_next]->[_TOKEN_];
-            $next_nonblank_token_type =
-              $rinput_token_array->[$j_next]->[_TYPE_];
+            # Get next nonblank on this line
+            my $Knnb = $self->K_next_nonblank($Ktoken_vars);
+            if ( !defined($Knnb) || $Knnb > $K_last ) {
+                $next_nonblank_token      = '';
+                $next_nonblank_token_type = 'b';
+            }
+            else {
+                $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
+                $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
+            }
 
             # Do not allow breaks which would promote a side comment to a
             # block comment.  In order to allow a break before an opening
             # or closing BLOCK, followed by a side comment, those sections
             # of code will handle this flag separately.
-            my $side_comment_follows = ( $next_nonblank_token_type eq '#' );
+            $side_comment_follows = ( $next_nonblank_token_type eq '#' );
             my $is_opening_BLOCK =
               (      $type eq '{'
                   && $token eq '{'
@@ -7503,13 +7482,12 @@ sub copy_token_as_type {
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars,
-                    $side_comment_follows );
+                $self->store_token_to_go( $Ktoken_vars ); 
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
-                  $self->starting_one_line_block( $j, $jmax, $level, $slevel,
-                    $ci_level, $rinput_token_array );
+                  $self->starting_one_line_block( $Ktoken_vars, $K_first,
+                    $K_last, $level, $slevel, $ci_level );
                 clear_breakpoint_undo_stack();
 
                 # to simplify the logic below, set a flag to indicate if
@@ -7569,8 +7547,7 @@ sub copy_token_as_type {
                         $self->output_line_to_go();
 
                         # and now store this token at the start of a new line
-                        $self->store_token_to_go( $rtoken_vars, $Ktoken_vars,
-                            $side_comment_follows );
+                        $self->store_token_to_go( $Ktoken_vars ); 
                     }
                 }
 
@@ -7619,7 +7596,7 @@ sub copy_token_as_type {
                 if ($side_comment_follows) { $no_internal_newlines = 1 }
 
                 # store the closing curly brace
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+                $self->store_token_to_go( $Ktoken_vars);
 
                 # ok, we just stored a closing curly brace.  Often, but
                 # not always, we want to end the line immediately.
@@ -7657,7 +7634,7 @@ sub copy_token_as_type {
 
                             # Follow users break point for
                             # one line block types U & G, such as a 'try' block
-                            || $is_one_line_block =~ /^[UG]$/ && $j == $jmax
+                            || $is_one_line_block =~ /^[UG]$/ && $Ktoken_vars == $K_last
                         )
 
                         # if needless semicolon follows we handle it later
@@ -7775,11 +7752,11 @@ sub copy_token_as_type {
                     destroy_one_line_block();
                 }
 
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+                $self->store_token_to_go( $Ktoken_vars);
 
                 $self->output_line_to_go()
                   unless ( $no_internal_newlines
-                    || ( $rOpts_keep_interior_semicolons && $j < $jmax )
+                    || ( $rOpts_keep_interior_semicolons && $Ktoken_vars < $K_last )
                     || ( $next_nonblank_token eq '}' ) );
 
             }
@@ -7790,13 +7767,13 @@ sub copy_token_as_type {
                 # no newlines after seeing here-target
                 $no_internal_newlines = 1;
                 destroy_one_line_block();
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+                $self->store_token_to_go( $Ktoken_vars );
             }
 
             # handle all other token types
             else {
 
-                $self->store_token_to_go( $rtoken_vars, $Ktoken_vars );
+                $self->store_token_to_go( $Ktoken_vars );
             }
 
             # remember two previous nonblank OUTPUT tokens
@@ -8244,22 +8221,18 @@ sub note_embedded_tab {
 
 sub starting_one_line_block {
 
-    # after seeing an opening curly brace, look for the closing brace
-    # and see if the entire block will fit on a line.  This routine is
-    # not always right because it uses the old whitespace, so a check
-    # is made later (at the closing brace) to make sure we really
-    # have a one-line block.  We have to do this preliminary check,
-    # though, because otherwise we would always break at a semicolon
-    # within a one-line block if the block contains multiple statements.
+    # after seeing an opening curly brace, look for the closing brace and see
+    # if the entire block will fit on a line.  This routine is not always right
+    # so a check is made later (at the closing brace) to make sure we really
+    # have a one-line block.  We have to do this preliminary check, though,
+    # because otherwise we would always break at a semicolon within a one-line
+    # block if the block contains multiple statements.
 
-    my ( $self, $j, $jmax, $level, $slevel, $ci_level, $rtoken_array ) = @_;
+    my ( $self, $Kj, $K_first, $K_last, $level, $slevel, $ci_level ) = @_;
+
     my $rbreak_container = $self->{rbreak_container};
     my $rshort_nested    = $self->{rshort_nested};
-
-    my $jmax_check = @{$rtoken_array};
-    if ( $jmax_check < $jmax ) {
-        Fault("jmax=$jmax > $jmax_check");
-    }
+    my $rLL              = $self->{rLL};
 
     # kill any current block - we can only go 1 deep
     destroy_one_line_block();
@@ -8277,12 +8250,12 @@ sub starting_one_line_block {
     }
 
     # return if block should be broken
-    my $type_sequence = $rtoken_array->[$j]->[_TYPE_SEQUENCE_];
+    my $type_sequence = $rLL->[$Kj]->[_TYPE_SEQUENCE_];
     if ( $rbreak_container->{$type_sequence} ) {
         return 0;
     }
 
-    my $block_type = $rtoken_array->[$j]->[_BLOCK_TYPE_];
+    my $block_type = $rLL->[$Kj]->[_BLOCK_TYPE_];
 
     # find the starting keyword for this block (such as 'if', 'else', ...)
 
@@ -8368,14 +8341,14 @@ sub starting_one_line_block {
         return 1;
     }
 
-    foreach my $i ( $j + 1 .. $jmax ) {
+    foreach my $Ki ( $Kj + 1 .. $K_last ) {
 
         # old whitespace could be arbitrarily large, so don't use it
-        if ( $rtoken_array->[$i]->[_TYPE_] eq 'b' ) { $pos += 1 }
-        else { $pos += $rtoken_array->[$i]->[_TOKEN_LENGTH_] }
+        if ( $rLL->[$Ki]->[_TYPE_] eq 'b' ) { $pos += 1 }
+        else { $pos += $rLL->[$Ki]->[_TOKEN_LENGTH_] }
 
         # ignore some small blocks
-        my $type_sequence = $rtoken_array->[$i]->[_TYPE_SEQUENCE_];
+        my $type_sequence = $rLL->[$Ki]->[_TYPE_SEQUENCE_];
         my $nobreak       = $rshort_nested->{$type_sequence};
 
         # Return false result if we exceed the maximum line length,
@@ -8390,26 +8363,31 @@ sub starting_one_line_block {
 
         # return if we encounter another opening brace before finding the
         # closing brace.
-        elsif ($rtoken_array->[$i]->[_TOKEN_] eq '{'
-            && $rtoken_array->[$i]->[_TYPE_] eq '{'
-            && $rtoken_array->[$i]->[_BLOCK_TYPE_]
+        elsif ($rLL->[$Ki]->[_TOKEN_] eq '{'
+            && $rLL->[$Ki]->[_TYPE_] eq '{'
+            && $rLL->[$Ki]->[_BLOCK_TYPE_]
             && !$nobreak )
         {
             return 0;
         }
 
         # if we find our closing brace..
-        elsif ($rtoken_array->[$i]->[_TOKEN_] eq '}'
-            && $rtoken_array->[$i]->[_TYPE_] eq '}'
-            && $rtoken_array->[$i]->[_BLOCK_TYPE_]
+        elsif ($rLL->[$Ki]->[_TOKEN_] eq '}'
+            && $rLL->[$Ki]->[_TYPE_] eq '}'
+            && $rLL->[$Ki]->[_BLOCK_TYPE_]
             && !$nobreak )
         {
 
             # be sure any trailing comment also fits on the line
-            # NOTE: the indexing here assumes that the rtoken_array has been
-            # padded with two trailing blanks
-            my $i_nonblank =
-              ( $rtoken_array->[ $i + 1 ]->[_TYPE_] eq 'b' ) ? $i + 2 : $i + 1;
+            my $Ki_nonblank = $Ki;
+            if ( $Ki_nonblank < $K_last ) {
+                $Ki_nonblank++;
+                if (   $rLL->[$Ki_nonblank]->[_TYPE_] eq 'b'
+                    && $Ki_nonblank < $K_last )
+                {
+                    $Ki_nonblank++;
+                }
+            }
 
             # Patch for one-line sort/map/grep/eval blocks with side comments:
             # We will ignore the side comment length for sort/map/grep/eval
@@ -8437,20 +8415,20 @@ sub starting_one_line_block {
             # It would be possible to fix this by changing bond strengths,
             # but they are high to prevent errors in older versions of perl.
 
-            if ( $rtoken_array->[$i_nonblank]->[_TYPE_] eq '#'
+            if ( $Ki < $K_last && $rLL->[$Ki_nonblank]->[_TYPE_] eq '#'
                 && !$is_sort_map_grep{$block_type} )
             {
 
-                $pos += $rtoken_array->[$i_nonblank]->[_TOKEN_LENGTH_];
+                $pos += $rLL->[$Ki_nonblank]->[_TOKEN_LENGTH_];
 
-                if ( $i_nonblank > $i + 1 ) {
+                if ( $Ki_nonblank > $Ki + 1 ) {
 
                     # source whitespace could be anything, assume
                     # at least one space before the hash on output
-                    if ( $rtoken_array->[ $i + 1 ]->[_TYPE_] eq 'b' ) {
+                    if ( $rLL->[$Ki+1]->[_TYPE_] eq 'b' ) {
                         $pos += 1;
                     }
-                    else { $pos += $rtoken_array->[ $i + 1 ]->[_TOKEN_LENGTH_] }
+                    else { $pos += $rLL->[$Ki+1]->[_TOKEN_LENGTH_] }
                 }
 
                 if ( $pos >= maximum_line_length($i_start) ) {
