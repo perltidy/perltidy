@@ -7890,9 +7890,6 @@ BEGIN {
     @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
-    @q = qw(sub);
-    @is_sub{@q} = (1) x scalar(@q);
-
     @q = qw(package);
     @is_package{@q} = (1) x scalar(@q);
 

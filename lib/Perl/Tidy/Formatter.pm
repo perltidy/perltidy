@@ -391,15 +391,6 @@ BEGIN {
     @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
 
-    # Patterns for standardizing matches to block types for regular subs and
-    # anonymous subs. Examples
-    #  'sub process' is a named sub
-    #  'sub ::m' is a named sub
-    #  'sub' is an anonymous sub
-    #  'sub:' is a label, not a sub
-    #  'substr' is a keyword
-    $SUB_PATTERN  = '^sub\s+(::|\w)';
-    $ASUB_PATTERN = '^sub$';
 }
 
 # whitespace codes
@@ -6308,6 +6299,13 @@ sub make_closing_side_comment_list_pattern {
 
 sub make_sub_matching_pattern {
 
+    # Patterns for standardizing matches to block types for regular subs and
+    # anonymous subs. Examples
+    #  'sub process' is a named sub
+    #  'sub ::m' is a named sub
+    #  'sub' is an anonymous sub
+    #  'sub:' is a label, not a sub
+    #  'substr' is a keyword
     $SUB_PATTERN  = '^sub\s+(::|\w)';
     $ASUB_PATTERN = '^sub$';
 
