@@ -1534,7 +1534,7 @@ sub break_lines {
             }
 
             # Handle all other lines of code
-            $self->print_line_of_tokens($line_of_tokens);
+            $self->process_line_of_CODE($line_of_tokens);
         }
 
         # handle line of non-code..
@@ -3669,7 +3669,7 @@ sub mark_short_nested_blocks {
     # set a flag to keep it together in later formatting steps.
 
     # The flag which is set here will be checked in two places:
-    # 'sub print_line_of_tokens' and 'sub starting_one_line_block'
+    # 'sub process_line_of_CODE' and 'sub starting_one_line_block'
 
     my $self = shift;
     my $rLL  = $self->{rLL};
@@ -7035,7 +7035,7 @@ sub copy_token_as_type {
     return $rnew_token;
 }
 
-{    # begin print_line_of_tokens
+{    # begin process_line_of_CODE
 
     # flags needed by the store routine
     my $in_continued_quote;
@@ -7145,26 +7145,34 @@ sub copy_token_as_type {
         return;
     }
 
-    sub print_line_of_tokens {
+    sub process_line_of_CODE {
 
         my ( $self, $line_of_tokens ) = @_;
 
-        # This routine is called once per input line to process all of
-        # the tokens on that line.  This is the first stage of
-        # beautification.
+	# This routine is called once per input line to process all of the
+	# tokens on that line.  This is the first stage of beautification.
 
         # Full-line comments and blank lines may be output immediately.
   
-	# For normal lines of code, this routine makes initial structural line
-	# breaks, i.e. breaks dictated by code blocks and statements.  Later
-	# routines make further line breaks appropriate for lists and logical
-	# structures.
-
 	# The tokens are copied one-by-one from the global token array $rLL to
-	# a set of '_to_go' arrays for a further processing via calls to 'sub
-	# store_token_to_go', until a structural break point is reached.  Then,
-	# the batch of collected '_to_go' tokens is passed along to 'sub
-	# output_line_to_go' for further processing.  
+	# a set of '_to_go' arrays which collect batches of tokens for a
+	# further processing via calls to 'sub store_token_to_go', until a well
+	# defined 'structural' break point* or 'forced' breakpoint* is reached.
+	# Then, the batch of collected '_to_go' tokens is passed along to 'sub
+	# process_batch_of_CODE' for further processing.  
+
+	# * 'structural' break points are basically line breaks corresponding
+	# to code blocks.  An example is a chain of if-elsif-else statements,
+	# which should typically be broken at the opening and closing braces.
+
+	# * 'forced' break points are breaks required by side comments or by
+	# special user controls.
+      
+	# So this routine is just making an initial set of required line
+	# breaks, basically regardless of the maximum requested line length.
+	# Later stages of formating make additional line breaks appropriate for
+	# lists and logical structures, and to keep line lengths below the
+	# requested maximum line length.
 
         $input_line_number = $line_of_tokens->{_line_number};
         my $input_line = $line_of_tokens->{_line_text};
@@ -7241,7 +7249,7 @@ sub copy_token_as_type {
             }
 
             destroy_one_line_block();
-            $self->output_line_to_go();
+            $self->process_batch_of_CODE();
 
             # output a blank line before block comments
             if (
@@ -7278,7 +7286,7 @@ sub copy_token_as_type {
             {
                 my $Ktoken_vars = $K_first;
                 $self->store_token_to_go($Ktoken_vars);
-                $self->output_line_to_go();
+                $self->process_batch_of_CODE();
             }
             else {
                 $self->flush();    # switching to new output stream
@@ -7344,7 +7352,7 @@ sub copy_token_as_type {
             $rtoken_vars->[_TOKEN_LENGTH_] = length($line);
 
             $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
-            $self->output_line_to_go();
+            $self->process_batch_of_CODE();
             return;
         }
 
@@ -7380,7 +7388,7 @@ sub copy_token_as_type {
             $forced_breakpoint_to_go[$max_index_to_go] = 1
               if ($rOpts_break_at_old_comma_breakpoints);
             destroy_one_line_block();
-            $self->output_line_to_go();
+            $self->process_batch_of_CODE();
         }
 
         # loop to process the tokens one-by-one
@@ -7428,7 +7436,7 @@ sub copy_token_as_type {
             if ( $rbrace_follower && $type ne 'b' ) {
 
                 unless ( $rbrace_follower->{$token} ) {
-                    $self->output_line_to_go();
+                    $self->process_batch_of_CODE();
                 }
                 $rbrace_follower = undef;
             }
@@ -7542,7 +7550,7 @@ sub copy_token_as_type {
                         $self->unstore_token_to_go();
 
                         # then output the line
-                        $self->output_line_to_go();
+                        $self->process_batch_of_CODE();
 
                         # and now store this token at the start of a new line
                         $self->store_token_to_go( $Ktoken_vars ); 
@@ -7554,7 +7562,7 @@ sub copy_token_as_type {
 
                 # now output this line
                 unless ($no_internal_newlines) {
-                    $self->output_line_to_go();
+                    $self->process_batch_of_CODE();
                 }
             }
 
@@ -7587,7 +7595,7 @@ sub copy_token_as_type {
                 {
 
                     # write out everything before this closing curly brace
-                    $self->output_line_to_go();
+                    $self->process_batch_of_CODE();
                 }
 
                 # Now update for side comment
@@ -7639,7 +7647,7 @@ sub copy_token_as_type {
                         && $next_nonblank_token ne ';'
                       )
                     {
-                        $self->output_line_to_go()
+                        $self->process_batch_of_CODE()
                           unless ($no_internal_newlines);
                     }
                 }
@@ -7716,7 +7724,7 @@ sub copy_token_as_type {
                     && $rOpts_add_newlines )
                 {
                     unless ($rbrace_follower) {
-                        $self->output_line_to_go()
+                        $self->process_batch_of_CODE()
                           unless ($no_internal_newlines);
                     }
                 }
@@ -7724,14 +7732,14 @@ sub copy_token_as_type {
                 elsif ($rbrace_follower) {
 
                     unless ( $rbrace_follower->{$next_nonblank_token} ) {
-                        $self->output_line_to_go()
+                        $self->process_batch_of_CODE()
                           unless ($no_internal_newlines);
                     }
                     $rbrace_follower = undef;
                 }
 
                 else {
-                    $self->output_line_to_go() unless ($no_internal_newlines);
+                    $self->process_batch_of_CODE() unless ($no_internal_newlines);
                 }
 
             }    # end treatment of closing block token
@@ -7752,7 +7760,7 @@ sub copy_token_as_type {
 
                 $self->store_token_to_go( $Ktoken_vars);
 
-                $self->output_line_to_go()
+                $self->process_batch_of_CODE()
                   unless ( $no_internal_newlines
                     || ( $rOpts_keep_interior_semicolons && $Ktoken_vars < $K_last )
                     || ( $next_nonblank_token eq '}' ) );
@@ -7817,7 +7825,7 @@ sub copy_token_as_type {
           )
         {
             destroy_one_line_block();
-            $self->output_line_to_go();
+            $self->process_batch_of_CODE();
         }
 
         # mark old line breakpoints in current output stream
@@ -7830,19 +7838,19 @@ sub copy_token_as_type {
             $old_breakpoint_to_go[$jobp] = 1;
         }
         return;
-    } ## end sub print_line_of_tokens
-} ## end block print_line_of_tokens
+    } ## end sub process_line_of_CODE
+} ## end block process_line_of_CODE
 
 sub consecutive_nonblank_lines {
     return $file_writer_object->get_consecutive_nonblank_lines() +
       $vertical_aligner_object->get_cached_line_count();
 }
 
-# sub output_line_to_go sends one logical line of tokens on down the
+# sub process_batch_of_CODE sends one logical line of tokens on down the
 # pipeline to the VerticalAligner package, breaking the line into continuation
 # lines as necessary.  The line of tokens is ready to go in the "to_go"
 # arrays.
-sub output_line_to_go {
+sub process_batch_of_CODE {
 
     my $self = shift;
     my $rLL  = $self->{rLL};
@@ -7856,7 +7864,7 @@ sub output_line_to_go {
     FORMATTER_DEBUG_FLAG_OUTPUT && do {
         my ( $a, $b, $c ) = caller;
         write_diagnostics(
-"OUTPUT: output_line_to_go called: $a $c $last_nonblank_type $last_nonblank_token, one_line=$index_start_one_line_block, tokens to write=$max_index_to_go\n"
+"OUTPUT: process_batch_of_CODE called: $a $c $last_nonblank_type $last_nonblank_token, one_line=$index_start_one_line_block, tokens to write=$max_index_to_go\n"
         );
         my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
         write_diagnostics("$output_str\n");
@@ -8404,9 +8412,9 @@ sub starting_one_line_block {
 ## --------
 
             # When the first line is input it gets broken apart by the main
-            # line break logic in sub print_line_of_tokens.
+            # line break logic in sub process_line_of_CODE.
             # When the second line is input it gets recombined by
-            # print_line_of_tokens and passed to the output routines.  The
+            # process_line_of_CODE and passed to the output routines.  The
             # output routines (set_continuation_breaks) do not break it apart
             # because the bond strengths are set to the highest possible value
             # for grep/map/eval/sort blocks, so the first version gets output.
@@ -9350,7 +9358,7 @@ sub correct_lp_indentation {
 sub flush {
     my $self = shift;
     destroy_one_line_block();
-    $self->output_line_to_go();
+    $self->process_batch_of_CODE();
     Perl::Tidy::VerticalAligner::flush();
     return;
 }
