@@ -7233,9 +7233,6 @@ sub copy_token_as_type {
         my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
 
-        my $next_nonblank_token;
-        my $next_nonblank_token_type;
-
         ######################################
         # Handle a block (full-line) comment..
         ######################################
@@ -7439,12 +7436,15 @@ sub copy_token_as_type {
             }
 
             # Get next nonblank on this line
-            my $Knnb = $self->K_next_nonblank($Ktoken_vars);
-            if ( !defined($Knnb) || $Knnb > $K_last ) {
-                $next_nonblank_token      = '';
-                $next_nonblank_token_type = 'b';
-            }
-            else {
+            my $next_nonblank_token      = '';
+            my $next_nonblank_token_type = 'b';
+            if ( $Ktoken_vars < $K_last ) {
+                my $Knnb = $Ktoken_vars + 1;
+                if (   $rLL->[$Knnb]->[_TYPE_] eq 'b'
+                    && $Knnb < $K_last )
+                {
+                    $Knnb++;
+                }
                 $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
                 $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
             }
