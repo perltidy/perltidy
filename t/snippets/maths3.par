@@ -1,0 +1,2 @@
+# test some bizarre spacing around operators
+-nwls="= / *"  -wrs="= / *" -nwrs="+ -" -wls="+ -"

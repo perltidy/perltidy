@@ -38,10 +38,28 @@ BEGIN {
     ###########################################
     $rparams = {
         'bos'       => "-bos",
-        'comments1' => "-fpsc=40 -iscl -nibc -nhsc -ssc",
-        'comments2' => "-msc=10 -dbc -dp",
-        'comments3' => "-mbl=2 -isbc",
-        'comments4' => "-kbl=2 -nolc -osbc",
+        'comments1' => <<'----------',
+# testing --fixed-position-side-comment=40, 
+# --ignore-side-comment-lengths,
+# --noindent-block-comments,
+# --nohanging-side-comments
+# --static-side-comments
+-fpsc=40 -iscl -nibc -nhsc -ssc
+----------
+        'comments2' => <<'----------',
+# testing --minimum-space-to-comment=10, --delete-block-comments, --delete-pod
+-msc=10 -dbc -dp
+----------
+        'comments3' => <<'----------',
+# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments
+-mbl=2 -isbc
+----------
+        'comments4' => <<'----------',
+# testing --keep-old-blank-lines=2 [=all] and 
+# --nooutdent-long-comments and 
+# --outdent-static-block-comments
+-kbl=2 -nolc -osbc
+----------
         'def'       => "",
         'long_line' => "-l=0",
         'pbp'       => "-pbp -nst -nse",

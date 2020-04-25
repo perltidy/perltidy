@@ -1,1 +1,2 @@
+# testing --minimum-space-to-comment=10, --delete-block-comments, --delete-pod
 -msc=10 -dbc -dp

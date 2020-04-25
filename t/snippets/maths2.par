@@ -1,1 +1,2 @@
+# testing -break-after-all-operators and no spaces around math operators
 -baao -nwls="= + - / *"  -nwrs="= + - / *"

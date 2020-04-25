@@ -19,6 +19,7 @@
 #16 space_paren.space_paren2
 #17 braces.braces5
 #18 braces.braces6
+#19 maths.maths3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -40,8 +41,12 @@ BEGIN {
         'braces5' => <<'----------',
 -bli -blil='if'
 ----------
-        'braces6'    => "-ce",
-        'def'        => "",
+        'braces6' => "-ce",
+        'def'     => "",
+        'maths3'  => <<'----------',
+# test some bizarre spacing around operators
+-nwls="= / *"  -wrs="= / *" -nwrs="+ -" -wls="+ -"
+----------
         'misc_tests' => <<'----------',
 -sts -ssc -sfs -nsak="my for" -ndsm
 ----------
@@ -80,6 +85,18 @@ sub message {
 $myfun = sub {
     print("Hello, World\n");
 };
+----------
+
+        'maths' => <<'----------',
+$tmp = $day - 32075 + 1461 * ( $year + 4800 - ( 14 - $month ) / 12 ) / 4 + 367
+* ( $month - 2 + ( ( 14 - $month ) / 12 ) * 12 ) / 12 - 3 * ( ( $year + 4900 -
+( 14 - $month ) / 12 ) / 100 ) / 4;
+
+return ( $r**$n ) * ( pi**( $n / 2 ) ) / ( sqrt(pi) * factorial( 2 * ( int( $n
+/ 2 ) ) + 2 ) / factorial( int( $n / 2 ) + 1 ) / ( 4**( int( $n / 2 ) + 1 ) )
+);
+
+$root=-$b+sqrt($b*$b-4.*$a*$c)/(2.*$a);
 ----------
 
         'misc_tests' => <<'----------',
@@ -379,6 +396,26 @@ $myfun = sub {
     print("Hello, World\n");
 };
 #18...........
+        },
+
+        'maths.maths3' => {
+            source => "maths",
+            params => "maths3",
+            expect => <<'#19...........',
+$tmp=
+  $day -32075 +
+  1461* ( $year +4800 -( 14 -$month )/ 12 )/ 4 +
+  367* ( $month -2 +( ( 14 -$month )/ 12 )* 12 )/ 12 -
+  3* ( ( $year +4900 -( 14 -$month )/ 12 )/ 100 )/ 4;
+
+return ( $r**$n )*
+  ( pi**( $n/ 2 ) )/
+  (
+    sqrt(pi)* factorial( 2* ( int( $n/ 2 ) ) +2 )/ factorial( int( $n/ 2 ) +1 )
+      / ( 4**( int( $n/ 2 ) +1 ) ) );
+
+$root= -$b +sqrt( $b* $b -4.* $a* $c )/ ( 2.* $a );
+#19...........
         },
     };
 

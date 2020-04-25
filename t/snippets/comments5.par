@@ -1,1 +1,2 @@
+# testing --delete-side-comments and --nostatic-block-comments
 -dsc -nsbc

@@ -210,6 +210,7 @@
 ../snippets19.t	space_paren.space_paren1
 ../snippets19.t	space_paren.space_paren2
 ../snippets19.t	braces.braces5
+../snippets19.t	braces.braces6
 ../snippets2.t	angle.def
 ../snippets2.t	arrows1.def
 ../snippets2.t	arrows2.def
@@ -370,4 +371,4 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets19.t	braces.braces6
+../snippets19.t	maths.maths3

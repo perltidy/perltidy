@@ -1,1 +1,6 @@
+# testing --fixed-position-side-comment=40, 
+# --ignore-side-comment-lengths,
+# --noindent-block-comments,
+# --nohanging-side-comments
+# --static-side-comments
 -fpsc=40 -iscl -nibc -nhsc -ssc

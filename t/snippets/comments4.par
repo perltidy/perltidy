@@ -1,1 +1,4 @@
+# testing --keep-old-blank-lines=2 [=all] and 
+# --nooutdent-long-comments and 
+# --outdent-static-block-comments
 -kbl=2 -nolc -osbc

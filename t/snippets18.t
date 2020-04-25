@@ -40,16 +40,21 @@ BEGIN {
         'braces1'   => "-bl -asbl",
         'braces2'   => "-sbl",
         'braces3'   => "-bli -bbvt=1",
-        'comments5' => "-dsc -nsbc",
-        'csc1'      => "-csc -csci=2 -ncscb",
-        'csc2'      => "-dcsc",
-        'def'       => "",
-        'iob'       => "-iob",
-        'kis'       => "-kis",
-        'maths1'    => <<'----------',
+        'comments5' => <<'----------',
+# testing --delete-side-comments and --nostatic-block-comments
+-dsc -nsbc
+----------
+        'csc1'   => "-csc -csci=2 -ncscb",
+        'csc2'   => "-dcsc",
+        'def'    => "",
+        'iob'    => "-iob",
+        'kis'    => "-kis",
+        'maths1' => <<'----------',
+# testing -break-before-all-operators and no spaces around math operators
 -bbao -nwls="= + - / *"  -nwrs="= + - / *"
 ----------
         'maths2' => <<'----------',
+# testing -break-after-all-operators and no spaces around math operators
 -baao -nwls="= + - / *"  -nwrs="= + - / *"
 ----------
         'wn' => "-wn",

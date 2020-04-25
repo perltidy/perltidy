@@ -1,147 +1,146 @@
 $VAR1 = {
-          'line-up-parentheses' => [
-                                     0,
-                                     1
-                                   ],
-          'nowant-left-space' => [
-                                   '++ -- ?',
-                                   '..',
-                                   '= + - / *'
-                                 ],
-          'backup-file-extension' => [
-                                       'bak',
-                                       '~'
-                                     ],
-          'closing-side-comments-balanced' => [
-                                                0,
-                                                1
-                                              ],
-          'break-after-all-operators' => [
-                                           0,
-                                           1
-                                         ],
-          'want-break-before' => [
-                                   ' ',
-                                   '% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=',
-                                   '% + - * / x != == >= <= =~ < > | & **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x=',
-                                   '='
-                                 ],
-          'one-line-block-nesting' => [
-                                        0,
-                                        1
-                                      ],
-          'fixed-position-side-comment' => [
-                                             40
-                                           ],
-          'delete-closing-side-comments' => [
-                                              0,
-                                              1
-                                            ],
-          'closing-side-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'break-before-all-operators' => [
-                                            0,
-                                            1
-                                          ],
-          'blanks-before-blocks' => [
+          'sub-alias-list' => [
+                                'method fun'
+                              ],
+          'space-function-paren' => [
                                       0,
                                       1
                                     ],
-          'space-prototype-paren' => [
-                                       0,
-                                       1,
-                                       2
-                                     ],
-          'opening-sub-brace-on-new-line' => [
-                                               0,
-                                               1
-                                             ],
-          'closing-paren-indentation' => [
-                                           0,
-                                           1,
-                                           2
-                                         ],
-          'square-bracket-vertical-tightness-closing' => [
-                                                           0,
-                                                           2
-                                                         ],
-          'indent-spaced-block-comments' => [
-                                              0,
-                                              1
-                                            ],
-          'want-right-space' => [
-                                  '= .= =~ !~ ? :'
-                                ],
-          'timestamp' => [
-                           0,
-                           1
-                         ],
-          'blank-lines-before-packages' => [
-                                             0,
-                                             1
-                                           ],
-          'closing-side-comment-maximum-text' => [
-                                                   20,
-                                                   40
-                                                 ],
-          'stack-closing-block-brace' => [
-                                           0,
-                                           1
-                                         ],
-          'one-line-block-semicolons' => [
-                                           0,
-                                           1,
-                                           2
-                                         ],
-          'break-at-old-method-breakpoints' => [
-                                                 0,
-                                                 1
-                                               ],
-          'entab-leading-whitespace' => [
-                                          8
-                                        ],
-          'space-backslash-quote' => [
-                                       0,
-                                       1,
-                                       2
-                                     ],
-          'static-block-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'space-after-keyword' => [
-                                     'push'
-                                   ],
-          'nowant-right-space' => [
-                                    '++ --',
-                                    '..',
-                                    '= + - / *',
-                                    'A'
-                                  ],
-          'nospace-after-keyword' => [
-                                       'my for'
-                                     ],
-          'closing-square-bracket-indentation' => [
-                                                    0,
-                                                    1,
-                                                    2
-                                                  ],
-          'long-block-line-count' => [
-                                       8
-                                     ],
-          'iterations' => [
+          'delete-pod' => [
+                            0,
                             1
                           ],
           'blank-lines-before-closing-block' => [
                                                   1
                                                 ],
+          'delete-block-comments' => [
+                                       0,
+                                       1
+                                     ],
+          'square-bracket-tightness' => [
+                                          0,
+                                          1,
+                                          2
+                                        ],
+          'closing-side-comment-else-flag' => [
+                                                0
+                                              ],
+          'one-line-block-nesting' => [
+                                        0,
+                                        1
+                                      ],
+          'indent-closing-brace' => [
+                                      0,
+                                      1
+                                    ],
+          'blanks-before-blocks' => [
+                                      0,
+                                      1
+                                    ],
+          'break-before-all-operators' => [
+                                            0,
+                                            1
+                                          ],
+          'want-left-space' => [
+                                 '+ -',
+                                 '= .= =~ !~ :'
+                               ],
+          'closing-side-comments-balanced' => [
+                                                0,
+                                                1
+                                              ],
+          'square-bracket-vertical-tightness-closing' => [
+                                                           0,
+                                                           2
+                                                         ],
+          'short-concatenation-item-length' => [
+                                                 12,
+                                                 8
+                                               ],
+          'space-terminal-semicolon' => [
+                                          0,
+                                          1
+                                        ],
+          'delete-semicolons' => [
+                                   0,
+                                   1
+                                 ],
+          'keyword-group-blanks-size' => [
+                                           '5'
+                                         ],
+          'iterations' => [
+                            1
+                          ],
+          'outdent-long-quotes' => [
+                                     0,
+                                     1
+                                   ],
+          'block-brace-vertical-tightness' => [
+                                                0,
+                                                1
+                                              ],
+          'stack-closing-paren' => [
+                                     0,
+                                     1
+                                   ],
+          'default-tabsize' => [
+                                 8
+                               ],
+          'closing-side-comments' => [
+                                       0,
+                                       1
+                                     ],
+          'delete-old-whitespace' => [
+                                       0,
+                                       1
+                                     ],
+          'keyword-group-blanks-before' => [
+                                             1,
+                                             2
+                                           ],
+          'space-backslash-quote' => [
+                                       0,
+                                       1,
+                                       2
+                                     ],
+          'cuddled-break-option' => [
+                                      1
+                                    ],
+          'closing-square-bracket-indentation' => [
+                                                    0,
+                                                    1,
+                                                    2
+                                                  ],
+          'keyword-group-blanks-inside' => [
+                                             0,
+                                             1
+                                           ],
+          'paren-vertical-tightness' => [
+                                          0,
+                                          1,
+                                          2
+                                        ],
+          'brace-tightness' => [
+                                 0,
+                                 1,
+                                 2
+                               ],
+          'delete-closing-side-comments' => [
+                                              0,
+                                              1
+                                            ],
           'format' => [
                         'html',
                         'tidy'
                       ],
-          'brace-left-and-indent' => [
+          'space-for-semicolon' => [
+                                     0,
+                                     1
+                                   ],
+          'nospace-after-keyword' => [
+                                       'my for'
+                                     ],
+          'standard-error-output' => [
                                        0,
                                        1
                                      ],
@@ -149,10 +148,40 @@ $VAR1 = {
                                            0,
                                            1
                                          ],
-          'outdent-keywords' => [
-                                  0,
-                                  1
-                                ],
+          'ignore-side-comment-lengths' => [
+                                             0,
+                                             1
+                                           ],
+          'static-block-comments' => [
+                                       0,
+                                       1
+                                     ],
+          'square-bracket-vertical-tightness' => [
+                                                   0,
+                                                   1,
+                                                   2
+                                                 ],
+          'want-break-before' => [
+                                   ' ',
+                                   '% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=',
+                                   '% + - * / x != == >= <= =~ < > | & **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x=',
+                                   '='
+                                 ],
+          'block-brace-tightness' => [
+                                       0,
+                                       1,
+                                       2
+                                     ],
+          'brace-left-and-indent-list' => [
+                                            'if'
+                                          ],
+          'closing-side-comment-maximum-text' => [
+                                                   20,
+                                                   40
+                                                 ],
+          'entab-leading-whitespace' => [
+                                          8
+                                        ],
           'break-at-old-semicolon-breakpoints' => [
                                                     0,
                                                     1
@@ -161,328 +190,316 @@ $VAR1 = {
                                      0,
                                      1
                                    ],
-          'default-tabsize' => [
-                                 8
-                               ],
-          'square-bracket-vertical-tightness' => [
-                                                   0,
-                                                   1,
-                                                   2
-                                                 ],
-          'closing-side-comment-else-flag' => [
-                                                0
-                                              ],
-          'outdent-static-block-comments' => [
-                                               0,
-                                               1
-                                             ],
-          'stack-closing-square-bracket' => [
-                                              0,
-                                              1
-                                            ],
-          'delete-pod' => [
-                            0,
-                            1
-                          ],
-          'opening-hash-brace-right' => [
-                                          0,
-                                          1
-                                        ],
           'closing-side-comment-interval' => [
                                                2,
                                                20,
                                                6
                                              ],
-          'delete-old-newlines' => [
-                                     0,
-                                     1
-                                   ],
-          'delete-block-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'keyword-group-blanks-size' => [
-                                           '5'
-                                         ],
-          'outdent-labels' => [
-                                0,
-                                1
-                              ],
-          'keyword-group-blanks-delete' => [
-                                             0,
-                                             1
-                                           ],
-          'keep-old-blank-lines' => [
-                                      0,
-                                      1,
-                                      2
-                                    ],
-          'brace-tightness' => [
-                                 0,
-                                 1,
-                                 2
-                               ],
-          'cuddled-else' => [
-                              0,
-                              1
-                            ],
-          'hanging-side-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'blank-lines-after-opening-block-list' => [
-                                                      '*'
-                                                    ],
-          'sub-alias-list' => [
-                                'method fun'
-                              ],
-          'comma-arrow-breakpoints' => [
-                                         1,
-                                         5
-                                       ],
-          'cuddled-break-option' => [
-                                      1
-                                    ],
-          'continuation-indentation' => [
-                                          0,
-                                          2,
-                                          4
-                                        ],
-          'brace-vertical-tightness-closing' => [
-                                                  0,
-                                                  2
-                                                ],
-          'want-break-after' => [
-                                  '% + - * / x != == >= <= =~ !~ < > | & >= < = **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x= . << >> -> && ||'
-                                ],
-          'backup-and-modify-in-place' => [
-                                            0,
-                                            1
-                                          ],
-          'add-semicolons' => [
-                                0,
-                                1
-                              ],
-          'keyword-group-blanks-before' => [
-                                             1,
-                                             2
-                                           ],
-          'standard-error-output' => [
-                                       0,
-                                       1
-                                     ],
-          'opening-square-bracket-right' => [
-                                              0,
-                                              1
-                                            ],
-          'add-whitespace' => [
-                                0,
-                                1
-                              ],
-          'stack-opening-paren' => [
-                                     0,
-                                     1
-                                   ],
-          'delete-side-comments' => [
-                                      0,
-                                      1
-                                    ],
-          'keyword-group-blanks-inside' => [
-                                             0,
-                                             1
-                                           ],
-          'warning-output' => [
-                                0,
-                                1
-                              ],
-          'want-left-space' => [
-                                 '= .= =~ !~ :'
-                               ],
-          'maximum-fields-per-table' => [
-                                          0
-                                        ],
-          'indent-block-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'weld-nested-containers' => [
-                                        0,
-                                        1
-                                      ],
-          'block-brace-vertical-tightness' => [
-                                                0,
-                                                1
-                                              ],
-          'static-side-comments' => [
-                                      0,
-                                      1
-                                    ],
-          'ignore-old-breakpoints' => [
-                                        0,
-                                        1
-                                      ],
-          'short-concatenation-item-length' => [
-                                                 12,
-                                                 8
-                                               ],
-          'space-for-semicolon' => [
-                                     0,
-                                     1
-                                   ],
-          'closing-brace-indentation' => [
-                                           0,
-                                           1,
-                                           2
-                                         ],
-          'blank-lines-after-opening-block' => [
-                                                 2
-                                               ],
-          'opening-brace-always-on-right' => [
-                                               0,
-                                               1
-                                             ],
-          'recombine' => [
-                           0,
-                           1
-                         ],
           'indent-columns' => [
                                 0,
                                 2,
                                 4
                               ],
-          'opening-paren-right' => [
-                                     0,
-                                     1
-                                   ],
-          'stack-closing-paren' => [
-                                     0,
-                                     1
-                                   ],
-          'paren-tightness' => [
-                                 0,
-                                 1,
-                                 2
-                               ],
           'variable-maximum-line-length' => [
                                               0,
                                               1
                                             ],
-          'brace-vertical-tightness' => [
-                                          0,
-                                          1,
-                                          2
-                                        ],
-          'break-at-old-comma-breakpoints' => [
-                                                0,
-                                                1
-                                              ],
-          'character-encoding' => [
-                                    'guess'
-                                  ],
-          'fuzzy-line-length' => [
-                                   0,
-                                   1
-                                 ],
-          'blank-lines-before-closing-block-list' => [
-                                                       '*'
-                                                     ],
-          'check-syntax' => [
-                              0,
-                              1
-                            ],
-          'stack-closing-hash-brace' => [
-                                          0,
-                                          1
-                                        ],
-          'cuddled-block-list' => [
-                                    'map,sort,grep',
-                                    'sort,map,grep'
-                                  ],
-          'square-bracket-tightness' => [
-                                          0,
-                                          1,
-                                          2
-                                        ],
-          'block-brace-tightness' => [
-                                       0,
-                                       1,
-                                       2
-                                     ],
           'add-newlines' => [
                               0,
                               1
                             ],
-          'space-terminal-semicolon' => [
+          'stack-opening-hash-brace' => [
                                           0,
                                           1
                                         ],
-          'ignore-side-comment-lengths' => [
+          'add-whitespace' => [
+                                0,
+                                1
+                              ],
+          'stack-closing-square-bracket' => [
+                                              0,
+                                              1
+                                            ],
+          'comma-arrow-breakpoints' => [
+                                         1,
+                                         5
+                                       ],
+          'keyword-group-blanks-repeat-count' => [
+                                                   0
+                                                 ],
+          'closing-brace-indentation' => [
+                                           0,
+                                           1,
+                                           2
+                                         ],
+          'nowant-right-space' => [
+                                    '+ -',
+                                    '++ --',
+                                    '..',
+                                    '= + - / *',
+                                    'A'
+                                  ],
+          'delete-side-comments' => [
+                                      0,
+                                      1
+                                    ],
+          'long-block-line-count' => [
+                                       8
+                                     ],
+          'keyword-group-blanks-delete' => [
                                              0,
                                              1
                                            ],
-          'brace-left-and-indent-list' => [
-                                            'if'
-                                          ],
           'tight-secret-operators' => [
                                         0,
                                         1
                                       ],
-          'space-function-paren' => [
-                                      0,
-                                      1
-                                    ],
-          'keyword-group-blanks-after' => [
-                                            1,
-                                            2
-                                          ],
-          'stack-opening-hash-brace' => [
+          'continuation-indentation' => [
+                                          0,
+                                          2,
+                                          4
+                                        ],
+          'brace-left-and-indent' => [
+                                       0,
+                                       1
+                                     ],
+          'line-up-parentheses' => [
+                                     0,
+                                     1
+                                   ],
+          'opening-sub-brace-on-new-line' => [
+                                               0,
+                                               1
+                                             ],
+          'opening-paren-right' => [
+                                     0,
+                                     1
+                                   ],
+          'opening-anonymous-sub-brace-on-new-line' => [
+                                                         0,
+                                                         1
+                                                       ],
+          'want-right-space' => [
+                                  '= .= =~ !~ ? :',
+                                  '= / *'
+                                ],
+          'delete-old-newlines' => [
+                                     0,
+                                     1
+                                   ],
+          'stack-closing-hash-brace' => [
                                           0,
                                           1
                                         ],
           'starting-indentation-level' => [
                                             0
                                           ],
-          'delete-old-whitespace' => [
+          'backup-and-modify-in-place' => [
+                                            0,
+                                            1
+                                          ],
+          'perl-syntax-check-flags' => [
+                                         '-c -T'
+                                       ],
+          'keep-interior-semicolons' => [
+                                          0,
+                                          1
+                                        ],
+          'stack-opening-square-bracket' => [
+                                              0,
+                                              1
+                                            ],
+          'outdent-long-comments' => [
                                        0,
                                        1
                                      ],
+          'blank-lines-after-opening-block' => [
+                                                 2
+                                               ],
+          'add-semicolons' => [
+                                0,
+                                1
+                              ],
+          'indent-block-comments' => [
+                                       0,
+                                       1
+                                     ],
+          'break-after-all-operators' => [
+                                           0,
+                                           1
+                                         ],
+          'character-encoding' => [
+                                    'guess'
+                                  ],
+          'timestamp' => [
+                           0,
+                           1
+                         ],
+          'fixed-position-side-comment' => [
+                                             40
+                                           ],
+          'one-line-block-semicolons' => [
+                                           0,
+                                           1,
+                                           2
+                                         ],
+          'fuzzy-line-length' => [
+                                   0,
+                                   1
+                                 ],
+          'brace-vertical-tightness-closing' => [
+                                                  0,
+                                                  2
+                                                ],
+          'blank-lines-before-subs' => [
+                                         0,
+                                         1
+                                       ],
+          'cuddled-block-list' => [
+                                    'map,sort,grep',
+                                    'sort,map,grep'
+                                  ],
+          'opening-brace-always-on-right' => [
+                                               0,
+                                               1
+                                             ],
+          'indent-spaced-block-comments' => [
+                                              0,
+                                              1
+                                            ],
+          'recombine' => [
+                           0,
+                           1
+                         ],
+          'backup-file-extension' => [
+                                       'bak',
+                                       '~'
+                                     ],
+          'check-syntax' => [
+                              0,
+                              1
+                            ],
+          'ignore-old-breakpoints' => [
+                                        0,
+                                        1
+                                      ],
+          'static-side-comments' => [
+                                      0,
+                                      1
+                                    ],
+          'minimum-space-to-comment' => [
+                                          10,
+                                          2,
+                                          4
+                                        ],
+          'keyword-group-blanks-after' => [
+                                            1,
+                                            2
+                                          ],
+          'cuddled-else' => [
+                              0,
+                              1
+                            ],
+          'space-after-keyword' => [
+                                     'push'
+                                   ],
+          'paren-tightness' => [
+                                 0,
+                                 1,
+                                 2
+                               ],
+          'stack-opening-paren' => [
+                                     0,
+                                     1
+                                   ],
+          'want-break-after' => [
+                                  '% + - * / x != == >= <= =~ !~ < > | & >= < = **= += *= &= <<= &&= -= /= |= >>= ||= .= %= ^= x= . << >> -> && ||'
+                                ],
+          'brace-vertical-tightness' => [
+                                          0,
+                                          1,
+                                          2
+                                        ],
+          'space-prototype-paren' => [
+                                       0,
+                                       1,
+                                       2
+                                     ],
+          'weld-nested-containers' => [
+                                        0,
+                                        1
+                                      ],
+          'opening-square-bracket-right' => [
+                                              0,
+                                              1
+                                            ],
+          'closing-paren-indentation' => [
+                                           0,
+                                           1,
+                                           2
+                                         ],
+          'warning-output' => [
+                                0,
+                                1
+                              ],
+          'paren-vertical-tightness-closing' => [
+                                                  0,
+                                                  2
+                                                ],
+          'blank-lines-before-closing-block-list' => [
+                                                       '*'
+                                                     ],
+          'outdent-static-block-comments' => [
+                                               0,
+                                               1
+                                             ],
+          'nowant-left-space' => [
+                                   '++ -- ?',
+                                   '..',
+                                   '= + - / *',
+                                   '= / *'
+                                 ],
+          'hanging-side-comments' => [
+                                       0,
+                                       1
+                                     ],
+          'break-at-old-method-breakpoints' => [
+                                                 0,
+                                                 1
+                                               ],
           'maximum-consecutive-blank-lines' => [
                                                  0,
                                                  1,
                                                  2
                                                ],
-          'outdent-long-quotes' => [
-                                     0,
-                                     1
-                                   ],
-          'blanks-before-comments' => [
-                                        0,
-                                        1
-                                      ],
-          'outdent-long-comments' => [
-                                       0,
-                                       1
-                                     ],
-          'paren-vertical-tightness' => [
+          'keep-old-blank-lines' => [
+                                      0,
+                                      1,
+                                      2
+                                    ],
+          'opening-hash-brace-right' => [
                                           0,
-                                          1,
-                                          2
+                                          1
                                         ],
-          'opening-anonymous-sub-brace-on-new-line' => [
-                                                         0,
-                                                         1
-                                                       ],
-          'keyword-group-blanks-repeat-count' => [
-                                                   0
-                                                 ],
-          'delete-semicolons' => [
-                                   0,
-                                   1
-                                 ],
-          'paren-vertical-tightness-closing' => [
-                                                  0,
-                                                  2
-                                                ],
+          'outdent-labels' => [
+                                0,
+                                1
+                              ],
+          'maximum-fields-per-table' => [
+                                          0
+                                        ],
+          'break-at-old-comma-breakpoints' => [
+                                                0,
+                                                1
+                                              ],
+          'blank-lines-before-packages' => [
+                                             0,
+                                             1
+                                           ],
+          'outdent-keywords' => [
+                                  0,
+                                  1
+                                ],
           'maximum-line-length' => [
                                      0,
                                      1,
@@ -493,28 +510,15 @@ $VAR1 = {
                                      78,
                                      80
                                    ],
-          'perl-syntax-check-flags' => [
-                                         '-c -T'
-                                       ],
-          'indent-closing-brace' => [
-                                      0,
-                                      1
-                                    ],
-          'keep-interior-semicolons' => [
-                                          0,
-                                          1
-                                        ],
-          'minimum-space-to-comment' => [
-                                          10,
-                                          2,
-                                          4
-                                        ],
-          'blank-lines-before-subs' => [
-                                         0,
-                                         1
-                                       ],
-          'stack-opening-square-bracket' => [
-                                              0,
-                                              1
-                                            ]
+          'blanks-before-comments' => [
+                                        0,
+                                        1
+                                      ],
+          'stack-closing-block-brace' => [
+                                           0,
+                                           1
+                                         ],
+          'blank-lines-after-opening-block-list' => [
+                                                      '*'
+                                                    ]
         };
