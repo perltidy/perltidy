@@ -3245,7 +3245,7 @@ The command B<-dp> or B<--delete-pod> will remove all pod documentation
 
 Two commands which remove comments (but not pod) are: B<-dbc> or
 B<--delete-block-comments> and B<-dsc> or  B<--delete-side-comments>.
-(Hanging side comments will be deleted with block comments here.)
+(Hanging side comments will be deleted with side comments here.)
 
 The negatives of these commands also work, and are the defaults.  When
 block comments are deleted, any leading 'hash-bang' will be retained.
@@ -3266,7 +3266,7 @@ not comments).
 
 The commands which write comments (but not pod) are: B<-tbc> or
 B<--tee-block-comments> and B<-tsc> or  B<--tee-side-comments>.
-(Hanging side comments will be written with block comments here.)
+(Hanging side comments will be written with side comments here.)
 
 The negatives of these commands also work, and are the defaults.  
 

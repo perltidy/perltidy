@@ -1560,6 +1560,9 @@ sub break_lines {
                 {
                     $self->want_blank_line();
                 }
+                if ( $rOpts->{'tee-pod'} ) {
+                    $sink_object->write_tee_line($input_line);
+                }
             }
 
             # leave the blank counters in a predictable state
@@ -1572,10 +1575,6 @@ sub break_lines {
             # write unindented non-code line
             if ( !$skip_line ) {
                 $self->write_unindented_line($input_line);
-            }
-
-            if ( $rOpts->{'tee-pod'} ) {
-                $sink_object->write_tee_line($input_line);
             }
         }
     }
@@ -7192,6 +7191,7 @@ sub copy_token_as_type {
         my $rLL              = $self->{rLL};
         my $rbreak_container = $self->{rbreak_container};
         my $rshort_nested    = $self->{rshort_nested};
+        my $sink_object      = $self->{sink_object};
 
         my $rOpts_add_newlines = $rOpts->{'add-newlines'};
         my $rOpts_break_at_old_comma_breakpoints =
@@ -7254,7 +7254,7 @@ sub copy_token_as_type {
         if ($is_comment) {
 
             if ( $rOpts->{'tee-block-comments'} ) {
-                $file_writer_object->tee_on();
+                $sink_object->write_tee_line($input_line);
             }
 
             destroy_one_line_block();
@@ -7302,9 +7302,6 @@ sub copy_token_as_type {
                 $file_writer_object->write_code_line(
                     $rtok_first->[_TOKEN_] . "\n" );
                 $last_line_leading_type = '#';
-            }
-            if ( $rOpts->{'tee-block-comments'} ) {
-                $file_writer_object->tee_off();
             }
             return;
         }
@@ -7813,6 +7810,10 @@ sub copy_token_as_type {
         }    # end of loop over all tokens in this 'line_of_tokens'
 
         my $type = $rLL->[$K_last]->[_TYPE_];
+
+        if ( $type eq '#' && $rOpts->{'tee-side-comments'} ) {
+            $sink_object->write_tee_line($input_line);
+        }
 
         # we have to flush ..
         if (
