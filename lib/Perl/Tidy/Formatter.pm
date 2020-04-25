@@ -1779,7 +1779,11 @@ sub initialize_whitespace_hashes {
     >;
     push( @spaces_right_side, ',' );    # avoids warning message
 
-    # Note that we are in a BEGIN block here.  Later in processing
+    %want_left_space  = ();
+    %want_right_space = ();
+    %binary_ws_rules  = ();
+
+    # Note that we setting defaults here.  Later in processing
     # the values of %want_left_space and  %want_right_space
     # may be overridden by any user settings specified by the
     # -wls and -wrs parameters.  However the binary_whitespace_rules
@@ -5695,6 +5699,14 @@ sub check_options {
         Exit(0);
     }
 
+    if ( $rOpts->{'delete-pod'} && $rOpts->{'tee-pod'} ) {
+        Warn(<<EOM);
+Options '--tee-pod' and '--delete-pod' conflict; Do them in separate runs.
+Turning off '--delete-pod' for this run to avoid data loss.
+EOM
+        $rOpts->{'delete-pod'} = 0;
+    }
+
     if ( $rOpts->{'line-up-parentheses'} ) {
 
         if (   $rOpts->{'indent-only'}
@@ -7044,7 +7056,7 @@ sub copy_token_as_type {
 
     # range of K of tokens for the current line, which might be useful
     # for checking for indexing errors
-    my ( $K_first, $K_last );   
+    my ( $K_first, $K_last );
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
@@ -7149,30 +7161,30 @@ sub copy_token_as_type {
 
         my ( $self, $line_of_tokens ) = @_;
 
-	# This routine is called once per input line to process all of the
-	# tokens on that line.  This is the first stage of beautification.
+        # This routine is called once per input line to process all of the
+        # tokens on that line.  This is the first stage of beautification.
 
         # Full-line comments and blank lines may be output immediately.
-  
-	# The tokens are copied one-by-one from the global token array $rLL to
-	# a set of '_to_go' arrays which collect batches of tokens for a
-	# further processing via calls to 'sub store_token_to_go', until a well
-	# defined 'structural' break point* or 'forced' breakpoint* is reached.
-	# Then, the batch of collected '_to_go' tokens is passed along to 'sub
-	# process_batch_of_CODE' for further processing.  
 
-	# * 'structural' break points are basically line breaks corresponding
-	# to code blocks.  An example is a chain of if-elsif-else statements,
-	# which should typically be broken at the opening and closing braces.
+        # The tokens are copied one-by-one from the global token array $rLL to
+        # a set of '_to_go' arrays which collect batches of tokens for a
+        # further processing via calls to 'sub store_token_to_go', until a well
+        # defined 'structural' break point* or 'forced' breakpoint* is reached.
+        # Then, the batch of collected '_to_go' tokens is passed along to 'sub
+        # process_batch_of_CODE' for further processing.
 
-	# * 'forced' break points are breaks required by side comments or by
-	# special user controls.
-      
-	# So this routine is just making an initial set of required line
-	# breaks, basically regardless of the maximum requested line length.
-	# Later stages of formating make additional line breaks appropriate for
-	# lists and logical structures, and to keep line lengths below the
-	# requested maximum line length.
+        # * 'structural' break points are basically line breaks corresponding
+        # to code blocks.  An example is a chain of if-elsif-else statements,
+        # which should typically be broken at the opening and closing braces.
+
+        # * 'forced' break points are breaks required by side comments or by
+        # special user controls.
+
+        # So this routine is just making an initial set of required line
+        # breaks, basically regardless of the maximum requested line length.
+        # Later stages of formating make additional line breaks appropriate for
+        # lists and logical structures, and to keep line lengths below the
+        # requested maximum line length.
 
         $input_line_number = $line_of_tokens->{_line_number};
         my $input_line = $line_of_tokens->{_line_text};
@@ -7209,6 +7221,7 @@ sub copy_token_as_type {
           $CODE_type eq 'SBC' || $is_static_block_comment_without_leading_space;
         my $is_hanging_side_comment = $CODE_type eq 'HSC';
         my $is_VERSION_statement    = $CODE_type eq 'VER';
+
         if ($is_VERSION_statement) {
             $saw_VERSION_in_this_file = 1;
             $no_internal_newlines     = 1;
@@ -7229,7 +7242,7 @@ sub copy_token_as_type {
             }
         }
 
-        my $jmax = $K_last - $K_first;
+        my $jmax       = $K_last - $K_first;
         my $rtok_first = $rLL->[$K_first];
 
         $in_continued_quote = $starting_in_quote =
@@ -7341,7 +7354,7 @@ sub copy_token_as_type {
             $line =~ s/\s+$//;
             $line =~ s/^\s+// unless ($in_continued_quote);
 
-	    my	$Ktoken_vars = $K_first;
+            my $Ktoken_vars = $K_first;
 
             # We work with a copy of the token variables and change the
             # first token to be the entire line as a quote variable
@@ -7488,7 +7501,7 @@ sub copy_token_as_type {
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
-                $self->store_token_to_go( $Ktoken_vars ); 
+                $self->store_token_to_go($Ktoken_vars);
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
@@ -7553,7 +7566,7 @@ sub copy_token_as_type {
                         $self->process_batch_of_CODE();
 
                         # and now store this token at the start of a new line
-                        $self->store_token_to_go( $Ktoken_vars ); 
+                        $self->store_token_to_go($Ktoken_vars);
                     }
                 }
 
@@ -7602,7 +7615,7 @@ sub copy_token_as_type {
                 if ($side_comment_follows) { $no_internal_newlines = 1 }
 
                 # store the closing curly brace
-                $self->store_token_to_go( $Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars);
 
                 # ok, we just stored a closing curly brace.  Often, but
                 # not always, we want to end the line immediately.
@@ -7640,7 +7653,8 @@ sub copy_token_as_type {
 
                             # Follow users break point for
                             # one line block types U & G, such as a 'try' block
-                            || $is_one_line_block =~ /^[UG]$/ && $Ktoken_vars == $K_last
+                            || $is_one_line_block =~ /^[UG]$/
+                            && $Ktoken_vars == $K_last
                         )
 
                         # if needless semicolon follows we handle it later
@@ -7739,7 +7753,8 @@ sub copy_token_as_type {
                 }
 
                 else {
-                    $self->process_batch_of_CODE() unless ($no_internal_newlines);
+                    $self->process_batch_of_CODE()
+                      unless ($no_internal_newlines);
                 }
 
             }    # end treatment of closing block token
@@ -7758,12 +7773,15 @@ sub copy_token_as_type {
                     destroy_one_line_block();
                 }
 
-                $self->store_token_to_go( $Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars);
 
                 $self->process_batch_of_CODE()
-                  unless ( $no_internal_newlines
-                    || ( $rOpts_keep_interior_semicolons && $Ktoken_vars < $K_last )
-                    || ( $next_nonblank_token eq '}' ) );
+                  unless (
+                    $no_internal_newlines
+                    || (   $rOpts_keep_interior_semicolons
+                        && $Ktoken_vars < $K_last )
+                    || ( $next_nonblank_token eq '}' )
+                  );
 
             }
 
@@ -7773,13 +7791,13 @@ sub copy_token_as_type {
                 # no newlines after seeing here-target
                 $no_internal_newlines = 1;
                 destroy_one_line_block();
-                $self->store_token_to_go( $Ktoken_vars );
+                $self->store_token_to_go($Ktoken_vars);
             }
 
             # handle all other token types
             else {
 
-                $self->store_token_to_go( $Ktoken_vars );
+                $self->store_token_to_go($Ktoken_vars);
             }
 
             # remember two previous nonblank OUTPUT tokens
@@ -8421,7 +8439,8 @@ sub starting_one_line_block {
             # It would be possible to fix this by changing bond strengths,
             # but they are high to prevent errors in older versions of perl.
 
-            if ( $Ki < $K_last && $rLL->[$Ki_nonblank]->[_TYPE_] eq '#'
+            if (   $Ki < $K_last
+                && $rLL->[$Ki_nonblank]->[_TYPE_] eq '#'
                 && !$is_sort_map_grep{$block_type} )
             {
 
@@ -8431,10 +8450,10 @@ sub starting_one_line_block {
 
                     # source whitespace could be anything, assume
                     # at least one space before the hash on output
-                    if ( $rLL->[$Ki+1]->[_TYPE_] eq 'b' ) {
+                    if ( $rLL->[ $Ki + 1 ]->[_TYPE_] eq 'b' ) {
                         $pos += 1;
                     }
-                    else { $pos += $rLL->[$Ki+1]->[_TOKEN_LENGTH_] }
+                    else { $pos += $rLL->[ $Ki + 1 ]->[_TOKEN_LENGTH_] }
                 }
 
                 if ( $pos >= maximum_line_length($i_start) ) {
@@ -12360,6 +12379,12 @@ sub terminal_type_K {
         # the -wba and -wbb flags. In this way the user can determine if a
         # breakpoint token should appear at the end of one line or the
         # beginning of the next line.
+
+        %right_bond_strength  = ();
+        %left_bond_strength   = ();
+        %binary_bond_strength = ();
+        %nobreak_lhs          = ();
+        %nobreak_rhs          = ();
 
         # The hash keys in this section are token types, plus the text of
         # certain keywords like 'or', 'and'.
