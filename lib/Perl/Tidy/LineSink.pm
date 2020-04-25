@@ -75,6 +75,21 @@ sub write_line {
     return;
 }
 
+sub write_tee_line {
+
+    # write line to tee file only...
+    # the original tee-on/tee-off method is being replaced because it 
+    # did not allow simultaneous tee-ing and deleting 
+
+    my ( $self, $line ) = @_;
+    chomp $line;
+    $line .= $self->{_line_separator};
+    unless ( $self->{_tee_file_opened} ) { $self->really_open_tee_file() }
+    my $fh_tee = $self->{_fh_tee};
+    print $fh_tee $line;
+    return;
+}
+
 sub tee_on {
     my $self = shift;
     $self->{_tee_flag} = 1;
