@@ -722,6 +722,9 @@ sub new {
         rvalid_self_keys           => [],              # for checking
         valign_batch_count         => 0,
         length_function            => $length_function,
+        sink_object                => $sink_object,
+        logger_object              => $logger_object,
+        file_writer_object         => $file_writer_object,
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -1415,6 +1418,7 @@ sub break_lines {
 
     my $self                       = shift;
     my $rlines                     = $self->{rlines};
+    my $sink_object                = $self->{sink_object};
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
 
     # Note for RT#118553, leave only one newline at the end of a file.
@@ -1542,14 +1546,12 @@ sub break_lines {
 
             # set special flags
             my $skip_line = 0;
-            my $tee_line  = 0;
             if ( $line_type =~ /^POD/ ) {
 
                 # Pod docs should have a preceding blank line.  But stay
                 # out of __END__ and __DATA__ sections, because
                 # the user may be using this section for any purpose whatsoever
                 if ( $rOpts->{'delete-pod'} ) { $skip_line = 1; }
-                if ( $rOpts->{'tee-pod'} )    { $tee_line = 1; }
                 if ( $rOpts->{'trim-pod'} )   { $input_line =~ s/\s+$// }
                 if (   !$skip_line
                     && !$in_format_skipping_section
@@ -1569,9 +1571,11 @@ sub break_lines {
 
             # write unindented non-code line
             if ( !$skip_line ) {
-                if ($tee_line) { $file_writer_object->tee_on() }
                 $self->write_unindented_line($input_line);
-                if ($tee_line) { $file_writer_object->tee_off() }
+            }
+
+            if ( $rOpts->{'tee-pod'} ) {
+                $sink_object->write_tee_line($input_line);
             }
         }
     }
@@ -5697,14 +5701,6 @@ sub check_options {
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
         dump_cuddled_block_list(*STDOUT);
         Exit(0);
-    }
-
-    if ( $rOpts->{'delete-pod'} && $rOpts->{'tee-pod'} ) {
-        Warn(<<EOM);
-Options '--tee-pod' and '--delete-pod' conflict; Do them in separate runs.
-Turning off '--delete-pod' for this run to avoid data loss.
-EOM
-        $rOpts->{'delete-pod'} = 0;
     }
 
     if ( $rOpts->{'line-up-parentheses'} ) {
