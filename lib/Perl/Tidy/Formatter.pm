@@ -7077,6 +7077,17 @@ sub copy_token_as_type {
         my $slevel                = $rtoken_vars->[_SLEVEL_];
         my $ci_level              = $rtoken_vars->[_CI_LEVEL_];
 
+	# Programming check: The K indexes in the batch must be a continuous
+	# sequence of the global token array.  If this relationship fails we
+	# are in danger of losing data.  An error here implies an error in
+        # a recent programming change.
+        if ( defined($max_index_to_go) && $max_index_to_go >= 0 ) {
+            my $Klast = $K_to_go[$max_index_to_go];
+            if ( $Ktoken_vars != $Klast + 1 ) {
+		Fault("Unexpected break in K values: $Ktoken_vars != $Klast+1");
+            }
+        }
+
         ++$max_index_to_go;
         $K_to_go[$max_index_to_go]                     = $Ktoken_vars;
         $tokens_to_go[$max_index_to_go]                = $token;
@@ -7111,7 +7122,7 @@ sub copy_token_as_type {
         my $length = $rLL->[$Ktoken_vars]->[_TOKEN_LENGTH_];
 
         # FIXME: Patch for indent-only, in which the entire set of tokens is
-        # turned into type 'q'. Lengths have not been defined because sub
+        # turned into type 'q'. Lengths may have not been defined because sub
         # 'respace_tokens' is bypassed. We do not need lengths in this case,
         # but we will use the character count to have a defined value.  In the
         # future, it would be nicer to have 'respace_tokens' convert the lines
