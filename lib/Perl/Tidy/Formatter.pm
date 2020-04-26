@@ -739,42 +739,6 @@ sub new {
     return $formatter_self;
 }
 
-# Future routines for storing new lines
-sub push_line {
-    my ( $self, $rline ) = @_;
-
-    # my $rline = $rlines->[$index_old];
-    # push @{$rlines_new}, $rline;
-    return;
-}
-
-sub push_old_line {
-    my ( $self, $index_old ) = @_;
-
-    # TODO: This will copy line with index $index_old to the new line array
-    # my $rlines = $self->{rlines};
-    # my $rline = $rlines->[$index_old];
-    # $self->push_line($rline);
-    return;
-}
-
-sub push_blank_line {
-    my ($self) = @_;
-
-    # my $rline = ...
-    # $self->push_line($rline);
-    return;
-}
-
-sub push_CODE_line {
-    my ( $self, $Kmin, $Kmax ) = @_;
-
-    # TODO: This will store the values for one new line of CODE
-    # CHECK TOKEN RANGE HERE
-    # $self->push_line($rline);
-    return;
-}
-
 sub increment_valign_batch_count {
     my ($self) = shift;
     return ++$self->{valign_batch_count};
