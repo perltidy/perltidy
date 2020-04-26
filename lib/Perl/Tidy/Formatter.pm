@@ -724,7 +724,7 @@ sub new {
         length_function            => $length_function,
         sink_object                => $sink_object,
         logger_object              => $logger_object,
-        file_writer_object         => $file_writer_object,
+        file_writer_object => $file_writer_object,
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -2272,13 +2272,22 @@ sub respace_tokens {
     my $self = shift;
     return if $rOpts->{'indent-only'};
 
-    # This routine makes all necessary changes to the tokenization after the
-    # file has been read. This consists mostly of inserting and deleting spaces
-    # according to the selected parameters. In a few cases non-space characters
-    # are added, deleted or modified.
+    # This routine makes all necessary and possible changes to the tokenization
+    # after the initial tokenization of the file. This is a tedious routine,
+    # but basically it consists of inserting and deleting whitespace between
+    # nonblank tokens according to the selected parameters. In a few cases
+    # non-space characters are added, deleted or modified.
 
-    # The old tokens are copied one-by-one, with changes, from the old
-    # linear storage array to a new array.
+    # The goal of this routine is to create a new token array which only needs
+    # the definition of new line breaks and padding to complete formatting.  In
+    # a few cases we have to cheat a little to achieve this goal.  In
+    # particular, we may not know if a semicolon will be needed, because it
+    # depends on how the line breaks go.  To handle this, we include the
+    # semicolon as a 'phantom' which can be displayed as normal or as an empty
+    # string.
+
+    # Method: The old tokens are copied one-by-one, with changes, from the old
+    # linear storage array $rLL to a new array $rLL_new.
 
     my $rLL                        = $self->{rLL};
     my $Klimit_old                 = $self->{Klimit};
@@ -3434,7 +3443,7 @@ sub find_nested_pairs {
     return;
 }
 
-sub dump_tokens {
+sub Debug_dump_tokens {
 
     # a debug routine, not normally used
     my ( $self, $msg ) = @_;
@@ -6815,12 +6824,6 @@ EOM
     }    # End sub
 }
 
-# NOTE: This sub is not used
-sub boolean_equals {
-    my ( $val1, $val2 ) = @_;
-    return ( $val1 && $val2 || !$val1 && !$val2 );
-}
-
 sub tight_paren_follows {
 
     my ( $self, $K_to_go_0, $K_ic ) = @_;
@@ -6962,21 +6965,6 @@ sub tight_paren_follows {
     return 1;
 }
 
-sub copy_hash {
-
-    # NOTE: This sub is not currently used
-    my ($rold_token_hash) = @_;
-    my %new_token_hash =
-      map { ( $_, $rold_token_hash->{$_} ) } keys %{$rold_token_hash};
-    return \%new_token_hash;
-}
-
-sub copy_array {
-    my ($rold) = @_;
-    my @new = map { $_ } @{$rold};
-    return \@new;
-}
-
 sub copy_token_as_type {
     my ( $rold_token, $type, $token ) = @_;
     if ( $type eq 'b' ) {
@@ -6996,7 +6984,8 @@ sub copy_token_as_type {
 "Programming error: copy_token_as has type $type but should be 'b' or 'q'"
         );
     }
-    my $rnew_token = copy_array($rold_token);
+
+    my $rnew_token = [ map { $_ } @{$rold_token} ];
     $rnew_token->[_TYPE_]                  = $type;
     $rnew_token->[_TOKEN_]                 = $token;
     $rnew_token->[_BLOCK_TYPE_]            = '';
@@ -7041,14 +7030,14 @@ sub copy_token_as_type {
         my $slevel                = $rtoken_vars->[_SLEVEL_];
         my $ci_level              = $rtoken_vars->[_CI_LEVEL_];
 
-	# Programming check: The K indexes in the batch must be a continuous
-	# sequence of the global token array.  If this relationship fails we
-	# are in danger of losing data.  An error here implies an error in
+        # Programming check: The K indexes in the batch must be a continuous
+        # sequence of the global token array.  If this relationship fails we
+        # are in danger of losing data.  An error here implies an error in
         # a recent programming change.
         if ( defined($max_index_to_go) && $max_index_to_go >= 0 ) {
             my $Klast = $K_to_go[$max_index_to_go];
             if ( $Ktoken_vars != $Klast + 1 ) {
-		Fault("Unexpected break in K values: $Ktoken_vars != $Klast+1");
+                Fault("Unexpected break in K values: $Ktoken_vars != $Klast+1");
             }
         }
 
@@ -9993,12 +9982,12 @@ sub send_lines_to_vertical_aligner {
 
     my ( $self, $rbatch_hash ) = @_;
 
-   # This routine receives a batch of code for which the final line breaks
-   # have been defined. Here we prepare the lines for passing to the vertical
-   # aligner.  We do the following tasks:
-   # - mark certain vertical alignment tokens tokens, such as '=', in each line.
-   # - make minor indentation adjustments
-   # - insert extra blank spaces to help display certain logical constructions
+    # This routine receives a batch of code for which the final line breaks
+    # have been defined. Here we prepare the lines for passing to the vertical
+    # aligner.  We do the following tasks:
+    # - mark certain vertical alignment tokens tokens, such as '=', in each line
+    # - make minor indentation adjustments
+    # - insert extra blank spaces to help display certain logical constructions
 
     my $rlines_K = $rbatch_hash->{rlines_K};
     if ( !@{$rlines_K} ) {
@@ -10030,7 +10019,6 @@ sub send_lines_to_vertical_aligner {
         push @{$ri_first}, $ibeg;
         push @{$ri_last},  $iend;
     }
-    #####################################################################
 
     my $valign_batch_number = $self->increment_valign_batch_count();
 
@@ -10193,21 +10181,6 @@ sub send_lines_to_vertical_aligner {
                         last;
                     }
                     $KP = $rLL->[$KP]->[_KNEXT_SEQ_ITEM_];
-                }
-            }
-        }
-
-        # FIXME: _TOKEN_LENGTH_ Debug code to be removed eventually
-        if (0) {
-            my $nfld = @{$rfields};
-            for ( my $k = 0 ; $k < $nfld ; $k++ ) {
-                my $field = $rfields->[$k];
-                my $len   = $rfield_lengths->[$k];
-                my $len2  = length($field);
-                if ( $len != $len2 ) {
-                    if ( $field !~ /^#/ ) {
-                        Warn("len=$len != $len2 for field: '$field'");
-                    }
                 }
             }
         }
@@ -15607,7 +15580,7 @@ sub undo_forced_breakpoint_stack {
         @is_mult_div{@q} = (1) x scalar(@q);
     }
 
-    sub DUMP_BREAKPOINTS {
+    sub Debug_dump_breakpoints {
 
         # Debug routine to dump current breakpoints...not normally called
         # We are given indexes to the current lines:
