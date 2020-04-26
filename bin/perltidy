@@ -1659,6 +1659,9 @@ The B<-fsb=string> is the corresponding parameter used to change the
 ending marker for format skipping.  The default is equivalent to
 -fse='#<<<'.  
 
+The beginning and ending strings may be the same, but it is preferable
+to make them different for clarity.
+
 =back
 
 =head2 Line Break Control

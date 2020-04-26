@@ -26,9 +26,6 @@ dump-want-right-space
 extended-syntax
 file-size-order
 force-read-binary
-format-skipping
-format-skipping-begin
-format-skipping-end
 frames
 help
 html
@@ -137,7 +134,6 @@ tee-block-comments
 tee-pod
 tee-side-comments
 title
-trim-pod
 trim-qw
 use-unicode-gcstring
 valign

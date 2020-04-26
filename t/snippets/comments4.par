@@ -1,4 +1,5 @@
 # testing --keep-old-blank-lines=2 [=all] and 
 # --nooutdent-long-comments and 
 # --outdent-static-block-comments
--kbl=2 -nolc -osbc
+# --format-skipping-begin and --format-skipping-end
+-kbl=2 -nolc -osbc -fsb='#<{2,}' -fse='#>{2,}'

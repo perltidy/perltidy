@@ -44,21 +44,23 @@ BEGIN {
 # --noindent-block-comments,
 # --nohanging-side-comments
 # --static-side-comments
--fpsc=40 -iscl -nibc -nhsc -ssc
+# --trim-pod
+-fpsc=40 -iscl -nibc -nhsc -ssc -trp
 ----------
         'comments2' => <<'----------',
 # testing --minimum-space-to-comment=10, --delete-block-comments, --delete-pod
 -msc=10 -dbc -dp
 ----------
         'comments3' => <<'----------',
-# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments
--mbl=2 -isbc
+# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments --no-format-skipping
+-mbl=2 -isbc -nfs
 ----------
         'comments4' => <<'----------',
 # testing --keep-old-blank-lines=2 [=all] and 
 # --nooutdent-long-comments and 
 # --outdent-static-block-comments
--kbl=2 -nolc -osbc
+# --format-skipping-begin and --format-skipping-end
+-kbl=2 -nolc -osbc -fsb='#<{2,}' -fse='#>{2,}'
 ----------
         'def'       => "",
         'long_line' => "-l=0",
@@ -133,13 +135,21 @@ sub macro_get_names { #
 } # end level 1
 
 
-#<<<  do not let perltidy touch this
+#<<<  do not let perltidy touch this unless -nfs is set
     my @list = (1,
                 1, 1,
                 1, 2, 1,
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>>
+
+#<<  test alternate format skipping string
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>
 
 
 
@@ -159,7 +169,7 @@ __END__
 
 
 =pod
-Some pod after  __END__ to delete with -dp
+Some pod after __END__ to delete with -dp and trim with -trp     
 =cut
 
 
@@ -350,13 +360,18 @@ sub macro_get_names {                  #
     }                                  # end level 2
 }                                      # end level 1
 
-#<<<  do not let perltidy touch this
+#<<<  do not let perltidy touch this unless -nfs is set
     my @list = (1,
                 1, 1,
                 1, 2, 1,
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>>
+
+#<<  test alternate format skipping string
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+#>>
 
 # some blank lines follow
 
@@ -371,7 +386,7 @@ __END__
 
 
 =pod
-Some pod after  __END__ to delete with -dp
+Some pod after __END__ to delete with -dp and trim with -trp
 =cut
 
 
@@ -421,13 +436,15 @@ sub macro_get_names {          #
     }          # end level 2
 }          # end level 1
 
-#<<<  do not let perltidy touch this
+#<<<  do not let perltidy touch this unless -nfs is set
     my @list = (1,
                 1, 1,
                 1, 2, 1,
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>>
+
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
 
 __END__
@@ -500,13 +517,15 @@ sub macro_get_names {    #
 }    # end level 1
 
 
-#<<<  do not let perltidy touch this
-    my @list = (1,
-                1, 1,
-                1, 2, 1,
-                1, 3, 3, 1,
-                1, 4, 6, 4, 1,);
+#<<<  do not let perltidy touch this unless -nfs is set
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
 #>>>
+
+#<<  test alternate format skipping string
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+#>>
 
 
 # some blank lines follow
@@ -524,7 +543,7 @@ __END__
 
 
 =pod
-Some pod after  __END__ to delete with -dp
+Some pod after __END__ to delete with -dp and trim with -trp     
 =cut
 
 
@@ -591,13 +610,21 @@ sub macro_get_names {    #
 }    # end level 1
 
 
-#<<<  do not let perltidy touch this
+#<<<  do not let perltidy touch this unless -nfs is set
     my @list = (1,
                 1, 1,
                 1, 2, 1,
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>>
+
+#<<  test alternate format skipping string
+    my @list = (1,
+                1, 1,
+                1, 2, 1,
+                1, 3, 3, 1,
+                1, 4, 6, 4, 1,);
+#>>
 
 
 
@@ -617,7 +644,7 @@ __END__
 
 
 =pod
-Some pod after  __END__ to delete with -dp
+Some pod after __END__ to delete with -dp and trim with -trp     
 =cut
 
 
@@ -680,13 +707,18 @@ sub macro_get_names {    #
     }    # end level 2
 }    # end level 1
 
-#<<<  do not let perltidy touch this
+#<<<  do not let perltidy touch this unless -nfs is set
     my @list = (1,
                 1, 1,
                 1, 2, 1,
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 #>>>
+
+#<<  test alternate format skipping string
+my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
+
+#>>
 
 # some blank lines follow
 
@@ -701,7 +733,7 @@ __END__
 
 
 =pod
-Some pod after  __END__ to delete with -dp
+Some pod after __END__ to delete with -dp and trim with -trp     
 =cut
 
 

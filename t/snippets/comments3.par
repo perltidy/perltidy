@@ -1,2 +1,2 @@
-# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments
--mbl=2 -isbc
+# testing --maximum-consecutive-blank-lines=2 and --indent-spaced-block-comments --no-format-skipping
+-mbl=2 -isbc -nfs
