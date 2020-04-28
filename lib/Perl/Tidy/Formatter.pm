@@ -280,6 +280,7 @@ use vars qw{
 
   $SUB_PATTERN
   $ASUB_PATTERN
+  $ANYSUB_PATTERN
 
   $NVARS
 
@@ -6286,8 +6287,9 @@ sub make_sub_matching_pattern {
     #  'sub' is an anonymous sub
     #  'sub:' is a label, not a sub
     #  'substr' is a keyword
-    $SUB_PATTERN  = '^sub\s+(::|\w)';
-    $ASUB_PATTERN = '^sub$';
+    $SUB_PATTERN    = '^sub\s+(::|\w)';   # match normal sub
+    $ASUB_PATTERN   = '^sub$';            # match anonymous sub
+    $ANYSUB_PATTERN = '^sub\b';           # match either type of sub
 
     if ( $rOpts->{'sub-alias-list'} ) {
 
@@ -6298,6 +6300,7 @@ sub make_sub_matching_pattern {
         $sub_alias_list =~ s/\s+/\|/g;
         $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
         $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
+        $ANYSUB_PATTERN =~ s/sub/\($sub_alias_list\)/;
     }
     return;
 }
@@ -6891,8 +6894,7 @@ sub tight_paren_follows {
         if (
                $block_type
             && $rLL->[$K_test]->[_TYPE_] eq '{'
-            && (   $block_type =~ /$SUB_PATTERN/
-                || $block_type =~ /$ASUB_PATTERN/ )
+            && $block_type =~ /$ANYSUB_PATTERN/
           )
         {
             return 1;
@@ -7480,7 +7482,7 @@ sub copy_token_as_type {
                 my $want_break =
 
                   # use -bl flag if not a sub block of any type
-                  $block_type !~ /^sub\b/
+                  $block_type !~ /$ANYSUB_PATTERN/
                   ? $rOpts->{'opening-brace-on-new-line'}
 
                   # use -sbl flag for a named sub block
@@ -7921,7 +7923,7 @@ sub process_batch_of_CODE {
             my $leading_type  = $types_to_go[$imin];
 
             # blank lines before subs except declarations and one-liners
-            if ( $leading_token =~ /^(sub\s)/ && $leading_type eq 'i' ) {
+            if ( $leading_type eq 'i' && $leading_token =~ /$SUB_PATTERN/ ) {
                 $want_blank = $rOpts->{'blank-lines-before-subs'}
                   if ( $self->terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
             }
@@ -8250,7 +8252,7 @@ sub starting_one_line_block {
 
     # the previous nonblank token should start these block types
     elsif (( $last_last_nonblank_token_to_go eq $block_type )
-        || ( $block_type =~ /^sub\b/ )
+        || $block_type =~ /$ANYSUB_PATTERN/
         || $block_type =~ /\(\)/ )
     {
         $i_start = $last_last_nonblank_index_to_go;
@@ -17339,7 +17341,7 @@ sub set_continuation_breaks {
                     # sub block breaks handled at higher level, unless
                     # it looks like the preceding list is long and broken
                     && !(
-                        $next_nonblank_block_type =~ /^sub\b/
+                        $next_nonblank_block_type =~ /$ANYSUB_PATTERN/
                         && ( $nesting_depth_to_go[$i_begin] ==
                             $nesting_depth_to_go[$i_next_nonblank] )
                     )
