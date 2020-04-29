@@ -2763,7 +2763,6 @@ sub respace_tokens {
 
                     my ( $token_pp, $type_pp );
 
-                    #my $Kpp = $K_previous_nonblank->($Kp);
                     my $Kpp = $self->K_previous_nonblank($Kp);
                     if ( defined($Kpp) ) {
                         $token_pp = $rLL->[$Kpp]->[_TOKEN_];
@@ -2925,7 +2924,7 @@ sub respace_tokens {
                     next;
                 }
 
-                if ( $token =~ /$SUB_PATTERN/ ) {
+                if ( $token =~ /$ANYSUB_PATTERN/ ) {
 
                     # -spp = 0 : no space before opening prototype paren
                     # -spp = 1 : stable (follow input spacing)
