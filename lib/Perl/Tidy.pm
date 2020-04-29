@@ -894,7 +894,7 @@ EOM
         # rerun perltidy over and over with wildcard input.
         if (
             !$source_stream
-            && (   $input_file =~ /$forbidden_file_extensions/o
+            && (   $input_file =~ /$forbidden_file_extensions/
                 || $input_file eq 'DIAGNOSTICS' )
           )
         {
