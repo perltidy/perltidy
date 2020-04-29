@@ -1,0 +1,5 @@
+# test some spacing rules at possible filehandles
+my $z=$x/$y;     # ok to change spaces around both sides of the /
+print $x / $y;   # do not remove space before or after / here
+print $x/$y;     # do not add a space before the / here
+print $x+$y;     # do not add a space before the + here
