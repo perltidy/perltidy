@@ -222,12 +222,14 @@ if (@changed) {
     print "------\n";
 }
 
+my $runme = "RUNME.sh";
+
 if ( !@mv ) {
     print "No differences\n";
+    if (-e $runme) {unlink $runme}
     exit;
 }
 
-my $runme = "RUNME.sh";
 if ( open( RUN, ">$runme" ) ) {
     print RUN <<EOM;
 #!/bin/sh
