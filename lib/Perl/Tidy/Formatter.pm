@@ -6286,9 +6286,9 @@ sub make_sub_matching_pattern {
     #  'sub' is an anonymous sub
     #  'sub:' is a label, not a sub
     #  'substr' is a keyword
-    $SUB_PATTERN    = '^sub\s+(::|\w)';   # match normal sub
-    $ASUB_PATTERN   = '^sub$';            # match anonymous sub
-    $ANYSUB_PATTERN = '^sub\b';           # match either type of sub
+    $SUB_PATTERN    = '^sub\s+(::|\w)';    # match normal sub
+    $ASUB_PATTERN   = '^sub$';             # match anonymous sub
+    $ANYSUB_PATTERN = '^sub\b';            # match either type of sub
 
     if ( $rOpts->{'sub-alias-list'} ) {
 
@@ -6890,11 +6890,9 @@ sub tight_paren_follows {
     my $K_test = $self->K_next_nonblank($K_oc);
     if ( defined($K_test) ) {
         my $block_type = $rLL->[$K_test]->[_BLOCK_TYPE_];
-        if (
-               $block_type
+        if (   $block_type
             && $rLL->[$K_test]->[_TYPE_] eq '{'
-            && $block_type =~ /$ANYSUB_PATTERN/
-          )
+            && $block_type =~ /$ANYSUB_PATTERN/ )
         {
             return 1;
         }

@@ -1094,9 +1094,9 @@ Suppose the user requests that / signs have a space to the left but not to the r
        print $x /$y;
    }
 
-If formatted in this way, the program will not run (at least with recent versions of perl) because the / is assumed to start a quote. In a complex program, Perl might find a terminating / to the multiline quote and run, but incorrectly.
+If formatted in this way, the program will not run (at least with recent versions of perl) because the / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but incorrectly.
 
-Similar issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators.  So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged.  Likewise, whitespace around barewords is left unchanged. But the bigger picture is that it is risky write programs which do math operations involving a term which could be taken to be a filehandle.
+Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators.  So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged.  Likewise, whitespace around barewords is left unchanged.
 
 =item Space between specific keywords and opening paren
 

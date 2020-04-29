@@ -1,5 +1,46 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2020 01 10.01</h2>
+
+<pre><code>- add option --break-at-old-semicolon-breakpoints', -bos, requested 
+  in RT#131644.  This flag will keep lines beginning with a semicolon.
+
+- Added --use-unicode-gcstring to control use of Unicode::GCString for
+  evaluating character widths of encoded data.  By default, for encoded files
+  perltidy will now look for Unicode::GCString and, if found, will use it 
+  to evaluate character display widths.  This can improve displayed
+  vertical alignment for files with wide characters. This flag is mainly intended
+  for testing, but can also prevent the use of this module in the event that some
+  unforseen issue arises.  Perltidy installation does not require
+  Unicode::GCString, so users wanting to use this feature need to install it
+  separately.
+
+- Added --character-encoding=guess or -guess to have perltidy guess
+  if a file is encoded as -utf8 or some older single-byte encoding. This
+  is useful when processing a mixture of file types, such as utf8 and 
+  latin-1.  Also, specific encodings of input files other than utf8 may
+  now be given, for example --character-encoding=euc-jp.  For a
+  description of the guessing method see the man pages.
+
+  Please Note: The default encoding has been set to be 'guess'
+  instead of 'none'. I do not like to change defaults, but this seems like
+  the right choice, since it should make perltidy work properly with both
+  older latin-1 and newer utf8 files.  I have done extensive testing and
+  so far haven't found any problems.
+
+- Fix for git#22, Preserve function signature on a single line. An
+  unwanted line break was being introduced when a closing signature paren
+  followed a closing do brace.
+
+- Fix RT#132059, the -dac parameter was not working and caused an error exit
+
+- When -utf8 is used, any error output is encoded as utf8
+
+- Fix for git#19, adjust line break around an 'xor'
+
+- Fix for git#18, added warning for missing comma before unknown bare word.
+</code></pre>
+
 <h2>2020 01 10</h2>
 
 <pre><code>- This release adds a flag to control the feature RT#130394 (allow short nested blocks)
