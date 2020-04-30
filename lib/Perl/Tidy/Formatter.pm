@@ -1496,12 +1496,6 @@ sub break_lines {
                 next;
             }
 
-            # Handle block comment to be deleted
-            elsif ( $CODE_type eq 'DEL' ) {
-                $self->flush();
-                next;
-            }
-
             # Handle all other lines of code
             $self->process_line_of_CODE($line_of_tokens);
         }
@@ -2645,7 +2639,6 @@ sub respace_tokens {
             # 'SBC'=Static Block Comment - a block comment which does not get
             #      indented
             # 'SBCX'=Static Block Comment Without Leading Space
-            # 'DEL'=Delete this line
             # 'VER'=VERSION statement
             # '' or (undefined) - no restructions
 
@@ -3125,7 +3118,6 @@ sub respace_tokens {
         # 'SBC'=Static Block Comment - a block comment which does not get
         #      indented
         # 'SBCX'=Static Block Comment Without Leading Space
-        # 'DEL'=Delete this line
         # 'VER'=VERSION statement
         # '' or (undefined) - no restructions
 
@@ -3261,8 +3253,6 @@ sub respace_tokens {
 
         # Handle a block (full-line) comment..
         if ($is_block_comment) {
-
-            if ( $rOpts->{'delete-block-comments'} ) { return 'DEL' }
 
             # TRIM COMMENTS -- This could be turned off as a option
             $rLL->[$Kfirst]->[_TOKEN_] =~ s/\s*$//;    # trim right end
@@ -7218,6 +7208,10 @@ sub copy_token_as_type {
 
             if ( $rOpts->{'tee-block-comments'} ) {
                 $sink_object->write_tee_line($input_line);
+            }
+            if ( $rOpts->{'delete-block-comments'} ) {
+                $self->flush();
+                return;
             }
 
             destroy_one_line_block();
