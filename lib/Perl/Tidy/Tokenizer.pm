@@ -1058,7 +1058,7 @@ sub dump_functions {
 
     my $fh = *STDOUT;
     foreach my $pkg ( keys %is_user_function ) {
-        print $fh "\nnon-constant subs in package $pkg\n";
+        $fh->print("\nnon-constant subs in package $pkg\n");
 
         foreach my $sub ( keys %{ $is_user_function{$pkg} } ) {
             my $msg = "";
@@ -1069,15 +1069,15 @@ sub dump_functions {
             if ( $is_block_function{$pkg}{$sub} ) {
                 $msg = 'block';
             }
-            print $fh "$sub $msg\n";
+            $fh->print("$sub $msg\n");
         }
     }
 
     foreach my $pkg ( keys %is_constant ) {
-        print $fh "\nconstants and constant subs in package $pkg\n";
+        $fh->print("\nconstants and constant subs in package $pkg\n");
 
         foreach my $sub ( keys %{ $is_constant{$pkg} } ) {
-            print $fh "$sub\n";
+            $fh->print("$sub\n");
         }
     }
     return;
@@ -2272,8 +2272,8 @@ sub prepare_for_a_new_file {
                 # FIXME: this should work but will not catch errors
                 # because we also have to be sure that previous token is
                 # a type character ($,@,%).
-                if ( $last_nonblank_token eq '{'
-                    && ( $next_tok !~ /^\d/ ) 
+                if (   $last_nonblank_token eq '{'
+                    && ( $next_tok !~ /^\d/ )
                     && ( $next_tok =~ /^\w/ ) )
                 {
 
@@ -2781,7 +2781,7 @@ sub prepare_for_a_new_file {
                         # but if the modifier starts a new line we can skip
                         # this because either the here doc will be fully
                         # contained in the replacement text (so we can
-                        # ignore it) or Perl will not find it.  
+                        # ignore it) or Perl will not find it.
                         # See test 'here2.in'.
                         if ( $saw_modifier_e && $i_tok >= 0 ) {
 
@@ -4001,8 +4001,7 @@ EOM
 # /^(\}|\{|BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|;|if|elsif|else|unless|while|until|for|foreach)$/
                         elsif (
                             $is_zero_continuation_block_type{
-                                $routput_block_type->[$i]
-                            } )
+                                $routput_block_type->[$i] } )
                         {
                             $in_statement_continuation = 0;
                         }
@@ -4011,8 +4010,7 @@ EOM
                         #     /^(sort|grep|map|do|eval)$/ )
                         elsif (
                             $is_not_zero_continuation_block_type{
-                                $routput_block_type->[$i]
-                            } )
+                                $routput_block_type->[$i] } )
                         {
                         }
 
@@ -5886,7 +5884,7 @@ sub scan_identifier_do {
             }
             elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
                 $saw_alpha     = 1;
-                $id_scan_state = ':';           # now need ::
+                $id_scan_state = ':';    # now need ::
                 $identifier .= $tok;
             }
             elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
@@ -6055,8 +6053,8 @@ sub scan_identifier_do {
         }
         elsif ( $id_scan_state eq '&' ) {    # starting sub call?
 
-            if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
-                $id_scan_state = ':';          # now need ::
+            if ( $tok =~ /^[\$\w]/ ) {       # alphanumeric ..
+                $id_scan_state = ':';        # now need ::
                 $saw_alpha     = 1;
                 $identifier .= $tok;
             }
@@ -6065,10 +6063,10 @@ sub scan_identifier_do {
                 $saw_alpha     = 1;
                 $identifier .= $tok;
             }
-            elsif ( $tok =~ /^\s*$/ ) {     # allow space
+            elsif ( $tok =~ /^\s*$/ ) {               # allow space
             }
-            elsif ( $tok eq '::' ) {        # leading ::
-                $id_scan_state = 'A';       # accept alpha next
+            elsif ( $tok eq '::' ) {                  # leading ::
+                $id_scan_state = 'A';                 # accept alpha next
                 $identifier .= $tok;
             }
             elsif ( $tok eq '{' ) {
@@ -6106,7 +6104,7 @@ sub scan_identifier_do {
         }
         elsif ( $id_scan_state eq 'A' ) {    # looking for alpha (after ::)
 
-            if ( $tok =~ /^\w/ ) {    # found it
+            if ( $tok =~ /^\w/ ) {           # found it
                 $identifier .= $tok;
                 $id_scan_state = ':';        # now need ::
                 $saw_alpha     = 1;
@@ -6136,9 +6134,9 @@ sub scan_identifier_do {
                 $identifier .= $tok;
                 $id_scan_state = 'A';        # now require alpha
             }
-            elsif ( $tok =~ /^\w/ ) {    # more alphanumeric is ok here
+            elsif ( $tok =~ /^\w/ ) {        # more alphanumeric is ok here
                 $identifier .= $tok;
-                $id_scan_state = ':';           # now need ::
+                $id_scan_state = ':';        # now need ::
                 $saw_alpha     = 1;
             }
             elsif ( $tok eq "'" && $allow_tick ) {    # tick
@@ -7435,7 +7433,7 @@ sub dump_token_types {
 
     # This should be the latest list of token types in use
     # adding NEW_TOKENS: add a comment here
-    print $fh <<'END_OF_LIST';
+    $fh->print(<<'END_OF_LIST');
 
 Here is a list of the token types currently used for lines of type 'CODE'.  
 For the following tokens, the "type" of a token is just the token itself.  
