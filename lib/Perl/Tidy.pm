@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2019 by Steve Hancock
+#    Copyright (c) 2000-2020 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -358,6 +358,8 @@ sub perltidy {
         formatter             => undef,
         logfile               => undef,
         errorfile             => undef,
+        teefile               => undef,
+        debugfile             => undef,
         perltidyrc            => undef,
         source                => undef,
         stderr                => undef,
@@ -412,6 +414,8 @@ EOM
     my $destination_stream = $input_hash{'destination'};
     my $errorfile_stream   = $input_hash{'errorfile'};
     my $logfile_stream     = $input_hash{'logfile'};
+    my $teefile_stream     = $input_hash{'teefile'};
+    my $debugfile_stream   = $input_hash{'debugfile'};
     my $perltidyrc_stream  = $input_hash{'perltidyrc'};
     my $source_stream      = $input_hash{'source'};
     my $stderr_stream      = $input_hash{'stderr'};
@@ -802,6 +806,14 @@ EOM
             # unexpected perltidy.LOG files.
             if ( !defined($logfile_stream) ) {
                 $logfile_stream = Perl::Tidy::DevNull->new();
+
+                # Likewise for .TEE and .DEBUG output
+            }
+            if ( !defined($teefile_stream) ) {
+                $teefile_stream = Perl::Tidy::DevNull->new();
+            }
+            if ( !defined($debugfile_stream) ) {
+                $debugfile_stream = Perl::Tidy::DevNull->new();
             }
         }
         elsif ( $input_file eq '-' ) {    # '-' indicates input from STDIN
@@ -1143,6 +1155,7 @@ EOM
 
         # the 'sink_object' knows how to write the output file
         my $tee_file = $fileroot . $dot . "TEE";
+        if ($teefile_stream) { $tee_file = $teefile_stream }
 
         my $line_separator = $rOpts->{'output-line-ending'};
         if ( $rOpts->{'preserve-line-endings'} ) {
@@ -1198,9 +1211,10 @@ EOM
         #---------------------------------------------------------------
         my $debugger_object = undef;
         if ( $rOpts->{DEBUG} ) {
+            my $debug_file = $fileroot . $dot . "DEBUG";
+            if ($debugfile_stream) { $debug_file = $debugfile_stream }
             $debugger_object =
-              Perl::Tidy::Debugger->new( $fileroot . $dot . "DEBUG",
-                $is_encoded_data );
+              Perl::Tidy::Debugger->new( $debug_file, $is_encoded_data );
         }
 
         #---------------------------------------------------------------
@@ -1231,6 +1245,16 @@ EOM
             # source, not an intermediate result, and
             # (2) we need to know if there are errors so we can stop the
             # iterations early if necessary.
+
+            # Programming note: ideally, we would also only save any .TEE file
+            # on iteration pass 1, but unfortunately the .TEE stream is
+            # combined in the sink object with the main output stream.  The
+            # programming actually works as is, with the .TEE file being
+            # written and rewritten on each iteration.  This even works if we
+            # are deleting comments or pod in the same run.  But this
+            # complexity could cause future bugs so it would be best to
+            # eventually split the tee output into a completely separate stream
+            # to just save it on pass 1 and avoid this complexity.
             if ( $iter > 1 ) {
                 $debugger_object = undef;
                 $logger_object   = undef;

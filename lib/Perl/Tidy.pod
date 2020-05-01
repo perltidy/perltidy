@@ -14,6 +14,8 @@ Perl::Tidy - Parses and beautifies perl source
         perltidyrc        => $perltidyrc,
         logfile           => $logfile,
         errorfile         => $errorfile,
+        teefile           => $teefile,
+        debugfile         => $debugfile,
         formatter         => $formatter,           # callback object (see below)
         dump_options      => $dump_options,
         dump_options_type => $dump_options_type,
@@ -115,6 +117,18 @@ The B<logfile> parameter allows the calling program to capture the log stream.
 This stream is only created if requested with a B<-g> parameter.  It contains
 detailed diagnostic information about a script which may be useful for
 debugging.
+
+=item teefile
+
+The B<teefile> parameter allows the calling program to capture the tee stream.
+This stream is only created if requested with one of the 'tee' parameters,
+a B<--tee-pod> , B<--tee-block-comments>, B<--tee-side-commnts>, or B<--tee-all-comments>.
+
+=item debugfile
+
+The B<debugfile> parameter allows the calling program to capture the stream
+produced by the B<--DEBUG> parameter.  This parameter is mainly used for 
+debugging perltidy itself.
 
 =item argv
 
