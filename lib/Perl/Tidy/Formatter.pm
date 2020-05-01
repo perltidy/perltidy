@@ -6506,7 +6506,7 @@ sub make_closing_side_comment_prefix {
 sub dump_want_left_space {
     my $fh = shift;
     local $" = "\n";
-    print $fh <<EOM;
+    $fh->print(<<EOM);
 These values are the main control of whitespace to the left of a token type;
 They may be altered with the -wls parameter.
 For a list of token types, use perltidy --dump-token-types (-dtt)
@@ -6515,7 +6515,7 @@ For a list of token types, use perltidy --dump-token-types (-dtt)
 ------------------------------------------------------------------------
 EOM
     foreach my $key ( sort keys %want_left_space ) {
-        print $fh "$key\t$want_left_space{$key}\n";
+        $fh->print("$key\t$want_left_space{$key}\n");
     }
     return;
 }
@@ -6523,7 +6523,7 @@ EOM
 sub dump_want_right_space {
     my $fh = shift;
     local $" = "\n";
-    print $fh <<EOM;
+    $fh->print(<<EOM);
 These values are the main control of whitespace to the right of a token type;
 They may be altered with the -wrs parameter.
 For a list of token types, use perltidy --dump-token-types (-dtt)
@@ -6532,7 +6532,7 @@ For a list of token types, use perltidy --dump-token-types (-dtt)
 ------------------------------------------------------------------------
 EOM
     foreach my $key ( sort keys %want_right_space ) {
-        print $fh "$key\t$want_right_space{$key}\n";
+        $fh->print("$key\t$want_right_space{$key}\n");
     }
     return;
 }
