@@ -2,6 +2,11 @@
 
 ## 2020 01 10.01
 
+    - calls to the module Perl::Tidy can now capture any output produced
+      by a debug flag or one of the 'tee' flags through the new 'debugfile' and
+      'teefile' call parameters.  These output streams are rarely used but
+      they are now treated the same as any 'logfile' stream.
+
     - add option --break-at-old-semicolon-breakpoints', -bos, requested 
       in RT#131644.  This flag will keep lines beginning with a semicolon.
 
