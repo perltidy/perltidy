@@ -1153,9 +1153,19 @@ EOM
             }
         }
 
-        # the 'sink_object' knows how to write the output file
+        my $fh_tee;
         my $tee_file = $fileroot . $dot . "TEE";
         if ($teefile_stream) { $tee_file = $teefile_stream }
+        if (   $rOpts->{'tee-pod'}
+            || $rOpts->{'tee-block-comments'}
+            || $rOpts->{'tee-side-comments'} )
+        {
+            ( $fh_tee, my $tee_filename ) =
+              Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
+            if ( !$fh_tee ) {
+                Warn("couldn't open TEE file $tee_file: $!\n");
+            }
+        }
 
         my $line_separator = $rOpts->{'output-line-ending'};
         if ( $rOpts->{'preserve-line-endings'} ) {
@@ -1164,21 +1174,28 @@ EOM
 
         $line_separator = "\n" unless defined($line_separator);
 
+        # the 'sink_object' knows how to write the output file
         my ( $sink_object, $postfilter_buffer );
         if (   $postfilter
             || $rOpts->{'assert-tidy'}
             || $rOpts->{'assert-untidy'} )
         {
-            $sink_object =
-              Perl::Tidy::LineSink->new( \$postfilter_buffer, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message,
-                $is_encoded_data );
+            $sink_object = Perl::Tidy::LineSink->new(
+                output_file              => \$postfilter_buffer,
+                line_separator           => $line_separator,
+                rOpts                    => $rOpts,
+                rpending_logfile_message => $rpending_logfile_message,
+                is_encoded_data          => $is_encoded_data,
+            );
         }
         else {
-            $sink_object =
-              Perl::Tidy::LineSink->new( $output_file, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message,
-                $is_encoded_data );
+            $sink_object = Perl::Tidy::LineSink->new(
+                output_file              => $output_file,
+                line_separator           => $line_separator,
+                rOpts                    => $rOpts,
+                rpending_logfile_message => $rpending_logfile_message,
+                is_encoded_data          => $is_encoded_data,
+            );
         }
 
         #---------------------------------------------------------------
@@ -1225,39 +1242,37 @@ EOM
         my $sink_object_final     = $sink_object;
         my $debugger_object_final = $debugger_object;
         my $logger_object_final   = $logger_object;
+        my $fh_tee_final          = $fh_tee;
 
         foreach my $iter ( 1 .. $max_iterations ) {
 
             # send output stream to temp buffers until last iteration
             my $sink_buffer;
             if ( $iter < $max_iterations ) {
-                $sink_object =
-                  Perl::Tidy::LineSink->new( \$sink_buffer, $tee_file,
-                    $line_separator, $rOpts, $rpending_logfile_message,
-                    $is_encoded_data );
+                $sink_object = Perl::Tidy::LineSink->new(
+                    output_file              => \$sink_buffer,
+                    line_separator           => $line_separator,
+                    rOpts                    => $rOpts,
+                    rpending_logfile_message => $rpending_logfile_message,
+                    is_encoded_data          => $is_encoded_data,
+                );
             }
             else {
                 $sink_object = $sink_object_final;
             }
 
-            # Save logger, debugger output only on pass 1 because:
+            # Save logger, debugger and tee output only on pass 1 because:
             # (1) line number references must be to the starting
             # source, not an intermediate result, and
             # (2) we need to know if there are errors so we can stop the
             # iterations early if necessary.
+            # (3) the tee option only works on first pass if comments are also
+            # being deleted.
 
-            # Programming note: ideally, we would also only save any .TEE file
-            # on iteration pass 1, but unfortunately the .TEE stream is
-            # combined in the sink object with the main output stream.  The
-            # programming actually works as is, with the .TEE file being
-            # written and rewritten on each iteration.  This even works if we
-            # are deleting comments or pod in the same run.  But this
-            # complexity could cause future bugs so it would be best to
-            # eventually split the tee output into a completely separate stream
-            # to just save it on pass 1 and avoid this complexity.
             if ( $iter > 1 ) {
                 $debugger_object = undef;
                 $logger_object   = undef;
+                $fh_tee          = undef;
             }
 
             #------------------------------------------------------------
@@ -1284,6 +1299,7 @@ EOM
                     diagnostics_object => $diagnostics_object,
                     sink_object        => $sink_object,
                     length_function    => $length_function,
+                    fh_tee             => $fh_tee,
                 );
             }
             else {
@@ -1401,6 +1417,7 @@ EOM
         # for second and higher iterations
         $debugger_object = $debugger_object_final;
         $logger_object   = $logger_object_final;
+        $fh_tee          = $fh_tee_final;
 
         $logger_object->write_logfile_entry($convergence_log_message)
           if $convergence_log_message;
@@ -1413,10 +1430,13 @@ EOM
             || $rOpts->{'assert-untidy'} )
         {
             $sink_object->close_output_file();
-            $sink_object =
-              Perl::Tidy::LineSink->new( $output_file, $tee_file,
-                $line_separator, $rOpts, $rpending_logfile_message,
-                $is_encoded_data );
+            $sink_object = Perl::Tidy::LineSink->new(
+                output_file              => $output_file,
+                line_separator           => $line_separator,
+                rOpts                    => $rOpts,
+                rpending_logfile_message => $rpending_logfile_message,
+                is_encoded_data          => $is_encoded_data,
+            );
 
             my $buf =
                 $postfilter
@@ -4166,4 +4186,3 @@ sub do_syntax_check {
 }
 
 1;
-

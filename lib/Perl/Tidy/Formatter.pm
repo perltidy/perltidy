@@ -580,10 +580,12 @@ sub new {
         diagnostics_object => undef,
         logger_object      => undef,
         length_function    => sub { return length( $_[0] ) },
+        fh_tee             => undef,
     );
     my %args = ( %defaults, @args );
 
     my $length_function = $args{length_function};
+    my $fh_tee          = $args{fh_tee};
     $logger_object      = $args{logger_object};
     $diagnostics_object = $args{diagnostics_object};
 
@@ -723,6 +725,7 @@ sub new {
         rvalid_self_keys           => [],              # for checking
         valign_batch_count         => 0,
         length_function            => $length_function,
+        fh_tee                     => $fh_tee,
         sink_object                => $sink_object,
         logger_object              => $logger_object,
         file_writer_object => $file_writer_object,
@@ -1377,13 +1380,14 @@ EOM
     return $rhash_of_desires;
 }
 
-sub break_lines {
+sub process_all_lines {
 
     # Loop over old lines to set new line break points
 
     my $self                       = shift;
     my $rlines                     = $self->{rlines};
     my $sink_object                = $self->{sink_object};
+    my $fh_tee                     = $self->{fh_tee};
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
 
     # Note for RT#118553, leave only one newline at the end of a file.
@@ -1520,7 +1524,7 @@ sub break_lines {
                     $self->want_blank_line();
                 }
                 if ( $rOpts->{'tee-pod'} ) {
-                    $sink_object->write_tee_line($input_line);
+                    $fh_tee->print($input_line) if ($fh_tee);
                 }
             }
 
@@ -4725,10 +4729,10 @@ sub finish_formatting {
     # Eventually this call should just change the 'rlines' data according to the
     # new line breaks and then return so that we can do an internal iteration
     # before continuing with the next stages of formatting.
-    $self->break_lines();
+    $self->process_all_lines();
 
     ############################################################
-    # A possible future decomposition of 'break_lines()' follows.
+    # A possible future decomposition of 'process_all_lines()' follows.
     # Benefits:
     # - allow perltidy to do an internal iteration which eliminates
     #   many unnecessary steps, such as re-parsing and vertical alignment.
@@ -7145,6 +7149,7 @@ sub copy_token_as_type {
         my $rbreak_container = $self->{rbreak_container};
         my $rshort_nested    = $self->{rshort_nested};
         my $sink_object      = $self->{sink_object};
+        my $fh_tee           = $self->{fh_tee};
 
         my $rOpts_add_newlines = $rOpts->{'add-newlines'};
         my $rOpts_break_at_old_comma_breakpoints =
@@ -7207,7 +7212,7 @@ sub copy_token_as_type {
         if ($is_comment) {
 
             if ( $rOpts->{'tee-block-comments'} ) {
-                $sink_object->write_tee_line($input_line);
+                $fh_tee->print($input_line) if ($fh_tee);
             }
             if ( $rOpts->{'delete-block-comments'} ) {
                 $self->flush();
@@ -7286,16 +7291,16 @@ sub copy_token_as_type {
             $self->flush();
             my $line = $input_line;
 
-            # delete side comments if requested with -io, but
-            # we will not allow deleting of closing side comments with -io
-            # because the coding would be more complex
-            if (   $rOpts->{'delete-side-comments'}
-                && $rLL->[$K_last]->[_TYPE_] eq '#' )
-            {
-
-                $line = "";
-                foreach my $KK ( $K_first .. $K_last - 1 ) {
-                    $line .= $rLL->[$KK]->[_TOKEN_];
+            # delete side comments if requested with -io
+            if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
+                if ( $rOpts->{'delete-side-comments'} ) {
+                    $line = "";
+                    foreach my $KK ( $K_first .. $K_last - 1 ) {
+                        $line .= $rLL->[$KK]->[_TOKEN_];
+                    }
+                }
+                if ( $rOpts->{'tee-side-comments'} ) {
+                    $fh_tee->print($input_line) if ($fh_tee);
                 }
             }
 
@@ -7769,7 +7774,7 @@ sub copy_token_as_type {
         my $type = $rLL->[$K_last]->[_TYPE_];
 
         if ( $type eq '#' && $rOpts->{'tee-side-comments'} ) {
-            $sink_object->write_tee_line($input_line);
+            $fh_tee->print($input_line) if ($fh_tee);
         }
 
         # we have to flush ..

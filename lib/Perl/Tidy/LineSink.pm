@@ -12,11 +12,24 @@ our $VERSION = '20200110.01';
 
 sub new {
 
-    my ( $class, $output_file, $tee_file, $line_separator, $rOpts,
-        $rpending_logfile_message, $is_encoded_data )
-      = @_;
-    my $fh     = undef;
-    my $fh_tee = undef;
+    my ( $class, @args ) = @_;
+
+    my %defaults = (
+        output_file              => undef,
+        line_separator           => undef,
+        rOpts                    => undef,
+        rpending_logfile_message => undef,
+        is_encoded_data          => undef,
+    );
+    my %args = ( %defaults, @args );
+
+    my $output_file              = $args{output_file};
+    my $line_separator           = $args{line_separator};
+    my $rOpts                    = $args{rOpts};
+    my $rpending_logfile_message = $args{rpending_logfile_message};
+    my $is_encoded_data          = $args{is_encoded_data};
+
+    my $fh = undef;
 
     my $output_file_open = 0;
 
@@ -45,12 +58,8 @@ EOM
 
     return bless {
         _fh               => $fh,
-        _fh_tee           => $fh_tee,
         _output_file      => $output_file,
         _output_file_open => $output_file_open,
-        _tee_flag         => 0,
-        _tee_file         => $tee_file,
-        _tee_file_opened  => 0,
         _line_separator   => $line_separator,
         _is_encoded_data  => $is_encoded_data,
     }, $class;
@@ -67,54 +76,6 @@ sub write_line {
 
     $fh->print($line) if ( $self->{_output_file_open} );
 
-    if ( $self->{_tee_flag} ) {
-        unless ( $self->{_tee_file_opened} ) { $self->really_open_tee_file() }
-        my $fh_tee = $self->{_fh_tee};
-        $fh_tee->print($line);
-    }
-    return;
-}
-
-sub write_tee_line {
-
-    # write line to tee file only...
-    # the original tee-on/tee-off method is being replaced because it
-    # did not allow simultaneous tee-ing and deleting
-
-    my ( $self, $line ) = @_;
-    chomp $line;
-    $line .= $self->{_line_separator};
-    unless ( $self->{_tee_file_opened} ) { $self->really_open_tee_file() }
-    my $fh_tee = $self->{_fh_tee};
-    $fh_tee->print($line);
-    return;
-}
-
-sub tee_on {
-    my $self = shift;
-    $self->{_tee_flag} = 1;
-    return;
-}
-
-sub tee_off {
-    my $self = shift;
-    $self->{_tee_flag} = 0;
-    return;
-}
-
-sub really_open_tee_file {
-    my $self            = shift;
-    my $tee_file        = $self->{_tee_file};
-    my $is_encoded_data = $self->{_is_encoded_data};
-
-    my ( $fh_tee, $filename ) =
-      Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
-    if ( !$fh_tee ) {
-        Perl::Tidy::Die("couldn't open TEE file $tee_file: $!\n");
-    }
-
-    $self->{_tee_file_opened} = 1;
-    $self->{_fh_tee}          = $fh_tee;
     return;
 }
 
@@ -126,23 +87,7 @@ sub close_output_file {
     if ( $output_file ne '-' && !ref $output_file ) {
         eval { $self->{_fh}->close() } if $self->{_output_file_open};
     }
-    $self->close_tee_file();
-    return;
-}
-
-sub close_tee_file {
-    my $self = shift;
-
-    # Only close physical files, not STDOUT and other objects
-    if ( $self->{_tee_file_opened} ) {
-        my $tee_file = $self->{_tee_file};
-        if ( $tee_file ne '-' && !ref $tee_file ) {
-            eval { $self->{_fh_tee}->close() };
-            $self->{_tee_file_opened} = 0;
-        }
-    }
     return;
 }
 
 1;
-

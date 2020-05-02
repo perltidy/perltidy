@@ -43,18 +43,6 @@ sub new {
     }, $class;
 }
 
-sub tee_on {
-    my $self = shift;
-    $self->{_line_sink_object}->tee_on();
-    return;
-}
-
-sub tee_off {
-    my $self = shift;
-    $self->{_line_sink_object}->tee_off();
-    return;
-}
-
 sub get_output_line_number {
     my $self = shift;
     return $self->{_output_line_number};
