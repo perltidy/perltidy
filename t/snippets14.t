@@ -24,7 +24,7 @@
 # To locate test #13 you can search for its name or the string '#13'
 
 use strict;
-use Test;
+use Test::More;
 use Carp;
 use Perl::Tidy;
 my $rparams;
@@ -1080,6 +1080,6 @@ foreach my $key ( sort keys %{$rtests} ) {
         }
     }
     else {
-        ok( $output, $expect );
+        is( $output, $expect, "$sname.$pname" );
     }
 }

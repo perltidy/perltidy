@@ -24,7 +24,7 @@
 # To locate test #13 you can search for its name or the string '#13'
 
 use strict;
-use Test;
+use Test::More;
 use Carp;
 use Perl::Tidy;
 my $rparams;
@@ -171,6 +171,8 @@ sub get_val() { }
 sub get_Val  () { }
 
 sub Get_val		() { }
+my $sub1=sub                     () { };
+my $sub2=sub () { };
 ----------
 
         'wngnu1' => <<'----------',
@@ -470,6 +472,8 @@ sub get_val() { }
 sub get_Val () { }
 
 sub Get_val () { }
+my $sub1 = sub () { };
+my $sub2 = sub () { };
 #18...........
         },
 
@@ -482,6 +486,8 @@ sub get_val() { }
 sub get_Val() { }
 
 sub Get_val() { }
+my $sub1 = sub() { };
+my $sub2 = sub() { };
 #19...........
         },
     };
@@ -535,6 +541,6 @@ foreach my $key ( sort keys %{$rtests} ) {
         }
     }
     else {
-        ok( $output, $expect );
+        is( $output, $expect, "$sname.$pname" );
     }
 }

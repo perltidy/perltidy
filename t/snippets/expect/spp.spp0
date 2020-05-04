@@ -3,3 +3,5 @@ sub get_val() { }
 sub get_Val() { }
 
 sub Get_val() { }
+my $sub1 = sub() { };
+my $sub2 = sub() { };

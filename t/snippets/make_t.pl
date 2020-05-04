@@ -283,7 +283,7 @@ $ename_string
 EOM
     $script .= <<'EOM';
 use strict;
-use Test;
+use Test::More;
 use Carp;
 use Perl::Tidy;
 my $rparams;
@@ -428,7 +428,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         }
     }
     else {
-        ok( $output, $expect );
+        is( $output, $expect, "$sname.$pname" );
     }
 }
 EOM
