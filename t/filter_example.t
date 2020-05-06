@@ -1,8 +1,9 @@
-# Test use of prefilter and postfilter parameters 
+# Test use of prefilter and postfilter parameters
 use strict;
 use Carp;
 use Perl::Tidy;
-use Test;
+use Test::More;
+my $name = 'filter_example';
 
 BEGIN {
     plan tests => 1;
@@ -47,19 +48,23 @@ ENDE
 my $output;
 my $stderr_string;
 my $errorfile_string;
-my $err = Perl::Tidy::perltidy(
-    argv => '-npro',  # fix for RT#127679, avoid reading unwanted .perltidyrc
+my $params = "";
+my $err    = Perl::Tidy::perltidy(
+
+    #argv => '-npro',  # fix for RT#127679, avoid reading unwanted .perltidyrc
+    argv       => '',
+    perltidyrc => \$params,    # avoid reading unwanted .perltidyrc
     prefilter =>
       sub { $_ = $_[0]; s/^\s*method\s+(\w.*)/sub METHOD_$1/gm; return $_ },
     postfilter  => sub { $_ = $_[0]; s/sub\s+METHOD_/method /gm; return $_ },
     source      => \$source,
     destination => \$output,
-    stderr    => \$stderr_string,
-    errorfile => \$errorfile_string,   # not used when -se flag is set
+    stderr      => \$stderr_string,
+    errorfile => \$errorfile_string,    # not used when -se flag is set
 );
 if ( $err || $stderr_string || $errorfile_string ) {
     ok(0);
 }
 else {
-    ok( $output, $expect );
+    is( $output, $expect, $name );
 }
