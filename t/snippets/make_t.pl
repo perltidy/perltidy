@@ -91,17 +91,60 @@ my @exp = glob("$ipath*");
 #print "exp=(@exp)\n";
 my $ix      = 0;
 my $rix_lookup = {};
-foreach my $file_exp (@exp) {
+my %is_basename;
+foreach my $file_exp (sort @exp) {
     my $estring = $get_string->($file_exp);
     my $ename   = $file_exp;
     if ( $ename =~ /([^\/]+)$/ ) { $ename = $1 }
     my ( $sname, $pname ) = split /\./, $ename;
+    my $sroot = ( $sname =~ /^([^\d]+)/ ) ? $1 : $sname;
+    if ( $sroot ne $sname && $pname ne 'def' ) { $is_basename{$pname}++ }
 
     $get_source->($sname);
     $get_param->($pname);
     push @{$rtests}, [ $ename, $pname, $sname, $estring ];
     $rix_lookup->{$ename} = $ix;
     $ix++;
+}
+
+# Find the base names.  NOTE: I tried packing by basename, which makes tracking
+# down errors a little easier, and makes the files change less frequently, but
+# the run times increased too much over the 'snippets*.t' packing method.  For
+# example, here are times recorded in April 2020 
+
+#    packing in 20 files, snippets1.t ... snippets20.t: 17.7 s 
+#    packing in 226 files, 105484.t ...  wngnu1.t:      44.7 s 
+
+# so there is over a factor of 2 increase in run time for the convenience of
+# packing by base name.  The extra time is due to continually reloading
+# perltidy for tiny snippets of code. Since I run 'make test' frequently, I
+# decided to stay with the snippets*.t packing.  I have left the base name
+# coding in just in case I ever need the basenames.
+
+my $rpacking_by_basename = {};
+foreach my $item ( @{$rtests} ) {
+    my ( $ename, $pname, $sname, $estring ) = @{$item};
+
+    # The base name is either $sname or $sroot
+    my $basename;
+    my $proot = ( $pname =~ /^([^\d]+)/ ) ? $1 : $pname;
+    my $sroot = ( $sname =~ /^([^\d]+)/ ) ? $1 : $sname;
+
+    if    ( $sname eq $pname ) { $basename = $sname }
+    elsif ( $sname eq $sroot ) { $basename = $sname }
+    elsif ( $sroot eq $proot ) { $basename = $sroot }
+    elsif ( $pname eq 'def' ) {
+        if   ( $is_basename{$sroot} ) { $basename = $sroot }
+        else                          { $basename = $sname }
+    }
+    else {
+        # shouldn't happen
+        $basename = "$sname-$pname";
+        print STDERR
+          "Unexpected filename $sname.$pname, using basename=$basename\n";
+    }
+    push @{$item}, $basename;
+    push @{ $rpacking_by_basename->{$basename} }, $item;
 }
 
 # assign indexes to existing packing locations 
@@ -186,6 +229,23 @@ EOM
 
 write_packing_list("$fpacking_list", $rpacking_list);
 print "Now run a 'make test' from the top directory to check these\n";
+
+# Example showing how to pack the snippet files using base names
+# See above note on the problem this causes with run times
+if (0) {
+    foreach my $basename ( sort keys %{$rpacking_by_basename} ) {
+        my @tests = @{ $rpacking_by_basename->{$basename} };
+        my $ofile = "/tmp/t/$basename.t";    ## FIXME: Just for testing
+        my $num   = @tests;
+        if ($num) {
+            make_snippet_t( $ofile, \@tests, $rparams, $rsources );
+            print "writing $num tests to $ofile\n";
+        }
+        else {
+            print STDERR "Strange; no files for $basename\n";
+        }
+    }
+}
 
 sub write_packing_list {
     my ( $ofile, $rpacking ) = @_;
@@ -405,30 +465,37 @@ foreach my $key ( sort keys %{$rtests} ) {
         errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
+        print STDERR "Error output received for test '$key'\n";
         if ($err) {
-            print STDERR
-              "This error received calling Perl::Tidy with '$sname' + '$pname'\n";
+            print STDERR "An error flag '$err' was returned\n";
             ok(!$err);
         }
         if ($stderr_string) {
             print STDERR "---------------------\n";
             print STDERR "<<STDERR>>\n$stderr_string\n";
             print STDERR "---------------------\n";
-            print STDERR
-              "This error received calling Perl::Tidy with '$sname' + '$pname'\n";
             ok(!$stderr_string);
         }
         if ($errorfile_string) {
             print STDERR "---------------------\n";
             print STDERR "<<.ERR file>>\n$errorfile_string\n";
             print STDERR "---------------------\n";
-            print STDERR
-              "This error received calling Perl::Tidy with '$sname' + '$pname'\n";
             ok(!$errorfile_string);
         }
     }
     else {
-        is( $output, $expect, "$sname.$pname" );
+        if ( !is( $output, $expect, $key ) ) {
+            my $leno = length($output);
+            my $lene = length($expect);
+            if ( $leno == $lene ) {
+                print STDERR
+"#> Test '$key' gave unexpected output.  Strings differ but both have length $leno\n";
+            }
+            else {
+                print STDERR
+"#> Test '$key' gave unexpected output.  String lengths differ: output=$leno, expected=$lene\n";
+            }
+        }
     }
 }
 EOM
