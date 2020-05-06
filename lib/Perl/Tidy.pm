@@ -915,9 +915,11 @@ EOM
         }
 
         # the 'source_object' supplies a method to read the input file
-        my $source_object =
-          Perl::Tidy::LineSource->new( $input_file, $rOpts,
-            $rpending_logfile_message );
+        my $source_object = Perl::Tidy::LineSource->new(
+            input_file               => $input_file,
+            rOpts                    => $rOpts,
+            rpending_logfile_message => $rpending_logfile_message,
+        );
         next unless ($source_object);
 
         my $max_iterations      = $rOpts->{'iterations'};
@@ -1069,8 +1071,11 @@ EOM
             $saw_md5{$digest} = 0;
         }
 
-        $source_object = Perl::Tidy::LineSource->new( \$buf, $rOpts,
-            $rpending_logfile_message );
+        $source_object = Perl::Tidy::LineSource->new(
+            input_file               => \$buf,
+            rOpts                    => $rOpts,
+            rpending_logfile_message => $rpending_logfile_message,
+        );
 
         # register this file name with the Diagnostics package
         $diagnostics_object->set_input_file($input_file)
@@ -1176,27 +1181,18 @@ EOM
 
         # the 'sink_object' knows how to write the output file
         my ( $sink_object, $postfilter_buffer );
-        if (   $postfilter
-            || $rOpts->{'assert-tidy'}
-            || $rOpts->{'assert-untidy'} )
-        {
-            $sink_object = Perl::Tidy::LineSink->new(
-                output_file              => \$postfilter_buffer,
-                line_separator           => $line_separator,
-                rOpts                    => $rOpts,
-                rpending_logfile_message => $rpending_logfile_message,
-                is_encoded_data          => $is_encoded_data,
-            );
-        }
-        else {
-            $sink_object = Perl::Tidy::LineSink->new(
-                output_file              => $output_file,
-                line_separator           => $line_separator,
-                rOpts                    => $rOpts,
-                rpending_logfile_message => $rpending_logfile_message,
-                is_encoded_data          => $is_encoded_data,
-            );
-        }
+        my $use_buffer =
+             $postfilter
+          || $rOpts->{'assert-tidy'}
+          || $rOpts->{'assert-untidy'};
+
+        $sink_object = Perl::Tidy::LineSink->new(
+            output_file    => $use_buffer ? \$postfilter_buffer : $output_file,
+            line_separator => $line_separator,
+            rOpts          => $rOpts,
+            rpending_logfile_message => $rpending_logfile_message,
+            is_encoded_data          => $is_encoded_data,
+        );
 
         #---------------------------------------------------------------
         # initialize the error logger for this file
@@ -1206,9 +1202,15 @@ EOM
         my $log_file = $fileroot . $dot . "LOG";
         if ($logfile_stream) { $log_file = $logfile_stream }
 
-        my $logger_object =
-          Perl::Tidy::Logger->new( $rOpts, $log_file, $warning_file,
-            $fh_stderr, $saw_extrude, $display_name, $is_encoded_data );
+        my $logger_object = Perl::Tidy::Logger->new(
+            rOpts           => $rOpts,
+            log_file        => $log_file,
+            warning_file    => $warning_file,
+            fh_stderr       => $fh_stderr,
+            saw_extruce     => $saw_extrude,
+            display_name    => $display_name,
+            is_encoded_data => $is_encoded_data,
+        );
         write_logfile_header(
             $rOpts,        $logger_object, $config_file,
             $rraw_options, $Windows_type,  $readable_options,
@@ -1288,10 +1290,13 @@ EOM
                 $formatter = $user_formatter;
             }
             elsif ( $rOpts->{'format'} eq 'html' ) {
-                $formatter =
-                  Perl::Tidy::HtmlWriter->new( $fileroot, $output_file,
-                    $actual_output_extension, $html_toc_extension,
-                    $html_src_extension );
+                $formatter = Perl::Tidy::HtmlWriter->new(
+                    input_file         => $fileroot,
+                    html_file          => $output_file,
+                    extension          => $actual_output_extension,
+                    html_toc_extension => $html_toc_extension,
+                    html_src_extension => $html_src_extension,
+                );
             }
             elsif ( $rOpts->{'format'} eq 'tidy' ) {
                 $formatter = Perl::Tidy::Formatter->new(
@@ -1349,9 +1354,11 @@ EOM
             if ( $iter < $max_iterations ) {
 
                 $sink_object->close_output_file();
-                $source_object =
-                  Perl::Tidy::LineSource->new( \$sink_buffer, $rOpts,
-                    $rpending_logfile_message );
+                $source_object = Perl::Tidy::LineSource->new(
+                    input_file               => \$sink_buffer,
+                    rOpts                    => $rOpts,
+                    rpending_logfile_message => $rpending_logfile_message,
+                );
 
                 # stop iterations if errors or converged
                 my $stop_now = $tokenizer->report_tokenization_errors();
@@ -1425,10 +1432,7 @@ EOM
         #---------------------------------------------------------------
         # Perform any postfilter operation
         #---------------------------------------------------------------
-        if (   $postfilter
-            || $rOpts->{'assert-tidy'}
-            || $rOpts->{'assert-untidy'} )
-        {
+        if ($use_buffer) {
             $sink_object->close_output_file();
             $sink_object = Perl::Tidy::LineSink->new(
                 output_file              => $output_file,
@@ -1461,9 +1465,11 @@ EOM
                 }
             }
 
-            $source_object =
-              Perl::Tidy::LineSource->new( \$buf, $rOpts,
-                $rpending_logfile_message );
+            $source_object = Perl::Tidy::LineSource->new(
+                input_file               => \$buf,
+                rOpts                    => $rOpts,
+                rpending_logfile_message => $rpending_logfile_message,
+            );
             while ( my $line = $source_object->get_line() ) {
                 $sink_object->write_line($line);
             }

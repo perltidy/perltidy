@@ -1421,9 +1421,11 @@ sub prepare_for_a_new_file {
         # make a new tokenizer
         my $rOpts = {};
         my $rpending_logfile_message;
-        my $source_object =
-          Perl::Tidy::LineSource->new( \$replacement_text, $rOpts,
-            $rpending_logfile_message );
+        my $source_object = Perl::Tidy::LineSource->new(
+            input_file               => \$replacement_text,
+            rOpts                    => $rOpts,
+            rpending_logfile_message => $rpending_logfile_message,
+        );
         my $tokenizer = Perl::Tidy::Tokenizer->new(
             source_object        => $source_object,
             logger_object        => $logger_object,

@@ -40,9 +40,22 @@ BEGIN {
 
 sub new {
 
-    my ( $class, $input_file, $html_file, $extension, $html_toc_extension,
-        $html_src_extension )
-      = @_;
+    my ( $class, @args ) = @_;
+
+    my %defaults = (
+        input_file         => undef,
+        html_file          => undef,
+        extension          => undef,
+        html_toc_extension => undef,
+        html_src_extension => undef,
+    );
+    my %args = ( %defaults, @args );
+
+    my $input_file         = $args{input_file};
+    my $html_file          = $args{html_file};
+    my $extension          = $args{extension};
+    my $html_toc_extension = $args{html_toc_extension};
+    my $html_src_extension = $args{html_src_extension};
 
     my $html_file_opened = 0;
     my $html_fh;
