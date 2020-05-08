@@ -127,12 +127,6 @@ use vars qw{
 
   $max_index_to_go
   $comma_count_in_batch
-  $last_nonblank_index_to_go
-  $last_nonblank_type_to_go
-  $last_nonblank_token_to_go
-  $last_last_nonblank_index_to_go
-  $last_last_nonblank_type_to_go
-  $last_last_nonblank_token_to_go
   @nonblank_lines_at_depth
   $starting_in_quote
   $ending_in_quote
@@ -185,11 +179,6 @@ use vars qw{
   $blank_lines_after_opening_block_pattern
   $blank_lines_before_closing_block_pattern
 
-  $last_nonblank_token
-  $last_nonblank_type
-  $last_last_nonblank_token
-  $last_last_nonblank_type
-  $last_nonblank_block_type
   $last_output_level
   %is_do_follower
   %is_if_brace_follower
@@ -282,8 +271,6 @@ use vars qw{
   $ASUB_PATTERN
   $ANYSUB_PATTERN
 
-  $NVARS
-
 };
 
 BEGIN {
@@ -305,8 +292,10 @@ BEGIN {
         _TOKEN_LENGTH_          => $i++,
         _TYPE_                  => $i++,
         _TYPE_SEQUENCE_         => $i++,
+
+        # Number of token variables; must be last in list:
+        _NVARS => $i++,
     };
-    $NVARS = 1 + _TYPE_SEQUENCE_;
 
     my @q;
 
@@ -650,11 +639,6 @@ sub new {
     $last_line_leading_level      = 0;
     $last_line_leading_type       = '#';
 
-    $last_nonblank_token        = ';';
-    $last_nonblank_type         = ';';
-    $last_last_nonblank_token   = ';';
-    $last_last_nonblank_type    = ';';
-    $last_nonblank_block_type   = "";
     $last_output_level          = 0;
     $looking_for_else           = 0;
     $embedded_tab_count         = 0;
@@ -676,6 +660,8 @@ sub new {
     %csc_block_label           = ();
 
     %saved_opening_indentation = ();
+
+    initialize_process_line_of_CODE();
 
     reset_block_text_accumulator();
 
@@ -791,13 +777,13 @@ sub check_token_array {
     my $self = shift;
 
     # Check for errors in the array of tokens
-    # Uses package variable $NVARS
     $self->check_self_hash();
     my $rLL = $self->{rLL};
     for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
         my $nvars = @{ $rLL->[$KK] };
-        if ( $nvars != $NVARS ) {
-            my $type = $rLL->[$KK]->[_TYPE_];
+        if ( $nvars != _NVARS ) {
+            my $NVARS = _NVARS;
+            my $type  = $rLL->[$KK]->[_TYPE_];
             $type = '*' unless defined($type);
             Fault(
 "number of vars for node $KK, type '$type', is $nvars but should be $NVARS"
@@ -867,25 +853,19 @@ sub prepare_for_new_input_lines {
     }
 
     $gnu_sequence_number++;    # increment output batch counter
-    %last_gnu_equals                = ();
-    %gnu_comma_count                = ();
-    %gnu_arrow_count                = ();
-    $line_start_index_to_go         = 0;
-    $max_gnu_item_index             = UNDEFINED_INDEX;
-    $index_max_forced_break         = UNDEFINED_INDEX;
-    $max_index_to_go                = UNDEFINED_INDEX;
-    $last_nonblank_index_to_go      = UNDEFINED_INDEX;
-    $last_nonblank_type_to_go       = '';
-    $last_nonblank_token_to_go      = '';
-    $last_last_nonblank_index_to_go = UNDEFINED_INDEX;
-    $last_last_nonblank_type_to_go  = '';
-    $last_last_nonblank_token_to_go = '';
-    $forced_breakpoint_count        = 0;
-    $forced_breakpoint_undo_count   = 0;
-    $rbrace_follower                = undef;
-    $summed_lengths_to_go[0]        = 0;
-    $comma_count_in_batch           = 0;
-    $starting_in_quote              = 0;
+    %last_gnu_equals              = ();
+    %gnu_comma_count              = ();
+    %gnu_arrow_count              = ();
+    $line_start_index_to_go       = 0;
+    $max_gnu_item_index           = UNDEFINED_INDEX;
+    $index_max_forced_break       = UNDEFINED_INDEX;
+    $max_index_to_go              = UNDEFINED_INDEX;
+    $forced_breakpoint_count      = 0;
+    $forced_breakpoint_undo_count = 0;
+    $rbrace_follower              = undef;
+    $summed_lengths_to_go[0]      = 0;
+    $comma_count_in_batch         = 0;
+    $starting_in_quote            = 0;
 
     destroy_one_line_block();
     return;
@@ -4844,7 +4824,81 @@ sub set_leading_whitespace {
     # define: space count of leading string which would apply if it
     # were the first token of a new line.
 
-    my ( $level_abs, $ci_level, $in_continued_quote ) = @_;
+    my ( $self, $Kj, $K_last_nonblank, $K_last_last_nonblank,
+        $level_abs, $ci_level, $in_continued_quote )
+      = @_;
+
+    if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
+        Fault("max_index_to_go is not defined");
+    }
+
+    # uses Global Symbols:
+    # "$bli_pattern"
+    # "$gnu_position_predictor"
+    # "$gnu_sequence_number"
+    # "$line_start_index_to_go"
+    # "$max_gnu_item_index"
+    # "$max_gnu_stack_index"
+    # "$max_index_to_go"
+    # "$rOpts_brace_left_and_indent"
+    # "$rOpts_continuation_indentation"
+    # "$rOpts_indent_columns"
+    # "$rOpts_line_up_parentheses"
+    # "$rOpts_maximum_line_length"
+    # "$rOpts_whitespace_cycle"
+    # "$whitespace_last_level"
+    # "%gnu_arrow_count"
+    # "%gnu_comma_count"
+    # "%is_assignment"
+    # "%is_if_unless_and_or_last_next_redo_return"
+    # "%last_gnu_equals"
+    # "%tightness"
+    # "%want_break_before"
+    # "@K_to_go"
+    # "@block_type_to_go"
+    # "@gnu_item_list"
+    # "@gnu_stack"
+    # "@leading_spaces_to_go"
+    # "@nesting_depth_to_go"
+    # "@old_breakpoint_to_go"
+    # "@reduced_spaces_to_go"
+    # "@token_lengths_to_go"
+    # "@tokens_to_go"
+    # "@types_to_go"
+    # "@whitespace_level_stack"
+
+    my $rbreak_container = $self->{rbreak_container};
+    my $rshort_nested    = $self->{rshort_nested};
+    my $rLL              = $self->{rLL};
+
+    # find needed previous nonblank tokens
+    my $last_nonblank_token      = '';
+    my $last_nonblank_type       = '';
+    my $last_nonblank_block_type = '';
+
+    # and previous nonblank tokens, just in this batch:
+    my $last_nonblank_token_in_batch     = '';
+    my $last_nonblank_type_in_batch      = '';
+    my $last_last_nonblank_type_in_batch = '';
+
+    if ( defined($K_last_nonblank) ) {
+        $last_nonblank_token      = $rLL->[$K_last_nonblank]->[_TOKEN_];
+        $last_nonblank_type       = $rLL->[$K_last_nonblank]->[_TYPE_];
+        $last_nonblank_block_type = $rLL->[$K_last_nonblank]->[_BLOCK_TYPE_];
+
+        if ( $K_last_nonblank >= $K_to_go[0] ) {
+            $last_nonblank_token_in_batch = $last_nonblank_token;
+            $last_nonblank_type_in_batch  = $last_nonblank_type;
+            if ( defined($K_last_last_nonblank)
+                && $K_last_last_nonblank > $K_to_go[0] )
+            {
+                $last_last_nonblank_type_in_batch =
+                  $rLL->[$K_last_last_nonblank]->[_TYPE_];
+            }
+        }
+    }
+
+    ################################################################
 
     # Adjust levels if necessary to recycle whitespace:
     # given $level_abs, the absolute level
@@ -5226,22 +5280,26 @@ sub set_leading_whitespace {
             $max_index_to_go == 1 && $types_to_go[0] eq 'b'
 
             # or previous character was one of these:
-            || $last_nonblank_type_to_go =~ /^([\:\?\,f])$/
+            || $last_nonblank_type_in_batch =~ /^([\:\?\,f])$/
 
             # or previous character was opening and this does not close it
-            || ( $last_nonblank_type_to_go eq '{' && $type ne '}' )
-            || ( $last_nonblank_type_to_go eq '(' and $type ne ')' )
+            || ( $last_nonblank_type_in_batch eq '{' && $type ne '}' )
+            || ( $last_nonblank_type_in_batch eq '(' and $type ne ')' )
 
             # or this token is one of these:
             || $type =~ /^([\.]|\|\||\&\&)$/
 
             # or this is a closing structure
-            || (   $last_nonblank_type_to_go eq '}'
-                && $last_nonblank_token_to_go eq $last_nonblank_type_to_go )
+            || (   $last_nonblank_type_in_batch eq '}'
+                && $last_nonblank_token_in_batch eq
+                $last_nonblank_type_in_batch )
 
             # or previous token was keyword 'return'
-            || ( $last_nonblank_type_to_go eq 'k'
-                && ( $last_nonblank_token_to_go eq 'return' && $type ne '{' ) )
+            || (
+                $last_nonblank_type_in_batch eq 'k'
+                && (   $last_nonblank_token_in_batch eq 'return'
+                    && $type ne '{' )
+            )
 
             # or starting a new line at certain keywords is fine
             || (   $type eq 'k'
@@ -5249,9 +5307,9 @@ sub set_leading_whitespace {
 
             # or this is after an assignment after a closing structure
             || (
-                $is_assignment{$last_nonblank_type_to_go}
+                $is_assignment{$last_nonblank_type_in_batch}
                 && (
-                    $last_last_nonblank_type_to_go =~ /^[\}\)\]]$/
+                    $last_last_nonblank_type_in_batch =~ /^[\}\)\]]$/
 
                     # and it is significantly to the right
                     || $gnu_position_predictor > $halfway
@@ -5265,13 +5323,13 @@ sub set_leading_whitespace {
             # back up 1 token if we want to break before that type
             # otherwise, we may strand tokens like '?' or ':' on a line
             if ( $line_start_index_to_go > 0 ) {
-                if ( $last_nonblank_type_to_go eq 'k' ) {
+                if ( $last_nonblank_type_in_batch eq 'k' ) {
 
-                    if ( $want_break_before{$last_nonblank_token_to_go} ) {
+                    if ( $want_break_before{$last_nonblank_token_in_batch} ) {
                         $line_start_index_to_go--;
                     }
                 }
-                elsif ( $want_break_before{$last_nonblank_type_to_go} ) {
+                elsif ( $want_break_before{$last_nonblank_type_in_batch} ) {
                     $line_start_index_to_go--;
                 }
             }
@@ -6857,7 +6915,7 @@ sub tight_paren_follows {
     # do blocks it can be preferable to keep the code compact
     # by returning a 'true' value.
 
-    # uses Global vars:  $rOpts, $SUB_PATTERN, $ASUB_PATTERN
+    # uses Global Symbols:  $rOpts, $ANYSUB_PATTERN
 
     return unless defined($K_ic);
     my $rLL = $self->{rLL};
@@ -6999,6 +7057,24 @@ sub copy_token_as_type {
     # for checking for indexing errors
     my ( $K_first, $K_last );
 
+    # past stored nonblank tokens
+    my (
+        $last_last_nonblank_token, $last_last_nonblank_type,
+        $last_nonblank_token,      $last_nonblank_type,
+        $last_nonblank_block_type, $K_last_nonblank_code,
+        $K_last_last_nonblank_code
+    );
+
+    sub initialize_process_line_of_CODE {
+        $last_nonblank_token       = ';';
+        $last_nonblank_type        = ';';
+        $last_last_nonblank_token  = ';';
+        $last_last_nonblank_type   = ';';
+        $last_nonblank_block_type  = "";
+        $K_last_nonblank_code      = undef;
+        $K_last_last_nonblank_code = undef;
+    }
+
     # Routine to place the current token into the output stream.
     # Called once per output token.
     sub store_token_to_go {
@@ -7086,19 +7162,12 @@ sub copy_token_as_type {
         # Define the indentation that this token would have if it started
         # a new line.  We have to do this now because we need to know this
         # when considering one-line blocks.
-        set_leading_whitespace( $level, $ci_level, $in_continued_quote );
+        $self->set_leading_whitespace( $Ktoken_vars, $K_last_nonblank_code,
+            $K_last_last_nonblank_code, $level, $ci_level,
+            $in_continued_quote );
 
-        # remember previous nonblank tokens seen
-        if ( $type ne 'b' ) {
-            $last_last_nonblank_index_to_go = $last_nonblank_index_to_go;
-            $last_last_nonblank_type_to_go  = $last_nonblank_type_to_go;
-            $last_last_nonblank_token_to_go = $last_nonblank_token_to_go;
-            $last_nonblank_index_to_go      = $max_index_to_go;
-            $last_nonblank_type_to_go       = $type;
-            $last_nonblank_token_to_go      = $token;
-            if ( $type eq ',' ) {
-                $comma_count_in_batch++;
-            }
+        if ( $type eq ',' ) {
+            $comma_count_in_batch++;
         }
 
         FORMATTER_DEBUG_FLAG_STORE && do {
@@ -7460,7 +7529,8 @@ sub copy_token_as_type {
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
-                  $self->starting_one_line_block( $Ktoken_vars, $K_first,
+                  $self->starting_one_line_block( $Ktoken_vars,
+                    $K_last_nonblank_code,
                     $K_last, $level, $slevel, $ci_level );
                 clear_breakpoint_undo_stack();
 
@@ -7757,11 +7827,13 @@ sub copy_token_as_type {
 
             # remember two previous nonblank OUTPUT tokens
             if ( $type ne '#' && $type ne 'b' ) {
-                $last_last_nonblank_token = $last_nonblank_token;
-                $last_last_nonblank_type  = $last_nonblank_type;
-                $last_nonblank_token      = $token;
-                $last_nonblank_type       = $type;
-                $last_nonblank_block_type = $block_type;
+                $last_last_nonblank_token  = $last_nonblank_token;
+                $last_last_nonblank_type   = $last_nonblank_type;
+                $last_nonblank_token       = $token;
+                $last_nonblank_type        = $type;
+                $last_nonblank_block_type  = $block_type;
+                $K_last_last_nonblank_code = $K_last_nonblank_code;
+                $K_last_nonblank_code      = $Ktoken_vars;
             }
 
             # unset the continued-quote flag since it only applies to the
@@ -7840,8 +7912,13 @@ sub process_batch_of_CODE {
     # debug stuff; this routine can be called from many points
     FORMATTER_DEBUG_FLAG_OUTPUT && do {
         my ( $a, $b, $c ) = caller;
+        my $token = my $type = "";
+        if ( $max_index_to_go >= 0 ) {
+            $token = $tokens_to_go[$max_index_to_go];
+            $type  = $types_to_go[$max_index_to_go];
+        }
         write_diagnostics(
-"OUTPUT: process_batch_of_CODE called: $a $c $last_nonblank_type $last_nonblank_token, one_line=$index_start_one_line_block, tokens to write=$max_index_to_go\n"
+"OUTPUT: process_batch_of_CODE called: $a $c at type='$type' tok='$token', one_line=$index_start_one_line_block, tokens to write=$max_index_to_go\n"
         );
         my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
         write_diagnostics("$output_str\n");
@@ -8211,7 +8288,19 @@ sub starting_one_line_block {
     # because otherwise we would always break at a semicolon within a one-line
     # block if the block contains multiple statements.
 
-    my ( $self, $Kj, $K_first, $K_last, $level, $slevel, $ci_level ) = @_;
+    my ( $self, $Kj, $K_last_nonblank, $K_last, $level, $slevel, $ci_level ) =
+      @_;
+
+    # uses Global Symbols:
+    # "$ANYSUB_PATTERN"
+    # "$index_max_forced_break"
+    # "$max_index_to_go"
+    # "%is_sort_map_grep"
+    # "%want_one_line_block"
+    # "@K_to_go"
+    # "@levels_to_go"
+    # "@tokens_to_go"
+    # "@types_to_go"
 
     my $rbreak_container = $self->{rbreak_container};
     my $rshort_nested    = $self->{rshort_nested};
@@ -8228,7 +8317,7 @@ sub starting_one_line_block {
 
     # shouldn't happen: there must have been a prior call to
     # store_token_to_go to put the opening brace in the output stream
-    if ( $max_index_to_go < 0 ) {
+    if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
         Fault("program bug: store_token_to_go called incorrectly\n");
     }
 
@@ -8240,18 +8329,24 @@ sub starting_one_line_block {
 
     my $block_type = $rLL->[$Kj]->[_BLOCK_TYPE_];
 
-    # find the starting keyword for this block (such as 'if', 'else', ...)
+    my $previous_nonblank_token = '';
+    my $i_last_nonblank         = -1;
+    if ( defined($K_last_nonblank) ) {
+        $i_last_nonblank         = $K_last_nonblank - $K_to_go[0];
+        $previous_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
+    }
 
+    # find the starting keyword for this block (such as 'if', 'else', ...)
     if ( $block_type =~ /^[\{\}\;\:]$/ || $block_type =~ /^package/ ) {
         $i_start = $max_index_to_go;
     }
 
     # the previous nonblank token should start these block types
-    elsif (( $last_last_nonblank_token_to_go eq $block_type )
+    elsif (( $i_last_nonblank >= 0 && $previous_nonblank_token eq $block_type )
         || $block_type =~ /$ANYSUB_PATTERN/
         || $block_type =~ /\(\)/ )
     {
-        $i_start = $last_last_nonblank_index_to_go;
+        $i_start = $i_last_nonblank;
 
         # For signatures and extended syntax ...
         # If this brace follows a parenthesized list, we should look back to
@@ -8273,7 +8368,7 @@ sub starting_one_line_block {
         }
     }
 
-    elsif ( $last_last_nonblank_token_to_go eq ')' ) {
+    elsif ( $previous_nonblank_token eq ')' ) {
 
         # For something like "if (xxx) {", the keyword "if" will be
         # just after the most recent break. This will be 0 unless

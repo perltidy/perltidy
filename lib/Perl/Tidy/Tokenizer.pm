@@ -2791,7 +2791,7 @@ sub prepare_for_a_new_file {
 
                             # Change type from 'Q' to 'h' for quotes with
                             # here-doc targets so that the formatter (see sub
-                            # print_line_of_tokens) will not make any line
+                            # process_line_of_CODE) will not make any line
                             # breaks after this point.
                             if ($rht) {
                                 push @{$rhere_target_list}, @{$rht};
