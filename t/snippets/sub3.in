@@ -1,0 +1,8 @@
+# keep these one-line blocks intact
+
+my $aa = sub
+#line 245 "Parse.yp"
+{ n_stmtexp $_[1] };
+
+my $bb = sub    #
+{ n_stmtexp $_[1] };

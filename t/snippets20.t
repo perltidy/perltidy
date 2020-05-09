@@ -3,6 +3,7 @@
 # Contents:
 #1 space6.def
 #2 space6.space6
+#3 sub3.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -39,6 +40,17 @@ print $x / $y;   # do not remove space before or after / here
 print $x/$y;     # do not add a space before the / here
 print $x+$y;     # do not add a space before the + here
 ----------
+
+        'sub3' => <<'----------',
+# keep these one-line blocks intact
+
+my $aa = sub
+#line 245 "Parse.yp"
+{ n_stmtexp $_[1] };
+
+my $bb = sub    #
+{ n_stmtexp $_[1] };
+----------
     };
 
     ####################################
@@ -68,6 +80,21 @@ print $x / $y;    # do not remove space before or after / here
 print $x/$y;      # do not add a space before the / here
 print $x+$y;      # do not add a space before the + here
 #2...........
+        },
+
+        'sub3.def' => {
+            source => "sub3",
+            params => "def",
+            expect => <<'#3...........',
+# keep these one-line blocks intact
+
+my $aa = sub
+#line 245 "Parse.yp"
+{ n_stmtexp $_[1] };
+
+my $bb = sub    #
+{ n_stmtexp $_[1] };
+#3...........
         },
     };
 
