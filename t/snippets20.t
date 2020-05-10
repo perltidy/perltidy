@@ -4,6 +4,9 @@
 #1 space6.def
 #2 space6.space6
 #3 sub3.def
+#4 wc.def
+#5 wc.wc1
+#6 wc.wc2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -26,6 +29,8 @@ BEGIN {
 -nwrs="+ - / *"
 -nwls="+ - / *"
 ----------
+        'wc1' => "-wc=4",
+        'wc2' => "-wc=4 -wn",
     };
 
     ############################
@@ -50,6 +55,24 @@ my $aa = sub
 
 my $bb = sub    #
 { n_stmtexp $_[1] };
+----------
+
+        'wc' => <<'----------',
+{
+    my (@indices) =
+      sort {
+        $dir eq 'left' ? $cells[$a] <=> $cells[$b] : $cells[$b] <=> $cells[$a];
+    } (0 .. $#cells);
+
+{{{{
+                    if ( !$array[0] ) {
+                        $array[0] =
+                          &$CantProcessPartFunc( $entity->{'fields'}{
+                          'content-type'} );
+                    }
+                    
+}}}}}
+
 ----------
     };
 
@@ -95,6 +118,85 @@ my $aa = sub
 my $bb = sub    #
 { n_stmtexp $_[1] };
 #3...........
+        },
+
+        'wc.def' => {
+            source => "wc",
+            params => "def",
+            expect => <<'#4...........',
+{
+    my (@indices) =
+      sort {
+        $dir eq 'left' ? $cells[$a] <=> $cells[$b] : $cells[$b] <=> $cells[$a];
+      } ( 0 .. $#cells );
+
+    {
+        {
+            {
+                {
+                    if ( !$array[0] ) {
+                        $array[0] =
+                          &$CantProcessPartFunc(
+                            $entity->{'fields'}{'content-type'} );
+                    }
+
+                }
+            }
+        }
+    }
+}
+
+#4...........
+        },
+
+        'wc.wc1' => {
+            source => "wc",
+            params => "wc1",
+            expect => <<'#5...........',
+{
+    my (@indices) =
+      sort {
+        $dir eq 'left' ? $cells[$a] <=> $cells[$b] : $cells[$b] <=> $cells[$a];
+      } ( 0 .. $#cells );
+
+    {
+        {
+            {
+                {
+    if ( !$array[0] ) {
+        $array[0] =
+          &$CantProcessPartFunc( $entity->{'fields'}{'content-type'} );
+    }
+
+                }
+            }
+        }
+    }
+}
+
+#5...........
+        },
+
+        'wc.wc2' => {
+            source => "wc",
+            params => "wc2",
+            expect => <<'#6...........',
+{
+    my (@indices) =
+      sort {
+        $dir eq 'left' ? $cells[$a] <=> $cells[$b] : $cells[$b] <=> $cells[$a];
+      } ( 0 .. $#cells );
+
+    { { { {
+        if ( !$array[0] ) {
+            $array[0] =
+              &$CantProcessPartFunc( $entity->{'fields'}{'content-type'} );
+        }
+
+    } } } }
+}
+
+#6...........
         },
     };
 

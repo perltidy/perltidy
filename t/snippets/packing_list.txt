@@ -234,6 +234,7 @@
 ../snippets2.t	ce1.def
 ../snippets20.t	space6.def
 ../snippets20.t	space6.space6
+../snippets20.t	sub3.def
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -374,3 +375,6 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets20.t	wc.def
+../snippets20.t	wc.wc1
+../snippets20.t	wc.wc2
