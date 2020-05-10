@@ -232,7 +232,6 @@ use vars qw{
   $keyword_group_list_pattern
   $keyword_group_list_comment_pattern
 
-  $rOpts_brace_left_and_indent
   $rOpts_closing_side_comment_maximum_text
   $rOpts_continuation_indentation
   $rOpts_indent_columns
@@ -1630,6 +1629,7 @@ sub write_line {
                 # Negative values can occur in files with unbalanced containers
                 my $slevel = $rslevels->[$j];
                 if ( $slevel < 0 ) { $slevel = 0 }
+                if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
 
                 my @tokary;
                 @tokary[
@@ -4527,6 +4527,25 @@ sub whitespace_cycle_adjustment {
     return;
 }
 
+sub bli_adjustment {
+
+    # if -bli is set, adds one continuation indentation for certain braces
+    my $self = shift;
+    return unless ($rOpts->{'brace-left-and-indent'});
+    my $rLL = $self->{rLL};
+    return unless ( defined($rLL) && @{$rLL} );
+    my $KNEXT = 0;
+    while ( defined($KNEXT) ) {
+        my $KK = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        if ( $block_type && $block_type =~ /$bli_pattern/ ) {
+            $rLL->[$KK]->[_CI_LEVEL_]++;
+        }
+    }
+    return;
+}
+
 sub link_sequence_items {
 
     # This has been merged into 'respace_tokens' but retained for reference
@@ -4765,6 +4784,9 @@ sub finish_formatting {
     # Set adjusted levels for the whitespace cycle option
     $self->whitespace_cycle_adjustment(); 
 
+    # Adjust continuation indentation if -bli is set
+    $self->bli_adjustment();
+
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
     # new line breaks and then return so that we can do an internal iteration
@@ -4893,14 +4915,12 @@ sub set_leading_whitespace {
     }
 
     # uses Global Symbols:
-    # "$bli_pattern"
     # "$gnu_position_predictor"
     # "$gnu_sequence_number"
     # "$line_start_index_to_go"
     # "$max_gnu_item_index"
     # "$max_gnu_stack_index"
     # "$max_index_to_go"
-    # "$rOpts_brace_left_and_indent"
     # "$rOpts_continuation_indentation"
     # "$rOpts_indent_columns"
     # "$rOpts_line_up_parentheses"
@@ -4964,18 +4984,9 @@ sub set_leading_whitespace {
         $level = $radjusted_levels->[$Kj];
     }
 
-    # modify for -bli, which adds one continuation indentation for
-    # opening braces
-    if (   $rOpts_brace_left_and_indent
-        && $max_index_to_go == 0
-        && $block_type_to_go[$max_index_to_go] =~ /$bli_pattern/ )
-    {
-        $ci_level++;
-    }
-
     # patch to avoid trouble when input file has negative indentation.
     # other logic should catch this error.
-    if ( $level < 0 ) { $level = 0 }
+    ##if ( $level < 0 ) { $level = 0 }
 
     #-------------------------------------------
     # handle the standard indentation scheme
@@ -6047,7 +6058,6 @@ EOM
     }
 
     # very frequently used parameters made global for efficiency
-    $rOpts_brace_left_and_indent = $rOpts->{'brace-left-and-indent'};
     $rOpts_closing_side_comment_maximum_text =
       $rOpts->{'closing-side-comment-maximum-text'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
@@ -11240,7 +11250,7 @@ sub lookup_opening_indentation {
 
                 # Patch for RT#131115: honor -bli flag at closing brace
                 my $is_bli =
-                     $rOpts_brace_left_and_indent
+    		     $rOpts->{'brace-left-and-indent'}
                   && $block_type_to_go[$i_terminal]
                   && $block_type_to_go[$i_terminal] =~ /$bli_pattern/;
 
