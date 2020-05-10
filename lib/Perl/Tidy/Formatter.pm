@@ -239,7 +239,6 @@ use vars qw{
   $rOpts_line_up_parentheses
   $rOpts_maximum_line_length
   $rOpts_variable_maximum_line_length
-  $rOpts_whitespace_cycle
 
   %is_opening_type
   %is_closing_type
@@ -6057,7 +6056,6 @@ EOM
     $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
-    $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
