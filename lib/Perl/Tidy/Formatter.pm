@@ -130,8 +130,6 @@ use vars qw{
   @nonblank_lines_at_depth
   $starting_in_quote
   $ending_in_quote
-  @whitespace_level_stack
-  $whitespace_last_level
 
   $format_skipping_pattern_begin
   $format_skipping_pattern_end
@@ -621,9 +619,6 @@ sub new {
     @inext_to_go                 = ();
     @iprev_to_go                 = ();
 
-    @whitespace_level_stack = ();
-    $whitespace_last_level  = -1;
-
     @dont_align         = ();
     @has_broken_sublist = ();
     @want_comma_break   = ();
@@ -715,6 +710,7 @@ sub new {
         sink_object                => $sink_object,
         logger_object              => $logger_object,
         file_writer_object => $file_writer_object,
+        radjusted_levels   => [],
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -4470,6 +4466,68 @@ sub weld_len_right_to_go {
     return $weld_len;
 }
 
+sub whitespace_cycle_adjustment {
+
+    my $self = shift;
+    my $rLL  = $self->{rLL};
+    return unless ( defined($rLL) && @{$rLL} );
+    my $radjusted_levels;
+    my $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
+    if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle > 0 ) {
+        my $whitespace_last_level = -1;
+        my @whitespace_level_stack = ();
+        my $last_nonblank_type = 'b';
+        my $last_nonblank_token = '';
+        my $Kmax = @{$rLL} - 1;
+        foreach my $KK ( 0 .. $Kmax ) {
+            my $level_abs = $rLL->[$KK]->[_LEVEL_];
+            my $level     = $level_abs;
+            if ( $level_abs < $whitespace_last_level ) {
+                pop(@whitespace_level_stack);
+            }
+            if ( !@whitespace_level_stack ) {
+                push @whitespace_level_stack, $level_abs;
+            }
+            elsif ( $level_abs > $whitespace_last_level ) {
+                $level = $whitespace_level_stack[-1] +
+                  ( $level_abs - $whitespace_last_level );
+
+                if (
+                    # 1 Try to break at a block brace
+                    (
+                           $level > $rOpts_whitespace_cycle
+                        && $last_nonblank_type eq '{'
+                        && $last_nonblank_token eq '{'
+                    )
+
+                    # 2 Then either a brace or bracket
+                    || (   $level > $rOpts_whitespace_cycle + 1
+                        && $last_nonblank_token =~ /^[\{\[]$/ )
+
+                    # 3 Then a paren too
+                    || $level > $rOpts_whitespace_cycle + 2
+                  )
+                {
+                    $level = 1;
+                }
+                push @whitespace_level_stack, $level;
+            }
+            $level = $whitespace_level_stack[-1];
+            $radjusted_levels->[$KK] = $level;
+
+            $whitespace_last_level = $level_abs;
+            my $type  = $rLL->[$KK]->[_TYPE_];
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( $type ne 'b' ) {
+                $last_nonblank_type  = $type;
+                $last_nonblank_token = $token;
+            }
+        }
+    }
+    $self->{radjusted_levels} = $radjusted_levels;
+    return;
+}
+
 sub link_sequence_items {
 
     # This has been merged into 'respace_tokens' but retained for reference
@@ -4705,6 +4763,9 @@ sub finish_formatting {
     # Locate small nested blocks which should not be broken
     $self->mark_short_nested_blocks();
 
+    # Set adjusted levels for the whitespace cycle option
+    $self->whitespace_cycle_adjustment(); 
+
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
     # new line breaks and then return so that we can do an internal iteration
@@ -4845,8 +4906,6 @@ sub set_leading_whitespace {
     # "$rOpts_indent_columns"
     # "$rOpts_line_up_parentheses"
     # "$rOpts_maximum_line_length"
-    # "$rOpts_whitespace_cycle"
-    # "$whitespace_last_level"
     # "%gnu_arrow_count"
     # "%gnu_comma_count"
     # "%is_assignment"
@@ -4865,7 +4924,6 @@ sub set_leading_whitespace {
     # "@token_lengths_to_go"
     # "@tokens_to_go"
     # "@types_to_go"
-    # "@whitespace_level_stack"
 
     my $rbreak_container = $self->{rbreak_container};
     my $rshort_nested    = $self->{rshort_nested};
@@ -4901,43 +4959,11 @@ sub set_leading_whitespace {
     ################################################################
 
     # Adjust levels if necessary to recycle whitespace:
-    # given $level_abs, the absolute level
-    # define $level, a possibly reduced level for whitespace
-    my $level = $level_abs;
-    if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle > 0 ) {
-        if ( $level_abs < $whitespace_last_level ) {
-            pop(@whitespace_level_stack);
-        }
-        if ( !@whitespace_level_stack ) {
-            push @whitespace_level_stack, $level_abs;
-        }
-        elsif ( $level_abs > $whitespace_last_level ) {
-            $level = $whitespace_level_stack[-1] +
-              ( $level_abs - $whitespace_last_level );
-
-            if (
-                # 1 Try to break at a block brace
-                (
-                       $level > $rOpts_whitespace_cycle
-                    && $last_nonblank_type eq '{'
-                    && $last_nonblank_token eq '{'
-                )
-
-                # 2 Then either a brace or bracket
-                || (   $level > $rOpts_whitespace_cycle + 1
-                    && $last_nonblank_token =~ /^[\{\[]$/ )
-
-                # 3 Then a paren too
-                || $level > $rOpts_whitespace_cycle + 2
-              )
-            {
-                $level = 1;
-            }
-            push @whitespace_level_stack, $level;
-        }
-        $level = $whitespace_level_stack[-1];
+    my $level            = $level_abs;
+    my $radjusted_levels = $self->{radjusted_levels};
+    if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
+        $level = $radjusted_levels->[$Kj];
     }
-    $whitespace_last_level = $level_abs;
 
     # modify for -bli, which adds one continuation indentation for
     # opening braces
