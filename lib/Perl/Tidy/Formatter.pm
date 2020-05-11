@@ -126,7 +126,6 @@ use vars qw{
   %saved_opening_indentation
 
   $max_index_to_go
-  $comma_count_in_batch
   @nonblank_lines_at_depth
   $starting_in_quote
   $ending_in_quote
@@ -181,8 +180,6 @@ use vars qw{
   %is_do_follower
   %is_if_brace_follower
   %space_after_keyword
-  $rbrace_follower
-  $looking_for_else
   %is_last_next_redo_return
   %is_other_brace_follower
   %is_else_brace_follower
@@ -205,8 +202,6 @@ use vars qw{
   @want_comma_break
 
   $is_static_block_comment
-  $index_start_one_line_block
-  $semicolons_before_block_self_destruct
   $index_max_forced_break
   $input_line_number
   $diagnostics_object
@@ -633,7 +628,6 @@ sub new {
     $last_line_leading_type       = '#';
 
     $last_output_level          = 0;
-    $looking_for_else           = 0;
     $embedded_tab_count         = 0;
     $first_embedded_tab_at      = 0;
     $last_embedded_tab_at       = 0;
@@ -856,12 +850,10 @@ sub prepare_for_new_input_lines {
     $max_index_to_go              = UNDEFINED_INDEX;
     $forced_breakpoint_count      = 0;
     $forced_breakpoint_undo_count = 0;
-    $rbrace_follower              = undef;
     $summed_lengths_to_go[0]      = 0;
-    $comma_count_in_batch         = 0;
     $starting_in_quote            = 0;
 
-    destroy_one_line_block();
+    initialize_batch_variables();
     return;
 }
 
@@ -1445,15 +1437,15 @@ sub process_all_lines {
                 # old blank lines and let the blank line rules generate any
                 # needed blanks.
 
-                # We also delete lines requested by the keyword-group logic
+                # and delete lines requested by the keyword-group logic
                 my $kgb_keep = !( defined( $rwant_blank_line_after->{$i} )
                     && $rwant_blank_line_after->{$i} == 2 );
 
-                # But the keep-old-blank-lines flag has priority over kgb flags
+                # But: the keep-old-blank-lines flag has priority over kgb flags
                 $kgb_keep = 1 if ( $rOpts_keep_old_blank_lines == 2 );
 
                 if ( $rOpts_keep_old_blank_lines && $kgb_keep ) {
-                    $self->flush();
+                    $self->flush($CODE_type);
                     $file_writer_object->write_blank_code_line(
                         $rOpts_keep_old_blank_lines == 2 );
                     $last_line_leading_type = 'b';
@@ -4819,18 +4811,6 @@ sub finish_formatting {
     return;
 }
 
-sub create_one_line_block {
-    ( $index_start_one_line_block, $semicolons_before_block_self_destruct ) =
-      @_;
-    return;
-}
-
-sub destroy_one_line_block {
-    $index_start_one_line_block            = UNDEFINED_INDEX;
-    $semicolons_before_block_self_destruct = 0;
-    return;
-}
-
 sub leading_spaces_to_go {
 
     # return the number of indentation spaces for a token in the output stream;
@@ -4901,7 +4881,7 @@ sub new_lp_indentation_item {
 
 sub set_leading_whitespace {
 
-    # This routine defines leading whitespace
+    # This routine defines leading whitespace for the case of -lp formatting
     # given: the level and continuation_level of a token,
     # define: space count of leading string which would apply if it
     # were the first token of a new line.
@@ -4910,9 +4890,8 @@ sub set_leading_whitespace {
         $level_abs, $ci_level, $in_continued_quote )
       = @_;
 
-    if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
-        Fault("max_index_to_go is not defined");
-    }
+    return unless ($rOpts_line_up_parentheses); 
+    return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 ); 
 
     # uses Global Symbols:
     # "$gnu_position_predictor"
@@ -4983,33 +4962,6 @@ sub set_leading_whitespace {
     if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
         $level = $radjusted_levels->[$Kj];
     }
-
-    # patch to avoid trouble when input file has negative indentation.
-    # other logic should catch this error.
-    ##if ( $level < 0 ) { $level = 0 }
-
-    #-------------------------------------------
-    # handle the standard indentation scheme
-    #-------------------------------------------
-    unless ($rOpts_line_up_parentheses) {
-        my $space_count =
-          $ci_level * $rOpts_continuation_indentation +
-          $level * $rOpts_indent_columns;
-        my $ci_spaces =
-          ( $ci_level == 0 ) ? 0 : $rOpts_continuation_indentation;
-
-        if ($in_continued_quote) {
-            $space_count = 0;
-            $ci_spaces   = 0;
-        }
-        $leading_spaces_to_go[$max_index_to_go] = $space_count;
-        $reduced_spaces_to_go[$max_index_to_go] = $space_count - $ci_spaces;
-        return;
-    }
-
-    #-------------------------------------------------------------
-    # handle case of -lp indentation..
-    #-------------------------------------------------------------
 
     # The continued_quote flag means that this is the first token of a
     # line, and it is the continuation of some kind of multi-line quote
@@ -7093,10 +7045,10 @@ sub copy_token_as_type {
 
     # past stored nonblank tokens
     my (
-        $last_last_nonblank_token, $last_last_nonblank_type,
-        $last_nonblank_token,      $last_nonblank_type,
-        $last_nonblank_block_type, $K_last_nonblank_code,
-        $K_last_last_nonblank_code
+        $last_last_nonblank_token,  $last_last_nonblank_type,
+        $last_nonblank_token,       $last_nonblank_type,
+        $last_nonblank_block_type,  $K_last_nonblank_code,
+        $K_last_last_nonblank_code, $looking_for_else,
     );
 
     sub initialize_process_line_of_CODE {
@@ -7107,6 +7059,30 @@ sub copy_token_as_type {
         $last_nonblank_block_type  = "";
         $K_last_nonblank_code      = undef;
         $K_last_last_nonblank_code = undef;
+        $looking_for_else          = 0;
+    }
+
+    # batch variables
+    my ( $rbrace_follower, $index_start_one_line_block,
+        $semicolons_before_block_self_destruct, $comma_count_in_batch );
+
+    # called at the start of each new batch
+    sub initialize_batch_variables {
+        $rbrace_follower      = undef;
+        $comma_count_in_batch = 0;
+        destroy_one_line_block();
+    }
+
+    sub create_one_line_block {
+        ( $index_start_one_line_block, $semicolons_before_block_self_destruct ) =
+          @_;
+        return;
+    }
+    
+    sub destroy_one_line_block {
+        $index_start_one_line_block            = UNDEFINED_INDEX;
+        $semicolons_before_block_self_destruct = 0;
+        return;
     }
 
     # Routine to place the current token into the output stream.
@@ -7158,14 +7134,8 @@ sub copy_token_as_type {
         $mate_index_to_go[$max_index_to_go]            = -1;
         $bond_strength_to_go[$max_index_to_go]         = 0;
 
-        # Note: negative levels are currently retained as a diagnostic so that
-        # the 'final indentation level' is correctly reported for bad scripts.
-        # But this means that every use of $level as an index must be checked.
-        # If this becomes too much of a problem, we might give up and just clip
-        # them at zero.
-        ## $levels_to_go[$max_index_to_go] = ( $level > 0 ) ? $level : 0;
         $levels_to_go[$max_index_to_go]        = $level;
-        $nesting_depth_to_go[$max_index_to_go] = ( $slevel >= 0 ) ? $slevel : 0;
+        $nesting_depth_to_go[$max_index_to_go] = $slevel;
 
         # link the non-blank tokens
         my $iprev = $max_index_to_go - 1;
@@ -7194,11 +7164,31 @@ sub copy_token_as_type {
           $token_lengths_to_go[$max_index_to_go];
 
         # Define the indentation that this token would have if it started
-        # a new line.  We have to do this now because we need to know this
-        # when considering one-line blocks.
-        $self->set_leading_whitespace( $Ktoken_vars, $K_last_nonblank_code,
-            $K_last_last_nonblank_code, $level, $ci_level,
-            $in_continued_quote );
+        # a new line.  We start by using the default formula.
+        # First Adjust levels if necessary to recycle whitespace:
+        my $level_wc            = $level;
+        my $radjusted_levels = $self->{radjusted_levels};
+        if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
+            $level_wc = $radjusted_levels->[$Ktoken_vars];
+        }
+        my $space_count =
+          $ci_level * $rOpts_continuation_indentation +
+          $level_wc * $rOpts_indent_columns;
+        my $ci_spaces =
+          ( $ci_level == 0 ) ? 0 : $rOpts_continuation_indentation;
+        if ($in_continued_quote) {
+            $space_count = 0;
+            $ci_spaces   = 0;
+        }
+        $leading_spaces_to_go[$max_index_to_go] = $space_count;
+        $reduced_spaces_to_go[$max_index_to_go] = $space_count - $ci_spaces;
+
+        # Correct these values if -lp is used
+        if ($rOpts_line_up_parentheses) {
+            $self->set_leading_whitespace( $Ktoken_vars, $K_last_nonblank_code,
+                $K_last_last_nonblank_code, $level, $ci_level,
+                $in_continued_quote );
+        }
 
         if ( $type eq ',' ) {
             $comma_count_in_batch++;
@@ -7209,6 +7199,43 @@ sub copy_token_as_type {
             print STDOUT
 "STORE: from $a $c: storing token $token type $type lev=$level slev=$slevel at $max_index_to_go\n";
         };
+        return;
+    }
+
+    sub end_batch {
+
+        # end the current batch, except for a few special cases
+        my ($self) = @_;
+
+        # Do not end line in a weld
+        return if ( weld_len_right_to_go($max_index_to_go) );
+
+        # just set a tentative breakpoint if we might be in a one-line block
+        if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
+            set_forced_breakpoint($max_index_to_go);
+            return;
+        }
+
+        $self->process_batch_of_CODE($comma_count_in_batch);
+        return;
+    }
+
+    # flush is called to output any tokens in the pipeline, so that
+    # an alternate source of lines can be written in the correct order
+    sub flush {
+        my ($self, $CODE_type) = @_;
+        destroy_one_line_block();
+
+        # if we are flushing within the code stream to insert blank line(s),
+        # then we can keep the batch intact at a weld. This improves
+        # formatting of -ce.  See test 'ce1.ce'
+        if ( $CODE_type && $CODE_type eq 'BL' ) { $self->end_batch() }
+
+        # otherwise, we have to shut things down completely.
+        else { $self->process_batch_of_CODE($comma_count_in_batch) }
+
+        $self->end_batch();
+        Perl::Tidy::VerticalAligner::flush();
         return;
     }
 
@@ -7323,7 +7350,7 @@ sub copy_token_as_type {
             }
 
             destroy_one_line_block();
-            $self->process_batch_of_CODE();
+            $self->end_batch();
 
             # output a blank line before block comments
             if (
@@ -7360,7 +7387,7 @@ sub copy_token_as_type {
             {
                 my $Ktoken_vars = $K_first;
                 $self->store_token_to_go($Ktoken_vars);
-                $self->process_batch_of_CODE();
+                $self->end_batch();
             }
             else {
                 $self->flush();    # switching to new output stream
@@ -7423,7 +7450,7 @@ sub copy_token_as_type {
             $rtoken_vars->[_TOKEN_LENGTH_] = length($line);
 
             $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
-            $self->process_batch_of_CODE();
+            $self->end_batch();
             return;
         }
 
@@ -7459,7 +7486,7 @@ sub copy_token_as_type {
             $forced_breakpoint_to_go[$max_index_to_go] = 1
               if ($rOpts_break_at_old_comma_breakpoints);
             destroy_one_line_block();
-            $self->process_batch_of_CODE();
+            $self->end_batch();
         }
 
         # loop to process the tokens one-by-one
@@ -7507,7 +7534,7 @@ sub copy_token_as_type {
             if ( $rbrace_follower && $type ne 'b' ) {
 
                 unless ( $rbrace_follower->{$token} ) {
-                    $self->process_batch_of_CODE();
+                    $self->end_batch();
                 }
                 $rbrace_follower = undef;
             }
@@ -7622,7 +7649,7 @@ sub copy_token_as_type {
                         $self->unstore_token_to_go();
 
                         # then output the line
-                        $self->process_batch_of_CODE();
+                        $self->end_batch();
 
                         # and now store this token at the start of a new line
                         $self->store_token_to_go($Ktoken_vars);
@@ -7634,7 +7661,7 @@ sub copy_token_as_type {
 
                 # now output this line
                 unless ($no_internal_newlines) {
-                    $self->process_batch_of_CODE();
+                    $self->end_batch();
                 }
             }
 
@@ -7667,7 +7694,7 @@ sub copy_token_as_type {
                 {
 
                     # write out everything before this closing curly brace
-                    $self->process_batch_of_CODE();
+                    $self->end_batch();
                 }
 
                 # Now update for side comment
@@ -7720,7 +7747,7 @@ sub copy_token_as_type {
                         && $next_nonblank_token ne ';'
                       )
                     {
-                        $self->process_batch_of_CODE()
+                        $self->end_batch()
                           unless ($no_internal_newlines);
                     }
                 }
@@ -7797,7 +7824,7 @@ sub copy_token_as_type {
                     && $rOpts_add_newlines )
                 {
                     unless ($rbrace_follower) {
-                        $self->process_batch_of_CODE()
+                        $self->end_batch()
                           unless ($no_internal_newlines);
                     }
                 }
@@ -7805,14 +7832,14 @@ sub copy_token_as_type {
                 elsif ($rbrace_follower) {
 
                     unless ( $rbrace_follower->{$next_nonblank_token} ) {
-                        $self->process_batch_of_CODE()
+                        $self->end_batch()
                           unless ($no_internal_newlines);
                     }
                     $rbrace_follower = undef;
                 }
 
                 else {
-                    $self->process_batch_of_CODE()
+                    $self->end_batch()
                       unless ($no_internal_newlines);
                 }
 
@@ -7834,7 +7861,7 @@ sub copy_token_as_type {
 
                 $self->store_token_to_go($Ktoken_vars);
 
-                $self->process_batch_of_CODE()
+                $self->end_batch()
                   unless (
                     $no_internal_newlines
                     || (   $rOpts_keep_interior_semicolons
@@ -7908,7 +7935,7 @@ sub copy_token_as_type {
           )
         {
             destroy_one_line_block();
-            $self->process_batch_of_CODE();
+            $self->end_batch();
         }
 
         # mark old line breakpoints in current output stream
@@ -7935,7 +7962,7 @@ sub consecutive_nonblank_lines {
 # arrays.
 sub process_batch_of_CODE {
 
-    my $self = shift;
+    my ($self, $comma_count_in_batch ) = @_;
     my $rLL  = $self->{rLL};
 
     my $rOpts_add_newlines              = $rOpts->{'add-newlines'};
@@ -7952,20 +7979,11 @@ sub process_batch_of_CODE {
             $type  = $types_to_go[$max_index_to_go];
         }
         write_diagnostics(
-"OUTPUT: process_batch_of_CODE called: $a $c at type='$type' tok='$token', one_line=$index_start_one_line_block, tokens to write=$max_index_to_go\n"
+"OUTPUT: process_batch_of_CODE called: $a $c at type='$type' tok='$token', tokens to write=$max_index_to_go\n"
         );
         my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
         write_diagnostics("$output_str\n");
     };
-
-    # Do not end line in a weld
-    return if ( weld_len_right_to_go($max_index_to_go) );
-
-    # just set a tentative breakpoint if we might be in a one-line block
-    if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
-        set_forced_breakpoint($max_index_to_go);
-        return;
-    }
 
     my $comma_arrow_count_contained = match_opening_and_closing_tokens();
 
@@ -8367,7 +8385,9 @@ sub starting_one_line_block {
     my $i_last_nonblank         = -1;
     if ( defined($K_last_nonblank) ) {
         $i_last_nonblank         = $K_last_nonblank - $K_to_go[0];
-        $previous_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
+        if ($i_last_nonblank >=0) {
+            $previous_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
+        }
     }
 
     # find the starting keyword for this block (such as 'if', 'else', ...)
@@ -9457,17 +9477,6 @@ sub correct_lp_indentation {
         }
     }
     return $do_not_pad;
-}
-
-# flush is called to output any tokens in the pipeline, so that
-# an alternate source of lines can be written in the correct order
-
-sub flush {
-    my $self = shift;
-    destroy_one_line_block();
-    $self->process_batch_of_CODE();
-    Perl::Tidy::VerticalAligner::flush();
-    return;
 }
 
 sub reset_block_text_accumulator {
