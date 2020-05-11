@@ -7234,7 +7234,6 @@ sub copy_token_as_type {
         # otherwise, we have to shut things down completely.
         else { $self->process_batch_of_CODE($comma_count_in_batch) }
 
-        $self->end_batch();
         Perl::Tidy::VerticalAligner::flush();
         return;
     }
