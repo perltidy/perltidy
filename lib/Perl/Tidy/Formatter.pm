@@ -8389,9 +8389,12 @@ sub starting_one_line_block {
     }
 
     # the previous nonblank token should start these block types
-    elsif (( $i_last_nonblank >= 0 && $previous_nonblank_token eq $block_type )
-        || $block_type =~ /$ANYSUB_PATTERN/
-        || $block_type =~ /\(\)/ )
+    elsif (
+        $i_last_nonblank >= 0
+        && (   $previous_nonblank_token eq $block_type
+            || $block_type =~ /$ANYSUB_PATTERN/
+            || $block_type =~ /\(\)/ )
+      )
     {
         $i_start = $i_last_nonblank;
 
