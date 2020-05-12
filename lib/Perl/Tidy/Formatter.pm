@@ -7430,7 +7430,7 @@ sub copy_token_as_type {
             # Fix for rt #125506 Unexpected string formating
             # in which leading space of a terminal quote was removed
             $line =~ s/\s+$//;
-            $line =~ s/^\s+// unless ($in_continued_quote);
+            $line =~ s/^\s+// unless ( $line_of_tokens->{_starting_in_quote} );
 
             my $Ktoken_vars = $K_first;
 
@@ -8384,7 +8384,10 @@ sub starting_one_line_block {
     }
 
     # find the starting keyword for this block (such as 'if', 'else', ...)
-    if ( $block_type =~ /^[\{\}\;\:]$/ || $block_type =~ /^package/ ) {
+    if (   $max_index_to_go == 0
+        || $block_type =~ /^[\{\}\;\:]$/
+        || $block_type =~ /^package/ )
+    {
         $i_start = $max_index_to_go;
     }
 
