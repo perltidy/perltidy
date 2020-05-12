@@ -3112,17 +3112,11 @@ sub respace_tokens {
         my $jmax = -1;
         if ( defined($Kfirst) ) { $jmax = $Klast - $Kfirst }
         my $input_line         = $line_of_tokens->{_line_text};
-        my $in_continued_quote = my $starting_in_quote =
-          $line_of_tokens->{_starting_in_quote};
-        my $in_quote        = $line_of_tokens->{_ending_in_quote};
-        my $ending_in_quote = $in_quote;
-        my $guessed_indentation_level =
-          $line_of_tokens->{_guessed_indentation_level};
 
         my $is_static_block_comment = 0;
 
         # Handle a continued quote..
-        if ($in_continued_quote) {
+        if ($line_of_tokens->{_starting_in_quote} ) {
 
             # A line which is entirely a quote or pattern must go out
             # verbatim.  Note: the \n is contained in $input_line.
