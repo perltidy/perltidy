@@ -1,0 +1,20 @@
+# Previously, perltidy -ce would move a closing brace below a pod section to
+# form '} else {'. No longer doing this because if you change back to -nce, the
+# brace cannot go back to where it was.
+if ($notty) {
+    $runnonstop = 1;
+    share($runnonstop);
+}
+
+=pod
+
+If there is a TTY, we have to determine who it belongs to before we can
+...
+
+=cut
+
+else {
+
+    # Is Perl being run from a slave editor or graphical debugger?
+    ...;
+}

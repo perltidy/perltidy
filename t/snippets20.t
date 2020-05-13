@@ -7,6 +7,8 @@
 #4 wc.def
 #5 wc.wc1
 #6 wc.wc2
+#7 ce2.ce
+#8 ce2.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -24,6 +26,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'ce'     => "-cuddled-blocks",
         'def'    => "",
         'space6' => <<'----------',
 -nwrs="+ - / *"
@@ -37,6 +40,29 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'ce2' => <<'----------',
+# Previously, perltidy -ce would move a closing brace below a pod section to
+# form '} else {'. No longer doing this because if you change back to -nce, the
+# brace cannot go back to where it was.
+if ($notty) {
+    $runnonstop = 1;
+	share($runnonstop);
+}
+
+=pod
+
+If there is a TTY, we have to determine who it belongs to before we can
+...
+
+=cut
+
+else {
+
+    # Is Perl being run from a slave editor or graphical debugger?
+    ...
+}
+----------
 
         'space6' => <<'----------',
 # test some spacing rules at possible filehandles
@@ -197,6 +223,61 @@ my $bb = sub    #
 }
 
 #6...........
+        },
+
+        'ce2.ce' => {
+            source => "ce2",
+            params => "ce",
+            expect => <<'#7...........',
+# Previously, perltidy -ce would move a closing brace below a pod section to
+# form '} else {'. No longer doing this because if you change back to -nce, the
+# brace cannot go back to where it was.
+if ($notty) {
+    $runnonstop = 1;
+    share($runnonstop);
+
+}
+
+=pod
+
+If there is a TTY, we have to determine who it belongs to before we can
+...
+
+=cut
+
+else {
+
+    # Is Perl being run from a slave editor or graphical debugger?
+    ...;
+}
+#7...........
+        },
+
+        'ce2.def' => {
+            source => "ce2",
+            params => "def",
+            expect => <<'#8...........',
+# Previously, perltidy -ce would move a closing brace below a pod section to
+# form '} else {'. No longer doing this because if you change back to -nce, the
+# brace cannot go back to where it was.
+if ($notty) {
+    $runnonstop = 1;
+    share($runnonstop);
+}
+
+=pod
+
+If there is a TTY, we have to determine who it belongs to before we can
+...
+
+=cut
+
+else {
+
+    # Is Perl being run from a slave editor or graphical debugger?
+    ...;
+}
+#8...........
         },
     };
 
