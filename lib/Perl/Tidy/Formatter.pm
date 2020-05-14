@@ -7213,6 +7213,9 @@ sub copy_token_as_type {
 
         my $in_continued_quote =
           ( $Ktoken_vars == $K_first ) && $line_of_tokens->{_starting_in_quote};
+        if ( $max_index_to_go == 0 ) {
+            $starting_in_quote = $in_continued_quote;
+        }
 
         # Define the indentation that this token would have if it started
         # a new line.  We start by using the default formula.
@@ -7379,7 +7382,6 @@ sub copy_token_as_type {
 
         my $rtok_first = $rLL->[$K_first];
 
-        $starting_in_quote = $line_of_tokens->{_starting_in_quote};
         my $in_quote = $line_of_tokens->{_ending_in_quote};
         $ending_in_quote = $in_quote;
         my $guessed_indentation_level =

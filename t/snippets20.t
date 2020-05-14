@@ -9,6 +9,8 @@
 #6 wc.wc2
 #7 ce2.ce
 #8 ce2.def
+#9 gnu6.def
+#10 gnu6.gnu
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -28,6 +30,7 @@ BEGIN {
     $rparams = {
         'ce'     => "-cuddled-blocks",
         'def'    => "",
+        'gnu'    => "-gnu",
         'space6' => <<'----------',
 -nwrs="+ - / *"
 -nwls="+ - / *"
@@ -62,6 +65,21 @@ else {
     # Is Perl being run from a slave editor or graphical debugger?
     ...
 }
+----------
+
+        'gnu6' => <<'----------',
+# the closing braces should have the same position for these two hashes with -gnu
+    $var1 = {
+        'foo10' => undef,
+        'foo72' => '
+',
+    };
+    $var2 = {
+        'foo72' => '
+',
+        'foo10' => undef,
+    };
+
 ----------
 
         'space6' => <<'----------',
@@ -278,6 +296,44 @@ else {
     ...;
 }
 #8...........
+        },
+
+        'gnu6.def' => {
+            source => "gnu6",
+            params => "def",
+            expect => <<'#9...........',
+# the closing braces should have the same position for these two hashes with -gnu
+    $var1 = {
+        'foo10' => undef,
+        'foo72' => '
+',
+    };
+    $var2 = {
+        'foo72' => '
+',
+        'foo10' => undef,
+    };
+
+#9...........
+        },
+
+        'gnu6.gnu' => {
+            source => "gnu6",
+            params => "gnu",
+            expect => <<'#10...........',
+    # the closing braces should have the same position for these two hashes with -gnu
+    $var1 = {
+        'foo10' => undef,
+        'foo72' => '
+',
+            };
+    $var2 = {
+        'foo72' => '
+',
+        'foo10' => undef,
+            };
+
+#10...........
         },
     };
 
