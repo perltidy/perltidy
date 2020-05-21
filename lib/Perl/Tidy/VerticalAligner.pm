@@ -2149,6 +2149,9 @@ sub my_flush {
             # Start a new group if necessary
             if ( !@group_lines ) {
                 add_to_group($new_line);
+                if ( $new_line->{_end_group} ) {
+                    my_flush_code();
+                }
                 next;
             }
 
@@ -2260,8 +2263,7 @@ sub my_flush {
                 $is_matching_terminal_line = 0;
             }
 
-            # Optional optimization; end the group if we know we cannot match
-            # next line.
+            # end the group if we know we cannot match next line.
             elsif ( $new_line->{_end_group} ) {
                 my_flush_code();
             }
