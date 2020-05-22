@@ -621,6 +621,7 @@ sub valign_input {
         rvertical_tightness_flags => $rvertical_tightness_flags,
         is_terminal_ternary       => $is_terminal_ternary,
         j_terminal_match          => $j_terminal_match,
+        is_forced_break           => $is_forced_break,
     );
 
     # --------------------------------------------------------------------

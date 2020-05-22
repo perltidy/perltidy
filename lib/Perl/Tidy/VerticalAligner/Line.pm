@@ -32,6 +32,8 @@ our $VERSION = '20200110.01';
         is_terminal_ternary       => undef,
         is_terminal_else          => undef,
         j_terminal_match          => undef,
+        is_forced_break           => undef,
+        end_group                 => undef,
     );
     {
 
@@ -96,6 +98,11 @@ our $VERSION = '20200110.01';
     sub get_is_terminal_ternary {
         my $self = shift;
         return $self->{_is_terminal_ternary};
+    }
+
+    sub get_is_forced_break {
+        my $self = shift;
+        return $self->{_is_forced_break};
     }
 
     sub get_leading_space_count {
@@ -260,6 +267,14 @@ our $VERSION = '20200110.01';
     sub set_alignment {
         my ( $self, $j, $val ) = @_;
         $self->{_ralignments}->[$j] = $val;
+        return;
+    }
+
+    sub get_end_group { my $self = shift; return $self->{_end_group} }
+
+    sub set_end_group {
+        my ( $self, $j, $val ) = @_;
+        $self->{_end_group}->[$j] = $val;
         return;
     }
 
