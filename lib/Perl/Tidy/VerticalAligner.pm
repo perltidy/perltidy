@@ -991,7 +991,7 @@ sub decide_if_list {
         my $jmax      = $line->get_jmax();
 
         foreach ( 1 .. $jmax - 2 ) {
-            if ( $rtokens->[$_] !~ /^(\,|=>|\{)/ ) {
+            if ( $rtokens->[$_] !~ /^(\,|=>)/ ) {
                 $list_type = "";
                 last;
             }
