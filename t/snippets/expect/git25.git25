@@ -1,0 +1,17 @@
+# example for git #25; use -l=0; was losing alignment;  sub 'fix_ragged_lists' was added to fix this
+my $mapping = [
+
+    # ...
+    { 'is_col' => 'dsstdat',                 'cr_col' => 'enroll_isaric_date', 'trans' => 0, },
+    { 'is_col' => 'corona_ieorres',          'cr_col' => '',                   'trans' => 0, },
+    { 'is_col' => 'symptoms_fever',          'cr_col' => 'elig_fever',         'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_cough',          'cr_col' => 'elig_cough',         'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_dys_tachy_noea', 'cr_col' => 'elig_dyspnea',       'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_clinical_susp',  'cr_col' => 'elig_ari',           'trans' => 0, },
+    { 'is_col' => 'sex', 'cr_col' => 'sex', 'trans' => 1, 'manually_reviewed' => 1, 'map' => { '0' => '1', '1' => '2' }, },
+    { 'is_col' => 'age', 'cr_col' => '', 'trans' => 0, },
+    { 'is_col' => 'ageu', 'cr_col' => '', 'trans' => 0, },
+
+    # ...
+];
+

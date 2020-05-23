@@ -11,6 +11,8 @@
 #8 ce2.def
 #9 gnu6.def
 #10 gnu6.gnu
+#11 git25.def
+#12 git25.git25
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,6 +32,7 @@ BEGIN {
     $rparams = {
         'ce'     => "-cuddled-blocks",
         'def'    => "",
+        'git25'  => "-l=0",
         'gnu'    => "-gnu",
         'space6' => <<'----------',
 -nwrs="+ - / *"
@@ -65,6 +68,24 @@ else {
     # Is Perl being run from a slave editor or graphical debugger?
     ...
 }
+----------
+
+        'git25' => <<'----------',
+# example for git #25; use -l=0; was losing alignment;  sub 'fix_ragged_lists' was added to fix this
+my $mapping = [
+# ...
+    { 'is_col' => 'dsstdat',                      'cr_col' => 'enroll_isaric_date',         'trans' => 0, },
+    { 'is_col' => 'corona_ieorres',               'cr_col' => '',                           'trans' => 0, },
+    { 'is_col' => 'symptoms_fever',               'cr_col' => 'elig_fever',                 'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_cough',               'cr_col' => 'elig_cough',                 'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_dys_tachy_noea',      'cr_col' => 'elig_dyspnea',               'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_clinical_susp',       'cr_col' => 'elig_ari',                   'trans' => 0, },
+    { 'is_col' => 'sex',                          'cr_col' => 'sex',                        'trans' => 1, 'manually_reviewed' => 1, 'map' => { '0' => '1', '1' => '2' }, },
+    { 'is_col' => 'age',                          'cr_col' => '',                           'trans' => 0, },
+    { 'is_col' => 'ageu',                         'cr_col' => '',                           'trans' => 0, },
+# ...
+];
+
 ----------
 
         'gnu6' => <<'----------',
@@ -334,6 +355,82 @@ else {
             };
 
 #10...........
+        },
+
+        'git25.def' => {
+            source => "git25",
+            params => "def",
+            expect => <<'#11...........',
+# example for git #25; use -l=0; was losing alignment;  sub 'fix_ragged_lists' was added to fix this
+my $mapping = [
+
+    # ...
+    { 'is_col' => 'dsstdat', 'cr_col' => 'enroll_isaric_date', 'trans' => 0, },
+    { 'is_col' => 'corona_ieorres', 'cr_col' => '', 'trans' => 0, },
+    {
+        'is_col'            => 'symptoms_fever',
+        'cr_col'            => 'elig_fever',
+        'trans'             => 1,
+        'manually_reviewed' => '@TODO',
+        'map'               => { '0' => '0', '1' => '1', '9' => '@TODO' },
+    },
+    {
+        'is_col'            => 'symptoms_cough',
+        'cr_col'            => 'elig_cough',
+        'trans'             => 1,
+        'manually_reviewed' => '@TODO',
+        'map'               => { '0' => '0', '1' => '1', '9' => '@TODO' },
+    },
+    {
+        'is_col'            => 'symptoms_dys_tachy_noea',
+        'cr_col'            => 'elig_dyspnea',
+        'trans'             => 1,
+        'manually_reviewed' => '@TODO',
+        'map'               => { '0' => '0', '1' => '1', '9' => '@TODO' },
+    },
+    {
+        'is_col' => 'symptoms_clinical_susp',
+        'cr_col' => 'elig_ari',
+        'trans'  => 0,
+    },
+    {
+        'is_col'            => 'sex',
+        'cr_col'            => 'sex',
+        'trans'             => 1,
+        'manually_reviewed' => 1,
+        'map'               => { '0' => '1', '1' => '2' },
+    },
+    { 'is_col' => 'age',  'cr_col' => '', 'trans' => 0, },
+    { 'is_col' => 'ageu', 'cr_col' => '', 'trans' => 0, },
+
+    # ...
+];
+
+#11...........
+        },
+
+        'git25.git25' => {
+            source => "git25",
+            params => "git25",
+            expect => <<'#12...........',
+# example for git #25; use -l=0; was losing alignment;  sub 'fix_ragged_lists' was added to fix this
+my $mapping = [
+
+    # ...
+    { 'is_col' => 'dsstdat',                 'cr_col' => 'enroll_isaric_date', 'trans' => 0, },
+    { 'is_col' => 'corona_ieorres',          'cr_col' => '',                   'trans' => 0, },
+    { 'is_col' => 'symptoms_fever',          'cr_col' => 'elig_fever',         'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_cough',          'cr_col' => 'elig_cough',         'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_dys_tachy_noea', 'cr_col' => 'elig_dyspnea',       'trans' => 1, 'manually_reviewed' => '@TODO', 'map' => { '0' => '0', '1' => '1', '9' => '@TODO' }, },
+    { 'is_col' => 'symptoms_clinical_susp',  'cr_col' => 'elig_ari',           'trans' => 0, },
+    { 'is_col' => 'sex', 'cr_col' => 'sex', 'trans' => 1, 'manually_reviewed' => 1, 'map' => { '0' => '1', '1' => '2' }, },
+    { 'is_col' => 'age', 'cr_col' => '', 'trans' => 0, },
+    { 'is_col' => 'ageu', 'cr_col' => '', 'trans' => 0, },
+
+    # ...
+];
+
+#12...........
         },
     };
 

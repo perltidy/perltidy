@@ -12309,6 +12309,17 @@ sub get_seqno {
                 }
 
                 #--------------------------------------------------------
+                # Undo alignment in special cases
+                #--------------------------------------------------------
+                if ($alignment_type) {
+
+                    # do not align the opening brace of an anonymous sub
+                    if ( $token eq '{' && $block_type =~ /$ASUB_PATTERN/ ) {
+                        $alignment_type = "";
+                    }
+                }
+
+                #--------------------------------------------------------
                 # then store the value
                 #--------------------------------------------------------
                 $ralignment_type_to_go->[$i] = $alignment_type;

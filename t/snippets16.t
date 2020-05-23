@@ -298,7 +298,7 @@ my $incname   = $indname . ( $indtot > 1 ? $indno : "" );
 # not a good alignment
 sub head {
     match_on_type @_ => Null => sub { die "Cannot get head of Null" },
-      ArrayRef => sub { $_->[0] };
+      ArrayRef       => sub { $_->[0] };
 }
 
 #10...........
