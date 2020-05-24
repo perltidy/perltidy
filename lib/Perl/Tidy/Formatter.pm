@@ -7256,21 +7256,31 @@ sub copy_token_as_type {
         return;
     }
 
+    sub package_and_process_batch_of_CODE {
+
+        # finish any batch packaging and call the process routine
+        # this is the only call to process_batch_of_CODE()
+        my ($self) = @_;
+        $self->process_batch_of_CODE($comma_count_in_batch);
+        return;
+    }
+
     sub end_batch {
 
         # end the current batch, except for a few special cases
         my ($self) = @_;
 
-        # Do not end line in a weld
+        # Exception 1: Do not end line in a weld
         return if ( weld_len_right_to_go($max_index_to_go) );
 
-        # just set a tentative breakpoint if we might be in a one-line block
+        # Exception 2: just set a tentative breakpoint if we might be in a
+        # one-line block
         if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
             set_forced_breakpoint($max_index_to_go);
             return;
         }
 
-        $self->process_batch_of_CODE($comma_count_in_batch);
+        $self->package_and_process_batch_of_CODE();
         return;
     }
 
@@ -7278,15 +7288,18 @@ sub copy_token_as_type {
     # an alternate source of lines can be written in the correct order
     sub flush {
         my ( $self, $CODE_type ) = @_;
+
+        # end the current batch with 1 exception
+
         destroy_one_line_block();
 
-        # if we are flushing within the code stream to insert blank line(s),
-        # then we can keep the batch intact at a weld. This improves
-        # formatting of -ce.  See test 'ce1.ce'
+        # Exception: if we are flushing within the code stream only to insert
+        # blank line(s), then we can keep the batch intact at a weld. This
+        # improves formatting of -ce.  See test 'ce1.ce'
         if ( $CODE_type && $CODE_type eq 'BL' ) { $self->end_batch() }
 
         # otherwise, we have to shut things down completely.
-        else { $self->process_batch_of_CODE($comma_count_in_batch) }
+        else { $self->package_and_process_batch_of_CODE() }
 
         Perl::Tidy::VerticalAligner::flush();
         return;
