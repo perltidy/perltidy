@@ -2283,9 +2283,14 @@ sub my_flush {
 
 sub delete_selected_tokens {
 
-    my ( $line_obj, $ridel ) = @_;
+    my ( $line_obj, $ridel, $new_list_ok ) = @_;
+
+    # $line_obj    is the line to be modified
+    # $ridel       is a ref to list of indexes to be deleted
+    # $new_list_ok is flag giving permission to convert non-list to list
 
     # remove an unused alignment token(s) to improve alignment chances
+
     return unless ( defined($line_obj) && defined($ridel) && @{$ridel} );
 
     my $jmax_old           = $line_obj->get_jmax();
@@ -2294,8 +2299,10 @@ sub delete_selected_tokens {
     my $rpatterns_old      = $line_obj->get_rpatterns();
     my $rtokens_old        = $line_obj->get_rtokens();
 
+    my $EXPLAIN = 0;
+
     local $" = '> <';
-    0 && print <<EOM;
+    $EXPLAIN && print <<EOM;
 delete indexes: <@{$ridel}>
 old jmax: $jmax_old
 old tokens: <@{$rtokens_old}>
@@ -2313,8 +2320,7 @@ EOM
     my $k         = 0;
     my $jdel_next = $ridel->[$k];
 
-    # FIXME:
-    if ( $jdel_next < 0 ) { print STDERR "bad jdel_next=$jdel_next\n"; return }
+    if ( $jdel_next < 0 ) { return }  # shouldnt happen
     my $pattern      = $rpatterns_old->[0];
     my $field        = $rfields_old->[0];
     my $field_length = $rfield_lengths_old->[0];
@@ -2361,7 +2367,161 @@ EOM
     $line_obj->set_rfield_lengths($rfield_lengths_new);
     $line_obj->set_jmax($jmax_new);
 
-    0 && print <<EOM;
+    # update list type based on new leading token
+    my $old_list_type = $line_obj->get_list_type();
+    my $new_list_type = "";
+    if ( $rtokens_new->[0] =~ /^(=>|,)/ ) {
+        $new_list_type = $rtokens_new->[0];
+    }
+
+    # An existing list will still be a list but with possibly different leading
+    # token
+    if ($old_list_type) {
+        if ( $old_list_type ne $new_list_type ) {
+            $line_obj->set_list_type($new_list_type);
+        }
+    }
+
+    # A non-list line could become a list if all non-list tokens have been
+    # deleted. But only do this if the "new_list_ok" flag is set.  The following
+    # two-line snippet shows an example of unwanted => alignement which can
+    # occur if we promote lines to be lists without permission:
+    #  $w1->bin( $xc, $yc,   { Panel => 3 } );
+    #  $w1->env( 0, 1, 0, 1, { Axis  => 'Box' } );
+    elsif ( $new_list_type && $new_list_ok ) {
+        my ( $raw_tok, $lev, $tag, $tok_count ) =
+          decode_alignment_token($new_list_type);
+
+	# But for lines with leading commas, we will require that they be
+	# tagged before converting a line from non-list to a list.
+        if ($tag) {
+            for ( my $i = 1 ; $i < @{$rtokens_new} - 1 ; $i++ ) {
+                if ( $rtokens_new->[$i] !~ /^(,|=>)/ ) {
+                    $new_list_type = "";
+                    last;
+                }
+            }
+            $line_obj->set_list_type($new_list_type) if ($new_list_type);
+        }
+    }
+
+    $EXPLAIN && print <<EOM;
+
+new jmax: $jmax_new
+new tokens: <@{$rtokens_new}>
+new patterns: <@{$rpatterns_new}>
+new fields: <@{$rfields_new}>
+EOM
+    return;
+}
+
+sub add_dummy_alignment_fields {
+
+    # NOTE: This routine is not currently called but it works and is included
+    # because it may be used in the future.
+    my ( $line_obj, $line_hw, $debug ) = @_;
+
+    # Add dummy alignment variables to line $line_obj
+    # by copying them from $line_hw.
+    #  $line_obj is the line being modified
+    #  $line_hw is the line used as an example
+    #  $debug is a flag for dumping values during testing
+
+    return unless ( defined($line_obj) && defined($line_hw) );
+
+    my $jmax_old           = $line_obj->get_jmax();
+    my $rfields_old        = $line_obj->get_rfields();
+    my $rfield_lengths_old = $line_obj->get_rfield_lengths();
+    my $rpatterns_old      = $line_obj->get_rpatterns();
+    my $rtokens_old        = $line_obj->get_rtokens();
+
+    my $jmax_hw           = $line_hw->get_jmax();
+    my $rfields_hw        = $line_hw->get_rfields();
+    my $rfield_lengths_hw = $line_hw->get_rfield_lengths();
+    my $rpatterns_hw      = $line_hw->get_rpatterns();
+    my $rtokens_hw        = $line_hw->get_rtokens();
+
+    my $num_old = @{$rtokens_old};
+    my $num_hw  = @{$rtokens_hw};
+
+    print STDERR "num_old=$num_old; num_hw=$num_hw\n";
+    print STDERR "Adding; jmax_hw=$jmax_hw, jmax_old=$jmax_old\n";
+    $debug = 0;
+
+    if ( $jmax_hw < $jmax_old ) {
+        print STDERR "unexpected values jmax_old=$jmax_old > jmax_hw=$jmax_hw";
+        return;
+    }
+
+    local $" = ')(';
+    $debug && print STDERR <<EOM;
+old jmax: $jmax_old
+old tokens: <@{$rtokens_old}>
+old patterns: <@{$rpatterns_old}>
+old fields: <@{$rfields_old}>
+old field_lengths: <@{$rfield_lengths_old}>
+EOM
+
+    my $rfields_new        = [];
+    my $rpatterns_new      = [];
+    my $rtokens_new        = [];
+    my $rfield_lengths_new = [];
+
+    my $pattern      = $rpatterns_old->[0];
+    my $field        = $rfields_old->[0];
+    my $field_length = $rfield_lengths_old->[0];
+    push @{$rfields_new},        $field;
+    push @{$rfield_lengths_new}, $field_length;
+    push @{$rpatterns_new},      $pattern;
+
+    for ( my $j = 0 ; $j < $jmax_hw ; $j++ ) {
+        my ( $token, $field, $field_length, $pattern );
+
+        # copy old fields before the side comment
+        if ( $j < $jmax_old - 1 ) {
+            $token        = $rtokens_old->[$j];
+            $field        = $rfields_old->[ $j + 1 ];
+            $field_length = $rfield_lengths_old->[ $j + 1 ];
+            $pattern      = $rpatterns_old->[ $j + 1 ];
+        }
+
+        # copy additional empty felds with same pattern as the model
+        elsif ( $j < $jmax_hw - 1 ) {
+            $token        = $rtokens_hw->[$j];
+            $field        = "";
+            $field_length = 0;
+            $pattern      = $rpatterns_hw->[ $j + 1 ];
+        }
+
+        # keep original side comment
+        else {
+            $token        = $rtokens_old->[ $jmax_old - 1 ];
+            $field        = $rfields_old->[$jmax_old];
+            $field_length = $rfield_lengths_old->[$jmax_old];
+            $pattern      = $rpatterns_old->[$jmax_old];
+        }
+
+        push @{$rtokens_new},        $token;
+        push @{$rfields_new},        $field;
+        push @{$rpatterns_new},      $pattern;
+        push @{$rfield_lengths_new}, $field_length;
+
+    }
+
+    # ----- x ------ x ------ x ------
+    #t      0        1        2        <- token indexing
+    #f   0      1        2        3    <- field and pattern
+
+    my $jmax_new = @{$rfields_new} - 1;
+    $line_obj->set_rtokens($rtokens_new);
+    $line_obj->set_rpatterns($rpatterns_new);
+    $line_obj->set_rfields($rfields_new);
+    $line_obj->set_rfield_lengths($rfield_lengths_new);
+    $line_obj->set_jmax($jmax_new);
+
+    local $" = ')(';
+
+    $debug && print <<EOM;
 
 new jmax: $jmax_new
 new tokens: <@{$rtokens_new}>
@@ -2456,7 +2616,8 @@ sub delete_unmatched_tokens {
     # many obviously un-needed alignment tokens as possible.  This will prevent
     # them from interfering with the final alignment.
 
-    return unless @{$rlines};
+    return unless @{$rlines} > 1;
+
     my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
     # ignore hanging side comments in these operations
@@ -2471,9 +2632,11 @@ sub delete_unmatched_tokens {
 
     # create a hash of tokens for each line
     my $rline_hashes = [];
+    my $saw_list_type;
     foreach my $line ( @{$rnew_lines} ) {
         my $rhash   = {};
         my $rtokens = $line->get_rtokens();
+        if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1}
         my $i       = 0;
         my $i_eq;
         my $lev_min;
@@ -2574,7 +2737,6 @@ sub delete_unmatched_tokens {
             my $line    = $rnew_lines->[$jj];
             my $rtokens = $line->get_rtokens();
             my $rhash   = $rline_hashes->[$jj];
-            my $i       = 0;
             my $i_eq    = $i_equals[$jj];
             my @idel;
             my $imax = @{$rtokens} - 2;
@@ -2641,11 +2803,325 @@ sub delete_unmatched_tokens {
                 }
             }
 
-            if (@idel) { delete_selected_tokens( $line, \@idel ) }
+            if (@idel) {
+                delete_selected_tokens( $line, \@idel, $saw_list_type );
+            }
         }
+
     }    # End loop over subgroups
 
+    fix_ragged_matches($rlines) if ($saw_list_type);
+
     return;
+}
+
+{    # fix_ragged_matches
+
+    my %is_comma_or_comment;
+    my $BLOCK_MERGE_RATIO;
+    my $EXPLAIN;
+
+    BEGIN {
+        my @q;
+
+        # These tokens with = may be deleted for vertical aligmnemt
+        @q = ( ',', '=>', '#' );
+        @is_comma_or_comment{@q} = (1) x scalar(@q);
+
+	# This fraction controls merges. Only merge a long block into a shorter
+	# block if the ratio of the number of lines is less than this ratio.
+	# The idea is to avoid merging away a significant block that would
+	# otherwise be aligned.  This is not a critical parameter.  Some
+	# testing showed that it is best between about 0.3 and 0.5.  The
+	# original test snippet, git25, worked best with a value >=0.35. 
+        $BLOCK_MERGE_RATIO = 0.5; 
+
+        # Debug flag
+        $EXPLAIN = 0;
+    }
+
+    sub fix_ragged_matches {
+        my ($rlines) = @_;
+
+        return unless @{$rlines} > 2;
+
+        # Look at a group of lines and see if there are ragged matches
+        # which can be improved by adjusting alignments.
+
+        # TODO: This version only treats lists.  It might be generalized
+        # to handle more types of matches. 
+
+        #########################################################
+        # Step 1. Start by scanning the lines and collecting info
+        #########################################################
+        # For each line, save:  [is_list, imax_match]
+        #   is_list=a flag showing if it is a pure list,
+        #   imax_match = the index of the highest matching alignment token
+        my $ri_list_info = [];
+        my $rtokens;
+        my $imax;
+        my $in_match = 0;
+        my $jj       = -1;
+
+        foreach my $line ( @{$rlines} ) {
+
+            # _m = previous line
+            my $rtokens_m = $rtokens;
+            my $imax_m    = $imax;
+            my $jj_m      = $jj;
+
+            $jj++;
+            $rtokens = $line->get_rtokens();
+            $imax    = @{$rtokens} - 2;        # max i before comment
+            my $list_type = $line->get_list_type();
+
+            # No matches if there is a group ending flag set between these lines
+            my $end_group = ( $jj_m >= 0 && $rlines->[$jj_m]->{_end_group} ); 
+
+            # Also skip past a non-list line; we are working on pure lists here
+            if ( $end_group || !$list_type ) {
+                push @{$ri_list_info}, [ 0, -1 ];
+                next;
+            }
+
+            # Loop to examine tokens of each line
+            my $i_nomatch;
+            my $is_list    = $imax >= 0;
+            my $i          = -1;
+            my $imax_match = -1;
+
+            foreach my $tok ( @{$rtokens} ) {
+                $i++;
+                last if ( $i > $imax );
+                my ( $raw_tok, $lev, $tag, $tok_count ) =
+                  decode_alignment_token($tok);
+
+                # Look for lines which are lists
+                if ( $is_list && !$is_comma_or_comment{$raw_tok} ) {
+                    $is_list = 0;
+                    last;
+                }
+
+                # Look for index of first token which does not match the
+                # previous line
+                if ( defined($rtokens_m) ) {
+                    if ( $i > $imax_m ) { last; }
+                    my $tokm = $rtokens_m->[$i];
+                    last if ( $tok ne $tokm );
+                }
+                $imax_match = $i;
+            }
+
+            # Save the last index of leading matches to the previous line
+            push @{$ri_list_info}, [ $is_list, $imax_match ];
+        }
+
+        ##########################################################
+        # Step 2. Combine runs of equal length matches into blocks
+        ##########################################################
+        my @match_blocks;
+
+        # Each block in @match_blocks contains [jbeg, jend, imax_match], where
+        # jbeg = line index of first line of block
+        # jend = line index of last line of block
+        # imax_match = index of maximum alignment token for lines in this batch.
+        #    This value applies to matches between all lines j=jbeg to jend and
+        #    j=jbeg-1 to jend-1.  In other words, the value for a pair of lines
+        #    is stored with the line with the higher index. 
+        my $imatch      = -10;
+        my $j_last_line = @{$rlines} - 1;
+        my %counts;
+        my $total_match_count = 0;
+        my $all_list_lines    = 1;
+        for ( my $jr = 1 ; $jr <= $j_last_line ; $jr++ ) {
+            my $jl = $jr - 1;
+            my ( $is_list, $imax_match ) = @{ $ri_list_info->[$jr] };
+            if ( !$is_list ) { $all_list_lines = 0 }
+            $counts{$imax_match}++;
+            $total_match_count += $imax_match + 2;
+
+            # look at total variation of fields
+            my $nl = $rlines->[$jl]->get_jmax();
+            my $nr = $rlines->[$jr]->get_jmax();
+
+            $imax_match = -1 unless ($is_list);
+            if ( $imax_match != $imatch ) {
+                if (@match_blocks) {
+                    $match_blocks[-1]->[1] = $jr - 1;
+                }
+
+                push @match_blocks, [ $jl, $j_last_line, $imax_match, 0 ];
+                $imatch = $imax_match;
+            }
+        }
+
+        if ($EXPLAIN) {
+            print "Blocks Before Merging:\n";
+            local $" = ')(';
+            foreach (@match_blocks) {
+                print "Block: (@{$_})\n";
+            }
+        }
+
+        ############################################################
+        # Step 3. Try to improve overall alignment by merging blocks
+        ############################################################
+
+        # Loop over iterations; it usually just takes one pass but it may
+        # occasionally take 2 iterations.
+        for ( my $it = 0 ; $it < 3 ; $it++ ) {
+
+            # quit if no more matches possible
+            last unless ( @match_blocks > 1 );
+
+            # loop over blocks
+            my @new_match_blocks = ();
+            my $merge_count      = 0;
+            for ( my $ib = 0 ; $ib < @match_blocks ; $ib++ ) {
+                my $block = $match_blocks[$ib];
+                my ( $jmin, $jmax, $imatch ) = @{$block};
+                my $num = $jmax - $jmin;
+
+                # Skip no-match blocks
+                next if ( $imatch < 0 );
+
+                # pull out values for previous block
+                my ( $block_m, $jmin_m, $jmax_m, $imatch_m, $num_m );
+                if (@new_match_blocks) {
+                    $block_m = $new_match_blocks[-1];
+                    ( $jmin_m, $jmax_m, $imatch_m ) = @{$block_m};
+                    $num_m = $jmax_m - $jmin_m;
+                }
+
+                # See if we can merge this block into a previous block which
+                # has an equal or fewer number of aligned fields.  The combined
+                # block will have the lesser number of alignments.  We will
+                # only do this if it will help overall alignment.
+                if ( defined($block_m) && $imatch >= $imatch_m ) {
+
+                    # Always ok to merge blocks with an equal number of
+                    # alignments.  This can occur if we previously removed an
+                    # intermediate larger block.
+                    my $merge_ok = ( $imatch == $imatch_m );
+
+                    # And it is ok to merge if the fraction of lines of the
+                    # block being modified is acceptably small.
+                    $merge_ok ||= $num < $BLOCK_MERGE_RATIO * $num_m;
+
+                    # If necessary, look for a sandwich situation at next block
+                    # and recompute assuming all three merge.
+                    if ( !$merge_ok && $ib < @match_blocks - 1 ) {
+                        my $block_p = $match_blocks[ $ib + 1 ];
+                        my ( $jmin_p, $jmax_p, $imatch_p ) = @{$block_p};
+                        if ( $imatch_p == $imatch_m ) {
+                            my $num_p = $jmax_p - $jmin_p;
+                            $merge_ok ||=
+                              $num < $BLOCK_MERGE_RATIO * ( $num_m + $num_p );
+                        }
+                    }
+
+                    if ($merge_ok) {
+
+                        # We are only merging with the previous block. In a
+                        # sandwich merge, the next block will merge in the next
+                        # pass through the loop.
+                        $block_m = [ $jmin_m, $jmax, $imatch_m ];
+                        $new_match_blocks[-1] = $block_m;
+                        $merge_count++;
+                        $EXPLAIN > 2
+                          && print
+"Merged block # $ib into previous block; #lines $num into $num_m, #matches $imatch into $imatch_m, it=$it\n";
+                        next;
+                    }
+                }
+                push @new_match_blocks, $block;
+            }
+            @match_blocks = @new_match_blocks;
+            $EXPLAIN > 2 && print "it=$it, merged block count = $merge_count\n";
+            last if ( $merge_count == 0 );
+        }
+
+        if ($EXPLAIN) {
+            print "Blocks After Merging:\n";
+            local $" = ')(';
+            foreach (@match_blocks) {
+                print "Block: (@{$_})\n";
+            }
+        }
+
+        #######################################################################
+        # Step 4. Trim away alignments which extend beyond the block alignments
+        #######################################################################
+        my ( $jbeg, $jend, $imax_match );
+        for ( my $ib = 0 ; $ib < @match_blocks ; $ib++ ) {
+            my $block = $match_blocks[$ib];
+            my ( $jbeg_m, $jend_m, $imax_match_m ) =
+              ( $jbeg, $jend, $imax_match );
+            ( $jbeg, $jend, $imax_match ) = @{$block};
+
+            next unless ( $imax_match >= 0 );
+
+            # We will ignore a group of two lines. These are already well
+            # covered by existing logic, and we can only make things worse.
+            next unless ( $jend - $jbeg > 1 );
+
+            if (   $jbeg > 0
+                && defined($imax_match_m)
+                && $imax_match > $imax_match_m
+                && $imax_match_m >= 0 )
+            {
+                $rlines->[ $jbeg - 1 ]->{_end_group} = 1;
+                $EXPLAIN > 2 && print "Marked group end before line $jbeg\n";
+            }
+
+            # remove unused alignment tokens
+            for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+                my $line    = $rlines->[$jj];
+                my $rtokens = $line->get_rtokens();
+                my $imax    = @{$rtokens} - 2;
+                my $tok     = $rtokens->[0];
+
+                # The first line of a block is handled by previous block except
+                # for the first line.  There are no gaps between blocks, so all
+                # lines will be handled.
+                next if ( $jj == $jbeg && $jj > 0 );
+
+                # A boundary line is trimmed to the larger of its surrounding
+                # match lengths:
+                my $imax_match_j = $imax_match;
+
+                # First line checks previous block
+                if (   $jj == $jbeg
+                    && defined($imax_match_m)
+                    && $imax_match_m > $imax_match_j )
+                {
+                    $imax_match_j = $imax_match_m;
+                }
+
+                # Last line checks next block
+                if ( $jj == $jend && $ib < @match_blocks - 1 ) {
+                    my $block_p = $match_blocks[ $ib + 1 ];
+                    my ( $jmin_p, $jmax_p, $imax_match_p ) = @{$block_p};
+                    if ( $imax_match_p > $imax_match_j ) {
+                        $imax_match_j = $imax_match_p;
+                    }
+                }
+
+                # Now delete the unused alignment tokens
+
+                # NOTE: We are currently only working on lists, so we can allow
+                # lines to be promoted as lists.  But if this coding is generalized
+                # this flag may have to be adjusted to handle or non-lists.
+                my $new_list_ok = 1;  
+
+                if ( $imax_match_j < $imax ) {
+                    my @idel = ( $imax_match_j + 1 .. $imax );
+                    delete_selected_tokens( $line, \@idel, $new_list_ok );
+                }
+            }
+        }
+        return;
+    }
 }
 
 {        # decide_if_aligned_pair

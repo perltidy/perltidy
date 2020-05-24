@@ -242,6 +242,8 @@
 ../snippets20.t	ce2.def
 ../snippets20.t	gnu6.def
 ../snippets20.t	gnu6.gnu
+../snippets20.t	git25.def
+../snippets20.t	git25.git25
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -382,5 +384,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets20.t	git25.def
-../snippets20.t	git25.git25
