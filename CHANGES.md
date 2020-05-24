@@ -2,6 +2,9 @@
 
 ## 2020 01 10.01
 
+    - Added fix for git#25, improve vertical alignment for long lists with
+      varying numbers of items per line.
+
     - calls to the module Perl::Tidy can now capture any output produced
       by a debug flag or one of the 'tee' flags through the new 'debugfile' and
       'teefile' call parameters.  These output streams are rarely used but
