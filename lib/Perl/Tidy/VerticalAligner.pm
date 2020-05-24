@@ -2824,7 +2824,6 @@ sub delete_unmatched_tokens {
     BEGIN {
         my @q;
 
-        # These tokens with = may be deleted for vertical aligmnemt
         @q = ( ',', '=>', '#' );
         @is_comma_or_comment{@q} = (1) x scalar(@q);
 

@@ -13,6 +13,7 @@
 #10 gnu6.gnu
 #11 git25.def
 #12 git25.git25
+#13 outdent.outdent2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -30,10 +31,14 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'ce'     => "-cuddled-blocks",
-        'def'    => "",
-        'git25'  => "-l=0",
-        'gnu'    => "-gnu",
+        'ce'       => "-cuddled-blocks",
+        'def'      => "",
+        'git25'    => "-l=0",
+        'gnu'      => "-gnu",
+        'outdent2' => <<'----------',
+# test -okw and -okwl
+-okw -okwl='next'
+----------
         'space6' => <<'----------',
 -nwrs="+ - / *"
 -nwls="+ - / *"
@@ -100,6 +105,16 @@ my $mapping = [
 ',
         'foo10' => undef,
     };
+
+----------
+
+        'outdent' => <<'----------',
+        my $i;
+      LOOP: while ( $i = <FOTOS> ) {
+            chomp($i);
+            next unless $i;
+            fixit($i);
+        }
 
 ----------
 
@@ -431,6 +446,20 @@ my $mapping = [
 ];
 
 #12...........
+        },
+
+        'outdent.outdent2' => {
+            source => "outdent",
+            params => "outdent2",
+            expect => <<'#13...........',
+        my $i;
+      LOOP: while ( $i = <FOTOS> ) {
+            chomp($i);
+          next unless $i;
+            fixit($i);
+        }
+
+#13...........
         },
     };
 

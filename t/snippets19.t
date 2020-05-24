@@ -50,7 +50,10 @@ BEGIN {
         'misc_tests' => <<'----------',
 -sts -ssc -sfs -nsak="my for" -ndsm
 ----------
-        'outdent1'     => "-nola -okw",
+        'outdent1' => <<'----------',
+# test -nola -okw
+-nola -okw
+----------
         'sbq0'         => "-sbq=0",
         'sbq2'         => "-sbq=2",
         'scbb'         => "-scbb",
@@ -108,7 +111,6 @@ my ( $a, $b, $c ) = @_;    # test -nsak="my for"
 ----------
 
         'outdent' => <<'----------',
-# test -nola -okw
         my $i;
       LOOP: while ( $i = <FOTOS> ) {
             chomp($i);
@@ -176,7 +178,6 @@ my( $a, $b, $c ) = @_ ;                                    # test -nsak="my for"
             source => "outdent",
             params => "def",
             expect => <<'#2...........',
-        # test -nola -okw
         my $i;
       LOOP: while ( $i = <FOTOS> ) {
             chomp($i);
@@ -191,7 +192,6 @@ my( $a, $b, $c ) = @_ ;                                    # test -nsak="my for"
             source => "outdent",
             params => "outdent1",
             expect => <<'#3...........',
-        # test -nola -okw
         my $i;
         LOOP: while ( $i = <FOTOS> ) {
             chomp($i);
