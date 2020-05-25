@@ -1,0 +1,7 @@
+return ( $r**$n ) *
+  (pi**($n / 2)) /
+  (
+    sqrt(pi) *
+      factorial( 2 * (int($n / 2)) + 2 ) /
+      factorial( int($n / 2) + 1 ) /
+      (4**(int($n / 2) + 1)));

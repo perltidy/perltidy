@@ -1986,6 +1986,8 @@ sub generate_options {
     $add_option->( 'brace-tightness',                           'bt',    '=i' );
     $add_option->( 'delete-old-whitespace',                     'dws',   '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
+    $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
+    $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
     $add_option->( 'nospace-after-keyword',                     'nsak',  '=s' );
     $add_option->( 'nowant-left-space',                         'nwls',  '=s' );
     $add_option->( 'nowant-right-space',                        'nwrs',  '=s' );
@@ -2195,11 +2197,12 @@ sub generate_options {
     %option_range = (
         'format'             => [ 'tidy', 'html', 'user' ],
         'output-line-ending' => [ 'dos',  'win',  'mac', 'unix' ],
-        'space-backslash-quote'    => [ 0, 2 ],
-        'block-brace-tightness'    => [ 0, 2 ],
-        'brace-tightness'          => [ 0, 2 ],
-        'paren-tightness'          => [ 0, 2 ],
-        'square-bracket-tightness' => [ 0, 2 ],
+        'space-backslash-quote'         => [ 0, 2 ],
+        'block-brace-tightness'         => [ 0, 2 ],
+        'keyword-paren-inner-tightness' => [ 0, 2 ],
+        'brace-tightness'               => [ 0, 2 ],
+        'paren-tightness'               => [ 0, 2 ],
+        'square-bracket-tightness'      => [ 0, 2 ],
 
         'block-brace-vertical-tightness'            => [ 0, 2 ],
         'brace-vertical-tightness'                  => [ 0, 2 ],
@@ -2279,6 +2282,7 @@ sub generate_options {
       indent-columns=4
       iterations=1
       keep-old-blank-lines=1
+      keyword-paren-inner-tightness=1
       long-block-line-count=8
       look-for-autoloader
       look-for-selfloader

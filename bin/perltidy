@@ -1168,6 +1168,48 @@ applying the different options would be:
         sub usage();    # n=1 [default; follows input]
         sub usage ();   # n=2 [space]
 
+=item B<-kpit=n> or B<--keyword-paren-inner-tightness=n>
+
+The space inside of an opening paren, which itself follows a certain keyword,
+can be controlled by this parameter.  The space on the inside of the
+corresponding closing paren will be treated in the same (balanced) manner.
+This parameter has precedence over any other paren spacing rules.  The values
+of B<n> are as follows:
+
+   -kpit=0 means always put a space (not tight)
+   -kpit=1 means ignore this parameter [default]
+   -kpit=2 means never put a space (tight)
+
+To illustrate, the following snippet is shown formatted in three ways:
+
+    if ( seek( DATA, 0, 0 ) ) { ... }    # perltidy (default)
+    if (seek(DATA, 0, 0)) { ... }        # perltidy -pt=2
+    if ( seek(DATA, 0, 0) ) { ... }      # perltidy -pt=2 -kpit=0
+
+In the second case the -pt=2 parameter makes all of the parens tight. In the
+third case the -kpit=0 flag causes the space within the 'if' parens to have a
+space, since 'if' is one of the keywords to which the -kpit flag applies by
+default.  The remaining parens are still tight because of the -pt=2 parameter.
+
+The set of keywords to which this parameter applies are by default are:
+
+   if elsif unless while until for foreach
+
+These can be changed with the parameter B<-kpitl=s> described in the next section. 
+
+
+=item B<-kpitl=string> or B<--keyword-paren-inner-tightness=string>
+
+This command can be used to change the keywords to which the the B<-kpit=n>
+command applies.  The parameter B<string> is a required list either keywords or
+functions, which should be placed in quotes if there are more than one.  By
+itself, this parameter does not cause any change in spacing, so the B<-kpit=n>
+command is still required.
+
+For example, the commands C<-kpitl="if else while" -kpit=2> will cause the just
+the spaces inside parens following  'if', 'else', and 'while' keywords to
+follow the tightness value indicated by the B<-kpit=2> flag.
+
 =item Trimming whitespace around C<qw> quotes
 
 B<-tqw> or B<--trim-qw> provide the default behavior of trimming

@@ -2,6 +2,9 @@
 
 ## 2020 01 10.01
 
+    - Added a parameter -kpit=n to control spaces inside of parens following
+      certain keywords, requested in git#26. This flag is off by default.
+
     - Added fix for git#25, improve vertical alignment for long lists with
       varying numbers of items per line.
 

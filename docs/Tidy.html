@@ -43,6 +43,8 @@
         perltidyrc        =&gt; $perltidyrc,
         logfile           =&gt; $logfile,
         errorfile         =&gt; $errorfile,
+        teefile           =&gt; $teefile,
+        debugfile         =&gt; $debugfile,
         formatter         =&gt; $formatter,           # callback object (see below)
         dump_options      =&gt; $dump_options,
         dump_options_type =&gt; $dump_options_type,
@@ -126,6 +128,18 @@
 <dd>
 
 <p>The <b>logfile</b> parameter allows the calling program to capture the log stream. This stream is only created if requested with a <b>-g</b> parameter. It contains detailed diagnostic information about a script which may be useful for debugging.</p>
+
+</dd>
+<dt id="teefile">teefile</dt>
+<dd>
+
+<p>The <b>teefile</b> parameter allows the calling program to capture the tee stream. This stream is only created if requested with one of the &#39;tee&#39; parameters, a <b>--tee-pod</b> , <b>--tee-block-comments</b>, <b>--tee-side-commnts</b>, or <b>--tee-all-comments</b>.</p>
+
+</dd>
+<dt id="debugfile">debugfile</dt>
+<dd>
+
+<p>The <b>debugfile</b> parameter allows the calling program to capture the stream produced by the <b>--DEBUG</b> parameter. This parameter is mainly used for debugging perltidy itself.</p>
 
 </dd>
 <dt id="argv">argv</dt>

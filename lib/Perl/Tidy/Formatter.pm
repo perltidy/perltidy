@@ -218,6 +218,7 @@ use vars qw{
   %closing_vertical_tightness
   %closing_token_indentation
   $some_closing_token_indentation
+  %keyword_paren_inner_tightness
 
   %opening_token_right
   %stack_opening_token
@@ -1824,17 +1825,23 @@ sub set_whitespace_flags {
 
     my $rwhitespace_flags = [];
 
-    my ( $last_token, $last_type, $last_block_type, $last_input_line_no,
-        $token, $type, $block_type, $input_line_no );
+    my ( $token, $type, $block_type, $seqno, $input_line_no );
+    my (
+        $last_token, $last_type, $last_block_type,
+        $last_seqno, $last_input_line_no
+    );
+
     my $j_tight_closing_paren = -1;
 
     $token              = ' ';
     $type               = 'b';
     $block_type         = '';
+    $seqno              = '';
     $input_line_no      = 0;
     $last_token         = ' ';
     $last_type          = 'b';
     $last_block_type    = '';
+    $last_seqno         = '';
     $last_input_line_no = 0;
 
     my $jmax = @{$rLL} - 1;
@@ -1890,6 +1897,46 @@ sub set_whitespace_flags {
         return (WS_YES);
     };
 
+    # Local hashes to set spaces around container tokens according to their
+    # sequence numbers.  These are set as keywords are examined.
+    # They are controlled by the -kpit and -kpitl flags.
+    my %opening_container_inside_ws;
+    my %closing_container_inside_ws;
+    my $set_container_ws_by_keyword = sub {
+        my ( $word, $sequence_number ) = @_;
+
+        # We just saw a keyword (or other function name) followed by an opening
+        # paren. Now check to see if the following paren should have special
+        # treatment for its inside space.  If so we set a hash value using the
+        # sequence number as key.
+        if ($word) {
+            my $tightness = $keyword_paren_inner_tightness{$word};
+            if ( defined($tightness) && $tightness != 1 ) {
+                my $ws_flag = $tightness == 0 ? WS_YES : WS_NO;
+                $opening_container_inside_ws{$sequence_number} = $ws_flag;
+                $closing_container_inside_ws{$sequence_number} = $ws_flag;
+            }
+        }
+    };
+
+    my $ws_opening_container_override = sub {
+        my ( $ws, $sequence_number ) = @_;
+        if ($sequence_number) {
+            my $ws_override = $opening_container_inside_ws{$sequence_number};
+            if ($ws_override) { $ws = $ws_override }
+        }
+        return $ws;
+    };
+
+    my $ws_closing_container_override = sub {
+        my ( $ws, $sequence_number ) = @_;
+        if ($sequence_number) {
+            my $ws_override = $closing_container_inside_ws{$sequence_number};
+            if ($ws_override) { $ws = $ws_override }
+        }
+        return $ws;
+    };
+
     # main loop over all tokens to define the whitespace flags
     for ( my $j = 0 ; $j <= $jmax ; $j++ ) {
 
@@ -1907,10 +1954,12 @@ sub set_whitespace_flags {
         $last_token         = $token;
         $last_type          = $type;
         $last_block_type    = $block_type;
+        $last_seqno         = $seqno;
         $last_input_line_no = $input_line_no;
         $token              = $rtokh->[_TOKEN_];
         $type               = $rtokh->[_TYPE_];
         $block_type         = $rtokh->[_BLOCK_TYPE_];
+        $seqno              = $rtokh->[_TYPE_SEQUENCE_];
         $input_line_no      = $rtokh->[_LINE_INDEX_];
 
         #---------------------------------------------------------------
@@ -1976,6 +2025,10 @@ sub set_whitespace_flags {
                     $ws = $ws_in_container->($j);
                 }
             }
+
+            # check for special cases which override the above rules
+            $ws = $ws_opening_container_override->( $ws, $last_seqno );
+
         }    # end setting space flag inside opening tokens
         my $ws_1;
         $ws_1 = $ws
@@ -2007,6 +2060,10 @@ sub set_whitespace_flags {
                     $ws = ( $tightness > 1 ) ? WS_NO : WS_YES;
                 }
             }
+
+            # check for special cases which override the above rules
+            $ws = $ws_closing_container_override->( $ws, $seqno );
+
         }    # end setting space flag inside closing tokens
 
         my $ws_2;
@@ -2051,6 +2108,9 @@ sub set_whitespace_flags {
                 $ws = WS_NO
                   unless ( $rOpts_space_keyword_paren
                     || $space_after_keyword{$last_token} );
+
+                # Set inside space flag if requested
+                $set_container_ws_by_keyword->( $last_token, $seqno );
             }
 
             # Space between function and '('
@@ -2062,6 +2122,7 @@ sub set_whitespace_flags {
                 || ( $last_type =~ /^[wi]$/ && $last_token =~ /^(\&|->)/ ) )
             {
                 $ws = WS_NO unless ($rOpts_space_function_paren);
+                $set_container_ws_by_keyword->( $last_token, $seqno );
             }
 
             # space between something like $i and ( in <<snippets/space2.in>>
@@ -5783,6 +5844,19 @@ EOM
         }
     }
 
+    # setup hash for -kpit option
+    %keyword_paren_inner_tightness = ();
+    my @kpit = split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
+    unless (@kpit) {
+        @kpit = qw(if elsif unless while until for foreach);    # defaults
+    }
+
+    # we will allow keywords and user-defined identifiers
+    foreach (@kpit) {
+        $keyword_paren_inner_tightness{$_} =
+          $rOpts->{'keyword-paren-inner-tightness'};
+    }
+
     # implement user whitespace preferences
     if ( my @q = split_words( $rOpts->{'want-left-space'} ) ) {
         @want_left_space{@q} = (1) x scalar(@q);
@@ -7103,6 +7177,7 @@ sub copy_token_as_type {
         $K_last_nonblank_code      = undef;
         $K_last_last_nonblank_code = undef;
         $looking_for_else          = 0;
+        return;
     }
 
     # batch variables
@@ -7115,6 +7190,7 @@ sub copy_token_as_type {
         $rbrace_follower      = undef;
         $comma_count_in_batch = 0;
         destroy_one_line_block();
+        return;
     }
 
     sub create_one_line_block {

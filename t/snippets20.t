@@ -14,6 +14,10 @@
 #11 git25.def
 #12 git25.git25
 #13 outdent.outdent2
+#14 kpit.def
+#15 kpit.kpit
+#16 kpitl.def
+#17 kpitl.kpitl
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -31,10 +35,14 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'ce'       => "-cuddled-blocks",
-        'def'      => "",
-        'git25'    => "-l=0",
-        'gnu'      => "-gnu",
+        'ce'    => "-cuddled-blocks",
+        'def'   => "",
+        'git25' => "-l=0",
+        'gnu'   => "-gnu",
+        'kpit'  => "-pt=2 -kpit=0",
+        'kpitl' => <<'----------',
+-kpit=0 -kpitl='return factorial' -pt=2
+----------
         'outdent2' => <<'----------',
 # test -okw and -okwl
 -okw -okwl='next'
@@ -106,6 +114,16 @@ my $mapping = [
         'foo10' => undef,
     };
 
+----------
+
+        'kpit' => <<'----------',
+if ( seek( DATA, 0, 0 ) ) { ... } 
+----------
+
+        'kpitl' => <<'----------',
+return ( $r**$n ) * ( pi**( $n / 2 ) ) / ( sqrt(pi) * factorial( 2 * ( int( $n
+/ 2 ) ) + 2 ) / factorial( int( $n / 2 ) + 1 ) / ( 4**( int( $n / 2 ) + 1 ) )
+);
 ----------
 
         'outdent' => <<'----------',
@@ -460,6 +478,50 @@ my $mapping = [
         }
 
 #13...........
+        },
+
+        'kpit.def' => {
+            source => "kpit",
+            params => "def",
+            expect => <<'#14...........',
+if ( seek( DATA, 0, 0 ) ) { ... }
+#14...........
+        },
+
+        'kpit.kpit' => {
+            source => "kpit",
+            params => "kpit",
+            expect => <<'#15...........',
+if ( seek(DATA, 0, 0) ) { ... }
+#15...........
+        },
+
+        'kpitl.def' => {
+            source => "kpitl",
+            params => "def",
+            expect => <<'#16...........',
+return ( $r**$n ) *
+  ( pi**( $n / 2 ) ) /
+  (
+    sqrt(pi) *
+      factorial( 2 * ( int( $n / 2 ) ) + 2 ) /
+      factorial( int( $n / 2 ) + 1 ) /
+      ( 4**( int( $n / 2 ) + 1 ) ) );
+#16...........
+        },
+
+        'kpitl.kpitl' => {
+            source => "kpitl",
+            params => "kpitl",
+            expect => <<'#17...........',
+return ( $r**$n ) *
+  (pi**($n / 2)) /
+  (
+    sqrt(pi) *
+      factorial( 2 * (int($n / 2)) + 2 ) /
+      factorial( int($n / 2) + 1 ) /
+      (4**(int($n / 2) + 1)));
+#17...........
         },
     };
 

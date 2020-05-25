@@ -928,6 +928,38 @@
         sub usage ();   # n=2 [space]</code></pre>
 
 </dd>
+<dt id="kpit-n-or---keyword-paren-inner-tightness-n"><b>-kpit=n</b> or <b>--keyword-paren-inner-tightness=n</b></dt>
+<dd>
+
+<p>The space inside of an opening paren, which itself follows a certain keyword, can be controlled by this parameter. The space on the inside of the corresponding closing paren will be treated in the same (balanced) manner. This parameter has precedence over any other paren spacing rules. The values of <b>n</b> are as follows:</p>
+
+<pre><code>   -kpit=0 means always put a space (not tight)
+   -kpit=1 means ignore this parameter [default]
+   -kpit=2 means never put a space (tight)</code></pre>
+
+<p>To illustrate, the following snippet is shown formatted in three ways:</p>
+
+<pre><code>    if ( seek( DATA, 0, 0 ) ) { ... }    # perltidy (default)
+    if (seek(DATA, 0, 0)) { ... }        # perltidy -pt=2
+    if ( seek(DATA, 0, 0) ) { ... }      # perltidy -pt=2 -kpit=0</code></pre>
+
+<p>In the second case the -pt=2 parameter makes all of the parens tight. In the third case the -kpit=0 flag causes the space within the &#39;if&#39; parens to have a space, since &#39;if&#39; is one of the keywords to which the -kpit flag applies by default. The remaining parens are still tight because of the -pt=2 parameter.</p>
+
+<p>The set of keywords to which this parameter applies are by default are:</p>
+
+<pre><code>   if elsif unless while until for foreach</code></pre>
+
+<p>These can be changed with the parameter <b>-kpitl=s</b> described in the next section.</p>
+
+</dd>
+<dt id="kpitl-string-or---keyword-paren-inner-tightness-string"><b>-kpitl=string</b> or <b>--keyword-paren-inner-tightness=string</b></dt>
+<dd>
+
+<p>This command can be used to change the keywords to which the the <b>-kpit=n</b> command applies. The parameter <b>string</b> is a required list either keywords or functions, which should be placed in quotes if there are more than one. By itself, this parameter does not cause any change in spacing, so the <b>-kpit=n</b> command is still required.</p>
+
+<p>For example, the commands <code>-kpitl=&quot;if else while&quot; -kpit=2</code> will cause the just the spaces inside parens following &#39;if&#39;, &#39;else&#39;, and &#39;while&#39; keywords to follow the tightness value indicated by the <b>-kpit=2</b> flag.</p>
+
+</dd>
 <dt id="Trimming-whitespace-around-qw-quotes">Trimming whitespace around <code>qw</code> quotes</dt>
 <dd>
 
