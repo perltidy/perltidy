@@ -1903,13 +1903,16 @@ sub set_whitespace_flags {
     my %opening_container_inside_ws;
     my %closing_container_inside_ws;
     my $set_container_ws_by_keyword = sub {
+
+        return unless (%keyword_paren_inner_tightness);
+
         my ( $word, $sequence_number ) = @_;
 
         # We just saw a keyword (or other function name) followed by an opening
         # paren. Now check to see if the following paren should have special
         # treatment for its inside space.  If so we set a hash value using the
         # sequence number as key.
-        if ($word) {
+        if ( $word && $sequence_number ) {
             my $tightness = $keyword_paren_inner_tightness{$word};
             if ( defined($tightness) && $tightness != 1 ) {
                 my $ws_flag = $tightness == 0 ? WS_YES : WS_NO;
@@ -1921,6 +1924,7 @@ sub set_whitespace_flags {
 
     my $ws_opening_container_override = sub {
         my ( $ws, $sequence_number ) = @_;
+        return $ws unless (%opening_container_inside_ws);
         if ($sequence_number) {
             my $ws_override = $opening_container_inside_ws{$sequence_number};
             if ($ws_override) { $ws = $ws_override }
@@ -1930,6 +1934,7 @@ sub set_whitespace_flags {
 
     my $ws_closing_container_override = sub {
         my ( $ws, $sequence_number ) = @_;
+        return $ws unless (%closing_container_inside_ws);
         if ($sequence_number) {
             my $ws_override = $closing_container_inside_ws{$sequence_number};
             if ($ws_override) { $ws = $ws_override }
@@ -5846,15 +5851,18 @@ EOM
 
     # setup hash for -kpit option
     %keyword_paren_inner_tightness = ();
-    my @kpit = split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
-    unless (@kpit) {
-        @kpit = qw(if elsif unless while until for foreach);    # defaults
-    }
+    my $kpit_value = $rOpts->{'keyword-paren-inner-tightness'};
+    if ( defined($kpit_value) && $kpit_value != 1 ) {
+        my @kpit =
+          split_words( $rOpts->{'keyword-paren-inner-tightness-list'} );
+        unless (@kpit) {
+            @kpit = qw(if elsif unless while until for foreach);    # defaults
+        }
 
-    # we will allow keywords and user-defined identifiers
-    foreach (@kpit) {
-        $keyword_paren_inner_tightness{$_} =
-          $rOpts->{'keyword-paren-inner-tightness'};
+        # we will allow keywords and user-defined identifiers
+        foreach (@kpit) {
+            $keyword_paren_inner_tightness{$_} = $kpit_value;
+        }
     }
 
     # implement user whitespace preferences
