@@ -1,0 +1,12 @@
+    if ( $var eq 'wastebasket' ) {    # this sends a pure block
+                                      # of hanging side comments
+                                      #to the vertical aligner.
+                                      #It caused a crash in
+                                      #a test version of
+                                      #sub 'delete_unmatched_tokens'
+                                      #...
+                                      #}
+    }
+    elsif ( $var eq 'spacecommand' ) {
+        &die("No $val function") unless eval "defined &$val";
+    }

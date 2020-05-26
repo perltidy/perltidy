@@ -18,6 +18,7 @@
 #15 kpit.kpit
 #16 kpitl.def
 #17 kpitl.kpitl
+#18 hanging_side_comments3.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -116,8 +117,23 @@ my $mapping = [
 
 ----------
 
+        'hanging_side_comments3' => <<'----------',
+    if ( $var eq 'wastebasket' ) {    # this sends a pure block
+                                      # of hanging side comments
+                                      #to the vertical aligner.
+                                      #It caused a crash in
+                                      #a test version of
+                                      #sub 'delete_unmatched_tokens'
+                                      #...
+                                      #}
+    }
+    elsif ( $var eq 'spacecommand' ) {
+        &die("No $val function") unless eval "defined &$val";
+    }
+----------
+
         'kpit' => <<'----------',
-if ( seek( DATA, 0, 0 ) ) { ... } 
+if ( seek(DATA, 0, 0) ) { ... }
 ----------
 
         'kpitl' => <<'----------',
@@ -522,6 +538,25 @@ return ( $r**$n ) *
       factorial( int($n / 2) + 1 ) /
       (4**(int($n / 2) + 1)));
 #17...........
+        },
+
+        'hanging_side_comments3.def' => {
+            source => "hanging_side_comments3",
+            params => "def",
+            expect => <<'#18...........',
+    if ( $var eq 'wastebasket' ) {    # this sends a pure block
+                                      # of hanging side comments
+                                      #to the vertical aligner.
+                                      #It caused a crash in
+                                      #a test version of
+                                      #sub 'delete_unmatched_tokens'
+                                      #...
+                                      #}
+    }
+    elsif ( $var eq 'spacecommand' ) {
+        &die("No $val function") unless eval "defined &$val";
+    }
+#18...........
         },
     };
 

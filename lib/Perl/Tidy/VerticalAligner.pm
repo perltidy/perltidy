@@ -2627,6 +2627,7 @@ sub delete_unmatched_tokens {
     my @min_levels;
 
     my $jmax = @{$rnew_lines} - 1;
+    return unless $jmax >= 0;
 
     my %is_good_tok;
 
