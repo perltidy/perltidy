@@ -1825,6 +1825,8 @@ sub set_whitespace_flags {
 
     my $rwhitespace_flags = [];
 
+    my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
+
     my ( $token, $type, $block_type, $seqno, $input_line_no );
     my (
         $last_token, $last_type, $last_block_type,
@@ -2224,13 +2226,13 @@ sub set_whitespace_flags {
         }
         elsif ( $type eq 'k' ) {
 
-	    # Keyword 'foreach' is a special case for the -kpit logic since the
+	    # Keywords 'for', 'foreach' are special cases for -kpit since the
 	    # opening paren does not always immediately follow the keyword. So
 	    # we have to search forward for the paren in this case.  I have
             # limited the search to 10 tokens ahead, just in case somebody
             # has a big file and no opening paren.  This should be enough for
             # all normal code.
-            if (   $token eq 'foreach'
+            if (   $is_for_foreach{$token}
                 && %keyword_paren_inner_tightness
                 && defined( $keyword_paren_inner_tightness{$token} )
                 && $j < $jmax )
@@ -9406,9 +9408,7 @@ sub pad_token {
 		    # Deactivated for -kpit due to conflict. This block deletes
 		    # a space in an attempt to improve alignment in some cases,
 		    # but it may conflict with user spacing requests.  For now
-		    # it is just deactivated if the -kpit option is used, to
-		    # avoid changing existing formatting, but really it adds
-		    # little value and could eventually be completely removed.
+		    # it is just deactivated if the -kpit option is used.
                     if ( $pad_spaces == -1 ) {
                         if (   $ipad > $ibeg
                             && $types_to_go[ $ipad - 1 ] eq 'b'
