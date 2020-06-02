@@ -134,6 +134,18 @@ my $mapping = [
 
         'kpit' => <<'----------',
 if ( seek(DATA, 0, 0) ) { ... }
+
+# The foreach keyword may be separated from the next opening paren
+foreach $req(@bgQueue) {
+   ...
+}
+
+# This had trouble because a later padding operation removed the inside space
+while ($CmdJob eq "" && @CmdQueue > 0 && $RunNightlyWhenIdle != 1
+        || @CmdQueue > 0 && $RunNightlyWhenIdle == 2 && $bpc->isAdminJob($CmdQueue[0]->{host})) {
+  ... 
+}
+
 ----------
 
         'kpitl' => <<'----------',
@@ -501,6 +513,21 @@ my $mapping = [
             params => "def",
             expect => <<'#14...........',
 if ( seek( DATA, 0, 0 ) ) { ... }
+
+# The foreach keyword may be separated from the next opening paren
+foreach $req (@bgQueue) {
+    ...;
+}
+
+# This had trouble because a later padding operation removed the inside space
+while ($CmdJob eq "" && @CmdQueue > 0 && $RunNightlyWhenIdle != 1
+    || @CmdQueue > 0
+    && $RunNightlyWhenIdle == 2
+    && $bpc->isAdminJob( $CmdQueue[0]->{host} ) )
+{
+    ...;
+}
+
 #14...........
         },
 
@@ -509,6 +536,21 @@ if ( seek( DATA, 0, 0 ) ) { ... }
             params => "kpit",
             expect => <<'#15...........',
 if ( seek(DATA, 0, 0) ) { ... }
+
+# The foreach keyword may be separated from the next opening paren
+foreach $req ( @bgQueue ) {
+    ...;
+}
+
+# This had trouble because a later padding operation removed the inside space
+while ( $CmdJob eq "" && @CmdQueue > 0 && $RunNightlyWhenIdle != 1
+    || @CmdQueue > 0
+    && $RunNightlyWhenIdle == 2
+    && $bpc->isAdminJob($CmdQueue[0]->{host}) )
+{
+    ...;
+}
+
 #15...........
         },
 

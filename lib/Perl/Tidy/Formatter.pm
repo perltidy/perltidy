@@ -2222,6 +2222,30 @@ sub set_whitespace_flags {
                 $ws = WS_NO;
             }
         }
+        elsif ( $type eq 'k' ) {
+
+	    # Keyword 'foreach' is a special case for the -kpit logic since the
+	    # opening paren does not always immediately follow the keyword. So
+	    # we have to search forward for the paren in this case.  I have
+            # limited the search to 10 tokens ahead, just in case somebody
+            # has a big file and no opening paren.  This should be enough for
+            # all normal code.
+            if (   $token eq 'foreach'
+                && %keyword_paren_inner_tightness
+                && defined( $keyword_paren_inner_tightness{$token} )
+                && $j < $jmax )
+            {
+                my $jp = $j;
+                for ( my $inc = 1 ; $inc < 10 ; $inc++ ) {
+                    $jp++;
+                    last if ( $jp > $jmax );
+                    next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
+                    my $seqno = $rLL->[$jp]->[_TYPE_SEQUENCE_];
+                    $set_container_ws_by_keyword->( $token, $seqno );
+                    last;
+                }
+            }
+        }
 
         my $ws_4;
         $ws_4 = $ws
@@ -9379,8 +9403,16 @@ sub pad_token {
                 # token
                 if ( $pad_spaces < 0 ) {
 
+		    # Deactivated for -kpit due to conflict. This block deletes
+		    # a space in an attempt to improve alignment in some cases,
+		    # but it may conflict with user spacing requests.  For now
+		    # it is just deactivated if the -kpit option is used, to
+		    # avoid changing existing formatting, but really it adds
+		    # little value and could eventually be completely removed.
                     if ( $pad_spaces == -1 ) {
-                        if ( $ipad > $ibeg && $types_to_go[ $ipad - 1 ] eq 'b' )
+                        if (   $ipad > $ibeg
+                            && $types_to_go[ $ipad - 1 ] eq 'b'
+                            && !%keyword_paren_inner_tightness )
                         {
                             $self->pad_token( $ipad - 1, $pad_spaces );
                         }
