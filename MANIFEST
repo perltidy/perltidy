@@ -1,4 +1,5 @@
 .pre-commit-hooks.yaml
+bbs.t
 bin/perltidy
 BUGS.md
 CHANGES.md
@@ -22,6 +23,7 @@ examples/lextest
 examples/perlcomment.pl
 examples/perllinetype.pl
 examples/perlmask.pl
+examples/perltidy.DEBUG
 examples/perltidy_okw.pl
 examples/perltidyrc_dump.pl
 examples/perlxmltok.pl
@@ -53,7 +55,8 @@ Makefile.PL
 MANIFEST			This list of files
 pm2pl
 README.md
-t/filter_example.t.SKIP
+t/atee.t
+t/filter_example.t
 t/snippets1.t
 t/snippets10.t
 t/snippets11.t
@@ -63,7 +66,11 @@ t/snippets14.t
 t/snippets15.t
 t/snippets16.t
 t/snippets17.t
+t/snippets18.t
+t/snippets19.t
 t/snippets2.t
+t/snippets20.t
+t/snippets21.t
 t/snippets3.t
 t/snippets4.t
 t/snippets5.t
@@ -77,3 +84,4 @@ t/testsa.t
 t/testss.t
 t/testwide.pl.src
 t/testwide.t
+t/testwide.t.tdy

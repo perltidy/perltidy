@@ -960,6 +960,48 @@
 <p>For example, the commands <code>-kpitl=&quot;if else while&quot; -kpit=2</code> will cause the just the spaces inside parens following &#39;if&#39;, &#39;else&#39;, and &#39;while&#39; keywords to follow the tightness value indicated by the <b>-kpit=2</b> flag.</p>
 
 </dd>
+<dt id="lop-or---logical-padding"><b>-lop</b> or <b>--logical-padding</b></dt>
+<dd>
+
+<p>In the following example some extra space has been inserted on the second line between the two open parens. This extra space is called &quot;logical padding&quot; and is intended to help align similar things vertically in some logical or ternary expressions.</p>
+
+<pre><code>    # perltidy [default formatting] 
+    $same =
+      (      ( $aP eq $bP )
+          &amp;&amp; ( $aS eq $bS )
+          &amp;&amp; ( $aT eq $bT )
+          &amp;&amp; ( $a-&gt;{&#39;title&#39;} eq $b-&gt;{&#39;title&#39;} )
+          &amp;&amp; ( $a-&gt;{&#39;href&#39;} eq $b-&gt;{&#39;href&#39;} ) );</code></pre>
+
+<p>Note that this is considered to be a different operation from &quot;vertical alignment&quot; because space at just one line is being adjusted, whereas in &quot;vertical alignment&quot; the spaces at all lines are being adjusted. So it sort of a local version of vertical alignment.</p>
+
+<p>Here is an example involving a ternary operator:</p>
+
+<pre><code>    # perltidy [default formatting] 
+    $bits =
+        $top &gt; 0xffff ? 32
+      : $top &gt; 0xff   ? 16
+      : $top &gt; 1      ? 8
+      :                 1;</code></pre>
+
+<p>This behavior is controlled with the flag <b>--logical-padding</b>, which is set &#39;on&#39; by default. If it is not desired it can be turned off using <b>--nological-padding</b> or <b>-nlop</b>. The above two examples become, with <b>-nlop</b>:</p>
+
+<pre><code>    # perltidy -nlop
+    $same =
+      ( ( $aP eq $bP )
+          &amp;&amp; ( $aS eq $bS )
+          &amp;&amp; ( $aT eq $bT )
+          &amp;&amp; ( $a-&gt;{&#39;title&#39;} eq $b-&gt;{&#39;title&#39;} )
+          &amp;&amp; ( $a-&gt;{&#39;href&#39;} eq $b-&gt;{&#39;href&#39;} ) );
+
+    # perltidy -nlop
+    $bits =
+      $top &gt; 0xffff ? 32
+      : $top &gt; 0xff ? 16
+      : $top &gt; 1    ? 8
+      :               1;</code></pre>
+
+</dd>
 <dt id="Trimming-whitespace-around-qw-quotes">Trimming whitespace around <code>qw</code> quotes</dt>
 <dd>
 
@@ -968,17 +1010,17 @@
 <p><b>-ntqw</b> or <b>--notrim-qw</b> cause leading and trailing whitespace around multi-line <code>qw</code> quotes to be left unchanged. This option will not normally be necessary, but was added for testing purposes, because in some versions of perl, trimming <code>qw</code> quotes changes the syntax tree.</p>
 
 </dd>
-<dt id="sbq-n-or---space-backslash-quote-n"><b>-sbq=n</b> or <b>--space-backslash-quote=n</b></dt>
+<dt id="b-sbq-n-or-b--space-backslash-quote-n">b&lt;-sbq=n&gt; or b&lt;--space-backslash-quote=n&gt;</dt>
 <dd>
 
-<p>Lines like</p>
+<p>lines like</p>
 
 <pre><code>       $str1=\&quot;string1&quot;;
        $str2=\&#39;string2&#39;;</code></pre>
 
 <p>can confuse syntax highlighters unless a space is included between the backslash and the single or double quotation mark.</p>
 
-<p>This can be controlled with the value of <b>n</b> as follows:</p>
+<p>this can be controlled with the value of b&lt;n&gt; as follows:</p>
 
 <pre><code>    -sbq=0 means no space between the backslash and quote
     -sbq=1 means follow the example of the source code

@@ -1210,6 +1210,56 @@ For example, the commands C<-kpitl="if else while" -kpit=2> will cause the just
 the spaces inside parens following  'if', 'else', and 'while' keywords to
 follow the tightness value indicated by the B<-kpit=2> flag.
 
+=item B<-lop>  or B<--logical-padding>
+
+In the following example some extra space has been inserted on the second
+line between the two open parens. This extra space is called "logical padding"
+and is intended to help align similar things vertically in some logical
+or ternary expressions.  
+
+    # perltidy [default formatting] 
+    $same =
+      (      ( $aP eq $bP )
+          && ( $aS eq $bS )
+          && ( $aT eq $bT )
+          && ( $a->{'title'} eq $b->{'title'} )
+          && ( $a->{'href'} eq $b->{'href'} ) );
+
+Note that this is considered to be a different operation from "vertical
+alignment" because space at just one line is being adjusted, whereas in
+"vertical alignment" the spaces at all lines are being adjusted. So it sort of
+a local version of vertical alignment.
+
+Here is an example involving a ternary operator:
+
+    # perltidy [default formatting] 
+    $bits =
+        $top > 0xffff ? 32
+      : $top > 0xff   ? 16
+      : $top > 1      ? 8
+      :                 1;
+
+This behavior is controlled with the flag B<--logical-padding>, which is set
+'on' by default.  If it is not desired it can be turned off using
+B<--nological-padding> or B<-nlop>.  The above two examples become, with
+B<-nlop>:
+
+    # perltidy -nlop
+    $same =
+      ( ( $aP eq $bP )
+          && ( $aS eq $bS )
+          && ( $aT eq $bT )
+          && ( $a->{'title'} eq $b->{'title'} )
+          && ( $a->{'href'} eq $b->{'href'} ) );
+
+    # perltidy -nlop
+    $bits =
+      $top > 0xffff ? 32
+      : $top > 0xff ? 16
+      : $top > 1    ? 8
+      :               1;
+
+
 =item Trimming whitespace around C<qw> quotes
 
 B<-tqw> or B<--trim-qw> provide the default behavior of trimming
@@ -1220,16 +1270,16 @@ multi-line C<qw> quotes to be left unchanged.  This option will not
 normally be necessary, but was added for testing purposes, because in
 some versions of perl, trimming C<qw> quotes changes the syntax tree.
 
-=item B<-sbq=n>  or B<--space-backslash-quote=n>
+=item b<-sbq=n>  or b<--space-backslash-quote=n>
 
-Lines like
+lines like
 
        $str1=\"string1";
        $str2=\'string2';
 
 can confuse syntax highlighters unless a space is included between the backslash and the single or double quotation mark.
 
-This can be controlled with the value of B<n> as follows:
+this can be controlled with the value of b<n> as follows:
 
     -sbq=0 means no space between the backslash and quote
     -sbq=1 means follow the example of the source code

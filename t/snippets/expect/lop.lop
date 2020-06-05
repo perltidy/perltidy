@@ -1,0 +1,17 @@
+# logical padding examples
+$same =
+  ( ( $aP eq $bP )
+      && ( $aS eq $bS )
+      && ( $aT eq $bT )
+      && ( $a->{'title'} eq $b->{'title'} )
+      && ( $a->{'href'} eq $b->{'href'} ) );
+
+$bits =
+  $top > 0xffff ? 32
+  : $top > 0xff ? 16
+  : $top > 1    ? 8
+  :               1;
+
+lc( $self->mime_attr('content-type')
+      || $self->{MIH_DefaultType}
+      || 'text/plain' );

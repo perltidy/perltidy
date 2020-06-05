@@ -19,6 +19,7 @@
 #16 kpitl.def
 #17 kpitl.kpitl
 #18 hanging_side_comments3.def
+#19 lop.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -152,6 +153,26 @@ while ($CmdJob eq "" && @CmdQueue > 0 && $RunNightlyWhenIdle != 1
 return ( $r**$n ) * ( pi**( $n / 2 ) ) / ( sqrt(pi) * factorial( 2 * ( int( $n
 / 2 ) ) + 2 ) / factorial( int( $n / 2 ) + 1 ) / ( 4**( int( $n / 2 ) + 1 ) )
 );
+----------
+
+        'lop' => <<'----------',
+# logical padding examples
+$same =
+  (      ( $aP eq $bP )
+      && ( $aS eq $bS )
+      && ( $aT eq $bT )
+      && ( $a->{'title'} eq $b->{'title'} )
+      && ( $a->{'href'} eq $b->{'href'} ) );
+
+$bits =
+    $top > 0xffff ? 32
+  : $top > 0xff   ? 16
+  : $top > 1      ? 8
+  :                 1;
+
+lc( $self->mime_attr('content-type')
+        || $self->{MIH_DefaultType}
+        || 'text/plain' );
 ----------
 
         'outdent' => <<'----------',
@@ -599,6 +620,30 @@ return ( $r**$n ) *
         &die("No $val function") unless eval "defined &$val";
     }
 #18...........
+        },
+
+        'lop.def' => {
+            source => "lop",
+            params => "def",
+            expect => <<'#19...........',
+# logical padding examples
+$same =
+  (      ( $aP eq $bP )
+      && ( $aS eq $bS )
+      && ( $aT eq $bT )
+      && ( $a->{'title'} eq $b->{'title'} )
+      && ( $a->{'href'} eq $b->{'href'} ) );
+
+$bits =
+    $top > 0xffff ? 32
+  : $top > 0xff   ? 16
+  : $top > 1      ? 8
+  :                 1;
+
+lc(      $self->mime_attr('content-type')
+      || $self->{MIH_DefaultType}
+      || 'text/plain' );
+#19...........
         },
     };
 

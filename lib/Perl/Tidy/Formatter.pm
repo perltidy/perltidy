@@ -10362,7 +10362,8 @@ sub send_lines_to_vertical_aligner {
 
     $self->undo_ci( $ri_first, $ri_last );
 
-    $self->set_logical_padding( $ri_first, $ri_last );
+    $self->set_logical_padding( $ri_first, $ri_last )
+      if ( $rOpts->{'logical-padding'} );
 
     # loop to prepare each line for shipment
     my $in_comma_list;

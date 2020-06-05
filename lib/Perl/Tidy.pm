@@ -1988,6 +1988,7 @@ sub generate_options {
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
     $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
+    $add_option->( 'logical-padding',                           'lop',   '!' );
     $add_option->( 'nospace-after-keyword',                     'nsak',  '=s' );
     $add_option->( 'nowant-left-space',                         'nwls',  '=s' );
     $add_option->( 'nowant-right-space',                        'nwrs',  '=s' );
@@ -2283,6 +2284,7 @@ sub generate_options {
       iterations=1
       keep-old-blank-lines=1
       keyword-paren-inner-tightness=1
+      logical-padding
       long-block-line-count=8
       look-for-autoloader
       look-for-selfloader
