@@ -3132,7 +3132,7 @@ sub delete_unmatched_tokens {
     BEGIN {
 
         my @q = qw(
-          if or ||
+          if unless or ||
         );
         @is_if_or{@q} = (1) x scalar(@q);
 
