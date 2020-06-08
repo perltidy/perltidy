@@ -632,21 +632,21 @@ B<utf8>.
 
 =item B<-gcs>,  B<--use-unicode-gcstring>
 
-This flag controls whether or not perltidy may use module Unicode::GCString.
-It has no effect if that module is not installed on a system.
-If text is encoded then perltidy will by default use the module
-Unicode::GCString to determine the horizontal widths of the text, provided
-Unicode::GCString is available.  This is needed to produce formatted text with
-good vertical alignment when there are wide characters. If the module is not
-available on the system, or if the flag B<--nouse-unicode-gcstring> or B<ngcs>
-has been set, then this module will not be used and characters will have an
-assumed display width of 1.  In this case, vertical alignment may be poor if
-code contains a mixture of wide and normal characters.  The default setting is
-B<--use-unicode-gcstring>.   This flag is mainly intended for testing, and as a
-workaround in case a problem arises with the Unicode::GCString module.
+This flag controls whether or not perltidy may use module Unicode::GCString to
+obtain accurate display widths of wide characters.  The default 
+is B<--nouse-unicode-gcstring>.
 
-Perltidy installation does not require Unicode::GCString, so users wanting
-to use this feature need to install it separately.
+If this flag is set, and text is encoded, perltidy will look for the module
+Unicode::GCString and, if found, will use it to obtain character display
+widths.  This can improve displayed vertical alignment for files with wide
+characters.  It is a nice feature but it is off by default to avoid conflicting
+formatting when there are multiple developers.  Perltidy installation does not
+require Unicode::GCString, so users wanting to use this feature need set this
+flag and also to install Unicode::GCString separately.
+
+If this flag is set and perltidy does not find module Unicode::GCString,
+a warning message will be produced and processing will continue but without
+the potential benefit provided by the module.
 
 Also note that actual vertical alignment depends upon the fonts used by the
 text display software, so vertical alignment may not be optimal even when

@@ -2,6 +2,9 @@
 
 ## 2020 01 10.01
 
+    - Fixed minor problem where trailing 'unless' clauses were not 
+      getting vertically aligned.
+
     - Added a parameter --logical-padding or -lop to allow logical padding
       to be turned off.  Requested by git #29. This flag is on by default.
       The man pages have examples.
@@ -21,14 +24,15 @@
       in RT#131644.  This flag will keep lines beginning with a semicolon.
 
     - Added --use-unicode-gcstring to control use of Unicode::GCString for
-      evaluating character widths of encoded data.  By default, for encoded files
-      perltidy will now look for Unicode::GCString and, if found, will use it 
+      evaluating character widths of encoded data.  The default is 
+      not to use this (--nouse-unicode-gcstring). If this flag is set,
+      perltidy will look for Unicode::GCString and, if found, will use it 
       to evaluate character display widths.  This can improve displayed
-      vertical alignment for files with wide characters. This flag is mainly intended
-      for testing, but can also prevent the use of this module in the event that some
-      unforseen issue arises.  Perltidy installation does not require
-      Unicode::GCString, so users wanting to use this feature need to install it
-      separately.
+      vertical alignment for files with wide characters.  It is a nice
+      feature but it is off by default to avoid conflicting formatting
+      when there are multiple developers.  Perltidy installation does not 
+      require Unicode::GCString, so users wanting to use this feature need 
+      set this flag and also to install Unicode::GCString separately.
 
     - Added --character-encoding=guess or -guess to have perltidy guess
       if a file (or other input stream) is encoded as -utf8 or some 
@@ -42,12 +46,12 @@
       which is included in standard perl distributions, and only tries to 
       guess if a file is utf8 or not, never any other encoding.  If the guess is 
       utf8, and if the file successfully decodes as utf8, then it the encoding 
-      is assumed to be utf8.  Otherwise, no encoding is assumed.
-      I have done extensive testing and have not detected any problems with
-      this guess method. If you do not want to use this new default guess mode,
-      or have a problem with it, you can set --character-encoding=none 
-      (the previous default) or --character-encoding=utf8 (if you deal
-      with utf8 files).
+      is assumed to be utf8.  Otherwise, no encoding is assumed.  I have done
+      extensive testing and have not detected any problems with this 
+      rather conservative guess method, so I think it is a good default. 
+      If you do not want to use this new default guess mode, or have a 
+      problem with it, you can set --character-encoding=none (the previous 
+      default) or --character-encoding=utf8 (if you deal with utf8 files).
 
     - Specific encodings of input files other than utf8 may now be given, for
       example --character-encoding=euc-jp.  
