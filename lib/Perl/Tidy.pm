@@ -1046,6 +1046,17 @@ EOM
             if ( !defined($loaded_unicode_gcstring) ) {
                 eval { require Unicode::GCString };
                 $loaded_unicode_gcstring = !$@;
+                if ( $@ && $rOpts->{'use-unicode-gcstring'} ) {
+                    Warn(<<EOM);
+----------------------
+Unable to load Unicode::GCString: $@
+Processing continues but some vertical alignment may be poor
+To prevent this warning message, you can either:
+- install module Unicode::GCString, or
+- remove '--use-unicode-gcstring' or '-gcs' from your perltidyrc or command line
+----------------------
+EOM
+                }
             }
             if ($loaded_unicode_gcstring) {
                 $length_function = sub {
@@ -2314,7 +2325,7 @@ sub generate_options {
       pass-version-line
       noweld-nested-containers
       recombine
-      use-unicode-gcstring
+      nouse-unicode-gcstring
       valign
       short-concatenation-item-length=8
       space-for-semicolon
