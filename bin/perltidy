@@ -1103,7 +1103,7 @@ Related issues arise with other binary operator symbols, such as + and -, and in
 When an opening paren follows a Perl keyword, no space is introduced after the
 keyword, unless it is (by default) one of these:
 
-   my local our and or eq ne if else elsif until unless 
+   my local our and or xor eq ne if else elsif until unless 
    while for foreach return switch case given when
 
 These defaults can be modified with two commands:
