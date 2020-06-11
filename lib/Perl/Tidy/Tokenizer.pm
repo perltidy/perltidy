@@ -1542,6 +1542,34 @@ sub prepare_for_a_new_file {
       qw(if elsif unless while until for foreach switch case given when catch);
     @is_blocktype_with_paren{@_} = (1) x scalar(@_);
 
+    my $extended_syntax_type = sub {
+
+        # check for certain extended syntax variations, and
+        # - if found, set $type and return the $type
+        # - if not found, return undef if not found
+        return unless ( $tokenizer_self->{'_extended_syntax'} );
+
+        if ( $type eq ':' ) {
+            my ( $next_nonblank_token, $i_next ) =
+              find_next_nonblank_token( $i + 1, $rtokens, $max_token_index );
+
+            # Look for Switch::Plain syntax; some examples
+            #  case 1: {
+            #  default: {
+            #  default:
+            # This should be enough to identify this syntax.  If necessary, we
+            # could also look for and require 'use Switch::Plain', but then
+            # perltidy would fail if run on small snippets in an editor.
+            if ( $statement_type eq 'case' || $statement_type eq 'default' ) {
+
+                # The type will be the same as a label
+                $type = 'J';
+                return $type;
+            }
+        }
+        return;
+    };
+
     # ------------------------------------------------------------
     # begin hash of code for handling most token types
     # ------------------------------------------------------------
@@ -2156,6 +2184,15 @@ sub prepare_for_a_new_file {
             {
                 $type              = 'A';
                 $in_attribute_list = 1;
+            }
+
+            # if an error would otherwise occur, check for extended syntax
+            elsif ( !$current_depth[QUESTION_COLON]
+                && $extended_syntax_type->() )
+            {
+
+                # it is a recognized extended syntax
+                # $type was set by $extended_syntax_type
             }
 
             # otherwise, it should be part of a ?/: operator
@@ -3405,8 +3442,11 @@ EOM
                     }
 
                     # patch for SWITCH/CASE if 'case' and 'when are
-                    # treated as keywords.
-                    elsif ( $tok eq 'when' || $tok eq 'case' ) {
+                    # treated as keywords.  Also 'default' for Switch::Plain
+                    elsif ($tok eq 'when'
+                        || $tok eq 'case'
+                        || $tok eq 'default' )
+                    {
                         $statement_type = $tok;    # next '{' is block
                     }
 
@@ -7556,11 +7596,12 @@ BEGIN {
 
     # These tokens may precede a code block
     # patched for SWITCH/CASE/CATCH.  Actually these could be removed
-    # now and we could let the extended-syntax coding handle them
+    # now and we could let the extended-syntax coding handle them.
+    # Added 'default' for Switch::Plain.
     @q =
       qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif else
       unless do while until eval for foreach map grep sort
-      switch case given when catch try finally);
+      switch case given when default catch try finally);
     @is_code_block_token{@q} = (1) x scalar(@q);
 
     # I'll build the list of keywords incrementally
@@ -7785,6 +7826,7 @@ BEGIN {
 
       switch
       case
+      default
       given
       when
       err
@@ -7795,9 +7837,8 @@ BEGIN {
 
     # patched above for SWITCH/CASE given/when err say
     # 'err' is a fairly safe addition.
-    # TODO: 'default' still needed if appropriate
-    # 'use feature' seen, but perltidy works ok without it.
-    # Concerned that 'default' could break code.
+    # Added 'default' for Switch::Plain. Note that we could also have
+    # a separate set of keywords to include if we see 'use Switch::Plain'
     push( @Keywords, @value_requestor );
 
     # These are treated the same but are not keywords:

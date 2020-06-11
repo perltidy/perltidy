@@ -2,6 +2,8 @@
 
 # Contents:
 #1 lop.lop
+#2 switch_plain.def
+#3 switch_plain.switch_plain
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -18,7 +20,11 @@ BEGIN {
     ###########################################
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
-    $rparams = { 'lop' => "-nlop", };
+    $rparams = {
+        'def'          => "",
+        'lop'          => "-nlop",
+        'switch_plain' => "-nola",
+    };
 
     ############################
     # BEGIN SECTION 2: Sources #
@@ -43,6 +49,29 @@ $bits =
 lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
+----------
+
+        'switch_plain' => <<'----------',
+# must run with -nola to keep default from outdenting
+use Switch::Plain;
+my $r = 'fail';
+my $x = int rand 100_000;
+nswitch (1 + $x * 2) {
+    case $x: {}
+    default: {
+        $r = 'ok';
+    }
+}
+my @words = qw(speed me towards death);
+$r = do {
+    sswitch ($words[rand @words]) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+        default: { 'wtf' }
+    }
+};
 ----------
     };
 
@@ -73,6 +102,60 @@ lc( $self->mime_attr('content-type')
       || $self->{MIH_DefaultType}
       || 'text/plain' );
 #1...........
+        },
+
+        'switch_plain.def' => {
+            source => "switch_plain",
+            params => "def",
+            expect => <<'#2...........',
+# must run with -nola to keep default from outdenting
+use Switch::Plain;
+my $r = 'fail';
+my $x = int rand 100_000;
+nswitch( 1 + $x * 2 ) {
+    case $x: { }
+  default: {
+        $r = 'ok';
+    }
+}
+my @words = qw(speed me towards death);
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+#2...........
+        },
+
+        'switch_plain.switch_plain' => {
+            source => "switch_plain",
+            params => "switch_plain",
+            expect => <<'#3...........',
+# must run with -nola to keep default from outdenting
+use Switch::Plain;
+my $r = 'fail';
+my $x = int rand 100_000;
+nswitch( 1 + $x * 2 ) {
+    case $x: { }
+    default: {
+        $r = 'ok';
+    }
+}
+my @words = qw(speed me towards death);
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+        default: { 'wtf' }
+    }
+};
+#3...........
         },
     };
 
