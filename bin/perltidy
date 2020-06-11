@@ -551,6 +551,10 @@ a syntax error and the braces would not be balanced:
         $self->balance( $self->balance + $amount );
     }
 
+For one of the extensions, module Switch::Plain, colons are marked as labels.
+If you use this module, you may want to also use the B<--nooutdent-labels> flag
+to prevent lines such as 'default:' from being outdented.
+
 This flag is enabled by default but it can be deactivated with B<-nxs>.
 Probably the only reason to deactivate this flag is to generate more diagnostic
 messages when debugging a script.

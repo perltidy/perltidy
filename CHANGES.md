@@ -2,6 +2,8 @@
 
 ## 2020 01 10.01
 
+    - Added support for Switch::Plain syntax, issue git #31.
+
     - Fixed minor problem where trailing 'unless' clauses were not 
       getting vertically aligned.
 
