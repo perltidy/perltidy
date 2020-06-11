@@ -2523,10 +2523,9 @@ single perl operator except B<=> on a -wbb flag.
 
 =head2 Controlling List Formatting
 
-Perltidy attempts to format lists of comma-separated values in tables
-which look good.  Its default algorithms usually work well, but sometimes
-parameters available to control list formatting.  In this case, there
-are several methods available to control list formatting.
+Perltidy attempts to format lists of comma-separated values in tables which
+look good.  Its default algorithms usually work well, but sometimes they don't.
+In this case, there are several methods available to control list formatting.
 
 A very simple way to prevent perltidy from changing the line breaks
 within a comma-separated list of values is to insert a blank line,
