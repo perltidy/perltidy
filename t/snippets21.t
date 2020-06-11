@@ -52,7 +52,7 @@ lc( $self->mime_attr('content-type')
 ----------
 
         'switch_plain' => <<'----------',
-# must run with -nola to keep default from outdenting
+# run with -nola to keep default from outdenting
 use Switch::Plain;
 my $r = 'fail';
 my $x = int rand 100_000;
@@ -62,16 +62,20 @@ nswitch (1 + $x * 2) {
         $r = 'ok';
     }
 }
-my @words = qw(speed me towards death);
-$r = do {
-    sswitch ($words[rand @words]) {
+
+my @words = qw(cinnamon ginger nutmeg cloves);
+my $test = 1;
+$r = $test
+  ? do {
+    sswitch( $words[ rand @words ] ) {
         case $words[0]:
         case $words[1]:
         case $words[2]:
         case $words[3]: { 'ok' }
-        default: { 'wtf' }
+      default: { 'default case' }
     }
-};
+  }
+  : 'not ok';
 ----------
     };
 
@@ -108,7 +112,7 @@ lc( $self->mime_attr('content-type')
             source => "switch_plain",
             params => "def",
             expect => <<'#2...........',
-# must run with -nola to keep default from outdenting
+# run with -nola to keep default from outdenting
 use Switch::Plain;
 my $r = 'fail';
 my $x = int rand 100_000;
@@ -118,16 +122,20 @@ nswitch( 1 + $x * 2 ) {
         $r = 'ok';
     }
 }
-my @words = qw(speed me towards death);
-$r = do {
+
+my @words = qw(cinnamon ginger nutmeg cloves);
+my $test  = 1;
+$r = $test
+  ? do {
     sswitch( $words[ rand @words ] ) {
         case $words[0]:
         case $words[1]:
         case $words[2]:
         case $words[3]: { 'ok' }
-      default: { 'wtf' }
+      default: { 'default case' }
     }
-};
+  }
+  : 'not ok';
 #2...........
         },
 
@@ -135,7 +143,7 @@ $r = do {
             source => "switch_plain",
             params => "switch_plain",
             expect => <<'#3...........',
-# must run with -nola to keep default from outdenting
+# run with -nola to keep default from outdenting
 use Switch::Plain;
 my $r = 'fail';
 my $x = int rand 100_000;
@@ -145,16 +153,20 @@ nswitch( 1 + $x * 2 ) {
         $r = 'ok';
     }
 }
-my @words = qw(speed me towards death);
-$r = do {
+
+my @words = qw(cinnamon ginger nutmeg cloves);
+my $test  = 1;
+$r = $test
+  ? do {
     sswitch( $words[ rand @words ] ) {
         case $words[0]:
         case $words[1]:
         case $words[2]:
         case $words[3]: { 'ok' }
-        default: { 'wtf' }
+        default: { 'default case' }
     }
-};
+  }
+  : 'not ok';
 #3...........
         },
     };

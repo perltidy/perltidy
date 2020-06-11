@@ -1,4 +1,4 @@
-########################################################################
+#######################################################################
 #
 # the Perl::Tidy::Tokenizer package is essentially a filter which
 # reads lines of perl source code from a source object and provides
@@ -1550,16 +1550,13 @@ sub prepare_for_a_new_file {
         return unless ( $tokenizer_self->{'_extended_syntax'} );
 
         if ( $type eq ':' ) {
-            my ( $next_nonblank_token, $i_next ) =
-              find_next_nonblank_token( $i + 1, $rtokens, $max_token_index );
 
             # Look for Switch::Plain syntax; some examples
             #  case 1: {
             #  default: {
             #  default:
-            # This should be enough to identify this syntax.  If necessary, we
-            # could also look for and require 'use Switch::Plain', but then
-            # perltidy would fail if run on small snippets in an editor.
+            # Note that the line 'default:' will be parsed as a label elsewhere.
+
             if ( $statement_type eq 'case' || $statement_type eq 'default' ) {
 
                 # The type will be the same as a label
@@ -2187,7 +2184,7 @@ sub prepare_for_a_new_file {
             }
 
             # if an error would otherwise occur, check for extended syntax
-            elsif ( !$current_depth[QUESTION_COLON]
+            elsif ( !is_balanced_closing_container(QUESTION_COLON)
                 && $extended_syntax_type->() )
             {
 
@@ -4978,6 +4975,27 @@ sub increase_nesting_depth {
     $nested_statement_type[$aa][ $current_depth[$aa] ] = $statement_type;
     $statement_type = "";
     return ( $seqno, $indent );
+}
+
+sub is_balanced_closing_container {
+
+    # Return true if a closing container can go here without error
+    # Return false if not
+    my ($aa) = @_;
+
+    # cannot close if there was no opening
+    return unless ( $current_depth[$aa] > 0 );
+
+    # check that any other brace types $bb contained within would be balanced
+    for my $bb ( 0 .. @closing_brace_names - 1 ) {
+        next if ( $bb == $aa );
+        return
+          unless ( $depth_array[$aa][$bb][ $current_depth[$aa] ] ==
+            $current_depth[$bb] );
+    }
+
+    # OK, everything will be balanced
+    return 1;
 }
 
 sub decrease_nesting_depth {

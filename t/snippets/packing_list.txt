@@ -252,6 +252,8 @@
 ../snippets20.t	hanging_side_comments3.def
 ../snippets20.t	lop.def
 ../snippets21.t	lop.lop
+../snippets21.t	switch_plain.def
+../snippets21.t	switch_plain.switch_plain
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -392,5 +394,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets21.t	switch_plain.def
-../snippets21.t	switch_plain.switch_plain
