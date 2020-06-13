@@ -4,6 +4,8 @@
 #1 lop.lop
 #2 switch_plain.def
 #3 switch_plain.switch_plain
+#4 sot.def
+#5 sot.sot
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,6 +25,7 @@ BEGIN {
     $rparams = {
         'def'          => "",
         'lop'          => "-nlop",
+        'sot'          => "-sot -sct",
         'switch_plain' => "-nola",
     };
 
@@ -49,6 +52,26 @@ $bits =
 lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
+----------
+
+        'sot' => <<'----------',
+$opt_c = Text::CSV_XS->new(
+{
+    binary       => 1, sep_char     => $opt_c, always_quote => 1,
+}
+);
+
+$c->Tk::bind(
+'<Control-f>' => sub {
+my ($c) = @_;
+my $e = $c->XEvent;
+itemsUnderArea $c;
+} );
+
+__PACKAGE__->load_components( qw(
+PK::Auto
+Core
+) );
 ----------
 
         'switch_plain' => <<'----------',
@@ -168,6 +191,59 @@ $r = $test
   }
   : 'not ok';
 #3...........
+        },
+
+        'sot.def' => {
+            source => "sot",
+            params => "def",
+            expect => <<'#4...........',
+$opt_c = Text::CSV_XS->new(
+    {
+        binary       => 1,
+        sep_char     => $opt_c,
+        always_quote => 1,
+    }
+);
+
+$c->Tk::bind(
+    '<Control-f>' => sub {
+        my ($c) = @_;
+        my $e = $c->XEvent;
+        itemsUnderArea $c;
+    }
+);
+
+__PACKAGE__->load_components(
+    qw(
+      PK::Auto
+      Core
+      )
+);
+#4...........
+        },
+
+        'sot.sot' => {
+            source => "sot",
+            params => "sot",
+            expect => <<'#5...........',
+$opt_c = Text::CSV_XS->new( {
+    binary       => 1,
+    sep_char     => $opt_c,
+    always_quote => 1,
+} );
+
+$c->Tk::bind(
+    '<Control-f>' => sub {
+        my ($c) = @_;
+        my $e = $c->XEvent;
+        itemsUnderArea $c;
+    } );
+
+__PACKAGE__->load_components( qw(
+      PK::Auto
+      Core
+) );
+#5...........
         },
     };
 

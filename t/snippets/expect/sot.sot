@@ -1,0 +1,17 @@
+$opt_c = Text::CSV_XS->new( {
+    binary       => 1,
+    sep_char     => $opt_c,
+    always_quote => 1,
+} );
+
+$c->Tk::bind(
+    '<Control-f>' => sub {
+        my ($c) = @_;
+        my $e = $c->XEvent;
+        itemsUnderArea $c;
+    } );
+
+__PACKAGE__->load_components( qw(
+      PK::Auto
+      Core
+) );
