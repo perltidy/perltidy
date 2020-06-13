@@ -76,6 +76,7 @@ use vars qw(
   $consecutive_block_comments
 
   $cached_line_text
+  $cached_line_text_length
   $cached_line_type
   $cached_line_flag
   $cached_seqno
@@ -106,10 +107,22 @@ use vars qw(
 
 sub initialize {
 
-    (
-        my $class, $rOpts, $file_writer_object, $logger_object,
-        $diagnostics_object
-    ) = @_;
+    my ( $class, @args ) = @_;
+
+    my %defaults = (
+        rOpts              => undef,
+        file_writer_object => undef,
+        logger_object      => undef,
+        diagnostics_object => undef,
+        length_function    => sub { return length( $_[0] ) },
+    );
+    my %args = ( %defaults, @args );
+
+    $rOpts              = $args{rOpts};
+    $file_writer_object = $args{file_writer_object};
+    $logger_object      = $args{logger_object};
+    $diagnostics_object = $args{diagnostics_object};
+    my $length_function = $args{length_function};
 
     # variables describing the entire space group:
     $ralignment_list            = [];
@@ -139,6 +152,7 @@ sub initialize {
 
     # valign_output_step_B cache:
     $cached_line_text                = "";
+    $cached_line_text_length         = 0;
     $cached_line_type                = 0;
     $cached_line_flag                = 0;
     $cached_seqno                    = 0;
@@ -167,7 +181,7 @@ sub initialize {
 
     initialize_for_new_group();
 
-    $vertical_aligner_self = {};
+    $vertical_aligner_self = { length_function => $length_function, };
     bless $vertical_aligner_self, $class;
     return $vertical_aligner_self;
 }
@@ -493,7 +507,7 @@ sub valign_input {
             || $is_blank_line
           )
         {
-            push_group_line( $rfields->[0] );
+            push_group_line( [ $rfields->[0], $rfield_lengths->[0] ] );
             return;
         }
         else {
@@ -565,7 +579,7 @@ sub valign_input {
         {
             $group_type                  = 'COMMENT';
             $comment_leading_space_count = $leading_space_count;
-            push_group_line( $rfields->[0] );
+            push_group_line( [ $rfields->[0], $rfield_lengths->[0] ] );
             return;
         }
 
@@ -1947,9 +1961,10 @@ sub flush {
             valign_output_step_C( $cached_line_text,
                 $cached_line_leading_space_count,
                 $last_level_written );
-            $cached_line_type    = 0;
-            $cached_line_text    = "";
-            $cached_seqno_string = "";
+            $cached_line_type        = 0;
+            $cached_line_text        = "";
+            $cached_line_text_length = 0;
+            $cached_seqno_string     = "";
         }
     }
     return;
@@ -2013,9 +2028,10 @@ sub my_flush_comment {
 
     # look for excessively long lines
     my $max_excess = 0;
-    foreach my $str (@group_lines) {
+    foreach my $item (@group_lines) {
+        my ($str, $str_len) = @{$item}; 
         my $excess =
-          length($str) +
+          $str_len +
           $leading_space_count -
           maximum_line_length_for_level($group_level);
         if ( $excess > $max_excess ) {
@@ -2037,8 +2053,9 @@ sub my_flush_comment {
 
     # write the lines
     my $outdent_long_lines = 0;
-    foreach my $line (@group_lines) {
-        my $line_len = length($line);    ## FIXME
+
+    foreach my $item (@group_lines) {
+        my ( $line, $line_len ) = @{$item};
         valign_output_step_B(
             leading_space_count       => $leading_space_count,
             line                      => $line,
@@ -3633,15 +3650,8 @@ sub valign_output_step_B {
     my $rvertical_tightness_flags = $input_hash{rvertical_tightness_flags};
     my $level                     = $input_hash{level};
 
-    # FIXME: The length calculations in this step should eventually be
-    # updated to use the length passed through the variable $str_length,
-    # so that lines be less likely to exceed line length limits for
-    # lines with wide characters.  This is a minor issue, and the coding
-    # is a little tedious, so it is low priority.  The following
-    # statement is a temporary patch until the new string length coding
-    # can be completed and tested.  Useful test cases are
+    # Useful -gcs test cases for wide characters are
     # perl527/(method.t.2, reg_mesg.t, mime-header.t)
-    $str_length = length($str);    # Temporary override
 
     # handle outdenting of long lines:
     if ($outdent_long_lines) {
@@ -3667,6 +3677,7 @@ sub valign_output_step_B {
     # to the leading_space_count from here on.
     my $leading_string =
       $leading_space_count > 0 ? ( ' ' x $leading_space_count ) : "";
+    my $leading_string_length = length($leading_string);
 
     # Unpack any recombination data; it was packed by
     # sub send_lines_to_vertical_aligner. Contents:
@@ -3691,6 +3702,10 @@ sub valign_output_step_B {
 
     # handle any cached line ..
     # either append this line to it or write it out
+    # Note: the function length() is used in this next test out of caution.
+    # All testing has shown that the variable $cached_line_text_length is
+    # correct, but its calculation is complex and a loss of cached text would
+    # be a disaster.
     if ( length($cached_line_text) ) {
 
         # Dump an invalid cached line
@@ -3703,7 +3718,7 @@ sub valign_output_step_B {
         # Handle cached line ending in OPENING tokens
         elsif ( $cached_line_type == 1 || $cached_line_type == 3 ) {
 
-            my $gap = $leading_space_count - length($cached_line_text);
+            my $gap = $leading_space_count - $cached_line_text_length;
 
             # handle option of just one tight opening per line:
             if ( $cached_line_flag == 1 ) {
@@ -3713,10 +3728,11 @@ sub valign_output_step_B {
             }
 
             if ( $gap >= 0 && defined($seqno_beg) ) {
-                $leading_string      = $cached_line_text . ' ' x $gap;
-                $leading_space_count = $cached_line_leading_space_count;
-                $seqno_string        = $cached_seqno_string . ':' . $seqno_beg;
-                $level               = $last_level_written;
+                $leading_string        = $cached_line_text . ' ' x $gap;
+                $leading_string_length = $cached_line_text_length + $gap;
+                $leading_space_count   = $cached_line_leading_space_count;
+                $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
+                $level        = $last_level_written;
             }
             else {
                 valign_output_step_C( $cached_line_text,
@@ -3728,6 +3744,8 @@ sub valign_output_step_B {
         # Handle cached line ending in CLOSING tokens
         else {
             my $test_line = $cached_line_text . ' ' x $cached_line_flag . $str;
+            my $test_line_length =
+              $cached_line_text_length + $cached_line_flag + $str_length;
             if (
 
                 # The new line must start with container
@@ -3748,8 +3766,7 @@ sub valign_output_step_B {
                 )
 
                 # The combined line must fit
-                && (
-                    length($test_line) <=
+                && ( $test_line_length <=
                     maximum_line_length_for_level($last_level_written) )
               )
             {
@@ -3841,10 +3858,12 @@ sub valign_output_step_B {
                     }
                 }
 
-                $str                 = $test_line;
-                $leading_string      = "";
-                $leading_space_count = $cached_line_leading_space_count;
-                $level               = $last_level_written;
+                $str                   = $test_line;
+                $str_length            = $test_line_length;
+                $leading_string        = "";
+                $leading_string_length = 0;
+                $leading_space_count   = $cached_line_leading_space_count;
+                $level                 = $last_level_written;
             }
             else {
                 valign_output_step_C( $cached_line_text,
@@ -3853,11 +3872,13 @@ sub valign_output_step_B {
             }
         }
     }
-    $cached_line_type = 0;
-    $cached_line_text = "";
+    $cached_line_type        = 0;
+    $cached_line_text        = "";
+    $cached_line_text_length = 0;
 
     # make the line to be written
-    my $line = $leading_string . $str;
+    my $line        = $leading_string . $str;
+    my $line_length = $leading_string_length + $str_length;
 
     # write or cache this line
     if ( !$open_or_close || $side_comment_length > 0 ) {
@@ -3865,6 +3886,7 @@ sub valign_output_step_B {
     }
     else {
         $cached_line_text                = $line;
+        $cached_line_text_length         = $line_length;
         $cached_line_type                = $open_or_close;
         $cached_line_flag                = $tightness_flag;
         $cached_seqno                    = $seqno;

@@ -655,9 +655,13 @@ sub new {
 
     prepare_for_new_input_lines();
 
-    $vertical_aligner_object =
-      Perl::Tidy::VerticalAligner->initialize( $rOpts, $file_writer_object,
-        $logger_object, $diagnostics_object );
+    $vertical_aligner_object = Perl::Tidy::VerticalAligner->initialize(
+        rOpts              => $rOpts,
+        file_writer_object => $file_writer_object,
+        logger_object      => $logger_object,
+        diagnostics_object => $diagnostics_object,
+        length_function    => $length_function
+    );
 
     if ( $rOpts->{'entab-leading-whitespace'} ) {
         write_logfile_entry(
@@ -7305,13 +7309,15 @@ sub copy_token_as_type {
 
         my $length = $rLL->[$Ktoken_vars]->[_TOKEN_LENGTH_];
 
-        # FIXME: Patch for indent-only, in which the entire set of tokens is
+        # Safety check that length is defined. Should not be needed now.
+        # Former patch for indent-only, in which the entire set of tokens is
         # turned into type 'q'. Lengths may have not been defined because sub
         # 'respace_tokens' is bypassed. We do not need lengths in this case,
         # but we will use the character count to have a defined value.  In the
         # future, it would be nicer to have 'respace_tokens' convert the lines
         # to quotes and get correct lengths.
         if ( !defined($length) ) { $length = length($token) }
+
         $token_lengths_to_go[$max_index_to_go] = $length;
 
         # We keep a running sum of token lengths from the start of this batch:
