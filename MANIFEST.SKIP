@@ -105,9 +105,10 @@ _config.yml
 # any zip files
 \.zip$
 
-# Perl::Tidy error, log and tidy files
-\bperltidy\.ERR
-\bperltidy\.LOG
+# any Perl::Tidy error, log and tidy files
+\.ERR$
+\.LOG$
+\.DEBUG$
 
 # The temporary combined perltidy.pl made by pm2pl
 \bperltidy-.*\.pl

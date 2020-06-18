@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20200110.01';
+our $VERSION = '20200619';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -2029,7 +2029,7 @@ sub my_flush_comment {
     # look for excessively long lines
     my $max_excess = 0;
     foreach my $item (@group_lines) {
-        my ($str, $str_len) = @{$item}; 
+        my ( $str, $str_len ) = @{$item};
         my $excess =
           $str_len +
           $leading_space_count -
@@ -2337,7 +2337,7 @@ EOM
     my $k         = 0;
     my $jdel_next = $ridel->[$k];
 
-    if ( $jdel_next < 0 ) { return }  # shouldnt happen
+    if ( $jdel_next < 0 ) { return }    # shouldnt happen
     my $pattern      = $rpatterns_old->[0];
     my $field        = $rfields_old->[0];
     my $field_length = $rfield_lengths_old->[0];
@@ -2409,8 +2409,8 @@ EOM
         my ( $raw_tok, $lev, $tag, $tok_count ) =
           decode_alignment_token($new_list_type);
 
-	# But for lines with leading commas, we will require that they be
-	# tagged before converting a line from non-list to a list.
+        # But for lines with leading commas, we will require that they be
+        # tagged before converting a line from non-list to a list.
         if ($tag) {
             for ( my $i = 1 ; $i < @{$rtokens_new} - 1 ; $i++ ) {
                 if ( $rtokens_new->[$i] !~ /^(,|=>)/ ) {
@@ -2654,8 +2654,8 @@ sub delete_unmatched_tokens {
     foreach my $line ( @{$rnew_lines} ) {
         my $rhash   = {};
         my $rtokens = $line->get_rtokens();
-        if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1}
-        my $i       = 0;
+        if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1 }
+        my $i = 0;
         my $i_eq;
         my $lev_min;
         foreach my $tok ( @{$rtokens} ) {
@@ -2833,7 +2833,7 @@ sub delete_unmatched_tokens {
     return;
 }
 
-{    # fix_ragged_matches
+{        # fix_ragged_matches
 
     my %is_comma_or_comment;
     my $BLOCK_MERGE_RATIO;
@@ -2845,13 +2845,13 @@ sub delete_unmatched_tokens {
         @q = ( ',', '=>', '#' );
         @is_comma_or_comment{@q} = (1) x scalar(@q);
 
-	# This fraction controls merges. Only merge a long block into a shorter
-	# block if the ratio of the number of lines is less than this ratio.
-	# The idea is to avoid merging away a significant block that would
-	# otherwise be aligned.  This is not a critical parameter.  Some
-	# testing showed that it is best between about 0.3 and 0.5.  The
-	# original test snippet, git25, worked best with a value >=0.35. 
-        $BLOCK_MERGE_RATIO = 0.5; 
+        # This fraction controls merges. Only merge a long block into a shorter
+        # block if the ratio of the number of lines is less than this ratio.
+        # The idea is to avoid merging away a significant block that would
+        # otherwise be aligned.  This is not a critical parameter.  Some
+        # testing showed that it is best between about 0.3 and 0.5.  The
+        # original test snippet, git25, worked best with a value >=0.35.
+        $BLOCK_MERGE_RATIO = 0.5;
 
         # Debug flag
         $EXPLAIN = 0;
@@ -2866,7 +2866,7 @@ sub delete_unmatched_tokens {
         # which can be improved by adjusting alignments.
 
         # TODO: This version only treats lists.  It might be generalized
-        # to handle more types of matches. 
+        # to handle more types of matches.
 
         #########################################################
         # Step 1. Start by scanning the lines and collecting info
@@ -2893,7 +2893,7 @@ sub delete_unmatched_tokens {
             my $list_type = $line->get_list_type();
 
             # No matches if there is a group ending flag set between these lines
-            my $end_group = ( $jj_m >= 0 && $rlines->[$jj_m]->{_end_group} ); 
+            my $end_group = ( $jj_m >= 0 && $rlines->[$jj_m]->{_end_group} );
 
             # Also skip past a non-list line; we are working on pure lists here
             if ( $end_group || !$list_type ) {
@@ -2944,7 +2944,7 @@ sub delete_unmatched_tokens {
         # imax_match = index of maximum alignment token for lines in this batch.
         #    This value applies to matches between all lines j=jbeg to jend and
         #    j=jbeg-1 to jend-1.  In other words, the value for a pair of lines
-        #    is stored with the line with the higher index. 
+        #    is stored with the line with the higher index.
         my $imatch      = -10;
         my $j_last_line = @{$rlines} - 1;
         my %counts;
@@ -3126,10 +3126,10 @@ sub delete_unmatched_tokens {
 
                 # Now delete the unused alignment tokens
 
-                # NOTE: We are currently only working on lists, so we can allow
-                # lines to be promoted as lists.  But if this coding is generalized
-                # this flag may have to be adjusted to handle or non-lists.
-                my $new_list_ok = 1;  
+             # NOTE: We are currently only working on lists, so we can allow
+             # lines to be promoted as lists.  But if this coding is generalized
+             # this flag may have to be adjusted to handle or non-lists.
+                my $new_list_ok = 1;
 
                 if ( $imax_match_j < $imax ) {
                     my @idel = ( $imax_match_j + 1 .. $imax );
@@ -3141,7 +3141,7 @@ sub delete_unmatched_tokens {
     }
 }
 
-{        # decide_if_aligned_pair
+{    # decide_if_aligned_pair
 
     my %is_if_or;
     my %is_assignment;

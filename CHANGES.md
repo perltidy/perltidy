@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2020 01 10.01
+## 2020 06 19
 
     - Added support for Switch::Plain syntax, issue git #31.
 
@@ -38,25 +38,23 @@
 
     - Added --character-encoding=guess or -guess to have perltidy guess
       if a file (or other input stream) is encoded as -utf8 or some 
-      older single-byte encoding. This is useful when processing a mixture 
-      of file types, such as utf8 and latin-1.  
+      other single-byte encoding. This is useful when processing a mixture 
+      of file types, such as utf8 and latin-1.
 
       Please Note: The default encoding has been set to be 'guess'
-      instead of 'none'. I do not like to change defaults, but this seems like
-      the best choice, since it should make perltidy work properly with both
+      instead of 'none'. This seems like the best default, since 
+      it allows perltidy work properly with both
       utf8 files and older latin-1 files.  The guess mode uses Encode::Guess,
       which is included in standard perl distributions, and only tries to 
       guess if a file is utf8 or not, never any other encoding.  If the guess is 
       utf8, and if the file successfully decodes as utf8, then it the encoding 
-      is assumed to be utf8.  Otherwise, no encoding is assumed.  I have done
-      extensive testing and have not detected any problems with this 
-      rather conservative guess method, so I think it is a good default. 
+      is assumed to be utf8.  Otherwise, no encoding is assumed. 
       If you do not want to use this new default guess mode, or have a 
       problem with it, you can set --character-encoding=none (the previous 
       default) or --character-encoding=utf8 (if you deal with utf8 files).
 
     - Specific encodings of input files other than utf8 may now be given, for
-      example --character-encoding=euc-jp.  
+      example --character-encoding=euc-jp.
 
     - Fix for git#22, Preserve function signature on a single line. An
       unwanted line break was being introduced when a closing signature paren

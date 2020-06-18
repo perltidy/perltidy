@@ -448,6 +448,8 @@
         $self-&gt;balance( $self-&gt;balance + $amount );
     }</code></pre>
 
+<p>For one of the extensions, module Switch::Plain, colons are marked as labels. If you use this module, you may want to also use the <b>--nooutdent-labels</b> flag to prevent lines such as &#39;default:&#39; from being outdented.</p>
+
 <p>This flag is enabled by default but it can be deactivated with <b>-nxs</b>. Probably the only reason to deactivate this flag is to generate more diagnostic messages when debugging a script.</p>
 
 </dd>
@@ -552,7 +554,7 @@
 
 <p>The value given to <b>-ci</b> is also used by some commands when a small space is required. Examples are commands for outdenting labels, <b>-ola</b>, and control keywords, <b>-okw</b>.</p>
 
-<p>When default values are not used, it is suggested that the value <b>n</b> given with <b>-ci=n</b> be no more than about one-half of the number of spaces assigned to a full indentation level on the <b>-i=n</b> command.</p>
+<p>When default values are not used, it is highly recommended that the value <b>n</b> given with <b>-ci=n</b> be no more than about one-half of the number of spaces assigned to a full indentation level on the <b>-i=n</b> command. The reason is that discontinuities in the definition and control of continuation indentation arise in complex code, and this rule helps to smooth out these discontinuities.</p>
 
 </dd>
 <dt id="sil-n---starting-indentation-level-n"><b>-sil=n</b> <b>--starting-indentation-level=n</b></dt>
@@ -842,7 +844,7 @@
 <dt id="Note:-Perltidy-does-always-follow-whitespace-controls">Note: Perltidy does always follow whitespace controls</dt>
 <dd>
 
-<p>The various parameters controlling whitespace within a program are requests which perltidy follows as well as possible, but there are a number of situations where changing whitespace could change program behavior and is not done. Examples are whitespace around bareword symbols and possible filehandles. For example, consider the problem of formatting the following subroutine:</p>
+<p>The various parameters controlling whitespace within a program are requests which perltidy follows as well as possible, but there are a number of situations where changing whitespace could change program behavior and is not done. Some of these are obvious; for example, we should not remove the space between the two plus symbols in &#39;$x+ +$y&#39; to avoid creating a &#39;++&#39; operator. Some are more subtle and involve the whitespace around bareword symbols and locations of possible filehandles. For example, consider the problem of formatting the following subroutine:</p>
 
 <pre><code>   sub print_div {
       my ($x,$y)=@_;
@@ -856,9 +858,9 @@
        print $x /$y;
    }</code></pre>
 
-<p>If formatted in this way, the program will not run (at least with recent versions of perl) because the / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but incorrectly.</p>
+<p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but incorrectly.</p>
 
-<p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged.</p>
+<p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
 
 </dd>
 <dt id="Space-between-specific-keywords-and-opening-paren">Space between specific keywords and opening paren</dt>
@@ -866,7 +868,7 @@
 
 <p>When an opening paren follows a Perl keyword, no space is introduced after the keyword, unless it is (by default) one of these:</p>
 
-<pre><code>   my local our and or eq ne if else elsif until unless 
+<pre><code>   my local our and or xor eq ne if else elsif until unless 
    while for foreach return switch case given when</code></pre>
 
 <p>These defaults can be modified with two commands:</p>
@@ -1997,7 +1999,7 @@
 
 <h2 id="Controlling-List-Formatting">Controlling List Formatting</h2>
 
-<p>Perltidy attempts to format lists of comma-separated values in tables which look good. Its default algorithms usually work well, but sometimes parameters available to control list formatting. In this case, there are several methods available to control list formatting.</p>
+<p>Perltidy attempts to format lists of comma-separated values in tables which look good. Its default algorithms usually work well, but sometimes they don&#39;t. In this case, there are several methods available to control list formatting.</p>
 
 <p>A very simple way to prevent perltidy from changing the line breaks within a comma-separated list of values is to insert a blank line, comment, or side-comment anywhere between the opening and closing parens (or braces or brackets). This causes perltidy to skip over its list formatting logic. (The reason is that any of these items put a constraint on line breaks, and perltidy needs complete control over line breaks within a container to adjust a list layout). For example, let us consider</p>
 
@@ -3119,7 +3121,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20200110.01</p>
+<p>This man page documents perltidy version 20200619</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

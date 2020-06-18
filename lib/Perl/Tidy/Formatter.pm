@@ -12,7 +12,7 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20200110.01';
+our $VERSION = '20200619';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -2230,9 +2230,9 @@ sub set_whitespace_flags {
         }
         elsif ( $type eq 'k' ) {
 
-	    # Keywords 'for', 'foreach' are special cases for -kpit since the
-	    # opening paren does not always immediately follow the keyword. So
-	    # we have to search forward for the paren in this case.  I have
+            # Keywords 'for', 'foreach' are special cases for -kpit since the
+            # opening paren does not always immediately follow the keyword. So
+            # we have to search forward for the paren in this case.  I have
             # limited the search to 10 tokens ahead, just in case somebody
             # has a big file and no opening paren.  This should be enough for
             # all normal code.
@@ -9411,10 +9411,10 @@ sub pad_token {
                 # token
                 if ( $pad_spaces < 0 ) {
 
-		    # Deactivated for -kpit due to conflict. This block deletes
-		    # a space in an attempt to improve alignment in some cases,
-		    # but it may conflict with user spacing requests.  For now
-		    # it is just deactivated if the -kpit option is used.
+                    # Deactivated for -kpit due to conflict. This block deletes
+                    # a space in an attempt to improve alignment in some cases,
+                    # but it may conflict with user spacing requests.  For now
+                    # it is just deactivated if the -kpit option is used.
                     if ( $pad_spaces == -1 ) {
                         if (   $ipad > $ibeg
                             && $types_to_go[ $ipad - 1 ] eq 'b'
