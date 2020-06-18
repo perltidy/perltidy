@@ -1542,6 +1542,10 @@ sub prepare_for_a_new_file {
       qw(if elsif unless while until for foreach switch case given when catch);
     @is_blocktype_with_paren{@_} = (1) x scalar(@_);
 
+    my %is_case_default;
+    @_ = qw(case default);
+    @is_case_default{@_} = (1) x scalar(@_);
+
     my $extended_syntax_type = sub {
 
         # check for certain extended syntax variations, and
@@ -1557,7 +1561,7 @@ sub prepare_for_a_new_file {
             #  default:
             # Note that the line 'default:' will be parsed as a label elsewhere.
 
-            if ( $statement_type eq 'case' || $statement_type eq 'default' ) {
+            if ( $is_case_default{$statement_type} ) {
 
                 # The type will be the same as a label
                 $type = 'J';
