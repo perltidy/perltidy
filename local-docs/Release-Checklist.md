@@ -7,7 +7,7 @@
   files.
     - compare results of the current version with previous version
 - review tickets at sourceforge (hardly used now, but possible)
-- review/update the ChangeLog.pod file
+- review/update the CHANGES.md file
 - be sure RPerl still works:
   - build and install the latest Perl::Tidy on development machine
   - install the latest RPerl [currently RPerl-5.002000]

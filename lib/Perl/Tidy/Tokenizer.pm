@@ -1546,31 +1546,6 @@ sub prepare_for_a_new_file {
     @_ = qw(case default);
     @is_case_default{@_} = (1) x scalar(@_);
 
-    my $extended_syntax_type = sub {
-
-        # check for certain extended syntax variations, and
-        # - if found, set $type and return the $type
-        # - if not found, return undef if not found
-        return unless ( $tokenizer_self->{'_extended_syntax'} );
-
-        if ( $type eq ':' ) {
-
-            # Look for Switch::Plain syntax; some examples
-            #  case 1: {
-            #  default: {
-            #  default:
-            # Note that the line 'default:' will be parsed as a label elsewhere.
-
-            if ( $is_case_default{$statement_type} ) {
-
-                # The type will be the same as a label
-                $type = 'J';
-                return $type;
-            }
-        }
-        return;
-    };
-
     # ------------------------------------------------------------
     # begin hash of code for handling most token types
     # ------------------------------------------------------------
@@ -2187,13 +2162,20 @@ sub prepare_for_a_new_file {
                 $in_attribute_list = 1;
             }
 
-            # if an error would otherwise occur, check for extended syntax
-            elsif ( !is_balanced_closing_container(QUESTION_COLON)
-                && $extended_syntax_type->() )
+	    # Look for Switch::Plain syntax if an error would otherwise occur
+	    # here. Note that we do not need to check if the extended syntax
+	    # flag is set because otherwise an error would occur, and we would
+	    # then have to output a message telling the user to set the
+	    # extended syntax flag to avoid the error.
+            #  case 1: {
+            #  default: {
+            #  default:
+            # Note that the line 'default:' will be parsed as a label elsewhere.
+            elsif ($is_case_default{$statement_type}
+                && !is_balanced_closing_container(QUESTION_COLON) )
             {
-
-                # it is a recognized extended syntax
-                # $type was set by $extended_syntax_type
+                # mark it as a perltidy label type
+                $type = 'J';
             }
 
             # otherwise, it should be part of a ?/: operator
