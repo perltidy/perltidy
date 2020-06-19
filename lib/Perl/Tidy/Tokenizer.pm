@@ -2162,16 +2162,16 @@ sub prepare_for_a_new_file {
                 $in_attribute_list = 1;
             }
 
-	    # Look for Switch::Plain syntax if an error would otherwise occur
-	    # here. Note that we do not need to check if the extended syntax
-	    # flag is set because otherwise an error would occur, and we would
-	    # then have to output a message telling the user to set the
-	    # extended syntax flag to avoid the error.
+            # Look for Switch::Plain syntax if an error would otherwise occur
+            # here. Note that we do not need to check if the extended syntax
+            # flag is set because otherwise an error would occur, and we would
+            # then have to output a message telling the user to set the
+            # extended syntax flag to avoid the error.
             #  case 1: {
             #  default: {
             #  default:
             # Note that the line 'default:' will be parsed as a label elsewhere.
-            elsif ($is_case_default{$statement_type}
+            elsif ( $is_case_default{$statement_type}
                 && !is_balanced_closing_container(QUESTION_COLON) )
             {
                 # mark it as a perltidy label type
