@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2020 06 19.01
+
+    - When --assert-tidy is used and triggers an error, the first difference
+      between input and output files is shown in the error output. This is
+      a partial response to issue git #30.
+
 ## 2020 06 19
 
     - Added support for Switch::Plain syntax, issue git #31.

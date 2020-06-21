@@ -10,7 +10,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20200619';
+our $VERSION = '20200619.01';
 
 sub new {
     my ( $package, $rscalar, $mode ) = @_;
