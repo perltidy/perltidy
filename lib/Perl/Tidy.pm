@@ -1469,8 +1469,10 @@ EOM
                         $is_encoded_data );
                     $logger_object->warning(<<EOM);
 assertion failure: '--assert-tidy' is set but output differs from input
-$diff_msg
 EOM
+                    $logger_object->interrupt_logfile();
+                    $logger_object->warning( $diff_msg . "\n" );
+                    $logger_object->resume_logfile();
                 }
             }
             if ( $rOpts->{'assert-untidy'} ) {
@@ -1711,34 +1713,44 @@ sub compare_string_buffers {
     my $leni = length($bufi);
     my $leno = length($bufo);
     my $msg =
-      "Input file length is $leni chars, output file length is $leno chars\n";
+      "Input  file length is $leni chars\nOutput file length is $leno chars\n";
     return $msg unless $leni && $leno;
 
     my ( $fhi, $fnamei ) = streamhandle( \$bufi, 'r', $is_encoded_data );
     my ( $fho, $fnameo ) = streamhandle( \$bufo, 'r', $is_encoded_data );
     return $msg unless ( $fho && $fhi );    # for safety, shouldn't happen
-    my ( $linei, $lineo );
-    my ( $counti, $counto ) = ( 0, 0 );
+    my ( $linei,              $lineo );
+    my ( $counti,             $counto ) = ( 0, 0 );
+    my ( $last_nonblank_line, $last_nonblank_count ) = ( "", 0 );
     while (1) {
-        my $last_common_line = $linei;
+        if ($linei) {
+            $last_nonblank_line  = $linei;
+            $last_nonblank_count = $counti;
+        }
         $linei = $fhi->getline();
         $lineo = $fho->getline();
 
         # compare chomp'ed lines
+
         if ( defined($linei) ) { $counti++; chomp $linei }
         if ( defined($lineo) ) { $counto++; chomp $lineo }
 
         # see if one or both ended before a difference
-        last unless ( $counti == $counto );
+        last unless ( defined($linei) && defined($lineo) );
 
         if ( $linei ne $lineo ) {
+
+            my ( $trimi, $trimo ) = ( $linei, $lineo );
+            $trimi =~ s/\s+$//;
+            $trimo =~ s/\s+$//;
+            my $reason =
+              ( $trimi eq $trimo ) ? " (trailing whitespace difference)" : "";
             $msg .= <<EOM;
-Files first differ at line $counti:
+Files first differ at line $counti: $reason
 EOM
-            if ( defined($last_common_line) ) {
-                my $countm = $counti - 1;
+            if ($last_nonblank_line) {
                 $msg .= <<EOM;
- $countm:$last_common_line
+ $last_nonblank_count:$last_nonblank_line
 EOM
             }
             $msg .= <<EOM;
@@ -1751,17 +1763,17 @@ EOM
 
     if ( $counti > $counto ) {
         $msg .= <<EOM;
-Files initially match but output file has fewer lines
+Files initially match file but output file has fewer lines
 EOM
     }
     elsif ( $counti < $counto ) {
         $msg .= <<EOM;
-Files initially match but input file has fewer lines
+Files initially match file but input file has fewer lines
 EOM
     }
     else {
         $msg .= <<EOM;
-Lines of file match but checksums differ. Strange - perhaps endings differ.
+Text in lines of file match but checksums differ. Line endings may differ.
 EOM
     }
     return $msg;
