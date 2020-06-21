@@ -1751,12 +1751,12 @@ EOM
 
     if ( $counti > $counto ) {
         $msg .= <<EOM;
-File initially match file but output file has fewer lines
+Files initially match but output file has fewer lines
 EOM
     }
     elsif ( $counti < $counto ) {
         $msg .= <<EOM;
-File initially match file but input file has fewer lines
+Files initially match but input file has fewer lines
 EOM
     }
     else {
