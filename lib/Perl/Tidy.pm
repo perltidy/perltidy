@@ -1066,8 +1066,10 @@ EOM
         }
 
         # MD5 sum of input file is evaluated before any prefilter
+        my $saved_input_buf;
         if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
-            $digest_input = $md5_hex->($buf);
+            $digest_input    = $md5_hex->($buf);
+            $saved_input_buf = $buf;
         }
 
         # Prefilters and postfilters: The prefilter is a code reference
@@ -1462,9 +1464,13 @@ EOM
             if ( $rOpts->{'assert-tidy'} ) {
                 my $digest_output = $md5_hex->($buf);
                 if ( $digest_output ne $digest_input ) {
-                    $logger_object->warning(
-"assertion failure: '--assert-tidy' is set but output differs from input\n"
-                    );
+                    my $diff_msg =
+                      compare_string_buffers( $saved_input_buf, $buf,
+                        $is_encoded_data );
+                    $logger_object->warning(<<EOM);
+assertion failure: '--assert-tidy' is set but output differs from input
+$diff_msg
+EOM
                 }
             }
             if ( $rOpts->{'assert-untidy'} ) {
@@ -1695,6 +1701,71 @@ EOM
   ERROR_EXIT:
     return 1;
 }    # end of main program perltidy
+
+sub compare_string_buffers {
+
+    # Compare input and output string buffers and return a brief text
+    # description of the first difference.
+    my ( $bufi, $bufo, $is_encoded_data ) = @_;
+
+    my $leni = length($bufi);
+    my $leno = length($bufo);
+    my $msg =
+      "Input file length is $leni chars, output file length is $leno chars\n";
+    return $msg unless $leni && $leno;
+
+    my ( $fhi, $fnamei ) = streamhandle( \$bufi, 'r', $is_encoded_data );
+    my ( $fho, $fnameo ) = streamhandle( \$bufo, 'r', $is_encoded_data );
+    return $msg unless ( $fho && $fhi );    # for safety, shouldn't happen
+    my ( $linei, $lineo );
+    my ( $counti, $counto ) = ( 0, 0 );
+    while (1) {
+        my $last_common_line = $linei;
+        $linei = $fhi->getline();
+        $lineo = $fho->getline();
+
+        # compare chomp'ed lines
+        if ( defined($linei) ) { $counti++; chomp $linei }
+        if ( defined($lineo) ) { $counto++; chomp $lineo }
+
+        # see if one or both ended before a difference
+        last unless ( $counti == $counto );
+
+        if ( $linei ne $lineo ) {
+            $msg .= <<EOM;
+Files first differ at line $counti:
+EOM
+            if ( defined($last_common_line) ) {
+                my $countm = $counti - 1;
+                $msg .= <<EOM;
+ $countm:$last_common_line
+EOM
+            }
+            $msg .= <<EOM;
+<$counti:$linei
+>$counto:$lineo
+EOM
+            return $msg;
+        }
+    }
+
+    if ( $counti > $counto ) {
+        $msg .= <<EOM;
+File initially match file but output file has fewer lines
+EOM
+    }
+    elsif ( $counti < $counto ) {
+        $msg .= <<EOM;
+File initially match file but input file has fewer lines
+EOM
+    }
+    else {
+        $msg .= <<EOM;
+Lines of file match but checksums differ. Strange - perhaps endings differ.
+EOM
+    }
+    return $msg;
+}
 
 sub get_stream_as_named_file {
 
