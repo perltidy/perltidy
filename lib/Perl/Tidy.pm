@@ -221,7 +221,9 @@ EOM
         # Case 1: handle encoded data
         if ($is_encoded_data) {
             if ( ref($fh) eq 'IO::File' ) {
-                $fh->binmode(":raw:encoding(UTF-8)");
+                ## binmode object call not available in older perl versions 
+                ## $fh->binmode(":raw:encoding(UTF-8)");  
+                binmode $fh, ":raw:encoding(UTF-8)";
             }
             elsif ( $fh eq '-' ) {
                 binmode STDOUT, ":raw:encoding(UTF-8)";
@@ -230,7 +232,8 @@ EOM
 
         # Case 2: handle unencoded data
         else {
-            if    ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
+            ##if    ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
+            if    ( ref($fh) eq 'IO::File' ) { binmode $fh }
             elsif ( $fh eq '-' )             { binmode STDOUT }
         }
     }
