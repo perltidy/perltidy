@@ -1717,23 +1717,23 @@ sub line_diff {
     # have same common characters so non-null characters indicate character
     # differences.
     my ( $s1, $s2 ) = @_;
-    my $mask        = $s1 ^ $s2;
     my $diff_marker = "";
     my $pos         = -1;
     my $pos1        = $pos;
-    my $count       = 0;
-    my $len1        = length($s1);
-    my $len2        = length($s2);
+    if ( defined($s1) && defined($s2) ) {
+        my $count = 0;
+        my $mask  = $s1 ^ $s2;
 
-    while ( $mask =~ /[^\0]/g ) {
-        $count++;
-        my $pos_last = $pos;
-        $pos = $-[0];
-        if ( $count == 1 ) { $pos1 = $pos; }
-        $diff_marker .= ' ' x ( $pos - $pos_last - 1 ) . '^';
+        while ( $mask =~ /[^\0]/g ) {
+            $count++;
+            my $pos_last = $pos;
+            $pos = $-[0];
+            if ( $count == 1 ) { $pos1 = $pos; }
+            $diff_marker .= ' ' x ( $pos - $pos_last - 1 ) . '^';
 
-        # we could continue to mark all differences, but there is no point
-        last;
+            # we could continue to mark all differences, but there is no point
+            last;
+        }
     }
     return wantarray ? ( $diff_marker, $pos1 ) : $diff_marker;
 }
