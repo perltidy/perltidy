@@ -1707,6 +1707,37 @@ EOM
     return 1;
 }    # end of main program perltidy
 
+sub line_diff {
+
+    # Given two strings, return
+    # $diff_marker = a string with carat (^) symbols indicating differences
+    # $pos1 = character position of first difference; pos1=-1 if no difference
+
+    # Form exclusive or of the strings, which has null characters where strings
+    # have same common characters so non-null characters indicate character
+    # differences.
+    my ( $s1, $s2 ) = @_;
+    my $mask        = $s1 ^ $s2;
+    my $diff_marker = "";
+    my $pos         = -1;
+    my $pos1        = $pos;
+    my $count       = 0;
+    my $len1        = length($s1);
+    my $len2        = length($s2);
+
+    while ( $mask =~ /[^\0]/g ) {
+        $count++;
+        my $pos_last = $pos;
+        $pos = $-[0];
+        if ( $count == 1 ) { $pos1 = $pos; }
+        $diff_marker .= ' ' x ( $pos - $pos_last - 1 ) . '^';
+
+        # we could continue to mark all differences, but there is no point
+        last;
+    }
+    return wantarray ? ( $diff_marker, $pos1 ) : $diff_marker;
+}
+
 sub compare_string_buffers {
 
     # Compare input and output string buffers and return a brief text
@@ -1725,6 +1756,13 @@ sub compare_string_buffers {
     my ( $linei,              $lineo );
     my ( $counti,             $counto ) = ( 0, 0 );
     my ( $last_nonblank_line, $last_nonblank_count ) = ( "", 0 );
+    my $truncate = sub {
+        my ( $str, $lenmax ) = @_;
+        if ( length($str) > $lenmax ) {
+            $str = substr( $str, 0, $lenmax ) . "...";
+        }
+        return $str;
+    };
     while (1) {
         if ($linei) {
             $last_nonblank_line  = $linei;
@@ -1734,36 +1772,64 @@ sub compare_string_buffers {
         $lineo = $fho->getline();
 
         # compare chomp'ed lines
-
         if ( defined($linei) ) { $counti++; chomp $linei }
         if ( defined($lineo) ) { $counto++; chomp $lineo }
 
         # see if one or both ended before a difference
         last unless ( defined($linei) && defined($lineo) );
 
-        if ( $linei ne $lineo ) {
+        next if ( $linei eq $lineo );
 
-            my ( $trimi, $trimo ) = ( $linei, $lineo );
-            $trimi =~ s/\s+$//;
-            $trimo =~ s/\s+$//;
-            my $reason =
-              ( $trimi eq $trimo ) ? " (trailing whitespace difference)" : "";
+        # lines differ ...
+        my ( $line_diff, $pos1 ) = line_diff( $linei, $lineo );
+        my $reason = "Files first differ at character $pos1 of line $counti";
+
+        my ( $leading_ws_i, $leading_ws_o ) = ( "", "" );
+        if ( $linei =~ /^(\s+)/ ) { $leading_ws_i = $1; }
+        if ( $lineo =~ /^(\s+)/ ) { $leading_ws_o = $1; }
+        if ( $leading_ws_i ne $leading_ws_o ) {
+            $reason .= "; leading whitespace differs";
+            if ( $leading_ws_i =~ /\t/ ) {
+                $reason .= "; input has tab char";
+            }
+        }
+        else {
+            my ( $trailing_ws_i, $trailing_ws_o ) = ( "", "" );
+            if ( $linei =~ /(\s+)$/ ) { $trailing_ws_i = $1; }
+            if ( $lineo =~ /(\s+)$/ ) { $trailing_ws_o = $1; }
+            if ( $trailing_ws_i ne $trailing_ws_o ) {
+                $reason .= "; trailing whitespace differs";
+            }
+        }
+        $msg .= $reason . "\n";
+
+        # limit string display length
+        if ( $pos1 > 60 ) {
+            my $drop = $pos1 - 40;
+            $linei     = "..." . substr( $linei,     $drop );
+            $lineo     = "..." . substr( $lineo,     $drop );
+            $line_diff = "   " . substr( $line_diff, $drop );
+        }
+        $linei              = $truncate->( $linei,              72 );
+        $lineo              = $truncate->( $lineo,              72 );
+        $last_nonblank_line = $truncate->( $last_nonblank_line, 72 );
+
+        if ($last_nonblank_line) {
+            my $countm = $counti - 1;
             $msg .= <<EOM;
-Files first differ at line $counti: $reason
-EOM
-            if ($last_nonblank_line) {
-                $msg .= <<EOM;
  $last_nonblank_count:$last_nonblank_line
 EOM
-            }
-            $msg .= <<EOM;
+        }
+        $line_diff = ' ' x ( 2 + length($counto) ) . $line_diff;
+        $msg .= <<EOM;
 <$counti:$linei
 >$counto:$lineo
+$line_diff 
 EOM
-            return $msg;
-        }
-    }
+        return $msg;
+    } ## end while
 
+    # no line differences found, but one file may have fewer lines
     if ( $counti > $counto ) {
         $msg .= <<EOM;
 Files initially match file but output file has fewer lines
@@ -1776,7 +1842,7 @@ EOM
     }
     else {
         $msg .= <<EOM;
-Text in lines of file match but checksums differ. Line endings may differ.
+Text in lines of file match but checksums differ. Perhaps line endings differ.
 EOM
     }
     return $msg;
