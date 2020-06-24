@@ -7666,10 +7666,12 @@ BEGIN {
       elsif
       eof
       eq
+      evalbytes
       exec
       exists
       exit
       exp
+      fc
       fcntl
       fileno
       flock

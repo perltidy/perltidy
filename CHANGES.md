@@ -2,6 +2,8 @@
 
 ## 2020 06 19.01
 
+    - Fixed issue git #32, misparse of bare 'ref' in ternary
+
     - When --assert-tidy is used and triggers an error, the first difference
       between input and output files is shown in the error output. This is
       a partial response to issue git #30.
