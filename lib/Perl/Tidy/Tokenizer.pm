@@ -2075,9 +2075,11 @@ sub prepare_for_a_new_file {
             elsif ( $expecting == UNKNOWN ) {
 
                 # In older versions of Perl, a bare ? can be a pattern
-                # delimiter.  Sometime after Perl 5.10 this seems to have
-                # been dropped, but we have to support it in order to format
-                # older programs.  For example, the following line worked
+                # delimiter.  In perl version 5.22 this was
+                # dropped, but we have to support it in order to format
+                # older programs. See:
+                ## https://perl.developpez.com/documentations/en/5.22.0/perl5211delta.html
+                # For example, the following line worked
                 # at one time:
                 #      ?(.*)? && (print $1,"\n");
                 # In current versions it would have to be written with slashes:
@@ -8044,6 +8046,7 @@ BEGIN {
       eval
       lc
       pop
+      ref
       shift
       uc
       undef

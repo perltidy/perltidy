@@ -1100,7 +1100,7 @@ Suppose the user requests that / signs have a space to the left but not to the r
        print $x /$y;
    }
 
-If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but incorrectly.
+If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but not as intended.
 
 Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators.  So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged.  Likewise, whitespace around barewords is left unchanged.  The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.
 
