@@ -112,7 +112,8 @@ use vars qw{
   @opening_brace_names
   @closing_brace_names
   %is_keyword_taking_list
-  %is_keyword_taking_optional_args
+  %is_keyword_taking_optional_args_for_slash
+  %is_keyword_taking_optional_args_for_question
   %is_q_qq_qw_qx_qr_s_y_tr_m
   %is_sub
   %is_package
@@ -1825,7 +1826,7 @@ sub prepare_for_a_new_file {
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '?'.
             if (   $last_nonblank_type eq 'k'
-                && $is_keyword_taking_optional_args{$last_nonblank_token} )
+                && $is_keyword_taking_optional_args_for_slash{$last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -2062,7 +2063,7 @@ sub prepare_for_a_new_file {
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '/'.
             if (   $last_nonblank_type eq 'k'
-                && $is_keyword_taking_optional_args{$last_nonblank_token} )
+                && $is_keyword_taking_optional_args_for_question{$last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -4412,7 +4413,7 @@ sub operator_expected {
         if (   $tok eq '/'
             && $next_type eq '/'
             && $last_nonblank_type eq 'k'
-            && $is_keyword_taking_optional_args{$last_nonblank_token} )
+            && $is_keyword_taking_optional_args_for_slash{$last_nonblank_token} )
         {
             $op_expected = OPERATOR;
         }
@@ -8041,20 +8042,111 @@ BEGIN {
     @is_keyword_taking_list{@keyword_taking_list} =
       (1) x scalar(@keyword_taking_list);
 
-    # perl functions which may be unary operators
-    my @keyword_taking_optional_args = qw(
+    # perl functions which may be unary operators.
+
+    # This list is used to decide if a pattern delimited by slashes, /pattern/,
+    # can follow one of these keywords.  
+    @q = qw(
+       chomp eof eval fc lc pop shift uc undef
+    );
+
+    @is_keyword_taking_optional_args_for_slash{@q} =
+      (1) x scalar(@q);
+
+    # This list is used to decide if a pattern delmited by question marks,
+    # ?pattern?, can follow one of these keywords.  Note that from perl 5.22
+    # on, a ?pattern? is not recognized, so we can be much more strict than
+    # with a /pattern/. Note that 'split' could be in this list but has
+    # been removed to allow the guessing algorithm decide.
+    @q = qw(
+      abs
+      alarm
+      caller
+      chdir
       chomp
+      chop
+      chr
+      chroot
+      close
+      cos
+      defined
+      die
+      endgrent
+      endnetent
+      endprotoent
+      endpwent
+      endservent
       eof
       eval
+      evalbytes
+      exit
+      exp
+      fc
+      getc
+      getgrent
+      getlogin
+      getnetent
+      getppid
+      getprotoent
+      getpwent
+      getservent
+      glob
+      gmtime
+      hex
+      int
+      last
       lc
+      lcfirst
+      length
+      localtime
+      log
+      lstat
+      mkdir
+      next
+      oct
+      ord
       pop
+      pos
+      print
+      printf
+      prototype
+      quotemeta
+      rand
+      readline
+      readlink
+      readpipe
+      redo
       ref
+      require
+      reset
+      reverse
+      rmdir
+      say
+      select
+      setgrent
+      setpwent
       shift
+      sin
+      sleep
+      sqrt
+      srand
+      stat
+      study
+      tell
+      time
+      times
       uc
+      ucfirst
+      umask
       undef
+      unlink
+      wait
+      wantarray
+      warn
+      write
     );
-    @is_keyword_taking_optional_args{@keyword_taking_optional_args} =
-      (1) x scalar(@keyword_taking_optional_args);
+    @is_keyword_taking_optional_args_for_question{@q} =
+      (1) x scalar(@q);
 
     # These are not used in any way yet
     #    my @unused_keywords = qw(
