@@ -1,5 +1,4 @@
 .pre-commit-hooks.yaml
-bbs.t
 bin/perltidy
 BUGS.md
 CHANGES.md
