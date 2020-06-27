@@ -1,4 +1,4 @@
-#######################################################################
+######################################################################
 #
 # the Perl::Tidy::Tokenizer package is essentially a filter which
 # reads lines of perl source code from a source object and provides
@@ -112,8 +112,9 @@ use vars qw{
   @opening_brace_names
   @closing_brace_names
   %is_keyword_taking_list
-  %is_keyword_taking_optional_args_for_slash
-  %is_keyword_taking_optional_args_for_question
+  %is_keyword_taking_optional_arg
+  %is_keyword_rejecting_slash_as_pattern_delimiter
+  %is_keyword_rejecting_question_as_pattern_delimiter
   %is_q_qq_qw_qx_qr_s_y_tr_m
   %is_sub
   %is_package
@@ -1826,7 +1827,7 @@ sub prepare_for_a_new_file {
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '?'.
             if (   $last_nonblank_type eq 'k'
-                && $is_keyword_taking_optional_args_for_slash{$last_nonblank_token} )
+                && $is_keyword_rejecting_slash_as_pattern_delimiter{$last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -2063,7 +2064,7 @@ sub prepare_for_a_new_file {
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '/'.
             if (   $last_nonblank_type eq 'k'
-                && $is_keyword_taking_optional_args_for_question{$last_nonblank_token} )
+                && $is_keyword_rejecting_question_as_pattern_delimiter{$last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -4413,9 +4414,20 @@ sub operator_expected {
         if (   $tok eq '/'
             && $next_type eq '/'
             && $last_nonblank_type eq 'k'
-            && $is_keyword_taking_optional_args_for_slash{$last_nonblank_token} )
+            && $is_keyword_rejecting_slash_as_pattern_delimiter{$last_nonblank_token} )
         {
             $op_expected = OPERATOR;
+        }
+
+	# Patch to allow a ? following 'split' to be a depricated pattern
+	# delimiter.  This patch is coordinated with the omission of split from
+	# the list %is_keyword_rejecting_question_as_pattern_delimiter. This
+	# patch will force perltidy to guess.
+        elsif ($tok eq '?'
+            && $last_nonblank_type eq 'k'
+            && $last_nonblank_token eq 'split' )
+        {
+            $op_expected = UNKNOWN;
         }
         else {
             $op_expected = TERM;
@@ -8050,15 +8062,15 @@ BEGIN {
        chomp eof eval fc lc pop shift uc undef
     );
 
-    @is_keyword_taking_optional_args_for_slash{@q} =
+    @is_keyword_rejecting_slash_as_pattern_delimiter{@q} =
       (1) x scalar(@q);
 
-    # This list is used to decide if a pattern delmited by question marks,
-    # ?pattern?, can follow one of these keywords.  Note that from perl 5.22
-    # on, a ?pattern? is not recognized, so we can be much more strict than
-    # with a /pattern/. Note that 'split' could be in this list but has
-    # been removed to allow the guessing algorithm decide.
-    @q = qw(
+    # These are keywords for which an arg may optionally be omitted.  They are
+    # currently only used to disambiguate a ? used as a ternary from one used
+    # as a (depricated) pattern delimiter.  In the future, they might be used
+    # to give a warning about ambiguous syntax before a /.
+    # Note: split has been omitted (see not below).
+    my @keywords_taking_optional_arg = qw(
       abs
       alarm
       caller
@@ -8071,11 +8083,6 @@ BEGIN {
       cos
       defined
       die
-      endgrent
-      endnetent
-      endprotoent
-      endpwent
-      endservent
       eof
       eval
       evalbytes
@@ -8083,13 +8090,6 @@ BEGIN {
       exp
       fc
       getc
-      getgrent
-      getlogin
-      getnetent
-      getppid
-      getprotoent
-      getpwent
-      getservent
       glob
       gmtime
       hex
@@ -8123,8 +8123,6 @@ BEGIN {
       rmdir
       say
       select
-      setgrent
-      setpwent
       shift
       sin
       sleep
@@ -8133,19 +8131,26 @@ BEGIN {
       stat
       study
       tell
-      time
-      times
       uc
       ucfirst
       umask
       undef
       unlink
-      wait
-      wantarray
       warn
       write
     );
-    @is_keyword_taking_optional_args_for_question{@q} =
+    @is_keyword_taking_optional_arg{@keywords_taking_optional_arg} =
+      (1) x scalar(@keywords_taking_optional_arg);
+
+    # This list is used to decide if a pattern delmited by question marks,
+    # ?pattern?, can follow one of these keywords.  Note that from perl 5.22
+    # on, a ?pattern? is not recognized, so we can be much more strict than
+    # with a /pattern/. Note that 'split' is not in this list. In current
+    # versions of perl a question following split must be a ternary, but
+    # in older versions it could be a pattern.  The guessing algorithm will
+    # decide.  We are combining two lists here to simplify the test.
+    @q = ( @keywords_taking_optional_arg, @operator_requestor );
+    @is_keyword_rejecting_question_as_pattern_delimiter{@q} =
       (1) x scalar(@q);
 
     # These are not used in any way yet
