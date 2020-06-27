@@ -1555,6 +1555,24 @@ sub fix_terminal_else {
                             goto NO_MATCH;
                         }
 
+                        # The introduction of sub 'prune_alignment_tree'
+                        # enabled alignment of lists left of the equals with
+                        # other scalar variables. For example:
+                        # my ( $D, $s, $e ) = @_;
+                        # my $d             = length $D;
+                        # my $c             = $e - $s - $d;
+
+                        # But this would change formatting of a lot of scripts,
+                        # so for now we prevent alignment of comma lists on the
+                        # left with scalars on the left.
+                        elsif (
+                            ( index( $old_rpatterns->[$j], ',' ) >= 0 ) ne
+                            ( index( $rpatterns->[$j],     ',' ) >= 0 ) )
+                        {
+                            $GoToLoc = '7A';
+                            goto NO_MATCH;
+                        }
+
                         # If we pass that test, we'll call it a marginal match.
                         # Here is an example of a marginal match:
                         #       $done{$$op} = 1;
@@ -2626,7 +2644,7 @@ sub decode_alignment_token {
     }
 }
 
-sub delete_unmatched_tokens {
+sub OLD_delete_unmatched_tokens {
     my ($rlines) = @_;
 
     # This is a preliminary step in vertical alignment in which we remove as
@@ -2833,7 +2851,692 @@ sub delete_unmatched_tokens {
     return;
 }
 
-{        # fix_ragged_matches
+sub delete_unmatched_tokens {
+    my ($rlines) = @_;
+
+    # This is a preliminary step in vertical alignment in which we remove as
+    # many obviously un-needed alignment tokens as possible.  This will prevent
+    # them from interfering with the final alignment.
+
+    return unless @{$rlines} > 1;
+
+    my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
+
+    # ignore hanging side comments in these operations
+    my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
+    my $rnew_lines = \@filtered;
+    my @i_equals;
+    my @line_info;
+
+    my $jmax = @{$rnew_lines} - 1;
+    return unless $jmax >= 0;
+
+    my %is_good_tok;
+
+    # create a hash of tokens for each line
+    my $rline_hashes = [];
+    my $saw_list_type;
+    my $max_lev_diff = 0;
+    foreach my $line ( @{$rnew_lines} ) {
+        my $rhash   = {};
+        my $rtokens = $line->get_rtokens();
+        if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1 }
+        my $i = 0;
+        my $i_eq;
+        my ( $lev_min, $lev_max );
+        foreach my $tok ( @{$rtokens} ) {
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
+
+            if ( $tok !~ /^[#]$/ ) {
+                if ( !defined($lev_min) ) { $lev_min = $lev; $lev_max = $lev; }
+                else {
+                    if ( $lev < $lev_min ) { $lev_min = $lev }
+                    if ( $lev > $lev_max ) { $lev_max = $lev }
+                }
+            }
+
+            # Possible future upgrade: for multiple matches,
+            # record [$i1, $i2, ..] instead of $i
+            $rhash->{$tok} =
+              [ $i, undef, undef, $raw_tok, $lev, $tag, $tok_count ];
+
+            # remember the first equals at line level
+            if ( !defined($i_eq) && $raw_tok eq '=' ) {
+                if ( $lev eq $group_level ) { $i_eq = $i }
+            }
+            $i++;
+        }
+        push @{$rline_hashes}, $rhash;
+        push @i_equals, $i_eq;
+        push @line_info, [ $lev_min, $lev_max ];
+        if ( defined($lev_min) ) {
+            my $lev_diff = $lev_max - $lev_min;
+            if ( $lev_diff > $max_lev_diff ) { $max_lev_diff = $lev_diff }
+        }
+    }
+
+    # compare each line pair and record matches
+    my $rtok_hash = {};
+    my $nr        = 0;
+    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+        my $nl = $nr;
+        $nr = 0;
+        my $jr      = $jl + 1;
+        my $rhash_l = $rline_hashes->[$jl];
+        my $rhash_r = $rline_hashes->[$jr];
+        my $count   = 0;                      # UNUSED NOW?
+        my $ntoks   = 0;
+        foreach my $tok ( keys %{$rhash_l} ) {
+            $ntoks++;
+            if ( defined( $rhash_r->{$tok} ) ) {
+                if ( $tok ne '#' ) { $count++; }
+                my $il = $rhash_l->{$tok}->[0];
+                my $ir = $rhash_r->{$tok}->[0];
+                $rhash_l->{$tok}->[2] = $ir;
+                $rhash_r->{$tok}->[1] = $il;
+                if ( $tok ne '#' ) {
+                    push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
+                    $nr++;
+                }
+            }
+        }
+
+        # Set a line break if no matching tokens between these lines
+        if ( $nr == 0 && $nl > 0 ) {
+            $rnew_lines->[$jl]->{_end_group} = 1;
+        }
+    }
+
+    # find subgroups
+    my @subgroups;
+    push @subgroups, [ 0, $jmax ];
+    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+        if ( $rnew_lines->[$jl]->{_end_group} ) {
+            $subgroups[-1]->[1] = $jl;
+            push @subgroups, [ $jl + 1, $jmax ];
+        }
+    }
+
+    # Loop to process each subgroups
+    foreach my $item (@subgroups) {
+        my ( $jbeg, $jend ) = @{$item};
+
+        # look for complete ternary or if/elsif/else blocks
+        my $nlines = $jend - $jbeg + 1;
+        my %token_line_count;
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            my %seen;
+            my $line    = $rnew_lines->[$jj];
+            my $rtokens = $line->get_rtokens();
+            foreach my $tok ( @{$rtokens} ) {
+                if ( !$seen{$tok} ) {
+                    $seen{$tok}++;
+                    $token_line_count{$tok}++;
+                }
+            }
+        }
+
+        # Look for if/else/elsif and ternary blocks
+        my $is_full_block;
+        foreach my $tok ( keys %token_line_count ) {
+            if ( $token_line_count{$tok} == $nlines ) {
+                if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
+                    $is_full_block = 1;
+                }
+            }
+        }
+
+        # remove unwanted alignment tokens
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            my $line    = $rnew_lines->[$jj];
+            my $rtokens = $line->get_rtokens();
+            my $rhash   = $rline_hashes->[$jj];
+            my $i_eq    = $i_equals[$jj];
+            my @idel;
+            my $imax = @{$rtokens} - 2;
+            my $delete_above_level;
+
+            for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                my $tok = $rtokens->[$i];
+                next if ( $tok eq '#' );    # shouldn't happen
+                my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
+                  @{ $rhash->{$tok} };
+
+                # always remove unmatched tokens
+                my $delete_me = !defined($il) && !defined($ir);
+
+                # also, if this is a complete ternary or if/elsif/else block,
+                # remove all alignments which are not also in every line
+                $delete_me ||=
+                  ( $is_full_block && $token_line_count{$tok} < $nlines );
+
+                # Remove all tokens above a certain level following a previous
+                # deletion.  For example, we have to remove tagged higher level
+                # alignment tokens following a => deletion because the tags of
+                # higher level tokens will now be incorrect. For example, this
+                # will prevent aligning commas as follows after deleting the
+                # second =>
+                #    $w->insert(
+                #	ListBox => origin => [ 270, 160 ],
+                #	size    => [ 200,           55 ],
+                #    );
+                if ( defined($delete_above_level) ) {
+                    if ( $lev > $delete_above_level ) {
+                        $delete_me ||= 1;    #$tag;
+                    }
+                    else { $delete_above_level = undef }
+                }
+
+                if (
+                    $delete_me
+                    && is_deletable_token( $tok, $i, $imax, $jj, $i_eq )
+
+                    # Patch: do not touch the first line of a terminal match,
+                    # such as below, because j_terminal has already been set.
+                    #    if ($tag) { $tago = "<$tag>"; $tagc = "</$tag>"; }
+                    #    else      { $tago = $tagc = ''; }
+                    # But see snippets 'else1.t' and 'else2.t'
+                    && !( $jj == $jbeg && $has_terminal_match && $nlines == 2 )
+
+                  )
+                {
+##print "deleting token $i\n";
+                    push @idel, $i;
+                    if ( !defined($delete_above_level)
+                        || $lev < $delete_above_level )
+                    {
+
+                        # delete all following higher level alignments
+                        $delete_above_level = $lev;
+
+                        # but keep deleting after => to next lower level
+                        # to avoid some bizarre alignments
+                        if ( $raw_tok eq '=>' ) {
+                            $delete_above_level = $lev - 1;
+                        }
+                    }
+                }
+            }
+
+            if (@idel) {
+                delete_selected_tokens( $line, \@idel, $saw_list_type );
+            }
+        }
+
+    }    # End loop over subgroups
+
+    # See if we can get better overall alignment by removing some high level
+    # (deep) matches.  We can skip this call if there are none.
+    prune_alignment_tree($rlines) if ( $max_lev_diff >= 1 );
+
+    # See if we can get better overall alignment by removing some
+    # ending alignment tokens of ragged lists.
+    fix_ragged_matches($rlines) if ($saw_list_type);
+
+    return;
+}
+
+sub get_line_token_info {
+
+    # Scan lines of tokens and return summary information about the range of
+    # levels and patterns.
+    my ($rlines) = @_;
+
+    my $rline_values = [];
+    for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
+        my ($line) = $rlines->[$jj];
+
+        my $rtokens = $line->get_rtokens();
+        my $i       = -1;
+        my ( $lev_min, $lev_max );
+        my $token_pattern_max = "";
+        my %saw_level;
+        my @token_info;
+
+        # Find the index of the last token before the side comment
+        my $imax = @{$rtokens} - 2;
+
+        # But if the line ends in a comma list, walk it back to the first such
+        # comma This will have the effect of making all trailing ragged comma
+        # lists match in the prune tree routine.  These trailing comma lists
+        # can better be handled by later alignment rules.
+        my $tok_end = $rtokens->[$imax];
+        if ( $tok_end =~ /^,/ ) {
+            my $i = $imax - 1;
+            while ( $i >= 0 && $rtokens->[$i] eq $tok_end ) {
+                $imax = $i;
+                $i--;
+            }
+        }
+
+        # make a first pass to find level range
+        foreach my $tok ( @{$rtokens} ) {
+            $i++;
+            last if ( $i > $imax );
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
+            push @token_info, [ $raw_tok, $lev, $tag, $tok_count ];
+            last if ( $tok eq '#' );
+            $token_pattern_max .= $tok;
+            $saw_level{$lev}++;
+            if ( !defined($lev_min) ) {
+                $lev_min = $lev;
+                $lev_max = $lev;
+            }
+            else {
+                if ( $lev < $lev_min ) { $lev_min = $lev; }
+                if ( $lev > $lev_max ) { $lev_max = $lev; }
+            }
+        }
+
+        # handle no levels
+        my $rtoken_patterns = {};
+        my $rtoken_indexes  = {};
+        my @levs            = sort keys %saw_level;
+        if ( !defined($lev_min) ) {
+            $lev_min                     = -1;
+            $lev_max                     = -1;
+            $levs[0]                     = -1;
+            $rtoken_patterns->{$lev_min} = "";
+            $rtoken_indexes->{$lev_min}  = [];
+        }
+
+        # handle one level
+        elsif ( $lev_max == $lev_min ) {
+            $rtoken_patterns->{$lev_max} = $token_pattern_max;
+            $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
+
+            #return ( $lev_min, $lev_max, $rtoken_patterns );
+        }
+
+        # handle multiple levels
+        else {
+            $rtoken_patterns->{$lev_max} = $token_pattern_max;
+            $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
+
+            my $DEBUG   = 0;
+            my $lev_top = pop @levs;    # alread did max level
+            my $itok    = -1;
+            foreach my $tok ( @{$rtokens} ) {
+                $itok++;
+                last if ( $itok > $imax );
+                my ( $raw_tok, $lev, $tag, $tok_count ) =
+                  @{ $token_info[$itok] };
+                last if ( $raw_tok eq '#' );
+                foreach my $lev_test (@levs) {
+                    next if ( $lev > $lev_test );
+                    $rtoken_patterns->{$lev_test} .= $tok;
+                    push @{ $rtoken_indexes->{$lev_test} }, $itok;
+                }
+            }
+            push @levs, $lev_top;
+        }
+
+        push @{$rline_values},
+          [ $lev_min, $lev_max, $rtoken_patterns, \@levs, $rtoken_indexes, ];
+
+        # DEBUG
+        0 && do {
+            local $" = ')(';
+            print "lev_min=$lev_min, lev_max=$lev_max, levels=(@levs)\n";
+            foreach my $key ( sort keys %{$rtoken_patterns} ) {
+                print "$key => $rtoken_patterns->{$key}\n";
+                print "$key => @{$rtoken_indexes->{$key}}\n";
+            }
+        };
+    }
+    return $rline_values;
+}
+
+sub prune_alignment_tree {
+    my ($rlines) = @_;
+    my $jmax = @{$rlines} - 1;
+    return unless $jmax > 1;
+
+    # Vertical alignment in perltidy is done as an iterative process.  The
+    # starting point is to mark all possible alignment tokens ('=', ',', '=>',
+    # etc) for vertical alignment.  Then we have to delete all alignments
+    # which, if actually made, would detract from overall alignment.  This
+    # is done in several phases of which this is one.
+
+    # In this routine we look at the alignments of a group of lines as a
+    # hierarchical tree.  We will 'prune' the tree to limited depths if that
+    # will improve overall alignment at the lower depths.  
+    # For each line we will be looking at its alignment patterns down to
+    # different fixed depths. For each depth, we include all lower depths and
+    # ignore all higher depths.  We want to see if we can get alignment of a
+    # larger group of lines if we ignore alignments at some lower depth.  
+    # Here is an # example:
+
+    # for (
+    #     [ '$var',     sub { join $_, "bar" },            0, "bar" ],
+    #     [ 'CONSTANT', sub { join "foo", "bar" },         0, "bar" ],
+    #     [ 'CONSTANT', sub { join "foo", "bar", 3 },      1, "barfoo3" ],
+    #     [ '$myvar',   sub { my $var; join $var, "bar" }, 0, "bar" ],
+    # );
+
+    # In the above example, all lines have three commas at the lowest depth
+    # (zero), so if there were no other alignements, these lines would all
+    # align considering only the zero depth alignment token.  But some lines
+    # have additional comma alignments at the next depth, so we need to decide
+    # if we should drop those to keep the top level alignments, or keep those
+    # for some additional low level alignments at the expense losing some top
+    # level alignments.  In this case we will drop the deeper level commas to
+    # keep the entire collection aligned.  But in some cases the decision could
+    # go the other way.
+
+    # The tree for this example at the zero depth has one node containing
+    # all four lines, since they are identical at zero level (three commas).
+    # At depth one, there are three 'children' nodes, namely:
+    # - lines 1 and 2, which have a single comma in the 'sub' at depth 1
+    # - line 3, which has 2 commas at depth 1
+    # - line4, which has a ';' and a ',' at depth 1
+    # There are no deeper alignments in this example.
+    # so the tree structure for this example is:
+    #
+    #    depth 0         depth 1      depth 2
+    #    [lines 1-4] --  [line 1-2] -  (empty)
+    #                 |  [line 3]   -  (empty)
+    #                 |  [line 4]   -  (empty)
+
+    # We can carry this to any depth, but it is not really useful to go below
+    # depth 2. To cleanly stop there, we will consider depth 2 to contain all
+    # alignments at depth >=2.
+
+    my $EXPLAIN = 0;
+
+    ####################################################################
+    # Prune Tree Step 1. Start by scanning the lines and collecting info
+    ####################################################################
+
+    # Note that the caller had this info but we have to redo this now because
+    # alignment tokens may have been deleted.
+    my $rline_values = get_line_token_info($rlines);
+
+    # We can work to any depth, but there is little advantage to working
+    # to a a depth greater than 2
+    my $MAX_DEPTH = 2;
+
+    # This arrays will hold the tree of alignment tokens at different depths
+    # for these lines.
+    my @match_tree;
+
+    # Tree nodes contain these values:
+    # $match_tree[$depth] = [$jbeg, $jend, $n_parent, $level, $pattern]
+    #  $depth = 0,1,2 = index of depth of the match
+
+    #  $jbeg beginning index j of the range of lines in this match
+    #  $jend ending index j of the range of lines in this match
+    #  $n_parent = index of the containing group at $depth-1, if it exists
+    #  $level = actual level of code being matched in this group
+    #  $pattern = alignment pattern being matched
+    #  $nc_beg_p = first child
+    #  $nc_end_p = last child
+    #  $rindexes = ref to token indexes
+
+    # the patterns and levels of the current group being formed at each depth
+    my ( @token_patterns_current, @levels_current, @token_indexes_current );
+
+    # the patterns and levels of the next line being tested at each depth
+    my ( @token_patterns_next, @levels_next, @token_indexes_next );
+
+    #########################################################
+    # define a recursive worker subroutine for tree construction
+    #########################################################
+
+    # This is a recursive routine which is called if a match condition changes
+    # at any depth when a new line is encountered.  It ends the match node
+    # which changed plus all deeper nodes attached to it.
+    my $end_node;
+    $end_node = sub {
+        my ( $depth, $jl, $n_parent ) = @_;
+
+        # $depth is the tree depth
+        # $jl is the  index of the line
+        # $n_parent is index of the parent node of this node
+
+        return if ( $depth > $MAX_DEPTH );
+
+        # end any current group at this depth
+        if (   $jl >= 0
+            && defined( $match_tree[$depth] )
+            && @{ $match_tree[$depth] }
+            && defined( $levels_current[$depth] ) )
+        {
+            $match_tree[$depth]->[-1]->[1] = $jl;
+        }
+
+        # Define the index of the node we will create below
+        my $ng_self = 0;
+        if ( defined( $match_tree[$depth] ) ) {
+            $ng_self = @{ $match_tree[$depth] };
+        }
+
+        # end any next deeper child node(s)
+        $end_node->( $depth + 1, $jl, $ng_self );
+
+        # update the levels being matched
+        $token_patterns_current[$depth] = $token_patterns_next[$depth];
+        $token_indexes_current[$depth]  = $token_indexes_next[$depth];
+        $levels_current[$depth]         = $levels_next[$depth];
+
+        # Do not start a new group at this level if it is not being used
+        if ( !defined( $levels_next[$depth] )
+            || $depth > 0
+            && $levels_next[$depth] <= $levels_next[ $depth - 1 ] )
+        {
+            return;
+        }
+
+        # Create a node for the next group at this depth. We initially assume
+        # that it will continue to $jmax, and correct that later if the node
+        # ends earlier.
+        push @{ $match_tree[$depth] },
+          [
+            $jl + 1, $jmax, $n_parent, $levels_current[$depth],
+            $token_patterns_current[$depth],
+            undef, undef, $token_indexes_current[$depth],
+          ];
+
+        return;
+    };    ## end sub end_node
+
+    ######################################################
+    # Prune Tree Step 2. Loop to form the tree of matches.
+    ######################################################
+    for ( my $jp = 0 ; $jp <= $jmax ; $jp++ ) {
+
+        # working with two adjacent line indexes, 'm'=minus, 'p'=plus
+        my $jm = $jp - 1;
+
+        # Pull out values for the next line
+        my ( $lev_min, $lev_max, $rtoken_patterns, $rlevs, $rtoken_indexes ) =
+          @{ $rline_values->[$jp] };
+
+        # Transfer levels and patterns for this line to the working arrays.
+        # If the number of levels differs from our chosen MAX_DEPTH ...
+        # if fewer than MAX_DEPTH: leave levels at missing depths undefined
+        # if more than MAX_DEPTH: set the MAX_DEPTH level to be the maximum
+        @levels_next = @{$rlevs}[ 0 .. $MAX_DEPTH ];
+        if ( @{$rlevs} > $MAX_DEPTH ) {
+            $levels_next[$MAX_DEPTH] = $rlevs->[-1];
+        }
+        my $depth = 0;
+        foreach (@levels_next) {
+            $token_patterns_next[$depth] =
+              defined($_) ? $rtoken_patterns->{$_} : undef;
+            $token_indexes_next[$depth] =
+              defined($_) ? $rtoken_indexes->{$_} : undef;
+            $depth++;
+        }
+
+        # Look for a change in match groups...
+
+        # Initialize on the first line
+        if ( $jp == 0 ) {
+            my $n_parent;
+            $end_node->( 0, $jm, $n_parent );
+        }
+
+        # End groups if a hard flag has been set
+        elsif ( $rlines->[$jm]->{_end_group} ) {
+            my $n_parent;
+            $end_node->( 0, $jm, $n_parent );
+        }
+
+        # Otherwise see if anything changed and update the tree if so
+        else {
+            foreach my $depth ( 0 .. $MAX_DEPTH ) {
+
+                my $def_current = defined( $token_patterns_current[$depth] );
+                my $def_next    = defined( $token_patterns_next[$depth] );
+                last unless ( $def_current || $def_next );
+                if (   !$def_current
+                    || !$def_next
+                    || $token_patterns_current[$depth] ne
+                    $token_patterns_next[$depth] )
+                {
+                    my $n_parent;
+                    if ( $depth > 0 && defined( $match_tree[ $depth - 1 ] ) ) {
+                        $n_parent = @{ $match_tree[ $depth - 1 ] } - 1;
+                    }
+                    $end_node->( $depth, $jm, $n_parent );
+                    last;
+                }
+            }
+        }
+    } ## end loop to form tree of matches
+
+    ##########################################################
+    # Prune Tree Step 3. Make links from parent to child nodes
+    ##########################################################
+
+    # It seemed cleaner to do this as a separate step rather than during tree
+    # construction.  The children nodes have links up to the parent node which
+    # created them.  Now make links in the opposite direction, so the parents
+    # can find the children.  We store the range of children nodes ($nc_beg,
+    # $nc_end) of each parent with two additional indexes in the orignal array.
+    # These will be undef if no children.
+    for ( my $depth = $MAX_DEPTH ; $depth > 0 ; $depth-- ) {
+        next unless defined( $match_tree[$depth] );
+        my $nc_max = @{ $match_tree[$depth] } - 1;
+        my $np_now;
+        foreach my $nc ( 0 .. $nc_max ) {
+            my $np = $match_tree[$depth]->[$nc]->[2];
+            if ( !defined($np) ) {
+
+                # shouldn't happen
+                #print STDERR "lost child $np at depth $depth\n";
+                next;
+            }
+            if ( !defined($np_now) || $np != $np_now ) {
+                $np_now = $np;
+                $match_tree[ $depth - 1 ]->[$np]->[5] = $nc;
+            }
+            $match_tree[ $depth - 1 ]->[$np]->[6] = $nc;
+        }
+    } ## end loop to make links down to the child nodes
+
+    if ( 0 || $EXPLAIN > 0 ) {
+        print "Tree complete. Found these groups:\n";
+        foreach my $depth ( 0 .. $MAX_DEPTH ) {
+            Dump_tree_groups( \@{ $match_tree[$depth] }, "depth=$depth" );
+        }
+    }
+
+    #######################################################
+    # Prune Tree Step 4. Make a list of nodes to be deleted
+    #######################################################
+    #  [$jbeg, $jend, $level_keep]
+    #  $jbeg..$jend is the range of line indexes,
+    #  $level_keep is the minimum level to keep
+    my @delete_list;
+
+    my $starting_depth = 0;    # normally 0 except for debugging
+
+    # We work with a list of nodes to visit at the next deeper depth.
+    my @todo_list;
+    if ( defined( $match_tree[$starting_depth] ) ) {
+        @todo_list = ( 0 .. @{ $match_tree[$starting_depth] } - 1 );
+    }
+
+    for ( my $depth = $starting_depth ; $depth < $MAX_DEPTH ; $depth++ ) {
+        last unless (@todo_list);
+        my @todo_next;
+        foreach my $np (@todo_list) {
+            my ( $jbeg_p, $jend_p, $np_p, $lev_p, $pat_p, $nc_beg_p, $nc_end_p,
+                $rindexes_p )
+              = @{ $match_tree[$depth]->[$np] };
+
+            # nothing to do if no children
+            next unless defined($nc_beg_p);
+
+            # Define the number of lines to either keep or delete a child node.
+            # This is the key decision we have to make.  We want to delete
+            # short runs of matched lines, and keep long runs.  The following
+            # rule has given good results but it might be optimized in the
+            # future to include more variables.
+            my $nlines_keep = $depth + 3;
+            my $nlines_p    = $jend_p - $jbeg_p + 1;
+            if ( $nlines_keep > $nlines_p - 1 ) { $nlines_keep = $nlines_p - 1 }
+
+            # loop to keep or delete each child node
+            foreach my $nc ( $nc_beg_p .. $nc_end_p ) {
+                my ( $jbeg_c, $jend_c, $np_c, $lev_c, $pat_c, $nc_beg_c,
+                    $nc_end_c )
+                  = @{ $match_tree[ $depth + 1 ]->[$nc] };
+                my $nlines_c = $jend_c - $jbeg_c + 1;
+                if ( $nlines_c < $nlines_keep ) {
+                    push @delete_list, [ $jbeg_c, $jend_c, $lev_p ];
+                }
+                else {
+                    push @todo_next, $nc;
+                }
+            }
+        }
+        @todo_list = @todo_next;
+    } ## end loop to select nodes to delete
+
+    #############################################################
+    # Prune Tree Step 5. Loop to delete selected alignment tokens
+    #############################################################
+    foreach my $item (@delete_list) {
+        my ( $jbeg, $jend, $level_keep ) = @{$item};
+        foreach my $jj ( $jbeg .. $jend ) {
+            my $line = $rlines->[$jj];
+            my @idel;
+            my $rtokens = $line->get_rtokens();
+            my $imax    = @{$rtokens} - 2;
+            for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                my $tok = $rtokens->[$i];
+                my ( $raw_tok, $lev, $tag, $tok_count ) =
+                  decode_alignment_token($tok);
+                if ( $lev > $level_keep ) {
+                    push @idel, $i;
+                }
+            }
+            if (@idel) {
+                delete_selected_tokens( $line, \@idel );
+            }
+        }
+    } ## end loop to delete selected alignment tokens
+    return;
+} ## end sub prune_alignment_tree
+
+sub Dump_tree_group {
+    my ( $rgroup, $msg ) = @_;
+    print "$msg\n";
+    local $" = ')(';
+    foreach my $item ( @{$rgroup} ) {
+        my @fix = @{$item};
+        foreach (@fix) { $_ = "undef" unless defined $_; }
+        $fix[4] = "...";
+        print "(@fix)\n";
+    }
+}
+
+{    # fix_ragged_matches
 
     my %is_comma_or_comment;
     my $BLOCK_MERGE_RATIO;
