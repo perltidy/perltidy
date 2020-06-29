@@ -2658,7 +2658,7 @@ sub delete_unmatched_tokens {
     # ignore hanging side comments in these operations
     my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
     my $rnew_lines = \@filtered;
-    my @i_equals;
+    my @equals_info;
     my @line_info;
 
     my $jmax = @{$rnew_lines} - 1;
@@ -2671,11 +2671,12 @@ sub delete_unmatched_tokens {
     my $saw_list_type;
     my $max_lev_diff = 0;
     foreach my $line ( @{$rnew_lines} ) {
-        my $rhash   = {};
-        my $rtokens = $line->get_rtokens();
+        my $rhash     = {};
+        my $rtokens   = $line->get_rtokens();
+        my $rpatterns = $line->get_rpatterns();
         if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1 }
         my $i = 0;
-        my $i_eq;
+        my ( $i_eq, $tok_eq, $pat_eq );
         my ( $lev_min, $lev_max );
         foreach my $tok ( @{$rtokens} ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
@@ -2696,12 +2697,17 @@ sub delete_unmatched_tokens {
 
             # remember the first equals at line level
             if ( !defined($i_eq) && $raw_tok eq '=' ) {
-                if ( $lev eq $group_level ) { $i_eq = $i }
+
+                if ( $lev eq $group_level ) {
+                    $i_eq   = $i;
+                    $tok_eq = $tok;
+                    $pat_eq = $rpatterns->[$i];
+                }
             }
             $i++;
         }
         push @{$rline_hashes}, $rhash;
-        push @i_equals, $i_eq;
+        push @equals_info, [ $i_eq, $tok_eq, $pat_eq ];
         push @line_info, [ $lev_min, $lev_max ];
         if ( defined($lev_min) ) {
             my $lev_diff = $lev_max - $lev_min;
@@ -2738,6 +2744,31 @@ sub delete_unmatched_tokens {
         # Set a line break if no matching tokens between these lines
         if ( $nr == 0 && $nl > 0 ) {
             $rnew_lines->[$jl]->{_end_group} = 1;
+        }
+
+        # Also set a line break if both lines have simple equals but with
+        # different leading characters in patterns.  This check is similar to
+        # one in sub check_match, and will prevent sub prune_alignment_tree
+        # from removing alignments which otherwise should be kept. This fix
+        # is rarely needed, but it can occasionally improve formatting.
+        # For example:
+        #     my $name = $this->{Name};
+        #     $type = $this->ctype($genlooptype) if defined $genlooptype;
+        #     my $declini = ( $asgnonly ? ""          : "\t$type *" );
+        #     my $cast    = ( $type     ? "($type *)" : "" );
+        # The last two lines start with 'my' and will not match the previous
+        # line starting with $type, so we do not want prune_alignment tree
+        # to delete their ? : alignments at a deeper level.
+        my ( $i_eq_l, $tok_eq_l, $pat_eq_l ) = @{ $equals_info[$jl] };
+        my ( $i_eq_r, $tok_eq_r, $pat_eq_r ) = @{ $equals_info[$jr] };
+        if ( defined($i_eq_l) && defined($i_eq_r) ) {
+            if (   $tok_eq_l eq $tok_eq_r
+                && $i_eq_l == 0
+                && $i_eq_r == 0
+                && substr( $pat_eq_l, 0, 1 ) ne substr( $pat_eq_r, 0, 1 ) )
+            {
+                $rnew_lines->[$jl]->{_end_group} = 1;
+            }
         }
     }
 
@@ -2785,7 +2816,7 @@ sub delete_unmatched_tokens {
             my $line    = $rnew_lines->[$jj];
             my $rtokens = $line->get_rtokens();
             my $rhash   = $rline_hashes->[$jj];
-            my $i_eq    = $i_equals[$jj];
+            my $i_eq    = $equals_info[$jj]->[0];
             my @idel;
             my $imax = @{$rtokens} - 2;
             my $delete_above_level;
@@ -2891,7 +2922,7 @@ sub get_line_token_info {
         my $imax = @{$rtokens} - 2;
 
         # But if the line ends in a comma list, walk it back to the first such
-        # comma This will have the effect of making all trailing ragged comma
+        # comma. This will have the effect of making all trailing ragged comma
         # lists match in the prune tree routine.  These trailing comma lists
         # can better be handled by later alignment rules.
         my $tok_end = $rtokens->[$imax];
@@ -2939,8 +2970,6 @@ sub get_line_token_info {
         elsif ( $lev_max == $lev_min ) {
             $rtoken_patterns->{$lev_max} = $token_pattern_max;
             $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
-
-            #return ( $lev_min, $lev_max, $rtoken_patterns );
         }
 
         # handle multiple levels
@@ -3056,8 +3085,10 @@ sub prune_alignment_tree {
     my @match_tree;
 
     # Tree nodes contain these values:
-    # $match_tree[$depth] = [$jbeg, $jend, $n_parent, $level, $pattern]
-    #  $depth = 0,1,2 = index of depth of the match
+    # $match_tree[$depth] = [$jbeg, $jend, $n_parent, $level, $pattern, 
+    #                        $nc_beg_p, $nc_end_p, $rindexes];
+    # where
+    #      $depth = 0,1,2 = index of depth of the match
 
     #  $jbeg beginning index j of the range of lines in this match
     #  $jend ending index j of the range of lines in this match

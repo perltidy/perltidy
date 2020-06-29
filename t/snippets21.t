@@ -6,6 +6,7 @@
 #3 switch_plain.switch_plain
 #4 sot.def
 #5 sot.sot
+#6 prune.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -52,6 +53,42 @@ $bits =
 lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
+----------
+
+        'prune' => <<'----------',
+# some tests for 'sub prune_alignment_tree'
+
+$request->header( 'User-Agent' => $agent )              if $agent;
+$request->header( 'From'       => $from )               if $from;
+$request->header( 'Range'      => "bytes=0-$max_size" ) if $max_size;
+
+for (
+    [ 'CONSTANT', sub { join "foo", "bar" },         0, "bar" ],
+    [ 'CONSTANT', sub { join "foo", "bar", 3 },      1, "barfoo3" ],
+    [ '$var',     sub { join $_, "bar" },            0, "bar" ],
+    [ '$myvar',   sub { my $var; join $var, "bar" }, 0, "bar" ],
+);
+
+[
+    [ [NewXSHdr],     [ NewXSName, NewXSArgs ],            "XSHdr" ],
+    [ [NewXSCHdrs],   [ NewXSName, NewXSArgs, GlobalNew ], "XSCHdrs" ],
+    [ [DefSyms],      [StructName],                        "MkDefSyms" ],
+    [ [NewXSSymTab],  [ DefSyms, NewXSArgs ],              "AddArgsyms" ],
+    [ [NewXSLocals],  [NewXSSymTab],                       "Sym2Loc" ],
+    [ [IsAffineFlag], [],                                  sub { return "0" } ],
+];
+
+@degen_nums[ 1, 2, 4, 8 ]         = ( 'a', 'c', 'g', 't' );
+@degen_nums[ 5, 10, 9, 6, 3, 12 ] = ( 'r', 'y', 'w', 's', 'm', 'k' );
+@degen_nums[ 14, 13, 11, 7, 15 ]  = ( 'b', 'd', 'h', 'v', 'n' );
+
+$_CreateFile   = ff( "k32", "CreateFile",   [ P, N, N, N, N, N, N ], N );
+$_CloseHandle  = ff( "k32", "CloseHandle",  [N],                     N );
+$_GetCommState = ff( "k32", "GetCommState", [ N, P ],                I );
+$_SetCommState = ff( "k32", "SetCommState", [ N, P ],                I );
+$_SetupComm    = ff( "k32", "SetupComm",    [ N, N, N ],             I );
+$_PurgeComm    = ff( "k32", "PurgeComm",    [ N, N ],                I );
+$_CreateEvent  = ff( "k32", "CreateEvent",  [ P, I, I, P ],          N );
 ----------
 
         'sot' => <<'----------',
@@ -244,6 +281,46 @@ __PACKAGE__->load_components( qw(
       Core
 ) );
 #5...........
+        },
+
+        'prune.def' => {
+            source => "prune",
+            params => "def",
+            expect => <<'#6...........',
+# some tests for 'sub prune_alignment_tree'
+
+$request->header( 'User-Agent' => $agent )              if $agent;
+$request->header( 'From'       => $from )               if $from;
+$request->header( 'Range'      => "bytes=0-$max_size" ) if $max_size;
+
+for (
+    [ 'CONSTANT', sub { join "foo", "bar" },         0, "bar" ],
+    [ 'CONSTANT', sub { join "foo", "bar", 3 },      1, "barfoo3" ],
+    [ '$var',     sub { join $_, "bar" },            0, "bar" ],
+    [ '$myvar',   sub { my $var; join $var, "bar" }, 0, "bar" ],
+);
+
+[
+    [ [NewXSHdr],     [ NewXSName, NewXSArgs ],            "XSHdr" ],
+    [ [NewXSCHdrs],   [ NewXSName, NewXSArgs, GlobalNew ], "XSCHdrs" ],
+    [ [DefSyms],      [StructName],                        "MkDefSyms" ],
+    [ [NewXSSymTab],  [ DefSyms, NewXSArgs ],              "AddArgsyms" ],
+    [ [NewXSLocals],  [NewXSSymTab],                       "Sym2Loc" ],
+    [ [IsAffineFlag], [],                                  sub { return "0" } ],
+];
+
+@degen_nums[ 1, 2, 4, 8 ]         = ( 'a', 'c', 'g', 't' );
+@degen_nums[ 5, 10, 9, 6, 3, 12 ] = ( 'r', 'y', 'w', 's', 'm', 'k' );
+@degen_nums[ 14, 13, 11, 7, 15 ]  = ( 'b', 'd', 'h', 'v', 'n' );
+
+$_CreateFile   = ff( "k32", "CreateFile",   [ P, N, N, N, N, N, N ], N );
+$_CloseHandle  = ff( "k32", "CloseHandle",  [N],                     N );
+$_GetCommState = ff( "k32", "GetCommState", [ N, P ],                I );
+$_SetCommState = ff( "k32", "SetCommState", [ N, P ],                I );
+$_SetupComm    = ff( "k32", "SetupComm",    [ N, N, N ],             I );
+$_PurgeComm    = ff( "k32", "PurgeComm",    [ N, N ],                I );
+$_CreateEvent  = ff( "k32", "CreateEvent",  [ P, I, I, P ],          N );
+#6...........
         },
     };
 
