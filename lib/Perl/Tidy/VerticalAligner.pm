@@ -3348,7 +3348,7 @@ sub prune_alignment_tree {
     return;
 } ## end sub prune_alignment_tree
 
-sub Dump_tree_group {
+sub Dump_tree_groups {
     my ( $rgroup, $msg ) = @_;
     print "$msg\n";
     local $" = ')(';
@@ -3356,6 +3356,7 @@ sub Dump_tree_group {
         my @fix = @{$item};
         foreach (@fix) { $_ = "undef" unless defined $_; }
         $fix[4] = "...";
+        $fix[7] = "...";
         print "(@fix)\n";
     }
 }
