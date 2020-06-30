@@ -10842,6 +10842,18 @@ sub send_lines_to_vertical_aligner {
 
                         # Sum length from previous alignment
                         my $len = token_sequence_length( $i_start, $i - 1 );
+
+			# Minor patch: do not include the length of any '!'.
+			# Otherwise, commas in the following line will not
+			# match
+                        #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
+                        #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
+                        if ( grep { $_ eq '!' }
+                            @types_to_go[ $i_start .. $i - 1 ] )
+                        {
+                            $len -= 1;
+                        }
+
                         if ( $i_start == $ibeg ) {
 
                             # For first token, use distance from start of line
