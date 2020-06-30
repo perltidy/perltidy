@@ -2903,9 +2903,36 @@ sub delete_unmatched_tokens {
 
 sub get_line_token_info {
 
-    # Scan lines of tokens and return summary information about the range of
+    # scan lines of tokens and return summary information about the range of
     # levels and patterns.
     my ($rlines) = @_;
+
+    # First scan to check monotonicity. Here is an example of several
+    # lines which are monotonic. The = is the lowest level, and
+    # the commas are all one level deeper. So this is not nonmonotonic.
+    #  $$d{"weeks"}   = [ "w",  "wk",  "wks", "week", "weeks" ];
+    #  $$d{"days"}    = [ "d",  "day", "days" ];
+    #  $$d{"hours"}   = [ "h",  "hr",  "hrs", "hour", "hours" ];
+    my @all_token_info;
+    my $all_monotonic = 1;
+    for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
+        my ($line) = $rlines->[$jj];
+        my $rtokens = $line->get_rtokens();
+        my $last_lev;
+        my $is_monotonic = 1;
+        my $i            = -1;
+        foreach my $tok ( @{$rtokens} ) {
+            $i++;
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
+            push @{ $all_token_info[$jj] },
+              [ $raw_tok, $lev, $tag, $tok_count ];
+            last if ( $tok eq '#' );
+            if ( $i > 0 && $lev < $last_lev ) { $is_monotonic = 0 }
+            $last_lev = $lev;
+        }
+        if ( !$is_monotonic ) { $all_monotonic = 0 }
+    }
 
     my $rline_values = [];
     for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
@@ -2917,16 +2944,18 @@ sub get_line_token_info {
         my $token_pattern_max = "";
         my %saw_level;
         my @token_info;
+        my $is_monotonic = 1;
 
-        # Find the index of the last token before the side comment
+        # find the index of the last token before the side comment
         my $imax = @{$rtokens} - 2;
 
-        # But if the line ends in a comma list, walk it back to the first such
-        # comma. This will have the effect of making all trailing ragged comma
-        # lists match in the prune tree routine.  These trailing comma lists
-        # can better be handled by later alignment rules.
+	# If the entire group is monotonic, and the line ends in a comma list,
+	# walk it back to the first such comma. this will have the effect of
+	# making all trailing ragged comma lists match in the prune tree
+	# routine.  these trailing comma lists can better be handled by later
+	# alignment rules.
         my $tok_end = $rtokens->[$imax];
-        if ( $tok_end =~ /^,/ ) {
+        if ( $all_monotonic && $tok_end =~ /^,/ ) {
             my $i = $imax - 1;
             while ( $i >= 0 && $rtokens->[$i] eq $tok_end ) {
                 $imax = $i;
@@ -2935,12 +2964,14 @@ sub get_line_token_info {
         }
 
         # make a first pass to find level range
+        my $last_lev;
         foreach my $tok ( @{$rtokens} ) {
             $i++;
             last if ( $i > $imax );
+            last if ($tok eq '#');
             my ( $raw_tok, $lev, $tag, $tok_count ) =
-              decode_alignment_token($tok);
-            push @token_info, [ $raw_tok, $lev, $tag, $tok_count ];
+              @{$all_token_info[$jj]->[$i]};
+
             last if ( $tok eq '#' );
             $token_pattern_max .= $tok;
             $saw_level{$lev}++;
@@ -2949,9 +2980,11 @@ sub get_line_token_info {
                 $lev_max = $lev;
             }
             else {
-                if ( $lev < $lev_min ) { $lev_min = $lev; }
-                if ( $lev > $lev_max ) { $lev_max = $lev; }
+                if ( $lev < $lev_min )  { $lev_min      = $lev; }
+                if ( $lev > $lev_max )  { $lev_max      = $lev; }
+                if ( $lev < $last_lev ) { $is_monotonic = 0 }
             }
+            $last_lev = $lev;
         }
 
         # handle no levels
@@ -2977,14 +3010,15 @@ sub get_line_token_info {
             $rtoken_patterns->{$lev_max} = $token_pattern_max;
             $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
 
-            my $DEBUG   = 0;
+            my $debug = 0;
             my $lev_top = pop @levs;    # alread did max level
             my $itok    = -1;
             foreach my $tok ( @{$rtokens} ) {
                 $itok++;
                 last if ( $itok > $imax );
+                ##my ( $raw_tok, $lev, $tag, $tok_count ) = @{ $token_info[$itok] };
                 my ( $raw_tok, $lev, $tag, $tok_count ) =
-                  @{ $token_info[$itok] };
+                  @{$all_token_info[$jj]->[$itok]};
                 last if ( $raw_tok eq '#' );
                 foreach my $lev_test (@levs) {
                     next if ( $lev > $lev_test );
@@ -2996,9 +3030,12 @@ sub get_line_token_info {
         }
 
         push @{$rline_values},
-          [ $lev_min, $lev_max, $rtoken_patterns, \@levs, $rtoken_indexes, ];
+          [
+            $lev_min, $lev_max,        $rtoken_patterns,
+            \@levs,   $rtoken_indexes, $is_monotonic
+          ];
 
-        # DEBUG
+        # debug
         0 && do {
             local $" = ')(';
             print "lev_min=$lev_min, lev_max=$lev_max, levels=(@levs)\n";
@@ -3276,6 +3313,7 @@ sub prune_alignment_tree {
     #  $jbeg..$jend is the range of line indexes,
     #  $level_keep is the minimum level to keep
     my @delete_list;
+    my %end_group;
 
     my $starting_depth = 0;    # normally 0 except for debugging
 
@@ -3296,25 +3334,49 @@ sub prune_alignment_tree {
             # nothing to do if no children
             next unless defined($nc_beg_p);
 
-            # Define the number of lines to either keep or delete a child node.
-            # This is the key decision we have to make.  We want to delete
-            # short runs of matched lines, and keep long runs.  The following
-            # rule has given good results but it might be optimized in the
-            # future to include more variables.
-            my $nlines_keep = $depth + 3;
-            my $nlines_p    = $jend_p - $jbeg_p + 1;
-            if ( $nlines_keep > $nlines_p - 1 ) { $nlines_keep = $nlines_p - 1 }
+	    # Define the number of lines to either keep or delete a child node.
+	    # This is the key decision we have to make.  We want to delete
+	    # short runs of matched lines, and keep long runs.  It seems easier
+	    # for the eye to follow breaks in monotonic level changes than
+	    # non-monotonic level changes.  For example, the following looks
+	    # best if we delete the lower level alignments:
+
+            #  [1]                  ~~ [];
+            #  [ ["foo"], ["bar"] ] ~~ [ qr/o/, qr/a/ ];
+            #  [ qr/o/, qr/a/ ]     ~~ [ ["foo"], ["bar"] ];
+            #  [ "foo", "bar" ]     ~~ [ qr/o/, qr/a/ ];
+            #  [ qr/o/, qr/a/ ]     ~~ [ "foo", "bar" ];
+            #  $deep1               ~~ $deep1;
+
+            # So we will use two thresholds.  
+            my $nmin_mono     = $depth + 3;
+            my $nmin_non_mono = $depth + 6;
+            my $nlines_p          = $jend_p - $jbeg_p + 1;
+            if ( $nmin_mono > $nlines_p - 1 ) {
+                $nmin_mono = $nlines_p - 1;
+            }
+            if ( $nmin_non_mono > $nlines_p - 1 ) {
+                $nmin_non_mono = $nlines_p - 1;
+            }
 
             # loop to keep or delete each child node
+            my $jend_c_keep;
             foreach my $nc ( $nc_beg_p .. $nc_end_p ) {
                 my ( $jbeg_c, $jend_c, $np_c, $lev_c, $pat_c, $nc_beg_c,
                     $nc_end_c )
                   = @{ $match_tree[ $depth + 1 ]->[$nc] };
                 my $nlines_c = $jend_c - $jbeg_c + 1;
-                if ( $nlines_c < $nlines_keep ) {
+                my $is_monotonic = $rline_values->[$jbeg_c]->[5];
+                my $nmin = $is_monotonic ? $nmin_mono : $nmin_non_mono;
+                if ( $nlines_c < $nmin ) {
                     push @delete_list, [ $jbeg_c, $jend_c, $lev_p ];
                 }
                 else {
+                    if ( defined($jend_c_keep) && $jbeg_c == $jend_c_keep + 1 )
+                    {
+                        $rlines->[$jend_c_keep]->{_end_group} = 1;
+                    }
+                    $jend_c_keep = $jend_c;
                     push @todo_next, $nc;
                 }
             }
@@ -3356,7 +3418,6 @@ sub Dump_tree_groups {
         my @fix = @{$item};
         foreach (@fix) { $_ = "undef" unless defined $_; }
         $fix[4] = "...";
-        $fix[7] = "...";
         print "(@fix)\n";
     }
 }

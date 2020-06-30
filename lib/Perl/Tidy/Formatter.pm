@@ -10776,7 +10776,8 @@ sub send_lines_to_vertical_aligner {
             # These are used below to prevent unwanted cross-line alignments.
             # Unbalanced containers already avoid aligning across
             # container boundaries.
-            my $tok = $tokens_to_go[$i];
+            my $tok        = $tokens_to_go[$i];
+            my $depth_last = $depth;
             if ( $tok =~ /^[\(\{\[]/ ) {    #'(' ) {
 
                 # if container is balanced on this line...
@@ -10880,8 +10881,12 @@ sub send_lines_to_vertical_aligner {
                 # also decorate commas with any container name to avoid
                 # unwanted cross-line alignments.
                 if ( $raw_tok eq ',' || $raw_tok eq '=>' ) {
-                    if ( $container_name[$depth] ) {
-                        $tok .= $container_name[$depth];
+
+                    # If we are at an opening token which increased depth, we have
+                    # to use the name from the previous depth.
+                    my $depth_p = ( $depth_last < $depth ? $depth_last : $depth );
+                    if ( $container_name[$depth_p] ) {
+                        $tok .= $container_name[$depth_p];
                     }
                 }
 

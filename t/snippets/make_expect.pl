@@ -275,8 +275,8 @@ EOM
     if ( -e $diff_file ) {
         $diff_msg = <<EOM;
 Look at each differences in '$diff_file'
-The full old ouput for 'somefile.def' is in expect/somefile.def
-The full new ouput for 'somefile.def' is in tmp/somefile.def
+The full old output for 'somefile.def' is in expect/somefile.def
+The full new output for 'somefile.def' is in tmp/somefile.def
 EOM
 
     }

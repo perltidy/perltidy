@@ -149,7 +149,7 @@ my $p    = TAP::Parser::SubclassTest->new(
 ----------
 
         'align25' => <<'----------',
-# do not align commas here; different container types
+# do not align internal commas here; different container types
 is_deeply( [ $a,        $a ], [ $b,               $c ] );
 is_deeply( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
 is_deeply( [ \$a,       \$a ], [ \$b,             \$c ] );
@@ -393,10 +393,10 @@ my $p = TAP::Parser::SubclassTest->new(
             source => "align25",
             params => "def",
             expect => <<'#17...........',
-# do not align commas here; different container types
-is_deeply( [ $a, $a ], [ $b, $c ] );
+# do not align internal commas here; different container types
+is_deeply( [ $a, $a ],               [ $b, $c ] );
 is_deeply( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
-is_deeply( [ \$a, \$a ], [ \$b, \$c ] );
+is_deeply( [ \$a, \$a ],             [ \$b, \$c ] );
 
 #17...........
         },
