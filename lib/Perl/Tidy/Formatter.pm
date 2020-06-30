@@ -12205,7 +12205,7 @@ sub get_seqno {
         # Replaced =~ and // in the list.  // had been removed in RT 119588
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~ =~ !~ //
+          { ? : => && || ~~ !~~ =~ !~ // <=>
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
