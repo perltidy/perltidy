@@ -3246,6 +3246,11 @@ sub prune_alignment_tree {
             $end_node->( 0, $jm, $n_parent );
         }
 
+        # Continue at hanging side comment
+        elsif ( $rlines->[$jp]->{_is_hanging_side_comment} ) {
+             next;
+        }
+
         # Otherwise see if anything changed and update the tree if so
         else {
             foreach my $depth ( 0 .. $MAX_DEPTH ) {
