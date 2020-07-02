@@ -2892,7 +2892,9 @@ sub delete_unmatched_tokens {
 
     # See if we can get better overall alignment by removing some high level
     # (deep) matches.  We can skip this call if there are none.
-    prune_alignment_tree($rlines) if ( $max_lev_diff >= 1 );
+    # Modified to send all lines through so that good breakpoints
+    # can be located.
+    prune_alignment_tree($rlines); ## if ( $max_lev_diff >= 1 );
 
     # See if we can get better overall alignment by removing some
     # ending alignment tokens of ragged lists.
@@ -3320,21 +3322,34 @@ sub prune_alignment_tree {
     my @delete_list;
     my %end_group;
 
-    my $starting_depth = 0;    # normally 0 except for debugging
+    # Define a threshold line count for forcing a break
+    my $nlines_break = 3;
 
     # We work with a list of nodes to visit at the next deeper depth.
     my @todo_list;
-    if ( defined( $match_tree[$starting_depth] ) ) {
-        @todo_list = ( 0 .. @{ $match_tree[$starting_depth] } - 1 );
+    if ( defined( $match_tree[0] ) ) {
+        @todo_list = ( 0 .. @{ $match_tree[0] } - 1 );
     }
 
-    for ( my $depth = $starting_depth ; $depth < $MAX_DEPTH ; $depth++ ) {
+    for ( my $depth = 0 ; $depth <= $MAX_DEPTH ; $depth++ ) {
         last unless (@todo_list);
         my @todo_next;
         foreach my $np (@todo_list) {
             my ( $jbeg_p, $jend_p, $np_p, $lev_p, $pat_p, $nc_beg_p, $nc_end_p,
                 $rindexes_p )
               = @{ $match_tree[$depth]->[$np] };
+
+            # Set a break before this block if it has significant size.
+            # Eventually this could become unnecessary if the final alignment 
+            # phase logic improves, but for now this insures that significant
+            # alignment changes are not missed.  See test 'align33.in'.
+            my $nlines_p = $jend_p - $jbeg_p + 1;
+            if (   $jbeg_p > 1
+                && $nlines_p > $nlines_break
+                && !$rlines->[$jbeg_p]->{_is_hanging_side_comment} )
+            {
+                $rlines->[ $jbeg_p - 1 ]->{_end_group} = 1;
+            }
 
             # nothing to do if no children
             next unless defined($nc_beg_p);
@@ -3356,7 +3371,6 @@ sub prune_alignment_tree {
             # So we will use two thresholds.  
             my $nmin_mono     = $depth + 3;
             my $nmin_non_mono = $depth + 6;
-            my $nlines_p          = $jend_p - $jbeg_p + 1;
             if ( $nmin_mono > $nlines_p - 1 ) {
                 $nmin_mono = $nlines_p - 1;
             }
@@ -3365,7 +3379,6 @@ sub prune_alignment_tree {
             }
 
             # loop to keep or delete each child node
-            my $jend_c_keep;
             foreach my $nc ( $nc_beg_p .. $nc_end_p ) {
                 my ( $jbeg_c, $jend_c, $np_c, $lev_c, $pat_c, $nc_beg_c,
                     $nc_end_c )
@@ -3377,11 +3390,6 @@ sub prune_alignment_tree {
                     push @delete_list, [ $jbeg_c, $jend_c, $lev_p ];
                 }
                 else {
-                    if ( defined($jend_c_keep) && $jbeg_c == $jend_c_keep + 1 )
-                    {
-                        $rlines->[$jend_c_keep]->{_end_group} = 1;
-                    }
-                    $jend_c_keep = $jend_c;
                     push @todo_next, $nc;
                 }
             }

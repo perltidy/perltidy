@@ -7,6 +7,7 @@
 #4 sot.def
 #5 sot.sot
 #6 prune.def
+#7 align33.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -34,6 +35,18 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align33' => <<'----------',
+$wl  = int( $wl * $f + .5 );
+$wr  = int( $wr * $f + .5 );
+$pag = int( $pageh * $f + .5 );
+$fe  = $opt_F ? "t" : "f";
+$cf  = $opt_U ? "t" : "f";
+$tp  = $opt_t ? "t" : "f";
+$rm  = $numbstyle ? "t" : "f";
+$pa = $showurl   ? "t" : "f";
+$nh = $seq_number ? "t" : "f";
+----------
 
         'lop' => <<'----------',
 # logical padding examples
@@ -358,6 +371,22 @@ is_deeply \@t, [
     !!0,
 ];
 #6...........
+        },
+
+        'align33.def' => {
+            source => "align33",
+            params => "def",
+            expect => <<'#7...........',
+$wl  = int( $wl * $f + .5 );
+$wr  = int( $wr * $f + .5 );
+$pag = int( $pageh * $f + .5 );
+$fe = $opt_F      ? "t" : "f";
+$cf = $opt_U      ? "t" : "f";
+$tp = $opt_t      ? "t" : "f";
+$rm = $numbstyle  ? "t" : "f";
+$pa = $showurl    ? "t" : "f";
+$nh = $seq_number ? "t" : "f";
+#7...........
         },
     };
 
