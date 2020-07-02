@@ -3339,7 +3339,7 @@ sub prune_alignment_tree {
                 $rindexes_p )
               = @{ $match_tree[$depth]->[$np] };
 
-            # Set a break before this block if it has significant size.
+            # Set a break before this block if it has a significant size.
             # Eventually this could become unnecessary if the final alignment 
             # phase logic improves, but for now this insures that significant
             # alignment changes are not missed.  See test 'align33.in'.
