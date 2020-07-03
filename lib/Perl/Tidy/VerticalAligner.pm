@@ -2178,7 +2178,14 @@ sub my_flush {
         initialize_for_new_group();
 
         # remove unmatched tokens in all lines
-        delete_unmatched_tokens( \@new_lines );
+        my $saw_list_type = delete_unmatched_tokens( \@new_lines );
+
+        # construct tree of matched lines 
+        my $rmatched_lines = prune_alignment_tree(\@new_lines);
+
+        # See if we can get better overall alignment by removing some
+        # ending alignment tokens of ragged lists.
+        fix_ragged_matches(\@new_lines) if ($saw_list_type);
 
         foreach my $new_line (@new_lines) {
 
@@ -2890,17 +2897,7 @@ sub delete_unmatched_tokens {
 
     }    # End loop over subgroups
 
-    # See if we can get better overall alignment by removing some high level
-    # (deep) matches.  We can skip this call if there are none.
-    # Modified to send all lines through so that good breakpoints
-    # can be located.
-    prune_alignment_tree($rlines); ## if ( $max_lev_diff >= 1 );
-
-    # See if we can get better overall alignment by removing some
-    # ending alignment tokens of ragged lists.
-    fix_ragged_matches($rlines) if ($saw_list_type);
-
-    return;
+    return $saw_list_type;
 }
 
 sub get_line_token_info {
@@ -3053,7 +3050,7 @@ sub get_line_token_info {
 sub prune_alignment_tree {
     my ($rlines) = @_;
     my $jmax = @{$rlines} - 1;
-    return unless $jmax > 1;
+    return unless $jmax > 0; ##1;
 
     # Vertical alignment in perltidy is done as an iterative process.  The
     # starting point is to mark all possible alignment tokens ('=', ',', '=>',
@@ -3137,6 +3134,20 @@ sub prune_alignment_tree {
     #  $nc_beg_p = first child
     #  $nc_end_p = last child
     #  $rindexes = ref to token indexes
+
+    my $rmatched_lines;
+    # Array to store info about the location of each line in the tree:
+    #   $rmatched_lines->[$jj]=
+    #         [ $group_id, $nlines_i, $jbeg_i, $nlines_o, $jbeg_o ];
+    # where
+    #   $jj = line index
+    #   $group_id = "n1.n2.n3" = decimal tree identifier of the group, i.e.
+    #    "1.0.3" = group 1 -> child 0 -> child 3 
+    #   $nlines_i = number of lines in this child subgroup
+    #   $jbeg_i   = starting index of this child subgroup
+    #   $nlines_o = number of lines in the outer containing group
+    #   $jbeg_o   = starting index of the outer containing group
+
 
     # the patterns and levels of the current group being formed at each depth
     my ( @token_patterns_current, @levels_current, @token_indexes_current );
@@ -3338,12 +3349,27 @@ sub prune_alignment_tree {
             my ( $jbeg_p, $jend_p, $np_p, $lev_p, $pat_p, $nc_beg_p, $nc_end_p,
                 $rindexes_p )
               = @{ $match_tree[$depth]->[$np] };
+            my $nlines_p = $jend_p - $jbeg_p + 1;
+
+            # Define the set of matched lines containing each line in this group
+            if ( $depth == 0 ) {
+                foreach my $j ( $jbeg_p .. $jend_p ) {
+                    $rmatched_lines->[$j] =
+                      [ "$np", $nlines_p, $jbeg_p, $nlines_p, $jbeg_p ];
+                }
+            }
+            else {
+                foreach my $j ( $jbeg_p .. $jend_p ) {
+                    $rmatched_lines->[$j]->[0] .= ".$np";
+                    $rmatched_lines->[$j]->[1] = $nlines_p;
+                    $rmatched_lines->[$j]->[2] = $jbeg_p;
+                }
+            }
 
             # Set a break before this block if it has a significant size.
             # Eventually this could become unnecessary if the final alignment 
             # phase logic improves, but for now this insures that significant
             # alignment changes are not missed.  See test 'align33.in'.
-            my $nlines_p = $jend_p - $jbeg_p + 1;
             if (   $jbeg_p > 1
                 && $nlines_p > $nlines_break
                 && !$rlines->[$jbeg_p]->{_is_hanging_side_comment} )
@@ -3420,7 +3446,7 @@ sub prune_alignment_tree {
             }
         }
     } ## end loop to delete selected alignment tokens
-    return;
+    return $rmatched_lines; 
 } ## end sub prune_alignment_tree
 
 sub Dump_tree_groups {
