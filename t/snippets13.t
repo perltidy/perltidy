@@ -220,8 +220,8 @@ my $account   = "Insert into accountlines
             params => "def",
             expect => <<'#3...........',
     my $type   = shift || "o";
-    my $fname  = ( $type eq 'oo' ? 'orte_city' : 'orte' );
-    my $suffix = ( $coord_system eq 'standard' ? '' : '-orig' );
+    my $fname  = ( $type eq 'oo'               ? 'orte_city' : 'orte' );
+    my $suffix = ( $coord_system eq 'standard' ? ''          : '-orig' );
 #3...........
         },
 
@@ -447,7 +447,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

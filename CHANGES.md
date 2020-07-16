@@ -1,6 +1,10 @@
 # Perltidy Change Log
 
-## 2020 06 19.01
+## 2020 06 19.02
+
+    - Vertical alignment has been improved.
+
+    - Formatting with the -lp option is improved. 
 
     - Fixed issue git #32, misparse of bare 'ref' in ternary
 

@@ -554,12 +554,12 @@ require Cwd;
 ( my $boot = $self->{NAME} ) =~ s/:/_/g;
 doit(
     sub { @E::ISA = qw/F/ },
-    sub { @E::ISA = qw/D/; @C::ISA = qw/F/ },
-    sub { @C::ISA = qw//; @A::ISA = qw/K/ },
-    sub { @A::ISA = qw//; @J::ISA = qw/F K/ },
-    sub { @J::ISA = qw/F/; @H::ISA = qw/K G/ },
-    sub { @H::ISA = qw/G/; @B::ISA = qw/B/ },
-    sub { @B::ISA = qw//; @K::ISA = qw/K J I/ },
+    sub { @E::ISA = qw/D/;   @C::ISA = qw/F/ },
+    sub { @C::ISA = qw//;    @A::ISA = qw/K/ },
+    sub { @A::ISA = qw//;    @J::ISA = qw/F K/ },
+    sub { @J::ISA = qw/F/;   @H::ISA = qw/K G/ },
+    sub { @H::ISA = qw/G/;   @B::ISA = qw/B/ },
+    sub { @B::ISA = qw//;    @K::ISA = qw/K J I/ },
     sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
     return;
 );
@@ -567,7 +567,7 @@ my %extractor_for = (
     quotelike => [ $ws, $variable,    $id, { MATCH => \&extract_quotelike } ],
     regex     => [ $ws, $pod_or_DATA, $id, $exql ],
     string    => [ $ws, $pod_or_DATA, $id, $exql ],
-    code => [
+    code      => [
         $ws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
@@ -673,12 +673,12 @@ require Cwd;
 ( my $boot = $self->{NAME} ) =~ s/:/_/g;
 doit(
     sub { @E::ISA = qw/F/ },
-    sub { @E::ISA = qw/D/; @C::ISA = qw/F/ },
-    sub { @C::ISA = qw//; @A::ISA = qw/K/ },
-    sub { @A::ISA = qw//; @J::ISA = qw/F K/ },
-    sub { @J::ISA = qw/F/; @H::ISA = qw/K G/ },
-    sub { @H::ISA = qw/G/; @B::ISA = qw/B/ },
-    sub { @B::ISA = qw//; @K::ISA = qw/K J I/ },
+    sub { @E::ISA = qw/D/;   @C::ISA = qw/F/ },
+    sub { @C::ISA = qw//;    @A::ISA = qw/K/ },
+    sub { @A::ISA = qw//;    @J::ISA = qw/F K/ },
+    sub { @J::ISA = qw/F/;   @H::ISA = qw/K G/ },
+    sub { @H::ISA = qw/G/;   @B::ISA = qw/B/ },
+    sub { @B::ISA = qw//;    @K::ISA = qw/K J I/ },
     sub { @K::ISA = qw/J I/; @D::ISA = qw/A H B C/ },
     return;
 );
@@ -686,7 +686,7 @@ my %extractor_for = (
     quotelike => [ $ws, $variable,    $id, { MATCH => \&extract_quotelike } ],
     regex     => [ $ws, $pod_or_DATA, $id, $exql ],
     string    => [ $ws, $pod_or_DATA, $id, $exql ],
-    code => [
+    code      => [
         $ws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
@@ -1054,7 +1054,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

@@ -1,9 +1,9 @@
 $wl  = int( $wl * $f + .5 );
 $wr  = int( $wr * $f + .5 );
 $pag = int( $pageh * $f + .5 );
-$fe = $opt_F      ? "t" : "f";
-$cf = $opt_U      ? "t" : "f";
-$tp = $opt_t      ? "t" : "f";
-$rm = $numbstyle  ? "t" : "f";
-$pa = $showurl    ? "t" : "f";
-$nh = $seq_number ? "t" : "f";
+$fe  = $opt_F      ? "t" : "f";
+$cf  = $opt_U      ? "t" : "f";
+$tp  = $opt_t      ? "t" : "f";
+$rm  = $numbstyle  ? "t" : "f";
+$pa  = $showurl    ? "t" : "f";
+$nh  = $seq_number ? "t" : "f";

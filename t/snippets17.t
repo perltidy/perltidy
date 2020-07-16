@@ -968,10 +968,10 @@ my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
             expect => <<'#18...........',
 # some side comments
 *{"${callpkg}::$sym"} = $type eq '&' ? \&{"${pkg}::$sym"}    #
-  : $type eq '$'                     ? \${"${pkg}::$sym"}    #
-  : $type eq '@'                     ? \@{"${pkg}::$sym"}
-  : $type eq '%'                     ? \%{"${pkg}::$sym"}    # side comment
-  : $type eq '*'                     ? *{"${pkg}::$sym"}     #
+  : $type eq '$' ? \${"${pkg}::$sym"}                        #
+  : $type eq '@' ? \@{"${pkg}::$sym"}
+  : $type eq '%' ? \%{"${pkg}::$sym"}                        # side comment
+  : $type eq '*' ? *{"${pkg}::$sym"}                         #
   :   do { require Carp; Carp::croak("Can't export symbol: $type$sym") };
 #18...........
         },
@@ -1016,7 +1016,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

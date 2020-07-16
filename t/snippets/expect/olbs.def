@@ -1,5 +1,5 @@
 for $x ( 1, 2 ) { s/(.*)/+$1/ }
-for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+for $x ( 1, 2 ) { s/(.*)/+$1/ }     # side comment
 if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment

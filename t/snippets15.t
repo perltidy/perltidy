@@ -207,9 +207,9 @@ my $sub2=sub () { };
             expect => <<'#1...........',
         # side comments limit gnu type formatting with l=80; note extra comma
         push @tests, [
-            "Lowest code point requiring 13 bytes to represent",      # 2**36
-            "\xff\x80\x80\x80\x80\x80\x81\x80\x80\x80\x80\x80\x80",
-            ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
+               "Lowest code point requiring 13 bytes to represent",      # 2**36
+               "\xff\x80\x80\x80\x80\x80\x81\x80\x80\x80\x80\x80\x80",
+               ($::is64bit) ? 0x1000000000 : -1,    # overflows on 32bit
                      ],
           ;
 #1...........
@@ -244,7 +244,7 @@ my $sub2=sub () { };
             params => "def",
             expect => <<'#3...........',
 for $x ( 1, 2 ) { s/(.*)/+$1/ }
-for $x ( 1, 2 ) { s/(.*)/+$1/ }    # side comment
+for $x ( 1, 2 ) { s/(.*)/+$1/ }     # side comment
 if ( $editlblk eq 1 ) { $editlblk = "on"; $editlblkchecked = "checked" }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }
 for $x ( 1, 2 ) { s/(.*)/+$1/; }    # side comment
@@ -515,7 +515,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

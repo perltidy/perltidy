@@ -3,7 +3,7 @@ my $mapping = [
 
     # ...
     { 'is_col' => 'dsstdat', 'cr_col' => 'enroll_isaric_date', 'trans' => 0, },
-    { 'is_col' => 'corona_ieorres', 'cr_col' => '', 'trans' => 0, },
+    { 'is_col' => 'corona_ieorres', 'cr_col' => '',            'trans' => 0, },
     {
         'is_col'            => 'symptoms_fever',
         'cr_col'            => 'elig_fever',

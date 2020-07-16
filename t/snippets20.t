@@ -448,7 +448,7 @@ my $mapping = [
 
     # ...
     { 'is_col' => 'dsstdat', 'cr_col' => 'enroll_isaric_date', 'trans' => 0, },
-    { 'is_col' => 'corona_ieorres', 'cr_col' => '', 'trans' => 0, },
+    { 'is_col' => 'corona_ieorres', 'cr_col' => '',            'trans' => 0, },
     {
         'is_col'            => 'symptoms_fever',
         'cr_col'            => 'elig_fever',
@@ -670,7 +670,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

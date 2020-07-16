@@ -1,9 +1,9 @@
 return $pdl->slice(
     join ',', (
         map {
-                $_ eq "X" ? ":"
+                $_ eq "X"         ? ":"
               : ref $_ eq "ARRAY" ? join ':', @$_
-              : !ref $_ ? $_
+              : !ref $_           ? $_
               : die "INVALID SLICE DEF $_"
         } @_
     )

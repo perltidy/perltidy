@@ -233,9 +233,9 @@ my( $a, $b, $c ) = @_ ;                                    # test -nsak="my for"
             source => "tightness",
             params => "def",
             expect => <<'#7...........',
-if ( ( my $len_tab = length($tabstr) ) > 0 ) { }    # test -pt
-$width = $col[ $j + $k ] - $col[$j];                # test -sbt
-$obj->{ $parsed_sql->{'table'}[0] };                # test -bt
+if ( ( my $len_tab = length($tabstr) ) > 0 ) { }            # test -pt
+$width = $col[ $j + $k ] - $col[$j];                        # test -sbt
+$obj->{ $parsed_sql->{'table'}[0] };                        # test -bt
 %bf = map { $_ => -M $_ } grep { /\.deb$/ } dirents '.';    # test -bbt
 #7...........
         },
@@ -244,9 +244,9 @@ $obj->{ $parsed_sql->{'table'}[0] };                # test -bt
             source => "tightness",
             params => "tightness1",
             expect => <<'#8...........',
-if ( ( my $len_tab = length( $tabstr ) ) > 0 ) { }    # test -pt
-$width = $col[ $j + $k ] - $col[ $j ];                # test -sbt
-$obj->{ $parsed_sql->{ 'table' }[ 0 ] };              # test -bt
+if ( ( my $len_tab = length( $tabstr ) ) > 0 ) { }          # test -pt
+$width = $col[ $j + $k ] - $col[ $j ];                      # test -sbt
+$obj->{ $parsed_sql->{ 'table' }[ 0 ] };                    # test -bt
 %bf = map { $_ => -M $_ } grep { /\.deb$/ } dirents '.';    # test -bbt
 #8...........
         },
@@ -255,9 +255,9 @@ $obj->{ $parsed_sql->{ 'table' }[ 0 ] };              # test -bt
             source => "tightness",
             params => "tightness2",
             expect => <<'#9...........',
-if ( ( my $len_tab = length($tabstr) ) > 0 ) { }    # test -pt
-$width = $col[ $j + $k ] - $col[$j];                # test -sbt
-$obj->{ $parsed_sql->{'table'}[0] };                # test -bt
+if ( ( my $len_tab = length($tabstr) ) > 0 ) { }          # test -pt
+$width = $col[ $j + $k ] - $col[$j];                      # test -sbt
+$obj->{ $parsed_sql->{'table'}[0] };                      # test -bt
 %bf = map { $_ => -M $_ } grep {/\.deb$/} dirents '.';    # test -bbt
 #9...........
         },
@@ -266,9 +266,9 @@ $obj->{ $parsed_sql->{'table'}[0] };                # test -bt
             source => "tightness",
             params => "tightness3",
             expect => <<'#10...........',
-if ((my $len_tab = length($tabstr)) > 0) { }    # test -pt
-$width = $col[$j + $k] - $col[$j];              # test -sbt
-$obj->{$parsed_sql->{'table'}[0]};              # test -bt
+if ((my $len_tab = length($tabstr)) > 0) { }            # test -pt
+$width = $col[$j + $k] - $col[$j];                      # test -sbt
+$obj->{$parsed_sql->{'table'}[0]};                      # test -bt
 %bf = map {$_ => -M $_} grep {/\.deb$/} dirents '.';    # test -bbt
 #10...........
         },
@@ -442,7 +442,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

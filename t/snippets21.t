@@ -380,12 +380,12 @@ is_deeply \@t, [
 $wl  = int( $wl * $f + .5 );
 $wr  = int( $wr * $f + .5 );
 $pag = int( $pageh * $f + .5 );
-$fe = $opt_F      ? "t" : "f";
-$cf = $opt_U      ? "t" : "f";
-$tp = $opt_t      ? "t" : "f";
-$rm = $numbstyle  ? "t" : "f";
-$pa = $showurl    ? "t" : "f";
-$nh = $seq_number ? "t" : "f";
+$fe  = $opt_F      ? "t" : "f";
+$cf  = $opt_U      ? "t" : "f";
+$tp  = $opt_t      ? "t" : "f";
+$rm  = $numbstyle  ? "t" : "f";
+$pa  = $showurl    ? "t" : "f";
+$nh  = $seq_number ? "t" : "f";
 #7...........
         },
     };
@@ -413,7 +413,7 @@ foreach my $key ( sort keys %{$rtests} ) {
         perltidyrc  => \$params,
         argv        => '',             # for safety; hide any ARGV from perltidy
         stderr      => \$stderr_string,
-        errorfile => \$errorfile_string,    # not used when -se flag is set
+        errorfile   => \$errorfile_string,    # not used when -se flag is set
     );
     if ( $err || $stderr_string || $errorfile_string ) {
         print STDERR "Error output received for test '$key'\n";

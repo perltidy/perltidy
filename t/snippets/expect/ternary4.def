@@ -1,7 +1,7 @@
 # some side comments
 *{"${callpkg}::$sym"} = $type eq '&' ? \&{"${pkg}::$sym"}    #
-  : $type eq '$'                     ? \${"${pkg}::$sym"}    #
-  : $type eq '@'                     ? \@{"${pkg}::$sym"}
-  : $type eq '%'                     ? \%{"${pkg}::$sym"}    # side comment
-  : $type eq '*'                     ? *{"${pkg}::$sym"}     #
+  : $type eq '$' ? \${"${pkg}::$sym"}                        #
+  : $type eq '@' ? \@{"${pkg}::$sym"}
+  : $type eq '%' ? \%{"${pkg}::$sym"}                        # side comment
+  : $type eq '*' ? *{"${pkg}::$sym"}                         #
   :   do { require Carp; Carp::croak("Can't export symbol: $type$sym") };
