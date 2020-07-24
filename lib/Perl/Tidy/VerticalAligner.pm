@@ -43,38 +43,47 @@ BEGIN {
 
 }
 
+# global symbols:
+
+# objects, initialized on creation
 use vars qw(
   $vertical_aligner_self
-  $maximum_alignment_index
-  $ralignment_list
-  $maximum_jmax_seen
-  $minimum_jmax_seen
-  $previous_minimum_jmax_seen
-  $previous_maximum_jmax_seen
-  @group_lines
-  $group_level
-  $group_type
-  $group_maximum_gap
-  $marginal_match
-  $last_level_written
-  $last_leading_space_count
-  $extra_indent_ok
-  $zero_count
-  $last_comment_column
-  $last_side_comment_line_number
-  $last_side_comment_length
-  $last_side_comment_level
-  $outdented_line_count
-  $first_outdented_line_at
-  $last_outdented_line_at
   $diagnostics_object
   $logger_object
   $file_writer_object
-  @side_comment_history
-  $comment_leading_space_count
-  $is_matching_terminal_line
-  $consecutive_block_comments
+);
 
+# Options and some frequently used shortcuts
+# Initialized on creation
+use vars qw(
+  $rOpts
+  $rOpts_maximum_line_length
+  $rOpts_variable_maximum_line_length
+  $rOpts_continuation_indentation
+  $rOpts_indent_columns
+  $rOpts_tabs
+  $rOpts_entab_leading_whitespace
+  $rOpts_valign
+  $rOpts_fixed_position_side_comment
+  $rOpts_minimum_space_to_comment
+);
+
+# Variables for the current group of lines being formed initialized in
+# sub initialize_for_new_group and when first line of a group is received
+use vars qw(
+  @group_lines
+  $group_level
+  $group_type
+  $zero_count
+  $last_leading_space_count
+  $comment_leading_space_count
+  $extra_indent_ok
+);
+
+# cache variables used by valign_output_step_B.
+# first initialized in sub initialize,
+# then re-initialized in sub 'valign_output_step_B'
+use vars qw(
   $cached_line_text
   $cached_line_text_length
   $cached_line_type
@@ -83,26 +92,28 @@ use vars qw(
   $cached_line_valid
   $cached_line_leading_space_count
   $cached_seqno_string
-
-  $valign_buffer_filling
-  @valign_buffer
-
   $seqno_string
   $last_nonblank_seqno_string
+);
 
-  $rOpts
+# Vertical alignment buffer used by valign_output_step_C
+use vars qw(
+  $valign_buffer_filling
+  @valign_buffer
+);
 
-  $rOpts_maximum_line_length
-  $rOpts_variable_maximum_line_length
-  $rOpts_continuation_indentation
-  $rOpts_indent_columns
-  $rOpts_tabs
-  $rOpts_entab_leading_whitespace
-  $rOpts_valign
-
-  $rOpts_fixed_position_side_comment
-  $rOpts_minimum_space_to_comment
-
+# Memory of what has been output
+# updated as lines are processed
+use vars qw(
+  $last_level_written
+  $last_comment_column
+  $last_side_comment_line_number
+  $last_side_comment_length
+  $last_side_comment_level
+  $outdented_line_count
+  $first_outdented_line_at
+  $last_outdented_line_at
+  $consecutive_block_comments
 );
 
 sub initialize {
@@ -125,30 +136,19 @@ sub initialize {
     my $length_function = $args{length_function};
 
     # variables describing the entire space group:
-    $ralignment_list            = [];
-    $group_level                = 0;
-    $last_level_written         = -1;
-    $extra_indent_ok            = 0;    # can we move all lines to the right?
-    $last_side_comment_length   = 0;
-    $maximum_jmax_seen          = 0;
-    $minimum_jmax_seen          = 0;
-    $previous_minimum_jmax_seen = 0;
-    $previous_maximum_jmax_seen = 0;
+    $group_level              = 0;
+    $last_level_written       = -1;
+    $extra_indent_ok          = 0;    # can we move all lines to the right?
+    $last_side_comment_length = 0;
 
     # variables describing each line of the group
-    @group_lines = ();                  # list of all lines in group
+    @group_lines = ();                # list of all lines in group
 
     $outdented_line_count          = 0;
     $first_outdented_line_at       = 0;
     $last_outdented_line_at        = 0;
     $last_side_comment_line_number = 0;
     $last_side_comment_level       = -1;
-    $is_matching_terminal_line     = 0;
-
-    # most recent 3 side comments; [ line number, column ]
-    $side_comment_history[0] = [ -300, 0 ];
-    $side_comment_history[1] = [ -200, 0 ];
-    $side_comment_history[2] = [ -100, 0 ];
 
     # valign_output_step_B cache:
     $cached_line_text                = "";
@@ -180,6 +180,7 @@ sub initialize {
     forget_side_comment();
 
     initialize_for_new_group();
+    initialize_leading_string_cache();
 
     $vertical_aligner_self = { length_function => $length_function, };
     bless $vertical_aligner_self, $class;
@@ -188,11 +189,8 @@ sub initialize {
 
 sub initialize_for_new_group {
     @group_lines                 = ();
-    $maximum_alignment_index     = -1;  # alignments in current group
     $zero_count                  = 0;   # count consecutive lines without tokens
-    $group_maximum_gap           = 0;   # largest gap introduced
     $group_type                  = "";
-    $marginal_match              = 0;
     $comment_leading_space_count = 0;
     $last_leading_space_count    = 0;
     return;
@@ -261,52 +259,14 @@ sub get_stack_depth {
 }
 
 sub make_alignment {
-    my ( $col, $token ) = @_;
+    my ($col) = @_;
 
-    # make one new alignment at column $col which aligns token $token
-    ++$maximum_alignment_index;
-
-    #my $alignment = new Perl::Tidy::VerticalAligner::Alignment(
-    my $nlines    = @group_lines;
+    # make one new alignment at column $col
     my $alignment = Perl::Tidy::VerticalAligner::Alignment->new(
         column          => $col,
         starting_column => $col,
-        matching_token  => $token,
-        starting_line   => $nlines - 1,
-        ending_line     => $nlines - 1,
-        serial_number   => $maximum_alignment_index,
     );
-    $ralignment_list->[$maximum_alignment_index] = $alignment;
     return $alignment;
-}
-
-sub dump_alignments {
-    print STDOUT
-"Current Alignments:\ni\ttoken\tstarting_column\tcolumn\tstarting_line\tending_line\n";
-    for my $i ( 0 .. $maximum_alignment_index ) {
-        my $column          = $ralignment_list->[$i]->get_column();
-        my $starting_column = $ralignment_list->[$i]->get_starting_column();
-        my $matching_token  = $ralignment_list->[$i]->get_matching_token();
-        my $starting_line   = $ralignment_list->[$i]->get_starting_line();
-        my $ending_line     = $ralignment_list->[$i]->get_ending_line();
-        print STDOUT
-"$i\t$matching_token\t$starting_column\t$column\t$starting_line\t$ending_line\n";
-    }
-    return;
-}
-
-sub save_alignment_columns {
-    for my $i ( 0 .. $maximum_alignment_index ) {
-        $ralignment_list->[$i]->save_column();
-    }
-    return;
-}
-
-sub restore_alignment_columns {
-    for my $i ( 0 .. $maximum_alignment_index ) {
-        $ralignment_list->[$i]->restore_column();
-    }
-    return;
 }
 
 sub forget_side_comment {
@@ -507,6 +467,9 @@ sub valign_input {
             || $is_blank_line
           )
         {
+
+            # Note that for a comment group we are not storing a line
+            # but rather just the text and its length.
             push_group_line( [ $rfields->[0], $rfield_lengths->[0] ] );
             return;
         }
@@ -555,19 +518,8 @@ sub valign_input {
         {
 
             # flush the current group if it has some aligned columns..
-            if ( $group_lines[0]->get_jmax() > 1 ) { my_flush() }
-
-            # flush current group if we are just collecting side comments..
-            elsif (
-
-                # ...and we haven't seen a comment lately
-                ( $zero_count > 3 )
-
-                # ..or if this new line doesn't fit to the left of the comments
-                || ( ( $leading_space_count + $rfield_lengths->[0] ) >
-                    $group_lines[0]->get_column(0) )
-              )
-            {
+            # or we haven't seen a comment lately
+            if ( $group_lines[0]->get_jmax() > 1 || $zero_count > 3 ) {
                 my_flush();
             }
         }
@@ -656,12 +608,8 @@ sub valign_input {
     # --------------------------------------------------------------------
     # Append this line to the current group (or start new group)
     # --------------------------------------------------------------------
-    if ( !@group_lines ) {
-        add_to_group($new_line);
-    }
-    else {
-        push_group_line($new_line);
-    }
+
+    push_group_line($new_line);
 
     # output this group if it ends in a terminal else or ternary line
     if ( defined($j_terminal_match) ) {
@@ -683,7 +631,6 @@ sub valign_input {
         dump_array( @{$rtokens} );
         print STDOUT "APPEND patterns:";
         dump_array( @{$rpatterns} );
-        dump_alignments();
     };
 
     return;
@@ -692,6 +639,9 @@ sub valign_input {
 sub join_hanging_comment {
 
     my $line = shift;
+
+    # uses no Global symbols
+
     my $jmax = $line->get_jmax();
     return 0 unless $jmax == 1;                  # must be 2 fields
     my $rtokens = $line->get_rtokens();
@@ -722,8 +672,16 @@ sub join_hanging_comment {
 }
 
 # create an empty side comment if none exists
+
 sub make_side_comment {
     my ( $new_line, $level_end ) = @_;
+
+## uses Global symbols {
+##  '$last_side_comment_level'
+##  '$last_side_comment_line_number'
+##  '$vertical_aligner_self'
+## }
+
     my $jmax    = $new_line->get_jmax();
     my $rtokens = $new_line->get_rtokens();
 
@@ -806,14 +764,6 @@ sub fix_terminal_ternary {
 
     my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths ) = @_;
     return unless ($old_line);
-
-## FUTURE CODING
-##     my ( $old_line, $end_line ) = @_;
-##     return unless ( $old_line && $end_line );
-##
-##     my $rfields   = $end_line->get_rfields();
-##     my $rpatterns = $end_line->get_rpatterns();
-##     my $rtokens   = $end_line->get_rtokens();
 
     my $jmax        = @{$rfields} - 1;
     my $rfields_old = $old_line->get_rfields();
@@ -961,10 +911,6 @@ sub fix_terminal_ternary {
     @{$rtokens}        = @tokens;
     @{$rpatterns}      = @patterns;
     @{$rfield_lengths} = @field_lengths;
-## FUTURE CODING
-##     $end_line->set_rfields( \@fields );
-##     $end_line->set_rtokens( \@tokens );
-##     $end_line->set_rpatterns( \@patterns );
 
     # force a flush after this line
     return $jquestion;
@@ -1035,309 +981,235 @@ sub fix_terminal_else {
     else                                      { return $jbrace }
 }
 
-{    # sub check_match
-    my %is_good_alignment;
-    my $EXPLAIN;
+sub check_match {
 
-    BEGIN {
+    # See if the current line matches the current vertical alignment group.
+    # If not, flush the current group.
 
-        # Vertically aligning on certain "good" tokens is usually okay
-        # so we can be less restrictive in marginal cases.
-        my @q = qw( { ? => = );
-        push @q, (',');
-        @is_good_alignment{@q} = (1) x scalar(@q);
+    my ( $new_line, $old_line ) = @_;
 
-        $EXPLAIN = 0;
+    # uses no Global symbols
+
+    # returns a flag and a value as follows:
+    #    return (1, $imax_align)     if the line matches and fits
+    #    return (0, $imax_align)     if the line does not match or fit
+
+    # where $imax_align is the index of the last common matching token,
+    # to be used in the left-to-right sweep of the subsequent step.
+
+    my $jmax                = $new_line->get_jmax();
+    my $maximum_field_index = $old_line->get_jmax();
+
+    # Variable $imax_align will be set to indicate the maximum token index
+    # to be matched in the left-to-right sweep, in the case that this line
+    # does not exactly match the current group.
+    my $imax_align = -1;
+
+    # variable $GoToMsg explains reason for no match, for debugging
+    my $GoToMsg = "";
+    my $EXPLAIN = 0;
+
+    my $is_hanging_side_comment = $new_line->get_is_hanging_side_comment();
+    my $rtokens                 = $new_line->get_rtokens();
+    my $rfields                 = $new_line->get_rfields();
+    my $rfield_lengths          = $new_line->get_rfield_lengths();
+    my $rpatterns               = $new_line->get_rpatterns();
+    my $list_type               = $new_line->get_list_type();
+
+    my $group_list_type = $old_line->get_list_type();
+    my $old_rpatterns   = $old_line->get_rpatterns();
+    my $old_rtokens     = $old_line->get_rtokens();
+
+    my $jlimit = $jmax - 2;
+    if ( $jmax > $maximum_field_index ) {
+        $jlimit = $maximum_field_index - 2;
     }
 
-    sub check_match {
-
-        # See if the current line matches the current vertical alignment group.
-        # If not, flush the current group.
-        my ( $new_line, $old_line ) = @_;
-
-        # uses global variables:
-        #  $previous_minimum_jmax_seen
-        #  $maximum_jmax_seen
-        #  $marginal_match
-        my $jmax                = $new_line->get_jmax();
-        my $maximum_field_index = $old_line->get_jmax();
-
-        # Variable $imax_align will be set to indicate the maximum token index
-        # to be matched in the left-to-right sweep, in the case that this line
-        # does not exactly match the current group.
-        my $imax_align = -1;
-
-        # variable $GoToLoc explains reason for no match, for debugging
-        my $GoToLoc = "";
-
-        my $jmax_original_line      = $new_line->get_jmax_original_line();
-        my $is_hanging_side_comment = $new_line->get_is_hanging_side_comment();
-        my $rtokens                 = $new_line->get_rtokens();
-        my $rfields                 = $new_line->get_rfields();
-        my $rfield_lengths          = $new_line->get_rfield_lengths();
-        my $rpatterns               = $new_line->get_rpatterns();
-        my $list_type               = $new_line->get_list_type();
-
-        my $group_list_type = $old_line->get_list_type();
-        my $old_rpatterns   = $old_line->get_rpatterns();
-        my $old_rtokens     = $old_line->get_rtokens();
-
-        my $jlimit = $jmax - 2;
-        if ( $jmax > $maximum_field_index ) {
-            $jlimit = $maximum_field_index - 2;
+    # handle comma-separated lists ..
+    if ( $group_list_type && ( $list_type eq $group_list_type ) ) {
+        for my $j ( 0 .. $jlimit ) {
+            my $old_tok = $old_rtokens->[$j];
+            my $new_tok = $rtokens->[$j];
+            $GoToMsg = "different tokens: $old_tok ne $new_tok";
+            goto NO_MATCH if ( $old_tok ne $new_tok );
+            $imax_align = $j;
         }
+    }
 
-        # handle comma-separated lists ..
-        if ( $group_list_type && ( $list_type eq $group_list_type ) ) {
-            for my $j ( 0 .. $jlimit ) {
-                my $old_tok = $old_rtokens->[$j];
-                my $new_tok = $rtokens->[$j];
-                $GoToLoc = "different tokens: $old_tok ne $new_tok";
-                goto NO_MATCH if ( $old_tok ne $new_tok );
-                $imax_align = $j;
-            }
-        }
+    # do detailed check for everything else except hanging side comments
+    elsif ( !$is_hanging_side_comment ) {
 
-        # do detailed check for everything else except hanging side comments
-        elsif ( !$is_hanging_side_comment ) {
-
-            my $leading_space_count = $new_line->get_leading_space_count();
-
-            my $max_pad = 0;
-            my $min_pad = 0;
-            my $saw_good_alignment;
-
-            for my $j ( 0 .. $jlimit ) {
-
-                my $old_tok = $old_rtokens->[$j];
-                my $new_tok = $rtokens->[$j];
-
-                # Note on encoding used for alignment tokens:
-                # -------------------------------------------
-                # Tokens are "decorated" with information which can help
-                # prevent unwanted alignments.  Consider for example the
-                # following two lines:
-                #   local ( $xn, $xd ) = split( '/', &'rnorm(@_) );
-                #   local ( $i, $f ) = &'bdiv( $xn, $xd );
-                # There are three alignment tokens in each line, a comma,
-                # an =, and a comma.  In the first line these three tokens
-                # are encoded as:
-                #    ,4+local-18     =3      ,4+split-7
-                # and in the second line they are encoded as
-                #    ,4+local-18     =3      ,4+&'bdiv-8
-                # Tokens always at least have token name and nesting
-                # depth.  So in this example the ='s are at depth 3 and
-                # the ,'s are at depth 4.  This prevents aligning tokens
-                # of different depths.  Commas contain additional
-                # information, as follows:
-                # ,  {depth} + {container name} - {spaces to opening paren}
-                # This allows us to reject matching the rightmost commas
-                # in the above two lines, since they are for different
-                # function calls.  This encoding is done in
-                # 'sub send_lines_to_vertical_aligner'.
-
-                # Pick off actual token.
-                # Everything up to the first digit is the actual token.
-
-                my ( $alignment_token, $lev, $tag, $tok_count ) =
-                  decode_alignment_token($new_tok);
-
-                # see if the decorated tokens match
-                my $tokens_match = $new_tok eq $old_tok
-
-                  # Exception for matching terminal : of ternary statement..
-                  # consider containers prefixed by ? and : a match
-                  || ( $new_tok =~ /^,\d*\+\:/ && $old_tok =~ /^,\d*\+\?/ );
-
-                # No match if the alignment tokens differ...
-                if ( !$tokens_match ) {
-                    $GoToLoc = "tokens differ: $new_tok ne $old_tok";
-                    goto NO_MATCH;
-                }
-
-                # Calculate amount of padding required to fit this in.
-                # $pad is the number of spaces by which we must increase
-                # the current field to squeeze in this field.
-                my $pad =
-                  $rfield_lengths->[$j] - $old_line->current_field_width($j);
-                if ( $j == 0 ) { $pad += $leading_space_count; }
-
-                # remember max pads to limit marginal cases
-                if ( $alignment_token ne '#' ) {
-                    if ( $pad > $max_pad ) { $max_pad = $pad }
-                    if ( $pad < $min_pad ) { $min_pad = $pad }
-                }
-                if ( $is_good_alignment{$alignment_token} ) {
-                    $saw_good_alignment = 1;
-                }
-
-                # If patterns don't match, we have to be careful...
-                if ( $old_rpatterns->[$j] ne $rpatterns->[$j] ) {
-
-                    # flag this as a marginal match since patterns differ
-                    $marginal_match = 1
-                      if ( $marginal_match == 0 && @group_lines == 1 );
-
-                    # We have to be very careful about aligning commas
-                    # when the pattern's don't match, because it can be
-                    # worse to create an alignment where none is needed
-                    # than to omit one.  Here's an example where the ','s
-                    # are not in named containers.  The first line below
-                    # should not match the next two:
-                    #   ( $a, $b ) = ( $b, $r );
-                    #   ( $x1, $x2 ) = ( $x2 - $q * $x1, $x1 );
-                    #   ( $y1, $y2 ) = ( $y2 - $q * $y1, $y1 );
-                    if ( $alignment_token eq ',' ) {
-
-                        # do not align commas unless they are in named
-                        # containers
-                        $GoToLoc = "do not align commas in unnamed containers";
-                        goto NO_MATCH unless ( $new_tok =~ /[A-Za-z]/ );
-                    }
-
-                    # do not align parens unless patterns match;
-                    # large ugly spaces can occur in math expressions.
-                    elsif ( $alignment_token eq '(' ) {
-
-                        # But we can allow a match if the parens don't
-                        # require any padding.
-                        $GoToLoc = "do not align '(' unless patterns match";
-                        if ( $pad != 0 ) { goto NO_MATCH }
-                    }
-
-                    # Handle an '=' alignment with different patterns to
-                    # the left.
-                    elsif ( $alignment_token eq '=' ) {
-
-                        # It is best to be a little restrictive when
-                        # aligning '=' tokens.  Here is an example of
-                        # two lines that we will not align:
-                        #       my $variable=6;
-                        #       $bb=4;
-                        # The problem is that one is a 'my' declaration,
-                        # and the other isn't, so they're not very similar.
-                        # We will filter these out by comparing the first
-                        # letter of the pattern.  This is crude, but works
-                        # well enough.
-                        if (
-                            substr( $old_rpatterns->[$j], 0, 1 ) ne
-                            substr( $rpatterns->[$j],     0, 1 ) )
-                        {
-                            $GoToLoc = "first character before equals differ";
-                            goto NO_MATCH;
-                        }
-
-                        # The introduction of sub 'prune_alignment_tree'
-                        # enabled alignment of lists left of the equals with
-                        # other scalar variables. For example:
-                        # my ( $D, $s, $e ) = @_;
-                        # my $d             = length $D;
-                        # my $c             = $e - $s - $d;
-
-                        # But this would change formatting of a lot of scripts,
-                        # so for now we prevent alignment of comma lists on the
-                        # left with scalars on the left.  We will also prevent
-                        # any partial alignments.
-                        elsif (
-                            ( index( $old_rpatterns->[$j], ',' ) >= 0 ) ne
-                            ( index( $rpatterns->[$j],     ',' ) >= 0 ) )
-                        {
-                            $imax_align = -1;
-                            $GoToLoc = "mixed commas/no-commas before equals";
-                            goto NO_MATCH;
-                        }
-
-                        # If we pass that test, we'll call it a marginal match.
-                        # Here is an example of a marginal match:
-                        #       $done{$$op} = 1;
-                        #       $op         = compile_bblock($op);
-                        # The left tokens are both identifiers, but
-                        # one accesses a hash and the other doesn't.
-                        # We'll let this be a tentative match and undo
-                        # it later if we don't find more than 2 lines
-                        # in the group.
-                        elsif ( @group_lines == 1 ) {
-                            $marginal_match =
-                              2;    # =2 prevents being undone below
-                        }
-                    }
-                }
-
-                # Everything matches so far, so we can update the maximum index
-                # for partial alignment.
-                $imax_align = $j;
-
-            } ## end for my $j ( 0 .. $jlimit)
-
-            # Turn off the "marginal match" flag in some cases...
-            # A "marginal match" occurs when the alignment tokens agree
-            # but there are differences in the other tokens (patterns).
-            # If we leave the marginal match flag set, then the rule is that we
-            # will align only if there are more than two lines in the group.
-            # We will turn of the flag if we almost have a match
-            # and either we have seen a good alignment token or we
-            # just need a small pad (2 spaces) to fit.  These rules are
-            # the result of experimentation.  Tokens which misaligned by just
-            # one or two characters are annoying.  On the other hand,
-            # large gaps to less important alignment tokens are also annoying.
-            if (   $marginal_match == 1
-                && $jmax == $maximum_field_index
-                && ( $saw_good_alignment || ( $max_pad < 3 && $min_pad > -3 ) )
-              )
-            {
-                $marginal_match = 0;
-            }
-
-            ##print "marginal=$marginal_match saw=$saw_good_alignment jmax=$jmax max=$maximum_field_index maxpad=$max_pad minpad=$min_pad\n";
-        }
-
-        # The tokens match, but the lines must have identical number of
-        # tokens to join the group.
-        if ( $maximum_field_index != $jmax ) {
-            $GoToLoc = "token count differs";
+	# A group with hanging side comments ends with the first non hanging
+	# side comment.
+        if ( $old_line->get_is_hanging_side_comment() ) {
+            $GoToMsg = "end of hanging side comments";
             goto NO_MATCH;
         }
 
-        $EXPLAIN && print "match, imax_align=$imax_align, jmax=$jmax\n";
+        my $leading_space_count = $new_line->get_leading_space_count();
 
-        # The tokens match. Now See if there is space for this line in the
-        # current group.
-        check_fit( $new_line, $old_line, $jlimit );
+        for my $j ( 0 .. $jlimit ) {
 
-        return;
+            my $old_tok = $old_rtokens->[$j];
+            my $new_tok = $rtokens->[$j];
 
-      NO_MATCH:
+            my ( $alignment_token, $lev, $tag, $tok_count ) =
+              decode_alignment_token($new_tok);
 
-        # variable $GoToLoc is for debugging
-        $EXPLAIN && print "no match because $GoToLoc, flag=$imax_align\n";
+            # see if the decorated tokens match
+            my $tokens_match = $new_tok eq $old_tok
 
-        end_rgroup($imax_align);
-        return;
+              # Exception for matching terminal : of ternary statement..
+              # consider containers prefixed by ? and : a match
+              || ( $new_tok =~ /^,\d*\+\:/ && $old_tok =~ /^,\d*\+\?/ );
+
+            # No match if the alignment tokens differ...
+            if ( !$tokens_match ) {
+                $GoToMsg = "tokens differ: $new_tok ne $old_tok";
+                goto NO_MATCH;
+            }
+
+            # Calculate amount of padding required to fit this in.
+            # $pad is the number of spaces by which we must increase
+            # the current field to squeeze in this field.
+            my $pad =
+              $rfield_lengths->[$j] - $old_line->current_field_width($j);
+            if ( $j == 0 ) { $pad += $leading_space_count; }
+
+            # If patterns don't match, we have to be careful...
+            if ( $old_rpatterns->[$j] ne $rpatterns->[$j] ) {
+
+                # We have to be very careful about aligning commas
+                # when the pattern's don't match, because it can be
+                # worse to create an alignment where none is needed
+                # than to omit one.  Here's an example where the ','s
+                # are not in named containers.  The first line below
+                # should not match the next two:
+                #   ( $a, $b ) = ( $b, $r );
+                #   ( $x1, $x2 ) = ( $x2 - $q * $x1, $x1 );
+                #   ( $y1, $y2 ) = ( $y2 - $q * $y1, $y1 );
+                if ( $alignment_token eq ',' ) {
+
+                    # do not align commas unless they are in named
+                    # containers
+                    $GoToMsg = "do not align commas in unnamed containers";
+                    goto NO_MATCH unless ( $new_tok =~ /[A-Za-z]/ );
+                }
+
+                # do not align parens unless patterns match;
+                # large ugly spaces can occur in math expressions.
+                elsif ( $alignment_token eq '(' ) {
+
+                    # But we can allow a match if the parens don't
+                    # require any padding.
+                    $GoToMsg = "do not align '(' unless patterns match";
+                    if ( $pad != 0 ) { goto NO_MATCH }
+                }
+
+                # Handle an '=' alignment with different patterns to
+                # the left.
+                elsif ( $alignment_token eq '=' ) {
+
+                    # It is best to be a little restrictive when
+                    # aligning '=' tokens.  Here is an example of
+                    # two lines that we will not align:
+                    #       my $variable=6;
+                    #       $bb=4;
+                    # The problem is that one is a 'my' declaration,
+                    # and the other isn't, so they're not very similar.
+                    # We will filter these out by comparing the first
+                    # letter of the pattern.  This is crude, but works
+                    # well enough.
+                    if (
+                        substr( $old_rpatterns->[$j], 0, 1 ) ne
+                        substr( $rpatterns->[$j],     0, 1 ) )
+                    {
+                        $GoToMsg = "first character before equals differ";
+                        goto NO_MATCH;
+                    }
+
+                    # The introduction of sub 'prune_alignment_tree'
+                    # enabled alignment of lists left of the equals with
+                    # other scalar variables. For example:
+                    # my ( $D, $s, $e ) = @_;
+                    # my $d             = length $D;
+                    # my $c             = $e - $s - $d;
+
+                    # But this would change formatting of a lot of scripts,
+                    # so for now we prevent alignment of comma lists on the
+                    # left with scalars on the left.  We will also prevent
+                    # any partial alignments.
+                    elsif ( ( index( $old_rpatterns->[$j], ',' ) >= 0 ) ne
+                        ( index( $rpatterns->[$j], ',' ) >= 0 ) )
+                    {
+                        $imax_align = -1;
+                        $GoToMsg    = "mixed commas/no-commas before equals";
+                        goto NO_MATCH;
+                    }
+                }
+            }
+
+            # Everything matches so far, so we can update the maximum index
+            # for partial alignment.
+            $imax_align = $j;
+
+        } ## end for my $j ( 0 .. $jlimit)
+
     }
+
+    # The tokens match, but the lines must have identical number of
+    # tokens to join the group.
+    if ( $maximum_field_index != $jmax ) {
+        $GoToMsg = "token count differs";
+        goto NO_MATCH;
+    }
+
+    # The tokens match. Now See if there is space for this line in the
+    # current group.
+    if ( check_fit( $new_line, $old_line ) ) {
+
+        $EXPLAIN
+          && print "match and fit, imax_align=$imax_align, jmax=$jmax\n";
+        return ( 1, $jlimit );
+    }
+    else {
+
+        $EXPLAIN
+          && print "match but no fit, imax_align=$imax_align, jmax=$jmax\n";
+        return ( 0, $jlimit );
+    }
+
+  NO_MATCH:
+
+    $EXPLAIN
+      && print
+      "no match because $GoToMsg, max match index =i $imax_align, jmax=$jmax\n";
+
+    return ( 0, $imax_align );
 }
 
 sub check_fit {
 
-    my ( $new_line, $old_line, $imax_align ) = @_;
-    return unless (@group_lines);
+    my ( $new_line, $old_line ) = @_;
+
+    # uses no Global symbols
 
     # The new line has alignments identical to the current group. Now we have
-    # to see if the new line can fit into the group without causing a field
-    # to exceed the line length limit.  If it cannot, we will end the current
-    # group and start a new one.
+    # to fit the new line into the group without causing a field
+    # to exceed the line length limit.
+    #   return true if successful
+    #   return false if not successful
 
     my $jmax                = $new_line->get_jmax();
     my $leading_space_count = $new_line->get_leading_space_count();
     my $rfield_lengths      = $new_line->get_rfield_lengths();
-
-    my $group_list_type = $group_lines[0]->get_list_type();
-
-    my $padding_so_far    = 0;
-    my $padding_available = $old_line->get_available_space_on_right();
+    my $padding_available   = $old_line->get_available_space_on_right();
 
     # Save current columns in case this line does not fit.
-    save_alignment_columns();
+    my @alignments = $old_line->get_alignments();
+    foreach my $alignment (@alignments) {
+        $alignment->save_column();
+    }
 
     # Loop over all alignments ...
     my $maximum_field_index = $old_line->get_jmax();
@@ -1349,79 +1221,57 @@ sub check_fit {
             $pad += $leading_space_count;
         }
 
-        # Remember largest gap of the group, excluding gap to side comment.
-        if (   $pad < 0
-            && $group_maximum_gap < -$pad
-            && $j > 0
-            && $j < $jmax - 1 )
-        {
-            $group_maximum_gap = -$pad;
-        }
-
         # Keep going if this field does not need any space.
         next if $pad < 0;
 
         # See if it needs too much space.
         if ( $pad > $padding_available ) {
 
-            # Not enough room for it; revert to starting state then flush.
-            restore_alignment_columns();
-            end_rgroup($imax_align);
-            last;
+            ################################################
+            # Line does not fit -- revert to starting state
+            ################################################
+            foreach my $alignment (@alignments) {
+                $alignment->restore_column();
+            }
+            return;
         }
 
-        # This line fits, squeeze it in.
+        # make room for this field
         $old_line->increase_field_width( $j, $pad );
         $padding_available -= $pad;
+    }
 
-        # remember largest gap of the group, excluding gap to side comment
-        if ( $pad > $group_maximum_gap && $j > 0 && $j < $jmax - 1 ) {
-            $group_maximum_gap = $pad;
-        }
+    ######################################
+    # The line fits, the match is accepted
+    ######################################
+    return 1;
+
+}
+
+sub install_new_alignments {
+
+    my ($new_line) = @_;
+
+    # uses no Global symbols
+
+    my $jmax           = $new_line->get_jmax();
+    my $rfield_lengths = $new_line->get_rfield_lengths();
+    my $col            = $new_line->get_leading_space_count();
+
+    for my $j ( 0 .. $jmax ) {
+        $col += $rfield_lengths->[$j];
+
+        # create initial alignments for the new group
+        my $alignment = make_alignment($col);    ##, $token );
+        $new_line->set_alignment( $j, $alignment );
     }
     return;
 }
 
-sub add_to_group {
-
-    # The current line either starts a new alignment group or is
-    # accepted into the current alignment group.
-    my ($new_line) = @_;
-    push_group_line($new_line);
-
-    # initialize field lengths if starting new group
-    if ( @group_lines == 1 ) {
-
-        my $jmax           = $new_line->get_jmax();
-        my $rfields        = $new_line->get_rfields();
-        my $rfield_lengths = $new_line->get_rfield_lengths();
-        my $rtokens        = $new_line->get_rtokens();
-        my $col            = $new_line->get_leading_space_count();
-
-        for my $j ( 0 .. $jmax ) {
-            $col += $rfield_lengths->[$j];
-
-            # create initial alignments for the new group
-            my $token = "";
-            if ( $j < $jmax ) { $token = $rtokens->[$j] }
-            my $alignment = make_alignment( $col, $token );
-            $new_line->set_alignment( $j, $alignment );
-        }
-
-        $maximum_jmax_seen = $jmax;
-        $minimum_jmax_seen = $jmax;
-    }
-
-    # use previous alignments otherwise
-    else {
-        my @new_alignments = $group_lines[-2]->get_alignments();
-        $new_line->set_alignments(@new_alignments);
-    }
-
-    # remember group jmax extremes for next call to valign_input
-    $previous_minimum_jmax_seen = $minimum_jmax_seen;
-    $previous_maximum_jmax_seen = $maximum_jmax_seen;
-    return;
+sub copy_old_alignments {
+    my ( $new_line, $old_line ) = @_;
+    my @new_alignments = $old_line->get_alignments();
+    $new_line->set_alignments(@new_alignments);
 }
 
 sub dump_array {
@@ -1486,6 +1336,11 @@ sub level_change {
     # compute decrease in level when we remove $diff spaces from the
     # leading spaces
     my ( $leading_space_count, $diff, $level ) = @_;
+
+## uses Global symbols {
+##  '$rOpts_indent_columns'
+## }
+
     if ($rOpts_indent_columns) {
         my $olev =
           int( ( $leading_space_count + $diff ) / $rOpts_indent_columns );
@@ -1511,9 +1366,20 @@ sub my_flush_comment {
 
     # Output a group of COMMENT lines
 
+## uses Global symbols {
+##  '$comment_leading_space_count'
+##  '$file_writer_object'
+##  '$first_outdented_line_at'
+##  '$group_level'
+##  '$last_outdented_line_at'
+##  '$outdented_line_count'
+##  '@group_lines'
+## }
+
     return unless (@group_lines);
     my $leading_space_count = $comment_leading_space_count;
-    my $leading_string      = get_leading_string($leading_space_count);
+    my $leading_string =
+      get_leading_string( $leading_space_count, $group_level );
 
     # look for excessively long lines
     my $max_excess = 0;
@@ -1566,6 +1432,14 @@ sub my_flush {
     # intact
     return unless (@group_lines);
 
+## uses Global symbols {
+##  '$extra_indent_ok'   # a flag for handling initial indentation
+##  '$group_level'       # the common level of this group
+##  '$group_type'        # identifies type of this group (i.e. comment or code)
+##  '@group_lines'       # array of lines for this group
+##  '$rOpts'             # the user options
+## }
+
     # Debug
     0 && do {
         my ( $a, $b, $c ) = caller();
@@ -1579,42 +1453,45 @@ sub my_flush {
 
     # Output a single line of CODE
     elsif ( @group_lines == 1 ) {
+        my $line = $group_lines[0];
+        install_new_alignments($line);
         adjust_side_comment_single_group();
-        my $extra_leading_spaces = get_extra_leading_spaces();
-        my $line                 = $group_lines[0];
-        my $group_leader_length  = $line->get_leading_space_count();
+        my $extra_leading_spaces =
+          $extra_indent_ok ? get_extra_leading_spaces_single_line($line) : 0;
+        my $group_leader_length = $line->get_leading_space_count();
         valign_output_step_A(
             line                 => $line,
             min_ci_gap           => 0,
             do_not_align         => 0,
             group_leader_length  => $group_leader_length,
-            extra_leading_spaces => $extra_leading_spaces
+            extra_leading_spaces => $extra_leading_spaces,
+            level                => $group_level
         );
         initialize_for_new_group();
     }
 
-    # Handle vertical alignment of multiple lines of CODE lines.  Most of
-    # the work of vertical aligning happens here.
+    # Output multiple CODE lines.  Most of the actual work of vertical aligning
+    # happens here in seven steps:
     else {
 
-        # we will rebuild alignment line group(s);
+        # transfer the array of lines to a local work array
         my @all_lines = @group_lines;
-        initialize_for_new_group();
 
         # STEP 1: Remove most unmatched tokens. They block good alignments.
-        delete_unmatched_tokens( \@all_lines );
+        my $max_lev_diff = delete_unmatched_tokens( \@all_lines, $group_level );
 
         # STEP 2: Construct a tree of matched lines and delete some small deeper
         # levels of tokens.  They also block good alignments.
-        my ( $rgroup_id, $rgroup_index ) = prune_alignment_tree( \@all_lines );
+        prune_alignment_tree( \@all_lines ) if ($max_lev_diff);
 
-        # STEP 3: Sweep top to bottom, forming groups of lines with exactly
-        # matching common alignments.
+        # STEP 3: Sweep top to bottom, forming subgroups of lines with exactly
+        # matching common alignments.  The indexes of these subgroups are in the
+        # return variable.
         my $rgroups =
-          sweep_top_to_bottom( \@all_lines, $rgroup_id, $rgroup_index );
+          sweep_top_down( \@all_lines, $group_level );
 
-        # STEP 4: Sweep left to right through these groups, looking for
-        # leading alignment tokens shared by groups.
+        # STEP 4: Sweep left to right through the lines, looking for leading
+        # alignment tokens shared by groups.
         sweep_left_to_right( \@all_lines, $rgroups );
 
         # STEP 5: Move side comments to a common column if possible.
@@ -1623,7 +1500,9 @@ sub my_flush {
         # STEP 6: For the -lp option, increase the indentation of lists
         # to the desired amount, but do not exceed the line length limit.
         my $extra_leading_spaces =
-          get_extra_leading_spaces_multiple_groups( \@all_lines, $rgroups );
+          $extra_indent_ok
+          ? get_extra_leading_spaces_multiple_groups( \@all_lines, $rgroups )
+          : 0;
 
         # STEP 7: Output the lines.
         # All lines in this batch have the same basic leading spacing:
@@ -1635,176 +1514,211 @@ sub my_flush {
                 min_ci_gap           => 0,
                 do_not_align         => 0,
                 group_leader_length  => $group_leader_length,
-                extra_leading_spaces => $extra_leading_spaces
+                extra_leading_spaces => $extra_leading_spaces,
+                level                => $group_level,
             );
         }
+
         initialize_for_new_group();
     } ## end handling of multiple lines
     return;
 }
 
-{    # rgroups
+{    # closure for sub sweep_top_down
 
-    # The variable $rgroups will hold the partition of all lines in this output
-    # batch into groups with common alignments.
+    # uses no Global symbols
 
-    my $rgroups;
+    my $rall_lines;         # all of the lines
+    my $grp_level;          # level of all lines
+    my $rgroups;            # describes the partition of lines we will make here
+    my $group_line_count;   # number of lines in current partition
+
     BEGIN { $rgroups = [] }
 
-    sub initialize_rgroups {
-        $rgroups = [];
-        return;
-    }
-
-    sub get_rgroups {
-        return $rgroups;
+    sub initialize_for_new_rgroup {
+        $group_line_count = 0;
     }
 
     sub add_to_rgroup {
-        my ( $rline, $jend ) = @_;
 
-        add_to_group($rline);
+        my ($jend) = @_;
+        my $rline = $rall_lines->[$jend];
 
-        # A line has just been added to @group_lines, so we include it
-        # in the current subgroup, or start a new one.
-        # There will be 1 line in @group_lines when a new subgroup starts
-        my $jbeg   = $jend;
-        my $nlines = @group_lines;
-        if ( $nlines > 1 ) {
+        my $jbeg = $jend;
+        if ( $group_line_count == 0 ) {
+            install_new_alignments($rline);
+        }
+        else {
             my $rvals = pop @{$rgroups};
             $jbeg = $rvals->[0];
+            copy_old_alignments( $rline, $rall_lines->[$jbeg] );
         }
         push @{$rgroups}, [ $jbeg, $jend, undef ];
+        $group_line_count++;
         return;
+    }
+
+    sub get_rgroup_jrange {
+
+        return unless @{$rgroups};
+        return unless ( $group_line_count > 0 );
+        my ( $jbeg, $jend ) = @{ $rgroups->[-1] };
+        return ( $jbeg, $jend );
     }
 
     sub end_rgroup {
 
         my ($imax_align) = @_;
         return unless @{$rgroups};
-        return unless @group_lines;
+        return unless ( $group_line_count > 0 );
 
-        # Undo alignment of some poor two-line combinations.
+        my ( $jbeg, $jend ) = @{ pop @{$rgroups} };
+        push @{$rgroups}, [ $jbeg, $jend, $imax_align ];
+
+        # Undo some alignments of poor two-line combinations.
         # We had to wait until now to know the line count.
-        decide_if_aligned_pair($imax_align);
+        if ( $jend - $jbeg == 1 ) {
+            my $line_0 = $rall_lines->[$jbeg];
+            my $line_1 = $rall_lines->[$jend];
+            if ( is_marginal_match( $line_0, $line_1, $grp_level ) ) {
+                combine_fields( $line_0, $line_1, $imax_align );
+            }
+        }
 
-        $rgroups->[-1]->[2] = $imax_align;
-
-        initialize_for_new_group();
+        initialize_for_new_rgroup();
         return;
     }
-}
 
-sub sweep_top_to_bottom {
-    my ( $rlines, $rgroup_id, $rgroup_index ) = @_;
-    my $jline = -1;
+    sub sweep_top_down {
+        my ( $rlines, $group_common_level) = @_; 
 
-    # Partition the set of lines into final alignment subgroups
-    # and store the alignments with the lines.
-    initialize_rgroups();
-    $is_matching_terminal_line = 0;
-    return unless @{$rlines};    # shouldn't happen
+        # uses no Global symbols
 
-    my $keep_group_intact = $rOpts->{'line-up-parentheses'} && $extra_indent_ok;
+        # Partition the set of lines into final alignment subgroups
+        # and store the alignments with the lines.
 
-    # Setting the _end_group flag for the last line causes problems for -lp
-    # formatting, so we unset it.
-    $rlines->[-1]->{_end_group} = 0;
+        # transfer args to closure variables
+        $rall_lines = $rlines;
+        $grp_level  = $group_common_level;
+        $rgroups    = [];
+        initialize_for_new_rgroup();
+        return unless @{$rlines};    # shouldn't happen
 
-    # Loop over all lines ...
-    foreach my $new_line ( @{$rlines} ) {
-        $jline++;
+        # Unset the _end_group flag for the last line if it it set because it
+        # is not needed and can causes problems for -lp formatting
+        $rall_lines->[-1]->{_end_group} = 0;
 
-        # Start a new subgroup if necessary
-        if ( !@group_lines ) {
-            add_to_rgroup( $new_line, $jline );
-            if ( $new_line->{_end_group} ) {
+        # Loop over all lines ...
+        my $jline = -1;
+        foreach my $new_line ( @{$rall_lines} ) {
+            $jline++;
+
+            # Start a new subgroup if necessary
+            if ( !$group_line_count ) {
+                add_to_rgroup($jline);
+                if ( $new_line->{_end_group} ) {
+                    end_rgroup(-1);
+                }
+                next;
+            }
+
+            my $j_terminal_match = $new_line->get_j_terminal_match();
+            my ( $jbeg, $jend ) = get_rgroup_jrange();
+            if ( !defined($jbeg) ) {
+
+                # safety check, shouldn't happen
+                warning(<<EOM);
+Program bug detected in Perl::Tidy::VerticalAligner sub sweep_top_down 
+undefined index for group line count $group_line_count
+EOM
+                $jbeg = $jline;
+            }
+            my $base_line = $rall_lines->[$jbeg];
+
+            # Initialize a global flag saying if the last line of the group
+            # should match end of group and also terminate the group.  There
+            # should be no returns between here and where the flag is handled
+            # at the bottom.
+            my $col_matching_terminal = 0;
+            if ( defined($j_terminal_match) ) {
+
+                # remember the column of the terminal ? or { to match with
+                $col_matching_terminal =
+                  $base_line->get_column($j_terminal_match);
+            }
+
+            # -------------------------------------------------------------
+            # Allow hanging side comment to join current group, if any. This
+            # will help keep side comments aligned, because otherwise we
+            # will have to start a new group, making alignment less likely.
+            # -------------------------------------------------------------
+            if ( $new_line->get_is_hanging_side_comment() ) {
+                join_hanging_comment( $new_line, $base_line );
+            }
+
+            # If this line has no matching tokens, then flush out the lines
+            # BEFORE this line unless both it and the previous line have side
+            # comments.  This prevents this line from pushing side coments out
+            # to the right.
+            elsif ( $new_line->get_jmax() == 1 ) {
+
+                # There are no matching tokens, so now check side comments.
+                # Programming note: accessing arrays with index -1 is
+                # risky in Perl, but we have verified there is at least one
+                # line in the group and that there is at least one field.
+                my $prev_comment =
+                  $rall_lines->[ $jline - 1 ]->get_rfields()->[-1];
+                my $side_comment = $new_line->get_rfields()->[-1];
+                end_rgroup(-1) unless ( $side_comment && $prev_comment );
+            }
+
+            # See if the new line matches and fits the current group,
+            # if it still exists. Flush the current group if not.
+            if ($group_line_count) {
+                my ( $is_match, $imax_align ) =
+                  check_match( $new_line, $base_line );
+                if ( !$is_match ) { end_rgroup($imax_align) }
+            }
+
+            # Store the new line
+            add_to_rgroup($jline);
+
+            if ( defined($j_terminal_match) ) {
+
+                # if there is only one line in the group (maybe due to failure
+                # to match perfectly with previous lines), then align the ? or
+                # { of this terminal line with the previous one unless that
+                # would make the line too long
+                if ( $group_line_count == 1 ) {
+                    $base_line = $new_line;
+                    my $col_now = $base_line->get_column($j_terminal_match);
+                    my $pad     = $col_matching_terminal - $col_now;
+                    my $padding_available =
+                      $base_line->get_available_space_on_right();
+                    if ( $pad > 0 && $pad <= $padding_available ) {
+                        $base_line->increase_field_width( $j_terminal_match,
+                            $pad );
+                    }
+                }
                 end_rgroup(-1);
             }
-            next;
-        }
 
-        my $j_terminal_match = $new_line->get_j_terminal_match();
-        my $base_line        = $group_lines[0];
-
-        # Initialize a global flag saying if the last line of the group
-        # should match end of group and also terminate the group.  There
-        # should be no returns between here and where the flag is handled
-        # at the bottom.
-        my $col_matching_terminal = 0;
-        if ( defined($j_terminal_match) ) {
-
-            # remember the column of the terminal ? or { to match with
-            $col_matching_terminal = $base_line->get_column($j_terminal_match);
-
-            # set global flag for sub decide_if_aligned_pair
-            $is_matching_terminal_line = 1;
-        }
-
-        # -------------------------------------------------------------
-        # Allow hanging side comment to join current group, if any. This
-        # will help keep side comments aligned, because otherwise we
-        # will have to start a new group, making alignment less likely.
-        # -------------------------------------------------------------
-        if ( $new_line->get_is_hanging_side_comment() ) {
-            join_hanging_comment( $new_line, $base_line );
-        }
-
-        # If this line has no matching tokens, then flush out the lines
-        # BEFORE this line unless both it and the previous line have side
-        # comments.  This prevents this line from pushing side coments out
-        # to the right.
-        elsif ( $new_line->get_jmax() == 1 && !$keep_group_intact ) {
-
-            # There are no matching tokens, so now check side comments.
-            # Programming note: accessing arrays with index -1 is
-            # risky in Perl, but we have verified there is at least one
-            # line in the group and that there is at least one field.
-            my $prev_comment = $group_lines[-1]->get_rfields()->[-1];
-            my $side_comment = $new_line->get_rfields()->[-1];
-            end_rgroup(-1) unless ( $side_comment && $prev_comment );
-        }
-
-        # See if the new line matches and fits the current group.
-        # Flush the current group if not.
-        check_match( $new_line, $base_line );
-
-        # Store the new line
-        add_to_rgroup( $new_line, $jline );
-
-        if ( defined($j_terminal_match) ) {
-
-            # if there is only one line in the group (maybe due to failure
-            # to match perfectly with previous lines), then align the ? or
-            # { of this terminal line with the previous one unless that
-            # would make the line too long
-            if ( @group_lines == 1 ) {
-                $base_line = $group_lines[0];
-                my $col_now = $base_line->get_column($j_terminal_match);
-                my $pad     = $col_matching_terminal - $col_now;
-                my $padding_available =
-                  $base_line->get_available_space_on_right();
-                if ( $pad > 0 && $pad <= $padding_available ) {
-                    $base_line->increase_field_width( $j_terminal_match, $pad );
-                }
+            # end the group if we know we cannot match next line.
+            elsif ( $new_line->{_end_group} ) {
+                end_rgroup(-1);
             }
-            end_rgroup(-1);
-            $is_matching_terminal_line = 0;
-        }
+        } ## end loop over lines
 
-        # end the group if we know we cannot match next line.
-        elsif ( $new_line->{_end_group} ) {
-            end_rgroup(-1);
-        }
-    } ## end loop over lines
-    end_rgroup(-1);
-    my $rgroups = get_rgroups();
-    return ($rgroups);
+        end_rgroup(-1);
+        return ($rgroups);
+    }
 }
 
 sub sweep_left_to_right {
 
     my ( $rlines, $rgroups ) = @_;
+
+    # uses no Global symbols
 
     # So far we have divided the lines into groups having an equal number of
     # identical alignments.  Here we are going to look for common leading
@@ -1869,9 +1783,9 @@ sub sweep_left_to_right {
         $jbeg_m    = $jbeg;
         $jend_m    = $jend;
 
-	# Get values for this group. Note that we just have to use values for
-	# one of the lines of the group since all members have the same
-	# alignments.
+        # Get values for this group. Note that we just have to use values for
+        # one of the lines of the group since all members have the same
+        # alignments.
         ( $jbeg, $jend, $istop ) = @{$item};
 
         $line    = $rlines->[$jbeg];
@@ -1960,6 +1874,8 @@ sub sweep_left_to_right {
 
 sub do_left_to_right_sweep {
     my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad ) = @_;
+
+    # uses no Global symbols
 
     my $move_to_common_column = sub {
 
@@ -2088,6 +2004,8 @@ sub do_left_to_right_sweep {
 sub delete_selected_tokens {
 
     my ( $line_obj, $ridel, $new_list_ok ) = @_;
+
+    # uses no Global symbols
 
     # $line_obj    is the line to be modified
     # $ridel       is a ref to list of indexes to be deleted
@@ -2241,6 +2159,9 @@ sub decode_alignment_token {
     # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
     # The second '=' will be '=0.2' [level 0, second equals]
     my ($tok) = @_;
+
+    # uses no Global symbols
+
     my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, "", 1 );
     if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
         $raw_tok   = $1;
@@ -2251,7 +2172,9 @@ sub decode_alignment_token {
     return ( $raw_tok, $lev, $tag, $tok_count );
 }
 
-{    # sub is_deletable_token
+{    # closure for sub is_deletable_token
+
+    # uses no Global symbols
 
     my %is_deletable_equals;
 
@@ -2273,7 +2196,7 @@ sub decode_alignment_token {
         # this will improve the chances of getting vertical alignments.
         # But it can be useful not to delete selected tokens in order to
         # prevent some undesirable alignments.
-        my ( $token, $i, $imax, $jline, $i_eq ) = @_;
+        my ( $token, $i, $imax, $jline, $i_eq, $grp_level ) = @_;
 
         my ( $raw_tok, $lev, $tag, $tok_count ) =
           decode_alignment_token($token);
@@ -2288,14 +2211,14 @@ sub decode_alignment_token {
             return if ( defined($i_eq) && $i < $i_eq );
 
             # Do not delete line-level commas
-            return if ( $lev <= $group_level );
+            return if ( $lev <= $grp_level );
         }
 
         # most operators with an equals sign should be retained if at
         # same level as this statement
         elsif ( $raw_tok =~ /=/ ) {
             return
-              unless ( $lev > $group_level || $is_deletable_equals{$raw_tok} );
+              unless ( $lev > $grp_level || $is_deletable_equals{$raw_tok} );
         }
 
         # otherwise, ok to delete the token
@@ -2304,7 +2227,9 @@ sub decode_alignment_token {
 }
 
 sub delete_unmatched_tokens {
-    my ($rlines) = @_;
+    my ( $rlines, $grp_level ) = @_;
+
+    # uses no Global symbols
 
     # This is a preliminary step in vertical alignment in which we remove as
     # many obviously un-needed alignment tokens as possible.  This will prevent
@@ -2357,7 +2282,7 @@ sub delete_unmatched_tokens {
             # remember the first equals at line level
             if ( !defined($i_eq) && $raw_tok eq '=' ) {
 
-                if ( $lev eq $group_level ) {
+                if ( $lev eq $grp_level ) {
                     $i_eq   = $i;
                     $tok_eq = $tok;
                     $pat_eq = $rpatterns->[$i];
@@ -2514,7 +2439,8 @@ sub delete_unmatched_tokens {
 
                 if (
                     $delete_me
-                    && is_deletable_token( $tok, $i, $imax, $jj, $i_eq )
+                    && is_deletable_token( $tok, $i, $imax, $jj, $i_eq,
+                        $grp_level )
 
                     # Patch: do not touch the first line of a terminal match,
                     # such as below, because j_terminal has already been set.
@@ -2549,7 +2475,7 @@ sub delete_unmatched_tokens {
 
     }    # End loop over subgroups
 
-    return $saw_list_type;
+    return $max_lev_diff;
 }
 
 sub get_line_token_info {
@@ -2557,6 +2483,8 @@ sub get_line_token_info {
     # scan lines of tokens and return summary information about the range of
     # levels and patterns.
     my ($rlines) = @_;
+
+    # uses no Global symbols
 
     # First scan to check monotonicity. Here is an example of several
     # lines which are monotonic. The = is the lowest level, and
@@ -2705,6 +2633,8 @@ sub prune_alignment_tree {
     my $jmax = @{$rlines} - 1;
     return unless $jmax > 0;
 
+    # uses no Global symbols
+
     # Vertical alignment in perltidy is done as an iterative process.  The
     # starting point is to mark all possible alignment tokens ('=', ',', '=>',
     # etc) for vertical alignment.  Then we have to delete all alignments
@@ -2793,23 +2723,6 @@ sub prune_alignment_tree {
     #  $nc_beg_p = first child
     #  $nc_end_p = last child
     #  $rindexes = ref to token indexes
-
-    my $rgroup_id = [];
-
-    # Array to store info about the location of each line in the tree:
-    #   $rgroup_id->[$jj] = $id
-    # where
-    #   $jj = line index
-    #   $id = "n1.n2.n3" = decimal tree identifier of the group, i.e.
-    #    "1.0.3" = group 1 -> child 0 -> child 3
-
-    my $rgroup_index = {};
-
-    # Hash giving information for each group
-    #   $rgroup_id{$id} = [$jbeg, $jend, ]
-    # where
-    #   $jbeg = index of first line of group
-    #   $jend = index of last line of group
 
     # the patterns and levels of the current group being formed at each depth
     my ( @token_patterns_current, @levels_current, @token_indexes_current );
@@ -3019,30 +2932,6 @@ sub prune_alignment_tree {
               = @{ $match_tree[$depth]->[$np] };
             my $nlines_p = $jend_p - $jbeg_p + 1;
 
-            # Make a unique identifier for this group of matched lines
-            my $id;
-            if   ( $depth == 0 ) { $id = "$np" }
-            else                 { $id = $rgroup_id->[$jbeg_p] . ".$np" }
-
-            # Make a modified group name if this is a simple comma list.
-            # This can simplify later operations.
-            if ( !defined($nc_beg_p) ) {
-                my ( $lev_min, $lev_max, $rtoken_patterns, $rlevs,
-                    $rtoken_indexes, $is_monotonic, $imax_line, $imax_used )
-                  = @{ $rline_values->[$jbeg_p] };
-                if (   $lev_min == $group_level
-                    && $imax_used == 0
-                    && $imax_line != $imax_used )
-                {
-                    $id = "C" . $id;
-                }
-            }
-
-            $rgroup_index->{$id} = [ $jbeg_p, $jend_p ];
-            foreach my $jj ( $jbeg_p .. $jend_p ) {
-                $rgroup_id->[$jj] = $id;
-            }
-
             # nothing to do if no children
             next unless defined($nc_beg_p);
 
@@ -3114,7 +3003,8 @@ sub prune_alignment_tree {
             }
         }
     } ## end loop to delete selected alignment tokens
-    return ( $rgroup_id, $rgroup_index );
+
+    return;
 } ## end sub prune_alignment_tree
 
 sub Dump_tree_groups {
@@ -3130,10 +3020,11 @@ sub Dump_tree_groups {
     return;
 }
 
-{    # decide_if_aligned_pair
+{    # closure for is_marginal_match
 
     my %is_if_or;
     my %is_assignment;
+    my %is_good_alignment;
 
     BEGIN {
 
@@ -3149,76 +3040,121 @@ sub Dump_tree_groups {
           x=
         );
         @is_assignment{@q} = (1) x scalar(@q);
+
+        # Vertically aligning on certain "good" tokens is usually okay
+        # so we can be less restrictive in marginal cases.
+        @q = qw( { ? => = );
+        push @q, (',');
+        @is_good_alignment{@q} = (1) x scalar(@q);
     }
 
-## uses Global symbols {
-##  '$group_level'
-##  '$last_comment_column'
-##  '$last_level_written'
-##  '$last_side_comment_length'
+    sub is_marginal_match {
 
-##  '$is_matching_terminal_line'
-##  '$marginal_match'
-##  '$previous_maximum_jmax_seen'
-##  '$previous_minimum_jmax_seen'
+        my ( $line_0, $line_1, $grp_level ) = @_;
 
-##  '$rOpts_minimum_space_to_comment'
-##  '@group_lines'
-## }
+        # uses no Global symbols
 
-    sub decide_if_aligned_pair {
+        # Decide if we should align two lines:
+        #   return true if the two lines should not be aligned
+        #   return false if it is okay to align the two lines
 
-        my ($imax_align) = @_;
+        # This routine is a hodgepodge of rules which work fairly well. But
+        # there are no perfect rules for this, and this routine will probably
+        # need to be updated from time to time.
 
-        # Do not try to align two lines which are not really similar
-        return unless ( @group_lines == 2 );
-        return if ($is_matching_terminal_line);
+        return if ( defined( $line_1->get_j_terminal_match() ) );
 
         # always align lists
-        my $group_list_type = $group_lines[0]->get_list_type();
-        return 0 if ($group_list_type);
+        my $group_list_type = $line_0->get_list_type();
+        return if ($group_list_type);
 
-        my $jmax0          = $group_lines[0]->get_jmax();
-        my $jmax1          = $group_lines[1]->get_jmax();
-        my $rtokens        = $group_lines[0]->get_rtokens();
-        my $leading_equals = ( $rtokens->[0] =~ /=/ );
+        my $is_hanging_side_comment = $line_1->get_is_hanging_side_comment();
+        return if ($is_hanging_side_comment);
 
-        # scan the tokens on the second line
-        my $rtokens1 = $group_lines[1]->get_rtokens();
+        my $jmax_0           = $line_0->get_jmax();
+        my $jmax_1           = $line_1->get_jmax();
+        my $rtokens_1        = $line_1->get_rtokens();
+        my $rtokens_0        = $line_0->get_rtokens();
+        my $rfield_lengths_0 = $line_0->get_rfield_lengths();
+        my $rfield_lengths_1 = $line_1->get_rfield_lengths();
+        my $rpatterns_0      = $line_0->get_rpatterns();
+        my $rpatterns_1      = $line_1->get_rpatterns();
+
+        # We will scan the alignment tokens and set a flag '$is_marginal' if
+        # it seems that the an alignment would look bad.  If we pass
+        my $is_marginal        = 0;
+        my $max_pad            = 0;
+        my $saw_good_alignment = 0;
         my $saw_if_or;        # if we saw an 'if' or 'or' at group level
         my $raw_tokb = "";    # first token seen at group level
-        for ( my $j = 0 ; $j < $jmax1 - 1 ; $j++ ) {
+        for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
-              decode_alignment_token( $rtokens1->[$j] );
-            if ( $raw_tok && $lev == $group_level ) {
+              decode_alignment_token( $rtokens_1->[$j] );
+            if ( $raw_tok && $lev == $grp_level ) {
                 if ( !$raw_tokb ) { $raw_tokb = $raw_tok }
                 $saw_if_or ||= $is_if_or{$raw_tok};
             }
+            my $pad = $rfield_lengths_1->[$j] - $rfield_lengths_0->[$j];
+            if ( $j == 0 ) {
+                $pad += $line_1->get_leading_space_count() -
+                  $line_0->get_leading_space_count();
+            }
+
+            if ( $pad < 0 )        { $pad     = -$pad }
+            if ( $pad > $max_pad ) { $max_pad = $pad }
+            if ( $is_good_alignment{$raw_tok} ) {
+                $saw_good_alignment = 1;
+            }
+            if ( $rpatterns_0->[$j] ne $rpatterns_1->[$j] ) {
+
+                # Flag this as a marginal match since patterns differ.
+                # Normally, we will not allow just two lines to match if
+                # marginal. But we can allow matching in some specific cases.
+
+                $is_marginal = 1 if ( $is_marginal == 0 );
+                if ( $raw_tok eq '=' ) {
+
+                    # Here is an example of a marginal match:
+                    #       $done{$$op} = 1;
+                    #       $op         = compile_bblock($op);
+                    # The left tokens are both identifiers, but
+                    # one accesses a hash and the other doesn't.
+                    # We'll let this be a tentative match and undo
+                    # it later if we don't find more than 2 lines
+                    # in the group.
+                    $is_marginal = 2;
+                }
+            }
         }
 
-        # A marginal match is a match which has different patterns. Normally,
-        # we should not allow exactly two lines to match if marginal. But
-        # we can allow matching in some specific cases.
-        my $is_marginal = $marginal_match;
-
-        # lines with differing number of alignment tokens are marginal
-        $is_marginal ||=
-          $previous_maximum_jmax_seen != $previous_minimum_jmax_seen
-          && !$is_assignment{$raw_tokb};
+        # Turn off the "marginal match" flag in some cases...
+        # A "marginal match" occurs when the alignment tokens agree
+        # but there are differences in the other tokens (patterns).
+        # If we leave the marginal match flag set, then the rule is that we
+        # will align only if there are more than two lines in the group.
+        # We will turn of the flag if we almost have a match
+        # and either we have seen a good alignment token or we
+        # just need a small pad (2 spaces) to fit.  These rules are
+        # the result of experimentation.  Tokens which misaligned by just
+        # one or two characters are annoying.  On the other hand,
+        # large gaps to less important alignment tokens are also annoying.
+        if ( $is_marginal == 1
+            && ( $saw_good_alignment || $max_pad < 3 ) )
+        {
+            $is_marginal = 0;
+        }
 
         # We will use the line endings to help decide on alignments...
         # See if the lines end with semicolons...
-        my $rpatterns0 = $group_lines[0]->get_rpatterns();
-        my $rpatterns1 = $group_lines[1]->get_rpatterns();
         my $sc_term0;
         my $sc_term1;
-        if ( $jmax0 < 1 || $jmax1 < 1 ) {
+        if ( $jmax_0 < 1 || $jmax_1 < 1 ) {
 
             # shouldn't happen
         }
         else {
-            my $pat0 = $rpatterns0->[ $jmax0 - 1 ];
-            my $pat1 = $rpatterns1->[ $jmax1 - 1 ];
+            my $pat0 = $rpatterns_0->[ $jmax_0 - 1 ];
+            my $pat1 = $rpatterns_1->[ $jmax_1 - 1 ];
             $sc_term0 = $pat0 =~ /;b?$/;
             $sc_term1 = $pat1 =~ /;b?$/;
         }
@@ -3240,7 +3176,7 @@ sub Dump_tree_groups {
         #    grep     { /$handles/ } $self->_get_delegate_method_list;
         $is_marginal ||=
              ( $raw_tokb eq '(' || $raw_tokb eq '{' )
-          && $jmax1 == 2
+          && $jmax_1 == 2
           && $sc_term0 ne $sc_term1;
 
         # Undo the marginal match flag in certain cases,
@@ -3265,8 +3201,8 @@ sub Dump_tree_groups {
             #  First line not semicolon terminated, Not OK to match:
             #   $$href{-NUM_TEXT_FILES} = $$href{-NUM_BINARY_FILES} =
             #      $$href{-NUM_DIRS} = 0;
-            my $pat0 = $rpatterns0->[0];
-            my $pat1 = $rpatterns1->[0];
+            my $pat0 = $rpatterns_0->[0];
+            my $pat1 = $rpatterns_1->[0];
 
             ##########################################################
             # Turn off the marginal flag for some types of assignments
@@ -3315,15 +3251,15 @@ sub Dump_tree_groups {
             }
         }
 
-        # Remove the alignments if still marginal
-        if ($is_marginal) { combine_fields($imax_align) }
-        return;
+        return $is_marginal;
     }
 }
 
 sub get_extra_leading_spaces_multiple_groups {
 
     my ( $rlines, $rgroups ) = @_;
+
+    # uses no Global symbols
 
     #----------------------------------------------------------
     # Define any extra indentation space (for the -lp option).
@@ -3336,7 +3272,6 @@ sub get_extra_leading_spaces_multiple_groups {
     # lines of a list are back together again.
     #----------------------------------------------------------
 
-    return 0 unless ($extra_indent_ok);
     return 0 unless ( @{$rlines} && @{$rgroups} );
 
     my $object = $rlines->[0]->get_indentation();
@@ -3382,8 +3317,7 @@ sub adjust_side_comment_multiple_groups {
 
     my ( $rlines, $rgroups ) = @_;
 
-    # let's see if we can move the side comment field out a little
-    # to improve readability (the last field is always a side comment field)
+    # Try to align the side comments
 
 ## uses Global symbols {
 ##  '$group_level'                    -- the common level of all these lines
@@ -3394,10 +3328,11 @@ sub adjust_side_comment_multiple_groups {
 ## }
 
     # Look for any nonblank side comments
-    my ( $ng_sc_beg, $ng_sc_end );
-    my ( $j_sc_beg,  $j_sc_end );
-    my $ng = -1;
+    my $j_sc_beg;
     my @is_group_with_side_comment;
+    my $is_hanging_side_comment_beg;
+    my @todo;
+    my $ng = -1;
     foreach my $item ( @{$rgroups} ) {
         $ng++;
         my ( $jbeg, $jend ) = @{$item};
@@ -3405,27 +3340,25 @@ sub adjust_side_comment_multiple_groups {
             my $line = $rlines->[$j];
             my $jmax = $line->get_jmax();
             if ( $line->get_rfield_lengths()->[$jmax] ) {
-                $is_group_with_side_comment[$ng]++;
-                if ( !defined($ng_sc_beg) ) {
-                    $ng_sc_beg = $ng;
-                    $ng_sc_end = $ng;
-                    $j_sc_beg  = $j;
-                    $j_sc_end  = $j;
+
+                # this group has a line with a side comment
+                push @todo, $ng;
+                if ( !defined($j_sc_beg) ) {
+                    $j_sc_beg = $j;
+                    $is_hanging_side_comment_beg =
+                      $line->get_is_hanging_side_comment();
                 }
-                else {
-                    $ng_sc_end = $ng;
-                    $j_sc_end  = $j;
-                }
+                last;
             }
         }
     }
 
     # done if nothing to do
-    return unless defined($ng_sc_beg);
+    return unless @todo;
 
     # If there are multiple groups we will do two passes
     # so that we can find a common alignment for all groups.
-    my $MAX_PASS = ( $ng_sc_end > $ng_sc_beg ) ? 2 : 1;
+    my $MAX_PASS = @todo > 1 ? 2 : 1;
 
     # Loop over passes
     my $max_comment_column = $last_comment_column;
@@ -3434,23 +3367,21 @@ sub adjust_side_comment_multiple_groups {
         # If there are two passes, then on the last pass make the old column
         # equal to the largest of the group.  This will result in the comments
         # being aligned if possible.
-        if ( $PASS == $MAX_PASS ) { $last_comment_column = $max_comment_column }
+        if ( $PASS == $MAX_PASS ) {
+            $last_comment_column = $max_comment_column;
+        }
 
-        # Loop over the groups
-        my $ng = -1;
+        # Loop over the groups with side comments
         my $column_limit;
-        foreach my $item ( @{$rgroups} ) {
-            $ng++;
-            next if ( $ng < $ng_sc_beg );
-            last if ( $ng > $ng_sc_end );
-            next unless ( $is_group_with_side_comment[$ng] );
-            my ( $jbeg, $jend ) = @{$item};
+        foreach my $ng (@todo) {
+            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
 
             # Note that since all lines in a group have common alignments, we
             # just have to work on one of the lines (the first line).
             my $line = $rlines->[$jbeg];
             my $jmax = $line->get_jmax();
-            last if ( $PASS < $MAX_PASS && $line->{_is_hanging_side_comment} );
+            last
+              if ( $PASS < $MAX_PASS && $line->{_is_hanging_side_comment} );
 
             # the maximum space without exceeding the line length:
             my $avail = $line->get_available_space_on_right();
@@ -3459,59 +3390,61 @@ sub adjust_side_comment_multiple_groups {
             my $side_comment_column = $line->get_column( $jmax - 1 );
             my $move = $last_comment_column - $side_comment_column;
 
-            # Remember the maximum possible column of the first line with side
-            # comment
+            # Remember the maximum possible column of the first line with
+            # side comment
             if ( !defined($column_limit) ) {
                 $column_limit = $side_comment_column + $avail;
             }
 
-            if ( $jmax > 0 ) {
+            next if ( $jmax <= 0 );
 
-                # but if this doesn't work, give up and use the minimum space
-                if ( $move > $avail ) {
-                    $move = $rOpts_minimum_space_to_comment - 1;
+            # but if this doesn't work, give up and use the minimum space
+            if ( $move > $avail ) {
+                $move = $rOpts_minimum_space_to_comment - 1;
+            }
+
+            # but we want some minimum space to the comment
+            my $min_move = $rOpts_minimum_space_to_comment - 1;
+            if (   $move >= 0
+                && $last_side_comment_length > 0
+                && ( $j_sc_beg == 0 )
+                && $group_level == $last_level_written )
+            {
+                $min_move = 0;
+            }
+
+            # if this group starts with a hanging side comment
+            # then allow it to line up
+            if ($is_hanging_side_comment_beg) {
+                $min_move = 0;
+            }
+
+            if ( $move < $min_move ) {
+                $move = $min_move;
+            }
+
+            # don't exceed the available space
+            if ( $move > $avail ) { $move = $avail }
+
+            # We can only increase space, never decrease.
+            if ( $move < 0 ) { $move = 0 }
+
+            # Discover the largest column on the preliminary  pass
+            if ( $PASS < $MAX_PASS ) {
+                my $col = $line->get_column( $jmax - 1 ) + $move;
+
+                # but ignore columns too large for the starting line
+                if ( $col > $max_comment_column && $col < $column_limit ) {
+                    $max_comment_column = $col;
                 }
+            }
 
-                # but we want some minimum space to the comment
-                my $min_move = $rOpts_minimum_space_to_comment - 1;
-                if (   $move >= 0
-                    && $last_side_comment_length > 0
-                    && ( $j_sc_beg == 0 )
-                    && $group_level == $last_level_written )
-                {
-                    $min_move = 0;
-                }
+            # Make the changes on the final pass
+            else {
+                $line->increase_field_width( $jmax - 1, $move );
 
-                if ( $move < $min_move ) {
-                    $move = $min_move;
-                }
-
-                # previously, an upper bound was placed on $move here,
-                # (maximum_space_to_comment), but it was not helpful
-
-                # don't exceed the available space
-                if ( $move > $avail ) { $move = $avail }
-
-                # We can only increase space, never decrease.
-                if ( $move < 0 ) { $move = 0 }
-
-                # Discover the largest column on the preliminary  pass
-                if ( $PASS < $MAX_PASS ) {
-                    my $col = $line->get_column( $jmax - 1 ) + $move;
-
-                    # but ignore columns too large for the starting line
-                    if ( $col > $max_comment_column && $col < $column_limit ) {
-                        $max_comment_column = $col;
-                    }
-                }
-
-                # Make the changes on the final pass
-                else {
-                    $line->increase_field_width( $jmax - 1, $move );
-
-                    # remember this column for the next group
-                    $last_comment_column = $line->get_column( $jmax - 1 );
-                }
+                # remember this column for the next group
+                $last_comment_column = $line->get_column( $jmax - 1 );
             }
         } ## end loop over groups
     } ## end loop over passes
@@ -3521,6 +3454,15 @@ sub adjust_side_comment_multiple_groups {
 sub adjust_side_comment_single_group {
 
     my $do_not_align = shift;
+
+## uses Global symbols {
+##  '$group_level'
+##  '$last_comment_column'
+##  '$last_level_written'
+##  '$last_side_comment_length'
+##  '$rOpts_minimum_space_to_comment'
+##  '@group_lines'
+## }
 
     # let's see if we can move the side comment field out a little
     # to improve readability (the last field is always a side comment field)
@@ -3610,6 +3552,12 @@ sub valign_output_step_A {
     # been found. Then it is shipped to the next step.
     ###############################################################
 
+## uses Global symbols {
+##  '$file_writer_object'
+##  '$rOpts_fixed_position_side_comment'
+##  '$rOpts_minimum_space_to_comment'
+## }
+
     my %input_hash = @_;
 
     my $line                 = $input_hash{line};
@@ -3617,6 +3565,7 @@ sub valign_output_step_A {
     my $do_not_align         = $input_hash{do_not_align};
     my $group_leader_length  = $input_hash{group_leader_length};
     my $extra_leading_spaces = $input_hash{extra_leading_spaces};
+    my $level                = $input_hash{level};
 
     my $rfields                   = $line->get_rfields();
     my $rfield_lengths            = $line->get_rfield_lengths();
@@ -3685,13 +3634,6 @@ sub valign_output_step_A {
         else {
             $total_pad_count = 0;
         }
-
-        # update side comment history buffer
-        if ( $j == $maximum_field_index ) {
-            my $lineno = $file_writer_object->get_output_line_number();
-            shift @side_comment_history;
-            push @side_comment_history, [ $lineno, $col ];
-        }
     }
 
     my $side_comment_length = $rfield_lengths->[$maximum_field_index];
@@ -3704,12 +3646,12 @@ sub valign_output_step_A {
         side_comment_length => $side_comment_length,
         outdent_long_lines  => $outdent_long_lines,
         rvertical_tightness_flags => $rvertical_tightness_flags,
-        level                     => $group_level,
+        level                     => $level,
     );
     return;
 }
 
-sub get_extra_leading_spaces {
+sub get_extra_leading_spaces_single_line {
 
     #----------------------------------------------------------
     # Define any extra indentation space (for the -lp option).
@@ -3722,35 +3664,27 @@ sub get_extra_leading_spaces {
     # lines of a list are back together again.
     #----------------------------------------------------------
 
+    my ($line) = @_;
+
+    # uses no Global symbols
+
     my $extra_leading_spaces = 0;
-    if ($extra_indent_ok) {
-        my $object = $group_lines[0]->get_indentation();
-        if ( ref($object) ) {
-            my $extra_indentation_spaces_wanted =
-              get_recoverable_spaces($object);
+    my $object               = $line->get_indentation();
+    if ( ref($object) ) {
+        my $extra_indentation_spaces_wanted = get_recoverable_spaces($object);
+        if ($extra_indentation_spaces_wanted) {
 
-            # all indentation objects must be the same
-            for my $i ( 1 .. @group_lines - 1 ) {
-                if ( $object != $group_lines[$i]->get_indentation() ) {
-                    $extra_indentation_spaces_wanted = 0;
-                    last;
-                }
-            }
+            # the maximum space without exceeding the line length:
+            my $avail = $line->get_available_space_on_right();
+            $extra_leading_spaces =
+              ( $avail > $extra_indentation_spaces_wanted )
+              ? $extra_indentation_spaces_wanted
+              : $avail;
 
-            if ($extra_indentation_spaces_wanted) {
-
-                # the maximum space without exceeding the line length:
-                my $avail = $group_lines[0]->get_available_space_on_right();
-                $extra_leading_spaces =
-                  ( $avail > $extra_indentation_spaces_wanted )
-                  ? $extra_indentation_spaces_wanted
-                  : $avail;
-
-                # update the indentation object because with -icp the terminal
-                # ');' will use the same adjustment.
-                $object->permanently_decrease_available_spaces(
-                    -$extra_leading_spaces );
-            }
+            # update the indentation object because with -icp the terminal
+            # ');' will use the same adjustment.
+            $object->permanently_decrease_available_spaces(
+                -$extra_leading_spaces );
         }
     }
     return $extra_leading_spaces;
@@ -3763,7 +3697,10 @@ sub combine_fields {
     # between $imax_align and the side comment.  Alignments have already
     # been set so we have to adjust them.
 
-    my ($imax_align) = @_;
+    my ( $line_0, $line_1, $imax_align ) = @_;
+
+    # uses no Global symbols
+
     if ( !defined($imax_align) ) { $imax_align = -1 }
 
     # Correction: although this routine has the ability to retain some leading
@@ -3776,17 +3713,14 @@ sub combine_fields {
     #  $path =~ s:^~:$ENV{'HOME'} || (getpwuid($<))[$[+7]:e;
     $imax_align = -1;
 
-    # Uses global variables:
-    #  @group_lines
-
     # First delete the unwanted tokens
-    my $jmax_old       = $group_lines[0]->get_jmax();
-    my @old_alignments = $group_lines[0]->get_alignments();
+    my $jmax_old       = $line_0->get_jmax();
+    my @old_alignments = $line_0->get_alignments();
     my @idel           = ( $imax_align + 1 .. $jmax_old - 2 );
 
     return unless (@idel);
 
-    foreach my $line (@group_lines) {
+    foreach my $line ( $line_0, $line_1 ) {
         delete_selected_tokens( $line, \@idel );
     }
 
@@ -3798,16 +3732,21 @@ sub combine_fields {
           @old_alignments[ 0 .. $imax_align ];
     }
 
-    my $jmax_new = $group_lines[0]->get_jmax();
+    my $jmax_new = $line_0->get_jmax();
 
     $new_alignments[ $jmax_new - 1 ] = $old_alignments[ $jmax_old - 1 ];
     $new_alignments[$jmax_new] = $old_alignments[$jmax_old];
-    $group_lines[0]->set_alignments(@new_alignments);
-    $group_lines[1]->set_alignments(@new_alignments);
+    $line_0->set_alignments(@new_alignments);
+    $line_1->set_alignments(@new_alignments);
     return;
 }
 
 sub get_output_line_number {
+
+## uses Global symbols {
+##  '$file_writer_object'
+##  '@group_lines'
+## }
 
     # the output line number reported to a caller is the number of items
     # written plus the number of items in the buffer
@@ -3824,6 +3763,26 @@ sub valign_output_step_B {
     # In particular this routine handles stacking of opening
     # and closing tokens.
     ###############################################################
+
+## uses Global symbols {
+##  '$cached_line_flag'
+##  '$cached_line_leading_space_count'
+##  '$cached_line_text'
+##  '$cached_line_text_length'
+##  '$cached_line_type'
+##  '$cached_line_valid'
+##  '$cached_seqno'
+##  '$cached_seqno_string'
+##  '$extra_indent_ok'
+##  '$file_writer_object'
+##  '$first_outdented_line_at'
+##  '$last_level_written'
+##  '$last_nonblank_seqno_string'
+##  '$last_outdented_line_at'
+##  '$last_side_comment_length'
+##  '$outdented_line_count'
+##  '$seqno_string'
+## }
 
     my %input_hash = @_;
 
@@ -4096,6 +4055,13 @@ sub valign_output_step_C {
     ###############################################################
     my @args = @_;
 
+## uses Global symbols {
+##  '$last_nonblank_seqno_string'
+##  '$seqno_string'
+##  '$valign_buffer_filling'
+##  '@valign_buffer'
+## }
+
     # Dump any saved lines if we see a line with an unbalanced opening or
     # closing token.
     dump_valign_buffer() if ( $seqno_string && $valign_buffer_filling );
@@ -4160,6 +4126,13 @@ sub valign_output_step_D {
 
     my ( $line, $leading_space_count, $level ) = @_;
 
+## uses Global symbols {
+##  '$file_writer_object'
+##  '$rOpts_entab_leading_whitespace'
+##  '$rOpts_indent_columns'
+##  '$rOpts_tabs'
+## }
+
     # The line is currently correct if there is no tabbing (recommended!)
     # We may have to lop off some leading spaces and replace with tabs.
     if ( $leading_space_count > 0 ) {
@@ -4217,7 +4190,7 @@ sub valign_output_step_D {
                 if ( $line !~ /^\s*#/ ) {
                     VALIGN_DEBUG_FLAG_TABS
                       && warning(
-"Error entabbing in valign_output_step_D: for level=$group_level count=$leading_space_count\n"
+"Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
                       );
                 }
                 $leading_string = ( ' ' x $leading_space_count );
@@ -4245,12 +4218,22 @@ sub valign_output_step_D {
 
 {    # begin get_leading_string
 
+## uses Global symbols {
+##  '$rOpts_entab_leading_whitespace'
+##  '$rOpts_indent_columns'
+##  '$rOpts_tabs'
+## }
+
     my @leading_string_cache;
+
+    sub initialize_leading_string_cache {
+        @leading_string_cache = ();
+    }
 
     sub get_leading_string {
 
         # define the leading whitespace string for this line..
-        my $leading_whitespace_count = shift;
+        my ( $leading_whitespace_count, $grp_level ) = @_;
 
         # Handle case of zero whitespace, which includes multi-line quotes
         # (which may have a finite level; this prevents tab problems)
@@ -4284,15 +4267,15 @@ sub valign_output_step_D {
 
         # Handle option of one tab per level
         else {
-            $leading_string = ( "\t" x $group_level );
+            $leading_string = ( "\t" x $grp_level );
             my $space_count =
-              $leading_whitespace_count - $group_level * $rOpts_indent_columns;
+              $leading_whitespace_count - $grp_level * $rOpts_indent_columns;
 
             # shouldn't happen:
             if ( $space_count < 0 ) {
                 VALIGN_DEBUG_FLAG_TABS
                   && warning(
-"Error in get_leading_string: for level=$group_level count=$leading_whitespace_count\n"
+"Error in get_leading_string: for level=$grp_level count=$leading_whitespace_count\n"
                   );
 
                 # -- skip entabbing
@@ -4309,6 +4292,13 @@ sub valign_output_step_D {
 
 sub report_anything_unusual {
     my $self = shift;
+
+## uses Global symbols {
+##  '$first_outdented_line_at'
+##  '$last_outdented_line_at'
+##  '$outdented_line_count'
+## }
+
     if ( $outdented_line_count > 0 ) {
         write_logfile_entry(
             "$outdented_line_count long lines were outdented:\n");
@@ -4327,4 +4317,3 @@ sub report_anything_unusual {
     return;
 }
 1;
-

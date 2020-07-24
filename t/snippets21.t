@@ -8,6 +8,8 @@
 #5 sot.sot
 #6 prune.def
 #7 align33.def
+#8 gnu7.def
+#9 gnu7.gnu
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -26,6 +28,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'          => "",
+        'gnu'          => "-gnu",
         'lop'          => "-nlop",
         'sot'          => "-sot -sct",
         'switch_plain' => "-nola",
@@ -46,6 +49,22 @@ $tp  = $opt_t ? "t" : "f";
 $rm  = $numbstyle ? "t" : "f";
 $pa = $showurl   ? "t" : "f";
 $nh = $seq_number ? "t" : "f";
+----------
+
+        'gnu7' => <<'----------',
+# hanging side comments
+if ( $seen == 1 ) {    # We're the first word so far to have
+    # this abbreviation.
+    $hashref->{$abbrev} = $word;
+}
+elsif ( $seen == 2 ) {    # We're the second word to have this
+    # abbreviation, so we can't use it.
+    delete $hashref->{$abbrev};
+}
+else {                    # We're the third word to have this
+    # abbreviation, so skip to the next word.
+    next WORD;
+}
 ----------
 
         'lop' => <<'----------',
@@ -387,6 +406,49 @@ $rm  = $numbstyle  ? "t" : "f";
 $pa  = $showurl    ? "t" : "f";
 $nh  = $seq_number ? "t" : "f";
 #7...........
+        },
+
+        'gnu7.def' => {
+            source => "gnu7",
+            params => "def",
+            expect => <<'#8...........',
+# hanging side comments
+if ( $seen == 1 ) {    # We're the first word so far to have
+                       # this abbreviation.
+    $hashref->{$abbrev} = $word;
+}
+elsif ( $seen == 2 ) {    # We're the second word to have this
+                          # abbreviation, so we can't use it.
+    delete $hashref->{$abbrev};
+}
+else {                    # We're the third word to have this
+                          # abbreviation, so skip to the next word.
+    next WORD;
+}
+#8...........
+        },
+
+        'gnu7.gnu' => {
+            source => "gnu7",
+            params => "gnu",
+            expect => <<'#9...........',
+# hanging side comments
+if ($seen == 1)
+{    # We're the first word so far to have
+     # this abbreviation.
+    $hashref->{$abbrev} = $word;
+}
+elsif ($seen == 2)
+{    # We're the second word to have this
+     # abbreviation, so we can't use it.
+    delete $hashref->{$abbrev};
+}
+else
+{    # We're the third word to have this
+     # abbreviation, so skip to the next word.
+    next WORD;
+}
+#9...........
         },
     };
 
