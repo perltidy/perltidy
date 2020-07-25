@@ -1836,7 +1836,7 @@ sub sweep_left_to_right {
                 my $tok   = $rtokens->[$i];
                 my $tok_m = $rtokens_m->[$i];
                 last if ( $tok ne $tok_m );
-                push @icommon, [ $i, $ng ];
+                push @icommon, [ $i, $ng, $tok ];
             }
         }
     }
@@ -1851,22 +1851,24 @@ sub sweep_left_to_right {
     @icommon = sort { $a->[0] <=> $b->[0] || $a->[1] <=> $b->[1] } @icommon;
 
     # Make a task list of the form
-    #   [$i, ng_beg, $ng_end], ..
+    #   [$i, ng_beg, $ng_end, $tok], ..
     # where
     #   $i is the index of the token to be aligned
     #   $ng_beg..$ng_end is the group range for this action
     my @todo;
-    my ( $i, $ng_end );
+    my ( $i, $ng_end, $tok );
     foreach my $item (@icommon) {
         my $ng_last = $ng_end;
         my $i_last  = $i;
-        ( $i, $ng_end ) = @{$item};
+        ( $i, $ng_end, $tok ) = @{$item};
         my $ng_beg = $ng_end - 1;
         if ( defined($ng_last) && $ng_beg == $ng_last && $i == $i_last ) {
             my $var = pop(@todo);
             $ng_beg = $var->[1];
         }
-        push @todo, [ $i, $ng_beg, $ng_end ];
+        my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
+        push @todo, [ $i, $ng_beg, $ng_end, $tok, $lev ];
     }
 
     ###############################
@@ -1881,13 +1883,19 @@ sub do_left_to_right_sweep {
 
     # uses no Global symbols
 
+    # arrays to keep track of failed matches so that we can stop trying
+    # after a failure.
+    my @blocking_token;  # [$ng] token at a match failure
+    my @blocking_level;  # [$ng] level at a match failure
+
     my $move_to_common_column = sub {
 
         # Move the alignment column of token $itok to $col_want for a sequence
         # of groups.
-        my ( $ngb, $nge, $itok, $col_want ) = @_;
+        my ( $ngb, $nge, $itok, $tok, $col_want ) = @_;
         return unless ( defined($ngb) && $nge > $ngb );
         foreach my $ng ( $ngb .. $nge ) {
+
             my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
             my $line  = $rlines->[$jbeg];
             my $col   = $line->get_column($itok);
@@ -1899,18 +1907,14 @@ sub do_left_to_right_sweep {
                     && $move > $rmax_move->{$ng} );
                 $line->increase_field_width( $itok, $move );
             }
-
-            # Note that we continue on even if the move would have been
-            # negative.  We could also throw a switch to stop at this point,
-            # but if we keep going we may get some additional alignments.
-            # So there may be jumps in aligned/non-aligned tokens when
-            # we are running out of space, but it does not seem to look
-            # any worse than stopping altogether.
+            elsif ($move < 0) {
+                # spot to take special action on failure to move
+            }
         }
     };
 
     foreach my $task ( @{$rtodo} ) {
-        my ( $itok, $ng_beg, $ng_end ) = @{$task};
+        my ( $itok, $ng_beg, $ng_end, $tok, $lev ) = @{$task};
 
         # Nothing to do for a single group
         next unless ( $ng_end > $ng_beg );
@@ -1949,7 +1953,27 @@ sub do_left_to_right_sweep {
                 next;
             }
 
-            # RULE: prevent a 'tail-wag-dog' syndrom:
+	    # RULE: Throw a blocking flag upon encountering a token level
+	    # different from the level of the first blocking token.  For
+	    # example, in the following example, the = matches get blocked
+	    # between two groups.  So we want to start blocking matches at the
+	    # commas, which are at deeper level, so that we do not get the big
+	    # gaps shown here:
+
+            #  my $unknown3 = pack( "v",          -2 );
+            #  my $unknown4 = pack( "v",          0x09 );
+            #  my $unknown5 = pack( "VVV",        0x06, 0x00, 0x00 );
+            #  my $num_bbd_blocks  = pack( "V",   $num_lists );
+            #  my $root_startblock = pack( "V",   $root_start );
+            #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
+
+	    # On the other hand, it is okay to keep matching at the same level
+	    # such as in a simple list of commas and/or fat arrors.
+
+            my $is_blocked =
+              defined( $blocking_level[$ng] ) && $lev > $blocking_level[$ng];
+
+            # RULE: prevent a 'tail-wag-dog' syndrom, meaning:
             # Do not let one or two lines with a different number of alignments
             # open up a big gap in a large block.  For example, we will prevent
             # something like this, where the first line prys open the rest:
@@ -1977,9 +2001,21 @@ sub do_left_to_right_sweep {
             }
 
             # quit and restart if it cannot join this batch
-            if ( $col_want > $col_max || $col > $col_limit || $is_big_gap ) {
-                $move_to_common_column->( $ng_first, $ng - 1, $itok,
-                    $col_want );
+            if (   $col_want > $col_max
+                || $col > $col_limit
+                || $is_big_gap
+                || $is_blocked )
+            {
+
+                # remember the level of the first blocking token
+                if ( !defined( $blocking_level[$ng] ) ) {
+                    $blocking_token[$ng] = $tok;
+                    $blocking_level[$ng] = $lev;
+                }
+
+                $move_to_common_column->(
+                    $ng_first, $ng - 1, $itok, $tok, $col_want
+                );
                 $ng_first        = $ng;
                 $col_want        = $col;
                 $col_limit       = $col_max;
@@ -1998,7 +2034,9 @@ sub do_left_to_right_sweep {
         } ## end loop over groups
 
         if ( $ng_end > $ng_first ) {
-            $move_to_common_column->( $ng_first, $ng_end, $itok, $col_want );
+            $move_to_common_column->(
+                $ng_first, $ng_end, $itok, $tok, $col_want
+            );
         } ## end loop over groups for one task
     } ## end loop over tasks
 
@@ -3324,237 +3362,6 @@ sub get_extra_leading_spaces_multiple_groups {
     # ');' will use the same adjustment.
     $object->permanently_decrease_available_spaces( -$extra_leading_spaces );
     return $extra_leading_spaces;
-}
-
-sub OLD_adjust_side_comment_multiple_groups {
-
-    my ( $rlines, $rgroups ) = @_;
-
-    # Try to align the side comments
-
-## uses Global symbols {
-##  '$group_level'                    -- the common level of all these lines
-##  '$last_level_written'             -- level of previous set of lines
-##  '$last_comment_column'            -- comment col of previous lines
-##  '$last_side_comment_length'       -- its length
-##  '$rOpts_minimum_space_to_comment'
-## }
-
-    # Look for any nonblank side comments
-    my $j_sc_beg;
-    my @is_group_with_side_comment;
-    my $is_hanging_side_comment_beg;
-    my @todo;
-    my $ng = -1;
-    foreach my $item ( @{$rgroups} ) {
-        $ng++;
-        my ( $jbeg, $jend ) = @{$item};
-        foreach my $j ( $jbeg .. $jend ) {
-            my $line = $rlines->[$j];
-            my $jmax = $line->get_jmax();
-            if ( $line->get_rfield_lengths()->[$jmax] ) {
-
-                # this group has a line with a side comment
-                push @todo, $ng;
-                if ( !defined($j_sc_beg) ) {
-                    $j_sc_beg = $j;
-                    $is_hanging_side_comment_beg =
-                      $line->get_is_hanging_side_comment();
-                }
-                last;
-            }
-        }
-    }
-
-    # done if nothing to do
-    return unless @todo;
-
-    # If there are multiple groups we will do two passes
-    # so that we can find a common alignment for all groups.
-    my $MAX_PASS = @todo > 1 ? 2 : 1;
-
-    # Loop over passes
-    my $max_comment_column = $last_comment_column;
-    for ( my $PASS = 1 ; $PASS <= $MAX_PASS ; $PASS++ ) {
-
-        # If there are two passes, then on the last pass make the old column
-        # equal to the largest of the group.  This will result in the comments
-        # being aligned if possible.
-        if ( $PASS == $MAX_PASS ) {
-            $last_comment_column = $max_comment_column;
-        }
-
-        # Loop over the groups with side comments
-        my $column_limit;
-        foreach my $ng (@todo) {
-            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
-
-            # Note that since all lines in a group have common alignments, we
-            # just have to work on one of the lines (the first line).
-            my $line = $rlines->[$jbeg];
-            my $jmax = $line->get_jmax();
-            last
-              if ( $PASS < $MAX_PASS && $line->{_is_hanging_side_comment} );
-
-            # the maximum space without exceeding the line length:
-            my $avail = $line->get_available_space_on_right();
-
-            # try to use the previous comment column
-            my $side_comment_column = $line->get_column( $jmax - 1 );
-            my $move = $last_comment_column - $side_comment_column;
-
-            # Remember the maximum possible column of the first line with
-            # side comment
-            if ( !defined($column_limit) ) {
-                $column_limit = $side_comment_column + $avail;
-            }
-
-            next if ( $jmax <= 0 );
-
-            # but if this doesn't work, give up and use the minimum space
-            if ( $move > $avail ) {
-                $move = $rOpts_minimum_space_to_comment - 1;
-            }
-
-            # but we want some minimum space to the comment
-            my $min_move = $rOpts_minimum_space_to_comment - 1;
-            if (   $move >= 0
-                && $last_side_comment_length > 0
-                && ( $j_sc_beg == 0 )
-                && $group_level == $last_level_written )
-            {
-                $min_move = 0;
-            }
-
-            # if this group starts with a hanging side comment
-            # then allow it to line up
-            if ($is_hanging_side_comment_beg) {
-                $min_move = 0;
-            }
-
-            if ( $move < $min_move ) {
-                $move = $min_move;
-            }
-
-            # don't exceed the available space
-            if ( $move > $avail ) { $move = $avail }
-
-            # We can only increase space, never decrease.
-            if ( $move < 0 ) { $move = 0 }
-
-            # Discover the largest column on the preliminary  pass
-            if ( $PASS < $MAX_PASS ) {
-                my $col = $line->get_column( $jmax - 1 ) + $move;
-
-                # but ignore columns too large for the starting line
-                if ( $col > $max_comment_column && $col < $column_limit ) {
-                    $max_comment_column = $col;
-                }
-            }
-
-            # Make the changes on the final pass
-            else {
-                $line->increase_field_width( $jmax - 1, $move );
-
-                # remember this column for the next group
-                $last_comment_column = $line->get_column( $jmax - 1 );
-            }
-        } ## end loop over groups
-    } ## end loop over passes
-    return;
-}
-
-sub OLD_adjust_side_comment_single_group {
-
-    my $do_not_align = shift;
-
-## uses Global symbols {
-##  '$group_level'
-##  '$last_comment_column'
-##  '$last_level_written'
-##  '$last_side_comment_length'
-##  '$rOpts_minimum_space_to_comment'
-##  '@group_lines'
-## }
-
-    # let's see if we can move the side comment field out a little
-    # to improve readability (the last field is always a side comment field)
-    my $have_side_comment       = 0;
-    my $first_side_comment_line = -1;
-    my $maximum_field_index     = $group_lines[0]->get_jmax();
-    my $i                       = 0;
-    foreach my $line (@group_lines) {
-        if ( $line->get_rfield_lengths()->[$maximum_field_index] ) {
-            $have_side_comment       = 1;
-            $first_side_comment_line = $i;
-            last;
-        }
-        $i++;
-    }
-
-    my $kmax = $maximum_field_index + 1;
-
-    if ($have_side_comment) {
-
-        my $line = $group_lines[0];
-
-        # the maximum space without exceeding the line length:
-        my $avail = $line->get_available_space_on_right();
-
-        # try to use the previous comment column
-        my $side_comment_column = $line->get_column( $kmax - 2 );
-        my $move                = $last_comment_column - $side_comment_column;
-
-        if ( $kmax > 0 && !$do_not_align ) {
-
-            # but if this doesn't work, give up and use the minimum space
-            if ( $move > $avail ) {
-                $move = $rOpts_minimum_space_to_comment - 1;
-            }
-
-            # but we want some minimum space to the comment
-            my $min_move = $rOpts_minimum_space_to_comment - 1;
-            if (   $move >= 0
-                && $last_side_comment_length > 0
-                && ( $first_side_comment_line == 0 )
-                && $group_level == $last_level_written )
-            {
-                $min_move = 0;
-            }
-
-            if ( $move < $min_move ) {
-                $move = $min_move;
-            }
-
-            # previously, an upper bound was placed on $move here,
-            # (maximum_space_to_comment), but it was not helpful
-
-            # don't exceed the available space
-            if ( $move > $avail ) { $move = $avail }
-
-            # we can only increase space, never decrease
-            if ( $move > 0 ) {
-                $line->increase_field_width( $maximum_field_index - 1, $move );
-            }
-
-            # remember this column for the next group
-            $last_comment_column = $line->get_column( $kmax - 2 );
-        }
-        else {
-
-            # try to at least line up the existing side comment location
-            if ( $kmax > 0 && $move > 0 && $move < $avail ) {
-                $line->increase_field_width( $maximum_field_index - 1, $move );
-                $do_not_align = 0;
-            }
-
-            # reset side comment column if we can't align
-            else {
-                forget_side_comment();
-            }
-        }
-    }
-    return $do_not_align;
 }
 
 sub adjust_side_comment_multiple_groups {
