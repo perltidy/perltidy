@@ -11,25 +11,14 @@ our $VERSION = '20200619.02';
 
 {
 
-    #use Carp;
-
     #    _column          # the current column number
     #    _starting_column # column number when created
-    #    _matching_token  # what token we are matching
-    #    _starting_line   # the line index of creation
-    #    _ending_line
-    # the most recent line to use it
-    #    _saved_column
-    #    _serial_number   # unique number for this alignment
+    #    _saved_column    # a place for temporary storage
 
     my %default_data = (
         column          => undef,
         starting_column => undef,
-        matching_token  => undef,
-        starting_line   => undef,
-        ending_line     => undef,
         saved_column    => undef,
-        serial_number   => undef,
     );
 
     # class population count
@@ -45,14 +34,16 @@ our $VERSION = '20200619.02';
         my ( $caller, %arg ) = @_;
         my $caller_is_obj = ref($caller);
         my $class         = $caller_is_obj || $caller;
-        ##no strict "refs";
         my $self = bless {}, $class;
 
         foreach my $key ( keys %default_data ) {
             my $_key = '_' . $key;
             if    ( exists $arg{$key} ) { $self->{$_key} = $arg{$key} }
             elsif ($caller_is_obj)      { $self->{$_key} = $caller->{$_key} }
-            else { $self->{$_key} = $default_data{$_key} }
+            else  { $self->{$_key} = $default_data{$_key} }
+        }
+        if ( !defined( $self->{_starting_column} ) ) {
+            $self->{_starting_column} = $self->{_column};
         }
         $self->_increment_count();
         return $self;
@@ -70,34 +61,12 @@ our $VERSION = '20200619.02';
         my $self = shift;
         return $self->{_starting_column};
     }
-    sub get_matching_token { my $self = shift; return $self->{_matching_token} }
-    sub get_starting_line  { my $self = shift; return $self->{_starting_line} }
-    sub get_ending_line    { my $self = shift; return $self->{_ending_line} }
-    sub get_serial_number  { my $self = shift; return $self->{_serial_number} }
 
     sub set_column { my ( $self, $val ) = @_; $self->{_column} = $val; return }
 
     sub set_starting_column {
         my ( $self, $val ) = @_;
         $self->{_starting_column} = $val;
-        return;
-    }
-
-    sub set_matching_token {
-        my ( $self, $val ) = @_;
-        $self->{_matching_token} = $val;
-        return;
-    }
-
-    sub set_starting_line {
-        my ( $self, $val ) = @_;
-        $self->{_starting_line} = $val;
-        return;
-    }
-
-    sub set_ending_line {
-        my ( $self, $val ) = @_;
-        $self->{_ending_line} = $val;
         return;
     }
 
