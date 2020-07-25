@@ -34,9 +34,9 @@ environment:
     - Perl_VERSION: "5.16"
     - Perl_VERSION: "5.14"
 #    - Perl_VERSION: "5.12"  ## Strawberry Perl config error started 18 July 2020
-    - Perl_VERSION: "5.10"
-    - Perl_VERSION: "5.8.9"
-    - Perl_VERSION: "5.8.8"
+#    - Perl_VERSION: "5.10"
+#    - Perl_VERSION: "5.8.9"
+#    - Perl_VERSION: "5.8.8"
     - Perl_VERSION: "latest"
       CI_HELPER_BRANCH: "canary"
       TEST_SIGNATURE: 1
