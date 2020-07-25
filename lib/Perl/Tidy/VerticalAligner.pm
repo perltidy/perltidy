@@ -1272,6 +1272,7 @@ sub copy_old_alignments {
     my ( $new_line, $old_line ) = @_;
     my @new_alignments = $old_line->get_alignments();
     $new_line->set_alignments(@new_alignments);
+    return;
 }
 
 sub dump_array {
@@ -1455,7 +1456,7 @@ sub my_flush {
     elsif ( @group_lines == 1 ) {
         my $line = $group_lines[0];
         install_new_alignments($line);
-        adjust_side_comment_single_group();
+        adjust_side_comment_single_group($line);
         my $extra_leading_spaces =
           $extra_indent_ok ? get_extra_leading_spaces_single_line($line) : 0;
         my $group_leader_length = $line->get_leading_space_count();
@@ -1478,7 +1479,8 @@ sub my_flush {
         my @all_lines = @group_lines;
 
         # STEP 1: Remove most unmatched tokens. They block good alignments.
-        my $max_lev_diff = delete_unmatched_tokens( \@all_lines, $group_level );
+        my ( $max_lev_diff, $saw_side_comment ) =
+          delete_unmatched_tokens( \@all_lines, $group_level );
 
         # STEP 2: Construct a tree of matched lines and delete some small deeper
         # levels of tokens.  They also block good alignments.
@@ -1495,7 +1497,8 @@ sub my_flush {
         sweep_left_to_right( \@all_lines, $rgroups );
 
         # STEP 5: Move side comments to a common column if possible.
-        adjust_side_comment_multiple_groups( \@all_lines, $rgroups );
+        adjust_side_comment_multiple_groups( \@all_lines, $rgroups )
+          if ($saw_side_comment);
 
         # STEP 6: For the -lp option, increase the indentation of lists
         # to the desired amount, but do not exceed the line length limit.
@@ -1537,6 +1540,7 @@ sub my_flush {
 
     sub initialize_for_new_rgroup {
         $group_line_count = 0;
+        return;
     }
 
     sub add_to_rgroup {
@@ -2235,25 +2239,28 @@ sub delete_unmatched_tokens {
     # many obviously un-needed alignment tokens as possible.  This will prevent
     # them from interfering with the final alignment.
 
-    return unless @{$rlines} > 1;
+    return unless @{$rlines} > 1;  # shouldn't happen
 
     my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
     # ignore hanging side comments in these operations
     my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
     my $rnew_lines = \@filtered;
+
+    my $saw_side_comment = @filtered != @{$rlines};
+    my $max_lev_diff = 0;
+
+    # nothing to do if all lines were hanging side comments
+    my $jmax = @{$rnew_lines} - 1;
+    return ( $max_lev_diff, $saw_side_comment ) unless ( $jmax >= 0 );
+
     my @equals_info;
     my @line_info;
-
-    my $jmax = @{$rnew_lines} - 1;
-    return unless $jmax >= 0;
-
     my %is_good_tok;
 
     # create a hash of tokens for each line
     my $rline_hashes = [];
     my $saw_list_type;
-    my $max_lev_diff = 0;
     foreach my $line ( @{$rnew_lines} ) {
         my $rhash     = {};
         my $rtokens   = $line->get_rtokens();
@@ -2271,6 +2278,12 @@ sub delete_unmatched_tokens {
                 else {
                     if ( $lev < $lev_min ) { $lev_min = $lev }
                     if ( $lev > $lev_max ) { $lev_max = $lev }
+                }
+            }
+            else {
+                if ( !$saw_side_comment ) {
+                    my $length = $line->get_rfield_lengths()->[ $i + 1 ];
+                    $saw_side_comment ||= $length;
                 }
             }
 
@@ -2475,7 +2488,7 @@ sub delete_unmatched_tokens {
 
     }    # End loop over subgroups
 
-    return $max_lev_diff;
+    return ($max_lev_diff, $saw_side_comment);
 }
 
 sub get_line_token_info {
@@ -3313,7 +3326,7 @@ sub get_extra_leading_spaces_multiple_groups {
     return $extra_leading_spaces;
 }
 
-sub adjust_side_comment_multiple_groups {
+sub OLD_adjust_side_comment_multiple_groups {
 
     my ( $rlines, $rgroups ) = @_;
 
@@ -3451,7 +3464,7 @@ sub adjust_side_comment_multiple_groups {
     return;
 }
 
-sub adjust_side_comment_single_group {
+sub OLD_adjust_side_comment_single_group {
 
     my $do_not_align = shift;
 
@@ -3543,6 +3556,209 @@ sub adjust_side_comment_single_group {
     }
     return $do_not_align;
 }
+
+sub adjust_side_comment_multiple_groups {
+
+    my ( $rlines, $rgroups ) = @_;
+
+    # Try to align the side comments
+
+## uses Global symbols {
+##  '$group_level'                    -- the common level of all these lines
+##  '$last_level_written'             -- level of previous set of lines
+##  '$last_comment_column'            -- comment col of previous lines
+##  '$last_side_comment_length'       -- its length
+##  '$rOpts_minimum_space_to_comment'
+## }
+
+    # Look for any nonblank side comments
+    my $j_sc_beg;
+    my @is_group_with_side_comment;
+    my @todo;
+    my $ng = -1;
+    foreach my $item ( @{$rgroups} ) {
+        $ng++;
+        my ( $jbeg, $jend ) = @{$item};
+        foreach my $j ( $jbeg .. $jend ) {
+            my $line = $rlines->[$j];
+            my $jmax = $line->get_jmax();
+            if ( $line->get_rfield_lengths()->[$jmax] ) {
+
+                # this group has a line with a side comment
+                push @todo, $ng;
+                if ( !defined($j_sc_beg) ) {
+                    $j_sc_beg = $j;
+                }
+                last;
+            }
+        }
+    }
+
+    # done if nothing to do
+    return unless @todo;
+
+    # If there are multiple groups we will do two passes
+    # so that we can find a common alignment for all groups.
+    my $MAX_PASS = @todo > 1 ? 2 : 1;
+
+    # Loop over passes
+    my $max_comment_column = $last_comment_column;
+    for ( my $PASS = 1 ; $PASS <= $MAX_PASS ; $PASS++ ) {
+
+        # If there are two passes, then on the last pass make the old column
+        # equal to the largest of the group.  This will result in the comments
+        # being aligned if possible.
+        if ( $PASS == $MAX_PASS ) {
+            $last_comment_column = $max_comment_column;
+        }
+
+        # Loop over the groups with side comments
+        my $column_limit;
+        foreach my $ng (@todo) {
+            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
+
+            # Note that since all lines in a group have common alignments, we
+            # just have to work on one of the lines (the first line).
+            my $line                    = $rlines->[$jbeg];
+            my $jmax                    = $line->get_jmax();
+            my $is_hanging_side_comment = $line->get_is_hanging_side_comment();
+            last
+              if ( $PASS < $MAX_PASS && $is_hanging_side_comment );
+
+            # the maximum space without exceeding the line length:
+            my $avail = $line->get_available_space_on_right();
+
+            # try to use the previous comment column
+            my $side_comment_column = $line->get_column( $jmax - 1 );
+            my $move = $last_comment_column - $side_comment_column;
+
+            # Remember the maximum possible column of the first line with
+            # side comment
+            if ( !defined($column_limit) ) {
+                $column_limit = $side_comment_column + $avail;
+            }
+
+            next if ( $jmax <= 0 );
+
+            # but if this doesn't work, give up and use the minimum space
+            if ( $move > $avail ) {
+                $move = $rOpts_minimum_space_to_comment - 1;
+            }
+
+            # but we want some minimum space to the comment
+            my $min_move = $rOpts_minimum_space_to_comment - 1;
+            if (   $move >= 0
+                && $last_side_comment_length > 0
+                && ( $j_sc_beg == 0 )
+                && $group_level == $last_level_written )
+            {
+                $min_move = 0;
+            }
+
+            # remove constraints on hanging side comments
+            if ($is_hanging_side_comment) { $min_move = 0 }
+
+            if ( $move < $min_move ) {
+                $move = $min_move;
+            }
+
+            # don't exceed the available space
+            if ( $move > $avail ) { $move = $avail }
+
+            # We can only increase space, never decrease.
+            if ( $move < 0 ) { $move = 0 }
+
+            # Discover the largest column on the preliminary  pass
+            if ( $PASS < $MAX_PASS ) {
+                my $col = $line->get_column( $jmax - 1 ) + $move;
+
+                # but ignore columns too large for the starting line
+                if ( $col > $max_comment_column && $col < $column_limit ) {
+                    $max_comment_column = $col;
+                }
+            }
+
+            # Make the changes on the final pass
+            else {
+                $line->increase_field_width( $jmax - 1, $move );
+
+                # remember this column for the next group
+                $last_comment_column = $line->get_column( $jmax - 1 );
+            }
+        } ## end loop over groups
+    } ## end loop over passes
+    return;
+}
+
+sub adjust_side_comment_single_group {
+
+    my ($line) = @_;
+
+## uses Global symbols {
+##  '$group_level'
+##  '$last_comment_column'
+##  '$last_level_written'
+##  '$last_side_comment_length'
+##  '$rOpts_minimum_space_to_comment'
+## }
+
+    # let's see if we can move the side comment field out a little
+    # to improve readability (the last field is always a side comment field)
+
+    my $jmax   = $line->get_jmax();
+    my $length = $line->get_rfield_lengths()->[$jmax];
+    return unless ($length);
+
+    # the maximum space without exceeding the line length:
+    my $avail = $line->get_available_space_on_right();
+
+    # try to use the previous comment column
+    my $is_hanging_side_comment = $line->get_is_hanging_side_comment();
+    my $side_comment_column     = $line->get_column( $jmax - 1 );
+    my $move                    = $last_comment_column - $side_comment_column;
+
+    # but if this doesn't work, give up and use the minimum space
+    if ( $move > $avail ) {
+        $move = $rOpts_minimum_space_to_comment - 1;
+    }
+
+    # but we want some minimum space to the comment
+    my $min_move = $rOpts_minimum_space_to_comment - 1;
+    if (   $move >= 0
+        && $last_side_comment_length > 0
+        && $group_level == $last_level_written )
+    {
+        $min_move = 0;
+    }
+
+    # remove constraints on a hanging side comment
+    if ($is_hanging_side_comment) {
+        $min_move = 0;
+    }
+
+    if ( $move < $min_move ) {
+        $move = $min_move;
+    }
+
+    # don't exceed the available space
+    if ( $move > $avail ) { $move = $avail }
+
+    # we can only increase space, never decrease
+    if ( $move > 0 ) {
+        $line->increase_field_width( $jmax - 1, $move );
+    }
+
+    # remember this column for the next group
+    if ( $avail >= 0 ) {
+        $last_comment_column = $line->get_column( $jmax - 1 );
+    }
+    else {
+        forget_side_comment();
+    }
+
+    return;
+}
+
 
 sub valign_output_step_A {
 
@@ -4228,6 +4444,7 @@ sub valign_output_step_D {
 
     sub initialize_leading_string_cache {
         @leading_string_cache = ();
+        return;
     }
 
     sub get_leading_string {
