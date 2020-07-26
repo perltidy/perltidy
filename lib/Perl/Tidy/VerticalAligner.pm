@@ -181,6 +181,7 @@ sub initialize {
 
     initialize_for_new_group();
     initialize_leading_string_cache();
+    initialize_decode();
 
     $vertical_aligner_self = { length_function => $length_function, };
     bless $vertical_aligner_self, $class;
@@ -1039,8 +1040,8 @@ sub check_match {
     # do detailed check for everything else except hanging side comments
     elsif ( !$is_hanging_side_comment ) {
 
-	# A group with hanging side comments ends with the first non hanging
-	# side comment.
+        # A group with hanging side comments ends with the first non hanging
+        # side comment.
         if ( $old_line->get_is_hanging_side_comment() ) {
             $GoToMsg = "end of hanging side comments";
             goto NO_MATCH;
@@ -1489,12 +1490,11 @@ sub my_flush {
         # STEP 3: Sweep top to bottom, forming subgroups of lines with exactly
         # matching common alignments.  The indexes of these subgroups are in the
         # return variable.
-        my $rgroups =
-          sweep_top_down( \@all_lines, $group_level );
+        my $rgroups = sweep_top_down( \@all_lines, $group_level );
 
         # STEP 4: Sweep left to right through the lines, looking for leading
         # alignment tokens shared by groups.
-        sweep_left_to_right( \@all_lines, $rgroups );
+        sweep_left_to_right( \@all_lines, $rgroups, $group_level );
 
         # STEP 5: Move side comments to a common column if possible.
         adjust_side_comment_multiple_groups( \@all_lines, $rgroups )
@@ -1584,8 +1584,10 @@ sub my_flush {
         if ( $jend - $jbeg == 1 ) {
             my $line_0 = $rall_lines->[$jbeg];
             my $line_1 = $rall_lines->[$jend];
-            if ( is_marginal_match( $line_0, $line_1, $grp_level ) ) {
-                combine_fields( $line_0, $line_1, $imax_align );
+            my ( $is_marginal, $imax_align_fix ) =
+              is_marginal_match( $line_0, $line_1, $grp_level, $imax_align );
+            if ($is_marginal) {
+                combine_fields( $line_0, $line_1, $imax_align_fix );
             }
         }
 
@@ -1593,8 +1595,16 @@ sub my_flush {
         return;
     }
 
+    sub block_penultimate_match {
+
+        # emergency reset to prevent sweep_left_to_right from trying to match a
+        # failed terminal else match
+        return unless @{$rgroups} > 1;
+        $rgroups->[-2]->[2] = -1;
+    }
+
     sub sweep_top_down {
-        my ( $rlines, $group_common_level) = @_; 
+        my ( $rlines, $group_common_level ) = @_;
 
         # uses no Global symbols
 
@@ -1703,6 +1713,9 @@ EOM
                         $base_line->increase_field_width( $j_terminal_match,
                             $pad );
                     }
+
+                    # do not let sub sweep_left_to_right change this
+                    block_penultimate_match();
                 }
                 end_rgroup(-1);
             }
@@ -1720,7 +1733,7 @@ EOM
 
 sub sweep_left_to_right {
 
-    my ( $rlines, $rgroups ) = @_;
+    my ( $rlines, $rgroups, $grp_level ) = @_;
 
     # uses no Global symbols
 
@@ -1866,33 +1879,32 @@ sub sweep_left_to_right {
             my $var = pop(@todo);
             $ng_beg = $var->[1];
         }
-        my ( $raw_tok, $lev, $tag, $tok_count ) =
-              decode_alignment_token($tok);
-        push @todo, [ $i, $ng_beg, $ng_end, $tok, $lev ];
+        my ( $raw_tok, $lev, $tag, $tok_count ) = decode_alignment_token($tok);
+        push @todo, [ $i, $ng_beg, $ng_end, $raw_tok, $lev ];
     }
 
     ###############################
     # Step 3: Execute the task list
     ###############################
-    do_left_to_right_sweep( $rlines, $rgroups, \@todo, \%max_move, $short_pad );
+    do_left_to_right_sweep( $rlines, $rgroups, \@todo, \%max_move, $short_pad,
+        $grp_level );
     return;
 }
 
 sub do_left_to_right_sweep {
-    my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad ) = @_;
+    my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $grp_level ) = @_;
 
     # uses no Global symbols
 
-    # arrays to keep track of failed matches so that we can stop trying
-    # after a failure.
-    my @blocking_token;  # [$ng] token at a match failure
-    my @blocking_level;  # [$ng] level at a match failure
+    # $blocking_level[$nj is the level at a match failure between groups $ng-1
+    # and $ng
+    my @blocking_level; 
 
     my $move_to_common_column = sub {
 
         # Move the alignment column of token $itok to $col_want for a sequence
         # of groups.
-        my ( $ngb, $nge, $itok, $tok, $col_want ) = @_;
+        my ( $ngb, $nge, $itok, $col_want ) = @_;
         return unless ( defined($ngb) && $nge > $ngb );
         foreach my $ng ( $ngb .. $nge ) {
 
@@ -1907,14 +1919,15 @@ sub do_left_to_right_sweep {
                     && $move > $rmax_move->{$ng} );
                 $line->increase_field_width( $itok, $move );
             }
-            elsif ($move < 0) {
+            elsif ( $move < 0 ) {
+
                 # spot to take special action on failure to move
             }
         }
     };
 
     foreach my $task ( @{$rtodo} ) {
-        my ( $itok, $ng_beg, $ng_end, $tok, $lev ) = @{$task};
+        my ( $itok, $ng_beg, $ng_end, $raw_tok, $lev ) = @{$task};
 
         # Nothing to do for a single group
         next unless ( $ng_end > $ng_beg );
@@ -1924,17 +1937,22 @@ sub do_left_to_right_sweep {
         my $col_limit;    # maximum column before bumping into max line length
         my $line_count_ng_m = 0;
         my $jmax_m;
-        my $istop_m;
+        my $it_stop_m;
 
         # Loop over the groups
+        # 'ix_' = index in the array of lines
+        # 'ng_' = index in the array of groups
+        # 'it_' = index in the array of tokens
+        my $ix_min = $rgroups->[$ng_beg]->[0];
+        my $ix_max = $rgroups->[$ng_end]->[1];
         foreach my $ng ( $ng_beg .. $ng_end ) {
-            my ( $jbeg, $jend, $istop ) = @{ $rgroups->[$ng] };
-            my $line_count_ng = $jend - $jbeg + 1;
+            my ( $ix_beg, $ix_end, $it_stop ) = @{ $rgroups->[$ng] };
+            my $line_count_ng = $ix_end - $ix_beg + 1;
 
             # Important: note that since all lines in a group have a common
             # alignments object, we just have to work on one of the lines (the
             # first line).  All of the rest will be changed automatically.
-            my $line = $rlines->[$jbeg];
+            my $line = $rlines->[$ix_beg];
             my $jmax = $line->get_jmax();
 
             # the maximum space without exceeding the line length:
@@ -1949,16 +1967,17 @@ sub do_left_to_right_sweep {
                 $col_limit       = $col_max;
                 $line_count_ng_m = $line_count_ng;
                 $jmax_m          = $jmax;
-                $istop_m         = $istop;
+                $it_stop_m       = $it_stop;
                 next;
             }
 
-	    # RULE: Throw a blocking flag upon encountering a token level
-	    # different from the level of the first blocking token.  For
-	    # example, in the following example, the = matches get blocked
-	    # between two groups.  So we want to start blocking matches at the
-	    # commas, which are at deeper level, so that we do not get the big
-	    # gaps shown here:
+            # RULE: Throw a blocking flag upon encountering a token level
+            # different from the level of the first blocking token.  For
+            # example, in the following example, if the = matches get blocked
+            # between two groups as shown, then we want to start blocking
+            # matches at the commas, which are at deeper level, so that we do
+            # not get the big
+            # gaps shown here:
 
             #  my $unknown3 = pack( "v",          -2 );
             #  my $unknown4 = pack( "v",          0x09 );
@@ -1967,8 +1986,8 @@ sub do_left_to_right_sweep {
             #  my $root_startblock = pack( "V",   $root_start );
             #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
 
-	    # On the other hand, it is okay to keep matching at the same level
-	    # such as in a simple list of commas and/or fat arrors.
+            # On the other hand, it is okay to keep matching at the same level
+            # such as in a simple list of commas and/or fat arrors.
 
             my $is_blocked =
               defined( $blocking_level[$ng] ) && $lev > $blocking_level[$ng];
@@ -1984,20 +2003,26 @@ sub do_left_to_right_sweep {
             #  $worksheet->write( "D8", "",                    $format );
             #  $worksheet->write( "D8", "",                    $format );
 
+            # Allow a larger gap group level
+            my $factor = 1;
+            if ( $lev == $grp_level && $raw_tok eq '=' || $raw_tok eq '=>' ) {
+                $factor = 2;
+            }
+
             # We should exclude from consideration two groups which are
             # effectively the same but separated because one does not
             # fit in the maximum allowed line length.
-            my $is_same_group = $jmax == $jmax_m && $istop_m == $jmax_m - 2;
+            my $is_same_group = $jmax == $jmax_m && $it_stop_m == $jmax_m - 2;
             my $is_big_gap;
             if ( !$is_same_group ) {
                 $is_big_gap ||=
                      $line_count_ng >= 4
-                  && $line_count_ng_m <= 2
-                  && $col_want > $col + $short_pad;
+                  && $ix_beg <= $ix_min + 2
+                  && $col_want > $col + $short_pad * $factor;
                 $is_big_gap ||=
                      $line_count_ng_m >= 4
-                  && $line_count_ng <= 2
-                  && $col > $col_want + $short_pad;
+                  && $ix_beg >= $ix_max - 1
+                  && $col > $col_want + $short_pad * $factor;
             }
 
             # quit and restart if it cannot join this batch
@@ -2009,19 +2034,17 @@ sub do_left_to_right_sweep {
 
                 # remember the level of the first blocking token
                 if ( !defined( $blocking_level[$ng] ) ) {
-                    $blocking_token[$ng] = $tok;
                     $blocking_level[$ng] = $lev;
                 }
 
-                $move_to_common_column->(
-                    $ng_first, $ng - 1, $itok, $tok, $col_want
-                );
+                $move_to_common_column->( $ng_first, $ng - 1, $itok,
+                    $col_want );
                 $ng_first        = $ng;
                 $col_want        = $col;
                 $col_limit       = $col_max;
                 $line_count_ng_m = $line_count_ng;
                 $jmax_m          = $jmax;
-                $istop_m         = $istop;
+                $it_stop_m       = $it_stop;
                 next;
             }
 
@@ -2034,9 +2057,7 @@ sub do_left_to_right_sweep {
         } ## end loop over groups
 
         if ( $ng_end > $ng_first ) {
-            $move_to_common_column->(
-                $ng_first, $ng_end, $itok, $tok, $col_want
-            );
+            $move_to_common_column->( $ng_first, $ng_end, $itok, $col_want );
         } ## end loop over groups for one task
     } ## end loop over tasks
 
@@ -2179,39 +2200,53 @@ EOM
     return;
 }
 
-sub decode_alignment_token {
+{
+    my %decoded_token;
 
-    # Unpack the values packed in an alignment token
-    #
-    # Usage:
-    #        my ( $raw_tok, $lev, $tag, $tok_count ) =
-    #          decode_alignment_token($token);
-
-    # Alignment tokens have a trailing decimal level and optional tag (for
-    # commas):
-    # For example, the first comma in the following line
-    #     sub banner  { crlf; report( shift, '/', shift ); crlf }
-    # is decorated as follows:
-    #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
-
-    # An optional token count may be appended with a leading dot.
-    # Currently this is only done for '=' tokens but this could change.
-    # For example, consider the following line:
-    #   $nport   = $port = shift || $name;
-    # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
-    # The second '=' will be '=0.2' [level 0, second equals]
-    my ($tok) = @_;
-
-    # uses no Global symbols
-
-    my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, "", 1 );
-    if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
-        $raw_tok   = $1;
-        $lev       = $2;
-        $tag       = $3 if ($3);
-        $tok_count = $5 if ($5);
+    sub initialize_decode {
+        %decoded_token = ();
     }
-    return ( $raw_tok, $lev, $tag, $tok_count );
+
+    sub decode_alignment_token {
+
+        # Unpack the values packed in an alignment token
+        #
+        # Usage:
+        #        my ( $raw_tok, $lev, $tag, $tok_count ) =
+        #          decode_alignment_token($token);
+
+        # Alignment tokens have a trailing decimal level and optional tag (for
+        # commas):
+        # For example, the first comma in the following line
+        #     sub banner  { crlf; report( shift, '/', shift ); crlf }
+        # is decorated as follows:
+        #    ,2+report-6  => (tok,lev,tag) =qw( ,   2   +report-6)
+
+        # An optional token count may be appended with a leading dot.
+        # Currently this is only done for '=' tokens but this could change.
+        # For example, consider the following line:
+        #   $nport   = $port = shift || $name;
+        # The first '=' may either be '=0' or '=0.1' [level 0, first equals]
+        # The second '=' will be '=0.2' [level 0, second equals]
+        my ($tok) = @_;
+
+        # uses no Global symbols
+
+        if ( defined( $decoded_token{$tok} ) ) {
+            return @{ $decoded_token{$tok} };
+        }
+
+        my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, "", 1 );
+        if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
+            $raw_tok   = $1;
+            $lev       = $2;
+            $tag       = $3 if ($3);
+            $tok_count = $5 if ($5);
+        }
+        my @vals = ( $raw_tok, $lev, $tag, $tok_count );
+        $decoded_token{$tok} = \@vals;
+        return @vals;
+    }
 }
 
 {    # closure for sub is_deletable_token
@@ -2277,7 +2312,7 @@ sub delete_unmatched_tokens {
     # many obviously un-needed alignment tokens as possible.  This will prevent
     # them from interfering with the final alignment.
 
-    return unless @{$rlines} > 1;  # shouldn't happen
+    return unless @{$rlines} > 1;    # shouldn't happen
 
     my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
@@ -2286,7 +2321,7 @@ sub delete_unmatched_tokens {
     my $rnew_lines = \@filtered;
 
     my $saw_side_comment = @filtered != @{$rlines};
-    my $max_lev_diff = 0;
+    my $max_lev_diff     = 0;
 
     # nothing to do if all lines were hanging side comments
     my $jmax = @{$rnew_lines} - 1;
@@ -2526,7 +2561,7 @@ sub delete_unmatched_tokens {
 
     }    # End loop over subgroups
 
-    return ($max_lev_diff, $saw_side_comment);
+    return ( $max_lev_diff, $saw_side_comment );
 }
 
 sub get_line_token_info {
@@ -3001,7 +3036,7 @@ sub prune_alignment_tree {
             #  $deep1               ~~ $deep1;
 
             # So we will use two thresholds.
-            my $nmin_mono     = $depth + 3;    #TODO: test with 2
+            my $nmin_mono     = $depth + 2;
             my $nmin_non_mono = $depth + 6;
             if ( $nmin_mono > $nlines_p - 1 ) {
                 $nmin_mono = $nlines_p - 1;
@@ -3101,7 +3136,7 @@ sub Dump_tree_groups {
 
     sub is_marginal_match {
 
-        my ( $line_0, $line_1, $grp_level ) = @_;
+        my ( $line_0, $line_1, $grp_level, $imax_align ) = @_;
 
         # uses no Global symbols
 
@@ -3138,6 +3173,7 @@ sub Dump_tree_groups {
         my $saw_good_alignment = 0;
         my $saw_if_or;        # if we saw an 'if' or 'or' at group level
         my $raw_tokb = "";    # first token seen at group level
+        my $jfirst_bad;
         for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
               decode_alignment_token( $rtokens_1->[$j] );
@@ -3156,13 +3192,17 @@ sub Dump_tree_groups {
             if ( $is_good_alignment{$raw_tok} ) {
                 $saw_good_alignment = 1;
             }
+            else {
+                $jfirst_bad = $j unless defined($jfirst_bad);
+            }
             if ( $rpatterns_0->[$j] ne $rpatterns_1->[$j] ) {
 
                 # Flag this as a marginal match since patterns differ.
                 # Normally, we will not allow just two lines to match if
                 # marginal. But we can allow matching in some specific cases.
 
-                $is_marginal = 1 if ( $is_marginal == 0 );
+                $jfirst_bad  = $j if ( !defined($jfirst_bad) );
+                $is_marginal = 1  if ( $is_marginal == 0 );
                 if ( $raw_tok eq '=' ) {
 
                     # Here is an example of a marginal match:
@@ -3177,6 +3217,8 @@ sub Dump_tree_groups {
                 }
             }
         }
+
+        if ( !defined($jfirst_bad) ) { $jfirst_bad = $jmax_1 - 1; }
 
         # Turn off the "marginal match" flag in some cases...
         # A "marginal match" occurs when the alignment tokens agree
@@ -3301,8 +3343,10 @@ sub Dump_tree_groups {
                 }
             }
         }
-
-        return $is_marginal;
+        if ( $is_marginal && $imax_align > $jfirst_bad - 1 ) {
+            $imax_align = $jfirst_bad - 1;
+        }
+        return ( $is_marginal, $imax_align );
     }
 }
 
@@ -3566,7 +3610,6 @@ sub adjust_side_comment_single_group {
     return;
 }
 
-
 sub valign_output_step_A {
 
     ###############################################################
@@ -3725,16 +3768,6 @@ sub combine_fields {
     # uses no Global symbols
 
     if ( !defined($imax_align) ) { $imax_align = -1 }
-
-    # Correction: although this routine has the ability to retain some leading
-    # alignments, overall the results are much better if we always remove all
-    # of the alignments.  Here is an example of the problem if we do not
-    # do this. The first two lines are marginal but match their =~ matches
-    # the third line. But if we keep it we get a big gap:
-    #  return $path unless $path =~ /^~/;
-    #  $path                     =~ s:^~([^/]+):(getpwnam($1))[$[+7]:e;
-    #  $path =~ s:^~:$ENV{'HOME'} || (getpwuid($<))[$[+7]:e;
-    $imax_align = -1;
 
     # First delete the unwanted tokens
     my $jmax_old       = $line_0->get_jmax();
