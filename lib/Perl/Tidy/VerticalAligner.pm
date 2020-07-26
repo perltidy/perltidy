@@ -1714,8 +1714,10 @@ EOM
                             $pad );
                     }
 
-                    # do not let sub sweep_left_to_right change this
-                    block_penultimate_match();
+                    # do not let sweep_left_to_right change an isolated 'else'
+                    if ( !$new_line->{_is_terminal_ternary} ) {
+                        block_penultimate_match();
+                    }
                 }
                 end_rgroup(-1);
             }
@@ -1898,7 +1900,7 @@ sub do_left_to_right_sweep {
 
     # $blocking_level[$nj is the level at a match failure between groups $ng-1
     # and $ng
-    my @blocking_level; 
+    my @blocking_level;
 
     my $move_to_common_column = sub {
 
@@ -2564,6 +2566,16 @@ sub delete_unmatched_tokens {
     return ( $max_lev_diff, $saw_side_comment );
 }
 
+sub fat_comma_to_comma {
+    my ($str) = @_;
+
+    # We are changing '=>' to ',' and removing any trailing decimal count
+    # because currently fat commas have a count and commas do not.
+    # For example, we will change '=>2+{-3.2' into ',2+{-3'
+    if ( $str =~ /^=>([^\.]*)/ ) { $str = ',' . $1 }
+    return $str;
+}
+
 sub get_line_token_info {
 
     # scan lines of tokens and return summary information about the range of
@@ -2620,10 +2632,17 @@ sub get_line_token_info {
         # making all trailing ragged comma lists match in the prune tree
         # routine.  these trailing comma lists can better be handled by later
         # alignment rules.
-        my $tok_end = $rtokens->[$imax];
+
+        # Treat fat commas the same as commas here by converting them to
+        # commas.  This will improve the chance of aligning the leading parts
+        # of ragged lists.
+
+        my $tok_end = fat_comma_to_comma( $rtokens->[$imax] );
         if ( $all_monotonic && $tok_end =~ /^,/ ) {
             my $i = $imax - 1;
-            while ( $i >= 0 && $rtokens->[$i] eq $tok_end ) {
+            while ( $i >= 0
+                && fat_comma_to_comma( $rtokens->[$i] ) eq $tok_end )
+            {
                 $imax = $i;
                 $i--;
             }
