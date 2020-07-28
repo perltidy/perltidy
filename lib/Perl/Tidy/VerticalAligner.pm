@@ -1893,111 +1893,126 @@ sub sweep_left_to_right {
     return;
 }
 
-sub do_left_to_right_sweep {
-    my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $grp_level ) = @_;
+{    # do_left_to_right_sweep
 
-    # uses no Global symbols
+    my %is_good_alignment_token;
 
-    # $blocking_level[$nj is the level at a match failure between groups $ng-1
-    # and $ng
-    my @blocking_level;
+    BEGIN {
+        my @q = qw(
+          => = ? if unless
+        );
+        push @q, ',';
+        @is_good_alignment_token{@q} = (1) x scalar(@q);
+    }
 
-    my $move_to_common_column = sub {
+    sub do_left_to_right_sweep {
+        my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $grp_level ) =
+          @_;
 
-        # Move the alignment column of token $itok to $col_want for a sequence
-        # of groups.
-        my ( $ngb, $nge, $itok, $col_want ) = @_;
-        return unless ( defined($ngb) && $nge > $ngb );
-        foreach my $ng ( $ngb .. $nge ) {
+        # uses no Global symbols
 
-            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
-            my $line  = $rlines->[$jbeg];
-            my $col   = $line->get_column($itok);
-            my $avail = $line->get_available_space_on_right();
-            my $move  = $col_want - $col;
-            if ( $move > 0 ) {
-                next
-                  if ( defined( $rmax_move->{$ng} )
-                    && $move > $rmax_move->{$ng} );
-                $line->increase_field_width( $itok, $move );
+	# $blocking_level[$nj is the level at a match failure between groups
+	# $ng-1 and $ng
+        my @blocking_level;
+
+        my $move_to_common_column = sub {
+
+	    # Move the alignment column of token $itok to $col_want for a
+	    # sequence of groups.
+            my ( $ngb, $nge, $itok, $col_want ) = @_;
+            return unless ( defined($ngb) && $nge > $ngb );
+            foreach my $ng ( $ngb .. $nge ) {
+
+                my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
+                my $line  = $rlines->[$jbeg];
+                my $col   = $line->get_column($itok);
+                my $avail = $line->get_available_space_on_right();
+                my $move  = $col_want - $col;
+                if ( $move > 0 ) {
+                    next
+                      if ( defined( $rmax_move->{$ng} )
+                        && $move > $rmax_move->{$ng} );
+                    $line->increase_field_width( $itok, $move );
+                }
+                elsif ( $move < 0 ) {
+
+                    # spot to take special action on failure to move
+                }
             }
-            elsif ( $move < 0 ) {
+        };
 
-                # spot to take special action on failure to move
-            }
-        }
-    };
+        foreach my $task ( @{$rtodo} ) {
+            my ( $itok, $ng_beg, $ng_end, $raw_tok, $lev ) = @{$task};
 
-    foreach my $task ( @{$rtodo} ) {
-        my ( $itok, $ng_beg, $ng_end, $raw_tok, $lev ) = @{$task};
+            # Nothing to do for a single group
+            next unless ( $ng_end > $ng_beg );
 
-        # Nothing to do for a single group
-        next unless ( $ng_end > $ng_beg );
+            my $ng_first;  # index of the first group of a continuous sequence
+            my $col_want;  # the common alignment column of a sequence of groups
+            my $col_limit; # maximum column before bumping into max line length
+            my $line_count_ng_m = 0;
+            my $jmax_m;
+            my $it_stop_m;
 
-        my $ng_first;     # index of the first group of a continuous sequence
-        my $col_want;     # the common alignment column of a sequence of groups
-        my $col_limit;    # maximum column before bumping into max line length
-        my $line_count_ng_m = 0;
-        my $jmax_m;
-        my $it_stop_m;
+            # Loop over the groups
+            # 'ix_' = index in the array of lines
+            # 'ng_' = index in the array of groups
+            # 'it_' = index in the array of tokens
+            my $ix_min      = $rgroups->[$ng_beg]->[0];
+            my $ix_max      = $rgroups->[$ng_end]->[1];
+            my $lines_total = $ix_max - $ix_min + 1;
+            foreach my $ng ( $ng_beg .. $ng_end ) {
+                my ( $ix_beg, $ix_end, $it_stop ) = @{ $rgroups->[$ng] };
+                my $line_count_ng = $ix_end - $ix_beg + 1;
 
-        # Loop over the groups
-        # 'ix_' = index in the array of lines
-        # 'ng_' = index in the array of groups
-        # 'it_' = index in the array of tokens
-        my $ix_min = $rgroups->[$ng_beg]->[0];
-        my $ix_max = $rgroups->[$ng_end]->[1];
-        foreach my $ng ( $ng_beg .. $ng_end ) {
-            my ( $ix_beg, $ix_end, $it_stop ) = @{ $rgroups->[$ng] };
-            my $line_count_ng = $ix_end - $ix_beg + 1;
+		# Important: note that since all lines in a group have a common
+		# alignments object, we just have to work on one of the lines
+		# (the first line).  All of the rest will be changed
+		# automatically.
+                my $line = $rlines->[$ix_beg];
+                my $jmax = $line->get_jmax();
 
-            # Important: note that since all lines in a group have a common
-            # alignments object, we just have to work on one of the lines (the
-            # first line).  All of the rest will be changed automatically.
-            my $line = $rlines->[$ix_beg];
-            my $jmax = $line->get_jmax();
+                # the maximum space without exceeding the line length:
+                my $avail   = $line->get_available_space_on_right();
+                my $col     = $line->get_column($itok);
+                my $col_max = $col + $avail;
 
-            # the maximum space without exceeding the line length:
-            my $avail   = $line->get_available_space_on_right();
-            my $col     = $line->get_column($itok);
-            my $col_max = $col + $avail;
+                # Initialize on first group
+                if ( !defined($col_want) ) {
+                    $ng_first        = $ng;
+                    $col_want        = $col;
+                    $col_limit       = $col_max;
+                    $line_count_ng_m = $line_count_ng;
+                    $jmax_m          = $jmax;
+                    $it_stop_m       = $it_stop;
+                    next;
+                }
 
-            # Initialize on first group
-            if ( !defined($col_want) ) {
-                $ng_first        = $ng;
-                $col_want        = $col;
-                $col_limit       = $col_max;
-                $line_count_ng_m = $line_count_ng;
-                $jmax_m          = $jmax;
-                $it_stop_m       = $it_stop;
-                next;
-            }
+		# RULE: Throw a blocking flag upon encountering a token level
+		# different from the level of the first blocking token.  For
+		# example, in the following example, if the = matches get
+		# blocked between two groups as shown, then we want to start
+		# blocking matches at the commas, which are at deeper level, so
+		# that we do not get the big gaps shown here:
 
-            # RULE: Throw a blocking flag upon encountering a token level
-            # different from the level of the first blocking token.  For
-            # example, in the following example, if the = matches get blocked
-            # between two groups as shown, then we want to start blocking
-            # matches at the commas, which are at deeper level, so that we do
-            # not get the big
-            # gaps shown here:
+                #  my $unknown3 = pack( "v",          -2 );
+                #  my $unknown4 = pack( "v",          0x09 );
+                #  my $unknown5 = pack( "VVV",        0x06, 0x00, 0x00 );
+                #  my $num_bbd_blocks  = pack( "V",   $num_lists );
+                #  my $root_startblock = pack( "V",   $root_start );
+                #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
 
-            #  my $unknown3 = pack( "v",          -2 );
-            #  my $unknown4 = pack( "v",          0x09 );
-            #  my $unknown5 = pack( "VVV",        0x06, 0x00, 0x00 );
-            #  my $num_bbd_blocks  = pack( "V",   $num_lists );
-            #  my $root_startblock = pack( "V",   $root_start );
-            #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
+		# On the other hand, it is okay to keep matching at the same
+		# level such as in a simple list of commas and/or fat arrors.
 
-            # On the other hand, it is okay to keep matching at the same level
-            # such as in a simple list of commas and/or fat arrors.
+                my $is_blocked =
+                  defined( $blocking_level[$ng] )
+                  && $lev > $blocking_level[$ng];
 
-            my $is_blocked =
-              defined( $blocking_level[$ng] ) && $lev > $blocking_level[$ng];
-
-            # RULE: prevent a 'tail-wag-dog' syndrom, meaning:
-            # Do not let one or two lines with a different number of alignments
-            # open up a big gap in a large block.  For example, we will prevent
-            # something like this, where the first line prys open the rest:
+		# RULE: prevent a 'tail-wag-dog' syndrom, meaning: Do not let
+		# one or two lines with a different number of alignments open
+		# up a big gap in a large block.  For example, we will prevent
+		# something like this, where the first line prys open the rest:
 
             #  $worksheet->write( "B7", "http://www.perl.com", undef, $format );
             #  $worksheet->write( "C7", "",                    $format );
@@ -2005,65 +2020,81 @@ sub do_left_to_right_sweep {
             #  $worksheet->write( "D8", "",                    $format );
             #  $worksheet->write( "D8", "",                    $format );
 
-            # Allow a larger gap group level
-            my $factor = 1;
-            if ( $lev == $grp_level && $raw_tok eq '=' || $raw_tok eq '=>' ) {
-                $factor = 2;
-            }
+                # We should exclude from consideration two groups which are
+                # effectively the same but separated because one does not
+                # fit in the maximum allowed line length.
+                my $is_same_group =
+                  $jmax == $jmax_m && $it_stop_m == $jmax_m - 2;
 
-            # We should exclude from consideration two groups which are
-            # effectively the same but separated because one does not
-            # fit in the maximum allowed line length.
-            my $is_same_group = $jmax == $jmax_m && $it_stop_m == $jmax_m - 2;
-            my $is_big_gap;
-            if ( !$is_same_group ) {
-                $is_big_gap ||=
-                     $line_count_ng >= 4
-                  && $ix_beg <= $ix_min + 2
-                  && $col_want > $col + $short_pad * $factor;
-                $is_big_gap ||=
-                     $line_count_ng_m >= 4
-                  && $ix_beg >= $ix_max - 1
-                  && $col > $col_want + $short_pad * $factor;
-            }
+                my $lines_above = $ix_beg - $ix_min;
+                my $lines_below = $lines_total - $lines_above;
 
-            # quit and restart if it cannot join this batch
-            if (   $col_want > $col_max
-                || $col > $col_limit
-                || $is_big_gap
-                || $is_blocked )
-            {
-
-                # remember the level of the first blocking token
-                if ( !defined( $blocking_level[$ng] ) ) {
-                    $blocking_level[$ng] = $lev;
+                # Increase the tolerable gap for certain favorable factors
+                my $factor = 1;
+                if ( $is_good_alignment_token{$raw_tok} ) {
+                    $factor += 1;
+                    if ( $lev == $grp_level ) {
+                        $factor += 1;
+                    }
                 }
 
-                $move_to_common_column->( $ng_first, $ng - 1, $itok,
+                my $is_big_gap;
+                if ( !$is_same_group ) {
+                    $is_big_gap ||=
+                      (      $lines_above == 1
+                          || $lines_above == 2 && $lines_below >= 4 )
+                      && $col_want > $col + $short_pad * $factor;
+                    $is_big_gap ||=
+                      (      $lines_below == 1
+                          || $lines_below == 2 && $lines_above >= 4 )
+                      && $col > $col_want + $short_pad * $factor;
+                }
+
+                # if match is limited by gap size, stop aligning at this level
+                if ($is_big_gap) {
+                    $blocking_level[$ng] = $lev - 1;
+                }
+
+                # quit and restart if it cannot join this batch
+                if (   $col_want > $col_max
+                    || $col > $col_limit
+                    || $is_big_gap
+                    || $is_blocked )
+                {
+
+                    # remember the level of the first blocking token
+                    if ( !defined( $blocking_level[$ng] ) ) {
+                        $blocking_level[$ng] = $lev;
+                    }
+
+                    $move_to_common_column->(
+                        $ng_first, $ng - 1, $itok, $col_want
+                    );
+                    $ng_first        = $ng;
+                    $col_want        = $col;
+                    $col_limit       = $col_max;
+                    $line_count_ng_m = $line_count_ng;
+                    $jmax_m          = $jmax;
+                    $it_stop_m       = $it_stop;
+                    next;
+                }
+
+                $line_count_ng_m += $line_count_ng;
+
+                # update the common column and limit
+                if ( $col > $col_want )      { $col_want  = $col }
+                if ( $col_max < $col_limit ) { $col_limit = $col_max }
+
+            } ## end loop over groups
+
+            if ( $ng_end > $ng_first ) {
+                $move_to_common_column->( $ng_first, $ng_end, $itok,
                     $col_want );
-                $ng_first        = $ng;
-                $col_want        = $col;
-                $col_limit       = $col_max;
-                $line_count_ng_m = $line_count_ng;
-                $jmax_m          = $jmax;
-                $it_stop_m       = $it_stop;
-                next;
-            }
+            } ## end loop over groups for one task
+        } ## end loop over tasks
 
-            $line_count_ng_m += $line_count_ng;
-
-            # update the common column and limit
-            if ( $col > $col_want )      { $col_want  = $col }
-            if ( $col_max < $col_limit ) { $col_limit = $col_max }
-
-        } ## end loop over groups
-
-        if ( $ng_end > $ng_first ) {
-            $move_to_common_column->( $ng_first, $ng_end, $itok, $col_want );
-        } ## end loop over groups for one task
-    } ## end loop over tasks
-
-    return;
+        return;
+    }
 }
 
 sub delete_selected_tokens {
