@@ -43,7 +43,7 @@ BEGIN {
 
 }
 
-# global symbols:
+# Global symbols:
 
 # objects, initialized on creation
 use vars qw(
@@ -94,12 +94,6 @@ use vars qw(
   $cached_seqno_string
   $seqno_string
   $last_nonblank_seqno_string
-);
-
-# Vertical alignment buffer used by valign_output_step_C
-use vars qw(
-  $valign_buffer_filling
-  @valign_buffer
 );
 
 # Memory of what has been output
@@ -179,18 +173,22 @@ sub initialize {
     $consecutive_block_comments = 0;
     forget_side_comment();
 
+    initialize_valign_buffer();
     initialize_for_new_group();
     initialize_leading_string_cache();
     initialize_decode();
 
+    # This is the length function for measuring string lengths.
+    # It is not currently used but might eventually be needed.
     $vertical_aligner_self = { length_function => $length_function, };
+
     bless $vertical_aligner_self, $class;
     return $vertical_aligner_self;
 }
 
 sub initialize_for_new_group {
     @group_lines                 = ();
-    $zero_count                  = 0;   # count consecutive lines without tokens
+    $zero_count                  = 0;    # consecutive lines without tokens
     $group_type                  = "";
     $comment_leading_space_count = 0;
     $last_leading_space_count    = 0;
@@ -263,10 +261,8 @@ sub make_alignment {
     my ($col) = @_;
 
     # make one new alignment at column $col
-    my $alignment = Perl::Tidy::VerticalAligner::Alignment->new(
-        column          => $col,
-        starting_column => $col,
-    );
+    my $alignment =
+      Perl::Tidy::VerticalAligner::Alignment->new( column => $col, );
     return $alignment;
 }
 
@@ -1311,28 +1307,6 @@ sub flush {
     return;
 }
 
-sub reduce_valign_buffer_indentation {
-
-    my ($diff) = @_;
-    if ( $valign_buffer_filling && $diff ) {
-        my $max_valign_buffer = @valign_buffer;
-        foreach my $i ( 0 .. $max_valign_buffer - 1 ) {
-            my ( $line, $leading_space_count, $level ) =
-              @{ $valign_buffer[$i] };
-            my $ws = substr( $line, 0, $diff );
-            if ( ( length($ws) == $diff ) && $ws =~ /^\s+$/ ) {
-                $line = substr( $line, $diff );
-            }
-            if ( $leading_space_count >= $diff ) {
-                $leading_space_count -= $diff;
-                $level = level_change( $leading_space_count, $diff, $level );
-            }
-            $valign_buffer[$i] = [ $line, $leading_space_count, $level ];
-        }
-    }
-    return;
-}
-
 sub level_change {
 
     # compute decrease in level when we remove $diff spaces from the
@@ -1351,17 +1325,6 @@ sub level_change {
         if ( $level < 0 ) { $level = 0 }
     }
     return $level;
-}
-
-sub dump_valign_buffer {
-    if (@valign_buffer) {
-        foreach (@valign_buffer) {
-            valign_output_step_D( @{$_} );
-        }
-        @valign_buffer = ();
-    }
-    $valign_buffer_filling = "";
-    return;
 }
 
 sub my_flush_comment {
@@ -1899,7 +1862,7 @@ sub sweep_left_to_right {
 
     BEGIN {
         my @q = qw(
-          => = ? if unless
+          => = ? if unless or ||
         );
         push @q, ',';
         @is_good_alignment_token{@q} = (1) x scalar(@q);
@@ -1911,14 +1874,15 @@ sub sweep_left_to_right {
 
         # uses no Global symbols
 
-	# $blocking_level[$nj is the level at a match failure between groups
-	# $ng-1 and $ng
+        # $blocking_level[$nj is the level at a match failure between groups
+        # $ng-1 and $ng
         my @blocking_level;
+        my $group_list_type = $rlines->[0]->get_list_type();
 
         my $move_to_common_column = sub {
 
-	    # Move the alignment column of token $itok to $col_want for a
-	    # sequence of groups.
+            # Move the alignment column of token $itok to $col_want for a
+            # sequence of groups.
             my ( $ngb, $nge, $itok, $col_want ) = @_;
             return unless ( defined($ngb) && $nge > $ngb );
             foreach my $ng ( $ngb .. $nge ) {
@@ -1965,10 +1929,10 @@ sub sweep_left_to_right {
                 my ( $ix_beg, $ix_end, $it_stop ) = @{ $rgroups->[$ng] };
                 my $line_count_ng = $ix_end - $ix_beg + 1;
 
-		# Important: note that since all lines in a group have a common
-		# alignments object, we just have to work on one of the lines
-		# (the first line).  All of the rest will be changed
-		# automatically.
+                # Important: note that since all lines in a group have a common
+                # alignments object, we just have to work on one of the lines
+                # (the first line).  All of the rest will be changed
+                # automatically.
                 my $line = $rlines->[$ix_beg];
                 my $jmax = $line->get_jmax();
 
@@ -1988,12 +1952,12 @@ sub sweep_left_to_right {
                     next;
                 }
 
-		# RULE: Throw a blocking flag upon encountering a token level
-		# different from the level of the first blocking token.  For
-		# example, in the following example, if the = matches get
-		# blocked between two groups as shown, then we want to start
-		# blocking matches at the commas, which are at deeper level, so
-		# that we do not get the big gaps shown here:
+                # RULE: Throw a blocking flag upon encountering a token level
+                # different from the level of the first blocking token.  For
+                # example, in the following example, if the = matches get
+                # blocked between two groups as shown, then we want to start
+                # blocking matches at the commas, which are at deeper level, so
+                # that we do not get the big gaps shown here:
 
                 #  my $unknown3 = pack( "v",          -2 );
                 #  my $unknown4 = pack( "v",          0x09 );
@@ -2002,17 +1966,16 @@ sub sweep_left_to_right {
                 #  my $root_startblock = pack( "V",   $root_start );
                 #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
 
-		# On the other hand, it is okay to keep matching at the same
-		# level such as in a simple list of commas and/or fat arrors.
+                # On the other hand, it is okay to keep matching at the same
+                # level such as in a simple list of commas and/or fat arrors.
 
-                my $is_blocked =
-                  defined( $blocking_level[$ng] )
+                my $is_blocked = defined( $blocking_level[$ng] )
                   && $lev > $blocking_level[$ng];
 
-		# RULE: prevent a 'tail-wag-dog' syndrom, meaning: Do not let
-		# one or two lines with a different number of alignments open
-		# up a big gap in a large block.  For example, we will prevent
-		# something like this, where the first line prys open the rest:
+                # RULE: prevent a 'tail-wag-dog' syndrom, meaning: Do not let
+                # one or two lines with a different number of alignments open
+                # up a big gap in a large block.  For example, we will prevent
+                # something like this, where the first line prys open the rest:
 
             #  $worksheet->write( "B7", "http://www.perl.com", undef, $format );
             #  $worksheet->write( "C7", "",                    $format );
@@ -2031,7 +1994,18 @@ sub sweep_left_to_right {
 
                 # Increase the tolerable gap for certain favorable factors
                 my $factor = 1;
-                if ( $is_good_alignment_token{$raw_tok} ) {
+                if ( $is_good_alignment_token{$raw_tok}
+
+		    # We have to be careful if there are just 2 lines.  This
+		    # two-line factor allows large gaps only for 2 lines which
+		    # are simple lists with fewer items on the second line. It
+		    # gives results similar to previous versions of perltidy.
+                    && (   $lines_total > 2
+                        || $group_list_type
+                        && $jmax < $jmax_m
+                        && $lev == $grp_level )
+                  )
+                {
                     $factor += 1;
                     if ( $lev == $grp_level ) {
                         $factor += 1;
@@ -2282,319 +2256,353 @@ EOM
     }
 }
 
-{    # closure for sub is_deletable_token
+{    # closure for delete_unmatched_tokens
 
     # uses no Global symbols
 
-    my %is_deletable_equals;
+    my %is_assignment;
+    my %keep_after_deleted_assignment;
 
     BEGIN {
         my @q;
 
-        # These tokens with = may be deleted for vertical aligmnemt
         @q = qw(
-          <= >= == =~ != <=>
-          =>
+          = **= += *= &= <<= &&=
+          -= /= |= >>= ||= //=
+          .= %= ^=
+          x=
         );
-        @is_deletable_equals{@q} = (1) x scalar(@q);
+        @is_assignment{@q} = (1) x scalar(@q);
+
+        # These tokens may be kept following an = deletion
+        @q = qw(
+          if unless or ||
+        );
+        @keep_after_deleted_assignment{@q} = (1) x scalar(@q);
 
     }
 
-    sub is_deletable_token {
+    sub delete_unmatched_tokens {
+        my ( $rlines, $grp_level ) = @_;
 
-        # Normally we should allow an isolated token to be deleted because
-        # this will improve the chances of getting vertical alignments.
-        # But it can be useful not to delete selected tokens in order to
-        # prevent some undesirable alignments.
-        my ( $token, $i, $imax, $jline, $i_eq, $grp_level ) = @_;
+        # This is a preliminary step in vertical alignment in which we remove
+        # as many obviously un-needed alignment tokens as possible.  This will
+        # prevent them from interfering with the final alignment.
 
-        my ( $raw_tok, $lev, $tag, $tok_count ) =
-          decode_alignment_token($token);
+        return unless @{$rlines} > 1;    # shouldn't happen
 
-        # Always okay to delete second and higher copies of a token
-        if ( $tok_count > 1 ) { return 1 }
+        my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
-        # only remove lower level commas
-        if ( $raw_tok eq ',' ) {
+        # ignore hanging side comments in these operations
+        my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
+        my $rnew_lines = \@filtered;
 
-            # Do not delete commas before an equals
-            return if ( defined($i_eq) && $i < $i_eq );
+        my $saw_side_comment = @filtered != @{$rlines};
+        my $max_lev_diff     = 0;
 
-            # Do not delete line-level commas
-            return if ( $lev <= $grp_level );
-        }
+        # nothing to do if all lines were hanging side comments
+        my $jmax = @{$rnew_lines} - 1;
+        return ( $max_lev_diff, $saw_side_comment ) unless ( $jmax >= 0 );
 
-        # most operators with an equals sign should be retained if at
-        # same level as this statement
-        elsif ( $raw_tok =~ /=/ ) {
-            return
-              unless ( $lev > $grp_level || $is_deletable_equals{$raw_tok} );
-        }
+        my @equals_info;
+        my @line_info;
+        my %is_good_tok;
 
-        # otherwise, ok to delete the token
-        return 1;
-    }
-}
+        # create a hash of tokens for each line
+        my $rline_hashes = [];
+        my $saw_list_type;
+        foreach my $line ( @{$rnew_lines} ) {
+            my $rhash     = {};
+            my $rtokens   = $line->get_rtokens();
+            my $rpatterns = $line->get_rpatterns();
+            if ( !$saw_list_type && $line->get_list_type() ) {
+                $saw_list_type = 1;
+            }
+            my $i = 0;
+            my ( $i_eq, $tok_eq, $pat_eq );
+            my ( $lev_min, $lev_max );
+            foreach my $tok ( @{$rtokens} ) {
+                my ( $raw_tok, $lev, $tag, $tok_count ) =
+                  decode_alignment_token($tok);
 
-sub delete_unmatched_tokens {
-    my ( $rlines, $grp_level ) = @_;
-
-    # uses no Global symbols
-
-    # This is a preliminary step in vertical alignment in which we remove as
-    # many obviously un-needed alignment tokens as possible.  This will prevent
-    # them from interfering with the final alignment.
-
-    return unless @{$rlines} > 1;    # shouldn't happen
-
-    my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
-
-    # ignore hanging side comments in these operations
-    my @filtered   = grep { !$_->{_is_hanging_side_comment} } @{$rlines};
-    my $rnew_lines = \@filtered;
-
-    my $saw_side_comment = @filtered != @{$rlines};
-    my $max_lev_diff     = 0;
-
-    # nothing to do if all lines were hanging side comments
-    my $jmax = @{$rnew_lines} - 1;
-    return ( $max_lev_diff, $saw_side_comment ) unless ( $jmax >= 0 );
-
-    my @equals_info;
-    my @line_info;
-    my %is_good_tok;
-
-    # create a hash of tokens for each line
-    my $rline_hashes = [];
-    my $saw_list_type;
-    foreach my $line ( @{$rnew_lines} ) {
-        my $rhash     = {};
-        my $rtokens   = $line->get_rtokens();
-        my $rpatterns = $line->get_rpatterns();
-        if ( !$saw_list_type && $line->get_list_type() ) { $saw_list_type = 1 }
-        my $i = 0;
-        my ( $i_eq, $tok_eq, $pat_eq );
-        my ( $lev_min, $lev_max );
-        foreach my $tok ( @{$rtokens} ) {
-            my ( $raw_tok, $lev, $tag, $tok_count ) =
-              decode_alignment_token($tok);
-
-            if ( $tok !~ /^[#]$/ ) {
-                if ( !defined($lev_min) ) { $lev_min = $lev; $lev_max = $lev; }
+                if ( $tok !~ /^[#]$/ ) {
+                    if ( !defined($lev_min) ) {
+                        $lev_min = $lev;
+                        $lev_max = $lev;
+                    }
+                    else {
+                        if ( $lev < $lev_min ) { $lev_min = $lev }
+                        if ( $lev > $lev_max ) { $lev_max = $lev }
+                    }
+                }
                 else {
-                    if ( $lev < $lev_min ) { $lev_min = $lev }
-                    if ( $lev > $lev_max ) { $lev_max = $lev }
+                    if ( !$saw_side_comment ) {
+                        my $length = $line->get_rfield_lengths()->[ $i + 1 ];
+                        $saw_side_comment ||= $length;
+                    }
                 }
+
+                # Possible future upgrade: for multiple matches,
+                # record [$i1, $i2, ..] instead of $i
+                $rhash->{$tok} =
+                  [ $i, undef, undef, $raw_tok, $lev, $tag, $tok_count ];
+
+                # remember the first equals at line level
+                if ( !defined($i_eq) && $raw_tok eq '=' ) {
+
+                    if ( $lev eq $grp_level ) {
+                        $i_eq   = $i;
+                        $tok_eq = $tok;
+                        $pat_eq = $rpatterns->[$i];
+                    }
+                }
+                $i++;
             }
-            else {
-                if ( !$saw_side_comment ) {
-                    my $length = $line->get_rfield_lengths()->[ $i + 1 ];
-                    $saw_side_comment ||= $length;
-                }
-            }
-
-            # Possible future upgrade: for multiple matches,
-            # record [$i1, $i2, ..] instead of $i
-            $rhash->{$tok} =
-              [ $i, undef, undef, $raw_tok, $lev, $tag, $tok_count ];
-
-            # remember the first equals at line level
-            if ( !defined($i_eq) && $raw_tok eq '=' ) {
-
-                if ( $lev eq $grp_level ) {
-                    $i_eq   = $i;
-                    $tok_eq = $tok;
-                    $pat_eq = $rpatterns->[$i];
-                }
-            }
-            $i++;
-        }
-        push @{$rline_hashes}, $rhash;
-        push @equals_info, [ $i_eq, $tok_eq, $pat_eq ];
-        push @line_info, [ $lev_min, $lev_max ];
-        if ( defined($lev_min) ) {
-            my $lev_diff = $lev_max - $lev_min;
-            if ( $lev_diff > $max_lev_diff ) { $max_lev_diff = $lev_diff }
-        }
-    }
-
-    # compare each line pair and record matches
-    my $rtok_hash = {};
-    my $nr        = 0;
-    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
-        my $nl = $nr;
-        $nr = 0;
-        my $jr      = $jl + 1;
-        my $rhash_l = $rline_hashes->[$jl];
-        my $rhash_r = $rline_hashes->[$jr];
-        my $count   = 0;                      # UNUSED NOW?
-        my $ntoks   = 0;
-        foreach my $tok ( keys %{$rhash_l} ) {
-            $ntoks++;
-            if ( defined( $rhash_r->{$tok} ) ) {
-                if ( $tok ne '#' ) { $count++; }
-                my $il = $rhash_l->{$tok}->[0];
-                my $ir = $rhash_r->{$tok}->[0];
-                $rhash_l->{$tok}->[2] = $ir;
-                $rhash_r->{$tok}->[1] = $il;
-                if ( $tok ne '#' ) {
-                    push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
-                    $nr++;
-                }
+            push @{$rline_hashes}, $rhash;
+            push @equals_info, [ $i_eq, $tok_eq, $pat_eq ];
+            push @line_info, [ $lev_min, $lev_max ];
+            if ( defined($lev_min) ) {
+                my $lev_diff = $lev_max - $lev_min;
+                if ( $lev_diff > $max_lev_diff ) { $max_lev_diff = $lev_diff }
             }
         }
 
-        # Set a line break if no matching tokens between these lines
-        # (this is not strictly necessary now but does not hurt)
-        if ( $nr == 0 && $nl > 0 ) {
-            $rnew_lines->[$jl]->{_end_group} = 1;
-        }
+        # compare each line pair and record matches
+        my $rtok_hash = {};
+        my $nr        = 0;
+        for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+            my $nl = $nr;
+            $nr = 0;
+            my $jr      = $jl + 1;
+            my $rhash_l = $rline_hashes->[$jl];
+            my $rhash_r = $rline_hashes->[$jr];
+            my $count   = 0;                      # UNUSED NOW?
+            my $ntoks   = 0;
+            foreach my $tok ( keys %{$rhash_l} ) {
+                $ntoks++;
+                if ( defined( $rhash_r->{$tok} ) ) {
+                    if ( $tok ne '#' ) { $count++; }
+                    my $il = $rhash_l->{$tok}->[0];
+                    my $ir = $rhash_r->{$tok}->[0];
+                    $rhash_l->{$tok}->[2] = $ir;
+                    $rhash_r->{$tok}->[1] = $il;
+                    if ( $tok ne '#' ) {
+                        push @{ $rtok_hash->{$tok} }, ( $jl, $jr );
+                        $nr++;
+                    }
+                }
+            }
 
-        # Also set a line break if both lines have simple equals but with
-        # different leading characters in patterns.  This check is similar to
-        # one in sub check_match, and will prevent sub prune_alignment_tree
-        # from removing alignments which otherwise should be kept. This fix
-        # is rarely needed, but it can occasionally improve formatting.
-        # For example:
-        #     my $name = $this->{Name};
-        #     $type = $this->ctype($genlooptype) if defined $genlooptype;
-        #     my $declini = ( $asgnonly ? ""          : "\t$type *" );
-        #     my $cast    = ( $type     ? "($type *)" : "" );
-        # The last two lines start with 'my' and will not match the previous
-        # line starting with $type, so we do not want prune_alignment tree
-        # to delete their ? : alignments at a deeper level.
-        my ( $i_eq_l, $tok_eq_l, $pat_eq_l ) = @{ $equals_info[$jl] };
-        my ( $i_eq_r, $tok_eq_r, $pat_eq_r ) = @{ $equals_info[$jr] };
-        if ( defined($i_eq_l) && defined($i_eq_r) ) {
-            if (   $tok_eq_l eq $tok_eq_r
-                && $i_eq_l == 0
-                && $i_eq_r == 0
-                && substr( $pat_eq_l, 0, 1 ) ne substr( $pat_eq_r, 0, 1 ) )
-            {
+            # Set a line break if no matching tokens between these lines
+            # (this is not strictly necessary now but does not hurt)
+            if ( $nr == 0 && $nl > 0 ) {
                 $rnew_lines->[$jl]->{_end_group} = 1;
             }
-        }
-    }
 
-    # find subgroups
-    my @subgroups;
-    push @subgroups, [ 0, $jmax ];
-    for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
-        if ( $rnew_lines->[$jl]->{_end_group} ) {
-            $subgroups[-1]->[1] = $jl;
-            push @subgroups, [ $jl + 1, $jmax ];
-        }
-    }
-
-    # Loop to process each subgroups
-    foreach my $item (@subgroups) {
-        my ( $jbeg, $jend ) = @{$item};
-
-        # look for complete ternary or if/elsif/else blocks
-        my $nlines = $jend - $jbeg + 1;
-        my %token_line_count;
-        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
-            my %seen;
-            my $line    = $rnew_lines->[$jj];
-            my $rtokens = $line->get_rtokens();
-            foreach my $tok ( @{$rtokens} ) {
-                if ( !$seen{$tok} ) {
-                    $seen{$tok}++;
-                    $token_line_count{$tok}++;
+            # Also set a line break if both lines have simple equals but with
+            # different leading characters in patterns.  This check is similar
+            # to one in sub check_match, and will prevent sub
+            # prune_alignment_tree from removing alignments which otherwise
+            # should be kept. This fix is rarely needed, but it can
+            # occasionally improve formatting.
+            # For example:
+            #     my $name = $this->{Name};
+            #     $type = $this->ctype($genlooptype) if defined $genlooptype;
+            #     my $declini = ( $asgnonly ? ""          : "\t$type *" );
+            #     my $cast    = ( $type     ? "($type *)" : "" );
+            # The last two lines start with 'my' and will not match the
+            # previous line starting with $type, so we do not want
+            # prune_alignment tree to delete their ? : alignments at a deeper
+            # level.
+            my ( $i_eq_l, $tok_eq_l, $pat_eq_l ) = @{ $equals_info[$jl] };
+            my ( $i_eq_r, $tok_eq_r, $pat_eq_r ) = @{ $equals_info[$jr] };
+            if ( defined($i_eq_l) && defined($i_eq_r) ) {
+                if (   $tok_eq_l eq $tok_eq_r
+                    && $i_eq_l == 0
+                    && $i_eq_r == 0
+                    && substr( $pat_eq_l, 0, 1 ) ne substr( $pat_eq_r, 0, 1 ) )
+                {
+                    $rnew_lines->[$jl]->{_end_group} = 1;
                 }
             }
         }
 
-        # Look for if/else/elsif and ternary blocks
-        my $is_full_block;
-        foreach my $tok ( keys %token_line_count ) {
-            if ( $token_line_count{$tok} == $nlines ) {
-                if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
-                    $is_full_block = 1;
-                }
+        # find subgroups
+        my @subgroups;
+        push @subgroups, [ 0, $jmax ];
+        for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+            if ( $rnew_lines->[$jl]->{_end_group} ) {
+                $subgroups[-1]->[1] = $jl;
+                push @subgroups, [ $jl + 1, $jmax ];
             }
         }
 
-        # remove unwanted alignment tokens
-        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
-            my $line    = $rnew_lines->[$jj];
-            my $rtokens = $line->get_rtokens();
-            my $rhash   = $rline_hashes->[$jj];
-            my $i_eq    = $equals_info[$jj]->[0];
-            my @idel;
-            my $imax = @{$rtokens} - 2;
-            my $delete_above_level;
+        # Loop to process each subgroups
+        foreach my $item (@subgroups) {
+            my ( $jbeg, $jend ) = @{$item};
 
-            for ( my $i = 0 ; $i <= $imax ; $i++ ) {
-                my $tok = $rtokens->[$i];
-                next if ( $tok eq '#' );    # shouldn't happen
-                my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
-                  @{ $rhash->{$tok} };
-
-                # always remove unmatched tokens
-                my $delete_me = !defined($il) && !defined($ir);
-
-                # also, if this is a complete ternary or if/elsif/else block,
-                # remove all alignments which are not also in every line
-                $delete_me ||=
-                  ( $is_full_block && $token_line_count{$tok} < $nlines );
-
-                # Remove all tokens above a certain level following a previous
-                # deletion.  For example, we have to remove tagged higher level
-                # alignment tokens following a => deletion because the tags of
-                # higher level tokens will now be incorrect. For example, this
-                # will prevent aligning commas as follows after deleting the
-                # second =>
-                #    $w->insert(
-                #	ListBox => origin => [ 270, 160 ],
-                #	size    => [ 200,           55 ],
-                #    );
-                if ( defined($delete_above_level) ) {
-                    if ( $lev > $delete_above_level ) {
-                        $delete_me ||= 1;    #$tag;
+            # look for complete ternary or if/elsif/else blocks
+            my $nlines = $jend - $jbeg + 1;
+            my %token_line_count;
+            for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+                my %seen;
+                my $line    = $rnew_lines->[$jj];
+                my $rtokens = $line->get_rtokens();
+                foreach my $tok ( @{$rtokens} ) {
+                    if ( !$seen{$tok} ) {
+                        $seen{$tok}++;
+                        $token_line_count{$tok}++;
                     }
-                    else { $delete_above_level = undef }
                 }
+            }
 
-                if (
-                    $delete_me
-                    && is_deletable_token( $tok, $i, $imax, $jj, $i_eq,
-                        $grp_level )
+            # Look for if/else/elsif and ternary blocks
+            my $is_full_block;
+            foreach my $tok ( keys %token_line_count ) {
+                if ( $token_line_count{$tok} == $nlines ) {
+                    if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
+                        $is_full_block = 1;
+                    }
+                }
+            }
 
-                    # Patch: do not touch the first line of a terminal match,
-                    # such as below, because j_terminal has already been set.
+            # Loop over lines to remove unwanted alignment tokens
+            for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+                my $line    = $rnew_lines->[$jj];
+                my $rtokens = $line->get_rtokens();
+                my $rhash   = $rline_hashes->[$jj];
+                my $i_eq    = $equals_info[$jj]->[0];
+                my @idel;
+                my $imax = @{$rtokens} - 2;
+                my $delete_above_level;
+                my $deleted_assignment_token;
+
+                # Loop over all alignment tokens
+                for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                    my $tok = $rtokens->[$i];
+                    next if ( $tok eq '#' );    # shouldn't happen
+                    my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
+                      @{ $rhash->{$tok} };
+
+                    #######################################################
+		    # Here is the basic RULE: remove an unmatched alignment
+		    # which does not occur in the surrounding lines.
+                    #######################################################
+                    my $delete_me = !defined($il) && !defined($ir);
+
+                    # But now we modify this with exceptions...
+
+                    # If this is a complete ternary or if/elsif/else block,
+                    # remove all alignments which are not also in every line
+                    $delete_me ||=
+                      ( $is_full_block && $token_line_count{$tok} < $nlines );
+
+                    # Remove all tokens above a certain level following a
+                    # previous deletion.  For example, we have to remove tagged
+                    # higher level alignment tokens following a => deletion
+                    # because the tags of higher level tokens will now be
+                    # incorrect. For example, this will prevent aligning commas
+                    # as follows after deleting the second =>
+                    #    $w->insert(
+                    #	ListBox => origin => [ 270, 160 ],
+                    #	size    => [ 200,           55 ],
+                    #    );
+                    if ( defined($delete_above_level) ) {
+                        if ( $lev > $delete_above_level ) {
+                            $delete_me ||= 1;    #$tag;
+                        }
+                        else { $delete_above_level = undef }
+                    }
+
+                    # Remove all but certain tokens after an assignment deletion
+                    if (
+                        $deleted_assignment_token
+                        && ( $lev > $grp_level
+                            || !$keep_after_deleted_assignment{$raw_tok} )
+                      )
+                    {
+                        $delete_me ||= 1;
+                    }
+
+                    # Turn off deletion in some special cases..
+
+                    # Do not touch the first line of a terminal
+                    # match, such as below, because j_terminal has already
+                    # been set.
                     #    if ($tag) { $tago = "<$tag>"; $tagc = "</$tag>"; }
                     #    else      { $tago = $tagc = ''; }
                     # But see snippets 'else1.t' and 'else2.t'
-                    && !( $jj == $jbeg && $has_terminal_match && $nlines == 2 )
+                    $delete_me = 0
+                      if ( $jj == $jbeg
+                        && $has_terminal_match
+                        && $nlines == 2 );
 
-                  )
-                {
-                    push @idel, $i;
-                    if ( !defined($delete_above_level)
-                        || $lev < $delete_above_level )
-                    {
+                    if ($delete_me) {
 
-                        # delete all following higher level alignments
-                        $delete_above_level = $lev;
+                        # okay to delete second and higher copies of a token
+                        if ( $tok_count == 1 ) {
 
-                        # but keep deleting after => to next lower level
-                        # to avoid some bizarre alignments
-                        if ( $raw_tok eq '=>' ) {
-                            $delete_above_level = $lev - 1;
+                            # for a comma...
+                            if ( $raw_tok eq ',' ) {
+
+                                # Do not delete commas before an equals
+                                $delete_me = 0
+                                  if ( defined($i_eq) && $i < $i_eq );
+
+                                # Do not delete line-level commas
+                                $delete_me = 0 if ( $lev <= $grp_level );
+                            }
+
+                            # For an assignment at group level..
+                            if (   $is_assignment{$raw_tok}
+                                && $lev == $grp_level )
+                            {
+
+                                # Do not delete if it is the last alignment of
+                                # multiple tokens; this will prevent some
+                                # undesirable alignments
+                                if ( $imax > 0 && $i == $imax ) {
+                                    $delete_me = 0;
+                                }
+
+                                # Otherwise, set a flag to delete most
+                                # remaining tokens
+                                else { $deleted_assignment_token = $raw_tok }
+                            }
                         }
                     }
+
+                    #####################################
+                    # Add this token to the deletion list
+                    #####################################
+                    if ($delete_me) {
+                        push @idel, $i;
+
+                        # update deletion propagation flags
+                        if ( !defined($delete_above_level)
+                            || $lev < $delete_above_level )
+                        {
+
+                            # delete all following higher level alignments
+                            $delete_above_level = $lev;
+
+                            # but keep deleting after => to next lower level
+                            # to avoid some bizarre alignments
+                            if ( $raw_tok eq '=>' ) {
+                                $delete_above_level = $lev - 1;
+                            }
+                        }
+                    }
+                }    # End loop over alignment tokens
+
+                # Process all deletion requests for this line
+                if (@idel) {
+                    delete_selected_tokens( $line, \@idel, $saw_list_type );
                 }
-            }
-
-            if (@idel) {
-                delete_selected_tokens( $line, \@idel, $saw_list_type );
-            }
-        }
-
-    }    # End loop over subgroups
-
-    return ( $max_lev_diff, $saw_side_comment );
+            }    # End loopover lines
+        }    # End loop over subgroups
+        return ( $max_lev_diff, $saw_side_comment );
+    }
 }
 
 sub fat_comma_to_comma {
@@ -4151,76 +4159,122 @@ sub valign_output_step_B {
     return;
 }
 
-sub valign_output_step_C {
+{    # closure for valign_output_step_C
 
-    ###############################################################
-    # This is Step C in writing vertically aligned lines.
-    # Lines are either stored in a buffer or passed along to the next step.
-    # The reason for storing lines is that we may later want to reduce their
-    # indentation when -sot and -sct are both used.
-    ###############################################################
-    my @args = @_;
+    # Vertical alignment buffer used by valign_output_step_C
+    my $valign_buffer_filling;
+    my @valign_buffer;
 
 ## uses Global symbols {
 ##  '$last_nonblank_seqno_string'
 ##  '$seqno_string'
-##  '$valign_buffer_filling'
-##  '@valign_buffer'
 ## }
 
-    # Dump any saved lines if we see a line with an unbalanced opening or
-    # closing token.
-    dump_valign_buffer() if ( $seqno_string && $valign_buffer_filling );
-
-    # Either store or write this line
-    if ($valign_buffer_filling) {
-        push @valign_buffer, [@args];
-    }
-    else {
-        valign_output_step_D(@args);
+    sub initialize_valign_buffer {
+        @valign_buffer         = ();
+        $valign_buffer_filling = "";
+        return;
     }
 
-    # For lines starting or ending with opening or closing tokens..
-    if ($seqno_string) {
-        $last_nonblank_seqno_string = $seqno_string;
-
-        # Start storing lines when we see a line with multiple stacked opening
-        # tokens.
-        # patch for RT #94354, requested by Colin Williams
-        if ( $seqno_string =~ /^\d+(\:+\d+)+$/ && $args[0] !~ /^[\}\)\]\:\?]/ )
-        {
-
-            # This test is efficient but a little subtle: The first test says
-            # that we have multiple sequence numbers and hence multiple opening
-            # or closing tokens in this line.  The second part of the test
-            # rejects stacked closing and ternary tokens.  So if we get here
-            # then we should have stacked unbalanced opening tokens.
-
-            # Here is a complex example:
-
-            # Foo($Bar[0], {  # (side comment)
-            # 	baz => 1,
-            # });
-
-            # The first line has sequence 6::4.  It does not begin with
-            # a closing token or ternary, so it passes the test and must be
-            # stacked opening tokens.
-
-            # The last line has sequence 4:6 but is a stack of closing tokens,
-            # so it gets rejected.
-
-            # Note that the sequence number of an opening token for a qw quote
-            # is a negative number and will be rejected.
-            # For example, for the following line:
-            #    skip_symbols([qw(
-            # $seqno_string='10:5:-1'.  It would be okay to accept it but
-            # I decided not to do this after testing.
-
-            $valign_buffer_filling = $seqno_string;
-
+    sub dump_valign_buffer {
+        if (@valign_buffer) {
+            foreach (@valign_buffer) {
+                valign_output_step_D( @{$_} );
+            }
+            @valign_buffer = ();
         }
+        $valign_buffer_filling = "";
+        return;
     }
-    return;
+
+    sub reduce_valign_buffer_indentation {
+
+        my ($diff) = @_;
+        if ( $valign_buffer_filling && $diff ) {
+            my $max_valign_buffer = @valign_buffer;
+            foreach my $i ( 0 .. $max_valign_buffer - 1 ) {
+                my ( $line, $leading_space_count, $level ) =
+                  @{ $valign_buffer[$i] };
+                my $ws = substr( $line, 0, $diff );
+                if ( ( length($ws) == $diff ) && $ws =~ /^\s+$/ ) {
+                    $line = substr( $line, $diff );
+                }
+                if ( $leading_space_count >= $diff ) {
+                    $leading_space_count -= $diff;
+                    $level =
+                      level_change( $leading_space_count, $diff, $level );
+                }
+                $valign_buffer[$i] = [ $line, $leading_space_count, $level ];
+            }
+        }
+        return;
+    }
+
+    sub valign_output_step_C {
+
+        ###############################################################
+        # This is Step C in writing vertically aligned lines.
+        # Lines are either stored in a buffer or passed along to the next step.
+        # The reason for storing lines is that we may later want to reduce their
+        # indentation when -sot and -sct are both used.
+        ###############################################################
+        my @args = @_;
+
+        # Dump any saved lines if we see a line with an unbalanced opening or
+        # closing token.
+        dump_valign_buffer() if ( $seqno_string && $valign_buffer_filling );
+
+        # Either store or write this line
+        if ($valign_buffer_filling) {
+            push @valign_buffer, [@args];
+        }
+        else {
+            valign_output_step_D(@args);
+        }
+
+        # For lines starting or ending with opening or closing tokens..
+        if ($seqno_string) {
+            $last_nonblank_seqno_string = $seqno_string;
+
+            # Start storing lines when we see a line with multiple stacked
+            # opening tokens.
+            # patch for RT #94354, requested by Colin Williams
+            if (   $seqno_string =~ /^\d+(\:+\d+)+$/
+                && $args[0] !~ /^[\}\)\]\:\?]/ )
+            {
+
+                # This test is efficient but a little subtle: The first test
+                # says that we have multiple sequence numbers and hence
+                # multiple opening or closing tokens in this line.  The second
+                # part of the test rejects stacked closing and ternary tokens.
+                # So if we get here then we should have stacked unbalanced
+                # opening tokens.
+
+                # Here is a complex example:
+
+                # Foo($Bar[0], {  # (side comment)
+                # 	baz => 1,
+                # });
+
+                # The first line has sequence 6::4.  It does not begin with
+                # a closing token or ternary, so it passes the test and must be
+                # stacked opening tokens.
+
+                # The last line has sequence 4:6 but is a stack of closing
+                # tokens, so it gets rejected.
+
+                # Note that the sequence number of an opening token for a qw
+                # quote is a negative number and will be rejected.  For
+                # example, for the following line: skip_symbols([qw(
+                # $seqno_string='10:5:-1'.  It would be okay to accept it but I
+                # decided not to do this after testing.
+
+                $valign_buffer_filling = $seqno_string;
+
+            }
+        }
+        return;
+    }
 }
 
 sub valign_output_step_D {
@@ -4424,3 +4478,4 @@ sub report_anything_unusual {
     return;
 }
 1;
+
