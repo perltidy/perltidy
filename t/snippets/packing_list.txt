@@ -258,6 +258,8 @@
 ../snippets21.t	sot.sot
 ../snippets21.t	prune.def
 ../snippets21.t	align33.def
+../snippets21.t	gnu7.def
+../snippets21.t	gnu7.gnu
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -398,5 +400,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets21.t	gnu7.def
-../snippets21.t	gnu7.gnu
+../snippets21.t	git33.def
+../snippets21.t	git33.git33

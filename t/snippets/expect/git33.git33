@@ -1,0 +1,5 @@
+# test -wls='->' -wrs='->'
+use Net::Ping;
+my ($ping) = Net::Ping -> new();
+$ping -> ping($host);
+

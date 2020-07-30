@@ -2981,6 +2981,14 @@ sub respace_tokens {
                     my $rcopy = copy_token_as_type( $rtoken_vars, '->', '->' );
                     $store_token->($rcopy);
 
+                    # store a blank after the arrow if requested
+                    # added for issue git #33
+                    if ($want_right_space{'->'} == WS_YES ) {
+                        my $rcopy =
+                          copy_token_as_type( $rtoken_vars, 'b', ' ' );
+                        $store_token->($rcopy);
+                    }
+
                     # then reset the current token to be the remainder,
                     # and reset the whitespace flag according to the arrow
                     $token = $rtoken_vars->[_TOKEN_] = $token_save;

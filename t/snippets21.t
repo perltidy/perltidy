@@ -10,6 +10,8 @@
 #7 align33.def
 #8 gnu7.def
 #9 gnu7.gnu
+#10 git33.def
+#11 git33.git33
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -27,7 +29,11 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'          => "",
+        'def'   => "",
+        'git33' => <<'----------',
+-wls='->' -wrs='->'
+
+----------
         'gnu'          => "-gnu",
         'lop'          => "-nlop",
         'sot'          => "-sot -sct",
@@ -49,6 +55,14 @@ $tp  = $opt_t ? "t" : "f";
 $rm  = $numbstyle ? "t" : "f";
 $pa = $showurl   ? "t" : "f";
 $nh = $seq_number ? "t" : "f";
+----------
+
+        'git33' => <<'----------',
+# test -wls='->' -wrs='->'
+use Net::Ping;
+my ($ping) = Net::Ping->new();
+$ping->ping($host);
+
 ----------
 
         'gnu7' => <<'----------',
@@ -449,6 +463,30 @@ else
     next WORD;
 }
 #9...........
+        },
+
+        'git33.def' => {
+            source => "git33",
+            params => "def",
+            expect => <<'#10...........',
+# test -wls='->' -wrs='->'
+use Net::Ping;
+my ($ping) = Net::Ping->new();
+$ping->ping($host);
+
+#10...........
+        },
+
+        'git33.git33' => {
+            source => "git33",
+            params => "git33",
+            expect => <<'#11...........',
+# test -wls='->' -wrs='->'
+use Net::Ping;
+my ($ping) = Net::Ping -> new();
+$ping -> ping($host);
+
+#11...........
         },
     };
 
