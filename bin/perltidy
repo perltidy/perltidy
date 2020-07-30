@@ -3350,7 +3350,7 @@ is broken in multiple lines in the source.
 
 =head2 Controlling Vertical Alignment
 
-Vertical alignment refers to lining up certain symbols in list of consecutive
+Vertical alignment refers to lining up certain symbols in a list of consecutive
 similar lines to improve readability.  For example, the "fat commas" are
 aligned in the following statement:
 

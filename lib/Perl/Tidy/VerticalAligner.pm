@@ -360,6 +360,24 @@ sub valign_input {
     my $rpatterns                 = $rline_hash->{rpatterns};
     my $rfield_lengths            = $rline_hash->{rfield_lengths};
 
+## uses Global symbols {
+##  '$cached_line_flag'
+##  '$cached_line_type'
+##  '$cached_line_valid'
+##  '$cached_seqno'
+##  '$comment_leading_space_count'
+##  '$consecutive_block_comments'
+##  '$extra_indent_ok'
+##  '$group_level'
+##  '$group_type'
+##  '$last_comment_column'
+##  '$last_leading_space_count'
+##  '$last_level_written'
+##  '$rOpts_valign'
+##  '$zero_count'
+##  '@group_lines'
+## }
+
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
     my $jmax = @{$rfields} - 1;
@@ -722,6 +740,8 @@ sub decide_if_list {
 
     my $line = shift;
 
+    # uses no Global symbols
+
     # A list will be taken to be a line with a forced break in which all
     # of the field separators are commas or comma-arrows (except for the
     # trailing #)
@@ -761,6 +781,10 @@ sub fix_terminal_ternary {
 
     my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths ) = @_;
     return unless ($old_line);
+
+## uses Global symbols {
+##  '$group_level'
+## }
 
     my $jmax        = @{$rfields} - 1;
     my $rfields_old = $old_line->get_rfields();
@@ -925,6 +949,9 @@ sub fix_terminal_else {
     # returns a positive value if the else block should be indented
     #
     my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths ) = @_;
+
+# uses no Global symbols
+
     return unless ($old_line);
     my $jmax = @{$rfields} - 1;
     return unless ( $jmax > 0 );
@@ -1285,6 +1312,17 @@ sub dump_array {
 
 # This is the external flush, which also empties the buffer and cache
 sub flush {
+
+## uses Global symbols {
+##  '$cached_line_leading_space_count'
+##  '$cached_line_text'
+##  '$cached_line_text_length'
+##  '$cached_line_type'
+##  '$cached_seqno_string'
+##  '$last_level_written'
+##  '$seqno_string'
+##  '@group_lines'
+## }
 
     # the buffer must be emptied first, then any cached text
     dump_valign_buffer();
