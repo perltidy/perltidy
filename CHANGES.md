@@ -2,6 +2,8 @@
 
 ## 2020 06 19.02
 
+    - Fix issue git #33, allow control of space after '->'
+
     - Vertical alignment has been improved.
 
     - Formatting with the -lp option is improved. 
