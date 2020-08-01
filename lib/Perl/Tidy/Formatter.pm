@@ -79,21 +79,110 @@ BEGIN {
     FORMATTER_DEBUG_FLAG_WHITE       && $debug_warning->('WHITE');
 }
 
-use vars qw{
+# Global vars...
 
+# Objects
+use vars qw{
+  $diagnostics_object
+  $logger_object
+  $file_writer_object
+  $formatter_self
+};
+
+# user parameters and shortcuts
+use vars qw{
+  $rOpts
+  $rOpts_closing_side_comment_maximum_text
+  $rOpts_continuation_indentation
+  $rOpts_indent_columns
+  $rOpts_line_up_parentheses
+  $rOpts_maximum_line_length
+  $rOpts_variable_maximum_line_length
+};
+
+# static hashes for token identification
+use vars qw{
+  %is_do_follower
+  %is_if_brace_follower
+  %space_after_keyword
+  %is_last_next_redo_return
+  %is_other_brace_follower
+  %is_else_brace_follower
+  %is_anon_sub_brace_follower
+  %is_anon_sub_1_brace_follower
+  %is_sort_map_grep
+  %is_sort_map_grep_eval
+  %want_one_line_block
+  %is_sort_map_grep_eval_do
+  %is_block_without_semicolon
+  %is_if_unless
+  %is_and_or
+  %is_assignment
+  %is_chain_operator
+  %is_if_unless_and_or_last_next_redo_return
+  %ok_to_add_semicolon_for_block_type
+};
+
+use vars qw{
+  %is_opening_type
+  %is_closing_type
+  %is_keyword_returning_list
+  %tightness
+  %matching_token
+  %right_bond_strength
+  %left_bond_strength
+  %binary_ws_rules
+  %want_left_space
+  %want_right_space
+  $bli_pattern
+  %is_closing_type
+  %is_opening_type
+  %is_closing_token
+  %is_opening_token
+};
+
+# variables related to user parameters
+use vars qw{
+  %want_break_before
+  %outdent_keyword
+
+  %opening_vertical_tightness
+  %closing_vertical_tightness
+  %closing_token_indentation
+  $some_closing_token_indentation
+  %keyword_paren_inner_tightness
+
+  %opening_token_right
+  %stack_opening_token
+  %stack_closing_token
+};
+
+# patterns for text identification
+use vars qw{
+  $format_skipping_pattern_begin
+  $format_skipping_pattern_end
+
+  $block_brace_vertical_tightness_pattern
+  $keyword_group_list_pattern
+  $keyword_group_list_comment_pattern
+
+  $static_block_comment_pattern
+  $static_side_comment_pattern
+
+  $SUB_PATTERN
+  $ASUB_PATTERN
+  $ANYSUB_PATTERN
+
+  $blank_lines_after_opening_block_pattern
+  $blank_lines_before_closing_block_pattern
+};
+
+
+# Variables related to the -lp option
+use vars qw{
   @gnu_stack
   $max_gnu_stack_index
   $gnu_position_predictor
-  $line_start_index_to_go
-  $last_indentation_written
-  $last_unadjusted_indentation
-  $last_leading_token
-  $last_output_short_opening_token
-  $peak_batch_size
-
-  $saw_VERSION_in_this_file
-  $saw_END_or_DATA_
-
   @gnu_item_list
   $max_gnu_item_index
   $gnu_sequence_number
@@ -101,7 +190,44 @@ use vars qw{
   %last_gnu_equals
   %gnu_comma_count
   %gnu_arrow_count
+  $line_start_index_to_go
+};
 
+# variables related to forming closing side comments
+use vars qw{
+  %block_leading_text
+  %block_opening_line_number
+  $csc_new_statement_ok
+  $csc_last_label
+  %csc_block_label
+  $accumulating_text_for_block
+  $leading_block_text
+  $rleading_block_if_elsif_text
+  $leading_block_text_level
+  $leading_block_text_length_exceeded
+  $leading_block_text_line_length
+  $leading_block_text_line_number
+  $closing_side_comment_prefix_pattern
+  $closing_side_comment_list_pattern
+};
+
+# hashes used by the weld-nested option (-wn)
+use vars qw{
+  %weld_len_left_closing
+  %weld_len_right_closing
+  %weld_len_left_opening
+  %weld_len_right_opening
+};
+
+# variable used by cuddled format option
+use vars qw{
+  $rcuddled_block_types
+};
+
+# Arrays holding a batch of tokens being prepared for shipment
+# to the vertical aligner
+use vars qw{
+  $max_index_to_go
   @block_type_to_go
   @type_sequence_to_go
   @container_environment_to_go
@@ -122,21 +248,39 @@ use vars qw{
   @types_to_go
   @inext_to_go
   @iprev_to_go
+};
 
-  %saved_opening_indentation
+# Variables related to forming lists
+use vars qw{
+  @has_broken_sublist
+  @dont_align
+  @want_comma_break
+};
 
-  $max_index_to_go
-  @nonblank_lines_at_depth
-  $starting_in_quote
-  $ending_in_quote
-
-  $format_skipping_pattern_begin
-  $format_skipping_pattern_end
-
+# Variables related to setting new line breaks
+use vars qw{
   $forced_breakpoint_count
   $forced_breakpoint_undo_count
   @forced_breakpoint_undo_stack
   %postponed_breakpoint
+};
+
+# memory of processed text
+use vars qw{
+  $last_indentation_written
+  $last_unadjusted_indentation
+  $last_leading_token
+  $last_output_short_opening_token
+  $peak_batch_size
+
+  $saw_VERSION_in_this_file
+  $saw_END_or_DATA_
+
+  %saved_opening_indentation
+
+  @nonblank_lines_at_depth
+  $starting_in_quote
+  $ending_in_quote
 
   $tabbing
   $embedded_tab_count
@@ -158,111 +302,11 @@ use vars qw{
   $last_line_leading_level
   $last_last_line_leading_level
 
-  %block_leading_text
-  %block_opening_line_number
-  $csc_new_statement_ok
-  $csc_last_label
-  %csc_block_label
-  $accumulating_text_for_block
-  $leading_block_text
-  $rleading_block_if_elsif_text
-  $leading_block_text_level
-  $leading_block_text_length_exceeded
-  $leading_block_text_line_length
-  $leading_block_text_line_number
-  $closing_side_comment_prefix_pattern
-  $closing_side_comment_list_pattern
-
-  $blank_lines_after_opening_block_pattern
-  $blank_lines_before_closing_block_pattern
-
   $last_output_level
-  %is_do_follower
-  %is_if_brace_follower
-  %space_after_keyword
-  %is_last_next_redo_return
-  %is_other_brace_follower
-  %is_else_brace_follower
-  %is_anon_sub_brace_follower
-  %is_anon_sub_1_brace_follower
-  %is_sort_map_grep
-  %is_sort_map_grep_eval
-  %want_one_line_block
-  %is_sort_map_grep_eval_do
-  %is_block_without_semicolon
-  %is_if_unless
-  %is_and_or
-  %is_assignment
-  %is_chain_operator
-  %is_if_unless_and_or_last_next_redo_return
-  %ok_to_add_semicolon_for_block_type
-
-  @has_broken_sublist
-  @dont_align
-  @want_comma_break
 
   $is_static_block_comment
   $index_max_forced_break
   $input_line_number
-  $diagnostics_object
-  $vertical_aligner_object
-  $logger_object
-  $file_writer_object
-  $formatter_self
-  @ci_stack
-  %want_break_before
-  %outdent_keyword
-  $static_block_comment_pattern
-  $static_side_comment_pattern
-  %opening_vertical_tightness
-  %closing_vertical_tightness
-  %closing_token_indentation
-  $some_closing_token_indentation
-  %keyword_paren_inner_tightness
-
-  %opening_token_right
-  %stack_opening_token
-  %stack_closing_token
-
-  $block_brace_vertical_tightness_pattern
-  $keyword_group_list_pattern
-  $keyword_group_list_comment_pattern
-
-  $rOpts_closing_side_comment_maximum_text
-  $rOpts_continuation_indentation
-  $rOpts_indent_columns
-  $rOpts_line_up_parentheses
-  $rOpts_maximum_line_length
-  $rOpts_variable_maximum_line_length
-
-  %is_opening_type
-  %is_closing_type
-  %is_keyword_returning_list
-  %tightness
-  %matching_token
-  $rOpts
-  %right_bond_strength
-  %left_bond_strength
-  %binary_ws_rules
-  %want_left_space
-  %want_right_space
-  $bli_pattern
-  %is_closing_type
-  %is_opening_type
-  %is_closing_token
-  %is_opening_token
-
-  %weld_len_left_closing
-  %weld_len_right_closing
-  %weld_len_left_opening
-  %weld_len_right_opening
-
-  $rcuddled_block_types
-
-  $SUB_PATTERN
-  $ASUB_PATTERN
-  $ANYSUB_PATTERN
-
 };
 
 BEGIN {
@@ -548,7 +592,9 @@ sub DESTROY {
 }
 
 sub get_output_line_number {
-    return $vertical_aligner_object->get_output_line_number();
+    my ($self) = @_;
+    my $vao = $self->{vertical_aligner_object};
+    return $vao->get_output_line_number();
 }
 
 sub new {
@@ -617,7 +663,6 @@ sub new {
     @has_broken_sublist = ();
     @want_comma_break   = ();
 
-    @ci_stack                   = ("");
     $first_tabbing_disagreement = 0;
     $last_tabbing_disagreement  = 0;
     $tabbing_disagreement_count = 0;
@@ -655,7 +700,7 @@ sub new {
 
     prepare_for_new_input_lines();
 
-    $vertical_aligner_object = Perl::Tidy::VerticalAligner->initialize(
+    my $vertical_aligner_object = Perl::Tidy::VerticalAligner->initialize(
         rOpts              => $rOpts,
         file_writer_object => $file_writer_object,
         logger_object      => $logger_object,
@@ -706,8 +751,9 @@ sub new {
         fh_tee                     => $fh_tee,
         sink_object                => $sink_object,
         logger_object              => $logger_object,
-        file_writer_object => $file_writer_object,
-        radjusted_levels   => [],
+        file_writer_object         => $file_writer_object,
+        vertical_aligner_object    => $vertical_aligner_object,
+        radjusted_levels           => [],
     };
     my @valid_keys = keys %{$formatter_self};
     $formatter_self->{rvalid_self_keys} = \@valid_keys;
@@ -1460,7 +1506,7 @@ sub process_all_lines {
             else {
 
                 # let logger see all non-blank lines of code
-                my $output_line_number = get_output_line_number();
+                my $output_line_number = $self->get_output_line_number();
                 black_box( $line_of_tokens, $output_line_number );
             }
 
@@ -2983,7 +3029,7 @@ sub respace_tokens {
 
                     # store a blank after the arrow if requested
                     # added for issue git #33
-                    if ($want_right_space{'->'} == WS_YES ) {
+                    if ( $want_right_space{'->'} == WS_YES ) {
                         my $rcopy =
                           copy_token_as_type( $rtoken_vars, 'b', ' ' );
                         $store_token->($rcopy);
@@ -3593,7 +3639,7 @@ sub K_previous_code {
     # use the standard array unless given otherwise
     $rLL = $self->{rLL} unless ( defined($rLL) );
     my $Num = @{$rLL};
-    if ( !defined($KK) ) { $KK = $Num }
+    if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
 
         # The caller should make the first call with KK_new=undef to
@@ -3623,7 +3669,7 @@ sub K_previous_nonblank {
     # use the standard array unless given otherwise
     $rLL = $self->{rLL} unless ( defined($rLL) );
     my $Num = @{$rLL};
-    if ( !defined($KK) ) { $KK = $Num }
+    if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
 
         # The caller should make the first call with KK_new=undef to
@@ -5753,7 +5799,8 @@ sub wrapup {
     }
     write_logfile_entry("\n");
 
-    $vertical_aligner_object->report_anything_unusual();
+    my $vao = $self->{vertical_aligner_object};
+    $vao->report_anything_unusual();
 
     $file_writer_object->report_line_length_errors();
 
@@ -7408,6 +7455,13 @@ sub copy_token_as_type {
         return;
     }
 
+    sub flush_vertical_aligner {
+        my ($self) = @_;
+        my $vao = $self->{vertical_aligner_object};
+        $vao->flush();
+        return;
+    }
+
     # flush is called to output any tokens in the pipeline, so that
     # an alternate source of lines can be written in the correct order
     sub flush {
@@ -7425,7 +7479,7 @@ sub copy_token_as_type {
         # otherwise, we have to shut things down completely.
         else { $self->package_and_process_batch_of_CODE() }
 
-        Perl::Tidy::VerticalAligner::flush();
+        $self->flush_vertical_aligner();
         return;
     }
 
@@ -8134,8 +8188,10 @@ sub copy_token_as_type {
 } ## end block process_line_of_CODE
 
 sub consecutive_nonblank_lines {
+    my ($self) = @_;
+    my $vao = $self->{vertical_aligner_object};
     return $file_writer_object->get_consecutive_nonblank_lines() +
-      $vertical_aligner_object->get_cached_line_count();
+      $vao->get_cached_line_count();
 }
 
 # sub process_batch_of_CODE sends one logical line of tokens on down the
@@ -8266,7 +8322,7 @@ sub process_batch_of_CODE {
                 $want_blank =
                      $rOpts->{'blanks-before-blocks'}
                   && $lc >= $rOpts->{'long-block-line-count'}
-                  && consecutive_nonblank_lines() >=
+                  && $self->consecutive_nonblank_lines() >=
                   $rOpts->{'long-block-line-count'}
                   && $self->terminal_type_i( $imin, $imax ) ne '}';
             }
@@ -8288,7 +8344,7 @@ sub process_batch_of_CODE {
             if ($want_blank) {
 
                 # future: send blank line down normal path to VerticalAligner
-                Perl::Tidy::VerticalAligner::flush();
+                $self->flush_vertical_aligner();
                 $file_writer_object->require_blank_code_lines($want_blank);
             }
         }
@@ -8468,7 +8524,7 @@ EOM
                 /$blank_lines_after_opening_block_pattern/ )
             {
                 my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
-                Perl::Tidy::VerticalAligner::flush();
+                $self->flush_vertical_aligner();
                 $file_writer_object->require_blank_code_lines($nblanks);
             }
         }
@@ -9692,14 +9748,14 @@ sub reset_block_text_accumulator {
 }
 
 sub set_block_text_accumulator {
-    my $i = shift;
+    my ( $self, $i ) = @_;
     $accumulating_text_for_block = $tokens_to_go[$i];
     if ( $accumulating_text_for_block !~ /^els/ ) {
         $rleading_block_if_elsif_text = [];
     }
     $leading_block_text                 = "";
     $leading_block_text_level           = $levels_to_go[$i];
-    $leading_block_text_line_number     = get_output_line_number();
+    $leading_block_text_line_number     = $self->get_output_line_number();
     $leading_block_text_length_exceeded = 0;
 
     # this will contain the column number of the last character
@@ -9802,6 +9858,8 @@ sub accumulate_block_text {
 
     sub accumulate_csc_text {
 
+        my ($self) = @_;
+
         # called once per output buffer when -csc is used. Accumulates
         # the text placed after certain closing block braces.
         # Defines and returns the following for this buffer:
@@ -9864,7 +9922,8 @@ sub accumulate_block_text {
 
                     if ( defined( $block_opening_line_number{$type_sequence} ) )
                     {
-                        my $output_line_number = get_output_line_number();
+                        my $output_line_number =
+                          $self->get_output_line_number();
                         $block_line_count =
                           $output_line_number -
                           $block_opening_line_number{$type_sequence} + 1;
@@ -9880,7 +9939,7 @@ sub accumulate_block_text {
 
                 elsif ( $token eq '{' ) {
 
-                    my $line_number = get_output_line_number();
+                    my $line_number = $self->get_output_line_number();
                     $block_opening_line_number{$type_sequence} = $line_number;
 
                     # set a label for this block, except for
@@ -9921,7 +9980,7 @@ sub accumulate_block_text {
                 && $is_if_elsif_else_unless_while_until_for_foreach{$token}
                 && $token =~ /$closing_side_comment_list_pattern/ )
             {
-                set_block_text_accumulator($i);
+                $self->set_block_text_accumulator($i);
             }
             else {
 
@@ -10110,7 +10169,7 @@ sub add_closing_side_comment {
 
     my ( $terminal_type, $i_terminal, $i_block_leading_text,
         $block_leading_text, $block_line_count, $block_label )
-      = accumulate_csc_text();
+      = $self->accumulate_csc_text();
 
     #---------------------------------------------------------------
     # Step 2: make the closing side comment if this ends a block
@@ -10371,7 +10430,7 @@ sub send_lines_to_vertical_aligner {
         && $type_beg_next eq 'k'
         && $token_beg_next =~ /^(if|unless)$/ )
     {
-        Perl::Tidy::VerticalAligner::flush();
+        $self->flush_vertical_aligner();
     }
 
     $self->undo_ci( $ri_first, $ri_last );
@@ -10461,7 +10520,7 @@ sub send_lines_to_vertical_aligner {
             $ri_first, $ri_last );
 
         # flush an outdented line to avoid any unwanted vertical alignment
-        Perl::Tidy::VerticalAligner::flush() if ($is_outdented_line);
+        $self->flush_vertical_aligner() if ($is_outdented_line);
 
         # Set a flag at the final ':' of a ternary chain to request
         # vertical alignment of the final term.  Here is a
@@ -10544,12 +10603,13 @@ sub send_lines_to_vertical_aligner {
 
         $rvalign_hash->{valign_batch_number} = $valign_batch_number;
 
-        Perl::Tidy::VerticalAligner::valign_input($rvalign_hash);
+        my $vao = $self->{vertical_aligner_object};
+        $vao->valign_input($rvalign_hash);
 
         $in_comma_list = $type_end eq ',' && $forced_breakpoint;
 
         # flush an outdented line to avoid any unwanted vertical alignment
-        Perl::Tidy::VerticalAligner::flush() if ($is_outdented_line);
+        $self->flush_vertical_aligner() if ($is_outdented_line);
 
         $do_not_pad = 0;
 
@@ -10588,7 +10648,7 @@ sub send_lines_to_vertical_aligner {
 
     # output any new -cscw block comment
     if ($cscw_block_comment) {
-        Perl::Tidy::VerticalAligner::flush();
+        $self->flush_vertical_aligner();
         $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
     }
     return;
@@ -10851,9 +10911,9 @@ sub send_lines_to_vertical_aligner {
                         # Sum length from previous alignment
                         my $len = token_sequence_length( $i_start, $i - 1 );
 
-			# Minor patch: do not include the length of any '!'.
-			# Otherwise, commas in the following line will not
-			# match
+                        # Minor patch: do not include the length of any '!'.
+                        # Otherwise, commas in the following line will not
+                        # match
                         #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
                         #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
                         if ( grep { $_ eq '!' }
@@ -10902,9 +10962,10 @@ sub send_lines_to_vertical_aligner {
                 # unwanted cross-line alignments.
                 if ( $raw_tok eq ',' || $raw_tok eq '=>' ) {
 
-                    # If we are at an opening token which increased depth, we have
-                    # to use the name from the previous depth.
-                    my $depth_p = ( $depth_last < $depth ? $depth_last : $depth );
+                  # If we are at an opening token which increased depth, we have
+                  # to use the name from the previous depth.
+                    my $depth_p =
+                      ( $depth_last < $depth ? $depth_last : $depth );
                     if ( $container_name[$depth_p] ) {
                         $tok .= $container_name[$depth_p];
                     }
@@ -14024,7 +14085,7 @@ sub pad_array_to_go {
                     if ( $is_logical_container{ $container_type[$depth] } ) {
                     }
                     else {
-                        if ($is_long_line) { set_forced_breakpoint($i) }
+                        if    ($is_long_line) { set_forced_breakpoint($i) }
                         elsif ( ( $i == $i_line_start || $i == $i_line_end )
                             && $rOpts_break_at_old_logical_breakpoints )
                         {
@@ -15072,8 +15133,8 @@ sub find_token_starting_list {
         # do we have a long first term which should be
         # left on a line by itself?
         my $use_separate_first_term = (
-            $odd_or_even == 1       # only if we can use 1 field/line
-              && $item_count > 3    # need several items
+            $odd_or_even == 1           # only if we can use 1 field/line
+              && $item_count > 3        # need several items
               && $first_term_length >
               2 * $max_length[0] - 2    # need long first term
               && $first_term_length >
@@ -15671,7 +15732,7 @@ sub get_maximum_fields_wanted {
     else {
 
         my $is_odd            = 1;
-        my @max_length        = ( 0, 0 );
+        my @max_length        = ( 0,     0 );
         my @last_length_2     = ( undef, undef );
         my @first_length_2    = ( undef, undef );
         my $last_length       = undef;
@@ -18198,3 +18259,4 @@ sub compare_indentation_levels {
     return;
 }
 1;
+

@@ -337,7 +337,7 @@ sub valign_input {
     # side comments.  Tabs in these fields can mess up the column counting.
     # The log file warns the user if there are any such tabs.
 
-    my ($rline_hash) = @_;
+    my ( $self, $rline_hash ) = @_;
 
     my $level                     = $rline_hash->{level};
     my $level_end                 = $rline_hash->{level_end};
@@ -1305,6 +1305,7 @@ sub dump_array {
 
 # This is the external flush, which also empties the buffer and cache
 sub flush {
+    my ($self) = @_;
 
 ## uses Global symbols {
 ##  '$cached_line_leading_space_count'
