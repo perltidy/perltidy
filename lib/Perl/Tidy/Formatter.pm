@@ -700,7 +700,7 @@ sub new {
 
     prepare_for_new_input_lines();
 
-    my $vertical_aligner_object = Perl::Tidy::VerticalAligner->initialize(
+    my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
         file_writer_object => $file_writer_object,
         logger_object      => $logger_object,

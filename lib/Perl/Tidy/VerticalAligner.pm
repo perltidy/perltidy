@@ -83,7 +83,7 @@ BEGIN {
     };
 }
 
-sub initialize {
+sub new {
 
     my ( $class, @args ) = @_;
 
