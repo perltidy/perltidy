@@ -1539,6 +1539,7 @@ sub my_flush {
         # failed terminal else match
         return unless @{$rgroups} > 1;
         $rgroups->[-2]->[2] = -1;
+        return;
     }
 
     sub sweep_top_down {
@@ -2186,6 +2187,7 @@ EOM
 
     sub initialize_decode {
         %decoded_token = ();
+        return;
     }
 
     sub decode_alignment_token {
@@ -3806,6 +3808,7 @@ sub get_output_line_number {
         # the cache
         $seqno_string               = "";
         $last_nonblank_seqno_string = "";
+        return;
     }
 
     sub my_flush_cache {
