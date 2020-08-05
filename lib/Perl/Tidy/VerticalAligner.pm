@@ -154,6 +154,23 @@ sub initialize {
     return $self;
 }
 
+sub flush {
+
+    # flush() is the external call to completely empty the pipeline.
+    my ($self) = @_;
+
+    # the buffer must be emptied first
+    $self->dump_valign_buffer();
+
+    # then any current group
+    $self->my_flush();
+
+    # then the cache, which may still contain text if there was
+    # no group
+    $self->my_flush_cache();
+    return;
+}
+
 sub initialize_for_new_group {
     my ($self) = @_;
 
@@ -1285,25 +1302,6 @@ sub dump_array {
     # debug routine to dump array contents
     local $" = ')(';
     print STDOUT "(@_)\n";
-    return;
-}
-
-# flush() sends the current Perl::Tidy::VerticalAligner group down the
-# pipeline to Perl::Tidy::FileWriter.
-
-# This is the external flush, which also empties the buffer and cache
-sub flush {
-    my ($self) = @_;
-
-    # the buffer must be emptied first, then any cached text
-    $self->dump_valign_buffer();
-
-    if ( $self->group_line_count() ) {
-        $self->my_flush();
-    }
-    else {
-        $self->my_flush_cache();
-    }
     return;
 }
 
