@@ -348,7 +348,6 @@ BEGIN {
         _rpaired_to_inner_container_ => $i++,
         _rbreak_container_           => $i++,
         _rshort_nested_              => $i++,
-        _valign_batch_count_         => $i++,
         _length_function_            => $i++,
         _fh_tee_                     => $i++,
         _sink_object_                => $i++,
@@ -746,8 +745,8 @@ sub new {
             "Indentation will be with $rOpts->{'indent-columns'} spaces\n");
     }
 
-    # This hash holds the main data structures for formatting
-    # All hash keys must be defined here.
+    # This array reference holds the main data structures for formatting
+    # To add an item, first add a constant index in the BEGIN block above.
     my $self = [];
 
     $self->[_rlines_]        = [];       # = ref to array of lines of the file
@@ -771,7 +770,6 @@ sub new {
     $self->[_rpaired_to_inner_container_] = {};
     $self->[_rbreak_container_]           = {};    # prevent one-line blocks
     $self->[_rshort_nested_]              = {};    # blocks not forced open
-    $self->[_valign_batch_count_]         = 0;
     $self->[_length_function_]            = $length_function;
     $self->[_fh_tee_]                     = $fh_tee;
     $self->[_sink_object_]                = $sink_object;
@@ -788,16 +786,6 @@ sub new {
 "Attempt to create more than 1 object in $class, which is not a true class yet\n";
     }
     return $self;
-}
-
-sub increment_valign_batch_count {
-    my ($self) = shift;
-    return ++$self->[_valign_batch_count_];
-}
-
-sub get_valign_batch_count {
-    my ($self) = shift;
-    return $self->[_valign_batch_count_];
 }
 
 sub Fault {
@@ -10422,8 +10410,6 @@ sub send_lines_to_vertical_aligner {
         push @{$ri_last},  $iend;
     }
 
-    my $valign_batch_number = $self->increment_valign_batch_count();
-
     my ( $cscw_block_comment, $closing_side_comment );
     if ( $rOpts->{'closing-side-comments'} ) {
         ( $closing_side_comment, $cscw_block_comment ) =
@@ -10613,8 +10599,6 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{rpatterns}                 = $rpatterns;
         $rvalign_hash->{rtokens}                   = $rtokens;
         $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
-
-        $rvalign_hash->{valign_batch_number} = $valign_batch_number;
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
