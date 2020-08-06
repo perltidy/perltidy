@@ -69,13 +69,11 @@ BEGIN {
         _extra_indent_ok_             => $i++,
     };
 
-    # Debug flags. These are relics from the original program
-    # development and can be removed any time.
+    # Debug flags. These are relics from the original program development
+    # looking for problems with tab characters and can be removed any time.
     # Caution: these debug flags produce a lot of output
     # They should all be 0 except when debugging small scripts
 
-    use constant VALIGN_DEBUG_FLAG_APPEND  => 0;
-    use constant VALIGN_DEBUG_FLAG_APPEND0 => 0;
     use constant VALIGN_DEBUG_FLAG_TABS    => 0;
 
     my $debug_warning = sub {
@@ -83,8 +81,6 @@ BEGIN {
         return;
     };
 
-    VALIGN_DEBUG_FLAG_APPEND  && $debug_warning->('APPEND');
-    VALIGN_DEBUG_FLAG_APPEND0 && $debug_warning->('APPEND0');
     VALIGN_DEBUG_FLAG_TABS    && $debug_warning->('TABS');
 
 }
@@ -169,11 +165,11 @@ sub flush {
     $self->dump_valign_buffer();
 
     # then any current group
-    $self->my_flush();
+    $self->_flush_group_lines();
 
     # then the cache, which may still contain text if there was
     # no group
-    $self->my_flush_cache();
+    $self->_flush_cache();
     return;
 }
 
@@ -389,10 +385,10 @@ sub valign_input {
 
     my $group_level = $self->[_group_level_];
 
-    VALIGN_DEBUG_FLAG_APPEND0 && do {
+    0 && do {
         my $nlines = $self->group_line_count();
         print STDOUT
-"APPEND0: entering lines=$nlines new #fields= $jmax, leading_count=$leading_space_count force=$is_forced_break, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
+"Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count force=$is_forced_break, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
     };
 
     # Validate cached line if necessary: If we can produce a container
@@ -425,7 +421,7 @@ sub valign_input {
     }
 
     # caller might request no alignment in special cases
-    if ($do_not_pad) { $self->my_flush() }
+    if ($do_not_pad) { $self->_flush_group_lines() }
 
     # shouldn't happen:
     if ( $level < 0 ) { $level = 0 }
@@ -440,7 +436,7 @@ sub valign_input {
           (      $level < $group_level
               && $self->[_last_level_written_] < $group_level );
 
-        $self->my_flush();
+        $self->_flush_group_lines();
 
         # If we know that this line will get flushed out by itself because
         # of level changes, we can leave the extra_indent_ok flag set.
@@ -481,7 +477,7 @@ sub valign_input {
             return;
         }
         else {
-            $self->my_flush();
+            $self->_flush_group_lines();
         }
     }
 
@@ -529,7 +525,7 @@ sub valign_input {
             if (   $rgroup_lines->[0]->get_jmax() > 1
                 || $self->[_zero_count_] > 3 )
             {
-                $self->my_flush();
+                $self->_flush_group_lines();
             }
         }
 
@@ -625,23 +621,23 @@ sub valign_input {
 
     # output this group if it ends in a terminal else or ternary line
     if ( defined($j_terminal_match) ) {
-        $self->my_flush();
+        $self->_flush_group_lines();
     }
 
     # Force break after jump to lower level
     if ( $level_jump < 0 ) {
-        $self->my_flush();
+        $self->_flush_group_lines();
     }
 
     # --------------------------------------------------------------------
     # Some old debugging stuff
     # --------------------------------------------------------------------
-    VALIGN_DEBUG_FLAG_APPEND && do {
-        print STDOUT "APPEND fields:";
+    0 && do {
+        print STDOUT "exiting valign_input fields:";
         dump_array( @{$rfields} );
-        print STDOUT "APPEND tokens:";
+        print STDOUT "exiting valign_input tokens:";
         dump_array( @{$rtokens} );
-        print STDOUT "APPEND patterns:";
+        print STDOUT "exiting valign_input patterns:";
         dump_array( @{$rpatterns} );
     };
 
@@ -1344,9 +1340,9 @@ sub level_change {
     return $level;
 }
 
-sub my_flush_comment {
+sub _flush_comment_lines {
 
-    # Output a group of COMMENT lines
+    # Output a group consisting of COMMENT lines
 
     my ($self) = @_;
     return unless ( $self->group_line_count() );
@@ -1406,7 +1402,7 @@ sub my_flush_comment {
     return;
 }
 
-sub my_flush {
+sub _flush_group_lines {
 
     # This is the vertical aligner internal flush, which leaves the cache
     # intact
@@ -1422,14 +1418,14 @@ sub my_flush {
         my ( $a, $b, $c ) = caller();
         my $nlines = $self->group_line_count();
         print STDOUT
-"APPEND0: my_flush called from $a $b $c lines=$nlines, type=$group_type \n";
+"APPEND0: _flush_group_lines called from $a $b $c lines=$nlines, type=$group_type \n";
     };
 
     ############################################
     # Section 1: Handle a group of COMMENT lines
     ############################################
     if ( $group_type eq 'COMMENT' ) {
-        $self->my_flush_comment();
+        $self->_flush_comment_lines();
         return;
     }
 
@@ -3838,7 +3834,7 @@ sub get_output_line_number {
         return;
     }
 
-    sub my_flush_cache {
+    sub _flush_cache {
         my ($self) = @_;
         if ($cached_line_type) {
             $seqno_string = $cached_seqno_string;
