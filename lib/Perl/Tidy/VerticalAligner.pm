@@ -426,7 +426,7 @@ sub valign_input {
         set_cached_line_valid(0);
     }
 
-    # patch until new aligner is finished
+    # caller might request no alignment in special cases
     if ($do_not_pad) { $self->my_flush() }
 
     # shouldn't happen:
@@ -653,7 +653,8 @@ sub valign_input {
 sub join_hanging_comment {
 
     # Add dummy fields to a hanging side comment to make it look
-    # like the first line in its potential group.
+    # like the first line in its potential group.  This simplifies
+    # the coding.
     my ( $new_line, $old_line ) = @_;
 
     my $jmax = $new_line->get_jmax();
@@ -739,32 +740,45 @@ sub make_side_comment {
     return;
 }
 
-sub decide_if_list {
+{    # closure for decide_if_list
 
-    my $line = shift;
+    my %is_comma_token;
 
-    # A list will be taken to be a line with a forced break in which all
-    # of the field separators are commas or comma-arrows (except for the
-    # trailing #)
+    BEGIN {
 
-    # List separator tokens are things like ',3'   or '=>2',
-    # where the trailing digit is the nesting depth.  Allow braces
-    # to allow nested list items.
-    my $rtokens    = $line->get_rtokens();
-    my $test_token = $rtokens->[0];
-    if ( $test_token =~ /^(\,|=>)/ ) {
-        my $list_type = $test_token;
-        my $jmax      = $line->get_jmax();
-
-        foreach ( 1 .. $jmax - 2 ) {
-            if ( $rtokens->[$_] !~ /^(\,|=>)/ ) {
-                $list_type = "";
-                last;
-            }
-        }
-        $line->set_list_type($list_type);
+        my @q = qw( => );
+        push @q, ',';
+        @is_comma_token{@q} = (1) x scalar(@q);
     }
-    return;
+
+    sub decide_if_list {
+
+        my $line = shift;
+
+        # A list will be taken to be a line with a forced break in which all
+        # of the field separators are commas or comma-arrows (except for the
+        # trailing #)
+
+        my $rtokens    = $line->get_rtokens();
+        my $test_token = $rtokens->[0];
+        my ( $raw_tok, $lev, $tag, $tok_count ) =
+          decode_alignment_token($test_token);
+        if ( $is_comma_token{$raw_tok} ) {
+            my $list_type = $test_token;
+            my $jmax      = $line->get_jmax();
+
+            foreach ( 1 .. $jmax - 2 ) {
+                ( $raw_tok, $lev, $tag, $tok_count ) =
+                  decode_alignment_token( $rtokens->[$_] );
+                if ( !$is_comma_token{$raw_tok} ) {
+                    $list_type = "";
+                    last;
+                }
+            }
+            $line->set_list_type($list_type);
+        }
+        return;
+    }
 }
 
 sub fix_terminal_ternary {
