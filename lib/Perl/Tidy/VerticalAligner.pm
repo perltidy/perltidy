@@ -10,38 +10,25 @@ use Perl::Tidy::VerticalAligner::Line;
 # attempts to line up certain common tokens, such as => and #, which are
 # identified by the calling routine.
 #
-# There are two main routines: valign_input and flush.  Append acts as a
-# storage buffer, collecting lines into a group which can be vertically
-# aligned.  When alignment is no longer possible or desirable, it dumps
-# the group to flush.
+# Usage: 
+#   - An object is initiated with a call to new().
+#   - Then lines are written one-by-one with calls to valign_input().
+#   - A final call to flush() must be made to empth the pipeline.
 #
-#     valign_input -----> flush
+# The sub valign_input collects lines into groups.  When a group reaches
+# the maximum possible size it is processed for alignment and output.
+# The maximum group size is reached whenerver there is a change in indentation
+# level, a blank line, a block comment, or an external flush call.
 #
-#     collects          writes
-#     vertical          one
-#     groups            group
+# If the calling routine needs to interrupt the output and sent other
+# text to the output, it first call flush() to empty the output pipeline.
+# This might occur for example if a block of pod text needs to be sent
+# to the output between blocks of code.
+
+# It is essential that a final call to flush() be made. Other some
+# final lines of text could be lost.
 
 BEGIN {
-
-    # Debug flags. These are relics from the original program
-    # development and can be removed any time.
-    # Caution: these debug flags produce a lot of output
-    # They should all be 0 except when debugging small scripts
-
-    use constant VALIGN_DEBUG_FLAG_APPEND  => 0;
-    use constant VALIGN_DEBUG_FLAG_APPEND0 => 0;
-    use constant VALIGN_DEBUG_FLAG_TERNARY => 0;
-    use constant VALIGN_DEBUG_FLAG_TABS    => 0;
-
-    my $debug_warning = sub {
-        print STDOUT "VALIGN_DEBUGGING with key $_[0]\n";
-        return;
-    };
-
-    VALIGN_DEBUG_FLAG_APPEND  && $debug_warning->('APPEND');
-    VALIGN_DEBUG_FLAG_APPEND0 && $debug_warning->('APPEND0');
-    VALIGN_DEBUG_FLAG_TERNARY && $debug_warning->('TERNARY');
-    VALIGN_DEBUG_FLAG_TABS    && $debug_warning->('TABS');
 
     # Define the fixed indexes for variables in $self, which is an array
     # reference.  Note the convention of leading and trailing underscores to
@@ -81,6 +68,27 @@ BEGIN {
         _comment_leading_space_count_ => $i++,
         _extra_indent_ok_             => $i++,
     };
+
+    # Debug flags. These are relics from the original program
+    # development and can be removed any time.
+    # Caution: these debug flags produce a lot of output
+    # They should all be 0 except when debugging small scripts
+
+    use constant VALIGN_DEBUG_FLAG_APPEND  => 0;
+    use constant VALIGN_DEBUG_FLAG_APPEND0 => 0;
+    use constant VALIGN_DEBUG_FLAG_TERNARY => 0;
+    use constant VALIGN_DEBUG_FLAG_TABS    => 0;
+
+    my $debug_warning = sub {
+        print STDOUT "VALIGN_DEBUGGING with key $_[0]\n";
+        return;
+    };
+
+    VALIGN_DEBUG_FLAG_APPEND  && $debug_warning->('APPEND');
+    VALIGN_DEBUG_FLAG_APPEND0 && $debug_warning->('APPEND0');
+    VALIGN_DEBUG_FLAG_TERNARY && $debug_warning->('TERNARY');
+    VALIGN_DEBUG_FLAG_TABS    && $debug_warning->('TABS');
+
 }
 
 sub new {
