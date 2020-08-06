@@ -86,7 +86,6 @@ use vars qw{
   $diagnostics_object
   $logger_object
   $file_writer_object
-  $formatter_self
 };
 
 # user parameters and shortcuts
@@ -176,7 +175,6 @@ use vars qw{
   $blank_lines_after_opening_block_pattern
   $blank_lines_before_closing_block_pattern
 };
-
 
 # Variables related to the -lp option
 use vars qw{
@@ -331,6 +329,33 @@ BEGIN {
 
         # Number of token variables; must be last in list:
         _NVARS => $i++,
+    };
+
+    # fixed array indexes in the $self array reference
+    $i = 0;
+    use constant {
+        _rlines_                     => $i++,
+        _rlines_new_                 => $i++,
+        _rLL_                        => $i++,
+        _Klimit_                     => $i++,
+        _rnested_pairs_              => $i++,
+        _K_opening_container_        => $i++,
+        _K_closing_container_        => $i++,
+        _K_opening_ternary_          => $i++,
+        _K_closing_ternary_          => $i++,
+        _rcontainer_map_             => $i++,
+        _rK_phantom_semicolons_      => $i++,
+        _rpaired_to_inner_container_ => $i++,
+        _rbreak_container_           => $i++,
+        _rshort_nested_              => $i++,
+        _valign_batch_count_         => $i++,
+        _length_function_            => $i++,
+        _fh_tee_                     => $i++,
+        _sink_object_                => $i++,
+        _logger_object_              => $i++,
+        _file_writer_object_         => $i++,
+        _vertical_aligner_object_    => $i++,
+        _radjusted_levels_           => $i++,
     };
 
     my @q;
@@ -593,7 +618,7 @@ sub DESTROY {
 
 sub get_output_line_number {
     my ($self) = @_;
-    my $vao = $self->{vertical_aligner_object};
+    my $vao = $self->[_vertical_aligner_object_];
     return $vao->get_output_line_number();
 }
 
@@ -723,59 +748,56 @@ sub new {
 
     # This hash holds the main data structures for formatting
     # All hash keys must be defined here.
-    $formatter_self = {
-        rlines              => [],       # = ref to array of lines of the file
-        rlines_new          => [],       # = ref to array of output lines
+    my $self = [];
+
+    $self->[_rlines_]        = [];       # = ref to array of lines of the file
+    $self->[_rlines_new_]    = [];       # = ref to array of output lines
                                          #   (FOR FUTURE DEVELOPMENT)
-        rLL                 => [],       # = ref to array with all tokens
+    $self->[_rLL_]           = [];       # = ref to array with all tokens
                                          # in the file. LL originally meant
                                          # 'Linked List'. Linked lists were a
                                          # bad idea but LL is easy to type.
-        Klimit              => undef,    # = maximum K index for rLL. This is
+    $self->[_Klimit_]        = undef;    # = maximum K index for rLL. This is
                                          # needed to catch any autovivification
                                          # problems.
-        rnested_pairs       => [],       # for welding decisions
-        K_opening_container => {},       # for quickly traversing structure
-        K_closing_container => {},       # for quickly traversing structure
-        K_opening_ternary   => {},       # for quickly traversing structure
-        K_closing_ternary   => {},       # for quickly traversing structure
-        rcontainer_map      => {},       # hierarchical map of containers
-        rK_phantom_semicolons =>
-          undef,    # for undoing phantom semicolons if iterating
-        rpaired_to_inner_container => {},
-        rbreak_container           => {},              # prevent one-line blocks
-        rshort_nested              => {},              # blocks not forced open
-        rvalid_self_keys           => [],              # for checking
-        valign_batch_count         => 0,
-        length_function            => $length_function,
-        fh_tee                     => $fh_tee,
-        sink_object                => $sink_object,
-        logger_object              => $logger_object,
-        file_writer_object         => $file_writer_object,
-        vertical_aligner_object    => $vertical_aligner_object,
-        radjusted_levels           => [],
-    };
-    my @valid_keys = keys %{$formatter_self};
-    $formatter_self->{rvalid_self_keys} = \@valid_keys;
+    $self->[_rnested_pairs_] = [];       # for welding decisions
+    $self->[_K_opening_container_] = {};    # for quickly traversing structure
+    $self->[_K_closing_container_] = {};    # for quickly traversing structure
+    $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
+    $self->[_K_closing_ternary_]   = {};    # for quickly traversing structure
+    $self->[_rcontainer_map_]      = {};    # hierarchical map of containers
+    $self->[_rK_phantom_semicolons_] =
+      undef;    # for undoing phantom semicolons if iterating
+    $self->[_rpaired_to_inner_container_] = {};
+    $self->[_rbreak_container_]           = {};    # prevent one-line blocks
+    $self->[_rshort_nested_]              = {};    # blocks not forced open
+    $self->[_valign_batch_count_]         = 0;
+    $self->[_length_function_]            = $length_function;
+    $self->[_fh_tee_]                     = $fh_tee;
+    $self->[_sink_object_]                = $sink_object;
+    $self->[_logger_object_]              = $logger_object;
+    $self->[_file_writer_object_]         = $file_writer_object;
+    $self->[_vertical_aligner_object_]    = $vertical_aligner_object;
+    $self->[_radjusted_levels_]           = [];
 
-    bless $formatter_self, $class;
+    bless $self, $class;
 
     # Safety check..this is not a class yet
     if ( _increment_count() > 1 ) {
         confess
 "Attempt to create more than 1 object in $class, which is not a true class yet\n";
     }
-    return $formatter_self;
+    return $self;
 }
 
 sub increment_valign_batch_count {
     my ($self) = shift;
-    return ++$self->{valign_batch_count};
+    return ++$self->[_valign_batch_count_];
 }
 
 sub get_valign_batch_count {
     my ($self) = shift;
-    return $self->{valign_batch_count};
+    return $self->[_valign_batch_count_];
 }
 
 sub Fault {
@@ -803,21 +825,12 @@ EOM
     return;
 }
 
-sub check_self_hash {
-    my $self            = shift;
-    my @valid_self_keys = @{ $self->{rvalid_self_keys} };
-    my %valid_self_hash;
-    @valid_self_hash{@valid_self_keys} = (1) x scalar(@valid_self_keys);
-    check_keys( $self, \%valid_self_hash, "Checkpoint: self error", 1 );
-    return;
-}
-
 sub check_token_array {
     my $self = shift;
 
     # Check for errors in the array of tokens
-    $self->check_self_hash();
-    my $rLL = $self->{rLL};
+    ##$self->check_self_hash();
+    my $rLL = $self->[_rLL_];
     for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
         my $nvars = @{ $rLL->[$KK] };
         if ( $nvars != _NVARS ) {
@@ -844,17 +857,17 @@ sub set_rLL_max_index {
     # Set the limit of the rLL array, assuming that it is correct.
     # This should only be called by routines after they make changes
     # to tokenization
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     if ( !defined($rLL) ) {
 
         # Shouldn't happen because rLL was initialized to be an array ref
         Fault("Undefined Memory rLL");
     }
-    my $Klimit_old = $self->{Klimit};
+    my $Klimit_old = $self->[_Klimit_];
     my $num        = @{$rLL};
     my $Klimit;
     if ( $num > 0 ) { $Klimit = $num - 1 }
-    $self->{Klimit} = $Klimit;
+    $self->[_Klimit_] = $Klimit;
     return ($Klimit);
 }
 
@@ -863,8 +876,8 @@ sub get_rLL_max_index {
 
     # the memory location $rLL and number of tokens should be obtained
     # from this routine so that any autovivication can be immediately caught.
-    my $rLL    = $self->{rLL};
-    my $Klimit = $self->{Klimit};
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
     if ( !defined($rLL) ) {
 
         # Shouldn't happen because rLL was initialized to be an array ref
@@ -974,9 +987,9 @@ EOM
     my $Opt_repeat_count =
       $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
 
-    my $rlines              = $self->{rlines};
-    my $rLL                 = $self->{rLL};
-    my $K_closing_container = $self->{K_closing_container};
+    my $rlines              = $self->[_rlines_];
+    my $rLL                 = $self->[_rLL_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     # variables for the current group and subgroups:
     my ( $ibeg, $iend, $count, $level_beg, $K_closing, @iblanks, @group,
@@ -1402,9 +1415,9 @@ sub process_all_lines {
     # Loop over old lines to set new line break points
 
     my $self                       = shift;
-    my $rlines                     = $self->{rlines};
-    my $sink_object                = $self->{sink_object};
-    my $fh_tee                     = $self->{fh_tee};
+    my $rlines                     = $self->[_rlines_];
+    my $sink_object                = $self->[_sink_object_];
+    my $fh_tee                     = $self->[_fh_tee_];
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
 
     # Note for RT#118553, leave only one newline at the end of a file.
@@ -1595,8 +1608,8 @@ sub process_all_lines {
 
     sub check_line_hashes {
         my $self = shift;
-        $self->check_self_hash();
-        my $rlines = $self->{rlines};
+        ##$self->check_self_hash();
+        my $rlines = $self->[_rlines_];
         foreach my $rline ( @{$rlines} ) {
             my $iline     = $rline->{_line_number};
             my $line_type = $rline->{_line_type};
@@ -1613,9 +1626,9 @@ sub write_line {
     # We are caching tokenized lines as they arrive and converting them to the
     # format needed for the final formatting.
     my ( $self, $line_of_tokens_old ) = @_;
-    my $rLL        = $self->{rLL};
-    my $Klimit     = $self->{Klimit};
-    my $rlines_new = $self->{rlines};
+    my $rLL        = $self->[_rLL_];
+    my $Klimit     = $self->[_Klimit_];
+    my $rlines_new = $self->[_rlines_];
 
     my $Kfirst;
     my $line_of_tokens = {};
@@ -1714,7 +1727,7 @@ sub write_line {
 
     $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
     $line_of_tokens->{_code_type} = "";
-    $self->{Klimit}               = $Klimit;
+    $self->[_Klimit_]             = $Klimit;
 
     push @{$rlines_new}, $line_of_tokens;
     return;
@@ -1866,7 +1879,7 @@ sub set_whitespace_flags {
     #
 
     my $self = shift;
-    my $rLL  = $self->{rLL};
+    my $rLL  = $self->[_rLL_];
 
     my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
@@ -2402,11 +2415,11 @@ sub respace_tokens {
     # Method: The old tokens are copied one-by-one, with changes, from the old
     # linear storage array $rLL to a new array $rLL_new.
 
-    my $rLL                        = $self->{rLL};
-    my $Klimit_old                 = $self->{Klimit};
-    my $rlines                     = $self->{rlines};
-    my $rpaired_to_inner_container = $self->{rpaired_to_inner_container};
-    my $length_function            = $self->{length_function};
+    my $rLL                        = $self->[_rLL_];
+    my $Klimit_old                 = $self->[_Klimit_];
+    my $rlines                     = $self->[_rlines_];
+    my $rpaired_to_inner_container = $self->[_rpaired_to_inner_container_];
+    my $length_function            = $self->[_length_function_];
 
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
@@ -3187,13 +3200,13 @@ sub respace_tokens {
     }    # End line loop
 
     # Reset memory to be the new array
-    $self->{rLL} = $rLL_new;
+    $self->[_rLL_] = $rLL_new;
     $self->set_rLL_max_index();
-    $self->{K_opening_container}   = $K_opening_container;
-    $self->{K_closing_container}   = $K_closing_container;
-    $self->{K_opening_ternary}     = $K_opening_ternary;
-    $self->{K_closing_ternary}     = $K_closing_ternary;
-    $self->{rK_phantom_semicolons} = $rK_phantom_semicolons;
+    $self->[_K_opening_container_]   = $K_opening_container;
+    $self->[_K_closing_container_]   = $K_closing_container;
+    $self->[_K_opening_ternary_]     = $K_opening_ternary;
+    $self->[_K_closing_ternary_]     = $K_closing_ternary;
+    $self->[_rK_phantom_semicolons_] = $rK_phantom_semicolons;
 
     # make sure the new array looks okay
     $self->check_token_array();
@@ -3212,7 +3225,7 @@ sub respace_tokens {
 
     sub scan_comments {
         my $self   = shift;
-        my $rlines = $self->{rlines};
+        my $rlines = $self->[_rlines_];
 
         $Last_line_had_side_comment = undef;
         $In_format_skipping_section = undef;
@@ -3247,8 +3260,8 @@ sub respace_tokens {
         # 'VER'=VERSION statement
         # '' or (undefined) - no restructions
 
-        my $rLL    = $self->{rLL};
-        my $Klimit = $self->{Klimit};
+        my $rLL    = $self->[_rLL_];
+        my $Klimit = $self->[_Klimit_];
 
         my $rOpts_add_newlines    = $rOpts->{'add-newlines'};
         my $rOpts_format_skipping = $rOpts->{'format-skipping'};
@@ -3426,7 +3439,7 @@ sub respace_tokens {
 sub find_nested_pairs {
     my $self = shift;
 
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
     # We define an array of pairs of nested containers
@@ -3548,8 +3561,8 @@ sub find_nested_pairs {
         }
         $last_nonblank_token_vars = $rtoken_vars;
     }
-    $self->{rnested_pairs}              = \@nested_pairs;
-    $self->{rpaired_to_inner_container} = $rpaired_to_inner_container;
+    $self->[_rnested_pairs_]              = \@nested_pairs;
+    $self->[_rpaired_to_inner_container_] = $rpaired_to_inner_container;
     return;
 }
 
@@ -3557,7 +3570,7 @@ sub Debug_dump_tokens {
 
     # a debug routine, not normally used
     my ( $self, $msg ) = @_;
-    my $rLL   = $self->{rLL};
+    my $rLL   = $self->[_rLL_];
     my $nvars = @{$rLL};
     print STDERR "$msg\n";
     print STDERR "ntokens=$nvars\n";
@@ -3573,14 +3586,14 @@ sub Debug_dump_tokens {
 
 sub get_old_line_index {
     my ( $self, $K ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return 0 unless defined($K);
     return $rLL->[$K]->[_LINE_INDEX_];
 }
 
 sub get_old_line_count {
     my ( $self, $Kbeg, $Kend ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return 0 unless defined($Kbeg);
     return 0 unless defined($Kend);
     return $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_] + 1;
@@ -3593,7 +3606,7 @@ sub K_next_code {
     return unless ( defined($KK) && $KK >= 0 );
 
     # use the standard array unless given otherwise
-    $rLL = $self->{rLL} unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
@@ -3617,7 +3630,7 @@ sub K_next_nonblank {
     return unless ( defined($KK) && $KK >= 0 );
 
     # use the standard array unless given otherwise
-    $rLL = $self->{rLL} unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
@@ -3637,7 +3650,7 @@ sub K_previous_code {
     my ( $self, $KK, $rLL ) = @_;
 
     # use the standard array unless given otherwise
-    $rLL = $self->{rLL} unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num = @{$rLL};
     if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
@@ -3667,7 +3680,7 @@ sub K_previous_nonblank {
     my ( $self, $KK, $rLL ) = @_;
 
     # use the standard array unless given otherwise
-    $rLL = $self->{rLL} unless ( defined($rLL) );
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num = @{$rLL};
     if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
@@ -3690,12 +3703,12 @@ sub map_containers {
 
     # Maps the container hierarchy
     my $self = shift;
-    my $rLL  = $self->{rLL};
+    my $rLL  = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
-    my $rcontainer_map      = $self->{rcontainer_map};
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $rcontainer_map      = $self->[_rcontainer_map_];
 
     # loop over containers
     my @stack;    # stack of container sequence numbers
@@ -3762,17 +3775,17 @@ sub mark_short_nested_blocks {
     # 'sub process_line_of_CODE' and 'sub starting_one_line_block'
 
     my $self = shift;
-    my $rLL  = $self->{rLL};
+    my $rLL  = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
     return unless ( $rOpts->{'one-line-block-nesting'} );
 
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
-    my $rbreak_container    = $self->{rbreak_container};
-    my $rshort_nested       = $self->{rshort_nested};
-    my $rcontainer_map      = $self->{rcontainer_map};
-    my $rlines              = $self->{rlines};
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $rbreak_container    = $self->[_rbreak_container_];
+    my $rshort_nested       = $self->[_rshort_nested_];
+    my $rcontainer_map      = $self->[_rcontainer_map_];
+    my $rlines              = $self->[_rlines_];
 
     # Variables needed for estimating line lengths
     my $starting_indent;
@@ -3925,13 +3938,13 @@ sub weld_containers {
 
 sub cumulative_length_before_K {
     my ( $self, $KK ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 }
 
 sub cumulative_length_after_K {
     my ( $self, $KK ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
 }
 
@@ -3942,12 +3955,12 @@ sub weld_cuddled_blocks {
     # closing and opening block braces and welding them together.
     return unless ( %{$rcuddled_block_types} );
 
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
-    my $rbreak_container = $self->{rbreak_container};
+    my $rbreak_container = $self->[_rbreak_container_];
 
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
@@ -4106,12 +4119,12 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                 = $self->{rLL};
+    my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->get_rLL_max_index();
-    my $rnested_pairs       = $self->{rnested_pairs};
-    my $rlines              = $self->{rlines};
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
+    my $rnested_pairs       = $self->[_rnested_pairs_];
+    my $rlines              = $self->[_rlines_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
@@ -4432,12 +4445,12 @@ EOM
 sub weld_nested_quotes {
     my $self = shift;
 
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
-    my $K_opening_container = $self->{K_opening_container};
-    my $K_closing_container = $self->{K_closing_container};
-    my $rlines              = $self->{rlines};
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $rlines              = $self->[_rlines_];
 
     my $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
@@ -4609,7 +4622,7 @@ sub weld_len_right_to_go {
 sub whitespace_cycle_adjustment {
 
     my $self = shift;
-    my $rLL  = $self->{rLL};
+    my $rLL  = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $radjusted_levels;
     my $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
@@ -4664,7 +4677,7 @@ sub whitespace_cycle_adjustment {
             }
         }
     }
-    $self->{radjusted_levels} = $radjusted_levels;
+    $self->[_radjusted_levels_] = $radjusted_levels;
     return;
 }
 
@@ -4673,7 +4686,7 @@ sub bli_adjustment {
     # if -bli is set, adds one continuation indentation for certain braces
     my $self = shift;
     return unless ( $rOpts->{'brace-left-and-indent'} );
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $KNEXT = 0;
     while ( defined($KNEXT) ) {
@@ -4691,8 +4704,8 @@ sub link_sequence_items {
 
     # This has been merged into 'respace_tokens' but retained for reference
     my $self   = shift;
-    my $rlines = $self->{rlines};
-    my $rLL    = $self->{rLL};
+    my $rlines = $self->[_rlines_];
+    my $rLL    = $self->[_rLL_];
 
     # We walk the token list and make links to the next sequence item.
     # We also define these hashes to container tokens using sequence number as
@@ -4755,19 +4768,19 @@ EOM
         }
     }
 
-    $self->{K_opening_container} = $K_opening_container;
-    $self->{K_closing_container} = $K_closing_container;
-    $self->{K_opening_ternary}   = $K_opening_ternary;
-    $self->{K_closing_ternary}   = $K_closing_ternary;
+    $self->[_K_opening_container_] = $K_opening_container;
+    $self->[_K_closing_container_] = $K_closing_container;
+    $self->[_K_opening_ternary_]   = $K_opening_ternary;
+    $self->[_K_closing_ternary_]   = $K_closing_ternary;
     return;
 }
 
 sub resync_lines_and_tokens {
 
     my $self   = shift;
-    my $rLL    = $self->{rLL};
-    my $Klimit = $self->{Klimit};
-    my $rlines = $self->{rlines};
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    my $rlines = $self->[_rlines_];
 
     # Re-construct the arrays of tokens associated with the original input lines
     # since they have probably changed due to inserting and deleting blanks
@@ -4857,7 +4870,7 @@ sub resync_lines_and_tokens {
 
 sub dump_verbatim {
     my $self   = shift;
-    my $rlines = $self->{rlines};
+    my $rlines = $self->[_rlines_];
     foreach my $line ( @{$rlines} ) {
         my $input_line = $line->{_line_text};
         $self->write_unindented_line($input_line);
@@ -5072,9 +5085,9 @@ sub set_leading_whitespace {
     # "@tokens_to_go"
     # "@types_to_go"
 
-    my $rbreak_container = $self->{rbreak_container};
-    my $rshort_nested    = $self->{rshort_nested};
-    my $rLL              = $self->{rLL};
+    my $rbreak_container = $self->[_rbreak_container_];
+    my $rshort_nested    = $self->[_rshort_nested_];
+    my $rLL              = $self->[_rLL_];
 
     # find needed previous nonblank tokens
     my $last_nonblank_token      = '';
@@ -5107,7 +5120,7 @@ sub set_leading_whitespace {
 
     # Adjust levels if necessary to recycle whitespace:
     my $level            = $level_abs;
-    my $radjusted_levels = $self->{radjusted_levels};
+    my $radjusted_levels = $self->[_radjusted_levels_];
     if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
         $level = $radjusted_levels->[$Kj];
     }
@@ -5799,7 +5812,7 @@ sub wrapup {
     }
     write_logfile_entry("\n");
 
-    my $vao = $self->{vertical_aligner_object};
+    my $vao = $self->[_vertical_aligner_object_];
     $vao->report_anything_unusual();
 
     $file_writer_object->report_line_length_errors();
@@ -7070,7 +7083,7 @@ sub tight_paren_follows {
     # uses Global Symbols:  $rOpts, $ANYSUB_PATTERN
 
     return unless defined($K_ic);
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
 
     # we should only be called at a closing block
     my $seqno_i = $rLL->[$K_ic]->[_TYPE_SEQUENCE_];
@@ -7083,8 +7096,8 @@ sub tight_paren_follows {
     return unless ( $token_next eq ')' );
 
     my $seqno_o = $rLL->[$K_oc]->[_TYPE_SEQUENCE_];
-    my $K_io    = $self->{K_opening_container}->{$seqno_i};
-    my $K_oo    = $self->{K_opening_container}->{$seqno_o};
+    my $K_io    = $self->[_K_opening_container_]->{$seqno_i};
+    my $K_oo    = $self->[_K_opening_container_]->{$seqno_o};
 
     # RULE 1: Do not break before a closing signature paren
     # (regardless of complexity).  This is a fix for issue git#22.
@@ -7303,7 +7316,7 @@ sub copy_token_as_type {
     sub store_token_to_go {
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
-        my $rLL  = $self->{rLL};
+        my $rLL  = $self->[_rLL_];
         my $flag = $side_comment_follows ? 1 : $no_internal_newlines;
 
         # the array of tokens can be given if they are different from the
@@ -7392,7 +7405,7 @@ sub copy_token_as_type {
         # a new line.  We start by using the default formula.
         # First Adjust levels if necessary to recycle whitespace:
         my $level_wc         = $level;
-        my $radjusted_levels = $self->{radjusted_levels};
+        my $radjusted_levels = $self->[_radjusted_levels_];
         if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
             $level_wc = $radjusted_levels->[$Ktoken_vars];
         }
@@ -7457,7 +7470,7 @@ sub copy_token_as_type {
 
     sub flush_vertical_aligner {
         my ($self) = @_;
-        my $vao = $self->{vertical_aligner_object};
+        my $vao = $self->[_vertical_aligner_object_];
         $vao->flush();
         return;
     }
@@ -7520,11 +7533,11 @@ sub copy_token_as_type {
         my $rK_range = $line_of_tokens->{_rK_range};
         ( $K_first, $K_last ) = @{$rK_range};
 
-        my $rLL              = $self->{rLL};
-        my $rbreak_container = $self->{rbreak_container};
-        my $rshort_nested    = $self->{rshort_nested};
-        my $sink_object      = $self->{sink_object};
-        my $fh_tee           = $self->{fh_tee};
+        my $rLL              = $self->[_rLL_];
+        my $rbreak_container = $self->[_rbreak_container_];
+        my $rshort_nested    = $self->[_rshort_nested_];
+        my $sink_object      = $self->[_sink_object_];
+        my $fh_tee           = $self->[_fh_tee_];
 
         my $rOpts_add_newlines = $rOpts->{'add-newlines'};
         my $rOpts_break_at_old_comma_breakpoints =
@@ -8189,7 +8202,7 @@ sub copy_token_as_type {
 
 sub consecutive_nonblank_lines {
     my ($self) = @_;
-    my $vao = $self->{vertical_aligner_object};
+    my $vao = $self->[_vertical_aligner_object_];
     return $file_writer_object->get_consecutive_nonblank_lines() +
       $vao->get_cached_line_count();
 }
@@ -8201,7 +8214,7 @@ sub consecutive_nonblank_lines {
 sub process_batch_of_CODE {
 
     my ( $self, $comma_count_in_batch ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
 
     my $rOpts_add_newlines              = $rOpts->{'add-newlines'};
     my $rOpts_comma_arrow_breakpoints   = $rOpts->{'comma-arrow-breakpoints'};
@@ -8592,9 +8605,9 @@ sub starting_one_line_block {
     # "@tokens_to_go"
     # "@types_to_go"
 
-    my $rbreak_container = $self->{rbreak_container};
-    my $rshort_nested    = $self->{rshort_nested};
-    my $rLL              = $self->{rLL};
+    my $rbreak_container = $self->[_rbreak_container_];
+    my $rshort_nested    = $self->[_rshort_nested_];
+    my $rLL              = $self->[_rLL_];
 
     # kill any current block - we can only go 1 deep
     destroy_one_line_block();
@@ -9014,7 +9027,7 @@ sub pad_token {
 
     # insert $pad_spaces before token number $ipad
     my ( $self, $ipad, $pad_spaces ) = @_;
-    my $rLL     = $self->{rLL};
+    my $rLL     = $self->[_rLL_];
     my $KK      = $K_to_go[$ipad];
     my $tok     = $rLL->[$KK]->[_TOKEN_];
     my $tok_len = $rLL->[$KK]->[_TOKEN_LENGTH_];
@@ -10156,7 +10169,7 @@ sub make_else_csc_text {
 sub add_closing_side_comment {
 
     my $self = shift;
-    my $rLL  = $self->{rLL};
+    my $rLL  = $self->[_rLL_];
 
     # add closing side comments after closing block braces if -csc used
     my ( $closing_side_comment, $cscw_block_comment );
@@ -10386,8 +10399,8 @@ sub send_lines_to_vertical_aligner {
     my $n_last_line = @{$rlines_K} - 1;
     my $do_not_pad  = $rbatch_hash->{do_not_pad};
 
-    my $rLL    = $self->{rLL};
-    my $Klimit = $self->{Klimit};
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
 
     my ( $Kbeg_next, $Kend_next ) = @{ $rlines_K->[0] };
     my $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
@@ -10603,7 +10616,7 @@ sub send_lines_to_vertical_aligner {
 
         $rvalign_hash->{valign_batch_number} = $valign_batch_number;
 
-        my $vao = $self->{vertical_aligner_object};
+        my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
 
         $in_comma_list = $type_end eq ',' && $forced_breakpoint;
@@ -11364,7 +11377,7 @@ sub lookup_opening_indentation {
             $ri_last, $rindentation_list, $level_jump
         ) = @_;
 
-        my $rLL = $self->{rLL};
+        my $rLL = $self->[_rLL_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) =
@@ -11960,20 +11973,20 @@ sub K_mate_index {
    # return the index K of the other member of the pair.
     my ( $self, $K ) = @_;
     return unless defined($K);
-    my $rLL   = $self->{rLL};
+    my $rLL   = $self->[_rLL_];
     my $seqno = $rLL->[$K]->[_TYPE_SEQUENCE_];
     return unless ($seqno);
 
-    my $K_opening = $self->{K_opening_container}->{$seqno};
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
     if ( defined($K_opening) ) {
         if ( $K != $K_opening ) { return $K_opening }
-        return $self->{K_closing_container}->{$seqno};
+        return $self->[_K_closing_container_]->{$seqno};
     }
 
-    $K_opening = $self->{K_opening_ternary}->{$seqno};
+    $K_opening = $self->[_K_opening_ternary_]->{$seqno};
     if ( defined($K_opening) ) {
         if ( $K != $K_opening ) { return $K_opening }
-        return $self->{K_closing_ternary}->{$seqno};
+        return $self->[_K_closing_ternary_]->{$seqno};
     }
     return;
 }
@@ -12610,7 +12623,7 @@ sub terminal_type_K {
     #    otherwise returns final token type
 
     my ( $self, $Kbeg, $Kend ) = @_;
-    my $rLL = $self->{rLL};
+    my $rLL = $self->[_rLL_];
 
     if ( !defined($Kend) ) {
         Fault("Error in terminal_type_K: Kbeg=$Kbeg > $Kend=Kend");
@@ -16024,8 +16037,8 @@ sub undo_forced_breakpoint_stack {
     sub delete_one_line_semicolons {
 
         my ( $self, $ri_beg, $ri_end ) = @_;
-        my $rLL                 = $self->{rLL};
-        my $K_opening_container = $self->{K_opening_container};
+        my $rLL                 = $self->[_rLL_];
+        my $K_opening_container = $self->[_K_opening_container_];
 
         # Walk down the lines of this batch and delete any semicolons
         # terminating one-line blocks;
@@ -16091,7 +16104,7 @@ sub undo_forced_breakpoint_stack {
         # Walk down the lines of this batch and unmask any invisible line-ending
         # semicolons.  They were placed by sub respace_tokens but we only now
         # know if we actually need them.
-        my $rLL = $self->{rLL};
+        my $rLL = $self->[_rLL_];
 
         my $nmax = @{$ri_end} - 1;
         foreach my $n ( 0 .. $nmax ) {
@@ -17497,7 +17510,7 @@ sub in_same_container_i {
 
         my ( $self, $K1, $K2 ) = @_;
         if ( $K2 < $K1 ) { ( $K1, $K2 ) = ( $K2, $K1 ) }
-        my $rLL     = $self->{rLL};
+        my $rLL     = $self->[_rLL_];
         my $depth_1 = $rLL->[$K1]->[_SLEVEL_];
         return if ( $depth_1 < 0 );
         return unless ( $rLL->[$K2]->[_SLEVEL_] == $depth_1 );
