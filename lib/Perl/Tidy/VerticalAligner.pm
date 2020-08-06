@@ -2203,9 +2203,16 @@ EOM
 
 {    # closure for decode_alignment_token
 
+    # This routine is called repeatedly for each token, so it needs to be
+    # efficient.  We can speed things up by remembering the inputs and outputs
+    # in a hash.
     my %decoded_token;
 
     sub initialize_decode {
+
+        # We will re-initialize the hash for each file. Otherwise, there is
+        # a danger that the hash can become arbitrarily large if a very large
+        # number of files is processed at once.
         %decoded_token = ();
         return;
     }
