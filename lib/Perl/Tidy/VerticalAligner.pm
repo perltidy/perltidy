@@ -76,7 +76,6 @@ BEGIN {
 
     use constant VALIGN_DEBUG_FLAG_APPEND  => 0;
     use constant VALIGN_DEBUG_FLAG_APPEND0 => 0;
-    use constant VALIGN_DEBUG_FLAG_TERNARY => 0;
     use constant VALIGN_DEBUG_FLAG_TABS    => 0;
 
     my $debug_warning = sub {
@@ -86,7 +85,6 @@ BEGIN {
 
     VALIGN_DEBUG_FLAG_APPEND  && $debug_warning->('APPEND');
     VALIGN_DEBUG_FLAG_APPEND0 && $debug_warning->('APPEND0');
-    VALIGN_DEBUG_FLAG_TERNARY && $debug_warning->('TERNARY');
     VALIGN_DEBUG_FLAG_TABS    && $debug_warning->('TABS');
 
 }
@@ -799,6 +797,7 @@ sub fix_terminal_ternary {
       = @_;
 
     return unless ($old_line);
+    my $EXPLAIN = 0;
 
     my $jmax        = @{$rfields} - 1;
     my $rfields_old = $old_line->get_rfields();
@@ -814,8 +813,9 @@ sub fix_terminal_ternary {
     my $pad_length = 0;
     foreach my $j ( 0 .. $maximum_field_index - 1 ) {
         my $tok = $rtokens_old->[$j];
-        if ( $tok =~ /^\?(\d+)$/ ) {
-            $depth_question = $1;
+        my ( $raw_tok, $lev, $tag, $tok_count ) = decode_alignment_token($tok);
+        if ( $raw_tok eq '?' ) {
+            $depth_question = $lev;
 
             # depth must be correct
             next unless ( $depth_question eq $group_level );
@@ -845,7 +845,7 @@ sub fix_terminal_ternary {
     my @tokens        = @{$rtokens};
     my @field_lengths = @{$rfield_lengths};
 
-    VALIGN_DEBUG_FLAG_TERNARY && do {
+    $EXPLAIN && do {
         local $" = '><';
         print STDOUT "CURRENT FIELDS=<@{$rfields_old}>\n";
         print STDOUT "CURRENT TOKENS=<@{$rtokens_old}>\n";
@@ -934,7 +934,7 @@ sub fix_terminal_ternary {
         splice( @field_lengths, 0, 0, (0) x $jadd )  if $jadd;
     }
 
-    VALIGN_DEBUG_FLAG_TERNARY && do {
+    $EXPLAIN && do {
         local $" = '><';
         print STDOUT "MODIFIED TOKENS=<@tokens>\n";
         print STDOUT "MODIFIED PATTERNS=<@patterns>\n";
