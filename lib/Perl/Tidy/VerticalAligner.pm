@@ -10,23 +10,24 @@ use Perl::Tidy::VerticalAligner::Line;
 # attempts to line up certain common tokens, such as => and #, which are
 # identified by the calling routine.
 #
-# Usage: 
-#   - An object is initiated with a call to new().
-#   - Then lines are written one-by-one with calls to valign_input().
-#   - A final call to flush() must be made to empth the pipeline.
+# Usage:
+#   - Initiate an object with a call to new().
+#   - Write lines one-by-one with calls to valign_input().
+#   - Make a final call to flush() to empty the pipeline.
 #
 # The sub valign_input collects lines into groups.  When a group reaches
 # the maximum possible size it is processed for alignment and output.
 # The maximum group size is reached whenerver there is a change in indentation
-# level, a blank line, a block comment, or an external flush call.
+# level, a blank line, a block comment, or an external flush call.  The calling
+# routine may also force a break in alignment at any time.
 #
-# If the calling routine needs to interrupt the output and sent other
-# text to the output, it first call flush() to empty the output pipeline.
-# This might occur for example if a block of pod text needs to be sent
-# to the output between blocks of code.
+# If the calling routine needs to interrupt the output and sent other text to
+# the output, it must first call flush() to empty the output pipeline.  This
+# might occur for example if a block of pod text needs to be sent to the output
+# between blocks of code.
 
 # It is essential that a final call to flush() be made. Other some
-# final lines of text could be lost.
+# final lines of text will be lost.
 
 BEGIN {
 
@@ -69,19 +70,19 @@ BEGIN {
         _extra_indent_ok_             => $i++,
     };
 
-    # Debug flags. These are relics from the original program development
-    # looking for problems with tab characters and can be removed any time.
-    # Caution: these debug flags produce a lot of output
-    # They should all be 0 except when debugging small scripts
+    # Debug flag. This is a relics from the original program development
+    # looking for problems with tab characters.  Caution: this debug flag can
+    # produce a lot of output It should be 0 except when debugging small
+    # scripts.
 
-    use constant VALIGN_DEBUG_FLAG_TABS    => 0;
+    use constant VALIGN_DEBUG_FLAG_TABS => 0;
 
     my $debug_warning = sub {
         print STDOUT "VALIGN_DEBUGGING with key $_[0]\n";
         return;
     };
 
-    VALIGN_DEBUG_FLAG_TABS    && $debug_warning->('TABS');
+    VALIGN_DEBUG_FLAG_TABS && $debug_warning->('TABS');
 
 }
 
@@ -324,7 +325,7 @@ sub valign_input {
     # the matching tokens, and the last one tracks the maximum line length.
     #
     # Each time a new line comes in, it joins the current vertical
-    # group if possible.  Otherwise it causes the current group to be dumped
+    # group if possible.  Otherwise it causes the current group to be flushed
     # and a new group is started.
     #
     # For each new group member, the column locations are increased, as
@@ -366,17 +367,27 @@ sub valign_input {
       $self->[_last_leading_space_count_] > $leading_space_count;
     $self->[_last_leading_space_count_] = $leading_space_count;
 
-    # Patch: undo for hanging side comment
+    # Identify a hanging side comment.  Hanging side comments have an empty
+    # initial field.
     my $is_hanging_side_comment =
       ( $jmax == 1 && $rtokens->[0] eq '#' && $rfields->[0] =~ /^\s*$/ );
+
+    # Undo outdented flag for a hanging side comment
     $is_outdented = 0 if $is_hanging_side_comment;
 
-    # Forget side comment alignment after seeing 2 or more block comments
+    # Identify a block comment.
     my $is_block_comment = ( $jmax == 0 && $rfields->[0] =~ /^#/ );
+
+    # Block comment .. update count
     if ($is_block_comment) {
         $self->[_consecutive_block_comments_]++;
     }
+
+    # Not a block comment ..
+    # Forget side comment column if we saw 2 or more block comments,
+    # and reset the count
     else {
+
         if ( $self->[_consecutive_block_comments_] > 1 ) {
             $self->forget_side_comment();
         }
@@ -786,7 +797,7 @@ sub fix_terminal_ternary {
     #    : $year % 400 ? 0
     #    :               1;
     #
-    # returns 1 if the terminal item should be indented
+    # returns the index of the terminal question token, if any
 
     my ( $old_line, $rfields, $rtokens, $rpatterns, $rfield_lengths,
         $group_level )
@@ -1016,7 +1027,6 @@ sub fix_terminal_else {
 sub check_match {
 
     # See if the current line matches the current vertical alignment group.
-    # If not, flush the current group.
 
     my ( $self, $new_line, $old_line ) = @_;
 
@@ -1024,15 +1034,13 @@ sub check_match {
     #    return (1, $imax_align)     if the line matches and fits
     #    return (0, $imax_align)     if the line does not match or fit
 
-    # where $imax_align is the index of the last common matching token,
-    # to be used in the left-to-right sweep of the subsequent step.
+    # Variable $imax_align will be set to indicate the maximum token index to
+    # be matched in the subsequent left-to-right sweep, in the case that this
+    # line does not exactly match the current group.
 
     my $jmax                = $new_line->get_jmax();
     my $maximum_field_index = $old_line->get_jmax();
 
-    # Variable $imax_align will be set to indicate the maximum token index
-    # to be matched in the left-to-right sweep, in the case that this line
-    # does not exactly match the current group.
     my $imax_align = -1;
 
     # variable $GoToMsg explains reason for no match, for debugging
@@ -1055,7 +1063,9 @@ sub check_match {
         $jlimit = $maximum_field_index - 2;
     }
 
-    # handle comma-separated lists ..
+    # Handle comma-separated lists ..
+    # We require all alignment tokens to match but will not be concerned if
+    # patterns differ.
     if ( $group_list_type && ( $list_type eq $group_list_type ) ) {
         for my $j ( 0 .. $jlimit ) {
             my $old_tok = $old_rtokens->[$j];
@@ -1066,7 +1076,9 @@ sub check_match {
         }
     }
 
-    # do detailed check for everything else except hanging side comments
+    # Handle everything else except hanging side comments ..
+    # We require all alignment tokens to match, and we also put a few
+    # restrictions on patterns.
     elsif ( !$is_hanging_side_comment ) {
 
         # A group with hanging side comments ends with the first non hanging
@@ -1083,15 +1095,7 @@ sub check_match {
             my $old_tok = $old_rtokens->[$j];
             my $new_tok = $rtokens->[$j];
 
-            my ( $alignment_token, $lev, $tag, $tok_count ) =
-              decode_alignment_token($new_tok);
-
-            # see if the decorated tokens match
-            my $tokens_match = $new_tok eq $old_tok
-
-              # Exception for matching terminal : of ternary statement..
-              # consider containers prefixed by ? and : a match
-              || ( $new_tok =~ /^,\d*\+\:/ && $old_tok =~ /^,\d*\+\?/ );
+            my $tokens_match = $new_tok eq $old_tok;
 
             # No match if the alignment tokens differ...
             if ( !$tokens_match ) {
@@ -1108,6 +1112,9 @@ sub check_match {
 
             # If patterns don't match, we have to be careful...
             if ( $old_rpatterns->[$j] ne $rpatterns->[$j] ) {
+
+                my ( $alignment_token, $lev, $tag, $tok_count ) =
+                  decode_alignment_token($new_tok);
 
                 # We have to be very careful about aligning commas
                 # when the pattern's don't match, because it can be
@@ -1132,7 +1139,8 @@ sub check_match {
 
                     # But we can allow a match if the parens don't
                     # require any padding.
-                    $GoToMsg = "do not align '(' unless patterns match";
+                    $GoToMsg =
+                      "do not align '(' unless patterns match or pad=0";
                     if ( $pad != 0 ) { goto NO_MATCH }
                 }
 
