@@ -21,12 +21,12 @@ use Perl::Tidy::VerticalAligner::Line;
 # level, a blank line, a block comment, or an external flush call.  The calling
 # routine may also force a break in alignment at any time.
 #
-# If the calling routine needs to interrupt the output and sent other text to
+# If the calling routine needs to interrupt the output and send other text to
 # the output, it must first call flush() to empty the output pipeline.  This
 # might occur for example if a block of pod text needs to be sent to the output
 # between blocks of code.
 
-# It is essential that a final call to flush() be made. Other some
+# It is essential that a final call to flush() be made. Otherwise some
 # final lines of text will be lost.
 
 BEGIN {

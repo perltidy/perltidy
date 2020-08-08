@@ -12,6 +12,8 @@
 #9 gnu7.gnu
 #10 git33.def
 #11 git33.git33
+#12 rt133130.def
+#13 rt133130.rt133130
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -34,8 +36,12 @@ BEGIN {
 -wls='->' -wrs='->'
 
 ----------
-        'gnu'          => "-gnu",
-        'lop'          => "-nlop",
+        'gnu'      => "-gnu",
+        'lop'      => "-nlop",
+        'rt133130' => <<'----------',
+# only the method should get a csc:
+-csc -cscl=sub -sal=method
+----------
         'sot'          => "-sot -sct",
         'switch_plain' => "-nola",
     };
@@ -154,6 +160,25 @@ is_deeply \@t, [
   [ !1 ],   [ 8, 7, 6 ],  [ 8, 7, 6 ],  [4],
   !!0,
 ];
+----------
+
+        'rt133130' => <<'----------',
+method sum_radlinks {
+    my ( $global_radiation_matrix, $local_radiation_matrix, $rngg ) = @_;
+    my ( $i, $j, $n1, $n2, $num );
+    my $rggij;
+    $num = @$rngg;
+    for ( $i = 0 ; $i < $num ; $i++ ) {
+        $n1 = $rngg->[$i];
+        for ( $j = 0 ; $j < $num ; $j++ ) {
+            $n2    = $rngg->[$j];
+            $rggij = $local_radiation_matrix->[$i][$j];
+            if ( $rggij && ( $n1 != $n2 ) ) {
+                $global_radiation_matrix->[$n1][$n2] += $rggij;
+            }
+        }
+    }
+}
 ----------
 
         'sot' => <<'----------',
@@ -487,6 +512,52 @@ my ($ping) = Net::Ping -> new();
 $ping -> ping($host);
 
 #11...........
+        },
+
+        'rt133130.def' => {
+            source => "rt133130",
+            params => "def",
+            expect => <<'#12...........',
+method sum_radlinks {
+    my ( $global_radiation_matrix, $local_radiation_matrix, $rngg ) = @_;
+    my ( $i, $j, $n1, $n2, $num );
+    my $rggij;
+    $num = @$rngg;
+    for ( $i = 0 ; $i < $num ; $i++ ) {
+        $n1 = $rngg->[$i];
+        for ( $j = 0 ; $j < $num ; $j++ ) {
+            $n2    = $rngg->[$j];
+            $rggij = $local_radiation_matrix->[$i][$j];
+            if ( $rggij && ( $n1 != $n2 ) ) {
+                $global_radiation_matrix->[$n1][$n2] += $rggij;
+            }
+        }
+    }
+}
+#12...........
+        },
+
+        'rt133130.rt133130' => {
+            source => "rt133130",
+            params => "rt133130",
+            expect => <<'#13...........',
+method sum_radlinks {
+    my ( $global_radiation_matrix, $local_radiation_matrix, $rngg ) = @_;
+    my ( $i, $j, $n1, $n2, $num );
+    my $rggij;
+    $num = @$rngg;
+    for ( $i = 0 ; $i < $num ; $i++ ) {
+        $n1 = $rngg->[$i];
+        for ( $j = 0 ; $j < $num ; $j++ ) {
+            $n2    = $rngg->[$j];
+            $rggij = $local_radiation_matrix->[$i][$j];
+            if ( $rggij && ( $n1 != $n2 ) ) {
+                $global_radiation_matrix->[$n1][$n2] += $rggij;
+            }
+        }
+    }
+} ## end sub sum_radlinks
+#13...........
         },
     };
 

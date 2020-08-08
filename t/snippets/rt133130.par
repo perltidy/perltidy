@@ -1,0 +1,2 @@
+# only the method should get a csc:
+-csc -cscl=sub -sal=method

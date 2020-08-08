@@ -386,6 +386,8 @@ For example,
 
 will cause the perltidy to treate the words 'method', 'fun', '_sub' and 'M4' to be treated the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
 
+Note that several other parameters accept a list of keywords, including 'sub' (see L<Specifying Block Types>).
+You do not need to include any sub aliases in these lists. Just include keyword 'sub' if you wish, and all aliases are automatically included.
 
 =back
 

@@ -1,0 +1,16 @@
+method sum_radlinks {
+    my ( $global_radiation_matrix, $local_radiation_matrix, $rngg ) = @_;
+    my ( $i, $j, $n1, $n2, $num );
+    my $rggij;
+    $num = @$rngg;
+    for ( $i = 0 ; $i < $num ; $i++ ) {
+        $n1 = $rngg->[$i];
+        for ( $j = 0 ; $j < $num ; $j++ ) {
+            $n2    = $rngg->[$j];
+            $rggij = $local_radiation_matrix->[$i][$j];
+            if ( $rggij && ( $n1 != $n2 ) ) {
+                $global_radiation_matrix->[$n1][$n2] += $rggij;
+            }
+        }
+    }
+}
