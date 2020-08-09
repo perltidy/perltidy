@@ -5889,7 +5889,7 @@ Conflict: -lp  conflicts with -io, -fnl, -nanl, or -ndnl; ignoring -lp
     
 The -lp indentation logic requires that perltidy be able to coordinate
 arbitrarily large numbers of line breakpoints.  This isn't possible
-with these flags. Sometimes an acceptable workaround is to use -wocb=3
+with these flags.
 -----------------------------------------------------------------------
 EOM
             $rOpts->{'line-up-parentheses'} = 0;
