@@ -269,7 +269,6 @@ use vars qw{
   $last_unadjusted_indentation
   $last_leading_token
   $last_output_short_opening_token
-  $peak_batch_size
 
   $saw_VERSION_in_this_file
   $saw_END_or_DATA_
@@ -652,7 +651,6 @@ sub new {
 
     # initialize the leading whitespace stack to negative levels
     # so that we can never run off the end of the stack
-    $peak_batch_size        = 0;    # flag to determine if we have output code
     $gnu_position_predictor = 0;    # where the current token is predicted to be
     $max_gnu_stack_index    = 0;
     $max_gnu_item_index     = -1;
@@ -776,13 +774,13 @@ sub new {
     $self->[_length_function_]            = $length_function;
 
     # Objects...
-    $self->[_fh_tee_]                     = $fh_tee;
-    $self->[_sink_object_]                = $sink_object;
-    $self->[_logger_object_]              = $logger_object;
-    $self->[_file_writer_object_]         = $file_writer_object;
-    $self->[_vertical_aligner_object_]    = $vertical_aligner_object;
+    $self->[_fh_tee_]                  = $fh_tee;
+    $self->[_sink_object_]             = $sink_object;
+    $self->[_logger_object_]           = $logger_object;
+    $self->[_file_writer_object_]      = $file_writer_object;
+    $self->[_vertical_aligner_object_] = $vertical_aligner_object;
 
-    $self->[_radjusted_levels_]           = [];
+    $self->[_radjusted_levels_] = [];
 
     # Memory of processed text
     $self->[_last_last_line_leading_level_] = 0;
@@ -896,12 +894,6 @@ sub get_rLL_max_index {
 }
 
 sub prepare_for_new_input_lines {
-
-    # Remember the largest batch size processed. This is needed
-    # by the pad routine to avoid padding the first nonblank token
-    if ( $max_index_to_go && $max_index_to_go > $peak_batch_size ) {
-        $peak_batch_size = $max_index_to_go;
-    }
 
     $gnu_sequence_number++;    # increment output batch counter
     %last_gnu_equals              = ();
@@ -5827,7 +5819,7 @@ sub check_options {
     initialize_whitespace_hashes();
     initialize_bond_strength_hashes();
 
-    make_sub_matching_pattern();   # must be first pattern, see RT #133130
+    make_sub_matching_pattern();    # must be first pattern, see RT #133130
     make_static_block_comment_pattern();
     make_static_side_comment_pattern();
     make_closing_side_comment_prefix();
@@ -6506,9 +6498,9 @@ sub make_sub_matching_pattern {
     $ASUB_PATTERN   = '^sub$';             # match anonymous sub
     $ANYSUB_PATTERN = '^sub\b';            # match either type of sub
 
-    # Note (see also RT #133130): These patterns are used by 
-    # sub make_block_pattern, which is used for making most patterns. 
-    # So this sub needs to be called before other pattern-making routines. 
+    # Note (see also RT #133130): These patterns are used by
+    # sub make_block_pattern, which is used for making most patterns.
+    # So this sub needs to be called before other pattern-making routines.
 
     if ( $rOpts->{'sub-alias-list'} ) {
 
@@ -8215,8 +8207,13 @@ sub consecutive_nonblank_lines {
     # blanks
     my @nonblank_lines_at_depth;
 
+    # remember maximum size of previous batches; this is needed by the logical
+    # padding routine
+    my $peak_batch_size;
+
     sub initialize_grind_batch_of_CODE {
         @nonblank_lines_at_depth = ();
+        $peak_batch_size         = 0;
     }
 
     # sub grind_batch_of_CODE sends one batch of code on down the pipeline to
@@ -8548,9 +8545,10 @@ EOM
             }
 
             my $rbatch_hash = {
-                rlines_K   => $rlines_K,
-                do_not_pad => $do_not_pad,
-                ibeg0      => $ri_first->[0],
+                rlines_K        => $rlines_K,
+                do_not_pad      => $do_not_pad,
+                ibeg0           => $ri_first->[0],
+                peak_batch_size => $peak_batch_size,
             };
 
             $self->send_lines_to_vertical_aligner($rbatch_hash);
@@ -8576,6 +8574,12 @@ EOM
                     $file_writer_object->require_blank_code_lines($nblanks);
                 }
             }
+        }
+
+        # Remember the largest batch size processed. This is needed by the
+        # logical padding routine to avoid padding the first nonblank token
+        if ( $max_index_to_go && $max_index_to_go > $peak_batch_size ) {
+            $peak_batch_size = $max_index_to_go;
         }
 
         prepare_for_new_input_lines();
@@ -9118,7 +9122,7 @@ sub pad_token {
         #           &Error_OutOfRange;
         #       }
         #
-        my ( $self, $ri_first, $ri_last ) = @_;
+        my ( $self, $ri_first, $ri_last, $peak_batch_size ) = @_;
         my $max_line = @{$ri_first} - 1;
 
         # FIXME: move these declarations below
@@ -10432,8 +10436,9 @@ sub send_lines_to_vertical_aligner {
         Fault("Unexpected call with no lines");
         return;
     }
-    my $n_last_line = @{$rlines_K} - 1;
-    my $do_not_pad  = $rbatch_hash->{do_not_pad};
+    my $n_last_line     = @{$rlines_K} - 1;
+    my $do_not_pad      = $rbatch_hash->{do_not_pad};
+    my $peak_batch_size = $rbatch_hash->{peak_batch_size};
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -10482,7 +10487,7 @@ sub send_lines_to_vertical_aligner {
 
     $self->undo_ci( $ri_first, $ri_last );
 
-    $self->set_logical_padding( $ri_first, $ri_last )
+    $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size )
       if ( $rOpts->{'logical-padding'} );
 
     # loop to prepare each line for shipment
@@ -11274,7 +11279,7 @@ sub send_lines_to_vertical_aligner {
             if ( $saved_opening_indentation{$seqno} ) {
                 ( $indent, $offset, $is_leading ) =
                   @{ $saved_opening_indentation{$seqno} };
-               $exists=1;
+                $exists = 1;
             }
         }
 
