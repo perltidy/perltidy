@@ -70,7 +70,7 @@ BEGIN {
         _extra_indent_ok_             => $i++,
     };
 
-    # Debug flag. This is a relics from the original program development
+    # Debug flag. This is a relic from the original program development
     # looking for problems with tab characters.  Caution: this debug flag can
     # produce a lot of output It should be 0 except when debugging small
     # scripts.
