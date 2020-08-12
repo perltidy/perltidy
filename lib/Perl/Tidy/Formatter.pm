@@ -261,36 +261,6 @@ use vars qw{
   $forced_breakpoint_undo_count
   @forced_breakpoint_undo_stack
   %postponed_breakpoint
-};
-
-# memory of processed text
-use vars qw{
-  $last_indentation_written
-  $last_unadjusted_indentation
-  $last_leading_token
-  $last_output_short_opening_token
-
-  $saw_VERSION_in_this_file
-  $saw_END_or_DATA_
-
-  $tabbing
-  $embedded_tab_count
-  $first_embedded_tab_at
-  $last_embedded_tab_at
-  $deleted_semicolon_count
-  $first_deleted_semicolon_at
-  $last_deleted_semicolon_at
-  $added_semicolon_count
-  $first_added_semicolon_at
-  $last_added_semicolon_at
-  $first_tabbing_disagreement
-  $last_tabbing_disagreement
-  $in_tabbing_disagreement
-  $tabbing_disagreement_count
-  $input_line_tabbing
-
-  $last_output_level
-
   $index_max_forced_break
 };
 
@@ -344,9 +314,31 @@ BEGIN {
         _radjusted_levels_           => $i++,
         _rbatch_vars_                => $i++,
 
+        _last_output_short_opening_token_ => $i++,
+
         _last_line_leading_type_       => $i++,
         _last_line_leading_level_      => $i++,
         _last_last_line_leading_level_ => $i++,
+
+        _added_semicolon_count_    => $i++,
+        _first_added_semicolon_at_ => $i++,
+        _last_added_semicolon_at_  => $i++,
+
+        _deleted_semicolon_count_    => $i++,
+        _first_deleted_semicolon_at_ => $i++,
+        _last_deleted_semicolon_at_  => $i++,
+
+        _embedded_tab_count_    => $i++,
+        _first_embedded_tab_at_ => $i++,
+        _last_embedded_tab_at_  => $i++,
+
+        _first_tabbing_disagreement_ => $i++,
+        _last_tabbing_disagreement_  => $i++,
+        _tabbing_disagreement_count_ => $i++,
+        _in_tabbing_disagreement_    => $i++,
+
+        _saw_VERSION_in_this_file_ => $i++,
+        _saw_END_or_DATA_          => $i++,
 
     };
 
@@ -612,7 +604,7 @@ sub write_diagnostics {
 
 sub get_added_semicolon_count {
     my $self = shift;
-    return $added_semicolon_count;
+    return $self->[_added_semicolon_count_];
 }
 
 sub DESTROY {
@@ -659,13 +651,6 @@ sub new {
     $gnu_stack[0]                = new_lp_indentation_item( 0, -1, -1, 0, 0 );
     @gnu_item_list               = ();
     $last_output_indentation     = 0;
-    $last_indentation_written    = 0;
-    $last_unadjusted_indentation = 0;
-    $last_leading_token          = "";
-    $last_output_short_opening_token = 0;
-
-    $saw_VERSION_in_this_file = !$rOpts->{'pass-version-line'};
-    $saw_END_or_DATA_         = 0;
 
     @block_type_to_go            = ();
     @type_sequence_to_go         = ();
@@ -692,23 +677,7 @@ sub new {
     @has_broken_sublist = ();
     @want_comma_break   = ();
 
-    $first_tabbing_disagreement = 0;
-    $last_tabbing_disagreement  = 0;
-    $tabbing_disagreement_count = 0;
-    $in_tabbing_disagreement    = 0;
-    $input_line_tabbing         = undef;
-
-    $last_output_level          = 0;
-    $embedded_tab_count         = 0;
-    $first_embedded_tab_at      = 0;
-    $last_embedded_tab_at       = 0;
-    $deleted_semicolon_count    = 0;
-    $first_deleted_semicolon_at = 0;
-    $last_deleted_semicolon_at  = 0;
-    $added_semicolon_count      = 0;
-    $first_added_semicolon_at   = 0;
-    $last_added_semicolon_at    = 0;
-    %postponed_breakpoint       = ();
+    %postponed_breakpoint = ();
 
     # variables for adding side comments
     %block_leading_text        = ();
@@ -722,9 +691,11 @@ sub new {
 
     initialize_grind_batch_of_CODE();
 
+    initialize_adjusted_indentation();
+
     reset_block_text_accumulator();
 
-    prepare_for_new_input_lines();
+    prepare_for_next_batch();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
@@ -788,6 +759,28 @@ sub new {
     $self->[_last_last_line_leading_level_] = 0;
     $self->[_last_line_leading_level_]      = 0;
     $self->[_last_line_leading_type_]       = '#';
+
+    $self->[_last_output_short_opening_token_] = 0;
+
+    $self->[_added_semicolon_count_]    = 0;
+    $self->[_first_added_semicolon_at_] = 0;
+    $self->[_last_added_semicolon_at_]  = 0;
+
+    $self->[_deleted_semicolon_count_]    = 0;
+    $self->[_first_deleted_semicolon_at_] = 0;
+    $self->[_last_deleted_semicolon_at_]  = 0;
+
+    $self->[_embedded_tab_count_]    = 0;
+    $self->[_first_embedded_tab_at_] = 0;
+    $self->[_last_embedded_tab_at_]  = 0;
+
+    $self->[_first_tabbing_disagreement_] = 0;
+    $self->[_last_tabbing_disagreement_]  = 0;
+    $self->[_tabbing_disagreement_count_] = 0;
+    $self->[_in_tabbing_disagreement_]    = 0;
+
+    $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
+    $self->[_saw_END_or_DATA_]          = 0;
 
     bless $self, $class;
 
@@ -894,7 +887,7 @@ sub get_rLL_max_index {
     return ($Klimit);
 }
 
-sub prepare_for_new_input_lines {
+sub prepare_for_next_batch {
 
     $gnu_sequence_number++;    # increment output batch counter
     %last_gnu_equals              = ();
@@ -1472,7 +1465,7 @@ sub process_all_lines {
 
         # put a blank line after an =cut which comes before __END__ and __DATA__
         # (required by podchecker)
-        if ( $last_line_type eq 'POD_END' && !$saw_END_or_DATA_ ) {
+        if ( $last_line_type eq 'POD_END' && !$self->[_saw_END_or_DATA_] ) {
             $file_writer_object->reset_consecutive_blank_lines();
             if ( !$in_format_skipping_section && $input_line !~ /^\s*$/ ) {
                 $self->want_blank_line();
@@ -1540,7 +1533,7 @@ sub process_all_lines {
                 if (   !$skip_line
                     && !$in_format_skipping_section
                     && $line_type eq 'POD_START'
-                    && !$saw_END_or_DATA_ )
+                    && !$self->[_saw_END_or_DATA_] )
                 {
                     $self->want_blank_line();
                 }
@@ -1553,7 +1546,7 @@ sub process_all_lines {
             # after __END__ or __DATA__
             elsif ( $line_type =~ /^(END_START|DATA_START)$/ ) {
                 $file_writer_object->reset_consecutive_blank_lines();
-                $saw_END_or_DATA_ = 1;
+                $self->[_saw_END_or_DATA_] = 1;
             }
 
             # write unindented non-code line
@@ -5722,6 +5715,9 @@ sub wrapup {
     $file_writer_object->decrement_output_line_number()
       ;    # fix up line number since it was incremented
     we_are_at_the_last_line();
+    my $added_semicolon_count    = $self->[_added_semicolon_count_];
+    my $first_added_semicolon_at = $self->[_first_added_semicolon_at_];
+    my $last_added_semicolon_at  = $self->[_last_added_semicolon_at_];
     if ( $added_semicolon_count > 0 ) {
         my $first = ( $added_semicolon_count > 1 ) ? "First" : "";
         my $what =
@@ -5738,6 +5734,9 @@ sub wrapup {
         write_logfile_entry("\n");
     }
 
+    my $deleted_semicolon_count    = $self->[_deleted_semicolon_count_];
+    my $first_deleted_semicolon_at = $self->[_first_deleted_semicolon_at_];
+    my $last_deleted_semicolon_at  = $self->[_last_deleted_semicolon_at_];
     if ( $deleted_semicolon_count > 0 ) {
         my $first = ( $deleted_semicolon_count > 1 ) ? "First" : "";
         my $what =
@@ -5757,6 +5756,9 @@ sub wrapup {
         write_logfile_entry("\n");
     }
 
+    my $embedded_tab_count    = $self->[_embedded_tab_count_];
+    my $first_embedded_tab_at = $self->[_first_embedded_tab_at_];
+    my $last_embedded_tab_at  = $self->[_last_embedded_tab_at_];
     if ( $embedded_tab_count > 0 ) {
         my $first = ( $embedded_tab_count > 1 ) ? "First" : "";
         my $what =
@@ -5776,6 +5778,10 @@ sub wrapup {
         write_logfile_entry("\n");
     }
 
+    my $first_tabbing_disagreement = $self->[_first_tabbing_disagreement_];
+    my $last_tabbing_disagreement  = $self->[_last_tabbing_disagreement_];
+    my $tabbing_disagreement_count = $self->[_tabbing_disagreement_count_];
+    my $in_tabbing_disagreement    = $self->[_in_tabbing_disagreement_];
     if ($first_tabbing_disagreement) {
         write_logfile_entry(
 "First indentation disagreement seen at input line $first_tabbing_disagreement\n"
@@ -7213,8 +7219,6 @@ sub copy_token_as_type {
 
     # uses Global Symbols:
     # "$file_writer_object"
-    # "$last_output_short_opening_token"
-    # "$saw_VERSION_in_this_file"
 
     # "$rOpts"
     # "$ANYSUB_PATTERN"
@@ -7446,6 +7450,8 @@ sub copy_token_as_type {
         # This must be the only call to grind_batch_of_CODE()
         my ($self) = @_;
 
+        return unless ( $max_index_to_go >= 0 );
+
         # Create an array to hold variables for this batch
         my $rbatch_vars = [];
         $rbatch_vars->[_comma_count_in_batch_] = $comma_count_in_batch;
@@ -7466,7 +7472,7 @@ sub copy_token_as_type {
         # Done .. this batch is history
         $self->[_rbatch_vars_] = [];
 
-        prepare_for_new_input_lines();
+        prepare_for_next_batch();
 
         return;
     }
@@ -7587,8 +7593,8 @@ sub copy_token_as_type {
         my $is_VERSION_statement    = $CODE_type eq 'VER';
 
         if ($is_VERSION_statement) {
-            $saw_VERSION_in_this_file = 1;
-            $no_internal_newlines     = 1;
+            $self->[_saw_VERSION_in_this_file_] = 1;
+            $no_internal_newlines = 1;
         }
 
         # Add interline blank if any
@@ -7644,7 +7650,7 @@ sub copy_token_as_type {
                 # because we already have space above this comment.
                 # Note that the first comment in this if block, after
                 # the 'if (', does not get a blank line because of this.
-                && !$last_output_short_opening_token
+                && !$self->[_last_output_short_opening_token_]
 
                 # never before static block comments
                 && !$is_static_block_comment
@@ -8645,36 +8651,36 @@ EOM
 }
 
 sub note_added_semicolon {
-    my ($line_number) = @_;
-    $last_added_semicolon_at = $line_number;
-    if ( $added_semicolon_count == 0 ) {
-        $first_added_semicolon_at = $last_added_semicolon_at;
+    my ( $self, $line_number ) = @_;
+    $self->[_last_added_semicolon_at_] = $line_number;
+    if ( $self->[_added_semicolon_count_] == 0 ) {
+        $self->[_first_added_semicolon_at_] = $line_number;
     }
-    $added_semicolon_count++;
+    $self->[_added_semicolon_count_]++;
     write_logfile_entry("Added ';' here\n");
     return;
 }
 
 sub note_deleted_semicolon {
     my ( $self, $line_number ) = @_;
-    $last_deleted_semicolon_at = $line_number;
-    if ( $deleted_semicolon_count == 0 ) {
-        $first_deleted_semicolon_at = $last_deleted_semicolon_at;
+    $self->[_last_deleted_semicolon_at_] = $line_number;
+    if ( $self->[_deleted_semicolon_count_] == 0 ) {
+        $self->[_first_deleted_semicolon_at_] = $line_number;
     }
-    $deleted_semicolon_count++;
+    $self->[_deleted_semicolon_count_]++;
     write_logfile_entry("Deleted unnecessary ';' at line $line_number\n");
     return;
 }
 
 sub note_embedded_tab {
     my ( $self, $line_number ) = @_;
-    $embedded_tab_count++;
-    $last_embedded_tab_at = $line_number;
-    if ( !$first_embedded_tab_at ) {
-        $first_embedded_tab_at = $last_embedded_tab_at;
+    $self->[_embedded_tab_count_]++;
+    $self->[_last_embedded_tab_at_] = $line_number;
+    if ( !$self->[_first_embedded_tab_at_] ) {
+        $self->[_first_embedded_tab_at_] = $line_number;
     }
 
-    if ( $embedded_tab_count <= MAX_NAG_MESSAGES ) {
+    if ( $self->[_embedded_tab_count_] <= MAX_NAG_MESSAGES ) {
         write_logfile_entry("Embedded tabs in quote or pattern\n");
     }
     return;
@@ -10739,7 +10745,7 @@ sub send_lines_to_vertical_aligner {
         #   BEGIN {
         #   default {
         #   sub {
-        $last_output_short_opening_token
+        $self->[_last_output_short_opening_token_]
 
           # line ends in opening token
           = $type_end =~ /^[\{\(\[L]$/
@@ -11457,6 +11463,9 @@ sub lookup_opening_indentation {
 {
     my %is_if_elsif_else_unless_while_until_for_foreach;
 
+    my ( $last_indentation_written, $last_unadjusted_indentation,
+        $last_leading_token );
+
     BEGIN {
 
         # These block types may have text between the keyword and opening
@@ -11466,6 +11475,13 @@ sub lookup_opening_indentation {
         my @q = qw(if elsif else unless while until for foreach case when);
         @is_if_elsif_else_unless_while_until_for_foreach{@q} =
           (1) x scalar(@q);
+    }
+
+    sub initialize_adjusted_indentation {
+        $last_indentation_written    = 0;
+        $last_unadjusted_indentation = 0;
+        $last_leading_token          = "";
+        return;
     }
 
     sub set_adjusted_indentation {
@@ -15676,7 +15692,7 @@ sub find_token_starting_list {
             #---------------------------------------------------------------
 
             # use old breakpoints if this is a 'big' list
-            # FIXME: See if this is still necessary. sub sweep_left_to_right 
+            # FIXME: See if this is still necessary. sub sweep_left_to_right
             # now fixes a lot of problems.
             if ( $packed_lines > 2 && $item_count > 10 ) {
                 write_logfile_entry("List sparse: using old breakpoints\n");
@@ -16239,7 +16255,7 @@ sub undo_forced_breakpoint_stack {
                 $rLL->[$KK]->[_TOKEN_]        = $tok;
                 $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
                 my $line_number = 1 + $self->get_old_line_index($KK);
-                note_added_semicolon($line_number);
+                $self->note_added_semicolon($line_number);
             }
         }
         return;
@@ -18352,38 +18368,40 @@ sub compare_indentation_levels {
         $line_number )
       = @_;
     if ( $guessed_indentation_level ne $structural_indentation_level ) {
-        $last_tabbing_disagreement = $line_number;
+        $self->[_last_tabbing_disagreement_] = $line_number;
 
-        if ($in_tabbing_disagreement) {
+        if ( $self->[_in_tabbing_disagreement_] ) {
         }
         else {
-            $tabbing_disagreement_count++;
+            $self->[_tabbing_disagreement_count_]++;
 
-            if ( $tabbing_disagreement_count <= MAX_NAG_MESSAGES ) {
+            if ( $self->[_tabbing_disagreement_count_] <= MAX_NAG_MESSAGES ) {
                 write_logfile_entry(
 "Start indentation disagreement: input=$guessed_indentation_level; output=$structural_indentation_level\n"
                 );
             }
-            $in_tabbing_disagreement    = $line_number;
-            $first_tabbing_disagreement = $in_tabbing_disagreement
-              unless ($first_tabbing_disagreement);
+            $self->[_in_tabbing_disagreement_]    = $line_number;
+            $self->[_first_tabbing_disagreement_] = $line_number
+              unless ( $self->[_first_tabbing_disagreement_] );
         }
     }
     else {
 
+        my $in_tabbing_disagreement = $self->[_in_tabbing_disagreement_];
         if ($in_tabbing_disagreement) {
 
-            if ( $tabbing_disagreement_count <= MAX_NAG_MESSAGES ) {
+            if ( $self->[_tabbing_disagreement_count_] <= MAX_NAG_MESSAGES ) {
                 write_logfile_entry(
 "End indentation disagreement from input line $in_tabbing_disagreement\n"
                 );
 
-                if ( $tabbing_disagreement_count == MAX_NAG_MESSAGES ) {
+                if ( $self->[_tabbing_disagreement_count_] == MAX_NAG_MESSAGES )
+                {
                     write_logfile_entry(
                         "No further tabbing disagreements will be noted\n");
                 }
             }
-            $in_tabbing_disagreement = 0;
+            $self->[_in_tabbing_disagreement_] = 0;
         }
     }
     return;
