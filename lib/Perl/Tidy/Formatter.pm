@@ -248,13 +248,6 @@ use vars qw{
   @iprev_to_go
 };
 
-# Variables related to forming lists
-use vars qw{
-  @has_broken_sublist
-  @dont_align
-  @want_comma_break
-};
-
 # Variables related to setting new line breaks
 use vars qw{
   $forced_breakpoint_count
@@ -645,12 +638,12 @@ sub new {
 
     # initialize the leading whitespace stack to negative levels
     # so that we can never run off the end of the stack
-    $gnu_position_predictor = 0;    # where the current token is predicted to be
-    $max_gnu_stack_index    = 0;
-    $max_gnu_item_index     = -1;
-    $gnu_stack[0]                = new_lp_indentation_item( 0, -1, -1, 0, 0 );
-    @gnu_item_list               = ();
-    $last_output_indentation     = 0;
+    $gnu_position_predictor  = 0;   # where the current token is predicted to be
+    $max_gnu_stack_index     = 0;
+    $max_gnu_item_index      = -1;
+    $gnu_stack[0]            = new_lp_indentation_item( 0, -1, -1, 0, 0 );
+    @gnu_item_list           = ();
+    $last_output_indentation = 0;
 
     @block_type_to_go            = ();
     @type_sequence_to_go         = ();
@@ -673,10 +666,6 @@ sub new {
     @inext_to_go                 = ();
     @iprev_to_go                 = ();
 
-    @dont_align         = ();
-    @has_broken_sublist = ();
-    @want_comma_break   = ();
-
     %postponed_breakpoint = ();
 
     # variables for adding side comments
@@ -684,6 +673,8 @@ sub new {
     %block_opening_line_number = ();
     $csc_new_statement_ok      = 1;
     %csc_block_label           = ();
+
+    initialize_scan_list();
 
     initialize_saved_opening_indentation();
 
@@ -8248,6 +8239,7 @@ sub consecutive_nonblank_lines {
     sub initialize_grind_batch_of_CODE {
         @nonblank_lines_at_depth = ();
         $peak_batch_size         = 0;
+        return;
     }
 
     # sub grind_batch_of_CODE receives sections of code which are the longest
@@ -11248,6 +11240,7 @@ sub send_lines_to_vertical_aligner {
 
     sub initialize_saved_opening_indentation {
         %saved_opening_indentation = ();
+        return;
     }
 
     sub is_unbalanced_batch {
@@ -13754,6 +13747,16 @@ sub pad_array_to_go {
         @i_equals,
     );
 
+    # these arrays must retain values between calls
+    my ( @has_broken_sublist, @dont_align, @want_comma_break );
+
+    sub initialize_scan_list {
+        @dont_align         = ();
+        @has_broken_sublist = ();
+        @want_comma_break   = ();
+        return;
+    }
+
     # routine to define essential variables when we go 'up' to
     # a new depth
     sub check_for_new_minimum_depth {
@@ -13832,6 +13835,7 @@ sub pad_array_to_go {
                     interrupted         => $interrupted_list[$dd],
                     rdo_not_break_apart => \$do_not_break_apart,
                     must_break_open     => $must_break_open,
+                    has_broken_sublist  => $has_broken_sublist[$dd],
                 );
                 $bp_count           = $forced_breakpoint_count - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
@@ -15037,6 +15041,7 @@ sub find_token_starting_list {
         my $interrupted         = $input_hash{interrupted};
         my $rdo_not_break_apart = $input_hash{rdo_not_break_apart};
         my $must_break_open     = $input_hash{must_break_open};
+        my $has_broken_sublist  = $input_hash{has_broken_sublist};
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );
@@ -15147,7 +15152,7 @@ sub find_token_starting_list {
         # sublist.  This has higher priority than the Interrupted List
         # Rule.
         #---------------------------------------------------------------
-        if ( $has_broken_sublist[$depth] ) {
+        if ($has_broken_sublist) {
 
             # Break at every comma except for a comma between two
             # simple, small terms.  This prevents long vertical
@@ -18407,4 +18412,3 @@ sub compare_indentation_levels {
     return;
 }
 1;
-
