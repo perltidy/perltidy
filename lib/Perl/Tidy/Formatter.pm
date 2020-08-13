@@ -81,12 +81,11 @@ BEGIN {
 
 # Global vars...
 
-# Objects
-use vars qw{
-  $diagnostics_object
-  $logger_object
-  $file_writer_object
-};
+##################################################################
+# Section 1: Global variables which are either constant or may
+# be configured by user-supplied parameters.  They remain constant
+# after being configured.
+##################################################################
 
 # user parameters and shortcuts
 use vars qw{
@@ -133,14 +132,13 @@ use vars qw{
   %binary_ws_rules
   %want_left_space
   %want_right_space
-  $bli_pattern
   %is_closing_type
   %is_opening_type
   %is_closing_token
   %is_opening_token
 };
 
-# variables related to user parameters
+# hashes which may be configured by user parameters
 use vars qw{
   %want_break_before
   %outdent_keyword
@@ -156,7 +154,13 @@ use vars qw{
   %stack_closing_token
 };
 
-# patterns for text identification
+# Variable defined by cuddled format option
+use vars qw{
+  $rcuddled_block_types
+};
+
+# Various regex patterns for text identification.
+# Most can be configured by user parameters.
 use vars qw{
   $format_skipping_pattern_begin
   $format_skipping_pattern_end
@@ -174,9 +178,32 @@ use vars qw{
 
   $blank_lines_after_opening_block_pattern
   $blank_lines_before_closing_block_pattern
+
+  $bli_pattern
 };
 
-# Variables related to the -lp option
+###################################################################
+# Section 2: Global variables which relate to an individual script.
+# They should be moved either into a closure or into $self
+###################################################################
+
+# Logger Object. This can be eventually moved into $self
+use vars qw{
+  $logger_object
+};
+
+# Variables related to setting new line breaks.
+# These should eventually be moved into a closure.
+use vars qw{
+  $forced_breakpoint_count
+  $forced_breakpoint_undo_count
+  @forced_breakpoint_undo_stack
+  %postponed_breakpoint
+  $index_max_forced_break
+};
+
+# Variables related to the -lp option.
+# These should eventually be moved into closures.
 use vars qw{
   @gnu_stack
   $max_gnu_stack_index
@@ -191,7 +218,8 @@ use vars qw{
   $line_start_index_to_go
 };
 
-# variables related to forming closing side comments
+# Variables related to forming closing side comments.
+# These should eventually be moved into a closure.
 use vars qw{
   %block_leading_text
   %block_opening_line_number
@@ -209,7 +237,8 @@ use vars qw{
   $closing_side_comment_list_pattern
 };
 
-# hashes used by the weld-nested option (-wn)
+# Hashes used by the weld-nested option (-wn).
+# These should eventually be moved into $self.
 use vars qw{
   %weld_len_left_closing
   %weld_len_right_closing
@@ -217,13 +246,8 @@ use vars qw{
   %weld_len_right_opening
 };
 
-# variable used by cuddled format option
-use vars qw{
-  $rcuddled_block_types
-};
-
-# Arrays holding a batch of tokens being prepared for shipment
-# to the vertical aligner
+# Arrays holding the batch of tokens currently being processed.
+# These will be moved into the _rbatch_vars_ sub-array of $self.
 use vars qw{
   $max_index_to_go
   @block_type_to_go
@@ -246,15 +270,6 @@ use vars qw{
   @types_to_go
   @inext_to_go
   @iprev_to_go
-};
-
-# Variables related to setting new line breaks
-use vars qw{
-  $forced_breakpoint_count
-  $forced_breakpoint_undo_count
-  @forced_breakpoint_undo_stack
-  %postponed_breakpoint
-  $index_max_forced_break
 };
 
 BEGIN {
@@ -302,6 +317,7 @@ BEGIN {
         _fh_tee_                     => $i++,
         _sink_object_                => $i++,
         _logger_object_              => $i++,
+        _diagnostics_object_         => $i++,
         _file_writer_object_         => $i++,
         _vertical_aligner_object_    => $i++,
         _radjusted_levels_           => $i++,
@@ -335,7 +351,9 @@ BEGIN {
 
     };
 
-    # Array index names for _rbatch_vars_ (which is in $self)
+    # Array index names for _rbatch_vars_ (in above list)
+    # Thus _rbatch_vars_ is a sub-array of $self for
+    # holding the batches of tokens being processed.
     $i = 0;
     use constant {
         _comma_count_in_batch_    => $i++,
@@ -346,6 +364,7 @@ BEGIN {
         _do_not_pad_              => $i++,
         _ibeg0_                   => $i++,
         _peak_batch_size_         => $i++,
+        _rK_to_go_                => $i++,
     };
 
     my @q;
@@ -590,7 +609,8 @@ sub we_are_at_the_last_line {
 
 # interface to Perl::Tidy::Diagnostics routine
 sub write_diagnostics {
-    my $msg = shift;
+    my ( $self, $msg ) = @_;
+    my $diagnostics_object = $self->[_diagnostics_object_];
     if ($diagnostics_object) { $diagnostics_object->write_diagnostics($msg); }
     return;
 }
@@ -628,12 +648,12 @@ sub new {
 
     my $length_function = $args{length_function};
     my $fh_tee          = $args{fh_tee};
-    $logger_object      = $args{logger_object};
-    $diagnostics_object = $args{diagnostics_object};
+    $logger_object = $args{logger_object};
+    my $diagnostics_object = $args{diagnostics_object};
 
     # we create another object with a get_line() and peek_ahead() method
     my $sink_object = $args{sink_object};
-    $file_writer_object =
+    my $file_writer_object =
       Perl::Tidy::FileWriter->new( $sink_object, $rOpts, $logger_object );
 
     # initialize the leading whitespace stack to negative levels
@@ -740,6 +760,7 @@ sub new {
     $self->[_fh_tee_]                  = $fh_tee;
     $self->[_sink_object_]             = $sink_object;
     $self->[_logger_object_]           = $logger_object;
+    $self->[_diagnostics_object_]      = $diagnostics_object;
     $self->[_file_writer_object_]      = $file_writer_object;
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
 
@@ -1394,6 +1415,7 @@ sub process_all_lines {
     my $sink_object                = $self->[_sink_object_];
     my $fh_tee                     = $self->[_fh_tee_];
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
+    my $file_writer_object         = $self->[_file_writer_object_];
 
     # Note for RT#118553, leave only one newline at the end of a file.
     # Example code to do this is in comments below:
@@ -2324,7 +2346,7 @@ sub set_whitespace_flags {
 
         if ( !defined($ws) ) {
             $ws = 0;
-            write_diagnostics(
+            $self->write_diagnostics(
                 "WS flag is undefined for tokens $last_token $token\n");
         }
 
@@ -2344,7 +2366,7 @@ sub set_whitespace_flags {
 
             # If this happens, we have a non-fatal but undesirable
             # hole in the above rules which should be patched.
-            write_diagnostics(
+            $self->write_diagnostics(
                 "WS flag is zero for tokens $last_token $token\n");
         }
 
@@ -5703,12 +5725,14 @@ sub wrapup {
     my $self = shift;
 
     $self->flush();
+    my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->decrement_output_line_number()
       ;    # fix up line number since it was incremented
     we_are_at_the_last_line();
     my $added_semicolon_count    = $self->[_added_semicolon_count_];
     my $first_added_semicolon_at = $self->[_first_added_semicolon_at_];
     my $last_added_semicolon_at  = $self->[_last_added_semicolon_at_];
+
     if ( $added_semicolon_count > 0 ) {
         my $first = ( $added_semicolon_count > 1 ) ? "First" : "";
         my $what =
@@ -7209,7 +7233,6 @@ sub copy_token_as_type {
 {    # begin process_line_of_CODE
 
     # uses Global Symbols:
-    # "$file_writer_object"
 
     # "$rOpts"
     # "$ANYSUB_PATTERN"
@@ -7449,6 +7472,8 @@ sub copy_token_as_type {
         $rbatch_vars->[_starting_in_quote_]    = $starting_in_quote;
         $rbatch_vars->[_ending_in_quote_]      = $ending_in_quote;
 
+        $rbatch_vars->[_rK_to_go_] = [ @K_to_go[ 0 .. $max_index_to_go ] ];
+
         # The flag $is_static_block_comment applies to the line which just
         # arrived. So it only applies if we are outputting that line.
         $rbatch_vars->[_is_static_block_comment_] =
@@ -7552,11 +7577,12 @@ sub copy_token_as_type {
         my $rK_range = $line_of_tokens->{_rK_range};
         ( $K_first, $K_last ) = @{$rK_range};
 
-        my $rLL              = $self->[_rLL_];
-        my $rbreak_container = $self->[_rbreak_container_];
-        my $rshort_nested    = $self->[_rshort_nested_];
-        my $sink_object      = $self->[_sink_object_];
-        my $fh_tee           = $self->[_fh_tee_];
+        my $file_writer_object = $self->[_file_writer_object_];
+        my $rLL                = $self->[_rLL_];
+        my $rbreak_container   = $self->[_rbreak_container_];
+        my $rshort_nested      = $self->[_rshort_nested_];
+        my $sink_object        = $self->[_sink_object_];
+        my $fh_tee             = $self->[_fh_tee_];
 
         my $rOpts_add_newlines = $rOpts->{'add-newlines'};
         my $rOpts_break_at_old_comma_breakpoints =
@@ -8220,8 +8246,9 @@ sub copy_token_as_type {
 } ## end block process_line_of_CODE
 
 sub consecutive_nonblank_lines {
-    my ($self) = @_;
-    my $vao = $self->[_vertical_aligner_object_];
+    my ($self)             = @_;
+    my $file_writer_object = $self->[_file_writer_object_];
+    my $vao                = $self->[_vertical_aligner_object_];
     return $file_writer_object->get_consecutive_nonblank_lines() +
       $vao->get_cached_line_count();
 }
@@ -8263,15 +8290,17 @@ sub consecutive_nonblank_lines {
     # - 'grind_batch_of_CODE' determines which tokens will form the OUTPUT
     # lines.
 
-   # Thus sub 'process_line_of_CODE' builds up the longest possible sequences of
-   # tokens, without much regard for line length, and grind_batch_of_CODE
-   # breaks these sequences back down into the new output lines.
+    # So sub 'process_line_of_CODE' builds up the longest possible continouus
+    # sequences of tokens, regardless of line length, and then
+    # grind_batch_of_CODE breaks these sequences back down into the new output
+    # lines.
 
     # Sub 'grind_batch_of_CODE' ships its output lines to the vertical aligner.
 
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
+        my $file_writer_object = $self->[_file_writer_object_];
 
         my $rbatch_vars = $self->[_rbatch_vars_];
 
@@ -8279,6 +8308,7 @@ sub consecutive_nonblank_lines {
         my $starting_in_quote       = $rbatch_vars->[_starting_in_quote_];
         my $ending_in_quote         = $rbatch_vars->[_ending_in_quote_];
         my $is_static_block_comment = $rbatch_vars->[_is_static_block_comment_];
+        my $rK_to_go                = $rbatch_vars->[_rK_to_go_];
 
         my $rLL = $self->[_rLL_];
 
@@ -8297,11 +8327,11 @@ sub consecutive_nonblank_lines {
                 $token = $tokens_to_go[$max_index_to_go];
                 $type  = $types_to_go[$max_index_to_go];
             }
-            write_diagnostics(
+            $self->write_diagnostics(
 "OUTPUT: grind_batch_of_CODE called: $a $c at type='$type' tok='$token', tokens to write=$max_index_to_go\n"
             );
             my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
-            write_diagnostics("$output_str\n");
+            $self->write_diagnostics("$output_str\n");
         };
 
         my $comma_arrow_count_contained = match_opening_and_closing_tokens();
@@ -8959,6 +8989,7 @@ sub unstore_token_to_go {
 sub want_blank_line {
     my $self = shift;
     $self->flush();
+    my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->want_blank_line();
     return;
 }
@@ -8966,6 +8997,7 @@ sub want_blank_line {
 sub write_unindented_line {
     my ( $self, $line ) = @_;
     $self->flush();
+    my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->write_line($line);
     return;
 }
@@ -10502,6 +10534,7 @@ sub send_lines_to_vertical_aligner {
     my $ending_in_quote         = $rbatch_vars->[_ending_in_quote_];
     my $is_static_block_comment = $rbatch_vars->[_is_static_block_comment_];
     my $ibeg0                   = $rbatch_vars->[_ibeg0_];
+    my $rK_to_go                = $rbatch_vars->[_rK_to_go_];
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -10764,6 +10797,7 @@ sub send_lines_to_vertical_aligner {
     # output any new -cscw block comment
     if ($cscw_block_comment) {
         $self->flush_vertical_aligner();
+        my $file_writer_object = $self->[_file_writer_object_];
         $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
     }
     return;
@@ -18412,3 +18446,4 @@ sub compare_indentation_levels {
     return;
 }
 1;
+
