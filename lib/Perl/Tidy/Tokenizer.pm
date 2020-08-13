@@ -367,7 +367,7 @@ sub get_saw_brace_error {
 }
 
 sub get_unexpected_error_count {
-    my ($self) = shift;
+    my ($self) = @_;
     return $self->{_unexpected_error_count};
 }
 
