@@ -2,6 +2,8 @@
 
 ## 2020 06 19.02
 
+    - Fix RT #133166, encoding not set for -st
+
     - Fix issue RT #133161, perltidy -html was not working on pod
 
     - Fix issue git #33, allow control of space after '->'
