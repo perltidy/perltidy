@@ -30,10 +30,10 @@ use vars qw{
 #{ eval "use HTML::Entities"; $missing_html_entities = $@; }
 
 BEGIN {
-    if ( !eval { use HTML::Entities; 1 } ) {
+    if ( !eval { require HTML::Entities; 1 } ) {
         $missing_html_entities = $@ ? $@ : 1;
     }
-    if ( !eval { use Pod::Html; 1 } ) {
+    if ( !eval { require Pod::Html; 1 } ) {
         $missing_pod_html = $@ ? $@ : 1;
     }
 }
@@ -713,7 +713,7 @@ sub pod_to_html {
             Perl::Tidy::Die( $_[0] );
         };
 
-        pod2html(@args);
+        Pod::Html::pod2html(@args);
     }
     $fh_tmp = IO::File->new( $tmpfile, 'r' );
     unless ($fh_tmp) {
