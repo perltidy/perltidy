@@ -225,16 +225,15 @@ EOM
                 ## $fh->binmode(":raw:encoding(UTF-8)");  
                 binmode $fh, ":raw:encoding(UTF-8)";
             }
-            elsif ( $fh eq '-' ) {
+            elsif ( $filename eq '-' ) {
                 binmode STDOUT, ":raw:encoding(UTF-8)";
             }
         }
 
         # Case 2: handle unencoded data
         else {
-            ##if    ( ref($fh) eq 'IO::File' ) { $fh->binmode(); }
             if    ( ref($fh) eq 'IO::File' ) { binmode $fh }
-            elsif ( $fh eq '-' )             { binmode STDOUT }
+            elsif ( $filename eq '-' )       { binmode STDOUT }
         }
     }
 
