@@ -7,7 +7,7 @@
 package Perl::Tidy::HtmlWriter;
 use strict;
 use warnings;
-our $VERSION = '20200619.02';
+our $VERSION = '20200822';
 
 use File::Basename;
 
@@ -695,7 +695,7 @@ sub pod_to_html {
         # "header!", "index!", "recurse!", "quiet!", "verbose!"
         foreach my $kw (qw(podheader podindex podrecurse podquiet podverbose)) {
             my $kwd = $kw;    # allows us to strip 'pod'
-            if ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
+            if    ( $rOpts->{$kw} ) { $kwd =~ s/^pod//; push @args, "--$kwd" }
             elsif ( defined( $rOpts->{$kw} ) ) {
                 $kwd =~ s/^pod//;
                 push @args, "--no$kwd";

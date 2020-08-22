@@ -7,7 +7,7 @@
 package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
-our $VERSION = '20200619.02';
+our $VERSION = '20200822';
 
 {
 
@@ -34,13 +34,13 @@ our $VERSION = '20200619.02';
         my ( $caller, %arg ) = @_;
         my $caller_is_obj = ref($caller);
         my $class         = $caller_is_obj || $caller;
-        my $self = bless {}, $class;
+        my $self          = bless {}, $class;
 
         foreach my $key ( keys %default_data ) {
             my $_key = '_' . $key;
             if    ( exists $arg{$key} ) { $self->{$_key} = $arg{$key} }
             elsif ($caller_is_obj)      { $self->{$_key} = $caller->{$_key} }
-            else  { $self->{$_key} = $default_data{$_key} }
+            else { $self->{$_key} = $default_data{$_key} }
         }
         if ( !defined( $self->{_starting_column} ) ) {
             $self->{_starting_column} = $self->{_column};

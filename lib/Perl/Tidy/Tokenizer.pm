@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20200619.02';
+our $VERSION = '20200822';
 
 use Perl::Tidy::LineBuffer;
 
@@ -1826,8 +1826,9 @@ sub prepare_for_a_new_file {
 
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '?'.
-            if (   $last_nonblank_type eq 'k'
-                && $is_keyword_rejecting_slash_as_pattern_delimiter{$last_nonblank_token} )
+            if ( $last_nonblank_type eq 'k'
+                && $is_keyword_rejecting_slash_as_pattern_delimiter{
+                    $last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -2063,8 +2064,9 @@ sub prepare_for_a_new_file {
             # Patch for rt #126965
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '/'.
-            if (   $last_nonblank_type eq 'k'
-                && $is_keyword_rejecting_question_as_pattern_delimiter{$last_nonblank_token} )
+            if ( $last_nonblank_type eq 'k'
+                && $is_keyword_rejecting_question_as_pattern_delimiter{
+                    $last_nonblank_token} )
             {
                 $is_pattern = 0;
             }
@@ -2418,7 +2420,7 @@ sub prepare_for_a_new_file {
 
         # type = 'pp' for pre-increment, '++' for post-increment
         '++' => sub {
-            if ( $expecting == TERM ) { $type = 'pp' }
+            if    ( $expecting == TERM ) { $type = 'pp' }
             elsif ( $expecting == UNKNOWN ) {
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
@@ -2439,7 +2441,7 @@ sub prepare_for_a_new_file {
         # type = 'mm' for pre-decrement, '--' for post-decrement
         '--' => sub {
 
-            if ( $expecting == TERM ) { $type = 'mm' }
+            if    ( $expecting == TERM ) { $type = 'mm' }
             elsif ( $expecting == UNKNOWN ) {
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
@@ -2915,8 +2917,8 @@ EOM
             }
             my $pre_tok  = $rtokens->[$i];        # get the next pre-token
             my $pre_type = $rtoken_type->[$i];    # and type
-            $tok  = $pre_tok;
-            $type = $pre_type;                    # to be modified as necessary
+            $tok        = $pre_tok;
+            $type       = $pre_type;              # to be modified as necessary
             $block_type = "";    # blank for all tokens except code block braces
             $container_type = "";    # blank for all tokens except some parens
             $type_sequence  = "";    # blank for all tokens except ?/:
@@ -4414,15 +4416,16 @@ sub operator_expected {
         if (   $tok eq '/'
             && $next_type eq '/'
             && $last_nonblank_type eq 'k'
-            && $is_keyword_rejecting_slash_as_pattern_delimiter{$last_nonblank_token} )
+            && $is_keyword_rejecting_slash_as_pattern_delimiter{
+                $last_nonblank_token} )
         {
             $op_expected = OPERATOR;
         }
 
-	# Patch to allow a ? following 'split' to be a depricated pattern
-	# delimiter.  This patch is coordinated with the omission of split from
-	# the list %is_keyword_rejecting_question_as_pattern_delimiter. This
-	# patch will force perltidy to guess.
+        # Patch to allow a ? following 'split' to be a depricated pattern
+        # delimiter.  This patch is coordinated with the omission of split from
+        # the list %is_keyword_rejecting_question_as_pattern_delimiter. This
+        # patch will force perltidy to guess.
         elsif ($tok eq '?'
             && $last_nonblank_type eq 'k'
             && $last_nonblank_token eq 'split' )
@@ -5135,7 +5138,7 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
 
     while ( $line = $tokenizer_self->{_line_buffer_object}->peek_ahead( $i++ ) )
     {
-        $line =~ s/^\s*//;    # trim leading blanks
+        $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
         ( $rpre_tokens, $rmap, $rpre_types ) =
@@ -5155,7 +5158,7 @@ sub peek_ahead_for_nonblank_token {
 
     while ( $line = $tokenizer_self->{_line_buffer_object}->peek_ahead( $i++ ) )
     {
-        $line =~ s/^\s*//;    # trim leading blanks
+        $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
         my ( $rtok, $rmap, $rtype ) =
@@ -8057,9 +8060,9 @@ BEGIN {
     # perl functions which may be unary operators.
 
     # This list is used to decide if a pattern delimited by slashes, /pattern/,
-    # can follow one of these keywords.  
+    # can follow one of these keywords.
     @q = qw(
-       chomp eof eval fc lc pop shift uc undef
+      chomp eof eval fc lc pop shift uc undef
     );
 
     @is_keyword_rejecting_slash_as_pattern_delimiter{@q} =

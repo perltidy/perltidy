@@ -1,14 +1,20 @@
 # Perltidy Change Log
 
-## 2020 06 19.02
+## 2020 08 22
 
-    - Fix RT #133166, encoding not set for -st
+    - Fix RT #133166, encoding not set for -st.  Also reported as RT #133171
+      and git #35. 
+
+      This is a significant bug in version 20200616 which can corrupt data if
+      perltidy is run as a filter on encoded text.
+**Please upgrade**
 
     - Fix issue RT #133161, perltidy -html was not working on pod
 
     - Fix issue git #33, allow control of space after '->'
 
-    - Vertical alignment has been improved.
+    - Vertical alignment has been improved. Numerous minor issues have
+      been fixed.
 
     - Formatting with the -lp option is improved. 
 

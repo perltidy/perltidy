@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20200619.02';
+    $VERSION = '20200822';
 }
 
 sub streamhandle {
@@ -221,8 +221,8 @@ EOM
         # Case 1: handle encoded data
         if ($is_encoded_data) {
             if ( ref($fh) eq 'IO::File' ) {
-                ## binmode object call not available in older perl versions 
-                ## $fh->binmode(":raw:encoding(UTF-8)");  
+                ## binmode object call not available in older perl versions
+                ## $fh->binmode(":raw:encoding(UTF-8)");
                 binmode $fh, ":raw:encoding(UTF-8)";
             }
             elsif ( $filename eq '-' ) {
@@ -1753,7 +1753,7 @@ sub compare_string_buffers {
     my ( $fho, $fnameo ) = streamhandle( \$bufo, 'r', $is_encoded_data );
     return $msg unless ( $fho && $fhi );    # for safety, shouldn't happen
     my ( $linei,              $lineo );
-    my ( $counti,             $counto ) = ( 0, 0 );
+    my ( $counti,             $counto )              = ( 0,  0 );
     my ( $last_nonblank_line, $last_nonblank_count ) = ( "", 0 );
     my $truncate = sub {
         my ( $str, $lenmax ) = @_;
@@ -2358,14 +2358,14 @@ sub generate_options {
     #   if max is undefined, there is no upper limit
     # Parameters not listed here have defaults
     %option_range = (
-        'format'             => [ 'tidy', 'html', 'user' ],
-        'output-line-ending' => [ 'dos',  'win',  'mac', 'unix' ],
-        'space-backslash-quote'         => [ 0, 2 ],
-        'block-brace-tightness'         => [ 0, 2 ],
-        'keyword-paren-inner-tightness' => [ 0, 2 ],
-        'brace-tightness'               => [ 0, 2 ],
-        'paren-tightness'               => [ 0, 2 ],
-        'square-bracket-tightness'      => [ 0, 2 ],
+        'format'                        => [ 'tidy', 'html', 'user' ],
+        'output-line-ending'            => [ 'dos',  'win',  'mac', 'unix' ],
+        'space-backslash-quote'         => [ 0,      2 ],
+        'block-brace-tightness'         => [ 0,      2 ],
+        'keyword-paren-inner-tightness' => [ 0,      2 ],
+        'brace-tightness'               => [ 0,      2 ],
+        'paren-tightness'               => [ 0,      2 ],
+        'square-bracket-tightness'      => [ 0,      2 ],
 
         'block-brace-vertical-tightness'            => [ 0, 2 ],
         'brace-vertical-tightness'                  => [ 0, 2 ],
@@ -4030,7 +4030,7 @@ sub show_version {
     print STDOUT <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2019, Steve Hancock
+Copyright 2000-2020, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.

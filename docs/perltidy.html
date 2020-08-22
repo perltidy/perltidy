@@ -330,6 +330,8 @@
 
 <p>will cause the perltidy to treate the words &#39;method&#39;, &#39;fun&#39;, &#39;_sub&#39; and &#39;M4&#39; to be treated the same as if they were &#39;sub&#39;. Note that if the alias words are separated by spaces then the string of words should be placed in quotes.</p>
 
+<p>Note that several other parameters accept a list of keywords, including &#39;sub&#39; (see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>). You do not need to include any sub aliases in these lists. Just include keyword &#39;sub&#39; if you wish, and all aliases are automatically included.</p>
+
 </dd>
 </dl>
 
@@ -858,7 +860,7 @@
        print $x /$y;
    }</code></pre>
 
-<p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but incorrectly.</p>
+<p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but not as intended.</p>
 
 <p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
 
@@ -2632,7 +2634,7 @@
 
 <h2 id="Controlling-Vertical-Alignment">Controlling Vertical Alignment</h2>
 
-<p>Vertical alignment refers to lining up certain symbols in list of consecutive similar lines to improve readability. For example, the &quot;fat commas&quot; are aligned in the following statement:</p>
+<p>Vertical alignment refers to lining up certain symbols in a list of consecutive similar lines to improve readability. For example, the &quot;fat commas&quot; are aligned in the following statement:</p>
 
 <pre><code>        $data = $pkg-&gt;new(
             PeerAddr =&gt; join( &quot;.&quot;, @port[ 0 .. 3 ] ),   
@@ -3121,7 +3123,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20200619</p>
+<p>This man page documents perltidy version 20200822</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
