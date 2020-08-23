@@ -404,5 +404,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets21.t	html2.def
-../snippets21.t	html2.html
