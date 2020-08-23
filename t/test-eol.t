@@ -129,3 +129,5 @@ Perl::Tidy::perltidy(
 }
 
 ok($output, $expected_output, "output file EOLs (UTF8)");
+
+if ( -e $output_filename ) { unlink $output_filename }
