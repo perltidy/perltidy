@@ -35,7 +35,7 @@ my $err = Perl::Tidy::perltidy(
     stderr      => \$stderr_string,
     errorfile   => \$errorfile_string, # not used when -se flag is set
 );
-if ( $err || $stderr_string || $errorfile_string || !$output ) {
+if ( $err==1 || $stderr_string || $errorfile_string || !$output ) {
     print STDERR "Error output received\n";
     if ($err) {
         print STDERR "An error flag '$err' was returned\n";
