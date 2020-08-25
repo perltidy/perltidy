@@ -745,7 +745,7 @@ sub make_side_comment {
     return;
 }
 
-{    # closure for decide_if_list
+{    ## closure for sub decide_if_list
 
     my %is_comma_token;
 
@@ -1491,7 +1491,7 @@ sub _flush_group_lines {
     return;
 }
 
-{    # closure for sub sweep_top_down
+{    ## closure for sub sweep_top_down
 
     my $rall_lines;         # all of the lines
     my $grp_level;          # level of all lines
@@ -1866,7 +1866,7 @@ sub sweep_left_to_right {
     return;
 }
 
-{    # do_left_to_right_sweep
+{    ## closure for sub do_left_to_right_sweep
 
     my %is_good_alignment_token;
 
@@ -2205,7 +2205,7 @@ EOM
     return;
 }
 
-{    # closure for decode_alignment_token
+{    ## closure for sub decode_alignment_token
 
     # This routine is called repeatedly for each token, so it needs to be
     # efficient.  We can speed things up by remembering the inputs and outputs
@@ -2261,7 +2261,7 @@ EOM
     }
 }
 
-{    # closure for delete_unmatched_tokens
+{    ## closure for sub delete_unmatched_tokens
 
     my %is_assignment;
     my %keep_after_deleted_assignment;
@@ -3176,7 +3176,7 @@ sub Dump_tree_groups {
     return;
 }
 
-{    # closure for is_marginal_match
+{    ## closure for sub is_marginal_match
 
     my %is_if_or;
     my %is_assignment;
@@ -3773,7 +3773,7 @@ sub get_output_line_number {
     return $nlines + $file_writer_object->get_output_line_number();
 }
 
-{    # closure for valign_output_step_B
+{    ## closure for sub valign_output_step_B
 
     # These are values for a cache used by valign_output_step_B.
     my $cached_line_text;
@@ -4151,7 +4151,7 @@ sub get_output_line_number {
     }
 }
 
-{    # closure for valign_output_step_C
+{    ## closure for sub valign_output_step_C
 
     # Vertical alignment buffer used by valign_output_step_C
     my $valign_buffer_filling;
@@ -4370,7 +4370,7 @@ sub valign_output_step_D {
     return;
 }
 
-{    # begin get_leading_string
+{    ## closure for sub get_leading_string
 
     my @leading_string_cache;
 

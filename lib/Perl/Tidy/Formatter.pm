@@ -476,7 +476,7 @@ use constant MAX_NAG_MESSAGES => 6;
 # For example, ?: pairs might have numbers 7,11,15,...
 use constant TYPE_SEQUENCE_INCREMENT => 4;
 
-{
+{    ## closure for subs to count instanes
 
     # methods to count instances
     my $_count = 0;
@@ -1571,7 +1571,7 @@ sub process_all_lines {
     return;
 }
 
-{    ## Beginning of routine to check line hashes
+{    ## closure for sub check_line_hashes
 
     my %valid_line_hash;
 
@@ -3215,7 +3215,7 @@ sub respace_tokens {
     return;
 }
 
-{    # scan_comments
+{    ## closure for sub scan_comments
 
     my $Last_line_had_side_comment;
     my $In_format_skipping_section;
@@ -6278,7 +6278,8 @@ sub bad_pattern {
     return $@;
 }
 
-{
+{    ## closure for sub prepare_cuddled_block_types
+
     my %no_cuddle;
 
     # Add keywords here which really should not be cuddled
@@ -6783,7 +6784,7 @@ EOM
     return;
 }
 
-{    # begin is_essential_whitespace
+{    ## closure for sub is_essential_whitespace
 
     my %is_sort_grep_map;
     my %is_for_foreach;
@@ -6982,7 +6983,8 @@ EOM
     }
 }
 
-{
+{    ## closure for sub new_secret_operator_whitespace
+
     my %secret_operators;
     my %is_leading_secret_token;
 
@@ -7230,7 +7232,7 @@ sub copy_token_as_type {
     return $rnew_token;
 }
 
-{    # begin process_line_of_CODE
+{    ## closure for sub process_line_of_CODE
 
     # uses Global Symbols:
 
@@ -8253,7 +8255,7 @@ sub consecutive_nonblank_lines {
       $vao->get_cached_line_count();
 }
 
-{    # closure for grind_batch_of_CODE
+{    ## closure for sub grind_batch_of_CODE
 
     # Keep track of consecutive nonblank lines so that we can insert occasional
     # blanks
@@ -9186,7 +9188,7 @@ sub pad_token {
     return;
 }
 
-{
+{    ## closure for sub set_logical_padding
     my %is_math_op;
 
     BEGIN {
@@ -9982,7 +9984,8 @@ sub accumulate_block_text {
     return;
 }
 
-{
+{    ## closure for sub accumulate_csc_text
+
     my %is_if_elsif_else_unless_while_until_for_foreach;
 
     BEGIN {
@@ -10236,7 +10239,7 @@ sub make_else_csc_text {
     return $csc_text;
 }
 
-{    # sub balance_csc_text
+{    ## closure for sub balance_csc_text
 
     my %matching_char;
 
@@ -10803,7 +10806,7 @@ sub send_lines_to_vertical_aligner {
     return;
 }
 
-{    # begin make_alignment_patterns
+{    ## closure for sub make_alignment_patterns
 
     my %block_type_map;
     my %keyword_map;
@@ -11263,7 +11266,7 @@ sub send_lines_to_vertical_aligner {
 
 }    # end make_alignment_patterns
 
-{    # begin unmatched_indexes
+{    ## closure for sub match_opening_and_closing_tokens
 
     # closure to keep track of unbalanced containers.
     # arrays shared by the routines in this block:
@@ -11388,7 +11391,7 @@ sub send_lines_to_vertical_aligner {
 
         return ( $indent, $offset, $is_leading, $exists );
     }
-}    # end unmatched_indexes
+}    # end closure for sub match_opening_and_closing_tokens
 
 sub get_opening_indentation {
 
@@ -11487,7 +11490,7 @@ sub lookup_opening_indentation {
     return ( $rindentation_list->[ $nline + 1 ], $offset, $is_leading );
 }
 
-{
+{    ## closure for sub set_adjusted_indentation
     my %is_if_elsif_else_unless_while_until_for_foreach;
 
     my ( $last_indentation_written, $last_unadjusted_indentation,
@@ -12443,7 +12446,7 @@ sub get_seqno {
     return ($seqno);
 }
 
-{
+{    ## closure for sub set_vertical_alignment_markers
     my %is_vertical_alignment_type;
     my %is_not_vertical_alignment_token;
     my %is_vertical_alignment_keyword;
@@ -12825,7 +12828,7 @@ sub terminal_type_K {
 
 }
 
-{    # set_bond_strengths
+{    ## closure for sub set_bond_strengths
 
     my %is_good_keyword_breakpoint;
     my %is_lt_gt_le_ge;
@@ -13754,7 +13757,7 @@ sub pad_array_to_go {
     return;
 }
 
-{    # begin scan_list
+{    ## closure for sub scan_list
 
     my (
         $block_type,               $current_depth,
@@ -15044,7 +15047,7 @@ sub find_token_starting_list {
     return $i_opening_minus;
 }
 
-{    # begin set_comma_breakpoints_do
+{    ## closure for sub set_comma_breakpoints_do
 
     my %is_keyword_with_special_leading_term;
 
@@ -16156,7 +16159,7 @@ sub undo_forced_breakpoint_stack {
     return;
 }
 
-{    # begin recombine_breakpoints
+{    ## closure for sub recombine_breakpoints
 
     my %is_amp_amp;
     my %is_ternary;
@@ -17654,7 +17657,7 @@ sub in_same_container_i {
     return $self->in_same_container_K( $K_to_go[$i1], $K_to_go[$i2] );
 }
 
-{    # sub in_same_container_K
+{    ## closure for sub in_same_container_K
     my $ris_break_token;
     my $ris_comma_token;
 
