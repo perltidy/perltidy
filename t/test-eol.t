@@ -130,5 +130,6 @@ Perl::Tidy::perltidy(
 
 ok($output, $expected_output, "output file EOLs (UTF8)");
 
-# Appveyor produces an error if you try to unlink a temp file
-##if ( -e $output_filename ) { unlink $output_filename }
+# Try to delete the tmpfile; 
+# Comment this out if it causes a failure at Appveyor
+if ( -e $output_filename ) { unlink $output_filename }
