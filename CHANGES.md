@@ -1,5 +1,9 @@
 # Perltidy Change Log
 
+    - Side comment locations reset at a line ending in a level 0 open
+      block, such as when a new multi-line sub begins.  This is intended to 
+      help keep side comments from drifting to far to the right.
+
 ## 2020 08 22
 
     - Fix RT #133166, encoding not set for -st.  Also reported as RT #133171

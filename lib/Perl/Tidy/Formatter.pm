@@ -10645,12 +10645,14 @@ sub send_lines_to_vertical_aligner {
           $self->make_alignment_patterns( $ibeg, $iend,
             $ralignment_type_to_go );
 
-        my ( $indentation, $lev, $level_end, $terminal_type,
+        my ( $indentation, $lev, $level_end, $terminal_type, $i_terminal,
             $is_semicolon_terminated, $is_outdented_line )
           = $self->set_adjusted_indentation( $ibeg, $iend, $rfields,
             $rpatterns,         $ri_first, $ri_last,
             $rindentation_list, $ljump,    $starting_in_quote,
             $is_static_block_comment, );
+
+        my $terminal_block_type=$block_type_to_go[$i_terminal];
 
         # we will allow outdenting of long lines..
         my $outdent_long_lines = (
@@ -10753,6 +10755,7 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{rpatterns}                 = $rpatterns;
         $rvalign_hash->{rtokens}                   = $rtokens;
         $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
+        $rvalign_hash->{terminal_block_type}       = $terminal_block_type;
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
@@ -12080,7 +12083,7 @@ sub lookup_opening_indentation {
             }
         }
 
-        return ( $indentation, $lev, $level_end, $terminal_type,
+        return ( $indentation, $lev, $level_end, $terminal_type, $i_terminal,
             $is_semicolon_terminated, $is_outdented_line );
     }
 }

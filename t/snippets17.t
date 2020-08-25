@@ -420,7 +420,7 @@ sub macro_get_names {          #
     'Nov', 'Dec'
 );
 
-{           # this side comment will not align
+{          # this side comment will not align
     my $IGNORE = 0;          # This is a side comment
                              # This is a hanging side comment
                              # And so is this
@@ -688,7 +688,7 @@ sub macro_get_names {    #
     'Nov', 'Dec'
 );
 
-{           # this side comment will not align
+{    # this side comment will not align
     my $IGNORE = 0;    # This is a side comment
                        # This is a hanging side comment
                        # And so is this

@@ -354,6 +354,7 @@ sub valign_input {
     my $rtokens                   = $rline_hash->{rtokens};
     my $rpatterns                 = $rline_hash->{rpatterns};
     my $rfield_lengths            = $rline_hash->{rfield_lengths};
+    my $terminal_block_type       = $rline_hash->{terminal_block_type};
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
@@ -392,6 +393,12 @@ sub valign_input {
             $self->forget_side_comment();
         }
         $self->[_consecutive_block_comments_] = 0;
+    }
+
+    # Reset side comment location if we are entering a new block from level 0.
+    # This is intended to keep them from drifting too far to the right.
+    if ( $terminal_block_type && $level == 0 && $level_end > $level ) {
+        $self->forget_side_comment();
     }
 
     my $group_level = $self->[_group_level_];
