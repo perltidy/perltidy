@@ -93,7 +93,8 @@ use vars qw{
   @starting_line_of_current_depth
 };
 
-# GLOBAL CONSTANTS for routines in this package
+# GLOBAL CONSTANTS for routines in this package,
+# Initialized in a BEGIN block.
 use vars qw{
   %is_indirect_object_taker
   %is_block_operator
@@ -133,7 +134,7 @@ use constant LIST_CONTEXT    => 1;
 # Maximum number of little messages; probably need not be changed.
 use constant MAX_NAG_MESSAGES => 6;
 
-{
+{    ## closure for subs to count instances
 
     # methods to count instances
     my $_count = 0;
@@ -1140,7 +1141,7 @@ sub prepare_for_a_new_file {
     return;
 }
 
-{                                       # begin tokenize_this_line
+{    ## closure for sub tokenize_this_line
 
     use constant BRACE          => 0;
     use constant SQUARE_BRACKET => 1;
@@ -6332,7 +6333,7 @@ sub scan_identifier_do {
     return ( $i, $tok, $type, $id_scan_state, $identifier );
 }
 
-{
+{    ## closure for sub do_scan_sub
 
     # saved package and subnames in case prototype is on separate line
     my ( $package_saved, $subname_saved );
@@ -6598,7 +6599,7 @@ sub numerator_expected {
     return $numerator_expected;
 }
 
-{
+{    ## closure for sub pattern_expected
     my %pattern_test;
 
     BEGIN {
@@ -7469,7 +7470,7 @@ sub show_tokens {
     return;
 }
 
-{
+{    ## closure for sub matching end token
     my %matching_end_token;
 
     BEGIN {
