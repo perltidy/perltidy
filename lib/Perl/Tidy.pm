@@ -1696,7 +1696,7 @@ EOM
     # errors or warnings will write a line like
     #        '## Please see file testing.t.ERR'
     # to standard output for each file with errors, so the flag will be true,
-    # even only some of the multiple files may have had errors.
+    # even if only some of the multiple files may have had errors.
 
   NORMAL_EXIT:
     my $ret = $Warn_count ? 2 : 0;
