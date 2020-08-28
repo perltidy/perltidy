@@ -118,7 +118,7 @@ use vars qw{
 };
 
 # Initialized in check_options. These are constants and could
-# also be initialized in a BEGIN block.
+# just as well be initialized in a BEGIN block.
 use vars qw{
   %is_do_follower
   %is_if_brace_follower
@@ -225,15 +225,6 @@ use vars qw{
   @forced_breakpoint_undo_stack
   %postponed_breakpoint
   $index_max_forced_break
-};
-
-# Hashes used by the weld-nested option (-wn).
-# These will be moved into $self.
-use vars qw{
-  %weld_len_left_closing
-  %weld_len_right_closing
-  %weld_len_left_opening
-  %weld_len_right_opening
 };
 
 # Arrays holding the batch of tokens currently being processed.
@@ -776,10 +767,11 @@ sub new {
     $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
     $self->[_saw_END_or_DATA_]          = 0;
 
-    $self->[_rweld_len_left_closing_]  = {};    # weld flags
-    $self->[_rweld_len_right_closing_] = {};    # weld flags
-    $self->[_rweld_len_left_opening_]  = {};    # weld flags
-    $self->[_rweld_len_right_opening_] = {};    # weld flags
+    # Hashes which control container welding
+    $self->[_rweld_len_left_closing_]  = {};
+    $self->[_rweld_len_right_closing_] = {};
+    $self->[_rweld_len_left_opening_]  = {};
+    $self->[_rweld_len_right_opening_] = {};
 
     bless $self, $class;
 
@@ -3875,15 +3867,7 @@ sub mark_short_nested_blocks {
 sub weld_containers {
 
     # do any welding operations
-    my $self = shift;
-
-    # initialize weld length hashes needed later for checking line lengths.
-    # TODO: These should eventually be stored in $self rather than be package
-    # vars.
-    %weld_len_left_closing  = ();
-    %weld_len_right_closing = ();
-    %weld_len_left_opening  = ();
-    %weld_len_right_opening = ();
+    my ($self) = @_;
 
     return if ( $rOpts->{'indent-only'} );
     return unless ( $rOpts->{'add-newlines'} );
@@ -3932,7 +3916,9 @@ sub cumulative_length_after_K {
 }
 
 sub weld_cuddled_blocks {
-    my $self = shift;
+    my ($self) = @_;
+
+    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
 
     # This routine implements the -cb flag by finding the appropriate
     # closing and opening block braces and welding them together.
@@ -4044,7 +4030,7 @@ sub weld_cuddled_blocks {
                     my $dlen =
                       $rLL->[$Kon]->[_CUMULATIVE_LENGTH_] -
                       $rLL->[ $Ko - 1 ]->[_CUMULATIVE_LENGTH_];
-                    $weld_len_right_closing{$closing_seqno} = $dlen;
+                    $rweld_len_right_closing->{$closing_seqno} = $dlen;
 
                     # Set flag that we want to break the next container
                     # so that the cuddled line is balanced.
@@ -4094,7 +4080,12 @@ sub weld_cuddled_blocks {
 }
 
 sub weld_nested_containers {
-    my $self = shift;
+    my ($self) = @_;
+
+    my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
+    my $rweld_len_left_opening  = $self->[_rweld_len_left_opening_];
+    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
+    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
 
     # This routine implements the -wn flag by "welding together"
     # the nested closing and opening tokens which were previously
@@ -4386,18 +4377,18 @@ sub weld_nested_containers {
 
             }
 
-            $weld_len_left_closing{$outer_seqno}  = $len_close;
-            $weld_len_right_opening{$outer_seqno} = $len_open;
+            $rweld_len_left_closing->{$outer_seqno}  = $len_close;
+            $rweld_len_right_opening->{$outer_seqno} = $len_open;
 
             $inner_seqno = $outer_seqno;
         }
 
         # sweep from outer to inner
         foreach my $seqno ( reverse @{$item} ) {
-            $weld_len_right_closing{$seqno} =
-              $len_close - $weld_len_left_closing{$seqno};
-            $weld_len_left_opening{$seqno} =
-              $len_open - $weld_len_right_opening{$seqno};
+            $rweld_len_right_closing->{$seqno} =
+              $len_close - $rweld_len_left_closing->{$seqno};
+            $rweld_len_left_opening->{$seqno} =
+              $len_open - $rweld_len_right_opening->{$seqno};
         }
     }
 
@@ -4412,10 +4403,10 @@ sub weld_nested_containers {
             foreach my $seq ( @{$weld} ) {
                 print <<EOM;
 	seq=$seq
-        left_opening=$weld_len_left_opening{$seq};
-        right_opening=$weld_len_right_opening{$seq};
-        left_closing=$weld_len_left_closing{$seq};
-        right_closing=$weld_len_right_closing{$seq};
+        left_opening=$rweld_len_left_opening->{$seq};
+        right_opening=$rweld_len_right_opening->{$seq};
+        left_closing=$rweld_len_left_closing->{$seq};
+        right_closing=$rweld_len_right_closing->{$seq};
 EOM
             }
 
@@ -4427,6 +4418,9 @@ EOM
 
 sub weld_nested_quotes {
     my $self = shift;
+
+    my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
+    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -4521,8 +4515,8 @@ sub weld_nested_quotes {
 
             # OK to weld
             # FIXME: Are these always correct?
-            $weld_len_left_closing{$outer_seqno}  = 1;
-            $weld_len_right_opening{$outer_seqno} = 2;
+            $rweld_len_left_closing->{$outer_seqno}  = 1;
+            $rweld_len_right_opening->{$outer_seqno} = 2;
 
             # QW PATCH 1 (Testing)
             # undo CI for welded quotes
@@ -4543,16 +4537,19 @@ sub weld_len_left {
 
     my ( $self, $seqno, $type_or_tok ) = @_;
 
+    my $rweld_len_left_closing = $self->[_rweld_len_left_closing_];
+    my $rweld_len_left_opening = $self->[_rweld_len_left_opening_];
+
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its left
 
     my $weld_len;
     if ($seqno) {
         if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $weld_len_left_closing{$seqno};
+            $weld_len = $rweld_len_left_closing->{$seqno};
         }
         elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $weld_len_left_opening{$seqno};
+            $weld_len = $rweld_len_left_opening->{$seqno};
         }
     }
     if ( !defined($weld_len) ) { $weld_len = 0 }
@@ -4563,16 +4560,19 @@ sub weld_len_right {
 
     my ( $self, $seqno, $type_or_tok ) = @_;
 
+    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
+    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
+
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its right
 
     my $weld_len;
     if ($seqno) {
         if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $weld_len_right_closing{$seqno};
+            $weld_len = $rweld_len_right_closing->{$seqno};
         }
         elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $weld_len_right_opening{$seqno};
+            $weld_len = $rweld_len_right_opening->{$seqno};
         }
     }
     if ( !defined($weld_len) ) { $weld_len = 0 }
