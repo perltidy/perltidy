@@ -223,12 +223,11 @@ use vars qw{
   $forced_breakpoint_count
   $forced_breakpoint_undo_count
   @forced_breakpoint_undo_stack
-  %postponed_breakpoint
   $index_max_forced_break
 };
 
 # Arrays holding the batch of tokens currently being processed.
-# These are being moved into the _rbatch_vars_ sub-array of $self.
+# These are being moved into the _this_batch_ sub-array of $self.
 use vars qw{
   $max_index_to_go
   @block_type_to_go
@@ -302,7 +301,7 @@ BEGIN {
         _file_writer_object_         => $i++,
         _vertical_aligner_object_    => $i++,
         _radjusted_levels_           => $i++,
-        _rbatch_vars_                => $i++,
+        _this_batch_                => $i++,
 
         _last_output_short_opening_token_ => $i++,
 
@@ -337,8 +336,8 @@ BEGIN {
 
     };
 
-    # Array index names for _rbatch_vars_ (in above list)
-    # Thus _rbatch_vars_ is a sub-array of $self for
+    # Array index names for _this_batch_ (in above list)
+    # So _this_batch_ is a sub-array of $self for
     # holding the batches of tokens being processed.
     $i = 0;
     use constant {
@@ -350,10 +349,35 @@ BEGIN {
         _do_not_pad_              => $i++,
         _ibeg0_                   => $i++,
         _peak_batch_size_         => $i++,
+
+        _forced_breakpoint_count_       => $i++,
+        _forced_breakpoint_undo_count_  => $i++,
+        _rforced_breakpoint_undo_stack_ => $i++,
+        _index_max_forced_break_        => $i++,
+
         _rK_to_go_                => $i++,
         _rtokens_to_go_           => $i++,
         _rtypes_to_go_            => $i++,
         _rblock_type_to_go_       => $i++,
+
+        _max_index_to_go_              => $i++,
+        _rtype_sequence_to_go_         => $i++,
+        _rcontainer_environment_to_go_ => $i++,
+        _rbond_strength_to_go_         => $i++,
+        _rforced_breakpoint_to_go_     => $i++,
+        _rtoken_lengths_to_go_         => $i++,
+        _rsummed_lengths_to_go_        => $i++,
+        _rlevels_to_go_                => $i++,
+        _rleading_spaces_to_go_        => $i++,
+        _rreduced_spaces_to_go_        => $i++,
+        _rmate_index_to_go_            => $i++,
+        _rci_levels_to_go_             => $i++,
+        _rnesting_depth_to_go_         => $i++,
+        _rnobreak_to_go_               => $i++,
+        _rold_breakpoint_to_go_        => $i++,
+        _rinext_to_go_                 => $i++,
+        _riprev_to_go_                 => $i++,
+
     };
 
     my @q;
@@ -462,14 +486,14 @@ use constant MAX_NAG_MESSAGES => 6;
 # For example, ?: pairs might have numbers 7,11,15,...
 use constant TYPE_SEQUENCE_INCREMENT => 4;
 
-{    ## closure for subs to count instanes
+{    ## begin closure to count instanes
 
     # methods to count instances
     my $_count = 0;
     sub get_count        { return $_count; }
     sub _increment_count { return ++$_count }
     sub _decrement_count { return --$_count }
-}
+} ## end closure to count instanes
 
 sub trim {
 
@@ -642,8 +666,6 @@ sub new {
     my $file_writer_object =
       Perl::Tidy::FileWriter->new( $sink_object, $rOpts, $logger_object );
 
-    initialize_gnu_vars();
-
     @block_type_to_go            = ();
     @type_sequence_to_go         = ();
     @container_environment_to_go = ();
@@ -665,7 +687,7 @@ sub new {
     @inext_to_go                 = ();
     @iprev_to_go                 = ();
 
-    %postponed_breakpoint = ();
+    initialize_gnu_vars();
 
     initialize_csc_vars();
 
@@ -678,6 +700,8 @@ sub new {
     initialize_grind_batch_of_CODE();
 
     initialize_adjusted_indentation();
+
+    initialize_postponed_breakpoint(); 
 
     prepare_for_next_batch();
 
@@ -738,7 +762,7 @@ sub new {
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
 
     $self->[_radjusted_levels_] = [];
-    $self->[_rbatch_vars_]      = [];
+    $self->[_this_batch_]      = [];
 
     # Memory of processed text
     $self->[_last_last_line_leading_level_] = 0;
@@ -1545,7 +1569,7 @@ sub process_all_lines {
     return;
 }
 
-{    ## closure for sub check_line_hashes
+{    ## begin closure check_line_hashes
 
     my %valid_line_hash;
 
@@ -1589,8 +1613,7 @@ sub process_all_lines {
         }
         return;
     }
-
-}    ## End check line hashes
+} ## end closure check_line_hashes
 
 sub write_line {
 
@@ -2362,6 +2385,7 @@ sub set_whitespace_flags {
         new_secret_operator_whitespace( $rLL, $rwhitespace_flags );
     }
     return $rwhitespace_flags;
+
 } ## end sub set_whitespace_flags
 
 sub respace_tokens {
@@ -3189,7 +3213,7 @@ sub respace_tokens {
     return;
 }
 
-{    ## closure for sub scan_comments
+{    ## begin closure scan_comments
 
     my $Last_line_had_side_comment;
     my $In_format_skipping_section;
@@ -3405,7 +3429,7 @@ sub respace_tokens {
         }
         return $CODE_type;
     }
-}
+} ## end closure scan_comments
 
 sub find_nested_pairs {
     my $self = shift;
@@ -4996,7 +5020,7 @@ sub get_available_spaces_to_go {
     return ref($item) ? $item->get_available_spaces() : 0;
 }
 
-{    ## closure for sub set_leading_whitespace (for -lp indentation)
+{    ## begin closure set_leading_whitespace (for -lp indentation)
 
     my $gnu_position_predictor;
     my $gnu_sequence_number;
@@ -5079,36 +5103,6 @@ sub get_available_spaces_to_go {
 
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
-
-        # uses Global Symbols:
-        # "$gnu_position_predictor"
-        # "$gnu_sequence_number"
-        # "$line_start_index_to_go"
-        # "$max_gnu_item_index"
-        # "$max_gnu_stack_index"
-        # "$max_index_to_go"
-        # "$rOpts_continuation_indentation"
-        # "$rOpts_indent_columns"
-        # "$rOpts_line_up_parentheses"
-        # "$rOpts_maximum_line_length"
-        # "%gnu_arrow_count"
-        # "%gnu_comma_count"
-        # "%is_assignment"
-        # "%is_if_unless_and_or_last_next_redo_return"
-        # "%last_gnu_equals"
-        # "%tightness"
-        # "%want_break_before"
-        # "@K_to_go"
-        # "@block_type_to_go"
-        # "@gnu_item_list"
-        # "@gnu_stack"
-        # "@leading_spaces_to_go"
-        # "@nesting_depth_to_go"
-        # "@old_breakpoint_to_go"
-        # "@reduced_spaces_to_go"
-        # "@token_lengths_to_go"
-        # "@tokens_to_go"
-        # "@types_to_go"
 
         my $rbreak_container = $self->[_rbreak_container_];
         my $rshort_nested    = $self->[_rshort_nested_];
@@ -5676,8 +5670,7 @@ sub get_available_spaces_to_go {
         }
         return;
     }
-
-}
+} ## end closure set_leading_whitespace
 
 sub reduce_lp_indentation {
 
@@ -6322,7 +6315,7 @@ sub bad_pattern {
     return $@;
 }
 
-{    ## closure for sub prepare_cuddled_block_types
+{    ## begin closure prepare_cuddled_block_types
 
     my %no_cuddle;
 
@@ -6435,7 +6428,7 @@ sub bad_pattern {
         }
         return;
     }
-}
+}    ## begin closure prepare_cuddled_block_types
 
 sub dump_cuddled_block_list {
     my ($fh) = @_;
@@ -6828,7 +6821,7 @@ EOM
     return;
 }
 
-{    ## closure for sub is_essential_whitespace
+{    ## begin closure is_essential_whitespace
 
     my %is_sort_grep_map;
     my %is_for_foreach;
@@ -7025,9 +7018,9 @@ EOM
 ##if ($typel eq 'j') {print STDERR "typel=$typel typer=$typer result='$result'\n"}
         return $result;
     }
-}
+} ## end closure is_essential_whitespace
 
-{    ## closure for sub new_secret_operator_whitespace
+{    ## begin closure new_secret_operator_whitespace
 
     my %secret_operators;
     my %is_leading_secret_token;
@@ -7106,7 +7099,7 @@ EOM
         }    ## End loop over all tokens
         return;
     }    # End sub
-}
+}    ## end closure new_secret_operator_whitespace
 
 sub tight_paren_follows {
 
@@ -7144,8 +7137,6 @@ sub tight_paren_follows {
     # to help make complex code readable.  But for simpler
     # do blocks it can be preferable to keep the code compact
     # by returning a 'true' value.
-
-    # uses Global Symbols:  $rOpts, $ANYSUB_PATTERN
 
     return unless defined($K_ic);
     my $rLL = $self->[_rLL_];
@@ -7276,44 +7267,7 @@ sub copy_token_as_type {
     return $rnew_token;
 }
 
-{    ## closure for sub process_line_of_CODE
-
-    # uses Global Symbols:
-
-    # "$rOpts"
-    # "$ANYSUB_PATTERN"
-    # "$ASUB_PATTERN"
-    # "$closing_side_comment_list_pattern"
-    # "$closing_side_comment_prefix_pattern"
-
-    # "%is_anon_sub_1_brace_follower"
-    # "%is_anon_sub_brace_follower"
-    # "%is_block_without_semicolon"
-    # "%is_do_follower"
-    # "%is_else_brace_follower"
-    # "%is_if_brace_follower"
-    # "%is_other_brace_follower"
-    # "%is_sort_map_grep_eval"
-
-    # "$max_index_to_go"
-    # "@K_to_go"
-    # "@block_type_to_go"
-    # "@bond_strength_to_go"
-    # "@ci_levels_to_go"
-    # "@container_environment_to_go"
-    # "@forced_breakpoint_to_go"
-    # "@inext_to_go"
-    # "@iprev_to_go"
-    # "@levels_to_go"
-    # "@mate_index_to_go"
-    # "@nesting_depth_to_go"
-    # "@nobreak_to_go"
-    # "@old_breakpoint_to_go"
-    # "@summed_lengths_to_go"
-    # "@token_lengths_to_go"
-    # "@tokens_to_go"
-    # "@type_sequence_to_go"
-    # "@types_to_go"
+{    ## begin closure process_line_of_CODE
 
     # flags needed by the store routine
     my $line_of_tokens;
@@ -7513,32 +7467,32 @@ sub copy_token_as_type {
         return unless ( $max_index_to_go >= 0 );
 
         # Create an array to hold variables for this batch
-        my $rbatch_vars = [];
-        $rbatch_vars->[_comma_count_in_batch_] = $comma_count_in_batch;
-        $rbatch_vars->[_starting_in_quote_]    = $starting_in_quote;
-        $rbatch_vars->[_ending_in_quote_]      = $ending_in_quote;
+        my $this_batch = [];
+        $this_batch->[_comma_count_in_batch_] = $comma_count_in_batch;
+        $this_batch->[_starting_in_quote_]    = $starting_in_quote;
+        $this_batch->[_ending_in_quote_]      = $ending_in_quote;
 
-        $rbatch_vars->[_rK_to_go_] = [ @K_to_go[ 0 .. $max_index_to_go ] ];
-        $rbatch_vars->[_rtokens_to_go_] =
+        $this_batch->[_rK_to_go_] = [ @K_to_go[ 0 .. $max_index_to_go ] ];
+        $this_batch->[_rtokens_to_go_] =
           [ @tokens_to_go[ 0 .. $max_index_to_go ] ];
-        $rbatch_vars->[_rtypes_to_go_] =
+        $this_batch->[_rtypes_to_go_] =
           [ @types_to_go[ 0 .. $max_index_to_go ] ];
-        $rbatch_vars->[_rblock_type_to_go_] =
+        $this_batch->[_rblock_type_to_go_] =
           [ @block_type_to_go[ 0 .. $max_index_to_go ] ];
 
         # The flag $is_static_block_comment applies to the line which just
         # arrived. So it only applies if we are outputting that line.
-        $rbatch_vars->[_is_static_block_comment_] =
+        $this_batch->[_is_static_block_comment_] =
              defined($K_first)
           && $max_index_to_go == 0
           && $K_to_go[0] == $K_first ? $is_static_block_comment : 0;
 
-        $self->[_rbatch_vars_] = $rbatch_vars;
+        $self->[_this_batch_] = $this_batch;
 
         $self->grind_batch_of_CODE();
 
         # Done .. this batch is history
-        $self->[_rbatch_vars_] = [];
+        $self->[_this_batch_] = [];
 
         prepare_for_next_batch();
 
@@ -8295,7 +8249,7 @@ sub copy_token_as_type {
         }
         return;
     } ## end sub process_line_of_CODE
-} ## end block process_line_of_CODE
+} ## end closure process_line_of_CODE
 
 sub consecutive_nonblank_lines {
     my ($self)             = @_;
@@ -8305,7 +8259,7 @@ sub consecutive_nonblank_lines {
       $vao->get_cached_line_count();
 }
 
-{    ## closure for sub grind_batch_of_CODE
+{    ## begin closure grind_batch_of_CODE
 
     # Keep track of consecutive nonblank lines so that we can insert occasional
     # blanks
@@ -8354,13 +8308,13 @@ sub consecutive_nonblank_lines {
         my ($self) = @_;
         my $file_writer_object = $self->[_file_writer_object_];
 
-        my $rbatch_vars = $self->[_rbatch_vars_];
+        my $this_batch = $self->[_this_batch_];
 
-        my $comma_count_in_batch    = $rbatch_vars->[_comma_count_in_batch_];
-        my $starting_in_quote       = $rbatch_vars->[_starting_in_quote_];
-        my $ending_in_quote         = $rbatch_vars->[_ending_in_quote_];
-        my $is_static_block_comment = $rbatch_vars->[_is_static_block_comment_];
-        my $rK_to_go                = $rbatch_vars->[_rK_to_go_];
+        my $comma_count_in_batch    = $this_batch->[_comma_count_in_batch_];
+        my $starting_in_quote       = $this_batch->[_starting_in_quote_];
+        my $ending_in_quote         = $this_batch->[_ending_in_quote_];
+        my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
+        my $rK_to_go                = $this_batch->[_rK_to_go_];
 
         my $rLL = $self->[_rLL_];
 
@@ -8684,10 +8638,10 @@ EOM
                     "Index error at line $index_error; i and K ranges differ");
             }
 
-            $rbatch_vars->[_rlines_K_]        = $rlines_K;
-            $rbatch_vars->[_ibeg0_]           = $ri_first->[0];
-            $rbatch_vars->[_peak_batch_size_] = $peak_batch_size;
-            $rbatch_vars->[_do_not_pad_]      = $do_not_pad;
+            $this_batch->[_rlines_K_]        = $rlines_K;
+            $this_batch->[_ibeg0_]           = $ri_first->[0];
+            $this_batch->[_peak_batch_size_] = $peak_batch_size;
+            $this_batch->[_do_not_pad_]      = $do_not_pad;
 
             $self->send_lines_to_vertical_aligner();
 
@@ -8722,7 +8676,7 @@ EOM
 
         return;
     }
-}
+} ## end closure grind_batch_of_CODE
 
 sub note_added_semicolon {
     my ( $self, $line_number ) = @_;
@@ -8771,17 +8725,6 @@ sub starting_one_line_block {
 
     my ( $self, $Kj, $K_last_nonblank, $K_last, $level, $slevel, $ci_level ) =
       @_;
-
-    # uses Global Symbols:
-    # "$ANYSUB_PATTERN"
-    # "$index_max_forced_break"
-    # "$max_index_to_go"
-    # "%is_sort_map_grep"
-    # "%want_one_line_block"
-    # "@K_to_go"
-    # "@levels_to_go"
-    # "@tokens_to_go"
-    # "@types_to_go"
 
     my $rbreak_container = $self->[_rbreak_container_];
     my $rshort_nested    = $self->[_rshort_nested_];
@@ -9238,7 +9181,7 @@ sub pad_token {
     return;
 }
 
-{    ## closure for sub set_logical_padding
+{    ## begin closure set_logical_padding
     my %is_math_op;
 
     BEGIN {
@@ -9701,7 +9644,7 @@ sub pad_token {
         }    # end of loop over lines
         return;
     }
-}
+} ## end closure set_logical_padding
 
 sub correct_lp_indentation {
 
@@ -9922,7 +9865,7 @@ sub correct_lp_indentation {
     return $do_not_pad;
 }
 
-{    ## closure for sub accumulate_csc_text
+{    ## begin closure accumulate_csc_text
 
     # Variables related to forming closing side comments.
 
@@ -10318,9 +10261,9 @@ sub correct_lp_indentation {
         }
         return $csc_text;
     }
-} ## end closure for sub accumulate_csc_text
+} ## end closure accumulate_csc_text
 
-{    ## closure for sub balance_csc_text
+{    ## begin closure balance_csc_text
 
     my %matching_char;
 
@@ -10376,7 +10319,7 @@ sub correct_lp_indentation {
         # return the balanced string
         return $csc;
     }
-}
+} ## end closure balance_csc_text
 
 sub add_closing_side_comment {
 
@@ -10604,21 +10547,21 @@ sub send_lines_to_vertical_aligner {
     # - do logical padding: insert extra blank spaces to help display certain
     #   logical constructions
 
-    my $rbatch_vars = $self->[_rbatch_vars_];
-    my $rlines_K    = $rbatch_vars->[_rlines_K_];
+    my $this_batch = $self->[_this_batch_];
+    my $rlines_K    = $this_batch->[_rlines_K_];
     if ( !@{$rlines_K} ) {
         Fault("Unexpected call with no lines");
         return;
     }
     my $n_last_line = @{$rlines_K} - 1;
 
-    my $do_not_pad              = $rbatch_vars->[_do_not_pad_];
-    my $peak_batch_size         = $rbatch_vars->[_peak_batch_size_];
-    my $starting_in_quote       = $rbatch_vars->[_starting_in_quote_];
-    my $ending_in_quote         = $rbatch_vars->[_ending_in_quote_];
-    my $is_static_block_comment = $rbatch_vars->[_is_static_block_comment_];
-    my $ibeg0                   = $rbatch_vars->[_ibeg0_];
-    my $rK_to_go                = $rbatch_vars->[_rK_to_go_];
+    my $do_not_pad              = $this_batch->[_do_not_pad_];
+    my $peak_batch_size         = $this_batch->[_peak_batch_size_];
+    my $starting_in_quote       = $this_batch->[_starting_in_quote_];
+    my $ending_in_quote         = $this_batch->[_ending_in_quote_];
+    my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
+    my $ibeg0                   = $this_batch->[_ibeg0_];
+    my $rK_to_go                = $this_batch->[_rK_to_go_];
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -10888,7 +10831,7 @@ sub send_lines_to_vertical_aligner {
     return;
 }
 
-{    ## closure for sub make_alignment_patterns
+{    ## begin closure make_alignment_patterns
 
     my %block_type_map;
     my %keyword_map;
@@ -11346,9 +11289,9 @@ sub send_lines_to_vertical_aligner {
         return ( \@tokens, \@fields, \@patterns, \@field_lengths );
     }
 
-}    # end make_alignment_patterns
+} ## end closure make_alignment_patterns
 
-{    ## closure for sub match_opening_and_closing_tokens
+{    ## begin closure match_opening_and_closing_tokens
 
     # closure to keep track of unbalanced containers.
     # arrays shared by the routines in this block:
@@ -11473,7 +11416,7 @@ sub send_lines_to_vertical_aligner {
 
         return ( $indent, $offset, $is_leading, $exists );
     }
-}    # end closure for sub match_opening_and_closing_tokens
+} ## end closure match_opening_and_closing_tokens
 
 sub get_opening_indentation {
 
@@ -11572,7 +11515,7 @@ sub lookup_opening_indentation {
     return ( $rindentation_list->[ $nline + 1 ], $offset, $is_leading );
 }
 
-{    ## closure for sub set_adjusted_indentation
+{    ## begin closure set_adjusted_indentation
     my %is_if_elsif_else_unless_while_until_for_foreach;
 
     my ( $last_indentation_written, $last_unadjusted_indentation,
@@ -12167,7 +12110,7 @@ sub lookup_opening_indentation {
             $terminal_block_type, $is_semicolon_terminated,
             $is_outdented_line );
     }
-}
+} ## end closure set_adjusted_indentation
 
 sub mate_index_to_go {
     my ( $self, $i ) = @_;
@@ -12514,8 +12457,8 @@ sub get_seqno {
     my ( $self, $ii, $ending_in_quote ) = @_;
 
     my $rLL         = $self->[_rLL_];
-    my $rbatch_vars = $self->[_rbatch_vars_];
-    my $rK_to_go    = $rbatch_vars->[_rK_to_go_];
+    my $this_batch = $self->[_this_batch_];
+    my $rK_to_go    = $this_batch->[_rK_to_go_];
 
     my $KK    = $rK_to_go->[$ii];
     my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
@@ -12535,7 +12478,7 @@ sub get_seqno {
     return ($seqno);
 }
 
-{    ## closure for sub set_vertical_alignment_markers
+{    ## begin closure set_vertical_alignment_markers
     my %is_vertical_alignment_type;
     my %is_not_vertical_alignment_token;
     my %is_vertical_alignment_keyword;
@@ -12817,9 +12760,9 @@ sub get_seqno {
         }
         return $ralignment_type_to_go;
     }
-}
+} ## end closure set_vertical_alignment_markers
 
-{    ## closure for sub terminal_type_i
+{    ## begin closure terminal_type_i
 
     my %is_sort_map_grep_eval_do;
 
@@ -12836,9 +12779,9 @@ sub get_seqno {
         # otherwise returns final token type
 
         my ( $self, $ibeg, $iend ) = @_;
-        my $rbatch_vars       = $self->[_rbatch_vars_];
-        my $rtypes_to_go      = $rbatch_vars->[_rtypes_to_go_];
-        my $rblock_type_to_go = $rbatch_vars->[_rblock_type_to_go_];
+        my $this_batch       = $self->[_this_batch_];
+        my $rtypes_to_go      = $this_batch->[_rtypes_to_go_];
+        my $rblock_type_to_go = $this_batch->[_rblock_type_to_go_];
 
         # Start at the end and work backwards
         my $i      = $iend;
@@ -12876,9 +12819,9 @@ sub get_seqno {
         }
         return wantarray ? ( $type_i, $i ) : $type_i;
     }
-}
+} ## end closure terminal_type_i
 
-{    ## closure for sub set_bond_strengths
+{    ## begin closure set_bond_strengths
 
     my %is_good_keyword_breakpoint;
     my %is_lt_gt_le_ge;
@@ -13774,7 +13717,7 @@ sub get_seqno {
         } ## end main loop
         return;
     } ## end sub set_bond_strengths
-}
+} ## end closure set_bond_strengths
 
 sub pad_array_to_go {
 
@@ -13811,7 +13754,7 @@ sub pad_array_to_go {
     return;
 }
 
-{    ## closure for sub scan_list
+{    ## begin closure scan_list
 
     my (
         $block_type,               $current_depth,
@@ -14369,10 +14312,9 @@ sub pad_array_to_go {
                             }
                         } ## end if ( ( $i == $i_line_start...))
                     } ## end if ( $type eq ':' )
-                    if ( defined( $postponed_breakpoint{$type_sequence} ) ) {
+                    if ( has_postponed_breakpoint($type_sequence) ) {
                         my $inc = ( $type eq ':' ) ? 0 : 1;
                         $self->set_forced_breakpoint( $i - $inc );
-                        delete $postponed_breakpoint{$type_sequence};
                     }
                 } ## end if ( $token =~ /^[\)\]\}\:]$/[{[(])
 
@@ -15072,7 +15014,7 @@ sub pad_array_to_go {
 
         return $saw_good_breakpoint;
     } ## end sub scan_list
-}    # end scan_list
+}  ## end closure scan_list
 
 sub find_token_starting_list {
 
@@ -15110,7 +15052,7 @@ sub find_token_starting_list {
     return $i_opening_minus;
 }
 
-{    ## closure for sub set_comma_breakpoints_do
+{    ## begin closure set_comma_breakpoints_do
 
     my %is_keyword_with_special_leading_term;
 
@@ -15849,7 +15791,7 @@ sub find_token_starting_list {
         }
         return;
     }
-}
+} ## end closure set_comma_breakpoints_do
 
 sub study_list_complexity {
 
@@ -16236,7 +16178,7 @@ sub undo_forced_breakpoint_stack {
     return;
 }
 
-{    ## closure for sub recombine_breakpoints
+{    ## begin closure recombine_breakpoints
 
     my %is_amp_amp;
     my %is_ternary;
@@ -17416,7 +17358,7 @@ sub undo_forced_breakpoint_stack {
         }
         return ( $ri_beg, $ri_end );
     }
-}    # end recombine_breakpoints
+} ## end closure recombine_breakpoints
 
 sub break_all_chain_tokens {
 
@@ -17735,7 +17677,7 @@ sub in_same_container_i {
     return $self->in_same_container_K( $K_to_go[$i1], $K_to_go[$i2] );
 }
 
-{    ## closure for sub in_same_container_K
+{    ## begin closure in_same_container_K
     my $ris_break_token;
     my $ris_comma_token;
 
@@ -17804,7 +17746,7 @@ sub in_same_container_i {
         }
         return 1;
     }
-}
+} ## end closure in_same_container_K
 
 sub set_continuation_breaks {
 
@@ -18448,36 +18390,52 @@ sub insert_additional_breaks {
     return;
 }
 
-sub set_closing_breakpoint {
+{    ## begin closure set_closing_breakpoint
 
-    # set a breakpoint at a matching closing token
-    # at present, this is only used to break at a ':' which matches a '?'
-    my ( $self, $i_break ) = @_;
+    my %postponed_breakpoint;
 
-    if ( $mate_index_to_go[$i_break] >= 0 ) {
-
-        # CAUTION: infinite recursion possible here:
-        #   set_closing_breakpoint calls set_forced_breakpoint, and
-        #   set_forced_breakpoint call set_closing_breakpoint
-        #   ( test files attrib.t, BasicLyx.pm.html).
-        # Don't reduce the '2' in the statement below
-        if ( $mate_index_to_go[$i_break] > $i_break + 2 ) {
-
-            # break before } ] and ), but sub set_forced_breakpoint will decide
-            # to break before or after a ? and :
-            my $inc = ( $tokens_to_go[$i_break] eq '?' ) ? 0 : 1;
-            $self->set_forced_breakpoint( $mate_index_to_go[$i_break] - $inc );
-        }
+    sub initialize_postponed_breakpoint {
+        %postponed_breakpoint = ();
+        return;
     }
-    else {
-        my $type_sequence = $type_sequence_to_go[$i_break];
-        if ($type_sequence) {
-            my $closing_token = $matching_token{ $tokens_to_go[$i_break] };
-            $postponed_breakpoint{$type_sequence} = 1;
-        }
+
+    sub has_postponed_breakpoint {
+        my ($seqno) = @_;
+        return $postponed_breakpoint{$seqno};
     }
-    return;
-}
+
+    sub set_closing_breakpoint {
+
+        # set a breakpoint at a matching closing token
+        # at present, this is only used to break at a ':' which matches a '?'
+        my ( $self, $i_break ) = @_;
+
+        if ( $mate_index_to_go[$i_break] >= 0 ) {
+
+            # CAUTION: infinite recursion possible here:
+            #   set_closing_breakpoint calls set_forced_breakpoint, and
+            #   set_forced_breakpoint call set_closing_breakpoint
+            #   ( test files attrib.t, BasicLyx.pm.html).
+            # Don't reduce the '2' in the statement below
+            if ( $mate_index_to_go[$i_break] > $i_break + 2 ) {
+
+             # break before } ] and ), but sub set_forced_breakpoint will decide
+             # to break before or after a ? and :
+                my $inc = ( $tokens_to_go[$i_break] eq '?' ) ? 0 : 1;
+                $self->set_forced_breakpoint(
+                    $mate_index_to_go[$i_break] - $inc );
+            }
+        }
+        else {
+            my $type_sequence = $type_sequence_to_go[$i_break];
+            if ($type_sequence) {
+                my $closing_token = $matching_token{ $tokens_to_go[$i_break] };
+                $postponed_breakpoint{$type_sequence} = 1;
+            }
+        }
+        return;
+    }
+} ## end closure set_closing_breakpoint
 
 sub compare_indentation_levels {
 
