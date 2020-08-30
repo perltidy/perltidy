@@ -217,15 +217,6 @@ use vars qw{
   $logger_object
 };
 
-# Variables related to setting new line breaks.
-# These should eventually be moved into a closure.
-use vars qw{
-  $forced_breakpoint_count
-  $forced_breakpoint_undo_count
-  @forced_breakpoint_undo_stack
-  $index_max_forced_break
-};
-
 # Arrays holding the batch of tokens currently being processed.
 # These are being moved into the _this_batch_ sub-array of $self.
 use vars qw{
@@ -301,7 +292,7 @@ BEGIN {
         _file_writer_object_         => $i++,
         _vertical_aligner_object_    => $i++,
         _radjusted_levels_           => $i++,
-        _this_batch_                => $i++,
+        _this_batch_                 => $i++,
 
         _last_output_short_opening_token_ => $i++,
 
@@ -350,15 +341,10 @@ BEGIN {
         _ibeg0_                   => $i++,
         _peak_batch_size_         => $i++,
 
-        _forced_breakpoint_count_       => $i++,
-        _forced_breakpoint_undo_count_  => $i++,
-        _rforced_breakpoint_undo_stack_ => $i++,
-        _index_max_forced_break_        => $i++,
-
-        _rK_to_go_                => $i++,
-        _rtokens_to_go_           => $i++,
-        _rtypes_to_go_            => $i++,
-        _rblock_type_to_go_       => $i++,
+        _rK_to_go_          => $i++,
+        _rtokens_to_go_     => $i++,
+        _rtypes_to_go_      => $i++,
+        _rblock_type_to_go_ => $i++,
 
         _max_index_to_go_              => $i++,
         _rtype_sequence_to_go_         => $i++,
@@ -701,7 +687,7 @@ sub new {
 
     initialize_adjusted_indentation();
 
-    initialize_postponed_breakpoint(); 
+    initialize_postponed_breakpoint();
 
     prepare_for_next_batch();
 
@@ -762,7 +748,7 @@ sub new {
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
 
     $self->[_radjusted_levels_] = [];
-    $self->[_this_batch_]      = [];
+    $self->[_this_batch_]       = [];
 
     # Memory of processed text
     $self->[_last_last_line_leading_level_] = 0;
@@ -904,12 +890,10 @@ sub get_rLL_max_index {
 
 sub prepare_for_next_batch {
 
-    $index_max_forced_break       = UNDEFINED_INDEX;
-    $max_index_to_go              = UNDEFINED_INDEX;
-    $forced_breakpoint_count      = 0;
-    $forced_breakpoint_undo_count = 0;
-    $summed_lengths_to_go[0]      = 0;
+    $max_index_to_go         = UNDEFINED_INDEX;
+    $summed_lengths_to_go[0] = 0;
 
+    initialize_forced_breakpoint_vars();
     initialize_gnu_batch_vars();
     initialize_batch_variables();
     return;
@@ -7099,7 +7083,7 @@ EOM
         }    ## End loop over all tokens
         return;
     }    # End sub
-}    ## end closure new_secret_operator_whitespace
+} ## end closure new_secret_operator_whitespace
 
 sub tight_paren_follows {
 
@@ -7472,13 +7456,30 @@ sub copy_token_as_type {
         $this_batch->[_starting_in_quote_]    = $starting_in_quote;
         $this_batch->[_ending_in_quote_]      = $ending_in_quote;
 
-        $this_batch->[_rK_to_go_] = [ @K_to_go[ 0 .. $max_index_to_go ] ];
-        $this_batch->[_rtokens_to_go_] =
-          [ @tokens_to_go[ 0 .. $max_index_to_go ] ];
-        $this_batch->[_rtypes_to_go_] =
-          [ @types_to_go[ 0 .. $max_index_to_go ] ];
-        $this_batch->[_rblock_type_to_go_] =
-          [ @block_type_to_go[ 0 .. $max_index_to_go ] ];
+        $this_batch->[_max_index_to_go_] = $max_index_to_go;
+
+        $this_batch->[_rK_to_go_]          = \@K_to_go;
+        $this_batch->[_rtokens_to_go_]     = \@tokens_to_go;
+        $this_batch->[_rtypes_to_go_]      = \@types_to_go;
+        $this_batch->[_rblock_type_to_go_] = \@block_type_to_go;
+
+        $this_batch->[_rtype_sequence_to_go_] = \@type_sequence_to_go;
+        $this_batch->[_rcontainer_environment_to_go_] =
+          \@container_environment_to_go;
+        $this_batch->[_rbond_strength_to_go_]     = \@bond_strength_to_go;
+        $this_batch->[_rforced_breakpoint_to_go_] = \@forced_breakpoint_to_go;
+        $this_batch->[_rtoken_lengths_to_go_]     = \@token_lengths_to_go;
+        $this_batch->[_rsummed_lengths_to_go_]    = \@summed_lengths_to_go;
+        $this_batch->[_rlevels_to_go_]            = \@levels_to_go;
+        $this_batch->[_rleading_spaces_to_go_]    = \@leading_spaces_to_go;
+        $this_batch->[_rreduced_spaces_to_go_]    = \@reduced_spaces_to_go;
+        $this_batch->[_rmate_index_to_go_]        = \@mate_index_to_go;
+        $this_batch->[_rci_levels_to_go_]         = \@ci_levels_to_go;
+        $this_batch->[_rnesting_depth_to_go_]     = \@nesting_depth_to_go;
+        $this_batch->[_rnobreak_to_go_]           = \@nobreak_to_go;
+        $this_batch->[_rold_breakpoint_to_go_]    = \@old_breakpoint_to_go;
+        $this_batch->[_rinext_to_go_]             = \@inext_to_go;
+        $this_batch->[_riprev_to_go_]             = \@iprev_to_go;
 
         # The flag $is_static_block_comment applies to the line which just
         # arrived. So it only applies if we are outputting that line.
@@ -8558,7 +8559,7 @@ sub consecutive_nonblank_lines {
                 # or, we don't already have an interior breakpoint
                 # and we didn't see a good breakpoint
                 || (
-                       !$forced_breakpoint_count
+                       !get_forced_breakpoint_count()
                     && !$saw_good_break
 
                     # and this line is 'short'
@@ -8751,7 +8752,8 @@ sub starting_one_line_block {
         return 0;
     }
 
-    my $block_type = $rLL->[$Kj]->[_BLOCK_TYPE_];
+    my $block_type             = $rLL->[$Kj]->[_BLOCK_TYPE_];
+    my $index_max_forced_break = get_index_max_forced_break();
 
     my $previous_nonblank_token = '';
     my $i_last_nonblank         = -1;
@@ -10548,7 +10550,7 @@ sub send_lines_to_vertical_aligner {
     #   logical constructions
 
     my $this_batch = $self->[_this_batch_];
-    my $rlines_K    = $this_batch->[_rlines_K_];
+    my $rlines_K   = $this_batch->[_rlines_K_];
     if ( !@{$rlines_K} ) {
         Fault("Unexpected call with no lines");
         return;
@@ -12456,9 +12458,9 @@ sub get_seqno {
     # tokens by the vertical aligner.
     my ( $self, $ii, $ending_in_quote ) = @_;
 
-    my $rLL         = $self->[_rLL_];
+    my $rLL        = $self->[_rLL_];
     my $this_batch = $self->[_this_batch_];
-    my $rK_to_go    = $this_batch->[_rK_to_go_];
+    my $rK_to_go   = $this_batch->[_rK_to_go_];
 
     my $KK    = $rK_to_go->[$ii];
     my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
@@ -12779,7 +12781,7 @@ sub get_seqno {
         # otherwise returns final token type
 
         my ( $self, $ibeg, $iend ) = @_;
-        my $this_batch       = $self->[_this_batch_];
+        my $this_batch        = $self->[_this_batch_];
         my $rtypes_to_go      = $this_batch->[_rtypes_to_go_];
         my $rblock_type_to_go = $this_batch->[_rblock_type_to_go_];
 
@@ -13850,7 +13852,7 @@ sub pad_array_to_go {
 
             # handle commas within containers...
             else {
-                my $fbc = $forced_breakpoint_count;
+                my $fbc = get_forced_breakpoint_count();
 
                 # always open comma lists not preceded by keywords,
                 # barewords, identifiers (that is, anything that doesn't
@@ -13871,7 +13873,7 @@ sub pad_array_to_go {
                     must_break_open     => $must_break_open,
                     has_broken_sublist  => $has_broken_sublist[$dd],
                 );
-                $bp_count           = $forced_breakpoint_count - $fbc;
+                $bp_count           = get_forced_breakpoint_count() - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
             }
         }
@@ -14056,7 +14058,7 @@ sub pad_array_to_go {
         $last_old_breakpoint_count  = 0;
         $minimum_depth = $current_depth + 1;    # forces update in check below
         $old_breakpoint_count      = 0;
-        $starting_breakpoint_count = $forced_breakpoint_count;
+        $starting_breakpoint_count = get_forced_breakpoint_count();
         $token                     = ';';
         $type                      = ';';
         $type_sequence             = '';
@@ -14359,16 +14361,17 @@ sub pad_array_to_go {
             #------------------------------------------------------------
             if ( $depth > $current_depth ) {
 
-                $breakpoint_stack[$depth]       = $forced_breakpoint_count;
-                $breakpoint_undo_stack[$depth]  = $forced_breakpoint_undo_count;
-                $has_broken_sublist[$depth]     = 0;
-                $identifier_count_stack[$depth] = 0;
-                $index_before_arrow[$depth]     = -1;
-                $interrupted_list[$depth]       = 0;
-                $item_count_stack[$depth]       = 0;
-                $last_comma_index[$depth]       = undef;
-                $last_dot_index[$depth]         = undef;
-                $last_nonblank_type[$depth]     = $last_nonblank_type;
+                $breakpoint_stack[$depth] = get_forced_breakpoint_count();
+                $breakpoint_undo_stack[$depth] =
+                  get_forced_breakpoint_undo_count();
+                $has_broken_sublist[$depth]            = 0;
+                $identifier_count_stack[$depth]        = 0;
+                $index_before_arrow[$depth]            = -1;
+                $interrupted_list[$depth]              = 0;
+                $item_count_stack[$depth]              = 0;
+                $last_comma_index[$depth]              = undef;
+                $last_dot_index[$depth]                = undef;
+                $last_nonblank_type[$depth]            = $last_nonblank_type;
                 $old_breakpoint_count_stack[$depth]    = $old_breakpoint_count;
                 $opening_structure_index_stack[$depth] = $i;
                 $rand_or_list[$depth]                  = [];
@@ -14528,7 +14531,7 @@ sub pad_array_to_go {
 
                   # and we made some breakpoints between the opening and closing
                     && ( $breakpoint_undo_stack[$current_depth] <
-                        $forced_breakpoint_undo_count )
+                        get_forced_breakpoint_undo_count() )
 
                     # and this block is short enough to fit on one line
                     # Note: use < because need 1 more space for possible comma
@@ -14543,7 +14546,7 @@ sub pad_array_to_go {
                 # now see if we have any comma breakpoints left
                 my $has_comma_breakpoints =
                   ( $breakpoint_stack[$current_depth] !=
-                      $forced_breakpoint_count );
+                      get_forced_breakpoint_count() );
 
                 # update broken-sublist flag of the outer container
                 $has_broken_sublist[$depth] =
@@ -14794,7 +14797,7 @@ sub pad_array_to_go {
                     if (
                         $is_assignment{$next_nonblank_type}
                         && ( $breakpoint_stack[$current_depth] !=
-                            $forced_breakpoint_count )
+                            get_forced_breakpoint_count() )
                       )
                     {
                         $self->set_forced_breakpoint($i);
@@ -15014,7 +15017,7 @@ sub pad_array_to_go {
 
         return $saw_good_breakpoint;
     } ## end sub scan_list
-}  ## end closure scan_list
+} ## end closure scan_list
 
 sub find_token_starting_list {
 
@@ -16053,6 +16056,7 @@ sub set_nobreaks {
 
         FORMATTER_DEBUG_FLAG_NOBREAK && do {
             my ( $a, $b, $c ) = caller();
+            my $forced_breakpoint_count = get_forced_breakpoint_count();
             print STDOUT
 "NOBREAK: forced_breakpoint $forced_breakpoint_count from $a $c with i=$i max=$max_index_to_go type=$types_to_go[$i]\n";
         };
@@ -16071,112 +16075,139 @@ sub set_nobreaks {
     return;
 }
 
-sub set_fake_breakpoint {
+{    ## begin closure set_forced_breakpoint
 
-    # Just bump up the breakpoint count as a signal that there are breaks.
-    # This is useful if we have breaks but may want to postpone deciding where
-    # to make them.
-    $forced_breakpoint_count++;
-    return;
-}
+    my $forced_breakpoint_count;
+    my $forced_breakpoint_undo_count;
+    my @forced_breakpoint_undo_stack;
+    my $index_max_forced_break;
 
-sub set_forced_breakpoint {
-    my ( $self, $i ) = @_;
-
-    return unless defined $i && $i >= 0;
-
-    # no breaks between welded tokens
-    return if ( $self->weld_len_right_to_go($i) );
-
-    # when called with certain tokens, use bond strengths to decide
-    # if we break before or after it
-    my $token = $tokens_to_go[$i];
-
-    if ( $token =~ /^([\=\.\,\:\?]|and|or|xor|&&|\|\|)$/ ) {
-        if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
+    sub initialize_forced_breakpoint_vars {
+        $forced_breakpoint_count      = 0;
+        $index_max_forced_break       = UNDEFINED_INDEX;
+        $forced_breakpoint_undo_count = 0;
+        @forced_breakpoint_undo_stack = ();
     }
 
-    # breaks are forced before 'if' and 'unless'
-    elsif ( $is_if_unless{$token} ) { $i-- }
+    sub get_forced_breakpoint_count {
+        return $forced_breakpoint_count;
+    }
 
-    if ( $i >= 0 && $i <= $max_index_to_go ) {
-        my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
+    sub get_forced_breakpoint_undo_count {
+        return $forced_breakpoint_undo_count;
+    }
 
-        FORMATTER_DEBUG_FLAG_FORCE && do {
-            my ( $a, $b, $c ) = caller();
-            print STDOUT
-"FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
-        };
+    sub get_index_max_forced_break {
+        return $index_max_forced_break;
+    }
 
-        # NOTE: if we call set_closing_breakpoint below it will then call this
-        # routing back. So there is the possibility of an infinite loop if a
-        # programming error is made. As a precaution, I have added a check on
-        # the forced_breakpoint flag, so that we won't keep trying to set it.
-        # That will give additional protection against a loop.
-        if (   $i_nonblank >= 0
-            && $nobreak_to_go[$i_nonblank] == 0
-            && !$forced_breakpoint_to_go[$i_nonblank] )
-        {
-            $forced_breakpoint_to_go[$i_nonblank] = 1;
+    sub set_fake_breakpoint {
 
-            if ( $i_nonblank > $index_max_forced_break ) {
-                $index_max_forced_break = $i_nonblank;
-            }
-            $forced_breakpoint_count++;
-            $forced_breakpoint_undo_stack[ $forced_breakpoint_undo_count++ ] =
-              $i_nonblank;
+      # Just bump up the breakpoint count as a signal that there are breaks.
+      # This is useful if we have breaks but may want to postpone deciding where
+      # to make them.
+        $forced_breakpoint_count++;
+        return;
+    }
 
-            # if we break at an opening container..break at the closing
-            if ( $tokens_to_go[$i_nonblank] =~ /^[\{\[\(\?]$/ ) {
-                $self->set_closing_breakpoint($i_nonblank);
-            }
+    sub set_forced_breakpoint {
+        my ( $self, $i ) = @_;
+
+        return unless defined $i && $i >= 0;
+
+        # no breaks between welded tokens
+        return if ( $self->weld_len_right_to_go($i) );
+
+        # when called with certain tokens, use bond strengths to decide
+        # if we break before or after it
+        my $token = $tokens_to_go[$i];
+
+        if ( $token =~ /^([\=\.\,\:\?]|and|or|xor|&&|\|\|)$/ ) {
+            if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
         }
-    }
-    return;
-}
 
-sub clear_breakpoint_undo_stack {
-    my ($self) = @_;
-    $forced_breakpoint_undo_count = 0;
-    return;
-}
+        # breaks are forced before 'if' and 'unless'
+        elsif ( $is_if_unless{$token} ) { $i-- }
 
-sub undo_forced_breakpoint_stack {
-
-    my ( $self, $i_start ) = @_;
-    if ( $i_start < 0 ) {
-        $i_start = 0;
-        my ( $a, $b, $c ) = caller();
-        warning(
-"Program Bug: undo_forced_breakpoint_stack from $a $c has i=$i_start "
-        );
-    }
-
-    while ( $forced_breakpoint_undo_count > $i_start ) {
-        my $i =
-          $forced_breakpoint_undo_stack[ --$forced_breakpoint_undo_count ];
         if ( $i >= 0 && $i <= $max_index_to_go ) {
-            $forced_breakpoint_to_go[$i] = 0;
-            $forced_breakpoint_count--;
+            my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
 
-            FORMATTER_DEBUG_FLAG_UNDOBP && do {
+            FORMATTER_DEBUG_FLAG_FORCE && do {
                 my ( $a, $b, $c ) = caller();
                 print STDOUT
-"UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
+"FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
             };
-        }
 
-        # shouldn't happen, but not a critical error
-        else {
-            FORMATTER_DEBUG_FLAG_UNDOBP && do {
-                my ( $a, $b, $c ) = caller();
-                print STDOUT
-"Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go";
-            };
+          # NOTE: if we call set_closing_breakpoint below it will then call this
+          # routing back. So there is the possibility of an infinite loop if a
+          # programming error is made. As a precaution, I have added a check on
+          # the forced_breakpoint flag, so that we won't keep trying to set it.
+          # That will give additional protection against a loop.
+            if (   $i_nonblank >= 0
+                && $nobreak_to_go[$i_nonblank] == 0
+                && !$forced_breakpoint_to_go[$i_nonblank] )
+            {
+                $forced_breakpoint_to_go[$i_nonblank] = 1;
+
+                if ( $i_nonblank > $index_max_forced_break ) {
+                    $index_max_forced_break = $i_nonblank;
+                }
+                $forced_breakpoint_count++;
+                $forced_breakpoint_undo_stack[ $forced_breakpoint_undo_count++ ]
+                  = $i_nonblank;
+
+                # if we break at an opening container..break at the closing
+                if ( $tokens_to_go[$i_nonblank] =~ /^[\{\[\(\?]$/ ) {
+                    $self->set_closing_breakpoint($i_nonblank);
+                }
+            }
         }
+        return;
     }
-    return;
-}
+
+    sub clear_breakpoint_undo_stack {
+        my ($self) = @_;
+        $forced_breakpoint_undo_count = 0;
+        return;
+    }
+
+    sub undo_forced_breakpoint_stack {
+
+        my ( $self, $i_start ) = @_;
+        if ( $i_start < 0 ) {
+            $i_start = 0;
+            my ( $a, $b, $c ) = caller();
+            warning(
+"Program Bug: undo_forced_breakpoint_stack from $a $c has i=$i_start "
+            );
+        }
+
+        while ( $forced_breakpoint_undo_count > $i_start ) {
+            my $i =
+              $forced_breakpoint_undo_stack[ --$forced_breakpoint_undo_count ];
+            if ( $i >= 0 && $i <= $max_index_to_go ) {
+                $forced_breakpoint_to_go[$i] = 0;
+                $forced_breakpoint_count--;
+
+                FORMATTER_DEBUG_FLAG_UNDOBP && do {
+                    my ( $a, $b, $c ) = caller();
+                    print STDOUT
+"UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
+                };
+            }
+
+            # shouldn't happen, but not a critical error
+            else {
+                FORMATTER_DEBUG_FLAG_UNDOBP && do {
+                    my ( $a, $b, $c ) = caller();
+                    print STDOUT
+"Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go";
+                };
+            }
+        }
+        return;
+    }
+} ## end closure set_forced_breakpoint
 
 {    ## begin closure recombine_breakpoints
 
@@ -18045,7 +18076,7 @@ sub set_continuation_breaks {
                 last
                   if (
                     $i_test == $imax              # we are at the end
-                    && !$forced_breakpoint_count  #
+                    && !get_forced_breakpoint_count()
                     && $saw_good_break            # old line had good break
                     && $type =~ /^[#;\{]$/        # and this line ends in
                                                   # ';' or side comment
