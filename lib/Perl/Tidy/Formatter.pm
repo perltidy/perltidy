@@ -890,9 +890,6 @@ sub get_rLL_max_index {
 
 sub prepare_for_next_batch {
 
-    $max_index_to_go         = UNDEFINED_INDEX;
-    $summed_lengths_to_go[0] = 0;
-
     initialize_forced_breakpoint_vars();
     initialize_gnu_batch_vars();
     initialize_batch_variables();
@@ -4964,17 +4961,6 @@ sub finish_formatting {
     return;
 }
 
-sub leading_spaces_to_go {
-
-    # return the number of indentation spaces for a token in the output stream;
-    # these were previously stored by 'set_leading_whitespace'.
-
-    my $ii = shift;
-    if ( $ii < 0 ) { $ii = 0 }
-    return get_spaces( $leading_spaces_to_go[$ii] );
-
-}
-
 sub get_spaces {
 
     # return the number of leading spaces associated with an indentation
@@ -4995,7 +4981,7 @@ sub get_recoverable_spaces {
 
 sub get_available_spaces_to_go {
 
-    my $ii   = shift;
+    my ( $self, $ii ) = @_;
     my $item = $leading_spaces_to_go[$ii];
 
     # return the number of available leading spaces associated with an
@@ -5481,7 +5467,7 @@ sub get_available_spaces_to_go {
                 )
               )
             {
-                check_for_long_gnu_style_lines();
+                check_for_long_gnu_style_lines($max_index_to_go);
                 $line_start_index_to_go = $max_index_to_go;
 
                 # back up 1 token if we want to break before that type
@@ -5528,6 +5514,7 @@ sub get_available_spaces_to_go {
 
         # look at the current estimated maximum line length, and
         # remove some whitespace if it exceeds the desired maximum
+        my ($mx_index_to_go) = @_;
 
         # this is only for the '-lp' style
         return unless ($rOpts_line_up_parentheses);
@@ -5539,7 +5526,7 @@ sub get_available_spaces_to_go {
         # keep 2 extra free because they are needed in some cases
         # (result of trial-and-error testing)
         my $spaces_needed =
-          $gnu_position_predictor - maximum_line_length($max_index_to_go) + 2;
+          $gnu_position_predictor - maximum_line_length($mx_index_to_go) + 2;
 
         return if ( $spaces_needed <= 0 );
 
@@ -5663,7 +5650,7 @@ sub reduce_lp_indentation {
     # NOTE: to be called from scan_list only for a sequence of tokens
     # contained between opening and closing parens/braces/brackets
 
-    my ( $i, $spaces_wanted ) = @_;
+    my ( $self, $i, $spaces_wanted ) = @_;
     my $deleted_spaces = 0;
 
     my $item             = $leading_spaces_to_go[$i];
@@ -5682,16 +5669,6 @@ sub reduce_lp_indentation {
     }
 
     return $deleted_spaces;
-}
-
-sub token_sequence_length {
-
-    # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
-    # returns 0 if $ibeg > $iend (shouldn't happen)
-    my ( $ibeg, $iend ) = @_;
-    return 0                                  if ( $iend < 0 || $ibeg > $iend );
-    return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
-    return $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
 }
 
 sub total_line_length {
@@ -5713,13 +5690,6 @@ sub maximum_line_length_for_level {
         $maximum_line_length += $level * $rOpts_indent_columns;
     }
     return $maximum_line_length;
-}
-
-sub maximum_line_length {
-
-    # return maximum line length for line starting with the token at given index
-    my $ii = shift;
-    return maximum_line_length_for_level( $levels_to_go[$ii] );
 }
 
 sub excess_line_length {
@@ -7270,6 +7240,7 @@ sub copy_token_as_type {
         $is_static_block_comment,
     );
 
+    # Called once at the start of a new file
     sub initialize_process_line_of_CODE {
         $last_nonblank_token       = ';';
         $last_nonblank_type        = ';';
@@ -7294,11 +7265,46 @@ sub copy_token_as_type {
 
     # Called before the start of each new batch
     sub initialize_batch_variables {
-        $rbrace_follower      = undef;
-        $comma_count_in_batch = 0;
-        $ending_in_quote      = 0;
+
+        # These two global variables are future closure variables
+        $max_index_to_go         = UNDEFINED_INDEX;
+        $summed_lengths_to_go[0] = 0;
+
+        $rbrace_follower         = undef;
+        $comma_count_in_batch    = 0;
+        $ending_in_quote         = 0;
         destroy_one_line_block();
         return;
+    }
+
+    sub maximum_line_length {
+
+        # return maximum line length for line starting with the token at given
+        # batch index
+        my ($ii) = @_;
+        if ( $ii < 0 ) { $ii = 0 }
+        return maximum_line_length_for_level( $levels_to_go[$ii] );
+    }
+
+    sub leading_spaces_to_go {
+
+        # return the number of indentation spaces for a token in the output
+        # stream; these were previously stored by 'set_leading_whitespace'.
+
+        my ($ii) = @_;
+        if ( $ii < 0 ) { $ii = 0 }
+        return get_spaces( $leading_spaces_to_go[$ii] );
+    }
+
+    sub token_sequence_length {
+
+        # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
+        # returns 0 if $ibeg > $iend (shouldn't happen)
+        my ( $ibeg, $iend ) = @_;
+        return 0 if ( $iend < 0 || $ibeg > $iend );
+        return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
+        return $summed_lengths_to_go[ $iend + 1 ] -
+          $summed_lengths_to_go[$ibeg];
     }
 
     sub create_one_line_block {
@@ -8027,7 +8033,7 @@ sub copy_token_as_type {
                     # we have to actually make it by removing tentative
                     # breaks that were set within it
                     $self->undo_forced_breakpoint_stack(0);
-                    set_nobreaks( $index_start_one_line_block,
+                    $self->set_nobreaks( $index_start_one_line_block,
                         $max_index_to_go - 1 );
 
                     # then re-initialize for the next one-line block
@@ -8341,7 +8347,8 @@ sub consecutive_nonblank_lines {
             $self->write_diagnostics("$output_str\n");
         };
 
-        my $comma_arrow_count_contained = match_opening_and_closing_tokens();
+        my $comma_arrow_count_contained =
+          $self->match_opening_and_closing_tokens();
 
         # tell the -lp option we are outputting a batch so it can close
         # any unfinished items in its stack
@@ -8509,7 +8516,7 @@ sub consecutive_nonblank_lines {
             };
 
             # add a couple of extra terminal blank tokens
-            pad_array_to_go();
+            $self->pad_array_to_go();
 
             # set all forced breakpoints for good list formatting
             my $is_long_line =
@@ -8579,7 +8586,7 @@ sub consecutive_nonblank_lines {
 
                 $self->break_all_chain_tokens( $ri_first, $ri_last );
 
-                break_equals( $ri_first, $ri_last );
+                $self->break_equals( $ri_first, $ri_last );
 
                 # now we do a correction step to clean this up a bit
                 # (The only time we would not do this is for debugging)
@@ -8595,7 +8602,8 @@ sub consecutive_nonblank_lines {
             # do corrector step if -lp option is used
             my $do_not_pad = 0;
             if ($rOpts_line_up_parentheses) {
-                $do_not_pad = correct_lp_indentation( $ri_first, $ri_last );
+                $do_not_pad =
+                  $self->correct_lp_indentation( $ri_first, $ri_last );
             }
             $self->unmask_phantom_semicolons( $ri_first, $ri_last );
             if ( $rOpts_one_line_block_semicolons == 0 ) {
@@ -9117,7 +9125,8 @@ sub undo_lp_ci {
     #                 . " You said $1, but did you know that it's square was "
     #                 . $1 * $1 . " ?");
 
-    my ( $line_open, $i_start, $closing_index, $ri_first, $ri_last ) = @_;
+    my ( $self, $line_open, $i_start, $closing_index, $ri_first, $ri_last ) =
+      @_;
     my $max_line = @{$ri_first} - 1;
 
     # must be multiple lines
@@ -9657,7 +9666,7 @@ sub correct_lp_indentation {
     # predictor is usually good, but sometimes stumbles.  The corrector
     # tries to patch things up once the actual opening paren locations
     # are known.
-    my ( $ri_first, $ri_last ) = @_;
+    my ( $self, $ri_first, $ri_last ) = @_;
     my $do_not_pad = 0;
 
     #  Note on flag '$do_not_pad':
@@ -9731,8 +9740,8 @@ sub correct_lp_indentation {
                     if ( $closing_index > $iend ) {
                         my $ibeg_next = $ri_first->[ $line + 1 ];
                         if ( $ci_levels_to_go[$ibeg_next] > 0 ) {
-                            undo_lp_ci( $line, $i, $closing_index, $ri_first,
-                                $ri_last );
+                            $self->undo_lp_ci( $line, $i, $closing_index,
+                                $ri_first, $ri_last );
                         }
                     }
                 }
@@ -9950,7 +9959,7 @@ sub correct_lp_indentation {
     }
 
     sub accumulate_block_text {
-        my $i = shift;
+        my ( $self, $i ) = @_;
 
         # accumulate leading text for -csc, ignoring any side comments
         if (   $accumulating_text_for_block
@@ -10164,7 +10173,7 @@ sub correct_lp_indentation {
                     reset_block_text_accumulator();
                 }
                 else {
-                    accumulate_block_text($i);
+                    $self->accumulate_block_text($i);
                 }
             }
         }
@@ -10174,7 +10183,7 @@ sub correct_lp_indentation {
         # especially for cuddled-else formatting.
         if ( $terminal_block_type =~ /^els/ && $rblock_leading_if_elsif_text ) {
             $block_leading_text =
-              make_else_csc_text( $i_terminal, $terminal_block_type,
+              $self->make_else_csc_text( $i_terminal, $terminal_block_type,
                 $block_leading_text, $rblock_leading_if_elsif_text );
         }
 
@@ -10202,8 +10211,9 @@ sub correct_lp_indentation {
         # $rif_elsif_text = a reference to a list of all previous closing
         # side comments created for this if block
         #
-        my ( $i_terminal, $block_type, $block_leading_text, $rif_elsif_text ) =
-          @_;
+        my ( $self, $i_terminal, $block_type, $block_leading_text,
+            $rif_elsif_text )
+          = @_;
         my $csc_text = $block_leading_text;
 
         my $rOpts_closing_side_comment_else_flag =
@@ -11322,6 +11332,8 @@ sub send_lines_to_vertical_aligner {
         # Match up indexes of opening and closing braces, etc, in this batch.
         # This has to be done after all tokens are stored because unstoring
         # of tokens would otherwise cause trouble.
+
+        my ($self) = @_;
 
         @unmatched_opening_indexes_in_this_batch = ();
         @unmatched_closing_indexes_in_this_batch = ();
@@ -13725,6 +13737,7 @@ sub pad_array_to_go {
 
     # to simplify coding in scan_list and set_bond_strengths, it helps
     # to create some extra blank tokens at the end of the arrays
+    my ($self) = @_;
     $tokens_to_go[ $max_index_to_go + 1 ] = '';
     $tokens_to_go[ $max_index_to_go + 2 ] = '';
     $types_to_go[ $max_index_to_go + 1 ]  = 'b';
@@ -13739,7 +13752,7 @@ sub pad_array_to_go {
             # shouldn't happen:
             unless ( get_saw_brace_error() ) {
                 warning(
-"Program bug in scan_list: hit nesting error which should have been caught\n"
+"Program bug in pad_array_to_go: hit nesting error which should have been caught\n"
                 );
                 report_definite_bug();
             }
@@ -15425,7 +15438,8 @@ sub find_token_starting_list {
             )
           )
         {
-            my $available_spaces = get_available_spaces_to_go($i_first_comma);
+            my $available_spaces =
+              $self->get_available_spaces_to_go($i_first_comma);
             if ( $available_spaces > 0 ) {
 
                 my $spaces_wanted = $max_width - $columns;    # for 1 field
@@ -15445,7 +15459,8 @@ sub find_token_starting_list {
 
                 if ( $spaces_wanted > 0 ) {
                     my $deleted_spaces =
-                      reduce_lp_indentation( $i_first_comma, $spaces_wanted );
+                      $self->reduce_lp_indentation( $i_first_comma,
+                        $spaces_wanted );
 
                     # redo the math
                     if ( $deleted_spaces > 0 ) {
@@ -16051,7 +16066,7 @@ sub copy_old_breakpoints {
 }
 
 sub set_nobreaks {
-    my ( $i, $j ) = @_;
+    my ( $self, $i, $j ) = @_;
     if ( $i >= 0 && $i <= $j && $j <= $max_index_to_go ) {
 
         FORMATTER_DEBUG_FLAG_NOBREAK && do {
@@ -16242,7 +16257,7 @@ sub set_nobreaks {
         # We are given indexes to the current lines:
         # $ri_beg = ref to array of BEGinning indexes of each line
         # $ri_end = ref to array of ENDing indexes of each line
-        my ( $ri_beg, $ri_end, $msg ) = @_;
+        my ( $self, $ri_beg, $ri_end, $msg ) = @_;
         print STDERR "----Dumping breakpoints from: $msg----\n";
         for my $n ( 0 .. @{$ri_end} - 1 ) {
             my $ibeg = $ri_beg->[$n];
@@ -17517,7 +17532,7 @@ sub break_all_chain_tokens {
 
     # insert any new break points
     if (@insert_list) {
-        insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
+        $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
     }
     return;
 }
@@ -17542,7 +17557,7 @@ sub break_equals {
     # The logic here follows the logic in set_logical_padding, which
     # will add the padding in the second line to improve alignment.
     #
-    my ( $ri_left, $ri_right ) = @_;
+    my ( $self, $ri_left, $ri_right ) = @_;
     my $nmax = @{$ri_right} - 1;
     return unless ( $nmax >= 2 );
 
@@ -17629,7 +17644,7 @@ sub break_equals {
 
     # ok, insert any new break point
     if (@insert_list) {
-        insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
+        $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
     }
     return;
 }
@@ -17692,7 +17707,8 @@ sub insert_final_breaks {
 
             # insert any new break points
             if (@insert_list) {
-                insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
+                $self->insert_additional_breaks( \@insert_list, $ri_left,
+                    $ri_right );
             }
         }
     }
@@ -18075,14 +18091,14 @@ sub set_continuation_breaks {
                 # the same breakpoints will occur.  scbreak.t
                 last
                   if (
-                    $i_test == $imax              # we are at the end
+                    $i_test == $imax            # we are at the end
                     && !get_forced_breakpoint_count()
-                    && $saw_good_break            # old line had good break
-                    && $type =~ /^[#;\{]$/        # and this line ends in
-                                                  # ';' or side comment
-                    && $i_last_break < 0          # and we haven't made a break
-                    && $i_lowest >= 0             # and we saw a possible break
-                    && $i_lowest < $imax - 1      # (but not just before this ;)
+                    && $saw_good_break          # old line had good break
+                    && $type =~ /^[#;\{]$/      # and this line ends in
+                                                # ';' or side comment
+                    && $i_last_break < 0        # and we haven't made a break
+                    && $i_lowest >= 0           # and we saw a possible break
+                    && $i_lowest < $imax - 1    # (but not just before this ;)
                     && $strength - $lowest_strength < 0.5 * WEAK # and it's good
                   );
 
@@ -18370,7 +18386,8 @@ sub set_continuation_breaks {
                         push @insert_list, $i_question;
                     }
                 }
-                insert_additional_breaks( \@insert_list, \@i_first, \@i_last );
+                $self->insert_additional_breaks( \@insert_list, \@i_first,
+                    \@i_last );
             }
         }
     }
@@ -18382,7 +18399,7 @@ sub insert_additional_breaks {
     # this routine will add line breaks at requested locations after
     # sub set_continuation_breaks has made preliminary breaks.
 
-    my ( $ri_break_list, $ri_first, $ri_last ) = @_;
+    my ( $self, $ri_break_list, $ri_first, $ri_last ) = @_;
     my $i_f;
     my $i_l;
     my $line_number = 0;
