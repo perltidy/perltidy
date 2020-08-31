@@ -207,18 +207,9 @@ use vars qw{
 
 ###################################################################
 # Section 2: Global variables which relate to an individual script.
-# Most should be eventually be moved either into a closure, a new module,
-# or into $self.
+# These are work arrays for the current batch of tokens.
 ###################################################################
 
-# Logger Object. This can remain a global to simplify handling of error
-# messages. For example, it is called by sub Fault.
-use vars qw{
-  $logger_object
-};
-
-# Arrays holding the batch of tokens currently being processed.
-# These are being moved into the _this_batch_ sub-array of $self.
 use vars qw{
   $max_index_to_go
   @block_type_to_go
@@ -287,8 +278,6 @@ BEGIN {
         _length_function_            => $i++,
         _fh_tee_                     => $i++,
         _sink_object_                => $i++,
-        _logger_object_              => $i++,
-        _diagnostics_object_         => $i++,
         _file_writer_object_         => $i++,
         _vertical_aligner_object_    => $i++,
         _radjusted_levels_           => $i++,
@@ -340,30 +329,8 @@ BEGIN {
         _do_not_pad_              => $i++,
         _ibeg0_                   => $i++,
         _peak_batch_size_         => $i++,
-
-        _rK_to_go_          => $i++,
-        _rtokens_to_go_     => $i++,
-        _rtypes_to_go_      => $i++,
-        _rblock_type_to_go_ => $i++,
-
-        _max_index_to_go_              => $i++,
-        _rtype_sequence_to_go_         => $i++,
-        _rcontainer_environment_to_go_ => $i++,
-        _rbond_strength_to_go_         => $i++,
-        _rforced_breakpoint_to_go_     => $i++,
-        _rtoken_lengths_to_go_         => $i++,
-        _rsummed_lengths_to_go_        => $i++,
-        _rlevels_to_go_                => $i++,
-        _rleading_spaces_to_go_        => $i++,
-        _rreduced_spaces_to_go_        => $i++,
-        _rmate_index_to_go_            => $i++,
-        _rci_levels_to_go_             => $i++,
-        _rnesting_depth_to_go_         => $i++,
-        _rnobreak_to_go_               => $i++,
-        _rold_breakpoint_to_go_        => $i++,
-        _rinext_to_go_                 => $i++,
-        _riprev_to_go_                 => $i++,
-
+        _max_index_to_go_         => $i++,
+        _rK_to_go_                => $i++,
     };
 
     my @q;
@@ -553,63 +520,96 @@ EOM
     return;
 }
 
-# interface to Perl::Tidy::Logger routines
-sub warning {
-    my ($msg) = @_;
-    if ($logger_object) { $logger_object->warning($msg); }
-    return;
-}
+{    ## begin closure for logger routines
+    my $logger_object;
 
-sub complain {
-    my ($msg) = @_;
-    if ($logger_object) {
-        $logger_object->complain($msg);
+    # Called once per file to initialize the logger object
+    sub set_logger_object {
+        $logger_object = shift;
+        return;
     }
-    return;
-}
 
-sub write_logfile_entry {
-    my @msg = @_;
-    if ($logger_object) {
-        $logger_object->write_logfile_entry(@msg);
+    sub get_logger_object {
+        return $logger_object;
     }
-    return;
-}
 
-sub black_box {
-    my @msg = @_;
-    if ($logger_object) { $logger_object->black_box(@msg); }
-    return;
-}
-
-sub report_definite_bug {
-    if ($logger_object) {
-        $logger_object->report_definite_bug();
+    sub get_input_stream_name {
+        my $input_stream_name = "";
+        if ($logger_object) {
+            $input_stream_name = $logger_object->get_input_stream_name();
+        }
+        return $input_stream_name;
     }
-    return;
-}
 
-sub get_saw_brace_error {
-    if ($logger_object) {
-        return $logger_object->get_saw_brace_error();
+    # interface to Perl::Tidy::Logger routines
+    sub warning {
+        my ($msg) = @_;
+        if ($logger_object) { $logger_object->warning($msg); }
+        return;
     }
-    return;
-}
 
-sub we_are_at_the_last_line {
-    if ($logger_object) {
-        $logger_object->we_are_at_the_last_line();
+    sub complain {
+        my ($msg) = @_;
+        if ($logger_object) {
+            $logger_object->complain($msg);
+        }
+        return;
     }
-    return;
-}
 
-# interface to Perl::Tidy::Diagnostics routine
-sub write_diagnostics {
-    my ( $self, $msg ) = @_;
-    my $diagnostics_object = $self->[_diagnostics_object_];
-    if ($diagnostics_object) { $diagnostics_object->write_diagnostics($msg); }
-    return;
-}
+    sub write_logfile_entry {
+        my @msg = @_;
+        if ($logger_object) {
+            $logger_object->write_logfile_entry(@msg);
+        }
+        return;
+    }
+
+    sub black_box {
+        my @msg = @_;
+        if ($logger_object) { $logger_object->black_box(@msg); }
+        return;
+    }
+
+    sub report_definite_bug {
+        if ($logger_object) {
+            $logger_object->report_definite_bug();
+        }
+        return;
+    }
+
+    sub get_saw_brace_error {
+        if ($logger_object) {
+            return $logger_object->get_saw_brace_error();
+        }
+        return;
+    }
+
+    sub we_are_at_the_last_line {
+        if ($logger_object) {
+            $logger_object->we_are_at_the_last_line();
+        }
+        return;
+    }
+
+} ## end closure for logger routines
+
+{    ## begin closure for diagnostics routines
+    my $diagnostics_object;
+
+    # Called once per file to initialize the diagnostics object
+    sub set_diagnostics_object {
+        $diagnostics_object = shift;
+        return;
+    }
+
+    sub write_diagnostics {
+        my ($msg) = @_;
+        if ($diagnostics_object) {
+            $diagnostics_object->write_diagnostics($msg);
+        }
+        return;
+    }
+} ## end closure for diagnostics routines
 
 sub get_added_semicolon_count {
     my $self = shift;
@@ -642,9 +642,9 @@ sub new {
     );
     my %args = ( %defaults, @args );
 
-    my $length_function = $args{length_function};
-    my $fh_tee          = $args{fh_tee};
-    $logger_object = $args{logger_object};
+    my $length_function    = $args{length_function};
+    my $fh_tee             = $args{fh_tee};
+    my $logger_object      = $args{logger_object};
     my $diagnostics_object = $args{diagnostics_object};
 
     # we create another object with a get_line() and peek_ahead() method
@@ -652,43 +652,17 @@ sub new {
     my $file_writer_object =
       Perl::Tidy::FileWriter->new( $sink_object, $rOpts, $logger_object );
 
-    @block_type_to_go            = ();
-    @type_sequence_to_go         = ();
-    @container_environment_to_go = ();
-    @bond_strength_to_go         = ();
-    @forced_breakpoint_to_go     = ();
-    @summed_lengths_to_go        = ();    # line length to start of ith token
-    @token_lengths_to_go         = ();
-    @levels_to_go                = ();
-    @mate_index_to_go            = ();
-    @ci_levels_to_go             = ();
-    @nesting_depth_to_go         = (0);
-    @nobreak_to_go               = ();
-    @old_breakpoint_to_go        = ();
-    @tokens_to_go                = ();
-    @K_to_go                     = ();
-    @types_to_go                 = ();
-    @leading_spaces_to_go        = ();
-    @reduced_spaces_to_go        = ();
-    @inext_to_go                 = ();
-    @iprev_to_go                 = ();
-
+    # initialize closure variables...
+    set_logger_object($logger_object);
+    set_diagnostics_object($diagnostics_object);
     initialize_gnu_vars();
-
     initialize_csc_vars();
-
     initialize_scan_list();
-
     initialize_saved_opening_indentation();
-
     initialize_process_line_of_CODE();
-
     initialize_grind_batch_of_CODE();
-
     initialize_adjusted_indentation();
-
     initialize_postponed_breakpoint();
-
     prepare_for_next_batch();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
@@ -712,21 +686,21 @@ sub new {
             "Indentation will be with $rOpts->{'indent-columns'} spaces\n");
     }
 
-    # This array reference holds the main data structures for formatting
+    # Initialize the $self array reference.
     # To add an item, first add a constant index in the BEGIN block above.
     my $self = [];
 
-    $self->[_rlines_]        = [];       # = ref to array of lines of the file
-    $self->[_rlines_new_]    = [];       # = ref to array of output lines
-                                         #   (FOR FUTURE DEVELOPMENT)
-    $self->[_rLL_]           = [];       # = ref to array with all tokens
-                                         # in the file. LL originally meant
-                                         # 'Linked List'. Linked lists were a
-                                         # bad idea but LL is easy to type.
-    $self->[_Klimit_]        = undef;    # = maximum K index for rLL. This is
-                                         # needed to catch any autovivification
-                                         # problems.
-    $self->[_rnested_pairs_] = [];       # for welding decisions
+    # Basic data structures...
+    $self->[_rlines_]     = [];       # = ref to array of lines of the file
+    $self->[_rlines_new_] = [];       # = ref to array of output lines
+                                      #   (FOR FUTURE DEVELOPMENT)
+    $self->[_rLL_]        = [];       # = ref to array with all tokens
+                                      # in the file. LL originally meant
+                                      # 'Linked List'. Linked lists were a
+                                      # bad idea but LL is easy to type.
+    $self->[_Klimit_]     = undef;    # = maximum K index for rLL. This is
+                                      # needed to catch any autovivification
+                                      # problems.
     $self->[_K_opening_container_] = {};    # for quickly traversing structure
     $self->[_K_closing_container_] = {};    # for quickly traversing structure
     $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
@@ -739,45 +713,39 @@ sub new {
     $self->[_rshort_nested_]              = {};    # blocks not forced open
     $self->[_length_function_]            = $length_function;
 
-    # Objects...
+    # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
     $self->[_sink_object_]             = $sink_object;
-    $self->[_logger_object_]           = $logger_object;
-    $self->[_diagnostics_object_]      = $diagnostics_object;
     $self->[_file_writer_object_]      = $file_writer_object;
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
 
-    $self->[_radjusted_levels_] = [];
-    $self->[_this_batch_]       = [];
+    # Reference to the batch being processed
+    $self->[_this_batch_] = [];
 
-    # Memory of processed text
-    $self->[_last_last_line_leading_level_] = 0;
-    $self->[_last_line_leading_level_]      = 0;
-    $self->[_last_line_leading_type_]       = '#';
-
+    # Memory of processed text...
+    $self->[_last_last_line_leading_level_]    = 0;
+    $self->[_last_line_leading_level_]         = 0;
+    $self->[_last_line_leading_type_]          = '#';
     $self->[_last_output_short_opening_token_] = 0;
+    $self->[_added_semicolon_count_]           = 0;
+    $self->[_first_added_semicolon_at_]        = 0;
+    $self->[_last_added_semicolon_at_]         = 0;
+    $self->[_deleted_semicolon_count_]         = 0;
+    $self->[_first_deleted_semicolon_at_]      = 0;
+    $self->[_last_deleted_semicolon_at_]       = 0;
+    $self->[_embedded_tab_count_]              = 0;
+    $self->[_first_embedded_tab_at_]           = 0;
+    $self->[_last_embedded_tab_at_]            = 0;
+    $self->[_first_tabbing_disagreement_]      = 0;
+    $self->[_last_tabbing_disagreement_]       = 0;
+    $self->[_tabbing_disagreement_count_]      = 0;
+    $self->[_in_tabbing_disagreement_]         = 0;
+    $self->[_saw_VERSION_in_this_file_]        = !$rOpts->{'pass-version-line'};
+    $self->[_saw_END_or_DATA_]                 = 0;
 
-    $self->[_added_semicolon_count_]    = 0;
-    $self->[_first_added_semicolon_at_] = 0;
-    $self->[_last_added_semicolon_at_]  = 0;
-
-    $self->[_deleted_semicolon_count_]    = 0;
-    $self->[_first_deleted_semicolon_at_] = 0;
-    $self->[_last_deleted_semicolon_at_]  = 0;
-
-    $self->[_embedded_tab_count_]    = 0;
-    $self->[_first_embedded_tab_at_] = 0;
-    $self->[_last_embedded_tab_at_]  = 0;
-
-    $self->[_first_tabbing_disagreement_] = 0;
-    $self->[_last_tabbing_disagreement_]  = 0;
-    $self->[_tabbing_disagreement_count_] = 0;
-    $self->[_in_tabbing_disagreement_]    = 0;
-
-    $self->[_saw_VERSION_in_this_file_] = !$rOpts->{'pass-version-line'};
-    $self->[_saw_END_or_DATA_]          = 0;
-
-    # Hashes which control container welding
+    # Hashes related to container welding...
+    $self->[_rnested_pairs_]           = [];
+    $self->[_radjusted_levels_]        = [];
     $self->[_rweld_len_left_closing_]  = {};
     $self->[_rweld_len_right_closing_] = {};
     $self->[_rweld_len_left_opening_]  = {};
@@ -801,7 +769,7 @@ sub Fault {
     my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
     my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
-    my $input_stream_name = $logger_object->get_input_stream_name();
+    my $input_stream_name = get_input_stream_name();
 
     Die(<<EOM);
 ==============================================================================
@@ -814,7 +782,8 @@ This is probably an error introduced by a recent programming change.
 ==============================================================================
 EOM
 
-    # This is for Perl-Critic
+    # We shouldn't get here, but this return is to keep Perl-Critic from
+    # complaining.
     return;
 }
 
@@ -889,7 +858,6 @@ sub get_rLL_max_index {
 }
 
 sub prepare_for_next_batch {
-
     initialize_forced_breakpoint_vars();
     initialize_gnu_batch_vars();
     initialize_batch_variables();
@@ -1583,8 +1551,7 @@ sub process_all_lines {
     }
 
     sub check_line_hashes {
-        my $self = shift;
-        ##$self->check_self_hash();
+        my $self   = shift;
         my $rlines = $self->[_rlines_];
         foreach my $rline ( @{$rlines} ) {
             my $iline     = $rline->{_line_number};
@@ -2324,7 +2291,7 @@ sub set_whitespace_flags {
 
         if ( !defined($ws) ) {
             $ws = 0;
-            $self->write_diagnostics(
+            write_diagnostics(
                 "WS flag is undefined for tokens $last_token $token\n");
         }
 
@@ -2344,7 +2311,7 @@ sub set_whitespace_flags {
 
             # If this happens, we have a non-fatal but undesirable
             # hole in the above rules which should be patched.
-            $self->write_diagnostics(
+            write_diagnostics(
                 "WS flag is zero for tokens $last_token $token\n");
         }
 
@@ -7266,13 +7233,33 @@ sub copy_token_as_type {
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
-        # These two global variables are future closure variables
-        $max_index_to_go         = UNDEFINED_INDEX;
-        $summed_lengths_to_go[0] = 0;
+        $max_index_to_go             = UNDEFINED_INDEX;
+        @block_type_to_go            = ();
+        @type_sequence_to_go         = ();
+        @container_environment_to_go = ();
+        @bond_strength_to_go         = ();
+        @forced_breakpoint_to_go     = ();
+        @summed_lengths_to_go        = (0);
+        @token_lengths_to_go         = ();
+        @levels_to_go                = ();
+        @mate_index_to_go            = ();
+        @ci_levels_to_go             = ();
+        @nesting_depth_to_go         = (0);
+        @nobreak_to_go               = ();
+        @old_breakpoint_to_go        = ();
+        @tokens_to_go                = ();
+        @K_to_go                     = ();
+        @types_to_go                 = ();
+        @leading_spaces_to_go        = ();
+        @reduced_spaces_to_go        = ();
+        @inext_to_go                 = ();
+        @iprev_to_go                 = ();
 
-        $rbrace_follower         = undef;
-        $comma_count_in_batch    = 0;
-        $ending_in_quote         = 0;
+        ##$summed_lengths_to_go[0] = 0;
+
+        $rbrace_follower      = undef;
+        $comma_count_in_batch = 0;
+        $ending_in_quote      = 0;
         destroy_one_line_block();
         return;
     }
@@ -7461,31 +7448,8 @@ sub copy_token_as_type {
         $this_batch->[_comma_count_in_batch_] = $comma_count_in_batch;
         $this_batch->[_starting_in_quote_]    = $starting_in_quote;
         $this_batch->[_ending_in_quote_]      = $ending_in_quote;
-
-        $this_batch->[_max_index_to_go_] = $max_index_to_go;
-
-        $this_batch->[_rK_to_go_]          = \@K_to_go;
-        $this_batch->[_rtokens_to_go_]     = \@tokens_to_go;
-        $this_batch->[_rtypes_to_go_]      = \@types_to_go;
-        $this_batch->[_rblock_type_to_go_] = \@block_type_to_go;
-
-        $this_batch->[_rtype_sequence_to_go_] = \@type_sequence_to_go;
-        $this_batch->[_rcontainer_environment_to_go_] =
-          \@container_environment_to_go;
-        $this_batch->[_rbond_strength_to_go_]     = \@bond_strength_to_go;
-        $this_batch->[_rforced_breakpoint_to_go_] = \@forced_breakpoint_to_go;
-        $this_batch->[_rtoken_lengths_to_go_]     = \@token_lengths_to_go;
-        $this_batch->[_rsummed_lengths_to_go_]    = \@summed_lengths_to_go;
-        $this_batch->[_rlevels_to_go_]            = \@levels_to_go;
-        $this_batch->[_rleading_spaces_to_go_]    = \@leading_spaces_to_go;
-        $this_batch->[_rreduced_spaces_to_go_]    = \@reduced_spaces_to_go;
-        $this_batch->[_rmate_index_to_go_]        = \@mate_index_to_go;
-        $this_batch->[_rci_levels_to_go_]         = \@ci_levels_to_go;
-        $this_batch->[_rnesting_depth_to_go_]     = \@nesting_depth_to_go;
-        $this_batch->[_rnobreak_to_go_]           = \@nobreak_to_go;
-        $this_batch->[_rold_breakpoint_to_go_]    = \@old_breakpoint_to_go;
-        $this_batch->[_rinext_to_go_]             = \@inext_to_go;
-        $this_batch->[_riprev_to_go_]             = \@iprev_to_go;
+        $this_batch->[_max_index_to_go_]      = $max_index_to_go;
+        $this_batch->[_rK_to_go_]             = \@K_to_go;
 
         # The flag $is_static_block_comment applies to the line which just
         # arrived. So it only applies if we are outputting that line.
@@ -8340,11 +8304,11 @@ sub consecutive_nonblank_lines {
                 $token = $tokens_to_go[$max_index_to_go];
                 $type  = $types_to_go[$max_index_to_go];
             }
-            $self->write_diagnostics(
+            write_diagnostics(
 "OUTPUT: grind_batch_of_CODE called: $a $c at type='$type' tok='$token', tokens to write=$max_index_to_go\n"
             );
             my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
-            $self->write_diagnostics("$output_str\n");
+            write_diagnostics("$output_str\n");
         };
 
         my $comma_arrow_count_contained =
@@ -12153,7 +12117,7 @@ sub mate_index_to_go {
             $type_mate = $types_to_go[$i_mate];
         }
         my $seq  = $type_sequence_to_go[$i];
-        my $file = $logger_object->get_input_stream_name();
+        my $file = get_input_stream_name();
 
         Warn(
 "mate_index: file '$file': i=$i, imate=$i_mate, should be $i_mate_alt, K=$K, K_mate=$K_mate\ntype=$type, tok=$tok, seq=$seq, max=$max_index_to_go, tok_mate=$tok_mate, type_mate=$type_mate"
@@ -12787,19 +12751,16 @@ sub get_seqno {
 
     sub terminal_type_i {
 
-        # returns type of last token on this line (terminal token), as follows:
-        # returns # for a full-line comment
-        # returns ' ' for a blank line
-        # otherwise returns final token type
+      #    returns type of last token on this line (terminal token), as follows:
+      #    returns # for a full-line comment
+      #    returns ' ' for a blank line
+      #    otherwise returns final token type
 
         my ( $self, $ibeg, $iend ) = @_;
-        my $this_batch        = $self->[_this_batch_];
-        my $rtypes_to_go      = $this_batch->[_rtypes_to_go_];
-        my $rblock_type_to_go = $this_batch->[_rblock_type_to_go_];
 
         # Start at the end and work backwards
         my $i      = $iend;
-        my $type_i = $rtypes_to_go->[$i];
+        my $type_i = $types_to_go[$i];
 
         # Check for side comment
         if ( $type_i eq '#' ) {
@@ -12807,7 +12768,7 @@ sub get_seqno {
             if ( $i < $ibeg ) {
                 return wantarray ? ( $type_i, $ibeg ) : $type_i;
             }
-            $type_i = $rtypes_to_go->[$i];
+            $type_i = $types_to_go[$i];
         }
 
         # Skip past a blank
@@ -12816,13 +12777,13 @@ sub get_seqno {
             if ( $i < $ibeg ) {
                 return wantarray ? ( $type_i, $ibeg ) : $type_i;
             }
-            $type_i = $rtypes_to_go->[$i];
+            $type_i = $types_to_go[$i];
         }
 
         # Found it..make sure it is a BLOCK termination,
         # but hide a terminal } after sort/grep/map because it is not
         # necessarily the end of the line.  (terminal.t)
-        my $block_type = $rblock_type_to_go->[$i];
+        my $block_type = $block_type_to_go[$i];
         if (
             $type_i eq '}'
             && ( !$block_type
@@ -12833,6 +12794,7 @@ sub get_seqno {
         }
         return wantarray ? ( $type_i, $i ) : $type_i;
     }
+
 } ## end closure terminal_type_i
 
 {    ## begin closure set_bond_strengths
