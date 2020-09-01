@@ -190,6 +190,8 @@ use vars qw{
   $format_skipping_pattern_begin
   $format_skipping_pattern_end
 
+  $non_indenting_brace_pattern
+
   $bli_pattern
 
   $block_brace_vertical_tightness_pattern
@@ -205,10 +207,9 @@ use vars qw{
 
 };
 
-###################################################################
-# Section 2: Global variables which relate to an individual script.
-# These are work arrays for the current batch of tokens.
-###################################################################
+#########################################################
+# Section 2: Work arrays for the current batch of tokens.
+#########################################################
 
 use vars qw{
   $max_index_to_go
@@ -4574,21 +4575,96 @@ sub weld_len_right_to_go {
     return $weld_len;
 }
 
+sub adjust_indentation_levels {
+
+    my ($self) = @_;
+
+    # Set adjusted levels for any non-indenting braces
+    $self->non_indenting_braces();
+
+    # Set adjusted levels for the whitespace cycle option
+    $self->whitespace_cycle_adjustment();
+
+}
+
+sub non_indenting_braces {
+
+    # remove indentation within marked braces if requested
+    my ($self) = @_;
+    return unless ( $rOpts->{'non-indenting-braces'} );
+
+    my $rLL  = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    my $radjusted_levels;
+    my $Kmax = @{$rLL} - 1;
+    my @seqno_stack;
+
+    my $is_non_indenting_brace = sub {
+        my ($KK)       = @_;
+        my $token      = $rLL->[$KK]->[_TOKEN_];
+        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        return unless ( $token eq '{' && $block_type );
+        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        my $K_sc       = $self->K_next_nonblank($KK);
+        return unless defined($K_sc);
+        my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
+        return unless ( $line_index_sc == $line_index );
+        my $type_sc = $rLL->[$K_sc]->[_TYPE_];
+        return unless ( $type_sc eq '#' );
+        my $token_sc = $rLL->[$K_sc]->[_TOKEN_];
+        return ( $token_sc =~ /$non_indenting_brace_pattern/ );
+    };
+
+    foreach my $KK ( 0 .. $Kmax ) {
+        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        my $level_abs = $rLL->[$KK]->[_LEVEL_];
+        my $level     = $level_abs;
+        my $num       = @seqno_stack;
+        if ($seqno) {
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            if ( $token eq '{' && $is_non_indenting_brace->($KK) ) {
+                push @seqno_stack, $seqno;
+            }
+            if ( $token eq '}' && @seqno_stack && $seqno_stack[-1] == $seqno ) {
+                pop @seqno_stack;
+                $num -= 1;
+            }
+        }
+        if ($num) { $level -= $num }
+        $radjusted_levels->[$KK] = $level;
+    }
+    $self->[_radjusted_levels_] = $radjusted_levels;
+    return;
+}
+
 sub whitespace_cycle_adjustment {
 
     my $self = shift;
     my $rLL  = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
-    my $radjusted_levels;
+    my $radjusted_levels = $self->[_radjusted_levels_];
+
     my $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
     if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle > 0 ) {
+
+        my $Kmax = @{$rLL} - 1;
+
+        # We have to start with any existing adjustments
+        my $adjusted_levels_defined =
+          defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL};
+        if ( !$adjusted_levels_defined ) {
+            foreach my $KK ( 0 .. $Kmax ) {
+                $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
+            }
+        }
+
         my $whitespace_last_level  = -1;
         my @whitespace_level_stack = ();
         my $last_nonblank_type     = 'b';
         my $last_nonblank_token    = '';
-        my $Kmax                   = @{$rLL} - 1;
         foreach my $KK ( 0 .. $Kmax ) {
-            my $level_abs = $rLL->[$KK]->[_LEVEL_];
+            my $level_abs = $radjusted_levels->[$KK];  ##$rLL->[$KK]->[_LEVEL_];
             my $level     = $level_abs;
             if ( $level_abs < $whitespace_last_level ) {
                 pop(@whitespace_level_stack);
@@ -4890,8 +4966,7 @@ sub finish_formatting {
     # Locate small nested blocks which should not be broken
     $self->mark_short_nested_blocks();
 
-    # Set adjusted levels for the whitespace cycle option
-    $self->whitespace_cycle_adjustment();
+    $self->adjust_indentation_levels();
 
     # Adjust continuation indentation if -bli is set
     $self->bli_adjustment();
@@ -5078,8 +5153,13 @@ sub get_available_spaces_to_go {
         # Adjust levels if necessary to recycle whitespace:
         my $level            = $level_abs;
         my $radjusted_levels = $self->[_radjusted_levels_];
+        my $nK               = @{$rLL};
+        my $nws              = @{$radjusted_levels};
         if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
             $level = $radjusted_levels->[$Kj];
+
+            # negative levels can occure in bad files
+            if ( $level < 0 ) { $level = 0 }
         }
 
         # The continued_quote flag means that this is the first token of a
@@ -5810,6 +5890,7 @@ sub check_options {
       make_format_skipping_pattern( 'format-skipping-begin', '#<<<' );
     $format_skipping_pattern_end =
       make_format_skipping_pattern( 'format-skipping-end', '#>>>' );
+    make_non_indenting_brace_pattern();
 
     # If closing side comments ARE selected, then we can safely
     # delete old closing side comments unless closing side comment
@@ -6453,6 +6534,29 @@ sub make_format_skipping_pattern {
         );
     }
     return $pattern;
+}
+
+sub make_non_indenting_brace_pattern {
+
+    # create the pattern used to identify static side comments
+    $non_indenting_brace_pattern = '^#<<<';
+
+    # allow the user to change it
+    if ( $rOpts->{'non-indenting-brace-prefix'} ) {
+        my $prefix = $rOpts->{'non-indenting-brace-prefix'};
+        $prefix =~ s/^\s*//;
+        if ( $prefix !~ /^#/ ) {
+            Die("ERROR: the -nibp parameter '$prefix' must begin with '#'\n");
+        }
+        my $pattern = '^' . $prefix;
+        if ( bad_pattern($pattern) ) {
+            Die(
+"ERROR: the -nibp prefix '$prefix' causes the invalid regex '$pattern'\n"
+            );
+        }
+        $non_indenting_brace_pattern = $pattern;
+    }
+    return;
 }
 
 sub make_closing_side_comment_list_pattern {
@@ -7403,6 +7507,9 @@ sub copy_token_as_type {
         my $radjusted_levels = $self->[_radjusted_levels_];
         if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
             $level_wc = $radjusted_levels->[$Ktoken_vars];
+
+            # negative levels can occure in bad files
+            if ( $level_wc < 0 ) { $level_wc = 0 }
         }
         my $space_count =
           $ci_level * $rOpts_continuation_indentation +
@@ -10728,6 +10835,13 @@ sub send_lines_to_vertical_aligner {
             }
         }
 
+        my $level_adj        = $lev;
+        my $radjusted_levels = $self->[_radjusted_levels_];
+        if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
+            $level_adj = $radjusted_levels->[$Kbeg];
+            if ( $level_adj < 0 ) { $level_adj = 0 }
+        }
+
         # add any new closing side comment to the last line
         if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
             $rfields->[-1] .= " $closing_side_comment";
@@ -10741,6 +10855,7 @@ sub send_lines_to_vertical_aligner {
         my $rvalign_hash = {};
         $rvalign_hash->{level}           = $lev;
         $rvalign_hash->{level_end}       = $level_end;
+        $rvalign_hash->{level_adj}       = $level_adj;
         $rvalign_hash->{indentation}     = $indentation;
         $rvalign_hash->{is_forced_break} = $forced_breakpoint || $in_comma_list;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;

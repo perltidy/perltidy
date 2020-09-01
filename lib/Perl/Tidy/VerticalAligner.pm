@@ -342,6 +342,7 @@ sub valign_input {
 
     my $level                     = $rline_hash->{level};
     my $level_end                 = $rline_hash->{level_end};
+    my $level_adj                 = $rline_hash->{level_adj};
     my $indentation               = $rline_hash->{indentation};
     my $is_forced_break           = $rline_hash->{is_forced_break};
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
@@ -397,7 +398,7 @@ sub valign_input {
 
     # Reset side comment location if we are entering a new block from level 0.
     # This is intended to keep them from drifting too far to the right.
-    if ( $terminal_block_type && $level == 0 && $level_end > $level ) {
+    if ( $terminal_block_type && $level_adj == 0 && $level_end > $level ) {
         $self->forget_side_comment();
     }
 

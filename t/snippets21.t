@@ -14,6 +14,9 @@
 #11 git33.git33
 #12 rt133130.def
 #13 rt133130.rt133130
+#14 nib.def
+#15 nib.nib1
+#16 nib.nib2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,8 +39,12 @@ BEGIN {
 -wls='->' -wrs='->'
 
 ----------
-        'gnu'      => "-gnu",
-        'lop'      => "-nlop",
+        'gnu'  => "-gnu",
+        'lop'  => "-nlop",
+        'nib1' => "-nib",
+        'nib2' => <<'----------',
+-nib -nibp='#\+\+'
+----------
         'rt133130' => <<'----------',
 # only the method should get a csc:
 -csc -cscl=sub -sal=method
@@ -105,6 +112,25 @@ $bits =
 lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
+----------
+
+        'nib' => <<'----------',
+{    #<<<
+{    #<<<
+{    #++
+    print "hello world\n";
+}
+}
+}
+
+{    #++
+    {    #++
+        {    #<<<
+        print "hello world\n";
+        }
+    }
+}
+
 ----------
 
         'prune' => <<'----------',
@@ -558,6 +584,75 @@ method sum_radlinks {
     }
 } ## end sub sum_radlinks
 #13...........
+        },
+
+        'nib.def' => {
+            source => "nib",
+            params => "def",
+            expect => <<'#14...........',
+{    #<<<
+    {    #<<<
+        {    #++
+            print "hello world\n";
+        }
+    }
+}
+
+{    #++
+    {    #++
+        {    #<<<
+            print "hello world\n";
+        }
+    }
+}
+
+#14...........
+        },
+
+        'nib.nib1' => {
+            source => "nib",
+            params => "nib1",
+            expect => <<'#15...........',
+{    #<<<
+{    #<<<
+{    #++
+    print "hello world\n";
+}
+}
+}
+
+{    #++
+    {    #++
+        {    #<<<
+        print "hello world\n";
+        }
+    }
+}
+
+#15...........
+        },
+
+        'nib.nib2' => {
+            source => "nib",
+            params => "nib2",
+            expect => <<'#16...........',
+{    #<<<
+    {    #<<<
+        {    #++
+        print "hello world\n";
+        }
+    }
+}
+
+{    #++
+{    #++
+{    #<<<
+    print "hello world\n";
+}
+}
+}
+
+#16...........
         },
     };
 

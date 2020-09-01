@@ -847,6 +847,45 @@ terminates a code block .  For example,
 
 The default is not to do this, indicated by B<-nicb>.
 
+
+=item B<-nib>, B<--non-indenting-braces>
+
+If this flag is set, perltidy will look for opening block braces which are
+followed by a special side comment, which is B<#<<<> by default.  If found, the
+code between this opening brace and its corresponding closing brace will not be
+given the normal extra indentation level.  As a simple example, 
+
+  perltidy -nib:
+
+    { #<<<
+    print "hello world\n";
+    }
+
+This might be useful, for example, to keep large sections of code from
+moving to the right when placed in a closure.
+
+Only the opening brace needs to be marked, and nested braces can be marked.
+The special side comment can be changed with the next parameter.
+
+
+=item B<-nibp=s>, B<--non-indenting-brace-prefix=s>
+
+The B<-nibp=string> parameter may be used to change the marker for
+non-indenting braces.  The default is equivalent to -nibp='#<<<'.  The string
+that you enter must begin with a # and should be in quotes as necessary to get
+past the command shell of your system.  This string is the leading text of a
+regex pattern that is constructed by appending pre-pending a '^', so you must
+also include backslashes for characters to be taken literally rather than as
+patterns.
+
+For example, to match the side comment '#++', the parameter would be
+  
+  -nibp='#\+\+'
+
+Note that the default string is the same as the string for starting a
+B<format-skipping> section, but it is for a side-comment rather than a block
+comment. 
+
 =item B<-olq>, B<--outdent-long-quotes>
 
 When B<-olq> is set, lines which is a quoted string longer than the

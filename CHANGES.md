@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+    - Added parameter --non-indenting-braces, or -nib, which prevents
+      code following an opening brace marked with a special side comment 
+      from indenting one level.  This is off by default and turned on 
+      with -nib.  It might be useful for preventing code from shifting 
+      when adding or testing closures, for example.
+
     - Side comment locations reset at a line ending in a level 0 open
       block, such as when a new multi-line sub begins.  This is intended to 
       help keep side comments from drifting to far to the right.

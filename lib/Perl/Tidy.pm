@@ -2189,6 +2189,8 @@ sub generate_options {
     $add_option->( 'indent-spaced-block-comments',      'isbc', '!' );
     $add_option->( 'fixed-position-side-comment',       'fpsc', '=i' );
     $add_option->( 'minimum-space-to-comment',          'msc',  '=i' );
+    $add_option->( 'non-indenting-braces',              'nib',  '!' );
+    $add_option->( 'non-indenting-brace-prefix',        'nibp', '=s' );
     $add_option->( 'outdent-long-comments',             'olc',  '!' );
     $add_option->( 'outdent-static-block-comments',     'osbc', '!' );
     $add_option->( 'static-block-comment-prefix',       'sbcp', '=s' );
@@ -2463,6 +2465,7 @@ sub generate_options {
       noquiet
       noshow-options
       nostatic-side-comments
+      nonon-indenting-braces
       notabs
       nowarning-output
       one-line-block-semicolons=1
