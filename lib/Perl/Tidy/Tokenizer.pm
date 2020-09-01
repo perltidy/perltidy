@@ -134,6 +134,60 @@ use constant LIST_CONTEXT    => 1;
 # Maximum number of little messages; probably need not be changed.
 use constant MAX_NAG_MESSAGES => 6;
 
+BEGIN {
+
+    # Array index names for token variables
+    my $i = 0;
+    use constant {
+        _rhere_target_list_                  => $i++,
+        _in_here_doc_                        => $i++,
+        _here_doc_target_                    => $i++,
+        _here_quote_character_               => $i++,
+        _in_data_                            => $i++,
+        _in_end_                             => $i++,
+        _in_format_                          => $i++,
+        _in_error_                           => $i++,
+        _in_pod_                             => $i++,
+        _in_attribute_list_                  => $i++,
+        _in_quote_                           => $i++,
+        _quote_target_                       => $i++,
+        _line_start_quote_                   => $i++,
+        _starting_level_                     => $i++,
+        _know_starting_level_                => $i++,
+        _tabsize_                            => $i++,
+        _indent_columns_                     => $i++,
+        _look_for_hash_bang_                 => $i++,
+        _trim_qw_                            => $i++,
+        _continuation_indentation_           => $i++,
+        _outdent_labels_                     => $i++,
+        _last_line_number_                   => $i++,
+        _saw_perl_dash_P_                    => $i++,
+        _saw_perl_dash_w_                    => $i++,
+        _saw_use_strict_                     => $i++,
+        _saw_v_string_                       => $i++,
+        _hit_bug_                            => $i++,
+        _look_for_autoloader_                => $i++,
+        _look_for_selfloader_                => $i++,
+        _saw_autoloader_                     => $i++,
+        _saw_selfloader_                     => $i++,
+        _saw_hash_bang_                      => $i++,
+        _saw_end_                            => $i++,
+        _saw_data_                           => $i++,
+        _saw_negative_indentation_           => $i++,
+        _started_tokenizing_                 => $i++,
+        _line_buffer_object_                 => $i++,
+        _debugger_object_                    => $i++,
+        _diagnostics_object_                 => $i++,
+        _logger_object_                      => $i++,
+        _unexpected_error_count_             => $i++,
+        _started_looking_for_here_target_at_ => $i++,
+        _nearly_matched_here_target_at_      => $i++,
+        _line_of_text_                       => $i++,
+        _rlower_case_labels_at_              => $i++,
+        _extended_syntax_                    => $i++,
+    };
+}
+
 {    ## closure for subs to count instances
 
     # methods to count instances
@@ -201,79 +255,80 @@ sub new {
     my $line_buffer_object = Perl::Tidy::LineBuffer->new($source_object);
 
     # Tokenizer state data is as follows:
-    # _rhere_target_list    reference to list of here-doc targets
-    # _here_doc_target      the target string for a here document
-    # _here_quote_character the type of here-doc quoting (" ' ` or none)
-    #                       to determine if interpolation is done
-    # _quote_target         character we seek if chasing a quote
-    # _line_start_quote     line where we started looking for a long quote
-    # _in_here_doc          flag indicating if we are in a here-doc
-    # _in_pod               flag set if we are in pod documentation
-    # _in_error             flag set if we saw severe error (binary in script)
-    # _in_data              flag set if we are in __DATA__ section
-    # _in_end               flag set if we are in __END__ section
-    # _in_format            flag set if we are in a format description
-    # _in_attribute_list    flag telling if we are looking for attributes
-    # _in_quote             flag telling if we are chasing a quote
-    # _starting_level       indentation level of first line
-    # _line_buffer_object   object with get_line() method to supply source code
-    # _diagnostics_object   place to write debugging information
-    # _unexpected_error_count  error count used to limit output
-    # _lower_case_labels_at  line numbers where lower case labels seen
-    # _hit_bug		     program bug detected
-    $tokenizer_self = {
-        _rhere_target_list                  => [],
-        _in_here_doc                        => 0,
-        _here_doc_target                    => "",
-        _here_quote_character               => "",
-        _in_data                            => 0,
-        _in_end                             => 0,
-        _in_format                          => 0,
-        _in_error                           => 0,
-        _in_pod                             => 0,
-        _in_attribute_list                  => 0,
-        _in_quote                           => 0,
-        _quote_target                       => "",
-        _line_start_quote                   => -1,
-        _starting_level                     => $args{starting_level},
-        _know_starting_level                => defined( $args{starting_level} ),
-        _tabsize                            => $args{tabsize},
-        _indent_columns                     => $args{indent_columns},
-        _look_for_hash_bang                 => $args{look_for_hash_bang},
-        _trim_qw                            => $args{trim_qw},
-        _continuation_indentation           => $args{continuation_indentation},
-        _outdent_labels                     => $args{outdent_labels},
-        _last_line_number                   => $args{starting_line_number} - 1,
-        _saw_perl_dash_P                    => 0,
-        _saw_perl_dash_w                    => 0,
-        _saw_use_strict                     => 0,
-        _saw_v_string                       => 0,
-        _hit_bug                            => 0,
-        _look_for_autoloader                => $args{look_for_autoloader},
-        _look_for_selfloader                => $args{look_for_selfloader},
-        _saw_autoloader                     => 0,
-        _saw_selfloader                     => 0,
-        _saw_hash_bang                      => 0,
-        _saw_end                            => 0,
-        _saw_data                           => 0,
-        _saw_negative_indentation           => 0,
-        _started_tokenizing                 => 0,
-        _line_buffer_object                 => $line_buffer_object,
-        _debugger_object                    => $args{debugger_object},
-        _diagnostics_object                 => $args{diagnostics_object},
-        _logger_object                      => $args{logger_object},
-        _unexpected_error_count             => 0,
-        _started_looking_for_here_target_at => 0,
-        _nearly_matched_here_target_at      => undef,
-        _line_text                          => "",
-        _rlower_case_labels_at              => undef,
-        _extended_syntax                    => $args{extended_syntax},
-    };
+    # _rhere_target_list_    reference to list of here-doc targets
+    # _here_doc_target_      the target string for a here document
+    # _here_quote_character_ the type of here-doc quoting (" ' ` or none)
+    #                        to determine if interpolation is done
+    # _quote_target_         character we seek if chasing a quote
+    # _line_start_quote_     line where we started looking for a long quote
+    # _in_here_doc_          flag indicating if we are in a here-doc
+    # _in_pod_               flag set if we are in pod documentation
+    # _in_error_             flag set if we saw severe error (binary in script)
+    # _in_data_              flag set if we are in __DATA__ section
+    # _in_end_               flag set if we are in __END__ section
+    # _in_format_            flag set if we are in a format description
+    # _in_attribute_list_    flag telling if we are looking for attributes
+    # _in_quote_             flag telling if we are chasing a quote
+    # _starting_level_       indentation level of first line
+    # _line_buffer_object_   object with get_line() method to supply source code
+    # _diagnostics_object_   place to write debugging information
+    # _unexpected_error_count_ error count used to limit output
+    # _lower_case_labels_at_ line numbers where lower case labels seen
+    # _hit_bug_              program bug detected
+
+    my $self = [];
+    $self->[_rhere_target_list_]        = [];
+    $self->[_in_here_doc_]              = 0;
+    $self->[_here_doc_target_]          = "";
+    $self->[_here_quote_character_]     = "";
+    $self->[_in_data_]                  = 0;
+    $self->[_in_end_]                   = 0;
+    $self->[_in_format_]                = 0;
+    $self->[_in_error_]                 = 0;
+    $self->[_in_pod_]                   = 0;
+    $self->[_in_attribute_list_]        = 0;
+    $self->[_in_quote_]                 = 0;
+    $self->[_quote_target_]             = "";
+    $self->[_line_start_quote_]         = -1;
+    $self->[_starting_level_]           = $args{starting_level};
+    $self->[_know_starting_level_]      = defined( $args{starting_level} );
+    $self->[_tabsize_]                  = $args{tabsize};
+    $self->[_indent_columns_]           = $args{indent_columns};
+    $self->[_look_for_hash_bang_]       = $args{look_for_hash_bang};
+    $self->[_trim_qw_]                  = $args{trim_qw};
+    $self->[_continuation_indentation_] = $args{continuation_indentation};
+    $self->[_outdent_labels_]           = $args{outdent_labels};
+    $self->[_last_line_number_]         = $args{starting_line_number} - 1;
+    $self->[_saw_perl_dash_P_]          = 0;
+    $self->[_saw_perl_dash_w_]          = 0;
+    $self->[_saw_use_strict_]           = 0;
+    $self->[_saw_v_string_]             = 0;
+    $self->[_hit_bug_]                  = 0;
+    $self->[_look_for_autoloader_]      = $args{look_for_autoloader};
+    $self->[_look_for_selfloader_]      = $args{look_for_selfloader};
+    $self->[_saw_autoloader_]           = 0;
+    $self->[_saw_selfloader_]           = 0;
+    $self->[_saw_hash_bang_]            = 0;
+    $self->[_saw_end_]                  = 0;
+    $self->[_saw_data_]                 = 0;
+    $self->[_saw_negative_indentation_] = 0;
+    $self->[_started_tokenizing_]       = 0;
+    $self->[_line_buffer_object_]       = $line_buffer_object;
+    $self->[_debugger_object_]          = $args{debugger_object};
+    $self->[_diagnostics_object_]       = $args{diagnostics_object};
+    $self->[_logger_object_]            = $args{logger_object};
+    $self->[_unexpected_error_count_]   = 0;
+    $self->[_started_looking_for_here_target_at_] = 0;
+    $self->[_nearly_matched_here_target_at_]      = undef;
+    $self->[_line_of_text_]                       = "";
+    $self->[_rlower_case_labels_at_]              = undef;
+    $self->[_extended_syntax_]                    = $args{extended_syntax};
+    bless $self, $class;
+
+    $tokenizer_self = $self;
 
     prepare_for_a_new_file();
     find_starting_indentation_level();
-
-    bless $tokenizer_self, $class;
 
     # This is not a full class yet, so die if an attempt is made to
     # create more than one object.
@@ -283,14 +338,14 @@ sub new {
 "Attempt to create more than 1 object in $class, which is not a true class yet\n";
     }
 
-    return $tokenizer_self;
+    return $self;
 
 }
 
 # interface to Perl::Tidy::Logger routines
 sub warning {
     my $msg           = shift;
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->warning($msg);
     }
@@ -299,7 +354,7 @@ sub warning {
 
 sub complain {
     my $msg           = shift;
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->complain($msg);
     }
@@ -308,7 +363,7 @@ sub complain {
 
 sub write_logfile_entry {
     my $msg           = shift;
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->write_logfile_entry($msg);
     }
@@ -316,7 +371,7 @@ sub write_logfile_entry {
 }
 
 sub interrupt_logfile {
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->interrupt_logfile();
     }
@@ -324,7 +379,7 @@ sub interrupt_logfile {
 }
 
 sub resume_logfile {
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->resume_logfile();
     }
@@ -332,7 +387,7 @@ sub resume_logfile {
 }
 
 sub increment_brace_error {
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->increment_brace_error();
     }
@@ -340,8 +395,8 @@ sub increment_brace_error {
 }
 
 sub report_definite_bug {
-    $tokenizer_self->{_hit_bug} = 1;
-    my $logger_object = $tokenizer_self->{_logger_object};
+    $tokenizer_self->[_hit_bug_] = 1;
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->report_definite_bug();
     }
@@ -350,7 +405,7 @@ sub report_definite_bug {
 
 sub brace_warning {
     my $msg           = shift;
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $logger_object->brace_warning($msg);
     }
@@ -358,7 +413,7 @@ sub brace_warning {
 }
 
 sub get_saw_brace_error {
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         return $logger_object->get_saw_brace_error();
     }
@@ -369,14 +424,14 @@ sub get_saw_brace_error {
 
 sub get_unexpected_error_count {
     my ($self) = @_;
-    return $self->{_unexpected_error_count};
+    return $self->[_unexpected_error_count_];
 }
 
 # interface to Perl::Tidy::Diagnostics routines
 sub write_diagnostics {
     my $msg = shift;
-    if ( $tokenizer_self->{_diagnostics_object} ) {
-        $tokenizer_self->{_diagnostics_object}->write_diagnostics($msg);
+    if ( $tokenizer_self->[_diagnostics_object_] ) {
+        $tokenizer_self->[_diagnostics_object_]->write_diagnostics($msg);
     }
     return;
 }
@@ -384,32 +439,32 @@ sub write_diagnostics {
 sub report_tokenization_errors {
 
     my $self         = shift;
-    my $severe_error = $self->{_in_error};
+    my $severe_error = $self->[_in_error_];
 
     my $level = get_indentation_level();
-    if ( $level != $tokenizer_self->{_starting_level} ) {
+    if ( $level != $tokenizer_self->[_starting_level_] ) {
         warning("final indentation level: $level\n");
     }
 
     check_final_nesting_depths();
 
-    if ( $tokenizer_self->{_look_for_hash_bang}
-        && !$tokenizer_self->{_saw_hash_bang} )
+    if ( $tokenizer_self->[_look_for_hash_bang_]
+        && !$tokenizer_self->[_saw_hash_bang_] )
     {
         warning(
             "hit EOF without seeing hash-bang line; maybe don't need -x?\n");
     }
 
-    if ( $tokenizer_self->{_in_format} ) {
+    if ( $tokenizer_self->[_in_format_] ) {
         warning("hit EOF while in format description\n");
     }
 
-    if ( $tokenizer_self->{_in_pod} ) {
+    if ( $tokenizer_self->[_in_pod_] ) {
 
         # Just write log entry if this is after __END__ or __DATA__
         # because this happens to often, and it is not likely to be
         # a parsing error.
-        if ( $tokenizer_self->{_saw_data} || $tokenizer_self->{_saw_end} ) {
+        if ( $tokenizer_self->[_saw_data_] || $tokenizer_self->[_saw_end_] ) {
             write_logfile_entry(
 "hit eof while in pod documentation (no =cut seen)\n\tthis can cause trouble with some pod utilities\n"
             );
@@ -423,11 +478,11 @@ sub report_tokenization_errors {
 
     }
 
-    if ( $tokenizer_self->{_in_here_doc} ) {
+    if ( $tokenizer_self->[_in_here_doc_] ) {
         $severe_error = 1;
-        my $here_doc_target = $tokenizer_self->{_here_doc_target};
+        my $here_doc_target = $tokenizer_self->[_here_doc_target_];
         my $started_looking_for_here_target_at =
-          $tokenizer_self->{_started_looking_for_here_target_at};
+          $tokenizer_self->[_started_looking_for_here_target_at_];
         if ($here_doc_target) {
             warning(
 "hit EOF in here document starting at line $started_looking_for_here_target_at with target: $here_doc_target\n"
@@ -439,7 +494,7 @@ sub report_tokenization_errors {
             );
         }
         my $nearly_matched_here_target_at =
-          $tokenizer_self->{_nearly_matched_here_target_at};
+          $tokenizer_self->[_nearly_matched_here_target_at_];
         if ($nearly_matched_here_target_at) {
             warning(
 "NOTE: almost matched at input line $nearly_matched_here_target_at except for whitespace\n"
@@ -447,12 +502,12 @@ sub report_tokenization_errors {
         }
     }
 
-    if ( $tokenizer_self->{_in_quote} ) {
+    if ( $tokenizer_self->[_in_quote_] ) {
         $severe_error = 1;
-        my $line_start_quote = $tokenizer_self->{_line_start_quote};
-        my $quote_target     = $tokenizer_self->{_quote_target};
+        my $line_start_quote = $tokenizer_self->[_line_start_quote_];
+        my $quote_target     = $tokenizer_self->[_quote_target_];
         my $what =
-          ( $tokenizer_self->{_in_attribute_list} )
+          ( $tokenizer_self->[_in_attribute_list_] )
           ? "attribute list"
           : "quote/pattern";
         warning(
@@ -460,11 +515,11 @@ sub report_tokenization_errors {
         );
     }
 
-    if ( $tokenizer_self->{_hit_bug} ) {
+    if ( $tokenizer_self->[_hit_bug_] ) {
         $severe_error = 1;
     }
 
-    my $logger_object = $tokenizer_self->{_logger_object};
+    my $logger_object = $tokenizer_self->[_logger_object_];
 
 # TODO: eventually may want to activate this to cause file to be output verbatim
     if (0) {
@@ -485,7 +540,7 @@ sub report_tokenization_errors {
         }
     }
 
-    unless ( $tokenizer_self->{_saw_perl_dash_w} ) {
+    unless ( $tokenizer_self->[_saw_perl_dash_w_] ) {
         if ( $] < 5.006 ) {
             write_logfile_entry("Suggest including '-w parameter'\n");
         }
@@ -494,19 +549,19 @@ sub report_tokenization_errors {
         }
     }
 
-    if ( $tokenizer_self->{_saw_perl_dash_P} ) {
+    if ( $tokenizer_self->[_saw_perl_dash_P_] ) {
         write_logfile_entry("Use of -P parameter for defines is discouraged\n");
     }
 
-    unless ( $tokenizer_self->{_saw_use_strict} ) {
+    unless ( $tokenizer_self->[_saw_use_strict_] ) {
         write_logfile_entry("Suggest including 'use strict;'\n");
     }
 
     # it is suggested that labels have at least one upper case character
     # for legibility and to avoid code breakage as new keywords are introduced
-    if ( $tokenizer_self->{_rlower_case_labels_at} ) {
+    if ( $tokenizer_self->[_rlower_case_labels_at_] ) {
         my @lower_case_labels_at =
-          @{ $tokenizer_self->{_rlower_case_labels_at} };
+          @{ $tokenizer_self->[_rlower_case_labels_at_] };
         write_logfile_entry(
             "Suggest using upper case characters in label(s)\n");
         local $" = ')(';
@@ -519,8 +574,9 @@ sub report_v_string {
 
     # warn if this version can't handle v-strings
     my $tok = shift;
-    unless ( $tokenizer_self->{_saw_v_string} ) {
-        $tokenizer_self->{_saw_v_string} = $tokenizer_self->{_last_line_number};
+    unless ( $tokenizer_self->[_saw_v_string_] ) {
+        $tokenizer_self->[_saw_v_string_] =
+          $tokenizer_self->[_last_line_number_];
     }
     if ( $] < 5.006 ) {
         warning(
@@ -531,7 +587,7 @@ sub report_v_string {
 }
 
 sub get_input_line_number {
-    return $tokenizer_self->{_last_line_number};
+    return $tokenizer_self->[_last_line_number_];
 }
 
 # returns the next tokenized line
@@ -542,12 +598,12 @@ sub get_line {
     # USES GLOBAL VARIABLES: $tokenizer_self, $brace_depth,
     # $square_bracket_depth, $paren_depth
 
-    my $input_line = $tokenizer_self->{_line_buffer_object}->get_line();
-    $tokenizer_self->{_line_text} = $input_line;
+    my $input_line = $tokenizer_self->[_line_buffer_object_]->get_line();
+    $tokenizer_self->[_line_of_text_] = $input_line;
 
     return unless ($input_line);
 
-    my $input_line_number = ++$tokenizer_self->{_last_line_number};
+    my $input_line_number = ++$tokenizer_self->[_last_line_number_];
 
     # Find and remove what characters terminate this line, including any
     # control r
@@ -562,7 +618,7 @@ sub get_line {
     # for backwards compatibility we keep the line text terminated with
     # a newline character
     $input_line .= "\n";
-    $tokenizer_self->{_line_text} = $input_line;    # update
+    $tokenizer_self->[_line_of_text_] = $input_line;    # update
 
     # create a data structure describing this line which will be
     # returned to the caller.
@@ -616,11 +672,11 @@ sub get_line {
     };
 
     # must print line unchanged if we are in a here document
-    if ( $tokenizer_self->{_in_here_doc} ) {
+    if ( $tokenizer_self->[_in_here_doc_] ) {
 
         $line_of_tokens->{_line_type} = 'HERE';
-        my $here_doc_target      = $tokenizer_self->{_here_doc_target};
-        my $here_quote_character = $tokenizer_self->{_here_quote_character};
+        my $here_doc_target      = $tokenizer_self->[_here_doc_target_];
+        my $here_quote_character = $tokenizer_self->[_here_quote_character_];
         my $candidate_target     = $input_line;
         chomp $candidate_target;
 
@@ -630,27 +686,27 @@ sub get_line {
             $candidate_target =~ s/^\s*//;
         }
         if ( $candidate_target eq $here_doc_target ) {
-            $tokenizer_self->{_nearly_matched_here_target_at} = undef;
-            $line_of_tokens->{_line_type}                     = 'HERE_END';
+            $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
+            $line_of_tokens->{_line_type} = 'HERE_END';
             write_logfile_entry("Exiting HERE document $here_doc_target\n");
 
-            my $rhere_target_list = $tokenizer_self->{_rhere_target_list};
+            my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
             if ( @{$rhere_target_list} ) {  # there can be multiple here targets
                 ( $here_doc_target, $here_quote_character ) =
                   @{ shift @{$rhere_target_list} };
-                $tokenizer_self->{_here_doc_target} = $here_doc_target;
-                $tokenizer_self->{_here_quote_character} =
+                $tokenizer_self->[_here_doc_target_] = $here_doc_target;
+                $tokenizer_self->[_here_quote_character_] =
                   $here_quote_character;
                 write_logfile_entry(
                     "Entering HERE document $here_doc_target\n");
-                $tokenizer_self->{_nearly_matched_here_target_at} = undef;
-                $tokenizer_self->{_started_looking_for_here_target_at} =
+                $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
+                $tokenizer_self->[_started_looking_for_here_target_at_] =
                   $input_line_number;
             }
             else {
-                $tokenizer_self->{_in_here_doc}          = 0;
-                $tokenizer_self->{_here_doc_target}      = "";
-                $tokenizer_self->{_here_quote_character} = "";
+                $tokenizer_self->[_in_here_doc_]          = 0;
+                $tokenizer_self->[_here_doc_target_]      = "";
+                $tokenizer_self->[_here_quote_character_] = "";
             }
         }
 
@@ -660,7 +716,7 @@ sub get_line {
             $candidate_target =~ s/\s*$//;
             $candidate_target =~ s/^\s*//;
             if ( $candidate_target eq $here_doc_target ) {
-                $tokenizer_self->{_nearly_matched_here_target_at} =
+                $tokenizer_self->[_nearly_matched_here_target_at_] =
                   $input_line_number;
             }
         }
@@ -668,11 +724,11 @@ sub get_line {
     }
 
     # must print line unchanged if we are in a format section
-    elsif ( $tokenizer_self->{_in_format} ) {
+    elsif ( $tokenizer_self->[_in_format_] ) {
 
         if ( $input_line =~ /^\.[\s#]*$/ ) {
             write_logfile_entry("Exiting format section\n");
-            $tokenizer_self->{_in_format} = 0;
+            $tokenizer_self->[_in_format_] = 0;
             $line_of_tokens->{_line_type} = 'FORMAT_END';
         }
         else {
@@ -682,15 +738,15 @@ sub get_line {
     }
 
     # must print line unchanged if we are in pod documentation
-    elsif ( $tokenizer_self->{_in_pod} ) {
+    elsif ( $tokenizer_self->[_in_pod_] ) {
 
         $line_of_tokens->{_line_type} = 'POD';
         if ( $input_line =~ /^=cut/ ) {
             $line_of_tokens->{_line_type} = 'POD_END';
             write_logfile_entry("Exiting POD section\n");
-            $tokenizer_self->{_in_pod} = 0;
+            $tokenizer_self->[_in_pod_] = 0;
         }
-        if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->{_in_end} ) {
+        if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->[_in_end_] ) {
             warning(
                 "Hash-bang in pod can cause older versions of perl to fail! \n"
             );
@@ -703,13 +759,13 @@ sub get_line {
     # are seeing illegal tokens and cannot continue.  Syntax errors do
     # not pass this route).  Calling routine can decide what to do, but
     # the default can be to just pass all lines as if they were after __END__
-    elsif ( $tokenizer_self->{_in_error} ) {
+    elsif ( $tokenizer_self->[_in_error_] ) {
         $line_of_tokens->{_line_type} = 'ERROR';
         return $line_of_tokens;
     }
 
     # print line unchanged if we are __DATA__ section
-    elsif ( $tokenizer_self->{_in_data} ) {
+    elsif ( $tokenizer_self->[_in_data_] ) {
 
         # ...but look for POD
         # Note that the _in_data and _in_end flags remain set
@@ -718,7 +774,7 @@ sub get_line {
         if ( $input_line =~ /^=(?!cut)/ ) {
             $line_of_tokens->{_line_type} = 'POD_START';
             write_logfile_entry("Entering POD section\n");
-            $tokenizer_self->{_in_pod} = 1;
+            $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
         else {
@@ -728,7 +784,7 @@ sub get_line {
     }
 
     # print line unchanged if we are in __END__ section
-    elsif ( $tokenizer_self->{_in_end} ) {
+    elsif ( $tokenizer_self->[_in_end_] ) {
 
         # ...but look for POD
         # Note that the _in_data and _in_end flags remain set
@@ -737,7 +793,7 @@ sub get_line {
         if ( $input_line =~ /^=(?!cut)/ ) {
             $line_of_tokens->{_line_type} = 'POD_START';
             write_logfile_entry("Entering POD section\n");
-            $tokenizer_self->{_in_pod} = 1;
+            $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
         else {
@@ -747,17 +803,17 @@ sub get_line {
     }
 
     # check for a hash-bang line if we haven't seen one
-    if ( !$tokenizer_self->{_saw_hash_bang} ) {
+    if ( !$tokenizer_self->[_saw_hash_bang_] ) {
         if ( $input_line =~ /^\#\!.*perl\b/ ) {
-            $tokenizer_self->{_saw_hash_bang} = $input_line_number;
+            $tokenizer_self->[_saw_hash_bang_] = $input_line_number;
 
             # check for -w and -P flags
             if ( $input_line =~ /^\#\!.*perl\s.*-.*P/ ) {
-                $tokenizer_self->{_saw_perl_dash_P} = 1;
+                $tokenizer_self->[_saw_perl_dash_P_] = 1;
             }
 
             if ( $input_line =~ /^\#\!.*perl\s.*-.*w/ ) {
-                $tokenizer_self->{_saw_perl_dash_w} = 1;
+                $tokenizer_self->[_saw_perl_dash_w_] = 1;
             }
 
             if (
@@ -769,13 +825,13 @@ sub get_line {
                        $last_nonblank_block_type
                     && $last_nonblank_block_type eq 'BEGIN'
                 )
-                && ( !$tokenizer_self->{_look_for_hash_bang} )
+                && ( !$tokenizer_self->[_look_for_hash_bang_] )
               )
             {
 
                 # this is helpful for VMS systems; we may have accidentally
                 # tokenized some DCL commands
-                if ( $tokenizer_self->{_started_tokenizing} ) {
+                if ( $tokenizer_self->[_started_tokenizing_] ) {
                     warning(
 "There seems to be a hash-bang after line 1; do you need to run with -x ?\n"
                     );
@@ -795,8 +851,8 @@ sub get_line {
     }
 
     # wait for a hash-bang before parsing if the user invoked us with -x
-    if ( $tokenizer_self->{_look_for_hash_bang}
-        && !$tokenizer_self->{_saw_hash_bang} )
+    if ( $tokenizer_self->[_look_for_hash_bang_]
+        && !$tokenizer_self->[_saw_hash_bang_] )
     {
         $line_of_tokens->{_line_type} = 'SYSTEM';
         return $line_of_tokens;
@@ -818,32 +874,33 @@ sub get_line {
     #        _in_error
     #        _in_pod
     #        _in_quote
-    my $ending_in_quote_last = $tokenizer_self->{_in_quote};
+    my $ending_in_quote_last = $tokenizer_self->[_in_quote_];
     tokenize_this_line($line_of_tokens);
 
     # Now finish defining the return structure and return it
-    $line_of_tokens->{_ending_in_quote} = $tokenizer_self->{_in_quote};
+    $line_of_tokens->{_ending_in_quote} = $tokenizer_self->[_in_quote_];
 
     # handle severe error (binary data in script)
-    if ( $tokenizer_self->{_in_error} ) {
-        $tokenizer_self->{_in_quote} = 0;    # to avoid any more messages
+    if ( $tokenizer_self->[_in_error_] ) {
+        $tokenizer_self->[_in_quote_] = 0;    # to avoid any more messages
         warning("Giving up after error\n");
         $line_of_tokens->{_line_type} = 'ERROR';
-        reset_indentation_level(0);          # avoid error messages
+        reset_indentation_level(0);           # avoid error messages
         return $line_of_tokens;
     }
 
     # handle start of pod documentation
-    if ( $tokenizer_self->{_in_pod} ) {
+    if ( $tokenizer_self->[_in_pod_] ) {
 
         # This gets tricky..above a __DATA__ or __END__ section, perl
         # accepts '=cut' as the start of pod section. But afterwards,
         # only pod utilities see it and they may ignore an =cut without
         # leading =head.  In any case, this isn't good.
         if ( $input_line =~ /^=cut\b/ ) {
-            if ( $tokenizer_self->{_saw_data} || $tokenizer_self->{_saw_end} ) {
+            if ( $tokenizer_self->[_saw_data_] || $tokenizer_self->[_saw_end_] )
+            {
                 complain("=cut while not in pod ignored\n");
-                $tokenizer_self->{_in_pod}    = 0;
+                $tokenizer_self->[_in_pod_] = 0;
                 $line_of_tokens->{_line_type} = 'POD_END';
             }
             else {
@@ -871,30 +928,30 @@ sub get_line {
     }
 
     # see if this line contains here doc targets
-    my $rhere_target_list = $tokenizer_self->{_rhere_target_list};
+    my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
     if ( @{$rhere_target_list} ) {
 
         my ( $here_doc_target, $here_quote_character ) =
           @{ shift @{$rhere_target_list} };
-        $tokenizer_self->{_in_here_doc}          = 1;
-        $tokenizer_self->{_here_doc_target}      = $here_doc_target;
-        $tokenizer_self->{_here_quote_character} = $here_quote_character;
+        $tokenizer_self->[_in_here_doc_]          = 1;
+        $tokenizer_self->[_here_doc_target_]      = $here_doc_target;
+        $tokenizer_self->[_here_quote_character_] = $here_quote_character;
         write_logfile_entry("Entering HERE document $here_doc_target\n");
-        $tokenizer_self->{_started_looking_for_here_target_at} =
+        $tokenizer_self->[_started_looking_for_here_target_at_] =
           $input_line_number;
     }
 
     # NOTE: __END__ and __DATA__ statements are written unformatted
     # because they can theoretically contain additional characters
     # which are not tokenized (and cannot be read with <DATA> either!).
-    if ( $tokenizer_self->{_in_data} ) {
+    if ( $tokenizer_self->[_in_data_] ) {
         $line_of_tokens->{_line_type} = 'DATA_START';
         write_logfile_entry("Starting __DATA__ section\n");
-        $tokenizer_self->{_saw_data} = 1;
+        $tokenizer_self->[_saw_data_] = 1;
 
         # keep parsing after __DATA__ if use SelfLoader was seen
-        if ( $tokenizer_self->{_saw_selfloader} ) {
-            $tokenizer_self->{_in_data} = 0;
+        if ( $tokenizer_self->[_saw_selfloader_] ) {
+            $tokenizer_self->[_in_data_] = 0;
             write_logfile_entry(
                 "SelfLoader seen, continuing; -nlsl deactivates\n");
         }
@@ -902,14 +959,14 @@ sub get_line {
         return $line_of_tokens;
     }
 
-    elsif ( $tokenizer_self->{_in_end} ) {
+    elsif ( $tokenizer_self->[_in_end_] ) {
         $line_of_tokens->{_line_type} = 'END_START';
         write_logfile_entry("Starting __END__ section\n");
-        $tokenizer_self->{_saw_end} = 1;
+        $tokenizer_self->[_saw_end_] = 1;
 
         # keep parsing after __END__ if use AutoLoader was seen
-        if ( $tokenizer_self->{_saw_autoloader} ) {
-            $tokenizer_self->{_in_end} = 0;
+        if ( $tokenizer_self->[_saw_autoloader_] ) {
+            $tokenizer_self->[_in_end_] = 0;
             write_logfile_entry(
                 "AutoLoader seen, continuing; -nlal deactivates\n");
         }
@@ -920,40 +977,41 @@ sub get_line {
     $line_of_tokens->{_line_type} = 'CODE';
 
     # remember if we have seen any real code
-    if (  !$tokenizer_self->{_started_tokenizing}
+    if (  !$tokenizer_self->[_started_tokenizing_]
         && $input_line !~ /^\s*$/
         && $input_line !~ /^\s*#/ )
     {
-        $tokenizer_self->{_started_tokenizing} = 1;
+        $tokenizer_self->[_started_tokenizing_] = 1;
     }
 
-    if ( $tokenizer_self->{_debugger_object} ) {
-        $tokenizer_self->{_debugger_object}->write_debug_entry($line_of_tokens);
+    if ( $tokenizer_self->[_debugger_object_] ) {
+        $tokenizer_self->[_debugger_object_]
+          ->write_debug_entry($line_of_tokens);
     }
 
     # Note: if keyword 'format' occurs in this line code, it is still CODE
     # (keyword 'format' need not start a line)
-    if ( $tokenizer_self->{_in_format} ) {
+    if ( $tokenizer_self->[_in_format_] ) {
         write_logfile_entry("Entering format section\n");
     }
 
-    if ( $tokenizer_self->{_in_quote}
-        and ( $tokenizer_self->{_line_start_quote} < 0 ) )
+    if ( $tokenizer_self->[_in_quote_]
+        and ( $tokenizer_self->[_line_start_quote_] < 0 ) )
     {
 
         #if ( ( my $quote_target = get_quote_target() ) !~ /^\s*$/ ) {
-        if (
-            ( my $quote_target = $tokenizer_self->{_quote_target} ) !~ /^\s*$/ )
+        if ( ( my $quote_target = $tokenizer_self->[_quote_target_] ) !~
+            /^\s*$/ )
         {
-            $tokenizer_self->{_line_start_quote} = $input_line_number;
+            $tokenizer_self->[_line_start_quote_] = $input_line_number;
             write_logfile_entry(
                 "Start multi-line quote or pattern ending in $quote_target\n");
         }
     }
-    elsif ( ( $tokenizer_self->{_line_start_quote} >= 0 )
-        && !$tokenizer_self->{_in_quote} )
+    elsif ( ( $tokenizer_self->[_line_start_quote_] >= 0 )
+        && !$tokenizer_self->[_in_quote_] )
     {
-        $tokenizer_self->{_line_start_quote} = -1;
+        $tokenizer_self->[_line_start_quote_] = -1;
         write_logfile_entry("End of multi-line quote or pattern\n");
     }
 
@@ -973,13 +1031,13 @@ sub find_starting_indentation_level {
     my $starting_level = 0;
 
     # use value if given as parameter
-    if ( $tokenizer_self->{_know_starting_level} ) {
-        $starting_level = $tokenizer_self->{_starting_level};
+    if ( $tokenizer_self->[_know_starting_level_] ) {
+        $starting_level = $tokenizer_self->[_starting_level_];
     }
 
     # if we know there is a hash_bang line, the level must be zero
-    elsif ( $tokenizer_self->{_look_for_hash_bang} ) {
-        $tokenizer_self->{_know_starting_level} = 1;
+    elsif ( $tokenizer_self->[_look_for_hash_bang_] ) {
+        $tokenizer_self->[_know_starting_level_] = 1;
     }
 
     # otherwise figure it out from the input file
@@ -990,7 +1048,7 @@ sub find_starting_indentation_level {
         # keep looking at lines until we find a hash bang or piece of code
         my $msg = "";
         while ( $line =
-            $tokenizer_self->{_line_buffer_object}->peek_ahead( $i++ ) )
+            $tokenizer_self->[_line_buffer_object_]->peek_ahead( $i++ ) )
         {
 
             # if first line is #! then assume starting level is zero
@@ -1006,7 +1064,7 @@ sub find_starting_indentation_level {
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
         write_logfile_entry("$msg");
     }
-    $tokenizer_self->{_starting_level} = $starting_level;
+    $tokenizer_self->[_starting_level_] = $starting_level;
     reset_indentation_level($starting_level);
     return;
 }
@@ -1037,20 +1095,20 @@ sub guess_old_indentation_level {
 
         # If there are leading tabs, we use the tab scheme for this run, if
         # any, so that the code will remain stable when editing.
-        if ($1) { $spaces += length($1) * $tokenizer_self->{_tabsize} }
+        if ($1) { $spaces += length($1) * $tokenizer_self->[_tabsize_] }
 
         if ($2) { $spaces += length($2) }
 
         # correct for outdented labels
-        if ( $3 && $tokenizer_self->{'_outdent_labels'} ) {
-            $spaces += $tokenizer_self->{_continuation_indentation};
+        if ( $3 && $tokenizer_self->[_outdent_labels_] ) {
+            $spaces += $tokenizer_self->[_continuation_indentation_];
         }
     }
 
     # compute indentation using the value of -i for this run.
     # If -i=0 is used for this run (which is possible) it doesn't matter
     # what we do here but we'll guess that the old run used 4 spaces per level.
-    my $indent_columns = $tokenizer_self->{_indent_columns};
+    my $indent_columns = $tokenizer_self->[_indent_columns_];
     $indent_columns = 4 if ( !$indent_columns );
     $level          = int( $spaces / $indent_columns );
     return ($level);
@@ -1408,7 +1466,7 @@ sub prepare_for_a_new_file {
         write_logfile_entry("scanning replacement text for here-doc targets\n");
 
         # save the logger object for error messages
-        my $logger_object = $tokenizer_self->{_logger_object};
+        my $logger_object = $tokenizer_self->[_logger_object_];
 
         # localize all package variables
         local (
@@ -1455,18 +1513,18 @@ sub prepare_for_a_new_file {
 
         # remove any here doc targets
         my $rht = undef;
-        if ( $tokenizer_self->{_in_here_doc} ) {
+        if ( $tokenizer_self->[_in_here_doc_] ) {
             $rht = [];
             push @{$rht},
               [
-                $tokenizer_self->{_here_doc_target},
-                $tokenizer_self->{_here_quote_character}
+                $tokenizer_self->[_here_doc_target_],
+                $tokenizer_self->[_here_quote_character_]
               ];
-            if ( $tokenizer_self->{_rhere_target_list} ) {
-                push @{$rht}, @{ $tokenizer_self->{_rhere_target_list} };
-                $tokenizer_self->{_rhere_target_list} = undef;
+            if ( $tokenizer_self->[_rhere_target_list_] ) {
+                push @{$rht}, @{ $tokenizer_self->[_rhere_target_list_] };
+                $tokenizer_self->[_rhere_target_list_] = undef;
             }
-            $tokenizer_self->{_in_here_doc} = undef;
+            $tokenizer_self->[_in_here_doc_] = undef;
         }
 
         # now its safe to report errors
@@ -1619,7 +1677,7 @@ sub prepare_for_a_new_file {
             scan_identifier();
 
             if ( $identifier eq '$^W' ) {
-                $tokenizer_self->{_saw_perl_dash_w} = 1;
+                $tokenizer_self->[_saw_perl_dash_w_] = 1;
             }
 
             # Check for identifier in indirect object slot
@@ -1919,7 +1977,7 @@ sub prepare_for_a_new_file {
 
                 # check for syntax error here;
                 unless ( $is_blocktype_with_paren{$last_nonblank_token} ) {
-                    if ( $tokenizer_self->{'_extended_syntax'} ) {
+                    if ( $tokenizer_self->[_extended_syntax_] ) {
 
                         # we append a trailing () to mark this as an unknown
                         # block type.  This allows perltidy to format some
@@ -2322,7 +2380,7 @@ sub prepare_for_a_new_file {
                 {
 
                     if ( $next_tok eq 'W' ) {
-                        $tokenizer_self->{_saw_perl_dash_w} = 1;
+                        $tokenizer_self->[_saw_perl_dash_w_] = 1;
                     }
                     $tok  = $tok . $next_tok;
                     $i    = $i + 1;
@@ -2529,11 +2587,11 @@ sub prepare_for_a_new_file {
     @_ = qw(use require);
     @is_use_require{@_} = (1) x scalar(@_);
 
-    # This hash holds the hash key in $tokenizer_self for these keywords:
+    # This hash holds the array index in $tokenizer_self for these keywords:
     my %is_format_END_DATA = (
-        'format'   => '_in_format',
-        '__END__'  => '_in_end',
-        '__DATA__' => '_in_data',
+        'format'   => _in_format_,
+        '__END__'  => _in_end_,
+        '__DATA__' => _in_data_,
     );
 
     # original ref: camel 3 p 147,
@@ -2688,7 +2746,7 @@ sub prepare_for_a_new_file {
             # and must not be in an equation
             if ( !$in_quote && ( operator_expected( 'b', '=', 'b' ) == TERM ) )
             {
-                $tokenizer_self->{_in_pod} = 1;
+                $tokenizer_self->[_in_pod_] = 1;
                 return;
             }
         }
@@ -2711,7 +2769,7 @@ sub prepare_for_a_new_file {
 
         # update the copy of the line for use in error messages
         # This must be exactly what we give the pre_tokenizer
-        $tokenizer_self->{_line_text} = $input_line;
+        $tokenizer_self->[_line_of_text_] = $input_line;
 
         # re-initialize for the main loop
         $routput_token_list     = [];    # stack of output token indexes
@@ -3207,14 +3265,14 @@ EOM
                 elsif ( ( $tok eq 'strict' )
                     and ( $last_nonblank_token eq 'use' ) )
                 {
-                    $tokenizer_self->{_saw_use_strict} = 1;
+                    $tokenizer_self->[_saw_use_strict_] = 1;
                     scan_bare_identifier();
                 }
 
                 elsif ( ( $tok eq 'warnings' )
                     and ( $last_nonblank_token eq 'use' ) )
                 {
-                    $tokenizer_self->{_saw_perl_dash_w} = 1;
+                    $tokenizer_self->[_saw_perl_dash_w_] = 1;
 
                     # scan as identifier, so that we pick up something like:
                     # use warnings::register
@@ -3223,7 +3281,7 @@ EOM
 
                 elsif (
                        $tok eq 'AutoLoader'
-                    && $tokenizer_self->{_look_for_autoloader}
+                    && $tokenizer_self->[_look_for_autoloader_]
                     && (
                         $last_nonblank_token eq 'use'
 
@@ -3235,22 +3293,22 @@ EOM
                   )
                 {
                     write_logfile_entry("AutoLoader seen, -nlal deactivates\n");
-                    $tokenizer_self->{_saw_autoloader}      = 1;
-                    $tokenizer_self->{_look_for_autoloader} = 0;
+                    $tokenizer_self->[_saw_autoloader_]      = 1;
+                    $tokenizer_self->[_look_for_autoloader_] = 0;
                     scan_bare_identifier();
                 }
 
                 elsif (
                        $tok eq 'SelfLoader'
-                    && $tokenizer_self->{_look_for_selfloader}
+                    && $tokenizer_self->[_look_for_selfloader_]
                     && (   $last_nonblank_token eq 'use'
                         || $input_line =~ /^\s*(use|require)\s+SelfLoader\b/
                         || $input_line =~ /\bISA\s*=.*\bSelfLoader\b/ )
                   )
                 {
                     write_logfile_entry("SelfLoader seen, -nlsl deactivates\n");
-                    $tokenizer_self->{_saw_selfloader}      = 1;
-                    $tokenizer_self->{_look_for_selfloader} = 0;
+                    $tokenizer_self->[_saw_selfloader_]      = 1;
+                    $tokenizer_self->[_look_for_selfloader_] = 0;
                     scan_bare_identifier();
                 }
 
@@ -3329,7 +3387,7 @@ EOM
                    # of leading and trailing whitespace.  So they are given a
                    # separate type, 'q', unless requested otherwise.
                     $type =
-                      ( $tok eq 'qw' && $tokenizer_self->{_trim_qw} )
+                      ( $tok eq 'qw' && $tokenizer_self->[_trim_qw_] )
                       ? 'q'
                       : 'Q';
                     $quote_type = $type;
@@ -3344,7 +3402,7 @@ EOM
                   )
                 {
                     if ( $tok !~ /[A-Z]/ ) {
-                        push @{ $tokenizer_self->{_rlower_case_labels_at} },
+                        push @{ $tokenizer_self->[_rlower_case_labels_at_] },
                           $input_line_number;
                     }
                     $type = 'J';
@@ -3366,7 +3424,9 @@ EOM
                 # We will switch to type 'k' before outputting the tokens.
                 elsif ( $is_format_END_DATA{$tok_kw} ) {
                     $type = ';';    # make tokenizer look for TERM next
-                    $tokenizer_self->{ $is_format_END_DATA{$tok_kw} } = 1;
+
+                    # Remember that we are in one of these three sections
+                    $tokenizer_self->[ $is_format_END_DATA{$tok_kw} ] = 1;
                     last;
                 }
 
@@ -3819,7 +3879,7 @@ EOM
                 my $val = ord($type);
                 warning(
                     "unexpected character decimal $val ($type) in script\n");
-                $tokenizer_self->{_in_error} = 1;
+                $tokenizer_self->[_in_error_] = 1;
             }
 
             # ----------------------------------------------------------------
@@ -4181,8 +4241,8 @@ EOM
             }
 
             if ( $level_in_tokenizer < 0 ) {
-                unless ( $tokenizer_self->{_saw_negative_indentation} ) {
-                    $tokenizer_self->{_saw_negative_indentation} = 1;
+                unless ( $tokenizer_self->[_saw_negative_indentation_] ) {
+                    $tokenizer_self->[_saw_negative_indentation_] = 1;
                     warning("Starting negative indentation\n");
                 }
             }
@@ -4245,11 +4305,11 @@ EOM
             push( @tokens, substr( $input_line, $rtoken_map->[$im], $num ) );
         }
 
-        $tokenizer_self->{_in_attribute_list} = $in_attribute_list;
-        $tokenizer_self->{_in_quote}          = $in_quote;
-        $tokenizer_self->{_quote_target} =
+        $tokenizer_self->[_in_attribute_list_] = $in_attribute_list;
+        $tokenizer_self->[_in_quote_]          = $in_quote;
+        $tokenizer_self->[_quote_target_] =
           $in_quote ? matching_end_token($quote_character) : "";
-        $tokenizer_self->{_rhere_target_list} = $rhere_target_list;
+        $tokenizer_self->[_rhere_target_list_] = $rhere_target_list;
 
         $line_of_tokens->{_rtoken_type}            = \@token_type;
         $line_of_tokens->{_rtokens}                = \@tokens;
@@ -4837,11 +4897,11 @@ sub report_unexpected {
         $rpretoken_type, $input_line )
       = @_;
 
-    if ( ++$tokenizer_self->{_unexpected_error_count} <= MAX_NAG_MESSAGES ) {
+    if ( ++$tokenizer_self->[_unexpected_error_count_] <= MAX_NAG_MESSAGES ) {
         my $msg = "found $found where $expecting expected";
         my $pos = $rpretoken_map->[$i_tok];
         interrupt_logfile();
-        my $input_line_number = $tokenizer_self->{_last_line_number};
+        my $input_line_number = $tokenizer_self->[_last_line_number_];
         my ( $offset, $numbered_line, $underline ) =
           make_numbered_line( $input_line_number, $input_line, $pos );
         $underline = write_on_underline( $underline, $pos - $offset, '^' );
@@ -4960,8 +5020,8 @@ sub increase_nesting_depth {
     $current_depth[$aa]++;
     $total_depth++;
     $total_depth[$aa][ $current_depth[$aa] ] = $total_depth;
-    my $input_line_number = $tokenizer_self->{_last_line_number};
-    my $input_line        = $tokenizer_self->{_line_text};
+    my $input_line_number = $tokenizer_self->[_last_line_number_];
+    my $input_line        = $tokenizer_self->[_line_of_text_];
 
     # Sequence numbers increment by number of items.  This keeps
     # a unique set of numbers but still allows the relative location
@@ -5026,8 +5086,8 @@ sub decrease_nesting_depth {
     # @current_sequence_number, @depth_array, @starting_line_of_current_depth
     # $statement_type
     my $seqno             = 0;
-    my $input_line_number = $tokenizer_self->{_last_line_number};
-    my $input_line        = $tokenizer_self->{_line_text};
+    my $input_line_number = $tokenizer_self->[_last_line_number_];
+    my $input_line        = $tokenizer_self->[_line_of_text_];
 
     my $outdent = 0;
     $total_depth--;
@@ -5152,7 +5212,8 @@ sub peek_ahead_for_n_nonblank_pre_tokens {
     my $i = 0;
     my ( $rpre_tokens, $rmap, $rpre_types );
 
-    while ( $line = $tokenizer_self->{_line_buffer_object}->peek_ahead( $i++ ) )
+    while ( $line =
+        $tokenizer_self->[_line_buffer_object_]->peek_ahead( $i++ ) )
     {
         $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
@@ -5172,7 +5233,8 @@ sub peek_ahead_for_nonblank_token {
     my $line;
     my $i = 0;
 
-    while ( $line = $tokenizer_self->{_line_buffer_object}->peek_ahead( $i++ ) )
+    while ( $line =
+        $tokenizer_self->[_line_buffer_object_]->peek_ahead( $i++ ) )
     {
         $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
@@ -5379,7 +5441,8 @@ sub guess_if_here_doc {
     my $k   = 0;
     my $msg = "checking <<";
 
-    while ( $line = $tokenizer_self->{_line_buffer_object}->peek_ahead( $k++ ) )
+    while ( $line =
+        $tokenizer_self->[_line_buffer_object_]->peek_ahead( $k++ ) )
     {
         chomp $line;
 
@@ -6511,7 +6574,7 @@ sub scan_identifier_do {
                         );
                     }
                     $saw_function_definition{$package}{$subname} =
-                      $tokenizer_self->{_last_line_number};
+                      $tokenizer_self->[_last_line_number_];
                 }
             }
             elsif ( $next_nonblank_token eq ';' ) {
