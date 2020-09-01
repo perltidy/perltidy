@@ -4631,8 +4631,7 @@ sub non_indenting_braces {
                 $num -= 1;
             }
         }
-        if ($num) { $level -= $num }
-        $radjusted_levels->[$KK] = $level;
+        $radjusted_levels->[$KK] = $level - $num;
     }
     $self->[_radjusted_levels_] = $radjusted_levels;
     return;
@@ -7358,8 +7357,6 @@ sub copy_token_as_type {
         @reduced_spaces_to_go        = ();
         @inext_to_go                 = ();
         @iprev_to_go                 = ();
-
-        ##$summed_lengths_to_go[0] = 0;
 
         $rbrace_follower      = undef;
         $comma_count_in_batch = 0;

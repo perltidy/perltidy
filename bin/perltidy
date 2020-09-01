@@ -883,8 +883,8 @@ For example, to match the side comment '#++', the parameter would be
   -nibp='#\+\+'
 
 Note that the default string is the same as the string for starting a
-B<format-skipping> section, but it is for a side-comment rather than a block
-comment. 
+B<format-skipping> section, but in that case it is for a block comment 
+rather than a side-comment. 
 
 =item B<-olq>, B<--outdent-long-quotes>
 
