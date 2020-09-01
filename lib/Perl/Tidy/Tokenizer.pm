@@ -1119,14 +1119,29 @@ sub prepare_for_a_new_file {
 
     # variables used to track depths of various containers
     # and report nesting errors
-    $paren_depth                         = 0;
-    $brace_depth                         = 0;
-    $square_bracket_depth                = 0;
-    @current_depth                       = (0) x scalar @closing_brace_names;
-    $total_depth                         = 0;
-    @total_depth                         = ();
-    @nesting_sequence_number             = ( 0 .. @closing_brace_names - 1 );
-    @current_sequence_number             = ();
+    $paren_depth             = 0;
+    $brace_depth             = 0;
+    $square_bracket_depth    = 0;
+    @current_depth           = (0) x scalar @closing_brace_names;
+    $total_depth             = 0;
+    @total_depth             = ();
+    @nesting_sequence_number = ( 0 .. @closing_brace_names - 1 );
+    @current_sequence_number = ();
+
+    @paren_type                     = ();
+    @paren_semicolon_count          = ();
+    @paren_structural_type          = ();
+    @brace_type                     = ();
+    @brace_structural_type          = ();
+    @brace_context                  = ();
+    @brace_package                  = ();
+    @square_bracket_type            = ();
+    @square_bracket_structural_type = ();
+    @depth_array                    = ();
+    @nested_ternary_flag            = ();
+    @nested_statement_type          = ();
+    @starting_line_of_current_depth = ();
+
     $paren_type[$paren_depth]            = '';
     $paren_semicolon_count[$paren_depth] = 0;
     $paren_structural_type[$brace_depth] = '';
