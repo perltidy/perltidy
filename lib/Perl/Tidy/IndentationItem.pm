@@ -10,6 +10,29 @@ use strict;
 use warnings;
 our $VERSION = '20200822';
 
+BEGIN {
+
+    # Array index names
+    my $i = 0;
+    use constant {
+        _spaces_             => $i++,
+        _level_              => $i++,
+        _ci_level_           => $i++,
+        _available_spaces_   => $i++,
+        _closed_             => $i++,
+        _comma_count_        => $i++,
+        _sequence_number_    => $i++,
+        _index_              => $i++,
+        _have_child_         => $i++,
+        _recoverable_spaces_ => $i++,
+        _align_paren_        => $i++,
+        _marked_             => $i++,
+        _stack_depth_        => $i++,
+        _starting_index_     => $i++,
+        _arrow_count_        => $i++,
+    };
+}
+
 sub new {
 
     # Create an 'indentation_item' which describes one level of leading
@@ -54,23 +77,25 @@ sub new {
     # starting_index     =>  # first token index of this level
     # arrow_count        =>  # how many =>'s
 
-    return bless {
-        _spaces             => $spaces,
-        _level              => $level,
-        _ci_level           => $ci_level,
-        _available_spaces   => $available_spaces,
-        _closed             => $closed,
-        _comma_count        => $comma_count,
-        _sequence_number    => $gnu_sequence_number,
-        _index              => $index,
-        _have_child         => $have_child,
-        _recoverable_spaces => $want_right_spaces,
-        _align_paren        => $align_paren,
-        _marked             => $marked,
-        _stack_depth        => $stack_depth,
-        _starting_index     => $starting_index,
-        _arrow_count        => $arrow_count,
-    }, $class;
+    my $self = [];
+    $self->[_spaces_]             = $spaces;
+    $self->[_level_]              = $level;
+    $self->[_ci_level_]           = $ci_level;
+    $self->[_available_spaces_]   = $available_spaces;
+    $self->[_closed_]             = $closed;
+    $self->[_comma_count_]        = $comma_count;
+    $self->[_sequence_number_]    = $gnu_sequence_number;
+    $self->[_index_]              = $index;
+    $self->[_have_child_]         = $have_child;
+    $self->[_recoverable_spaces_] = $want_right_spaces;
+    $self->[_align_paren_]        = $align_paren;
+    $self->[_marked_]             = $marked;
+    $self->[_stack_depth_]        = $stack_depth;
+    $self->[_starting_index_]     = $starting_index;
+    $self->[_arrow_count_]        = $arrow_count;
+
+    bless $self, $class;
+    return $self;
 }
 
 sub permanently_decrease_available_spaces {
@@ -112,148 +137,148 @@ sub tentatively_decrease_available_spaces {
 
 sub get_stack_depth {
     my $self = shift;
-    return $self->{_stack_depth};
+    return $self->[_stack_depth_];
 }
 
 sub get_spaces {
     my $self = shift;
-    return $self->{_spaces};
+    return $self->[_spaces_];
 }
 
 sub get_marked {
     my $self = shift;
-    return $self->{_marked};
+    return $self->[_marked_];
 }
 
 sub set_marked {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_marked} = $value;
+        $self->[_marked_] = $value;
     }
-    return $self->{_marked};
+    return $self->[_marked_];
 }
 
 sub get_available_spaces {
     my $self = shift;
-    return $self->{_available_spaces};
+    return $self->[_available_spaces_];
 }
 
 sub decrease_SPACES {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_spaces} -= $value;
+        $self->[_spaces_] -= $value;
     }
-    return $self->{_spaces};
+    return $self->[_spaces_];
 }
 
 sub decrease_available_spaces {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_available_spaces} -= $value;
+        $self->[_available_spaces_] -= $value;
     }
-    return $self->{_available_spaces};
+    return $self->[_available_spaces_];
 }
 
 sub get_align_paren {
     my $self = shift;
-    return $self->{_align_paren};
+    return $self->[_align_paren_];
 }
 
 sub get_recoverable_spaces {
     my $self = shift;
-    return $self->{_recoverable_spaces};
+    return $self->[_recoverable_spaces_];
 }
 
 sub set_recoverable_spaces {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_recoverable_spaces} = $value;
+        $self->[_recoverable_spaces_] = $value;
     }
-    return $self->{_recoverable_spaces};
+    return $self->[_recoverable_spaces_];
 }
 
 sub increase_recoverable_spaces {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_recoverable_spaces} += $value;
+        $self->[_recoverable_spaces_] += $value;
     }
-    return $self->{_recoverable_spaces};
+    return $self->[_recoverable_spaces_];
 }
 
 sub get_ci_level {
     my $self = shift;
-    return $self->{_ci_level};
+    return $self->[_ci_level_];
 }
 
 sub get_level {
     my $self = shift;
-    return $self->{_level};
+    return $self->[_level_];
 }
 
 sub get_sequence_number {
     my $self = shift;
-    return $self->{_sequence_number};
+    return $self->[_sequence_number_];
 }
 
 sub get_index {
     my $self = shift;
-    return $self->{_index};
+    return $self->[_index_];
 }
 
 sub get_starting_index {
     my $self = shift;
-    return $self->{_starting_index};
+    return $self->[_starting_index_];
 }
 
 sub set_have_child {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_have_child} = $value;
+        $self->[_have_child_] = $value;
     }
-    return $self->{_have_child};
+    return $self->[_have_child_];
 }
 
 sub get_have_child {
     my $self = shift;
-    return $self->{_have_child};
+    return $self->[_have_child_];
 }
 
 sub set_arrow_count {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_arrow_count} = $value;
+        $self->[_arrow_count_] = $value;
     }
-    return $self->{_arrow_count};
+    return $self->[_arrow_count_];
 }
 
 sub get_arrow_count {
     my $self = shift;
-    return $self->{_arrow_count};
+    return $self->[_arrow_count_];
 }
 
 sub set_comma_count {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_comma_count} = $value;
+        $self->[_comma_count_] = $value;
     }
-    return $self->{_comma_count};
+    return $self->[_comma_count_];
 }
 
 sub get_comma_count {
     my $self = shift;
-    return $self->{_comma_count};
+    return $self->[_comma_count_];
 }
 
 sub set_closed {
     my ( $self, $value ) = @_;
     if ( defined($value) ) {
-        $self->{_closed} = $value;
+        $self->[_closed_] = $value;
     }
-    return $self->{_closed};
+    return $self->[_closed_];
 }
 
 sub get_closed {
     my $self = shift;
-    return $self->{_closed};
+    return $self->[_closed_];
 }
 1;
