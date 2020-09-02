@@ -1,10 +1,20 @@
 # Perltidy Change Log
 
     - Added parameter --non-indenting-braces, or -nib, which prevents
-      code following an opening brace marked with a special side comment 
-      from indenting one level.  This is off by default and turned on 
-      with -nib.  It might be useful for preventing code from shifting 
-      when adding or testing closures, for example.
+      code which follows an opening brace marked with a special side comment, 
+      '#<<<', from indenting one level.  For example,
+
+                    { #<<<   a closure to contain lexical vars
+
+                    my $var;  # this line does not indent
+
+                    }
+
+                    # this line cannot 'see' $var;
+
+      This is on by default.  If your code happens to have some
+      opening braces followed by '#<<<', and you
+      don't want this, you can use -nnib to deactivate it. 
 
     - Side comment locations reset at a line ending in a level 0 open
       block, such as when a new multi-line sub begins.  This is intended to 

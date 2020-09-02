@@ -2462,10 +2462,10 @@ sub generate_options {
       nodelete-old-whitespace
       nohtml
       nologfile
+      non-indenting-braces
       noquiet
       noshow-options
       nostatic-side-comments
-      nonon-indenting-braces
       notabs
       nowarning-output
       one-line-block-semicolons=1

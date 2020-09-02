@@ -41,7 +41,7 @@ BEGIN {
 ----------
         'gnu'  => "-gnu",
         'lop'  => "-nlop",
-        'nib1' => "-nib",
+        'nib1' => "-nnib",
         'nib2' => <<'----------',
 -nib -nibp='#\+\+'
 ----------
@@ -591,17 +591,17 @@ method sum_radlinks {
             params => "def",
             expect => <<'#14...........',
 {    #<<<
-    {    #<<<
-        {    #++
-            print "hello world\n";
-        }
-    }
+{    #<<<
+{    #++
+    print "hello world\n";
+}
+}
 }
 
 {    #++
     {    #++
         {    #<<<
-            print "hello world\n";
+        print "hello world\n";
         }
     }
 }
@@ -614,17 +614,17 @@ method sum_radlinks {
             params => "nib1",
             expect => <<'#15...........',
 {    #<<<
-{    #<<<
-{    #++
-    print "hello world\n";
-}
-}
+    {    #<<<
+        {    #++
+            print "hello world\n";
+        }
+    }
 }
 
 {    #++
     {    #++
         {    #<<<
-        print "hello world\n";
+            print "hello world\n";
         }
     }
 }

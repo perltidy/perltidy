@@ -850,22 +850,39 @@ The default is not to do this, indicated by B<-nicb>.
 
 =item B<-nib>, B<--non-indenting-braces>
 
-If this flag is set, perltidy will look for opening block braces which are
-followed by a special side comment, which is B<#<<<> by default.  If found, the
-code between this opening brace and its corresponding closing brace will not be
-given the normal extra indentation level.  As a simple example, 
+Normally, lines of code contained within a pair of block braces receive one
+extra level of indentation.  If this flag is set, perltidy will look for
+opening block braces which are followed by a special side comment, which is
+B<#<<<> by default.  If found, the code between this opening brace and its
+corresponding closing brace will not be given the normal extra indentation
+level.  For example:
 
-  perltidy -nib:
+            { #<<<   a closure to contain lexical vars
 
-    { #<<<
-    print "hello world\n";
-    }
+            my $var;  # this line does not get one level of indentation
+            ...
 
-This might be useful, for example, to keep large sections of code from
-moving to the right when placed in a closure.
+            }
 
-Only the opening brace needs to be marked, and nested braces can be marked.
-The special side comment can be changed with the next parameter.
+            # this line cannot 'see' $var;
+
+This can be useful, for example, when combining code from different files.
+Different sections of code can be placed within braces to keep their lexical
+variables from being visible to the end of the file.  To keep the new blocks
+from causing all of their contained code to be reformatted if you run perltidy, 
+you can mark the opening braces with this special side comment.
+
+Only the opening brace needs to be marked, since perltidy knows where the
+closing brace is.  
+
+This feature is on by default.  If your code happens to have some opening
+braces followed by '#<<<', and you don't want this, you can use B<-nnib> to
+deactivate it.  To make it easy to remember, the default string is the same as
+the string for starting a B<format-skipping> section. There is no confusion
+because in that case it is for a block comment rather than a side-comment. 
+
+The special side comment can be changed with the next
+parameter.
 
 
 =item B<-nibp=s>, B<--non-indenting-brace-prefix=s>
@@ -882,9 +899,6 @@ For example, to match the side comment '#++', the parameter would be
   
   -nibp='#\+\+'
 
-Note that the default string is the same as the string for starting a
-B<format-skipping> section, but in that case it is for a block comment 
-rather than a side-comment. 
 
 =item B<-olq>, B<--outdent-long-quotes>
 
