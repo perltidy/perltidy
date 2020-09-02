@@ -459,20 +459,14 @@ sub trim {
 }
 
 sub max {
-    my @vals = @_;
-    my $max  = shift @vals;
-    foreach my $val (@vals) {
-        $max = ( $max < $val ) ? $val : $max;
-    }
+    my $max  = shift; 
+    for (@_) { $max = $_ > $max ? $_ : $max };
     return $max;
 }
 
 sub min {
-    my @vals = @_;
-    my $min  = shift @vals;
-    foreach my $val (@vals) {
-        $min = ( $min > $val ) ? $val : $min;
-    }
+    my $min  = shift; 
+    for (@_) { $min = $_ < $min ? $_ : $min };
     return $min;
 }
 
@@ -4623,17 +4617,30 @@ sub non_indenting_braces {
 
     my $is_non_indenting_brace = sub {
         my ($KK)       = @_;
+
+        # looking for an opening block brace
         my $token      = $rLL->[$KK]->[_TOKEN_];
         my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         return unless ( $token eq '{' && $block_type );
-        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+
+        # followed by a comment
         my $K_sc       = $self->K_next_nonblank($KK);
         return unless defined($K_sc);
-        my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
-        return unless ( $line_index_sc == $line_index );
         my $type_sc = $rLL->[$K_sc]->[_TYPE_];
         return unless ( $type_sc eq '#' );
+
+        # on the same line
+        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
+        return unless ( $line_index_sc == $line_index );
+
+        # get the side comment text
         my $token_sc = $rLL->[$K_sc]->[_TOKEN_];
+
+        # The pattern ends in \s but we have removed the newline, so
+        # we added it back for the match. That way we require an exact
+        # match to the special string and also allow additional text.
+        $token_sc .= "\n";
         return ( $token_sc =~ /$non_indenting_brace_pattern/ );
     };
 
@@ -6556,8 +6563,11 @@ sub make_format_skipping_pattern {
 
 sub make_non_indenting_brace_pattern {
 
-    # create the pattern used to identify static side comments
-    $non_indenting_brace_pattern = '^#<<<';
+    # Create the pattern used to identify static side comments.
+    # Note that we are ending the pattern in a \s. This will allow
+    # the pattern to be followed by a space and some text, or a newline.
+    # The pattern is used in sub 'non_indenting_braces'
+    $non_indenting_brace_pattern = '^#<<<\s';
 
     # allow the user to change it
     if ( $rOpts->{'non-indenting-brace-prefix'} ) {
@@ -6566,7 +6576,7 @@ sub make_non_indenting_brace_pattern {
         if ( $prefix !~ /^#/ ) {
             Die("ERROR: the -nibp parameter '$prefix' must begin with '#'\n");
         }
-        my $pattern = '^' . $prefix;
+        my $pattern = '^' . $prefix . '\s';
         if ( bad_pattern($pattern) ) {
             Die(
 "ERROR: the -nibp prefix '$prefix' causes the invalid regex '$pattern'\n"

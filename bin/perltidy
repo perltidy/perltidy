@@ -874,9 +874,9 @@ The B<-nibp=string> parameter may be used to change the marker for
 non-indenting braces.  The default is equivalent to -nibp='#<<<'.  The string
 that you enter must begin with a # and should be in quotes as necessary to get
 past the command shell of your system.  This string is the leading text of a
-regex pattern that is constructed by appending pre-pending a '^', so you must
-also include backslashes for characters to be taken literally rather than as
-patterns.
+regex pattern that is constructed by appending pre-pending a '^' and appending
+a'\s', so you must also include backslashes for characters to be taken
+literally rather than as patterns.
 
 For example, to match the side comment '#++', the parameter would be
   

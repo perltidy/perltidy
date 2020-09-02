@@ -136,7 +136,7 @@ use constant MAX_NAG_MESSAGES => 6;
 
 BEGIN {
 
-    # Array index names for token variables
+    # Array index names for $self
     my $i = 0;
     use constant {
         _rhere_target_list_                  => $i++,
