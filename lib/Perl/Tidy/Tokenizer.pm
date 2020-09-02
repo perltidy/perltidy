@@ -527,14 +527,14 @@ sub report_tokenization_errors {
         # Set the severe error for a fairly high warning count because
         # some of the warnings do not harm formatting, such as duplicate
         # sub names.
-        my $warning_count = $logger_object->{_warning_count};
+        my $warning_count = $logger_object->get_warning_count();
         if ( $warning_count > 50 ) {
             $severe_error = 1;
         }
 
         # Brace errors are significant, so set the severe error flag at
         # a low number.
-        my $saw_brace_error = $logger_object->{_saw_brace_error};
+        my $saw_brace_error = get_saw_brace_error();
         if ( $saw_brace_error > 2 ) {
             $severe_error = 1;
         }

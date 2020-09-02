@@ -1657,7 +1657,7 @@ EOM
         if (   $in_place_modify
             && $delete_backup
             && -f $ifname
-            && ( $delete_backup > 1 || !$logger_object->{_warning_count} ) )
+            && ( $delete_backup > 1 || !$logger_object->get_warning_count() ) )
         {
 
             # As an added safety precaution, do not delete the source file

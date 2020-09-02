@@ -4579,12 +4579,33 @@ sub adjust_indentation_levels {
 
     my ($self) = @_;
 
-    # Set adjusted levels for any non-indenting braces
+    # Two options, -nib and -wc, are implemented by defining adjusted levels in
+    # $self->[_radjusted_levels_].  They will create this array if
+    # they are active, and otherwise it will be an empty array.
+
+    # Set adjusted levels for any non-indenting braces.
+    # If this option is used it will create the _radjusted_levels_ array.
     $self->non_indenting_braces();
 
-    # Set adjusted levels for the whitespace cycle option
+    # Set adjusted levels for the whitespace cycle option.  If this option is
+    # used it will create or modify the _radjusted_levels_ array.
     $self->whitespace_cycle_adjustment();
 
+    # Now clip any adjusted levels to be non-negative
+    $self->clip_adjusted_levels();
+
+    return;
+}
+
+sub clip_adjusted_levels {
+
+    # Replace any negative adjusted levels with zero.
+    # Negative levels can occur in files with brace errors.
+    my ($self) = @_;
+    my $radjusted_levels = $self->[_radjusted_levels_];
+    return unless defined($radjusted_levels) && @{$radjusted_levels};
+    foreach ( @{$radjusted_levels} ) { $_ = 0 if ( $_ < 0 ) }
+    return;
 }
 
 sub non_indenting_braces {
@@ -4593,7 +4614,7 @@ sub non_indenting_braces {
     my ($self) = @_;
     return unless ( $rOpts->{'non-indenting-braces'} );
 
-    my $rLL  = $self->[_rLL_];
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
     my $radjusted_levels;
@@ -5156,9 +5177,7 @@ sub get_available_spaces_to_go {
         my $nws              = @{$radjusted_levels};
         if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
             $level = $radjusted_levels->[$Kj];
-
-            # negative levels can occure in bad files
-            if ( $level < 0 ) { $level = 0 }
+            if ( $level < 0 ) { $level = 0 }    # note: this should not happen
         }
 
         # The continued_quote flag means that this is the first token of a
@@ -7504,9 +7523,9 @@ sub copy_token_as_type {
         my $radjusted_levels = $self->[_radjusted_levels_];
         if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
             $level_wc = $radjusted_levels->[$Ktoken_vars];
-
-            # negative levels can occure in bad files
-            if ( $level_wc < 0 ) { $level_wc = 0 }
+            if ( $level_wc < 0 ) {
+                $level_wc = 0;
+            }    # note: this should not happen
         }
         my $space_count =
           $ci_level * $rOpts_continuation_indentation +
@@ -16176,6 +16195,7 @@ sub set_nobreaks {
         $index_max_forced_break       = UNDEFINED_INDEX;
         $forced_breakpoint_undo_count = 0;
         @forced_breakpoint_undo_stack = ();
+        return;
     }
 
     sub get_forced_breakpoint_count {
