@@ -1793,9 +1793,12 @@ marker by at least one space.  For example
                 1, 4, 6, 4, 1,);
  #>>>
 
+Format skipping begins when a format skipping comment is seen and continues
+until either a format-skipping end pattern is found or until the end of file. 
+
 The comment markers may be placed at any location that a block comment may
 appear.  If they do not appear to be working, use the -log flag and examine the
-F<.LOG> file.  Use B<-nfs> to disable this feature.
+F<.LOG> file.  Use B<-nfs> to disable this feature.  
 
 This method works for any code. For the specific case of a comma-separated list
 of values, as in this example, another possibility is to insert a blank or
