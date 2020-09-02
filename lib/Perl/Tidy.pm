@@ -718,6 +718,18 @@ EOM
         }
     }
 
+    # Turn off assert-tidy and assert-untidy unless we are tidying files
+    if ( $rOpts->{'format'} ne 'tidy' ) {
+        if ( $rOpts->{'assert-tidy'} ) {
+            $rOpts->{'assert-tidy'} = 0;
+            Warn("ignoring --assert-tidy, --format is not 'tidy'\n");
+        }
+        if ( $rOpts->{'assert-untidy'} ) {
+            $rOpts->{'assert-untidy'} = 0;
+            Warn("ignoring --assert-untidy, --format is not 'tidy'\n");
+        }
+    }
+
     Perl::Tidy::Formatter::check_options($rOpts);
     Perl::Tidy::Tokenizer::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
@@ -1744,7 +1756,7 @@ sub compare_string_buffers {
     my ( $bufi, $bufo, $is_encoded_data ) = @_;
 
     my $leni = length($bufi);
-    my $leno = length($bufo);
+    my $leno = defined($bufo) ? length($bufo) : 0;
     my $msg =
       "Input  file length is $leni chars\nOutput file length is $leno chars\n";
     return $msg unless $leni && $leno;
