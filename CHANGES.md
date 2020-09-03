@@ -1,8 +1,8 @@
 # Perltidy Change Log
 
     - Added parameter --non-indenting-braces, or -nib, which prevents
-      code which follows an opening brace marked with a special side comment, 
-      '#<<<', from indenting one level.  For example,
+      code from indenting one level if it follows an opening brace marked 
+      with a special side comment, '#<<<'.  For example,
 
                     { #<<<   a closure to contain lexical vars
 
