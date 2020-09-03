@@ -900,6 +900,9 @@ sub keyword_group_scan {
 Unexpected value for -kgbs: '$Opt_size'; expecting 'min' or 'min.max'; 
 ignoring all -kgb flags
 EOM
+	# Turn this option off so that this message does not keep repeating
+	# during iterations and other files.
+        $rOpts->{'keyword-group-blanks-size'} = "";
         return $rhash_of_desires;
     }
     $Opt_size_min = 1 unless ($Opt_size_min);
