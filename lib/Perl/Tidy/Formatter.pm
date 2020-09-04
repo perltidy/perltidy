@@ -11060,7 +11060,7 @@ sub send_lines_to_vertical_aligner {
         my @imatch_list;
         for my $i ( $ibeg .. $iend ) {
 
-            if ( $ralignment_type_to_go->[$i] ne '' ) {
+            if ( $ralignment_type_to_go->[$i] ) {
 
                 # Patch #2: undo alignment within elsif parens
                 if ( $i > $i_elsif_open && $i < $i_elsif_close ) {
@@ -11203,7 +11203,7 @@ sub send_lines_to_vertical_aligner {
                     # matches.
 
                     # if we are not aligning on this paren...
-                    if ( $ralignment_type_to_go->[$i] eq '' ) {
+                    if ( !$ralignment_type_to_go->[$i] ) {
 
                         # Sum length from previous alignment
                         my $len = token_sequence_length( $i_start, $i - 1 );
@@ -11241,7 +11241,7 @@ sub send_lines_to_vertical_aligner {
 
             # if we find a new synchronization token, we are done with
             # a field
-            if ( $i > $i_start && $ralignment_type_to_go->[$i] ne '' ) {
+            if ( $i > $i_start && $ralignment_type_to_go->[$i] ) {
 
                 my $tok = my $raw_tok = $ralignment_type_to_go->[$i];
 
@@ -12649,9 +12649,15 @@ sub get_seqno {
         my ( $self, $ri_first, $ri_last ) = @_;
 
         my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
-
         my $ralignment_type_to_go;
-        for my $i ( 0 .. $max_index_to_go ) {
+
+	# Initialize the alignment array. Note that closing side comments can
+	# insert up to 2 additional tokens beyond the original
+	# $max_index_to_go, so we need to check ri_last for the last index.
+        my $max_line = @{$ri_first} - 1;
+        my $iend = $ri_last->[$max_line];
+        if ( $iend < $max_index_to_go ) { $iend = $max_index_to_go }
+        for my $i ( 0 .. $iend ) {
             $ralignment_type_to_go->[$i] = '';
         }
 
@@ -12673,7 +12679,6 @@ sub get_seqno {
         my $vert_last_nonblank_type;
         my $vert_last_nonblank_token;
         my $vert_last_nonblank_block_type;
-        my $max_line = @{$ri_first} - 1;
 
         foreach my $line ( 0 .. $max_line ) {
             my $ibeg = $ri_first->[$line];
