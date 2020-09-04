@@ -10806,7 +10806,7 @@ sub send_lines_to_vertical_aligner {
 
         my $rvertical_tightness_flags =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
-            $ri_first, $ri_last, $ending_in_quote );
+            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
 
         # flush an outdented line to avoid any unwanted vertical alignment
         $self->flush_vertical_aligner() if ($is_outdented_line);
@@ -12297,7 +12297,7 @@ sub K_mate_index {
 sub set_vertical_tightness_flags {
 
     my ( $self, $n, $n_last_line, $ibeg, $iend, $ri_first, $ri_last,
-        $ending_in_quote )
+        $ending_in_quote, $closing_side_comment )
       = @_;
 
     # Define vertical tightness controls for the nth line of a batch.
@@ -12551,11 +12551,16 @@ sub set_vertical_tightness_flags {
     # Vertical Tightness Flags Section 3:
     # Handle type 4, a closing block brace on the last line of the batch Check
     # for a last line with isolated closing BLOCK curly
+    # Patch: added a check for any new closing side comment which the
+    # -csc option may generate. If it exists, there will be a side comment
+    # so we cannot combine with a brace on the next line.  This issue
+    # occurs for the combination -scbb and -csc is used.
     #--------------------------------------------------------------
     elsif ($rOpts_stack_closing_block_brace
         && $ibeg eq $iend
         && $block_type_to_go[$iend]
-        && $types_to_go[$iend] eq '}' )
+        && $types_to_go[$iend] eq '}'
+        && ( !$closing_side_comment || $n < $n_last_line ) )
     {
         my $spaces = $rOpts_block_brace_tightness == 2 ? 0 : 1;
         @{$rvertical_tightness_flags} =
