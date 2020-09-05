@@ -459,14 +459,16 @@ sub trim {
 }
 
 sub max {
-    my $max  = shift; 
-    for (@_) { $max = $_ > $max ? $_ : $max };
+    my (@vals) = @_;
+    my $max = shift @vals;
+    for (@vals) { $max = $_ > $max ? $_ : $max }
     return $max;
 }
 
 sub min {
-    my $min  = shift; 
-    for (@_) { $min = $_ < $min ? $_ : $min };
+    my (@vals) = @_;
+    my $min = shift @vals;
+    for (@vals) { $min = $_ < $min ? $_ : $min }
     return $min;
 }
 
