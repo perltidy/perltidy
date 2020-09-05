@@ -3371,7 +3371,9 @@ sub respace_tokens {
         {
             $Saw_VERSION_in_this_file = 1;
             write_logfile_entry("passing VERSION line; -npvl deactivates\n");
-            $CODE_type = 'VER';
+
+            # This code type has lower priority than others
+            $CODE_type = 'VER' unless ($CODE_type);
         }
         return $CODE_type;
     }
