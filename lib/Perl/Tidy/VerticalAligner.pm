@@ -4137,6 +4137,18 @@ sub get_output_line_number {
         my $line        = $leading_string . $str;
         my $line_length = $leading_string_length + $str_length;
 
+	# Safety check: be sure that a line to be cached as a stacked block
+	# brace line ends in the appropriate opening or closing block brace.
+	# This should always be the case if the caller set flags correctly.
+	# Code '3' is for -sobb, code '4' is for -scbb.
+        if ($open_or_close) {
+            if (   $open_or_close == 3 && $line !~ /\{\s*$/
+                || $open_or_close == 4 && $line !~ /\}\s*$/ )
+            {
+                $open_or_close = 0;
+            }
+        } 
+
         # write or cache this line
         if ( !$open_or_close || $side_comment_length > 0 ) {
             $self->valign_output_step_C( $line, $leading_space_count, $level );
