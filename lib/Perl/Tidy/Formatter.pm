@@ -14853,6 +14853,13 @@ sub pad_array_to_go {
                                 # we are breaking after an opening brace, paren,
                                 # so don't break before it too
                                 && $i_start_2 ne $i_opening
+
+                                # Defensive coding check: be sure the index is valid.
+                                # FIXME: We should probably be using K indexes for 'starting_index'
+                                # so that the object can remain valid between batches.
+                                # See test problem: random_issues/random_487.pro
+                                && $i_start_2 >= 0
+                                && $i_start_2 <= $max_index_to_go
                               )
                             {
 
