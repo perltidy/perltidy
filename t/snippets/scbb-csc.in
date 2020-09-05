@@ -1,0 +1,33 @@
+sub perlmod_install_advice
+{
+my(@mod) = @_;
+if ($auto_install_cpan) {
+require AutoInstall::Tk;
+my $r = AutoInstall::Tk::do_autoinstall_tk(@mod);
+if ($r > 0) {
+for my $mod (@mod) {
+warn "Re-require $mod...\n";
+eval "require $mod";
+die __LINE__ . ": $@" if $@;
+}}
+} 
+else {
+my $shell = ($os eq 'win' ? M"Eingabeaufforderung" : M"Shell");
+status_message
+(
+Mfmt(
+(
+@mod > 1
+? "Die fehlenden Perl-Module können aus der %s mit dem Kommando\n"
+: "Das fehlende Perl-Modul kann aus der %s mit dem Kommando\n"
+),
+$shell
+)
+.
+"    perl -MCPAN -e \"install " . join(", ", @mod) . "\"\n" .
+"aus dem Internet geholt und installiert werden.\n",
+"err"
+);
+} 
+} 
+
