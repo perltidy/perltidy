@@ -7421,7 +7421,7 @@ sub copy_token_as_type {
         # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
         # returns 0 if $ibeg > $iend (shouldn't happen)
         my ( $ibeg, $iend ) = @_;
-        return 0 if ( $iend < 0 || $ibeg > $iend );
+        return 0 if ( !defined($iend) || $iend < 0 || $ibeg > $iend );
         return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
         return $summed_lengths_to_go[ $iend + 1 ] -
           $summed_lengths_to_go[$ibeg];
@@ -11757,7 +11757,10 @@ sub lookup_opening_indentation {
                 my $token         = $rLL->[$K_next_nonblank]->[_TOKEN_];
                 my $welded = $self->weld_len_left( $type_sequence, $token );
                 if ($welded) {
-                    $ibeg_weld_fix = $ibeg + ( $K_next_nonblank - $K_beg );
+                    my $itest = $ibeg + ( $K_next_nonblank - $K_beg );
+                    if ( $itest <= $max_index_to_go ) {
+                        $ibeg_weld_fix = $itest;
+                    }
                     $type_beg = ')';    ##$token_beg;
                 }
             }
