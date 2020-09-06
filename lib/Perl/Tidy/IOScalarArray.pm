@@ -14,7 +14,7 @@ package Perl::Tidy::IOScalarArray;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20200822';
+our $VERSION = '20200907';
 
 sub new {
     my ( $package, $rarray, $mode ) = @_;

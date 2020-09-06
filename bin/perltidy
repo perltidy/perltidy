@@ -851,9 +851,10 @@ The default is not to do this, indicated by B<-nicb>.
 =item B<-nib>, B<--non-indenting-braces>
 
 Normally, lines of code contained within a pair of block braces receive one
-additional level of indentation.  If this flag is set, perltidy will look for
-opening block braces which are followed by a special side comment, which is
-B<#<<<> by default.  If found, the code between this opening brace and its
+additional level of indentation.  This flag, which is enabled by default, 
+causes perltidy to look for
+opening block braces which are followed by a special side comment. This special
+side comment is B<#<<<> by default.  If found, the code between this opening brace and its
 corresponding closing brace will not be given the normal extra indentation
 level.  For example:
 
@@ -864,23 +865,24 @@ level.  For example:
 
             }
 
-            # this line cannot 'see' $var;
+            # this line does not 'see' $var;
 
 This can be useful, for example, when combining code from different files.
 Different sections of code can be placed within braces to keep their lexical
-variables from being visible to the end of the file.  To keep the new blocks
-from causing all of their contained code to be reformatted if you run perltidy, 
-you can mark the opening braces with this special side comment.
+variables from being visible to the end of the file.  To keep the new braces
+from causing all of their contained code to be indented if you run perltidy,
+and possibly introducing new line breaks in long lines, you can mark the
+opening braces with this special side comment.
 
 Only the opening brace needs to be marked, since perltidy knows where the
 closing brace is.  Braces contained within marked braces may also be marked
 as non-indenting.
 
-This feature is on by default.  If your code happens to have some opening
-braces followed by '#<<<', and you don't want this, you can use B<-nnib> to
-deactivate it.  To make it easy to remember, the default string is the same as
-the string for starting a B<format-skipping> section. There is no confusion
-because in that case it is for a block comment rather than a side-comment. 
+If your code happens to have some opening braces followed by '#<<<', and you
+don't want this behavior, you can use B<-nnib> to deactivate it.  To make it
+easy to remember, the default string is the same as the string for starting a
+B<format-skipping> section. There is no confusion because in that case it is
+for a block comment rather than a side-comment. 
 
 The special side comment can be changed with the next parameter.
 
@@ -4110,7 +4112,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20200822
+This man page documents perltidy version 20200907
 
 =head1 BUG REPORTS
 

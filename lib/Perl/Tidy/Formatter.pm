@@ -12,7 +12,7 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20200822';
+our $VERSION = '20200907';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -902,8 +902,9 @@ sub keyword_group_scan {
 Unexpected value for -kgbs: '$Opt_size'; expecting 'min' or 'min.max'; 
 ignoring all -kgb flags
 EOM
-	# Turn this option off so that this message does not keep repeating
-	# during iterations and other files.
+
+        # Turn this option off so that this message does not keep repeating
+        # during iterations and other files.
         $rOpts->{'keyword-group-blanks-size'} = "";
         return $rhash_of_desires;
     }
@@ -1232,11 +1233,11 @@ EOM
         ( $K_first, $K_last ) = @{$rK_range};
         if ( !defined($K_first) ) {
 
-            # Unexpected blank line..shouldn't happen
-            # $rK_range should be defined for line type CODE
-            Warn(
-"Programming Error: Unexpected Blank Line in sub 'keyword_group_scan'. Ignoring"
-            );
+            # Somewhat unexpected blank line..
+            # $rK_range is normally defined for line type CODE, but this can
+            # happen for example if the input line was a single semicolon which
+            # is being deleted.  In that case there was code in the input
+            # file but it is not being retained. So we can silently return.
             return $rhash_of_desires;
         }
 
@@ -4623,7 +4624,7 @@ sub non_indenting_braces {
     my @seqno_stack;
 
     my $is_non_indenting_brace = sub {
-        my ($KK)       = @_;
+        my ($KK) = @_;
 
         # looking for an opening block brace
         my $token      = $rLL->[$KK]->[_TOKEN_];
@@ -4631,13 +4632,13 @@ sub non_indenting_braces {
         return unless ( $token eq '{' && $block_type );
 
         # followed by a comment
-        my $K_sc       = $self->K_next_nonblank($KK);
+        my $K_sc = $self->K_next_nonblank($KK);
         return unless defined($K_sc);
         my $type_sc = $rLL->[$K_sc]->[_TYPE_];
         return unless ( $type_sc eq '#' );
 
         # on the same line
-        my $line_index = $rLL->[$KK]->[_LINE_INDEX_];
+        my $line_index    = $rLL->[$KK]->[_LINE_INDEX_];
         my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
         return unless ( $line_index_sc == $line_index );
 
@@ -12663,11 +12664,11 @@ sub get_seqno {
         my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
         my $ralignment_type_to_go;
 
-	# Initialize the alignment array. Note that closing side comments can
-	# insert up to 2 additional tokens beyond the original
-	# $max_index_to_go, so we need to check ri_last for the last index.
+        # Initialize the alignment array. Note that closing side comments can
+        # insert up to 2 additional tokens beyond the original
+        # $max_index_to_go, so we need to check ri_last for the last index.
         my $max_line = @{$ri_first} - 1;
-        my $iend = $ri_last->[$max_line];
+        my $iend     = $ri_last->[$max_line];
         if ( $iend < $max_index_to_go ) { $iend = $max_index_to_go }
         for my $i ( 0 .. $iend ) {
             $ralignment_type_to_go->[$i] = '';
@@ -14861,10 +14862,10 @@ sub pad_array_to_go {
                                 # so don't break before it too
                                 && $i_start_2 ne $i_opening
 
-                                # Defensive coding check: be sure the index is valid.
-                                # FIXME: We should probably be using K indexes for 'starting_index'
-                                # so that the object can remain valid between batches.
-                                # See test problem: random_issues/random_487.pro
+             # Defensive coding check: be sure the index is valid.
+             # FIXME: We should probably be using K indexes for 'starting_index'
+             # so that the object can remain valid between batches.
+             # See test problem: random_issues/random_487.pro
                                 && $i_start_2 >= 0
                                 && $i_start_2 <= $max_index_to_go
                               )

@@ -7,7 +7,7 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
-our $VERSION = '20200822';
+our $VERSION = '20200907';
 
 sub new {
 

@@ -649,6 +649,39 @@
 <p>The default is not to do this, indicated by <b>-nicb</b>.</p>
 
 </dd>
+<dt id="nib---non-indenting-braces"><b>-nib</b>, <b>--non-indenting-braces</b></dt>
+<dd>
+
+<p>Normally, lines of code contained within a pair of block braces receive one additional level of indentation. This flag, which is enabled by default, causes perltidy to look for opening block braces which are followed by a special side comment. This special side comment is <b>#&lt;&lt;&lt;</b> by default. If found, the code between this opening brace and its corresponding closing brace will not be given the normal extra indentation level. For example:</p>
+
+<pre><code>            { #&lt;&lt;&lt;   a closure to contain lexical vars
+
+            my $var;  # this line does not get one level of indentation
+            ...
+
+            }
+
+            # this line does not &#39;see&#39; $var;</code></pre>
+
+<p>This can be useful, for example, when combining code from different files. Different sections of code can be placed within braces to keep their lexical variables from being visible to the end of the file. To keep the new braces from causing all of their contained code to be indented if you run perltidy, and possibly introducing new line breaks in long lines, you can mark the opening braces with this special side comment.</p>
+
+<p>Only the opening brace needs to be marked, since perltidy knows where the closing brace is. Braces contained within marked braces may also be marked as non-indenting.</p>
+
+<p>If your code happens to have some opening braces followed by &#39;#&lt;&lt;&lt;&#39;, and you don&#39;t want this behavior, you can use <b>-nnib</b> to deactivate it. To make it easy to remember, the default string is the same as the string for starting a <b>format-skipping</b> section. There is no confusion because in that case it is for a block comment rather than a side-comment.</p>
+
+<p>The special side comment can be changed with the next parameter.</p>
+
+</dd>
+<dt id="nibp-s---non-indenting-brace-prefix-s"><b>-nibp=s</b>, <b>--non-indenting-brace-prefix=s</b></dt>
+<dd>
+
+<p>The <b>-nibp=string</b> parameter may be used to change the marker for non-indenting braces. The default is equivalent to -nibp=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. This string is the leading text of a regex pattern that is constructed by appending pre-pending a &#39;^&#39; and appending a&#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
+
+<p>For example, to match the side comment &#39;#++&#39;, the parameter would be</p>
+
+<pre><code>  -nibp=&#39;#\+\+&#39;</code></pre>
+
+</dd>
 <dt id="olq---outdent-long-quotes"><b>-olq</b>, <b>--outdent-long-quotes</b></dt>
 <dd>
 
@@ -1382,6 +1415,8 @@
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
  #&gt;&gt;&gt;</code></pre>
+
+<p>Format skipping begins when a format skipping comment is seen and continues until either a format-skipping end pattern is found or until the end of file.</p>
 
 <p>The comment markers may be placed at any location that a block comment may appear. If they do not appear to be working, use the -log flag and examine the <i>.LOG</i> file. Use <b>-nfs</b> to disable this feature.</p>
 
@@ -3123,7 +3158,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20200822</p>
+<p>This man page documents perltidy version 20200907</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

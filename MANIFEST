@@ -18,6 +18,7 @@ examples/ex_mp.pl
 examples/filter_example.in
 examples/filter_example.pl
 examples/find_naughty.pl
+examples/fix-scbb-csc-bug.pl
 examples/lextest
 examples/perlcomment.pl
 examples/perllinetype.pl

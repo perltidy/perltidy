@@ -13,12 +13,16 @@ use warnings;
 # I typically run it in the background from a bash script, something like this
 # nohup nice -n19 perltidy_random_parameters.pl $filename $number
 
+# This creates a lot of output, so run it in a temporary directory and
+# delete everything after checking the results and saving anything noteworthy.
+
 # TODO:
 # - This currently runs the perltidy binary.  Add an option to run call the
 #   module directly.
-# - Add additional garbage strings
-# - The parameters are hardwired but could be obtained directly from perltidy
+# - The parameters are hardwired but should be obtained directly from perltidy
 #   so that they are always up to date.
+# - Simplify the summary: filter essential results to a spreadsheet
+# - Add some additional garbage strings
 
 my $usage = <<EOM;
 Run perltidy repeatedly on a selected file with randomly generated parameters:
@@ -31,143 +35,303 @@ Num is the number of times, default 1000;
 You can stop the run any time by creating a file "stop.now"
 EOM
 
-my $ifile          = $ARGV[0];
-my $ifile_original = $ifile;
-my $max_cases      = $ARGV[1];
-if ( !$ifile || $max_cases <= 0 ) { die "$usage" }
-my $stop_file = 'stop.now';
-if ( -e $stop_file ) { unlink $stop_file }
-my $ifile_size = -s $ifile;
-
-# Set this flag to have each run format the output of the previous
+# 'Chaining' means the next run formats the output of the previous
 # run instead of formatting the original file.
-my $CHAIN_MODE = 1;
+# 0 = no chaining
+# 1 = always chain unless error
+# 2 = random chaining
+my $CHAIN_MODE = 2;
 
-my $case                  = "000";
-my $error_count           = 0;
-my $missing_ofile_count   = 0;
-my $missing_chkfile_count = 0;
-my ( $ofile_size_min,   $ofile_size_max );
-my ( $ofile_case_min,   $ofile_case_max );
-my ( $chkfile_size_min, $chkfile_size_max );
-my ( $chkfile_case_min, $chkfile_case_max );
-my $error_flag    = 0;
-my $restart_count = 0;
+my @files = @ARGV;
+if ( !@files ) { die "$usage" }
 
-for ( 1 .. $max_cases ) {
-    $case += 1;
-    print STDERR "\n-----\nCase: $case\n";
-    print STDOUT "\n-----\nCase: $case\n";
-    my $profile            = "profile.$case";
-    my $rrandom_parameters = get_random_parameters();
-    open OUT, ">", $profile || die "cannot open $profile: $!\n";
-    foreach ( @{$rrandom_parameters} ) {
-        print OUT "$_\n";
-    }
-    close OUT;
-    my $ofile   = "ofile.$case";
-    my $chkfile = "chkfile.$case";
-    system "perltidy < $ifile > $ofile -pro=$profile";
-    my $efile   = "perltidy.ERR";
-    my $logfile = "perltidy.LOG";
-    if ( -e $efile )   { rename $efile,   "ERR.$case" }
-    if ( -e $logfile ) { rename $logfile, "LOG.$case" }
-
-    if ( !-e $ofile ) {
-        print STDERR "**Warning** missing output $ofile\n";
-        $missing_ofile_count++;
-        $error_flag = 1;
-    }
-
-    else {
-        my $ofile_size = -s $ofile;
-        if ( !defined($ofile_size_min) ) {
-            $ofile_size_min = $ofile_size_max = $ofile_size;
-            $ofile_case_min = $ofile_case_max = $ofile;
-        }
-        else {
-            if ( $ofile_size < $ofile_size_min ) {
-                $ofile_size_min = $ofile_size;
-                $ofile_case_min = $ofile;
-            }
-            if ( $ofile_size > $ofile_size_max ) {
-                $ofile_size_max = $ofile_size;
-                $ofile_case_max = $ofile;
-            }
-        }
-    }
-
-    # run perltidy on the output to see if it can be reformatted
-    # without errors
-    system "perltidy < $ofile > $chkfile";
-    my $err;
-    if ( -e $efile ) {
-        rename $efile, "$chkfile.ERR";
-        print STDERR "**Error reformatting** see $chkfile.ERR\n";
-        $error_count++;
-        $err = 1;
-    }
-    if ( !-e $chkfile ) {
-        print STDERR "**Warning** missing checkfile output $chkfile\n";
-        $missing_chkfile_count++;
-        $err = 1;
-    }
-    else {
-        my $chkfile_size = -s $chkfile;
-        if ( !defined($chkfile_size_min) ) {
-            $chkfile_size_min = $chkfile_size_max = $chkfile_size;
-            $chkfile_case_min = $chkfile_case_max = $chkfile;
-        }
-        else {
-            if ( $chkfile_size < $chkfile_size_min ) {
-                $chkfile_size_min = $chkfile_size;
-                $chkfile_case_min = $chkfile;
-            }
-            if ( $chkfile_size > $chkfile_size_max ) {
-                $chkfile_size_max = $chkfile_size;
-                $chkfile_case_max = $chkfile;
-            }
-        }
-    }
-
-    if ($CHAIN_MODE) {
-        $ifile = $err ? $ifile_original : $ofile;
-        $restart_count++ if ($err);
-    }
-
-    if ( -e $stop_file ) {
-        print STDERR "$stop_file seen; exiting\n";
-    }
+my $max_cases = pop @files;
+if ( $max_cases !~ /^\d+$/ ) {
+    push @files, $max_cases;
+    $max_cases = 100;
 }
 
-# Report results
-my $mode =
-  $CHAIN_MODE ? "chain mode, $restart_count restarts" : 'non-chain mode';
+if ( !@files ) { die "$usage" }
+my $file_count = 0;
+my $rsummary = [];
+my @problems;
+
 print STDERR <<EOM;
-Run Summary:
-$ifile_original: starting input file
-running in $mode
+Chain mode flag: $CHAIN_MODE  (0=no, 1=always, 2=random)
+
+EOM
+
+
+my $stop_file = 'stop.now';
+if ( -e $stop_file ) { unlink $stop_file }
+foreach my $file (@files) {
+    next unless -e $file;
+    $file_count++;
+    my $ifile          = $file;
+    my $ifile_original = $ifile;
+    my $ifile_size = -s $ifile;
+
+    my $case                  = 0;
+    my $error_count           = 0;
+    my $missing_ofile_count   = 0;
+    my $missing_chkfile_count = 0;
+    my ( $ofile_size_min,   $ofile_size_max );
+    my ( $ofile_case_min,   $ofile_case_max );
+    my ( $efile_size_min,   $efile_size_max ) = ( 0,  0 );
+    my ( $efile_case_min,   $efile_case_max ) = ( "", "" );
+    my ( $chkfile_size_min, $chkfile_size_max );
+    my ( $chkfile_case_min, $chkfile_case_max );
+
+    my $error_flag    = 0;
+    my $restart_count = 0;
+    my $efile_count   = 0;
+    my $has_starting_error;
+
+  RUN:
+    for ( 1 .. $max_cases ) {
+        $case += 1;
+        print STDERR "\n-----\nCase $case, File $file_count, File name: '$ifile'\n";
+
+        # Use same random parameters for second and later files..
+        my $profile = "profile.$case";
+        if ( $file_count == 1 ) {
+
+            # use default parameters on first case. That way we can check
+            # if a file produces an error output
+            my $rrandom_parameters;
+            if ( $case > 1 ) {
+                $rrandom_parameters = get_random_parameters();
+            }
+            open OUT, ">", $profile || die "cannot open $profile: $!\n";
+            foreach ( @{$rrandom_parameters} ) {
+                print OUT "$_\n";
+            }
+            close OUT;
+        }
+
+        my $ext = $case;
+        if ( @files > 1 ) { $ext .= ".$file_count" }
+        my $fno = @files > 1 ? ".$file_count" : "";
+
+        my $ofile   = "ofile.$ext";
+        my $chkfile = "chkfile.$ext";
+        system "perltidy < $ifile > $ofile -pro=$profile";
+        my $efile   = "perltidy.ERR";
+        my $logfile = "perltidy.LOG";
+        if ( -e $efile )   { rename $efile,   "ERR.$ext" }
+        if ( -e $logfile ) { rename $logfile, "LOG.$ext" }
+
+        if ( !-e $ofile ) {
+            print STDERR "**Warning** missing output $ofile\n";
+            $missing_ofile_count++;
+            $error_flag = 1;
+        }
+
+        else {
+            my $ofile_size = -s $ofile;
+            if ( !defined($ofile_size_min) ) {
+                $ofile_size_min = $ofile_size_max = $ofile_size;
+                $ofile_case_min = $ofile_case_max = $ofile;
+            }
+            else {
+                if ( $ofile_size < $ofile_size_min ) {
+                    $ofile_size_min = $ofile_size;
+                    $ofile_case_min = $ofile;
+                }
+                if ( $ofile_size > $ofile_size_max ) {
+                    $ofile_size_max = $ofile_size;
+                    $ofile_case_max = $ofile;
+                }
+            }
+        }
+
+        my $efile_size = 0;
+        if ( -e $efile ) {
+            $efile_size = -s $efile;
+            $efile_count++;
+            if ( !defined($efile_size_min) ) {
+                $efile_size_min = $efile_size_max = $efile_size;
+                $efile_case_min = $efile_case_max = $efile;
+            }
+            else {
+                if ( $efile_size < $efile_size_min ) {
+                    $efile_size_min = $efile_size;
+                    $efile_case_min = $efile;
+                }
+                if ( $efile_size > $efile_size_max ) {
+                    $efile_size_max = $efile_size;
+                    $efile_case_max = $efile;
+                }
+            }
+        }
+
+        # run perltidy on the output to see if it can be reformatted
+        # without errors
+        system "perltidy < $ofile > $chkfile";
+        my $err;
+        if ( -e $efile ) {
+            rename $efile, "$chkfile.ERR";
+            $err = 1;
+            if ($case == 1) {
+                $has_starting_error=1;
+            }
+            elsif ( !$has_starting_error ) {
+                print STDERR "**Error reformatting** see $chkfile.ERR\n";
+                $error_count++;
+            }
+        }
+        if ( !-e $chkfile ) {
+            print STDERR "**Warning** missing checkfile output $chkfile\n";
+            $missing_chkfile_count++;
+            $err = 1;
+        }
+        else {
+            my $chkfile_size = -s $chkfile;
+            if ( !defined($chkfile_size_min) ) {
+                $chkfile_size_min = $chkfile_size_max = $chkfile_size;
+                $chkfile_case_min = $chkfile_case_max = $chkfile;
+            }
+            else {
+                if ( $chkfile_size < $chkfile_size_min ) {
+                    $chkfile_size_min = $chkfile_size;
+                    $chkfile_case_min = $chkfile;
+                }
+                if ( $chkfile_size > $chkfile_size_max ) {
+                    $chkfile_size_max = $chkfile_size;
+                    $chkfile_case_max = $chkfile;
+                }
+            }
+        }
+
+        $ifile = $ifile_original;
+        if ( $CHAIN_MODE && !$err ) {
+            if ( $CHAIN_MODE == 1 || int( rand(1) + 0.5 ) ) {
+                { $ifile = $ofile }
+            }
+        }
+
+        if ( -e $stop_file ) {
+            print STDERR "$stop_file seen; exiting\n";
+            last RUN;
+        }
+    }
+
+    $rsummary->[$file_count] = {
+        input_name            => $ifile_original,
+        input_size            => $ifile_size,
+        error_count           => $error_count,
+        efile_count           => $efile_count,
+        missing_ofile_count   => $missing_ofile_count,
+        missing_chkfile_count => $missing_chkfile_count,
+        minimum_output_size   => $ofile_size_min,
+        maximum_output_size   => $ofile_size_max,
+        minimum_output_case   => $ofile_case_min,
+        maximum_output_case   => $ofile_case_max,
+        minimum_rerun_size    => $chkfile_size_min,
+        maximum_rerun_size    => $chkfile_size_max,
+        minimum_rerun_case    => $chkfile_case_min,
+        maximum_rerun_case    => $chkfile_case_max,
+        minimum_error_size    => $efile_size_min,
+        maximum_error_size    => $efile_size_max,
+        minimum_error_case    => $efile_case_min,
+        maximum_error_case    => $efile_case_max,
+    };
+
+    report_results($rsummary->[$file_count]);
+
+    # Save anything that looks like it needs attention
+    if (   $error_count
+        || $missing_ofile_count
+        || $missing_chkfile_count
+        || $ofile_size_min == 0
+        || $chkfile_size_min == 0 )
+    {
+        push @problems, $file_count;
+    }
+
+} # End loop over files
+
+if (@problems) {
+    print STDERR <<EOM;
+
+=============================
+SUMMARY OF POSSIBLE PROBLEMS:
+=============================
+EOM
+
+    foreach my $nf (@problems) {
+        report_results( $rsummary->[$nf] );
+    }
+}
+else {
+    print STDERR <<EOM;
+
+========================
+No obvious problems seen
+========================
+EOM
+
+}
+
+print STDERR <<EOM;
+
+Be sure to search STDERR for 'uninitialized' and other warnings
+EOM
+
+
+sub report_results {
+
+    my ( $rh ) = @_;
+
+    my $ifile_original        = $rh->{input_name};
+    my $ifile_size            = $rh->{input_size};
+    my $error_count           = $rh->{error_count};
+    my $efile_count           = $rh->{efile_count};
+    my $missing_ofile_count   = $rh->{missing_ofile_count};
+    my $missing_chkfile_count = $rh->{missing_chkfile_count};
+    my $ofile_size_min        = $rh->{minimum_rerun_size};
+    my $ofile_size_max        = $rh->{maximum_rerun_size};
+    my $ofile_case_min        = $rh->{minimum_rerun_case};
+    my $ofile_case_max        = $rh->{maximum_rerun_case};
+    my $chkfile_size_min      = $rh->{minimum_output_size};
+    my $chkfile_size_max      = $rh->{maximum_output_size};
+    my $chkfile_case_min      = $rh->{minimum_output_case};
+    my $chkfile_case_max      = $rh->{maximum_output_case};
+    my $efile_size_min        = $rh->{minimum_error_size};
+    my $efile_size_max        = $rh->{maximum_error_size};
+    my $efile_case_min        = $rh->{minimum_error_case};
+    my $efile_case_max        = $rh->{maximum_error_case};
+
+    print STDERR <<EOM;
+Results summary for Input File: '$ifile_original'
+Size : $ifile_size
 $error_count files had errors when reformatted
 $missing_ofile_count output files were missing 
 $missing_chkfile_count check output files were missing
-
-Size of test file: $ifile_size
 EOM
 
-print STDERR <<EOM if ( defined($ofile_size_min) );
+    print STDERR <<EOM if ( defined($ofile_size_min) );
+
 Minimum output size: $ofile_size_min for case $ofile_case_min
 Maximum output size: $ofile_size_max for case $ofile_case_max
 EOM
 
-print STDERR <<EOM if ( defined($chkfile_size_min) );
+    print STDERR <<EOM if ( defined($chkfile_size_min) );
+
 Minimum rerun size: $chkfile_size_min for case $chkfile_case_min
 Maximum rerun size: $chkfile_size_max for case $chkfile_case_max
 EOM
 
-print STDERR <<EOM;
+    print STDERR <<EOM if ( defined($efile_size_min) );
 
-Be sure to search for 'unitialized' in STDERR
+Number of error files: $efile_count 
+Minimum error file size: $efile_size_min for case $efile_case_min
+Maximum error file size: $efile_size_max for case $efile_case_max
 EOM
+    return;
+}
+
+
 
 sub get_random_parameters {
 
@@ -479,7 +643,8 @@ sub get_random_parameters {
         ':s' => 'OPTIONAL STRING',
     );
 
-    my @random_words = qw(bannanas sub train apples);
+    my @random_words = qw(bannanas sub subaru train 1x =+ !);
+
     my @operators =
       qw(% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=);
     my @keywords = qw(my our local do while if  garbage1 34 );
@@ -545,13 +710,12 @@ sub get_random_parameters {
         'default-tabsize'          => [ 0, 8 ],
         'entab-leading-whitespace' => [ 0, 8 ],
 
-        # TODO: FILL thESE with multiple random operators
-        'want-break-after'   => \@operators,    #['+', '-', '*', '=', '.'],
-        'want-break-before'  => \@operators,    #['+', '-', '*'],
-        'want-left-space'    => \@operators,    #['+', '-', '*'],
-        'want-right-space'   => \@operators,    #['+', '-', '*'],
-        'nowant-left-space'  => \@operators,    #['+', '-', '*'],
-        'nowant-right-space' => \@operators,    #['+', '-', '*'],
+        'want-break-after'   => \@operators,
+        'want-break-before'  => \@operators,
+        'want-left-space'    => \@operators,
+        'want-right-space'   => \@operators,
+        'nowant-left-space'  => \@operators,
+        'nowant-right-space' => \@operators,
 
         #'keyword-group-blanks-list=s
         'keyword-group-blanks-size' => [ 0, 2, 4, 7, 10, 2.8, 1.8 ],
@@ -619,10 +783,21 @@ sub get_random_parameters {
       html
       notidy
       format
+      help
+      version
       starting-indentation-level
       tee-block-comments
       tee-pod
       tee-side-comments
+      dump-cuddled-block-list
+      dump-defaults
+      dump-long-names
+      dump-options
+      dump-profile
+      dump-short-names
+      dump-token-types
+      dump-want-left-space
+      dump-want-right-space
     );
 
     my %skip;
@@ -705,31 +880,4 @@ sub get_random_parameters {
         }
     }
     return \@random_parameters;
-}
-
-sub get_num {
-    my ( $msg, $default ) = @_;
-    if ( defined($default) ) {
-        $msg =~ s/:$//;
-        $msg .= " (<cr>=$default):";
-    }
-    my $ans = query($msg);
-    $ans = $default if ( defined($default) && $ans eq "" );
-    my $val = eval($ans);
-    if ($@) { warn $@; $val = $ans; }
-    return $val;
-}
-
-sub queryu {
-    return uc query(@_);
-}
-
-sub query {
-    my ($msg) = @_;
-    print $msg;
-    my $ans = <STDIN>;
-    chomp $ans;
-
-    #my $val=$ans;
-    return $ans;
 }
