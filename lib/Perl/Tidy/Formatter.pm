@@ -35,6 +35,24 @@ sub Exit {
     croak "unexpected return from Perl::Tidy::Exit";
 }
 
+sub AUTOLOAD {
+
+    # Catch any undefined sub calls so that we are sure to get
+    # some diagnostic information.  This sub should never be called
+    # except for a programming error.
+    our $AUTOLOAD;
+    my ( $pkg, $fname, $lno ) = caller();
+    print STDERR <<EOM;
+======================================================================
+Unexpected call to Autoload looking for sub $AUTOLOAD
+Called from package: '$pkg'  
+Called from File '$fname'  at line '$lno'
+This error is probably due to a recent programming change
+======================================================================
+EOM
+    Die("Error exit due to unexpected Autoload call to '$AUTOLOAD'\n");
+}
+
 BEGIN {
 
     # Codes for insertion and deletion of blanks
