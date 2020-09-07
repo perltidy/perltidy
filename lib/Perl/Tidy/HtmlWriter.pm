@@ -57,6 +57,10 @@ EOM
         "Error exit due to unexpected Autoload call to '$AUTOLOAD'\n");
 }
 
+sub DESTROY {
+    # required to avoid call to AUTOLOAD in some versions of perl
+}
+
 sub new {
 
     my ( $class, @args ) = @_;

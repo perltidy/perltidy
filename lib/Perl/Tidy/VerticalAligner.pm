@@ -48,6 +48,11 @@ EOM
         "Error exit due to unexpected Autoload call to '$AUTOLOAD'\n");
 }
 
+sub DESTROY {
+    # required to avoid call to AUTOLOAD in some versions of perl
+}
+
+
 BEGIN {
 
     # Define the fixed indexes for variables in $self, which is an array

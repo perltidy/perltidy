@@ -113,6 +113,10 @@ BEGIN {
     $VERSION = '20200907';
 }
 
+sub DESTROY {
+    # required to avoid call to AUTOLOAD in some versions of perl
+}
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
