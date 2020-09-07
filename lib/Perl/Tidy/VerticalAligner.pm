@@ -1652,6 +1652,11 @@ EOM
                 # remember the column of the terminal ? or { to match with
                 $col_matching_terminal =
                   $base_line->get_column($j_terminal_match);
+
+                # FIXME: It can happen that $j_terminal_match becomes incorrect if
+                # delete_unmatched_tokens deletes some tokens and doesn't update it.
+                # This needs to be fixed.  For now just ignore it.
+                $col_matching_terminal = 0 unless defined($col_matching_terminal);
             }
 
             # -------------------------------------------------------------
@@ -1713,10 +1718,17 @@ EOM
                 if ( $group_line_count == 1 ) {
                     $base_line = $new_line;
                     my $col_now = $base_line->get_column($j_terminal_match);
+
+		    # FIXME: It can happen that $j_terminal_match becomes
+		    # incorrect if delete_unmatched_tokens deletes some tokens
+		    # and doesn't update it.  This needs to be fixed.  For now
+		    # just ignore it.
+                    $col_now = 0 unless defined($col_now);
+
                     my $pad     = $col_matching_terminal - $col_now;
                     my $padding_available =
                       $base_line->get_available_space_on_right();
-                    if ( $pad > 0 && $pad <= $padding_available ) {
+                    if ( $col_now && $pad > 0 && $pad <= $padding_available ) {
                         $base_line->increase_field_width( $j_terminal_match,
                             $pad );
                     }
