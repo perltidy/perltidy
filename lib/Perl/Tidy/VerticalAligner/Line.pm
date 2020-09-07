@@ -140,17 +140,30 @@ our $VERSION = '20200907';
 
     sub get_column {
         my ( $self, $j ) = @_;
-        return $self->{_ralignments}->[$j]->get_column();
+        my $col;
+        my $alignment = $self->{_ralignments}->[$j];
+        if ( defined($alignment) ) {
+            $col = $alignment->get_column();
+        }
+        return $col;
     }
 
     sub get_starting_column {
         my ( $self, $j ) = @_;
-        return $self->{_ralignments}->[$j]->get_starting_column();
+        my $col;
+        my $alignment = $self->{_ralignments}->[$j];
+        if ( defined($alignment) ) {
+            $col = $alignment->get_starting_column();
+        }
+        return $col;
     }
 
     sub increment_column {
         my ( $self, $k, $pad ) = @_;
-        $self->{_ralignments}->[$k]->increment_column($pad);
+        my $alignment = $self->{_ralignments}->[$k];
+        if ( defined($alignment) ) {
+            $alignment->increment_column($pad);
+        }
         return;
     }
 
