@@ -1080,7 +1080,7 @@ comment).
 
 =item B<-aws>,  B<--add-whitespace>
 
-Setting this option allows perltidy to add certain whitespace improve
+Setting this option allows perltidy to add certain whitespace to improve
 code readability.  This is the default. If you do not want any
 whitespace added, but are willing to have some whitespace deleted, use
 B<-naws>.  (Use B<-fws> to leave whitespace completely unchanged).
