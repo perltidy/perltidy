@@ -2644,7 +2644,7 @@ sub generate_options {
         'nostack-opening-tokens' => [qw(nsop nsohb nsosb)],
 
         'sct'                    => [qw(scp schb scsb)],
-        'stack-closing-tokens'   => => [qw(scp schb scsb)],
+        'stack-closing-tokens'   => [qw(scp schb scsb)],
         'nsct'                   => [qw(nscp nschb nscsb)],
         'nostack-closing-tokens' => [qw(nscp nschb nscsb)],
 
