@@ -18,18 +18,19 @@ use warnings;
 
 # TODO:
 # - This currently runs the perltidy binary.  Add an option to run call the
-#   module directly.
-# - The parameters are hardwired but should be obtained directly from perltidy
-#   so that they are always up to date.
-# - Simplify the summary: filter essential results to a spreadsheet
-# - Add some additional garbage strings
+#   module.
+# - Add additional garbage strings for better test coverage
+# - Review all perltidy error output and add some unique string
+#   for easy searching.
+# - Add option to randomly scramble input files
+# - Add option to check extrude/mangle/normal cycle
 
 my $usage = <<EOM;
 Run perltidy repeatedly on a selected file with randomly generated parameters:
 
-    perltidy_random_parameters ifile Num
+    perltidy_random_parameters file1 [file2 [ ... Num
 
-ifile is the name of a perl script to be formatted
+file1 ... are the names of a text to be formatted
 Num is the number of times, default 1000;
 
 You can stop the run any time by creating a file "stop.now"
@@ -110,8 +111,7 @@ foreach my $file (@files) {
         }
 
         my $ext = $case;
-        if ( @files > 1 ) { $ext .= ".$file_count" }
-        my $fno = @files > 1 ? ".$file_count" : "";
+        if ( @files > 1 ) { $ext = "$file_count.$case" }
 
         my $ofile   = "ofile.$ext";
         my $chkfile = "chkfile.$ext";
@@ -181,7 +181,7 @@ foreach my $file (@files) {
             }
         }
         if ( !-e $chkfile ) {
-            print STDERR "**Warning** missing checkfile output $chkfile\n";
+            print STDERR "**WARNING** missing checkfile output $chkfile\n";
             $missing_chkfile_count++;
             $err = 1;
         }
@@ -216,6 +216,7 @@ foreach my $file (@files) {
         }
     }
 
+    # Summary for one file run with all profiles
     $rsummary->[$file_count] = {
         input_name            => $ifile_original,
         input_size            => $ifile_size,
@@ -239,12 +240,24 @@ foreach my $file (@files) {
 
     report_results($rsummary->[$file_count]);
 
-    # Save anything that looks like it needs attention
-    if (   $error_count
+    # Note if it looks like results for this file needs attention
+    if (
+
+        # check file had an error but not with defaults
+        $error_count
+
+        # There were missing output files
         || $missing_ofile_count
+
+        # There were missing output files when rerun with defaults
         || $missing_chkfile_count
+
+        # an output file had zero size
         || $ofile_size_min == 0
-        || $chkfile_size_min == 0 )
+
+        # an output file had zero size when rerun with defaults
+        || $chkfile_size_min == 0
+      )
     {
         push @problems, $file_count;
     }
@@ -331,309 +344,343 @@ EOM
     return;
 }
 
+sub get_parameters {
 
+    # get latest parameters from perltidy
+    use File::Temp qw(tempfile);
+    my ( $fout, $tmpnam ) = File::Temp::tempfile();
+    if (!$fout) {die "cannot get tempfile\n"}
+    my @parameters;
+    system "perltidy --dump-long-names >$tmpnam";
+    open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
+    while ( my $line = <IN> ) {
+        next if $line =~ /#/;
+        chomp $line, push @parameters, $line;
+    }
+    close IN;
+    unlink $tmpnam if (-e $tmpnam);
+    return \@parameters;
+}
+
+{    #<<<
+
+my @parameters;
+
+BEGIN {    #<<<
+
+# Here is a static list of all parameters current as of v.20200907
+# Created with perltidy --dump-long-names
+# Command line long names (passed to GetOptions)
+#---------------------------------------------------------------
+# here is a summary of the Getopt codes:
+# <none> does not take an argument
+# =s takes a mandatory string
+# :s takes an optional string
+# =i takes a mandatory integer
+# :i takes an optional integer
+# ! does not take an argument and may be negated
+#  i.e., -foo and -nofoo are allowed
+# a double dash signals the end of the options list
+#
+#---------------------------------------------------------------
+@parameters = qw(
+  DEBUG!
+  add-newlines!
+  add-semicolons!
+  add-whitespace!
+  assert-tidy!
+  assert-untidy!
+  backlink=s
+  backup-and-modify-in-place!
+  backup-file-extension=s
+  blank-lines-after-opening-block-list=s
+  blank-lines-after-opening-block=i
+  blank-lines-before-closing-block-list=s
+  blank-lines-before-closing-block=i
+  blank-lines-before-packages=i
+  blank-lines-before-subs=i
+  blanks-before-blocks!
+  blanks-before-comments!
+  block-brace-tightness=i
+  block-brace-vertical-tightness-list=s
+  block-brace-vertical-tightness=i
+  brace-left-and-indent!
+  brace-left-and-indent-list=s
+  brace-tightness=i
+  brace-vertical-tightness-closing=i
+  brace-vertical-tightness=i
+  break-after-all-operators!
+  break-at-old-attribute-breakpoints!
+  break-at-old-comma-breakpoints!
+  break-at-old-keyword-breakpoints!
+  break-at-old-logical-breakpoints!
+  break-at-old-method-breakpoints!
+  break-at-old-semicolon-breakpoints!
+  break-at-old-ternary-breakpoints!
+  break-before-all-operators!
+  cachedir=s
+  character-encoding=s
+  check-syntax!
+  closing-brace-indentation=i
+  closing-paren-indentation=i
+  closing-side-comment-else-flag=i
+  closing-side-comment-interval=i
+  closing-side-comment-list=s
+  closing-side-comment-maximum-text=i
+  closing-side-comment-prefix=s
+  closing-side-comment-warnings!
+  closing-side-comments!
+  closing-side-comments-balanced!
+  closing-square-bracket-indentation=i
+  closing-token-indentation=i
+  comma-arrow-breakpoints=i
+  continuation-indentation=i
+  cuddled-block-list-exclusive!
+  cuddled-block-list=s
+  cuddled-break-option=i
+  cuddled-else!
+  default-tabsize=i
+  delete-block-comments!
+  delete-closing-side-comments!
+  delete-old-newlines!
+  delete-old-whitespace!
+  delete-pod!
+  delete-semicolons!
+  delete-side-comments!
+  dump-cuddled-block-list!
+  dump-defaults!
+  dump-long-names!
+  dump-options!
+  dump-profile!
+  dump-short-names!
+  dump-token-types!
+  dump-want-left-space!
+  dump-want-right-space!
+  entab-leading-whitespace=i
+  extended-syntax!
+  file-size-order!
+  fixed-position-side-comment=i
+  force-read-binary!
+  format-skipping!
+  format-skipping-begin=s
+  format-skipping-end=s
+  format=s
+  frames!
+  fuzzy-line-length!
+  hanging-side-comments!
+  help
+  html!
+  html-bold-bareword!
+  html-bold-colon!
+  html-bold-comma!
+  html-bold-comment!
+  html-bold-here-doc-target!
+  html-bold-here-doc-text!
+  html-bold-identifier!
+  html-bold-keyword!
+  html-bold-label!
+  html-bold-numeric!
+  html-bold-paren!
+  html-bold-pod-text!
+  html-bold-punctuation!
+  html-bold-quote!
+  html-bold-semicolon!
+  html-bold-structure!
+  html-bold-subroutine!
+  html-bold-v-string!
+  html-color-background=s
+  html-color-bareword=s
+  html-color-colon=s
+  html-color-comma=s
+  html-color-comment=s
+  html-color-here-doc-target=s
+  html-color-here-doc-text=s
+  html-color-identifier=s
+  html-color-keyword=s
+  html-color-label=s
+  html-color-numeric=s
+  html-color-paren=s
+  html-color-pod-text=s
+  html-color-punctuation=s
+  html-color-quote=s
+  html-color-semicolon=s
+  html-color-structure=s
+  html-color-subroutine=s
+  html-color-v-string=s
+  html-entities!
+  html-italic-bareword!
+  html-italic-colon!
+  html-italic-comma!
+  html-italic-comment!
+  html-italic-here-doc-target!
+  html-italic-here-doc-text!
+  html-italic-identifier!
+  html-italic-keyword!
+  html-italic-label!
+  html-italic-numeric!
+  html-italic-paren!
+  html-italic-pod-text!
+  html-italic-punctuation!
+  html-italic-quote!
+  html-italic-semicolon!
+  html-italic-structure!
+  html-italic-subroutine!
+  html-italic-v-string!
+  html-line-numbers
+  html-linked-style-sheet=s
+  html-pre-only
+  html-src-extension=s
+  html-table-of-contents!
+  html-toc-extension=s
+  htmlroot=s
+  ignore-old-breakpoints!
+  ignore-side-comment-lengths!
+  indent-block-comments!
+  indent-closing-brace!
+  indent-columns=i
+  indent-spaced-block-comments!
+  iterations=i
+  keep-interior-semicolons!
+  keep-old-blank-lines=i
+  keyword-group-blanks-after=i
+  keyword-group-blanks-before=i
+  keyword-group-blanks-delete!
+  keyword-group-blanks-inside!
+  keyword-group-blanks-list=s
+  keyword-group-blanks-repeat-count=i
+  keyword-group-blanks-size=s
+  keyword-paren-inner-tightness-list=s
+  keyword-paren-inner-tightness=i
+  libpods=s
+  line-up-parentheses!
+  logfile!
+  logfile-gap:i
+  logical-padding!
+  long-block-line-count=i
+  look-for-autoloader!
+  look-for-hash-bang!
+  look-for-selfloader!
+  maximum-consecutive-blank-lines=i
+  maximum-fields-per-table=i
+  maximum-line-length=i
+  memoize!
+  minimum-space-to-comment=i
+  no-profile
+  nohtml-style-sheets
+  non-indenting-brace-prefix=s
+  non-indenting-braces!
+  noprofile
+  nospace-after-keyword=s
+  notidy
+  nowant-left-space=s
+  nowant-right-space=s
+  npro
+  one-line-block-nesting=i
+  one-line-block-semicolons=i
+  opening-anonymous-sub-brace-on-new-line!
+  opening-brace-always-on-right!
+  opening-brace-on-new-line!
+  opening-hash-brace-right!
+  opening-paren-right!
+  opening-square-bracket-right!
+  opening-sub-brace-on-new-line!
+  outdent-keyword-list=s
+  outdent-keywords!
+  outdent-labels!
+  outdent-long-comments!
+  outdent-long-quotes!
+  outdent-static-block-comments!
+  outfile=s
+  output-file-extension=s
+  output-line-ending=s
+  output-path=s
+  paren-tightness=i
+  paren-vertical-tightness-closing=i
+  paren-vertical-tightness=i
+  pass-version-line!
+  perl-syntax-check-flags=s
+  pod2html!
+  podflush
+  podheader!
+  podindex!
+  podpath=s
+  podquiet!
+  podrecurse!
+  podroot=s
+  podverbose!
+  preserve-line-endings!
+  profile=s
+  quiet!
+  recombine!
+  short-concatenation-item-length=i
+  show-options!
+  space-after-keyword=s
+  space-backslash-quote=i
+  space-for-semicolon!
+  space-function-paren!
+  space-keyword-paren!
+  space-prototype-paren=i
+  space-terminal-semicolon!
+  square-bracket-tightness=i
+  square-bracket-vertical-tightness-closing=i
+  square-bracket-vertical-tightness=i
+  stack-closing-block-brace!
+  stack-closing-hash-brace!
+  stack-closing-paren!
+  stack-closing-square-bracket!
+  stack-opening-block-brace!
+  stack-opening-hash-brace!
+  stack-opening-paren!
+  stack-opening-square-bracket!
+  standard-error-output!
+  standard-output!
+  starting-indentation-level=i
+  static-block-comment-prefix=s
+  static-block-comments!
+  static-side-comment-prefix=s
+  static-side-comments!
+  stylesheet
+  sub-alias-list=s
+  tabs!
+  tee-block-comments!
+  tee-pod!
+  tee-side-comments!
+  tight-secret-operators!
+  timestamp!
+  title=s
+  trim-pod!
+  trim-qw!
+  use-unicode-gcstring!
+  valign!
+  variable-maximum-line-length!
+  version
+  vertical-tightness-closing=i
+  vertical-tightness=i
+  want-break-after=s
+  want-break-before=s
+  want-left-space=s
+  want-right-space=s
+  warning-output!
+  weld-nested-containers!
+  whitespace-cycle=i
+);
+
+# We can use the above list, but
+# normally we want to update to the latest parameters
+my $UPDATE_PARAMETERS=1;
+
+if ($UPDATE_PARAMETERS) {
+    my $rparameters_current = get_parameters();
+    @parameters = @{$rparameters_current};
+    print STDERR "Updating parameters....\n";
+}
+
+}
 
 sub get_random_parameters {
 
     # return a set of random parameters for perltidy
     my @random_parameters;
-
-    # Created with perltidy --dump-long-names
-
-    # Command line long names (passed to GetOptions)
-    #---------------------------------------------------------------
-    # here is a summary of the Getopt codes:
-    # <none> does not take an argument
-    # =s takes a mandatory string
-    # :s takes an optional string
-    # =i takes a mandatory integer
-    # :i takes an optional integer
-    # ! does not take an argument and may be negated
-    #  i.e., -foo and -nofoo are allowed
-    # a double dash signals the end of the options list
-    #
-    #---------------------------------------------------------------
-    my @parameters = qw(
-      DEBUG!
-      add-newlines!
-      add-semicolons!
-      add-whitespace!
-      assert-tidy!
-      assert-untidy!
-      backlink=s
-      backup-and-modify-in-place!
-      backup-file-extension=s
-      blank-lines-after-opening-block-list=s
-      blank-lines-after-opening-block=i
-      blank-lines-before-closing-block-list=s
-      blank-lines-before-closing-block=i
-      blank-lines-before-packages=i
-      blank-lines-before-subs=i
-      blanks-before-blocks!
-      blanks-before-comments!
-      block-brace-tightness=i
-      block-brace-vertical-tightness-list=s
-      block-brace-vertical-tightness=i
-      brace-left-and-indent!
-      brace-left-and-indent-list=s
-      brace-tightness=i
-      brace-vertical-tightness-closing=i
-      brace-vertical-tightness=i
-      break-after-all-operators!
-      break-at-old-attribute-breakpoints!
-      break-at-old-comma-breakpoints!
-      break-at-old-keyword-breakpoints!
-      break-at-old-logical-breakpoints!
-      break-at-old-method-breakpoints!
-      break-at-old-semicolon-breakpoints!
-      break-at-old-ternary-breakpoints!
-      break-before-all-operators!
-      cachedir=s
-      character-encoding=s
-      check-syntax!
-      closing-brace-indentation=i
-      closing-paren-indentation=i
-      closing-side-comment-else-flag=i
-      closing-side-comment-interval=i
-      closing-side-comment-list=s
-      closing-side-comment-maximum-text=i
-      closing-side-comment-prefix=s
-      closing-side-comment-warnings!
-      closing-side-comments!
-      closing-side-comments-balanced!
-      closing-square-bracket-indentation=i
-      closing-token-indentation=i
-      comma-arrow-breakpoints=i
-      continuation-indentation=i
-      cuddled-block-list-exclusive!
-      cuddled-block-list=s
-      cuddled-break-option=i
-      cuddled-else!
-      default-tabsize=i
-      delete-block-comments!
-      delete-closing-side-comments!
-      delete-old-newlines!
-      delete-old-whitespace!
-      delete-pod!
-      delete-semicolons!
-      delete-side-comments!
-      dump-cuddled-block-list!
-      dump-defaults!
-      dump-long-names!
-      dump-options!
-      dump-profile!
-      dump-short-names!
-      dump-token-types!
-      dump-want-left-space!
-      dump-want-right-space!
-      entab-leading-whitespace=i
-      extended-syntax!
-      file-size-order!
-      fixed-position-side-comment=i
-      force-read-binary!
-      format-skipping!
-      format-skipping-begin=s
-      format-skipping-end=s
-      format=s
-      frames!
-      fuzzy-line-length!
-      hanging-side-comments!
-      help
-      html!
-      html-bold-bareword!
-      html-bold-colon!
-      html-bold-comma!
-      html-bold-comment!
-      html-bold-here-doc-target!
-      html-bold-here-doc-text!
-      html-bold-identifier!
-      html-bold-keyword!
-      html-bold-label!
-      html-bold-numeric!
-      html-bold-paren!
-      html-bold-pod-text!
-      html-bold-punctuation!
-      html-bold-quote!
-      html-bold-semicolon!
-      html-bold-structure!
-      html-bold-subroutine!
-      html-bold-v-string!
-      html-color-background=s
-      html-color-bareword=s
-      html-color-colon=s
-      html-color-comma=s
-      html-color-comment=s
-      html-color-here-doc-target=s
-      html-color-here-doc-text=s
-      html-color-identifier=s
-      html-color-keyword=s
-      html-color-label=s
-      html-color-numeric=s
-      html-color-paren=s
-      html-color-pod-text=s
-      html-color-punctuation=s
-      html-color-quote=s
-      html-color-semicolon=s
-      html-color-structure=s
-      html-color-subroutine=s
-      html-color-v-string=s
-      html-entities!
-      html-italic-bareword!
-      html-italic-colon!
-      html-italic-comma!
-      html-italic-comment!
-      html-italic-here-doc-target!
-      html-italic-here-doc-text!
-      html-italic-identifier!
-      html-italic-keyword!
-      html-italic-label!
-      html-italic-numeric!
-      html-italic-paren!
-      html-italic-pod-text!
-      html-italic-punctuation!
-      html-italic-quote!
-      html-italic-semicolon!
-      html-italic-structure!
-      html-italic-subroutine!
-      html-italic-v-string!
-      html-line-numbers
-      html-linked-style-sheet=s
-      html-pre-only
-      html-src-extension=s
-      html-table-of-contents!
-      html-toc-extension=s
-      htmlroot=s
-      ignore-old-breakpoints!
-      ignore-side-comment-lengths!
-      indent-block-comments!
-      indent-closing-brace!
-      indent-columns=i
-      indent-spaced-block-comments!
-      iterations=i
-      keep-interior-semicolons!
-      keep-old-blank-lines=i
-      keyword-group-blanks-after=i
-      keyword-group-blanks-before=i
-      keyword-group-blanks-delete!
-      keyword-group-blanks-inside!
-      keyword-group-blanks-list=s
-      keyword-group-blanks-repeat-count=i
-      keyword-group-blanks-size=s
-      keyword-paren-inner-tightness-list=s
-      keyword-paren-inner-tightness=i
-      libpods=s
-      line-up-parentheses!
-      logfile!
-      logfile-gap:i
-      logical-padding!
-      long-block-line-count=i
-      look-for-autoloader!
-      look-for-hash-bang!
-      look-for-selfloader!
-      maximum-consecutive-blank-lines=i
-      maximum-fields-per-table=i
-      maximum-line-length=i
-      memoize!
-      minimum-space-to-comment=i
-      no-profile
-      nohtml-style-sheets
-      non-indenting-brace-prefix=s
-      non-indenting-braces!
-      noprofile
-      nospace-after-keyword=s
-      notidy
-      nowant-left-space=s
-      nowant-right-space=s
-      npro
-      one-line-block-nesting=i
-      one-line-block-semicolons=i
-      opening-anonymous-sub-brace-on-new-line!
-      opening-brace-always-on-right!
-      opening-brace-on-new-line!
-      opening-hash-brace-right!
-      opening-paren-right!
-      opening-square-bracket-right!
-      opening-sub-brace-on-new-line!
-      outdent-keyword-list=s
-      outdent-keywords!
-      outdent-labels!
-      outdent-long-comments!
-      outdent-long-quotes!
-      outdent-static-block-comments!
-      outfile=s
-      output-file-extension=s
-      output-line-ending=s
-      output-path=s
-      paren-tightness=i
-      paren-vertical-tightness-closing=i
-      paren-vertical-tightness=i
-      pass-version-line!
-      perl-syntax-check-flags=s
-      pod2html!
-      podflush
-      podheader!
-      podindex!
-      podpath=s
-      podquiet!
-      podrecurse!
-      podroot=s
-      podverbose!
-      preserve-line-endings!
-      profile=s
-      quiet!
-      recombine!
-      short-concatenation-item-length=i
-      show-options!
-      space-after-keyword=s
-      space-backslash-quote=i
-      space-for-semicolon!
-      space-function-paren!
-      space-keyword-paren!
-      space-prototype-paren=i
-      space-terminal-semicolon!
-      square-bracket-tightness=i
-      square-bracket-vertical-tightness-closing=i
-      square-bracket-vertical-tightness=i
-      stack-closing-block-brace!
-      stack-closing-hash-brace!
-      stack-closing-paren!
-      stack-closing-square-bracket!
-      stack-opening-block-brace!
-      stack-opening-hash-brace!
-      stack-opening-paren!
-      stack-opening-square-bracket!
-      standard-error-output!
-      standard-output!
-      starting-indentation-level=i
-      static-block-comment-prefix=s
-      static-block-comments!
-      static-side-comment-prefix=s
-      static-side-comments!
-      stylesheet
-      sub-alias-list=s
-      tabs!
-      tee-block-comments!
-      tee-pod!
-      tee-side-comments!
-      tight-secret-operators!
-      timestamp!
-      title=s
-      trim-pod!
-      trim-qw!
-      use-unicode-gcstring!
-      valign!
-      variable-maximum-line-length!
-      version
-      vertical-tightness-closing=i
-      vertical-tightness=i
-      want-break-after=s
-      want-break-before=s
-      want-left-space=s
-      want-right-space=s
-      warning-output!
-      weld-nested-containers!
-      whitespace-cycle=i
-    );
 
     my %flag_types = (
         '!'  => 'BINARY FLAG',
@@ -881,3 +928,6 @@ sub get_random_parameters {
     }
     return \@random_parameters;
 }
+
+}
+

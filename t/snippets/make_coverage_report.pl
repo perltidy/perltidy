@@ -16,6 +16,10 @@ use Data::Dumper;
 #
 # It will also be useful to output a list of unused parameters
 
+# NOTE: While this gives useful information, I have concluded that due to
+# the large number of parameters and their possible interactions, automated
+# random testing is a better way to be sure perltidy parameters are tested.
+
 my $usage = <<EOM;
 # writes a summary of parameters covered in snippet testing
 # no_coverage.txt has list of parameters not covered
