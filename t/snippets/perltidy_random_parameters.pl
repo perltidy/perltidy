@@ -52,6 +52,9 @@ if ( $max_cases !~ /^\d+$/ ) {
     $max_cases = 100;
 }
 
+# only work on regular files with non-zero length
+@files=grep {-f $_ && !-z $_} @files;
+
 if ( !@files ) { die "$usage" }
 my $file_count = 0;
 my $rsummary = [];
@@ -65,6 +68,7 @@ EOM
 
 my $stop_file = 'stop.now';
 if ( -e $stop_file ) { unlink $stop_file }
+my @chkfile_errors;
 foreach my $file (@files) {
     next unless -e $file;
     $file_count++;
@@ -91,7 +95,6 @@ foreach my $file (@files) {
   RUN:
     for ( 1 .. $max_cases ) {
         $case += 1;
-        print STDERR "\n-----\nCase $case, File $file_count, File name: '$ifile'\n";
 
         # Use same random parameters for second and later files..
         my $profile = "profile.$case";
@@ -115,7 +118,12 @@ foreach my $file (@files) {
 
         my $ofile   = "ofile.$ext";
         my $chkfile = "chkfile.$ext";
-        system "perltidy < $ifile > $ofile -pro=$profile";
+
+        print STDERR "\n-----\nprofile='$profile', ifile='$ifile'\n";
+
+        my $cmd = "perltidy <$ifile >$ofile -pro=$profile";
+        print STDERR "$cmd\n";
+        system $cmd;
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
         if ( -e $efile )   { rename $efile,   "ERR.$ext" }
@@ -167,7 +175,9 @@ foreach my $file (@files) {
 
         # run perltidy on the output to see if it can be reformatted
         # without errors
-        system "perltidy < $ofile > $chkfile";
+        my $cmd2="perltidy <$ofile >$chkfile";
+        system $cmd2;
+        print STDERR "$cmd2\n";
         my $err;
         if ( -e $efile ) {
             rename $efile, "$chkfile.ERR";
@@ -176,8 +186,9 @@ foreach my $file (@files) {
                 $has_starting_error=1;
             }
             elsif ( !$has_starting_error ) {
-                print STDERR "**Error reformatting** see $chkfile.ERR\n";
+                print STDERR "**ERROR reformatting** see $chkfile.ERR\n";
                 $error_count++;
+                push @chkfile_errors, $chkfile; 
             }
         }
         if ( !-e $chkfile ) {
@@ -218,7 +229,7 @@ foreach my $file (@files) {
 
     # Summary for one file run with all profiles
     $rsummary->[$file_count] = {
-        input_name            => $ifile_original,
+        input_original_name   => $ifile_original,
         input_size            => $ifile_size,
         error_count           => $error_count,
         efile_count           => $efile_count,
@@ -275,6 +286,17 @@ EOM
     foreach my $nf (@problems) {
         report_results( $rsummary->[$nf] );
     }
+    if (@chkfile_errors) {
+       local $"=')(';
+       my $num=@chkfile_errors;
+       $num=10 if ($num>10);
+       print STDERR <<EOM;
+Some check files with errors (search above for '**ERROR'):
+(@chkfile_errors[1..$num])
+EOM
+    }
+
+
 }
 else {
     print STDERR <<EOM;
@@ -286,17 +308,24 @@ EOM
 
 }
 
-print STDERR <<EOM;
+# Write a script to automate search for errors
+write_runme();
 
-Be sure to search STDERR for 'uninitialized' and other warnings
+print STDERR <<EOM;
+Next: run 'RUNME.pl' or do this by hand:
+Look for lines longer than 80 characters
+grep 'Thank you' and 'bug in perltidy' in all .ERR files
+Search STDERR for 'uninitialized' and other warnings
 EOM
+
+##FIXME: write out a RUNME.sh script to do the above automatically
 
 
 sub report_results {
 
     my ( $rh ) = @_;
 
-    my $ifile_original        = $rh->{input_name};
+    my $ifile_original        = $rh->{input_original_name};
     my $ifile_size            = $rh->{input_size};
     my $error_count           = $rh->{error_count};
     my $efile_count           = $rh->{efile_count};
@@ -316,8 +345,9 @@ sub report_results {
     my $efile_case_max        = $rh->{maximum_error_case};
 
     print STDERR <<EOM;
-Results summary for Input File: '$ifile_original'
-Size : $ifile_size
+------------------------------------------------
+Original input file: $ifile_original
+ifile size : $ifile_size
 $error_count files had errors when reformatted
 $missing_ofile_count output files were missing 
 $missing_chkfile_count check output files were missing
@@ -931,3 +961,50 @@ sub get_random_parameters {
 
 }
 
+sub write_runme {
+
+    # Write a script RUNME.pl which can find problems in nohup.out
+    my $runme = 'RUNME.pl';
+    if ( open( RUN, '>', $runme ) ) {
+        print RUN <<'EOM';
+#!/usr/bin/perl -w
+my $nohup = "nohup.out";
+my $ofile = "nohup.out.err";
+open( IN,  '<', $nohup ) || die "cannot open $nohup: $!\n";
+open( OUT, '>', $ofile ) || die "cannot open $ofile: $!\n";
+my $lno   = 0;
+my $count = 0;
+my @lines=<IN>;
+my $nlines=@lines;
+foreach my $line (@lines) {
+    $lno++;
+    if ( $line =~ /uninitialized/ || length($line) > 80 ) {
+
+        # ignore last few lines
+        next if ( $lno > $nlines - 4 );
+        $count++;
+        print OUT "$lno: $line";
+        print STDERR "$lno: $line";
+    }
+}
+close IN;
+close OUT;
+my $gfile="nohup.out.grep";
+my $cmd1 = "grep 'Thank you' ERR.* >>$gfile";
+my $cmd2 = "grep 'Thank you' *.ERR >>$gfile";
+system ($cmd1);
+system ($cmd2);
+print STDERR "$count problems seen in $nohup\n";
+if ($count) {
+    print STDERR "please see $ofile\n";
+}
+if (-s $gfile) {
+   print STDERR "please see $gfile\n";
+}
+EOM
+        close RUN;
+        system("chmod +x $runme");
+        print "Wrote '$runme'\n";
+        return;
+    }
+}
