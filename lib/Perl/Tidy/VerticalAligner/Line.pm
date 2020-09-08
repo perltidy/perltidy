@@ -90,6 +90,12 @@ our $VERSION = '20200907';
         return $self->{_j_terminal_match};
     }
 
+    sub set_j_terminal_match {
+        my ( $self, $val ) = @_;
+        $self->{_j_terminal_match} = $val;
+        return;
+    }
+
     sub get_is_terminal_else {
         my $self = shift;
         return $self->{_is_terminal_else};
