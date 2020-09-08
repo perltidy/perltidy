@@ -4018,10 +4018,13 @@ sub weld_cuddled_blocks {
 
                 # We can weld the closing brace to its following word ..
                 my $Ko  = $K_closing_container->{$closing_seqno};
-                my $Kon = $self->K_next_nonblank($Ko);
+                my $Kon;
+                if ( defined($Ko) ) {
+                    $Kon = $self->K_next_nonblank($Ko);
+                }
 
                 # ..unless it is a comment
-                if ( $rLL->[$Kon]->[_TYPE_] ne '#' ) {
+                if ( defined($Ko) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
                     my $dlen =
                       $rLL->[$Kon]->[_CUMULATIVE_LENGTH_] -
                       $rLL->[ $Ko - 1 ]->[_CUMULATIVE_LENGTH_];
