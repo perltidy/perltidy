@@ -6002,6 +6002,13 @@ with these flags.
 EOM
             $rOpts->{'line-up-parentheses'} = 0;
         }
+
+        if ( $rOpts->{'whitespace-cycle'} ) {
+            Warn(<<EOM);
+Conflict: -wc cannot currently be used with the -lp option; ignoring -wc
+EOM
+            $rOpts->{'whitespace-cycle'} = 0;
+        }
     }
 
     # At present, tabs are not compatible with the line-up-parentheses style
