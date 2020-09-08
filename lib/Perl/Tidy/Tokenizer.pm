@@ -218,8 +218,7 @@ Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
 ======================================================================
 EOM
-    Perl::Tidy::Die(
-        "Error exit due to unexpected Autoload call to '$AUTOLOAD'\n");
+    exit 1;
 }
 
 sub check_options {
@@ -2140,12 +2139,15 @@ sub prepare_for_a_new_file {
                   find_angle_operator_termination( $input_line, $i, $rtoken_map,
                     $expecting, $max_token_index );
 
-                if ( $type eq '<' && $expecting == TERM ) {
-                    error_if_expecting_TERM();
-                    interrupt_logfile();
-                    warning("Unterminated <> operator?\n");
-                    resume_logfile();
-                }
+                ##  This message is not very helpful and quite confusing if the above
+                ##  routine decided not to write a message with the line number.
+                ##  if ( $type eq '<' && $expecting == TERM ) {
+                ##      error_if_expecting_TERM();
+                ##      interrupt_logfile();
+                ##      warning("Unterminated <> operator?\n");
+                ##      resume_logfile();
+                ##  }
+
             }
             else {
             }
