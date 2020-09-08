@@ -5957,7 +5957,7 @@ sub scan_identifier_do {
     my $tok                 = $tok_begin;
     my $message             = "";
 
-    my $in_prototype_or_signature = $container_type =~ /^sub/;
+    my $in_prototype_or_signature = $container_type =~ /^sub\b/;
 
     # these flags will be used to help figure out the type:
     my $saw_alpha = ( $tok =~ /^\w/ );
