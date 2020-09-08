@@ -3613,9 +3613,9 @@ allow perltidy to parse interactive VMS scripts, but it should be used
 for any script which is normally invoked with C<perl -x>.
 
 Please note: do not use this flag unless you are sure your script needs it.
-Parsing errors can occur if it does not have a hash-bang.  For example, if the
-actual first hash-bang is in a here-doc, a parsing error will occur because the
-tokenization will begin in the middle of the here-doc.
+Parsing errors can occur if it does not have a hash-bang, or, for example, if
+the actual first hash-bang is in a here-doc. In that case a parsing error will
+occur because the tokenization will begin in the middle of the here-doc.
 
 =item  Making a file unreadable
 

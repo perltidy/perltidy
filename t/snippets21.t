@@ -99,7 +99,7 @@ else {                    # We're the third word to have this
 ----------
 
         'here_long' => <<'----------',
-# must not break first line regardless of value of maximum-line-length
+# must not break after here target regardless of maximum-line-length
 $sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
     SELECT COUNT(duration),SUM(duration) 
     FROM logins WHERE username='$user'
@@ -786,7 +786,7 @@ sub perlmod_install_advice {
             source => "here_long",
             params => "def",
             expect => <<'#19...........',
-# must not break first line regardless of value of maximum-line-length
+# must not break after here target regardless of maximum-line-length
 $sth = $dbh->prepare(<<"END_OF_SELECT") or die "Couldn't prepare SQL";
     SELECT COUNT(duration),SUM(duration) 
     FROM logins WHERE username='$user'

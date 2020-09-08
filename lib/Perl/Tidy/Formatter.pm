@@ -3056,18 +3056,6 @@ sub respace_tokens {
                 $rtoken_vars->[_TOKEN_] = $token;
             }
 
-            # change code type to be NIN at a here target to avoid breaking the line
-            elsif ( $type eq 'h' ) {
-
-                # 'VB' = Verbatim - line goes out verbatim
-                # 'FS' = Format Skipping - line goes out verbatim, no blanks
-                # 'IO' = Indent Only - only indentation may be changed
-                unless ( $CODE_type && $CODE_type =~ /^(VB|FS|IO)$/ ) {
-                    $CODE_type = 'NIN';
-                    $line_of_tokens->{_code_type} = $CODE_type;
-                }
-            }
-
             # patch to add space to something like "x10"
             # This avoids having to split this token in the pre-tokenizer
             elsif ( $type eq 'n' ) {
@@ -13861,7 +13849,7 @@ sub get_seqno {
                 }
             }
             else {
-                $strength = NO_BREAK;
+                $strength = NO_BREAK + 1;
             }
 
             #---------------------------------------------------------------

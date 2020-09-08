@@ -26,7 +26,7 @@ BEGIN {
     $rsources = {
 
         'here_long' => <<'----------',
-# must not break first line regardless of value of maximum-line-length
+# must not break after here target regardless of maximum-line-length
 $sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
     SELECT COUNT(duration),SUM(duration) 
     FROM logins WHERE username='$user'
@@ -44,8 +44,9 @@ END_OF_SELECT
             source => "here_long",
             params => "here_long",
             expect => <<'#1...........',
-# must not break first line regardless of value of maximum-line-length
-$sth = $dbh->prepare(<<"END_OF_SELECT") or die "Couldn't prepare SQL";
+# must not break after here target regardless of maximum-line-length
+$sth = $dbh->prepare(
+    <<"END_OF_SELECT") or die "Couldn't prepare SQL";
     SELECT COUNT(duration),SUM(duration) 
     FROM logins WHERE username='$user'
 END_OF_SELECT

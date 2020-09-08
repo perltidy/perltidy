@@ -269,6 +269,8 @@
 ../snippets21.t	nib.nib2
 ../snippets21.t	scbb-csc.def
 ../snippets21.t	scbb-csc.scbb-csc
+../snippets21.t	here_long.def
+../snippets22.t	here_long.here_long
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -409,5 +411,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets21.t	here_long.def
-../snippets22.t	here_long.here_long
