@@ -332,6 +332,7 @@ BEGIN {
         _peak_batch_size_         => $i++,
         _max_index_to_go_         => $i++,
         _rK_to_go_                => $i++,
+        _batch_count_             => $i++,
     };
 
     my @q;
@@ -8398,10 +8399,12 @@ sub consecutive_nonblank_lines {
     # remember maximum size of previous batches; this is needed by the logical
     # padding routine
     my $peak_batch_size;
+    my $batch_count;
 
     sub initialize_grind_batch_of_CODE {
         @nonblank_lines_at_depth = ();
         $peak_batch_size         = 0;
+        $batch_count             = 0;
         return;
     }
 
@@ -8439,6 +8442,7 @@ sub consecutive_nonblank_lines {
         my $file_writer_object = $self->[_file_writer_object_];
 
         my $this_batch = $self->[_this_batch_];
+        $batch_count++;
 
         my $comma_count_in_batch    = $this_batch->[_comma_count_in_batch_];
         my $starting_in_quote       = $this_batch->[_starting_in_quote_];
@@ -8774,6 +8778,7 @@ EOM
             $this_batch->[_ibeg0_]           = $ri_first->[0];
             $this_batch->[_peak_batch_size_] = $peak_batch_size;
             $this_batch->[_do_not_pad_]      = $do_not_pad;
+            $this_batch->[_batch_count_]     = $batch_count;
 
             $self->send_lines_to_vertical_aligner();
 
@@ -10697,6 +10702,7 @@ sub send_lines_to_vertical_aligner {
     my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
     my $ibeg0                   = $this_batch->[_ibeg0_];
     my $rK_to_go                = $this_batch->[_rK_to_go_];
+    my $batch_count = $this_batch->[_batch_count_];
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -10921,6 +10927,7 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{rtokens}                   = $rtokens;
         $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
         $rvalign_hash->{terminal_block_type}       = $terminal_block_type;
+        $rvalign_hash->{batch_count}               = $batch_count;
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
