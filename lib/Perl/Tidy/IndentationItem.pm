@@ -28,7 +28,7 @@ BEGIN {
         _align_paren_        => $i++,
         _marked_             => $i++,
         _stack_depth_        => $i++,
-        _starting_index_     => $i++,
+        _starting_index_K_   => $i++,
         _arrow_count_        => $i++,
     };
 }
@@ -47,7 +47,7 @@ sub new {
     my $gnu_sequence_number = $input_hash{gnu_sequence_number};
     my $align_paren         = $input_hash{align_paren};
     my $stack_depth         = $input_hash{stack_depth};
-    my $starting_index      = $input_hash{starting_index};
+    my $starting_index_K    = $input_hash{starting_index_K};
 
     my $closed            = -1;
     my $arrow_count       = 0;
@@ -74,7 +74,7 @@ sub new {
     #                        # with an opening structure?
     # marked             =>  # if visited by corrector logic
     # stack_depth        =>  # indentation nesting depth
-    # starting_index     =>  # first token index of this level
+    # starting_index_K   =>  # first token index K of this level
     # arrow_count        =>  # how many =>'s
 
     my $self = [];
@@ -91,7 +91,7 @@ sub new {
     $self->[_align_paren_]        = $align_paren;
     $self->[_marked_]             = $marked;
     $self->[_stack_depth_]        = $stack_depth;
-    $self->[_starting_index_]     = $starting_index;
+    $self->[_starting_index_K_]   = $starting_index_K;
     $self->[_arrow_count_]        = $arrow_count;
 
     bless $self, $class;
@@ -225,9 +225,9 @@ sub get_index {
     return $self->[_index_];
 }
 
-sub get_starting_index {
+sub get_starting_index_K {
     my $self = shift;
-    return $self->[_starting_index_];
+    return $self->[_starting_index_K_];
 }
 
 sub set_have_child {

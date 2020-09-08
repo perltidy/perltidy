@@ -5141,6 +5141,14 @@ sub get_available_spaces_to_go {
         my $index = 0;
         if ( $level >= 0 ) { $index = ++$max_gnu_item_index; }
 
+        my $starting_index_K = 0;
+        if (   defined($line_start_index_to_go)
+            && $line_start_index_to_go >= 0
+            && $line_start_index_to_go <= $max_index_to_go )
+        {
+            $starting_index_K = $K_to_go[$line_start_index_to_go];
+        }
+
         my $item = Perl::Tidy::IndentationItem->new(
             spaces              => $spaces,
             level               => $level,
@@ -5150,7 +5158,7 @@ sub get_available_spaces_to_go {
             gnu_sequence_number => $gnu_sequence_number,
             align_paren         => $align_paren,
             stack_depth         => $max_gnu_stack_index,
-            starting_index      => $line_start_index_to_go,
+            starting_index_K    => $starting_index_K,
         );
 
         if ( $level >= 0 ) {
@@ -14891,18 +14899,17 @@ sub pad_array_to_go {
                             $item = $leading_spaces_to_go[ $i_opening + 2 ];
                         }
                         if ( defined($item) ) {
-                            my $i_start_2 = $item->get_starting_index();
+                            my $i_start_2;
+                            my $K_start_2 = $item->get_starting_index_K();
+                            if ( defined($K_start_2) ) {
+                                $i_start_2 = $K_start_2 - $K_to_go[0];
+                            }
                             if (
                                 defined($i_start_2)
 
                                 # we are breaking after an opening brace, paren,
                                 # so don't break before it too
                                 && $i_start_2 ne $i_opening
-
-             # Defensive coding check: be sure the index is valid.
-             # FIXME: We should probably be using K indexes for 'starting_index'
-             # so that the object can remain valid between batches.
-             # See test problem: random_issues/random_487.pro
                                 && $i_start_2 >= 0
                                 && $i_start_2 <= $max_index_to_go
                               )
