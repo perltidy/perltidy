@@ -626,6 +626,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
+    return if ($AUTOLOAD eq 'DESTROY');
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -635,7 +636,7 @@ Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
 ======================================================================
 EOM
-    Die("Error exit due to unexpected Autoload call to '$AUTOLOAD'\n");
+    exit 1;
 }
 
 sub DESTROY {

@@ -292,7 +292,7 @@ EOM
        $num=10 if ($num>10);
        print STDERR <<EOM;
 Some check files with errors (search above for '**ERROR'):
-(@chkfile_errors[1..$num])
+(@chkfile_errors[1..$num-1])
 EOM
     }
 
