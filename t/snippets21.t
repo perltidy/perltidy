@@ -19,6 +19,7 @@
 #16 nib.nib2
 #17 scbb-csc.def
 #18 scbb-csc.scbb-csc
+#19 here_long.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -95,6 +96,15 @@ else {                    # We're the third word to have this
     # abbreviation, so skip to the next word.
     next WORD;
 }
+----------
+
+        'here_long' => <<'----------',
+# must not break first line regardless of value of maximum-line-length
+$sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
+    SELECT COUNT(duration),SUM(duration) 
+    FROM logins WHERE username='$user'
+END_OF_SELECT
+
 ----------
 
         'lop' => <<'----------',
@@ -770,6 +780,19 @@ sub perlmod_install_advice {
 } ## end sub perlmod_install_advice
 
 #18...........
+        },
+
+        'here_long.def' => {
+            source => "here_long",
+            params => "def",
+            expect => <<'#19...........',
+# must not break first line regardless of value of maximum-line-length
+$sth = $dbh->prepare(<<"END_OF_SELECT") or die "Couldn't prepare SQL";
+    SELECT COUNT(duration),SUM(duration) 
+    FROM logins WHERE username='$user'
+END_OF_SELECT
+
+#19...........
         },
     };
 
