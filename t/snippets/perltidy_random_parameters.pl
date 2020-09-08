@@ -842,30 +842,9 @@ sub get_random_parameters {
     ###################################################################
     my @q = qw(
       DEBUG
-      quiet
-      logfile
-      logfile-gap
       backup-and-modify-in-place
       backup-file-extension
       character-encoding
-      format-skipping-begin
-      format-skipping-end
-      outfile
-      output-file-extension
-      output-path
-      output-file-extension
-      output-line-ending
-      standard-output
-      standard-error-output
-      html
-      notidy
-      format
-      help
-      version
-      starting-indentation-level
-      tee-block-comments
-      tee-pod
-      tee-side-comments
       dump-cuddled-block-list
       dump-defaults
       dump-long-names
@@ -875,6 +854,28 @@ sub get_random_parameters {
       dump-token-types
       dump-want-left-space
       dump-want-right-space
+      format
+      format-skipping-begin
+      format-skipping-end
+      help
+      html
+      logfile
+      logfile-gap
+      look-for-hash-bang
+      notidy
+      outfile
+      output-file-extension
+      output-file-extension
+      output-line-ending
+      output-path
+      quiet
+      standard-error-output
+      standard-output
+      starting-indentation-level
+      tee-block-comments
+      tee-pod
+      tee-side-comments
+      version
     );
 
     my %skip;
