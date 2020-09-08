@@ -380,6 +380,7 @@ sub valign_input {
     my $rpatterns                 = $rline_hash->{rpatterns};
     my $rfield_lengths            = $rline_hash->{rfield_lengths};
     my $terminal_block_type       = $rline_hash->{terminal_block_type};
+    my $batch_count               = $rline_hash->{batch_count};
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
@@ -1653,9 +1654,8 @@ EOM
                 $col_matching_terminal =
                   $base_line->get_column($j_terminal_match);
 
-                # FIXME: It can happen that $j_terminal_match becomes incorrect if
-                # delete_unmatched_tokens deletes some tokens and doesn't update it.
-                # This needs to be fixed.  For now just ignore it.
+		# Ignore an undefined value as a defensive step; shouldn't
+		# normally happen.
                 $col_matching_terminal = 0 unless defined($col_matching_terminal);
             }
 
@@ -1719,10 +1719,8 @@ EOM
                     $base_line = $new_line;
                     my $col_now = $base_line->get_column($j_terminal_match);
 
-		    # FIXME: It can happen that $j_terminal_match becomes
-		    # incorrect if delete_unmatched_tokens deletes some tokens
-		    # and doesn't update it.  This needs to be fixed.  For now
-		    # just ignore it.
+		    # Ignore an undefined value as a defensive step; shouldn't
+		    # normally happen.
                     $col_now = 0 unless defined($col_now);
 
                     my $pad     = $col_matching_terminal - $col_now;
@@ -2141,6 +2139,7 @@ sub delete_selected_tokens {
     my $rfield_lengths_old = $line_obj->get_rfield_lengths();
     my $rpatterns_old      = $line_obj->get_rpatterns();
     my $rtokens_old        = $line_obj->get_rtokens();
+    my $j_terminal_match   = $line_obj->get_j_terminal_match();
 
     my $EXPLAIN = 0;
 
@@ -2172,6 +2171,7 @@ EOM
     push @{$rpatterns_new},      $pattern;
 
     # Loop to either copy items or concatenate fields and patterns
+    my $jmin_del;
     for ( my $j = 0 ; $j < $jmax_old ; $j++ ) {
         my $token        = $rtokens_old->[$j];
         my $field        = $rfields_old->[ $j + 1 ];
@@ -2184,6 +2184,7 @@ EOM
             push @{$rfield_lengths_new}, $field_length;
         }
         else {
+            if ( !defined($jmin_del) ) { $jmin_del = $j }
             $rfields_new->[-1] .= $field;
             $rfield_lengths_new->[-1] += $field_length;
             $rpatterns_new->[-1] .= $pattern;
@@ -2200,6 +2201,13 @@ EOM
     $line_obj->set_rfields($rfields_new);
     $line_obj->set_rfield_lengths($rfield_lengths_new);
     $line_obj->set_jmax($jmax_new);
+
+    # The value of j_terminal_match will be incorrect if we delete tokens prior
+    # to it. We will have to give up on aligning the terminal tokens if this
+    # happens.
+    if ( defined($j_terminal_match) && $jmin_del <= $j_terminal_match ) {
+        $line_obj->set_j_terminal_match(undef);
+    }
 
     # update list type based on new leading token
     my $old_list_type = $line_obj->get_list_type();
