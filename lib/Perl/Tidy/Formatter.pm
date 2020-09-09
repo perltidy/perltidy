@@ -3991,7 +3991,6 @@ sub weld_cuddled_blocks {
 
             my $block_type = $rtoken_vars->[_BLOCK_TYPE_];
             if ( !$block_type ) {
-                print STDERR "not a block...\n" if ($KK==457);
 
                 # patch for unrecognized block types which may not be labeled
                 my $Kp = $self->K_previous_nonblank($KK);
