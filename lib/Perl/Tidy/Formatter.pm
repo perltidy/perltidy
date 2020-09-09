@@ -3953,9 +3953,11 @@ sub weld_cuddled_blocks {
           $rLL->[$K_opening]->[_LINE_INDEX_];
     };
 
-    # A stack to remember open chains at all levels:
-    # $in_chain[$level] = [$chain_type, $type_sequence];
-    my @in_chain;
+    # A stack to remember open chains at all levels: This is a hash rather than
+    # an array for safety because negative levels can occur in files with
+    # errors.  This allows us to keep processing with negative levels.
+    # $in_chain{$level} = [$chain_type, $type_sequence];
+    my %in_chain;
     my $CBO = $rOpts->{'cuddled-break-option'};
 
     # loop over structure items to find cuddled pairs
@@ -3977,8 +3979,8 @@ sub weld_cuddled_blocks {
         my $last_level = $level;
         $level = $rtoken_vars->[_LEVEL_TRUE_];
 
-        if    ( $level < $last_level ) { $in_chain[$last_level] = undef }
-        elsif ( $level > $last_level ) { $in_chain[$level]      = undef }
+        if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
+        elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
 
         # We are only looking at code blocks
         my $token = $rtoken_vars->[_TOKEN_];
@@ -3989,6 +3991,7 @@ sub weld_cuddled_blocks {
 
             my $block_type = $rtoken_vars->[_BLOCK_TYPE_];
             if ( !$block_type ) {
+                print STDERR "not a block...\n" if ($KK==457);
 
                 # patch for unrecognized block types which may not be labeled
                 my $Kp = $self->K_previous_nonblank($KK);
@@ -3997,13 +4000,14 @@ sub weld_cuddled_blocks {
                 }
                 next unless $Kp;
                 $block_type = $rLL->[$Kp]->[_TOKEN_];
+
             }
-            if ( $in_chain[$level] ) {
+            if ( $in_chain{$level} ) {
 
                 # we are in a chain and are at an opening block brace.
                 # See if we are welding this opening brace with the previous
                 # block brace.  Get their identification numbers:
-                my $closing_seqno = $in_chain[$level]->[1];
+                my $closing_seqno = $in_chain{$level}->[1];
                 my $opening_seqno = $type_sequence;
 
                 # The preceding block must be on multiple lines so that its
@@ -4042,23 +4046,23 @@ sub weld_cuddled_blocks {
                 # We are not in a chain. Start a new chain if we see the
                 # starting block type.
                 if ( $rcuddled_block_types->{$block_type} ) {
-                    $in_chain[$level] = [ $block_type, $type_sequence ];
+                    $in_chain{$level} = [ $block_type, $type_sequence ];
                 }
                 else {
                     $block_type = '*';
-                    $in_chain[$level] = [ $block_type, $type_sequence ];
+                    $in_chain{$level} = [ $block_type, $type_sequence ];
                 }
             }
         }
         elsif ( $token eq '}' ) {
-            if ( $in_chain[$level] ) {
+            if ( $in_chain{$level} ) {
 
                 # We are in a chain at a closing brace.  See if this chain
                 # continues..
                 my $Knn = $self->K_next_code($KK);
                 next unless $Knn;
 
-                my $chain_type          = $in_chain[$level]->[0];
+                my $chain_type          = $in_chain{$level}->[0];
                 my $next_nonblank_token = $rLL->[$Knn]->[_TOKEN_];
                 if (
                     $rcuddled_block_types->{$chain_type}->{$next_nonblank_token}
@@ -4067,13 +4071,12 @@ sub weld_cuddled_blocks {
 
                     # Note that we do not weld yet because we must wait until
                     # we we are sure that an opening brace for this follows.
-                    $in_chain[$level]->[1] = $type_sequence;
+                    $in_chain{$level}->[1] = $type_sequence;
                 }
-                else { $in_chain[$level] = undef }
+                else { $in_chain{$level} = undef }
             }
         }
     }
-
     return;
 }
 
