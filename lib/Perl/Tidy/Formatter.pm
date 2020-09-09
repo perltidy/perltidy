@@ -7488,7 +7488,7 @@ sub copy_token_as_type {
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
         my $rLL  = $self->[_rLL_];
-        my $flag = $side_comment_follows ? 1 : $no_internal_newlines;
+        my $flag = $side_comment_follows ? 2 : $no_internal_newlines;
 
         # the array of tokens can be given if they are different from the
         # input arrays.
@@ -7754,8 +7754,11 @@ sub copy_token_as_type {
             return;
         }
 
-        $no_internal_newlines = 1 - $rOpts_add_newlines;
-        $no_internal_newlines ||= $CODE_type eq 'NIN';
+        $no_internal_newlines = 0;
+        if ( !$rOpts_add_newlines || $CODE_type eq 'NIN' ) {
+            $no_internal_newlines = 2;
+        }
+
         $side_comment_follows = 0;
         my $is_comment =
           ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq '#' );
@@ -7768,7 +7771,7 @@ sub copy_token_as_type {
 
         if ($is_VERSION_statement) {
             $self->[_saw_VERSION_in_this_file_] = 1;
-            $no_internal_newlines = 1;
+            $no_internal_newlines = 2;
         }
 
         # Add interline blank if any
@@ -8331,7 +8334,7 @@ sub copy_token_as_type {
             elsif ( $type eq 'h' ) {
 
                 # no newlines after seeing here-target
-                $no_internal_newlines = 1;
+                $no_internal_newlines = 2;
                 destroy_one_line_block();
                 $self->store_token_to_go($Ktoken_vars);
             }
@@ -13868,7 +13871,13 @@ sub get_seqno {
                 }
             }
             else {
-                $strength = NO_BREAK + 1;
+                $strength = NO_BREAK; 
+
+                # For critical code such as lines with here targets we must
+                # be absolutely sure that we do not allow a break.  So for
+                # these the nobreak flag exceeds 1 as a signal. Otherwise we
+                # can run into trouble when small tolerances are added.
+                $strength +=1 if ( $nobreak_to_go[$i] > 1 ); 
             }
 
             #---------------------------------------------------------------
