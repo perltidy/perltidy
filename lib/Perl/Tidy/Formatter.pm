@@ -1,3 +1,5 @@
+{ #<<< begin package Perl::Tidy::Formatter
+
 #####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
@@ -44,6 +46,7 @@ BEGIN {
 
     # Caution: these debug flags produce a lot of output
     # They should all be 0 except when debugging small scripts
+    # TODO: These can be removed any time.
     use constant FORMATTER_DEBUG_FLAG_RECOMBINE   => 0;
     use constant FORMATTER_DEBUG_FLAG_BOND_TABLES => 0;
     use constant FORMATTER_DEBUG_FLAG_BOND        => 0;
@@ -79,161 +82,135 @@ BEGIN {
     FORMATTER_DEBUG_FLAG_WHITE       && $debug_warning->('WHITE');
 }
 
-# Global vars...
+# Global variables ...
+my (
 
-##################################################################
-# Section 1: Global variables which are either constant or may
-# be configured by user-supplied parameters.  They remain constant
-# after being configured.
-##################################################################
+    ##################################################################
+    # Section 1: Global variables which are either always constant or
+    # are constant after being configured by user-supplied
+    # parameters.  They remain constant as a file is being processed.
+    ##################################################################
 
-# user parameters and shortcuts
-use vars qw{
-  $rOpts
-  $rOpts_closing_side_comment_maximum_text
-  $rOpts_continuation_indentation
-  $rOpts_indent_columns
-  $rOpts_line_up_parentheses
-  $rOpts_maximum_line_length
-  $rOpts_variable_maximum_line_length
-};
+    # user parameters and shortcuts
+    $rOpts,
+    $rOpts_closing_side_comment_maximum_text,
+    $rOpts_continuation_indentation,
+    $rOpts_indent_columns,
+    $rOpts_line_up_parentheses,
+    $rOpts_maximum_line_length,
+    $rOpts_variable_maximum_line_length,
 
-# Static hashes initialized in a BEGIN block
-use vars qw{
-  %is_assignment
-  %is_keyword_returning_list
-  %is_if_unless_and_or_last_next_redo_return
-  %is_last_next_redo_return
-  %is_sort_map_grep
-  %is_sort_map_grep_eval
-  %is_if_unless
-  %is_and_or
-  %is_chain_operator
-  %is_block_without_semicolon
-  %ok_to_add_semicolon_for_block_type
-  %is_opening_type
-  %is_closing_type
-  %is_opening_token
-  %is_closing_token
-};
+    # Static hashes initialized in a BEGIN block
+    %is_assignment,
+    %is_keyword_returning_list,
+    %is_if_unless_and_or_last_next_redo_return,
+    %is_last_next_redo_return,
+    %is_sort_map_grep,
+    %is_sort_map_grep_eval,
+    %is_if_unless,
+    %is_and_or,
+    %is_chain_operator,
+    %is_block_without_semicolon,
+    %ok_to_add_semicolon_for_block_type,
+    %is_opening_type,
+    %is_closing_type,
+    %is_opening_token,
+    %is_closing_token,
 
-# Initialized in check_options. These are constants and could
-# just as well be initialized in a BEGIN block.
-use vars qw{
-  %is_do_follower
-  %is_if_brace_follower
-  %is_else_brace_follower
-  %is_anon_sub_brace_follower
-  %is_anon_sub_1_brace_follower
-  %is_other_brace_follower
-};
+    # Initialized in check_options. These are constants and could
+    # just as well be initialized in a BEGIN block.
+    %is_do_follower,
+    %is_if_brace_follower,
+    %is_else_brace_follower,
+    %is_anon_sub_brace_follower,
+    %is_anon_sub_1_brace_follower,
+    %is_other_brace_follower,
 
-# Initialized in sub initialize_whitespace_hashes;
-# Some can be modified according to user parameters.
-use vars qw{
-  %is_closing_type
-  %is_opening_type
-  %binary_ws_rules
-  %want_left_space
-  %want_right_space
-};
+    # Initialized in sub initialize_whitespace_hashes;
+    # Some can be modified according to user parameters.
+    %binary_ws_rules,
+    %want_left_space,
+    %want_right_space,
 
-# Configured in sub initialize_bond_strength_hashes
-use vars qw{
-  %right_bond_strength
-  %left_bond_strength
-};
+    # Configured in sub initialize_bond_strength_hashes
+    %right_bond_strength,
+    %left_bond_strength,
 
-# Initialized in check_options, modified by prepare_cuddled_block_types:
-use vars qw{
-  %want_one_line_block
-};
+    # Initialized in check_options, modified by prepare_cuddled_block_types:
+    %want_one_line_block,
 
-# Initialized in sub prepare_cuddled_block_types
-use vars qw{
-  $rcuddled_block_types
-};
+    # Initialized in sub prepare_cuddled_block_types
+    $rcuddled_block_types,
 
-# Initialized and configured in check_optioms
-use vars qw{
-  %outdent_keyword
-  %keyword_paren_inner_tightness
+    # Initialized and configured in check_optioms
+    %outdent_keyword,
+    %keyword_paren_inner_tightness,
 
-  %want_break_before
+    %want_break_before,
 
-  %space_after_keyword
+    %space_after_keyword,
 
-  %tightness
-  %matching_token
+    %tightness,
+    %matching_token,
 
-  %opening_vertical_tightness
-  %closing_vertical_tightness
-  %closing_token_indentation
-  $some_closing_token_indentation
+    %opening_vertical_tightness,
+    %closing_vertical_tightness,
+    %closing_token_indentation,
+    $some_closing_token_indentation,
 
-  %opening_token_right
-  %stack_opening_token
-  %stack_closing_token
-};
+    %opening_token_right,
+    %stack_opening_token,
+    %stack_closing_token,
 
-# regex patterns for text identification.
-# Most are initialized in a sub make_**_pattern during configuration.
-# Most can be configured by user parameters.
-use vars qw{
-  $SUB_PATTERN
-  $ASUB_PATTERN
-  $ANYSUB_PATTERN
+    # regex patterns for text identification.
+    # Most are initialized in a sub make_**_pattern during configuration.
+    # Most can be configured by user parameters.
+    $SUB_PATTERN,
+    $ASUB_PATTERN,
+    $ANYSUB_PATTERN,
+    $static_block_comment_pattern,
+    $static_side_comment_pattern,
+    $format_skipping_pattern_begin,
+    $format_skipping_pattern_end,
+    $non_indenting_brace_pattern,
+    $bli_pattern,
+    $block_brace_vertical_tightness_pattern,
+    $blank_lines_after_opening_block_pattern,
+    $blank_lines_before_closing_block_pattern,
+    $keyword_group_list_pattern,
+    $keyword_group_list_comment_pattern,
+    $closing_side_comment_prefix_pattern,
+    $closing_side_comment_list_pattern,
 
-  $static_block_comment_pattern
-  $static_side_comment_pattern
+    #########################################################
+    # Section 2: Work arrays for the current batch of tokens.
+    #########################################################
 
-  $format_skipping_pattern_begin
-  $format_skipping_pattern_end
+    # These are re-initialized for each batch of code
+    # in sub initialize_batch_variables.
+    $max_index_to_go,
+    @block_type_to_go,
+    @type_sequence_to_go,
+    @container_environment_to_go,
+    @bond_strength_to_go,
+    @forced_breakpoint_to_go,
+    @token_lengths_to_go,
+    @summed_lengths_to_go,
+    @levels_to_go,
+    @leading_spaces_to_go,
+    @reduced_spaces_to_go,
+    @mate_index_to_go,
+    @ci_levels_to_go,
+    @nesting_depth_to_go,
+    @nobreak_to_go,
+    @old_breakpoint_to_go,
+    @tokens_to_go,
+    @K_to_go,
+    @types_to_go,
+    @inext_to_go,
+    @iprev_to_go,
 
-  $non_indenting_brace_pattern
-
-  $bli_pattern
-
-  $block_brace_vertical_tightness_pattern
-
-  $blank_lines_after_opening_block_pattern
-  $blank_lines_before_closing_block_pattern
-
-  $keyword_group_list_pattern
-  $keyword_group_list_comment_pattern
-
-  $closing_side_comment_prefix_pattern
-  $closing_side_comment_list_pattern
-
-};
-
-#########################################################
-# Section 2: Work arrays for the current batch of tokens.
-#########################################################
-
-use vars qw{
-  $max_index_to_go
-  @block_type_to_go
-  @type_sequence_to_go
-  @container_environment_to_go
-  @bond_strength_to_go
-  @forced_breakpoint_to_go
-  @token_lengths_to_go
-  @summed_lengths_to_go
-  @levels_to_go
-  @leading_spaces_to_go
-  @reduced_spaces_to_go
-  @mate_index_to_go
-  @ci_levels_to_go
-  @nesting_depth_to_go
-  @nobreak_to_go
-  @old_breakpoint_to_go
-  @tokens_to_go
-  @K_to_go
-  @types_to_go
-  @inext_to_go
-  @iprev_to_go
-};
+);
 
 BEGIN {
 
@@ -628,7 +605,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ($AUTOLOAD eq 'DESTROY');
+    return if ( $AUTOLOAD eq 'DESTROY' );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -4024,7 +4001,7 @@ sub weld_cuddled_blocks {
                 ## && $is_broken_block->($opening_seqno);
 
                 # We can weld the closing brace to its following word ..
-                my $Ko  = $K_closing_container->{$closing_seqno};
+                my $Ko = $K_closing_container->{$closing_seqno};
                 my $Kon;
                 if ( defined($Ko) ) {
                     $Kon = $self->K_next_nonblank($Ko);
@@ -4648,7 +4625,7 @@ sub non_indenting_braces {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
-    my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_]; 
+    my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
 
     my $radjusted_levels;
     my $Kmax = @{$rLL} - 1;
@@ -10735,7 +10712,7 @@ sub send_lines_to_vertical_aligner {
     my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
     my $ibeg0                   = $this_batch->[_ibeg0_];
     my $rK_to_go                = $this_batch->[_rK_to_go_];
-    my $batch_count = $this_batch->[_batch_count_];
+    my $batch_count             = $this_batch->[_batch_count_];
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -12718,7 +12695,7 @@ sub get_seqno {
         # accept vertical alignment.
 
         my ( $self, $ri_first, $ri_last ) = @_;
-        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_]; 
+        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
 
         my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
         my $ralignment_type_to_go;
@@ -12803,10 +12780,8 @@ sub get_seqno {
                         $sc_type
 
                         # or it is a static side comment
-                        || (
-                               $rOpts->{'static-side-comments'}
-                            && $token =~ /$static_side_comment_pattern/
-                        )
+                        || (   $rOpts->{'static-side-comments'}
+                            && $token =~ /$static_side_comment_pattern/ )
 
                         # or a closing side comment
                         || (   $vert_last_nonblank_block_type
@@ -13888,13 +13863,13 @@ sub get_seqno {
                 }
             }
             else {
-                $strength = NO_BREAK; 
+                $strength = NO_BREAK;
 
                 # For critical code such as lines with here targets we must
                 # be absolutely sure that we do not allow a break.  So for
                 # these the nobreak flag exceeds 1 as a signal. Otherwise we
                 # can run into trouble when small tolerances are added.
-                $strength +=1 if ( $nobreak_to_go[$i] > 1 ); 
+                $strength += 1 if ( $nobreak_to_go[$i] > 1 );
             }
 
             #---------------------------------------------------------------
@@ -18735,3 +18710,4 @@ sub compare_indentation_levels {
     return;
 }
 1;
+} ## end package Perl::Tidy::Formatter
