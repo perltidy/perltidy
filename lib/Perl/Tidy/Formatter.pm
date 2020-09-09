@@ -4027,7 +4027,7 @@ sub weld_cuddled_blocks {
                 }
 
                 # ..unless it is a comment
-                if ( defined($Ko) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
+                if ( defined($Kon) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
                     my $dlen =
                       $rLL->[$Kon]->[_CUMULATIVE_LENGTH_] -
                       $rLL->[ $Ko - 1 ]->[_CUMULATIVE_LENGTH_];
