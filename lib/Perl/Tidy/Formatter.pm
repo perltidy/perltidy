@@ -315,6 +315,8 @@ BEGIN {
         _rweld_len_left_opening_  => $i++,
         _rweld_len_right_opening_ => $i++,
 
+        _rspecial_side_comment_type_ => $i++,
+
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -767,6 +769,8 @@ sub new {
     $self->[_rweld_len_right_closing_] = {};
     $self->[_rweld_len_left_opening_]  = {};
     $self->[_rweld_len_right_opening_] = {};
+
+    $self->[_rspecial_side_comment_type_] = {};
 
     bless $self, $class;
 
@@ -4644,6 +4648,8 @@ sub non_indenting_braces {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
+    my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_]; 
+
     my $radjusted_levels;
     my $Kmax = @{$rLL} - 1;
     my @seqno_stack;
@@ -4674,7 +4680,9 @@ sub non_indenting_braces {
         # we added it back for the match. That way we require an exact
         # match to the special string and also allow additional text.
         $token_sc .= "\n";
-        return ( $token_sc =~ /$non_indenting_brace_pattern/ );
+        my $is_nib = ( $token_sc =~ /$non_indenting_brace_pattern/ );
+        if ($is_nib) { $rspecial_side_comment_type->{$K_sc} = 'NIB' }
+        return $is_nib;
     };
 
     foreach my $KK ( 0 .. $Kmax ) {
@@ -12710,6 +12718,7 @@ sub get_seqno {
         # accept vertical alignment.
 
         my ( $self, $ri_first, $ri_last ) = @_;
+        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_]; 
 
         my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
         my $ralignment_type_to_go;
@@ -12785,10 +12794,16 @@ sub get_seqno {
                 # align a side comment --
                 elsif ( $type eq '#' ) {
 
+                    my $KK      = $K_to_go[$i];
+                    my $sc_type = $rspecial_side_comment_type->{$KK};
+
                     unless (
 
-                        # it is a static side comment
-                        (
+                        # it is any specially marked side comment
+                        $sc_type
+
+                        # or it is a static side comment
+                        || (
                                $rOpts->{'static-side-comments'}
                             && $token =~ /$static_side_comment_pattern/
                         )

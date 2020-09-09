@@ -639,8 +639,8 @@ method sum_radlinks {
             source => "nib",
             params => "def",
             expect => <<'#14...........',
-{    #<<<
-{    #<<<
+{ #<<<
+{ #<<<
 {    #++
     print "hello world\n";
 }
@@ -649,7 +649,7 @@ method sum_radlinks {
 
 {    #++
     {    #++
-        {    #<<<
+        { #<<<
         print "hello world\n";
         }
     }
@@ -687,14 +687,14 @@ method sum_radlinks {
             expect => <<'#16...........',
 {    #<<<
     {    #<<<
-        {    #++
+        { #++
         print "hello world\n";
         }
     }
 }
 
-{    #++
-{    #++
+{ #++
+{ #++
 {    #<<<
     print "hello world\n";
 }
