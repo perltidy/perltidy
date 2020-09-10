@@ -790,7 +790,7 @@ sub get_line {
         # Note that the _in_data and _in_end flags remain set
         # so that we return to that state after seeing the
         # end of a pod section
-        if ( $input_line =~ /^=(?!cut)/ ) {
+        if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
             write_logfile_entry("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
@@ -809,7 +809,7 @@ sub get_line {
         # Note that the _in_data and _in_end flags remain set
         # so that we return to that state after seeing the
         # end of a pod section
-        if ( $input_line =~ /^=(?!cut)/ ) {
+        if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
             write_logfile_entry("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
