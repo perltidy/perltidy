@@ -834,14 +834,16 @@ sub get_random_parameters {
     );
 
     ###################################################################
-    # Some are best skipped, otherwise the program will just quit early
-    # Parameters can be added and removed from the list to customize
-    # testing.
-    # 'format' was added because html is not so interesting, but can be
-    # removed.
+    # Most of these have been tested and are best skipped because
+    # they produce unwanted output or perhaps cause the program to
+    # just quit early.  Parameters can be added and removed from the
+    # list to customize testing.  'format' was added because html is
+    # not so interesting, but can be removed for html testing.
     ###################################################################
     my @q = qw(
       DEBUG
+      assert-tidy
+      assert-untidy
       backup-and-modify-in-place
       backup-file-extension
       character-encoding
