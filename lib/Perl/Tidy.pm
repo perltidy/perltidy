@@ -83,9 +83,6 @@ use vars qw{
   $VERSION
   @ISA
   @EXPORT
-  $missing_file_spec
-  $fh_stderr
-  $Warn_count
 };
 
 @ISA    = qw( Exporter );
@@ -304,39 +301,44 @@ sub find_input_line_ending {
     return $ending;
 }
 
-sub catfile {
+{ ## begin closure for sub catfile
 
-    # concatenate a path and file basename
-    # returns undef in case of error
-
-    my @parts = @_;
+    my $missing_file_spec;
 
     BEGIN {
         eval { require File::Spec };
         $missing_file_spec = $@;
     }
 
-    # use File::Spec if we can
-    unless ($missing_file_spec) {
-        return File::Spec->catfile(@parts);
+    sub catfile {
+
+        # concatenate a path and file basename
+        # returns undef in case of error
+
+        my @parts = @_;
+
+        # use File::Spec if we can
+        unless ($missing_file_spec) {
+            return File::Spec->catfile(@parts);
+        }
+
+        # Perl 5.004 systems may not have File::Spec so we'll make
+        # a simple try.  We assume File::Basename is available.
+        # return if not successful.
+        my $name      = pop @parts;
+        my $path      = join '/', @parts;
+        my $test_file = $path . $name;
+        my ( $test_name, $test_path ) = fileparse($test_file);
+        return $test_file if ( $test_name eq $name );
+        return            if ( $^O eq 'VMS' );
+
+        # this should work at least for Windows and Unix:
+        $test_file = $path . '/' . $name;
+        ( $test_name, $test_path ) = fileparse($test_file);
+        return $test_file if ( $test_name eq $name );
+        return;
     }
-
-    # Perl 5.004 systems may not have File::Spec so we'll make
-    # a simple try.  We assume File::Basename is available.
-    # return if not successful.
-    my $name      = pop @parts;
-    my $path      = join '/', @parts;
-    my $test_file = $path . $name;
-    my ( $test_name, $test_path ) = fileparse($test_file);
-    return $test_file if ( $test_name eq $name );
-    return            if ( $^O eq 'VMS' );
-
-    # this should work at least for Windows and Unix:
-    $test_file = $path . '/' . $name;
-    ( $test_name, $test_path ) = fileparse($test_file);
-    return $test_file if ( $test_name eq $name );
-    return;
-}
+} ## end closure for sub catfile
 
 # Here is a map of the flow of data from the input source to the output
 # line sink:
@@ -372,6 +374,12 @@ sub catfile {
 # The Logger package, not shown, records significant events and warning
 # messages.  It writes a .LOG file, which may be saved with a
 # '-log' or a '-g' flag.
+
+{ #<<<
+
+my $Warn_count; 
+my $fh_stderr;
+sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
 sub perltidy {
 
@@ -463,8 +471,6 @@ EOM
     else {
         $fh_stderr = *STDERR;
     }
-
-    sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
     sub Exit {
         my $flag = shift;
@@ -1739,7 +1745,8 @@ EOM
 
   ERROR_EXIT:
     return 1;
-}    # end of main program perltidy
+}    ## end of main program perltidy
+}    ## end of closure for sub perltidy
 
 sub line_diff {
 
