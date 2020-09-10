@@ -7463,14 +7463,21 @@ sub copy_token_as_type {
         # We had to wait until now for reasons explained in sub 'write_line'.
         if ( $level < 0 ) { $level = 0 }
 
-        # Programming check: The K indexes in the batch must be a continuous
-        # sequence of the global token array.  If this relationship fails we
-        # are in danger of losing data.  An error here implies an error in
-        # a recent programming change.
+        # Check for emergency flush...
+	# The K indexes in the batch must always be a continuous sequence of
+	# the global token array.  The batch process programming assumes this.
+	# If storing this token would cause this relation to fail we must dump
+	# the current batch before storing the new token.  It is extremely rare
+	# for this to happen. One known example is the following two-line snippet
+	# when run with parameters
+        # --noadd-newlines  --space-terminal-semicolon:
+        #    if ( $_ =~ /PENCIL/ ) { $pencil_flag= 1 } ; ;
+        #    $yy=1;
+
         if ( defined($max_index_to_go) && $max_index_to_go >= 0 ) {
             my $Klast = $K_to_go[$max_index_to_go];
             if ( $Ktoken_vars != $Klast + 1 ) {
-                Fault("Unexpected break in K values: $Ktoken_vars != $Klast+1");
+                 $self->flush_batch_of_CODE();
             }
         }
 
