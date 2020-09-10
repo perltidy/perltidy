@@ -37,51 +37,6 @@ sub Exit {
     croak "unexpected return from Perl::Tidy::Exit";
 }
 
-BEGIN {
-
-    # Codes for insertion and deletion of blanks
-    use constant DELETE => 0;
-    use constant STABLE => 1;
-    use constant INSERT => 2;
-
-    # Caution: these debug flags produce a lot of output
-    # They should all be 0 except when debugging small scripts
-    # TODO: These can be removed any time.
-    use constant FORMATTER_DEBUG_FLAG_RECOMBINE   => 0;
-    use constant FORMATTER_DEBUG_FLAG_BOND_TABLES => 0;
-    use constant FORMATTER_DEBUG_FLAG_BOND        => 0;
-    use constant FORMATTER_DEBUG_FLAG_BREAK       => 0;
-    use constant FORMATTER_DEBUG_FLAG_CI          => 0;
-    use constant FORMATTER_DEBUG_FLAG_FLUSH       => 0;
-    use constant FORMATTER_DEBUG_FLAG_FORCE       => 0;
-    use constant FORMATTER_DEBUG_FLAG_LIST        => 0;
-    use constant FORMATTER_DEBUG_FLAG_NOBREAK     => 0;
-    use constant FORMATTER_DEBUG_FLAG_OUTPUT      => 0;
-    use constant FORMATTER_DEBUG_FLAG_SPARSE      => 0;
-    use constant FORMATTER_DEBUG_FLAG_STORE       => 0;
-    use constant FORMATTER_DEBUG_FLAG_UNDOBP      => 0;
-    use constant FORMATTER_DEBUG_FLAG_WHITE       => 0;
-
-    my $debug_warning = sub {
-        print STDOUT "FORMATTER_DEBUGGING with key $_[0]\n";
-    };
-
-    FORMATTER_DEBUG_FLAG_RECOMBINE   && $debug_warning->('RECOMBINE');
-    FORMATTER_DEBUG_FLAG_BOND_TABLES && $debug_warning->('BOND_TABLES');
-    FORMATTER_DEBUG_FLAG_BOND        && $debug_warning->('BOND');
-    FORMATTER_DEBUG_FLAG_BREAK       && $debug_warning->('BREAK');
-    FORMATTER_DEBUG_FLAG_CI          && $debug_warning->('CI');
-    FORMATTER_DEBUG_FLAG_FLUSH       && $debug_warning->('FLUSH');
-    FORMATTER_DEBUG_FLAG_FORCE       && $debug_warning->('FORCE');
-    FORMATTER_DEBUG_FLAG_LIST        && $debug_warning->('LIST');
-    FORMATTER_DEBUG_FLAG_NOBREAK     && $debug_warning->('NOBREAK');
-    FORMATTER_DEBUG_FLAG_OUTPUT      && $debug_warning->('OUTPUT');
-    FORMATTER_DEBUG_FLAG_SPARSE      && $debug_warning->('SPARSE');
-    FORMATTER_DEBUG_FLAG_STORE       && $debug_warning->('STORE');
-    FORMATTER_DEBUG_FLAG_UNDOBP      && $debug_warning->('UNDOBP');
-    FORMATTER_DEBUG_FLAG_WHITE       && $debug_warning->('WHITE');
-}
-
 # Global variables ...
 my (
 
@@ -214,6 +169,8 @@ my (
 
 BEGIN {
 
+    # Initialize constants...
+
     # Array index names for token variables
     my $i = 0;
     use constant {
@@ -314,6 +271,35 @@ BEGIN {
         _batch_count_             => $i++,
     };
 
+    # Codes for insertion and deletion of blanks
+    use constant DELETE => 0;
+    use constant STABLE => 1;
+    use constant INSERT => 2;
+
+    # whitespace codes
+    use constant WS_YES      => 1;
+    use constant WS_OPTIONAL => 0;
+    use constant WS_NO       => -1;
+
+    # Token bond strengths.
+    use constant NO_BREAK    => 10000;
+    use constant VERY_STRONG => 100;
+    use constant STRONG      => 2.1;
+    use constant NOMINAL     => 1.1;
+    use constant WEAK        => 0.8;
+    use constant VERY_WEAK   => 0.55;
+
+    # values for testing indexes in output array
+    use constant UNDEFINED_INDEX => -1;
+
+    # Maximum number of little messages; probably need not be changed.
+    use constant MAX_NAG_MESSAGES => 6;
+
+    # increment between sequence numbers for each type
+    # For example, ?: pairs might have numbers 7,11,15,...
+    use constant TYPE_SEQUENCE_INCREMENT => 4;
+
+    # Initialize constant hashes ...
     my @q;
 
     @q = qw(
@@ -396,29 +382,6 @@ BEGIN {
     @is_closing_token{@q} = (1) x scalar(@q);
 
 }
-
-# whitespace codes
-use constant WS_YES      => 1;
-use constant WS_OPTIONAL => 0;
-use constant WS_NO       => -1;
-
-# Token bond strengths.
-use constant NO_BREAK    => 10000;
-use constant VERY_STRONG => 100;
-use constant STRONG      => 2.1;
-use constant NOMINAL     => 1.1;
-use constant WEAK        => 0.8;
-use constant VERY_WEAK   => 0.55;
-
-# values for testing indexes in output array
-use constant UNDEFINED_INDEX => -1;
-
-# Maximum number of little messages; probably need not be changed.
-use constant MAX_NAG_MESSAGES => 6;
-
-# increment between sequence numbers for each type
-# For example, ?: pairs might have numbers 7,11,15,...
-use constant TYPE_SEQUENCE_INCREMENT => 4;
 
 {    ## begin closure to count instanes
 
@@ -1824,6 +1787,7 @@ sub set_whitespace_flags {
 
     my $self = shift;
     my $rLL  = $self->[_rLL_];
+    my $DEBUG_WHITE;
 
     my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
@@ -2046,7 +2010,7 @@ sub set_whitespace_flags {
         }    # end setting space flag inside opening tokens
         my $ws_1;
         $ws_1 = $ws
-          if FORMATTER_DEBUG_FLAG_WHITE;
+          if $DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 2:
@@ -2082,7 +2046,7 @@ sub set_whitespace_flags {
 
         my $ws_2;
         $ws_2 = $ws
-          if FORMATTER_DEBUG_FLAG_WHITE;
+          if $DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 3:
@@ -2093,7 +2057,7 @@ sub set_whitespace_flags {
         }
         my $ws_3;
         $ws_3 = $ws
-          if FORMATTER_DEBUG_FLAG_WHITE;
+          if $DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 4:
@@ -2258,7 +2222,7 @@ sub set_whitespace_flags {
 
         my $ws_4;
         $ws_4 = $ws
-          if FORMATTER_DEBUG_FLAG_WHITE;
+          if $DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 5:
@@ -2319,7 +2283,7 @@ sub set_whitespace_flags {
 
         $rwhitespace_flags->[$j] = $ws;
 
-        FORMATTER_DEBUG_FLAG_WHITE && do {
+        $DEBUG_WHITE && do {
             my $str = substr( $last_token, 0, 15 );
             $str .= ' ' x ( 16 - length($str) );
             if ( !defined($ws_1) ) { $ws_1 = "*" }
@@ -7471,6 +7435,8 @@ sub copy_token_as_type {
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
+    my $DEBUG_STORE;
+
     sub store_token_to_go {
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
@@ -7593,7 +7559,7 @@ sub copy_token_as_type {
             $comma_count_in_batch++;
         }
 
-        FORMATTER_DEBUG_FLAG_STORE && do {
+        $DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
             print STDOUT
 "STORE: from $a $c: storing token $token type $type lev=$level slev=$slevel at $max_index_to_go\n";
@@ -8446,6 +8412,8 @@ sub consecutive_nonblank_lines {
 
     # Sub 'grind_batch_of_CODE' ships its output lines to the vertical aligner.
 
+    my $DEBUG_GRIND;
+
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
@@ -8469,19 +8437,19 @@ sub consecutive_nonblank_lines {
         my $rOpts_one_line_block_semicolons =
           $rOpts->{'one-line-block-semicolons'};
 
-        # debug stuff; this routine can be called from many points
-        FORMATTER_DEBUG_FLAG_OUTPUT && do {
-            my ( $a, $b, $c ) = caller;
+        # This routine is only called from sub flush_batch_of_code, so that
+        # routine is a better spot for debugging.
+        $DEBUG_GRIND && do {
             my $token = my $type = "";
             if ( $max_index_to_go >= 0 ) {
                 $token = $tokens_to_go[$max_index_to_go];
                 $type  = $types_to_go[$max_index_to_go];
             }
-            write_diagnostics(
-"OUTPUT: grind_batch_of_CODE called: $a $c at type='$type' tok='$token', tokens to write=$max_index_to_go\n"
-            );
             my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
-            write_diagnostics("$output_str\n");
+            print STDERR <<EOM;
+grind got batch number $batch_count with $max_index_to_go tokens, last type '$type' tok='$token', text:
+$output_str
+EOM
         };
 
         my $comma_arrow_count_contained =
@@ -8645,12 +8613,6 @@ sub consecutive_nonblank_lines {
             $self->[_last_line_leading_level_] = $last_line_leading_level;
             $self->[_last_last_line_leading_level_] =
               $last_last_line_leading_level;
-
-            FORMATTER_DEBUG_FLAG_FLUSH && do {
-                my ( $package, $file, $line ) = caller;
-                print STDOUT
-"FLUSH: flushing from $package $file $line, types= $types_to_go[$imin] to $types_to_go[$imax]\n";
-            };
 
             # add a couple of extra terminal blank tokens
             $self->pad_array_to_go();
@@ -13444,6 +13406,8 @@ sub get_seqno {
 
     } ## end sub initialize_bond_strength_hashes
 
+    my $DEBUG_BOND;
+
     sub set_bond_strengths {
 
         my ($self) = @_;
@@ -13783,7 +13747,7 @@ sub get_seqno {
 
             # If the hardwired rules conflict with the tabulated bond
             # strength then there is an inconsistency that should be fixed
-            FORMATTER_DEBUG_FLAG_BOND_TABLES
+                 $DEBUG_BOND
               && $tabulated_bond_str
               && $bond_str_1
               && $bond_str_1 != $bond_str_2
@@ -13892,7 +13856,7 @@ sub get_seqno {
 
             $bond_strength_to_go[$i] = $strength;
 
-            FORMATTER_DEBUG_FLAG_BOND && do {
+            $DEBUG_BOND && do {
                 my $str = substr( $token, 0, 15 );
                 $str .= ' ' x ( 16 - length($str) );
                 print STDOUT
@@ -15257,6 +15221,8 @@ sub find_token_starting_list {
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
     }
 
+    my $DEBUG_SPARSE;
+
     sub set_comma_breakpoints_do {
 
         # Given a list with some commas, set breakpoints at some of the
@@ -15868,8 +15834,7 @@ sub find_token_starting_list {
         }    # end shortcut methods
 
         # debug stuff
-
-        FORMATTER_DEBUG_FLAG_SPARSE && do {
+        $DEBUG_SPARSE && do {
             print STDOUT
 "SPARSE:cols=$columns commas=$comma_count items:$item_count ids=$identifier_count pairwidth=$pair_width fields=$number_of_fields lines packed: $packed_lines packed_cols=$packed_columns fmtd:$formatted_lines cols /line:$columns_per_line  unused:$unused_columns fmtd:$formatted_columns sparsity=$sparsity allow=$max_allowed_sparsity\n";
 
@@ -16245,7 +16210,7 @@ sub set_nobreaks {
     my ( $self, $i, $j ) = @_;
     if ( $i >= 0 && $i <= $j && $j <= $max_index_to_go ) {
 
-        FORMATTER_DEBUG_FLAG_NOBREAK && do {
+        0 && do {
             my ( $a, $b, $c ) = caller();
             my $forced_breakpoint_count = get_forced_breakpoint_count();
             print STDOUT
@@ -16257,7 +16222,7 @@ sub set_nobreaks {
 
     # shouldn't happen; non-critical error
     else {
-        FORMATTER_DEBUG_FLAG_NOBREAK && do {
+        0 && do {
             my ( $a, $b, $c ) = caller();
             print STDOUT
               "NOBREAK ERROR: from $a $c with i=$i j=$j max=$max_index_to_go\n";
@@ -16302,6 +16267,8 @@ sub set_nobreaks {
         return;
     }
 
+    my $DEBUG_FORCE;
+
     sub set_forced_breakpoint {
         my ( $self, $i ) = @_;
 
@@ -16324,7 +16291,7 @@ sub set_nobreaks {
         if ( $i >= 0 && $i <= $max_index_to_go ) {
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
 
-            FORMATTER_DEBUG_FLAG_FORCE && do {
+            $DEBUG_FORCE && do {
                 my ( $a, $b, $c ) = caller();
                 print STDOUT
 "FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
@@ -16363,6 +16330,8 @@ sub set_nobreaks {
         return;
     }
 
+    my $DEBUG_UNDOBP;
+
     sub undo_forced_breakpoint_stack {
 
         my ( $self, $i_start ) = @_;
@@ -16381,7 +16350,7 @@ sub set_nobreaks {
                 $forced_breakpoint_to_go[$i] = 0;
                 $forced_breakpoint_count--;
 
-                FORMATTER_DEBUG_FLAG_UNDOBP && do {
+                $DEBUG_UNDOBP && do {
                     my ( $a, $b, $c ) = caller();
                     print STDOUT
 "UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
@@ -16390,7 +16359,7 @@ sub set_nobreaks {
 
             # shouldn't happen, but not a critical error
             else {
-                FORMATTER_DEBUG_FLAG_UNDOBP && do {
+                $DEBUG_UNDOBP && do {
                     my ( $a, $b, $c ) = caller();
                     print STDOUT
 "Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go";
@@ -16673,7 +16642,7 @@ sub set_nobreaks {
                 #my $depth_increase=( $nesting_depth_to_go[$ibeg_2] -
                 #        $nesting_depth_to_go[$ibeg_1] );
 
-                FORMATTER_DEBUG_FLAG_RECOMBINE && do {
+                0 && do {
                     print STDERR
 "RECOMBINE: n=$n imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
                 };
@@ -18003,6 +17972,7 @@ sub set_continuation_breaks {
     # a break.  This signals later routines not to undo the breakpoint.
 
     my ( $self, $saw_good_break ) = @_;
+    my $DEBUG_BREAKPOINTS = 0;
 
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
@@ -18381,7 +18351,7 @@ sub set_continuation_breaks {
                 }
             }
 
-            FORMATTER_DEBUG_FLAG_BREAK
+            $DEBUG_BREAKPOINTS
               && do {
                 my $ltok     = $token;
                 my $rtok     = $next_nonblank_token ? $next_nonblank_token : "";
@@ -18465,7 +18435,7 @@ sub set_continuation_breaks {
         $next_nonblank_type  = $types_to_go[$i_next_nonblank];
         $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
 
-        FORMATTER_DEBUG_FLAG_BREAK
+        $DEBUG_BREAKPOINTS
           && print STDOUT
           "BREAK: best is i = $i_lowest strength = $lowest_strength\n";
 
