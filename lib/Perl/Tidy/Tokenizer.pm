@@ -4411,30 +4411,41 @@ sub operator_expected {
             $op_expected = UNKNOWN;
         }
 
+        # The 'weird parsing rules' of next section do not work for '<' and '?'
+        # It is best to mark them as unknown.  Test case:
+        #  print $fh <DATA>;
+        elsif ( $tok =~ /^[\<\?]$/ ) {
+            $op_expected = UNKNOWN;
+        }
+
         # For possible file handle like "$a", Perl uses weird parsing rules.
         # For example:
         # print $a/2,"/hi";   - division
         # print $a / 2,"/hi"; - division
         # print $a/ 2,"/hi";  - division
         # print $a /2,"/hi";  - pattern (and error)!
-        elsif ( ( $prev_type eq 'b' ) && ( $next_type ne 'b' ) ) {
+        # Some examples where this logic works okay, for '&','*','+':
+        #    print $fh &xsi_protos(@mods);
+        #    my $x = new $CompressClass *FH;
+        #    print $OUT +( $count % 15 ? ", " : "\n\t" );
+        elsif ($prev_type eq 'b'
+            && $next_type ne 'b' )
+        {
             $op_expected = TERM;
         }
 
-        # Note when an operation is being done where a
-        # filehandle might be expected, since a change in whitespace
-        # could change the interpretation of the statement.
-        else {
-            if ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
+        # Note that '?' and '<' have been moved above
+        # ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
+        elsif ( $tok =~ /^([x\/\+\-\*\%\&\.]|\>\>)$/ ) {
 
-               # Do not complain in 'use' statements, which have special syntax.
-               # For example, from RT#130344:
-               #   use lib $FindBin::Bin . '/lib';
-                if ( $statement_type ne 'use' ) {
-                    complain("operator in print statement not recommended\n");
-                }
-                $op_expected = OPERATOR;
+
+            # Do not complain in 'use' statements, which have special syntax.
+            # For example, from RT#130344:
+            #   use lib $FindBin::Bin . '/lib';
+            if ( $statement_type ne 'use' ) {
+                complain("operator in print statement not recommended\n");
             }
+            $op_expected = OPERATOR;
         }
     }
 
@@ -6374,6 +6385,10 @@ sub scan_identifier_do {
     if ( $id_scan_state =~ /^[A\:\(\)]/ ) {
         $id_scan_state = '';
     }
+
+    # The deprecated variable $# does not combine with anything on the next line
+    if ( $identifier eq '$#' ) { $id_scan_state = '' }
+
     if ( $i < 0 ) { $i = 0 }
 
     unless ($type) {
