@@ -186,15 +186,17 @@ sub flush {
     # flush() is the external call to completely empty the pipeline.
     my ($self) = @_;
 
-    # the buffer must be emptied first
-    $self->dump_valign_buffer();
+    # push things out the pipline...
 
-    # then any current group
+    # push out any current group lines
     $self->_flush_group_lines();
 
-    # then the cache, which may still contain text if there was
-    # no group
+    # then anything left in the cache of step_B
     $self->_flush_cache();
+
+    # then anything left in the buffer of step_C
+    $self->dump_valign_buffer();
+
     return;
 }
 
