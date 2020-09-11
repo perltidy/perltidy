@@ -24,33 +24,11 @@ use warnings;
 our $VERSION = '20200907';
 
 use Perl::Tidy::LineBuffer;
-
-BEGIN {
-
-    # Caution: these debug flags produce a lot of output
-    # They should all be 0 except when debugging small scripts
-
-    use constant TOKENIZER_DEBUG_FLAG_EXPECT   => 0;
-    use constant TOKENIZER_DEBUG_FLAG_NSCAN    => 0;
-    use constant TOKENIZER_DEBUG_FLAG_QUOTE    => 0;
-    use constant TOKENIZER_DEBUG_FLAG_SCAN_ID  => 0;
-    use constant TOKENIZER_DEBUG_FLAG_TOKENIZE => 0;
-
-    my $debug_warning = sub {
-        print STDOUT "TOKENIZER_DEBUGGING with key $_[0]\n";
-    };
-
-    TOKENIZER_DEBUG_FLAG_EXPECT   && $debug_warning->('EXPECT');
-    TOKENIZER_DEBUG_FLAG_NSCAN    && $debug_warning->('NSCAN');
-    TOKENIZER_DEBUG_FLAG_QUOTE    && $debug_warning->('QUOTE');
-    TOKENIZER_DEBUG_FLAG_SCAN_ID  && $debug_warning->('SCAN_ID');
-    TOKENIZER_DEBUG_FLAG_TOKENIZE && $debug_warning->('TOKENIZE');
-
-}
-
 use Carp;
 
 # PACKAGE VARIABLES for processing an entire FILE.
+# These must be package variables because most may get localized during
+# processing.  Most are initialized in sub prepare_for_a_new_file. 
 use vars qw{
   $tokenizer_self
 
@@ -2653,6 +2631,7 @@ sub prepare_for_a_new_file {
         'qx' => 1,
     );
 
+    my $DEBUG_TOKENIZE = 0;
     sub tokenize_this_line {
 
   # This routine breaks a line of perl code into tokens which are of use in
@@ -3133,7 +3112,7 @@ EOM
             $next_tok  = $rtokens->[ $i + 1 ];
             $next_type = $rtoken_type->[ $i + 1 ];
 
-            TOKENIZER_DEBUG_FLAG_TOKENIZE && do {
+            $DEBUG_TOKENIZE && do {
                 local $" = ')(';
                 my @debug_list = (
                     $last_nonblank_token,      $tok,
@@ -4390,6 +4369,7 @@ sub operator_expected {
     # $statement_type
 
     my ( $prev_type, $tok, $next_type ) = @_;
+    my $DEBUG_EXPECT = 0;
 
     my $op_expected = UNKNOWN;
 
@@ -4606,7 +4586,7 @@ sub operator_expected {
         );
     }
 
-    TOKENIZER_DEBUG_FLAG_EXPECT && do {
+    $DEBUG_EXPECT && do {
         print STDOUT
 "EXPECT: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
     };
@@ -5737,6 +5717,7 @@ sub scan_id_do {
     my ( $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
         $max_token_index )
       = @_;
+    my $DEBUG_NSCAN = 0;
     my $type = '';
     my ( $i_beg, $pos_beg );
 
@@ -5822,7 +5803,7 @@ sub scan_id_do {
         report_definite_bug();
     }
 
-    TOKENIZER_DEBUG_FLAG_NSCAN && do {
+    $DEBUG_NSCAN && do {
         print STDOUT
           "NSCAN: returns i=$i, tok=$tok, type=$type, state=$id_scan_state\n";
     };
@@ -5959,6 +5940,7 @@ sub scan_identifier_do {
     my ( $i, $id_scan_state, $identifier, $rtokens, $max_token_index,
         $expecting, $container_type )
       = @_;
+    my $DEBUG_SCAN_ID = 0;
     my $i_begin   = $i;
     my $type      = '';
     my $tok_begin = $rtokens->[$i_begin];
@@ -6438,7 +6420,7 @@ sub scan_identifier_do {
         $i   = $i_begin;
     }
 
-    TOKENIZER_DEBUG_FLAG_SCAN_ID && do {
+    $DEBUG_SCAN_ID && do {
         my ( $a, $b, $c ) = caller;
         print STDOUT
 "SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";
@@ -7274,7 +7256,7 @@ sub follow_quoted_string {
     my $i             = $i_beg - 1;
     my $quoted_string = "";
 
-    TOKENIZER_DEBUG_FLAG_QUOTE && do {
+    0 && do {
         print STDOUT
 "QUOTE entering with quote_pos = $quote_pos i=$i beginning_tok =$beginning_tok\n";
     };
