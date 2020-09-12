@@ -7204,6 +7204,7 @@ sub tight_paren_follows {
     my $seqno_o = $rLL->[$K_oc]->[_TYPE_SEQUENCE_];
     my $K_io    = $self->[_K_opening_container_]->{$seqno_i};
     my $K_oo    = $self->[_K_opening_container_]->{$seqno_o};
+    return unless ( defined($K_io) && defined($K_oo) );
 
     # RULE 1: Do not break before a closing signature paren
     # (regardless of complexity).  This is a fix for issue git#22.
