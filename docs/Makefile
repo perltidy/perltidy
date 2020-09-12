@@ -2,6 +2,7 @@
 all:
 	pod2html ../local-docs/stylekey.pod >stylekey.html
 	pod2html ../local-docs/tutorial.pod >tutorial.html
+	pod2html ../local-docs/BugLog.pod >BugLog.html
 	markdown ../INSTALL.md >INSTALL.html
 	markdown ../CHANGES.md >ChangeLog.html
 	pod2html ../bin/perltidy >perltidy.html
