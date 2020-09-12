@@ -11136,9 +11136,8 @@ sub send_lines_to_vertical_aligner {
         my @field_lengths = ();
         my $i_start       = $ibeg;
 
-        my $depth                 = 0;
-        my @container_name        = ("");
-        my @multiple_comma_arrows = (undef);
+        my $depth          = 0;
+        my %container_name = ( 0 => "" );
 
         my $j = 0;    # field index
 
@@ -11158,32 +11157,30 @@ sub send_lines_to_vertical_aligner {
                 my $i_mate = $self->mate_index_to_go($i);
                 if ( $i_mate > $i && $i_mate <= $iend ) {
                     $depth++;
-                    my $seqno = $type_sequence_to_go[$i];
-                    my $count = comma_arrow_count($seqno);
-                    $multiple_comma_arrows[$depth] = $count && $count > 1;
 
                     # Append the previous token name to make the container name
                     # more unique.  This name will also be given to any commas
                     # within this container, and it helps avoid undesirable
                     # alignments of different types of containers.
 
-                 # Containers beginning with { and [ are given those names
-                 # for uniqueness. That way commas in different containers
-                 # will not match. Here is an example of what this prevents:
-                 #	a => [ 1,       2, 3 ],
-                 #   b => { b1 => 4, b2 => 5 },
-                 # Here is another example of what we avoid by labeling the
-                 # commas properly:
-                 #   is_d( [ $a,        $a ], [ $b,               $c ] );
-                 #   is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
-                 #   is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
+                    # Containers beginning with { and [ are given those names
+                    # for uniqueness. That way commas in different containers
+                    # will not match. Here is an example of what this prevents:
+                    #	a => [ 1,       2, 3 ],
+                    #   b => { b1 => 4, b2 => 5 },
+                    # Here is another example of what we avoid by labeling the
+                    # commas properly:
+
+                   # is_d( [ $a,        $a ], [ $b,               $c ] );
+                   # is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
+                   # is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
 
                     my $name = $tok;
                     if ( $tok eq '(' ) {
                         $name = $self->previous_nonblank_token($i);
                         $name =~ s/^->//;
                     }
-                    $container_name[$depth] = "+" . $name;
+                    $container_name{$depth} = "+" . $name;
 
                     # Make the container name even more unique if necessary.
                     # If we are not vertically aligning this opening paren,
@@ -11240,7 +11237,7 @@ sub send_lines_to_vertical_aligner {
 
                         # tack this length onto the container name to try
                         # to make a unique token name
-                        $container_name[$depth] .= "-" . $len;
+                        $container_name{$depth} .= "-" . $len;
                     }
                 }
             }
@@ -11272,8 +11269,8 @@ sub send_lines_to_vertical_aligner {
                   # to use the name from the previous depth.
                     my $depth_p =
                       ( $depth_last < $depth ? $depth_last : $depth );
-                    if ( $container_name[$depth_p] ) {
-                        $tok .= $container_name[$depth_p];
+                    if ( $container_name{$depth_p} ) {
+                        $tok .= $container_name{$depth_p};
                     }
                 }
 
@@ -11290,10 +11287,10 @@ sub send_lines_to_vertical_aligner {
                 #    }
                 if ( $raw_tok eq '(' ) {
                     my $ci = $ci_levels_to_go[$ibeg];
-                    if (   $container_name[$depth] =~ /^\+(if|unless)/
+                    if (   $container_name{$depth} =~ /^\+(if|unless)/
                         && $ci )
                     {
-                        $tok .= $container_name[$depth];
+                        $tok .= $container_name{$depth};
                     }
                 }
 
@@ -11377,10 +11374,10 @@ sub send_lines_to_vertical_aligner {
                     }
                 }
 
-         # Convert a bareword within braces into a quote for matching. This will
-         # allow alignment of expressions like this:
-         #    local ( $SIG{'INT'} ) = IGNORE;
-         #    local ( $SIG{ALRM} )  = 'POSTMAN';
+		# Convert a bareword within braces into a quote for matching.
+		# This will allow alignment of expressions like this:
+                #    local ( $SIG{'INT'} ) = IGNORE;
+                #    local ( $SIG{ALRM} )  = 'POSTMAN';
                 if (   $type eq 'w'
                     && $i > $ibeg
                     && $i < $iend
