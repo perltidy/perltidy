@@ -16,14 +16,14 @@ use warnings;
 # This creates a lot of output, so run it in a temporary directory and
 # delete everything after checking the results and saving anything noteworthy.
 
-# TODO:
+# - create scripts to easily package problems with bugs
+
+# - Add option to generate random input files
 # - This currently runs the perltidy binary.  Add an option to run call the
 #   module.
 # - Add additional garbage strings for better test coverage
 # - Review all perltidy error output and add some unique string
 #   for easy searching.
-# - Add option to randomly scramble input files
-# - Add option to check extrude/mangle/normal cycle
 
 my $usage = <<EOM;
 Run perltidy repeatedly on a selected file with randomly generated parameters:
@@ -69,6 +69,7 @@ EOM
 my $stop_file = 'stop.now';
 if ( -e $stop_file ) { unlink $stop_file }
 my @chkfile_errors;
+my @size_errors;
 foreach my $file (@files) {
     next unless -e $file;
     $file_count++;
@@ -86,6 +87,7 @@ foreach my $file (@files) {
     my ( $efile_case_min,   $efile_case_max ) = ( "", "" );
     my ( $chkfile_size_min, $chkfile_size_max );
     my ( $chkfile_case_min, $chkfile_case_max );
+    my $ofile_size_min_expected = 0;
 
     my $error_flag    = 0;
     my $restart_count = 0;
@@ -98,12 +100,34 @@ foreach my $file (@files) {
 
         # Use same random parameters for second and later files..
         my $profile = "profile.$case";
+
+        # Make the profile
         if ( $file_count == 1 ) {
 
             # use default parameters on first case. That way we can check
             # if a file produces an error output
             my $rrandom_parameters;
-            if ( $case > 1 ) {
+            if ( $case == 1 ) {
+               $rrandom_parameters = [ "" ];
+            }
+
+            # Case 2 creates the smallest possible output file size
+            if ($case == 2) {
+               $rrandom_parameters = [ "--mangle -dac -i=0 -ci=0" ];
+            }
+
+            # Case 3 checks extrude from mangle (case 2)
+            if ($case == 3) {
+               $rrandom_parameters = [ "--extrude" ];
+            }
+
+            # Case 4 checks mangle again from extrude (
+            if ($case == 4) {
+               $rrandom_parameters = [ "--mangle" ];
+            }
+
+            # From then on random parameters are generated
+            if ( $case > 5 ) {
                 $rrandom_parameters = get_random_parameters();
             }
             open OUT, ">", $profile || die "cannot open $profile: $!\n";
@@ -150,6 +174,13 @@ foreach my $file (@files) {
                     $ofile_size_max = $ofile_size;
                     $ofile_case_max = $ofile;
                 }
+            }
+            if    ( $case == 2 ) { $ofile_size_min_expected = $ofile_size }
+            elsif ( $case > 2 && $ofile_size < 0.95 * $ofile_size_min_expected )
+            {
+                print STDERR
+"**ERROR for ofile=$ofile: size = $ofile_size < $ofile_size_min_expected = min expected\n";
+                push @size_errors, $ofile;
             }
         }
 
@@ -214,8 +245,12 @@ foreach my $file (@files) {
             }
         }
 
+        # Set input file for next run
         $ifile = $ifile_original;
-        if ( $CHAIN_MODE && !$err ) {
+        if ($case < 4) {
+             $ifile = $ofile;
+        }
+        elsif ( $CHAIN_MODE && !$err ) {
             if ( $CHAIN_MODE == 1 || int( rand(1) + 0.5 ) ) {
                 { $ifile = $ofile }
             }
@@ -289,10 +324,19 @@ EOM
     if (@chkfile_errors) {
        local $"=')(';
        my $num=@chkfile_errors;
-       $num=10 if ($num>10);
+       $num=20 if ($num>20);
        print STDERR <<EOM;
 Some check files with errors (search above for '**ERROR'):
 (@chkfile_errors[1..$num-1])
+EOM
+    }
+    if (@size_errors) {
+       local $"=')(';
+       my $num=@size_errors;
+       $num=20 if ($num>20);
+       print STDERR <<EOM;
+Some files with definite size errors (search above for '**ERROR'):
+(@size_errors[1..$num-1])
 EOM
     }
 
@@ -981,7 +1025,10 @@ my @lines=<IN>;
 my $nlines=@lines;
 foreach my $line (@lines) {
     $lno++;
-    if ( $line =~ /uninitialized/ || length($line) > 80 ) {
+    if (   $line =~ /uninitialized/
+        || $line =~ /A fault was/
+        || length($line) > 80 )
+    {
 
         # ignore last few lines
         next if ( $lno > $nlines - 4 );
