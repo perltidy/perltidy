@@ -16464,6 +16464,7 @@ sub set_nobreaks {
             # ... with the corresponding opening brace on the same line
             my $type_sequence = $rLL->[$K_end]->[_TYPE_SEQUENCE_];
             my $K_opening     = $K_opening_container->{$type_sequence};
+            next unless ( defined($K_opening) );
             my $i_opening     = $i_beg + ( $K_opening - $K_beg );
             next if ( $i_opening < $i_beg );
 
@@ -18556,6 +18557,8 @@ sub insert_additional_breaks {
     my $i_l;
     my $line_number = 0;
     foreach my $i_break_left ( sort { $a <=> $b } @{$ri_break_list} ) {
+
+        next if ( $nobreak_to_go[$i_break_left] );
 
         $i_f = $ri_first->[$line_number];
         $i_l = $ri_last->[$line_number];
