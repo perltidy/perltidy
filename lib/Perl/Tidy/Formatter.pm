@@ -11922,7 +11922,12 @@ sub lookup_opening_indentation {
             # handle option to indent non-blocks of the form );  };  ];
             # But don't do special indentation to something like ')->pack('
             if ( !$block_type_to_go[$ibeg] ) {
-                my $cti = $closing_token_indentation{ $tokens_to_go[$ibeg] };
+
+		# Note that logical padding has already been applied, so we may
+		# need to remove some spaces to get a valid hash key.
+                my $tok = $tokens_to_go[$ibeg];
+                if ( length($tok) > 1 ) { $tok =~ s/\s//g }
+                my $cti = $closing_token_indentation{ $tok };
                 if ( $cti == 1 ) {
                     if (   $i_terminal <= $ibeg + 1
                         || $is_semicolon_terminated )
