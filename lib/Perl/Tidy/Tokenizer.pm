@@ -7359,7 +7359,9 @@ sub follow_quoted_string {
                 }
             }
             else {
-                $quoted_string .= substr( $tok, $old_pos );
+                if ( $old_pos <= length($tok) ) {
+                    $quoted_string .= substr( $tok, $old_pos );
+                }
             }
         }
     }
