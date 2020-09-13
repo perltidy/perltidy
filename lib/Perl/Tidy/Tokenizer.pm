@@ -814,7 +814,7 @@ sub get_line {
             }
 
             if (
-                ( $input_line_number > 1 )
+                $input_line_number > 1
 
                 # leave any hash bang in a BEGIN block alone
                 # i.e. see 'debugger-duck_type.t'
@@ -822,7 +822,11 @@ sub get_line {
                        $last_nonblank_block_type
                     && $last_nonblank_block_type eq 'BEGIN'
                 )
-                && ( !$tokenizer_self->[_look_for_hash_bang_] )
+                && !$tokenizer_self->[_look_for_hash_bang_]
+
+                # Patch: be sure there is a slash after the #! before giving a
+                # warning
+                && $input_line =~ /^\#\!\s*\/.*perl\b/
               )
             {
 
