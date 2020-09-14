@@ -113,7 +113,7 @@ foreach my $file (@files) {
 
             # Case 2 creates the smallest possible output file size
             if ($case == 2) {
-               $rrandom_parameters = [ "--mangle -dac -i=0 -ci=0" ];
+               $rrandom_parameters = [ "--mangle -dsc -dac -i=0 -ci=0 -it=2" ];
             }
 
             # Case 3 checks extrude from mangle (case 2)
@@ -175,8 +175,18 @@ foreach my $file (@files) {
                     $ofile_case_max = $ofile;
                 }
             }
+
+            # Min possible size is the min of cases 2 and 3
+            # Save this to check other results for file truncation
             if    ( $case == 2 ) { $ofile_size_min_expected = $ofile_size }
-            elsif ( $case > 2 && $ofile_size < 0.95 * $ofile_size_min_expected )
+            elsif ( $case == 3 ) {
+                if ( $ofile_size < $ofile_size_min_expected ) {
+                    $ofile_size_min_expected = $ofile_size;
+                }
+            }
+
+            # Check for unexpectedly very small file size
+            elsif ( $case > 3 && $ofile_size < 0.6 * $ofile_size_min_expected )
             {
                 print STDERR
 "**ERROR for ofile=$ofile: size = $ofile_size < $ofile_size_min_expected = min expected\n";

@@ -12652,7 +12652,7 @@ sub get_seqno {
         @is_not_vertical_alignment_token{@q} = (1) x scalar(@q);
 
         # these are the only types aligned at a line end
-        @q = qw(&& ||);
+        @q = qw(&& || =>);
         @is_terminal_alignment_type{@q} = (1) x scalar(@q);
 
         # these tokens only align at line level
@@ -12801,7 +12801,7 @@ sub get_seqno {
                     # moved far to the right where it is hard to see because
                     # nothing follows it, and
                     # (2) doing so may prevent other good alignments.
-                    # Current exceptions are && and ||
+                    # Current exceptions are && and || and =>
                     if ( $i == $iend || $i >= $i_terminal ) {
                         $alignment_type = ""
                           unless ( $is_terminal_alignment_type{$type} );
@@ -16464,6 +16464,7 @@ sub set_nobreaks {
 
             # ...and preceded by a semicolon on the same line
             my $K_semicolon = $self->K_previous_nonblank($K_end);
+            next unless defined($K_semicolon);
             my $i_semicolon = $i_beg + ( $K_semicolon - $K_beg );
             next if ( $i_semicolon <= $i_beg );
             next unless ( $rLL->[$K_semicolon]->[_TYPE_] eq ';' );

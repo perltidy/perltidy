@@ -576,7 +576,7 @@ my %extractor_for = (
         $ncws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
-    executable => [ $ws, { DONT_MATCH => $pod_or_DATA } ],
+    executable             => [ $ws, { DONT_MATCH => $pod_or_DATA } ],
     executable_no_comments =>
       [ { DONT_MATCH => $comment }, $ncws, { DONT_MATCH => $pod_or_DATA } ],
     all => [ { MATCH => qr/(?s:.*)/ } ],
@@ -695,7 +695,7 @@ my %extractor_for = (
         $ncws, { DONT_MATCH => $pod_or_DATA },
         $variable, $id, { DONT_MATCH => \&extract_quotelike }
     ],
-    executable => [ $ws, { DONT_MATCH => $pod_or_DATA } ],
+    executable             => [ $ws, { DONT_MATCH => $pod_or_DATA } ],
     executable_no_comments =>
       [ { DONT_MATCH => $comment }, $ncws, { DONT_MATCH => $pod_or_DATA } ],
     all => [ { MATCH => qr/(?s:.*)/ } ],

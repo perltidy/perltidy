@@ -65,7 +65,7 @@ BEGIN {
         'def'       => "",
         'long_line' => "-l=0",
         'pbp'       => "-pbp -nst -nse",
-        'rperl' =>
+        'rperl'     =>
           "-pbp  -nst --ignore-side-comment-lengths  --converge  -l=0  -q",
         'rt132059' => "-dac",
     };

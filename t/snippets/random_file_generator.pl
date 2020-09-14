@@ -70,20 +70,32 @@ for ( my $nf = 1 ; $nf <= $max_cases ; $nf++ ) {
     my $frac  = rand(1);
     my $ix    = int( rand($nsources) );
     $ix = random_index( $nsources - 1 );
-    my $method = random_index(2);
+    my $NMETH = 4;
+    my $method = random_index(3);
     my $rfile;
-    if ( $method == 2 ) {
+    if ( $method == 3 ) {
         my $nchars=1+random_index(1000);
         $rfile = random_characters($nchars);
 print STDERR "Method $method, nchars=$nchars\n";
     }
-    elsif ( $method == 1 ) {
+    elsif ( $method == 2 ) {
         $rfile = skip_random_lines( $rsource_files->[$ix], $frac );
 print STDERR "Method $method, frac=$frac, file=$ix\n";
     }
-    else {
+    elsif ( $method == 1 ) {
         $rfile = select_random_lines( $rsource_files->[$ix], $frac );
 print STDERR "Method $method, frac=$frac, file=$ix\n";
+    }
+    elsif ( $method == 0 ) {
+        $rfile = reverse_random_lines( $rsource_files->[$ix], $frac );
+print STDERR "Method $method, frac=$frac, file=$ix\n";
+    }
+
+    # Shouldn't happen
+    else {
+        my $nchars=1+random_index(1000);
+        $rfile = random_characters($nchars);
+print STDERR "FIXME: method=$method but NMETH=$NMETH; Method $method, nchars=$nchars\n";
     }
     open( OUT, ">", $fname ) || die "cannot open $fname: $!\n";
     foreach my $line ( @{$rfile} ) {
@@ -142,6 +154,37 @@ sub select_random_lines {
        $count++;
     }
     return \@selected;
+}
+
+sub reverse_random_lines { 
+
+    # skip some fraction of the lines in a source file
+    # but keep lines in the original order
+    my ($rsource, $frand) = @_;
+
+    my %select;
+    my $nlines = @{$rsource};
+    my $num_delete = $nlines*$frand;
+    my $count=0;
+    while ($count < $num_delete) {
+       my $ii = rand($nlines);
+       $ii = int($ii);
+       $select{$ii} = 1;
+       $count++;
+    }
+   
+    my @lines;
+    my $jj = -1;
+    foreach my $line (@{$rsource}) {
+        $jj++;
+        if ($select{$jj} ) {
+             chomp $line;
+             $line = reverse($line);
+             $line .= "\n";
+        };
+        push @lines, $line;
+    }
+    return \@lines;
 }
 
 sub skip_random_lines { 

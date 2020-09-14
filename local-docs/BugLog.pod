@@ -5,13 +5,76 @@ found with the help of automated random testing.
 
 =over
 
+=item B<Allow vertical alignment of line-ending fat comma>
+
+A change was made to allow a '=>' at the end of a line to align vertically, 
+provided that it aligns with two or more other '=>' tokens.
+
+=item B<fixed uninitialized value reference>
+
+The following message was generated when running perltidy on random text:
+
+ Use of uninitialized value $K_semicolon in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 16467.
+
+This was fixed 14 Sep 2020. 
+
+=item B<Do not create a zero size file by deleting semicolons>
+
+A rule was added to prevent a file consisting of a single semicolon
+  
+ ;
+
+from becoming a zero length file.  This could cause problems with other
+software.
+
+=item B<fixed uninitialized value reference>
+
+The following message was generated when running perltidy on random text:
+
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11926.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11936.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11944.
+
+This was fixed 13 Sep 2020 in 'fixed unitialized variable problem ', adb2096.
+
+=item B<fixed uninitialized value reference>
+
+The following message was generated when running perltidy on random text:
+
+ substr outside of string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
+ Use of uninitialized value in concatenation (.) or string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
+
+This was fixed 13 Sep 2020 in 'fixed unitialized variable problem', 5bf49a3.
+
+=item B<fixed uninitialized value reference>
+
+The following message was generated when running perltidy on random text:
+
+ Use of uninitialized value $K_opening in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 16467.
+
+This was fixed 13 Sep 2020 in 'fix undefined variable reference', 1919482.
+
+=item B<hashbang warning changed>
+
+The following snippet generated a warning that there might be a hash-bang
+after the start of the script.  
+
+ $x = 2;
+ #!  sunos does not yet provide a /usr/bin/perl
+ $script = "$^X $script";
+
+To prevent this annoyance, the warning is not given unless the first nonblank
+character after the '#!' is a '/'.  Note that this change is just for the
+warning message. The actual hash bang check does not require the slash.
+
+
 =item B<uninitialized index referenced>
 
 An unitialized index was referenced when running on a file of randomly generated text:
 
   Use of uninitialized value $K_oo in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 7259.
 
-This was fixed 12 Sep 2020.
+This was fixed 12 Sep 2020 in 'fixed undefined index', 616bb88.
 
 =item B<Oops message triggered>
 

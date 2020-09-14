@@ -3296,6 +3296,8 @@ sub Dump_tree_groups {
         my $saw_if_or;        # if we saw an 'if' or 'or' at group level
         my $raw_tokb = "";    # first token seen at group level
         my $jfirst_bad;
+        my $line_ending_fat_comma;    # is last token just a '=>' ?
+
         for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
               decode_alignment_token( $rtokens_1->[$j] );
@@ -3303,6 +3305,16 @@ sub Dump_tree_groups {
                 if ( !$raw_tokb ) { $raw_tokb = $raw_tok }
                 $saw_if_or ||= $is_if_or{$raw_tok};
             }
+
+            # Look for a line ending in a bare '=>'
+            # These make marginal matches with just two lines.
+            $line_ending_fat_comma = (
+                     $j == $jmax_1 - 2
+                  && $raw_tok eq '=>'
+                  && ( $rfield_lengths_0->[ $j + 1 ] == 2
+                    || $rfield_lengths_1->[ $j + 1 ] == 2 )
+            );
+
             my $pad = $rfield_lengths_1->[$j] - $rfield_lengths_0->[$j];
             if ( $j == 0 ) {
                 $pad += $line_1->get_leading_space_count() -
@@ -3311,7 +3323,7 @@ sub Dump_tree_groups {
 
             if ( $pad < 0 )        { $pad     = -$pad }
             if ( $pad > $max_pad ) { $max_pad = $pad }
-            if ( $is_good_alignment{$raw_tok} ) {
+            if ( $is_good_alignment{$raw_tok} && !$line_ending_fat_comma ) {
                 $saw_good_alignment = 1;
             }
             else {
@@ -3339,6 +3351,8 @@ sub Dump_tree_groups {
                 }
             }
         }
+
+        $is_marginal = 1 if ( $is_marginal == 0 && $line_ending_fat_comma );
 
         if ( !defined($jfirst_bad) ) { $jfirst_bad = $jmax_1 - 1; }
 
@@ -3433,7 +3447,7 @@ sub Dump_tree_groups {
             elsif ( $raw_tokb eq '=>' ) {
 
                 # undo marginal flag if patterns match
-                $is_marginal = $pat0 ne $pat1;
+                $is_marginal = $pat0 ne $pat1 || $line_ending_fat_comma;
             }
             elsif ( $raw_tokb eq '=~' ) {
 
