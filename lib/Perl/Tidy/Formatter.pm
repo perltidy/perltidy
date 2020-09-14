@@ -2380,6 +2380,7 @@ sub respace_tokens {
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
     my $last_nonblank_block_type = '';
+    my $nonblank_token_count     = 0;
     my $store_token              = sub {
         my ($item) = @_;
 
@@ -2448,6 +2449,7 @@ sub respace_tokens {
             $last_nonblank_type       = $type;
             $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
+            $nonblank_token_count++;
         }
 
         # and finally, add this item to the new array
@@ -3060,6 +3062,12 @@ sub respace_tokens {
                             $ok_to_delete = $next_nonblank_token_type eq ';'
                               || $next_nonblank_token_type eq '}';
                         }
+                    }
+
+                    # do not delete only nonblank token in a file
+                    else {
+                        my $Kn = $self->K_next_nonblank($KK);
+                        $ok_to_delete = defined($Kn) || $nonblank_token_count;
                     }
 
                     if ($ok_to_delete) {
