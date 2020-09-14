@@ -824,9 +824,9 @@ sub get_line {
                 )
                 && !$tokenizer_self->[_look_for_hash_bang_]
 
-                # Patch: be sure there is a slash after the #! before giving a
-                # warning
-                && $input_line =~ /^\#\!\s*\/.*perl\b/
+		# Patch: be sure there is either a slash or the word 'perl'
+		# after the #! before giving a warning.
+                && $input_line =~ /^\#\!\s*(\/|perl)/ 
               )
             {
 
