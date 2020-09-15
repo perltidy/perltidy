@@ -1,4 +1,3 @@
-
 #####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
@@ -61,6 +60,7 @@ my (
     %is_assignment,
     %is_keyword_returning_list,
     %is_if_unless_and_or_last_next_redo_return,
+    %is_if_elsif_else_unless_while_until_for_foreach,
     %is_last_next_redo_return,
     %is_sort_map_grep,
     %is_sort_map_grep_eval,
@@ -329,6 +329,15 @@ BEGIN {
 
     @q = qw(is if unless and or err last next redo return);
     @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
+
+    # These block types may have text between the keyword and opening
+    # curly.  Note: 'else' does not, but must be included to allow trailing
+    # if/elsif text to be appended.
+    # patch for SWITCH/CASE: added 'case' and 'when'
+    @q =
+      qw(if elsif else unless while until for foreach case when catch);
+    @is_if_elsif_else_unless_while_until_for_foreach{@q} =
+      (1) x scalar(@q);
 
     @q = qw(last next redo return);
     @is_last_next_redo_return{@q} = (1) x scalar(@q);
@@ -6196,6 +6205,7 @@ EOM
 
     # Only make a hash entry for the next parameters if values are defined.
     # That allows a quick check to be made later.
+    %break_before_container_types = ();
     for ( $rOpts->{'break-before-hash-brace'} ) {
         $break_before_container_types{'{'} = $_ if $_ && $_ > 0;
     }
@@ -10061,8 +10071,6 @@ sub correct_lp_indentation {
 
     # Variables related to forming closing side comments.
 
-    my %is_if_elsif_else_unless_while_until_for_foreach;
-
     my %block_leading_text;
     my %block_opening_line_number;
     my $csc_new_statement_ok;
@@ -10075,18 +10083,6 @@ sub correct_lp_indentation {
     my $leading_block_text_length_exceeded;
     my $leading_block_text_line_length;
     my $leading_block_text_line_number;
-
-    BEGIN {
-
-        # These block types may have text between the keyword and opening
-        # curly.  Note: 'else' does not, but must be included to allow trailing
-        # if/elsif text to be appended.
-        # patch for SWITCH/CASE: added 'case' and 'when'
-        my @q =
-          qw(if elsif else unless while until for foreach case when catch);
-        @is_if_elsif_else_unless_while_until_for_foreach{@q} =
-          (1) x scalar(@q);
-    }
 
     sub initialize_csc_vars {
         %block_leading_text           = ();
@@ -11718,21 +11714,9 @@ sub lookup_opening_indentation {
 }
 
 {    ## begin closure set_adjusted_indentation
-    my %is_if_elsif_else_unless_while_until_for_foreach;
 
     my ( $last_indentation_written, $last_unadjusted_indentation,
         $last_leading_token );
-
-    BEGIN {
-
-        # These block types may have text between the keyword and opening
-        # curly.  Note: 'else' does not, but must be included to allow trailing
-        # if/elsif text to be appended.
-        # patch for SWITCH/CASE: added 'case' and 'when'
-        my @q = qw(if elsif else unless while until for foreach case when);
-        @is_if_elsif_else_unless_while_until_for_foreach{@q} =
-          (1) x scalar(@q);
-    }
 
     sub initialize_adjusted_indentation {
         $last_indentation_written    = 0;
@@ -17886,7 +17870,9 @@ sub insert_breaks_before_list_opening_containers {
 
     return unless %break_before_container_types;
 
-    my $nmax                  = @{$ri_right} - 1;
+    my $nmax = @{$ri_right} - 1;
+    return unless ( $nmax >= 0 );
+
     my $rLL                   = $self->[_rLL_];
     my $rtype_count_by_seqno  = $self->[_rtype_count_by_seqno_];
     my $ris_broken_container  = $self->[_ris_broken_container_];
@@ -17912,15 +17898,20 @@ sub insert_breaks_before_list_opening_containers {
             $iend     = $ir + ( $Kend - $Kr );
         }
 
-        # This is only for line-ending tokens
+        # This is only for line-ending tokens with a preceding blank
+        # on the same line.
         next unless ( $Kl < $Kend - 1 );
 
-        # Only for selected types of tokens
+        # And only for some kind of container token
+        my $seqno = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
+        next unless ( defined($seqno) );
+
+        # And only for selected types of container tokens
         my $token_end    = $rLL->[$Kend]->[_TOKEN_];
         my $break_option = $break_before_container_types{$token_end};
         next unless ($break_option);
 
-        # This is not for block braces
+        # This is not for code block braces
         my $block_type = $rLL->[$Kend]->[_BLOCK_TYPE_];
         next if ($block_type);
 
@@ -17930,7 +17921,6 @@ sub insert_breaks_before_list_opening_containers {
         # This is only for list containers. This is a little fuzzy,
         # but we will require at least 2 commas or 1 fat comma in the
         # immediate lower level
-        my $seqno           = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
         my $fat_comma_count = $rtype_count_by_seqno->{$seqno}->{'=>'};
         my $comma_count     = $rtype_count_by_seqno->{$seqno}->{','};
         next unless ( $fat_comma_count || $comma_count && $comma_count > 1 );
@@ -17942,8 +17932,9 @@ sub insert_breaks_before_list_opening_containers {
         if ( $token_end eq '(' ) {
             my $iend_m2 = $iend - 2;
             if ( $iend_m2 >= $il ) {
-                if (   $types_to_go[$iend_m2] eq 'k'
-                    && $is_if_unless{ $tokens_to_go[$iend_m2] } )
+                if ( $types_to_go[$iend_m2] eq 'k'
+                    && $is_if_elsif_else_unless_while_until_for_foreach{
+                        $tokens_to_go[$iend_m2] } )
                 {
                     next;
                 }
