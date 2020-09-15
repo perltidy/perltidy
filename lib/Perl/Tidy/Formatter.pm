@@ -1,4 +1,3 @@
-{ #<<< begin package Perl::Tidy::Formatter
 
 #####################################################################
 #
@@ -13,6 +12,9 @@
 package Perl::Tidy::Formatter;
 use strict;
 use warnings;
+
+{ #<<< begin package Perl::Tidy::Formatter
+
 use Carp;
 our $VERSION = '20200907';
 
@@ -18875,5 +18877,6 @@ sub compare_indentation_levels {
     }
     return;
 }
-1;
+
 } ## end package Perl::Tidy::Formatter
+1;
