@@ -15,7 +15,7 @@ use warnings;
 { #<<< begin package Perl::Tidy::Formatter
 
 use Carp;
-our $VERSION = '20200907';
+our $VERSION = '20200907.01';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()

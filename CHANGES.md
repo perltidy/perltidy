@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2020 xx xx 
+## 2020 09 07.01
 
     - Added the token '->' to the list of alignment tokens, as suggested in git
       #39, so that it can be vertically aligned if a space is placed before them with -wls='->'.
