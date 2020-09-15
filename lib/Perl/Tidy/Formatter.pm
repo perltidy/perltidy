@@ -103,6 +103,8 @@ my (
 
     %want_break_before,
 
+    %break_before_container_types,
+
     %space_after_keyword,
 
     %tightness,
@@ -207,6 +209,9 @@ BEGIN {
         _K_closing_ternary_          => $i++,
         _rcontainer_map_             => $i++,
         _rK_phantom_semicolons_      => $i++,
+        _rtype_count_by_seqno_       => $i++,
+        _ris_broken_container_       => $i++,
+        _rhas_broken_container_      => $i++,
         _rpaired_to_inner_container_ => $i++,
         _rbreak_container_           => $i++,
         _rshort_nested_              => $i++,
@@ -667,6 +672,9 @@ sub new {
     $self->[_rcontainer_map_]      = {};    # hierarchical map of containers
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
+    $self->[_rtype_count_by_seqno_]       = {};
+    $self->[_ris_broken_container_]       = {};
+    $self->[_rhas_broken_container_]      = {};
     $self->[_rpaired_to_inner_container_] = {};
     $self->[_rbreak_container_]           = {};    # prevent one-line blocks
     $self->[_rshort_nested_]              = {};    # blocks not forced open
@@ -2361,6 +2369,13 @@ sub respace_tokens {
     # This will be needed if we want to undo them for iterations
     my $rK_phantom_semicolons = [];
 
+    my %seqno_stack;
+    my %KK_stack;
+    my $depth_next            = 0;
+    my $rtype_count_by_seqno  = {};
+    my $ris_broken_container  = {};
+    my $rhas_broken_container = {};
+
     # a sub to link preceding nodes forward to a new node type
     my $link_back = sub {
         my ( $Ktop, $key ) = @_;
@@ -2450,6 +2465,14 @@ sub respace_tokens {
             $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
             $nonblank_token_count++;
+
+            # count selected types
+            if ( $type =~ /^(=>|,)$/ ) {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ( defined($seqno) ) {
+                    $rtype_count_by_seqno->{$seqno}->{$type}++;
+                }
+            }
         }
 
         # and finally, add this item to the new array
@@ -3082,10 +3105,32 @@ sub respace_tokens {
 
             elsif ($type_sequence) {
 
-                #                if ( $is_opening_token{$token} ) {
-                #                }
+                if ( $is_opening_token{$token} ) {
+                    $seqno_stack{$depth_next} = $type_sequence;
+                    $KK_stack{$depth_next}    = $KK;
+                    $depth_next++;
+                }
+                elsif ( $is_closing_token{$token} ) {
+                    $depth_next--;
 
-                if ( $is_closing_token{$token} ) {
+                    # keep track of broken lists for later formatting
+                    my $seqno_test  = $seqno_stack{$depth_next};
+                    my $KK_open     = $KK_stack{$depth_next};
+                    my $seqno_outer = $seqno_stack{ $depth_next - 1 };
+                    if (   defined($seqno_test)
+                        && defined($KK_open)
+                        && $seqno_test == $type_sequence )
+                    {
+                        my $lx_open  = $rLL->[$KK_open]->[_LINE_INDEX_];
+                        my $lx_close = $rLL->[$KK]->[_LINE_INDEX_];
+                        if ( $lx_open < $lx_close ) {
+                            $ris_broken_container->{$type_sequence} =
+                              $lx_close - $lx_open;
+                            if ( defined($seqno_outer) ) {
+                                $rhas_broken_container->{$seqno_outer} = 1;
+                            }
+                        }
+                    }
 
                     # Insert a tentative missing semicolon if the next token is
                     # a closing block brace
@@ -3125,6 +3170,9 @@ sub respace_tokens {
     $self->[_K_opening_ternary_]     = $K_opening_ternary;
     $self->[_K_closing_ternary_]     = $K_closing_ternary;
     $self->[_rK_phantom_semicolons_] = $rK_phantom_semicolons;
+    $self->[_rtype_count_by_seqno_]  = $rtype_count_by_seqno;
+    $self->[_ris_broken_container_]  = $ris_broken_container;
+    $self->[_rhas_broken_container_] = $rhas_broken_container;
 
     # make sure the new array looks okay
     $self->check_token_array();
@@ -6144,6 +6192,18 @@ EOM
         $left_bond_strength{'?'}  = NO_BREAK;
     }
 
+    # Only make a hash entry for the next parameters if values are defined.
+    # That allows a quick check to be made later.
+    for ( $rOpts->{'break-before-hash-brace'} ) {
+        $break_before_container_types{'{'} = $_ if $_ && $_ > 0;
+    }
+    for ( $rOpts->{'break-before-square-bracket'} ) {
+        $break_before_container_types{'['} = $_ if $_ && $_ > 0;
+    }
+    for ( $rOpts->{'break-before-paren'} ) {
+        $break_before_container_types{'('} = $_ if $_ && $_ > 0;
+    }
+
     # Define here tokens which may follow the closing brace of a do statement
     # on the same line, as in:
     #   } while ( $something);
@@ -7472,21 +7532,21 @@ sub copy_token_as_type {
         # We had to wait until now for reasons explained in sub 'write_line'.
         if ( $level < 0 ) { $level = 0 }
 
-        # Check for emergency flush...
-	# The K indexes in the batch must always be a continuous sequence of
-	# the global token array.  The batch process programming assumes this.
-	# If storing this token would cause this relation to fail we must dump
-	# the current batch before storing the new token.  It is extremely rare
-	# for this to happen. One known example is the following two-line snippet
-	# when run with parameters
-        # --noadd-newlines  --space-terminal-semicolon:
-        #    if ( $_ =~ /PENCIL/ ) { $pencil_flag= 1 } ; ;
-        #    $yy=1;
+       # Check for emergency flush...
+       # The K indexes in the batch must always be a continuous sequence of
+       # the global token array.  The batch process programming assumes this.
+       # If storing this token would cause this relation to fail we must dump
+       # the current batch before storing the new token.  It is extremely rare
+       # for this to happen. One known example is the following two-line snippet
+       # when run with parameters
+       # --noadd-newlines  --space-terminal-semicolon:
+       #    if ( $_ =~ /PENCIL/ ) { $pencil_flag= 1 } ; ;
+       #    $yy=1;
 
         if ( defined($max_index_to_go) && $max_index_to_go >= 0 ) {
             my $Klast = $K_to_go[$max_index_to_go];
             if ( $Ktoken_vars != $Klast + 1 ) {
-                 $self->flush_batch_of_CODE();
+                $self->flush_batch_of_CODE();
             }
         }
 
@@ -8710,9 +8770,12 @@ EOM
                       $self->recombine_breakpoints( $ri_first, $ri_last );
                 }
 
-                $self->insert_final_breaks( $ri_first, $ri_last )
+                $self->insert_final_ternary_breaks( $ri_first, $ri_last )
                   if $colon_count;
             }
+
+            $self->insert_breaks_before_list_opening_containers( $ri_first,
+                $ri_last );
 
             # do corrector step if -lp option is used
             my $do_not_pad = 0;
@@ -11383,8 +11446,8 @@ sub send_lines_to_vertical_aligner {
                     }
                 }
 
-		# Convert a bareword within braces into a quote for matching.
-		# This will allow alignment of expressions like this:
+                # Convert a bareword within braces into a quote for matching.
+                # This will allow alignment of expressions like this:
                 #    local ( $SIG{'INT'} ) = IGNORE;
                 #    local ( $SIG{ALRM} )  = 'POSTMAN';
                 if (   $type eq 'w'
@@ -11931,11 +11994,11 @@ sub lookup_opening_indentation {
             # But don't do special indentation to something like ')->pack('
             if ( !$block_type_to_go[$ibeg] ) {
 
-		# Note that logical padding has already been applied, so we may
-		# need to remove some spaces to get a valid hash key.
+                # Note that logical padding has already been applied, so we may
+                # need to remove some spaces to get a valid hash key.
                 my $tok = $tokens_to_go[$ibeg];
                 if ( length($tok) > 1 ) { $tok =~ s/\s//g }
-                my $cti = $closing_token_indentation{ $tok };
+                my $cti = $closing_token_indentation{$tok};
                 if ( $cti == 1 ) {
                     if (   $i_terminal <= $ibeg + 1
                         || $is_semicolon_terminated )
@@ -12642,7 +12705,7 @@ sub get_seqno {
         # Replaced =~ and // in the list.  // had been removed in RT 119588
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ? : => && || ~~ !~~ =~ !~ // <=>
+          { ? : => && || ~~ !~~ =~ !~ // <=> ->
           #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
@@ -16479,7 +16542,7 @@ sub set_nobreaks {
             my $type_sequence = $rLL->[$K_end]->[_TYPE_SEQUENCE_];
             my $K_opening     = $K_opening_container->{$type_sequence};
             next unless ( defined($K_opening) );
-            my $i_opening     = $i_beg + ( $K_opening - $K_beg );
+            my $i_opening = $i_beg + ( $K_opening - $K_beg );
             next if ( $i_opening < $i_beg );
 
             # ... and only one semicolon between these braces
@@ -17815,7 +17878,118 @@ sub break_equals {
     return;
 }
 
-sub insert_final_breaks {
+sub insert_breaks_before_list_opening_containers {
+
+    my ( $self, $ri_left, $ri_right ) = @_;
+
+    return unless %break_before_container_types;
+
+    my $nmax                  = @{$ri_right} - 1;
+    my $rLL                   = $self->[_rLL_];
+    my $rtype_count_by_seqno  = $self->[_rtype_count_by_seqno_];
+    my $ris_broken_container  = $self->[_ris_broken_container_];
+    my $rhas_broken_container = $self->[_rhas_broken_container_];
+
+    # scan the ends of all lines
+    my @insert_list;
+    for my $n ( 0 .. $nmax ) {
+        my $il = $ri_left->[$n];
+        my $ir = $ri_right->[$n];
+        next unless ( $ir > $il );
+        my $Kl       = $K_to_go[$il];
+        my $Kr       = $K_to_go[$ir];
+        my $Kend     = $Kr;
+        my $iend     = $ir;
+        my $type_end = $rLL->[$Kr]->[_TYPE_];
+
+        # backup before a side comment
+        if ( $type_end eq '#' ) {
+            $Kend = $self->K_previous_nonblank($Kr);
+            next unless defined($Kend);
+            $type_end = $rLL->[$Kend]->[_TYPE_];
+            $iend     = $ir + ( $Kend - $Kr );
+        }
+
+        # This is only for line-ending tokens
+        next unless ( $Kl < $Kend - 1 );
+
+        # Only for selected types of tokens
+        my $token_end    = $rLL->[$Kend]->[_TOKEN_];
+        my $break_option = $break_before_container_types{$token_end};
+        next unless ($break_option);
+
+        # This is not for block braces
+        my $block_type = $rLL->[$Kend]->[_BLOCK_TYPE_];
+        next if ($block_type);
+
+        # Require a space before the line ending token
+        next unless ( $rLL->[ $Kend - 1 ]->[_TYPE_] eq 'b' );
+
+        # This is only for list containers. This is a little fuzzy,
+        # but we will require at least 2 commas or 1 fat comma in the
+        # immediate lower level
+        my $seqno           = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
+        my $fat_comma_count = $rtype_count_by_seqno->{$seqno}->{'=>'};
+        my $comma_count     = $rtype_count_by_seqno->{$seqno}->{','};
+        next unless ( $fat_comma_count || $comma_count && $comma_count > 1 );
+
+        # Do not break a weld
+        next if ( $self->weld_len_left( $seqno, $token_end ) );
+
+        # Parens cannot break after certain keywords
+        if ( $token_end eq '(' ) {
+            my $iend_m2 = $iend - 2;
+            if ( $iend_m2 >= $il ) {
+                if (   $types_to_go[$iend_m2] eq 'k'
+                    && $is_if_unless{ $tokens_to_go[$iend_m2] } )
+                {
+                    next;
+                }
+            }
+        }
+
+        # Final decision is based on selected option
+        # 1 = stable
+        my $ok_to_break;
+        if ( $break_option == 1 ) {
+            if ( $ir - 2 > $il ) {
+                $ok_to_break = $old_breakpoint_to_go[ $ir - 2 ];
+            }
+        }
+
+        # 2 = only if complex list
+        elsif ( $break_option == 2 ) {
+            $ok_to_break = $rhas_broken_container->{$seqno};
+        }
+
+        # 3 = always break
+        elsif ( $break_option == 3 ) {
+            $ok_to_break = 1;
+        }
+
+        # Shouldn't happen! Bad flag, make same as 3
+        else {
+            $ok_to_break = 1;
+        }
+
+        next unless ($ok_to_break);
+
+        # This meets the criteria, so install a break
+        my $Kbreak = $self->K_previous_nonblank($Kend);
+        my $ibreak = $Kbreak - $Kl + $il;
+        next if ( $ibreak < $il );
+        next if ( $nobreak_to_go[$ibreak] );
+        push @insert_list, $ibreak;
+    }
+
+    # insert any new break points
+    if (@insert_list) {
+        $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
+    }
+    return;
+}
+
+sub insert_final_ternary_breaks {
 
     my ( $self, $ri_left, $ri_right ) = @_;
 

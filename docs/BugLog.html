@@ -1,0 +1,330 @@
+<?xml version="1.0" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title></title>
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<link rev="made" href="mailto:root@localhost" />
+</head>
+
+<body>
+
+
+
+<ul id="index">
+  <li><a href="#Issues-fixed-after-release-20200907">Issues fixed after release 20200907</a></li>
+</ul>
+
+<h1 id="Issues-fixed-after-release-20200907">Issues fixed after release 20200907</h1>
+
+<p>This is a detailed log of changes since the release 20200907. All bugs were found with the help of automated random testing.</p>
+
+<dl>
+
+<dt id="make-the-arrow-a-vertical-alignment-token-git-39"><b>make the arrow a vertical alignment token, git #39</b></dt>
+<dd>
+
+<p>The -&gt; can now be vertically aligned if a space is placed before it with -wls=&#39;-&gt;&#39;.</p>
+
+</dd>
+<dt id="add-flags--bbhb-n--bbsb-n-bbp-n-git-38"><b>add flags -bbhb=n, -bbsb=n, =bbp=n, git #38</b></dt>
+<dd>
+
+<p>These flags give control over the opening token of a multiple-line list. They are described in the man pages, perltidy.html.</p>
+
+</dd>
+<dt id="Allow-vertical-alignment-of-line-ending-fat-comma"><b>Allow vertical alignment of line-ending fat comma</b></dt>
+<dd>
+
+<p>A change was made to allow a &#39;=&gt;&#39; at the end of a line to align vertically, provided that it aligns with two or more other &#39;=&gt;&#39; tokens. This update was 14 Sep 2020, &#39;Allow line-ending &#39;=&gt;&#39; to align vertically&#39;, ea96739.</p>
+
+</dd>
+<dt id="fixed-uninitialized-value-reference"><b>fixed uninitialized value reference</b></dt>
+<dd>
+
+<p>The following message was generated when running perltidy on random text:</p>
+
+<pre><code> Use of uninitialized value $K_semicolon in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 16467.</code></pre>
+
+<p>This was fixed 14 Sep 2020, included in &#39;Allow line-ending &#39;=&gt;&#39; to align vertically&#39;, ea96739.</p>
+
+</dd>
+<dt id="Do-not-create-a-zero-size-file-by-deleting-semicolons"><b>Do not create a zero size file by deleting semicolons</b></dt>
+<dd>
+
+<p>A rule was added to prevent a file consisting of a single semicolon</p>
+
+<pre><code> ;</code></pre>
+
+<p>from becoming a zero length file. This could cause problems with other software. Fixed 13 Sep 2020, &#39;do not create a zero length file by deleting semicolons&#39;, b39195e.</p>
+
+</dd>
+<dt id="fixed-uninitialized-value-reference1"><b>fixed uninitialized value reference</b></dt>
+<dd>
+
+<p>The following message was generated when running perltidy on random text:</p>
+
+<pre><code> Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11926.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11936.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 11944.</code></pre>
+
+<p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem &#39;, adb2096.</p>
+
+</dd>
+<dt id="fixed-uninitialized-value-reference2"><b>fixed uninitialized value reference</b></dt>
+<dd>
+
+<p>The following message was generated when running perltidy on random text:</p>
+
+<pre><code> substr outside of string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.
+ Use of uninitialized value in concatenation (.) or string at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7362.</code></pre>
+
+<p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem&#39;, 5bf49a3.</p>
+
+</dd>
+<dt id="fixed-uninitialized-value-reference3"><b>fixed uninitialized value reference</b></dt>
+<dd>
+
+<p>The following message was generated when running perltidy on random text:</p>
+
+<pre><code> Use of uninitialized value $K_opening in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 16467.</code></pre>
+
+<p>This was fixed 13 Sep 2020 in &#39;fix undefined variable reference&#39;, 1919482.</p>
+
+</dd>
+<dt id="hashbang-warning-changed"><b>hashbang warning changed</b></dt>
+<dd>
+
+<p>The following snippet generated a warning that there might be a hash-bang after the start of the script.</p>
+
+<pre><code> $x = 2;
+ #!  sunos does not yet provide a /usr/bin/perl
+ $script = &quot;$^X $script&quot;;</code></pre>
+
+<p>To prevent this annoyance, the warning is not given unless the first nonblank character after the &#39;#!&#39; is a &#39;/&#39;. Note that this change is just for the warning message. The actual hash bang check does not require the slash.</p>
+
+<p>Fixed 13 Sep 2020, &#39;prevent unnecessary hash-bang warning message&#39; 4f7733e and &#39;improved hash-bang warning filter&#39;, fa84904.</p>
+
+</dd>
+<dt id="uninitialized-index-referenced"><b>uninitialized index referenced</b></dt>
+<dd>
+
+<p>An unitialized index was referenced when running on a file of randomly generated text:</p>
+
+<pre><code>  Use of uninitialized value $K_oo in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 7259.</code></pre>
+
+<p>This was fixed 12 Sep 2020 in &#39;fixed undefined index&#39;, 616bb88.</p>
+
+</dd>
+<dt id="Oops-message-triggered"><b>Oops message triggered</b></dt>
+<dd>
+
+<p>The parameter combination -lp -wc triggered an internal bug message from perltidy:</p>
+
+<pre><code> 398: Program bug with -lp.  seqno=77 should be 254 and i=1 should be less than max=-1
+ 713: The logfile perltidy.LOG may contain useful information
+ 713: 
+ 713: Oops, you seem to have encountered a bug in perltidy.  Please check the
+ 713: BUGS file at http://perltidy.sourceforge.net.  If the problem is not
+ 713: listed there, please report it so that it can be corrected.  Include the
+ ...</code></pre>
+
+<p>The problem is that the parameters --line-up-parentheses and --whitespace-cycle=n are not compatible. The fix is to write a message and turn off the -wc parameter when the both occur. This was fixed 8 Sep 2020 in &quot;do not allow -wc and -lp together, can cause bugs&quot;, 7103781.</p>
+
+</dd>
+<dt id="Internal-fault-detected-by-perltidy"><b>Internal fault detected by perltidy</b></dt>
+<dd>
+
+<p>This snippet after processing with the indicated parameters triggered a Fault message in store-token-to-go due to discontinuous internal index values :</p>
+
+<pre><code>  perltidy --noadd-newlines --space-terminal-semicolon
+
+  if ( $_ =~ /PENCIL/ ) { $pencil_flag= 1 } ; ;
+  $yy=1;</code></pre>
+
+<p>This triggered the message:</p>
+
+<pre><code> ==============================================================================
+ While operating on input stream with name: &#39;&lt;stdin&gt;&#39;
+ A fault was detected at line 7472 of sub &#39;Perl::Tidy::Formatter::store_token_to_go&#39;
+ in file &#39;/home/steve/bin/Perl/Tidy/Formatter.pm&#39;
+ which was called from line 8298 of sub &#39;Perl::Tidy::Formatter::process_line_of_CODE&#39;
+ Message: &#39;Unexpected break in K values: 591 != 589+1&#39;
+ This is probably an error introduced by a recent programming change. 
+ ==============================================================================</code></pre>
+
+<p>The deletion of the extra, spaced, comma had created an extra space in the token array which had not been forseen in the original programming. It was fixed 10 Sep 2020 in &quot;fixed very rare fault found with automated testing&quot;, eb1b1d9.</p>
+
+</dd>
+<dt id="Error-parsing-deprecated-variable"><b>Error parsing deprecated $# variable</b></dt>
+<dd>
+
+<p>This problem can be illustrated with this two-line snippet:</p>
+
+<pre><code>  $#
+  eq$,?print&quot;yes\n&quot;:print&quot;no\n&quot;;</code></pre>
+
+<p>Perltidy joined &#39;$#&#39; and &#39;eq&#39; to get $#eq, but should have stopped at the line end to get $# followed by keyword &#39;eq&#39;. (Note that $# is deprecated). This was fixed 11 Sep 2020 in &quot;fixed several fringe parsing bugs found in testing&quot;, 85e01b7.</p>
+
+</dd>
+<dt id="Error-message-parsing-a-file-with-angle-brackets-and-ternaries"><b>Error message parsing a file with angle brackets and ternaries</b></dt>
+<dd>
+
+<p>This problem can be illustrated with the following test snippet which was not correctly parsed.</p>
+
+<pre><code> print$$ &lt;300?&quot;$$&lt;300\n&quot;:$$&lt;700?&quot;$$&lt;700\n&quot;:$$&lt;2_000?&quot;$$&lt;2,000\n&quot;:$$&lt;10_000?&quot;$$ &lt;10,000\n&quot;:&quot;$$&gt;9,999\n&quot;;</code></pre>
+
+<p>The problem is related to the &#39;&lt;&#39; symbol following the &#39;$$&#39; variable, a possible filehandle, and is similar to a previous bug. The problem was corrected 11 Sep 2020 in &quot;fixed several fringe parsing bugs found in testing&quot;, 85e01b7. The line now correctly formats to</p>
+
+<pre><code> print $$ &lt; 300  ? &quot;$$&lt;300\n&quot;
+   : $$ &lt; 700    ? &quot;$$&lt;700\n&quot;
+   : $$ &lt; 2_000  ? &quot;$$&lt;2,000\n&quot;
+   : $$ &lt; 10_000 ? &quot;$$ &lt;10,000\n&quot;
+   :               &quot;$$&gt;9,999\n&quot;;</code></pre>
+
+</dd>
+<dt id="code-crash-with-cuddled-else-formatting-on-unbalanced-files"><b>code crash with cuddled-else formatting on unbalanced files</b></dt>
+<dd>
+
+<p>A file with incorrect bracing which effectively gave negative indentation caused a crash when a stack was referenced with a negative index. The problem was fixed 8 Sept 2020 in &quot;convert array to hash to avoid trouble with neg levels in bad files&quot;, a720e0d.</p>
+
+</dd>
+<dt id="error-message-Unterminated-angle-operator"><b>error message &#39;Unterminated angle operator?&#39;</b></dt>
+<dd>
+
+<p>This error can be demonstrated with this line.</p>
+
+<pre><code>  print $i &lt;10 ? &quot;yes&quot; : &quot;no&quot;;</code></pre>
+
+<p>Perl has some strange parsing rules near a possible filehandle, and they change over time. The &#39;&lt;&#39; here is a less than symbol, but perltidy expected that it might be the start of an angle operator, based on the old rules, and gave a warning. The formatting was still correct, but the warning was confusing. This has been fixed 8 Sep 2020 in &#39;remove confusing warning message&#39;, 0a4d725.</p>
+
+</dd>
+<dt id="Line-broken-after-here-target"><b>Line broken after here target</b></dt>
+<dd>
+
+<p>This problem is illustrated with the following snippet</p>
+
+<pre><code>  $sth= $dbh-&gt;prepare (&lt;&lt;&quot;END_OF_SELECT&quot;) or die &quot;Couldn&#39;t prepare SQL&quot; ;
+      SELECT COUNT(duration),SUM(duration) 
+      FROM logins WHERE username=&#39;$user&#39;
+  END_OF_SELECT</code></pre>
+
+<p>When run with a short line length it got broken after the here target, causing an error. This was due to a recent program change and fixed 7 Sep 2020 in &#39;fixed bug where long line with here target got broken&#39;, 8f7e4cb.</p>
+
+</dd>
+<dt id="undefined-variable-named-test2"><b>undefined variable named &#39;test2&#39;</b></dt>
+<dd>
+
+<p>An uninitialized value was being referenced and triggered this message:</p>
+
+<pre><code> undefined test2, i_opening=5, max=18, caller=Perl::Tidy::Formatter ./perltidy-20200907.pl 13465
+ Use of uninitialized value $test2 in numeric eq (==) at ./perltidy-20200907.pl line 19692.</code></pre>
+
+<p>Fixed 8 Sep 2020 in &#39;fixed rare problem with stored index values for -lp option&#39;, 4147c8c.</p>
+
+</dd>
+<dt id="Line-order-switched-at-start-of-quoted-text"><b>Line order switched at start of quoted text</b></dt>
+<dd>
+
+<p>This problem arose in several scripts involving the parameter --line-up-parentheses pluse one or more of the vertical tightness flags. It can be illustrated with the following snippet:</p>
+
+<pre><code>    perltidy --line-up-parentheses --paren-vertical-tightness=1
+
+    if (
+        ( $name, $chap ) =
+        $cur_fname =~ m!^Bible/
+          .*?/          # testament
+          .*?/          # range of books
+          (.*?)/        # book name
+          .*?           # optional range of verses
+          (\d+)$!x
+      )
+    {
+        $cur_name = &quot;$name $chap&quot;;
+    }</code></pre>
+
+<p>This gave</p>
+
+<pre><code>    if (( $name, $chap ) =
+          .*?/          # testament
+        $cur_fname =~ m!^Bible/
+          .*?/          # range of books
+          (.*?)/        # book name
+          .*?           # optional range of verses
+          (\d+)$!x
+      )
+    {
+        $cur_name = &quot;$name $chap&quot;;
+    }</code></pre>
+
+<p>Notice the incorrect line order. The problem was an incorrect order of operations in the vertical aligner flush, leaving a line stranded and coming out in the wrong order. This was fixed 11 Sep 2020.</p>
+
+</dd>
+<dt id="crash-due-to-bad-index-named-j_terminal_match"><b>crash due to bad index named &#39;$j_terminal_match&#39;</b></dt>
+<dd>
+
+<p>This crash was due to an index error which caused a non-existant object to be referenced. The problem is fixed 2020-09-07 in &quot;fix problem of undefined values involving j_terminal_match&quot;, c5bfa77. The particular parameters which caused this were:</p>
+
+<pre><code>    --noadd-newlines --nowant-left-space=&#39;=&#39; </code></pre>
+
+</dd>
+<dt id="an-issue-with-the--x-flag"><b>an issue with the -x flag</b></dt>
+<dd>
+
+<p>This is not a bug but did take some time to resolve. The problem was reduced to the following script run with the -x flag (--look-for-hash-bang)</p>
+
+<pre><code> print(SCRIPT$headmaybe . &lt;&lt;EOB . &lt;&lt;&#39;EOF&#39; .$tailmaybe),$!;
+ #!$wd/perl
+ EOB
+ print &quot;\$^X is $^X, \$0 is $0\n&quot;;
+ EOF</code></pre>
+
+<p>The resulting file had a syntax error (here-doc target EOB changed).</p>
+
+<pre><code> print(SCRIPT$headmaybe . &lt;&lt;EOB . &lt;&lt;&#39;EOF&#39; .$tailmaybe),$!;
+ #!$wd/perl
+ EOB print &quot;\$^X is $^X, \$0 is $0\n&quot;;
+ EOF</code></pre>
+
+<p>The problem is that the -x flag tells perltidy not to start parsing until it sees a line starting with &#39;#!&#39;, which happens to be in a here-doc in this case.</p>
+
+<p>A warning was added to the manual 7 Sept 2020 in &quot;add warning about inappropriate -x flag&quot;, fe66743.</p>
+
+</dd>
+<dt id="error-parsing-sub-signature"><b>error parsing sub signature</b></dt>
+<dd>
+
+<p>This problem was reduced to the following snippet:</p>
+
+<pre><code> substr
+ (
+  $#
+ )</code></pre>
+
+<p>The deprecated variable &#39;$#&#39; was being parsed incorrectly, and this was due to an error in which the word &#39;substr&#39; followed by a paren was taken as the start of a sub signature. The problem was fixed 8 Sep 2020 in &#39;fix problem parsing sub prototypes&#39; 569e05f. The code</p>
+
+<pre><code>  $container_type =~ /^sub/;</code></pre>
+
+<p>was corrected to be</p>
+
+<pre><code>  $container_type =~ /^sub\b/;</code></pre>
+
+</dd>
+<dt id="uninitialized-value-message-found-7-Sep-2020"><b>uninitialized value message, found 7 Sep 2020</b></dt>
+<dd>
+
+<p>Unitialized values were referenced. An index was not being tested. Fixed 8 Sep 2020 in &quot;fix undefined variable&quot;, 9729965.</p>
+
+<pre><code> Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4022.
+ Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.
+ Use of uninitialized value $Ko in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.</code></pre>
+
+</dd>
+</dl>
+
+
+</body>
+
+</html>
+
+

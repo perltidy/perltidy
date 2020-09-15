@@ -833,7 +833,7 @@
 <dt id="aws---add-whitespace"><b>-aws</b>, <b>--add-whitespace</b></dt>
 <dd>
 
-<p>Setting this option allows perltidy to add certain whitespace improve code readability. This is the default. If you do not want any whitespace added, but are willing to have some whitespace deleted, use <b>-naws</b>. (Use <b>-fws</b> to leave whitespace completely unchanged).</p>
+<p>Setting this option allows perltidy to add certain whitespace to improve code readability. This is the default. If you do not want any whitespace added, but are willing to have some whitespace deleted, use <b>-naws</b>. (Use <b>-fws</b> to leave whitespace completely unchanged).</p>
 
 </dd>
 <dt id="dws---delete-old-whitespace"><b>-dws</b>, <b>--delete-old-whitespace</b></dt>
@@ -1674,6 +1674,77 @@
 <pre><code>  -opr  or --opening-paren-right
   -ohbr or --opening-hash-brace-right
   -osbr or --opening-square-bracket-right</code></pre>
+
+</dd>
+<dt id="bbhb-n---break-before-hash-brace-n-and-related-flags"><b>-bbhb=n</b>, <b>--break-before-hash-brace=n</b> and related flags</dt>
+<dd>
+
+<p>When a list of items spans multiple lines, the default formatting is to place the opening brace (or other container token) at the end of the starting line, like this:</p>
+
+<pre><code>    $romanNumerals = {
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;,
+    };</code></pre>
+
+<p>This flag can change the default behavior to cause a line break to be placed before the opening brace according to the value given to the integer <b>n</b>:</p>
+
+<pre><code>  -bbhb=0 never break [default]
+  -bbhb=1 stable: break if the input script had a break
+  -bbhb=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bbhb=3 always break</code></pre>
+
+<p>For example,</p>
+
+<pre><code>    # perltidy -bbhb=3
+    $romanNumerals =
+      {
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;,
+      };</code></pre>
+
+<p>There are a couple of points to note about this flag:</p>
+
+<ul>
+
+<li><p>This parameter only applies if the contents of the container looks like a list. The contents need to contain some commas or &#39;=&gt;&#39;s at the next interior level to be considered a list.</p>
+
+</li>
+<li><p>This parameter only applies if there is a blank space before the opening brace in the default formatting.</p>
+
+</li>
+<li><p>If multiple opening tokens have been &#39;welded&#39; together with the <b>-wn</b> parameter, then this parameter has no effect.</p>
+
+</li>
+<li><p>Similar flags for controlling parens and square brackets are given in the next section.</p>
+
+</li>
+</ul>
+
+</dd>
+<dt id="bbsb-n---break-before-square-bracket-n"><b>-bbsb=n</b>, <b>--break-before-square-bracket=n</b></dt>
+<dd>
+
+<p>This flag is similar to the flag described above, except it applies to square brackets.</p>
+
+<pre><code>  -bbsb=0 never break [default]
+  -bbsb=1 stable: break if the input script had a break
+  -bbsb=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bbsb=3 always break</code></pre>
+
+</dd>
+<dt id="bbp-n---break-before-paren-n"><b>-bbp=n</b>, <b>--break-before-paren=n</b></dt>
+<dd>
+
+<p>This flag is similar to <b>-bbhb=n</b>, described above, except it applies to parens.</p>
+
+<pre><code>  -bbp=0 never break [default]
+  -bbp=1 stable: break if the input script had a break
+  -bbp=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bbp=3 always break</code></pre>
 
 </dd>
 <dt id="wn---weld-nested-containers"><b>-wn</b>, <b>--weld-nested-containers</b></dt>
@@ -2800,6 +2871,8 @@
 <dd>
 
 <p>If your script has leading lines of system commands or other text which are not valid perl code, and which are separated from the start of the perl code by a &quot;hash-bang&quot; line, ( a line of the form <code>#!...perl</code> ), you must use the <b>-x</b> flag to tell perltidy not to parse and format any lines before the &quot;hash-bang&quot; line. This option also invokes perl with a -x flag when checking the syntax. This option was originally added to allow perltidy to parse interactive VMS scripts, but it should be used for any script which is normally invoked with <code>perl -x</code>.</p>
+
+<p>Please note: do not use this flag unless you are sure your script needs it. Parsing errors can occur if it does not have a hash-bang, or, for example, if the actual first hash-bang is in a here-doc. In that case a parsing error will occur because the tokenization will begin in the middle of the here-doc.</p>
 
 </dd>
 <dt id="Making-a-file-unreadable">Making a file unreadable</dt>

@@ -111,6 +111,7 @@ BEGIN {
 }
 
 sub DESTROY {
+
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 
@@ -120,7 +121,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ($AUTOLOAD eq 'DESTROY');
+    return if ( $AUTOLOAD eq 'DESTROY' );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -301,7 +302,7 @@ sub find_input_line_ending {
     return $ending;
 }
 
-{ ## begin closure for sub catfile
+{    ## begin closure for sub catfile
 
     my $missing_file_spec;
 
@@ -377,7 +378,7 @@ sub find_input_line_ending {
 
 { #<<<
 
-my $Warn_count; 
+my $Warn_count;
 my $fh_stderr;
 sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
@@ -1745,8 +1746,8 @@ EOM
 
   ERROR_EXIT:
     return 1;
-}    ## end of main program perltidy
-}    ## end of closure for sub perltidy
+} ## end of main program perltidy
+} ## end of closure for sub perltidy
 
 sub line_diff {
 
@@ -2282,6 +2283,9 @@ sub generate_options {
     $add_option->( 'keep-interior-semicolons',                'kis',   '!' );
     $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
     $add_option->( 'one-line-block-nesting',                  'olbn',  '=i' );
+    $add_option->( 'break-before-hash-brace',                 'bbhb',  '=i' );
+    $add_option->( 'break-before-square-bracket',             'bbsb',  '=i' );
+    $add_option->( 'break-before-paren',                      'bbp',   '=i' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -2468,6 +2472,9 @@ sub generate_options {
       break-at-old-ternary-breakpoints
       break-at-old-attribute-breakpoints
       break-at-old-keyword-breakpoints
+      break-before-hash-brace=0
+      break-before-square-bracket=0
+      break-before-paren=0
       comma-arrow-breakpoints=5
       nocheck-syntax
       character-encoding=guess
@@ -2551,10 +2558,10 @@ sub generate_options {
     #---------------------------------------------------------------
     %expansion = (
         %expansion,
-        'freeze-newlines'   => [qw(noadd-newlines nodelete-old-newlines)],
-        'fnl'               => [qw(freeze-newlines)],
-        'freeze-whitespace' => [qw(noadd-whitespace nodelete-old-whitespace)],
-        'fws'               => [qw(freeze-whitespace)],
+        'freeze-newlines'    => [qw(noadd-newlines nodelete-old-newlines)],
+        'fnl'                => [qw(freeze-newlines)],
+        'freeze-whitespace'  => [qw(noadd-whitespace nodelete-old-whitespace)],
+        'fws'                => [qw(freeze-whitespace)],
         'freeze-blank-lines' =>
           [qw(maximum-consecutive-blank-lines=0 keep-old-blank-lines=2)],
         'fbl'                => [qw(freeze-blank-lines)],
@@ -2562,16 +2569,16 @@ sub generate_options {
         'outdent-long-lines' => [qw(outdent-long-quotes outdent-long-comments)],
         'nooutdent-long-lines' =>
           [qw(nooutdent-long-quotes nooutdent-long-comments)],
-        'noll' => [qw(nooutdent-long-lines)],
-        'io'   => [qw(indent-only)],
+        'noll'                => [qw(nooutdent-long-lines)],
+        'io'                  => [qw(indent-only)],
         'delete-all-comments' =>
           [qw(delete-block-comments delete-side-comments delete-pod)],
         'nodelete-all-comments' =>
           [qw(nodelete-block-comments nodelete-side-comments nodelete-pod)],
-        'dac'  => [qw(delete-all-comments)],
-        'ndac' => [qw(nodelete-all-comments)],
-        'gnu'  => [qw(gnu-style)],
-        'pbp'  => [qw(perl-best-practices)],
+        'dac'              => [qw(delete-all-comments)],
+        'ndac'             => [qw(nodelete-all-comments)],
+        'gnu'              => [qw(gnu-style)],
+        'pbp'              => [qw(perl-best-practices)],
         'tee-all-comments' =>
           [qw(tee-block-comments tee-side-comments tee-pod)],
         'notee-all-comments' =>

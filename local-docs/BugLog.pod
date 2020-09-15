@@ -1,14 +1,24 @@
 =head1 Issues fixed after release 20200907
 
-This is a log of bugs found and fixed since the release 20200907. All were
+This is a detailed log of changes since the release 20200907. All bugs were
 found with the help of automated random testing.
 
 =over
+
+=item B<make the arrow a vertical alignment token, git #39>
+
+The -> can now be vertically aligned if a space is placed before it with -wls='->'.
+
+=item B<add flags -bbhb=n, -bbsb=n, =bbp=n, git #38>
+
+These flags give control over the opening token of a multiple-line list. They are
+described in the man pages, perltidy.html.
 
 =item B<Allow vertical alignment of line-ending fat comma>
 
 A change was made to allow a '=>' at the end of a line to align vertically, 
 provided that it aligns with two or more other '=>' tokens.
+This update was 14 Sep 2020, 'Allow line-ending '=>' to align vertically', ea96739.
 
 =item B<fixed uninitialized value reference>
 
@@ -16,7 +26,7 @@ The following message was generated when running perltidy on random text:
 
  Use of uninitialized value $K_semicolon in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 16467.
 
-This was fixed 14 Sep 2020. 
+This was fixed 14 Sep 2020, included in 'Allow line-ending '=>' to align vertically', ea96739.
 
 =item B<Do not create a zero size file by deleting semicolons>
 
@@ -25,7 +35,7 @@ A rule was added to prevent a file consisting of a single semicolon
  ;
 
 from becoming a zero length file.  This could cause problems with other
-software.
+software. Fixed 13 Sep 2020, 'do not create a zero length file by deleting semicolons', b39195e.
 
 =item B<fixed uninitialized value reference>
 
@@ -67,6 +77,8 @@ To prevent this annoyance, the warning is not given unless the first nonblank
 character after the '#!' is a '/'.  Note that this change is just for the
 warning message. The actual hash bang check does not require the slash.
 
+Fixed 13 Sep 2020, 'prevent unnecessary hash-bang warning message' 4f7733e
+and 'improved hash-bang warning filter', fa84904.
 
 =item B<uninitialized index referenced>
 

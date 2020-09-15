@@ -2125,6 +2125,83 @@ separately if desired:
   -ohbr or --opening-hash-brace-right
   -osbr or --opening-square-bracket-right
 
+=item B<-bbhb=n>,  B<--break-before-hash-brace=n> and related flags
+
+When a list of items spans multiple lines, the default formatting is to place
+the opening brace (or other container token) at the end of the starting line,
+like this:
+
+    $romanNumerals = {
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV',
+    };
+
+This flag can change the default behavior to cause a line break to be placed
+before the opening brace according to the value given to the integer B<n>:
+
+  -bbhb=0 never break [default]
+  -bbhb=1 stable: break if the input script had a break
+  -bbhb=2 break if list is 'complex', meaning it contains other broken lists
+  -bbhb=3 always break
+
+For example, 
+
+    # perltidy -bbhb=3
+    $romanNumerals =
+      {
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV',
+      };
+
+There are a couple of points to note about this flag:
+
+=over 4
+
+=item *
+
+This parameter only applies if the contents of the container looks like a list.
+The contents need to contain some commas or '=>'s at the next interior level to
+be considered a list.
+
+=item *
+
+This parameter only applies if there is a blank space before the opening brace
+in the default formatting.
+
+=item *
+
+If multiple opening tokens have been 'welded' together with the B<-wn> parameter, then
+this parameter has no effect.
+
+=item *
+
+Similar flags for controlling parens and square brackets are given in the next section.
+
+=back   
+
+=item B<-bbsb=n>,  B<--break-before-square-bracket=n>
+
+This flag is similar to the flag described above, except it applies to square brackets.
+
+  -bbsb=0 never break [default]
+  -bbsb=1 stable: break if the input script had a break
+  -bbsb=2 break if list is 'complex', meaning it contains other broken lists
+  -bbsb=3 always break
+
+=item B<-bbp=n>,  B<--break-before-paren=n>
+
+This flag is similar to B<-bbhb=n>, described above, except it applies to parens.
+
+  -bbp=0 never break [default]
+  -bbp=1 stable: break if the input script had a break
+  -bbp=2 break if list is 'complex', meaning it contains other broken lists
+  -bbp=3 always break
+
+
 =item B<-wn>,  B<--weld-nested-containers> 
 
 The B<-wn> flag causes closely nested pairs of opening and closing container
