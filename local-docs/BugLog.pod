@@ -8,11 +8,14 @@ found with the help of automated random testing.
 =item B<make the arrow a vertical alignment token, git #39>
 
 The -> can now be vertically aligned if a space is placed before it with -wls='->'.
+Added 15 Sep 2020 as part of previous item, 9ac6af6.
 
 =item B<add flags -bbhb=n, -bbsb=n, =bbp=n, git #38>
 
 These flags give control over the opening token of a multiple-line list. They are
 described in the man pages, perltidy.html.
+Added 15 Sep 2020 in "added flags -bbhb=n, -bbsb=n, -bbq=n, suggestion git #38".
+9ac6af6.
 
 =item B<Allow vertical alignment of line-ending fat comma>
 

@@ -1,0 +1,9 @@
+my %temp =
+  (
+    supsup => 123,
+    nested =>
+      {
+        asdf => 456,
+        yarg => 'yarp',
+      },
+  );

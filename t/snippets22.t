@@ -2,6 +2,9 @@
 
 # Contents:
 #1 here_long.here_long
+#2 bbhb.bbhb2
+#3 bbhb.bbhb3
+#4 bbhb.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -18,12 +21,27 @@ BEGIN {
     ###########################################
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
-    $rparams = { 'here_long' => "-l=33", };
+    $rparams = {
+        'bbhb2'     => "-bbhb=2 -bbp=2",
+        'bbhb3'     => "-bbhb=3 -bbp=3",
+        'def'       => "",
+        'here_long' => "-l=33",
+    };
 
     ############################
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bbhb' => <<'----------',
+my %temp = 
+( 
+supsup => 123, 
+nested => { 
+asdf => 456, 
+yarg => 'yarp', 
+}, );
+----------
 
         'here_long' => <<'----------',
 # must not break after here target regardless of maximum-line-length
@@ -52,6 +70,51 @@ $sth = $dbh->prepare(
 END_OF_SELECT
 
 #1...........
+        },
+
+        'bbhb.bbhb2' => {
+            source => "bbhb",
+            params => "bbhb2",
+            expect => <<'#2...........',
+my %temp =
+  (
+    supsup => 123,
+    nested => {
+        asdf => 456,
+        yarg => 'yarp',
+    },
+  );
+#2...........
+        },
+
+        'bbhb.bbhb3' => {
+            source => "bbhb",
+            params => "bbhb3",
+            expect => <<'#3...........',
+my %temp =
+  (
+    supsup => 123,
+    nested =>
+      {
+        asdf => 456,
+        yarg => 'yarp',
+      },
+  );
+#3...........
+        },
+
+        'bbhb.def' => {
+            source => "bbhb",
+            params => "def",
+            expect => <<'#4...........',
+my %temp = (
+    supsup => 123,
+    nested => {
+        asdf => 456,
+        yarg => 'yarp',
+    },
+);
+#4...........
         },
     };
 
