@@ -209,11 +209,12 @@ BEGIN {
         _K_closing_container_        => $i++,
         _K_opening_ternary_          => $i++,
         _K_closing_ternary_          => $i++,
-        _rcontainer_map_             => $i++,
         _rK_phantom_semicolons_      => $i++,
         _rtype_count_by_seqno_       => $i++,
         _ris_broken_container_       => $i++,
         _rhas_broken_container_      => $i++,
+        _rparent_of_seqno_           => $i++,
+        _rchildren_of_seqno_         => $i++,
         _rpaired_to_inner_container_ => $i++,
         _rbreak_container_           => $i++,
         _rshort_nested_              => $i++,
@@ -278,6 +279,10 @@ BEGIN {
         _batch_count_             => $i++,
     };
 
+    # Sequence number assigned to the root of sequence tree.
+    # The minimum of the actual sequences numbers is 4, so we can use 1
+    use constant SEQ_ROOT => 1;
+
     # Codes for insertion and deletion of blanks
     use constant DELETE => 0;
     use constant STABLE => 1;
@@ -334,8 +339,7 @@ BEGIN {
     # curly.  Note: 'else' does not, but must be included to allow trailing
     # if/elsif text to be appended.
     # patch for SWITCH/CASE: added 'case' and 'when'
-    @q =
-      qw(if elsif else unless while until for foreach case when catch);
+    @q = qw(if elsif else unless while until for foreach case when catch);
     @is_if_elsif_else_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
@@ -680,12 +684,13 @@ sub new {
     $self->[_K_closing_container_] = {};    # for quickly traversing structure
     $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
     $self->[_K_closing_ternary_]   = {};    # for quickly traversing structure
-    $self->[_rcontainer_map_]      = {};    # hierarchical map of containers
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
     $self->[_rtype_count_by_seqno_]       = {};
     $self->[_ris_broken_container_]       = {};
     $self->[_rhas_broken_container_]      = {};
+    $self->[_rparent_of_seqno_]           = {};
+    $self->[_rchildren_of_seqno_]         = {};
     $self->[_rpaired_to_inner_container_] = {};
     $self->[_rbreak_container_]           = {};    # prevent one-line blocks
     $self->[_rshort_nested_]              = {};    # blocks not forced open
@@ -2386,6 +2391,8 @@ sub respace_tokens {
     my $rtype_count_by_seqno  = {};
     my $ris_broken_container  = {};
     my $rhas_broken_container = {};
+    my $rparent_of_seqno      = {};
+    my $rchildren_of_seqno    = {};
 
     # a sub to link preceding nodes forward to a new node type
     my $link_back = sub {
@@ -3117,8 +3124,13 @@ sub respace_tokens {
             elsif ($type_sequence) {
 
                 if ( $is_opening_token{$token} ) {
-                    $seqno_stack{$depth_next} = $type_sequence;
-                    $KK_stack{$depth_next}    = $KK;
+                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                    push @{ $rchildren_of_seqno->{$seqno_parent} },
+                      $type_sequence;
+                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+                    $seqno_stack{$depth_next}           = $type_sequence;
+                    $KK_stack{$depth_next}              = $KK;
                     $depth_next++;
                 }
                 elsif ( $is_closing_token{$token} ) {
@@ -3184,6 +3196,8 @@ sub respace_tokens {
     $self->[_rtype_count_by_seqno_]  = $rtype_count_by_seqno;
     $self->[_ris_broken_container_]  = $ris_broken_container;
     $self->[_rhas_broken_container_] = $rhas_broken_container;
+    $self->[_rparent_of_seqno_]      = $rparent_of_seqno;
+    $self->[_rchildren_of_seqno_]    = $rchildren_of_seqno;
 
     # make sure the new array looks okay
     $self->check_token_array();
@@ -3677,60 +3691,6 @@ sub K_previous_nonblank {
     return;
 }
 
-sub map_containers {
-
-    # Maps the container hierarchy
-    my $self = shift;
-    return if $rOpts->{'indent-only'};
-    my $rLL = $self->[_rLL_];
-    return unless ( defined($rLL) && @{$rLL} );
-
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
-    my $rcontainer_map      = $self->[_rcontainer_map_];
-
-    # loop over containers
-    my @stack;    # stack of container sequence numbers
-    my $KNEXT = 0;
-    while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
-        my $rtoken_vars   = $rLL->[$KK];
-        my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-        if ( !$type_sequence ) {
-            next if ( $KK == 0 );    # first token in file may not be container
-            Fault("sequence = $type_sequence not defined at K=$KK");
-        }
-
-        my $token = $rtoken_vars->[_TOKEN_];
-        if ( $is_opening_token{$token} ) {
-            if (@stack) {
-                $rcontainer_map->{$type_sequence} = $stack[-1];
-            }
-            push @stack, $type_sequence;
-        }
-        if ( $is_closing_token{$token} ) {
-            if (@stack) {
-                my $seqno = pop @stack;
-                if ( $seqno != $type_sequence ) {
-
-                    # shouldn't happen unless file is garbage
-                }
-            }
-        }
-    }
-
-    # the stack should be empty for a good file
-    if (@stack) {
-
-        # unbalanced containers; file probably bad
-    }
-    else {
-        # ok
-    }
-    return;
-}
-
 sub mark_short_nested_blocks {
 
     # This routine looks at the entire file and marks any short nested blocks
@@ -3765,7 +3725,6 @@ sub mark_short_nested_blocks {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rbreak_container    = $self->[_rbreak_container_];
     my $rshort_nested       = $self->[_rshort_nested_];
-    my $rcontainer_map      = $self->[_rcontainer_map_];
     my $rlines              = $self->[_rlines_];
 
     # Variables needed for estimating line lengths
@@ -5032,9 +4991,6 @@ sub finish_formatting {
     # All token changes must be made here so that the token data structure
     # remains fixed for the rest of this iteration.
     $self->respace_tokens();
-
-    # Make a hierarchical map of the containers
-    $self->map_containers();
 
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
