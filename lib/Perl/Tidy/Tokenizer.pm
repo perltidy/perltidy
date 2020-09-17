@@ -2406,9 +2406,12 @@ sub prepare_for_a_new_file {
             scan_bare_identifier();
         },
         '<<' => sub {    # maybe a here-doc?
-            return
-              unless ( $i < $max_token_index )
-              ;          # here-doc not possible if end of line
+
+##      This check removed because it could be a deprecated here-doc with
+##      no specified target.  See example in log 16 Sep 2020.
+##            return
+##              unless ( $i < $max_token_index )
+##              ;          # here-doc not possible if end of line
 
             if ( $expecting != OPERATOR ) {
                 my ( $found_target, $here_doc_target, $here_quote_character,
@@ -2427,6 +2430,10 @@ sub prepare_for_a_new_file {
                     if ( length($here_doc_target) > 80 ) {
                         my $truncated = substr( $here_doc_target, 0, 80 );
                         complain("Long here-target: '$truncated' ...\n");
+                    }
+                    elsif ( !$here_doc_target ) {
+                        warning(
+                            'Use of bare << to mean <<"" is deprecated\n');
                     }
                     elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
                         complain(
