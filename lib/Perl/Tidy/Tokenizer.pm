@@ -824,9 +824,20 @@ sub get_line {
                 )
                 && !$tokenizer_self->[_look_for_hash_bang_]
 
-		# Patch: be sure there is either a slash or the word 'perl'
-		# after the #! before giving a warning.
-                && $input_line =~ /^\#\!\s*(\/|perl)/ 
+                # Try to avoid giving a false alarm at a simple comment. 
+                # These look like valid hash-bang lines:
+
+                #!/usr/bin/perl -w
+                #!   /usr/bin/perl -w
+                #!c:\perl\bin\perl.exe
+
+                # These are comments:
+                #! I love perl
+                #!  sunos does not yet provide a /usr/bin/perl
+
+                # Comments typically have multiple spaces, which suggests
+                # the filter
+                && $input_line =~ /^\#\!(\s+)?(\S+)?perl/ 
               )
             {
 
