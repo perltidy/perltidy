@@ -2179,9 +2179,44 @@ this parameter has no effect.
 
 =item *
 
-Similar flags for controlling parens and square brackets are given in the next section.
+The indentation of the braces will normally be one level of continuation
+indentation by default.  This can be changed with the parameter
+B<--indent-hash-brace=n> in the next section.
+
+=item *
+
+Similar flags for controlling parens and square brackets are given in the subsequent section.
 
 =back   
+
+=item B<-ihb=n>,  B<--indent-hash-brace=n>
+
+This flag is a companion to B<-bbhb> for controlling the indentation of an opening hash brace.
+The indentation is as follows:
+
+  -ihb=0 one continuation level [default]
+  -ihb=1 outdent by one continuation level
+  -ihb=2 indent one full indentation level
+
+For example:
+
+    # perltidy -bbhb=3 -ihb=1
+    $romanNumerals =
+    {
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV',
+    };
+
+    # perltidy -bbhb=3 -ihb=2
+    $romanNumerals =
+        {
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV',
+        };
 
 =item B<-bbsb=n>,  B<--break-before-square-bracket=n>
 
@@ -2192,6 +2227,15 @@ This flag is similar to the flag described above, except it applies to square br
   -bbsb=2 break if list is 'complex', meaning it contains other broken lists
   -bbsb=3 always break
 
+=item B<-isb=n>,  B<--indent-square-bracket=n>
+
+This flag is a companion to B<-bbsb> for controlling the indentation of an opening square bracket.
+The indentation is as follows:
+
+  -isb=0 one continuation level [default]
+  -isb=1 outdent by one continuation level
+  -isb=2 indent one full indentation level
+
 =item B<-bbp=n>,  B<--break-before-paren=n>
 
 This flag is similar to B<-bbhb=n>, described above, except it applies to parens.
@@ -2200,6 +2244,15 @@ This flag is similar to B<-bbhb=n>, described above, except it applies to parens
   -bbp=1 stable: break if the input script had a break
   -bbp=2 break if list is 'complex', meaning it contains other broken lists
   -bbp=3 always break
+
+=item B<-ip=n>,  B<--indent-paren=n>
+
+This flag is a companion to B<-bbp> for controlling the indentation of an opening paren.
+The indentation is as follows:
+
+  -ip=0 one continuation level [default]
+  -ip=1 outdent by one continuation level
+  -ip=2 indent one full indentation level
 
 
 =item B<-wn>,  B<--weld-nested-containers> 

@@ -1719,10 +1719,43 @@
 <li><p>If multiple opening tokens have been &#39;welded&#39; together with the <b>-wn</b> parameter, then this parameter has no effect.</p>
 
 </li>
-<li><p>Similar flags for controlling parens and square brackets are given in the next section.</p>
+<li><p>The indentation of the braces will normally be one level of continuation indentation by default. This can be changed with the parameter <b>--indent-hash-brace=n</b> in the next section.</p>
+
+</li>
+<li><p>Similar flags for controlling parens and square brackets are given in the subsequent section.</p>
 
 </li>
 </ul>
+
+</dd>
+<dt id="ihb-n---indent-hash-brace-n"><b>-ihb=n</b>, <b>--indent-hash-brace=n</b></dt>
+<dd>
+
+<p>This flag is a companion to <b>-bbhb</b> for controlling the indentation of an opening hash brace. The indentation is as follows:</p>
+
+<pre><code>  -ihb=0 one continuation level [default]
+  -ihb=1 outdent by one continuation level
+  -ihb=2 indent one full indentation level</code></pre>
+
+<p>For example:</p>
+
+<pre><code>    # perltidy -bbhb=3 -ihb=1
+    $romanNumerals =
+    {
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;,
+    };
+
+    # perltidy -bbhb=3 -ihb=2
+    $romanNumerals =
+        {
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;,
+        };</code></pre>
 
 </dd>
 <dt id="bbsb-n---break-before-square-bracket-n"><b>-bbsb=n</b>, <b>--break-before-square-bracket=n</b></dt>
@@ -1736,6 +1769,16 @@
   -bbsb=3 always break</code></pre>
 
 </dd>
+<dt id="isb-n---indent-square-bracket-n"><b>-isb=n</b>, <b>--indent-square-bracket=n</b></dt>
+<dd>
+
+<p>This flag is a companion to <b>-bbsb</b> for controlling the indentation of an opening square bracket. The indentation is as follows:</p>
+
+<pre><code>  -isb=0 one continuation level [default]
+  -isb=1 outdent by one continuation level
+  -isb=2 indent one full indentation level</code></pre>
+
+</dd>
 <dt id="bbp-n---break-before-paren-n"><b>-bbp=n</b>, <b>--break-before-paren=n</b></dt>
 <dd>
 
@@ -1745,6 +1788,16 @@
   -bbp=1 stable: break if the input script had a break
   -bbp=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
   -bbp=3 always break</code></pre>
+
+</dd>
+<dt id="ip-n---indent-paren-n"><b>-ip=n</b>, <b>--indent-paren=n</b></dt>
+<dd>
+
+<p>This flag is a companion to <b>-bbp</b> for controlling the indentation of an opening paren. The indentation is as follows:</p>
+
+<pre><code>  -ip=0 one continuation level [default]
+  -ip=1 outdent by one continuation level
+  -ip=2 indent one full indentation level</code></pre>
 
 </dd>
 <dt id="wn---weld-nested-containers"><b>-wn</b>, <b>--weld-nested-containers</b></dt>
