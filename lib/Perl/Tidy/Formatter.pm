@@ -106,6 +106,7 @@ my (
     %want_break_before,
 
     %break_before_container_types,
+    %container_indentation_options, 
 
     %space_after_keyword,
 
@@ -4577,21 +4578,44 @@ sub adjust_indentation_levels {
 
     my ($self) = @_;
 
-    # Two options, -nib and -wc, are implemented by defining adjusted levels in
-    # $self->[_radjusted_levels_].  They will create this array if
-    # they are active, and otherwise it will be an empty array.
+    # These routines adjust levels either by changing _CI_LEVEL_ directly or
+    # by setting modified levels in the array $self->[_radjusted_levels_].
+    # They will create this array if they are active, and otherwise it will be
+    # an empty array for later efficiency.
 
     # Set adjusted levels for any non-indenting braces.
     # If this option is used it will create the _radjusted_levels_ array.
+    # Important: This must be the first routine called which touches
+    # _radjusted_levels_
     $self->non_indenting_braces();
 
-    # Set adjusted levels for the whitespace cycle option.  If this option is
-    # used it will create or modify the _radjusted_levels_ array.
+    # Adjust indentation for list containers
+    $self->adjust_container_indentation();
+
+    # Set adjusted levels for the whitespace cycle option.  
     $self->whitespace_cycle_adjustment();
+
+    # Adjust continuation indentation if -bli is set
+    $self->bli_adjustment();
 
     # Now clip any adjusted levels to be non-negative
     $self->clip_adjusted_levels();
 
+    return;
+}
+
+sub initialize_adjusted_levels {
+    my ($self) = @_;
+
+    # Initialize _radjusted_levels if it has not yet been initialized.
+    my $radjusted_levels = $self->[_radjusted_levels_];
+    my $rLL              = $self->[_rLL_];
+    my $Kmax             = @{$rLL} - 1;
+    if ( !defined($radjusted_levels) || ( @{$radjusted_levels} != @{$rLL} ) ) {
+        foreach my $KK ( 0 .. $Kmax ) {
+            $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
+        }
+    }
     return;
 }
 
@@ -4608,7 +4632,8 @@ sub clip_adjusted_levels {
 
 sub non_indenting_braces {
 
-    # remove indentation within marked braces if requested
+    # Remove indentation within marked braces if requested
+    # NOTE: This must be the first routine to reference $radjusted_levels;
     my ($self) = @_;
     return unless ( $rOpts->{'non-indenting-braces'} );
 
@@ -4685,14 +4710,7 @@ sub whitespace_cycle_adjustment {
 
         my $Kmax = @{$rLL} - 1;
 
-        # We have to start with any existing adjustments
-        my $adjusted_levels_defined =
-          defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL};
-        if ( !$adjusted_levels_defined ) {
-            foreach my $KK ( 0 .. $Kmax ) {
-                $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
-            }
-        }
+        $self->initialize_adjusted_levels();
 
         my $whitespace_last_level  = -1;
         my @whitespace_level_stack = ();
@@ -4744,6 +4762,80 @@ sub whitespace_cycle_adjustment {
         }
     }
     $self->[_radjusted_levels_] = $radjusted_levels;
+    return;
+}
+
+sub adjust_container_indentation {
+
+    # adjust continuation indentation for certain tokens if requested
+
+    # -ihb=n , --indent-for-hash-brace=n
+    # -isb=n , --indent-for-square-bracket=n
+    # -ip=n , --indent-for-paren=n
+
+    # n=0  default indentation (usually one ci)
+    # n=1  outdent one ci
+    # n=2  indent one level (minus one ci)
+    # n=3  indent one extra ci [This may be dropped]
+
+    my ($self) = @_;
+
+    return unless %container_indentation_options;
+
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    # Option 2 needs the following array:
+    my $radjusted_levels = $self->[_radjusted_levels_];
+
+    # We will only initialize it if option 2 has been selected
+    foreach my $key (%container_indentation_options) {
+        my $val = $container_indentation_options{$key};
+        if ( defined($val) && $val == 2 ) {
+            $self->initialize_adjusted_levels();
+            last;
+        }
+    }
+
+    # Loop over all opening container tokens
+    my $K_opening_container = $self->[_K_opening_container_];
+    foreach my $seqno ( keys %{$K_opening_container} ) {
+        my $KK          = $K_opening_container->{$seqno};
+        my $rtoken_vars = $rLL->[$KK];
+        my $block_type  = $rtoken_vars->[_BLOCK_TYPE_];
+
+        # this routine is not for code block braces
+        next if ($block_type);
+
+        my $token = $rtoken_vars->[_TOKEN_];
+        my $flag  = $container_indentation_options{$token};
+        next unless ($flag);
+
+        # This is only for list containers
+        next unless $self->is_list($seqno);
+
+        # NOTE: We are adjusting indentation of the opening container. The
+        # closing container will normally follow the indentation of the opening
+        # container automatically, so this is not currently done.
+        my $ci = $rLL->[$KK]->[_CI_LEVEL_];
+
+        # option 1: outdent
+        if ( $flag == 1 ) {
+            $ci -= 1;
+        }
+
+        # option 2: indent one level
+        elsif ( $flag == 2 ) {
+            $ci -= 1;
+            $radjusted_levels->[$KK] += 1;
+        }
+
+        # option 3: for testing only, probably will be deleted
+        elsif ( $flag == 3 ) {
+            $ci += 1;
+        }
+        $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
+    }
     return;
 }
 
@@ -4999,9 +5091,6 @@ sub finish_formatting {
     $self->mark_short_nested_blocks();
 
     $self->adjust_indentation_levels();
-
-    # Adjust continuation indentation if -bli is set
-    $self->bli_adjustment();
 
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
@@ -5874,7 +5963,6 @@ sub wrapup {
 "First indentation disagreement seen at input line $first_tabbing_disagreement\n"
         );
     }
-
     if ($in_tabbing_disagreement) {
         write_logfile_entry(
 "Ending with indentation disagreement which started at input line $in_tabbing_disagreement\n"
@@ -6171,6 +6259,27 @@ EOM
     for ( $rOpts->{'break-before-paren'} ) {
         $break_before_container_types{'('} = $_ if $_ && $_ > 0;
     }
+
+    %container_indentation_options = ();
+    for ( $rOpts->{'indent-hash-brace'} ) {
+        my $tok = '{';
+        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_; 
+        }
+    }
+    for ( $rOpts->{'indent-square-bracket'} ) {
+        my $tok = '[';
+        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_; 
+        }
+    }
+    for ( $rOpts->{'indent-paren'} ) {
+        my $tok = '(';
+        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_; 
+        }
+    }
+
 
     # Define here tokens which may follow the closing brace of a do statement
     # on the same line, as in:
@@ -17820,6 +17929,22 @@ sub break_equals {
     return;
 }
 
+sub is_list {
+
+    # Try to decide if the immediate contents of a container is a list.
+
+    my ( $self, $seqno ) = @_;
+    my $rLL                  = $self->[_rLL_];
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+
+    # We will require at least 2 commas or 1 fat comma in the
+    # immediate lower level.
+    my $fat_comma_count = $rtype_count_by_seqno->{$seqno}->{'=>'};
+    my $comma_count     = $rtype_count_by_seqno->{$seqno}->{','};
+    my $is_list = ( $fat_comma_count || $comma_count && $comma_count > 1 );
+    return $is_list;
+}
+
 sub insert_breaks_before_list_opening_containers {
 
     my ( $self, $ri_left, $ri_right ) = @_;
@@ -17830,7 +17955,6 @@ sub insert_breaks_before_list_opening_containers {
     return unless ( $nmax >= 0 );
 
     my $rLL                   = $self->[_rLL_];
-    my $rtype_count_by_seqno  = $self->[_rtype_count_by_seqno_];
     my $ris_broken_container  = $self->[_ris_broken_container_];
     my $rhas_broken_container = $self->[_rhas_broken_container_];
 
@@ -17874,12 +17998,7 @@ sub insert_breaks_before_list_opening_containers {
         # Require a space before the line ending token
         next unless ( $rLL->[ $Kend - 1 ]->[_TYPE_] eq 'b' );
 
-        # This is only for list containers. This is a little fuzzy,
-        # but we will require at least 2 commas or 1 fat comma in the
-        # immediate lower level
-        my $fat_comma_count = $rtype_count_by_seqno->{$seqno}->{'=>'};
-        my $comma_count     = $rtype_count_by_seqno->{$seqno}->{','};
-        next unless ( $fat_comma_count || $comma_count && $comma_count > 1 );
+        next unless $self->is_list($seqno);
 
         # Do not break a weld
         next if ( $self->weld_len_left( $seqno, $token_end ) );
@@ -17929,6 +18048,9 @@ sub insert_breaks_before_list_opening_containers {
         next if ( $ibreak < $il );
         next if ( $nobreak_to_go[$ibreak] );
         push @insert_list, $ibreak;
+
+        # FIXME: at this point we could inform any child containers that they
+        # are part of a complex container.
     }
 
     # insert any new break points

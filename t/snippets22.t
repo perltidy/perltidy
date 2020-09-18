@@ -5,6 +5,8 @@
 #2 bbhb.bbhb2
 #3 bbhb.bbhb3
 #4 bbhb.def
+#5 bbhb.bbhb4
+#6 bbhb.bbhb5
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -24,6 +26,8 @@ BEGIN {
     $rparams = {
         'bbhb2'     => "-bbhb=2 -bbp=2",
         'bbhb3'     => "-bbhb=3 -bbp=3",
+        'bbhb4'     => "-bbhb=3 -bbp=3 -ihb=2 -ip=2",
+        'bbhb5'     => "-bbhb=3 -bbp=3 -ihb=1 -ip=1",
         'def'       => "",
         'here_long' => "-l=33",
     };
@@ -115,6 +119,38 @@ my %temp = (
     },
 );
 #4...........
+        },
+
+        'bbhb.bbhb4' => {
+            source => "bbhb",
+            params => "bbhb4",
+            expect => <<'#5...........',
+my %temp =
+    (
+    supsup => 123,
+    nested =>
+        {
+        asdf => 456,
+        yarg => 'yarp',
+        },
+    );
+#5...........
+        },
+
+        'bbhb.bbhb5' => {
+            source => "bbhb",
+            params => "bbhb5",
+            expect => <<'#6...........',
+my %temp =
+(
+    supsup => 123,
+    nested =>
+    {
+        asdf => 456,
+        yarg => 'yarp',
+    },
+);
+#6...........
         },
     };
 
