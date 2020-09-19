@@ -21,6 +21,22 @@
 
 <dl>
 
+<dt id="fix-incorrect-parsing-of-certain-deprecated-empty-here-docs"><b>fix incorrect parsing of certain deprecated empty here-docs </b></dt>
+<dd>
+
+<p>The following snippet was being incorrecly parsed:</p>
+
+<pre><code> print &lt;&lt;
+ # Hello World 13!
+ 
+   ;
+ print &quot;DONE\n&quot;;</code></pre>
+
+<p>This is a deprecated here-doc without a specified target but currently still a valid program. It would have been correctly parsed if the semicolon followed the &#39;&lt;&lt;&#39; operator rather than the here-doc.</p>
+
+<p>This was found in random testing and fixed 16 Sep 2020. A warning message about deprecated here-doc targets was added.</p>
+
+</dd>
 <dt id="make-the-arrow-a-vertical-alignment-token-git-39"><b>make the arrow a vertical alignment token, git #39</b></dt>
 <dd>
 

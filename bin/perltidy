@@ -2143,7 +2143,7 @@ before the opening brace according to the value given to the integer B<n>:
 
   -bbhb=0 never break [default]
   -bbhb=1 stable: break if the input script had a break
-  -bbhb=2 break if list is 'complex', meaning it contains other broken lists
+  -bbhb=2 break if list is 'complex' (see note below)
   -bbhb=3 always break
 
 For example, 
@@ -2157,9 +2157,14 @@ For example,
         four  => 'IV',
       };
 
-There are a couple of points to note about this flag:
+There are several points to note about this flag:
 
 =over 4
+
+=item *
+
+This parameter only applies to opening hash braces which are preceded by an '='
+or '=>'.
 
 =item *
 
@@ -2169,8 +2174,8 @@ be considered a list.
 
 =item *
 
-This parameter only applies if there is a blank space before the opening brace
-in the default formatting.
+For the B<n=2> option, a list is considered 'complex' if it is part of a nested list
+structure which spans multiple lines in the input file.
 
 =item *
 
@@ -2191,8 +2196,8 @@ Similar flags for controlling parens and square brackets are given in the subseq
 
 =item B<-ihb=n>,  B<--indent-hash-brace=n>
 
-This flag is a companion to B<-bbhb> for controlling the indentation of an opening hash brace.
-The indentation is as follows:
+This flag is a companion to B<-bbhb=n> for controlling the indentation of an opening hash brace
+which is placed on a new line by that parameter.  The indentation is as follows:
 
   -ihb=0 one continuation level [default]
   -ihb=1 outdent by one continuation level
@@ -2224,13 +2229,13 @@ This flag is similar to the flag described above, except it applies to square br
 
   -bbsb=0 never break [default]
   -bbsb=1 stable: break if the input script had a break
-  -bbsb=2 break if list is 'complex', meaning it contains other broken lists
+  -bbsb=2 break if list is 'complex' (part of nested list structure)
   -bbsb=3 always break
 
 =item B<-isb=n>,  B<--indent-square-bracket=n>
 
-This flag is a companion to B<-bbsb> for controlling the indentation of an opening square bracket.
-The indentation is as follows:
+This flag is a companion to B<-bbsb=n> for controlling the indentation of an opening square bracket
+which is placed on a new line by that parameter.  The indentation is as follows:
 
   -isb=0 one continuation level [default]
   -isb=1 outdent by one continuation level
@@ -2242,13 +2247,13 @@ This flag is similar to B<-bbhb=n>, described above, except it applies to parens
 
   -bbp=0 never break [default]
   -bbp=1 stable: break if the input script had a break
-  -bbp=2 break if list is 'complex', meaning it contains other broken lists
+  -bpb=2 break if list is 'complex' (part of nested list structure)
   -bbp=3 always break
 
 =item B<-ip=n>,  B<--indent-paren=n>
 
-This flag is a companion to B<-bbp> for controlling the indentation of an opening paren.
-The indentation is as follows:
+This flag is a companion to B<-bbp=n> for controlling the indentation of an opening paren
+which is placed on a new line by that parameter.  The indentation is as follows:
 
   -ip=0 one continuation level [default]
   -ip=1 outdent by one continuation level

@@ -1692,7 +1692,7 @@
 
 <pre><code>  -bbhb=0 never break [default]
   -bbhb=1 stable: break if the input script had a break
-  -bbhb=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bbhb=2 break if list is &#39;complex&#39; (see note below)
   -bbhb=3 always break</code></pre>
 
 <p>For example,</p>
@@ -1706,14 +1706,17 @@
         four  =&gt; &#39;IV&#39;,
       };</code></pre>
 
-<p>There are a couple of points to note about this flag:</p>
+<p>There are several points to note about this flag:</p>
 
 <ul>
 
+<li><p>This parameter only applies to opening hash braces which are preceded by an &#39;=&#39; or &#39;=&gt;&#39;.</p>
+
+</li>
 <li><p>This parameter only applies if the contents of the container looks like a list. The contents need to contain some commas or &#39;=&gt;&#39;s at the next interior level to be considered a list.</p>
 
 </li>
-<li><p>This parameter only applies if there is a blank space before the opening brace in the default formatting.</p>
+<li><p>For the <b>n=2</b> option, a list is considered &#39;complex&#39; if it is part of a nested list structure which spans multiple lines in the input file.</p>
 
 </li>
 <li><p>If multiple opening tokens have been &#39;welded&#39; together with the <b>-wn</b> parameter, then this parameter has no effect.</p>
@@ -1731,7 +1734,7 @@
 <dt id="ihb-n---indent-hash-brace-n"><b>-ihb=n</b>, <b>--indent-hash-brace=n</b></dt>
 <dd>
 
-<p>This flag is a companion to <b>-bbhb</b> for controlling the indentation of an opening hash brace. The indentation is as follows:</p>
+<p>This flag is a companion to <b>-bbhb=n</b> for controlling the indentation of an opening hash brace which is placed on a new line by that parameter. The indentation is as follows:</p>
 
 <pre><code>  -ihb=0 one continuation level [default]
   -ihb=1 outdent by one continuation level
@@ -1765,14 +1768,14 @@
 
 <pre><code>  -bbsb=0 never break [default]
   -bbsb=1 stable: break if the input script had a break
-  -bbsb=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bbsb=2 break if list is &#39;complex&#39; (part of nested list structure)
   -bbsb=3 always break</code></pre>
 
 </dd>
 <dt id="isb-n---indent-square-bracket-n"><b>-isb=n</b>, <b>--indent-square-bracket=n</b></dt>
 <dd>
 
-<p>This flag is a companion to <b>-bbsb</b> for controlling the indentation of an opening square bracket. The indentation is as follows:</p>
+<p>This flag is a companion to <b>-bbsb=n</b> for controlling the indentation of an opening square bracket which is placed on a new line by that parameter. The indentation is as follows:</p>
 
 <pre><code>  -isb=0 one continuation level [default]
   -isb=1 outdent by one continuation level
@@ -1786,14 +1789,14 @@
 
 <pre><code>  -bbp=0 never break [default]
   -bbp=1 stable: break if the input script had a break
-  -bbp=2 break if list is &#39;complex&#39;, meaning it contains other broken lists
+  -bpb=2 break if list is &#39;complex&#39; (part of nested list structure)
   -bbp=3 always break</code></pre>
 
 </dd>
 <dt id="ip-n---indent-paren-n"><b>-ip=n</b>, <b>--indent-paren=n</b></dt>
 <dd>
 
-<p>This flag is a companion to <b>-bbp</b> for controlling the indentation of an opening paren. The indentation is as follows:</p>
+<p>This flag is a companion to <b>-bbp=n</b> for controlling the indentation of an opening paren which is placed on a new line by that parameter. The indentation is as follows:</p>
 
 <pre><code>  -ip=0 one continuation level [default]
   -ip=1 outdent by one continuation level

@@ -73,6 +73,7 @@ my (
     %is_closing_type,
     %is_opening_token,
     %is_closing_token,
+    %is_equal_or_fat_comma,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -106,7 +107,7 @@ my (
     %want_break_before,
 
     %break_before_container_types,
-    %container_indentation_options, 
+    %container_indentation_options,
 
     %space_after_keyword,
 
@@ -401,6 +402,9 @@ BEGIN {
 
     @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
+
+    @q = qw( = => );
+    @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
 }
 
@@ -4592,7 +4596,7 @@ sub adjust_indentation_levels {
     # Adjust indentation for list containers
     $self->adjust_container_indentation();
 
-    # Set adjusted levels for the whitespace cycle option.  
+    # Set adjusted levels for the whitespace cycle option.
     $self->whitespace_cycle_adjustment();
 
     # Adjust continuation indentation if -bli is set
@@ -4798,26 +4802,45 @@ sub adjust_container_indentation {
     }
 
     # Loop over all opening container tokens
-    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $ris_broken_container = $self->[_ris_broken_container_];
     foreach my $seqno ( keys %{$K_opening_container} ) {
-        my $KK          = $K_opening_container->{$seqno};
-        my $rtoken_vars = $rLL->[$KK];
-        my $block_type  = $rtoken_vars->[_BLOCK_TYPE_];
+        my $KK = $K_opening_container->{$seqno};
 
         # this routine is not for code block braces
+        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         next if ($block_type);
 
-        my $token = $rtoken_vars->[_TOKEN_];
-        my $flag  = $container_indentation_options{$token};
+        # These flags only apply if the corresponding -bb* flags
+        # have been set to non-default values
+        my $rtoken_vars = $rLL->[$KK];
+        my $token       = $rtoken_vars->[_TOKEN_];
+        my $flag        = $container_indentation_options{$token};
         next unless ($flag);
+
+        # Require previous nonblank to be certain types (= and =>)
+        # Note similar coding in sub insert_breaks_before...
+        my $Kprev = $KK - 1;
+        next if ( $Kprev < 0 );
+        my $prev_type = $rLL->[$Kprev]->[_TYPE_];
+        if ( $prev_type eq 'b' ) {
+            $Kprev--;
+            next if ( $Kprev < 0 );
+            $prev_type = $rLL->[$Kprev]->[_TYPE_];
+        }
+        next unless ( $is_equal_or_fat_comma{$prev_type} );
 
         # This is only for list containers
         next unless $self->is_list($seqno);
+
+        # and only for broken lists
+        next unless $ris_broken_container->{$seqno};
 
         # NOTE: We are adjusting indentation of the opening container. The
         # closing container will normally follow the indentation of the opening
         # container automatically, so this is not currently done.
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
+        next unless ($ci);
 
         # option 1: outdent
         if ( $flag == 1 ) {
@@ -6263,23 +6286,22 @@ EOM
     %container_indentation_options = ();
     for ( $rOpts->{'indent-hash-brace'} ) {
         my $tok = '{';
-        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_; 
+        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_;
         }
     }
     for ( $rOpts->{'indent-square-bracket'} ) {
         my $tok = '[';
-        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_; 
+        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_;
         }
     }
     for ( $rOpts->{'indent-paren'} ) {
         my $tok = '(';
-        if ( defined($_) && $_>0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_; 
+        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
+            $container_indentation_options{$tok} = $_;
         }
     }
-
 
     # Define here tokens which may follow the closing brace of a do statement
     # on the same line, as in:
@@ -17931,16 +17953,28 @@ sub break_equals {
 
 sub is_list {
 
-    # Try to decide if the immediate contents of a container is a list.
+    # Return true if the immediate contents of a container appears to be a
+    # list.
 
     my ( $self, $seqno ) = @_;
-    my $rLL                  = $self->[_rLL_];
-    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    return unless defined($seqno);
+
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_opening           = $K_opening_container->{$seqno};
+    return unless ( defined($K_opening) );
+
+    my $rLL        = $self->[_rLL_];
+    my $block_type = $rLL->[$K_opening]->[_BLOCK_TYPE_];
+    return if ($block_type);
+
+    my $token = $rLL->[$K_opening]->[_TOKEN_];
+    return if ( $token eq ':' );
 
     # We will require at least 2 commas or 1 fat comma in the
     # immediate lower level.
-    my $fat_comma_count = $rtype_count_by_seqno->{$seqno}->{'=>'};
-    my $comma_count     = $rtype_count_by_seqno->{$seqno}->{','};
+    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
+    my $fat_comma_count      = $rtype_count_by_seqno->{$seqno}->{'=>'};
+    my $comma_count          = $rtype_count_by_seqno->{$seqno}->{','};
     my $is_list = ( $fat_comma_count || $comma_count && $comma_count > 1 );
     return $is_list;
 }
@@ -17957,6 +17991,7 @@ sub insert_breaks_before_list_opening_containers {
     my $rLL                   = $self->[_rLL_];
     my $ris_broken_container  = $self->[_ris_broken_container_];
     my $rhas_broken_container = $self->[_rhas_broken_container_];
+    my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
 
     # scan the ends of all lines
     my @insert_list;
@@ -17970,7 +18005,7 @@ sub insert_breaks_before_list_opening_containers {
         my $iend     = $ir;
         my $type_end = $rLL->[$Kr]->[_TYPE_];
 
-        # backup before a side comment
+        # Backup before any side comment
         if ( $type_end eq '#' ) {
             $Kend = $self->K_previous_nonblank($Kr);
             next unless defined($Kend);
@@ -17978,46 +18013,36 @@ sub insert_breaks_before_list_opening_containers {
             $iend     = $ir + ( $Kend - $Kr );
         }
 
-        # This is only for line-ending tokens with a preceding blank
-        # on the same line.
         next unless ( $Kl < $Kend - 1 );
 
-        # And only for some kind of container token
         my $seqno = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
         next unless ( defined($seqno) );
 
-        # And only for selected types of container tokens
+	# Only for types of container tokens with a non-default break option
         my $token_end    = $rLL->[$Kend]->[_TOKEN_];
         my $break_option = $break_before_container_types{$token_end};
         next unless ($break_option);
 
-        # This is not for code block braces
-        my $block_type = $rLL->[$Kend]->[_BLOCK_TYPE_];
-        next if ($block_type);
+        # Require previous nonblank to be certain types (= and =>)
+        # Note similar coding in sub adjust_container_indentation
+        my $Kprev     = $Kend - 1;
+        my $prev_type = $rLL->[$Kprev]->[_TYPE_];
+        if ( $prev_type eq 'b' ) {
+            $Kprev--;
+            next if ( $Kprev <= $Kl );
+            $prev_type = $rLL->[$Kprev]->[_TYPE_];
+        }
+        next unless ( $is_equal_or_fat_comma{$prev_type} );
 
-        # Require a space before the line ending token
-        next unless ( $rLL->[ $Kend - 1 ]->[_TYPE_] eq 'b' );
-
+        # This must be a list (this will exclude all code blocks)
         next unless $self->is_list($seqno);
 
-        # Do not break a weld
+        # Never break a weld
         next if ( $self->weld_len_left( $seqno, $token_end ) );
 
-        # Parens cannot break after certain keywords
-        if ( $token_end eq '(' ) {
-            my $iend_m2 = $iend - 2;
-            if ( $iend_m2 >= $il ) {
-                if ( $types_to_go[$iend_m2] eq 'k'
-                    && $is_if_elsif_else_unless_while_until_for_foreach{
-                        $tokens_to_go[$iend_m2] } )
-                {
-                    next;
-                }
-            }
-        }
+        # Final decision is based on selected option:
 
-        # Final decision is based on selected option
-        # 1 = stable
+        # Option 1 = stable, try to follow input
         my $ok_to_break;
         if ( $break_option == 1 ) {
             if ( $ir - 2 > $il ) {
@@ -18025,32 +18050,36 @@ sub insert_breaks_before_list_opening_containers {
             }
         }
 
-        # 2 = only if complex list
+        # Option 2 = only if complex list, meaning:
+        #  - this list contains a broken container, or
+        #  - this list is contained in a broken list
         elsif ( $break_option == 2 ) {
             $ok_to_break = $rhas_broken_container->{$seqno};
+            if ( !$ok_to_break ) {
+                my $parent = $rparent_of_seqno->{$seqno};
+                $ok_to_break = $self->is_list($parent);
+            }
         }
 
-        # 3 = always break
+        # Option 3 = always break
         elsif ( $break_option == 3 ) {
             $ok_to_break = 1;
         }
 
-        # Shouldn't happen! Bad flag, make same as 3
+        # Shouldn't happen! Bad flag, but make behavior same as 3
         else {
             $ok_to_break = 1;
         }
 
         next unless ($ok_to_break);
 
-        # This meets the criteria, so install a break
+        # This meets the criteria, so install a break before the opening token.
         my $Kbreak = $self->K_previous_nonblank($Kend);
         my $ibreak = $Kbreak - $Kl + $il;
         next if ( $ibreak < $il );
         next if ( $nobreak_to_go[$ibreak] );
         push @insert_list, $ibreak;
 
-        # FIXME: at this point we could inform any child containers that they
-        # are part of a complex container.
     }
 
     # insert any new break points

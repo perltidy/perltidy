@@ -83,10 +83,11 @@ END_OF_SELECT
 my %temp =
   (
     supsup => 123,
-    nested => {
+    nested =>
+      {
         asdf => 456,
         yarg => 'yarp',
-    },
+      },
   );
 #2...........
         },

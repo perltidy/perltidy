@@ -7,7 +7,8 @@
 
     - Added parameters -bbhb=n (--break-before-hash-brace=n), -bbsb=n (--break-before-square-bracket=n),
       and -bbp=n (--break-before-paren=n) suggested in git #38.  These provide control over the
-      opening container token of a multiple-line list.
+      opening container token of a multiple-line list.  Related new parameters -ihb=n, -isb=n, -ip=n
+      control indentation of these tokens.
 
     - Numerous issues have been found during automated testing and fixed. Many involve references to
       uninitialized variables when perltidy is given random text. A complete list is given in

@@ -274,6 +274,8 @@
 ../snippets22.t	bbhb.bbhb2
 ../snippets22.t	bbhb.bbhb3
 ../snippets22.t	bbhb.def
+../snippets22.t	bbhb.bbhb4
+../snippets22.t	bbhb.bbhb5
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -414,5 +416,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets22.t	bbhb.bbhb4
-../snippets22.t	bbhb.bbhb5
