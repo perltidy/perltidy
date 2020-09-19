@@ -404,6 +404,7 @@ BEGIN {
     @is_closing_token{@q} = (1) x scalar(@q);
 
     @q = qw( = => );
+    push @q, ',';   # include ordinary comma too
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
 }
@@ -4772,10 +4773,11 @@ sub whitespace_cycle_adjustment {
 sub adjust_container_indentation {
 
     # adjust continuation indentation for certain tokens if requested
+    # by these flags:
 
-    # -ihb=n , --indent-for-hash-brace=n
-    # -isb=n , --indent-for-square-bracket=n
-    # -ip=n , --indent-for-paren=n
+    # -bbhbi=n
+    # -bbsbi=n
+    # -bbpi=n
 
     # n=0  default indentation (usually one ci)
     # n=1  outdent one ci
@@ -6284,19 +6286,19 @@ EOM
     }
 
     %container_indentation_options = ();
-    for ( $rOpts->{'indent-hash-brace'} ) {
+    for ( $rOpts->{'break-before-hash-brace-and-indent'} ) {
         my $tok = '{';
         if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
             $container_indentation_options{$tok} = $_;
         }
     }
-    for ( $rOpts->{'indent-square-bracket'} ) {
+    for ( $rOpts->{'break-before-square-bracket-and-indent'} ) {
         my $tok = '[';
         if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
             $container_indentation_options{$tok} = $_;
         }
     }
-    for ( $rOpts->{'indent-paren'} ) {
+    for ( $rOpts->{'break-before-paren-and-indent'} ) {
         my $tok = '(';
         if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
             $container_indentation_options{$tok} = $_;
@@ -18018,7 +18020,7 @@ sub insert_breaks_before_list_opening_containers {
         my $seqno = $rLL->[$Kend]->[_TYPE_SEQUENCE_];
         next unless ( defined($seqno) );
 
-	# Only for types of container tokens with a non-default break option
+        # Only for types of container tokens with a non-default break option
         my $token_end    = $rLL->[$Kend]->[_TOKEN_];
         my $break_option = $break_before_container_types{$token_end};
         next unless ($break_option);

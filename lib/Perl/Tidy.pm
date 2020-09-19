@@ -2284,11 +2284,11 @@ sub generate_options {
     $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
     $add_option->( 'one-line-block-nesting',                  'olbn',  '=i' );
     $add_option->( 'break-before-hash-brace',                 'bbhb',  '=i' );
+    $add_option->( 'break-before-hash-brace-and-indent',      'bbhbi', '=i' );
     $add_option->( 'break-before-square-bracket',             'bbsb',  '=i' );
+    $add_option->( 'break-before-square-bracket-and-indent',  'bbsbi', '=i' );
     $add_option->( 'break-before-paren',                      'bbp',   '=i' );
-    $add_option->( 'indent-hash-brace',                       'ihb',   '=i' );
-    $add_option->( 'indent-square-bracket',                   'isb',   '=i' );
-    $add_option->( 'indent-paren',                            'ip',    '=i' );
+    $add_option->( 'break-before-paren-and-indent',           'bbpi',  '=i' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -2476,11 +2476,11 @@ sub generate_options {
       break-at-old-attribute-breakpoints
       break-at-old-keyword-breakpoints
       break-before-hash-brace=0
+      break-before-hash-brace-and-indent=0
       break-before-square-bracket=0
+      break-before-square-bracket-and-indent=0
       break-before-paren=0
-      indent-hash-brace=0
-      indent-square-bracket=0
-      indent-paren=0
+      break-before-paren-and-indent=0
       comma-arrow-breakpoints=5
       nocheck-syntax
       character-encoding=guess

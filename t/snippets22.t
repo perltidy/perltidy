@@ -26,8 +26,8 @@ BEGIN {
     $rparams = {
         'bbhb2'     => "-bbhb=2 -bbp=2",
         'bbhb3'     => "-bbhb=3 -bbp=3",
-        'bbhb4'     => "-bbhb=3 -bbp=3 -ihb=2 -ip=2",
-        'bbhb5'     => "-bbhb=3 -bbp=3 -ihb=1 -ip=1",
+        'bbhb4'     => "-bbhb=3 -bbp=3 -bbhbi=2 -bbpi=2",
+        'bbhb5'     => "-bbhb=3 -bbp=3 -bbhbi=1 -bbpi=1",
         'def'       => "",
         'here_long' => "-l=33",
     };
