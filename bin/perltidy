@@ -1198,12 +1198,12 @@ use the command:
 
 B<-skp>  or B<--space-keyword-paren>
 
-You will probably also want to use the flag B<-sfp> (next item) too.
+You may also want to use the flag B<-sfp> (next item) too.
 
 =item Space between all function names and opening parens
 
-When an opening paren follows a function the default is not to introduce
-a space.  To cause a space to be introduced use:
+When an opening paren follows a function the default and recommended formatting
+is not to introduce a space.  To cause a space to be introduced use:
 
 B<-sfp>  or B<--space-function-paren>
 
@@ -1211,6 +1211,17 @@ B<-sfp>  or B<--space-function-paren>
   myfunc ( $a, $b, $c );   # -sfp
 
 You will probably also want to use the flag B<-skp> (previous item) too.
+
+The reason this is not recommended is that spacing a function paren can make a
+program vulnerable to parsing problems by Perl.  For example, the following
+two-line program will run as written but will have a syntax error if
+reformatted with -sfp:
+
+  if ( -e filename() ) { print "exists\n"; }
+  sub filename { return $0 }
+
+The syntax error can be removed if the line order is reversed, so that
+Perl parses 'sub filename' first. 
 
 =item B<-spp=n>  or B<--space-prototype-paren=n>
 
@@ -2164,7 +2175,7 @@ There are several points to note about this flag:
 =item *
 
 This parameter only applies if the opening brace is preceded by an '='
-or '=>' or ','.
+or '=>'.
 
 =item *
 
