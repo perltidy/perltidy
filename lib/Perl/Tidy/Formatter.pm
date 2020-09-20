@@ -403,8 +403,10 @@ BEGIN {
     @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
 
+    # Braces -bbht etc must follow these. Note: experimentation with
+    # including a simple comma shows that it adds little and can lead
+    # to poor formatting in complex lists.
     @q = qw( = => );
-    push @q, ',';   # include ordinary comma too
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
 }
@@ -12072,9 +12074,22 @@ sub lookup_opening_indentation {
                 # Note that logical padding has already been applied, so we may
                 # need to remove some spaces to get a valid hash key.
                 my $tok = $tokens_to_go[$ibeg];
-                if ( length($tok) > 1 ) { $tok =~ s/\s//g }
                 my $cti = $closing_token_indentation{$tok};
-                if ( $cti == 1 ) {
+                if ( !defined($cti) ) {
+
+                    # $cti may not be defined for several reasons.
+                    # -padding may have been applied so the character
+                    #  has a length > 1
+                    # - we may have welded to a closing quote token.
+                    #   Here is an example (perltidy -wn):
+                    #       __PACKAGE__->load_components( qw(
+                    #  >         Core
+                    #  >
+                    #  >     ) );
+                    $adjust_indentation = 0;
+
+                }
+                elsif ( $cti == 1 ) {
                     if (   $i_terminal <= $ibeg + 1
                         || $is_semicolon_terminated )
                     {
