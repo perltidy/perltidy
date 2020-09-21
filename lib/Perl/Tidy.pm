@@ -4307,7 +4307,11 @@ sub process_this_file {
         $formatter->write_line($line);
     }
     my $severe_error = $tokenizer->report_tokenization_errors();
-    eval { $formatter->finish_formatting($severe_error) };
+
+    # user-defined formatters are possible, and may not have a
+    # sub 'finish_formatting', so we have to check
+    $formatter->finish_formatting($severe_error)
+      if $formatter->can('finish_formatting');
 
     return;
 }
