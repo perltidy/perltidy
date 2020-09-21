@@ -21,6 +21,27 @@
 
 <dl>
 
+<dt id="Switched-from-using-an-eval-block-to-the--can-function-for-sub-finish_formatting"><b>Switched from using an eval block to the -</b>can() function for sub finish_formatting&gt;</dt>
+<dd>
+
+<p>This is not a bug, but is cleaner coding and insures that error messages get reported. This change was made 20 Sep 2020.</p>
+
+</dd>
+<dt id="fixed-uninitialized-value-reference"><b>fixed uninitialized value reference</b></dt>
+<dd>
+
+<p>The following message was generated during automated testing Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12079. Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12089. Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12097.</p>
+
+<p>The problem could be simplified to running perltidy -wn on this snippet:</p>
+
+<pre><code>     __PACKAGE__-&gt;load_components( qw(
+&gt;         Core
+&gt; 
+&gt;     ) );</code></pre>
+
+<p>This was fixed 20 Sep 2020 in &#39;fixed_uninitialized_value&#39;, 8d6c4ed.</p>
+
+</dd>
 <dt id="fix-incorrect-parsing-of-certain-deprecated-empty-here-docs"><b>fix incorrect parsing of certain deprecated empty here-docs </b></dt>
 <dd>
 
@@ -55,7 +76,7 @@
 <p>A change was made to allow a &#39;=&gt;&#39; at the end of a line to align vertically, provided that it aligns with two or more other &#39;=&gt;&#39; tokens. This update was 14 Sep 2020, &#39;Allow line-ending &#39;=&gt;&#39; to align vertically&#39;, ea96739.</p>
 
 </dd>
-<dt id="fixed-uninitialized-value-reference"><b>fixed uninitialized value reference</b></dt>
+<dt id="fixed-uninitialized-value-reference1"><b>fixed uninitialized value reference</b></dt>
 <dd>
 
 <p>The following message was generated when running perltidy on random text:</p>
@@ -75,7 +96,7 @@
 <p>from becoming a zero length file. This could cause problems with other software. Fixed 13 Sep 2020, &#39;do not create a zero length file by deleting semicolons&#39;, b39195e.</p>
 
 </dd>
-<dt id="fixed-uninitialized-value-reference1"><b>fixed uninitialized value reference</b></dt>
+<dt id="fixed-uninitialized-value-reference2"><b>fixed uninitialized value reference</b></dt>
 <dd>
 
 <p>The following message was generated when running perltidy on random text:</p>
@@ -87,7 +108,7 @@
 <p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem &#39;, adb2096.</p>
 
 </dd>
-<dt id="fixed-uninitialized-value-reference2"><b>fixed uninitialized value reference</b></dt>
+<dt id="fixed-uninitialized-value-reference3"><b>fixed uninitialized value reference</b></dt>
 <dd>
 
 <p>The following message was generated when running perltidy on random text:</p>
@@ -98,7 +119,7 @@
 <p>This was fixed 13 Sep 2020 in &#39;fixed unitialized variable problem&#39;, 5bf49a3.</p>
 
 </dd>
-<dt id="fixed-uninitialized-value-reference3"><b>fixed uninitialized value reference</b></dt>
+<dt id="fixed-uninitialized-value-reference4"><b>fixed uninitialized value reference</b></dt>
 <dd>
 
 <p>The following message was generated when running perltidy on random text:</p>

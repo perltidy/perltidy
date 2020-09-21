@@ -5,6 +5,28 @@ found with the help of automated random testing.
 
 =over
 
+=item B<Switched from using an eval block to the ->can() function for sub finish_formatting>
+
+This is not a bug, but is cleaner coding and insures that error messages get reported.
+This change was made 20 Sep 2020.
+
+
+=item B<fixed uninitialized value reference>
+
+The following message was generated during automated testing
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12079.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12089.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12097.
+
+The problem could be simplified to running perltidy -wn on this snippet:
+
+     __PACKAGE__->load_components( qw(
+>         Core
+> 
+>     ) );
+
+This was fixed 20 Sep 2020 in 'fixed_uninitialized_value', 8d6c4ed.
+
 =item B<fix incorrect parsing of certain deprecated empty here-docs >
 
 The following snippet was being incorrecly parsed:

@@ -931,13 +931,13 @@
 
 <p><b>-skp</b> or <b>--space-keyword-paren</b></p>
 
-<p>You will probably also want to use the flag <b>-sfp</b> (next item) too.</p>
+<p>You may also want to use the flag <b>-sfp</b> (next item) too.</p>
 
 </dd>
 <dt id="Space-between-all-function-names-and-opening-parens">Space between all function names and opening parens</dt>
 <dd>
 
-<p>When an opening paren follows a function the default is not to introduce a space. To cause a space to be introduced use:</p>
+<p>When an opening paren follows a function the default and recommended formatting is not to introduce a space. To cause a space to be introduced use:</p>
 
 <p><b>-sfp</b> or <b>--space-function-paren</b></p>
 
@@ -945,6 +945,13 @@
   myfunc ( $a, $b, $c );   # -sfp</code></pre>
 
 <p>You will probably also want to use the flag <b>-skp</b> (previous item) too.</p>
+
+<p>The reason this is not recommended is that spacing a function paren can make a program vulnerable to parsing problems by Perl. For example, the following two-line program will run as written but will have a syntax error if reformatted with -sfp:</p>
+
+<pre><code>  if ( -e filename() ) { print &quot;exists\n&quot;; }
+  sub filename { return $0 }</code></pre>
+
+<p>The syntax error can be removed if the line order is reversed, so that Perl parses &#39;sub filename&#39; first.</p>
 
 </dd>
 <dt id="spp-n-or---space-prototype-paren-n"><b>-spp=n</b> or <b>--space-prototype-paren=n</b></dt>
@@ -1710,7 +1717,7 @@
 
 <ul>
 
-<li><p>This parameter only applies if the opening brace is preceded by an &#39;=&#39; or &#39;=&gt;&#39; or &#39;,&#39;.</p>
+<li><p>This parameter only applies if the opening brace is preceded by an &#39;=&#39; or &#39;=&gt;&#39;.</p>
 
 </li>
 <li><p>This parameter only applies if the contents of the container looks like a list. The contents need to contain some commas or &#39;=&gt;&#39;s at the next interior level to be considered a list.</p>
