@@ -878,8 +878,7 @@ EOM
                     if ( $input_file =~ /^\'(.+)\'$/ ) { $input_file = $1 }
                     if ( $input_file =~ /^\"(.+)\"$/ ) { $input_file = $1 }
                     my $pattern = fileglob_to_re($input_file);
-                    ##eval "/$pattern/";
-                    if ( !$@ && opendir( DIR, './' ) ) {
+                    if ( opendir( DIR, './' ) ) {
                         my @files =
                           grep { /$pattern/ && !-d $_ } readdir(DIR);
                         closedir(DIR);
