@@ -917,7 +917,7 @@ sub get_line {
             }
             else {
                 $line_of_tokens->{_line_type} = 'POD_START';
-                complain(
+                warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
                 );
                 write_logfile_entry("Entering POD section\n");
