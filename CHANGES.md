@@ -10,9 +10,13 @@
       opening container token of a multiple-line list.  Related new parameters -bbhbi=n, -bbsbi=n, -bbpi=n
       control indentation of these tokens.
 
+    - Added keyword 'isa'.
+
     - Numerous issues have been found during automated testing and fixed. Many involve references to
       uninitialized variables when perltidy is given random text. A complete list is given in
-      the file [BugLog.pod](https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod).
+      the file 
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2020 09 07
 
