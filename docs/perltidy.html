@@ -876,7 +876,7 @@
 <p><b>WARNING</b> Be sure to put these tokens in quotes to avoid having them misinterpreted by your command shell.</p>
 
 </dd>
-<dt id="Note:-Perltidy-does-always-follow-whitespace-controls">Note: Perltidy does always follow whitespace controls</dt>
+<dt id="Note1:-Perltidy-does-always-follow-whitespace-controls">Note1: Perltidy does always follow whitespace controls</dt>
 <dd>
 
 <p>The various parameters controlling whitespace within a program are requests which perltidy follows as well as possible, but there are a number of situations where changing whitespace could change program behavior and is not done. Some of these are obvious; for example, we should not remove the space between the two plus symbols in &#39;$x+ +$y&#39; to avoid creating a &#39;++&#39; operator. Some are more subtle and involve the whitespace around bareword symbols and locations of possible filehandles. For example, consider the problem of formatting the following subroutine:</p>
@@ -896,6 +896,23 @@
 <p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but not as intended.</p>
 
 <p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
+
+</dd>
+<dt id="Note2:-Perltidys-whitespace-rules-are-not-perfect">Note2: Perltidy&#39;s whitespace rules are not perfect</dt>
+<dd>
+
+<p>Despite these precautions, it is still possible to introduce syntax errors with some asymmetric whitespace rules, particularly when call parameters are not placed in containg parens or braces. For example, the following two lines will be parsed by perl without a syntax error:</p>
+
+<pre><code>  # original programming, syntax ok
+  my @newkeys = map $_-$nrecs+@data, @oldkeys;
+
+  # perltidy default, syntax ok
+  my @newkeys = map $_ - $nrecs + @data, @oldkeys;</code></pre>
+
+<p>But the following will give a syntax error:</p>
+
+<pre><code>  # perltidy -nwrs=&#39;-&#39;
+  my @newkeys = map $_ -$nrecs + @data, @oldkeys;</code></pre>
 
 </dd>
 <dt id="Space-between-specific-keywords-and-opening-paren">Space between specific keywords and opening paren</dt>
