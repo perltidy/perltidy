@@ -5,6 +5,13 @@ found with the help of automated random testing.
 
 =over
 
+=item B<If an =cut starts a POD section within code, give a warning>
+
+Previously only a complaint was given, which went into the log file and was not normally
+seen.  Perl silently accepts this but it can cause significant problems with pod utilities, so
+a clear warning is better.  This situation arose in testing on random files in combination with
+a -dp flag and it took some time to understand the results because of the lack of a warning.
+
 =item B<Switched from using an eval block to the ->can() function for sub finish_formatting>
 
 This is not a bug, but is cleaner coding and insures that error messages get reported.

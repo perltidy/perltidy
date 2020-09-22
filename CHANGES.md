@@ -12,7 +12,7 @@
 
     - Numerous issues have been found during automated testing and fixed. Many involve references to
       uninitialized variables when perltidy is given random text. A complete list is given in
-      the file 'BugLog.pod'.
+      the file [BugLog.pod](https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod).
 
 ## 2020 09 07
 
