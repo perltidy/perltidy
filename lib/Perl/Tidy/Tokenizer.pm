@@ -7977,6 +7977,7 @@ BEGIN {
       when
       err
       say
+      isa
 
       catch
     );
