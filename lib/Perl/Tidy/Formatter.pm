@@ -246,10 +246,12 @@ BEGIN {
         _first_embedded_tab_at_ => $i++,
         _last_embedded_tab_at_  => $i++,
 
-        _first_tabbing_disagreement_ => $i++,
-        _last_tabbing_disagreement_  => $i++,
-        _tabbing_disagreement_count_ => $i++,
-        _in_tabbing_disagreement_    => $i++,
+        _first_tabbing_disagreement_       => $i++,
+        _last_tabbing_disagreement_        => $i++,
+        _tabbing_disagreement_count_       => $i++,
+        _in_tabbing_disagreement_          => $i++,
+        _first_brace_tabbing_disagreement_ => $i++,
+        _in_brace_tabbing_disagreement_    => $i++,
 
         _saw_VERSION_in_this_file_ => $i++,
         _saw_END_or_DATA_          => $i++,
@@ -5959,15 +5961,37 @@ sub wrapup {
     my $last_tabbing_disagreement  = $self->[_last_tabbing_disagreement_];
     my $tabbing_disagreement_count = $self->[_tabbing_disagreement_count_];
     my $in_tabbing_disagreement    = $self->[_in_tabbing_disagreement_];
+
     if ($first_tabbing_disagreement) {
         write_logfile_entry(
 "First indentation disagreement seen at input line $first_tabbing_disagreement\n"
         );
     }
+
+    my $first_btd = $self->[_first_brace_tabbing_disagreement_];
+    if ($first_btd) {
+        my $msg =
+"First closing brace indentation disagreement started at input line $first_btd\n";
+        write_logfile_entry($msg);
+
+        # leave a hint in the .ERR file if there was a brace error
+        if ( get_saw_brace_error() ) { warning("NOTE: $msg") }
+    }
+
+    my $in_btd = $self->[_in_brace_tabbing_disagreement_];
+    if ($in_btd) {
+        my $msg =
+"Ending with brace indentation disagreement which started at input line $in_btd\n";
+        write_logfile_entry($msg);
+
+        # leave a hint in the .ERR file if there was a brace error
+        if ( get_saw_brace_error() ) { warning("NOTE: $msg") }
+    }
+
     if ($in_tabbing_disagreement) {
-        write_logfile_entry(
-"Ending with indentation disagreement which started at input line $in_tabbing_disagreement\n"
-        );
+        my $msg =
+"Ending with indentation disagreement which started at input line $in_tabbing_disagreement\n";
+        write_logfile_entry($msg);
     }
     else {
 
@@ -5981,6 +6005,7 @@ sub wrapup {
             write_logfile_entry("No indentation disagreement seen\n");
         }
     }
+
     if ($first_tabbing_disagreement) {
         write_logfile_entry(
 "Note: Indentation disagreement detection is not accurate for outdenting and -lp.\n"
@@ -7977,9 +8002,8 @@ sub copy_token_as_type {
         # compare input/output indentation except for continuation lines
         # (because they have an unknown amount of initial blank space)
         # and lines which are quotes (because they may have been outdented)
-        my $structural_indentation_level = $rLL->[$K_first]->[_LEVEL_];
-        $self->compare_indentation_levels( $guessed_indentation_level,
-            $structural_indentation_level, $input_line_number )
+        $self->compare_indentation_levels( $K_first, $guessed_indentation_level,
+            $input_line_number )
           unless ( $is_hanging_side_comment
             || $rtok_first->[_CI_LEVEL_] > 0
             || $guessed_indentation_level == 0
@@ -18970,15 +18994,35 @@ sub compare_indentation_levels {
     # this can be very useful for debugging a script which has an extra
     # or missing brace.
 
-    my ( $self, $guessed_indentation_level, $structural_indentation_level,
-        $line_number )
-      = @_;
+    my ( $self, $K_first, $guessed_indentation_level, $line_number ) = @_;
+    return unless ( defined($K_first) );
+
+    my $rLL = $self->[_rLL_];
+
+    my $structural_indentation_level = $rLL->[$K_first]->[_LEVEL_];
+    my $radjusted_levels             = $self->[_radjusted_levels_];
+    if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
+        $structural_indentation_level = $radjusted_levels->[$K_first];
+    }
+
+    my $is_closing_block = $rLL->[$K_first]->[_TYPE_] eq '}'
+      && $rLL->[$K_first]->[_BLOCK_TYPE_];
+
     if ( $guessed_indentation_level ne $structural_indentation_level ) {
         $self->[_last_tabbing_disagreement_] = $line_number;
 
-        if ( $self->[_in_tabbing_disagreement_] ) {
+        if ($is_closing_block) {
+
+            if ( !$self->[_in_brace_tabbing_disagreement_] ) {
+                $self->[_in_brace_tabbing_disagreement_] = $line_number;
+            }
+            if ( !$self->[_first_brace_tabbing_disagreement_] ) {
+                $self->[_first_brace_tabbing_disagreement_] = $line_number;
+            }
+
         }
-        else {
+
+        if ( !$self->[_in_tabbing_disagreement_] ) {
             $self->[_tabbing_disagreement_count_]++;
 
             if ( $self->[_tabbing_disagreement_count_] <= MAX_NAG_MESSAGES ) {
@@ -18992,6 +19036,8 @@ sub compare_indentation_levels {
         }
     }
     else {
+
+        $self->[_in_brace_tabbing_disagreement_] = 0 if ($is_closing_block);
 
         my $in_tabbing_disagreement = $self->[_in_tabbing_disagreement_];
         if ($in_tabbing_disagreement) {
@@ -19008,6 +19054,7 @@ sub compare_indentation_levels {
                 }
             }
             $self->[_in_tabbing_disagreement_] = 0;
+
         }
     }
     return;
