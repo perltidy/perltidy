@@ -860,6 +860,8 @@ sub prepare_for_next_batch {
 sub keyword_group_scan {
     my $self = shift;
 
+    # Called once per file to process the --keyword-group-blanks-* parameters.
+
     # Manipulate blank lines around keyword groups (kgb* flags)
     # Scan all lines looking for runs of consecutive lines beginning with
     # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
@@ -1348,11 +1350,13 @@ EOM
     # end of loop over all lines
     $end_group->();
     return $rhash_of_desires;
-}
+
+} ## end sub keyword_group_scan
 
 sub process_all_lines {
 
-    # Loop over old lines to set new line break points
+    # Main loop over all lines of a file.
+    # Lines are processed according to type.
 
     my $self                       = shift;
     my $rlines                     = $self->[_rlines_];
@@ -1513,9 +1517,12 @@ sub process_all_lines {
         }
     }
     return;
-}
+
+} ## end sub process_all_lines
 
 {    ## begin closure check_line_hashes
+
+    # This code checks that no autovivification occurs in the 'line' hash
 
     my %valid_line_hash;
 
@@ -1562,8 +1569,13 @@ sub process_all_lines {
 
 sub write_line {
 
-    # We are caching tokenized lines as they arrive and converting them to the
-    # format needed for the final formatting.
+    # This routine originally received lines of code and immediately processed
+    # them.  That was efficient when memory was limited, but now it just saves
+    # the lines it receives.  They get processed all together after the last
+    # line is received.
+
+    # As tokenized lines are received they are converted to the format needed
+    # for the final formatting.
     my ( $self, $line_of_tokens_old ) = @_;
     my $rLL        = $self->[_rLL_];
     my $Klimit     = $self->[_Klimit_];
@@ -1674,8 +1686,8 @@ sub write_line {
 
 sub initialize_whitespace_hashes {
 
-    # initialize these global hashes, which control the use of
-    # whitespace around tokens:
+    # This is called once before formatting begins to initialize these global
+    # hashes, which control the use of whitespace around tokens:
     #
     # %binary_ws_rules
     # %want_left_space
@@ -1806,15 +1818,16 @@ sub initialize_whitespace_hashes {
 
 sub set_whitespace_flags {
 
-    #    This routine examines each pair of nonblank tokens and
-    #    sets a flag indicating if white space is needed.
+    # This routine is called once per file to set whitespace flags for that
+    # file.  This routine examines each pair of nonblank tokens and sets a flag
+    # indicating if white space is needed.
     #
-    #    $rwhitespace_flags->[$j] is a flag indicating whether a white space
-    #    BEFORE token $j is needed, with the following values:
+    # $rwhitespace_flags->[$j] is a flag indicating whether a white space
+    # BEFORE token $j is needed, with the following values:
     #
-    #             WS_NO      = -1 do not want a space before token $j
+    #             WS_NO      = -1 do not want a space BEFORE token $j
     #             WS_OPTIONAL=  0 optional space or $j is a whitespace
-    #             WS_YES     =  1 want a space before token $j
+    #             WS_YES     =  1 want a space BEFORE token $j
     #
 
     my $self = shift;
@@ -2338,6 +2351,9 @@ sub respace_tokens {
 
     my $self = shift;
     return if $rOpts->{'indent-only'};
+
+    # This routine is called once per file to do as much formatting as possible
+    # before new line breaks are set.
 
     # This routine makes all necessary and possible changes to the tokenization
     # after the initial tokenization of the file. This is a tedious routine,
@@ -3218,6 +3234,11 @@ sub respace_tokens {
 
 {    ## begin closure scan_comments
 
+    # This routine is called once per file at the start of processing to
+    # make a pass through the lines, looking at lines of CODE and identifying
+    # special processing needs, such format skipping sections marked by
+    # special comments.
+
     my $Last_line_had_side_comment;
     my $In_format_skipping_section;
     my $Saw_VERSION_in_this_file;
@@ -3439,6 +3460,10 @@ sub respace_tokens {
 sub find_nested_pairs {
     my $self = shift;
 
+    # This routine is called once per file to do preliminary work needed for
+    # the --weld-nested option.  This information is also needed for adding
+    # semicolons.
+
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
@@ -3585,6 +3610,8 @@ sub Debug_dump_tokens {
 }
 
 sub get_old_line_index {
+
+    # return index of the original line that token K was on
     my ( $self, $K ) = @_;
     my $rLL = $self->[_rLL_];
     return 0 unless defined($K);
@@ -3592,6 +3619,8 @@ sub get_old_line_index {
 }
 
 sub get_old_line_count {
+
+    # return number of input lines separating two tokens
     my ( $self, $Kbeg, $Kend ) = @_;
     my $rLL = $self->[_rLL_];
     return 0 unless defined($Kbeg);
@@ -3840,7 +3869,8 @@ sub mark_short_nested_blocks {
 
 sub weld_containers {
 
-    # do any welding operations
+    # Called once per file to do any welding operations requested by --weld*
+    # flags.
     my ($self) = @_;
 
     return if ( $rOpts->{'indent-only'} );
@@ -3891,6 +3921,8 @@ sub cumulative_length_after_K {
 
 sub weld_cuddled_blocks {
     my ($self) = @_;
+
+    # Called once per file to handle cuddled formatting
 
     my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
 
@@ -4060,6 +4092,8 @@ sub weld_cuddled_blocks {
 
 sub weld_nested_containers {
     my ($self) = @_;
+
+    # Called once per file for option '--weld-nested-containers'
 
     my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
     my $rweld_len_left_opening  = $self->[_rweld_len_left_opening_];
@@ -4396,6 +4430,10 @@ EOM
 }
 
 sub weld_nested_quotes {
+
+    # Called once per file for option '--weld-nested-containers'. This
+    # does welding on qw quotes.
+
     my $self = shift;
 
     my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
@@ -4585,6 +4623,7 @@ sub adjust_indentation_levels {
 
     my ($self) = @_;
 
+    # Called once per file to do special indentation adjustments.
     # These routines adjust levels either by changing _CI_LEVEL_ directly or
     # by setting modified levels in the array $self->[_radjusted_levels_].
     # They will create this array if they are active, and otherwise it will be
@@ -4615,6 +4654,7 @@ sub initialize_adjusted_levels {
     my ($self) = @_;
 
     # Initialize _radjusted_levels if it has not yet been initialized.
+    # It is only needed when certain special adjustments are done.
     my $radjusted_levels = $self->[_radjusted_levels_];
     my $rLL              = $self->[_rLL_];
     my $Kmax             = @{$rLL} - 1;
@@ -4639,6 +4679,7 @@ sub clip_adjusted_levels {
 
 sub non_indenting_braces {
 
+    # Called once per file to handle the --non-indenting-braces parameter.
     # Remove indentation within marked braces if requested
     # NOTE: This must be the first routine to reference $radjusted_levels;
     my ($self) = @_;
@@ -4708,7 +4749,9 @@ sub non_indenting_braces {
 sub whitespace_cycle_adjustment {
 
     my $self = shift;
-    my $rLL  = $self->[_rLL_];
+
+    # Called once per file to implement the --whitespace-cycle option
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $radjusted_levels = $self->[_radjusted_levels_];
 
@@ -4774,12 +4817,13 @@ sub whitespace_cycle_adjustment {
 
 sub adjust_container_indentation {
 
-    # adjust continuation indentation for certain tokens if requested
-    # by these flags:
+    # Called once per file to implement the -bbhb* and related flags:
 
     # -bbhbi=n
     # -bbsbi=n
     # -bbpi=n
+
+    # where:
 
     # n=0  default indentation (usually one ci)
     # n=1  outdent one ci
@@ -4868,7 +4912,8 @@ sub adjust_container_indentation {
 
 sub bli_adjustment {
 
-    # if -bli is set, adds one continuation indentation for certain braces
+    # Called once per file to implement the --brace-left-and-indent option.
+    # If -bli is set, adds one continuation indentation for certain braces
     my $self = shift;
     return unless ( $rOpts->{'brace-left-and-indent'} );
     my $rLL = $self->[_rLL_];
@@ -5106,6 +5151,9 @@ sub get_available_spaces_to_go {
 }
 
 {    ## begin closure set_leading_whitespace (for -lp indentation)
+
+    # These routines are called batch-by-batch to handle the -lp indentation
+    # option.  The coding is rather complex, but is only for -lp.
 
     my $gnu_position_predictor;
     my $gnu_sequence_number;
@@ -5834,7 +5882,8 @@ sub excess_line_length {
 
 sub wrapup {
 
-    # flush buffer and write any informative messages
+    # This is the last routine called when a file is formatted.
+    # Flush buffer and write any informative messages
     my $self = shift;
 
     $self->flush();
@@ -5949,8 +5998,8 @@ sub wrapup {
 
 sub check_options {
 
-    # This routine is called to check the Opts hash after it is defined
-    # and to configure the control hashes to the selected run parameters.
+    # This routine is called to check the user-supplied run parameters
+    # and to configure the control hashes to them.
     $rOpts = shift;
 
     initialize_whitespace_hashes();
@@ -7161,7 +7210,6 @@ EOM
           || $typel eq 'J' && $typer eq 'J'
 
           ;    # the value of this long logic sequence is the result we want
-##if ($typel eq 'j') {print STDERR "typel=$typel typer=$typer result='$result'\n"}
         return $result;
     }
 } ## end closure is_essential_whitespace
@@ -7385,6 +7433,9 @@ sub tight_paren_follows {
 }
 
 sub copy_token_as_type {
+
+    # This provides a quick way to create a new token by
+    # slightly modifying an existing token.
     my ( $rold_token, $type, $token ) = @_;
     if ( $type eq 'b' ) {
         $token = " " unless defined($token);
@@ -7415,6 +7466,14 @@ sub copy_token_as_type {
 }
 
 {    ## begin closure process_line_of_CODE
+
+    # The routines in this closure receive lines of code and combine them into
+    # 'batches' and send them along. A 'batch' is the unit of code which can be
+    # processed further as a unit. It has the property that it is the largest
+    # amount of code into which which perltidy is free to place one or more
+    # line breaks within it without violating any constraints.
+
+    # When a new batch is formed it is sent to sub 'grind_batch_of_code'.
 
     # flags needed by the store routine
     my $line_of_tokens;
@@ -8472,12 +8531,14 @@ sub consecutive_nonblank_lines {
 
 {    ## begin closure grind_batch_of_CODE
 
-    # Keep track of consecutive nonblank lines so that we can insert occasional
-    # blanks
+    # The routines in this closure begin the processing of a 'batch' of code.
+
+    # A variable to keep track of consecutive nonblank lines so that we can
+    # insert occasional blanks
     my @nonblank_lines_at_depth;
 
-    # remember maximum size of previous batches; this is needed by the logical
-    # padding routine
+    # A variable to remember maximum size of previous batches; this is needed
+    # by the logical padding routine
     my $peak_batch_size;
     my $batch_count;
 
@@ -10085,7 +10146,8 @@ sub correct_lp_indentation {
 
 {    ## begin closure accumulate_csc_text
 
-    # Variables related to forming closing side comments.
+# These routines are called once per batch when the --closing-side-comments flag
+# has been set.
 
     my %block_leading_text;
     my %block_opening_line_number;
@@ -10470,6 +10532,8 @@ sub correct_lp_indentation {
 
 {    ## begin closure balance_csc_text
 
+    # Some additional routines for handling the --closing-side-comments option
+
     my %matching_char;
 
     BEGIN {
@@ -10720,8 +10784,13 @@ sub add_closing_side_comment {
     return ( $closing_side_comment, $cscw_block_comment );
 }
 
-sub previous_nonblank_token {
+sub make_paren_name {
     my ( $self, $i ) = @_;
+
+    # The token at index $i is a '('.
+    # Create an alignment name for it to avoid incorrect alignments.
+
+    # Start with the name of the previous nonblank token...
     my $name = "";
     my $im   = $i - 1;
     return "" if ( $im < 0 );
@@ -10729,7 +10798,7 @@ sub previous_nonblank_token {
     return "" if ( $im < 0 );
     $name = $tokens_to_go[$im];
 
-    # prepend any sub name to an isolated -> to avoid unwanted alignments
+    # Prepend any sub name to an isolated -> to avoid unwanted alignments
     # [test case is test8/penco.pl]
     if ( $name eq '->' ) {
         $im--;
@@ -10737,6 +10806,9 @@ sub previous_nonblank_token {
             $name = $tokens_to_go[$im] . $name;
         }
     }
+
+    # Finally, remove any leading arrows
+    $name =~ s/^->//;
     return $name;
 }
 
@@ -11263,8 +11335,7 @@ sub send_lines_to_vertical_aligner {
 
                     my $name = $tok;
                     if ( $tok eq '(' ) {
-                        $name = $self->previous_nonblank_token($i);
-                        $name =~ s/^->//;
+                        $name = $self->make_paren_name($i);
                     }
                     $container_name{$depth} = "+" . $name;
 
@@ -13059,6 +13130,9 @@ sub get_seqno {
 
 {    ## begin closure set_bond_strengths
 
+    # These routines and variables are involved in deciding where to break very
+    # long lines.
+
     my %is_good_keyword_breakpoint;
     my %is_lt_gt_le_ge;
 
@@ -13965,8 +14039,9 @@ sub get_seqno {
 
 sub pad_array_to_go {
 
-    # to simplify coding in scan_list and set_bond_strengths, it helps
+    # To simplify coding in scan_list and set_bond_strengths, it helps
     # to create some extra blank tokens at the end of the arrays
+    # FIXME: it would be nice to eliminate the need for this routine.
     my ($self) = @_;
     $tokens_to_go[ $max_index_to_go + 1 ] = '';
     $tokens_to_go[ $max_index_to_go + 2 ] = '';
@@ -14000,6 +14075,9 @@ sub pad_array_to_go {
 }
 
 {    ## begin closure scan_list
+
+    # These routines and variables are involved in finding good
+    # places to break long lists.
 
     my (
         $block_type,               $current_depth,
@@ -14273,6 +14351,8 @@ sub pad_array_to_go {
         # items can be vertically aligned.  The output of this routine is
         # stored in the array @forced_breakpoint_to_go, which is used to set
         # final breakpoints.
+
+        # It is called once per batch if the batch is a list.
         my $rOpts_break_at_old_attribute_breakpoints =
           $rOpts->{'break-at-old-attribute-breakpoints'};
         my $rOpts_break_at_old_comma_breakpoints =
@@ -16393,11 +16473,13 @@ sub set_nobreaks {
 "FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
             };
 
+            ######################################################################
           # NOTE: if we call set_closing_breakpoint below it will then call this
           # routing back. So there is the possibility of an infinite loop if a
           # programming error is made. As a precaution, I have added a check on
           # the forced_breakpoint flag, so that we won't keep trying to set it.
           # That will give additional protection against a loop.
+            ######################################################################
             if (   $i_nonblank >= 0
                 && $nobreak_to_go[$i_nonblank] == 0
                 && !$forced_breakpoint_to_go[$i_nonblank] )
@@ -16467,6 +16549,9 @@ sub set_nobreaks {
 } ## end closure set_forced_breakpoint
 
 {    ## begin closure recombine_breakpoints
+
+    # This routine is called once per batch to see if it would be better
+    # to combine some of the lines into which the batch has been broken.
 
     my %is_amp_amp;
     my %is_ternary;
@@ -17925,6 +18010,10 @@ sub insert_breaks_before_list_opening_containers {
 
     my ( $self, $ri_left, $ri_right ) = @_;
 
+    # This routine is called once per batch to implement the parameters
+    # --break-before-hash-brace, etc.
+
+    # Nothing to do if none of these parameters has been set
     return unless %break_before_container_types;
 
     my $nmax = @{$ri_right} - 1;
@@ -18035,6 +18124,9 @@ sub insert_final_ternary_breaks {
 
     my ( $self, $ri_left, $ri_right ) = @_;
 
+    # Called once per batch to look for and do any final line breaks for
+    # long ternary chains
+
     my $nmax = @{$ri_right} - 1;
 
     # scan the left and right end tokens of all lines
@@ -18128,7 +18220,7 @@ sub in_same_container_i {
 
         # Check to see if tokens at K1 and K2 are in the same container,
         # and not separated by certain characters: => , ? : || or
-        # This version uses the newer $rLL data structure
+        # This version uses the newer $rLL data structure.
 
         my ( $self, $K1, $K2 ) = @_;
         if ( $K2 < $K1 ) { ( $K1, $K2 ) = ( $K2, $K1 ) }
@@ -18178,6 +18270,8 @@ sub in_same_container_i {
 } ## end closure in_same_container_K
 
 sub set_continuation_breaks {
+
+    # Called once per batch to set breaks in long lines.
 
     # Define an array of indexes for inserting newline characters to
     # keep the line lengths below the maximum desired length.  There is
@@ -18872,9 +18966,10 @@ sub insert_additional_breaks {
 
 sub compare_indentation_levels {
 
-    # check to see if output line tabbing agrees with input line
+    # Check to see if output line tabbing agrees with input line
     # this can be very useful for debugging a script which has an extra
-    # or missing brace
+    # or missing brace.
+
     my ( $self, $guessed_indentation_level, $structural_indentation_level,
         $line_number )
       = @_;
