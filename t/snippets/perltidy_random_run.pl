@@ -447,6 +447,13 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
     }  ## end inner loop over profiles
 }  ## end outer loop over files
 
+if (@saved_for_deletion) {
+    foreach (@saved_for_deletion) {
+        unlink $_ if ( -e $_ );
+    }
+    @saved_for_deletion = ();
+}
+
 # Summarize results..
 if (@problems) {
     print STDERR <<EOM;
