@@ -1061,6 +1061,7 @@ EOM
           tee-pod
           tee-side-comments
           version
+          delete-pod
         );
 
         my %skip;
