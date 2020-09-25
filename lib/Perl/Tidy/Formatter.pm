@@ -10,20 +10,33 @@
 
 # Index...
 # CODE SECTION 1: Preliminary code and global definitions up to sub new
+#                 sub new
 # CODE SECTION 2: Some Basic Utilities
 # CODE SECTION 3: Check and process options
+#                 sub check_options
 # CODE SECTION 4: Receive lines from the tokenizer
+#                 sub write_line
 # CODE SECTION 5: Pre-process the entire file
+#                 sub finish_formatting 
 # CODE SECTION 6: Process line-by-line
+#                 sub process_all_lines 
 # CODE SECTION 7: Process lines of code
+#                 process_line_of_CODE
 # CODE SECTION 8: Utilities for setting breakpoints
+#                 sub set_forced_breakpoint
 # CODE SECTION 9: Process batches of code
+#                 sub grind_batch_of_CODE
 # CODE SECTION 10: Code to break long statments
+#                  sub set_continuation_breaks 
 # CODE SECTION 11: Code to break long lists
+#                  sub scan_list
 # CODE SECTION 12: Code for setting indentation
 # CODE SECTION 13: Preparing batches for vertical alignment
+#                  sub send_lines_to_vertical_aligner
 # CODE SECTION 14: Code for creating closing side comments
+#                  sub add_closing_side_comment
 # CODE SECTION 15: Summarize
+#                  sub wrapup
 
 #######################################################################
 # CODE SECTION 1: Preliminary code and global definitions up to sub new
@@ -3998,10 +4011,6 @@ sub dump_verbatim {
     }
     return;
 }
-
-###########################################
-# CODE SECTION 11: Code to break long lists
-###########################################
 
 {    ## begin closure scan_comments
 
@@ -12545,6 +12554,10 @@ sub set_continuation_breaks {
     }
     return ( \@i_first, \@i_last, $colon_count );
 }
+
+###########################################
+# CODE SECTION 11: Code to break long lists
+###########################################
 
 {    ## begin closure scan_list
 
