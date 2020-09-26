@@ -28,7 +28,7 @@ use Carp;
 
 # PACKAGE VARIABLES for processing an entire FILE.
 # These must be package variables because most may get localized during
-# processing.  Most are initialized in sub prepare_for_a_new_file. 
+# processing.  Most are initialized in sub prepare_for_a_new_file.
 use vars qw{
   $tokenizer_self
 
@@ -187,7 +187,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ($AUTOLOAD eq 'DESTROY');
+    return if ( $AUTOLOAD eq 'DESTROY' );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -824,7 +824,7 @@ sub get_line {
                 )
                 && !$tokenizer_self->[_look_for_hash_bang_]
 
-                # Try to avoid giving a false alarm at a simple comment. 
+                # Try to avoid giving a false alarm at a simple comment.
                 # These look like valid hash-bang lines:
 
                 #!/usr/bin/perl -w
@@ -837,7 +837,7 @@ sub get_line {
 
                 # Comments typically have multiple spaces, which suggests
                 # the filter
-                && $input_line =~ /^\#\!(\s+)?(\S+)?perl/ 
+                && $input_line =~ /^\#\!(\s+)?(\S+)?perl/
               )
             {
 
@@ -2653,7 +2653,8 @@ sub prepare_for_a_new_file {
         'qx' => 1,
     );
 
-    my $DEBUG_TOKENIZE = 0;
+    use constant DEBUG_TOKENIZE => 0;
+
     sub tokenize_this_line {
 
   # This routine breaks a line of perl code into tokens which are of use in
@@ -3134,7 +3135,7 @@ EOM
             $next_tok  = $rtokens->[ $i + 1 ];
             $next_type = $rtoken_type->[ $i + 1 ];
 
-            $DEBUG_TOKENIZE && do {
+            DEBUG_TOKENIZE && do {
                 local $" = ')(';
                 my @debug_list = (
                     $last_nonblank_token,      $tok,
@@ -4391,7 +4392,7 @@ sub operator_expected {
     # $statement_type
 
     my ( $prev_type, $tok, $next_type ) = @_;
-    my $DEBUG_EXPECT = 0;
+    use constant DEBUG_EXPECT => 0;
 
     my $op_expected = UNKNOWN;
 
@@ -4439,7 +4440,6 @@ sub operator_expected {
         # Note that '?' and '<' have been moved above
         # ( $tok =~ /^([x\/\+\-\*\%\&\.\?\<]|\>\>)$/ ) {
         elsif ( $tok =~ /^([x\/\+\-\*\%\&\.]|\>\>)$/ ) {
-
 
             # Do not complain in 'use' statements, which have special syntax.
             # For example, from RT#130344:
@@ -4608,7 +4608,7 @@ sub operator_expected {
         );
     }
 
-    $DEBUG_EXPECT && do {
+    DEBUG_EXPECT && do {
         print STDOUT
 "EXPECT: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
     };
@@ -5739,7 +5739,7 @@ sub scan_id_do {
     my ( $input_line, $i, $tok, $rtokens, $rtoken_map, $id_scan_state,
         $max_token_index )
       = @_;
-    my $DEBUG_NSCAN = 0;
+    use constant DEBUG_NSCAN => 0;
     my $type = '';
     my ( $i_beg, $pos_beg );
 
@@ -5825,7 +5825,7 @@ sub scan_id_do {
         report_definite_bug();
     }
 
-    $DEBUG_NSCAN && do {
+    DEBUG_NSCAN && do {
         print STDOUT
           "NSCAN: returns i=$i, tok=$tok, type=$type, state=$id_scan_state\n";
     };
@@ -5962,7 +5962,7 @@ sub scan_identifier_do {
     my ( $i, $id_scan_state, $identifier, $rtokens, $max_token_index,
         $expecting, $container_type )
       = @_;
-    my $DEBUG_SCAN_ID = 0;
+    use constant DEBUG_SCAN_ID => 0;
     my $i_begin   = $i;
     my $type      = '';
     my $tok_begin = $rtokens->[$i_begin];
@@ -6442,7 +6442,7 @@ sub scan_identifier_do {
         $i   = $i_begin;
     }
 
-    $DEBUG_SCAN_ID && do {
+    DEBUG_SCAN_ID && do {
         my ( $a, $b, $c ) = caller;
         print STDOUT
 "SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";

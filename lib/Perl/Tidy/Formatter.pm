@@ -17,9 +17,9 @@
 # CODE SECTION 4: Receive lines from the tokenizer
 #                 sub write_line
 # CODE SECTION 5: Pre-process the entire file
-#                 sub finish_formatting 
+#                 sub finish_formatting
 # CODE SECTION 6: Process line-by-line
-#                 sub process_all_lines 
+#                 sub process_all_lines
 # CODE SECTION 7: Process lines of code
 #                 process_line_of_CODE
 # CODE SECTION 8: Utilities for setting breakpoints
@@ -27,7 +27,7 @@
 # CODE SECTION 9: Process batches of code
 #                 sub grind_batch_of_CODE
 # CODE SECTION 10: Code to break long statments
-#                  sub set_continuation_breaks 
+#                  sub set_continuation_breaks
 # CODE SECTION 11: Code to break long lists
 #                  sub scan_list
 # CODE SECTION 12: Code for setting indentation
@@ -140,6 +140,9 @@ my (
     $rOpts_line_up_parentheses,
     $rOpts_maximum_line_length,
     $rOpts_variable_maximum_line_length,
+    $rOpts_block_brace_tightness,
+    $rOpts_block_brace_vertical_tightness,
+    $rOpts_stack_closing_block_brace,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -268,7 +271,6 @@ BEGIN {
         _BLOCK_TYPE_            => $i++,
         _CI_LEVEL_              => $i++,
         _CONTAINER_ENVIRONMENT_ => $i++,
-        _CONTAINER_TYPE_        => $i++,
         _CUMULATIVE_LENGTH_     => $i++,
         _LINE_INDEX_            => $i++,
         _KNEXT_SEQ_ITEM_        => $i++,
@@ -1340,6 +1342,10 @@ EOM
     $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
+    $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
+    $rOpts_block_brace_vertical_tightness =
+      $rOpts->{'block-brace-vertical-tightness'};
+    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -1544,7 +1550,7 @@ sub set_whitespace_flags {
 
     my $self = shift;
     my $rLL  = $self->[_rLL_];
-    my $DEBUG_WHITE;
+    use constant DEBUG_WHITE => 0;
 
     my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
@@ -1767,7 +1773,7 @@ sub set_whitespace_flags {
         }    # end setting space flag inside opening tokens
         my $ws_1;
         $ws_1 = $ws
-          if $DEBUG_WHITE;
+          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 2:
@@ -1803,7 +1809,7 @@ sub set_whitespace_flags {
 
         my $ws_2;
         $ws_2 = $ws
-          if $DEBUG_WHITE;
+          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 3:
@@ -1814,7 +1820,7 @@ sub set_whitespace_flags {
         }
         my $ws_3;
         $ws_3 = $ws
-          if $DEBUG_WHITE;
+          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 4:
@@ -1979,7 +1985,7 @@ sub set_whitespace_flags {
 
         my $ws_4;
         $ws_4 = $ws
-          if $DEBUG_WHITE;
+          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 5:
@@ -2040,7 +2046,7 @@ sub set_whitespace_flags {
 
         $rwhitespace_flags->[$j] = $ws;
 
-        $DEBUG_WHITE && do {
+        DEBUG_WHITE && do {
             my $str = substr( $last_token, 0, 15 );
             $str .= ' ' x ( 16 - length($str) );
             if ( !defined($ws_1) ) { $ws_1 = "*" }
@@ -2820,7 +2826,7 @@ EOM
 
     } ## end sub initialize_bond_strength_hashes
 
-    my $DEBUG_BOND;
+    use constant DEBUG_BOND => 0;
 
     sub set_bond_strengths {
 
@@ -3161,7 +3167,7 @@ EOM
 
             # If the hardwired rules conflict with the tabulated bond
             # strength then there is an inconsistency that should be fixed
-                 $DEBUG_BOND
+            DEBUG_BOND
               && $tabulated_bond_str
               && $bond_str_1
               && $bond_str_1 != $bond_str_2
@@ -3270,7 +3276,7 @@ EOM
 
             $bond_strength_to_go[$i] = $strength;
 
-            $DEBUG_BOND && do {
+            DEBUG_BOND && do {
                 my $str = substr( $token, 0, 15 );
                 $str .= ' ' x ( 16 - length($str) );
                 print STDOUT
@@ -3871,20 +3877,18 @@ sub write_line {
 
                 my @tokary;
                 @tokary[
-                  _TOKEN_,                 _TYPE_,
-                  _BLOCK_TYPE_,            _CONTAINER_TYPE_,
-                  _CONTAINER_ENVIRONMENT_, _TYPE_SEQUENCE_,
-                  _LEVEL_,                 _LEVEL_TRUE_,
-                  _SLEVEL_,                _CI_LEVEL_,
-                  _LINE_INDEX_,
+                  _TOKEN_,         _TYPE_,
+                  _BLOCK_TYPE_,    _CONTAINER_ENVIRONMENT_,
+                  _TYPE_SEQUENCE_, _LEVEL_,
+                  _LEVEL_TRUE_,    _SLEVEL_,
+                  _CI_LEVEL_,      _LINE_INDEX_,
                   ]
                   = (
-                    $rtokens->[$j],                $rtoken_type->[$j],
-                    $rblock_type->[$j],            $rcontainer_type->[$j],
-                    $rcontainer_environment->[$j], $rtype_sequence->[$j],
-                    $rlevels->[$j],                $rlevels->[$j],
-                    $slevel,                       $rci_levels->[$j],
-                    $input_line_no,
+                    $rtokens->[$j],        $rtoken_type->[$j],
+                    $rblock_type->[$j],    $rcontainer_environment->[$j],
+                    $rtype_sequence->[$j], $rlevels->[$j],
+                    $rlevels->[$j],        $slevel,
+                    $rci_levels->[$j],     $input_line_no,
                   );
                 push @{$rLL}, \@tokary;
             }
@@ -4546,23 +4550,26 @@ sub respace_tokens {
             }
         }
 
-        my $type = $item->[_TYPE_];
-
-        # trim comments
-        if ( $type eq '#' ) {
-            $item->[_TOKEN_] =~ s/\s*$//;
-        }
-
         # Find the length of this token.  Later it may be adjusted if phantom
         # or ignoring side comment lengths.
         my $token_length = $length_function->( $item->[_TOKEN_] );
 
-        # Mark length of side comments as just 1 if their lengths are ignored
-        if (   $type eq '#'
-            && $rOpts_ignore_side_comment_lengths
-            && ( !$CODE_type || $CODE_type eq 'HSC' ) )
-        {
-            $token_length = 1;
+        # handle comments
+        my $type       = $item->[_TYPE_];
+        my $is_comment = $type eq '#';
+        if ($is_comment) {
+
+            # trim comments if necessary
+            if ( $item->[_TOKEN_] =~ s/\s+$// ) {
+                $token_length = $length_function->( $item->[_TOKEN_] );
+            }
+
+           # Mark length of side comments as just 1 if their lengths are ignored
+            if ( $rOpts_ignore_side_comment_lengths
+                && ( !$CODE_type || $CODE_type eq 'HSC' ) )
+            {
+                $token_length = 1;
+            }
         }
 
         $item->[_TOKEN_LENGTH_] = $token_length;
@@ -4573,7 +4580,7 @@ sub respace_tokens {
         # Save the length sum to just AFTER this token
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
-        if ( $type && $type ne 'b' && $type ne '#' ) {
+        if ( $type && $type ne 'b' && !$is_comment ) {
             $last_nonblank_type       = $type;
             $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
@@ -5330,7 +5337,6 @@ sub copy_token_as_type {
     $rnew_token->[_TYPE_]                  = $type;
     $rnew_token->[_TOKEN_]                 = $token;
     $rnew_token->[_BLOCK_TYPE_]            = '';
-    $rnew_token->[_CONTAINER_TYPE_]        = '';
     $rnew_token->[_CONTAINER_ENVIRONMENT_] = '';
     $rnew_token->[_TYPE_SEQUENCE_]         = '';
     return $rnew_token;
@@ -7600,33 +7606,19 @@ sub prepare_for_next_batch {
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
-    my $DEBUG_STORE;
+
+    use constant DEBUG_STORE => 0;
 
     sub store_token_to_go {
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
-        my $rLL  = $self->[_rLL_];
-        my $flag = $side_comment_follows ? 2 : $no_internal_newlines;
+        my $rLL = $self->[_rLL_];
 
         # the array of tokens can be given if they are different from the
         # input arrays.
         if ( !defined($rtoken_vars) ) {
             $rtoken_vars = $rLL->[$Ktoken_vars];
         }
-
-        my $token                 = $rtoken_vars->[_TOKEN_];
-        my $type                  = $rtoken_vars->[_TYPE_];
-        my $block_type            = $rtoken_vars->[_BLOCK_TYPE_];
-        my $container_type        = $rtoken_vars->[_CONTAINER_TYPE_];
-        my $container_environment = $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
-        my $type_sequence         = $rtoken_vars->[_TYPE_SEQUENCE_];
-        my $level                 = $rtoken_vars->[_LEVEL_];
-        my $slevel                = $rtoken_vars->[_SLEVEL_];
-        my $ci_level              = $rtoken_vars->[_CI_LEVEL_];
-
-        # Clip levels to zero if there are level errors in the file.
-        # We had to wait until now for reasons explained in sub 'write_line'.
-        if ( $level < 0 ) { $level = 0 }
 
        # Check for emergency flush...
        # The K indexes in the batch must always be a continuous sequence of
@@ -7647,21 +7639,34 @@ sub prepare_for_next_batch {
         }
 
         ++$max_index_to_go;
-        $K_to_go[$max_index_to_go]                     = $Ktoken_vars;
-        $tokens_to_go[$max_index_to_go]                = $token;
-        $types_to_go[$max_index_to_go]                 = $type;
-        $nobreak_to_go[$max_index_to_go]               = $flag;
-        $old_breakpoint_to_go[$max_index_to_go]        = 0;
-        $forced_breakpoint_to_go[$max_index_to_go]     = 0;
-        $block_type_to_go[$max_index_to_go]            = $block_type;
-        $type_sequence_to_go[$max_index_to_go]         = $type_sequence;
-        $container_environment_to_go[$max_index_to_go] = $container_environment;
-        $ci_levels_to_go[$max_index_to_go]             = $ci_level;
-        $mate_index_to_go[$max_index_to_go]            = -1;
-        $bond_strength_to_go[$max_index_to_go]         = 0;
+        $K_to_go[$max_index_to_go] = $Ktoken_vars;
 
-        $levels_to_go[$max_index_to_go]        = $level;
-        $nesting_depth_to_go[$max_index_to_go] = $slevel;
+        $old_breakpoint_to_go[$max_index_to_go]    = 0;
+        $forced_breakpoint_to_go[$max_index_to_go] = 0;
+        $mate_index_to_go[$max_index_to_go]        = -1;
+        $bond_strength_to_go[$max_index_to_go]     = 0;
+
+        my $token = $tokens_to_go[$max_index_to_go] = $rtoken_vars->[_TOKEN_];
+        my $type  = $types_to_go[$max_index_to_go]  = $rtoken_vars->[_TYPE_];
+        my $ci_level = $ci_levels_to_go[$max_index_to_go] =
+          $rtoken_vars->[_CI_LEVEL_];
+        my $slevel = $nesting_depth_to_go[$max_index_to_go] =
+          $rtoken_vars->[_SLEVEL_];
+
+        # Clip levels to zero if there are level errors in the file.
+        # We had to wait until now for reasons explained in sub 'write_line'.
+        my $level = $rtoken_vars->[_LEVEL_];
+        if ( $level < 0 ) { $level = 0 }
+        $levels_to_go[$max_index_to_go] = $level;
+
+        $block_type_to_go[$max_index_to_go] = $rtoken_vars->[_BLOCK_TYPE_];
+        $container_environment_to_go[$max_index_to_go] =
+          $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
+        $type_sequence_to_go[$max_index_to_go] =
+          $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        my $flag = $side_comment_follows ? 2 : $no_internal_newlines;
+        $nobreak_to_go[$max_index_to_go] = $flag;
 
         # link the non-blank tokens
         my $iprev = $max_index_to_go - 1;
@@ -7731,7 +7736,7 @@ sub prepare_for_next_batch {
             $comma_count_in_batch++;
         }
 
-        $DEBUG_STORE && do {
+        DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
             print STDOUT
 "STORE: from $a $c: storing token $token type $type lev=$level slev=$slevel at $max_index_to_go\n";
@@ -9046,7 +9051,7 @@ sub compare_indentation_levels {
         return;
     }
 
-    my $DEBUG_FORCE;
+    use constant DEBUG_FORCE => 0;
 
     sub set_forced_breakpoint {
         my ( $self, $i ) = @_;
@@ -9070,7 +9075,7 @@ sub compare_indentation_levels {
         if ( $i >= 0 && $i <= $max_index_to_go ) {
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
 
-            $DEBUG_FORCE && do {
+            DEBUG_FORCE && do {
                 my ( $a, $b, $c ) = caller();
                 print STDOUT
 "FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
@@ -9111,7 +9116,7 @@ sub compare_indentation_levels {
         return;
     }
 
-    my $DEBUG_UNDOBP;
+    use constant DEBUG_UNDOBP => 0;
 
     sub undo_forced_breakpoint_stack {
 
@@ -9131,7 +9136,7 @@ sub compare_indentation_levels {
                 $forced_breakpoint_to_go[$i] = 0;
                 $forced_breakpoint_count--;
 
-                $DEBUG_UNDOBP && do {
+                DEBUG_UNDOBP && do {
                     my ( $a, $b, $c ) = caller();
                     print STDOUT
 "UNDOBP: undo forced_breakpoint i=$i $forced_breakpoint_undo_count from $a $c max=$max_index_to_go\n";
@@ -9140,7 +9145,7 @@ sub compare_indentation_levels {
 
             # shouldn't happen, but not a critical error
             else {
-                $DEBUG_UNDOBP && do {
+                DEBUG_UNDOBP && do {
                     my ( $a, $b, $c ) = caller();
                     print STDOUT
 "Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go";
@@ -9250,7 +9255,7 @@ sub compare_indentation_levels {
 
     # Sub 'grind_batch_of_CODE' ships its output lines to the vertical aligner.
 
-    my $DEBUG_GRIND;
+    use constant DEBUG_GRIND => 0;
 
     sub grind_batch_of_CODE {
 
@@ -9277,7 +9282,7 @@ sub compare_indentation_levels {
 
         # This routine is only called from sub flush_batch_of_code, so that
         # routine is a better spot for debugging.
-        $DEBUG_GRIND && do {
+        DEBUG_GRIND && do {
             my $token = my $type = "";
             if ( $max_index_to_go >= 0 ) {
                 $token = $tokens_to_go[$max_index_to_go];
@@ -11984,9 +11989,9 @@ sub set_continuation_breaks {
     #   $forced_breakpoint_to_go[$i]
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
+    use constant DEBUG_BREAKPOINTS => 0;
 
     my ( $self, $saw_good_break ) = @_;
-    my $DEBUG_BREAKPOINTS = 0;
 
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
@@ -12365,8 +12370,7 @@ sub set_continuation_breaks {
                 }
             }
 
-            $DEBUG_BREAKPOINTS
-              && do {
+            DEBUG_BREAKPOINTS && do {
                 my $ltok     = $token;
                 my $rtok     = $next_nonblank_token ? $next_nonblank_token : "";
                 my $i_testp2 = $i_test + 2;
@@ -12377,7 +12381,7 @@ sub set_continuation_breaks {
                 if ( length($rtok) > 6 ) { $rtok = substr( $rtok, 0, 8 ) }
                 print STDOUT
 "BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] 2long=$too_long str=$strength    $ltok $rtok\n";
-              };
+            };
 
             # allow one extra terminal token after exceeding line length
             # if it would strand this token.
@@ -12449,7 +12453,7 @@ sub set_continuation_breaks {
         $next_nonblank_type  = $types_to_go[$i_next_nonblank];
         $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
 
-        $DEBUG_BREAKPOINTS
+        DEBUG_BREAKPOINTS
           && print STDOUT
           "BREAK: best is i = $i_lowest strength = $lowest_strength\n";
 
@@ -13882,7 +13886,7 @@ sub find_token_starting_list {
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
     }
 
-    my $DEBUG_SPARSE;
+    use constant DEBUG_SPARSE => 0;
 
     sub set_comma_breakpoints_do {
 
@@ -14495,7 +14499,7 @@ sub find_token_starting_list {
         }    # end shortcut methods
 
         # debug stuff
-        $DEBUG_SPARSE && do {
+        DEBUG_SPARSE && do {
             print STDOUT
 "SPARSE:cols=$columns commas=$comma_count items:$item_count ids=$identifier_count pairwidth=$pair_width fields=$number_of_fields lines packed: $packed_lines packed_cols=$packed_columns fmtd:$formatted_lines cols /line:$columns_per_line  unused:$unused_columns fmtd:$formatted_columns sparsity=$sparsity allow=$max_allowed_sparsity\n";
 
@@ -18108,10 +18112,15 @@ sub set_vertical_tightness_flags {
 
     my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0 ];
 
-    my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
-    my $rOpts_block_brace_vertical_tightness =
-      $rOpts->{'block-brace-vertical-tightness'};
-    my $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
+    # Uses these parameters:
+    #   $rOpts_block_brace_tightness
+    #   $rOpts_block_brace_vertical_tightness
+    #   $rOpts_stack_closing_block_brace
+    #   %opening_vertical_tightness
+    #   %closing_vertical_tightness
+    #   %opening_token_right
+    #   %stack_closing_token
+    #   %stack_opening_token
 
     #--------------------------------------------------------------
     # Vertical Tightness Flags Section 1:
