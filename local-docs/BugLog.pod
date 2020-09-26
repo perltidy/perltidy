@@ -8,10 +8,12 @@ found with the help of automated random testing.
 =item B<Fixed some incorrect indentation disagreements reported in LOG file> 
 
 The .LOG file reports any disagreements between the indentation of the input and output files.
-This can help locate brace errors.  These were incorrect when some of the options were used,
-including --whitespace-cycle, -bbhb, -nib.  This was corrected 24 Sep 2020. At the same time,
-locations of closing brace indentation disagreements are now tracked and reported in the
-.ERR file when there is a brace error.  This can help localize the error if the file was
+This can help locate brace errors.  These were incorrect when some of the
+options were used, including --whitespace-cycle, -bbhb, -nib.  This was
+corrected 24 Sep 2020, 'fixed incorrect log entry for indentation
+disagreement', 3d40545. At the same time, locations of closing brace
+indentation disagreements are now tracked and reported in the .ERR file when
+there is a brace error.  This can help localize the error if the file was
 previously formatted by perltidy.
 
 =item B<If an =cut starts a POD section within code, give a warning>
@@ -30,6 +32,7 @@ This change was made 20 Sep 2020.
 =item B<fixed uninitialized value reference>
 
 The following message was generated during automated testing
+
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12079.
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12089.
  Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12097.
