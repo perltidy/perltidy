@@ -9,7 +9,7 @@
 #####################################################################
 
 # Index...
-# CODE SECTION 1: Preliminary code and global definitions up to sub new
+# CODE SECTION 1: Preliminary code, global definitions and sub new
 #                 sub new
 # CODE SECTION 2: Some Basic Utilities
 # CODE SECTION 3: Check and process options
@@ -2881,6 +2881,9 @@ EOM
             $next_nonblank_type  = $types_to_go[$i_next_nonblank];
             $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
 
+            my $seqno               = $type_sequence_to_go[$i];
+            my $next_nonblank_seqno = $type_sequence_to_go[$i_next_nonblank];
+
             # We are computing the strength of the bond between the current
             # token and the NEXT token.
 
@@ -3149,8 +3152,13 @@ EOM
             my $tabulated_bond_str;
             my $ltype = $type;
             my $rtype = $next_nonblank_type;
-            if ( $token =~ /^[\(\[\{\)\]\}]/ ) { $ltype = $type . $token }
-            if ( $next_nonblank_token =~ /^[\(\[\{\)\]\}]/ ) {
+            if ( $seqno && $token =~ /^[\(\[\{\)\]\}]$/ ) {
+                $ltype = $type . $token;
+            }
+
+            if (   $next_nonblank_seqno
+                && $next_nonblank_token =~ /^[\(\[\{\)\]\}]$/ )
+            {
                 $rtype = $next_nonblank_type . $next_nonblank_token;
             }
 
@@ -3262,13 +3270,17 @@ EOM
             #---------------------------------------------------------------
 
             # Do not allow a break within welds,
-            if ( $self->weld_len_right_to_go($i) ) { $strength = NO_BREAK }
+            if ($seqno) {
+                if ( $self->weld_len_right( $seqno, $type ) ) {
+                    $strength = NO_BREAK;
+                }
 
-            # But encourage breaking after opening welded tokens
-            elsif ($self->weld_len_left_to_go($i)
-                && $is_opening_token{$token} )
-            {
-                $strength -= 1;
+                # But encourage breaking after opening welded tokens
+                elsif ($self->weld_len_left( $seqno, $type )
+                    && $is_opening_token{$token} )
+                {
+                    $strength -= 1;
+                }
             }
 
             # always break after side comment
@@ -6287,19 +6299,16 @@ sub weld_len_left {
 
     my ( $self, $seqno, $type_or_tok ) = @_;
 
-    my $rweld_len_left_closing = $self->[_rweld_len_left_closing_];
-    my $rweld_len_left_opening = $self->[_rweld_len_left_opening_];
-
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its left
 
     my $weld_len;
     if ($seqno) {
         if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $rweld_len_left_closing->{$seqno};
+            $weld_len = $self->[_rweld_len_left_closing_]->{$seqno};
         }
         elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $rweld_len_left_opening->{$seqno};
+            $weld_len = $self->[_rweld_len_left_opening_]->{$seqno};
         }
     }
     if ( !defined($weld_len) ) { $weld_len = 0 }
@@ -6310,19 +6319,16 @@ sub weld_len_right {
 
     my ( $self, $seqno, $type_or_tok ) = @_;
 
-    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
-    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
-
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its right
 
     my $weld_len;
     if ($seqno) {
         if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $rweld_len_right_closing->{$seqno};
+            $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
         }
         elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $rweld_len_right_opening->{$seqno};
+            $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
         }
     }
     if ( !defined($weld_len) ) { $weld_len = 0 }
@@ -6331,6 +6337,9 @@ sub weld_len_right {
 
 sub weld_len_left_to_go {
     my ( $self, $i ) = @_;
+
+    # FIXME: this sub should be eliminated for efficiency. Make
+    # calls directly to sub weld_len_left instead
 
     # Given the index of a token in the 'to_go' array
     # return the length of any weld to its left
@@ -6342,6 +6351,10 @@ sub weld_len_left_to_go {
 
 sub weld_len_right_to_go {
     my ( $self, $i ) = @_;
+
+    # FIXME: this sub should be eliminated for efficiency. Make
+    # calls directly to sub weld_len_right instead, but watch out
+    # for the initial test on a blank.
 
     # Given the index of a token in the 'to_go' array
     # return the length of any weld to its right
@@ -10770,15 +10783,21 @@ sub break_equals {
                 # Recombine Section 1:
                 # Join welded nested containers immediately
                 #----------------------------------------------------------
-                if (   $self->weld_len_right_to_go($iend_1)
-                    || $self->weld_len_left_to_go($ibeg_2) )
+
+                if (
+                    $type_sequence_to_go[$iend_1]
+                    && $self->weld_len_right( $type_sequence_to_go[$iend_1],
+                        $type_iend_1 )
+
+                    || $type_sequence_to_go[$ibeg_2] && $self->weld_len_left(
+                        $type_sequence_to_go[$ibeg_2], $type_ibeg_2
+                    )
+                  )
                 {
                     $n_best = $n;
-
-                    # Old coding alternated sweep direction: no longer needed
-                    # $reverse = 1 - $reverse;
                     last;
                 }
+
                 $reverse = 0;
 
                 #----------------------------------------------------------
