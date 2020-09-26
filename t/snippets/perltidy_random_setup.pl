@@ -26,13 +26,13 @@ EOM
 default_config();
 
 if ( -e $config_file ) {
-    if ( ifyes("Read the existing config.txt file? [Y/N]") ) {
+    if ( ifyes("Read the existing config.txt file? [Y/N]", "Y") ) {
         read_config($config_file);
     }
 }
 
 if ( -e $FILES_file ) {
-    if (ifyes("Found $FILES_file, read it ? [Y/N]") ) {
+    if (ifyes("Found $FILES_file, read it ? [Y/N]", "Y") ) {
         $rfiles = read_list($FILES_file);
         my $nfiles=@{$rfiles};
         print STDOUT "found $nfiles files\n";
@@ -45,7 +45,7 @@ if ( !@{$rfiles} ) {
 }
 
 if ( -e $PROFILES_file ) {
-    if (ifyes("Found $PROFILES_file, read it ? [Y/N]") ) {
+    if (ifyes("Found $PROFILES_file, read it ? [Y/N]", "Y") ) {
         $rprofiles = read_list($PROFILES_file);
         my $nfiles=@{$rprofiles};
         print STDOUT "found $nfiles profiles\n";
@@ -57,7 +57,7 @@ if ( !@{$rprofiles} ) {
     $rprofiles = filter_profiles($rprofiles);
 }
 
-$rsetup->{'syntax_check'} = ifyes(<<EOM);
+$rsetup->{'syntax_check'} = ifyes(<<EOM,"N");
 Do you want to check syntax with perl -c ?
 This will cause any BEGIN blocks in them to execute, which
 can introduce a security concern.
@@ -110,11 +110,11 @@ EOM
         $rsetup->{chain_mode} = $chain_mode;
     }
     elsif ( $ans eq 'D' ) {
-        $delete_good_output = ifyes("Delete needless good output files? [Y/N]");
+        $delete_good_output = ifyes("Delete needless good output files? [Y/N]","Y");
         $rsetup->{delete_good_output} = $delete_good_output;
     }
     elsif ( $ans eq 'S' ) {
-        $do_syntax_check = ifyes("Do syntax checking? [Y/N]");
+        $do_syntax_check = ifyes("Do syntax checking? [Y/N]","N");
         $rsetup->{syntax_check} = $do_syntax_check;
     }
     elsif ( $ans eq 'Q' ) {
