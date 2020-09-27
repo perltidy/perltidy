@@ -2216,7 +2216,11 @@ EOM
           #     -data => $data;
           # This is the safest thing to do. If we had the token to the right of
           # the minus we could do a better check.
-          || $tokenr eq '-' && $typel eq 'w'
+          #
+          # And do not combine a bareword and a quote, like this:
+          #    oops "Your login, $Bad_Login, is not valid";
+          # It can cause a syntax error if oops is a sub
+          || $typel eq 'w' && ($tokenr eq '-' || $typer eq 'Q') 
 
           # perl is very fussy about spaces before <<
           || $tokenr =~ /^\<\</

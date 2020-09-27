@@ -5,6 +5,16 @@ found with the help of automated random testing.
 
 =over
 
+
+=item B<Keep any space between a bareword and quote>
+
+In random testing, the -mangle option introduced a syntax error by deleting
+the space between barewords and quotes (test file 'MxScreen'), such as:
+
+  oops"Your login, $Bad_Login, is not valid";
+
+Sub is_essential_whitespace was updated to prevent this on 27 Sep 2020.
+
 =item B<Fixed some incorrect indentation disagreements reported in LOG file> 
 
 The .LOG file reports any disagreements between the indentation of the input and output files.
