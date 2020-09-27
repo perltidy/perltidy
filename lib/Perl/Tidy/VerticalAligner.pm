@@ -29,13 +29,36 @@ use Perl::Tidy::VerticalAligner::Line;
 # It is essential that a final call to flush() be made. Otherwise some
 # final lines of text will be lost.
 
+# Index...
+# CODE SECTION 1: Preliminary code, global definitions and sub new
+#                 sub new
+# CODE SECTION 2: Some Basic Utilities
+# CODE SECTION 3: Code to accept input and form groups
+#                 sub valign_input
+# CODE SECTION 4: Code to process comment lines
+#                 sub _flush_comment_lines
+# CODE SECTION 5: Code to process groups of code lines
+#                 sub _flush_group_lines
+# CODE SECTION 6: Output Step A
+#                 sub valign_output_step_A
+# CODE SECTION 7: Output Step B
+#                 sub valign_output_step_B
+# CODE SECTION 8: Output Step C
+#                 sub valign_output_step_C
+# CODE SECTION 9: Output Step D
+#                 sub valign_output_step_D
+# CODE SECTION 10: Summary
+#                 sub report_anything_unusual
+
+# CODE SECTION 1: Preliminary code, global definitions and sub new
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ($AUTOLOAD eq 'DESTROY');
+    return if ( $AUTOLOAD eq 'DESTROY' );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -49,9 +72,9 @@ EOM
 }
 
 sub DESTROY {
+
     # required to avoid call to AUTOLOAD in some versions of perl
 }
-
 
 BEGIN {
 
@@ -181,6 +204,8 @@ sub new {
     return $self;
 }
 
+# CODE SECTION 2: Basic Utilities
+
 sub flush {
 
     # flush() is the external call to completely empty the pipeline.
@@ -302,6 +327,8 @@ sub maximum_line_length_for_level {
     }
     return $maximum_line_length;
 }
+
+# CODE SECTION 3: Code to accept input and form groups
 
 sub push_group_line {
 
@@ -839,7 +866,7 @@ sub fix_terminal_ternary {
       = @_;
 
     return unless ($old_line);
-    my $EXPLAIN = 0;
+    use constant EXPLAIN_TERNARY => 0;
 
     my $jmax        = @{$rfields} - 1;
     my $rfields_old = $old_line->get_rfields();
@@ -887,7 +914,7 @@ sub fix_terminal_ternary {
     my @tokens        = @{$rtokens};
     my @field_lengths = @{$rfield_lengths};
 
-    $EXPLAIN && do {
+    EXPLAIN_TERNARY && do {
         local $" = '><';
         print STDOUT "CURRENT FIELDS=<@{$rfields_old}>\n";
         print STDOUT "CURRENT TOKENS=<@{$rtokens_old}>\n";
@@ -976,7 +1003,7 @@ sub fix_terminal_ternary {
         splice( @field_lengths, 0, 0, (0) x $jadd )  if $jadd;
     }
 
-    $EXPLAIN && do {
+    EXPLAIN_TERNARY && do {
         local $" = '><';
         print STDOUT "MODIFIED TOKENS=<@tokens>\n";
         print STDOUT "MODIFIED PATTERNS=<@patterns>\n";
@@ -1080,7 +1107,7 @@ sub check_match {
 
     # variable $GoToMsg explains reason for no match, for debugging
     my $GoToMsg = "";
-    my $EXPLAIN = 0;
+    use constant EXPLAIN_CHECK_MATCH => 0;
 
     my $is_hanging_side_comment = $new_line->get_is_hanging_side_comment();
     my $rtokens                 = $new_line->get_rtokens();
@@ -1241,20 +1268,20 @@ sub check_match {
     # current group.
     if ( $self->check_fit( $new_line, $old_line ) ) {
 
-        $EXPLAIN
+        EXPLAIN_CHECK_MATCH
           && print "match and fit, imax_align=$imax_align, jmax=$jmax\n";
         return ( 1, $jlimit );
     }
     else {
 
-        $EXPLAIN
+        EXPLAIN_CHECK_MATCH
           && print "match but no fit, imax_align=$imax_align, jmax=$jmax\n";
         return ( 0, $jlimit );
     }
 
   NO_MATCH:
 
-    $EXPLAIN
+    EXPLAIN_CHECK_MATCH
       && print
       "no match because $GoToMsg, max match index =i $imax_align, jmax=$jmax\n";
 
@@ -1383,6 +1410,8 @@ sub level_change {
     return $level;
 }
 
+# CODE SECTION 4: Code to process comment lines
+
 sub _flush_comment_lines {
 
     # Output a group consisting of COMMENT lines
@@ -1444,6 +1473,8 @@ sub _flush_comment_lines {
     $self->initialize_for_new_group();
     return;
 }
+
+# CODE SECTION 5: Code to process groups of code lines
 
 sub _flush_group_lines {
 
@@ -1656,9 +1687,10 @@ EOM
                 $col_matching_terminal =
                   $base_line->get_column($j_terminal_match);
 
-		# Ignore an undefined value as a defensive step; shouldn't
-		# normally happen.
-                $col_matching_terminal = 0 unless defined($col_matching_terminal);
+                # Ignore an undefined value as a defensive step; shouldn't
+                # normally happen.
+                $col_matching_terminal = 0
+                  unless defined($col_matching_terminal);
             }
 
             # -------------------------------------------------------------
@@ -1721,11 +1753,11 @@ EOM
                     $base_line = $new_line;
                     my $col_now = $base_line->get_column($j_terminal_match);
 
-		    # Ignore an undefined value as a defensive step; shouldn't
-		    # normally happen.
+                    # Ignore an undefined value as a defensive step; shouldn't
+                    # normally happen.
                     $col_now = 0 unless defined($col_now);
 
-                    my $pad     = $col_matching_terminal - $col_now;
+                    my $pad = $col_matching_terminal - $col_now;
                     my $padding_available =
                       $base_line->get_available_space_on_right();
                     if ( $col_now && $pad > 0 && $pad <= $padding_available ) {
@@ -2143,10 +2175,10 @@ sub delete_selected_tokens {
     my $rtokens_old        = $line_obj->get_rtokens();
     my $j_terminal_match   = $line_obj->get_j_terminal_match();
 
-    my $EXPLAIN = 0;
+    use constant EXPLAIN_DELETE_SELECTED => 0;
 
     local $" = '> <';
-    $EXPLAIN && print <<EOM;
+    EXPLAIN_DELETE_SELECTED && print <<EOM;
 delete indexes: <@{$ridel}>
 old jmax: $jmax_old
 old tokens: <@{$rtokens_old}>
@@ -2249,7 +2281,7 @@ EOM
         }
     }
 
-    $EXPLAIN && print <<EOM;
+    EXPLAIN_DELETE_SELECTED && print <<EOM;
 
 new jmax: $jmax_new
 new tokens: <@{$rtokens_new}>
@@ -2895,7 +2927,7 @@ sub prune_alignment_tree {
     # depth 2. To cleanly stop there, we will consider depth 2 to contain all
     # alignments at depth >=2.
 
-    my $EXPLAIN = 0;
+    use constant EXPLAIN_PRUNE => 0;
 
     ####################################################################
     # Prune Tree Step 1. Start by scanning the lines and collecting info
@@ -3103,12 +3135,12 @@ sub prune_alignment_tree {
         }
     } ## end loop to make links down to the child nodes
 
-    if ( 0 || $EXPLAIN > 0 ) {
+    EXPLAIN_PRUNE > 0 && do {
         print "Tree complete. Found these groups:\n";
         foreach my $depth ( 0 .. $MAX_DEPTH ) {
             Dump_tree_groups( \@{ $match_tree[$depth] }, "depth=$depth" );
         }
-    }
+    };
 
     #######################################################
     # Prune Tree Step 4. Make a list of nodes to be deleted
@@ -3694,6 +3726,8 @@ sub adjust_side_comments {
     return;
 }
 
+# CODE SECTION 6: Output Step A
+
 sub valign_output_step_A {
 
     ###############################################################
@@ -3840,6 +3874,8 @@ sub get_output_line_number {
     my $file_writer_object = $self->[_file_writer_object_];
     return $nlines + $file_writer_object->get_output_line_number();
 }
+
+# CODE SECTION 7: Output Step B
 
 {    ## closure for sub valign_output_step_B
 
@@ -4231,6 +4267,8 @@ sub get_output_line_number {
     }
 }
 
+# CODE SECTION 8: Output Step C
+
 {    ## closure for sub valign_output_step_C
 
     # Vertical alignment buffer used by valign_output_step_C
@@ -4350,6 +4388,8 @@ sub get_output_line_number {
         return;
     }
 }
+
+# CODE SECTION 9: Output Step D
 
 sub valign_output_step_D {
 
@@ -4523,6 +4563,8 @@ sub valign_output_step_D {
         return $leading_string;
     }
 }    # end get_leading_string
+
+# CODE SECTION 10: Summary
 
 sub report_anything_unusual {
     my $self = shift;
