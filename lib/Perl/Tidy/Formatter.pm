@@ -3,9 +3,6 @@
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
 #
-# WARNING: This is not a real class for speed reasons.  Only one
-# Formatter may be used.
-#
 #####################################################################
 
 # Index...
@@ -2391,17 +2388,8 @@ EOM
     my %nobreak_rhs;
 
     my @bias_tokens;
+    my %bias;
     my $delta_bias;
-
-    sub bias_table_key {
-        my ( $type, $token ) = @_;
-        my $bias_table_key = $type;
-        if ( $type eq 'k' ) {
-            $bias_table_key = $token;
-            if ( $token eq 'err' ) { $bias_table_key = 'or' }
-        }
-        return $bias_table_key;
-    }
 
     sub initialize_bond_strength_hashes {
 
@@ -2839,8 +2827,8 @@ EOM
           $rOpts->{'short-concatenation-item-length'};
 
         # we start a new set of bias values for each line
-        my %bias;
-        @bias{@bias_tokens} = (0) x scalar(@bias_tokens);
+        %bias = map { $_ => 0 } @bias_tokens;
+
         my $code_bias = -.01;    # bias for closing block braces
 
         my $type         = 'b';
@@ -3197,10 +3185,17 @@ EOM
            # of one to avoid any problem.
            #-----------------------------------------------------------------
 
-            # The bias tables use special keys
-            my $left_key = bias_table_key( $type, $token );
+            # The bias tables use special keys:
+            #   $type - if not keyword
+            #   $token - if keyword, but map some keywords together
+            my $left_key =
+              $type eq 'k' ? $token eq 'err' ? 'or' : $token : $type;
             my $right_key =
-              bias_table_key( $next_nonblank_type, $next_nonblank_token );
+                $next_nonblank_type eq 'k'
+              ? $next_nonblank_token eq 'err'
+                  ? 'or'
+                  : $next_nonblank_token
+              : $next_nonblank_type;
 
             # add any bias set by sub scan_list at old comma break points.
             if ( $type eq ',' ) { $bond_str += $bond_strength_to_go[$i] }
@@ -18201,7 +18196,7 @@ sub set_vertical_tightness_flags {
         if (   $type_sequence_to_go[$ibeg_next]
             && !$block_type_to_go[$ibeg_next]
             && $is_closing_token{$token_next}
-            && $types_to_go[$iend] !~ '#' )    # for safety, shouldn't happen!
+            && $types_to_go[$iend] ne '#' )    # for safety, shouldn't happen!
         {
             my $ovt = $opening_vertical_tightness{$token_next};
             my $cvt = $closing_vertical_tightness{$token_next};
@@ -18384,10 +18379,16 @@ sub set_vertical_tightness_flags {
     }
 
     # pack in the sequence numbers of the ends of this line
-    $rvertical_tightness_flags->[4] =
-      $self->get_seqno( $ibeg, $ending_in_quote );
-    $rvertical_tightness_flags->[5] =
-      $self->get_seqno( $iend, $ending_in_quote );
+    my $seqno_beg = $type_sequence_to_go[$ibeg];
+    if ( !$seqno_beg && $types_to_go[$ibeg] eq 'q' ) {
+        $seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
+    }
+    my $seqno_end = $type_sequence_to_go[$iend];
+    if ( !$seqno_end && $types_to_go[$iend] eq 'q' ) {
+        $seqno_end = $self->get_seqno( $iend, $ending_in_quote );
+    }
+    $rvertical_tightness_flags->[4] = $seqno_beg;
+    $rvertical_tightness_flags->[5] = $seqno_end;
     return $rvertical_tightness_flags;
 }
 
