@@ -46,7 +46,7 @@ use warnings;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20200907.01';
+our $VERSION = '20201001';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -11983,9 +11983,10 @@ sub set_continuation_breaks {
     #   $forced_breakpoint_to_go[$i]
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
-    use constant DEBUG_BREAKPOINTS => 0;
 
     my ( $self, $saw_good_break ) = @_;
+
+    use constant DEBUG_BREAKPOINTS => 0;
 
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output

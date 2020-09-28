@@ -21,6 +21,22 @@
 
 <dl>
 
+<dt id="Keep-any-space-between-a-bareword-and-quote"><b>Keep any space between a bareword and quote</b></dt>
+<dd>
+
+<p>In random testing, the -mangle option introduced a syntax error by deleting the space between barewords and quotes (test file &#39;MxScreen&#39;), such as:</p>
+
+<pre><code>  oops&quot;Your login, $Bad_Login, is not valid&quot;;</code></pre>
+
+<p>Sub &#39;is_essential_whitespace&#39; was updated to prevent this on 27 Sep 2020, in &#39;keep any space between a bareword and quote&#39;, f32553c.</p>
+
+</dd>
+<dt id="Fixed-some-incorrect-indentation-disagreements-reported-in-LOG-file"><b>Fixed some incorrect indentation disagreements reported in LOG file</b></dt>
+<dd>
+
+<p>The .LOG file reports any disagreements between the indentation of the input and output files. This can help locate brace errors. These were incorrect when some of the options were used, including --whitespace-cycle, -bbhb, -nib. This was corrected 24 Sep 2020, &#39;fixed incorrect log entry for indentation disagreement&#39;, 3d40545. At the same time, locations of closing brace indentation disagreements are now tracked and reported in the .ERR file when there is a brace error. This can help localize the error if the file was previously formatted by perltidy.</p>
+
+</dd>
 <dt id="If-an-cut-starts-a-POD-section-within-code-give-a-warning"><b>If an =cut starts a POD section within code, give a warning</b></dt>
 <dd>
 
@@ -30,13 +46,17 @@
 <dt id="Switched-from-using-an-eval-block-to-the--can-function-for-sub-finish_formatting"><b>Switched from using an eval block to the -</b>can() function for sub finish_formatting&gt;</dt>
 <dd>
 
-<p>This is not a bug, but is cleaner coding and insures that error messages get reported. This change was made 20 Sep 2020.</p>
+<p>This is not a bug, but is cleaner coding and insures that error messages get reported. This change was made 20 Sep 2020, &#39;switch from eval { } to -&gt;can(&#39;finish_formatting&#39;)&#39;, 28f2a4f.</p>
 
 </dd>
 <dt id="fixed-uninitialized-value-reference"><b>fixed uninitialized value reference</b></dt>
 <dd>
 
-<p>The following message was generated during automated testing Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12079. Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12089. Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12097.</p>
+<p>The following message was generated during automated testing</p>
+
+<pre><code> Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12079.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12089.
+ Use of uninitialized value $cti in numeric eq (==) at /home/steve/bin/Perl/Tidy/Formatter.pm line 12097.</code></pre>
 
 <p>The problem could be simplified to running perltidy -wn on this snippet:</p>
 

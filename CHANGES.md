@@ -1,6 +1,13 @@
 # Perltidy Change Log
 
-## 2020 09 07.01
+## 2020 10 01
+
+    - Robustness of perltidy has been significantly improved.  Updating is recommended. Continual 
+      automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed. 
+      Many involve references to uninitialized variables when perltidy is fed random text and random
+      control parameters. A complete list is given in the file 
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
     - Added the token '->' to the list of alignment tokens, as suggested in git
       #39, so that it can be vertically aligned if a space is placed before them with -wls='->'.
@@ -11,12 +18,6 @@
       control indentation of these tokens.
 
     - Added keyword 'isa'.
-
-    - Numerous issues have been found during automated testing and fixed. Many involve references to
-      uninitialized variables when perltidy is given random text. A complete list is given in
-      the file 
-
-           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2020 09 07
 

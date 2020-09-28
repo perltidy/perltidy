@@ -7,7 +7,7 @@
 package Perl::Tidy::HtmlWriter;
 use strict;
 use warnings;
-our $VERSION = '20200907.01';
+our $VERSION = '20201001';
 
 use File::Basename;
 
@@ -44,7 +44,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ($AUTOLOAD eq 'DESTROY');
+    return if ( $AUTOLOAD eq 'DESTROY' );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -58,6 +58,7 @@ EOM
 }
 
 sub DESTROY {
+
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 

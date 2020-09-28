@@ -13,7 +13,8 @@ the space between barewords and quotes (test file 'MxScreen'), such as:
 
   oops"Your login, $Bad_Login, is not valid";
 
-Sub is_essential_whitespace was updated to prevent this on 27 Sep 2020.
+Sub 'is_essential_whitespace' was updated to prevent this on 27 Sep 2020, 
+in 'keep any space between a bareword and quote', f32553c.
 
 =item B<Fixed some incorrect indentation disagreements reported in LOG file> 
 
@@ -36,7 +37,7 @@ a -dp flag and it took some time to understand the results because of the lack o
 =item B<Switched from using an eval block to the ->can() function for sub finish_formatting>
 
 This is not a bug, but is cleaner coding and insures that error messages get reported.
-This change was made 20 Sep 2020.
+This change was made 20 Sep 2020, 'switch from eval { } to ->can('finish_formatting')', 28f2a4f.
 
 
 =item B<fixed uninitialized value reference>

@@ -3,6 +3,7 @@ bin/perltidy
 BUGS.md
 CHANGES.md
 COPYING
+docs/BugLog.html
 docs/ChangeLog.html
 docs/index.html
 docs/index.md
@@ -70,6 +71,7 @@ t/snippets19.t
 t/snippets2.t
 t/snippets20.t
 t/snippets21.t
+t/snippets22.t
 t/snippets3.t
 t/snippets4.t
 t/snippets5.t

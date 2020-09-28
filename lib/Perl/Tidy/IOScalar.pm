@@ -10,7 +10,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20200907.01';
+our $VERSION = '20201001';
 
 sub AUTOLOAD {
 
@@ -32,6 +32,7 @@ EOM
 }
 
 sub DESTROY {
+
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 

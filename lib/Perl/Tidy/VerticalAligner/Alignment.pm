@@ -7,7 +7,7 @@
 package Perl::Tidy::VerticalAligner::Alignment;
 use strict;
 use warnings;
-our $VERSION = '20200907.01';
+our $VERSION = '20201001';
 
 {
 
@@ -50,7 +50,7 @@ our $VERSION = '20200907.01';
     }
 
     sub AUTOLOAD {
-    
+
         # Catch any undefined sub calls so that we are sure to get
         # some diagnostic information.  This sub should never be called
         # except for a programming error.
