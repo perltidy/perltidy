@@ -2220,7 +2220,7 @@ EOM
           # And do not combine a bareword and a quote, like this:
           #    oops "Your login, $Bad_Login, is not valid";
           # It can cause a syntax error if oops is a sub
-          || $typel eq 'w' && ($tokenr eq '-' || $typer eq 'Q') 
+          || $typel eq 'w' && ( $tokenr eq '-' || $typer eq 'Q' )
 
           # perl is very fussy about spaces before <<
           || $tokenr =~ /^\<\</
@@ -6510,13 +6510,22 @@ sub adjust_indentation_levels {
     # Called once per file to do special indentation adjustments.
     # These routines adjust levels either by changing _CI_LEVEL_ directly or
     # by setting modified levels in the array $self->[_radjusted_levels_].
-    # They will create this array if they are active, and otherwise it will be
-    # an empty array for later efficiency.
 
-    # Set adjusted levels for any non-indenting braces.
-    # If this option is used it will create the _radjusted_levels_ array.
-    # Important: This must be the first routine called which touches
-    # _radjusted_levels_
+    # Initialize the adjusted levels. These will be the levels actually used
+    # for computing indentation.
+
+    # NOTE: This routine is called after the weld routines, which may have
+    # already adjusted _LEVEL_, so we are making adjustments on top of those
+    # levels.  It would be much nicer to have the weld routines also use this
+    # adjustment, but that gets complicated when we combine -gnu -wn and have
+    # some welded quotes.
+    my $radjusted_levels = $self->[_radjusted_levels_];
+    my $rLL              = $self->[_rLL_];
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+        $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
+    }
+
+    # First set adjusted levels for any non-indenting braces.
     $self->non_indenting_braces();
 
     # Adjust indentation for list containers
@@ -6531,22 +6540,6 @@ sub adjust_indentation_levels {
     # Now clip any adjusted levels to be non-negative
     $self->clip_adjusted_levels();
 
-    return;
-}
-
-sub initialize_adjusted_levels {
-    my ($self) = @_;
-
-    # Initialize _radjusted_levels if it has not yet been initialized.
-    # It is only needed when certain special adjustments are done.
-    my $radjusted_levels = $self->[_radjusted_levels_];
-    my $rLL              = $self->[_rLL_];
-    my $Kmax             = @{$rLL} - 1;
-    if ( !defined($radjusted_levels) || ( @{$radjusted_levels} != @{$rLL} ) ) {
-        foreach my $KK ( 0 .. $Kmax ) {
-            $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
-        }
-    }
     return;
 }
 
@@ -6565,7 +6558,6 @@ sub non_indenting_braces {
 
     # Called once per file to handle the --non-indenting-braces parameter.
     # Remove indentation within marked braces if requested
-    # NOTE: This must be the first routine to reference $radjusted_levels;
     my ($self) = @_;
     return unless ( $rOpts->{'non-indenting-braces'} );
 
@@ -6574,8 +6566,8 @@ sub non_indenting_braces {
 
     my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
 
-    my $radjusted_levels;
-    my $Kmax = @{$rLL} - 1;
+    my $radjusted_levels = $self->[_radjusted_levels_];
+    my $Kmax             = @{$rLL} - 1;
     my @seqno_stack;
 
     my $is_non_indenting_brace = sub {
@@ -6610,10 +6602,8 @@ sub non_indenting_braces {
     };
 
     foreach my $KK ( 0 .. $Kmax ) {
-        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        my $level_abs = $rLL->[$KK]->[_LEVEL_];
-        my $level     = $level_abs;
-        my $num       = @seqno_stack;
+        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        my $num   = @seqno_stack;
         if ($seqno) {
             my $token = $rLL->[$KK]->[_TOKEN_];
             if ( $token eq '{' && $is_non_indenting_brace->($KK) ) {
@@ -6624,9 +6614,8 @@ sub non_indenting_braces {
                 $num -= 1;
             }
         }
-        $radjusted_levels->[$KK] = $level - $num;
+        $radjusted_levels->[$KK] -= $num;
     }
-    $self->[_radjusted_levels_] = $radjusted_levels;
     return;
 }
 
@@ -6644,14 +6633,12 @@ sub whitespace_cycle_adjustment {
 
         my $Kmax = @{$rLL} - 1;
 
-        $self->initialize_adjusted_levels();
-
         my $whitespace_last_level  = -1;
         my @whitespace_level_stack = ();
         my $last_nonblank_type     = 'b';
         my $last_nonblank_token    = '';
         foreach my $KK ( 0 .. $Kmax ) {
-            my $level_abs = $radjusted_levels->[$KK];  ##$rLL->[$KK]->[_LEVEL_];
+            my $level_abs = $radjusted_levels->[$KK];
             my $level     = $level_abs;
             if ( $level_abs < $whitespace_last_level ) {
                 pop(@whitespace_level_stack);
@@ -6695,7 +6682,6 @@ sub whitespace_cycle_adjustment {
             }
         }
     }
-    $self->[_radjusted_levels_] = $radjusted_levels;
     return;
 }
 
@@ -6723,15 +6709,6 @@ sub adjust_container_indentation {
 
     # Option 2 needs the following array:
     my $radjusted_levels = $self->[_radjusted_levels_];
-
-    # We will only initialize it if option 2 has been selected
-    foreach my $key (%container_indentation_options) {
-        my $val = $container_indentation_options{$key};
-        if ( defined($val) && $val == 2 ) {
-            $self->initialize_adjusted_levels();
-            last;
-        }
-    }
 
     # Loop over all opening container tokens
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -7624,7 +7601,13 @@ sub prepare_for_next_batch {
     sub store_token_to_go {
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
-        my $rLL = $self->[_rLL_];
+
+        #####################################################
+        ## FIXME: these should be initialized just once outside
+        # this routine
+        my $rLL              = $self->[_rLL_];
+        my $radjusted_levels = $self->[_radjusted_levels_];
+        #####################################################
 
         # the array of tokens can be given if they are different from the
         # input arrays.
@@ -7717,14 +7700,7 @@ sub prepare_for_next_batch {
         # Define the indentation that this token would have if it started
         # a new line.  We start by using the default formula.
         # First Adjust levels if necessary to recycle whitespace:
-        my $level_wc         = $level;
-        my $radjusted_levels = $self->[_radjusted_levels_];
-        if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
-            $level_wc = $radjusted_levels->[$Ktoken_vars];
-            if ( $level_wc < 0 ) {
-                $level_wc = 0;
-            }    # note: this should not happen
-        }
+        my $level_wc = $radjusted_levels->[$Ktoken_vars];
         my $space_count =
           $ci_level * $rOpts_continuation_indentation +
           $level_wc * $rOpts_indent_columns;
