@@ -1179,6 +1179,20 @@ But the following will give a syntax error:
   # perltidy -nwrs='-'
   my @newkeys = map $_ -$nrecs + @data, @oldkeys;
 
+For another example, the following two lines will be parsed without syntax error:
+
+  # original programming, syntax ok
+  for my $severity ( reverse $SEVERITY_LOWEST+1 .. $SEVERITY_HIGHEST ) { ...  }
+
+  # perltidy default, syntax ok
+  for my $severity ( reverse $SEVERITY_LOWEST + 1 .. $SEVERITY_HIGHEST ) { ... }
+
+But the following will give a syntax error:
+
+  # perltidy -nwrs='+', syntax error:
+  for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }
+
+As a general rule, it seems best to keep whitespace balanced around binary operators.
 
 =item Space between specific keywords and opening paren
 
