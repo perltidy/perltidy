@@ -311,6 +311,7 @@ BEGIN {
         _rtype_count_by_seqno_       => $i++,
         _ris_broken_container_       => $i++,
         _rhas_broken_container_      => $i++,
+        _ris_bli_container_          => $i++,
         _rparent_of_seqno_           => $i++,
         _rchildren_of_seqno_         => $i++,
         _rpaired_to_inner_container_ => $i++,
@@ -600,6 +601,7 @@ sub new {
     $self->[_rtype_count_by_seqno_]       = {};
     $self->[_ris_broken_container_]       = {};
     $self->[_rhas_broken_container_]      = {};
+    $self->[_ris_bli_container_]          = {};
     $self->[_rparent_of_seqno_]           = {};
     $self->[_rchildren_of_seqno_]         = {};
     $self->[_rpaired_to_inner_container_] = {};
@@ -6798,13 +6800,24 @@ sub bli_adjustment {
     return unless ( $rOpts->{'brace-left-and-indent'} );
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
-    my $KNEXT = 0;
+    my $ris_bli_container   = $self->[_ris_bli_container_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $KNEXT               = 0;
+
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
         my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         if ( $block_type && $block_type =~ /$bli_pattern/ ) {
-            $rLL->[$KK]->[_CI_LEVEL_]++;
+            my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            my $K_opening = $K_opening_container->{$seqno};
+            if ( $KK eq $K_opening ) {
+                $rLL->[$KK]->[_CI_LEVEL_]++;
+                $ris_bli_container->{$seqno} = 1;
+            }
+            else {
+                $rLL->[$KK]->[_CI_LEVEL_] = $rLL->[$K_opening]->[_CI_LEVEL_];
+            }
         }
     }
     return;
@@ -7865,6 +7878,7 @@ sub prepare_for_next_batch {
         my $rshort_nested      = $self->[_rshort_nested_];
         my $sink_object        = $self->[_sink_object_];
         my $fh_tee             = $self->[_fh_tee_];
+        my $ris_bli_container  = $self->[_ris_bli_container_];
 
         if ( !defined($K_first) ) {
 
@@ -8196,6 +8210,9 @@ sub prepare_for_next_batch {
                   # use -asbl flag for an anonymous sub block
                   : $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
+                # Break if requested with -bli flag
+                $want_break ||= $ris_bli_container->{$type_sequence};
+
                 # Do not break if this token is welded to the left
                 if ( $self->weld_len_left( $type_sequence, $token ) ) {
                     $want_break = 0;
@@ -8215,7 +8232,6 @@ sub prepare_for_next_batch {
                     # has not insisted on keeping it on the right
                     || (   !$keyword_on_same_line
                         && !$rOpts->{'opening-brace-always-on-right'} )
-
                   )
                 {
 
@@ -8697,6 +8713,9 @@ sub starting_one_line_block {
         return 0;
     }
 
+    my $ris_bli_container = $self->[_ris_bli_container_];
+    my $is_bli            = $ris_bli_container->{$type_sequence};
+
     my $block_type             = $rLL->[$Kj]->[_BLOCK_TYPE_];
     my $index_max_forced_break = get_index_max_forced_break();
 
@@ -8904,12 +8923,21 @@ sub starting_one_line_block {
         }
     }
 
-    # Allow certain types of new one-line blocks to form by joining
-    # input lines.  These can be safely done, but for other block types,
-    # we keep old one-line blocks but do not form new ones. It is not
-    # always a good idea to make as many one-line blocks as possible,
-    # so other types are not done.  The user can always use -mangle.
-    if ( $want_one_line_block{$block_type} ) {
+    # We haven't hit the closing brace, but there is still space. So the
+    # question here is, should we keep going to look at more lines in hopes of
+    # forming a new one-line block, or should we stop right now. The problem
+    # with continuing is that we will not be able to honor breaks before the
+    # opening brace if we continue.
+
+    # Typically we will want to keep trying to make one-line blocks for things
+    # like sort/map/grep/eval.  But it is not always a good idea to make as
+    # many one-line blocks as possible, so other types are not done.  The user
+    # can always use -mangle.
+
+    # If we want to keep going, we will create a new one-line block.
+    # The blocks which we can keep going are in a hash, but we never want
+    # to continue if we are at a '-bli' block.
+    if ( $want_one_line_block{$block_type} && !$is_bli ) {
         create_one_line_block( $i_start, 1 );
     }
     return 0;
@@ -17501,7 +17529,8 @@ sub make_paren_name {
             $is_static_block_comment,
         ) = @_;
 
-        my $rLL = $self->[_rLL_];
+        my $rLL               = $self->[_rLL_];
+        my $ris_bli_container = $self->[_ris_bli_container_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) =
@@ -17563,6 +17592,23 @@ sub make_paren_name {
         my $token_beg     = $tokens_to_go[$ibeg];
         my $K_beg         = $K_to_go[$ibeg];
         my $ibeg_weld_fix = $ibeg;
+        my $seqno_beg     = $type_sequence_to_go[$ibeg];
+        my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
+
+        # Update the $is_bli flag as we go. It is initially 1.
+        # We note seeing a leading opening brace by setting it to 2.
+	# If we get to the closing brace without seeing the opening then we
+	# turn it off.  This occurs if the opening brace did not get output
+        # at the start of a line, so we will then indent the closing brace
+        # in the default way.
+        if ( $is_bli_beg && $is_bli_beg == 1 ) {
+            my $K_opening_container = $self->[_K_opening_container_];
+            my $K_opening = $K_opening_container->{$seqno_beg};
+            if ( $K_beg eq $K_opening ) {
+                $ris_bli_container->{$seqno_beg} = $is_bli_beg = 2;
+            }
+            else { $is_bli_beg = 0 }
+        }
 
         # QW PATCH 2 (Testing)
         # At an isolated closing token of a qw quote which is welded to
@@ -17671,13 +17717,7 @@ sub make_paren_name {
             {
                 my $K_next_nonblank = $self->K_next_code($K_beg);
 
-                # Patch for RT#131115: honor -bli flag at closing brace
-                my $is_bli =
-                     $rOpts->{'brace-left-and-indent'}
-                  && $block_type_to_go[$i_terminal]
-                  && $block_type_to_go[$i_terminal] =~ /$bli_pattern/;
-
-                if ( !$is_bli && defined($K_next_nonblank) ) {
+                if ( !$is_bli_beg && defined($K_next_nonblank) ) {
                     my $lev        = $rLL->[$K_beg]->[_LEVEL_];
                     my $level_next = $rLL->[$K_next_nonblank]->[_LEVEL_];
                     $adjust_indentation = 1 if ( $level_next < $lev );
@@ -17731,6 +17771,9 @@ sub make_paren_name {
                     $adjust_indentation = 1;
                 }
             }
+
+            # patch for issue git #40: -bli setting has priority
+            $adjust_indentation = 0 if ($is_bli_beg);
 
             $default_adjust_indentation = $adjust_indentation;
 
