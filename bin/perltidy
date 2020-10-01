@@ -1192,7 +1192,8 @@ But the following will give a syntax error:
   # perltidy -nwrs='+', syntax error:
   for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }
 
-As a general rule, it seems best to keep whitespace balanced around binary operators.
+To avoid subtle parsing problems like this, it is best to avoid spacing a
+binary operator asymetrically with a space on the left but not on the right.
 
 =item Space between specific keywords and opening paren
 
