@@ -88,6 +88,42 @@ sub message {
 $myfun = sub {
     print("Hello, World\n");
 };
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do {
+    $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try {
+    die;
+}
+catch {
+    die;
+};
 ----------
 
         'maths' => <<'----------',
@@ -289,6 +325,43 @@ sub message {
 $myfun = sub {
     print("Hello, World\n");
     };
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+    }
+  or do {
+    $error          = $@;
+    $produced_error = 1;
+    };
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+                }
+        );
+        }
+);
+
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+        }
+    };
+
+try {
+    die;
+    }
+catch {
+    die;
+    };
 #11...........
         },
 
@@ -377,6 +450,47 @@ sub message
 $myfun = sub {
     print("Hello, World\n");
 };
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do
+{
+    $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do
+{
+    sswitch( $words[ rand @words ] )
+    {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try
+{
+    die;
+}
+catch
+{
+    die;
+};
 #17...........
         },
 
@@ -394,6 +508,41 @@ sub message {
 
 $myfun = sub {
     print("Hello, World\n");
+};
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do {
+    $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try {
+    die;
+} catch {
+    die;
 };
 #18...........
         },

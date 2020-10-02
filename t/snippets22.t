@@ -7,6 +7,7 @@
 #4 bbhb.def
 #5 bbhb.bbhb4
 #6 bbhb.bbhb5
+#7 braces.braces7
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -24,10 +25,13 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bbhb2'     => "-bbhb=2 -bbp=2",
-        'bbhb3'     => "-bbhb=3 -bbp=3",
-        'bbhb4'     => "-bbhb=3 -bbp=3 -bbhbi=2 -bbpi=2",
-        'bbhb5'     => "-bbhb=3 -bbp=3 -bbhbi=1 -bbpi=1",
+        'bbhb2'   => "-bbhb=2 -bbp=2",
+        'bbhb3'   => "-bbhb=3 -bbp=3",
+        'bbhb4'   => "-bbhb=3 -bbp=3 -bbhbi=2 -bbpi=2",
+        'bbhb5'   => "-bbhb=3 -bbp=3 -bbhbi=1 -bbpi=1",
+        'braces7' => <<'----------',
+-bli -blil='*'
+----------
         'def'       => "",
         'here_long' => "-l=33",
     };
@@ -45,6 +49,57 @@ nested => {
 asdf => 456, 
 yarg => 'yarp', 
 }, );
+----------
+
+        'braces' => <<'----------',
+sub message {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    }
+    else {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub {
+    print("Hello, World\n");
+};
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do {
+    $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try {
+    die;
+}
+catch {
+    die;
+};
 ----------
 
         'here_long' => <<'----------',
@@ -152,6 +207,73 @@ my %temp =
     },
 );
 #6...........
+        },
+
+        'braces.braces7' => {
+            source => "braces",
+            params => "braces7",
+            expect => <<'#7...........',
+sub message
+  {
+    if ( !defined( $_[0] ) )
+      {
+        print("Hello, World\n");
+      }
+    else
+      {
+        print( $_[0], "\n" );
+      }
+  }
+
+$myfun = sub
+  {
+    print("Hello, World\n");
+  };
+
+eval
+  {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+  } or do
+  {
+    $error          = $@;
+    $produced_error = 1;
+  };
+
+Mojo::IOLoop->next_tick(
+    sub
+      {
+        $ua->get(
+            '/' => sub
+              {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+              }
+        );
+      }
+);
+
+$r = do
+  {
+    sswitch( $words[ rand @words ] )
+      {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+      }
+  };
+
+try
+  {
+    die;
+  }
+catch
+  {
+    die;
+  };
+#7...........
         },
     };
 
