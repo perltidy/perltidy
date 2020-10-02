@@ -1,5 +1,8 @@
 # Perltidy Change Log
 
+    - Fix issue git #40: when using -bli a closing brace followed by a semicolon was 
+      not being indented.
+
 ## 2020 10 01
 
     - Robustness of perltidy has been significantly improved.  Updating is recommended. Continual 

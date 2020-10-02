@@ -1,3 +1,38 @@
+=head1 Issues fixed after release 20201001
+
+=item B<terminal braces not indenting correctly with -bli formatting, issue git #40>
+
+This problem is illustrated with the following snippet when run with -bli -blil='*'
+ 
+    #-bli -bli list='*'
+    try
+      {
+        die;
+      }
+    catch
+      {
+        die;
+      };    # <-- this was not indenting
+
+This was due to conflicting rules and was fixed 1 Oct 2020 in commit
+'fix issue git #40, incorrect closing brace indentation with -bli', a5aefe9.
+
+At the same time, it was noted that block types sort/map/grep and eval were not
+following -bli formatting when -blil='*' and this was fixed.  For example, with
+corrected formatting, we would have
+
+  # perltidy -bli -blil='*'
+    eval
+      {
+        my $app = App::perlbrew->new( "install-patchperl", "-q" );
+        $app->run();
+      }
+      or do
+      {
+        $error          = $@;
+        $produced_error = 1;
+      };
+
 =head1 Issues fixed after release 20200907
 
 This is a detailed log of changes since the release 20200907. All bugs were
