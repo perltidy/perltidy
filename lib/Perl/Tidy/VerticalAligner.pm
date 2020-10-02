@@ -50,7 +50,9 @@ use Perl::Tidy::VerticalAligner::Line;
 # CODE SECTION 10: Summary
 #                 sub report_anything_unusual
 
+##################################################################
 # CODE SECTION 1: Preliminary code, global definitions and sub new
+##################################################################
 
 sub AUTOLOAD {
 
@@ -204,7 +206,9 @@ sub new {
     return $self;
 }
 
+#################################
 # CODE SECTION 2: Basic Utilities
+#################################
 
 sub flush {
 
@@ -328,7 +332,9 @@ sub maximum_line_length_for_level {
     return $maximum_line_length;
 }
 
+######################################################
 # CODE SECTION 3: Code to accept input and form groups
+######################################################
 
 sub push_group_line {
 
@@ -1410,7 +1416,9 @@ sub level_change {
     return $level;
 }
 
+###############################################
 # CODE SECTION 4: Code to process comment lines
+###############################################
 
 sub _flush_comment_lines {
 
@@ -1474,7 +1482,9 @@ sub _flush_comment_lines {
     return;
 }
 
+######################################################
 # CODE SECTION 5: Code to process groups of code lines
+######################################################
 
 sub _flush_group_lines {
 
@@ -3726,7 +3736,9 @@ sub adjust_side_comments {
     return;
 }
 
+###############################
 # CODE SECTION 6: Output Step A
+###############################
 
 sub valign_output_step_A {
 
@@ -3875,7 +3887,9 @@ sub get_output_line_number {
     return $nlines + $file_writer_object->get_output_line_number();
 }
 
+###############################
 # CODE SECTION 7: Output Step B
+###############################
 
 {    ## closure for sub valign_output_step_B
 
@@ -4267,7 +4281,9 @@ sub get_output_line_number {
     }
 }
 
+###############################
 # CODE SECTION 8: Output Step C
+###############################
 
 {    ## closure for sub valign_output_step_C
 
@@ -4389,7 +4405,9 @@ sub get_output_line_number {
     }
 }
 
+###############################
 # CODE SECTION 9: Output Step D
+###############################
 
 sub valign_output_step_D {
 
@@ -4564,7 +4582,9 @@ sub valign_output_step_D {
     }
 }    # end get_leading_string
 
+##########################
 # CODE SECTION 10: Summary
+##########################
 
 sub report_anything_unusual {
     my $self = shift;

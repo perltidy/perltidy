@@ -3971,8 +3971,11 @@ sub finish_formatting {
     $self->scan_comments();
 
     # Find nested pairs of container tokens for any welding. This information
-    # is also needed for adding semicolons when welding is done, so it is split
-    # apart from the welding step.
+    # is also needed for adding semicolons, so it is split apart from the
+    # welding step.  But we need to do it even if we are not welding so that we
+    # do not introduce a semicolon in a place where it would prevent welding in
+    # the future.  So this is necessary but a little inefficient if -wn is not
+    # used in this run.
     $self->find_nested_pairs();
 
     # Make sure everything looks good
