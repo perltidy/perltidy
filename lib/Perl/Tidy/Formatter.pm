@@ -3971,8 +3971,8 @@ sub finish_formatting {
     $self->scan_comments();
 
     # Find nested pairs of container tokens for any welding. This information
-    # is also needed for adding semicolons, so it is split apart from the
-    # welding step.
+    # is also needed for adding semicolons when welding is done, so it is split
+    # apart from the welding step.
     $self->find_nested_pairs();
 
     # Make sure everything looks good
@@ -6211,9 +6211,6 @@ sub weld_nested_quotes {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rlines              = $self->[_rlines_];
 
-    my $rOpts_variable_maximum_line_length =
-      $rOpts->{'variable-maximum-line-length'};
-
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
         foreach my $K ( $Kbeg .. $Kend ) {
@@ -6355,20 +6352,6 @@ sub weld_len_right {
     return $weld_len;
 }
 
-sub weld_len_left_to_go {
-    my ( $self, $i ) = @_;
-
-    # FIXME: this sub should be eliminated for efficiency. Make
-    # calls directly to sub weld_len_left instead
-
-    # Given the index of a token in the 'to_go' array
-    # return the length of any weld to its left
-    return if ( $i < 0 );
-    my $weld_len =
-      $self->weld_len_left( $type_sequence_to_go[$i], $types_to_go[$i] );
-    return $weld_len;
-}
-
 sub weld_len_right_to_go {
     my ( $self, $i ) = @_;
 
@@ -6453,8 +6436,6 @@ sub mark_short_nested_blocks {
     my @open_block_stack;
     my $iline = -1;
     my $KNEXT = 0;
-    my $rOpts_variable_maximum_line_length =
-      $rOpts->{'variable-maximum-line-length'};
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -7583,15 +7564,6 @@ sub prepare_for_next_batch {
         return;
     }
 
-    sub maximum_line_length {
-
-        # return maximum line length for line starting with the token at given
-        # batch index
-        my ($ii) = @_;
-        if ( $ii < 0 ) { $ii = 0 }
-        return maximum_line_length_for_level( $levels_to_go[$ii] );
-    }
-
     sub leading_spaces_to_go {
 
         # return the number of indentation spaces for a token in the output
@@ -7600,17 +7572,6 @@ sub prepare_for_next_batch {
         my ($ii) = @_;
         if ( $ii < 0 ) { $ii = 0 }
         return get_spaces( $leading_spaces_to_go[$ii] );
-    }
-
-    sub token_sequence_length {
-
-        # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
-        # returns 0 if $ibeg > $iend (shouldn't happen)
-        my ( $ibeg, $iend ) = @_;
-        return 0 if ( !defined($iend) || $iend < 0 || $ibeg > $iend );
-        return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
-        return $summed_lengths_to_go[ $iend + 1 ] -
-          $summed_lengths_to_go[$ibeg];
     }
 
     sub create_one_line_block {
@@ -7696,7 +7657,7 @@ sub prepare_for_next_batch {
         $nobreak_to_go[$max_index_to_go] =
           $side_comment_follows ? 2 : $no_internal_newlines;
 
-        my $length = $rLL->[$Ktoken_vars]->[_TOKEN_LENGTH_];
+        my $length = $rtoken_vars->[_TOKEN_LENGTH_];
 
         # Safety check that length is defined. Should not be needed now.
         # Former patch for indent-only, in which the entire set of tokens is
@@ -9426,8 +9387,7 @@ EOM
                 if ( $leading_type eq 'i' ) {
                     if ( $leading_token =~ /$SUB_PATTERN/ ) {
                         $want_blank = $rOpts->{'blank-lines-before-subs'}
-                          if ( $self->terminal_type_i( $imin, $imax ) !~
-                            /^[\;\}]$/ );
+                          if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
                     }
 
                     # break before all package declarations
@@ -9440,7 +9400,7 @@ EOM
                 if ( $leading_type eq 'k' ) {
                     if ( $leading_token =~ /^(BEGIN|END)$/ ) {
                         $want_blank = $rOpts->{'blank-lines-before-subs'}
-                          if ( $self->terminal_type_i( $imin, $imax ) ne '}' );
+                          if ( terminal_type_i( $imin, $imax ) ne '}' );
                     }
 
                     # Break before certain block types if we haven't had a
@@ -9466,7 +9426,7 @@ EOM
                           && $lc >= $rOpts->{'long-block-line-count'}
                           && $self->consecutive_nonblank_lines() >=
                           $rOpts->{'long-block-line-count'}
-                          && $self->terminal_type_i( $imin, $imax ) ne '}';
+                          && terminal_type_i( $imin, $imax ) ne '}';
                     }
                 }
 
@@ -9920,7 +9880,7 @@ sub lookup_opening_indentation {
       #    returns ' ' for a blank line
       #    otherwise returns final token type
 
-        my ( $self, $ibeg, $iend ) = @_;
+        my ( $ibeg, $iend ) = @_;
 
         # Start at the end and work backwards
         my $i      = $iend;
@@ -10588,8 +10548,7 @@ sub break_equals {
                 my $ibeg_nmax = $ri_beg->[$nmax];
 
                 # combined line cannot be too long
-                my $excess =
-                  $self->excess_line_length( $ibeg_1, $iend_2, 1, 1 );
+                my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
                 next if ( $excess > 0 );
 
                 my $type_iend_1 = $types_to_go[$iend_1];
@@ -12126,7 +12085,6 @@ sub set_continuation_breaks {
             my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
             my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
             my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
-            ##my $maximum_line_length      = maximum_line_length($i_begin);
 
             # adjustments to the previous bond strength may have been made, and
             # we must keep the bond strength of a token and its following blank
@@ -12500,8 +12458,7 @@ sub set_continuation_breaks {
             # do not break if statement is broken by side comment
             next
               if ( $tokens_to_go[$max_index_to_go] eq '#'
-                && $self->terminal_type_i( 0, $max_index_to_go ) !~
-                /^[\;\}]$/ );
+                && terminal_type_i( 0, $max_index_to_go ) !~ /^[\;\}]$/ );
 
             # no break needed if matching : is also on the line
             next
@@ -13382,9 +13339,8 @@ sub set_continuation_breaks {
                     # Note: we have to allow for one extra space after a
                     # closing token so that we do not strand a comma or
                     # semicolon, hence the '>=' here (oneline.t)
-                    # Note: we ignore left weld lengths here for best results
                     $is_long_term =
-                      $self->excess_line_length( $i_opening_minus, $i, 1 ) >= 0;
+                      $self->excess_line_length( $i_opening_minus, $i ) >= 0;
                 } ## end if ( !$is_long_term &&...)
 
                 # We've set breaks after all comma-arrows.  Now we have to
@@ -14962,6 +14918,16 @@ sub set_nobreaks {
 # CODE SECTION 12: Code for setting indentation
 ###############################################
 
+sub token_sequence_length {
+
+    # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
+    # returns 0 if $ibeg > $iend (shouldn't happen)
+    my ( $ibeg, $iend ) = @_;
+    return 0 if ( !defined($iend) || $iend < 0 || $ibeg > $iend );
+    return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
+    return $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
+}
+
 sub total_line_length {
 
     # return length of a line of tokens ($ibeg .. $iend)
@@ -14969,32 +14935,49 @@ sub total_line_length {
     return leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
 }
 
+sub maximum_line_length {
+
+    # return maximum line length for line starting with the token at given
+    # batch index
+    my ($ii) = @_;
+    return ($rOpts_maximum_line_length)
+      unless ($rOpts_variable_maximum_line_length);
+    my $level = $levels_to_go[$ii];
+    if ( $level < 0 ) { $level = 0 }
+    return $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
+}
+
 sub maximum_line_length_for_level {
 
     # return maximum line length for line starting with a given level
-    my $maximum_line_length = $rOpts_maximum_line_length;
-
-    # Modify if -vmll option is selected
-    if ($rOpts_variable_maximum_line_length) {
-        my $level = shift;
-        if ( $level < 0 ) { $level = 0 }
-        $maximum_line_length += $level * $rOpts_indent_columns;
-    }
-    return $maximum_line_length;
+    my ($level) = @_;
+    return ($rOpts_maximum_line_length)
+      unless ($rOpts_variable_maximum_line_length);
+    if ( $level < 0 ) { $level = 0 }
+    return $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
 }
 
 sub excess_line_length {
 
     # return number of characters by which a line of tokens ($ibeg..$iend)
     # exceeds the allowable line length.
-    my ( $self, $ibeg, $iend, $ignore_left_weld, $ignore_right_weld ) = @_;
+    my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
 
-    # Include left and right weld lengths unless requested not to
-    my $wl = $ignore_left_weld  ? 0 : $self->weld_len_left_to_go($iend);
-    my $wr = $ignore_right_weld ? 0 : $self->weld_len_right_to_go($iend);
+    # Include right weld lengths unless requested not to.
+    my $wr =
+      $ignore_right_weld
+      ? 0
+      : $self->weld_len_right( $type_sequence_to_go[$iend],
+        $types_to_go[$iend] );
 
-    return total_line_length( $ibeg, $iend ) + $wl + $wr -
-      maximum_line_length($ibeg);
+    my $maximum_line_length = $rOpts_maximum_line_length;
+    if ($rOpts_variable_maximum_line_length) {
+        $maximum_line_length =
+          $rOpts_maximum_line_length +
+          $levels_to_go[$ibeg] * $rOpts_indent_columns;
+    }
+
+    return total_line_length( $ibeg, $iend ) + $wr - $maximum_line_length;
 }
 
 sub get_spaces {
@@ -15803,6 +15786,13 @@ sub send_lines_to_vertical_aligner {
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
       if ( $rOpts->{'logical-padding'} );
+
+    # Resum lengths. We need accurate lengths for making alignment patterns,
+    # and we may have unmasked a semicolon which was not included at the start.
+    for ( 0 .. $max_index_to_go ) {
+        $summed_lengths_to_go[ $_ + 1 ] =
+          $summed_lengths_to_go[$_] + $token_lengths_to_go[$_];
+    }
 
     # loop to prepare each line for shipment
     my $in_comma_list;
@@ -16663,7 +16653,7 @@ sub undo_ci {
                     # find any unclosed container
                     next
                       unless ( $type_sequence_to_go[$i]
-                        && $self->mate_index_to_go($i) > $iend );
+                        && $mate_index_to_go[$i] > $iend );
 
                     # find next nonblank token to pad
                     $ipad = $inext_to_go[$i];
@@ -16820,7 +16810,7 @@ sub undo_ci {
                     my $i2 = $ri_last->[$l];
                     if ( $types_to_go[$i2] eq '#' ) {
                         my $i1 = $ri_first->[$l];
-                        next if $self->terminal_type_i( $i1, $i2 ) eq ',';
+                        next if terminal_type_i( $i1, $i2 ) eq ',';
                     }
                 }
 
@@ -16958,6 +16948,8 @@ sub pad_token {
 
 sub mate_index_to_go {
     my ( $self, $i ) = @_;
+
+    # NOTE: This works but is too inefficient, but is retained for info.
 
     # Return the matching index of a container or ternary pair
     # This is equivalent to the array @mate_index_to_go
@@ -17116,7 +17108,7 @@ sub K_mate_index {
                     && $tokens_to_go[$i_good_paren] eq '(' )
                 {
                     $i_elsif_open  = $i_good_paren;
-                    $i_elsif_close = $self->mate_index_to_go($i_good_paren);
+                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
                 }
             }
         }
@@ -17141,7 +17133,7 @@ sub K_mate_index {
                 # - it is at the top of the stack
                 # - and not the first overall opening paren
                 # - does not follow a leading keyword on this line
-                my $imate = $self->mate_index_to_go($i);
+                my $imate = $mate_index_to_go[$i];
                 if (   @imatch_list
                     && $imatch_list[-1] eq $imate
                     && ( $ibeg > 1 || @imatch_list > 1 )
@@ -17154,15 +17146,6 @@ sub K_mate_index {
         }
         return;
     }
-
-    my $field_length_sum = sub {
-        my ( $i1, $i2 ) = @_;
-        my $len_field = 0;
-        foreach ( $i1 .. $i2 ) {
-            $len_field += $token_lengths_to_go[$_];
-        }
-        return $len_field;
-    };
 
     sub make_alignment_patterns {
 
@@ -17205,99 +17188,105 @@ sub K_mate_index {
             # These are used below to prevent unwanted cross-line alignments.
             # Unbalanced containers already avoid aligning across
             # container boundaries.
-            my $tok        = $tokens_to_go[$i];
+
+            my $type       = $types_to_go[$i];
+            my $token      = $tokens_to_go[$i];
             my $depth_last = $depth;
-            if ( $tok =~ /^[\(\{\[]/ ) {    #'(' ) {
+            if ( $type_sequence_to_go[$i] ) {
+                if ( $is_opening_type{$token} ) {
 
-                # if container is balanced on this line...
-                my $i_mate = $self->mate_index_to_go($i);
-                if ( $i_mate > $i && $i_mate <= $iend ) {
-                    $depth++;
+                    # if container is balanced on this line...
+                    my $i_mate = $mate_index_to_go[$i];
+                    if ( $i_mate > $i && $i_mate <= $iend ) {
+                        $depth++;
 
-                    # Append the previous token name to make the container name
-                    # more unique.  This name will also be given to any commas
-                    # within this container, and it helps avoid undesirable
-                    # alignments of different types of containers.
+                     # Append the previous token name to make the container name
+                     # more unique.  This name will also be given to any commas
+                     # within this container, and it helps avoid undesirable
+                     # alignments of different types of containers.
 
-                    # Containers beginning with { and [ are given those names
-                    # for uniqueness. That way commas in different containers
-                    # will not match. Here is an example of what this prevents:
-                    #	a => [ 1,       2, 3 ],
-                    #   b => { b1 => 4, b2 => 5 },
-                    # Here is another example of what we avoid by labeling the
-                    # commas properly:
+                     # Containers beginning with { and [ are given those names
+                     # for uniqueness. That way commas in different containers
+                     # will not match. Here is an example of what this prevents:
+                     #	a => [ 1,       2, 3 ],
+                     #   b => { b1 => 4, b2 => 5 },
+                     # Here is another example of what we avoid by labeling the
+                     # commas properly:
 
                    # is_d( [ $a,        $a ], [ $b,               $c ] );
                    # is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
                    # is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
 
-                    my $name = $tok;
-                    if ( $tok eq '(' ) {
-                        $name = $self->make_paren_name($i);
-                    }
-                    $container_name{$depth} = "+" . $name;
-
-                    # Make the container name even more unique if necessary.
-                    # If we are not vertically aligning this opening paren,
-                    # append a character count to avoid bad alignment because
-                    # it usually looks bad to align commas within containers
-                    # for which the opening parens do not align.  Here
-                    # is an example very BAD alignment of commas (because
-                    # the atan2 functions are not all aligned):
-                    #    $XY =
-                    #      $X * $RTYSQP1 * atan2( $X, $RTYSQP1 ) +
-                    #      $Y * $RTXSQP1 * atan2( $Y, $RTXSQP1 ) -
-                    #      $X * atan2( $X,            1 ) -
-                    #      $Y * atan2( $Y,            1 );
-                    #
-                    # On the other hand, it is usually okay to align commas if
-                    # opening parens align, such as:
-                    #    glVertex3d( $cx + $s * $xs, $cy,            $z );
-                    #    glVertex3d( $cx,            $cy + $s * $ys, $z );
-                    #    glVertex3d( $cx - $s * $xs, $cy,            $z );
-                    #    glVertex3d( $cx,            $cy - $s * $ys, $z );
-                    #
-                    # To distinguish between these situations, we will
-                    # append the length of the line from the previous matching
-                    # token, or beginning of line, to the function name.  This
-                    # will allow the vertical aligner to reject undesirable
-                    # matches.
-
-                    # if we are not aligning on this paren...
-                    if ( !$ralignment_type_to_go->[$i] ) {
-
-                        # Sum length from previous alignment
-                        my $len = token_sequence_length( $i_start, $i - 1 );
-
-                        # Minor patch: do not include the length of any '!'.
-                        # Otherwise, commas in the following line will not
-                        # match
-                        #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
-                        #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
-                        if ( grep { $_ eq '!' }
-                            @types_to_go[ $i_start .. $i - 1 ] )
-                        {
-                            $len -= 1;
+                        my $name = $token;
+                        if ( $token eq '(' ) {
+                            $name = $self->make_paren_name($i);
                         }
+                        $container_name{$depth} = "+" . $name;
 
-                        if ( $i_start == $ibeg ) {
+                       # Make the container name even more unique if necessary.
+                       # If we are not vertically aligning this opening paren,
+                       # append a character count to avoid bad alignment because
+                       # it usually looks bad to align commas within containers
+                       # for which the opening parens do not align.  Here
+                       # is an example very BAD alignment of commas (because
+                       # the atan2 functions are not all aligned):
+                       #    $XY =
+                       #      $X * $RTYSQP1 * atan2( $X, $RTYSQP1 ) +
+                       #      $Y * $RTXSQP1 * atan2( $Y, $RTXSQP1 ) -
+                       #      $X * atan2( $X,            1 ) -
+                       #      $Y * atan2( $Y,            1 );
+                       #
+                       # On the other hand, it is usually okay to align commas
+                       # if opening parens align, such as:
+                       #    glVertex3d( $cx + $s * $xs, $cy,            $z );
+                       #    glVertex3d( $cx,            $cy + $s * $ys, $z );
+                       #    glVertex3d( $cx - $s * $xs, $cy,            $z );
+                       #    glVertex3d( $cx,            $cy - $s * $ys, $z );
+                       #
+                       # To distinguish between these situations, we will append
+                       # the length of the line from the previous matching
+                       # token, or beginning of line, to the function name.
+                       # This will allow the vertical aligner to reject
+                       # undesirable matches.
 
-                            # For first token, use distance from start of line
-                            # but subtract off the indentation due to level.
-                            # Otherwise, results could vary with indentation.
-                            $len += leading_spaces_to_go($ibeg) -
-                              $levels_to_go[$i_start] * $rOpts_indent_columns;
-                            if ( $len < 0 ) { $len = 0 }
+                        # if we are not aligning on this paren...
+                        if ( !$ralignment_type_to_go->[$i] ) {
+
+                            # Sum length from previous alignment
+                            my $len = token_sequence_length( $i_start, $i - 1 );
+
+                            # Minor patch: do not include the length of any '!'.
+                            # Otherwise, commas in the following line will not
+                            # match
+                            #  ok( 20, tapprox( ( pdl 2,  3 ), ( pdl 2, 3 ) ) );
+                            #  ok( 21, !tapprox( ( pdl 2, 3 ), ( pdl 2, 4 ) ) );
+                            if ( grep { $_ eq '!' }
+                                @types_to_go[ $i_start .. $i - 1 ] )
+                            {
+                                $len -= 1;
+                            }
+
+                            if ( $i_start == $ibeg ) {
+
+                              # For first token, use distance from start of line
+                              # but subtract off the indentation due to level.
+                              # Otherwise, results could vary with indentation.
+                                $len +=
+                                  leading_spaces_to_go($ibeg) -
+                                  $levels_to_go[$i_start] *
+                                  $rOpts_indent_columns;
+                                if ( $len < 0 ) { $len = 0 }
+                            }
+
+                            # tack this length onto the container name to try
+                            # to make a unique token name
+                            $container_name{$depth} .= "-" . $len;
                         }
-
-                        # tack this length onto the container name to try
-                        # to make a unique token name
-                        $container_name{$depth} .= "-" . $len;
                     }
                 }
-            }
-            elsif ( $tokens_to_go[$i] =~ /^[\)\}\]]/ ) {
-                $depth-- if $depth > 0;
+                elsif ( $is_closing_type{$token} ) {
+                    $depth-- if $depth > 0;
+                }
             }
 
             # if we find a new synchronization token, we are done with
@@ -17394,7 +17383,8 @@ sub K_mate_index {
                 push( @fields,
                     join( '', @tokens_to_go[ $i_start .. $i - 1 ] ) );
 
-                push @field_lengths, $field_length_sum->( $i_start, $i - 1 );
+                push @field_lengths,
+                  $summed_lengths_to_go[$i] - $summed_lengths_to_go[$i_start];
 
                 # store the alignment token for this field
                 push( @tokens, $tok );
@@ -17406,9 +17396,27 @@ sub K_mate_index {
             }
 
             # continue accumulating tokens
+
+            # for keywords we have to use the actual text
+            if ( $type eq 'k' ) {
+
+                my $tok_fix = $tokens_to_go[$i];
+
+                # but map certain keywords to a common string to allow
+                # alignment.
+                $tok_fix = $keyword_map{$tok_fix}
+                  if ( defined( $keyword_map{$tok_fix} ) );
+                $patterns[$j] .= $tok_fix;
+            }
+
+            elsif ( $type eq 'b' ) {
+                $patterns[$j] .= $type;
+            }
+
             # handle non-keywords..
-            if ( $types_to_go[$i] ne 'k' ) {
-                my $type = $types_to_go[$i];
+            else {
+
+                my $type_fix = $type;
 
                 # Mark most things before arrows as a quote to
                 # get them to line up. Testfile: mixed.pl.
@@ -17418,7 +17426,7 @@ sub K_mate_index {
                       ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
 
                     if ( $types_to_go[$i_next_nonblank] eq '=>' ) {
-                        $type = 'Q';
+                        $type_fix = 'Q';
 
                         # Patch to ignore leading minus before words,
                         # by changing pattern 'mQ' into just 'Q',
@@ -17439,36 +17447,27 @@ sub K_mate_index {
                     && $types_to_go[ $i - 1 ] eq 'L'
                     && $types_to_go[ $i + 1 ] eq 'R' )
                 {
-                    $type = 'Q';
+                    $type_fix = 'Q';
                 }
 
                 # patch to make numbers and quotes align
-                if ( $type eq 'n' ) { $type = 'Q' }
+                if ( $type eq 'n' ) { $type_fix = 'Q' }
 
                 # patch to ignore any ! in patterns
-                if ( $type eq '!' ) { $type = '' }
+                if ( $type eq '!' ) { $type_fix = '' }
 
-                $patterns[$j] .= $type;
-            }
-
-            # for keywords we have to use the actual text
-            else {
-
-                my $tok = $tokens_to_go[$i];
-
-                # but map certain keywords to a common string to allow
-                # alignment.
-                $tok = $keyword_map{$tok}
-                  if ( defined( $keyword_map{$tok} ) );
-                $patterns[$j] .= $tok;
+                $patterns[$j] .= $type_fix;
             }
         }
 
         # done with this line .. join text of tokens to make the last field
         push( @fields, join( '', @tokens_to_go[ $i_start .. $iend ] ) );
-        push @field_lengths, $field_length_sum->( $i_start, $iend );
+        push @field_lengths,
+          $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$i_start];
+
         return ( \@tokens, \@fields, \@patterns, \@field_lengths );
     }
+
 
 } ## end closure make_alignment_patterns
 
@@ -17533,8 +17532,7 @@ sub make_paren_name {
         my $ris_bli_container = $self->[_ris_bli_container_];
 
         # we need to know the last token of this line
-        my ( $terminal_type, $i_terminal ) =
-          $self->terminal_type_i( $ibeg, $iend );
+        my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
 
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
@@ -17597,13 +17595,13 @@ sub make_paren_name {
 
         # Update the $is_bli flag as we go. It is initially 1.
         # We note seeing a leading opening brace by setting it to 2.
-	# If we get to the closing brace without seeing the opening then we
-	# turn it off.  This occurs if the opening brace did not get output
+        # If we get to the closing brace without seeing the opening then we
+        # turn it off.  This occurs if the opening brace did not get output
         # at the start of a line, so we will then indent the closing brace
         # in the default way.
         if ( $is_bli_beg && $is_bli_beg == 1 ) {
             my $K_opening_container = $self->[_K_opening_container_];
-            my $K_opening = $K_opening_container->{$seqno_beg};
+            my $K_opening           = $K_opening_container->{$seqno_beg};
             if ( $K_beg eq $K_opening ) {
                 $ris_bli_container->{$seqno_beg} = $is_bli_beg = 2;
             }
@@ -18382,7 +18380,7 @@ sub set_vertical_tightness_flags {
             my $is_semicolon_terminated;
             if ( $n + 1 == $n_last_line ) {
                 my ( $terminal_type, $i_terminal ) =
-                  $self->terminal_type_i( $ibeg_next, $iend_next );
+                  terminal_type_i( $ibeg_next, $iend_next );
                 $is_semicolon_terminated = $terminal_type eq ';'
                   && $nesting_depth_to_go[$iend_next] <
                   $nesting_depth_to_go[$ibeg_next];
@@ -18957,7 +18955,7 @@ sub add_closing_side_comment {
         # ..and the corresponding opening brace must is not in this batch
         # (because we do not need to tag one-line blocks, although this
         # should also be caught with a positive -csci value)
-        && $self->mate_index_to_go($i_terminal) < 0
+        && $mate_index_to_go[$i_terminal] < 0
 
         # ..and either
         && (
