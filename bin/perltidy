@@ -1251,11 +1251,11 @@ program vulnerable to parsing problems by Perl.  For example, the following
 two-line program will run as written but will have a syntax error if
 reformatted with -sfp:
 
-  if ( -e filename() ) { print "exists\n"; }
+  if ( -e filename() ) { print "I'm here\n"; }
   sub filename { return $0 }
 
-The syntax error can be removed if the line order is reversed, so that
-Perl parses 'sub filename' first. 
+In this particular case the syntax error can be removed if the line order is
+reversed, so that Perl parses 'sub filename' first. 
 
 =item B<-spp=n>  or B<--space-prototype-paren=n>
 
