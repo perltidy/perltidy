@@ -73,7 +73,7 @@ our $VERSION = '20201001';
         # some diagnostic information.  This sub should never be called
         # except for a programming error.
         our $AUTOLOAD;
-        return if ( $AUTOLOAD eq 'DESTROY' );
+        return if ( $AUTOLOAD =~/\bDESTROY$/ );
         my ( $pkg, $fname, $lno ) = caller();
         print STDERR <<EOM;
     ======================================================================
