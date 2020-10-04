@@ -6819,12 +6819,15 @@ sub bli_adjustment {
         if ( $block_type && $block_type =~ /$bli_pattern/ ) {
             my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
             my $K_opening = $K_opening_container->{$seqno};
-            if ( $KK eq $K_opening ) {
-                $rLL->[$KK]->[_CI_LEVEL_]++;
-                $ris_bli_container->{$seqno} = 1;
-            }
-            else {
-                $rLL->[$KK]->[_CI_LEVEL_] = $rLL->[$K_opening]->[_CI_LEVEL_];
+            if ( defined($K_opening) ) {
+                if ( $KK eq $K_opening ) {
+                    $rLL->[$KK]->[_CI_LEVEL_]++;
+                    $ris_bli_container->{$seqno} = 1;
+                }
+                else {
+                    $rLL->[$KK]->[_CI_LEVEL_] =
+                      $rLL->[$K_opening]->[_CI_LEVEL_];
+                }
             }
         }
     }
