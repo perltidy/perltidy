@@ -60,7 +60,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD =~/\bDESTROY$/ );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -239,6 +239,10 @@ my (
     $keyword_group_list_comment_pattern,
     $closing_side_comment_prefix_pattern,
     $closing_side_comment_list_pattern,
+
+    # Table to efficiently find indentation and max line length
+    # from level.  Initialized in sub 'find_nested_pairs'
+    @maximum_line_length,
 
     #########################################################
     # Section 2: Work arrays for the current batch of tokens.
@@ -3971,11 +3975,8 @@ sub finish_formatting {
     $self->scan_comments();
 
     # Find nested pairs of container tokens for any welding. This information
-    # is also needed for adding semicolons, so it is split apart from the
-    # welding step.  But we need to do it even if we are not welding so that we
-    # do not introduce a semicolon in a place where it would prevent welding in
-    # the future.  So this is necessary but a little inefficient if -wn is not
-    # used in this run.
+    # is also needed for adding semicolons when welding is done, so it is split
+    # apart from the welding step.
     $self->find_nested_pairs();
 
     # Make sure everything looks good
@@ -4326,6 +4327,9 @@ sub find_nested_pairs {
     my $last_nonblank_token_vars;
     my $last_count;
 
+    # We will also scan for maximum level
+    my $level_max = $rLL->[0]->[_LEVEL_];
+
     my $nonblank_token_count = 0;
 
     # loop over all tokens
@@ -4344,6 +4348,11 @@ sub find_nested_pairs {
         if ($type_sequence) {
 
             my $token = $rtoken_vars->[_TOKEN_];
+
+            # For efficiency, check levels at container tokens. Actual max level
+            # can be one greater at interior tokens but we can compensate below.
+            my $level = $rtoken_vars->[_LEVEL_];
+            if ( $level > $level_max ) { $level_max = $level }
 
             if ( $is_opening_token{$token} ) {
 
@@ -4407,6 +4416,21 @@ sub find_nested_pairs {
     }
     $self->[_rnested_pairs_]              = \@nested_pairs;
     $self->[_rpaired_to_inner_container_] = $rpaired_to_inner_container;
+
+    # Create the tables of maximum line lengths vs level for later efficient
+    # use.  This avoids continually checking the -vmll flag. The actual max
+    # level may be one greater because we only checked container tokens above,
+    # but we can make the table longer than necessary.
+    $level_max += 10;
+    foreach my $level ( 0 .. $level_max ) {
+        $maximum_line_length[$level] = $rOpts_maximum_line_length;
+    }
+    if ($rOpts_variable_maximum_line_length) {
+        foreach my $level ( 0 .. $level_max ) {
+            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
+        }
+    }
+
     return;
 }
 
@@ -7573,8 +7597,9 @@ sub prepare_for_next_batch {
         # stream; these were previously stored by 'set_leading_whitespace'.
 
         my ($ii) = @_;
-        if ( $ii < 0 ) { $ii = 0 }
-        return get_spaces( $leading_spaces_to_go[$ii] );
+        return 0 if ( $ii < 0 );
+        my $indentation = $leading_spaces_to_go[$ii];
+        return ref($indentation) ? $indentation->get_spaces() : $indentation;
     }
 
     sub create_one_line_block {
@@ -8777,7 +8802,7 @@ sub starting_one_line_block {
     my $pos = total_line_length( $i_start, $max_index_to_go ) - 1;
 
     # see if length is too long to even start
-    if ( $pos > maximum_line_length($i_start) ) {
+    if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
         return 1;
     }
 
@@ -8792,7 +8817,7 @@ sub starting_one_line_block {
         my $nobreak       = $rshort_nested->{$type_sequence};
 
         # Return false result if we exceed the maximum line length,
-        if ( $pos > maximum_line_length($i_start) ) {
+        if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
             return 0;
         }
 
@@ -8872,7 +8897,7 @@ sub starting_one_line_block {
                     else { $pos += $rLL->[ $Ki + 1 ]->[_TOKEN_LENGTH_] }
                 }
 
-                if ( $pos >= maximum_line_length($i_start) ) {
+                if ( $pos >= $maximum_line_length[ $levels_to_go[$i_start] ] ) {
                     return 0;
                 }
             }
@@ -9025,9 +9050,9 @@ sub compare_indentation_levels {
 
     sub set_fake_breakpoint {
 
-      # Just bump up the breakpoint count as a signal that there are breaks.
-      # This is useful if we have breaks but may want to postpone deciding where
-      # to make them.
+        # Just bump up the breakpoint count as a signal that there are breaks.
+        # This is useful if we have breaks but may want to postpone deciding
+        # where to make them.
         $forced_breakpoint_count++;
         return;
     }
@@ -11870,7 +11895,9 @@ sub correct_lp_indentation {
                             $max_length = $length_t;
                         }
                     }
-                    $right_margin = maximum_line_length($ibeg) - $max_length;
+                    $right_margin =
+                      $maximum_line_length[ $levels_to_go[$ibeg] ] -
+                      $max_length;
                     if ( $right_margin < 0 ) { $right_margin = 0 }
                 }
 
@@ -12055,8 +12082,6 @@ sub set_continuation_breaks {
     # This is a sufficient but not necessary condition for colon chain
     my $is_colon_chain = ( $colons_in_order && @{$rcolon_list} > 2 );
 
-    my $maximum_line_length = $rOpts_maximum_line_length;
-
     #-------------------------------------------------------
     # BEGINNING of main loop to set continuation breakpoints
     # Keep iterating until we reach the end
@@ -12069,11 +12094,8 @@ sub set_continuation_breaks {
         my $lowest_next_token      = '';
         my $lowest_next_type       = 'b';
         my $i_lowest_next_nonblank = -1;
-
-        if ($rOpts_variable_maximum_line_length) {
-            $maximum_line_length = $rOpts_maximum_line_length +
-              $levels_to_go[$i_begin] * $rOpts_indent_columns;
-        }
+        my $maximum_line_length =
+          $maximum_line_length[ $levels_to_go[$i_begin] ];
 
         #-------------------------------------------------------
         # BEGINNING of inner loop to find the best next breakpoint
@@ -14145,7 +14167,7 @@ sub find_token_starting_list {
         my $need_lp_break_open = $must_break_open;
         if ( $rOpts_line_up_parentheses && !$must_break_open ) {
             my $columns_if_unbroken =
-              maximum_line_length($i_opening_minus) -
+              $maximum_line_length[ $levels_to_go[$i_opening_minus] ] -
               total_line_length( $i_opening_minus, $i_opening_paren );
             $need_lp_break_open =
                  ( $max_length[0] > $columns_if_unbroken )
@@ -14818,7 +14840,7 @@ sub get_maximum_fields_wanted {
 sub table_columns_available {
     my $i_first_comma = shift;
     my $columns =
-      maximum_line_length($i_first_comma) -
+      $maximum_line_length[ $levels_to_go[$i_first_comma] ] -
       leading_spaces_to_go($i_first_comma);
 
     # Patch: the vertical formatter does not line up lines whose lengths
@@ -14938,28 +14960,6 @@ sub total_line_length {
     return leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
 }
 
-sub maximum_line_length {
-
-    # return maximum line length for line starting with the token at given
-    # batch index
-    my ($ii) = @_;
-    return ($rOpts_maximum_line_length)
-      unless ($rOpts_variable_maximum_line_length);
-    my $level = $levels_to_go[$ii];
-    if ( $level < 0 ) { $level = 0 }
-    return $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
-}
-
-sub maximum_line_length_for_level {
-
-    # return maximum line length for line starting with a given level
-    my ($level) = @_;
-    return ($rOpts_maximum_line_length)
-      unless ($rOpts_variable_maximum_line_length);
-    if ( $level < 0 ) { $level = 0 }
-    return $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
-}
-
 sub excess_line_length {
 
     # return number of characters by which a line of tokens ($ibeg..$iend)
@@ -14973,14 +14973,8 @@ sub excess_line_length {
       : $self->weld_len_right( $type_sequence_to_go[$iend],
         $types_to_go[$iend] );
 
-    my $maximum_line_length = $rOpts_maximum_line_length;
-    if ($rOpts_variable_maximum_line_length) {
-        $maximum_line_length =
-          $rOpts_maximum_line_length +
-          $levels_to_go[$ibeg] * $rOpts_indent_columns;
-    }
-
-    return total_line_length( $ibeg, $iend ) + $wr - $maximum_line_length;
+    return total_line_length( $ibeg, $iend ) + $wr -
+      $maximum_line_length[ $levels_to_go[$ibeg] ];
 }
 
 sub get_spaces {
@@ -15195,7 +15189,7 @@ sub get_available_spaces_to_go {
 
                 my $test_position =
                   total_line_length( $i_test, $max_index_to_go );
-                my $mll = maximum_line_length($i_test);
+                my $mll = $maximum_line_length[ $levels_to_go[$i_test] ];
 
                 if (
 
@@ -15233,8 +15227,7 @@ sub get_available_spaces_to_go {
         }
 
         my $halfway =
-          maximum_line_length_for_level($level) -
-          $rOpts_maximum_line_length / 2;
+          $maximum_line_length[$level] - $rOpts_maximum_line_length / 2;
 
         # Check for decreasing depth ..
         # Note that one token may have both decreasing and then increasing
@@ -15562,7 +15555,8 @@ sub get_available_spaces_to_go {
         # keep 2 extra free because they are needed in some cases
         # (result of trial-and-error testing)
         my $spaces_needed =
-          $gnu_position_predictor - maximum_line_length($mx_index_to_go) + 2;
+          $gnu_position_predictor -
+          $maximum_line_length[ $levels_to_go[$mx_index_to_go] ] + 2;
 
         return if ( $spaces_needed <= 0 );
 
@@ -16898,7 +16892,8 @@ sub undo_ci {
                 if ( $ipad >= 0 && $pad_spaces ) {
 
                     my $length_t = total_line_length( $ibeg, $iend );
-                    if ( $pad_spaces + $length_t <= maximum_line_length($ibeg) )
+                    if ( $pad_spaces + $length_t <=
+                        $maximum_line_length[ $levels_to_go[$ibeg] ] )
                     {
                         $self->pad_token( $ipad, $pad_spaces );
                     }
@@ -17470,7 +17465,6 @@ sub K_mate_index {
 
         return ( \@tokens, \@fields, \@patterns, \@field_lengths );
     }
-
 
 } ## end closure make_alignment_patterns
 
@@ -18556,7 +18550,7 @@ sub set_vertical_tightness_flags {
                 # (ie, we may allow one token to exceed the text length limit)
                 && (
                     $new_line_length <
-                    maximum_line_length_for_level($leading_block_text_level)
+                    $maximum_line_length[$leading_block_text_level]
 
                     || length($leading_block_text) + $added_length <
                     $rOpts_closing_side_comment_maximum_text
@@ -18837,9 +18831,7 @@ sub set_vertical_tightness_flags {
           length($block_type) +
           length( $rOpts->{'closing-side-comment-prefix'} ) +
           $levels_to_go[$i_terminal] * $rOpts_indent_columns + 3;
-        if (
-            $length > maximum_line_length_for_level($leading_block_text_level) )
-        {
+        if ( $length > $maximum_line_length[$leading_block_text_level] ) {
             $csc_text = $saved_text;
         }
         return $csc_text;
