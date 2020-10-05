@@ -307,7 +307,6 @@ BEGIN {
         _rlines_new_              => $i++,
         _rLL_                     => $i++,
         _Klimit_                  => $i++,
-        _rnested_pairs_           => $i++,
         _K_opening_container_     => $i++,
         _K_closing_container_     => $i++,
         _K_opening_ternary_       => $i++,
@@ -371,7 +370,6 @@ BEGIN {
     # holding the batches of tokens being processed.
     $i = 0;
     use constant {
-        _comma_count_in_batch_    => $i++,
         _starting_in_quote_       => $i++,
         _ending_in_quote_         => $i++,
         _is_static_block_comment_ => $i++,
@@ -643,7 +641,6 @@ sub new {
     $self->[_saw_END_or_DATA_]                 = 0;
 
     # Hashes related to container welding...
-    $self->[_rnested_pairs_]           = [];
     $self->[_radjusted_levels_]        = [];
     $self->[_rweld_len_left_closing_]  = {};
     $self->[_rweld_len_right_closing_] = {};
@@ -4272,103 +4269,6 @@ sub dump_verbatim {
     }
 } ## end closure scan_comments
 
-sub find_nested_pairs {
-    my $self = shift;
-
-    # This routine is called once per file to do preliminary work needed for
-    # the --weld-nested option.  This information is also needed for adding
-    # semicolons.
-
-    my $rLL = $self->[_rLL_];
-    return unless ( defined($rLL) && @{$rLL} );
-
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
-
-    # We define an array of pairs of nested containers
-    my @nested_pairs;
-
-    # Names of calling routines can either be marked as 'i' or 'w',
-    # and they may invoke a sub call with an '->'. We will consider
-    # any consecutive string of such types as a single unit when making
-    # weld decisions.  We also allow a leading !
-    my $is_name_type = {
-        'i'  => 1,
-        'w'  => 1,
-        'U'  => 1,
-        '->' => 1,
-        '!'  => 1,
-    };
-
-    # Loop over all closing container tokens
-    foreach my $inner_seqno ( keys %{$K_closing_container} ) {
-        my $K_inner_closing = $K_closing_container->{$inner_seqno};
-
-        # See if it is immediately followed by another, outer closing token
-        my $K_outer_closing = $self->K_next_nonblank($K_inner_closing);
-        next unless ( defined($K_outer_closing) );
-        my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
-        next unless ($outer_seqno);
-        my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
-        next unless ( $is_closing_token{$token_outer_closing} );
-
-        # Yes .. this is a possible nesting pair.  Now we have to check the
-        # opening tokens.  The can be separated by a small amount.
-        my $K_outer_opening = $K_opening_container->{$outer_seqno};
-        my $K_inner_opening = $K_opening_container->{$inner_seqno};
-        next unless defined($K_outer_opening) && defined($K_inner_opening);
-        my $K_diff = $K_inner_opening - $K_outer_opening;
-
-        # Count nonblank characters separating them
-        if ( $K_diff < 0 ) { next }    # Shouldn't happen
-        if ( $K_diff > 8 ) { next }    # for speed
-        my $Kn             = $K_outer_opening;
-        my $nonblank_count = 0;
-        my $type;
-        my $is_name;
-        for ( my $it = 0 ; $it < 10 ; $it++ ) {
-            $Kn = $self->K_next_nonblank($Kn);
-            if ( !defined($Kn) )           { $nonblank_count = 0; last }
-            if ( $Kn eq $K_inner_opening ) { $nonblank_count++;   last; }
-            my $last_type    = $type;
-            my $last_is_name = $is_name;
-            $type    = $rLL->[$Kn]->[_TYPE_];
-            $is_name = $is_name_type->{$type};
-            $nonblank_count++
-              unless ( $is_name && $last_is_name );
-            last if ( $nonblank_count > 2 );
-        }
-
-        if (   $nonblank_count == 1
-            || $nonblank_count == 2
-            && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
-        {
-            push @nested_pairs,
-              [ $inner_seqno, $outer_seqno, $K_inner_closing ];
-        }
-        next;
-    }
-
-    # The weld routine expects the pairs in order in the form
-    #   [$seqno_inner, $seqno_outer]
-    # And they must be in the same order as the inner closing tokens
-    # (otherwise, welds of three or more adjacent tokens will not work).  The K
-    # value of this inner closing token has temporarily been stored for
-    # sorting.
-    @nested_pairs =
-
-      # Drop the K index after sorting (it would cause trouble downstream)
-      map { [ $_->[0], $_->[1] ] }
-
-      # Sort on the K values
-      sort { $a->[2] <=> $b->[2] } @nested_pairs;
-
-    # FIXME: this could just be returned and passed on to sub weld_...
-    $self->[_rnested_pairs_] = \@nested_pairs;
-
-    return;
-}
-
 {    ## begin closure check_line_hashes
 
     # This code checks that no autovivification occurs in the 'line' hash
@@ -4665,10 +4565,10 @@ sub respace_tokens {
 
           );
 
-       # Do not add a semicolon if it would impede a weld with an immediately
-       # following closing token.  We will use an approximate rule here:
-       # Do not add a semicolon between two closing container tokens if it would
-       # be the only semicolon in the outer container.
+        # Do not add a semicolon if it would impede a weld with an immediately
+        # following closing token...like this
+        #   { ( some code ) }
+        #                  ^--No semicolon can go here
 
         # look at the previous token... (note use of the _new array here)
         my $token_prev  = $rLL_new->[$Kp]->[_TOKEN_];
@@ -5665,9 +5565,6 @@ sub weld_containers {
 
     if ( $rOpts->{'weld-nested-containers'} ) {
 
-        # Find nested pairs of container tokens for any welding.
-        $self->find_nested_pairs();
-
         # if called, weld_nested_containers must be called before other weld
         # operations.  This is because weld_nested_containers could overwrite
         # hash values written by weld_cuddled_blocks and weld_nested_quotes.
@@ -5880,6 +5777,100 @@ sub weld_cuddled_blocks {
     return;
 }
 
+sub find_nested_pairs {
+    my $self = shift;
+
+    # This routine is called once per file to do preliminary work needed for
+    # the --weld-nested option.  This information is also needed for adding
+    # semicolons.
+
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
+    # We define an array of pairs of nested containers
+    my @nested_pairs;
+
+    # Names of calling routines can either be marked as 'i' or 'w',
+    # and they may invoke a sub call with an '->'. We will consider
+    # any consecutive string of such types as a single unit when making
+    # weld decisions.  We also allow a leading !
+    my $is_name_type = {
+        'i'  => 1,
+        'w'  => 1,
+        'U'  => 1,
+        '->' => 1,
+        '!'  => 1,
+    };
+
+    # Loop over all closing container tokens
+    foreach my $inner_seqno ( keys %{$K_closing_container} ) {
+        my $K_inner_closing = $K_closing_container->{$inner_seqno};
+
+        # See if it is immediately followed by another, outer closing token
+        my $K_outer_closing = $self->K_next_nonblank($K_inner_closing);
+        next unless ( defined($K_outer_closing) );
+        my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
+        next unless ($outer_seqno);
+        my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
+        next unless ( $is_closing_token{$token_outer_closing} );
+
+        # Yes .. this is a possible nesting pair.  Now we have to check the
+        # opening tokens.  The can be separated by a small amount.
+        my $K_outer_opening = $K_opening_container->{$outer_seqno};
+        my $K_inner_opening = $K_opening_container->{$inner_seqno};
+        next unless defined($K_outer_opening) && defined($K_inner_opening);
+        my $K_diff = $K_inner_opening - $K_outer_opening;
+
+        # Count nonblank characters separating them
+        if ( $K_diff < 0 ) { next }    # Shouldn't happen
+        if ( $K_diff > 8 ) { next }    # for speed
+        my $Kn             = $K_outer_opening;
+        my $nonblank_count = 0;
+        my $type;
+        my $is_name;
+        for ( my $it = 0 ; $it < 10 ; $it++ ) {
+            $Kn = $self->K_next_nonblank($Kn);
+            if ( !defined($Kn) )           { $nonblank_count = 0; last }
+            if ( $Kn eq $K_inner_opening ) { $nonblank_count++;   last; }
+            my $last_type    = $type;
+            my $last_is_name = $is_name;
+            $type    = $rLL->[$Kn]->[_TYPE_];
+            $is_name = $is_name_type->{$type};
+            $nonblank_count++
+              unless ( $is_name && $last_is_name );
+            last if ( $nonblank_count > 2 );
+        }
+
+        if (   $nonblank_count == 1
+            || $nonblank_count == 2
+            && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
+        {
+            push @nested_pairs,
+              [ $inner_seqno, $outer_seqno, $K_inner_closing ];
+        }
+        next;
+    }
+
+    # The weld routine expects the pairs in order in the form
+    #   [$seqno_inner, $seqno_outer]
+    # And they must be in the same order as the inner closing tokens
+    # (otherwise, welds of three or more adjacent tokens will not work).  The K
+    # value of this inner closing token has temporarily been stored for
+    # sorting.
+    @nested_pairs =
+
+      # Drop the K index after sorting (it would cause trouble downstream)
+      map { [ $_->[0], $_->[1] ] }
+
+      # Sort on the K values
+      sort { $a->[2] <=> $b->[2] } @nested_pairs;
+
+    return \@nested_pairs;
+}
+
 sub weld_nested_containers {
     my ($self) = @_;
 
@@ -5898,10 +5889,12 @@ sub weld_nested_containers {
 
     my $rLL                 = $self->[_rLL_];
     my $Klimit              = $self->get_rLL_max_index();
-    my $rnested_pairs       = $self->[_rnested_pairs_];
     my $rlines              = $self->[_rlines_];
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
+
+    # Find nested pairs of container tokens for any welding.
+    my $rnested_pairs = $self->find_nested_pairs();
 
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
@@ -6382,17 +6375,16 @@ sub weld_len_right {
 sub weld_len_right_to_go {
     my ( $self, $i ) = @_;
 
-    # FIXME: this sub should be eliminated for efficiency. Make
-    # calls directly to sub weld_len_right instead, but watch out
-    # for the initial test on a blank.
+    # Given the index of a token in the 'to_go' array return the length of any
+    # weld to its right. 
 
-    # Given the index of a token in the 'to_go' array
-    # return the length of any weld to its right
-    return if ( $i < 0 );
+    # Back up at a blank.
+    return 0 if ( $i < 0 );
     if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
-    my $weld_len =
-      $self->weld_len_right( $type_sequence_to_go[$i], $types_to_go[$i] );
-    return $weld_len;
+
+    return $type_sequence_to_go[$i]
+      ? $self->weld_len_right( $type_sequence_to_go[$i], $types_to_go[$i] )
+      : 0;
 }
 
 sub mark_short_nested_blocks {
@@ -9345,7 +9337,6 @@ EOM
 
             }
         }
-        $this_batch->[_comma_count_in_batch_] = $comma_count_in_batch;
 
         my $comma_arrow_count_contained =
           $self->match_opening_and_closing_tokens();
@@ -9527,8 +9518,8 @@ EOM
                    $is_long_line
                 || $old_line_count_in_batch > 1
 
-               # must always call scan_list() with unbalanced batches because it
-               # is maintaining some stacks
+		# must always call scan_list() with unbalanced batches because
+		# it is maintaining some stacks
                 || is_unbalanced_batch()
 
                 # call scan_list if we might want to break at commas
@@ -9546,7 +9537,7 @@ EOM
             {
                 ## This caused problems in one version of perl for unknown reasons:
                 ## $saw_good_break ||= scan_list();
-                my $sgb = $self->scan_list();
+                my $sgb = $self->scan_list($is_long_line);
                 $saw_good_break ||= $sgb;
             }
 
@@ -12894,7 +12885,7 @@ sub set_continuation_breaks {
 
     sub scan_list {
 
-        my ($self) = @_;
+        my ( $self, $is_long_line ) = @_;
 
         # This routine is responsible for setting line breaks for all lists,
         # so that hierarchical structure can be displayed and so that list
@@ -12939,7 +12930,6 @@ sub set_continuation_breaks {
 
         check_for_new_minimum_depth($current_depth);
 
-        my $is_long_line = $self->excess_line_length( 0, $max_index_to_go ) > 0;
         my $want_previous_breakpoint = -1;
 
         my $saw_good_breakpoint;
@@ -14966,24 +14956,49 @@ sub total_line_length {
 
     # return length of a line of tokens ($ibeg .. $iend)
     my ( $ibeg, $iend ) = @_;
-    return leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
+
+    # original coding:
+    #return leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
+
+    # this is basically sub 'leading_spaces_to_go':
+    my $indentation = $leading_spaces_to_go[$ibeg];
+    if ( ref($indentation) ) { $indentation = $indentation->get_spaces() }
+
+    return $indentation + $summed_lengths_to_go[ $iend + 1 ] -
+      $summed_lengths_to_go[$ibeg];
 }
+
 
 sub excess_line_length {
 
     # return number of characters by which a line of tokens ($ibeg..$iend)
     # exceeds the allowable line length.
+
+    # NOTE: Profiling shows that this is a critical routine for efficiency.
+    # Therefore I have eliminated additional calls to subs from it.
     my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
 
-    # Include right weld lengths unless requested not to.
-    my $wr =
-      $ignore_right_weld
-      ? 0
-      : $self->weld_len_right( $type_sequence_to_go[$iend],
-        $types_to_go[$iend] );
+    # Original expression for line length
+    ##$length = leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend ); 
 
-    return total_line_length( $ibeg, $iend ) + $wr -
-      $maximum_line_length[ $levels_to_go[$ibeg] ];
+    # This is basically sub 'leading_spaces_to_go':
+    my $indentation = $leading_spaces_to_go[$ibeg];
+    if ( ref($indentation) ) { $indentation = $indentation->get_spaces() }
+
+    my $length =
+      $indentation +
+      $summed_lengths_to_go[ $iend + 1 ] -
+      $summed_lengths_to_go[$ibeg];
+
+    # Include right weld lengths unless requested not to.
+    if ( !$ignore_right_weld && $type_sequence_to_go[$iend] ) {
+        my $wr = $self->weld_len_right( $type_sequence_to_go[$iend],
+            $types_to_go[$iend] );
+        $length += $wr;
+    }
+
+    # return the excess
+    return $length - $maximum_line_length[ $levels_to_go[$ibeg] ];
 }
 
 sub get_spaces {
