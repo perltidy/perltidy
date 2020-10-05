@@ -144,6 +144,7 @@ my (
     $rOpts_block_brace_vertical_tightness,
     $rOpts_stack_closing_block_brace,
 
+    $rOpts_recombine,
     $rOpts_add_newlines,
     $rOpts_break_at_old_comma_breakpoints,
     $rOpts_ignore_old_breakpoints,
@@ -302,32 +303,31 @@ BEGIN {
     # Array index names for $self (which is an array ref)
     $i = 0;
     use constant {
-        _rlines_                     => $i++,
-        _rlines_new_                 => $i++,
-        _rLL_                        => $i++,
-        _Klimit_                     => $i++,
-        _rnested_pairs_              => $i++,
-        _K_opening_container_        => $i++,
-        _K_closing_container_        => $i++,
-        _K_opening_ternary_          => $i++,
-        _K_closing_ternary_          => $i++,
-        _rK_phantom_semicolons_      => $i++,
-        _rtype_count_by_seqno_       => $i++,
-        _ris_broken_container_       => $i++,
-        _rhas_broken_container_      => $i++,
-        _ris_bli_container_          => $i++,
-        _rparent_of_seqno_           => $i++,
-        _rchildren_of_seqno_         => $i++,
-        _rpaired_to_inner_container_ => $i++,
-        _rbreak_container_           => $i++,
-        _rshort_nested_              => $i++,
-        _length_function_            => $i++,
-        _fh_tee_                     => $i++,
-        _sink_object_                => $i++,
-        _file_writer_object_         => $i++,
-        _vertical_aligner_object_    => $i++,
-        _radjusted_levels_           => $i++,
-        _this_batch_                 => $i++,
+        _rlines_                  => $i++,
+        _rlines_new_              => $i++,
+        _rLL_                     => $i++,
+        _Klimit_                  => $i++,
+        _rnested_pairs_           => $i++,
+        _K_opening_container_     => $i++,
+        _K_closing_container_     => $i++,
+        _K_opening_ternary_       => $i++,
+        _K_closing_ternary_       => $i++,
+        _rK_phantom_semicolons_   => $i++,
+        _rtype_count_by_seqno_    => $i++,
+        _ris_broken_container_    => $i++,
+        _rhas_broken_container_   => $i++,
+        _ris_bli_container_       => $i++,
+        _rparent_of_seqno_        => $i++,
+        _rchildren_of_seqno_      => $i++,
+        _rbreak_container_        => $i++,
+        _rshort_nested_           => $i++,
+        _length_function_         => $i++,
+        _fh_tee_                  => $i++,
+        _sink_object_             => $i++,
+        _file_writer_object_      => $i++,
+        _vertical_aligner_object_ => $i++,
+        _radjusted_levels_        => $i++,
+        _this_batch_              => $i++,
 
         _last_output_short_opening_token_ => $i++,
 
@@ -602,16 +602,15 @@ sub new {
     $self->[_K_closing_ternary_]   = {};    # for quickly traversing structure
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
-    $self->[_rtype_count_by_seqno_]       = {};
-    $self->[_ris_broken_container_]       = {};
-    $self->[_rhas_broken_container_]      = {};
-    $self->[_ris_bli_container_]          = {};
-    $self->[_rparent_of_seqno_]           = {};
-    $self->[_rchildren_of_seqno_]         = {};
-    $self->[_rpaired_to_inner_container_] = {};
-    $self->[_rbreak_container_]           = {};    # prevent one-line blocks
-    $self->[_rshort_nested_]              = {};    # blocks not forced open
-    $self->[_length_function_]            = $length_function;
+    $self->[_rtype_count_by_seqno_]  = {};
+    $self->[_ris_broken_container_]  = {};
+    $self->[_rhas_broken_container_] = {};
+    $self->[_ris_bli_container_]     = {};
+    $self->[_rparent_of_seqno_]      = {};
+    $self->[_rchildren_of_seqno_]    = {};
+    $self->[_rbreak_container_]      = {};    # prevent one-line blocks
+    $self->[_rshort_nested_]         = {};    # blocks not forced open
+    $self->[_length_function_]       = $length_function;
 
     # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
@@ -1361,6 +1360,7 @@ EOM
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
+    $rOpts_recombine                 = $rOpts->{'recombine'};
     $rOpts_add_newlines              = $rOpts->{'add-newlines'};
     $rOpts_break_at_old_comma_breakpoints =
       $rOpts->{'break-at-old-comma-breakpoints'};
@@ -3974,11 +3974,6 @@ sub finish_formatting {
     # special comments
     $self->scan_comments();
 
-    # Find nested pairs of container tokens for any welding. This information
-    # is also needed for adding semicolons when welding is done, so it is split
-    # apart from the welding step.
-    $self->find_nested_pairs();
-
     # Make sure everything looks good
     DEVEL_MODE && self->check_line_hashes();
 
@@ -4287,23 +4282,11 @@ sub find_nested_pairs {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+
     # We define an array of pairs of nested containers
     my @nested_pairs;
-
-    # We also set the following hash values to identify container pairs for
-    # which the opening and closing tokens are adjacent in the token stream:
-    # $rpaired_to_inner_container->{$seqno_out}=$seqno_in where $seqno_out and
-    # $seqno_in are the seqence numbers of the outer and inner containers of
-    # the pair We need these later to decide if we can insert a missing
-    # semicolon
-    my $rpaired_to_inner_container = {};
-
-    # This local hash remembers if an outer container has a close following
-    # inner container;
-    # The key is the outer sequence number
-    # The value is the token_hash of the inner container
-
-    my %has_close_following_opening;
 
     # Names of calling routines can either be marked as 'i' or 'w',
     # and they may invoke a sub call with an '->'. We will consider
@@ -4317,119 +4300,71 @@ sub find_nested_pairs {
         '!'  => 1,
     };
 
-    my $is_name = sub {
-        my $type = shift;
-        return $type && $is_name_type->{$type};
-    };
+    # Loop over all closing container tokens
+    foreach my $inner_seqno ( keys %{$K_closing_container} ) {
+        my $K_inner_closing = $K_closing_container->{$inner_seqno};
 
-    my $last_container;
-    my $last_last_container;
-    my $last_nonblank_token_vars;
-    my $last_count;
+        # See if it is immediately followed by another, outer closing token
+        my $K_outer_closing = $self->K_next_nonblank($K_inner_closing);
+        next unless ( defined($K_outer_closing) );
+        my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
+        next unless ($outer_seqno);
+        my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
+        next unless ( $is_closing_token{$token_outer_closing} );
 
-    # We will also scan for maximum level
-    my $level_max = $rLL->[0]->[_LEVEL_];
+        # Yes .. this is a possible nesting pair.  Now we have to check the
+        # opening tokens.  The can be separated by a small amount.
+        my $K_outer_opening = $K_opening_container->{$outer_seqno};
+        my $K_inner_opening = $K_opening_container->{$inner_seqno};
+        next unless defined($K_outer_opening) && defined($K_inner_opening);
+        my $K_diff = $K_inner_opening - $K_outer_opening;
 
-    my $nonblank_token_count = 0;
-
-    # loop over all tokens
-    foreach my $rtoken_vars ( @{$rLL} ) {
-
-        my $type = $rtoken_vars->[_TYPE_];
-
-        next if ( $type eq 'b' );
-
-        # long identifier-like items are counted as a single item
-        $nonblank_token_count++
-          unless ( $is_name->($type)
-            && $is_name->( $last_nonblank_token_vars->[_TYPE_] ) );
-
-        my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-        if ($type_sequence) {
-
-            my $token = $rtoken_vars->[_TOKEN_];
-
-            # For efficiency, check levels at container tokens. Actual max level
-            # can be one greater at interior tokens but we can compensate below.
-            my $level = $rtoken_vars->[_LEVEL_];
-            if ( $level > $level_max ) { $level_max = $level }
-
-            if ( $is_opening_token{$token} ) {
-
-                # following previous opening token ...
-                if (   $last_container
-                    && $is_opening_token{ $last_container->[_TOKEN_] } )
-                {
-
-                    # adjacent to this one
-                    my $tok_diff = $nonblank_token_count - $last_count;
-
-                    my $last_tok = $last_nonblank_token_vars->[_TOKEN_];
-
-                    if (   $tok_diff == 1
-                        || $tok_diff == 2 && $last_container->[_TOKEN_] eq '(' )
-                    {
-
-                        # remember this pair...
-                        my $outer_seqno = $last_container->[_TYPE_SEQUENCE_];
-                        my $inner_seqno = $type_sequence;
-                        $has_close_following_opening{$outer_seqno} =
-                          $rtoken_vars;
-                    }
-                }
-            }
-
-            elsif ( $is_closing_token{$token} ) {
-
-                # if the corresponding opening token had an adjacent opening
-                if (   $has_close_following_opening{$type_sequence}
-                    && $is_closing_token{ $last_container->[_TOKEN_] }
-                    && $has_close_following_opening{$type_sequence}
-                    ->[_TYPE_SEQUENCE_] == $last_container->[_TYPE_SEQUENCE_] )
-                {
-
-                    # The closing weld tokens must be adjacent
-                    # NOTE: so intermediate commas and semicolons
-                    # can currently block a weld.  This is something
-                    # that could be fixed in the future by including
-                    # a flag to delete un-necessary commas and semicolons.
-                    my $tok_diff = $nonblank_token_count - $last_count;
-
-                    if ( $tok_diff == 1 ) {
-
-                        # This is a closely nested pair ..
-                        my $inner_seqno = $last_container->[_TYPE_SEQUENCE_];
-                        my $outer_seqno = $type_sequence;
-                        $rpaired_to_inner_container->{$outer_seqno} =
-                          $inner_seqno;
-
-                        push @nested_pairs, [ $inner_seqno, $outer_seqno ];
-                    }
-                }
-            }
-
-            $last_last_container = $last_container;
-            $last_container      = $rtoken_vars;
-            $last_count          = $nonblank_token_count;
+        # Count nonblank characters separating them
+        if ( $K_diff < 0 ) { next }    # Shouldn't happen
+        if ( $K_diff > 8 ) { next }    # for speed
+        my $Kn             = $K_outer_opening;
+        my $nonblank_count = 0;
+        my $type;
+        my $is_name;
+        for ( my $it = 0 ; $it < 10 ; $it++ ) {
+            $Kn = $self->K_next_nonblank($Kn);
+            if ( !defined($Kn) )           { $nonblank_count = 0; last }
+            if ( $Kn eq $K_inner_opening ) { $nonblank_count++;   last; }
+            my $last_type    = $type;
+            my $last_is_name = $is_name;
+            $type    = $rLL->[$Kn]->[_TYPE_];
+            $is_name = $is_name_type->{$type};
+            $nonblank_count++
+              unless ( $is_name && $last_is_name );
+            last if ( $nonblank_count > 2 );
         }
-        $last_nonblank_token_vars = $rtoken_vars;
-    }
-    $self->[_rnested_pairs_]              = \@nested_pairs;
-    $self->[_rpaired_to_inner_container_] = $rpaired_to_inner_container;
 
-    # Create the tables of maximum line lengths vs level for later efficient
-    # use.  This avoids continually checking the -vmll flag. The actual max
-    # level may be one greater because we only checked container tokens above,
-    # but we can make the table longer than necessary.
-    $level_max += 10;
-    foreach my $level ( 0 .. $level_max ) {
-        $maximum_line_length[$level] = $rOpts_maximum_line_length;
-    }
-    if ($rOpts_variable_maximum_line_length) {
-        foreach my $level ( 0 .. $level_max ) {
-            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
+        if (   $nonblank_count == 1
+            || $nonblank_count == 2
+            && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
+        {
+            push @nested_pairs,
+              [ $inner_seqno, $outer_seqno, $K_inner_closing ];
         }
+        next;
     }
+
+    # The weld routine expects the pairs in order in the form
+    #   [$seqno_inner, $seqno_outer]
+    # And they must be in the same order as the inner closing tokens
+    # (otherwise, welds of three or more adjacent tokens will not work).  The K
+    # value of this inner closing token has temporarily been stored for
+    # sorting.
+    @nested_pairs =
+
+      # Drop the K index after sorting (it would cause trouble downstream)
+      map { [ $_->[0], $_->[1] ] }
+
+      # Sort on the K values
+      sort { $a->[2] <=> $b->[2] } @nested_pairs;
+
+    # FIXME: this could just be returned and passed on to sub weld_...
+    $self->[_rnested_pairs_] = \@nested_pairs;
 
     return;
 }
@@ -4506,11 +4441,10 @@ sub respace_tokens {
     # Method: The old tokens are copied one-by-one, with changes, from the old
     # linear storage array $rLL to a new array $rLL_new.
 
-    my $rLL                        = $self->[_rLL_];
-    my $Klimit_old                 = $self->[_Klimit_];
-    my $rlines                     = $self->[_rlines_];
-    my $rpaired_to_inner_container = $self->[_rpaired_to_inner_container_];
-    my $length_function            = $self->[_length_function_];
+    my $rLL             = $self->[_rLL_];
+    my $Klimit_old      = $self->[_Klimit_];
+    my $rlines          = $self->[_rlines_];
+    my $length_function = $self->[_length_function_];
 
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
@@ -4543,8 +4477,11 @@ sub respace_tokens {
     my $rK_phantom_semicolons = [];
 
     my %seqno_stack;
-    my %KK_stack;
+    my %KK_stack;                      # Note: old K index
+    my %K_opening_by_seqno    = ();    # Note: old K index
     my $depth_next            = 0;
+    my $depth_next_max        = 0;
+    my $level_max             = $rLL->[0]->[_LEVEL_];
     my $rtype_count_by_seqno  = {};
     my $ris_broken_container  = {};
     my $rhas_broken_container = {};
@@ -4726,10 +4663,42 @@ sub respace_tokens {
             || (   $previous_nonblank_type eq 'k'
                 && $previous_nonblank_token =~ /format/ )
 
-            # if it would prevent welding two containers
-            || $rpaired_to_inner_container->{$type_sequence}
-
           );
+
+       # Do not add a semicolon if it would impede a weld with an immediately
+       # following closing token.  We will use an approximate rule here:
+       # Do not add a semicolon between two closing container tokens if it would
+       # be the only semicolon in the outer container.
+
+        # look at the previous token... (note use of the _new array here)
+        my $token_prev  = $rLL_new->[$Kp]->[_TOKEN_];
+        my $seqno_inner = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
+
+        # If it is also a closing token we have to look closer...
+        if (
+               $seqno_inner
+            && $is_closing_token{$token_prev}
+
+            # we only need to look if there is just one inner container..
+            && @{ $rchildren_of_seqno->{$type_sequence} } == 1
+          )
+        {
+
+            # Go back and see if the corresponding two opening tokens are also
+            # together.  Note use of the old K indexes here:
+            my $K_outer_opening = $K_opening_by_seqno{$type_sequence};
+            if ( defined($K_outer_opening) ) {
+                my $K_nxt = $self->K_next_nonblank($K_outer_opening);
+                if ( defined($K_nxt) ) {
+                    my $seqno_nxt = $rLL->[$K_nxt]->[_TYPE_SEQUENCE_];
+
+                    # Is the next token after the outer opening the same as
+                    # our inner closing (i.e. same sequence number)?
+                    # If so, do not insert a semicolon here.
+                    return if ( $seqno_nxt && $seqno_nxt == $seqno_inner );
+                }
+            }
+        }
 
         # We will insert an empty semicolon here as a placeholder.  Later, if
         # it becomes the last token on a line, we will bring it to life.  The
@@ -5291,7 +5260,13 @@ sub respace_tokens {
                     $rparent_of_seqno->{$type_sequence} = $seqno_parent;
                     $seqno_stack{$depth_next}           = $type_sequence;
                     $KK_stack{$depth_next}              = $KK;
+                    $K_opening_by_seqno{$type_sequence} = $KK;
                     $depth_next++;
+
+                    if ( $depth_next > $depth_next_max ) {
+                        $depth_next_max = $depth_next;
+                        $level_max      = $rLL->[$KK]->[_LEVEL_];
+                    }
                 }
                 elsif ( $is_closing_token{$token} ) {
                     $depth_next--;
@@ -5344,6 +5319,26 @@ sub respace_tokens {
 
         }    # End token loop
     }    # End line loop
+
+    # Create a table of maximum line length vs level for later efficient use.
+    # This avoids continually checking the -vmll flag. We will make the table a
+    # little longer than could possibly be expected to avoid indexing beyond
+    # its limit.  The actual max level will be one greater than $level_max
+    # because we only checked outer container tokens, but that is no problem if
+    # we make the table longer than necessary.  Later routines may reduce
+    # levels (i.e. -nib and -wn), but typically will not increase it.  So this
+    # should be safe.  Since this is an array, calling routines have the burden
+    # of insuring indexing with non-negative levels.  All levels in the
+    # batch array $levels_to_go are guaranteed to be positive.
+    $level_max += 10;
+    foreach my $level ( 0 .. $level_max ) {
+        $maximum_line_length[$level] = $rOpts_maximum_line_length;
+    }
+    if ($rOpts_variable_maximum_line_length) {
+        foreach my $level ( 0 .. $level_max ) {
+            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
+        }
+    }
 
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
@@ -5670,8 +5665,11 @@ sub weld_containers {
 
     if ( $rOpts->{'weld-nested-containers'} ) {
 
+        # Find nested pairs of container tokens for any welding.
+        $self->find_nested_pairs();
+
         # if called, weld_nested_containers must be called before other weld
-        # operations.  # This is because weld_nested_containers could overwrite
+        # operations.  This is because weld_nested_containers could overwrite
         # hash values written by weld_cuddled_blocks and weld_nested_quotes.
         $self->weld_nested_containers();
 
@@ -5932,15 +5930,17 @@ sub weld_nested_containers {
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
-        my $KK      = $K_opening_container->{$seqno};
-        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+        my $KK = $K_opening_container->{$seqno};
+        my $lentot = defined($KK)
+          && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
         return $lentot;
     };
 
     my $length_to_closing_seqno = sub {
         my ($seqno) = @_;
         my $KK      = $K_closing_container->{$seqno};
-        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+        my $lentot = defined($KK)
+          && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
         return $lentot;
     };
 
@@ -9365,6 +9365,9 @@ EOM
             # looking for opening or closing block brace
             $block_type_to_go[$max_index_to_go]
 
+            # never any good breaks if just one token
+            && $max_index_to_go > 0
+
             # but not one of these which are never duplicated on a line:
             # until|while|for|if|elsif|else
             && !$is_block_without_semicolon{ $block_type_to_go[$max_index_to_go]
@@ -9511,11 +9514,13 @@ EOM
             $self->pad_array_to_go();
 
             # set all forced breakpoints for good list formatting
-            my $is_long_line =
-              $self->excess_line_length( $imin, $max_index_to_go ) > 0;
+            my $is_long_line = $max_index_to_go > 0
+              && $self->excess_line_length( $imin, $max_index_to_go ) > 0;
 
             my $old_line_count_in_batch =
-              $self->get_old_line_count( $K_to_go[0],
+              $max_index_to_go == 0
+              ? 1
+              : $self->get_old_line_count( $K_to_go[0],
                 $K_to_go[$max_index_to_go] );
 
             if (
@@ -9583,7 +9588,7 @@ EOM
 
                 # now we do a correction step to clean this up a bit
                 # (The only time we would not do this is for debugging)
-                if ( $rOpts->{'recombine'} ) {
+                if ($rOpts_recombine) {
                     ( $ri_first, $ri_last ) =
                       $self->recombine_breakpoints( $ri_first, $ri_last );
                 }
@@ -9593,7 +9598,8 @@ EOM
             }
 
             $self->insert_breaks_before_list_opening_containers( $ri_first,
-                $ri_last );
+                $ri_last )
+              if ( %break_before_container_types && $max_index_to_go > 0 );
 
             # do corrector step if -lp option is used
             my $do_not_pad = 0;
