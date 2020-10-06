@@ -1,7 +1,9 @@
 # Perltidy Change Log
 
-    - Fix issue git #40: when using -bli a closing brace followed by a semicolon was 
-      not being indented.
+    - Fix issue git #41, typo in manual regarding -fsb
+
+    - Fix issue git #40: when using the -bli option, a closing brace followed by 
+      a semicolon was not being indented.
 
 ## 2020 10 01
 
