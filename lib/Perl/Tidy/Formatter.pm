@@ -4570,22 +4570,23 @@ sub respace_tokens {
         #   { ( some code ) }
         #                  ^--No semicolon can go here
 
-        # look at the previous token... (note use of the _new array here)
-        my $token_prev  = $rLL_new->[$Kp]->[_TOKEN_];
+        # look at the previous token... note use of the _NEW rLL array here,
+        # but sequence numbers are invariant.
         my $seqno_inner = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
 
-        # If it is also a closing token we have to look closer...
+        # If it is also a CLOSING token we have to look closer...
         if (
                $seqno_inner
-            && $is_closing_token{$token_prev}
+            && $is_closing_token{$previous_nonblank_token}
 
             # we only need to look if there is just one inner container..
+            && defined( $rchildren_of_seqno->{$type_sequence} )
             && @{ $rchildren_of_seqno->{$type_sequence} } == 1
           )
         {
 
-            # Go back and see if the corresponding two opening tokens are also
-            # together.  Note use of the old K indexes here:
+            # Go back and see if the corresponding two OPENING tokens are also
+            # together.  Note that we are using the OLD K indexing here:
             my $K_outer_opening = $K_opening_by_seqno{$type_sequence};
             if ( defined($K_outer_opening) ) {
                 my $K_nxt = $self->K_next_nonblank($K_outer_opening);
@@ -5843,6 +5844,7 @@ sub find_nested_pairs {
 	# Here is an example of a long identifier chain which counts as a
 	# single nonblank here (this spans about 10 K indexes):
         #     if ( !Boucherot::SetOfConnections->new->handler->execute(
+        #        ^--K_o_o                                             ^--K_i_o
         #       @array) )
         for ( my $Kn = $K_outer_opening + 1 ; $Kn <= $K_inner_opening ; $Kn += 1 ) {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
