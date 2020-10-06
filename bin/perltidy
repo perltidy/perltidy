@@ -1883,7 +1883,7 @@ Some examples show how example strings become patterns:
 
 =item B<-fse=string>,  B<--format-skipping-end=string>
 
-The B<-fsb=string> is the corresponding parameter used to change the
+The B<-fse=string> is the corresponding parameter used to change the
 ending marker for format skipping.  The default is equivalent to
 -fse='#<<<'.  
 
