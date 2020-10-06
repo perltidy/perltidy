@@ -15,7 +15,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD =~/\bDESTROY$/ );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -92,24 +92,20 @@ sub new {
 }
 
 sub get_output_line_number {
-    my $self = shift;
-    return $self->[_output_line_number_];
+    return $_[0]->[_output_line_number_];
 }
 
 sub decrement_output_line_number {
-    my $self = shift;
-    $self->[_output_line_number_]--;
+    $_[0]->[_output_line_number_]--;
     return;
 }
 
 sub get_consecutive_nonblank_lines {
-    my $self = shift;
-    return $self->[_consecutive_nonblank_lines_];
+    return $_[0]->[_consecutive_nonblank_lines_];
 }
 
 sub reset_consecutive_blank_lines {
-    my $self = shift;
-    $self->[_consecutive_blank_lines_] = 0;
+    $_[0]->[_consecutive_blank_lines_] = 0;
     return;
 }
 
