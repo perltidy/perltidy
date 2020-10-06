@@ -5344,11 +5344,20 @@ sub K_next_nonblank {
     # return the index K of the next nonblank token
     return unless ( defined($KK) && $KK >= 0 );
 
-    # use the standard array unless given otherwise
+    # The third arg allows this routine to be used on any array.  This is
+    # useful in sub respace_tokens when we are copying tokens from an old $rLL
+    # to a new $rLL array.  But usually the third arg will not be given and we
+    # will just use the $rLL array in $self.
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
+
+	# Safety check, this fault shouldn't happen:  The $rLL array is the
+	# main array of tokens, so all entries should be used.  It is
+	# initialized in sub write_line, and then re-initialized by sub
+	# $store_token() within sub respace_tokens.  Tokens are pushed on
+        # so there shouldn't be any gaps.
         if ( !defined( $rLL->[$Knnb] ) ) {
             Fault("Undefined entry for k=$Knnb");
         }
@@ -5824,23 +5833,29 @@ sub find_nested_pairs {
         next unless defined($K_outer_opening) && defined($K_inner_opening);
         my $K_diff = $K_inner_opening - $K_outer_opening;
 
-        # Count nonblank characters separating them
+        # Count nonblank characters separating them.  
         if ( $K_diff < 0 ) { next }    # Shouldn't happen
-        if ( $K_diff > 8 ) { next }    # for speed
         my $Kn             = $K_outer_opening;
         my $nonblank_count = 0;
         my $type;
         my $is_name;
-        for ( my $it = 0 ; $it < 10 ; $it++ ) {
-            $Kn = $self->K_next_nonblank($Kn);
-            if ( !defined($Kn) )           { $nonblank_count = 0; last }
-            if ( $Kn eq $K_inner_opening ) { $nonblank_count++;   last; }
+
+	# Here is an example of a long identifier chain which counts as a
+	# single nonblank here (this spans about 10 K indexes):
+        #     if ( !Boucherot::SetOfConnections->new->handler->execute(
+        #       @array) )
+        for ( my $Kn = $K_outer_opening + 1 ; $Kn <= $K_inner_opening ; $Kn += 1 ) {
+            next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
+            if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
+
+            # skip chain of identifier tokens
             my $last_type    = $type;
             my $last_is_name = $is_name;
             $type    = $rLL->[$Kn]->[_TYPE_];
             $is_name = $is_name_type->{$type};
-            $nonblank_count++
-              unless ( $is_name && $last_is_name );
+            next if ( $is_name && $last_is_name );
+
+            $nonblank_count++;
             last if ( $nonblank_count > 2 );
         }
 
@@ -5945,9 +5960,9 @@ sub weld_nested_containers {
 
     my $previous_pair;
 
+    # Main loop over nested pairs...
     # We are working from outermost to innermost pairs so that
     # level changes will be complete when we arrive at the inner pairs.
-
     while ( my $item = pop( @{$rnested_pairs} ) ) {
         my ( $inner_seqno, $outer_seqno ) = @{$item};
 
@@ -9551,14 +9566,17 @@ EOM
                 # we aren't allowed to add any newlines
                 !$rOpts_add_newlines
 
-                # or, we don't already have an interior breakpoint
-                # and we didn't see a good breakpoint
+                # or,
                 || (
-                       !get_forced_breakpoint_count()
+
+                    # this line is 'short'
+                    !$is_long_line
+
+                    # and we didn't see a good breakpoint
                     && !$saw_good_break
 
-                    # and this line is 'short'
-                    && !$is_long_line
+                    # and we don't already have an interior breakpoint
+                    && !get_forced_breakpoint_count()
                 )
               )
             {
@@ -9601,7 +9619,7 @@ EOM
 
             # unmask any invisible line-ending semicolon.  They were placed by
             # sub respace_tokens but we only now know if we actually need them.
-            if ( $types_to_go[$imax] eq ';' && $tokens_to_go[$imax] eq '' ) {
+            if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) { 
                 my $i       = $imax;
                 my $tok     = ';';
                 my $tok_len = 1;
