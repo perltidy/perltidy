@@ -163,6 +163,7 @@ BEGIN {
         _line_of_text_                       => $i++,
         _rlower_case_labels_at_              => $i++,
         _extended_syntax_                    => $i++,
+        _maximum_level_                      => $i++,
     };
 }
 
@@ -320,6 +321,7 @@ sub new {
     $self->[_line_of_text_]                       = "";
     $self->[_rlower_case_labels_at_]              = undef;
     $self->[_extended_syntax_]                    = $args{extended_syntax};
+    $self->[_maximum_level_]                      = 0;
     bless $self, $class;
 
     $tokenizer_self = $self;
@@ -431,6 +433,10 @@ sub write_diagnostics {
         $tokenizer_self->[_diagnostics_object_]->write_diagnostics($msg);
     }
     return;
+}
+
+sub get_maximum_level {
+    return $tokenizer_self->[_maximum_level_];
 }
 
 sub report_tokenization_errors {
@@ -3994,6 +4000,11 @@ EOM
                 # save the current states
                 push( @{$rslevel_stack}, 1 + $slevel_in_tokenizer );
                 $level_in_tokenizer++;
+
+                if ( $level_in_tokenizer > $tokenizer_self->[_maximum_level_] )
+                {
+                    $tokenizer_self->[ _maximum_level_ ] = $level_in_tokenizer;
+                }
 
                 if ($forced_indentation_flag) {
 
