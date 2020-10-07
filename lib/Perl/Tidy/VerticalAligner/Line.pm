@@ -10,39 +10,34 @@ use strict;
 use warnings;
 our $VERSION = '20201001';
 
+BEGIN {
+    my $i = 0;
+    use constant {
+        _jmax_                      => $i++,
+        _jmax_original_line_        => $i++,
+        _rtokens_                   => $i++,
+        _rfields_                   => $i++,
+        _rfield_lengths_            => $i++,
+        _rpatterns_                 => $i++,
+        _indentation_               => $i++,
+        _leading_space_count_       => $i++,
+        _outdent_long_lines_        => $i++,
+        _list_type_                 => $i++,
+        _is_hanging_side_comment_   => $i++,
+        _ralignments_               => $i++,
+        _maximum_line_length_       => $i++,
+        _rvertical_tightness_flags_ => $i++,
+        _is_terminal_ternary_       => $i++,
+        _is_terminal_else_          => $i++,
+        _j_terminal_match_          => $i++,
+        _is_forced_break_           => $i++,
+        _end_group_                 => $i++,
+    };
+}
+
 {
 
     ##use Carp;
-
-    my %default_data = (
-        jmax                      => undef,
-        jmax_original_line        => undef,
-        rtokens                   => undef,
-        rfields                   => undef,
-        rfield_lengths            => undef,
-        rpatterns                 => undef,
-        indentation               => undef,
-        leading_space_count       => undef,
-        outdent_long_lines        => undef,
-        list_type                 => undef,
-        is_hanging_side_comment   => undef,
-        ralignments               => [],
-        maximum_line_length       => undef,
-        rvertical_tightness_flags => undef,
-        is_terminal_ternary       => undef,
-        is_terminal_else          => undef,
-        j_terminal_match          => undef,
-        is_forced_break           => undef,
-        end_group                 => undef,
-    );
-    {
-
-        # methods to count object population
-        my $_count = 0;
-        sub get_count        { return $_count; }
-        sub _increment_count { return ++$_count }
-        sub _decrement_count { return --$_count }
-    }
 
     # Constructor may be called as a class method
     sub new {
@@ -50,20 +45,29 @@ our $VERSION = '20201001';
         my $caller_is_obj = ref($caller);
         my $class         = $caller_is_obj || $caller;
         ##no strict "refs";
-        my $self = bless {}, $class;
+        my $self = bless [], $class;
 
-        $self->{_ralignments} = [];
+        $self->[_jmax_]                      = $arg{jmax};
+        $self->[_jmax_original_line_]        = $arg{jmax_original_line};
+        $self->[_rtokens_]                   = $arg{rtokens};
+        $self->[_rfields_]                   = $arg{rfields};
+        $self->[_rfield_lengths_]            = $arg{rfield_lengths};
+        $self->[_rpatterns_]                 = $arg{rpatterns};
+        $self->[_indentation_]               = $arg{indentation};
+        $self->[_leading_space_count_]       = $arg{leading_space_count};
+        $self->[_outdent_long_lines_]        = $arg{outdent_long_lines};
+        $self->[_list_type_]                 = $arg{list_type};
+        $self->[_is_hanging_side_comment_]   = $arg{is_hanging_side_comment};
+        $self->[_maximum_line_length_]       = $arg{maximum_line_length};
+        $self->[_rvertical_tightness_flags_] = $arg{rvertical_tightness_flags};
+        $self->[_is_terminal_ternary_]       = $arg{is_terminal_ternary};
+        $self->[_is_terminal_else_]          = $arg{is_terminal_else};
+        $self->[_j_terminal_match_]          = $arg{j_terminal_match};
+        $self->[_is_forced_break_]           = $arg{is_forced_break};
+        $self->[_end_group_]                 = $arg{end_group};
 
-        foreach my $key ( keys %default_data ) {
-            my $_key = '_' . $key;
+        $self->[_ralignments_] = [];
 
-            # Caller keys do not have an underscore
-            if    ( exists $arg{$key} ) { $self->{$_key} = $arg{$key} }
-            elsif ($caller_is_obj)      { $self->{$_key} = $caller->{$_key} }
-            else { $self->{$_key} = $default_data{$_key} }
-        }
-
-        $self->_increment_count();
         return $self;
     }
 
@@ -86,87 +90,72 @@ EOM
         exit 1;
     }
 
-    sub DESTROY {
-        my $self = shift;
-        $self->_decrement_count();
-        return;
-    }
-
-    sub get_jmax { my $self = shift; return $self->{_jmax} }
+    sub get_jmax { return $_[0]->[_jmax_] }
 
     sub get_jmax_original_line {
-        my $self = shift;
-        return $self->{_jmax_original_line};
+        return $_[0]->[_jmax_original_line_];
     }
-    sub get_rtokens        { my $self = shift; return $self->{_rtokens} }
-    sub get_rfields        { my $self = shift; return $self->{_rfields} }
-    sub get_rfield_lengths { my $self = shift; return $self->{_rfield_lengths} }
-    sub get_rpatterns      { my $self = shift; return $self->{_rpatterns} }
-    sub get_indentation    { my $self = shift; return $self->{_indentation} }
+    sub get_rtokens        { return $_[0]->[_rtokens_] }
+    sub get_rfields        { return $_[0]->[_rfields_] }
+    sub get_rfield_lengths { return $_[0]->[_rfield_lengths_] }
+    sub get_rpatterns      { return $_[0]->[_rpatterns_] }
+    sub get_indentation    { return $_[0]->[_indentation_] }
 
     sub get_j_terminal_match {
-        my $self = shift;
-        return $self->{_j_terminal_match};
+        return $_[0]->[_j_terminal_match_];
     }
 
     sub set_j_terminal_match {
         my ( $self, $val ) = @_;
-        $self->{_j_terminal_match} = $val;
+        $self->[_j_terminal_match_] = $val;
         return;
     }
 
     sub get_is_terminal_else {
-        my $self = shift;
-        return $self->{_is_terminal_else};
+        return $_[0]->[_is_terminal_else_];
     }
 
     sub get_is_terminal_ternary {
-        my $self = shift;
-        return $self->{_is_terminal_ternary};
+        return $_[0]->[_is_terminal_ternary_];
     }
 
     sub get_is_forced_break {
-        my $self = shift;
-        return $self->{_is_forced_break};
+        return $_[0]->[_is_forced_break_];
     }
 
     sub get_leading_space_count {
-        my $self = shift;
-        return $self->{_leading_space_count};
+        return $_[0]->[_leading_space_count_];
     }
 
     sub get_outdent_long_lines {
-        my $self = shift;
-        return $self->{_outdent_long_lines};
+        return $_[0]->[_outdent_long_lines_];
     }
-    sub get_list_type { my $self = shift; return $self->{_list_type} }
+    sub get_list_type { return $_[0]->[_list_type_] }
 
     sub get_is_hanging_side_comment {
-        my $self = shift;
-        return $self->{_is_hanging_side_comment};
+        return $_[0]->[_is_hanging_side_comment_];
     }
 
     sub get_rvertical_tightness_flags {
-        my $self = shift;
-        return $self->{_rvertical_tightness_flags};
+        return $_[0]->[_rvertical_tightness_flags_];
     }
 
     sub set_column {
         ## FIXME: does caller ever supply $val??
         my ( $self, $j, $val ) = @_;
-        return $self->{_ralignments}->[$j]->set_column($val);
+        return $self->[_ralignments_]->[$j]->set_column($val);
     }
 
     sub get_alignment {
         my ( $self, $j ) = @_;
-        return $self->{_ralignments}->[$j];
+        return $self->[_ralignments_]->[$j];
     }
-    sub get_alignments { my $self = shift; return @{ $self->{_ralignments} } }
+    sub get_alignments { return @{ $_[0]->[_ralignments_] } }
 
     sub get_column {
         my ( $self, $j ) = @_;
         my $col;
-        my $alignment = $self->{_ralignments}->[$j];
+        my $alignment = $self->[_ralignments_]->[$j];
         if ( defined($alignment) ) {
             $col = $alignment->get_column();
         }
@@ -176,7 +165,7 @@ EOM
     sub get_starting_column {
         my ( $self, $j ) = @_;
         my $col;
-        my $alignment = $self->{_ralignments}->[$j];
+        my $alignment = $self->[_ralignments_]->[$j];
         if ( defined($alignment) ) {
             $col = $alignment->get_starting_column();
         }
@@ -185,7 +174,7 @@ EOM
 
     sub increment_column {
         my ( $self, $k, $pad ) = @_;
-        my $alignment = $self->{_ralignments}->[$k];
+        my $alignment = $self->[_ralignments_]->[$k];
         if ( defined($alignment) ) {
             $alignment->increment_column($pad);
         }
@@ -194,7 +183,7 @@ EOM
 
     sub set_alignments {
         my ( $self, @args ) = @_;
-        @{ $self->{_ralignments} } = @args;
+        @{ $self->[_ralignments_] } = @args;
         return;
     }
 
@@ -235,84 +224,83 @@ EOM
     }
 
     sub get_available_space_on_right {
-        my $self = shift;
-        my $jmax = $self->get_jmax();
-        return $self->{_maximum_line_length} - $self->get_column($jmax);
+        my $jmax = $_[0]->get_jmax();
+        return $_[0]->[_maximum_line_length_] - $_[0]->get_column($jmax);
     }
 
-    sub set_jmax { my ( $self, $val ) = @_; $self->{_jmax} = $val; return }
+    sub set_jmax { my ( $self, $val ) = @_; $self->[_jmax_] = $val; return }
 
     sub set_jmax_original_line {
         my ( $self, $val ) = @_;
-        $self->{_jmax_original_line} = $val;
+        $self->[_jmax_original_line_] = $val;
         return;
     }
 
     sub set_rtokens {
         my ( $self, $val ) = @_;
-        $self->{_rtokens} = $val;
+        $self->[_rtokens_] = $val;
         return;
     }
 
     sub set_rfields {
         my ( $self, $val ) = @_;
-        $self->{_rfields} = $val;
+        $self->[_rfields_] = $val;
         return;
     }
 
     sub set_rfield_lengths {
         my ( $self, $val ) = @_;
-        $self->{_rfield_lengths} = $val;
+        $self->[_rfield_lengths_] = $val;
         return;
     }
 
     sub set_rpatterns {
         my ( $self, $val ) = @_;
-        $self->{_rpatterns} = $val;
+        $self->[_rpatterns_] = $val;
         return;
     }
 
     sub set_indentation {
         my ( $self, $val ) = @_;
-        $self->{_indentation} = $val;
+        $self->[_indentation_] = $val;
         return;
     }
 
     sub set_leading_space_count {
         my ( $self, $val ) = @_;
-        $self->{_leading_space_count} = $val;
+        $self->[_leading_space_count_] = $val;
         return;
     }
 
     sub set_outdent_long_lines {
         my ( $self, $val ) = @_;
-        $self->{_outdent_long_lines} = $val;
+        $self->[_outdent_long_lines_] = $val;
         return;
     }
 
     sub set_list_type {
         my ( $self, $val ) = @_;
-        $self->{_list_type} = $val;
+        $self->[_list_type_] = $val;
         return;
     }
 
     sub set_is_hanging_side_comment {
         my ( $self, $val ) = @_;
-        $self->{_is_hanging_side_comment} = $val;
+        $self->[_is_hanging_side_comment_] = $val;
         return;
     }
 
     sub set_alignment {
         my ( $self, $j, $val ) = @_;
-        $self->{_ralignments}->[$j] = $val;
+        $self->[_ralignments_]->[$j] = $val;
         return;
     }
 
-    sub get_end_group { my $self = shift; return $self->{_end_group} }
+    sub get_end_group { return $_[0]->[_end_group_] }
 
     sub set_end_group {
         my ( $self, $j, $val ) = @_;
-        $self->{_end_group}->[$j] = $val;
+        $self->[_end_group_]->[$j] = $val;
         return;
     }
 
