@@ -1053,6 +1053,17 @@ EOM
         $want_left_space{';'} = 1;
     }
 
+    # We should put an upper bound on any -sil=n value. Otherwise enormous
+    # files could be created by mistake.
+    for ( $rOpts->{'starting-indentation-level'} ) {
+        if ( $_ && $_ > 100 ) {
+            Warn(<<EOM);
+The value --starting-indentation-level=$_ is very large; a mistake? resetting to 0;
+EOM
+            $_ = 0;
+        }
+    }
+
     # implement outdenting preferences for keywords
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );
@@ -1419,6 +1430,24 @@ EOM
         '}' => $rOpts->{'stack-closing-hash-brace'},
         ']' => $rOpts->{'stack-closing-square-bracket'},
     );
+
+    # Create a table of maximum line length vs level for later efficient use.
+    # This avoids continually checking the -vmll flag. We will make the
+    # table very long to be sure it will not be exceeded.  But we have to 
+    # choose a fixed length.  A check will be made at the start of sub
+    # 'finish_formatting' to be sure it is not exceeded.  Note, some
+    # of my standard test problems have indentation levels of about 150,
+    # so this should be fairly large.
+    my $level_max = 1000;
+    foreach my $level ( 0 .. $level_max ) {
+        $maximum_line_length[$level] = $rOpts_maximum_line_length;
+    }
+    if ($rOpts_variable_maximum_line_length) {
+        foreach my $level ( 0 .. $level_max ) {
+            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
+        }
+    }
+
     return;
 }
 
@@ -3959,6 +3988,18 @@ sub finish_formatting {
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
 
+    # Check the maximum level. If it is extremely large we will
+    # give up and output the file verbatim.
+    my $maximum_level = Perl::Tidy::Tokenizer::get_maximum_level();
+    my $maximum_table_index = $#maximum_line_length;
+    if ( !$severe_error && $maximum_level > $maximum_table_index ) {
+        $severe_error ||= 1;
+        Warn(<<EOM);
+The maximum indentation level, $maximum_level, exceeds the builtin limit of $maximum_table_index.
+Something may be wrong; formatting will be skipped. 
+EOM
+    }
+
     # output file verbatim if severe error or no formatting requested
     if ( $severe_error || $rOpts->{notidy} ) {
         $self->dump_verbatim();
@@ -4381,7 +4422,6 @@ sub respace_tokens {
     my %K_opening_by_seqno    = ();    # Note: old K index
     my $depth_next            = 0;
     my $depth_next_max        = 0;
-    my $level_max             = $rLL->[0]->[_LEVEL_];
     my $rtype_count_by_seqno  = {};
     my $ris_broken_container  = {};
     my $rhas_broken_container = {};
@@ -5166,7 +5206,6 @@ sub respace_tokens {
 
                     if ( $depth_next > $depth_next_max ) {
                         $depth_next_max = $depth_next;
-                        $level_max      = $rLL->[$KK]->[_LEVEL_];
                     }
                 }
                 elsif ( $is_closing_token{$token} ) {
@@ -5220,26 +5259,6 @@ sub respace_tokens {
 
         }    # End token loop
     }    # End line loop
-
-    # Create a table of maximum line length vs level for later efficient use.
-    # This avoids continually checking the -vmll flag. We will make the table a
-    # little longer than could possibly be expected to avoid indexing beyond
-    # its limit.  The actual max level will be one greater than $level_max
-    # because we only checked outer container tokens, but that is no problem if
-    # we make the table longer than necessary.  Later routines may reduce
-    # levels (i.e. -nib and -wn), but typically will not increase it.  So this
-    # should be safe.  Since this is an array, calling routines have the burden
-    # of insuring indexing with non-negative levels.  All levels in the
-    # batch array $levels_to_go are guaranteed to be positive.
-    $level_max += 10;
-    foreach my $level ( 0 .. $level_max ) {
-        $maximum_line_length[$level] = $rOpts_maximum_line_length;
-    }
-    if ($rOpts_variable_maximum_line_length) {
-        foreach my $level ( 0 .. $level_max ) {
-            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
-        }
-    }
 
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
