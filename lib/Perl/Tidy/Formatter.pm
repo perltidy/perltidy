@@ -16617,8 +16617,13 @@ sub get_seqno {
                 my $Kbeg  = $K_to_go[$ibeg];
                 my $seqno = $rseqno_which_extended_ci->{$Kbeg};
                 if ( $seqno && $undo_extended_ci{$seqno} ) {
-                    $ci_levels_to_go[$ibeg]      = 0;
-                    $leading_spaces_to_go[$ibeg] = $reduced_spaces_to_go[$ibeg];
+
+                    # but do not undo ci set by the -lp flag
+                    if ( !ref( $reduced_spaces_to_go[$ibeg] ) ) {
+                        $ci_levels_to_go[$ibeg]      = 0;
+                        $leading_spaces_to_go[$ibeg] =
+                          $reduced_spaces_to_go[$ibeg];
+                    }
                 }
             }
 
