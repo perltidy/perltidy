@@ -172,6 +172,7 @@ my (
     %is_opening_token,
     %is_closing_token,
     %is_equal_or_fat_comma,
+    %is_block_with_ci,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -513,6 +514,10 @@ BEGIN {
     # to poor formatting in complex lists.
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
+
+    # These block types can take ci.  This is used by the -xci option.
+    @q = qw( do sub );
+    @is_block_with_ci{@q} = (1) x scalar(@q);
 
 }
 
@@ -6867,6 +6872,13 @@ sub extended_ci {
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+
+	# Certain block types arrive from the tokenizer without CI but should
+	# have it for this option.  These include 'do' and anonymous subs.
+        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        if ( $block_type && $is_block_with_ci{$block_type} ) {
+            $rLL->[$KK]->[_CI_LEVEL_] = 1;
+        }
 
         # This is only for containers with ci
         next unless ( $rLL->[$KK]->[_CI_LEVEL_] );
