@@ -1,5 +1,7 @@
 # Perltidy Change Log
 
+    - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
+
     - Fix issue git #41, typo in manual regarding -fsb
 
     - Fix issue git #40: when using the -bli option, a closing brace followed by 

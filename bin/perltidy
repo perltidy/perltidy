@@ -722,11 +722,66 @@ The value given to B<-ci> is also used by some commands when a small
 space is required.  Examples are commands for outdenting labels,
 B<-ola>, and control keywords, B<-okw>.  
 
-When default values are not used, it is highly recommended that the value B<n>
-given with B<-ci=n> be no more than about one-half of the number of spaces
-assigned to a full indentation level on the B<-i=n> command.  The reason is
-that discontinuities in the definition and control of continuation indentation
-arise in complex code, and this rule helps to smooth out these discontinuities.
+When default values are not used, it is recommended that either 
+
+(1) the value B<n> given with B<-ci=n> be no more than about one-half of the
+number of spaces assigned to a full indentation level on the B<-i=n> command,
+
+or
+
+(2) the flag B<-extended-continuation-indentation> is used (see next section).
+
+=item B<-xci>, B<--extended-continuation-indentation>
+
+This flag causes continuation indentation to "extend" deeper into containers.
+It is a fairly recent addition and is set off by default to avoid disturbing
+existing formatting.  If you use a continuation indentation equal to the
+indentation, you will probably want to set this flag.  
+
+Here is an explanation. There are two common strategies for continuation
+indentation.  One is the strategy recommend in the original perl style
+guidelines, in which B<-ci=2> and B<-i=4>.  The other is the strategy is the
+strategy recommended in the Perl Best Practices (B<pbp>) by Conway, in which
+B<-ci=4> and B<-i=4>.  The default formatting in perltidy works fairly well
+with the orignal perl style, but it runs into problems with the B<pbp> style. 
+The B<-xci> flag was added to fix this.
+
+To illustrate,
+
+        # perltidy default (-ci=2 -i=4)
+        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
+          or (  /^GLpic$/
+            and $dv = "PDL::Graphics::TriD::GL"
+            and $PDL::Graphics::TriD::offline = 1 )
+          or (  /^VRML$/
+            and $dv = "PDL::Graphics::TriD::VRML"
+            and $PDL::Graphics::TriD::offline = 1 )
+          or ( die "Invalid PDL 3D device '$_' specified!" );
+
+        # perltidy -pbp
+        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
+            or (/^GLpic$/
+            and $dv = "PDL::Graphics::TriD::GL"
+            and $PDL::Graphics::TriD::offline = 1 )
+            or (/^VRML$/
+            and $dv = "PDL::Graphics::TriD::VRML"
+            and $PDL::Graphics::TriD::offline = 1 )
+            or ( die "Invalid PDL 3D device '$_' specified!" );
+
+        # perltidy -pbp -xci
+        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
+            or (    /^GLpic$/
+                and $dv = "PDL::Graphics::TriD::GL"
+                and $PDL::Graphics::TriD::offline = 1 )
+            or (    /^VRML$/
+                and $dv = "PDL::Graphics::TriD::VRML"
+                and $PDL::Graphics::TriD::offline = 1 )
+            or ( die "Invalid PDL 3D device '$_' specified!" );
+
+In this last case the B<-xci> flag has helped show the structure by extending
+the continuation indentation down into the structures.  It may be used in all
+cases, but is particularly useful when B<-ci=n> and B<-i=n> are equal.  Another
+example is given in the discussion of the B<-pbp> flag.
 
 =item B<-sil=n> B<--starting-indentation-level=n>   
 
@@ -3453,9 +3508,9 @@ perltidy act as a filter on one file only.  These can be overridden by placing
 B<-nst> and/or B<-nse> after the -pbp parameter. 
 
 Also note that the value of continuation indentation, -ci=4, is equal to the
-value of the full indentation, -i=4.  In some complex statements perltidy will
-produce nicer results with -ci=2. This can be implemented by including -ci=2
-after the -pbp parameter.  For example, 
+value of the full indentation, -i=4.  It is recommended that the either (1)
+the parameter B<-ci=2> be used or the flag B<-xci> be set.  The following snippet
+illustrates these options.
 
     # perltidy -pbp
     $self->{_text} = (
@@ -3480,6 +3535,17 @@ after the -pbp parameter.  For example,
         ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
         : ' elsewhere in this document'
       );
+
+    # perltidy -pbp -xci
+    $self->{_text} = (
+         !$section        ? ''
+        : $type eq 'item' ? "the $section entry"
+        :                   "the section on $section"
+        )
+        . ( $page
+            ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+            : ' elsewhere in this document'
+        );
 
 
 =item  One-line blocks 

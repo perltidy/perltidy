@@ -121,7 +121,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD eq 'DESTROY' );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -2168,6 +2168,7 @@ sub generate_options {
     $category = 2;    # Code indentation control
     ########################################
     $add_option->( 'continuation-indentation',           'ci',   '=i' );
+    $add_option->( 'extended-continuation-indentation',  'xci',  '!' );
     $add_option->( 'line-up-parentheses',                'lp',   '!' );
     $add_option->( 'outdent-keyword-list',               'okwl', '=s' );
     $add_option->( 'outdent-keywords',                   'okw',  '!' );
@@ -2491,6 +2492,7 @@ sub generate_options {
       closing-brace-indentation=0
       closing-square-bracket-indentation=0
       continuation-indentation=2
+      noextended-continuation-indentation
       cuddled-break-option=1
       delete-old-newlines
       delete-semicolons

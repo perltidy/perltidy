@@ -363,6 +363,9 @@ BEGIN {
 
         _rspecial_side_comment_type_ => $i++,
 
+        _rseqno_which_extended_ci_ => $i++,
+        _ris_seqno_controlling_ci_ => $i++,
+
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -370,16 +373,17 @@ BEGIN {
     # holding the batches of tokens being processed.
     $i = 0;
     use constant {
-        _starting_in_quote_       => $i++,
-        _ending_in_quote_         => $i++,
-        _is_static_block_comment_ => $i++,
-        _rlines_K_                => $i++,
-        _do_not_pad_              => $i++,
-        _ibeg0_                   => $i++,
-        _peak_batch_size_         => $i++,
-        _max_index_to_go_         => $i++,
-        _rK_to_go_                => $i++,
-        _batch_count_             => $i++,
+        _starting_in_quote_        => $i++,
+        _ending_in_quote_          => $i++,
+        _is_static_block_comment_  => $i++,
+        _rlines_K_                 => $i++,
+        _do_not_pad_               => $i++,
+        _ibeg0_                    => $i++,
+        _peak_batch_size_          => $i++,
+        _max_index_to_go_          => $i++,
+        _rK_to_go_                 => $i++,
+        _batch_count_              => $i++,
+        _rix_seqno_controlling_ci_ => $i++,
     };
 
     # Sequence number assigned to the root of sequence tree.
@@ -552,6 +556,7 @@ sub new {
     initialize_csc_vars();
     initialize_scan_list();
     initialize_saved_opening_indentation();
+    initialize_undo_ci();
     initialize_process_line_of_CODE();
     initialize_grind_batch_of_CODE();
     initialize_adjusted_indentation();
@@ -646,6 +651,9 @@ sub new {
     $self->[_rweld_len_right_closing_] = {};
     $self->[_rweld_len_left_opening_]  = {};
     $self->[_rweld_len_right_opening_] = {};
+
+    $self->[_rseqno_which_extended_ci_] = {};
+    $self->[_ris_seqno_controlling_ci_] = {};
 
     $self->[_rspecial_side_comment_type_] = {};
 
@@ -1433,7 +1441,7 @@ EOM
 
     # Create a table of maximum line length vs level for later efficient use.
     # This avoids continually checking the -vmll flag. We will make the
-    # table very long to be sure it will not be exceeded.  But we have to 
+    # table very long to be sure it will not be exceeded.  But we have to
     # choose a fixed length.  A check will be made at the start of sub
     # 'finish_formatting' to be sure it is not exceeded.  Note, some
     # of my standard test problems have indentation levels of about 150,
@@ -3990,7 +3998,7 @@ sub finish_formatting {
 
     # Check the maximum level. If it is extremely large we will
     # give up and output the file verbatim.
-    my $maximum_level = Perl::Tidy::Tokenizer::get_maximum_level();
+    my $maximum_level       = Perl::Tidy::Tokenizer::get_maximum_level();
     my $maximum_table_index = $#maximum_line_length;
     if ( !$severe_error && $maximum_level > $maximum_table_index ) {
         $severe_error ||= 1;
@@ -5373,10 +5381,10 @@ sub K_next_nonblank {
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
 
-	# Safety check, this fault shouldn't happen:  The $rLL array is the
-	# main array of tokens, so all entries should be used.  It is
-	# initialized in sub write_line, and then re-initialized by sub
-	# $store_token() within sub respace_tokens.  Tokens are pushed on
+        # Safety check, this fault shouldn't happen:  The $rLL array is the
+        # main array of tokens, so all entries should be used.  It is
+        # initialized in sub write_line, and then re-initialized by sub
+        # $store_token() within sub respace_tokens.  Tokens are pushed on
         # so there shouldn't be any gaps.
         if ( !defined( $rLL->[$Knnb] ) ) {
             Fault("Undefined entry for k=$Knnb");
@@ -5853,19 +5861,24 @@ sub find_nested_pairs {
         next unless defined($K_outer_opening) && defined($K_inner_opening);
         my $K_diff = $K_inner_opening - $K_outer_opening;
 
-        # Count nonblank characters separating them.  
+        # Count nonblank characters separating them.
         if ( $K_diff < 0 ) { next }    # Shouldn't happen
         my $Kn             = $K_outer_opening;
         my $nonblank_count = 0;
         my $type;
         my $is_name;
 
-	# Here is an example of a long identifier chain which counts as a
-	# single nonblank here (this spans about 10 K indexes):
+        # Here is an example of a long identifier chain which counts as a
+        # single nonblank here (this spans about 10 K indexes):
         #     if ( !Boucherot::SetOfConnections->new->handler->execute(
         #        ^--K_o_o                                             ^--K_i_o
         #       @array) )
-        for ( my $Kn = $K_outer_opening + 1 ; $Kn <= $K_inner_opening ; $Kn += 1 ) {
+        for (
+            my $Kn = $K_outer_opening + 1 ;
+            $Kn <= $K_inner_opening ;
+            $Kn += 1
+          )
+        {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
             if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
 
@@ -5959,8 +5972,8 @@ sub weld_nested_containers {
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
-        my $KK = $K_opening_container->{$seqno};
-        my $lentot = defined($KK)
+        my $KK      = $K_opening_container->{$seqno};
+        my $lentot  = defined($KK)
           && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
         return $lentot;
     };
@@ -5968,7 +5981,7 @@ sub weld_nested_containers {
     my $length_to_closing_seqno = sub {
         my ($seqno) = @_;
         my $KK      = $K_closing_container->{$seqno};
-        my $lentot = defined($KK)
+        my $lentot  = defined($KK)
           && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
         return $lentot;
     };
@@ -6412,7 +6425,7 @@ sub weld_len_right_to_go {
     my ( $self, $i ) = @_;
 
     # Given the index of a token in the 'to_go' array return the length of any
-    # weld to its right. 
+    # weld to its right.
 
     # Back up at a blank.
     return 0 if ( $i < 0 );
@@ -6593,6 +6606,9 @@ sub adjust_indentation_levels {
 
     # Adjust continuation indentation if -bli is set
     $self->bli_adjustment();
+
+    $self->extended_ci()
+      if ( $rOpts->{'extended-continuation-indentation'} );
 
     # Now clip any adjusted levels to be non-negative
     $self->clip_adjusted_levels();
@@ -6824,6 +6840,64 @@ sub adjust_container_indentation {
             $ci += 1;
         }
         $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
+    }
+    return;
+}
+
+sub extended_ci {
+
+    # Add CI to interior tokens of a container which itself has CI but only if
+    # a token does not already have CI.  This will be adjusted later bu sub
+    # undo_ci
+
+    my ($self) = @_;
+
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
+    my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
+
+    # Loop over all opening container tokens
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $ris_broken_container = $self->[_ris_broken_container_];
+
+    my $KNEXT = 0;
+    while ( defined($KNEXT) ) {
+        my $KK = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+
+        # This is only for containers with ci
+        next unless ( $rLL->[$KK]->[_CI_LEVEL_] );
+
+        # We are looking for opening containers
+        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        my $K_opening = $K_opening_container->{$seqno};
+        next unless ( defined($K_opening) && $KK == $K_opening );
+
+        # Skip containers which themselves have had ci adjusted
+        # by an outer container
+        next if ( $rseqno_which_extended_ci->{$KK} );
+
+        # Make sure there is a closing container
+        # (could be missing if the script has a brace error)
+        my $K_closing = $K_closing_container->{$seqno};
+        next unless defined($K_closing);
+
+        # Add ci to any interior tokens which do not have it and remember which
+        # container made the change.  We will undo it later if this opening
+        # container token goes out without ci.
+        my $count = 0;
+        for ( my $Kt = $K_opening + 1 ; $Kt < $K_closing ; $Kt++ ) {
+            my $ci_t = $rLL->[$Kt]->[_CI_LEVEL_];
+            if ( !$ci_t ) {
+                $rLL->[$Kt]->[_CI_LEVEL_] = 1;
+                $rseqno_which_extended_ci->{$Kt} = $seqno;
+                $count++;
+            }
+        }
+        $ris_seqno_controlling_ci->{$seqno} = $count;
     }
     return;
 }
@@ -9302,10 +9376,11 @@ sub compare_indentation_levels {
         my $this_batch = $self->[_this_batch_];
         $batch_count++;
 
-        my $starting_in_quote       = $this_batch->[_starting_in_quote_];
-        my $ending_in_quote         = $this_batch->[_ending_in_quote_];
-        my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
-        my $rK_to_go                = $this_batch->[_rK_to_go_];
+        my $starting_in_quote        = $this_batch->[_starting_in_quote_];
+        my $ending_in_quote          = $this_batch->[_ending_in_quote_];
+        my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
+        my $rK_to_go                 = $this_batch->[_rK_to_go_];
+        my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
 
         my $rLL = $self->[_rLL_];
 
@@ -9337,6 +9412,7 @@ EOM
         my $comma_count_in_batch = 0;
         my $ilast_nonblank       = -1;
         my @colon_list;
+        my @ix_seqno_controlling_ci;
         for ( my $i = 0 ; $i <= $max_index_to_go ; $i++ ) {
             $bond_strength_to_go[$i] = 0;
             $iprev_to_go[$i]         = $ilast_nonblank;
@@ -9363,6 +9439,13 @@ EOM
                 # gather info needed by sub set_continuation_breaks
                 my $seqno = $type_sequence_to_go[$i];
                 if ($seqno) {
+
+                    # remember indexes of any tokens controlling xci
+                    # in this batch. This list is needed by sub undo_ci.
+                    if ( $ris_seqno_controlling_ci->{$seqno} ) {
+                        push @ix_seqno_controlling_ci, $i;
+                    }
+
                     if ( $type eq '?' ) {
                         push @colon_list, $type;
                     }
@@ -9370,7 +9453,6 @@ EOM
                         push @colon_list, $type;
                     }
                 }
-
             }
         }
 
@@ -9554,8 +9636,8 @@ EOM
                    $is_long_line
                 || $old_line_count_in_batch > 1
 
-		# must always call scan_list() with unbalanced batches because
-		# it is maintaining some stacks
+                # must always call scan_list() with unbalanced batches because
+                # it is maintaining some stacks
                 || is_unbalanced_batch()
 
                 # call scan_list if we might want to break at commas
@@ -9640,7 +9722,7 @@ EOM
 
             # unmask any invisible line-ending semicolon.  They were placed by
             # sub respace_tokens but we only now know if we actually need them.
-            if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) { 
+            if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
                 my $i       = $imax;
                 my $tok     = ';';
                 my $tok_len = 1;
@@ -9711,6 +9793,8 @@ EOM
             $this_batch->[_peak_batch_size_] = $peak_batch_size;
             $this_batch->[_do_not_pad_]      = $do_not_pad;
             $this_batch->[_batch_count_]     = $batch_count;
+            $this_batch->[_rix_seqno_controlling_ci_] =
+              \@ix_seqno_controlling_ci;
 
             $self->send_lines_to_vertical_aligner();
 
@@ -15007,7 +15091,6 @@ sub total_line_length {
       $summed_lengths_to_go[$ibeg];
 }
 
-
 sub excess_line_length {
 
     # return number of characters by which a line of tokens ($ibeg..$iend)
@@ -15018,7 +15101,7 @@ sub excess_line_length {
     my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
 
     # Original expression for line length
-    ##$length = leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend ); 
+    ##$length = leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
 
     # This is basically sub 'leading_spaces_to_go':
     my $indentation = $leading_spaces_to_go[$ibeg];
@@ -15788,14 +15871,15 @@ sub send_lines_to_vertical_aligner {
     }
     my $n_last_line = @{$rlines_K} - 1;
 
-    my $do_not_pad              = $this_batch->[_do_not_pad_];
-    my $peak_batch_size         = $this_batch->[_peak_batch_size_];
-    my $starting_in_quote       = $this_batch->[_starting_in_quote_];
-    my $ending_in_quote         = $this_batch->[_ending_in_quote_];
-    my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
-    my $ibeg0                   = $this_batch->[_ibeg0_];
-    my $rK_to_go                = $this_batch->[_rK_to_go_];
-    my $batch_count             = $this_batch->[_batch_count_];
+    my $do_not_pad               = $this_batch->[_do_not_pad_];
+    my $peak_batch_size          = $this_batch->[_peak_batch_size_];
+    my $starting_in_quote        = $this_batch->[_starting_in_quote_];
+    my $ending_in_quote          = $this_batch->[_ending_in_quote_];
+    my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
+    my $ibeg0                    = $this_batch->[_ibeg0_];
+    my $rK_to_go                 = $this_batch->[_rK_to_go_];
+    my $batch_count              = $this_batch->[_batch_count_];
+    my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
 
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
@@ -15841,7 +15925,7 @@ sub send_lines_to_vertical_aligner {
         $self->flush_vertical_aligner();
     }
 
-    $self->undo_ci( $ri_first, $ri_last );
+    $self->undo_ci( $ri_first, $ri_last, $rix_seqno_controlling_ci );
 
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
@@ -16405,105 +16489,157 @@ sub get_seqno {
     return ($seqno);
 }
 
-sub undo_ci {
+{
+    my %undo_extended_ci;
 
-    # Undo continuation indentation in certain sequences
-    # For example, we can undo continuation indentation in sort/map/grep chains
-    #    my $dat1 = pack( "n*",
-    #        map { $_, $lookup->{$_} }
-    #          sort { $a <=> $b }
-    #          grep { $lookup->{$_} ne $default } keys %$lookup );
-    # To align the map/sort/grep keywords like this:
-    #    my $dat1 = pack( "n*",
-    #        map { $_, $lookup->{$_} }
-    #        sort { $a <=> $b }
-    #        grep { $lookup->{$_} ne $default } keys %$lookup );
-    my ( $self, $ri_first, $ri_last ) = @_;
-    my ( $line_1, $line_2, $lev_last );
-    my $this_line_is_semicolon_terminated;
-    my $max_line = @{$ri_first} - 1;
+    sub initialize_undo_ci {
+        %undo_extended_ci = ();
+    }
 
-    # looking at each line of this batch..
-    # We are looking at leading tokens and looking for a sequence
-    # all at the same level and higher level than enclosing lines.
-    foreach my $line ( 0 .. $max_line ) {
+    sub undo_ci {
 
-        my $ibeg = $ri_first->[$line];
-        my $lev  = $levels_to_go[$ibeg];
-        if ( $line > 0 ) {
+        # Undo continuation indentation in certain sequences
+        my ( $self, $ri_first, $ri_last, $rix_seqno_controlling_ci ) = @_;
+        my ( $line_1, $line_2, $lev_last );
+        my $this_line_is_semicolon_terminated;
+        my $max_line = @{$ri_first} - 1;
 
-            # if we have started a chain..
-            if ($line_1) {
+        my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
 
-                # see if it continues..
-                if ( $lev == $lev_last ) {
-                    if (   $types_to_go[$ibeg] eq 'k'
-                        && $is_sort_map_grep{ $tokens_to_go[$ibeg] } )
-                    {
+        # Loop over all lines of the batch ...
+        foreach my $line ( 0 .. $max_line ) {
 
-                        # chain continues...
-                        # check for chain ending at end of a statement
-                        if ( $line == $max_line ) {
+            ####################################
+            # SECTION 1: Undo needless common CI
+            ####################################
 
-                            # see of this line ends a statement
-                            my $iend = $ri_last->[$line];
-                            $this_line_is_semicolon_terminated =
-                              $types_to_go[$iend] eq ';'
+         # We are looking at leading tokens and looking for a sequence
+         # all at the same level and all at a higher level than enclosing lines.
 
-                              # with possible side comment
-                              || ( $types_to_go[$iend] eq '#'
-                                && $iend - $ibeg >= 2
-                                && $types_to_go[ $iend - 2 ] eq ';'
-                                && $types_to_go[ $iend - 1 ] eq 'b' );
+            # For example, we can undo continuation indentation in sort/map/grep
+            # chains
+
+            #    my $dat1 = pack( "n*",
+            #        map { $_, $lookup->{$_} }
+            #          sort { $a <=> $b }
+            #          grep { $lookup->{$_} ne $default } keys %$lookup );
+
+            # to become
+
+            #    my $dat1 = pack( "n*",
+            #        map { $_, $lookup->{$_} }
+            #        sort { $a <=> $b }
+            #        grep { $lookup->{$_} ne $default } keys %$lookup );
+
+            my $ibeg = $ri_first->[$line];
+            my $lev  = $levels_to_go[$ibeg];
+            if ( $line > 0 ) {
+
+                # if we have started a chain..
+                if ($line_1) {
+
+                    # see if it continues..
+                    if ( $lev == $lev_last ) {
+                        if (   $types_to_go[$ibeg] eq 'k'
+                            && $is_sort_map_grep{ $tokens_to_go[$ibeg] } )
+                        {
+
+                            # chain continues...
+                            # check for chain ending at end of a statement
+                            if ( $line == $max_line ) {
+
+                                # see of this line ends a statement
+                                my $iend = $ri_last->[$line];
+                                $this_line_is_semicolon_terminated =
+                                  $types_to_go[$iend] eq ';'
+
+                                  # with possible side comment
+                                  || ( $types_to_go[$iend] eq '#'
+                                    && $iend - $ibeg >= 2
+                                    && $types_to_go[ $iend - 2 ] eq ';'
+                                    && $types_to_go[ $iend - 1 ] eq 'b' );
+                            }
+                            $line_2 = $line
+                              if ($this_line_is_semicolon_terminated);
                         }
-                        $line_2 = $line if ($this_line_is_semicolon_terminated);
+                        else {
+
+                            # kill chain
+                            $line_1 = undef;
+                        }
                     }
-                    else {
+                    elsif ( $lev < $lev_last ) {
+
+                        # chain ends with previous line
+                        $line_2 = $line - 1;
+                    }
+                    elsif ( $lev > $lev_last ) {
 
                         # kill chain
                         $line_1 = undef;
                     }
+
+                    # undo the continuation indentation if a chain ends
+                    if ( defined($line_2) && defined($line_1) ) {
+                        my $continuation_line_count = $line_2 - $line_1 + 1;
+                        @ci_levels_to_go[ @{$ri_first}[ $line_1 .. $line_2 ] ]
+                          = (0) x ($continuation_line_count)
+                          if ( $continuation_line_count >= 0 );
+                        @leading_spaces_to_go[ @{$ri_first}
+                          [ $line_1 .. $line_2 ] ] =
+                          @reduced_spaces_to_go[ @{$ri_first}
+                          [ $line_1 .. $line_2 ] ];
+                        $line_1 = undef;
+                    }
                 }
-                elsif ( $lev < $lev_last ) {
 
-                    # chain ends with previous line
-                    $line_2 = $line - 1;
-                }
-                elsif ( $lev > $lev_last ) {
+                # not in a chain yet..
+                else {
 
-                    # kill chain
-                    $line_1 = undef;
-                }
-
-                # undo the continuation indentation if a chain ends
-                if ( defined($line_2) && defined($line_1) ) {
-                    my $continuation_line_count = $line_2 - $line_1 + 1;
-                    @ci_levels_to_go[ @{$ri_first}[ $line_1 .. $line_2 ] ] =
-                      (0) x ($continuation_line_count)
-                      if ( $continuation_line_count >= 0 );
-                    @leading_spaces_to_go[ @{$ri_first}[ $line_1 .. $line_2 ] ]
-                      = @reduced_spaces_to_go[ @{$ri_first}
-                      [ $line_1 .. $line_2 ] ];
-                    $line_1 = undef;
-                }
-            }
-
-            # not in a chain yet..
-            else {
-
-                # look for start of a new sort/map/grep chain
-                if ( $lev > $lev_last ) {
-                    if (   $types_to_go[$ibeg] eq 'k'
-                        && $is_sort_map_grep{ $tokens_to_go[$ibeg] } )
-                    {
-                        $line_1 = $line;
+                    # look for start of a new sort/map/grep chain
+                    if ( $lev > $lev_last ) {
+                        if (   $types_to_go[$ibeg] eq 'k'
+                            && $is_sort_map_grep{ $tokens_to_go[$ibeg] } )
+                        {
+                            $line_1 = $line;
+                        }
                     }
                 }
             }
+
+            #########################################################
+            # SECTION 2: Undo ci set by sub extended_ci if not needed
+            #########################################################
+
+            # Undo the ci of the leading token if its controlling token
+            # went out on a previous line without ci
+            if ( $ci_levels_to_go[$ibeg] ) {
+                my $Kbeg  = $K_to_go[$ibeg];
+                my $seqno = $rseqno_which_extended_ci->{$Kbeg};
+                if ( $seqno && $undo_extended_ci{$seqno} ) {
+                    $ci_levels_to_go[$ibeg]      = 0;
+                    $leading_spaces_to_go[$ibeg] = $reduced_spaces_to_go[$ibeg];
+                }
+            }
+
+            # Flag any controlling opening tokens in lines without ci.
+            # This will be used later in the above if statement to undo the
+            # ci which they added.
+            elsif ( @{$rix_seqno_controlling_ci} ) {
+                my $iend = $ri_last->[$line];
+                foreach my $i ( @{$rix_seqno_controlling_ci} ) {
+                    next if ( $i < $ibeg );
+                    last if ( $i > $iend );
+                    my $seqno = $type_sequence_to_go[$i];
+                    $undo_extended_ci{$seqno} = 1;
+                }
+            }
+
+            $lev_last = $lev;
         }
-        $lev_last = $lev;
+
+        return;
     }
-    return;
 }
 
 {    ## begin closure set_logical_padding
