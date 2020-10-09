@@ -4471,7 +4471,8 @@ sub respace_tokens {
         my $type_sequence = $item->[_TYPE_SEQUENCE_];
         if ($type_sequence) {
 
-            $link_back->( $KK_new, _KNEXT_SEQ_ITEM_ );
+            ## moved below, this was very slow
+            ##$link_back->( $KK_new, _KNEXT_SEQ_ITEM_ );
 
             my $token = $item->[_TOKEN_];
             if ( $is_opening_token{$token} ) {
@@ -4492,8 +4493,14 @@ sub respace_tokens {
                     $K_closing_ternary->{$type_sequence} = $KK_new;
                 }
                 else {
-                    # shouldn't happen
-                    Fault("Ugh: shouldn't happen");
+
+                    # We really shouldn't arrive here, just being cautious:
+		    # The only sequenced types output by the tokenizer are the
+		    # opening & closing containers and the ternary types.
+                    my $type = $item->[_TYPE_];
+                    Fault(
+"Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
+                    );
                 }
             }
         }
@@ -5272,6 +5279,16 @@ sub respace_tokens {
 
         }    # End token loop
     }    # End line loop
+
+    # Walk backwards through the tokens, making forward links to sequence items
+    # This replaces calls to sub link_back above, which was inefficient.
+    if ( @{$rLL_new} ) {
+        my $KNEXT;
+        for ( my $KK = @{$rLL_new} - 1 ; $KK >= 0 ; $KK-- ) {
+            $rLL_new->[$KK]->[_KNEXT_SEQ_ITEM_] = $KNEXT;
+            if ( $rLL_new->[$KK]->[_TYPE_SEQUENCE_] ) { $KNEXT = $KK }
+        }
+    }
 
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
