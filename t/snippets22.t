@@ -8,6 +8,9 @@
 #5 bbhb.bbhb4
 #6 bbhb.bbhb5
 #7 braces.braces7
+#8 xci.def
+#9 xci.xci1
+#10 xci.xci2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -34,6 +37,8 @@ BEGIN {
 ----------
         'def'       => "",
         'here_long' => "-l=33",
+        'xci1'      => "-xci",
+        'xci2'      => "-pbp -nst -nse -xci",
     };
 
     ############################
@@ -109,6 +114,31 @@ $sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
     FROM logins WHERE username='$user'
 END_OF_SELECT
 
+----------
+
+        'xci' => <<'----------',
+$self->{_text} = (
+  !$section  ? ''
+ : $type eq 'item' ? "the $section entry"
+ : "the section on $section"
+ )
+ . (
+ $page
+ ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+ : ' elsewhere in this document'
+ );
+
+my $otherHashRef =
+ $condition
+ ? {
+ 'a' => 'a value',
+ 'b' => 'b value',
+ 'c' => {
+  'd' => 'd value',
+  'e' => 'e value'
+ }
+ }
+ : undef;
 ----------
     };
 
@@ -274,6 +304,91 @@ catch
     die;
   };
 #7...........
+        },
+
+        'xci.def' => {
+            source => "xci",
+            params => "def",
+            expect => <<'#8...........',
+$self->{_text} = (
+     !$section        ? ''
+    : $type eq 'item' ? "the $section entry"
+    :                   "the section on $section"
+  )
+  . (
+    $page
+    ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+    : ' elsewhere in this document'
+  );
+
+my $otherHashRef =
+  $condition
+  ? {
+    'a' => 'a value',
+    'b' => 'b value',
+    'c' => {
+        'd' => 'd value',
+        'e' => 'e value'
+    }
+  }
+  : undef;
+#8...........
+        },
+
+        'xci.xci1' => {
+            source => "xci",
+            params => "xci1",
+            expect => <<'#9...........',
+$self->{_text} = (
+     !$section        ? ''
+    : $type eq 'item' ? "the $section entry"
+    :                   "the section on $section"
+  )
+  . (
+      $page
+      ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+      : ' elsewhere in this document'
+  );
+
+my $otherHashRef =
+  $condition
+  ? {
+      'a' => 'a value',
+      'b' => 'b value',
+      'c' => {
+          'd' => 'd value',
+          'e' => 'e value'
+      }
+  }
+  : undef;
+#9...........
+        },
+
+        'xci.xci2' => {
+            source => "xci",
+            params => "xci2",
+            expect => <<'#10...........',
+$self->{_text} = (
+     !$section        ? ''
+    : $type eq 'item' ? "the $section entry"
+    :                   "the section on $section"
+    )
+    . ( $page
+        ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+        : ' elsewhere in this document'
+    );
+
+my $otherHashRef
+    = $condition
+    ? { 'a' => 'a value',
+        'b' => 'b value',
+        'c' => {
+            'd' => 'd value',
+            'e' => 'e value'
+        }
+    }
+    : undef;
+#10...........
         },
     };
 

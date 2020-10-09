@@ -1,0 +1,22 @@
+$self->{_text} = (
+     !$section        ? ''
+    : $type eq 'item' ? "the $section entry"
+    :                   "the section on $section"
+  )
+  . (
+      $page
+      ? ( $section ? ' in ' : '' ) . "the $page$page_ext manpage"
+      : ' elsewhere in this document'
+  );
+
+my $otherHashRef =
+  $condition
+  ? {
+      'a' => 'a value',
+      'b' => 'b value',
+      'c' => {
+          'd' => 'd value',
+          'e' => 'e value'
+      }
+  }
+  : undef;
