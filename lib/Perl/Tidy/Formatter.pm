@@ -16503,6 +16503,7 @@ sub get_seqno {
 
     sub initialize_undo_ci {
         %undo_extended_ci = ();
+        return;
     }
 
     sub undo_ci {
