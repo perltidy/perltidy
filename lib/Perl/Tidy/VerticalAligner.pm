@@ -2438,7 +2438,7 @@ EOM
                 my ( $raw_tok, $lev, $tag, $tok_count ) =
                   decode_alignment_token($tok);
 
-                if ( $tok !~ /^[#]$/ ) {
+                if ( $tok ne '#' ) {
                     if ( !defined($lev_min) ) {
                         $lev_min = $lev;
                         $lev_max = $lev;
@@ -2575,6 +2575,7 @@ EOM
                 if ( $token_line_count{$tok} == $nlines ) {
                     if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
                         $is_full_block = 1;
+                        last;
                     }
                 }
             }
@@ -3879,12 +3880,11 @@ sub combine_fields {
 
 sub get_output_line_number {
 
-    # the output line number reported to a caller is the number of items
-    # written plus the number of items in the buffer
-    my $self               = shift;
-    my $nlines             = $self->group_line_count();
-    my $file_writer_object = $self->[_file_writer_object_];
-    return $nlines + $file_writer_object->get_output_line_number();
+    # The output line number reported to a caller = 
+    # the number of items still in the buffer +
+    # the number of items written.
+    return $_[0]->group_line_count() +
+      $_[0]->[_file_writer_object_]->get_output_line_number();
 }
 
 ###############################

@@ -5524,14 +5524,6 @@ sub resync_lines_and_tokens {
         $inext = $rLL->[$Knext]->[_LINE_INDEX_];
     }
 
-    my $get_inext = sub {
-        if ( $Knext < 0 || $Knext > $Kmax ) { $inext = undef }
-        else {
-            $inext = $rLL->[$Knext]->[_LINE_INDEX_];
-        }
-        return $inext;
-    };
-
     # Remember the most recently output token index
     my $Klast_out;
 
@@ -5543,11 +5535,17 @@ sub resync_lines_and_tokens {
 
             my @K_array;
             my $rK_range;
-            $inext = $get_inext->();
-            while ( defined($inext) && $inext <= $iline ) {
-                push @{K_array}, $Knext;
-                $Knext += 1;
-                $inext = $get_inext->();
+            if ( $Knext <= $Kmax ) {
+                $inext = $rLL->[$Knext]->[_LINE_INDEX_];
+                while ( $inext <= $iline ) {
+                    push @{K_array}, $Knext;
+                    $Knext += 1;
+                    if ( $Knext > $Kmax ) {
+                        $inext = undef;
+                        last;
+                    }
+                    $inext = $rLL->[$Knext]->[_LINE_INDEX_];
+                }
             }
 
             # Delete any terminal blank token
@@ -6680,8 +6678,8 @@ sub non_indenting_braces {
     };
 
     foreach my $KK ( 0 .. $Kmax ) {
+        my $num = @seqno_stack;
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        my $num   = @seqno_stack;
         if ($seqno) {
             my $token = $rLL->[$KK]->[_TOKEN_];
             if ( $token eq '{' && $is_non_indenting_brace->($KK) ) {
@@ -6692,6 +6690,7 @@ sub non_indenting_braces {
                 $num -= 1;
             }
         }
+        next unless $num;
         $radjusted_levels->[$KK] -= $num;
     }
     return;
