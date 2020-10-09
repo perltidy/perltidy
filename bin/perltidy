@@ -725,9 +725,7 @@ B<-ola>, and control keywords, B<-okw>.
 When default values are not used, it is recommended that either 
 
 (1) the value B<n> given with B<-ci=n> be no more than about one-half of the
-number of spaces assigned to a full indentation level on the B<-i=n> command,
-
-or
+number of spaces assigned to a full indentation level on the B<-i=n> command, or
 
 (2) the flag B<-extended-continuation-indentation> is used (see next section).
 
@@ -741,47 +739,13 @@ indentation, you will probably want to set this flag.
 Here is an explanation. There are two common strategies for continuation
 indentation.  One is the strategy recommend in the original perl style
 guidelines, in which B<-ci=2> and B<-i=4>.  The other is the strategy is the
-strategy recommended in the Perl Best Practices (B<pbp>) by Conway, in which
+strategy recommended in the Perl Best Practices (B<-pbp>) by Conway, in which
 B<-ci=4> and B<-i=4>.  The default formatting in perltidy works fairly well
-with the orignal perl style, but it runs into problems with the B<pbp> style. 
-The B<-xci> flag was added to fix this.
+with the orignal perl style, but problems arise when B<-ci> and B<-i> are given
+equal values as in the B<pbp> style, particularly with ternary statements.  The
+B<-xci> flag was added to fix this.
 
-To illustrate,
-
-        # perltidy default (-ci=2 -i=4)
-        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
-          or (  /^GLpic$/
-            and $dv = "PDL::Graphics::TriD::GL"
-            and $PDL::Graphics::TriD::offline = 1 )
-          or (  /^VRML$/
-            and $dv = "PDL::Graphics::TriD::VRML"
-            and $PDL::Graphics::TriD::offline = 1 )
-          or ( die "Invalid PDL 3D device '$_' specified!" );
-
-        # perltidy -pbp
-        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
-            or (/^GLpic$/
-            and $dv = "PDL::Graphics::TriD::GL"
-            and $PDL::Graphics::TriD::offline = 1 )
-            or (/^VRML$/
-            and $dv = "PDL::Graphics::TriD::VRML"
-            and $PDL::Graphics::TriD::offline = 1 )
-            or ( die "Invalid PDL 3D device '$_' specified!" );
-
-        # perltidy -pbp -xci
-        ( /^GL$/ and $dv = "PDL::Graphics::TriD::GL" )
-            or (    /^GLpic$/
-                and $dv = "PDL::Graphics::TriD::GL"
-                and $PDL::Graphics::TriD::offline = 1 )
-            or (    /^VRML$/
-                and $dv = "PDL::Graphics::TriD::VRML"
-                and $PDL::Graphics::TriD::offline = 1 )
-            or ( die "Invalid PDL 3D device '$_' specified!" );
-
-In this last case the B<-xci> flag has helped show the structure by extending
-the continuation indentation down into the structures.  It may be used in all
-cases, but is particularly useful when B<-ci=n> and B<-i=n> are equal.  Another
-example is given in the discussion of the B<-pbp> flag.
+For an illustration, please see the section on the B<--perl-best-practices> flag.
 
 =item B<-sil=n> B<--starting-indentation-level=n>   
 
@@ -2985,6 +2949,26 @@ or C<or>, then the container will remain broken.  Also, breaks
 at internal keywords C<if> and C<unless> will normally be retained.
 To prevent this, and thus form longer lines, use B<-nbol>.
 
+Please note that this flag does not duplicate old logical breakpoints.  They
+are merely used as a hint with this flag that a statement should remain
+broken.  Without this flag, perltidy will normally try to combine relatively
+short expressions into a single line.
+
+For example, given this snippet:
+
+    return unless $cmd = $cmd || ($dot 
+        && $Last_Shell) || &prompt('|');
+
+    # perltidy -bol [default]
+    return
+      unless $cmd = $cmd
+      || ( $dot
+        && $Last_Shell )
+      || &prompt('|');
+
+    # perltidy -nbol
+    return unless $cmd = $cmd || ( $dot && $Last_Shell ) || &prompt('|');
+
 =item B<-bom>,  B<--break-at-old-method-breakpoints>
 
 By default, a method call arrow C<-E<gt>> is considered a candidate for
@@ -3508,9 +3492,10 @@ perltidy act as a filter on one file only.  These can be overridden by placing
 B<-nst> and/or B<-nse> after the -pbp parameter. 
 
 Also note that the value of continuation indentation, -ci=4, is equal to the
-value of the full indentation, -i=4.  It is recommended that the either (1)
-the parameter B<-ci=2> be used or the flag B<-xci> be set.  The following snippet
-illustrates these options.
+value of the full indentation, -i=4.  It is recommended that the either (1) the
+parameter B<-ci=2> be used instead, or the flag B<-xci> be set.  This will help
+show structure, particularly when there are ternary statements. The following
+snippet illustrates these options.
 
     # perltidy -pbp
     $self->{_text} = (
@@ -3547,13 +3532,14 @@ illustrates these options.
             : ' elsewhere in this document'
         );
 
+The B<-xci> flag was developed after the B<-pbp> parameters were published so you need
+to include it separately.
 
 =item  One-line blocks 
 
 There are a few points to note regarding one-line blocks.  A one-line
 block is something like this,
 
-	if ($x > 0) { $y = 1 / $x }  
 
 where the contents within the curly braces is short enough to fit
 on a single line.
