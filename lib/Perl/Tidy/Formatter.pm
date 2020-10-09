@@ -312,6 +312,7 @@ BEGIN {
         _K_closing_container_     => $i++,
         _K_opening_ternary_       => $i++,
         _K_closing_ternary_       => $i++,
+        _K_first_seq_item_        => $i++,
         _rK_phantom_semicolons_   => $i++,
         _rtype_count_by_seqno_    => $i++,
         _ris_broken_container_    => $i++,
@@ -608,6 +609,7 @@ sub new {
     $self->[_K_closing_container_] = {};    # for quickly traversing structure
     $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
     $self->[_K_closing_ternary_]   = {};    # for quickly traversing structure
+    $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
     $self->[_rtype_count_by_seqno_]  = {};
@@ -4272,9 +4274,6 @@ sub dump_verbatim {
         # Handle a block (full-line) comment..
         if ($is_block_comment) {
 
-            # TRIM COMMENTS -- This could be turned off as a option
-            $rLL->[$Kfirst]->[_TOKEN_] =~ s/\s*$//;    # trim right end
-
             if ($is_static_block_comment_without_leading_space) {
                 return 'SBCX';
             }
@@ -4441,22 +4440,6 @@ sub respace_tokens {
     my $rparent_of_seqno      = {};
     my $rchildren_of_seqno    = {};
 
-    # a sub to link preceding nodes forward to a new node type
-    my $link_back = sub {
-        my ( $Ktop, $key ) = @_;
-
-        my $Kprev = $Ktop - 1;
-        while ( $Kprev >= 0
-            && !defined( $rLL_new->[$Kprev]->[$key] ) )
-        {
-            $rLL_new->[$Kprev]->[$key] = $Ktop;
-            $Kprev -= 1;
-        }
-    };
-
-    # A sub to store one token in the new array
-    # All new tokens must be stored by this sub so that it can update
-    # all data structures on the fly.
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
     my $last_nonblank_block_type = '';
@@ -4470,9 +4453,6 @@ sub respace_tokens {
         # check for a sequenced item (i.e., container or ?/:)
         my $type_sequence = $item->[_TYPE_SEQUENCE_];
         if ($type_sequence) {
-
-            ## moved below, this was very slow
-            ##$link_back->( $KK_new, _KNEXT_SEQ_ITEM_ );
 
             my $token = $item->[_TOKEN_];
             if ( $is_opening_token{$token} ) {
@@ -5288,6 +5268,7 @@ sub respace_tokens {
             $rLL_new->[$KK]->[_KNEXT_SEQ_ITEM_] = $KNEXT;
             if ( $rLL_new->[$KK]->[_TYPE_SEQUENCE_] ) { $KNEXT = $KK }
         }
+        $self->[_K_first_seq_item_] = $KNEXT;
     }
 
     # Reset memory to be the new array
