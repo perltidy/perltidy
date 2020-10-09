@@ -25,6 +25,9 @@ severity = 4
 # Nested subs are needed for error handling in Tidy.pm. 
 [-Subroutines::ProhibitNestedSubs]
 
+# In critical routines this can significantly reduce processing speed
+[-Subroutines::RequireArgUnpacking]
+
 # constants are needed for clean array indexing.
 [-ValuesAndExpressions::ProhibitConstantPragma]
 
