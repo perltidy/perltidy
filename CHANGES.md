@@ -1,6 +1,10 @@
 # Perltidy Change Log
 
+## 2020 10 01.01
+
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
+
+    - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
 
     - Fix issue git #41, typo in manual regarding -fsb
 

@@ -12,8 +12,48 @@
 
 
 <ul id="index">
+  <li><a href="#Issues-fixed-after-release-20201001">Issues fixed after release 20201001</a></li>
   <li><a href="#Issues-fixed-after-release-20200907">Issues fixed after release 20200907</a></li>
+  <li><a href="#POD-ERRORS">POD ERRORS</a></li>
 </ul>
+
+<h1 id="Issues-fixed-after-release-20201001">Issues fixed after release 20201001</h1>
+
+<dl>
+
+<dt id="terminal-braces-not-indenting-correctly-with--bli-formatting-issue-git-40"><b>terminal braces not indenting correctly with -bli formatting, issue git #40</b></dt>
+<dd>
+
+<p>This problem is illustrated with the following snippet when run with -bli -blil=&#39;*&#39;</p>
+
+<pre><code>    #-bli -bli list=&#39;*&#39;
+    try
+      {
+        die;
+      }
+    catch
+      {
+        die;
+      };    # &lt;-- this was not indenting</code></pre>
+
+<p>This was due to conflicting rules and was fixed 1 Oct 2020 in commit &#39;fix issue git #40, incorrect closing brace indentation with -bli&#39;, a5aefe9.</p>
+
+<p>At the same time, it was noted that block types sort/map/grep and eval were not following -bli formatting when -blil=&#39;*&#39; and this was fixed. For example, with corrected formatting, we would have</p>
+
+<pre><code>  # perltidy -bli -blil=&#39;*&#39;
+    eval
+      {
+        my $app = App::perlbrew-&gt;new( &quot;install-patchperl&quot;, &quot;-q&quot; );
+        $app-&gt;run();
+      }
+      or do
+      {
+        $error          = $@;
+        $produced_error = 1;
+      };</code></pre>
+
+</dd>
+</dl>
 
 <h1 id="Issues-fixed-after-release-20200907">Issues fixed after release 20200907</h1>
 
@@ -381,6 +421,26 @@
 <pre><code> Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4022.
  Use of uninitialized value $Kon in array element at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.
  Use of uninitialized value $Ko in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.</code></pre>
+
+</dd>
+</dl>
+
+<h1 id="POD-ERRORS">POD ERRORS</h1>
+
+<p>Hey! <b>The above document had some coding errors, which are explained below:</b></p>
+
+<dl>
+
+<dt id="Around-line-3">Around line 3:</dt>
+<dd>
+
+<p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
+
+</dd>
+<dt id="Around-line-36">Around line 36:</dt>
+<dd>
+
+<p>You forgot a &#39;=back&#39; before &#39;=head1&#39;</p>
 
 </dd>
 </dl>

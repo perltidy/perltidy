@@ -556,7 +556,21 @@
 
 <p>The value given to <b>-ci</b> is also used by some commands when a small space is required. Examples are commands for outdenting labels, <b>-ola</b>, and control keywords, <b>-okw</b>.</p>
 
-<p>When default values are not used, it is highly recommended that the value <b>n</b> given with <b>-ci=n</b> be no more than about one-half of the number of spaces assigned to a full indentation level on the <b>-i=n</b> command. The reason is that discontinuities in the definition and control of continuation indentation arise in complex code, and this rule helps to smooth out these discontinuities.</p>
+<p>When default values are not used, it is recommended that either</p>
+
+<p>(1) the value <b>n</b> given with <b>-ci=n</b> be no more than about one-half of the number of spaces assigned to a full indentation level on the <b>-i=n</b> command, or</p>
+
+<p>(2) the flag <b>-extended-continuation-indentation</b> is used (see next section).</p>
+
+</dd>
+<dt id="xci---extended-continuation-indentation"><b>-xci</b>, <b>--extended-continuation-indentation</b></dt>
+<dd>
+
+<p>This flag causes continuation indentation to &quot;extend&quot; deeper into structures. If you use <b>-ci=n</b> and <b>-i=n</b> with the same value of <b>n</b> you will probably want to set this flag. Since this is a fairly new flag, the default is <b>-nxci</b> to avoid disturbing existing formatting.</p>
+
+<p>Here is an explanation. There are two common strategies for continuation indentation. One is the strategy recommend in the original perl style guidelines, in which <b>-ci=2</b> and <b>-i=4</b>. The other is the strategy is the strategy recommended for example in the &quot;Perl Best Practices&quot; book by Conway, in which <b>-ci=4</b> and <b>-i=4</b>. The default formatting in perltidy works fairly well with the orignal perl style, but problems arise when <b>-ci</b> and <b>-i</b> are given equal values as in the <b>pbp</b> style, particularly with ternary statements. The <b>-xci</b> flag was added to fix this. It may be used with any value of <b>-ci</b> but is particularly helpful when <b>-ci</b> and <b>-i</b> are given similar values.</p>
+
+<p>For an illustration, please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a>.</p>
 
 </dd>
 <dt id="sil-n---starting-indentation-level-n"><b>-sil=n</b> <b>--starting-indentation-level=n</b></dt>
@@ -914,6 +928,21 @@
 <pre><code>  # perltidy -nwrs=&#39;-&#39;
   my @newkeys = map $_ -$nrecs + @data, @oldkeys;</code></pre>
 
+<p>For another example, the following two lines will be parsed without syntax error:</p>
+
+<pre><code>  # original programming, syntax ok
+  for my $severity ( reverse $SEVERITY_LOWEST+1 .. $SEVERITY_HIGHEST ) { ...  }
+
+  # perltidy default, syntax ok
+  for my $severity ( reverse $SEVERITY_LOWEST + 1 .. $SEVERITY_HIGHEST ) { ... }</code></pre>
+
+<p>But the following will give a syntax error:</p>
+
+<pre><code>  # perltidy -nwrs=&#39;+&#39;, syntax error:
+  for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }</code></pre>
+
+<p>To avoid subtle parsing problems like this, it is best to avoid spacing a binary operator asymetrically with a space on the left but not on the right.</p>
+
 </dd>
 <dt id="Space-between-specific-keywords-and-opening-paren">Space between specific keywords and opening paren</dt>
 <dd>
@@ -965,10 +994,10 @@
 
 <p>The reason this is not recommended is that spacing a function paren can make a program vulnerable to parsing problems by Perl. For example, the following two-line program will run as written but will have a syntax error if reformatted with -sfp:</p>
 
-<pre><code>  if ( -e filename() ) { print &quot;exists\n&quot;; }
+<pre><code>  if ( -e filename() ) { print &quot;I&#39;m here\n&quot;; }
   sub filename { return $0 }</code></pre>
 
-<p>The syntax error can be removed if the line order is reversed, so that Perl parses &#39;sub filename&#39; first.</p>
+<p>In this particular case the syntax error can be removed if the line order is reversed, so that Perl parses &#39;sub filename&#39; first.</p>
 
 </dd>
 <dt id="spp-n-or---space-prototype-paren-n"><b>-spp=n</b> or <b>--space-prototype-paren=n</b></dt>
@@ -1462,7 +1491,7 @@
 <dt id="fse-string---format-skipping-end-string"><b>-fse=string</b>, <b>--format-skipping-end=string</b></dt>
 <dd>
 
-<p>The <b>-fsb=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&lt;&lt;&lt;&#39;.</p>
+<p>The <b>-fse=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&lt;&lt;&lt;&#39;.</p>
 
 <p>The beginning and ending strings may be the same, but it is preferable to make them different for clarity.</p>
 
@@ -2306,6 +2335,23 @@
 
 <p>By default, if a logical expression is broken at a <code>&amp;&amp;</code>, <code>||</code>, <code>and</code>, or <code>or</code>, then the container will remain broken. Also, breaks at internal keywords <code>if</code> and <code>unless</code> will normally be retained. To prevent this, and thus form longer lines, use <b>-nbol</b>.</p>
 
+<p>Please note that this flag does not duplicate old logical breakpoints. They are merely used as a hint with this flag that a statement should remain broken. Without this flag, perltidy will normally try to combine relatively short expressions into a single line.</p>
+
+<p>For example, given this snippet:</p>
+
+<pre><code>    return unless $cmd = $cmd || ($dot 
+        &amp;&amp; $Last_Shell) || &amp;prompt(&#39;|&#39;);
+
+    # perltidy -bol [default]
+    return
+      unless $cmd = $cmd
+      || ( $dot
+        &amp;&amp; $Last_Shell )
+      || &amp;prompt(&#39;|&#39;);
+
+    # perltidy -nbol
+    return unless $cmd = $cmd || ( $dot &amp;&amp; $Last_Shell ) || &amp;prompt(&#39;|&#39;);</code></pre>
+
 </dd>
 <dt id="bom---break-at-old-method-breakpoints"><b>-bom</b>, <b>--break-at-old-method-breakpoints</b></dt>
 <dd>
@@ -2713,7 +2759,7 @@
 
 <p>Please note that this parameter set includes -st and -se flags, which make perltidy act as a filter on one file only. These can be overridden by placing <b>-nst</b> and/or <b>-nse</b> after the -pbp parameter.</p>
 
-<p>Also note that the value of continuation indentation, -ci=4, is equal to the value of the full indentation, -i=4. In some complex statements perltidy will produce nicer results with -ci=2. This can be implemented by including -ci=2 after the -pbp parameter. For example,</p>
+<p>Also note that the value of continuation indentation, -ci=4, is equal to the value of the full indentation, -i=4. It is recommended that the either (1) the parameter <b>-ci=2</b> be used instead, or the flag <b>-xci</b> be set. This will help show structure, particularly when there are ternary statements. The following snippet illustrates these options.</p>
 
 <pre><code>    # perltidy -pbp
     $self-&gt;{_text} = (
@@ -2737,15 +2783,26 @@
         $page
         ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page$page_ext manpage&quot;
         : &#39; elsewhere in this document&#39;
-      );</code></pre>
+      );
+
+    # perltidy -pbp -xci
+    $self-&gt;{_text} = (
+         !$section        ? &#39;&#39;
+        : $type eq &#39;item&#39; ? &quot;the $section entry&quot;
+        :                   &quot;the section on $section&quot;
+        )
+        . ( $page
+            ? ( $section ? &#39; in &#39; : &#39;&#39; ) . &quot;the $page$page_ext manpage&quot;
+            : &#39; elsewhere in this document&#39;
+        );</code></pre>
+
+<p>The <b>-xci</b> flag was developed after the <b>-pbp</b> parameters were published so you need to include it separately.</p>
 
 </dd>
 <dt id="One-line-blocks">One-line blocks</dt>
 <dd>
 
 <p>There are a few points to note regarding one-line blocks. A one-line block is something like this,</p>
-
-<pre><code>        if ($x &gt; 0) { $y = 1 / $x }  </code></pre>
 
 <p>where the contents within the curly braces is short enough to fit on a single line.</p>
 
@@ -3313,7 +3370,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20201001</p>
+<p>This man page documents perltidy version 20201001.01</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

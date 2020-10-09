@@ -731,21 +731,23 @@ number of spaces assigned to a full indentation level on the B<-i=n> command, or
 
 =item B<-xci>, B<--extended-continuation-indentation>
 
-This flag causes continuation indentation to "extend" deeper into containers.
-It is a fairly recent addition and is set off by default to avoid disturbing
-existing formatting.  If you use a continuation indentation equal to the
-indentation, you will probably want to set this flag.  
+This flag causes continuation indentation to "extend" deeper into structures.
+If you use B<-ci=n> and B<-i=n> with the same value of B<n> you will probably
+want to set this flag.  Since this is a fairly new flag, the default is B<-nxci> 
+to avoid disturbing existing formatting.  
 
 Here is an explanation. There are two common strategies for continuation
 indentation.  One is the strategy recommend in the original perl style
 guidelines, in which B<-ci=2> and B<-i=4>.  The other is the strategy is the
-strategy recommended in the Perl Best Practices (B<-pbp>) by Conway, in which
-B<-ci=4> and B<-i=4>.  The default formatting in perltidy works fairly well
-with the orignal perl style, but problems arise when B<-ci> and B<-i> are given
-equal values as in the B<pbp> style, particularly with ternary statements.  The
-B<-xci> flag was added to fix this.
+strategy recommended for example in the "Perl Best Practices" book by Conway,
+in which B<-ci=4> and B<-i=4>.  The default formatting in perltidy works fairly
+well with the orignal perl style, but problems arise when B<-ci> and B<-i> are
+given equal values as in the B<pbp> style, particularly with ternary
+statements.  The B<-xci> flag was added to fix this.  It may be used with
+any value of B<-ci> but is particularly helpful when B<-ci> and B<-i> are given
+similar values.
 
-For an illustration, please see the section on the B<--perl-best-practices> flag.
+For an illustration, please see the section L<"B<-pbp>, B<--perl-best-practices>">.
 
 =item B<-sil=n> B<--starting-indentation-level=n>   
 
@@ -4350,7 +4352,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20201001
+This man page documents perltidy version 20201001.01
 
 =head1 BUG REPORTS
 
