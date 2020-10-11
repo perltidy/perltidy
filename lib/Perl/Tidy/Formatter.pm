@@ -4475,8 +4475,8 @@ sub respace_tokens {
                 else {
 
                     # We really shouldn't arrive here, just being cautious:
-		    # The only sequenced types output by the tokenizer are the
-		    # opening & closing containers and the ternary types.
+                    # The only sequenced types output by the tokenizer are the
+                    # opening & closing containers and the ternary types.
                     my $type = $item->[_TYPE_];
                     Fault(
 "Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
@@ -5698,7 +5698,7 @@ sub weld_cuddled_blocks {
 
     # loop over structure items to find cuddled pairs
     my $level = 0;
-    my $KNEXT = 0;
+    my $KNEXT = $self->[_K_first_seq_item_];
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -6314,7 +6314,7 @@ sub weld_nested_quotes {
     };
 
     # look for single qw quotes nested in containers
-    my $KNEXT = 0;
+    my $KNEXT = $self->[_K_first_seq_item_];
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -6504,7 +6504,7 @@ sub mark_short_nested_blocks {
     # loop over all containers
     my @open_block_stack;
     my $iline = -1;
-    my $KNEXT = 0;
+    my $KNEXT = $self->[_K_first_seq_item_];
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -6676,7 +6676,7 @@ sub non_indenting_braces {
     };
 
     foreach my $KK ( 0 .. $Kmax ) {
-        my $num = @seqno_stack;
+        my $num   = @seqno_stack;
         my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
         if ($seqno) {
             my $token = $rLL->[$KK]->[_TOKEN_];
@@ -6865,13 +6865,13 @@ sub extended_ci {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
 
-    my $KNEXT = 0;
+    my $KNEXT = $self->[_K_first_seq_item_];
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
 
-	# Certain block types arrive from the tokenizer without CI but should
-	# have it for this option.  These include 'do' and anonymous subs.
+        # Certain block types arrive from the tokenizer without CI but should
+        # have it for this option.  These include 'do' and anonymous subs.
         my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         if ( $block_type && $is_block_with_ci{$block_type} ) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
@@ -6921,7 +6921,7 @@ sub bli_adjustment {
     return unless ( defined($rLL) && @{$rLL} );
     my $ris_bli_container   = $self->[_ris_bli_container_];
     my $K_opening_container = $self->[_K_opening_container_];
-    my $KNEXT               = 0;
+    my $KNEXT               = $self->[_K_first_seq_item_];
 
     while ( defined($KNEXT) ) {
         my $KK = $KNEXT;
@@ -7739,8 +7739,9 @@ sub prepare_for_next_batch {
 
         # Add one token to the next batch.
 
-        # This routine needs to be coded efficiently because it is called
-        # once per token.
+        # NOTE: This routine needs to be coded efficiently because it is called
+        # once per token.  I have gotten it down from the second slowest to the
+        # eighth slowest, but that still seems rather slow for what it does.
 
         # These closure variables have already been defined,
         # for efficiency.
@@ -7816,8 +7817,7 @@ sub prepare_for_next_batch {
         #   summed_lengths_to_go[$i]   = total length to just before token $i
         #   summed_lengths_to_go[$i+1] = total length to just after token $i
         $summed_lengths_to_go[ $max_index_to_go + 1 ] =
-          $summed_lengths_to_go[$max_index_to_go] +
-          $token_lengths_to_go[$max_index_to_go];
+          $summed_lengths_to_go[$max_index_to_go] + $length;
 
         my $in_continued_quote =
           ( $Ktoken_vars == $K_first ) && $line_of_tokens->{_starting_in_quote};
@@ -7825,20 +7825,19 @@ sub prepare_for_next_batch {
             $starting_in_quote = $in_continued_quote;
         }
 
-        # Define the indentation that this token would have if it started
-        # a new line.  We start by using the default formula.
-        # First Adjust levels if necessary to recycle whitespace:
-        my $level_wc = $radjusted_levels->[$Ktoken_vars];
-        my $space_count =
-          $ci_level * $rOpts_continuation_indentation +
-          $level_wc * $rOpts_indent_columns;
-        my $ci_spaces = $ci_level > 0 ? $rOpts_continuation_indentation : 0;
+        # Define the indentation that this token will have in two cases:
+        # Without CI = reduced_spaces_to_go
+        # With CI    = leading_spaces_to_go
+        $reduced_spaces_to_go[$max_index_to_go] = my $reduced_spaces =
+          $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
+
+        $leading_spaces_to_go[$max_index_to_go] =
+          $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
+
         if ($in_continued_quote) {
-            $space_count = 0;
-            $ci_spaces   = 0;
+            $leading_spaces_to_go[$max_index_to_go] = 0;
+            $reduced_spaces_to_go[$max_index_to_go] = 0;
         }
-        $leading_spaces_to_go[$max_index_to_go] = $space_count;
-        $reduced_spaces_to_go[$max_index_to_go] = $space_count - $ci_spaces;
 
         # Correct these values if -lp is used
         if ($rOpts_line_up_parentheses) {
@@ -16232,12 +16231,13 @@ sub send_lines_to_vertical_aligner {
         my $max_line = @{$ri_first} - 1;
         my $iend     = $ri_last->[$max_line];
         if ( $iend < $max_index_to_go ) { $iend = $max_index_to_go }
-        for my $i ( 0 .. $iend ) {
-            $ralignment_type_to_go->[$i] = '';
-        }
 
         # nothing to do if we aren't allowed to change whitespace
-        if ( !$rOpts_add_whitespace ) {
+        # or there is only 1 token
+        if ( $iend == 0 || !$rOpts_add_whitespace ) {
+            for my $i ( 0 .. $iend ) {
+                $ralignment_type_to_go->[$i] = '';
+            }
             return $ralignment_type_to_go;
         }
 
@@ -16274,7 +16274,7 @@ sub send_lines_to_vertical_aligner {
                 # do not align tokens at lower level then start of line
                 # except for side comments
                 if (   $levels_to_go[$i] < $levels_to_go[$ibeg]
-                    && $types_to_go[$i] ne '#' )
+                    && $type ne '#' )
                 {
                     $ralignment_type_to_go->[$i] = '';
                     next;
@@ -16630,7 +16630,7 @@ sub get_seqno {
 
                     # but do not undo ci set by the -lp flag
                     if ( !ref( $reduced_spaces_to_go[$ibeg] ) ) {
-                        $ci_levels_to_go[$ibeg]      = 0;
+                        $ci_levels_to_go[$ibeg] = 0;
                         $leading_spaces_to_go[$ibeg] =
                           $reduced_spaces_to_go[$ibeg];
                     }
