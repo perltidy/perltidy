@@ -517,7 +517,11 @@ BEGIN {
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
     # These block types can take ci.  This is used by the -xci option.
-    @q = qw( do sub );
+    # Note that the 'sub' in this list is an anonymous sub.  To be more correct
+    # we could remove sub and use ASUB pattern to also handle a
+    # prototype/signature.  But that would slow things down and would probably
+    # never be useful.
+    @q = qw( do sub eval sort map grep );
     @is_block_with_ci{@q} = (1) x scalar(@q);
 
 }
@@ -6864,49 +6868,82 @@ sub extended_ci {
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
-
+    my @seqno_stack;
+    my $seqno_top;
+    my $KLAST;
     my $KNEXT = $self->[_K_first_seq_item_];
+
     while ( defined($KNEXT) ) {
+
+        # Fix all tokens up to the next sequence item if we are changing CI
+        if ($seqno_top) {
+            my $count = 0;
+            for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
+                my $ci_t = $rLL->[$Kt]->[_CI_LEVEL_];
+                if ( !$ci_t ) {
+                    $rLL->[$Kt]->[_CI_LEVEL_] = 1;
+                    $rseqno_which_extended_ci->{$Kt} = $seqno_top;
+                    $count++;
+                }
+            }
+            $ris_seqno_controlling_ci->{$seqno_top} += $count;
+        }
+
+        $KLAST = $KNEXT;
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
 
+        # Patch to fix some block types...
         # Certain block types arrive from the tokenizer without CI but should
-        # have it for this option.  These include 'do' and anonymous subs.
+        # have it for this option.  These include anonymous subs and
+        #     do sort map grep eval
         my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         if ( $block_type && $is_block_with_ci{$block_type} ) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
         }
 
-        # This is only for containers with ci
-        next unless ( $rLL->[$KK]->[_CI_LEVEL_] );
+        # see if we have reached the end of the current controlling container
+        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        if ( $seqno_top && $seqno == $seqno_top ) {
+            ## $rLL->[$KK]->[_CI_LEVEL_] = 1;  ## should not be necessary
+            $seqno_top = pop @seqno_stack;
+            next;
+        }
 
-        # We are looking for opening containers
-        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        # If this does not have ci, update ci if necessary and continue looking
+        if ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
+            if ($seqno_top) {
+                $rLL->[$KK]->[_CI_LEVEL_] = 1;
+                $rseqno_which_extended_ci->{$KK} = $seqno_top;
+                $ris_seqno_controlling_ci->{$seqno_top}++;
+            }
+            next;
+        }
+
+        # We are looking for opening container tokens with ci
         my $K_opening = $K_opening_container->{$seqno};
         next unless ( defined($K_opening) && $KK == $K_opening );
 
-        # Skip containers which themselves have had ci adjusted
-        # by an outer container
-        next if ( $rseqno_which_extended_ci->{$KK} );
-
-        # Make sure there is a closing container
+        # Make sure there is a corresponding closing container
         # (could be missing if the script has a brace error)
         my $K_closing = $K_closing_container->{$seqno};
         next unless defined($K_closing);
 
-        # Add ci to any interior tokens which do not have it and remember which
-        # container made the change.  We will undo it later if this opening
-        # container token goes out without ci.
-        my $count = 0;
-        for ( my $Kt = $K_opening + 1 ; $Kt < $K_closing ; $Kt++ ) {
-            my $ci_t = $rLL->[$Kt]->[_CI_LEVEL_];
-            if ( !$ci_t ) {
-                $rLL->[$Kt]->[_CI_LEVEL_] = 1;
-                $rseqno_which_extended_ci->{$Kt} = $seqno;
-                $count++;
-            }
-        }
-        $ris_seqno_controlling_ci->{$seqno} = $count;
+        # Require different input lines. This will filter out a large number
+        # of small hash braces and array brackets.  If we accidentally filter
+        # out an important container, it will get fixed on the next pass.
+        next
+          if (
+            $rLL->[$K_opening]->[_LINE_INDEX_] ==
+            $rLL->[$K_closing]->[_LINE_INDEX_]
+            && ( $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
+                $rLL->[$K_opening]->[_CUMULATIVE_LENGTH_] >
+                $rOpts_maximum_line_length )
+          );
+
+        # This becomes the next controlling container
+        push @seqno_stack, $seqno_top if ($seqno_top);
+        $seqno_top = $seqno;
     }
     return;
 }
@@ -16542,6 +16579,7 @@ sub get_seqno {
             #        grep { $lookup->{$_} ne $default } keys %$lookup );
 
             my $ibeg = $ri_first->[$line];
+            my $iend = $ri_last->[$line];
             my $lev  = $levels_to_go[$ibeg];
             if ( $line > 0 ) {
 
@@ -16559,7 +16597,6 @@ sub get_seqno {
                             if ( $line == $max_line ) {
 
                                 # see of this line ends a statement
-                                my $iend = $ri_last->[$line];
                                 $this_line_is_semicolon_terminated =
                                   $types_to_go[$iend] eq ';'
 
@@ -16617,8 +16654,36 @@ sub get_seqno {
                 }
             }
 
+            ######################################
+            # SECTION 2: Undo ci at cuddled blocks
+            ######################################
+
+            # Note that sub set_adjusted_indentation will be called later to
+            # actually do this, but for now we will tentatively mark cuddled
+            # lines with ci=0 so that the the -xci loop which follows will be
+            # correct at cuddles.
+            if (
+                $types_to_go[$ibeg] eq '}'
+                && ( $nesting_depth_to_go[$iend] + 1 ==
+                    $nesting_depth_to_go[$ibeg] )
+              )
+            {
+                my $terminal_type = $types_to_go[$iend];
+                if ( $terminal_type eq '#' && $iend > $ibeg ) {
+                    $terminal_type = $types_to_go[ $iend - 1 ];
+                    if ( $terminal_type eq '#' && $iend - 1 > $ibeg ) {
+                        $terminal_type = $types_to_go[ $iend - 2 ];
+                    }
+                }
+                if ( $terminal_type eq '{' ) {
+                    my $Kbeg = $K_to_go[$ibeg];
+                    $ci_levels_to_go[$ibeg] = 0;
+                    ##$rLL->[$Kbeg]->[_CI_LEVEL_] = 0;
+                }
+            }
+
             #########################################################
-            # SECTION 2: Undo ci set by sub extended_ci if not needed
+            # SECTION 3: Undo ci set by sub extended_ci if not needed
             #########################################################
 
             # Undo the ci of the leading token if its controlling token
@@ -16631,6 +16696,7 @@ sub get_seqno {
                     # but do not undo ci set by the -lp flag
                     if ( !ref( $reduced_spaces_to_go[$ibeg] ) ) {
                         $ci_levels_to_go[$ibeg] = 0;
+                        ##$rLL->[$Kbeg]->[_CI_LEVEL_] = 0;
                         $leading_spaces_to_go[$ibeg] =
                           $reduced_spaces_to_go[$ibeg];
                     }
@@ -16640,8 +16706,7 @@ sub get_seqno {
             # Flag any controlling opening tokens in lines without ci.
             # This will be used later in the above if statement to undo the
             # ci which they added.
-            elsif ( @{$rix_seqno_controlling_ci} ) {
-                my $iend = $ri_last->[$line];
+            if ( !$ci_levels_to_go[$ibeg] && @{$rix_seqno_controlling_ci} ) {
                 foreach my $i ( @{$rix_seqno_controlling_ci} ) {
                     next if ( $i < $ibeg );
                     last if ( $i > $iend );
@@ -17730,6 +17795,12 @@ sub make_paren_name {
         # options that the user has set regarding special indenting and
         # outdenting.
 
+	# This routine is mainly concerned with outdenting closing tokens but
+	# has become a 'catchall' for a variety of special problems involving
+	# ci.  Note that there is some overlap with the functions of sub
+	# undo_ci, which was processed earlier, so care has to be taken to keep
+	# them coordinated.
+
         my (
             $self,       $ibeg,
             $iend,       $rfields,
@@ -17739,8 +17810,9 @@ sub make_paren_name {
             $is_static_block_comment,
         ) = @_;
 
-        my $rLL               = $self->[_rLL_];
-        my $ris_bli_container = $self->[_ris_bli_container_];
+        my $rLL                      = $self->[_rLL_];
+        my $ris_bli_container        = $self->[_ris_bli_container_];
+        my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
@@ -17929,7 +18001,13 @@ sub make_paren_name {
                 if ( !$is_bli_beg && defined($K_next_nonblank) ) {
                     my $lev        = $rLL->[$K_beg]->[_LEVEL_];
                     my $level_next = $rLL->[$K_next_nonblank]->[_LEVEL_];
-                    $adjust_indentation = 1 if ( $level_next < $lev );
+
+                    # and do not undo ci if it was set by the -xci option
+                    $adjust_indentation = 1
+                      if (
+                        $level_next < $lev
+                        && !$rseqno_which_extended_ci->{$K_beg}
+                      );
                 }
 
                 # Patch for RT #96101, in which closing brace of anonymous subs
