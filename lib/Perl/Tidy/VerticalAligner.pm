@@ -244,9 +244,7 @@ sub initialize_for_new_group {
 }
 
 sub group_line_count {
-    my $self   = shift;
-    my $nlines = @{ $self->[_rgroup_lines_] };
-    return $nlines;
+    return +@{ $_[0]->[_rgroup_lines_] };
 }
 
 # interface to Perl::Tidy::Diagnostics routines
@@ -309,15 +307,6 @@ sub get_recoverable_spaces {
     # to get them to line up with their opening parens
     my $indentation = shift;
     return ref($indentation) ? $indentation->get_recoverable_spaces() : 0;
-}
-
-sub make_alignment {
-    my ($col) = @_;
-
-    # make one new alignment at column $col
-    my $alignment =
-      Perl::Tidy::VerticalAligner::Alignment->new( column => $col, );
-    return $alignment;
 }
 
 sub maximum_line_length_for_level {
@@ -478,9 +467,9 @@ sub valign_input {
     my $cached_line_flag = get_cached_line_flag();
     my $cached_seqno     = get_cached_seqno();
     if ($rvertical_tightness_flags) {
-        if (   $self->group_line_count() <= 1
-            && $cached_line_type
+        if (   $cached_line_type
             && $cached_seqno
+            && $self->group_line_count() <= 1
             && $rvertical_tightness_flags->[2]
             && $rvertical_tightness_flags->[2] == $cached_seqno )
         {
@@ -1378,7 +1367,8 @@ sub install_new_alignments {
         $col += $rfield_lengths->[$j];
 
         # create initial alignments for the new group
-        my $alignment = make_alignment($col);    ##, $token );
+        my $alignment =
+          Perl::Tidy::VerticalAligner::Alignment->new( column => $col );
         $new_line->set_alignment( $j, $alignment );
     }
     return;
