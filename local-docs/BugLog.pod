@@ -1,5 +1,49 @@
 =head1 Issues fixed after release 20201001
 
+=item b<fix -bos to keep isolated semicolon breaks after block braces>
+
+The flag B<-bos>,  or B<--break-at-old-semicolon-breakpoints>, keeps breaks
+at old isolated semicolons. For example
+
+    $z = sqrt($x**2 + $y**2)
+      ;
+
+In testing it was found not to be doing this after braces which require
+semicolons, such as 'do' and anonymous subs. This was fixed.  For example
+
+    my $dist = sub {
+        $z = sqrt( $x**2 + $y**2 )
+          ;
+      }
+      ;
+
+=item b<keep break after 'use overload'>
+
+If a line break occurs after B<use overload> then it will now be kept. Previously
+it was dropped.  For example, this would be kept intact:
+
+                use overload
+                    '+' => sub {
+                        print length $_[2], "\n";
+                        my ( $x, $y ) = _order(@_);
+                        Number::Roman->new( int $x + $y );
+                    },
+                    '-' => sub {
+                        my ( $x, $y ) = _order(@_);
+                        Number::Roman->new( int $x - $y );
+                    },
+                    ...
+
+This keeps the list from shifting to the right and can avoid problems in
+formatting the list with certain styles, including with the -xci flag.
+
+=item B<added flag -xci to improve formatting when -ci and -i are equal, issue git #28>
+
+This flag causes continuation indentation to "extend" deeper into structures.
+If you use B<-ci=n> and B<-i=n> with the same value of B<n> you will probably
+want to set this flag.  Since this is a fairly new flag, the default is B<-nxci> 
+to avoid disturbing existing formatting.  
+
 =item B<terminal braces not indenting correctly with -bli formatting, issue git #40>
 
 This problem is illustrated with the following snippet when run with -bli -blil='*'

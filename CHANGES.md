@@ -3,13 +3,20 @@
 ## 2020 10 01.02
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
+      This flag causes continuation indentation to "extend" deeper into structures.
+      If you use B<-ci=n> and B<-i=n> with the same value of B<n> you will probably
+      want to set this flag.  Since this is a fairly new flag, the default is B<-nxci> 
+      to avoid disturbing existing formatting.  
 
     - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
+      The man page was updated to note that it does not cause all logical breakpoints
+      to be replicated in the output file.
 
     - Fix issue git #41, typo in manual regarding -fsb
 
     - Fix issue git #40: when using the -bli option, a closing brace followed by 
-      a semicolon was not being indented.
+      a semicolon was not being indented.  This applies to braces which require 
+      semicolons, such as a 'do' block.
 
 ## 2020 10 01
 
