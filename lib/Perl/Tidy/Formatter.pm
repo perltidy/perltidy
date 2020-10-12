@@ -8662,6 +8662,26 @@ sub prepare_for_next_batch {
 
             # if we are instructed to keep all old line breaks
             || !$rOpts->{'delete-old-newlines'}
+
+            # if this is a line of the form 'use overload'. A break here
+            # in the input file is a good break because it will allow
+            # the operators which follow to be formatted well. Without
+            # this break the formatting with -ci=4 -xci is poor, for example.
+
+            #   use overload
+            #     '+' => sub {
+            #       print length $_[2], "\n";
+            #       my ( $x, $y ) = _order(@_);
+            #       Number::Roman->new( int $x + $y );
+            #     },
+            #     '-' => sub {
+            #       my ( $x, $y ) = _order(@_);
+            #       Number::Roman->new( int $x - $y );
+            #     };
+            || ( $max_index_to_go == 2
+              && $types_to_go[0] eq 'k'
+              && $tokens_to_go[0] eq 'use'
+              && $tokens_to_go[$max_index_to_go] eq 'overload' )
           )
         {
             destroy_one_line_block();
@@ -17959,12 +17979,16 @@ sub make_paren_name {
                         || $levels_to_go[$iend] < $levels_to_go[$ibeg] )
                 )
 
-                # and when the next line is at a lower indentation level
-                # PATCH: and only if the style allows undoing continuation
+                # and when the next line is at a lower indentation level...
+
+                # PATCH #1: and only if the style allows undoing continuation
                 # for all closing token types. We should really wait until
                 # the indentation of the next line is known and then make
                 # a decision, but that would require another pass.
-                || ( $level_jump < 0 && !$some_closing_token_indentation )
+
+                # PATCH #2: and not if this token is under -xci control
+                || ( $level_jump < 0 && !$some_closing_token_indentation 
+                   && !$rseqno_which_extended_ci->{$K_beg} )
 
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
