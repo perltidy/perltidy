@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20201001.01';
+our $VERSION = '20201001.02';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -60,7 +60,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD =~/\bDESTROY$/ );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -3870,7 +3870,7 @@ sub combine_fields {
 
 sub get_output_line_number {
 
-    # The output line number reported to a caller = 
+    # The output line number reported to a caller =
     # the number of items still in the buffer +
     # the number of items written.
     return $_[0]->group_line_count() +

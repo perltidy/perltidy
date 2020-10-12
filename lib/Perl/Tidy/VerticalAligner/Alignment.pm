@@ -10,7 +10,7 @@ use warnings;
 
 { #<<< A non-indenting brace
 
-our $VERSION = '20201001.01';
+our $VERSION = '20201001.02';
 
 #    _column_          # the current column number
 #    _starting_column_ # column number when created

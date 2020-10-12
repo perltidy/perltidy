@@ -49,7 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20201001.01';
+our $VERSION = '20201001.02';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -6893,6 +6893,14 @@ sub extended_ci {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
 
+        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        my $K_opening = $K_opening_container->{$seqno};
+
+        # see if we have reached the end of the current controlling container
+        if ( $seqno_top && $seqno == $seqno_top ) {
+            $seqno_top = pop @seqno_stack;
+        }
+
         # Patch to fix some block types...
         # Certain block types arrive from the tokenizer without CI but should
         # have it for this option.  These include anonymous subs and
@@ -6900,14 +6908,10 @@ sub extended_ci {
         my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
         if ( $block_type && $is_block_with_ci{$block_type} ) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
-        }
-
-        # see if we have reached the end of the current controlling container
-        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        if ( $seqno_top && $seqno == $seqno_top ) {
-            ## $rLL->[$KK]->[_CI_LEVEL_] = 1;  ## should not be necessary
-            $seqno_top = pop @seqno_stack;
-            next;
+            if ($seqno_top) {
+                $rseqno_which_extended_ci->{$KK} = $seqno_top;
+                $ris_seqno_controlling_ci->{$seqno_top}++;
+            }
         }
 
         # If this does not have ci, update ci if necessary and continue looking
@@ -6921,7 +6925,6 @@ sub extended_ci {
         }
 
         # We are looking for opening container tokens with ci
-        my $K_opening = $K_opening_container->{$seqno};
         next unless ( defined($K_opening) && $KK == $K_opening );
 
         # Make sure there is a corresponding closing container
@@ -17795,11 +17798,11 @@ sub make_paren_name {
         # options that the user has set regarding special indenting and
         # outdenting.
 
-	# This routine is mainly concerned with outdenting closing tokens but
-	# has become a 'catchall' for a variety of special problems involving
-	# ci.  Note that there is some overlap with the functions of sub
-	# undo_ci, which was processed earlier, so care has to be taken to keep
-	# them coordinated.
+        # This routine is mainly concerned with outdenting closing tokens but
+        # has become a 'catchall' for a variety of special problems involving
+        # ci.  Note that there is some overlap with the functions of sub
+        # undo_ci, which was processed earlier, so care has to be taken to keep
+        # them coordinated.
 
         my (
             $self,       $ibeg,
@@ -18004,10 +18007,8 @@ sub make_paren_name {
 
                     # and do not undo ci if it was set by the -xci option
                     $adjust_indentation = 1
-                      if (
-                        $level_next < $lev
-                        && !$rseqno_which_extended_ci->{$K_beg}
-                      );
+                      if ( $level_next < $lev
+                        && !$rseqno_which_extended_ci->{$K_beg} );
                 }
 
                 # Patch for RT #96101, in which closing brace of anonymous subs

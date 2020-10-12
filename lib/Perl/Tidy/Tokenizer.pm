@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20201001.01';
+our $VERSION = '20201001.02';
 
 use Perl::Tidy::LineBuffer;
 use Carp;
@@ -188,7 +188,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD =~/\bDESTROY$/ );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================
@@ -4003,7 +4003,7 @@ EOM
 
                 if ( $level_in_tokenizer > $tokenizer_self->[_maximum_level_] )
                 {
-                    $tokenizer_self->[ _maximum_level_ ] = $level_in_tokenizer;
+                    $tokenizer_self->[_maximum_level_] = $level_in_tokenizer;
                 }
 
                 if ($forced_indentation_flag) {

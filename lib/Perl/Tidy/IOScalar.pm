@@ -10,7 +10,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20201001.01';
+our $VERSION = '20201001.02';
 
 sub AUTOLOAD {
 
@@ -18,7 +18,7 @@ sub AUTOLOAD {
     # some diagnostic information.  This sub should never be called
     # except for a programming error.
     our $AUTOLOAD;
-    return if ( $AUTOLOAD =~/\bDESTROY$/ );
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
     print STDERR <<EOM;
 ======================================================================

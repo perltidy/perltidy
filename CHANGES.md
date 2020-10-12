@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2020 10 01.01
+## 2020 10 01.02
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
 
