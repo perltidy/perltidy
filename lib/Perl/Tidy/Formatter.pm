@@ -153,6 +153,7 @@ my (
     $rOpts_comma_arrow_breakpoints,
     $rOpts_maximum_fields_per_table,
     $rOpts_one_line_block_semicolons,
+    $rOpts_break_at_old_semicolon_breakpoints,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1396,6 +1397,8 @@ EOM
     $rOpts_comma_arrow_breakpoints   = $rOpts->{'comma-arrow-breakpoints'};
     $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
     $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
+    $rOpts_break_at_old_semicolon_breakpoints =
+      $rOpts->{'break-at-old-semicolon-breakpoints'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -8583,15 +8586,20 @@ sub prepare_for_next_batch {
             # handle semicolon
             elsif ( $type eq ';' ) {
 
+                my $break_before_semicolon = ( $Ktoken_vars == $K_first )
+                  && $rOpts_break_at_old_semicolon_breakpoints;
+
                 # kill one-line blocks with too many semicolons
                 $semicolons_before_block_self_destruct--;
                 if (
-                    ( $semicolons_before_block_self_destruct < 0 )
+                       $break_before_semicolon
+                    || ( $semicolons_before_block_self_destruct < 0 )
                     || (   $semicolons_before_block_self_destruct == 0
                         && $next_nonblank_token_type !~ /^[b\}]$/ )
                   )
                 {
                     destroy_one_line_block();
+                    $self->end_batch() if ($break_before_semicolon);
                 }
 
                 $self->store_token_to_go($Ktoken_vars);
@@ -8678,10 +8686,10 @@ sub prepare_for_next_batch {
             #       my ( $x, $y ) = _order(@_);
             #       Number::Roman->new( int $x - $y );
             #     };
-            || ( $max_index_to_go == 2
-              && $types_to_go[0] eq 'k'
-              && $tokens_to_go[0] eq 'use'
-              && $tokens_to_go[$max_index_to_go] eq 'overload' )
+            || (   $max_index_to_go == 2
+                && $types_to_go[0] eq 'k'
+                && $tokens_to_go[0] eq 'use'
+                && $tokens_to_go[$max_index_to_go] eq 'overload' )
           )
         {
             destroy_one_line_block();
@@ -10677,8 +10685,6 @@ sub break_equals {
 
         my $rOpts_short_concatenation_item_length =
           $rOpts->{'short-concatenation-item-length'};
-        my $rOpts_break_at_old_semicolon_breakpoints =
-          $rOpts->{'break-at-old-semicolon-breakpoints'};
 
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
@@ -10798,6 +10804,9 @@ sub break_equals {
                 # do any special checks for it
                 if ( $n == $nmax ) {
 
+                    # FIXME: this test does no harm but should not really be
+                    # needed now and can be removed after verification with
+                    # testing.
                     next
                       if ( $type_ibeg_2 eq ';'
                         && $rOpts_break_at_old_semicolon_breakpoints );
@@ -13093,8 +13102,6 @@ sub set_continuation_breaks {
           $rOpts->{'break-at-old-logical-breakpoints'};
         my $rOpts_break_at_old_method_breakpoints =
           $rOpts->{'break-at-old-method-breakpoints'};
-        my $rOpts_break_at_old_semicolon_breakpoints =
-          $rOpts->{'break-at-old-semicolon-breakpoints'};
         my $rOpts_break_at_old_ternary_breakpoints =
           $rOpts->{'break-at-old-ternary-breakpoints'};
 
@@ -13277,14 +13284,6 @@ sub set_continuation_breaks {
                     }
                 }
             } ## end if ( $type eq '->' )
-
-            elsif ( $type eq ';' ) {
-                if (   $i == $i_line_start
-                    && $rOpts_break_at_old_semicolon_breakpoints )
-                {
-                    $self->set_forced_breakpoint( $i - 1 );
-                }
-            }
 
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
@@ -17987,8 +17986,9 @@ sub make_paren_name {
                 # a decision, but that would require another pass.
 
                 # PATCH #2: and not if this token is under -xci control
-                || ( $level_jump < 0 && !$some_closing_token_indentation 
-                   && !$rseqno_which_extended_ci->{$K_beg} )
+                || (   $level_jump < 0
+                    && !$some_closing_token_indentation
+                    && !$rseqno_which_extended_ci->{$K_beg} )
 
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
