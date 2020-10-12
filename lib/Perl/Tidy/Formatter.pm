@@ -328,6 +328,7 @@ BEGIN {
         _sink_object_             => $i++,
         _file_writer_object_      => $i++,
         _vertical_aligner_object_ => $i++,
+        _logger_object_           => $i++,
         _radjusted_levels_        => $i++,
         _this_batch_              => $i++,
 
@@ -632,6 +633,7 @@ sub new {
     $self->[_sink_object_]             = $sink_object;
     $self->[_file_writer_object_]      = $file_writer_object;
     $self->[_vertical_aligner_object_] = $vertical_aligner_object;
+    $self->[_logger_object_]           = $logger_object;
 
     # Reference to the batch being processed
     $self->[_this_batch_] = [];
@@ -803,12 +805,6 @@ EOM
         if ($logger_object) {
             $logger_object->write_logfile_entry(@msg);
         }
-        return;
-    }
-
-    sub black_box {
-        my @msg = @_;
-        if ($logger_object) { $logger_object->black_box(@msg); }
         return;
     }
 
@@ -6882,8 +6878,7 @@ sub extended_ci {
         if ($seqno_top) {
             my $count = 0;
             for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
-                my $ci_t = $rLL->[$Kt]->[_CI_LEVEL_];
-                if ( !$ci_t ) {
+                if ( !$rLL->[$Kt]->[_CI_LEVEL_] ) {
                     $rLL->[$Kt]->[_CI_LEVEL_] = 1;
                     $rseqno_which_extended_ci->{$Kt} = $seqno_top;
                     $count++;
@@ -7003,6 +6998,8 @@ sub process_all_lines {
     my $fh_tee                     = $self->[_fh_tee_];
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
     my $file_writer_object         = $self->[_file_writer_object_];
+    my $logger_object              = $self->[_logger_object_];
+    my $vertical_aligner_object    = $self->[_vertical_aligner_object_];
 
     # Note for RT#118553, leave only one newline at the end of a file.
     # Example code to do this is in comments below:
@@ -7103,8 +7100,10 @@ sub process_all_lines {
             else {
 
                 # let logger see all non-blank lines of code
-                my $output_line_number = $self->get_output_line_number();
-                black_box( $line_of_tokens, $output_line_number );
+                if ($logger_object) {
+                    $logger_object->black_box( $line_of_tokens,
+                        $vertical_aligner_object->get_output_line_number );
+                }
             }
 
             # Handle Format Skipping (FS) and Verbatim (VB) Lines
@@ -7825,8 +7824,6 @@ sub prepare_for_next_batch {
         my $type  = $types_to_go[$max_index_to_go]  = $rtoken_vars->[_TYPE_];
         my $ci_level = $ci_levels_to_go[$max_index_to_go] =
           $rtoken_vars->[_CI_LEVEL_];
-        my $slevel = $nesting_depth_to_go[$max_index_to_go] =
-          $rtoken_vars->[_SLEVEL_];
 
         # Clip levels to zero if there are level errors in the file.
         # We had to wait until now for reasons explained in sub 'write_line'.
@@ -7834,7 +7831,8 @@ sub prepare_for_next_batch {
         if ( $level < 0 ) { $level = 0 }
         $levels_to_go[$max_index_to_go] = $level;
 
-        $block_type_to_go[$max_index_to_go] = $rtoken_vars->[_BLOCK_TYPE_];
+        $nesting_depth_to_go[$max_index_to_go] = $rtoken_vars->[_SLEVEL_];
+        $block_type_to_go[$max_index_to_go]    = $rtoken_vars->[_BLOCK_TYPE_];
         $container_environment_to_go[$max_index_to_go] =
           $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
         $type_sequence_to_go[$max_index_to_go] =
@@ -7871,15 +7869,15 @@ sub prepare_for_next_batch {
         # Define the indentation that this token will have in two cases:
         # Without CI = reduced_spaces_to_go
         # With CI    = leading_spaces_to_go
-        $reduced_spaces_to_go[$max_index_to_go] = my $reduced_spaces =
-          $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
-
-        $leading_spaces_to_go[$max_index_to_go] =
-          $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
-
         if ($in_continued_quote) {
             $leading_spaces_to_go[$max_index_to_go] = 0;
             $reduced_spaces_to_go[$max_index_to_go] = 0;
+        }
+        else {
+            $reduced_spaces_to_go[$max_index_to_go] = my $reduced_spaces =
+              $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
+            $leading_spaces_to_go[$max_index_to_go] =
+              $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
         }
 
         # Correct these values if -lp is used
@@ -7892,7 +7890,7 @@ sub prepare_for_next_batch {
         DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
             print STDOUT
-"STORE: from $a $c: storing token $token type $type lev=$level slev=$slevel at $max_index_to_go\n";
+"STORE: from $a $c: storing token $token type $type lev=$level at $max_index_to_go\n";
         };
         return;
     }
@@ -16700,7 +16698,6 @@ sub get_seqno {
                 if ( $terminal_type eq '{' ) {
                     my $Kbeg = $K_to_go[$ibeg];
                     $ci_levels_to_go[$ibeg] = 0;
-                    ##$rLL->[$Kbeg]->[_CI_LEVEL_] = 0;
                 }
             }
 
@@ -16718,7 +16715,6 @@ sub get_seqno {
                     # but do not undo ci set by the -lp flag
                     if ( !ref( $reduced_spaces_to_go[$ibeg] ) ) {
                         $ci_levels_to_go[$ibeg] = 0;
-                        ##$rLL->[$Kbeg]->[_CI_LEVEL_] = 0;
                         $leading_spaces_to_go[$ibeg] =
                           $reduced_spaces_to_go[$ibeg];
                     }

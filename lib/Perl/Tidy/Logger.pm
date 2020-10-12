@@ -165,7 +165,6 @@ sub black_box {
     $self->{_wrote_line_information_string} = 0;
 
     my $last_input_line_written = $self->{_last_input_line_written};
-    my $rOpts                   = $self->{_rOpts};
     if (
         (
             ( $input_line_number - $last_input_line_written ) >=
