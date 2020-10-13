@@ -506,6 +506,24 @@ EOM
     return;
 }
 
+sub get_save_logfile {
+
+    # To be called after tokenizer has finished to make formatting more
+    # efficient.  This is not precisely the same as the check used below
+    # because we don't yet have the syntax check result, but since syntax
+    # checking is off by default it will be the same except in debug runs with
+    # syntax checking activated.  In that case it will tell the formatter to
+    # save the logfile even if it may actually be deleted based on the syntax
+    # check.
+    my $self         = shift;
+    my $saw_code_bug = $self->{_saw_code_bug};
+    my $rOpts        = $self->{_rOpts};
+    return
+         $saw_code_bug == 1
+      || $rOpts->{'logfile'}
+      || $rOpts->{'check-syntax'};
+}
+
 sub finish {
 
     # called after all formatting to summarize errors

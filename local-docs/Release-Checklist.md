@@ -2,7 +2,10 @@
 
 - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy) 
 - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
-- compare the new version with previous version on all files in test area
+- compare formatting with the new version with previous version on all files in test area
+- run a blinker test (activate option -I and look for 'Blinker' in DIAGNOSTICS)
+- run a timing test: compare run time with previous version
+- profile with 'nytprof' and compare with previous version
 - run random testing on final version for a significant time before releasing (several days)
 - run 'author tests' on a much larger body of code than is covered by the .t
   files.

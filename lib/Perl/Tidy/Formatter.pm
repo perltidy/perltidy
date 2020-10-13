@@ -369,6 +369,7 @@ BEGIN {
 
         _rseqno_controlling_my_ci_ => $i++,
         _ris_seqno_controlling_ci_ => $i++,
+        _save_logfile_             => $i++,
 
     };
 
@@ -670,6 +671,9 @@ sub new {
     $self->[_ris_seqno_controlling_ci_] = {};
 
     $self->[_rspecial_side_comment_type_] = {};
+
+    # This flag will be updated later by a call to get_save_logfile()
+    $self->[_save_logfile_] = defined($logger_object);
 
     bless $self, $class;
 
@@ -4013,6 +4017,13 @@ EOM
         return;
     }
 
+    # Update the 'save_logfile' flag based to include any tokenization errors.
+    # We can save time by skipping logfile calls if it is not going to be saved.
+    my $logger_object = $self->[_logger_object_];
+    if ($logger_object) {
+        $self->[_save_logfile_] = $logger_object->get_save_logfile();
+    }
+
     # Make a pass through the lines, looking at lines of CODE and identifying
     # special processing needs, such format skipping sections marked by
     # special comments
@@ -7004,6 +7015,7 @@ sub process_all_lines {
     my $file_writer_object         = $self->[_file_writer_object_];
     my $logger_object              = $self->[_logger_object_];
     my $vertical_aligner_object    = $self->[_vertical_aligner_object_];
+    my $save_logfile               = $self->[_save_logfile_];
 
     # Note for RT#118553, leave only one newline at the end of a file.
     # Example code to do this is in comments below:
@@ -7103,8 +7115,9 @@ sub process_all_lines {
             }
             else {
 
-                # let logger see all non-blank lines of code
-                if ($logger_object) {
+                # Let logger see all non-blank lines of code. This is a slow operation
+                # so we avoid it if it is not going to be saved.
+                if ( $save_logfile && $logger_object ) {
                     $logger_object->black_box( $line_of_tokens,
                         $vertical_aligner_object->get_output_line_number );
                 }
