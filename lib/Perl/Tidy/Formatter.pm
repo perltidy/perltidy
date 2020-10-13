@@ -609,9 +609,7 @@ sub new {
                                       # in the file. LL originally meant
                                       # 'Linked List'. Linked lists were a
                                       # bad idea but LL is easy to type.
-    $self->[_Klimit_]     = undef;    # = maximum K index for rLL. This is
-                                      # needed to catch any autovivification
-                                      # problems.
+    $self->[_Klimit_]     = undef;    # = maximum K index for rLL.
     $self->[_K_opening_container_] = {};    # for quickly traversing structure
     $self->[_K_closing_container_] = {};    # for quickly traversing structure
     $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
@@ -688,51 +686,6 @@ sub new {
 ######################################
 # CODE SECTION 2: Some Basic Utilities
 ######################################
-
-sub set_rLL_max_index {
-    my $self = shift;
-
-    # Set the limit of the rLL array, assuming that it is correct.
-    # This should only be called by routines after they make changes
-    # to tokenization
-    my $rLL = $self->[_rLL_];
-    if ( !defined($rLL) ) {
-
-        # Shouldn't happen because rLL was initialized to be an array ref
-        Fault("Undefined Memory rLL");
-    }
-    my $Klimit_old = $self->[_Klimit_];
-    my $num        = @{$rLL};
-    my $Klimit;
-    if ( $num > 0 ) { $Klimit = $num - 1 }
-    $self->[_Klimit_] = $Klimit;
-    return ($Klimit);
-}
-
-sub get_rLL_max_index {
-    my $self = shift;
-
-    # the memory location $rLL and number of tokens should be obtained
-    # from this routine so that any autovivication can be immediately caught.
-    my $rLL    = $self->[_rLL_];
-    my $Klimit = $self->[_Klimit_];
-    if ( !defined($rLL) ) {
-
-        # Shouldn't happen because rLL was initialized to be an array ref
-        Fault("Undefined Memory rLL");
-    }
-    my $num = @{$rLL};
-    if (   $num == 0 && defined($Klimit)
-        || $num > 0 && !defined($Klimit)
-        || $num > 0 && $Klimit != $num - 1 )
-    {
-
-        # Possible autovivification problem...
-        if ( !defined($Klimit) ) { $Klimit = '*' }
-        Fault("Error getting rLL: Memory items=$num and Klimit=$Klimit");
-    }
-    return ($Klimit);
-}
 
 sub check_keys {
     my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
@@ -4326,7 +4279,11 @@ sub dump_verbatim {
 
 {    ## begin closure check_line_hashes
 
-    # This code checks that no autovivification occurs in the 'line' hash
+    # This code checks that no autovivification occurs in the 'line' hash.
+    # Almost all other storage has been moved to arrays to avoid possible
+    # autovivification errors, which are easy to introduce with typos and
+    # difficult to track down, but the hash is more appropriate for structures
+    # like this which are shared between modules.  So it needs to be checked.
 
     my %valid_line_hash;
 
@@ -5275,7 +5232,9 @@ sub respace_tokens {
 
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
-    $self->set_rLL_max_index();
+    my $Klimit;
+    if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
+    $self->[_Klimit_] = $Klimit;
     $self->[_K_opening_container_]   = $K_opening_container;
     $self->[_K_closing_container_]   = $K_closing_container;
     $self->[_K_opening_ternary_]     = $K_opening_ternary;
@@ -5940,7 +5899,6 @@ sub weld_nested_containers {
     # later during formatting.
 
     my $rLL                 = $self->[_rLL_];
-    my $Klimit              = $self->get_rLL_max_index();
     my $rlines              = $self->[_rlines_];
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
@@ -6861,7 +6819,7 @@ sub extended_ci {
     # contain.  These inner tokens remember their controlling sequence numbers.
     # Later, when these inner tokens are output, they have to see if the output
     # lines with their controlling tokens were output with CI or not.  If not,
-    # then they must and remove their CI too.
+    # then they must remove their CI too.
 
     # The controlling CI concept works hierarchically.  But CI itself is not
     # hierarchical; it is either on or off. There are some rare instances where
