@@ -367,7 +367,7 @@ BEGIN {
 
         _rspecial_side_comment_type_ => $i++,
 
-        _rseqno_which_extended_ci_ => $i++,
+        _rseqno_controlling_my_ci_ => $i++,
         _ris_seqno_controlling_ci_ => $i++,
 
     };
@@ -666,7 +666,7 @@ sub new {
     $self->[_rweld_len_left_opening_]  = {};
     $self->[_rweld_len_right_opening_] = {};
 
-    $self->[_rseqno_which_extended_ci_] = {};
+    $self->[_rseqno_controlling_my_ci_] = {};
     $self->[_ris_seqno_controlling_ci_] = {};
 
     $self->[_rspecial_side_comment_type_] = {};
@@ -6839,9 +6839,25 @@ sub adjust_container_indentation {
 
 sub extended_ci {
 
-    # Add CI to interior tokens of a container which itself has CI but only if
-    # a token does not already have CI.  This will be adjusted later bu sub
-    # undo_ci
+    # This routine implements the -xci (--extended-continuation-indentation)
+    # flag.  We add CI to interior tokens of a container which itself has CI but
+    # only if a token does not already have CI.
+
+    # To do this, we will locate opening tokens which themselves have
+    # continuation indentation (CI).  We track them with their sequence
+    # numbers.  These sequence numbers are called 'controlling sequence
+    # numbers'.  They apply continuation indentation to the tokens that they
+    # contain.  These inner tokens remember their controlling sequence numbers.
+    # Later, when these inner tokens are output, they have to see if the output
+    # lines with their controlling tokens were output with CI or not.  If not,
+    # then they must and remove their CI too.
+
+    # The controlling CI concept works hierarchically.  But CI itself is not
+    # hierarchical; it is either on or off. There are some rare instances where
+    # it would be best to have hierarchical CI too, but not enough to be worth
+    # the programming effort.
+
+    # The operations to remove unwanted CI are done in sub 'undo_ci'.
 
     my ($self) = @_;
 
@@ -6849,7 +6865,7 @@ sub extended_ci {
     return unless ( defined($rLL) && @{$rLL} );
 
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
-    my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
+    my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
 
     # Loop over all opening container tokens
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -6868,7 +6884,7 @@ sub extended_ci {
             for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
                 if ( !$rLL->[$Kt]->[_CI_LEVEL_] ) {
                     $rLL->[$Kt]->[_CI_LEVEL_] = 1;
-                    $rseqno_which_extended_ci->{$Kt} = $seqno_top;
+                    $rseqno_controlling_my_ci->{$Kt} = $seqno_top;
                     $count++;
                 }
             }
@@ -6895,7 +6911,7 @@ sub extended_ci {
         if ( $block_type && $is_block_with_ci{$block_type} ) {
             $rLL->[$KK]->[_CI_LEVEL_] = 1;
             if ($seqno_top) {
-                $rseqno_which_extended_ci->{$KK} = $seqno_top;
+                $rseqno_controlling_my_ci->{$KK} = $seqno_top;
                 $ris_seqno_controlling_ci->{$seqno_top}++;
             }
         }
@@ -6904,7 +6920,7 @@ sub extended_ci {
         if ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
             if ($seqno_top) {
                 $rLL->[$KK]->[_CI_LEVEL_] = 1;
-                $rseqno_which_extended_ci->{$KK} = $seqno_top;
+                $rseqno_controlling_my_ci->{$KK} = $seqno_top;
                 $ris_seqno_controlling_ci->{$seqno_top}++;
             }
             next;
@@ -16552,7 +16568,7 @@ sub get_seqno {
         my $this_line_is_semicolon_terminated;
         my $max_line = @{$ri_first} - 1;
 
-        my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
+        my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
 
         # Loop over all lines of the batch ...
         foreach my $line ( 0 .. $max_line ) {
@@ -16690,7 +16706,7 @@ sub get_seqno {
             # went out on a previous line without ci
             if ( $ci_levels_to_go[$ibeg] ) {
                 my $Kbeg  = $K_to_go[$ibeg];
-                my $seqno = $rseqno_which_extended_ci->{$Kbeg};
+                my $seqno = $rseqno_controlling_my_ci->{$Kbeg};
                 if ( $seqno && $undo_extended_ci{$seqno} ) {
 
                     # but do not undo ci set by the -lp flag
@@ -17811,7 +17827,7 @@ sub make_paren_name {
 
         my $rLL                      = $self->[_rLL_];
         my $ris_bli_container        = $self->[_ris_bli_container_];
-        my $rseqno_which_extended_ci = $self->[_rseqno_which_extended_ci_];
+        my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
@@ -17965,7 +17981,7 @@ sub make_paren_name {
                 # PATCH #2: and not if this token is under -xci control
                 || (   $level_jump < 0
                     && !$some_closing_token_indentation
-                    && !$rseqno_which_extended_ci->{$K_beg} )
+                    && !$rseqno_controlling_my_ci->{$K_beg} )
 
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
@@ -18009,7 +18025,7 @@ sub make_paren_name {
                     # and do not undo ci if it was set by the -xci option
                     $adjust_indentation = 1
                       if ( $level_next < $lev
-                        && !$rseqno_which_extended_ci->{$K_beg} );
+                        && !$rseqno_controlling_my_ci->{$K_beg} );
                 }
 
                 # Patch for RT #96101, in which closing brace of anonymous subs
