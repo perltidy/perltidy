@@ -2099,18 +2099,6 @@ sub set_whitespace_flags {
         #      -data => $data;
         if ( $ws == 0 && $input_line_no != $last_input_line_no ) { $ws = 1 }
 
-        if (   ( $ws == 0 )
-            && $j > 0
-            && $j < $jmax
-            && ( $last_type !~ /^[Zh]$/ ) )
-        {
-
-            # If this happens, we have a non-fatal but undesirable
-            # hole in the above rules which should be patched.
-            write_diagnostics(
-                "WS flag is zero for tokens $last_token $token\n");
-        }
-
         $rwhitespace_flags->[$j] = $ws;
 
         DEBUG_WHITE && do {
@@ -10801,13 +10789,6 @@ sub break_equals {
                 # If line $n is the last line, we set some flags and
                 # do any special checks for it
                 if ( $n == $nmax ) {
-
-                    # FIXME: this test does no harm but should not really be
-                    # needed now and can be removed after verification with
-                    # testing.
-                    next
-                      if ( $type_ibeg_2 eq ';'
-                        && $rOpts_break_at_old_semicolon_breakpoints );
 
                     # a terminal '{' should stay where it is
                     # unless preceded by a fat comma
