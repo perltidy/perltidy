@@ -95,7 +95,9 @@ sub Fault {
     my ($msg) = @_;
 
     # This routine is called for errors that really should not occur
-    # except if there has been a bug introduced by a recent program change
+    # except if there has been a bug introduced by a recent program change.
+    # Please add comments at calls to Fault to explain why the call
+    # should not occur, and where to look to fix it.
     my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
     my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
@@ -820,7 +822,9 @@ sub get_output_line_number {
 sub check_token_array {
     my $self = shift;
 
-    # Check for errors in the array of tokens
+    # Check for errors in the array of tokens. This is only called now
+    # when the DEVEL_MODE flag is set, so this Fault will only occur
+    # during code development.
     my $rLL = $self->[_rLL_];
     for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
         my $nvars = @{ $rLL->[$KK] };
@@ -828,6 +832,12 @@ sub check_token_array {
             my $NVARS = _NVARS;
             my $type  = $rLL->[$KK]->[_TYPE_];
             $type = '*' unless defined($type);
+
+            # The number of variables per token node is _NVARS and was set when
+            # the array indexes were generated. So if the number of variables
+            # is different we have done something wrong, like not store all of
+            # them in sub 'write_line' when they were received from the
+            # tokenizer.
             Fault(
 "number of vars for node $KK, type '$type', is $nvars but should be $NVARS"
             );
@@ -835,6 +845,11 @@ sub check_token_array {
         foreach my $var ( _TOKEN_, _TYPE_ ) {
             if ( !defined( $rLL->[$KK]->[$var] ) ) {
                 my $iline = $rLL->[$KK]->[_LINE_INDEX_];
+
+                # This is a simple check that each token has some basic
+                # variables.  In other words, that there are no holes in the
+                # array of tokens.  Sub 'write_line' pushes tokens into the
+                # $rLL array, so this should guarantee no gaps.
                 Fault("Undefined variable $var for K=$KK, line=$iline\n");
             }
         }
@@ -4435,7 +4450,10 @@ sub respace_tokens {
 
                     # We really shouldn't arrive here, just being cautious:
                     # The only sequenced types output by the tokenizer are the
-                    # opening & closing containers and the ternary types.
+                    # opening & closing containers and the ternary types. Each
+                    # of those was checked above. So we would only get here
+                    # if the tokenizer has been changed to mark some other
+                    # tokens with sequence numbers.
                     my $type = $item->[_TYPE_];
                     Fault(
 "Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
@@ -4722,7 +4740,10 @@ sub respace_tokens {
 
         # Check for correct sequence of token indexes...
         # An error here means that sub write_line() did not correctly
-        # package the tokenized lines as it received them.
+        # package the tokenized lines as it received them.  If we
+        # get a fault here it has not output a continuous sequence
+        # of K values.  Or a line of CODE may have been mismarked as
+        # something else.
         if ( defined($last_K_out) ) {
             if ( $Kfirst != $last_K_out + 1 ) {
                 Fault(
@@ -4731,6 +4752,9 @@ sub respace_tokens {
             }
         }
         else {
+
+            # The first token should always have been given index 0 by sub
+            # write_line()
             if ( $Kfirst != 0 ) {
                 Fault("Program Bug: first K is $Kfirst but should be 0");
             }
@@ -5234,7 +5258,7 @@ sub respace_tokens {
     $self->[_rLL_] = $rLL_new;
     my $Klimit;
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
-    $self->[_Klimit_] = $Klimit;
+    $self->[_Klimit_]                = $Klimit;
     $self->[_K_opening_container_]   = $K_opening_container;
     $self->[_K_closing_container_]   = $K_closing_container;
     $self->[_K_opening_ternary_]     = $K_opening_ternary;
@@ -5274,6 +5298,8 @@ sub copy_token_as_type {
         $token = ';' unless defined($token);
     }
     else {
+
+        # This sub assumes it will be called with just two types, 'b' or 'q'
         Fault(
 "Programming error: copy_token_as has type $type but should be 'b' or 'q'"
         );
@@ -5318,6 +5344,10 @@ sub K_next_code {
     my $Knnb = $KK + 1;
     while ( $Knnb < $Num ) {
         if ( !defined( $rLL->[$Knnb] ) ) {
+
+            # We seem to have encountered a gap in our array.
+            # This shouldn't happen because sub write_line() pushed
+            # items into the $rLL array.
             Fault("Undefined entry for k=$Knnb");
         }
         if (   $rLL->[$Knnb]->[_TYPE_] ne 'b'
@@ -5371,8 +5401,9 @@ sub K_previous_code {
     if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
 
-        # The caller should make the first call with KK_new=undef to
-        # avoid this error
+        # This fault can be caused by a programming error in which a bad $KK is
+        # given.  The caller should make the first call with KK_new=undef to
+        # avoid this error.
         Fault(
 "Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
         );
@@ -5401,8 +5432,9 @@ sub K_previous_nonblank {
     if    ( !defined($KK) ) { $KK = $Num }
     elsif ( $KK > $Num ) {
 
-        # The caller should make the first call with KK_new=undef to
-        # avoid this error
+        # This fault can be caused by a programming error in which a bad $KK is
+        # given.  The caller should make the first call with KK_new=undef to
+        # avoid this error.
         Fault(
 "Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
         );
@@ -5543,8 +5575,9 @@ sub resync_lines_and_tokens {
         }
     }
 
-    # There shouldn't be any nodes beyond the last one unless we start
-    # allowing 'link_after' calls
+    # There shouldn't be any nodes beyond the last one.  This routine is
+    # relinking lines and tokens after the tokens have been respaced.  A fault
+    # here indicates some kind of bug has been introduced into the above loops.
     if ( defined($inext) ) {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
@@ -5667,6 +5700,11 @@ sub weld_cuddled_blocks {
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$type_sequence ) {
             next if ( $KK == 0 );    # first token in file may not be container
+
+            # A fault here implies that an error was made in the little loop at
+            # the bottom of sub 'respace_tokens' which set the values of
+            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
+            # loop control lines above.
             Fault("sequence = $type_sequence not defined at K=$KK");
         }
 
@@ -6282,6 +6320,11 @@ sub weld_nested_quotes {
         my $outer_seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
         if ( !$outer_seqno ) {
             next if ( $KK == 0 );    # first token in file may not be container
+
+            # A fault here implies that an error was made in the little loop at
+            # the bottom of sub 'respace_tokens' which set the values of
+            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
+            # loop control lines above.
             Fault("sequence = $outer_seqno not defined at K=$KK");
         }
 
@@ -6473,7 +6516,10 @@ sub mark_short_nested_blocks {
         if ( !$type_sequence ) {
             next if ( $KK == 0 );    # first token in file may not be container
 
-            # an error here is most likely due to a recent programming change
+            # A fault here implies that an error was made in the little loop at
+            # the bottom of sub 'respace_tokens' which set the values of
+            # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
+            # loop control lines above.
             Fault("sequence = $type_sequence not defined at K=$KK");
         }
 
@@ -7073,8 +7119,8 @@ sub process_all_lines {
             }
             else {
 
-                # Let logger see all non-blank lines of code. This is a slow operation
-                # so we avoid it if it is not going to be saved.
+          # Let logger see all non-blank lines of code. This is a slow operation
+          # so we avoid it if it is not going to be saved.
                 if ( $save_logfile && $logger_object ) {
                     $logger_object->black_box( $line_of_tokens,
                         $vertical_aligner_object->get_output_line_number );
@@ -8844,8 +8890,11 @@ sub starting_one_line_block {
 
     my $i_start = 0;
 
-    # shouldn't happen: there must have been a prior call to
-    # store_token_to_go to put the opening brace in the output stream
+    # This routine should not have been called if there are no tokens in the
+    # 'to_go' arrays of previously stored tokens.  A previous call to
+    # 'store_token_to_go' should have stored an opening brace. An error here
+    # indicates that a programming change may have caused a flush operation to
+    # clean out the previously stored tokens.
     if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
         Fault("program bug: store_token_to_go called incorrectly\n");
     }
@@ -9810,15 +9859,15 @@ EOM
                   [ $Kbeg, $Kend, $forced_breakpoint_to_go[$iend] ];
             }
 
-       # Check correctness of the mapping between the i and K token indexes.
-       # (The K index is the global index, the i index is the batch index).
-       # It is important to do this check because an error would be disasterous.
-       # The reason that we should never see an index error here is that sub
-       # 'store_token_to_go' has a check to make sure that the indexes in
-       # batches remain continuous.  Since sub 'store_token_to_go'
-       # controls feeding tokens into batches, so no index discrepancies
-       # should occur unless a recent programming change has introduced a
-       # bug.
+            # Check correctness of the mapping between the i and K token
+            # indexes.  (The K index is the global index, the i index is the
+            # batch index).  It is important to do this check because an error
+            # would be disasterous.  The reason that we should never see an
+            # index error here is that sub 'store_token_to_go' has a check to
+            # make sure that the indexes in batches remain continuous.  Since
+            # sub 'store_token_to_go' controls feeding tokens into batches, so
+            # no index discrepancies should occur unless a recent programming
+            # change has introduced a bug.
             if ( defined($index_error) ) {
 
                 # Temporary debug code - should never get here
@@ -10611,9 +10660,11 @@ sub break_equals {
             next if ( $i_semicolon <= $i_beg );
             next unless ( $rLL->[$K_semicolon]->[_TYPE_] eq ';' );
 
-            # safety check - shouldn't happen
+            # Safety check - shouldn't happen - not critical
+            # This is not worth throwing a Fault, except in DEVEL_MODE
             if ( $types_to_go[$i_semicolon] ne ';' ) {
-                Fault("unexpected type looking for semicolon, ignoring");
+                DEVEL_MODE
+                  && Fault("unexpected type looking for semicolon");
                 next;
             }
 
@@ -10699,7 +10750,8 @@ sub break_equals {
             unless ( $nmax < $nmax_last ) {
 
                 # Shouldn't happen because splice below decreases nmax on each
-                # pass.
+                # iteration.  An error can only be due to a recent programming
+                # change.
                 Fault("Program bug-infinite loop in recombine breakpoints\n");
             }
             $nmax_last  = $nmax;
@@ -15899,6 +15951,10 @@ sub send_lines_to_vertical_aligner {
     my $this_batch = $self->[_this_batch_];
     my $rlines_K   = $this_batch->[_rlines_K_];
     if ( !@{$rlines_K} ) {
+
+        # This can't happen because sub grind_batch_of_CODE always receives
+        # tokens which it turns into one or more lines. If we get here it means
+        # that a programming error has caused those lines to be lost.
         Fault("Unexpected call with no lines");
         return;
     }
