@@ -9330,11 +9330,22 @@ sub compare_indentation_levels {
     sub undo_forced_breakpoint_stack {
 
         my ( $self, $i_start ) = @_;
+
+	# Given $i_start, a non-negative index the 'undo stack' of breakpoints,
+	# remove all breakpoints from the top of the 'undo stack' down to and
+	# including index $i_start.
+
+        # The 'undo stack' is a stack of all breakpoints made for a batch of
+        # code.
+
         if ( $i_start < 0 ) {
             $i_start = 0;
             my ( $a, $b, $c ) = caller();
-            warning(
-"Program Bug: undo_forced_breakpoint_stack from $a $c has i=$i_start "
+
+            # Bad call, can only be due to a recent programming change.
+            # Better stop here.
+            Fault(
+"Program Bug: undo_forced_breakpoint_stack from $a $c has bad i=$i_start "
             );
         }
 
@@ -10082,7 +10093,10 @@ sub lookup_opening_indentation {
     my ( $i_opening, $ri_start, $ri_last, $rindentation_list ) = @_;
 
     if ( !@{$ri_last} ) {
-        warning("Error in opening_indentation: no lines");
+
+        # An error here implies a bug introduced by a recent program change.
+        # Every batch of code has lines.
+        Fault("Error in opening_indentation: no lines");
         return;
     }
 
@@ -10096,12 +10110,17 @@ sub lookup_opening_indentation {
         while ( $i_opening > $ri_last->[$nline] ) { $nline++; }
     }
 
-    # error - token index is out of bounds - shouldn't happen
+    # Error - token index is out of bounds - shouldn't happen
+    # A program bug has been introduced in one of the calling routines.
+    # We better stop here.
     else {
-        warning(
-"non-fatal program bug in lookup_opening_indentation - index out of range\n"
-        );
-        report_definite_bug();
+        my $i_last_line=$ri_last->[-1];
+        Fault(<<EOM);
+Program bug in call to lookup_opening_indentation - index out of range
+ called with index i_opening=$i_opening  > $i_last_line = max index of last line
+This batch has max index = $max_index_to_go,
+EOM
+        report_definite_bug();  # old coding, will not get here
         $nline = $#{$ri_last};
     }
 
@@ -10187,7 +10206,10 @@ sub pad_array_to_go {
     if ( $is_closing_type{ $types_to_go[$max_index_to_go] } ) {
         if ( $nesting_depth_to_go[$max_index_to_go] <= 0 ) {
 
-            # shouldn't happen:
+	    # Nesting depths are equivalent to the _SLEVEL_ variable which is
+	    # clipped to be >=0 in sub write_line, so it should not be possible
+	    # to get here unless the code has a bracing error which leaves a
+	    # closing brace with zero nesting depth.  
             unless ( get_saw_brace_error() ) {
                 warning(
 "Program bug in pad_array_to_go: hit nesting error which should have been caught\n"
@@ -13235,7 +13257,7 @@ sub set_continuation_breaks {
             if ( $type eq '#' ) {
                 if ( $i != $max_index_to_go ) {
                     warning(
-"Non-fatal program bug: backup logic needed to break after a comment\n"
+"Non-fatal program bug: backup logic required to break after a comment\n"
                     );
                     report_definite_bug();
                     $nobreak_to_go[$i] = 0;
