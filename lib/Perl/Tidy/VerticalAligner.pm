@@ -62,9 +62,11 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
     print STDERR <<EOM;
 ======================================================================
-Unexpected call to Autoload looking for sub $AUTOLOAD
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
 Called from package: '$pkg'  
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
@@ -1415,12 +1417,12 @@ sub _flush_comment_lines {
     # Output a group consisting of COMMENT lines
 
     my ($self) = @_;
-    return unless ( $self->group_line_count() );
+    my $rgroup_lines = $self->[_rgroup_lines_];
+    return unless ( @{$rgroup_lines} );
     my $group_level         = $self->[_group_level_];
     my $leading_space_count = $self->[_comment_leading_space_count_];
     my $leading_string =
       $self->get_leading_string( $leading_space_count, $group_level );
-    my $rgroup_lines = $self->[_rgroup_lines_];
 
     # look for excessively long lines
     my $max_excess = 0;
@@ -1447,7 +1449,7 @@ sub _flush_comment_lines {
         unless ($outdented_line_count) {
             $self->[_first_outdented_line_at_] = $last_outdented_line_at;
         }
-        my $nlines = $self->group_line_count();
+        my $nlines = @{$rgroup_lines};
         $outdented_line_count += $nlines;
         $self->[_outdented_line_count_] = $outdented_line_count;
     }
@@ -1481,16 +1483,16 @@ sub _flush_group_lines {
     # This is the vertical aligner internal flush, which leaves the cache
     # intact
     my ($self) = @_;
-    return unless ( $self->group_line_count() );
 
     my $rgroup_lines = $self->[_rgroup_lines_];
-    my $group_type   = $self->[_group_type_];
-    my $group_level  = $self->[_group_level_];
+    return unless ( @{$rgroup_lines} );
+    my $group_type  = $self->[_group_type_];
+    my $group_level = $self->[_group_level_];
 
     # Debug
     0 && do {
         my ( $a, $b, $c ) = caller();
-        my $nlines = $self->group_line_count();
+        my $nlines = @{$rgroup_lines};
         print STDOUT
 "APPEND0: _flush_group_lines called from $a $b $c lines=$nlines, type=$group_type \n";
     };
