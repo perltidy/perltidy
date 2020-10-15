@@ -628,6 +628,15 @@ sub update_VERSION {
     my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
+        # Look for and turn off any DEVEL_MODE constants
+        if ( $line =~ /^\s*use constant DEVEL_MODE\s*=>\s*(\d);/ ) {
+            if ( $1 != 0 ) {
+                $line = <<EOM;
+use constant DEVEL_MODE => 0;
+EOM
+            }
+        }
+
         # finish writing after the change
         if ($old_VERSION_line) {
             $ftmp->print($line);
