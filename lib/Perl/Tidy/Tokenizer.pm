@@ -190,9 +190,11 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
     print STDERR <<EOM;
 ======================================================================
-Unexpected call to Autoload looking for sub $AUTOLOAD
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
 Called from package: '$pkg'  
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
@@ -5412,8 +5414,8 @@ sub guess_if_pattern_or_division {
         #     return pi /two;#/;    +/-   <-- possible pattern
         #
         # Spacing rule: a space before the slash but not after the slash
-        # usually indicates a pattern.  We can use this to break ties. 
-       
+        # usually indicates a pattern.  We can use this to break ties.
+
         my $is_pattern_by_spacing =
           ( $i > 1 && $next_token ne ' ' && $rtokens->[ $i - 2 ] eq ' ' );
 
@@ -5432,7 +5434,7 @@ sub guess_if_pattern_or_division {
 
         if ($in_quote) {
 
-            # we didn't find an ending / on this line, so we bias towards division
+          # we didn't find an ending / on this line, so we bias towards division
             if ( $divide_expected >= 0 ) {
                 $is_pattern = 0;
                 $msg .= "division (no ending / on this line)\n";
@@ -5470,7 +5472,7 @@ sub guess_if_pattern_or_division {
                         $is_pattern = 1;
                     }
 
-		    # If one rule is more definite, use it 
+                    # If one rule is more definite, use it
                     elsif ( $divide_expected > $pattern_expected ) {
                         $msg .=
                           "division (more likely based on following tokens)\n";

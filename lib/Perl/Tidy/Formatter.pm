@@ -62,9 +62,11 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
     print STDERR <<EOM;
 ======================================================================
-Unexpected call to Autoload looking for sub $AUTOLOAD
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
 Called from package: '$pkg'  
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
@@ -372,6 +374,7 @@ BEGIN {
         _rseqno_controlling_my_ci_ => $i++,
         _ris_seqno_controlling_ci_ => $i++,
         _save_logfile_             => $i++,
+        _maximum_level_            => $i++,
 
     };
 
@@ -671,6 +674,7 @@ sub new {
     $self->[_ris_seqno_controlling_ci_] = {};
 
     $self->[_rspecial_side_comment_type_] = {};
+    $self->[_maximum_level_]              = 0;
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -3850,9 +3854,10 @@ sub write_line {
     # As tokenized lines are received they are converted to the format needed
     # for the final formatting.
     my ( $self, $line_of_tokens_old ) = @_;
-    my $rLL        = $self->[_rLL_];
-    my $Klimit     = $self->[_Klimit_];
-    my $rlines_new = $self->[_rlines_];
+    my $rLL           = $self->[_rLL_];
+    my $Klimit        = $self->[_Klimit_];
+    my $rlines_new    = $self->[_rlines_];
+    my $maximum_level = $self->[_maximum_level_];
 
     my $Kfirst;
     my $line_of_tokens = {};
@@ -3910,6 +3915,10 @@ sub write_line {
                 my $slevel = $rslevels->[$j];
                 if ( $slevel < 0 ) { $slevel = 0 }
 
+                if ( $rlevels->[$j] > $maximum_level ) {
+                    $maximum_level = $rlevels->[$j];
+                }
+
               # But do not clip the 'level' variable yet. We will do this later,
               # in sub 'store_token_to_go'. The reason is that in files with
               # level errors, the logic in 'weld_cuddled_else' uses a stack
@@ -3950,6 +3959,7 @@ sub write_line {
     $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
     $line_of_tokens->{_code_type} = "";
     $self->[_Klimit_]             = $Klimit;
+    $self->[_maximum_level_]      = $maximum_level;
 
     push @{$rlines_new}, $line_of_tokens;
     return;
@@ -3968,7 +3978,7 @@ sub finish_formatting {
 
     # Check the maximum level. If it is extremely large we will
     # give up and output the file verbatim.
-    my $maximum_level       = Perl::Tidy::Tokenizer::get_maximum_level();
+    my $maximum_level       = $self->[_maximum_level_];
     my $maximum_table_index = $#maximum_line_length;
     if ( !$severe_error && $maximum_level > $maximum_table_index ) {
         $severe_error ||= 1;
@@ -9331,9 +9341,9 @@ sub compare_indentation_levels {
 
         my ( $self, $i_start ) = @_;
 
-	# Given $i_start, a non-negative index the 'undo stack' of breakpoints,
-	# remove all breakpoints from the top of the 'undo stack' down to and
-	# including index $i_start.
+        # Given $i_start, a non-negative index the 'undo stack' of breakpoints,
+        # remove all breakpoints from the top of the 'undo stack' down to and
+        # including index $i_start.
 
         # The 'undo stack' is a stack of all breakpoints made for a batch of
         # code.
@@ -10114,18 +10124,18 @@ sub lookup_opening_indentation {
     # A program bug has been introduced in one of the calling routines.
     # We better stop here.
     else {
-        my $i_last_line=$ri_last->[-1];
+        my $i_last_line = $ri_last->[-1];
         Fault(<<EOM);
 Program bug in call to lookup_opening_indentation - index out of range
  called with index i_opening=$i_opening  > $i_last_line = max index of last line
 This batch has max index = $max_index_to_go,
 EOM
-        report_definite_bug();  # old coding, will not get here
+        report_definite_bug();    # old coding, will not get here
         $nline = $#{$ri_last};
     }
 
     $rindentation_list->[0] =
-      $nline;    # save line number to start looking next call
+      $nline;                     # save line number to start looking next call
     my $ibeg       = $ri_start->[$nline];
     my $offset     = token_sequence_length( $ibeg, $i_opening ) - 1;
     my $is_leading = ( $ibeg == $i_opening );
@@ -10206,10 +10216,10 @@ sub pad_array_to_go {
     if ( $is_closing_type{ $types_to_go[$max_index_to_go] } ) {
         if ( $nesting_depth_to_go[$max_index_to_go] <= 0 ) {
 
-	    # Nesting depths are equivalent to the _SLEVEL_ variable which is
-	    # clipped to be >=0 in sub write_line, so it should not be possible
-	    # to get here unless the code has a bracing error which leaves a
-	    # closing brace with zero nesting depth.  
+            # Nesting depths are equivalent to the _SLEVEL_ variable which is
+            # clipped to be >=0 in sub write_line, so it should not be possible
+            # to get here unless the code has a bracing error which leaves a
+            # closing brace with zero nesting depth.
             unless ( get_saw_brace_error() ) {
                 warning(
 "Program bug in pad_array_to_go: hit nesting error which should have been caught\n"
