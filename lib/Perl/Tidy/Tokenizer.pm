@@ -5403,6 +5403,20 @@ sub guess_if_pattern_or_division {
         $i = $ibeg + 1;
         my $next_token = $rtokens->[$i];    # first token after slash
 
+        # One of the things we can look at is the spacing around the slash.
+        # There # are four possible spacings around the first slash:
+        #
+        #     return pi/two;#/;     -/-
+        #     return pi/ two;#/;    -/+
+        #     return pi / two;#/;   +/+
+        #     return pi /two;#/;    +/-   <-- possible pattern
+        #
+        # Spacing rule: a space before the slash but not after the slash
+        # usually indicates a pattern.  We can use this to break ties. 
+       
+        my $is_pattern_by_spacing =
+          ( $i > 1 && $next_token ne ' ' && $rtokens->[ $i - 2 ] eq ' ' );
+
         # look for a possible ending / on this line..
         my $in_quote        = 1;
         my $quote_depth     = 0;
@@ -5418,50 +5432,89 @@ sub guess_if_pattern_or_division {
 
         if ($in_quote) {
 
-            # we didn't find an ending / on this line,
-            # so we bias towards division
+            # we didn't find an ending / on this line, so we bias towards division
             if ( $divide_expected >= 0 ) {
                 $is_pattern = 0;
                 $msg .= "division (no ending / on this line)\n";
             }
             else {
+
+                # going down the rabbit hole...
                 $msg        = "multi-line pattern (division not possible)\n";
                 $is_pattern = 1;
             }
-
         }
 
-        # we found an ending /, so we bias towards a pattern
+        # we found an ending /, so we bias slightly towards a pattern
         else {
 
-            if ( pattern_expected( $i, $rtokens, $max_token_index ) >= 0 ) {
+            my $pattern_expected =
+              pattern_expected( $i, $rtokens, $max_token_index );
 
+            if ( $pattern_expected >= 0 ) {
+
+                # pattern looks possible...
                 if ( $divide_expected >= 0 ) {
 
-                    if ( $i - $ibeg > 60 ) {
-                        $msg .= "division (matching / too distant)\n";
+                    # Both pattern and divide can work here...
+
+                    # A very common bare word in math expressions is 'pi'
+                    if ( $last_nonblank_token eq 'pi' ) {
+                        $msg .= "division (pattern works too but saw 'pi')\n";
                         $is_pattern = 0;
                     }
-                    else {
-                        $msg .= "pattern (but division possible too)\n";
+
+                    # A very common bare word in pattern expressions is 'ok'
+                    elsif ( $last_nonblank_token eq 'ok' ) {
+                        $msg .= "pattern (division works too but saw 'ok')\n";
                         $is_pattern = 1;
                     }
+
+		    # If one rule is more definite, use it 
+                    elsif ( $divide_expected > $pattern_expected ) {
+                        $msg .=
+                          "division (more likely based on following tokens)\n";
+                        $is_pattern = 0;
+                    }
+
+                    # otherwise, use the spacing rule
+                    elsif ($is_pattern_by_spacing) {
+                        $msg .=
+"pattern (guess on spacing, but division possible too)\n";
+                        $is_pattern = 1;
+                    }
+                    else {
+                        $msg .=
+"division (guess on spacing, but pattern is possible too)\n";
+                        $is_pattern = 0;
+                    }
                 }
+
+                # divide_expected < 0 means divide can not work here
                 else {
                     $is_pattern = 1;
                     $msg .= "pattern (division not possible)\n";
                 }
             }
+
+            # pattern does not look possible...
             else {
 
                 if ( $divide_expected >= 0 ) {
                     $is_pattern = 0;
                     $msg .= "division (pattern not possible)\n";
                 }
+
+                # Neither pattern nor divide look possible...go by spacing
                 else {
-                    $is_pattern = 1;
-                    $msg .=
-                      "pattern (uncertain, but division would not work here)\n";
+                    if ($is_pattern_by_spacing) {
+                        $msg .= "pattern (guess on spacing)\n";
+                        $is_pattern = 1;
+                    }
+                    else {
+                        $msg .= "division (guess on spacing)\n";
+                        $is_pattern = 0;
+                    }
                 }
             }
         }
@@ -6885,16 +6938,29 @@ sub find_angle_operator_termination {
                 report_possible_bug();
             }
 
+            # count blanks on inside of brackets
+            my $blank_count = 0;
+            $blank_count++ if ( $str =~ /<\s+/ );
+            $blank_count++ if ( $str =~ /\s+>/ );
+
             # Now let's see where we stand....
             # OK if math op not possible
             if ( $expecting == TERM ) {
             }
 
-            # OK if there are no more than 2 pre-tokens inside
+            # OK if there are no more than 2 non-blank pre-tokens inside
             # (not possible to write 2 token math between < and >)
             # This catches most common cases
-            elsif ( $i <= $i_beg + 3 ) {
-                write_diagnostics("ANGLE(1 or 2 tokens): $str\n");
+            elsif ( $i <= $i_beg + 3 + $blank_count ) {
+
+                # No longer any need to document this common case
+                ## write_diagnostics("ANGLE(1 or 2 tokens): $str\n");
+            }
+
+            # OK if there is some kind of identifier inside
+            #   print $fh <tvg::INPUT>;
+            elsif ( $str =~ /^<\s*\$?(\w|::|\s)+\s*>$/ ) {
+                write_diagnostics("ANGLE (contains identifier): $str\n");
             }
 
             # Not sure..

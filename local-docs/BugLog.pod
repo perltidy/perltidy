@@ -1,5 +1,17 @@
 =head1 Issues fixed after release 20201001
 
+=item b<improve guess for pattern or division>
+
+The following line caused a tokenization error in which the two slashes
+were parsed as a pattern.  
+
+   my $masksize = ceil( Opcode::opcodes / 8 );    # /
+
+This problem was discovered in random testing.  When a slash follows a bareword
+whose prototype is not known to perltidy, it has to guess whether the slash
+starts a pattern or is a division.  The guessing logic was rewritten and 
+improved.
+
 =item b<fix -bos to keep isolated semicolon breaks after block braces>
 
 The flag B<-bos>,  or B<--break-at-old-semicolon-breakpoints>, keeps breaks
