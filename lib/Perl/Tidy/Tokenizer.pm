@@ -6022,6 +6022,7 @@ sub scan_identifier_do {
     # scan state, id_scan_state.  It updates id_scan_state based upon
     # current id_scan_state and token, and returns an updated
     # id_scan_state and the next index after the identifier.
+
     # USES GLOBAL VARIABLES: $context, $last_nonblank_token,
     # $last_nonblank_type
 
@@ -6037,18 +6038,23 @@ sub scan_identifier_do {
     my $identifier_begin    = $identifier;
     my $tok                 = $tok_begin;
     my $message             = "";
+    my $tok_is_blank;    # a flag to speed things up
 
     my $in_prototype_or_signature = $container_type =~ /^sub\b/;
 
     # these flags will be used to help figure out the type:
-    my $saw_alpha = ( $tok =~ /^\w/ );
+    ##my $saw_alpha = ( $tok =~ /^\w/ );  # This was slow
+    my $saw_alpha; 
     my $saw_type;
 
     # allow old package separator (') except in 'use' statement
     my $allow_tick = ( $last_nonblank_token ne 'use' );
 
+    #########################################################
     # get started by defining a type and a state if necessary
-    unless ($id_scan_state) {
+    #########################################################
+
+    if ( !$id_scan_state ) {
         $context = UNKNOWN_CONTEXT;
 
         # fixup for digraph
@@ -6079,6 +6085,7 @@ sub scan_identifier_do {
         }
         elsif ( $tok =~ /^\w/ ) {
             $id_scan_state = ':';
+            $saw_alpha = 1;
         }
         elsif ( $tok eq '->' ) {
             $id_scan_state = '$';
@@ -6095,22 +6102,34 @@ sub scan_identifier_do {
     }
     else {
         $i--;
-        $saw_type = ( $tok =~ /([\$\%\@\*\&])/ );
+        $saw_alpha = ( $tok =~ /^\w/ );
+        $saw_type  = ( $tok =~ /([\$\%\@\*\&])/ );
     }
 
-    # now loop to gather the identifier
+    ###############################
+    # loop to gather the identifier
+    ###############################
+
     my $i_save = $i;
 
     while ( $i < $max_token_index ) {
-        $i_save = $i unless ( $tok =~ /^\s*$/ );
-        $tok    = $rtokens->[ ++$i ];
+        ##$i_save = $i unless ( $tok =~ /^\s*$/ );  # This was a slow statement
+        if   ($tok_is_blank) { $tok_is_blank = undef }
+        else                 { $i_save       = $i }
 
+        $tok = $rtokens->[ ++$i ];
+
+        # patch to make digraph :: if necessary
         if ( ( $tok eq ':' ) && ( $rtokens->[ $i + 1 ] eq ':' ) ) {
             $tok = '::';
             $i++;
         }
 
-        if ( $id_scan_state eq '$' ) {    # starting variable name
+        ########################
+        # Starting variable name
+        ########################
+
+        if ( $id_scan_state eq '$' ) {
 
             if ( $tok eq '$' ) {
 
@@ -6123,14 +6142,18 @@ sub scan_identifier_do {
                     last;
                 }
             }
-
-            # POSTDEFREF ->@ ->% ->& ->*
-            elsif ( ( $tok =~ /^[\@\%\&\*]$/ ) && $identifier =~ /\-\>$/ ) {
-                $identifier .= $tok;
-            }
             elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
                 $saw_alpha     = 1;
                 $id_scan_state = ':';    # now need ::
+                $identifier .= $tok;
+            }
+            elsif ( $tok eq '::' ) {
+                $id_scan_state = 'A';
+                $identifier .= $tok;
+            }
+
+            # POSTDEFREF ->@ ->% ->& ->*
+            elsif ( ( $tok =~ /^[\@\%\&\*]$/ ) && $identifier =~ /\-\>$/ ) {
                 $identifier .= $tok;
             }
             elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
@@ -6145,10 +6168,6 @@ sub scan_identifier_do {
                 #  sub howdy::123::bubba{ print "bubba $54321!\n" }
                 #  howdy::123::bubba();
                 #
-            }
-            elsif ( $tok eq '::' ) {
-                $id_scan_state = 'A';
-                $identifier .= $tok;
             }
 
             # $# and POSTDEFREF ->$#
@@ -6189,6 +6208,8 @@ sub scan_identifier_do {
 
             # space ok after leading $ % * & @
             elsif ( $tok =~ /^\s*$/ ) {
+
+                $tok_is_blank = 1;
 
                 if ( $identifier =~ /^[\$\%\*\&\@]/ ) {
 
@@ -6297,10 +6318,137 @@ sub scan_identifier_do {
                 last;
             }
         }
-        elsif ( $id_scan_state eq '&' ) {    # starting sub call?
 
-            if ( $tok =~ /^[\$\w]/ ) {       # alphanumeric ..
+        ###################################
+        # looking for alphanumeric after ::
+        ###################################
+
+        elsif ( $id_scan_state eq 'A' ) {
+
+            $tok_is_blank = $tok =~ /^\s*$/;
+
+            if ( $tok =~ /^\w/ ) {    # found it
+                $identifier .= $tok;
+                $id_scan_state = ':';    # now need ::
+                $saw_alpha     = 1;
+            }
+            elsif ( $tok eq "'" && $allow_tick ) {
+                $identifier .= $tok;
+                $id_scan_state = ':';    # now need ::
+                $saw_alpha     = 1;
+            }
+            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
+            elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
+                $id_scan_state = '(';
+                $identifier .= $tok;
+            }
+            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
+            elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
+                $id_scan_state = ')';
+                $identifier .= $tok;
+            }
+            else {
+                $id_scan_state = '';
+                $i             = $i_save;
+                last;
+            }
+        }
+
+        ###################################
+        # looking for :: after alphanumeric
+        ###################################
+
+        elsif ( $id_scan_state eq ':' ) {    # looking for :: after alpha
+
+            $tok_is_blank = $tok =~ /^\s*$/;
+
+            if ( $tok eq '::' ) {            # got it
+                $identifier .= $tok;
+                $id_scan_state = 'A';        # now require alpha
+            }
+            elsif ( $tok =~ /^\w/ ) {        # more alphanumeric is ok here
+                $identifier .= $tok;
                 $id_scan_state = ':';        # now need ::
+                $saw_alpha     = 1;
+            }
+            elsif ( $tok eq "'" && $allow_tick ) {    # tick
+
+                if ( $is_keyword{$identifier} ) {
+                    $id_scan_state = '';              # that's all
+                    $i             = $i_save;
+                }
+                else {
+                    $identifier .= $tok;
+                }
+            }
+            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
+            elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
+                $id_scan_state = '(';
+                $identifier .= $tok;
+            }
+            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
+            elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
+                $id_scan_state = ')';
+                $identifier .= $tok;
+            }
+            else {
+                $id_scan_state = '';        # that's all
+                $i             = $i_save;
+                last;
+            }
+        }
+
+        ##############################
+        # looking for '(' of prototype
+        ##############################
+
+        elsif ( $id_scan_state eq '(' ) {
+
+            if ( $tok eq '(' ) {    # got it
+                $identifier .= $tok;
+                $id_scan_state = ')';    # now find the end of it
+            }
+            elsif ( $tok =~ /^\s*$/ ) {    # blank - keep going
+                $identifier .= $tok;
+                $tok_is_blank = 1;
+            }
+            else {
+                $id_scan_state = '';        # that's all - no prototype
+                $i             = $i_save;
+                last;
+            }
+        }
+
+        ##############################
+        # looking for ')' of prototype
+        ##############################
+
+        elsif ( $id_scan_state eq ')' ) {
+
+            $tok_is_blank = $tok =~ /^\s*$/;
+
+            if ( $tok eq ')' ) {    # got it
+                $identifier .= $tok;
+                $id_scan_state = '';    # all done
+                last;
+            }
+            elsif ( $tok =~ /^[\s\$\%\\\*\@\&\;]/ ) {
+                $identifier .= $tok;
+            }
+            else {    # probable error in script, but keep going
+                warning("Unexpected '$tok' while seeking end of prototype\n");
+                $identifier .= $tok;
+            }
+        }
+
+        ###################
+        # Starting sub call
+        ###################
+
+        elsif ( $id_scan_state eq '&' ) {
+
+            if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
+                $id_scan_state = ':';     # now need ::
                 $saw_alpha     = 1;
                 $identifier .= $tok;
             }
@@ -6310,6 +6458,7 @@ sub scan_identifier_do {
                 $identifier .= $tok;
             }
             elsif ( $tok =~ /^\s*$/ ) {               # allow space
+                $tok_is_blank = 1;
             }
             elsif ( $tok eq '::' ) {                  # leading ::
                 $id_scan_state = 'A';                 # accept alpha next
@@ -6348,103 +6497,17 @@ sub scan_identifier_do {
                 last;
             }
         }
-        elsif ( $id_scan_state eq 'A' ) {    # looking for alpha (after ::)
 
-            if ( $tok =~ /^\w/ ) {           # found it
-                $identifier .= $tok;
-                $id_scan_state = ':';        # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {
-                $identifier .= $tok;
-                $id_scan_state = ':';        # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
-                $id_scan_state = '(';
-                $identifier .= $tok;
-            }
-            elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
-                $id_scan_state = ')';
-                $identifier .= $tok;
-            }
-            else {
-                $id_scan_state = '';
-                $i             = $i_save;
-                last;
-            }
-        }
-        elsif ( $id_scan_state eq ':' ) {    # looking for :: after alpha
+        ######################
+        # unknown state - quit
+        ######################
 
-            if ( $tok eq '::' ) {            # got it
-                $identifier .= $tok;
-                $id_scan_state = 'A';        # now require alpha
-            }
-            elsif ( $tok =~ /^\w/ ) {        # more alphanumeric is ok here
-                $identifier .= $tok;
-                $id_scan_state = ':';        # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {    # tick
-
-                if ( $is_keyword{$identifier} ) {
-                    $id_scan_state = '';              # that's all
-                    $i             = $i_save;
-                }
-                else {
-                    $identifier .= $tok;
-                }
-            }
-            elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
-                $id_scan_state = '(';
-                $identifier .= $tok;
-            }
-            elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
-                $id_scan_state = ')';
-                $identifier .= $tok;
-            }
-            else {
-                $id_scan_state = '';        # that's all
-                $i             = $i_save;
-                last;
-            }
-        }
-        elsif ( $id_scan_state eq '(' ) {    # looking for ( of prototype
-
-            if ( $tok eq '(' ) {             # got it
-                $identifier .= $tok;
-                $id_scan_state = ')';        # now find the end of it
-            }
-            elsif ( $tok =~ /^\s*$/ ) {      # blank - keep going
-                $identifier .= $tok;
-            }
-            else {
-                $id_scan_state = '';         # that's all - no prototype
-                $i             = $i_save;
-                last;
-            }
-        }
-        elsif ( $id_scan_state eq ')' ) {    # looking for ) to end
-
-            if ( $tok eq ')' ) {             # got it
-                $identifier .= $tok;
-                $id_scan_state = '';         # all done
-                last;
-            }
-            elsif ( $tok =~ /^[\s\$\%\\\*\@\&\;]/ ) {
-                $identifier .= $tok;
-            }
-            else {    # probable error in script, but keep going
-                warning("Unexpected '$tok' while seeking end of prototype\n");
-                $identifier .= $tok;
-            }
-        }
-        else {        # can get here due to error in initialization
+        else {    # can get here due to error in initialization
             $id_scan_state = '';
             $i             = $i_save;
             last;
         }
-    }
+    } ## end of main loop
 
     if ( $id_scan_state eq ')' ) {
         warning("Hit end of line while seeking ) to end prototype\n");
@@ -6456,12 +6519,14 @@ sub scan_identifier_do {
         $id_scan_state = '';
     }
 
-    # The deprecated variable $# does not combine with anything on the next line
+    # Patch: the deprecated variable $# does not combine with anything on the
+    # next line.
     if ( $identifier eq '$#' ) { $id_scan_state = '' }
 
     if ( $i < 0 ) { $i = 0 }
 
-    unless ($type) {
+    # Be sure a token type is defined
+    if ( !$type ) {
 
         if ($saw_type) {
 
@@ -6499,10 +6564,13 @@ sub scan_identifier_do {
         }    # this can happen on a restart
     }
 
+    # See if we formed an identifier...
     if ($identifier) {
         $tok = $identifier;
         if ($message) { write_logfile_entry($message) }
     }
+
+    # did not find an identifier, back  up
     else {
         $tok = $tok_begin;
         $i   = $i_begin;
