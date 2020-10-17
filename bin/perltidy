@@ -2351,10 +2351,12 @@ For example:
 
 When this flag is set perltidy makes a preliminary pass through the file and
 identifies all nested pairs of containers.  To qualify as a nested pair, the
-closing container symbols must be immediately adjacent. The opening symbols
-must either be adjacent, or, if the outer opening symbol is an opening
-paren, they may be separated by any single non-container symbol or something
-that looks like a function evaluation.  
+closing container symbols must be immediately adjacent and the opening symbols
+must either (1) be adjacent as in the above example, or (2) have an anonymous
+sub declaration following the outer opening container symbol, or (3) have an
+outer opening paren separated from the inner opening symbol by any single
+non-container symbol or something that looks like a function evaluation,
+as illustrated in the next examples.  
 
 Any container symbol may serve as both the inner container of one pair and as
 the outer container of an adjacent pair. Consequently, any number of adjacent
