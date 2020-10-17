@@ -5915,8 +5915,13 @@ sub find_nested_pairs {
                 && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
 
             # anonymous sub + prototype or sig:  )->then( sub ($code) {
+	    # ... but it seems best not to stack two structural blocks, like
+	    # this
+            #    sub make_anon_with_my_sub { sub {
+            # because it probably hides the structure a little too much.
             || (   $rLL->[$K_inner_opening]->[_BLOCK_TYPE_] eq 'sub'
-                && $rLL->[$Kn_first]->[_TOKEN_] eq 'sub' )
+                && $rLL->[$Kn_first]->[_TOKEN_] eq 'sub'
+                && !$rLL->[$K_outer_opening]->[_BLOCK_TYPE_] )
           )
         {
             push @nested_pairs,
