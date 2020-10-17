@@ -35,6 +35,27 @@ BEGIN {
     };
 }
 
+sub AUTOLOAD {
+
+    # Catch any undefined sub calls so that we are sure to get
+    # some diagnostic information.  This sub should never be called
+    # except for a programming error.
+    our $AUTOLOAD;
+    return if ( $AUTOLOAD =~ /\bDESTROY$/ );
+    my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
+    print STDERR <<EOM;
+======================================================================
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
+Called from package: '$pkg'  
+Called from File '$fname'  at line '$lno'
+This error is probably due to a recent programming change
+======================================================================
+EOM
+    exit 1;
+}
+
 {
 
     ##use Carp;
@@ -69,25 +90,6 @@ BEGIN {
         $self->[_ralignments_] = [];
 
         return $self;
-    }
-
-    sub AUTOLOAD {
-
-        # Catch any undefined sub calls so that we are sure to get
-        # some diagnostic information.  This sub should never be called
-        # except for a programming error.
-        our $AUTOLOAD;
-        return if ( $AUTOLOAD =~ /\bDESTROY$/ );
-        my ( $pkg, $fname, $lno ) = caller();
-        print STDERR <<EOM;
-    ======================================================================
-    Unexpected call to Autoload looking for sub $AUTOLOAD
-    Called from package: '$pkg'  
-    Called from File '$fname'  at line '$lno'
-    This error is probably due to a recent programming change
-    ======================================================================
-EOM
-        exit 1;
     }
 
     sub get_jmax { return $_[0]->[_jmax_] }
@@ -153,13 +155,10 @@ EOM
     sub get_alignments { return @{ $_[0]->[_ralignments_] } }
 
     sub get_column {
-        my ( $self, $j ) = @_;
-        my $col;
-        my $alignment = $self->[_ralignments_]->[$j];
-        if ( defined($alignment) ) {
-            $col = $alignment->get_column();
-        }
-        return $col;
+        ##my ( $self, $j ) = @_;
+        my $alignment = $_[0]->[_ralignments_]->[ $_[1] ];
+        return unless defined($alignment);
+        return $alignment->get_column();
     }
 
     sub get_starting_column {
