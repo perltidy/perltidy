@@ -628,11 +628,14 @@ sub update_VERSION {
     my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
-        # Look for and turn off any DEVEL_MODE constants
-        if ( $line =~ /^\s*use constant DEVEL_MODE\s*=>\s*(\d);/ ) {
-            if ( $1 != 0 ) {
+        # Look for and turn off any DEVEL_MODE or DEBUG_XXX constants
+        if ( $line =~
+            /^(\s*use\s+constant\s+(?:DEBUG|DEVEL)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/
+          )
+        {
+            if ( $2 != 0 ) {
                 $line = <<EOM;
-use constant DEVEL_MODE => 0;
+$1 => 0;$3
 EOM
             }
         }
