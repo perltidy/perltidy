@@ -4510,6 +4510,17 @@ sub operator_expected {
     {
         $op_expected = OPERATOR;
 
+        # Patch: The following snippet from 'signatures.t' splits the $ from
+        # the variable name with a side comment. To avoid an error message we
+        # can mark this special case as UNKNOWN.
+        #  sub t086
+        #      ( #foo)))
+        #      $ #foo)))
+        #      a #foo)))    <-This 'a' is split from its $
+        #      ) #foo)))
+        #      { $a.$b }
+        if ( $last_nonblank_token eq '$' ) { $op_expected = UNKNOWN }
+
         # in a 'use' statement, numbers and v-strings are not true
         # numbers, so to avoid incorrect error messages, we will
         # mark them as unknown for now (use.t)
@@ -5434,14 +5445,18 @@ sub guess_if_pattern_or_division {
 
         if ($in_quote) {
 
-          # we didn't find an ending / on this line, so we bias towards division
+	    # we didn't find an ending / on this line, so we bias towards
+	    # division
             if ( $divide_expected >= 0 ) {
                 $is_pattern = 0;
                 $msg .= "division (no ending / on this line)\n";
             }
             else {
 
-                # going down the rabbit hole...
+		# assuming a multi-line pattern ... this is risky, but division
+		# does not seem possible.  If this fails, it would either be due
+                # to a syntax error in the code, or the division_expected logic
+                # needs to be fixed.
                 $msg        = "multi-line pattern (division not possible)\n";
                 $is_pattern = 1;
             }
@@ -6043,8 +6058,7 @@ sub scan_identifier_do {
     my $in_prototype_or_signature = $container_type =~ /^sub\b/;
 
     # these flags will be used to help figure out the type:
-    ##my $saw_alpha = ( $tok =~ /^\w/ );  # This was slow
-    my $saw_alpha; 
+    my $saw_alpha;
     my $saw_type;
 
     # allow old package separator (') except in 'use' statement
@@ -6085,7 +6099,7 @@ sub scan_identifier_do {
         }
         elsif ( $tok =~ /^\w/ ) {
             $id_scan_state = ':';
-            $saw_alpha = 1;
+            $saw_alpha     = 1;
         }
         elsif ( $tok eq '->' ) {
             $id_scan_state = '$';
@@ -6113,7 +6127,6 @@ sub scan_identifier_do {
     my $i_save = $i;
 
     while ( $i < $max_token_index ) {
-        ##$i_save = $i unless ( $tok =~ /^\s*$/ );  # This was a slow statement
         if   ($tok_is_blank) { $tok_is_blank = undef }
         else                 { $i_save       = $i }
 
@@ -6171,9 +6184,17 @@ sub scan_identifier_do {
             }
 
             # $# and POSTDEFREF ->$#
-            elsif ( ( $tok eq '#' ) && ( $identifier =~ /\$$/ ) ) {    # $#array
+            elsif (
+                   ( $tok eq '#' )
+                && ( $identifier =~ /\$$/ )
+
+                # a # inside a prototype or signature can only start a comment
+                && !$in_prototype_or_signature
+              )
+            {    # $#array
                 $identifier .= $tok;    # keep same state, a $ could follow
             }
+
             elsif ( $tok eq '{' ) {
 
                 # check for something like ${#} or ${©}
@@ -6262,7 +6283,7 @@ sub scan_identifier_do {
             }
             else {    # something else
 
-                if ( $in_prototype_or_signature && $tok =~ /^[\),=]/ ) {
+                if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
                     $id_scan_state = '';
                     $i             = $i_save;
                     $type          = 'i';       # probably punctuation variable
@@ -6337,12 +6358,10 @@ sub scan_identifier_do {
                 $id_scan_state = ':';    # now need ::
                 $saw_alpha     = 1;
             }
-            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
             elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
                 $id_scan_state = '(';
                 $identifier .= $tok;
             }
-            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
             elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
                 $id_scan_state = ')';
                 $identifier .= $tok;
@@ -6381,12 +6400,10 @@ sub scan_identifier_do {
                     $identifier .= $tok;
                 }
             }
-            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok =~ /^\s*$/ ) ) {
             elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
                 $id_scan_state = '(';
                 $identifier .= $tok;
             }
-            ##elsif ( ( $identifier =~ /^sub / ) && ( $tok eq '(' ) ) {
             elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
                 $id_scan_state = ')';
                 $identifier .= $tok;
@@ -6658,9 +6675,15 @@ sub scan_identifier_do {
         # does not look like a prototype, we assume it is a SIGNATURE and we
         # will stop and let the the standard tokenizer handle it.  In
         # particular, we stop if we see any nested parens, braces, or commas.
+        # Note, a valid prototype cannot contain any alphabetic character
+        # see https://perldoc.perl.org/perlsub
+        # But it appears that an underscore may be valid now
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
-            $input_line =~ m/\G(\s*\([^\)\(\}\{\,]*\))?  # PROTO
+            ## FIXME: this should be the future version after some
+            ## problems are resolved
+            ## $input_line =~ m/\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
+            $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
             (\s*:)?                              # ATTRS leading ':'
             /gcx
             && ( $1 || $2 )
@@ -8446,4 +8469,3 @@ BEGIN {
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
 }
 1;
-

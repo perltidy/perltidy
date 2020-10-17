@@ -1,5 +1,32 @@
 =head1 Issues fixed after release 20201001
 
+=item b<fix issues with prototype and signature parsing>
+
+Problems with parsing prototypes and signatures were found during testing and
+fixed.  For example the following snippet was mis-parsed because of the hash
+mark. 
+
+    sub test ( # comment ))) 
+        $x, $x) { $x+$y }
+
+
+Complex signature expressions such as the following are now parsed without
+error:
+
+    sub t086
+        ( #foo)))
+        $ #foo)))
+        a #foo)))
+        ) #foo)))
+        { $a.$b }
+
+The parenthesized expression in the snippet below was parsed as a prototype
+rather than a signature.  This was fixed.
+
+    sub echo ( $message = 'Hello World!' ) {
+        print "$message\n";
+    }
+
 =item b<improve guess for pattern or division>
 
 The following line caused a tokenization error in which the two slashes

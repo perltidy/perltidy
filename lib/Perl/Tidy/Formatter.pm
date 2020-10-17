@@ -5883,6 +5883,7 @@ sub find_nested_pairs {
         #     if ( !Boucherot::SetOfConnections->new->handler->execute(
         #        ^--K_o_o                                             ^--K_i_o
         #       @array) )
+        my $Kn_first = $K_outer_opening;
         for (
             my $Kn = $K_outer_opening + 1 ;
             $Kn <= $K_inner_opening ;
@@ -5890,6 +5891,7 @@ sub find_nested_pairs {
           )
         {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
+            if ( !$nonblank_count ) { $Kn_first = $Kn }
             if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
 
             # skip chain of identifier tokens
@@ -5903,9 +5905,19 @@ sub find_nested_pairs {
             last if ( $nonblank_count > 2 );
         }
 
-        if (   $nonblank_count == 1
-            || $nonblank_count == 2
-            && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
+        if (
+
+            # adjacent opening containers, like: do {{
+            $nonblank_count == 1
+
+            # short item following opening paren, like:  fun( yyy (
+            || (   $nonblank_count == 2
+                && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
+
+            # anonymous sub + prototype or sig:  )->then( sub ($code) {
+            || (   $rLL->[$K_inner_opening]->[_BLOCK_TYPE_] eq 'sub'
+                && $rLL->[$Kn_first]->[_TOKEN_] eq 'sub' )
+          )
         {
             push @nested_pairs,
               [ $inner_seqno, $outer_seqno, $K_inner_closing ];
