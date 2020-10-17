@@ -8899,9 +8899,10 @@ sub starting_one_line_block {
     my ( $self, $Kj, $K_last_nonblank, $K_last, $level, $slevel, $ci_level ) =
       @_;
 
-    my $rbreak_container = $self->[_rbreak_container_];
-    my $rshort_nested    = $self->[_rshort_nested_];
-    my $rLL              = $self->[_rLL_];
+    my $rbreak_container    = $self->[_rbreak_container_];
+    my $rshort_nested       = $self->[_rshort_nested_];
+    my $rLL                 = $self->[_rLL_];
+    my $K_opening_container = $self->[_K_opening_container_];
 
     # kill any current block - we can only go 1 deep
     destroy_one_line_block();
@@ -8964,17 +8965,25 @@ sub starting_one_line_block {
         # If this brace follows a parenthesized list, we should look back to
         # find the keyword before the opening paren because otherwise we might
         # form a one line block which stays intack, and cause the parenthesized
-        # expression to break open. That looks bad.  However, actually
-        # searching for the opening paren is slow and tedius.
-        # The actual keyword is often at the start of a line, but might not be.
-        # For example, we might have an anonymous sub with signature list
-        # following a =>.  It is safe to mark the start anywhere before the
-        # opening paren, so we just go back to the prevoious break (or start of
-        # the line) if that is before the opening paren.  The minor downside is
-        # that we may very occasionally break open a block unnecessarily.
+        # expression to break open. That looks bad.  
         if ( $tokens_to_go[$i_start] eq ')' ) {
-            $i_start = $index_max_forced_break + 1;
-            if ( $types_to_go[$i_start] eq 'b' ) { $i_start++; }
+
+            # Find the opening paren
+            my $K_start = $K_to_go[$i_start];
+            return 0 unless defined($K_start);
+            my $seqno = $type_sequence_to_go[$i_start];
+            return 0 unless ($seqno);
+            my $K_opening = $K_opening_container->{$seqno};
+            return 0 unless defined($K_opening);
+            my $i_opening = $i_start + ( $K_opening - $K_start );
+
+            # give up if not on this line
+            return 0 unless ( $i_opening >= 0 );
+            $i_start = $i_opening;    ##$index_max_forced_break + 1;
+
+            # go back one token before the opening paren
+            if ( $i_start > 0 )                                  { $i_start-- }
+            if ( $types_to_go[$i_start] eq 'b' && $i_start > 0 ) { $i_start--; }
             my $lev = $levels_to_go[$i_start];
             if ( $lev > $level ) { return 0 }
         }

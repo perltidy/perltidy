@@ -951,9 +951,7 @@ sub foo ( $x, $y = do { {} }, $z = 42, $w = do { "abcd" } ) {
 }
 
 # This signature should get put back on one line
-sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) {
-    "$p/$a";
-}
+sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) { "$p/$a" }
 
 # anonymous sub with signature
 my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {

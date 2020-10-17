@@ -329,10 +329,8 @@ my $y = 2;
             expect => <<'#8...........',
 get(
     on_ready => sub ($worker) { $on_ready->end; return; },
-    on_exit  => sub ( $worker, $status ) {
-        return;
-    },
-    on_data => sub ($data) { $self->_on_data(@_) if $self; return; }
+    on_exit  => sub ( $worker, $status ) { return; },
+    on_data  => sub ($data) { $self->_on_data(@_) if $self; return; }
 );
 #8...........
         },

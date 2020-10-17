@@ -1,10 +1,39 @@
 =head1 Issues fixed after release 20201001
 
+=item b<fix missing line break for hash of subs with signatures>
+
+During testing the following error was found and fixed.
+Given the following input snippet:
+
+    get(
+        on_ready => sub ($worker) {
+            $on_ready->end;
+            return;
+        },
+        on_exit => sub ( $worker, $status ) { return; },
+    );
+
+The resulting formatting was
+
+    get(
+        on_ready => sub ($worker) {
+            $on_ready->end;
+            return;
+        }, on_exit => sub ( $worker, $status ) { return; },
+    );
+
+Notice that the break after the comma has been lost.  The problem was traced to
+a short-cut taken by the code looking for one-line blocks. The unique
+circumstances in which this occured involved a hash of anonymous subs, one with
+a signature with multiple parameters and short enough to be a one-line block,
+as in the last sub definition line.  This was fixed 17 Oct 2020.
+
 =item b<fix issues with prototype and signature parsing>
 
 Problems with parsing prototypes and signatures were found during testing and
-fixed.  For example the following snippet was mis-parsed because of the hash
-mark. 
+fixed 17 Oct 2020 in 'fixed problem parsing multi-line signatures with
+comments', 017fd07.  For example the following snippet was mis-parsed because
+of the hash mark. 
 
     sub test ( # comment ))) 
         $x, $x) { $x+$y }
@@ -37,7 +66,7 @@ were parsed as a pattern.
 This problem was discovered in random testing.  When a slash follows a bareword
 whose prototype is not known to perltidy, it has to guess whether the slash
 starts a pattern or is a division.  The guessing logic was rewritten and 
-improved.
+improved 14 Oct 2020 in 'rewrote logic to guess if divide or pattern', afebe2f.
 
 =item b<fix -bos to keep isolated semicolon breaks after block braces>
 
@@ -48,7 +77,8 @@ at old isolated semicolons. For example
       ;
 
 In testing it was found not to be doing this after braces which require
-semicolons, such as 'do' and anonymous subs. This was fixed.  For example
+semicolons, such as 'do' and anonymous subs. This was fixed 12 Oct 2020 in
+'fix -bos to work with semicolons after braces', 03ee7fc.  For example
 
     my $dist = sub {
         $z = sqrt( $x**2 + $y**2 )
@@ -75,6 +105,7 @@ it was dropped.  For example, this would be kept intact:
 
 This keeps the list from shifting to the right and can avoid problems in
 formatting the list with certain styles, including with the -xci flag.
+Fixed 12 Oct 2020 in 'keep break after use overload statement', 8485afa.
 
 =item B<added flag -xci to improve formatting when -ci and -i are equal, issue git #28>
 
