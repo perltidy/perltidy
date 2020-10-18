@@ -289,7 +289,7 @@ $a->();
             source => "switch1",
             params => "def",
             expect => <<'#3...........',
-sub classify_digit($digit) {
+sub classify_digit ($digit) {
     switch ($digit) {
         case 0 { return 'zero' }
         case [ 2, 4, 6, 8 ]{ return 'even' }

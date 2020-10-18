@@ -1,5 +1,21 @@
 =head1 Issues fixed after release 20201001
 
+=item b<sub signatures no longer parsed with prototypes>
+
+Simple signatures were being parsed with the code for prototypes, which
+prevented them from being formatted with the usual formatting rules.  All
+signatures are now formatted separately from prototypes with the normal
+formatting rules. For example:
+
+ # Old, intput and after formatting:
+ sub t123 ($list=wantarray) { $list ? "list" : "scalar" }
+
+ # New, after formatting
+ sub t123 ( $list = wantarray ) { $list ? "list" : "scalar" }
+
+Notice that some spaces have been introduced within the signature. Previously
+the contents of the parens was left unchanged.
+
 =item b<fix parsing problem with $#>
 
 A problem with parsing variables of the form $# and $#array was found in
@@ -64,12 +80,6 @@ error:
         ) #foo)))
         { $a.$b }
 
-The parenthesized expression in the snippet below was parsed as a prototype
-rather than a signature.  This was fixed.
-
-    sub echo ( $message = 'Hello World!' ) {
-        print "$message\n";
-    }
 
 =item b<improve guess for pattern or division>
 

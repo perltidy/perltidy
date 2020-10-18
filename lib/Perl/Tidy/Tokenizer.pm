@@ -6688,15 +6688,13 @@ sub scan_identifier_do {
         # does not look like a prototype, we assume it is a SIGNATURE and we
         # will stop and let the the standard tokenizer handle it.  In
         # particular, we stop if we see any nested parens, braces, or commas.
-        # Note, a valid prototype cannot contain any alphabetic character
-        # see https://perldoc.perl.org/perlsub
-        # But it appears that an underscore may be valid now
+        # Also note, a valid prototype cannot contain any alphabetic character
+        #  -- see https://perldoc.perl.org/perlsub
+        # But it appears that an underscore may be valid now, so this is
+        # using [A-Za-z] instead of \w 
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
-            ## FIXME: this should be the future version after some
-            ## problems are resolved
-            ## $input_line =~ m/\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
-            $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
+            $input_line =~ m/\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO
             (\s*:)?                              # ATTRS leading ':'
             /gcx
             && ( $1 || $2 )
