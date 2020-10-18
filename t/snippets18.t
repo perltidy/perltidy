@@ -132,7 +132,7 @@ sub macro_get_names { #
    local(%name)=();  ## a static side comment to test -ssc
 
  # a spaced block comment to test -isbc
-   for (0..$                                          #mac_ver) {
+   for (0..$#mac_ver) {
       # a very long comment for testing the parameter --nooutdent-long-comments (or -nolc)
       $name{$_} = $mac_ext[$idx{$mac_exti[$_]}];
       $vmsfile =~ s/;[\d\-]*$//; # very long side comment; Clip off version number; we can use a newer version as well
