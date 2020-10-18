@@ -24,7 +24,7 @@ use Method::Signatures::Simple;
 
  # change invocant name
     method 
-foo4 ($class: $bar) { $class->bar($bar) }
+foo4 ( $class : $bar ) { $class->bar($bar) }
 ENDS
 
 my $expect = <<'ENDE';
@@ -42,7 +42,7 @@ method foo3 : lvalue {
 }
 
 # change invocant name
-method foo4 ($class: $bar) { $class->bar($bar) }
+method foo4 ( $class : $bar ) { $class->bar($bar) }
 ENDE
 
 my $output;

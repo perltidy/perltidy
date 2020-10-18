@@ -2250,8 +2250,8 @@ sub prepare_for_a_new_file {
             }
 
             # ATTRS: check for a ':' which introduces an attribute list
-            # (this might eventually get its own token type)
-            elsif ( $statement_type =~ /^sub\b/ ) {
+            # either after a 'sub' keyword or within a paren list
+            elsif ($statement_type =~ /^sub\b/ ) {
                 $type              = 'A';
                 $in_attribute_list = 1;
             }
@@ -2279,6 +2279,16 @@ sub prepare_for_a_new_file {
             {
                 # mark it as a perltidy label type
                 $type = 'J';
+            }
+
+            # Withing a signature.  For example,
+            # from 't/filter_example.t':
+            #    method foo4 ( $class: $bar ) { $class->bar($bar) }
+            elsif ( !is_balanced_closing_container(QUESTION_COLON)
+                && $paren_type[$paren_depth] =~ /^sub\b/ )
+            {
+                $type              = 'A';
+                $in_attribute_list = 1;
             }
 
             # otherwise, it should be part of a ?/: operator
@@ -6690,8 +6700,8 @@ sub scan_identifier_do {
         # particular, we stop if we see any nested parens, braces, or commas.
         # Also note, a valid prototype cannot contain any alphabetic character
         #  -- see https://perldoc.perl.org/perlsub
-        # But it appears that an underscore may be valid now, so this is
-        # using [A-Za-z] instead of \w 
+        # old PROTO:
+        # $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
             $input_line =~ m/\G(\s*\([^\)\(\}\{\,#A-Za-z]*\))?  # PROTO

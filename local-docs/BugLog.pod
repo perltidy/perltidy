@@ -2,19 +2,33 @@
 
 =item b<sub signatures no longer parsed with prototypes>
 
-Simple signatures were being parsed with the code for prototypes, which
-prevented them from being formatted with the usual formatting rules.  All
-signatures are now formatted separately from prototypes with the normal
-formatting rules. For example:
+Simple signatures (those without commas) were being parsed with code originally
+written for prototypes. This prevented them from being formatted with the
+usual formatting rules.  This was changed so that all signatures are now
+formatted with the normal formatting rules. For example:
 
- # Old, intput and after formatting:
+ # Old, input and after formatting:
  sub t123 ($list=wantarray) { $list ? "list" : "scalar" }
 
  # New, after formatting
  sub t123 ( $list = wantarray ) { $list ? "list" : "scalar" }
 
 Notice that some spaces have been introduced within the signature. Previously
-the contents of the parens was left unchanged.
+the contents of the parens not changed unless the parens contained a list.
+
+This change introduced a problem parsing extended syntax within
+signatures which has been fixed. In the following snippet, the ':' caused
+a parsing error which was fixed.
+
+  # perltidy -sal='method'
+  method foo4 ( $class : $bar, $bubba ) { $class->bar($bar) }
+
+The ':' here is given a type of 'A'. This may be used to change
+the spacing around it. For example:
+
+  # perltidy -sal='method' -nwls='A'
+  method foo4 ( $class: $bar, $bubba ) { $class->bar($bar) }
+
 
 =item b<fix parsing problem with $#>
 
