@@ -5315,13 +5315,13 @@ sub copy_token_as_type {
         );
     }
 
-    my $rnew_token = [ map { $_ } @{$rold_token} ];
-    $rnew_token->[_TYPE_]                  = $type;
-    $rnew_token->[_TOKEN_]                 = $token;
-    $rnew_token->[_BLOCK_TYPE_]            = '';
-    $rnew_token->[_CONTAINER_ENVIRONMENT_] = '';
-    $rnew_token->[_TYPE_SEQUENCE_]         = '';
-    return $rnew_token;
+    my @rnew_token = @{$rold_token};
+    $rnew_token[_TYPE_]                  = $type;
+    $rnew_token[_TOKEN_]                 = $token;
+    $rnew_token[_BLOCK_TYPE_]            = '';
+    $rnew_token[_CONTAINER_ENVIRONMENT_] = '';
+    $rnew_token[_TYPE_SEQUENCE_]         = '';
+    return \@rnew_token;
 }
 
 sub Debug_dump_tokens {
