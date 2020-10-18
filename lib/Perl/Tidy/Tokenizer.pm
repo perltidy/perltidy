@@ -6127,6 +6127,7 @@ sub scan_identifier_do {
     my $i_save = $i;
 
     while ( $i < $max_token_index ) {
+        my $last_tok_is_blank = $tok_is_blank;
         if   ($tok_is_blank) { $tok_is_blank = undef }
         else                 { $i_save       = $i }
 
@@ -6191,7 +6192,19 @@ sub scan_identifier_do {
                 # a # inside a prototype or signature can only start a comment
                 && !$in_prototype_or_signature
               )
-            {    # $#array
+            {
+                # A '#' starts a comment if it follows a space. For example,
+                # the following is equivalent to $ans=40.
+                #   my $ #
+                #     ans = 40;
+                if ($last_tok_is_blank) {
+                    $id_scan_state = '';
+                    $i             = $i_save;
+                    $type          = 'i';
+                    last;
+                }
+
+                # May be '$#' or '$#array'
                 $identifier .= $tok;    # keep same state, a $ could follow
             }
 

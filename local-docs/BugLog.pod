@@ -1,5 +1,20 @@
 =head1 Issues fixed after release 20201001
 
+=item b<fix parsing problem with $#>
+
+A problem with parsing variables of the form $# and $#array was found in
+testing and fixed.  For most variables the leading sigil may be separated from
+the remaining part of the identifier by whitespace.  An exception is for a
+variable beginning with '$#'.  If there is any space between the '$' and '#'
+then the '#' starts a comment.  So the following snippet is has valid syntax
+and is equivalent to $ans=40;
+
+    my $ #
+    #
+    ans = 40;
+
+This was being misparsed and was fixed 17 Oct 2020.
+
 =item b<fix missing line break for hash of subs with signatures>
 
 During testing the following error was found and fixed.
