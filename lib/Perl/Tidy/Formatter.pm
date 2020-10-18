@@ -2420,12 +2420,14 @@ EOM
 
     my %is_good_keyword_breakpoint;
     my %is_lt_gt_le_ge;
+    my %is_container_token;
 
     my %binary_bond_strength;
     my %nobreak_lhs;
     my %nobreak_rhs;
 
     my @bias_tokens;
+    my %bias_hash;
     my %bias;
     my $delta_bias;
 
@@ -2437,7 +2439,10 @@ EOM
 
         @q = qw(lt gt le ge);
         @is_lt_gt_le_ge{@q} = (1) x scalar(@q);
-        #
+
+        @q = qw/ ( [ { } ] ) /;
+        @is_container_token{@q} = (1) x scalar(@q);
+
         # The decision about where to break a line depends upon a "bond
         # strength" between tokens.  The LOWER the bond strength, the MORE
         # likely a break.  A bond strength may be any value but to simplify
@@ -2847,6 +2852,7 @@ EOM
         # with each line ending in a ':', we can add a small number to the
         # bond strength of each ':' (colon.t)
         @bias_tokens = qw( : && || f and or . );   # tokens which get bias
+        %bias_hash   = map { $_ => 0 } @bias_tokens;
         $delta_bias  = 0.0001;                     # a very small strength level
         return;
 
@@ -2865,7 +2871,7 @@ EOM
           $rOpts->{'short-concatenation-item-length'};
 
         # we start a new set of bias values for each line
-        %bias = map { $_ => 0 } @bias_tokens;
+        %bias = %bias_hash;
 
         my $code_bias = -.01;    # bias for closing block braces
 
@@ -3178,12 +3184,12 @@ EOM
             my $tabulated_bond_str;
             my $ltype = $type;
             my $rtype = $next_nonblank_type;
-            if ( $seqno && $token =~ /^[\(\[\{\)\]\}]$/ ) {
+            if ( $seqno && $is_container_token{$token} ) {
                 $ltype = $type . $token;
             }
 
             if (   $next_nonblank_seqno
-                && $next_nonblank_token =~ /^[\(\[\{\)\]\}]$/ )
+                && $is_container_token{$next_nonblank_token} )
             {
                 $rtype = $next_nonblank_type . $next_nonblank_token;
             }
@@ -3309,8 +3315,8 @@ EOM
                 }
 
                 # But encourage breaking after opening welded tokens
-                elsif ($self->weld_len_left( $seqno, $type )
-                    && $is_opening_token{$token} )
+                elsif ($is_opening_token{$token}
+                    && $self->weld_len_left( $seqno, $type ) )
                 {
                     $strength -= 1;
                 }
