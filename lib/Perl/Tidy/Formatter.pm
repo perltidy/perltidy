@@ -5373,7 +5373,8 @@ sub K_next_code {
 sub K_next_nonblank {
     my ( $self, $KK, $rLL ) = @_;
 
-    # return the index K of the next nonblank token
+    # return the index K of the next nonblank token, or
+    # return undef if none
     return unless ( defined($KK) && $KK >= 0 );
 
     # The third arg allows this routine to be used on any array.  This is
@@ -5383,6 +5384,14 @@ sub K_next_nonblank {
     $rLL = $self->[_rLL_] unless ( defined($rLL) );
     my $Num  = @{$rLL};
     my $Knnb = $KK + 1;
+    return unless ( $Knnb < $Num );
+    return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
+    return unless ( ++$Knnb < $Num );
+    return $Knnb if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' );
+
+    # Backup loop. Very unlikely to get here; it means we have neighboring
+    # blanks in the token stream.
+    $Knnb++;
     while ( $Knnb < $Num ) {
 
         # Safety check, this fault shouldn't happen:  The $rLL array is the
