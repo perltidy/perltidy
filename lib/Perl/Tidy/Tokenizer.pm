@@ -6838,6 +6838,12 @@ sub scan_identifier_do {
 
         # no match but line not blank
         else {
+
+            # assume that an opening paren starts a signature
+            if ($saw_opening_paren) {
+                $package_saved = "";
+                $subname_saved = "";
+            }
         }
         return ( $i, $tok, $type, $id_scan_state );
     }
