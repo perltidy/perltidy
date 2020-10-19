@@ -1,6 +1,6 @@
 ######################################################################
 #
-# the Perl::Tidy::Tokenizer package is essentially a filter which
+# The Perl::Tidy::Tokenizer package is essentially a filter which
 # reads lines of perl source code from a source object and provides
 # corresponding tokenized lines through its get_line() method.  Lines
 # flow from the source_object to the caller like this:
@@ -1625,9 +1625,9 @@ sub prepare_for_a_new_file {
     @_ = qw(for foreach);
     @is_for_foreach{@_} = (1) x scalar(@_);
 
-    my %is_my_our;
-    @_ = qw(my our);
-    @is_my_our{@_} = (1) x scalar(@_);
+    my %is_my_our_state;
+    @_ = qw(my our state);
+    @is_my_our_state{@_} = (1) x scalar(@_);
 
     # These keywords may introduce blocks after parenthesized expressions,
     # in the form:
@@ -2251,14 +2251,24 @@ sub prepare_for_a_new_file {
 
             # ATTRS: check for a ':' which introduces an attribute list
             # either after a 'sub' keyword or within a paren list
-            elsif ($statement_type =~ /^sub\b/ ) {
+            elsif ( $statement_type =~ /^sub\b/ ) {
+                $type              = 'A';
+                $in_attribute_list = 1;
+            }
+
+            # Withing a signature, unless we are in a ternary.  For example,
+            # from 't/filter_example.t':
+            #    method foo4 ( $class: $bar ) { $class->bar($bar) }
+            elsif ( $paren_type[$paren_depth] =~ /^sub\b/
+                && !is_balanced_closing_container(QUESTION_COLON) )
+            {
                 $type              = 'A';
                 $in_attribute_list = 1;
             }
 
             # check for scalar attribute, such as
             # my $foo : shared = 1;
-            elsif ($is_my_our{$statement_type}
+            elsif ($is_my_our_state{$statement_type}
                 && $current_depth[QUESTION_COLON] == 0 )
             {
                 $type              = 'A';
@@ -2279,16 +2289,6 @@ sub prepare_for_a_new_file {
             {
                 # mark it as a perltidy label type
                 $type = 'J';
-            }
-
-            # Withing a signature.  For example,
-            # from 't/filter_example.t':
-            #    method foo4 ( $class: $bar ) { $class->bar($bar) }
-            elsif ( !is_balanced_closing_container(QUESTION_COLON)
-                && $paren_type[$paren_depth] =~ /^sub\b/ )
-            {
-                $type              = 'A';
-                $in_attribute_list = 1;
             }
 
             # otherwise, it should be part of a ?/: operator
@@ -3492,7 +3492,7 @@ EOM
                     }
 
                     # remember my and our to check for trailing ": shared"
-                    elsif ( $is_my_our{$tok} ) {
+                    elsif ( $is_my_our_state{$tok} ) {
                         $statement_type = $tok;
                     }
 
@@ -5455,16 +5455,16 @@ sub guess_if_pattern_or_division {
 
         if ($in_quote) {
 
-	    # we didn't find an ending / on this line, so we bias towards
-	    # division
+            # we didn't find an ending / on this line, so we bias towards
+            # division
             if ( $divide_expected >= 0 ) {
                 $is_pattern = 0;
                 $msg .= "division (no ending / on this line)\n";
             }
             else {
 
-		# assuming a multi-line pattern ... this is risky, but division
-		# does not seem possible.  If this fails, it would either be due
+                # assuming a multi-line pattern ... this is risky, but division
+                # does not seem possible.  If this fails, it would either be due
                 # to a syntax error in the code, or the division_expected logic
                 # needs to be fixed.
                 $msg        = "multi-line pattern (division not possible)\n";
@@ -6700,7 +6700,9 @@ sub scan_identifier_do {
         # particular, we stop if we see any nested parens, braces, or commas.
         # Also note, a valid prototype cannot contain any alphabetic character
         #  -- see https://perldoc.perl.org/perlsub
-        # old PROTO:
+        # But it appears that an underscore is valid in a prototype, so the
+        # regex below uses [A-Za-z] rather than \w
+        # This is the old regex which has been replaced:
         # $input_line =~ m/\G(\s*\([^\)\(\}\{\,#]*\))?  # PROTO
         my $saw_opening_paren = $input_line =~ /\G\s*\(/;
         if (
@@ -8127,6 +8129,7 @@ BEGIN {
       sqrt
       srand
       stat
+      state
       study
       substr
       symlink
@@ -8349,6 +8352,7 @@ BEGIN {
       splice
       split
       sprintf
+      state
       substr
       syscall
       sysopen

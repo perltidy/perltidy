@@ -1,5 +1,15 @@
 =head1 Issues fixed after release 20201001
 
+=item b<added 'state' as keyword>
+
+A statement such as the following was generating an error message at the colon:
+
+   state $a : shared;
+
+The problem was that 'state' was not in the list of keywords. This has been fixed
+and the line now parses without error.  The 'state.t' test file for perl 5.31
+now formats without error.
+
 =item b<sub signatures no longer parsed with prototypes>
 
 Simple signatures (those without commas) were being parsed with code originally
