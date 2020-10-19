@@ -9779,8 +9779,12 @@ EOM
             $self->[_last_last_line_leading_level_] =
               $last_last_line_leading_level;
 
-            # add a couple of extra terminal blank tokens
-            $self->pad_array_to_go();
+            # Flag to remember if we called sub 'pad_array_to_go'.
+            # Some routines (scan_list(), set_continuation_breaks() ) need some
+            # extra tokens added at the end of the batch.  Most batches do not
+            # use these routines, so we will avoid calling 'pad_array_to_go'
+            # unless it is needed.
+            my $called_pad_array_to_go;
 
             # set all forced breakpoints for good list formatting
             my $is_long_line = $max_index_to_go > 0
@@ -9813,6 +9817,10 @@ EOM
                     && $rOpts_comma_arrow_breakpoints != 3 )
               )
             {
+                # add a couple of extra terminal blank tokens
+                $self->pad_array_to_go();
+                $called_pad_array_to_go = 1;
+
                 ## This caused problems in one version of perl for unknown reasons:
                 ## $saw_good_break ||= scan_list();
                 my $sgb = $self->scan_list($is_long_line);
@@ -9849,6 +9857,10 @@ EOM
 
             # otherwise use multiple lines
             else {
+
+		# add a couple of extra terminal blank tokens if we haven't
+		# already done so
+                $self->pad_array_to_go() unless ($called_pad_array_to_go); 
 
                 ( $ri_first, $ri_last ) =
                   $self->set_continuation_breaks( $saw_good_break,
