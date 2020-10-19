@@ -1759,6 +1759,11 @@ sub prepare_for_a_new_file {
                             $max_token_index );
                         if ( $next_nonblank_token ne ')' ) {
                             my $hint;
+
+                            # FIXME: this gives an error parsing something like
+                            #       $subsubs[0]()(0);
+                            # which is a valid syntax (see subsub.t).  We may
+                            # need to revise this coding.
                             error_if_expecting_OPERATOR('(');
 
                             if ( $last_nonblank_type eq 'C' ) {
