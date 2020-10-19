@@ -178,6 +178,7 @@ my (
     %is_closing_token,
     %is_equal_or_fat_comma,
     %is_block_with_ci,
+    %is_comma_or_fat_comma,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -523,6 +524,10 @@ BEGIN {
     # to poor formatting in complex lists.
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
+
+    @q = qw( => );
+    push @q, ',';
+    @is_comma_or_fat_comma{@q} = (1) x scalar(@q);
 
     # These block types can take ci.  This is used by the -xci option.
     # Note that the 'sub' in this list is an anonymous sub.  To be more correct
@@ -4515,7 +4520,7 @@ sub respace_tokens {
             $nonblank_token_count++;
 
             # count selected types
-            if ( $type =~ /^(=>|,)$/ ) {
+            if ( $is_comma_or_fat_comma{$type} ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
                     $rtype_count_by_seqno->{$seqno}->{$type}++;
