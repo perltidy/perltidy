@@ -3930,6 +3930,18 @@ increasing size, when multiple files are being processed.  This is useful
 during program development, when large numbers of files with varying sizes are
 processed, because it can reduce virtual memory usage. 
 
+B<--maximum-file-size-mb=n> or B<-mfs=n> specifies the maximum file size in
+megabytes that perltidy will attempt to format. This parameter is provided to
+avoid causing system problems by accidentally attempting to format an extremely
+large data file. Most perl scripts are less than about 2 MB in size. The
+integer B<n> has a default value of 10, so perltidy will skip formatting files
+which have a size greater than 10 MB.  The command to increase the limit to 20
+MB for example would be
+   
+  perltidy -mfs=20
+
+This only applies to files specified by filename on the command line. 
+
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file 
 showing the tokenization of all lines of code.
 

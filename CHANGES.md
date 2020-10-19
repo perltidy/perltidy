@@ -2,6 +2,12 @@
 
 ## 2020 10 01.02
 
+    - Add flag -mfs=n, --maximum-file-size-mb=n.  This parameter is provided to
+      avoid causing system problems by accidentally attempting to format an 
+      extremely large data file. The default is n=10.  The command to increase 
+      the limit to 20 MB for example would be  -mfs=20.  This only applies to
+      files specified by filename on the command line.
+
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.
       If you use B<-ci=n> and B<-i=n> with the same value of B<n> you will probably

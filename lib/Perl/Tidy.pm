@@ -906,6 +906,18 @@ EOM
                 next;
             }
 
+	    # And avoid formatting extremely large files. Since perltidy reads
+	    # files into memory, trying to process an extremely large file
+	    # could cause system problems.
+            my $size_in_mb = ( -s $input_file ) / ( 1024 * 1024 );
+            if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
+                $size_in_mb = sprintf( "%0.1f", $size_in_mb );
+                Warn(
+"skipping file: $input_file: size $size_in_mb MB exceeds limit $rOpts->{'maximum-file-size-mb'}; use -mfs=i to change\n"
+                );
+                next;
+            }
+
             unless ( ( -T $input_file ) || $rOpts->{'force-read-binary'} ) {
                 Warn(
                     "skipping file: $input_file: Non-text (override with -f)\n"
@@ -2369,6 +2381,7 @@ sub generate_options {
     $add_option->( 'version',                         'v',    '' );
     $add_option->( 'memoize',                         'mem',  '!' );
     $add_option->( 'file-size-order',                 'fso',  '!' );
+    $add_option->( 'maximum-file-size-mb',            'mfs',  '=i' );
 
     #---------------------------------------------------------------------
 
@@ -2511,6 +2524,7 @@ sub generate_options {
       maximum-consecutive-blank-lines=1
       maximum-fields-per-table=0
       maximum-line-length=80
+      maximum-file-size-mb=10
       memoize
       minimum-space-to-comment=4
       nobrace-left-and-indent
