@@ -1,5 +1,7 @@
 =head1 Issues fixed after release 20201001
 
+=over 4
+
 =item b<added 'state' as keyword>
 
 A statement such as the following was generating an error message at the colon:
@@ -8,7 +10,8 @@ A statement such as the following was generating an error message at the colon:
 
 The problem was that 'state' was not in the list of keywords. This has been fixed
 and the line now parses without error.  The 'state.t' test file for perl 5.31
-now formats without error.
+now formats without error.  This was added 18 Oct 2020 in "add 'state' as keyword",
+d73e15f.
 
 =item b<sub signatures no longer parsed with prototypes>
 
@@ -39,6 +42,9 @@ the spacing around it. For example:
   # perltidy -sal='method' -nwls='A'
   method foo4 ( $class: $bar, $bubba ) { $class->bar($bar) }
 
+This update was added 18 Oct 2020, in 'format all signatures separately from
+prototypes', e6a10f3.  The test file 'signatures.t' distributed with perl5.31
+formats without error now.
 
 =item b<fix parsing problem with $#>
 
@@ -53,7 +59,8 @@ and is equivalent to $ans=40;
     #
     ans = 40;
 
-This was being misparsed and was fixed 17 Oct 2020.
+This was being misparsed and was fixed 17 Oct 2020,  in
+'fixed parsing error with spaces in $#' a079cdb.
 
 =item b<fix missing line break for hash of subs with signatures>
 
@@ -81,7 +88,8 @@ Notice that the break after the comma has been lost.  The problem was traced to
 a short-cut taken by the code looking for one-line blocks. The unique
 circumstances in which this occured involved a hash of anonymous subs, one with
 a signature with multiple parameters and short enough to be a one-line block,
-as in the last sub definition line.  This was fixed 17 Oct 2020.
+as in the last sub definition line.  This was fixed 17 Oct 2020
+in 'fix missing line break for hash of subs with signatures', 51428db.
 
 =item b<fix issues with prototype and signature parsing>
 
@@ -103,7 +111,6 @@ error:
         a #foo)))
         ) #foo)))
         { $a.$b }
-
 
 =item b<improve guess for pattern or division>
 
@@ -195,6 +202,9 @@ corrected formatting, we would have
         $error          = $@;
         $produced_error = 1;
       };
+
+=back
+
 
 =head1 Issues fixed after release 20200907
 
@@ -574,3 +584,75 @@ Fixed 8 Sep 2020 in "fix undefined variable", 9729965.
  Use of uninitialized value $Ko in subtraction (-) at /home/steve/bin/Perl/Tidy/Formatter.pm line 4023.
 
 =back
+
+=head1 Open Issues
+
+These are known issues which have not been fixed.
+
+=over 4
+
+=item b<lexical subs not fully supported>
+
+Basic parsing of lexical subs works but some aspects of lexical subs are not yet functional. 
+One of these is that unlike regular subs, lexical subs can override names of builtin functions.
+
+First consider the following snippet
+
+  sub s { 
+    my $arg=$_[0];
+    print "s called with arg $arg\n";
+  }
+  s(1);
+  s(2);
+
+The 's' in the two last lines is the builtin s function, not the sub. Both perltidy and perl
+make the same assumption here. This program happens to still run but prints nothing. It will
+not run if the last semicolon is removed.
+
+Now consider the following snippet in which the sub has a preceding 'my'
+
+  use feature 'lexical_subs', 'signatures';
+  my sub s { 
+    my $arg=$_[0];
+    print "s called with arg $arg\n";
+  }
+  s(1);
+  s(2);
+
+The builtin function 's' is replaced by the sub s here, and the program runs.  Perltidy
+will format this but it is assuming that the s in the two last lines are the builtin s function.
+If the last semicolon is removed, there will be an formatting error.  So perltidy and perl
+make different assumptions in this case.
+
+Another issue is that perltidy does not yet remember the extent of the scope of a lexical sub.
+
+=item b<issues with paren-less calls>
+
+Consider the following snippet:
+
+  use Test::More;
+  ok open($stdin, "<&", $1), 'open ... "<&", $magical_fileno', ||  _diag $!;
+
+Note the unusual situation of a comma followed by an '||'.  Perltidy will format this
+satisfactorally but it will write an error message. The syntax is correct, however.
+Perl knows the prototype of the 'ok' function, which is called here without parens,
+so the last comma marks the last arg and is needed to keep the || from attaching
+to the last arg.
+
+Full support of peren-less calls will probably never be implemented in perltidy
+because it would require that it parse all of the modules used to find the
+prototypes.  This would make it impossible to run perltidy on small snippets of code
+from within an editor.
+
+The problem can be avoid if parens are used:
+
+  ok ( open($stdin, "<&", $1), 'open ... "<&", $magical_fileno') ||  _diag $!;
+
+=item b<multiple sub paren calls>
+
+Perltidy currently flags as an error a closing paren followed by an opening
+paren, as in the following
+
+  $subsubs[0]()(0)
+
+This syntax is ok.  The example is from test 'current_sub.t' in perl5.31.
