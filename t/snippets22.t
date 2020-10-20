@@ -11,6 +11,8 @@
 #8 xci.def
 #9 xci.xci1
 #10 xci.xci2
+#11 mangle4.def
+#12 mangle4.mangle
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -37,6 +39,7 @@ BEGIN {
 ----------
         'def'       => "",
         'here_long' => "-l=33",
+        'mangle'    => "--mangle",
         'xci1'      => "-xci",
         'xci2'      => "-pbp -nst -nse -xci",
     };
@@ -114,6 +117,26 @@ $sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
     FROM logins WHERE username='$user'
 END_OF_SELECT
 
+----------
+
+        'mangle4' => <<'----------',
+# a useful parsing test from 'signatures.t'
+use feature "signatures";
+no warnings "experimental::signatures";
+sub t086
+    ( #foo)))
+    $ #foo)))
+    a #foo)))
+    , #foo)))
+    , #foo)))
+    $ #foo)))
+    b #foo)))
+    = #foo)))
+    333 #foo)))
+    , #foo)))
+    , #foo)))
+    ) #foo)))
+    { $a.$b }
 ----------
 
         'xci' => <<'----------',
@@ -389,6 +412,53 @@ my $otherHashRef
     }
     : undef;
 #10...........
+        },
+
+        'mangle4.def' => {
+            source => "mangle4",
+            params => "def",
+            expect => <<'#11...........',
+# a useful parsing test from 'signatures.t'
+use feature "signatures";
+no warnings "experimental::signatures";
+
+sub t086 (    #foo)))
+    $         #foo)))
+      a       #foo)))
+    ,         #foo)))
+    ,         #foo)))
+    $         #foo)))
+      b       #foo)))
+      =       #foo)))
+      333     #foo)))
+    ,         #foo)))
+    ,         #foo)))
+  )           #foo)))
+{ $a . $b }
+#11...........
+        },
+
+        'mangle4.mangle' => {
+            source => "mangle4",
+            params => "mangle",
+            expect => <<'#12...........',
+# a useful parsing test from 'signatures.t'
+use feature "signatures";
+no warnings "experimental::signatures";
+sub t086(#foo)))
+$ #foo)))
+  a#foo)))
+,#foo)))
+,#foo)))
+$ #foo)))
+  b#foo)))
+  =#foo)))
+  333#foo)))
+,#foo)))
+,#foo)))
+  )#foo)))
+{$a.$b}
+#12...........
         },
     };
 

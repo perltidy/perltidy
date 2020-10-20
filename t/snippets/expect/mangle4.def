@@ -1,0 +1,17 @@
+# a useful parsing test from 'signatures.t'
+use feature "signatures";
+no warnings "experimental::signatures";
+
+sub t086 (    #foo)))
+    $         #foo)))
+      a       #foo)))
+    ,         #foo)))
+    ,         #foo)))
+    $         #foo)))
+      b       #foo)))
+      =       #foo)))
+      333     #foo)))
+    ,         #foo)))
+    ,         #foo)))
+  )           #foo)))
+{ $a . $b }
