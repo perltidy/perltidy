@@ -179,7 +179,6 @@ my (
     %is_equal_or_fat_comma,
     %is_block_with_ci,
     %is_comma_or_fat_comma,
-    %essential_whitespace_not_following,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -537,14 +536,6 @@ BEGIN {
     # never be useful.
     @q = qw( do sub eval sort map grep );
     @is_block_with_ci{@q} = (1) x scalar(@q);
-
-    # These are used as a speedup filter for sub is_essential_whitespace.
-    # No space is needed after them except for a here doc.
-    @q = qw( ; { } [ ] );
-    push @q, ',';
-    push @q, ')';
-    push @q, '(';
-    @essential_whitespace_not_following{@q} = (1) x scalar(@q);
 
 }
 
@@ -2150,6 +2141,10 @@ EOM
     my %is_for_foreach;
     my %is_digraph;
     my %is_trigraph;
+    my %essential_whitespace_filter_l1;
+    my %essential_whitespace_filter_r1;
+    my %essential_whitespace_filter_l2;
+    my %essential_whitespace_filter_r2;
 
     BEGIN {
 
@@ -2168,6 +2163,32 @@ EOM
 
         @q = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~);
         @is_trigraph{@q} = (1) x scalar(@q);
+
+        # These are used as a speedup filters for sub is_essential_whitespace.
+
+        # Filter 1:
+        # These left side token types USUALLY do not require a space:
+        @q = qw( ; { } [ ] L R );
+        push @q, ',';
+        push @q, ')';
+        push @q, '(';
+        @essential_whitespace_filter_l1{@q} = (1) x scalar(@q);
+
+        # BUT some might if followed by these right token types
+        @q = qw( pp mm << <<= h );
+        @essential_whitespace_filter_r1{@q} = (1) x scalar(@q);
+
+        # Filter 2:
+        # These right side filters usually do not require a space
+        @q = qw( ; ] R } );
+        push @q, ',';
+        push @q, ')';
+        @essential_whitespace_filter_r2{@q} = (1) x scalar(@q);
+
+        # BUT some might if followed by these left token types
+        @q = qw( h Z );
+        @essential_whitespace_filter_l2{@q} = (1) x scalar(@q);
+
     }
 
     sub is_essential_whitespace {
@@ -2179,19 +2200,43 @@ EOM
         # ($tokenr, $typer) is the token to the right of the space in question
         # ($tokenll, $typell) is previous nonblank token to the left of $tokenl
         #
-        # This is a slow routine but is not needed too often except when -mangle
-        # is used.
-        #
-        # Note: This routine should almost never need to be changed.  It is
+        # Note1: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
+
+	# Note2: The -mangle option causes large numbers of calls to this
+	# routine and therefore is a good test. So if a change is made, be sure
+	# to run a large number of files with the -mangle option and check for
+	# differences.
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
-        # speedups
-	# The first is not really essential but retained to keep formatting
-	# unchanged.
-        return 1 if ( $typer eq 'h' ); 
-        return   if ( $essential_whitespace_not_following{$typel} );
+	# This is potentially a very slow routine but the following quick
+	# filters typically catch and handle over 90% of the calls.
+
+        # Filter 1: usually no space required after common types ; , [ ] { } ( )
+        return
+          if ( $essential_whitespace_filter_l1{$typel}
+            && !$essential_whitespace_filter_r1{$typer} );
+
+        # Filter 2: usually no space before common types ; ,
+        return
+          if ( $essential_whitespace_filter_r2{$typer}
+            && !$essential_whitespace_filter_l2{$typel} );
+
+	# Filter 3: Handle side comments: a space is only essential if the left
+	# token ends in '$' For example, we do not want to create $#foo below:
+
+        #   sub t086
+        #       ( #foo)))
+        #       $ #foo)))
+        #       a #foo)))
+        #       ) #foo)))
+        #       { ... }
+
+        if ($typer eq '#' ) {
+            return 1 if ($tokenl && substr($tokenl,-1) eq '$');
+            return;
+        }
 
         my $tokenr_is_bareword   = $tokenr =~ /^\w/ && $tokenr !~ /^\d/;
         my $tokenr_is_open_paren = $tokenr eq '(';
@@ -2871,9 +2916,9 @@ EOM
         # example, to force long string of conditional operators to break
         # with each line ending in a ':', we can add a small number to the
         # bond strength of each ':' (colon.t)
-        @bias_tokens = qw( : && || f and or . );   # tokens which get bias
+        @bias_tokens = qw( : && || f and or . );       # tokens which get bias
         %bias_hash   = map { $_ => 0 } @bias_tokens;
-        $delta_bias  = 0.0001;                     # a very small strength level
+        $delta_bias  = 0.0001;    # a very small strength level
         return;
 
     } ## end sub initialize_bond_strength_hashes
@@ -4883,14 +4928,7 @@ sub respace_tokens {
 
             if (
 
-		# The call to is_essential_whitespace is very slow, so the
-		# following filter is used to eliminate most calls.
-                (
-                      !$essential_whitespace_not_following{$type_p}
-                    || $type_next eq 'h'
-                )
-
-                && is_essential_whitespace(
+                is_essential_whitespace(
                     $token_pp, $type_pp,    $token_p,
                     $type_p,   $token_next, $type_next,
                 )
@@ -5933,7 +5971,7 @@ sub find_nested_pairs {
           )
         {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
-            if ( !$nonblank_count ) { $Kn_first = $Kn }
+            if ( !$nonblank_count )        { $Kn_first = $Kn }
             if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
 
             # skip chain of identifier tokens
@@ -5957,8 +5995,8 @@ sub find_nested_pairs {
                 && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
 
             # anonymous sub + prototype or sig:  )->then( sub ($code) {
-	    # ... but it seems best not to stack two structural blocks, like
-	    # this
+            # ... but it seems best not to stack two structural blocks, like
+            # this
             #    sub make_anon_with_my_sub { sub {
             # because it probably hides the structure a little too much.
             || (   $rLL->[$K_inner_opening]->[_BLOCK_TYPE_] eq 'sub'
@@ -9012,7 +9050,7 @@ sub starting_one_line_block {
         # If this brace follows a parenthesized list, we should look back to
         # find the keyword before the opening paren because otherwise we might
         # form a one line block which stays intack, and cause the parenthesized
-        # expression to break open. That looks bad.  
+        # expression to break open. That looks bad.
         if ( $tokens_to_go[$i_start] eq ')' ) {
 
             # Find the opening paren
@@ -9885,9 +9923,9 @@ EOM
             # otherwise use multiple lines
             else {
 
-		# add a couple of extra terminal blank tokens if we haven't
-		# already done so
-                $self->pad_array_to_go() unless ($called_pad_array_to_go); 
+                # add a couple of extra terminal blank tokens if we haven't
+                # already done so
+                $self->pad_array_to_go() unless ($called_pad_array_to_go);
 
                 ( $ri_first, $ri_last ) =
                   $self->set_continuation_breaks( $saw_good_break,
