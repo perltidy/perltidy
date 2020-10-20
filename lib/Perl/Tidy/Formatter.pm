@@ -2233,8 +2233,14 @@ EOM
         #       ) #foo)))
         #       { ... }
 
+        # Also, I prefer not to put a ? and # together because ? used to be
+        # a pattern delmiter and spacing was used if guessing was needed.
+
         if ($typer eq '#' ) {
-            return 1 if ($tokenl && substr($tokenl,-1) eq '$');
+
+            return 1
+              if ( $tokenl
+                && ( $typel eq '?' || substr( $tokenl, -1 ) eq '$' ) );
             return;
         }
 
