@@ -23,10 +23,8 @@ use constant {
 };
 
 sub new {
-    my ( $caller, %arg ) = @_;
-    my $caller_is_obj = ref($caller);
-    my $class         = $caller_is_obj || $caller;
-    my $self          = bless [], $class;
+    my ( $class, %arg ) = @_;
+    my $self = bless [], $class;
     $self->[_column_]          = $arg{column};
     $self->[_starting_column_] = $arg{starting_column};
     $self->[_saved_column_]    = $arg{saved_column};
@@ -44,13 +42,15 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
     print STDERR <<EOM;
-    ======================================================================
-    Unexpected call to Autoload looking for sub $AUTOLOAD
-    Called from package: '$pkg'  
-    Called from File '$fname'  at line '$lno'
-    This error is probably due to a recent programming change
-    ======================================================================
+======================================================================
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
+Called from package: '$pkg'  
+Called from File '$fname'  at line '$lno'
+This error is probably due to a recent programming change
+======================================================================
 EOM
     exit 1;
 }

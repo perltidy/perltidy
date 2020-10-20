@@ -62,10 +62,7 @@ EOM
 
     # Constructor may be called as a class method
     sub new {
-        my ( $caller, %arg ) = @_;
-        my $caller_is_obj = ref($caller);
-        my $class         = $caller_is_obj || $caller;
-        ##no strict "refs";
+        my ( $class, %arg ) = @_;
         my $self = bless [], $class;
 
         $self->[_jmax_]                      = $arg{jmax};
