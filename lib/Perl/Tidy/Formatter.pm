@@ -179,6 +179,7 @@ my (
     %is_equal_or_fat_comma,
     %is_block_with_ci,
     %is_comma_or_fat_comma,
+    %essential_whitespace_not_following,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -536,6 +537,14 @@ BEGIN {
     # never be useful.
     @q = qw( do sub eval sort map grep );
     @is_block_with_ci{@q} = (1) x scalar(@q);
+
+    # These are used as a speedup filter for sub is_essential_whitespace.
+    # No space is needed after them except for a here doc.
+    @q = qw( ; { } [ ] );
+    push @q, ',';
+    push @q, ')';
+    push @q, '(';
+    @essential_whitespace_not_following{@q} = (1) x scalar(@q);
 
 }
 
@@ -2177,6 +2186,12 @@ EOM
         # for avoiding syntax problems rather than for formatting.
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
+
+        # speedups
+	# The first is not really essential but retained to keep formatting
+	# unchanged.
+        return 1 if ( $typer eq 'h' ); 
+        return   if ( $essential_whitespace_not_following{$typel} );
 
         my $tokenr_is_bareword   = $tokenr =~ /^\w/ && $tokenr !~ /^\d/;
         my $tokenr_is_open_paren = $tokenr eq '(';
@@ -4867,7 +4882,15 @@ sub respace_tokens {
             }
 
             if (
-                is_essential_whitespace(
+
+		# The call to is_essential_whitespace is very slow, so the
+		# following filter is used to eliminate most calls.
+                (
+                      !$essential_whitespace_not_following{$type_p}
+                    || $type_next eq 'h'
+                )
+
+                && is_essential_whitespace(
                     $token_pp, $type_pp,    $token_p,
                     $type_p,   $token_next, $type_next,
                 )
@@ -4943,90 +4966,66 @@ sub respace_tokens {
 
             # Handle a nonblank token...
 
-            # check for a qw quote
-            if ( $type eq 'q' ) {
+            if ($type_sequence) {
 
-                # trim blanks from right of qw quotes
-                # (To avoid trimming qw quotes use -ntqw; the tokenizer handles
-                # this)
-                $token =~ s/\s*$//;
-                $rtoken_vars->[_TOKEN_] = $token;
-                $self->note_embedded_tab($input_line_number)
-                  if ( $token =~ "\t" );
+                if ( $is_opening_token{$token} ) {
+                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                    push @{ $rchildren_of_seqno->{$seqno_parent} },
+                      $type_sequence;
+                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+                    $seqno_stack{$depth_next}           = $type_sequence;
+                    $KK_stack{$depth_next}              = $KK;
+                    $K_opening_by_seqno{$type_sequence} = $KK;
+                    $depth_next++;
 
-                if ($in_multiline_qw) {
-
-                    # If we are at the end of a multiline qw ..
-                    if ( $in_multiline_qw == $KK ) {
-
-                 # Split off the closing delimiter character
-                 # so that the formatter can put a line break there if necessary
-                        my $part1 = $token;
-                        my $part2 = substr( $part1, -1, 1, "" );
-
-                        if ($part1) {
-                            my $rcopy =
-                              copy_token_as_type( $rtoken_vars, 'q', $part1 );
-                            $store_token->($rcopy);
-                            $token = $part2;
-                            $rtoken_vars->[_TOKEN_] = $token;
-
-                        }
-                        $in_multiline_qw = undef;
-
-                        # store without preceding blank
-                        $store_token->($rtoken_vars);
-                        next;
-                    }
-                    else {
-                        # continuing a multiline qw
-                        $store_token->($rtoken_vars);
-                        next;
+                    if ( $depth_next > $depth_next_max ) {
+                        $depth_next_max = $depth_next;
                     }
                 }
+                elsif ( $is_closing_token{$token} ) {
+                    $depth_next--;
 
-                else {
-
-                    # we are encountered new qw token...see if multiline
-                    my $K_end = $K_end_q->($KK);
-                    if ( $ALLOW_BREAK_MULTILINE_QW && $K_end != $KK ) {
-
-                        # Starting multiline qw...
-                        # set flag equal to the ending K
-                        $in_multiline_qw = $K_end;
-
-                 # Split off the leading part
-                 # so that the formatter can put a line break there if necessary
-                        if ( $token =~ /^(qw\s*.)(.*)$/ ) {
-                            my $part1 = $1;
-                            my $part2 = $2;
-                            if ($part2) {
-                                my $rcopy =
-                                  copy_token_as_type( $rtoken_vars, 'q',
-                                    $part1 );
-                                $store_token_and_space->(
-                                    $rcopy, $rwhitespace_flags->[$KK] == WS_YES
-                                );
-                                $token = $part2;
-                                $rtoken_vars->[_TOKEN_] = $token;
-
-                                # Second part goes without intermediate blank
-                                $store_token->($rtoken_vars);
-                                next;
+                    # keep track of broken lists for later formatting
+                    my $seqno_test  = $seqno_stack{$depth_next};
+                    my $KK_open     = $KK_stack{$depth_next};
+                    my $seqno_outer = $seqno_stack{ $depth_next - 1 };
+                    if (   defined($seqno_test)
+                        && defined($KK_open)
+                        && $seqno_test == $type_sequence )
+                    {
+                        my $lx_open  = $rLL->[$KK_open]->[_LINE_INDEX_];
+                        my $lx_close = $rLL->[$KK]->[_LINE_INDEX_];
+                        if ( $lx_open < $lx_close ) {
+                            $ris_broken_container->{$type_sequence} =
+                              $lx_close - $lx_open;
+                            if ( defined($seqno_outer) ) {
+                                $rhas_broken_container->{$seqno_outer} = 1;
                             }
                         }
                     }
-                    else {
 
-                        # this is a new single token qw -
-                        # store with possible preceding blank
-                        $store_token_and_space->(
-                            $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
-                        );
-                        next;
+                    # Insert a tentative missing semicolon if the next token is
+                    # a closing block brace
+                    if (
+                           $type eq '}'
+                        && $token eq '}'
+
+                        # not preceded by a ';'
+                        && $last_nonblank_type ne ';'
+
+                   # and this is not a VERSION stmt (is all one line, we are not
+                   # inserting semicolons on one-line blocks)
+                        && $CODE_type ne 'VER'
+
+                        # and we are allowed to add semicolons
+                        && $rOpts->{'add-semicolons'}
+                      )
+                    {
+                        $add_phantom_semicolon->($KK);
                     }
                 }
-            } ## end if ( $type eq 'q' )
+            }
 
             # Modify certain tokens here for whitespace
             # The following is not yet done, but could be:
@@ -5113,26 +5112,6 @@ sub respace_tokens {
                 }
             }
 
-            # change 'LABEL   :'   to 'LABEL:'
-            elsif ( $type eq 'J' ) {
-                $token =~ s/\s+//g;
-                $rtoken_vars->[_TOKEN_] = $token;
-            }
-
-            # patch to add space to something like "x10"
-            # This avoids having to split this token in the pre-tokenizer
-            elsif ( $type eq 'n' ) {
-                if ( $token =~ /^x\d+/ ) {
-                    $token =~ s/x/x /;
-                    $rtoken_vars->[_TOKEN_] = $token;
-                }
-            }
-
-            # check a quote for problems
-            elsif ( $type eq 'Q' ) {
-                $check_Q->( $KK, $Kfirst, $input_line_number );
-            }
-
             # handle semicolons
             elsif ( $type eq ';' ) {
 
@@ -5195,65 +5174,109 @@ sub respace_tokens {
                 }
             }
 
-            elsif ($type_sequence) {
+            # patch to add space to something like "x10"
+            # This avoids having to split this token in the pre-tokenizer
+            elsif ( $type eq 'n' ) {
+                if ( $token =~ /^x\d+/ ) {
+                    $token =~ s/x/x /;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+            }
 
-                if ( $is_opening_token{$token} ) {
-                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-                    push @{ $rchildren_of_seqno->{$seqno_parent} },
-                      $type_sequence;
-                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
-                    $seqno_stack{$depth_next}           = $type_sequence;
-                    $KK_stack{$depth_next}              = $KK;
-                    $K_opening_by_seqno{$type_sequence} = $KK;
-                    $depth_next++;
+            # check for a qw quote
+            elsif ( $type eq 'q' ) {
 
-                    if ( $depth_next > $depth_next_max ) {
-                        $depth_next_max = $depth_next;
+                # trim blanks from right of qw quotes
+                # (To avoid trimming qw quotes use -ntqw; the tokenizer handles
+                # this)
+                $token =~ s/\s*$//;
+                $rtoken_vars->[_TOKEN_] = $token;
+                $self->note_embedded_tab($input_line_number)
+                  if ( $token =~ "\t" );
+
+                if ($in_multiline_qw) {
+
+                    # If we are at the end of a multiline qw ..
+                    if ( $in_multiline_qw == $KK ) {
+
+                 # Split off the closing delimiter character
+                 # so that the formatter can put a line break there if necessary
+                        my $part1 = $token;
+                        my $part2 = substr( $part1, -1, 1, "" );
+
+                        if ($part1) {
+                            my $rcopy =
+                              copy_token_as_type( $rtoken_vars, 'q', $part1 );
+                            $store_token->($rcopy);
+                            $token = $part2;
+                            $rtoken_vars->[_TOKEN_] = $token;
+
+                        }
+                        $in_multiline_qw = undef;
+
+                        # store without preceding blank
+                        $store_token->($rtoken_vars);
+                        next;
+                    }
+                    else {
+                        # continuing a multiline qw
+                        $store_token->($rtoken_vars);
+                        next;
                     }
                 }
-                elsif ( $is_closing_token{$token} ) {
-                    $depth_next--;
 
-                    # keep track of broken lists for later formatting
-                    my $seqno_test  = $seqno_stack{$depth_next};
-                    my $KK_open     = $KK_stack{$depth_next};
-                    my $seqno_outer = $seqno_stack{ $depth_next - 1 };
-                    if (   defined($seqno_test)
-                        && defined($KK_open)
-                        && $seqno_test == $type_sequence )
-                    {
-                        my $lx_open  = $rLL->[$KK_open]->[_LINE_INDEX_];
-                        my $lx_close = $rLL->[$KK]->[_LINE_INDEX_];
-                        if ( $lx_open < $lx_close ) {
-                            $ris_broken_container->{$type_sequence} =
-                              $lx_close - $lx_open;
-                            if ( defined($seqno_outer) ) {
-                                $rhas_broken_container->{$seqno_outer} = 1;
+                else {
+
+                    # we are encountered new qw token...see if multiline
+                    my $K_end = $K_end_q->($KK);
+                    if ( $ALLOW_BREAK_MULTILINE_QW && $K_end != $KK ) {
+
+                        # Starting multiline qw...
+                        # set flag equal to the ending K
+                        $in_multiline_qw = $K_end;
+
+                        # Split off the leading part so that the formatter can
+                        # put a line break there if necessary
+                        if ( $token =~ /^(qw\s*.)(.*)$/ ) {
+                            my $part1 = $1;
+                            my $part2 = $2;
+                            if ($part2) {
+                                my $rcopy =
+                                  copy_token_as_type( $rtoken_vars, 'q',
+                                    $part1 );
+                                $store_token_and_space->(
+                                    $rcopy, $rwhitespace_flags->[$KK] == WS_YES
+                                );
+                                $token = $part2;
+                                $rtoken_vars->[_TOKEN_] = $token;
+
+                                # Second part goes without intermediate blank
+                                $store_token->($rtoken_vars);
+                                next;
                             }
                         }
                     }
+                    else {
 
-                    # Insert a tentative missing semicolon if the next token is
-                    # a closing block brace
-                    if (
-                           $type eq '}'
-                        && $token eq '}'
-
-                        # not preceded by a ';'
-                        && $last_nonblank_type ne ';'
-
-                   # and this is not a VERSION stmt (is all one line, we are not
-                   # inserting semicolons on one-line blocks)
-                        && $CODE_type ne 'VER'
-
-                        # and we are allowed to add semicolons
-                        && $rOpts->{'add-semicolons'}
-                      )
-                    {
-                        $add_phantom_semicolon->($KK);
+                        # this is a new single token qw -
+                        # store with possible preceding blank
+                        $store_token_and_space->(
+                            $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
+                        );
+                        next;
                     }
                 }
+            } ## end if ( $type eq 'q' )
+
+            # change 'LABEL   :'   to 'LABEL:'
+            elsif ( $type eq 'J' ) {
+                $token =~ s/\s+//g;
+                $rtoken_vars->[_TOKEN_] = $token;
+            }
+
+            # check a quote for problems
+            elsif ( $type eq 'Q' ) {
+                $check_Q->( $KK, $Kfirst, $input_line_number );
             }
 
             # Store this token with possible previous blank
@@ -5264,8 +5287,7 @@ sub respace_tokens {
         }    # End token loop
     }    # End line loop
 
-    # Walk backwards through the tokens, making forward links to sequence items
-    # This replaces calls to sub link_back above, which was inefficient.
+    # Walk backwards through the tokens, making forward links to sequence items.
     if ( @{$rLL_new} ) {
         my $KNEXT;
         for ( my $KK = @{$rLL_new} - 1 ; $KK >= 0 ; $KK-- ) {
