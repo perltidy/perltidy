@@ -16784,7 +16784,6 @@ sub get_seqno {
             my @tmp     = reverse @{$rix_seqno_controlling_ci};
             my $ix_next = pop @tmp;
             foreach my $line ( 0 .. $max_line ) {
-                my $ibeg = $ri_first->[$line];
                 my $iend = $ri_last->[$line];
                 while ( defined($ix_next) && $ix_next <= $iend ) {
                     push @{ $i_controlling_ci[$line] }, $ix_next;
