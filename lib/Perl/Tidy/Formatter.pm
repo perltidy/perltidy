@@ -16763,6 +16763,27 @@ sub get_seqno {
 
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
 
+	# Prepare a list of controlling indexes for each line if required.
+	# This is used for efficient processing below.  Note: this is
+	# critical for speed. In the initial implementation I just looped
+	# through the @$rix_seqno_controlling_ci list below. Using NYT_prof, I
+	# found that this routine was causing a huge run time in large lists. 
+	# On a very large list test case, this new coding dropped the run time
+	# of this routine from 30 seconds to 169 milliseconds.
+        my @i_controlling_ci;
+        if ( @{$rix_seqno_controlling_ci} ) {
+            my @tmp     = reverse @{$rix_seqno_controlling_ci};
+            my $ix_next = pop @tmp;
+            foreach my $line ( 0 .. $max_line ) {
+                my $ibeg = $ri_first->[$line];
+                my $iend = $ri_last->[$line];
+                while ( defined($ix_next) && $ix_next <= $iend ) {
+                    push @{ $i_controlling_ci[$line] }, $ix_next;
+                    $ix_next = pop @tmp;
+                }
+            }
+        }
+
         # Loop over all lines of the batch ...
         foreach my $line ( 0 .. $max_line ) {
 
@@ -16770,8 +16791,8 @@ sub get_seqno {
             # SECTION 1: Undo needless common CI
             ####################################
 
-         # We are looking at leading tokens and looking for a sequence
-         # all at the same level and all at a higher level than enclosing lines.
+	    # We are looking at leading tokens and looking for a sequence all
+	    # at the same level and all at a higher level than enclosing lines.
 
             # For example, we can undo continuation indentation in sort/map/grep
             # chains
@@ -16911,13 +16932,12 @@ sub get_seqno {
                 }
             }
 
-            # Flag any controlling opening tokens in lines without ci.
-            # This will be used later in the above if statement to undo the
-            # ci which they added.
-            if ( !$ci_levels_to_go[$ibeg] && @{$rix_seqno_controlling_ci} ) {
-                foreach my $i ( @{$rix_seqno_controlling_ci} ) {
-                    next if ( $i < $ibeg );
-                    last if ( $i > $iend );
+	    # Flag any controlling opening tokens in lines without ci.  This
+	    # will be used later in the above if statement to undo the ci which
+	    # they added.  The array i_controlling_ci[$line] was prepared at
+	    # the top of this routine.
+            if ( !$ci_levels_to_go[$ibeg] && defined($i_controlling_ci[$line]) ) {
+                foreach my $i ( @{$i_controlling_ci[$line]} ) {
                     my $seqno = $type_sequence_to_go[$i];
                     $undo_extended_ci{$seqno} = 1;
                 }
