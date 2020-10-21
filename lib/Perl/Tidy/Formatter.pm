@@ -5536,12 +5536,21 @@ sub K_previous_nonblank {
         );
     }
     my $Kpnb = $KK - 1;
+    return unless ($Kpnb >= 0);
+    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ); 
+    return unless ( --$Kpnb >= 0 );
+    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ); 
+
+    # Backup loop. We should not get here unless some routine
+    # slipped repeated blanks into the token stream.
+    return unless ( --$Kpnb >= 0 );
     while ( $Kpnb >= 0 ) {
         if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ) { return $Kpnb }
         $Kpnb--;
     }
     return;
 }
+
 
 sub get_old_line_index {
 
