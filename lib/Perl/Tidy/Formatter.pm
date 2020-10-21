@@ -13204,10 +13204,17 @@ sub set_continuation_breaks {
     }
 
     my %is_logical_container;
+    my %quick_filter;
 
     BEGIN {
         my @q = qw# if elsif unless while and or err not && | || ? : ! #;
         @is_logical_container{@q} = (1) x scalar(@q);
+
+        # This filter will allow most tokens to skip past a section of code
+        %quick_filter = %is_assignment;
+        @q = qw# => . ; < > ~ #;
+        push @q, ',';
+        @quick_filter{@q} = (1) x scalar(@q);
     }
 
     sub set_for_semicolon_breakpoints {
@@ -14068,6 +14075,9 @@ sub set_continuation_breaks {
             #------------------------------------------------------------
 
             $current_depth = $depth;
+
+            # most token types can skip the rest of this loop
+            next unless ( $quick_filter{$type} );
 
             # handle comma-arrow
             if ( $type eq '=>' ) {
