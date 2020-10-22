@@ -10,9 +10,9 @@
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.
-      If you use B<-ci=n> and B<-i=n> with the same value of B<n> you will probably
-      want to set this flag.  Since this is a fairly new flag, the default is B<-nxci> 
-      to avoid disturbing existing formatting.  
+      Since this is a fairly new flag, the default is B<-nxci> to avoid disturbing 
+      existing formatting.  BUT if you use B<-ci=n> and B<-i=n> with the same value 
+      of B<n> you will probably want to set this flag.  
 
     - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
       The man page was updated to note that it does not cause all logical breakpoints
@@ -20,18 +20,24 @@
 
     - Fix issue git #41, typo in manual regarding -fsb
 
+    - Some problems with parsing complex multi-line sub signatures have been fixed.  
+
     - Fix issue git #40: when using the -bli option, a closing brace followed by 
       a semicolon was not being indented.  This applies to braces which require 
       semicolons, such as a 'do' block.
+
+    - Added 'state' as a keyword.
+
+    - A more complete list of updates and changes is given in the file 
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2020 10 01
 
     - Robustness of perltidy has been significantly improved.  Updating is recommended. Continual 
       automated testing runs began about 1 Sep 2020 and numerous issues have been found and fixed. 
       Many involve references to uninitialized variables when perltidy is fed random text and random
-      control parameters. A complete list is given in the file 
-
-           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+      control parameters. 
 
     - Added the token '->' to the list of alignment tokens, as suggested in git
       #39, so that it can be vertically aligned if a space is placed before them with -wls='->'.
