@@ -18,9 +18,11 @@ sub AUTOLOAD {
     our $AUTOLOAD;
     return if ( $AUTOLOAD =~ /\bDESTROY$/ );
     my ( $pkg, $fname, $lno ) = caller();
+    my $my_package = __PACKAGE__;
     print STDERR <<EOM;
 ======================================================================
-Unexpected call to Autoload looking for sub $AUTOLOAD
+Error detected in package '$my_package', version $VERSION
+Received unexpected AUTOLOAD call for sub '$AUTOLOAD'
 Called from package: '$pkg'  
 Called from File '$fname'  at line '$lno'
 This error is probably due to a recent programming change
@@ -109,7 +111,7 @@ sub close_output_file {
     # Only close physical files, not STDOUT and other objects
     my $output_file = $self->{_output_file};
     if ( $output_file ne '-' && !ref $output_file ) {
-        eval { $self->{_fh}->close() } if $self->{_output_file_open};
+        $self->{_fh}->close() if $self->{_output_file_open};
     }
     return;
 }
