@@ -4383,6 +4383,37 @@ EOM
 # Tokenizer routines which assist in identifying token types
 #######################################################################
 
+# hash to speed up sub operator_expected
+my %quick_op_expected;
+
+BEGIN {
+
+    # Always expecting TERM following these types:
+    my @q = qw(
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L * . | ^ < = [ m { \ >
+      || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /= &= // >>
+      ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
+    );
+    push @q, ',';
+    @{quick_op_expected}{@q} = (TERM) x scalar(@q);
+
+    # Always UNKNOWN following these types: [for completeness, nothing here]
+    # Note that type 'w' is almost always UNKNOWN but not always.
+    @q = qw( );
+    @{quick_op_expected}{@q} = (UNKNOWN) x scalar(@q);
+
+    # Always expecting OPERATOR following these types:
+    @q = qw( -- C -> h R ++ ] );
+    push @q, ')';
+    @{quick_op_expected}{@q} = (OPERATOR) x scalar(@q);
+
+    # Mixed: expectation depends on additional context:
+    # We will have to execute the full sub for these:
+    @q = qw( k } t n i Z <> q Q v w );
+    @{quick_op_expected}{@q} = (undef) x scalar(@q);
+
+}
+
 sub operator_expected {
 
     # Many perl symbols have two or more meanings.  For example, '<<'
@@ -4421,6 +4452,18 @@ sub operator_expected {
 
     my ( $prev_type, $tok, $next_type ) = @_;
     use constant DEBUG_EXPECT => 0;
+
+    # Optional shortcut which covers about 50% of cases and reduces run time
+    # of this sub by about 40%.  To verify correctness, run with -I on numerous
+    # test files and check for 'ERROR' in the resulting DIAGNOSTICS file.
+    my $op_expected_quick = $quick_op_expected{$last_nonblank_type};
+    if ( defined($op_expected_quick) ) {
+        return $op_expected_quick
+          unless defined( $tokenizer_self->[_diagnostics_object_] );
+
+        # in -I mode we continue and compare results with the full sub
+        # just before the return below.
+    }
 
     my $op_expected = UNKNOWN;
 
@@ -4645,6 +4688,13 @@ sub operator_expected {
         write_diagnostics(
 "OP: unknown after type=$last_nonblank_type  token=$last_nonblank_token\n"
         );
+    }
+
+    if ( defined($op_expected_quick) && $op_expected_quick != $op_expected ) {
+        write_diagnostics(<<EOM);
+ERROR in operator_expected for last_type=$last_nonblank_type: quick value $op_expected_quick != $op_expected
+last_nonblank_token='$last_nonblank_token'; remove $last_nonblank_type from quick hash
+EOM
     }
 
     DEBUG_EXPECT && do {
