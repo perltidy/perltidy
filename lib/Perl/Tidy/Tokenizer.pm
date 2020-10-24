@@ -4383,34 +4383,32 @@ EOM
 # Tokenizer routines which assist in identifying token types
 #######################################################################
 
-# hash to speed up sub operator_expected
-my %quick_op_expected;
+# hash lookup table of operator expected values
+my %op_expected_table;
 
 BEGIN {
 
     # Always expecting TERM following these types:
+    # note: this is identical to '@value_requestor_type' defined later.
     my @q = qw(
-      ; ! + x & ?  F J - p / Y : % f U ~ A G j L * . | ^ < = [ m { \ >
-      || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /= &= // >>
+      ; ! + x & ?  F J - p / Y : % f U ~ A G j L * . | ^ < = [ m { \ > t
+      || >= != mm *= => .. !~ == && |= .= pp -= =~ += <= %= ^= x= ~~ ** << /=
+      &= // >> ~. &. |. ^.
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
     );
     push @q, ',';
-    @{quick_op_expected}{@q} = (TERM) x scalar(@q);
+    push @q, '(';    # for completeness, not currently a token type
+    @{op_expected_table}{@q} = (TERM) x scalar(@q);
 
-    # Always UNKNOWN following these types: [for completeness, nothing here]
-    # Note that type 'w' is almost always UNKNOWN but not always.
-    @q = qw( );
-    @{quick_op_expected}{@q} = (UNKNOWN) x scalar(@q);
+    # Always UNKNOWN following these types:
+    @q = qw( w );
+    @{op_expected_table}{@q} = (UNKNOWN) x scalar(@q);
 
     # Always expecting OPERATOR following these types:
-    @q = qw( -- C -> h R ++ ] );
+    # FIXME: see notes below for types n,v,q,i
+    @q = qw( -- C -> h R ++ ] Q <> );    ## n v q i );
     push @q, ')';
-    @{quick_op_expected}{@q} = (OPERATOR) x scalar(@q);
-
-    # Mixed: expectation depends on additional context:
-    # We will have to execute the full sub for these:
-    @q = qw( k } t n i Z <> q Q v w );
-    @{quick_op_expected}{@q} = (undef) x scalar(@q);
+    @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
 
 }
 
@@ -4420,8 +4418,8 @@ sub operator_expected {
     # can be a shift operator or a here-doc operator.  The
     # interpretation of these symbols depends on the current state of
     # the tokenizer, which may either be expecting a term or an
-    # operator.  For this example, a << would be a shift if an operator
-    # is expected, and a here-doc if a term is expected.  This routine
+    # operator.  For this example, a << would be a shift if an OPERATOR
+    # is expected, and a here-doc if a TERM is expected.  This routine
     # is called to make this decision for any current token.  It returns
     # one of three possible values:
     #
@@ -4441,7 +4439,7 @@ sub operator_expected {
     # UNKNOWN, because a wrong guess can spoil the formatting of a
     # script.
     #
-    # adding NEW_TOKENS: it is critically important that this routine be
+    # Adding NEW_TOKENS: it is critically important that this routine be
     # updated to allow it to determine if an operator or term is to be
     # expected after the new token.  Doing this simply involves adding
     # the new token character to one of the regexes in this routine or
@@ -4450,35 +4448,158 @@ sub operator_expected {
     # USES GLOBAL VARIABLES: $last_nonblank_type, $last_nonblank_token,
     # $statement_type
 
+    # When possible, token types should be selected such that we can determine
+    # the 'operator_expected' value by a simple hash lookup.  If there are
+    # exceptions, that is an indication that a new type is needed.
+
     my ( $prev_type, $tok, $next_type ) = @_;
-    use constant DEBUG_EXPECT => 0;
 
-    # Optional shortcut which covers about 50% of cases and reduces run time
-    # of this sub by about 40%.  To verify correctness, run with -I on numerous
-    # test files and check for 'ERROR' in the resulting DIAGNOSTICS file.
-    my $op_expected_quick = $quick_op_expected{$last_nonblank_type};
-    if ( defined($op_expected_quick) ) {
-        return $op_expected_quick
-          unless defined( $tokenizer_self->[_diagnostics_object_] );
+    # Many types are defined in the table, given the previous type
+    my $op_expected = $op_expected_table{$last_nonblank_type};
+    goto RETURN if ( defined($op_expected) );
+    $op_expected = UNKNOWN;
 
-        # in -I mode we continue and compare results with the full sub
-        # just before the return below.
+    # Types 'k', '}' and 'Z' depend on context
+    # FIXME: Types 'i', 'n', 'v', 'q' currently also temporarily depend on
+    # context but that dependence should eventually be eliminated with better
+    # token type definition
+
+    # identifier...
+    if ( $last_nonblank_type eq 'i' ) {
+        $op_expected = OPERATOR;
+
+        # FIXME: it would be cleaner to make this a special type
+        # expecting VERSION or {} after package NAMESPACE
+        # TODO: maybe mark these words as type 'Y'?
+        if (   $statement_type =~ /^package\b/
+            && $last_nonblank_token =~ /^package\b/ )
+        {
+            $op_expected = TERM;
+        }
     }
 
-    my $op_expected = UNKNOWN;
+    # keyword...
+    elsif ( $last_nonblank_type eq 'k' ) {
+        $op_expected = TERM;
+        if ( $expecting_operator_token{$last_nonblank_token} ) {
+            $op_expected = OPERATOR;
+        }
+        elsif ( $expecting_term_token{$last_nonblank_token} ) {
 
-##print "tok=$tok last type=$last_nonblank_type last tok=$last_nonblank_token\n";
+            # Exceptions from TERM:
 
-# Note: function prototype is available for token type 'U' for future
-# program development.  It contains the leading and trailing parens,
-# and no blanks.  It might be used to eliminate token type 'C', for
-# example (prototype = '()'). Thus:
-# if ($last_nonblank_type eq 'U') {
-#     print "previous token=$last_nonblank_token  type=$last_nonblank_type prototype=$last_nonblank_prototype\n";
-# }
+            # // may follow perl functions which may be unary operators
+            # see test file dor.t (defined or);
+            if (   $tok eq '/'
+                && $next_type eq '/'
+                && $is_keyword_rejecting_slash_as_pattern_delimiter{
+                    $last_nonblank_token} )
+            {
+                $op_expected = OPERATOR;
+            }
 
-    # A possible filehandle (or object) requires some care...
-    if ( $last_nonblank_type eq 'Z' ) {
+            # Patch to allow a ? following 'split' to be a depricated pattern
+            # delimiter.  This patch is coordinated with the omission of split
+            # from the list
+            # %is_keyword_rejecting_question_as_pattern_delimiter. This patch
+            # will force perltidy to guess.
+            elsif ($tok eq '?'
+                && $last_nonblank_token eq 'split' )
+            {
+                $op_expected = UNKNOWN;
+            }
+        }
+    } ## end type 'k'
+
+    # closing container token...
+    elsif ( $last_nonblank_type eq '}' ) {
+        $op_expected = UNKNOWN;
+
+        # handle something after 'do' and 'eval'
+        if ( $is_block_operator{$last_nonblank_token} ) {
+
+            # something like $a = do { BLOCK } / 2;
+            # or this ? after a smartmatch anonynmous hash or array reference:
+            #   qr/3/ ~~ ['1234'] ? 1 : 0;
+            #                                  ^
+            $op_expected = OPERATOR;    # block mode following }
+        }
+
+        elsif ( $last_nonblank_token =~ /^(\)|\$|\-\>)/ ) {
+            $op_expected = OPERATOR;
+            if ( $last_nonblank_token eq '$' ) { $op_expected = UNKNOWN }
+
+        }
+
+        # Check for smartmatch operator before preceding brace or square
+        # bracket.  For example, at the ? after the ] in the following
+        # expressions we are expecting an operator:
+        #
+        # qr/3/ ~~ ['1234'] ? 1 : 0;
+        # map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
+        elsif ( $last_nonblank_type eq '}' && $last_nonblank_token eq '~~' ) {
+            $op_expected = OPERATOR;
+        }
+
+        # A right brace here indicates the end of a simple block.  All
+        # non-structural right braces have type 'R' all braces associated with
+        # block operator keywords have been given those keywords as
+        # "last_nonblank_token" and caught above.  (This statement is order
+        # dependent, and must come after checking $last_nonblank_token).
+        else {
+
+            # patch for dor.t (defined or).
+            if (   $tok eq '/'
+                && $next_type eq '/'
+                && $last_nonblank_token eq ']' )
+            {
+                $op_expected = OPERATOR;
+            }
+
+            # Patch for RT #116344: misparse a ternary operator after an
+            # anonymous hash, like this:
+            #   return ref {} ? 1 : 0;
+            # The right brace should really be marked type 'R' in this case,
+            # and it is safest to return an UNKNOWN here. Expecting a TERM will
+            # cause the '?' to always be interpreted as a pattern delimiter
+            # rather than introducing a ternary operator.
+            elsif ( $tok eq '?' ) {
+                $op_expected = UNKNOWN;
+            }
+            else {
+                $op_expected = TERM;
+            }
+        }
+    } ## end type '}'
+
+    # number or v-string...
+    # FIXME: Numbers in 'use' statement should have a different type; not 'n'
+    # or 'v' suggest implementing new type 'V' for numbers in a use statement
+    # TODO: mark these numbers as type 'w'
+    elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
+        $op_expected = OPERATOR;
+        if ( $statement_type eq 'use' ) {
+            $op_expected = UNKNOWN;
+        }
+    }
+
+    # quote...
+    # FIXME: labeled prototype words should probably be given type 'A' or maybe
+    # 'J'; not 'q'; or maybe mark as type 'Y'
+    elsif ( $last_nonblank_type eq 'q' ) {
+        $op_expected = OPERATOR;
+        if ( $last_nonblank_token eq 'prototype' )
+
+          #|| $last_nonblank_token eq 'switch' )
+        {
+            $op_expected = TERM;
+        }
+    }
+
+    # file handle or similar
+    elsif ( $last_nonblank_type eq 'Z' ) {
+
+        $op_expected = UNKNOWN;
 
         # angle.t
         if ( $last_nonblank_token =~ /^\w/ ) {
@@ -4522,187 +4643,23 @@ sub operator_expected {
         }
     }
 
-    # Check for smartmatch operator before preceding brace or square bracket.
-    # For example, at the ? after the ] in the following expressions we are
-    # expecting an operator:
-    #
-    # qr/3/ ~~ ['1234'] ? 1 : 0;
-    # map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-    elsif ( $last_nonblank_type eq '}' && $last_nonblank_token eq '~~' ) {
-        $op_expected = OPERATOR;
-    }
-
-    # handle something after 'do' and 'eval'
-    elsif ( $is_block_operator{$last_nonblank_token} ) {
-
-        # something like $a = eval "expression";
-        #                          ^
-        if ( $last_nonblank_type eq 'k' ) {
-            $op_expected = TERM;    # expression or list mode following keyword
-        }
-
-        # something like $a = do { BLOCK } / 2;
-        # or this ? after a smartmatch anonynmous hash or array reference:
-        #   qr/3/ ~~ ['1234'] ? 1 : 0;
-        #                                  ^
-        else {
-            $op_expected = OPERATOR;    # block mode following }
-        }
-    }
-
-    # handle bare word..
-    elsif ( $last_nonblank_type eq 'w' ) {
-
-        # unfortunately, we can't tell what type of token to expect next
-        # after most bare words
-        $op_expected = UNKNOWN;
-    }
-
-    # operator, but not term possible after these types
-    # Note: moved ')' from type to token because parens in list context
-    # get marked as '{' '}' now.  This is a minor glitch in the following:
-    #    my %opts = (ref $_[0] eq 'HASH') ? %{shift()} : ();
-    #
-    elsif (( $last_nonblank_type =~ /^[\]RnviQh]$/ )
-        || ( $last_nonblank_token =~ /^(\)|\$|\-\>)/ ) )
-    {
-        $op_expected = OPERATOR;
-
-        # Patch: The following snippet from 'signatures.t' splits the $ from
-        # the variable name with a side comment. To avoid an error message we
-        # can mark this special case as UNKNOWN.
-        #  sub t086
-        #      ( #foo)))
-        #      $ #foo)))
-        #      a #foo)))    <-This 'a' is split from its $
-        #      ) #foo)))
-        #      { $a.$b }
-        if ( $last_nonblank_token eq '$' ) { $op_expected = UNKNOWN }
-
-        # in a 'use' statement, numbers and v-strings are not true
-        # numbers, so to avoid incorrect error messages, we will
-        # mark them as unknown for now (use.t)
-        # TODO: it would be much nicer to create a new token V for VERSION
-        # number in a use statement.  Then this could be a check on type V
-        # and related patches which change $statement_type for '=>'
-        # and ',' could be removed.  Further, it would clean things up to
-        # scan the 'use' statement with a separate subroutine.
-        if (   ( $statement_type eq 'use' )
-            && ( $last_nonblank_type =~ /^[nv]$/ ) )
-        {
-            $op_expected = UNKNOWN;
-        }
-
-        # expecting VERSION or {} after package NAMESPACE
-        elsif ($statement_type =~ /^package\b/
-            && $last_nonblank_token =~ /^package\b/ )
-        {
-            $op_expected = TERM;
-        }
-    }
-
-    # no operator after many keywords, such as "die", "warn", etc
-    elsif ( $expecting_term_token{$last_nonblank_token} ) {
-
-        # // may follow perl functions which may be unary operators
-        # see test file dor.t (defined or);
-        if (   $tok eq '/'
-            && $next_type eq '/'
-            && $last_nonblank_type eq 'k'
-            && $is_keyword_rejecting_slash_as_pattern_delimiter{
-                $last_nonblank_token} )
-        {
-            $op_expected = OPERATOR;
-        }
-
-        # Patch to allow a ? following 'split' to be a depricated pattern
-        # delimiter.  This patch is coordinated with the omission of split from
-        # the list %is_keyword_rejecting_question_as_pattern_delimiter. This
-        # patch will force perltidy to guess.
-        elsif ($tok eq '?'
-            && $last_nonblank_type eq 'k'
-            && $last_nonblank_token eq 'split' )
-        {
-            $op_expected = UNKNOWN;
-        }
-        else {
-            $op_expected = TERM;
-        }
-    }
-
-    # no operator after things like + - **  (i.e., other operators)
-    elsif ( $expecting_term_types{$last_nonblank_type} ) {
-        $op_expected = TERM;
-    }
-
-    # a few operators, like "time", have an empty prototype () and so
-    # take no parameters but produce a value to operate on
-    elsif ( $expecting_operator_token{$last_nonblank_token} ) {
-        $op_expected = OPERATOR;
-    }
-
-    # post-increment and decrement produce values to be operated on
-    elsif ( $expecting_operator_types{$last_nonblank_type} ) {
-        $op_expected = OPERATOR;
-    }
-
-    # no value to operate on after sub block
-    elsif ( $last_nonblank_token =~ /^sub\s/ ) { $op_expected = TERM; }
-
-    # a right brace here indicates the end of a simple block.
-    # all non-structural right braces have type 'R'
-    # all braces associated with block operator keywords have been given those
-    # keywords as "last_nonblank_token" and caught above.
-    # (This statement is order dependent, and must come after checking
-    # $last_nonblank_token).
-    elsif ( $last_nonblank_type eq '}' ) {
-
-        # patch for dor.t (defined or).
-        if (   $tok eq '/'
-            && $next_type eq '/'
-            && $last_nonblank_token eq ']' )
-        {
-            $op_expected = OPERATOR;
-        }
-
-        # Patch for RT #116344: misparse a ternary operator after an anonymous
-        # hash, like this:
-        #   return ref {} ? 1 : 0;
-        # The right brace should really be marked type 'R' in this case, and
-        # it is safest to return an UNKNOWN here. Expecting a TERM will
-        # cause the '?' to always be interpreted as a pattern delimiter
-        # rather than introducing a ternary operator.
-        elsif ( $tok eq '?' ) {
-            $op_expected = UNKNOWN;
-        }
-        else {
-            $op_expected = TERM;
-        }
-    }
-
-    # something else..what did I forget?
+    # anything else...
     else {
-
-        # collecting diagnostics on unknown operator types..see what was missed
         $op_expected = UNKNOWN;
-        write_diagnostics(
-"OP: unknown after type=$last_nonblank_type  token=$last_nonblank_token\n"
-        );
     }
 
-    if ( defined($op_expected_quick) && $op_expected_quick != $op_expected ) {
-        write_diagnostics(<<EOM);
-ERROR in operator_expected for last_type=$last_nonblank_type: quick value $op_expected_quick != $op_expected
-last_nonblank_token='$last_nonblank_token'; remove $last_nonblank_type from quick hash
-EOM
-    }
+  RETURN:
 
-    DEBUG_EXPECT && do {
+    # debug and diagnostics can go here..
+
+    0 && do {
         print STDOUT
 "EXPECT: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
     };
+
     return $op_expected;
-}
+
+} ## end of sub operator_expected
 
 sub new_statement_ok {
 
@@ -5773,7 +5730,6 @@ sub scan_bare_identifier_do {
             elsif ( $is_block_function{$package}{$sub_name} ) {
                 $type = 'G';
             }
-
             elsif ( $is_block_list_function{$package}{$sub_name} ) {
                 $type = 'G';
             }
@@ -6263,9 +6219,10 @@ sub scan_identifier_do {
                 #   my $ #
                 #     ans = 40;
                 if ($last_tok_is_blank) {
-                    $id_scan_state = '';
-                    $i             = $i_save;
                     $type          = 'i';
+                    if ( $id_scan_state eq '$' ) { $type = 't' }
+                    $i             = $i_save;
+                    $id_scan_state = '';
                     last;
                 }
 
@@ -6362,9 +6319,15 @@ sub scan_identifier_do {
             else {    # something else
 
                 if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
-                    $id_scan_state = '';
+
+                    # see mangle4.in for test case
+                    # at a # we have to mark as type 't' because more may follow,
+                    # otherwise, in a signature we can let '$' be an identifier
+                    # here for better formatting.
+                    $type = 'i';
+                    if ( $id_scan_state eq '$' && $tok eq '#') { $type = 't' }
                     $i             = $i_save;
-                    $type          = 'i';       # probably punctuation variable
+                    $id_scan_state = '';
                     last;
                 }
 
@@ -8305,7 +8268,7 @@ BEGIN {
     my @value_requestor_type = qw#
       L { ( [ ~ !~ =~ ; . .. ... A : && ! || // = + - x
       **= += -= .= /= *= %= x= &= |= ^= <<= >>= &&= ||= //=
-      <= >= == != => \ > < % * / ? & | ** <=> ~~ !~~
+      <= >= == != => \ > < % * / ? & | ** <=> ~~ !~~ <<~
       f F pp mm Y p m U J G j >> << ^ t
       ~. ^. |. &. ^.= |.= &.=
       #;
