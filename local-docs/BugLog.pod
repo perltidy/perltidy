@@ -2,6 +2,34 @@
 
 =over 4
 
+=item b<more types of severe errors will prevent formatting>
+
+Files for which 'severe errors' are found have always been output verbatim
+rather than being formatted.  The definition of 'severe error' has been
+expanded to include a final indentation level error greater than 1, more than 2
+brace errors, and more than 3 "unexpected token type" parsing errors.  The goal
+is to avoid formatting a non-perl script or a perl script with severe errors.
+So for example the following snippet has a level error of 2
+
+{{{{
+}}
+
+was previously output with default parameters as
+
+{
+    {
+        {
+            {}
+        }
+
+
+along with an error message. But now it is just output verbatim as
+
+{{{{
+}}
+
+along with an error message.
+
 =item b<added 'state' as keyword>
 
 A statement such as the following was generating an error message at the colon:

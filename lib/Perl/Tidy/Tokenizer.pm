@@ -164,6 +164,7 @@ BEGIN {
         _rlower_case_labels_at_              => $i++,
         _extended_syntax_                    => $i++,
         _maximum_level_                      => $i++,
+        _true_brace_error_count_             => $i++,
     };
 }
 
@@ -324,6 +325,7 @@ sub new {
     $self->[_rlower_case_labels_at_]              = undef;
     $self->[_extended_syntax_]                    = $args{extended_syntax};
     $self->[_maximum_level_]                      = 0;
+    $self->[_true_brace_error_count_]             = 0;
     bless $self, $class;
 
     $tokenizer_self = $self;
@@ -443,15 +445,37 @@ sub get_maximum_level {
 
 sub report_tokenization_errors {
 
-    my $self         = shift;
+    my ($self) = @_;
+
+    # Report any tokenization errors and return a flag '$severe_error'.
+    # Set $severe_error = 1 if the tokenizations errors are so severe that
+    # the formatter should not attempt to format the file. Instead, it will
+    # just output the file verbatim.
+
+    # set severe error flag if tokenizer has encountered file reading problems
+    # (i.e. unexpected binary characters)
     my $severe_error = $self->[_in_error_];
 
     my $level = get_indentation_level();
     if ( $level != $tokenizer_self->[_starting_level_] ) {
         warning("final indentation level: $level\n");
+        my $level_diff = $tokenizer_self->[_starting_level_] - $level;
+
+        # Set severe error flag if the level error is greater than 1.
+        # The formatter can function for any level error but it is probably
+        # best not to attempt formatting for a high level error.
+        $severe_error = 1 if ( $level_diff < -1 || $level_diff > 1 );
     }
 
     check_final_nesting_depths();
+
+    # Likewise, large numbers of brace errors usually indicate non-perl
+    # scirpts, so set the severe error flag at a low number.  This is similar
+    # to the level check, but different because braces may balance but be
+    # incorrectly interlaced.
+    if ( $tokenizer_self->[_true_brace_error_count_] > 2 ) {
+        $severe_error = 1;
+    }
 
     if ( $tokenizer_self->[_look_for_hash_bang_]
         && !$tokenizer_self->[_saw_hash_bang_] )
@@ -507,6 +531,7 @@ sub report_tokenization_errors {
         }
     }
 
+    # Something is seriously wrong if we ended inside a quote
     if ( $tokenizer_self->[_in_quote_] ) {
         $severe_error = 1;
         my $line_start_quote = $tokenizer_self->[_line_start_quote_];
@@ -524,25 +549,12 @@ sub report_tokenization_errors {
         $severe_error = 1;
     }
 
-    my $logger_object = $tokenizer_self->[_logger_object_];
-
-# TODO: eventually may want to activate this to cause file to be output verbatim
-    if (0) {
-
-        # Set the severe error for a fairly high warning count because
-        # some of the warnings do not harm formatting, such as duplicate
-        # sub names.
-        my $warning_count = $logger_object->get_warning_count();
-        if ( $warning_count > 50 ) {
-            $severe_error = 1;
-        }
-
-        # Brace errors are significant, so set the severe error flag at
-        # a low number.
-        my $saw_brace_error = get_saw_brace_error();
-        if ( $saw_brace_error > 2 ) {
-            $severe_error = 1;
-        }
+    # Multiple "unexpected" type tokenization errors usually indicate parsing
+    # non-perl scripts, or that something is seriously wrong, so we should
+    # avoid formatting them.  This can happen for example if we run perltidy on
+    # a shell script or an html file.
+    if ( $tokenizer_self->[_unexpected_error_count_] > 3 ) {
+        $severe_error = 1;
     }
 
     unless ( $tokenizer_self->[_saw_perl_dash_w_] ) {
@@ -4404,8 +4416,10 @@ BEGIN {
     @q = qw( w );
     @{op_expected_table}{@q} = (UNKNOWN) x scalar(@q);
 
-    # Always expecting OPERATOR following these types:
-    # FIXME: see notes below for types n,v,q,i
+    # Always expecting OPERATOR ...
+    # 'n' and 'v' are currently excluded because they might be VERSION numbers
+    # 'i' is currently excluded because it might be a package
+    # 'q' is currently excluded because it might be a prototype
     @q = qw( -- C -> h R ++ ] Q <> );    ## n v q i );
     push @q, ')';
     @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
@@ -4512,6 +4526,16 @@ sub operator_expected {
     } ## end type 'k'
 
     # closing container token...
+
+    # Note that the actual token for type '}' may also be a ')'.
+
+    # Also note that $last_nonblank_token is not the token corresponding to 
+    # $last_nonblank_type when the type is a closing container.  In that
+    # case it is the token before the corresponding opening container token.
+    # So for example, for this snippet
+    #       $a = do { BLOCK } / 2;
+    # the $last_nonblank_token is 'do' when $last_nonblank_type eq '}'.
+
     elsif ( $last_nonblank_type eq '}' ) {
         $op_expected = UNKNOWN;
 
@@ -4573,9 +4597,10 @@ sub operator_expected {
     } ## end type '}'
 
     # number or v-string...
-    # FIXME: Numbers in 'use' statement should have a different type; not 'n'
-    # or 'v' suggest implementing new type 'V' for numbers in a use statement
-    # TODO: mark these numbers as type 'w'
+    # An exception is for VERSION numbers a 'use' statement which has the format
+    #     use Module VERSION LIST 
+    # We could avoid this exception by writing a special sub to parse 'use' statements
+    # and perhaps mark these numbers with a new type V (for VERSION) 
     elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
         $op_expected = OPERATOR;
         if ( $statement_type eq 'use' ) {
@@ -4589,8 +4614,7 @@ sub operator_expected {
     elsif ( $last_nonblank_type eq 'q' ) {
         $op_expected = OPERATOR;
         if ( $last_nonblank_token eq 'prototype' )
-
-          #|| $last_nonblank_token eq 'switch' )
+          ##|| $last_nonblank_token eq 'switch' )
         {
             $op_expected = TERM;
         }
@@ -5254,6 +5278,10 @@ EOM
             indicate_error( $msg, $input_line_number, $input_line, $pos, '^' );
         }
         increment_brace_error();
+
+        # keep track of errors in braces alone (ignoring ternary nesting errors)
+        $tokenizer_self->[_true_brace_error_count_]++
+          if ( $closing_brace_names[$aa] ne "':'" );
     }
     return ( $seqno, $outdent );
 }
