@@ -13,6 +13,8 @@
 #10 xci.xci2
 #11 mangle4.def
 #12 mangle4.mangle
+#13 extrude5.def
+#14 extrude5.extrude
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -38,6 +40,7 @@ BEGIN {
 -bli -blil='*'
 ----------
         'def'       => "",
+        'extrude'   => "--extrude",
         'here_long' => "-l=33",
         'mangle'    => "--mangle",
         'xci1'      => "-xci",
@@ -108,6 +111,11 @@ try {
 catch {
     die;
 };
+----------
+
+        'extrude5' => <<'----------',
+use perl6-alpha;
+$var{-y} = 1;
 ----------
 
         'here_long' => <<'----------',
@@ -459,6 +467,29 @@ $ #foo)))
   )#foo)))
 {$a.$b}
 #12...........
+        },
+
+        'extrude5.def' => {
+            source => "extrude5",
+            params => "def",
+            expect => <<'#13...........',
+use perl6-alpha;
+$var{-y} = 1;
+#13...........
+        },
+
+        'extrude5.extrude' => {
+            source => "extrude5",
+            params => "extrude",
+            expect => <<'#14...........',
+use
+perl6-alpha
+;
+$var{-y}
+=
+1
+;
+#14...........
         },
     };
 

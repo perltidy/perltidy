@@ -2493,6 +2493,7 @@ EOM
     my %is_lt_gt_le_ge;
     my %is_container_token;
 
+    my %binary_bond_strength_nospace;
     my %binary_bond_strength;
     my %nobreak_lhs;
     my %nobreak_rhs;
@@ -2574,11 +2575,12 @@ EOM
         # breakpoint token should appear at the end of one line or the
         # beginning of the next line.
 
-        %right_bond_strength  = ();
-        %left_bond_strength   = ();
-        %binary_bond_strength = ();
-        %nobreak_lhs          = ();
-        %nobreak_rhs          = ();
+        %right_bond_strength          = ();
+        %left_bond_strength           = ();
+        %binary_bond_strength_nospace = ();
+        %binary_bond_strength         = ();
+        %nobreak_lhs                  = ();
+        %nobreak_rhs                  = ();
 
         # The hash keys in this section are token types, plus the text of
         # certain keywords like 'or', 'and'.
@@ -2864,8 +2866,13 @@ EOM
         # a construction like '{-y}'.  The '-' quotes the 'y' and prevents
         # it from being taken as a transliteration. We have to keep
         # token types 'L m w' together to prevent this error.
-        $binary_bond_strength{'L{'}{'m'} = NO_BREAK;
-        $binary_bond_strength{'m'}{'w'} = NO_BREAK;
+        $binary_bond_strength{'L{'}{'m'}        = NO_BREAK;
+        $binary_bond_strength_nospace{'m'}{'w'} = NO_BREAK;
+
+	# keep 'bareword-' together, but only if there is no space between
+	# the word and dash. Do not keep together if there is a space.
+        # example 'use perl6-alpha'
+        $binary_bond_strength_nospace{'w'}{'m'} = NO_BREAK;
 
         # use strict requires that bare word and => not be separated
         $binary_bond_strength{'w'}{'=>'} = NO_BREAK;
@@ -3227,11 +3234,6 @@ EOM
                 }
             }
 
-	    # keep 'bareword-' together, but only if there is no space between
-	    # the word and dash. Do not keep together if there is a space.
-            # example 'use perl6-alpha'
-            elsif ( $type eq 'w' && $next_type eq 'm' ) { $bond_str = NO_BREAK }
-
             # Breaking before a ? before a quote can cause trouble if
             # they are not separated by a blank.
             # Example: a syntax error occurs if you break before the ? here
@@ -3277,8 +3279,15 @@ EOM
                 $rtype = $next_nonblank_type . $next_nonblank_token;
             }
 
+            # apply binary rules which apply regardless of space between tokens
             if ( $binary_bond_strength{$ltype}{$rtype} ) {
                 $bond_str           = $binary_bond_strength{$ltype}{$rtype};
+                $tabulated_bond_str = $bond_str;
+            }
+
+            # apply binary rules which apply only if no space between tokens
+            if ( $binary_bond_strength_nospace{$ltype}{$next_type} ) {
+                $bond_str           = $binary_bond_strength{$ltype}{$next_type};
                 $tabulated_bond_str = $bond_str;
             }
 

@@ -1,0 +1,7 @@
+use
+perl6-alpha
+;
+$var{-y}
+=
+1
+;
