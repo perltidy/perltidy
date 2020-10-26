@@ -2478,7 +2478,7 @@ sub prepare_for_a_new_file {
                         complain("Long here-target: '$truncated' ...\n");
                     }
                     elsif ( !$here_doc_target ) {
-                        warning('Use of bare << to mean <<"" is deprecated\n')
+                        warning('Use of bare << to mean <<"" is deprecated'."\n")
                           unless ($here_quote_character);
                     }
                     elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
