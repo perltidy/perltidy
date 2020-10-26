@@ -2,6 +2,67 @@
 
 =over 4
 
+
+=item b<Prevent syntax error by breaking dashed barewords>
+
+In random testing with the following test snippet with the -extrude option
+
+  my %var;
+  {
+      $var{-y}  = 1;
+      $var{-q}  = 1;
+      $var{-qq} = 1;
+      $var{-m}  = 1;
+      $var{y}   = 1;
+      $var{q}   = 1;
+      $var{qq}  = 1;
+      $var{m}   = 1;
+  }
+
+a syntax error was created in the resulting file when newlines were placed
+before or after the dashes.  It is necessary to always keep a dash on the same
+line with its surrounding tokens.  A rule was added to do this.  The new
+'extruded' result for the above snippet is:
+
+  my%var
+  ;
+  {
+  $var{-y}
+  =
+  1
+  ;
+  $var{-q}
+  =
+  1
+  ;
+  $var{-qq}
+  =
+  1
+  ;
+  $var{-m}
+  =
+  1
+  ;
+  $var{y}
+  =
+  1
+  ;
+  $var{q}
+  =
+  1
+  ;
+  $var{qq}
+  =
+  1
+  ;
+  $var{m}
+  =
+  1
+  ;
+  }
+
+This update was added 25 Oct 2020.
+
 =item b<more types of severe errors will prevent formatting>
 
 Files for which 'severe errors' are found have always been output verbatim
@@ -28,7 +89,7 @@ along with an error message. But now it is just output verbatim as
 {{{{
 }}
 
-along with an error message.
+along with an error message.  This update was added 25 Oct 2020.
 
 =item b<added 'state' as keyword>
 

@@ -2860,6 +2860,13 @@ EOM
 
         $binary_bond_strength{'w'}{'R}'} = NO_BREAK;
 
+        # The following two rules prevent a syntax error caused by breaking up
+        # a construction like '{-y}'.  The '-' quotes the 'y' and prevents
+        # it from being taken as a transliteration. We have to keep
+        # token types 'L m w' together to prevent this error.
+        $binary_bond_strength{'L{'}{'m'} = NO_BREAK;
+        $binary_bond_strength{'m'}{'w'} = NO_BREAK;
+
         # use strict requires that bare word and => not be separated
         $binary_bond_strength{'w'}{'=>'} = NO_BREAK;
 
@@ -4511,6 +4518,15 @@ sub respace_tokens {
         # This will be the index of this item in the new array
         my $KK_new = @{$rLL_new};
 
+        my $type     = $item->[_TYPE_];
+        my $is_blank = $type eq 'b';
+
+        # Do not output consecutive blanks. This should not happen, but
+        # is worth checking because later routines make this assumption.
+        if ( $is_blank && $KK_new && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
+            return;
+        }
+
         # check for a sequenced item (i.e., container or ?/:)
         my $type_sequence = $item->[_TYPE_SEQUENCE_];
         if ($type_sequence) {
@@ -4554,7 +4570,6 @@ sub respace_tokens {
         my $token_length = $length_function->( $item->[_TOKEN_] );
 
         # handle comments
-        my $type       = $item->[_TYPE_];
         my $is_comment = $type eq '#';
         if ($is_comment) {
 
@@ -4579,7 +4594,7 @@ sub respace_tokens {
         # Save the length sum to just AFTER this token
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
-        if ( $type && $type ne 'b' && !$is_comment ) {
+        if ( !$is_blank && !$is_comment ) {
             $last_nonblank_type       = $type;
             $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
@@ -7939,6 +7954,8 @@ sub prepare_for_next_batch {
             $rtoken_vars = $rLL->[$Ktoken_vars];
         }
 
+        my $type = $rtoken_vars->[_TYPE_];
+
         # Check for emergency flush...
         # The K indexes in the batch must always be a continuous sequence of
         # the global token array.  The batch process programming assumes this.
@@ -7954,17 +7971,24 @@ sub prepare_for_next_batch {
             if ( $Ktoken_vars != $Klast + 1 ) {
                 $self->flush_batch_of_CODE();
             }
+
+	    # Do not output consecutive blank tokens ... this should not
+	    # happen, but it is worth checking.  Later code can then make the
+	    # simplifying assumption that blank tokens are not consecutive.
+            elsif ( $type eq 'b' && $types_to_go[$max_index_to_go] eq 'b' ) {
+                return;
+            }
         }
 
         ++$max_index_to_go;
-        $K_to_go[$max_index_to_go] = $Ktoken_vars;
+        $K_to_go[$max_index_to_go]     = $Ktoken_vars;
+        $types_to_go[$max_index_to_go] = $rtoken_vars->[_TYPE_];
 
         $old_breakpoint_to_go[$max_index_to_go]    = 0;
         $forced_breakpoint_to_go[$max_index_to_go] = 0;
         $mate_index_to_go[$max_index_to_go]        = -1;
 
         my $token = $tokens_to_go[$max_index_to_go] = $rtoken_vars->[_TOKEN_];
-        my $type  = $types_to_go[$max_index_to_go]  = $rtoken_vars->[_TYPE_];
         my $ci_level = $ci_levels_to_go[$max_index_to_go] =
           $rtoken_vars->[_CI_LEVEL_];
 
