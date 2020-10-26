@@ -3202,6 +3202,17 @@ EOM
 
                     # treat bare word followed by open paren like qw(
                     if ( $next_nonblank_token eq '(' ) {
+
+			# TODO: This works, but if $tok eq 'prototype' then we
+			# should really parse the prototype separately here so
+			# that we have its properties.  This requires updating
+			# do_scan_sub to keep the subname available until we
+			# see the opening brace.  So something like
+                        #   if ($tok eq 'prototype' ) {scan_prototype()}
+                        #   else {
+
+			# All other attribute lists must be parsed as quotes
+			# (see 'signatures.t' for good examples)
                         $in_quote                = $quote_items{'q'};
                         $allowed_quote_modifiers = $quote_modifiers{'q'};
                         $type                    = 'q';

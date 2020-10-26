@@ -2,10 +2,30 @@
 
 =over 4
 
+=item b<Prevent syntax error by breaking dashed package names>
+
+In stress testing perltidy with the -extrude option, the following test snippet 
+
+  use perl6-alpha;
+
+was broken into sepate lines
+
+  use
+  perl6
+  -
+  alpha
+  ;
+
+A rule was added to prevent breaking around a dash separating two barewords.
+Rerunning gives
+
+  use
+  perl6-alpha
+  ;
 
 =item b<Prevent syntax error by breaking dashed barewords>
 
-In random testing with the following test snippet with the -extrude option
+In stress testing perltidy with the -extrude option, using the following test snippet
 
   my %var;
   {
@@ -19,7 +39,7 @@ In random testing with the following test snippet with the -extrude option
       $var{m}   = 1;
   }
 
-a syntax error was created in the resulting file when newlines were placed
+a syntax error was created when newlines were placed
 before or after the dashes.  It is necessary to always keep a dash on the same
 line with its surrounding tokens.  A rule was added to do this.  The new
 'extruded' result for the above snippet is:

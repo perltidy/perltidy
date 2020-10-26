@@ -3227,6 +3227,11 @@ EOM
                 }
             }
 
+	    # keep 'bareword-' together, but only if there is no space between
+	    # the word and dash. Do not keep together if there is a space.
+            # example 'use perl6-alpha'
+            elsif ( $type eq 'w' && $next_type eq 'm' ) { $bond_str = NO_BREAK }
+
             # Breaking before a ? before a quote can cause trouble if
             # they are not separated by a blank.
             # Example: a syntax error occurs if you break before the ? here
