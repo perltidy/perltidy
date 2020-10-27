@@ -108,7 +108,22 @@ if everything looks good.
 - This re-creates the 'snippet#.t' files in the upper directory.  A file 
 named 'packing\_list.txt' is written which shows the order of the snippets
 in the snippet files.  If you added test cases they should appear at the
-end of the list and will be in the highest numbered snippet file.
+end of the list and will be in the highest numbered snippet file.  This
+packing list is important because it keeps most of the snippets files
+unchanged and thereby minimizes file differences when the snippet files
+are updated.
+
+- Each of the files 'snippet#.t' contains 20 actual test cases.  The number 20
+is a compromise.  It would be easier to locate errors if there were just one
+test per file, but the time to run all of the test cases would more than
+double.
+
+- A glitch that can happen is that 'make\_expect.pl' will not write 'RUNME.sh'
+if there are no differences in the expected results.  If you still need to
+create new snippets files, for example because you may have deleted or changed
+some of the snippets files, you can form them directly with the command
+
+- perl ./make\_t.pl
 
 - Verify that everything is ok by running perl on the new '.t' files or by
 going to the top directory and doing 
@@ -119,6 +134,7 @@ make
 make test
 ```
 
+
 ## A typical example
 
 Suppose we fix a bug reported as RT #834567, and this bug only occurs when
@@ -128,7 +144,7 @@ the parameter -xyzzy is used.  Then we do the following:
 - Add a file rt834587.par with one line '-xyzzy'. You can skip this
 step if there are no special parameters.
 - Enter 'make' and follow the directions
-- Enter .RUNME.sh if everything looks good
+- Enter './RUNME.sh' if everything looks good
 - Look at the packing list file and verify that the new script is at the end. You 
 should see names for two cases, 'rt834587.def' and 'rt834587.rt834587', the first
 corresponding to running with default parameters and the second with '-xyzzy' parameter.
@@ -148,6 +164,23 @@ These files are the result of running perltidy on 'align6.def' with default para
 ('def.par').  After investigating and fixing any problems with the code,
 run 'make' again, and if all is well run the script it writes 'RUNME.sh'
 to create new snippets if necessary.
+
+## Fixing problems
+
+It can happen that pull requests show conflicts among the snippets.t files.
+Remember that the '../snippet#.t' files are automatically generated, so they
+can be deleted if necessary to allow a pull request to be processed.  Then the
+appropritate versions can be re-created by running 'make\_expect.pl' as
+described above.
+
+Another problem that can arise is when a the case needs to be removed.  In this
+case the thing to do is to 
+
+- remove its '.in' and '.par' files
+- remove all of its associated files from the directory './expect' 
+- likewise, remove all of its associated files from the directory './tmp'
+- remove the line(s) for those files from 'packing\_list.txt' 
+- rerun 'make\_expect.pl' (and the 'RUNME.sh' that it crreates)
 
 ## How to clean up a .par file
 
