@@ -4554,9 +4554,6 @@ sub operator_expected {
         if ( $is_block_operator{$last_nonblank_token} ) {
 
             # something like $a = do { BLOCK } / 2;
-            # or this ? after a smartmatch anonynmous hash or array reference:
-            #   qr/3/ ~~ ['1234'] ? 1 : 0;
-            #                                  ^
             $op_expected = OPERATOR;    # block mode following }
         }
 
@@ -4572,7 +4569,7 @@ sub operator_expected {
         #
         # qr/3/ ~~ ['1234'] ? 1 : 0;
         # map { $_ ~~ [ '0', '1' ] ? 'x' : 'o' } @a;
-        elsif ( $last_nonblank_type eq '}' && $last_nonblank_token eq '~~' ) {
+        elsif ( $last_nonblank_token eq '~~' ) {
             $op_expected = OPERATOR;
         }
 
