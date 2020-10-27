@@ -2,6 +2,13 @@
 
 =over 4
 
+=item b<Fixed several uses of undefined variables found in testing>
+
+Several instances of incorrect array indexing were found in testing and fixed.
+These each involved incorrectly indexing with index -1. They were found by
+placing undefs at the end of arrays.  None of these was causing incorrect
+formatting but they needed to be fixed.
+
 =item b<Prevent syntax error by breaking dashed package names>
 
 In stress testing perltidy with the -extrude option, the following test snippet 

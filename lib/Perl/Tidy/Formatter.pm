@@ -12756,6 +12756,7 @@ sub set_continuation_breaks {
                 #    ( $rho_ice * $Qs * $pi * $r_pellet**2 );
                 #
                 if (   $line_count > 2
+                    && $i_lowest >= 0           # and we saw a possible break
                     && $i_lowest < $i_test
                     && $i_test > $imax - 2
                     && $nesting_depth_to_go[$i_begin] >
@@ -13760,6 +13761,7 @@ sub set_continuation_breaks {
                 #    4 - always open up if vt=0
                 #    5 - stable: even for one line blocks if vt=0
                 if (  !$is_long_term
+                    && $saw_opening_structure
                     && $tokens_to_go[$i_opening] =~ /^[\(\{\[]$/
                     && $index_before_arrow[ $depth + 1 ] > 0
                     && !$opening_vertical_tightness{ $tokens_to_go[$i_opening] }
@@ -14317,8 +14319,7 @@ sub find_token_starting_list {
     my $i_opening_minus = $i_opening_paren;
     my $im1             = $i_opening_paren - 1;
     my $im2             = $i_opening_paren - 2;
-    my $im3             = $i_opening_paren - 3;
-    my $typem1          = $types_to_go[$im1];
+    my $typem1          = $im1 >= 0 ? $types_to_go[$im1] : 'b';
     my $typem2          = $im2 >= 0 ? $types_to_go[$im2] : 'b';
 
     if ( $typem1 eq ',' || ( $typem1 eq 'b' && $typem2 eq ',' ) ) {
