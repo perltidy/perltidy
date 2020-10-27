@@ -2203,15 +2203,15 @@ EOM
         # Note1: This routine should almost never need to be changed.  It is
         # for avoiding syntax problems rather than for formatting.
 
-	# Note2: The -mangle option causes large numbers of calls to this
-	# routine and therefore is a good test. So if a change is made, be sure
-	# to run a large number of files with the -mangle option and check for
-	# differences.
+        # Note2: The -mangle option causes large numbers of calls to this
+        # routine and therefore is a good test. So if a change is made, be sure
+        # to run a large number of files with the -mangle option and check for
+        # differences.
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
-	# This is potentially a very slow routine but the following quick
-	# filters typically catch and handle over 90% of the calls.
+        # This is potentially a very slow routine but the following quick
+        # filters typically catch and handle over 90% of the calls.
 
         # Filter 1: usually no space required after common types ; , [ ] { } ( )
         return
@@ -2223,8 +2223,8 @@ EOM
           if ( $essential_whitespace_filter_r2{$typer}
             && !$essential_whitespace_filter_l2{$typel} );
 
-	# Filter 3: Handle side comments: a space is only essential if the left
-	# token ends in '$' For example, we do not want to create $#foo below:
+        # Filter 3: Handle side comments: a space is only essential if the left
+        # token ends in '$' For example, we do not want to create $#foo below:
 
         #   sub t086
         #       ( #foo)))
@@ -2236,7 +2236,7 @@ EOM
         # Also, I prefer not to put a ? and # together because ? used to be
         # a pattern delmiter and spacing was used if guessing was needed.
 
-        if ($typer eq '#' ) {
+        if ( $typer eq '#' ) {
 
             return 1
               if ( $tokenl
@@ -2869,8 +2869,8 @@ EOM
         $binary_bond_strength{'L{'}{'m'}        = NO_BREAK;
         $binary_bond_strength_nospace{'m'}{'w'} = NO_BREAK;
 
-	# keep 'bareword-' together, but only if there is no space between
-	# the word and dash. Do not keep together if there is a space.
+        # keep 'bareword-' together, but only if there is no space between
+        # the word and dash. Do not keep together if there is a space.
         # example 'use perl6-alpha'
         $binary_bond_strength_nospace{'w'}{'m'} = NO_BREAK;
 
@@ -5565,10 +5565,10 @@ sub K_previous_nonblank {
         );
     }
     my $Kpnb = $KK - 1;
-    return unless ($Kpnb >= 0);
-    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ); 
+    return unless ( $Kpnb >= 0 );
+    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
     return unless ( --$Kpnb >= 0 );
-    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' ); 
+    return $Kpnb if ( $rLL->[$Kpnb]->[_TYPE_] ne 'b' );
 
     # Backup loop. We should not get here unless some routine
     # slipped repeated blanks into the token stream.
@@ -5579,7 +5579,6 @@ sub K_previous_nonblank {
     }
     return;
 }
-
 
 sub get_old_line_index {
 
@@ -7890,10 +7889,19 @@ sub prepare_for_next_batch {
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
-        $max_index_to_go = UNDEFINED_INDEX;
-
+        $max_index_to_go      = UNDEFINED_INDEX;
         @summed_lengths_to_go = @nesting_depth_to_go = (0);
 
+        # The initialization code for the remaining batch arrays is as follows
+        # and can be activated for testing.  But profiling shows that it is
+        # time-consuming to re-initialize the batch arrays and is not necessary
+        # because the maximum valid token, $max_index_to_go, is carefully
+        # controlled.  This means however that it is not possible to do any
+	# type of filter or map operation directly on these arrays.  And it is
+	# not possible to use negative indexes. As a precaution against program
+	# changes which might do this, sub pad_array_to_go adds some undefs at
+	# the end of the current batch of data.
+        0 && do { #<<<
         @block_type_to_go            = ();
         @type_sequence_to_go         = ();
         @container_environment_to_go = ();
@@ -7912,6 +7920,7 @@ sub prepare_for_next_batch {
         @reduced_spaces_to_go        = ();
         @inext_to_go                 = ();
         @iprev_to_go                 = ();
+        };
 
         $rbrace_follower = undef;
         $ending_in_quote = 0;
@@ -7986,9 +7995,9 @@ sub prepare_for_next_batch {
                 $self->flush_batch_of_CODE();
             }
 
-	    # Do not output consecutive blank tokens ... this should not
-	    # happen, but it is worth checking.  Later code can then make the
-	    # simplifying assumption that blank tokens are not consecutive.
+            # Do not output consecutive blank tokens ... this should not
+            # happen, but it is worth checking.  Later code can then make the
+            # simplifying assumption that blank tokens are not consecutive.
             elsif ( $type eq 'b' && $types_to_go[$max_index_to_go] eq 'b' ) {
                 return;
             }
@@ -10372,14 +10381,18 @@ EOM
 
 sub pad_array_to_go {
 
-    # To simplify coding in scan_list and set_bond_strengths, it helps
-    # to create some extra blank tokens at the end of the arrays
-    # FIXME: it would be nice to eliminate the need for this routine.
+    # To simplify coding in scan_list and set_bond_strengths, it helps to
+    # create some extra blank tokens at the end of the arrays.  We also add
+    # some undef's to help guard against using invalid data.
     my ($self) = @_;
-    $tokens_to_go[ $max_index_to_go + 1 ] = '';
-    $tokens_to_go[ $max_index_to_go + 2 ] = '';
-    $types_to_go[ $max_index_to_go + 1 ]  = 'b';
-    $types_to_go[ $max_index_to_go + 2 ]  = 'b';
+    $K_to_go[ $max_index_to_go + 1 ]             = undef;
+    $tokens_to_go[ $max_index_to_go + 1 ]        = '';
+    $tokens_to_go[ $max_index_to_go + 2 ]        = '';
+    $tokens_to_go[ $max_index_to_go + 3 ]        = undef;
+    $types_to_go[ $max_index_to_go + 1 ]         = 'b';
+    $types_to_go[ $max_index_to_go + 2 ]         = 'b';
+    $types_to_go[ $max_index_to_go + 3 ]         = undef;
+    $nesting_depth_to_go[ $max_index_to_go + 2 ] = undef;
     $nesting_depth_to_go[ $max_index_to_go + 1 ] =
       $nesting_depth_to_go[$max_index_to_go];
 
@@ -12755,13 +12768,15 @@ sub set_continuation_breaks {
                 #        $t_stop ) /
                 #    ( $rho_ice * $Qs * $pi * $r_pellet**2 );
                 #
-                if (   $line_count > 2
-                    && $i_lowest >= 0           # and we saw a possible break
+                if (
+                       $line_count > 2
+                    && $i_lowest >= 0    # and we saw a possible break
                     && $i_lowest < $i_test
                     && $i_test > $imax - 2
                     && $nesting_depth_to_go[$i_begin] >
                     $nesting_depth_to_go[$i_lowest]
-                    && $lowest_strength < $last_break_strength - .5 * WEAK )
+                    && $lowest_strength < $last_break_strength - .5 * WEAK
+                  )
                 {
                     # Make this break for math operators for now
                     my $ir = $inext_to_go[$i_lowest];
@@ -13260,7 +13275,7 @@ sub set_continuation_breaks {
 
         # This filter will allow most tokens to skip past a section of code
         %quick_filter = %is_assignment;
-        @q = qw# => . ; < > ~ #;
+        @q            = qw# => . ; < > ~ #;
         push @q, ',';
         @quick_filter{@q} = (1) x scalar(@q);
     }
@@ -13500,7 +13515,8 @@ sub set_continuation_breaks {
                         # and, when found, force a break before the
                         # opening paren and after the previous closing paren.
                         if (
-                            $types_to_go[$i_line_start] eq '}'
+                               $i_line_start >= 0
+                            && $types_to_go[$i_line_start] eq '}'
                             && (   $i == $i_line_start + 1
                                 || $i == $i_line_start + 2
                                 && $types_to_go[ $i - 1 ] eq 'b' )
@@ -14408,7 +14424,7 @@ sub find_token_starting_list {
             $i           = $rcomma_index->[$j];
 
             my $i_term_end =
-              ( $types_to_go[ $i - 1 ] eq 'b' ) ? $i - 2 : $i - 1;
+              ( $i == 0 || $types_to_go[ $i - 1 ] eq 'b' ) ? $i - 2 : $i - 1;
             my $i_term_begin =
               ( $types_to_go[$i_prev_plus] eq 'b' )
               ? $i_prev_plus + 1
@@ -16811,13 +16827,13 @@ sub get_seqno {
 
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
 
-	# Prepare a list of controlling indexes for each line if required.
-	# This is used for efficient processing below.  Note: this is
-	# critical for speed. In the initial implementation I just looped
-	# through the @$rix_seqno_controlling_ci list below. Using NYT_prof, I
-	# found that this routine was causing a huge run time in large lists. 
-	# On a very large list test case, this new coding dropped the run time
-	# of this routine from 30 seconds to 169 milliseconds.
+        # Prepare a list of controlling indexes for each line if required.
+        # This is used for efficient processing below.  Note: this is
+        # critical for speed. In the initial implementation I just looped
+        # through the @$rix_seqno_controlling_ci list below. Using NYT_prof, I
+        # found that this routine was causing a huge run time in large lists.
+        # On a very large list test case, this new coding dropped the run time
+        # of this routine from 30 seconds to 169 milliseconds.
         my @i_controlling_ci;
         if ( @{$rix_seqno_controlling_ci} ) {
             my @tmp     = reverse @{$rix_seqno_controlling_ci};
@@ -16838,8 +16854,8 @@ sub get_seqno {
             # SECTION 1: Undo needless common CI
             ####################################
 
-	    # We are looking at leading tokens and looking for a sequence all
-	    # at the same level and all at a higher level than enclosing lines.
+            # We are looking at leading tokens and looking for a sequence all
+            # at the same level and all at a higher level than enclosing lines.
 
             # For example, we can undo continuation indentation in sort/map/grep
             # chains
@@ -16979,12 +16995,14 @@ sub get_seqno {
                 }
             }
 
-	    # Flag any controlling opening tokens in lines without ci.  This
-	    # will be used later in the above if statement to undo the ci which
-	    # they added.  The array i_controlling_ci[$line] was prepared at
-	    # the top of this routine.
-            if ( !$ci_levels_to_go[$ibeg] && defined($i_controlling_ci[$line]) ) {
-                foreach my $i ( @{$i_controlling_ci[$line]} ) {
+            # Flag any controlling opening tokens in lines without ci.  This
+            # will be used later in the above if statement to undo the ci which
+            # they added.  The array i_controlling_ci[$line] was prepared at
+            # the top of this routine.
+            if ( !$ci_levels_to_go[$ibeg]
+                && defined( $i_controlling_ci[$line] ) )
+            {
+                foreach my $i ( @{ $i_controlling_ci[$line] } ) {
                     my $seqno = $type_sequence_to_go[$i];
                     $undo_extended_ci{$seqno} = 1;
                 }
