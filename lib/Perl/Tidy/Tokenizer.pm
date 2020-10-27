@@ -6356,13 +6356,28 @@ sub scan_identifier_do {
 
                 if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
 
-                    # see mangle4.in for test case
+                    # We might be in an extrusion of
+                    #     sub foo2 ( $first, $, $third ) {
+                    # looking at a line starting with a comma, like
+                    #   $
+                    #   ,
+                    # ... in this case the comma ends the signature variable '$' which
+                    # will have been previously marked type 't' rather than 'i'.
+                    if ( $i == $i_begin ) {
+                        $identifier = "";
+                        $type       = "";
+                    }
+
                     # at a # we have to mark as type 't' because more may follow,
                     # otherwise, in a signature we can let '$' be an identifier
-                    # here for better formatting.
-                    $type = 'i';
-                    if ( $id_scan_state eq '$' && $tok eq '#') { $type = 't' }
-                    $i             = $i_save;
+                    # here for better formatting.  see 'mangle4.in' for test case
+                    else {
+                        $type = 'i';
+                        if ( $id_scan_state eq '$' && $tok eq '#' ) {
+                            $type = 't';
+                        }
+                        $i = $i_save;
+                    }
                     $id_scan_state = '';
                     last;
                 }

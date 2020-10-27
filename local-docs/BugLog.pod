@@ -2,6 +2,34 @@
 
 =over 4
 
+=item b<Fixed problem parsing extruded signature>
+
+A parsing error was encountered in a test parsing the following extruded
+signature:
+
+  sub foo2
+  (
+  $
+  first
+  ,
+  $
+  ,
+  $
+  third
+  )
+  {
+  return
+  "first=$first, third=$third"
+  ;
+  }
+
+The second '$' combined with the ',' on the next line to form a punctuation variable.
+This was fixed 20 Oct 2020. The file parses correctly now, with formatted output
+
+  sub foo2 ( $first, $, $third ) {
+      return "first=$first, third=$third";
+  }
+
 =item b<Fixed several uses of undefined variables found in testing>
 
 Several instances of incorrect array indexing were found in testing and fixed.
