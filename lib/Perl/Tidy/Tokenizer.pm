@@ -2478,7 +2478,8 @@ sub prepare_for_a_new_file {
                         complain("Long here-target: '$truncated' ...\n");
                     }
                     elsif ( !$here_doc_target ) {
-                        warning('Use of bare << to mean <<"" is deprecated'."\n")
+                        warning(
+                            'Use of bare << to mean <<"" is deprecated' . "\n" )
                           unless ($here_quote_character);
                     }
                     elsif ( $here_doc_target !~ /^[A-Z_]\w+$/ ) {
@@ -3203,16 +3204,16 @@ EOM
                     # treat bare word followed by open paren like qw(
                     if ( $next_nonblank_token eq '(' ) {
 
-			# TODO: This works, but if $tok eq 'prototype' then we
-			# should really parse the prototype separately here so
-			# that we have its properties.  This requires updating
-			# do_scan_sub to keep the subname available until we
-			# see the opening brace.  So something like
+                        # TODO: This works, but if $tok eq 'prototype' then we
+                        # should really parse the prototype separately here so
+                        # that we have its properties.  This requires updating
+                        # do_scan_sub to keep the subname available until we
+                        # see the opening brace.  So something like
                         #   if ($tok eq 'prototype' ) {scan_prototype()}
                         #   else {
 
-			# All other attribute lists must be parsed as quotes
-			# (see 'signatures.t' for good examples)
+                        # All other attribute lists must be parsed as quotes
+                        # (see 'signatures.t' for good examples)
                         $in_quote                = $quote_items{'q'};
                         $allowed_quote_modifiers = $quote_modifiers{'q'};
                         $type                    = 'q';
@@ -3481,8 +3482,16 @@ EOM
                     next;
                 }
 
-                #      'sub' || 'package'
-                elsif ( $is_sub{$tok_kw} || $is_package{$tok_kw} ) {
+                #      'sub' or alias
+                elsif ( $is_sub{$tok_kw} ) {
+                    error_if_expecting_OPERATOR()
+                      if ( $expecting == OPERATOR );
+                    initialize_subname();
+                    scan_id();
+                }
+
+                #      'package'
+                elsif ( $is_package{$tok_kw} ) {
                     error_if_expecting_OPERATOR()
                       if ( $expecting == OPERATOR );
                     scan_id();
@@ -4540,7 +4549,7 @@ sub operator_expected {
 
     # Note that the actual token for type '}' may also be a ')'.
 
-    # Also note that $last_nonblank_token is not the token corresponding to 
+    # Also note that $last_nonblank_token is not the token corresponding to
     # $last_nonblank_type when the type is a closing container.  In that
     # case it is the token before the corresponding opening container token.
     # So for example, for this snippet
@@ -4605,10 +4614,10 @@ sub operator_expected {
     } ## end type '}'
 
     # number or v-string...
-    # An exception is for VERSION numbers a 'use' statement which has the format
-    #     use Module VERSION LIST 
-    # We could avoid this exception by writing a special sub to parse 'use' statements
-    # and perhaps mark these numbers with a new type V (for VERSION) 
+    # An exception is for VERSION numbers a 'use' statement. It has the format
+    #     use Module VERSION LIST
+    # We could avoid this exception by writing a special sub to parse 'use'
+    # statements and perhaps mark these numbers with a new type V (for VERSION)
     elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
         $op_expected = OPERATOR;
         if ( $statement_type eq 'use' ) {
@@ -6255,7 +6264,7 @@ sub scan_identifier_do {
                 #   my $ #
                 #     ans = 40;
                 if ($last_tok_is_blank) {
-                    $type          = 'i';
+                    $type = 'i';
                     if ( $id_scan_state eq '$' ) { $type = 't' }
                     $i             = $i_save;
                     $id_scan_state = '';
@@ -6361,16 +6370,18 @@ sub scan_identifier_do {
                     # looking at a line starting with a comma, like
                     #   $
                     #   ,
-                    # ... in this case the comma ends the signature variable '$' which
-                    # will have been previously marked type 't' rather than 'i'.
+		    # in this case the comma ends the signature variable
+		    # '$' which will have been previously marked type 't'
+		    # rather than 'i'.
                     if ( $i == $i_begin ) {
                         $identifier = "";
                         $type       = "";
                     }
 
-                    # at a # we have to mark as type 't' because more may follow,
-                    # otherwise, in a signature we can let '$' be an identifier
-                    # here for better formatting.  see 'mangle4.in' for test case
+		    # at a # we have to mark as type 't' because more may
+		    # follow, otherwise, in a signature we can let '$' be an
+		    # identifier here for better formatting.  
+                    # See 'mangle4.in' for a test case.
                     else {
                         $type = 'i';
                         if ( $id_scan_state eq '$' && $tok eq '#' ) {
@@ -6700,11 +6711,20 @@ sub scan_identifier_do {
     # saved package and subnames in case prototype is on separate line
     my ( $package_saved, $subname_saved );
 
+    # initialize subname each time a new 'sub' keyword is encountered
+    sub initialize_subname {
+        $package_saved = "";
+        $subname_saved = "";
+    }
+
     sub do_scan_sub {
 
-        # do_scan_sub parses a sub name and prototype
-        # it is called with $i_beg equal to the index of the first nonblank
-        # token following a 'sub' token.
+        # do_scan_sub parses a sub name and prototype. At present there
+        # are two basic types of calls:
+        # 1. it is called with $i_beg equal to the index of the first nonblank
+        #    token following a 'sub' token.
+        # 2. it is called with $i_beg equal to the index of a '(' which may
+        #    start a prototype.
 
         # TODO: add future error checks to be sure we have a valid
         # sub name.  For example, 'sub &doit' is wrong.  Also, be sure
@@ -6726,9 +6746,13 @@ sub scan_identifier_do {
         my $id_scan_state   = $input_hash{id_scan_state};
         my $max_token_index = $input_hash{max_token_index};
 
+        # if we are at an opening paren then we go directly to parsing the
+        # prototype
+        my $start_at_paren = $tok eq '(';
+
         $id_scan_state = "";    # normally we get everything in one call
-        my $subname = undef;
-        my $package = undef;
+        my $subname = $subname_saved;
+        my $package = $package_saved;
         my $proto   = undef;
         my $attrs   = undef;
         my $match;
@@ -6738,7 +6762,8 @@ sub scan_identifier_do {
 
         # Look for the sub NAME
         if (
-            $input_line =~ m/\G\s*
+              !$start_at_paren
+            && $input_line =~ m/\G\s*
         ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
         (\w+)               # NAME    - required
         /gcx
@@ -6755,6 +6780,11 @@ sub scan_identifier_do {
             my $numc = $pos - $pos_beg;
             $tok  = 'sub ' . substr( $input_line, $pos_beg, $numc );
             $type = 'i';
+
+            # remember the sub name in case another call is needed to
+            # get the prototype
+            $package_saved = $package;
+            $subname_saved = $subname;
         }
 
         # Now look for PROTO ATTRS
@@ -6790,14 +6820,17 @@ sub scan_identifier_do {
             if ( $match && $proto ) {
                 $tok .= $proto;
             }
+
+            # if we just started at an opening paren on this call, label it
+            # with the previous token
+            elsif ($start_at_paren) {
+                $tok = $last_nonblank_token;
+            }
+
             $match ||= 1;
 
             # Handle prototype on separate line from subname
-            if ($subname_saved) {
-                $package = $package_saved;
-                $subname = $subname_saved;
-                $tok     = $last_nonblank_token;
-            }
+            #if ($subname_saved) {
             $type = 'i';
         }
 
@@ -6845,8 +6878,6 @@ sub scan_identifier_do {
                     $next_nonblank_token = '}';
                 }
             }
-            $package_saved = "";
-            $subname_saved = "";
 
             # See what's next...
             if ( $next_nonblank_token eq '{' ) {
@@ -6890,13 +6921,11 @@ sub scan_identifier_do {
                 # Otherwise, we assume it is a SIGNATURE rather than a
                 # PROTOTYPE and let the normal tokenizer handle it as a list
                 if ( !$saw_opening_paren ) {
-                    $id_scan_state = 'sub';     # we must come back to get proto
-                    $package_saved = $package;
-                    $subname_saved = $subname;
+                    $id_scan_state = 'sub';    # we must come back to get proto
                 }
                 $statement_type = $tok;
             }
-            elsif ($next_nonblank_token) {      # EOF technically ok
+            elsif ($next_nonblank_token) {     # EOF technically ok
                 $subname = "" unless defined($subname);
                 warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
@@ -6905,14 +6934,9 @@ sub scan_identifier_do {
             check_prototype( $proto, $package, $subname );
         }
 
-        # no match but line not blank
+        # no match to either sub name or prototype, but line not blank
         else {
 
-            # assume that an opening paren starts a signature
-            if ($saw_opening_paren) {
-                $package_saved = "";
-                $subname_saved = "";
-            }
         }
         return ( $i, $tok, $type, $id_scan_state );
     }

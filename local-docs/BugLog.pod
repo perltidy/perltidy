@@ -24,7 +24,9 @@ signature:
   }
 
 The second '$' combined with the ',' on the next line to form a punctuation variable.
-This was fixed 20 Oct 2020. The file parses correctly now, with formatted output
+This was fixed 20 Oct 2020 in 'fixed problem parsing extruded signature', 9b454f6.
+
+The file parses correctly now, with formatted output
 
   sub foo2 ( $first, $, $third ) {
       return "first=$first, third=$third";
@@ -35,7 +37,8 @@ This was fixed 20 Oct 2020. The file parses correctly now, with formatted output
 Several instances of incorrect array indexing were found in testing and fixed.
 These each involved incorrectly indexing with index -1. They were found by
 placing undefs at the end of arrays.  None of these was causing incorrect
-formatting but they needed to be fixed.
+formatting. They were fixed 26 Oct 2020 in 'fixed several instances of
+incorrect array indexing', c60f694.
 
 =item b<Prevent syntax error by breaking dashed package names>
 
@@ -57,6 +60,8 @@ Rerunning gives
   use
   perl6-alpha
   ;
+
+This was fixed 26 Oct 2020 in 'prevent breaking package names with trailing dashes', 9234be4.
 
 =item b<Prevent syntax error by breaking dashed barewords>
 
@@ -116,7 +121,8 @@ line with its surrounding tokens.  A rule was added to do this.  The new
   ;
   }
 
-This update was added 25 Oct 2020.
+This update was added 26 Oct 2020, 'prevent syntax error by breaking dashed
+barewords', e121cae.
 
 =item b<more types of severe errors will prevent formatting>
 
@@ -144,7 +150,8 @@ along with an error message. But now it is just output verbatim as
 {{{{
 }}
 
-along with an error message.  This update was added 25 Oct 2020.
+along with an error message.  This update was added 25 Oct 2020,
+'avoid formatting files with more types of severe errors', 2a86f51.
 
 =item b<added 'state' as keyword>
 
