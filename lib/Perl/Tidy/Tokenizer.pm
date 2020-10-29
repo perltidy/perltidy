@@ -3204,13 +3204,37 @@ EOM
                     # treat bare word followed by open paren like qw(
                     if ( $next_nonblank_token eq '(' ) {
 
-                        # TODO: This works, but if $tok eq 'prototype' then we
-                        # should really parse the prototype separately here so
-                        # that we have its properties.  This requires updating
-                        # do_scan_sub to keep the subname available until we
-                        # see the opening brace.  So something like
-                        #   if ($tok eq 'prototype' ) {scan_prototype()}
-                        #   else {
+                        # For something like:
+                        #     : prototype($$) 
+                        # we should let do_scan_sub see it so that it can see
+                        # the prototype.  All other attributes get parsed as a
+                        # quoted string.
+                        if ( $tok eq 'prototype' ) {
+                            $id_scan_state = 'prototype';
+
+                            # start just after the word 'prototype'
+                            my $i_beg = $i + 1;
+                            ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
+                                input_line      => $input_line,
+                                i               => $i,
+                                i_beg           => $i_beg,
+                                tok             => $tok,
+                                type            => $type,
+                                rtokens         => $rtokens,
+                                rtoken_map      => $rtoken_map,
+                                id_scan_state   => $id_scan_state,
+                                max_token_index => $max_token_index
+                            );
+
+                            # If successful, mark as type 'q' to be consistent with other
+                            # attributes.  Note that type 'w' would also work.
+                            if ( $i > $i_beg ) {
+                                $type = 'q';    
+                                next;
+                            }
+
+                            # If not successful, fall through and parse as a quote.
+                        }
 
                         # All other attribute lists must be parsed as quotes
                         # (see 'signatures.t' for good examples)
@@ -6370,17 +6394,17 @@ sub scan_identifier_do {
                     # looking at a line starting with a comma, like
                     #   $
                     #   ,
-		    # in this case the comma ends the signature variable
-		    # '$' which will have been previously marked type 't'
-		    # rather than 'i'.
+                    # in this case the comma ends the signature variable
+                    # '$' which will have been previously marked type 't'
+                    # rather than 'i'.
                     if ( $i == $i_begin ) {
                         $identifier = "";
                         $type       = "";
                     }
 
-		    # at a # we have to mark as type 't' because more may
-		    # follow, otherwise, in a signature we can let '$' be an
-		    # identifier here for better formatting.  
+                    # at a # we have to mark as type 't' because more may
+                    # follow, otherwise, in a signature we can let '$' be an
+                    # identifier here for better formatting.
                     # See 'mangle4.in' for a test case.
                     else {
                         $type = 'i';
@@ -6717,14 +6741,45 @@ sub scan_identifier_do {
         $subname_saved = "";
     }
 
+    use constant {
+        SUB_CALL       => 1,
+        PAREN_CALL     => 2,
+        PROTOTYPE_CALL => 3,
+    };
+
     sub do_scan_sub {
 
-        # do_scan_sub parses a sub name and prototype. At present there
-        # are two basic types of calls:
-        # 1. it is called with $i_beg equal to the index of the first nonblank
+        # do_scan_sub parses a sub name and prototype.
+
+        # At present there are three basic CALL TYPES which are
+        # distinguished by the starting value of '$tok':
+        # 1. $tok='sub', id_scan_state='sub'
+        #    it is called with $i_beg equal to the index of the first nonblank
         #    token following a 'sub' token.
-        # 2. it is called with $i_beg equal to the index of a '(' which may
+        # 2. $tok='(', id_scan_state='sub',
+        #    it is called with $i_beg equal to the index of a '(' which may
         #    start a prototype.
+        # 3. $tok='prototype', id_scan_state='prototype'
+        #    it is called with $i_beg equal to the index of a '(' which is
+        #    preceded by ': prototype' and has $id_scan_state eq 'prototype'
+
+        # Examples:
+
+        # A single type 1 call will get both the sub and prototype
+        #   sub foo1 ( $$ ) { }
+        #   ^
+
+        # The subname will be obtained with a 'sub' call
+        # The prototype on line 2 will be obtained with a '(' call
+        #   sub foo1
+        #   ^                    <---call type 1
+        #     ( $$ ) { }
+        #     ^                  <---call type 2
+
+        # The subname will be obtained with a 'sub' call
+        # The prototype will be obtained with a 'prototype' call
+        #   sub foo1 ( $x, $y ) : prototype ( $$ ) { }
+        #   ^ <---type 1                    ^ <---type 3
 
         # TODO: add future error checks to be sure we have a valid
         # sub name.  For example, 'sub &doit' is wrong.  Also, be sure
@@ -6746,9 +6801,14 @@ sub scan_identifier_do {
         my $id_scan_state   = $input_hash{id_scan_state};
         my $max_token_index = $input_hash{max_token_index};
 
-        # if we are at an opening paren then we go directly to parsing the
-        # prototype
-        my $start_at_paren = $tok eq '(';
+        # Determine the CALL TYPE 
+        # 1=sub
+        # 2=(
+        # 3=prototype
+        my $call_type =
+            $tok eq 'prototype' ? PROTOTYPE_CALL
+          : $tok eq '('         ? PAREN_CALL
+          :                       SUB_CALL;
 
         $id_scan_state = "";    # normally we get everything in one call
         my $subname = $subname_saved;
@@ -6760,9 +6820,9 @@ sub scan_identifier_do {
         my $pos_beg = $rtoken_map->[$i_beg];
         pos($input_line) = $pos_beg;
 
-        # Look for the sub NAME
+        # Look for the sub NAME if this is a SUB call
         if (
-              !$start_at_paren
+               $call_type == SUB_CALL
             && $input_line =~ m/\G\s*
         ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
         (\w+)               # NAME    - required
@@ -6787,7 +6847,7 @@ sub scan_identifier_do {
             $subname_saved = $subname;
         }
 
-        # Now look for PROTO ATTRS
+        # Now look for PROTO ATTRS for all call types
         # Look for prototype/attributes which are usually on the same
         # line as the sub name but which might be on a separate line.
         # For example, we might have an anonymous sub with attributes,
@@ -6814,23 +6874,21 @@ sub scan_identifier_do {
             $proto = $1;
             $attrs = $2;
 
-            # If we also found the sub name on this call then append PROTO.
-            # This is not necessary but for compatibility with previous
+	    # Append the prototype to the starting token if it is 'sub' or
+	    # 'prototype'.  This is not necessary but for compatibility with previous
             # versions when the -csc flag is used:
-            if ( $match && $proto ) {
+            if ( $proto && ( $match || $call_type == PROTOTYPE_CALL ) ) {
                 $tok .= $proto;
             }
 
-            # if we just started at an opening paren on this call, label it
-            # with the previous token
-            elsif ($start_at_paren) {
+            # If we just entered the sub at an opening paren on this call, not
+            # a following :prototype, label it with the previous token.  This is
+            # necessary to propagate the sub name to its opening block.
+            elsif ( $call_type == PAREN_CALL ) {
                 $tok = $last_nonblank_token;
             }
 
             $match ||= 1;
-
-            # Handle prototype on separate line from subname
-            #if ($subname_saved) {
             $type = 'i';
         }
 
@@ -6908,7 +6966,7 @@ sub scan_identifier_do {
             # Setting 'statement_type' causes any ':'s to introduce
             # attributes.
             elsif ( $next_nonblank_token eq ':' ) {
-                $statement_type = $tok;
+                $statement_type = $tok if ( $call_type == SUB_CALL );
             }
 
             # if we stopped before an open paren ...
@@ -6923,7 +6981,7 @@ sub scan_identifier_do {
                 if ( !$saw_opening_paren ) {
                     $id_scan_state = 'sub';    # we must come back to get proto
                 }
-                $statement_type = $tok;
+                $statement_type = $tok if ( $call_type == SUB_CALL );
             }
             elsif ($next_nonblank_token) {     # EOF technically ok
                 $subname = "" unless defined($subname);
