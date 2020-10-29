@@ -173,6 +173,10 @@ $bits =
 lc( $self->mime_attr('content-type')
         || $self->{MIH_DefaultType}
         || 'text/plain' );
+
+# Padding can also remove spaces; here the space after the '(' is lost:
+elsif ( $statement_type =~ /^sub\b/
+    || $paren_type[$paren_depth] =~ /^sub\b/ )
 ----------
 
         'outdent' => <<'----------',
@@ -643,6 +647,10 @@ $bits =
 lc(      $self->mime_attr('content-type')
       || $self->{MIH_DefaultType}
       || 'text/plain' );
+
+# Padding can also remove spaces; here the space after the '(' is lost:
+elsif ($statement_type =~ /^sub\b/
+    || $paren_type[$paren_depth] =~ /^sub\b/ )
 #19...........
         },
     };
