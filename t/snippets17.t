@@ -247,6 +247,37 @@ sub t022 (
 my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
     ...;
 };
+
+# signature and prototype and attribute
+sub foo1 ( $x, $y ) : prototype ( $$ ) : shared { }
+
+sub foo11 ( $thing, % ) { print $thing }
+
+sub animal4 ( $cat, $ = ) {   } # second argument is optional
+
+*share = sub 
+( \[$@%] ) { };
+
+# extruded test
+sub foo2
+  (
+  $
+  first
+  ,
+  $
+  ,
+  $
+  third
+  )
+  {
+  return
+  "first=$first, third=$third"
+  ;
+  }
+
+# valid attributes
+sub fnord (&\%) : switch(10,foo(7,3)) : expensive;
+sub plugh () : Ugly('\(") : Bad;
 ----------
 
         'ternary4' => <<'----------',
@@ -957,6 +988,24 @@ sub t022 ( $p = do { $z += 10; 222 }, $a = do { $z++; 333 } ) { "$p/$a" }
 my $subref = sub ( $cat, $id = do { state $auto_id = 0; $auto_id++ } ) {
     ...;
 };
+
+# signature and prototype and attribute
+sub foo1 ( $x, $y ) : prototype ( $$ ) : shared { }
+
+sub foo11 ( $thing, % ) { print $thing }
+
+sub animal4 ( $cat, $ = ) { }    # second argument is optional
+
+*share = sub ( \[$@%] ) { };
+
+# extruded test
+sub foo2 ( $first, $, $third ) {
+    return "first=$first, third=$third";
+}
+
+# valid attributes
+sub fnord (&\%) : switch(10,foo(7,3)) : expensive;
+sub plugh () : Ugly('\(") : Bad;
 #17...........
         },
 
