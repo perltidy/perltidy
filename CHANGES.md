@@ -2,6 +2,10 @@
 
 ## 2020 10 01.02
 
+    - Fix git #44, fix exit status for assert-tidy/untidy.  The exit status was
+      always 0 for --assert-tidy if the user had turned off all error messages with
+      the -quiet.  This has been fixed.
+
     - Add flag -mfs=n, --maximum-file-size-mb=n.  This parameter is provided to
       avoid causing system problems by accidentally attempting to format an 
       extremely large data file. The default is n=10.  The command to increase 

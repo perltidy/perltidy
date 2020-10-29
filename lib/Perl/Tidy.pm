@@ -1528,7 +1528,7 @@ EOM
                     $logger_object->interrupt_logfile();
                     $logger_object->warning( $diff_msg . "\n" );
                     $logger_object->resume_logfile();
-                    $Warn_count++;
+                    $Warn_count++;  # insure correct exit if -q flag is set
                 }
             }
             if ( $rOpts->{'assert-untidy'} ) {
@@ -1537,7 +1537,7 @@ EOM
                     $logger_object->warning(
 "assertion failure: '--assert-untidy' is set but output equals input\n"
                     );
-                    $Warn_count++;
+                    $Warn_count++;  # insure correct exit if -q flag is set
                 }
             }
 

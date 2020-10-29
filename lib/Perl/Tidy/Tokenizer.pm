@@ -3205,7 +3205,7 @@ EOM
                     if ( $next_nonblank_token eq '(' ) {
 
                         # For something like:
-                        #     : prototype($$) 
+                        #     : prototype($$)
                         # we should let do_scan_sub see it so that it can see
                         # the prototype.  All other attributes get parsed as a
                         # quoted string.
@@ -3226,14 +3226,14 @@ EOM
                                 max_token_index => $max_token_index
                             );
 
-                            # If successful, mark as type 'q' to be consistent with other
-                            # attributes.  Note that type 'w' would also work.
+                   # If successful, mark as type 'q' to be consistent with other
+                   # attributes.  Note that type 'w' would also work.
                             if ( $i > $i_beg ) {
-                                $type = 'q';    
+                                $type = 'q';
                                 next;
                             }
 
-                            # If not successful, fall through and parse as a quote.
+                            # If not successful, continue and parse as a quote.
                         }
 
                         # All other attribute lists must be parsed as quotes
@@ -6739,6 +6739,7 @@ sub scan_identifier_do {
     sub initialize_subname {
         $package_saved = "";
         $subname_saved = "";
+        return;
     }
 
     use constant {
@@ -6801,7 +6802,7 @@ sub scan_identifier_do {
         my $id_scan_state   = $input_hash{id_scan_state};
         my $max_token_index = $input_hash{max_token_index};
 
-        # Determine the CALL TYPE 
+        # Determine the CALL TYPE
         # 1=sub
         # 2=(
         # 3=prototype
@@ -6874,9 +6875,9 @@ sub scan_identifier_do {
             $proto = $1;
             $attrs = $2;
 
-	    # Append the prototype to the starting token if it is 'sub' or
-	    # 'prototype'.  This is not necessary but for compatibility with previous
-            # versions when the -csc flag is used:
+       # Append the prototype to the starting token if it is 'sub' or
+       # 'prototype'.  This is not necessary but for compatibility with previous
+       # versions when the -csc flag is used:
             if ( $proto && ( $match || $call_type == PROTOTYPE_CALL ) ) {
                 $tok .= $proto;
             }

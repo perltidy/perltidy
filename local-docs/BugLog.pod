@@ -2,6 +2,11 @@
 
 =over 4
 
+=item b<Update for git #44, fix exit status for assert-tidy/untidy>
+
+The exit status was always 0 for --assert-tidy if the user had turned off error
+messages with -quiet.  This has been fixed.
+
 =item b<Fixed problem parsing extruded signature>
 
 A parsing error was encountered in a test parsing the following extruded
