@@ -659,7 +659,6 @@ sub valign_input {
     # --------------------------------------------------------------------
     my $new_line = Perl::Tidy::VerticalAligner::Line->new(
         jmax                      => $jmax,
-        jmax_original_line        => $jmax,
         rtokens                   => $rtokens,
         rfields                   => $rfields,
         rpatterns                 => $rpatterns,

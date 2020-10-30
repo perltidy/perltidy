@@ -14,7 +14,6 @@ BEGIN {
     my $i = 0;
     use constant {
         _jmax_                      => $i++,
-        _jmax_original_line_        => $i++,
         _rtokens_                   => $i++,
         _rfields_                   => $i++,
         _rfield_lengths_            => $i++,
@@ -66,7 +65,6 @@ EOM
         my $self = bless [], $class;
 
         $self->[_jmax_]                      = $arg{jmax};
-        $self->[_jmax_original_line_]        = $arg{jmax_original_line};
         $self->[_rtokens_]                   = $arg{rtokens};
         $self->[_rfields_]                   = $arg{rfields};
         $self->[_rfield_lengths_]            = $arg{rfield_lengths};
@@ -91,9 +89,6 @@ EOM
 
     sub get_jmax { return $_[0]->[_jmax_] }
 
-    sub get_jmax_original_line {
-        return $_[0]->[_jmax_original_line_];
-    }
     sub get_rtokens        { return $_[0]->[_rtokens_] }
     sub get_rfields        { return $_[0]->[_rfields_] }
     sub get_rfield_lengths { return $_[0]->[_rfield_lengths_] }
@@ -225,12 +220,6 @@ EOM
     }
 
     sub set_jmax { my ( $self, $val ) = @_; $self->[_jmax_] = $val; return }
-
-    sub set_jmax_original_line {
-        my ( $self, $val ) = @_;
-        $self->[_jmax_original_line_] = $val;
-        return;
-    }
 
     sub set_rtokens {
         my ( $self, $val ) = @_;
