@@ -3406,7 +3406,7 @@ EOM
             #---------------------------------------------------------------
 
             # Do not allow a break within welds,
-            if ($seqno) {
+            if ( $seqno && $total_weld_count ) {
                 if ( $self->weld_len_right( $seqno, $type ) ) {
                     $strength = NO_BREAK;
                 }
@@ -8472,9 +8472,6 @@ sub prepare_for_next_batch {
             my $type          = $rtoken_vars->[_TYPE_];
             my $block_type    = $rtoken_vars->[_BLOCK_TYPE_];
             my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-            my $level         = $rtoken_vars->[_LEVEL_];
-            my $slevel        = $rtoken_vars->[_SLEVEL_];
-            my $ci_level      = $rtoken_vars->[_CI_LEVEL_];
 
             if ( $type eq '#' ) {
 
@@ -8549,6 +8546,10 @@ sub prepare_for_next_batch {
             # (top) level.  Other indentation breaks will be handled by
             # sub scan_list, which is better suited to dealing with them.
             if ($is_opening_BLOCK) {
+
+                my $level    = $rtoken_vars->[_LEVEL_];
+                my $slevel   = $rtoken_vars->[_SLEVEL_];
+                my $ci_level = $rtoken_vars->[_CI_LEVEL_];
 
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
@@ -15471,7 +15472,10 @@ sub excess_line_length {
       $summed_lengths_to_go[$ibeg];
 
     # Include right weld lengths unless requested not to.
-    if ( !$ignore_right_weld && $type_sequence_to_go[$iend] ) {
+    if (  !$ignore_right_weld
+        && $type_sequence_to_go[$iend]
+        && $total_weld_count )
+    {
         my $wr = $self->weld_len_right( $type_sequence_to_go[$iend],
             $types_to_go[$iend] );
         $length += $wr;
