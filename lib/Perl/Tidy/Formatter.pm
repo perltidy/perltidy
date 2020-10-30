@@ -252,6 +252,9 @@ my (
     # from level.  Initialized in sub 'find_nested_pairs'
     @maximum_line_length,
 
+    # Total number of sequence items in a weld, for quick checks
+    $total_weld_count,
+
     #########################################################
     # Section 2: Work arrays for the current batch of tokens.
     #########################################################
@@ -369,6 +372,7 @@ BEGIN {
         _rweld_len_right_closing_ => $i++,
         _rweld_len_left_opening_  => $i++,
         _rweld_len_right_opening_ => $i++,
+        _ris_welded_seqno_        => $i++,
 
         _rspecial_side_comment_type_ => $i++,
 
@@ -674,6 +678,7 @@ sub new {
     $self->[_rweld_len_right_closing_] = {};
     $self->[_rweld_len_left_opening_]  = {};
     $self->[_rweld_len_right_opening_] = {};
+    $self->[_ris_welded_seqno_]        = {};
 
     $self->[_rseqno_controlling_my_ci_] = {};
     $self->[_ris_seqno_controlling_ci_] = {};
@@ -5756,6 +5761,23 @@ sub weld_containers {
 
     $self->weld_cuddled_blocks();
 
+    # After all welding is complete, we make a note of which seqence numbers
+    # have welds for quick checks.
+    my @q;
+    my $ris_welded_seqno = $self->[_ris_welded_seqno_];
+    @q = keys %{ $self->[_rweld_len_left_closing_] };
+    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
+    @q = keys %{ $self->[_rweld_len_right_closing_] };
+    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
+    @q = keys %{ $self->[_rweld_len_left_opening_] };
+    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
+    @q = keys %{ $self->[_rweld_len_right_opening_] };
+    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
+
+    # total number of sequenced items involved in a weld, for
+    # quick checks for avoiding calls to weld_len_xxx
+    $total_weld_count = 0 + keys %{$ris_welded_seqno};
+
     return;
 }
 
@@ -6542,16 +6564,20 @@ sub weld_len_left {
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its left
 
+    # quick check
+    return 0
+      unless ( $total_weld_count
+        && $seqno
+        && $self->[_ris_welded_seqno_]->{$seqno} );
+
     my $weld_len;
-    if ($seqno) {
-        if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $self->[_rweld_len_left_closing_]->{$seqno};
-        }
-        elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $self->[_rweld_len_left_opening_]->{$seqno};
-        }
+    if ( $is_closing_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_left_closing_]->{$seqno};
     }
-    if ( !defined($weld_len) ) { $weld_len = 0 }
+    elsif ( $is_opening_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_left_opening_]->{$seqno};
+    }
+    $weld_len = 0 unless ( defined($weld_len) );
     return $weld_len;
 }
 
@@ -6562,16 +6588,20 @@ sub weld_len_right {
     # Given the sequence number of a token, and the token or its type,
     # return the length of any weld to its right
 
+    # quick check
+    return 0
+      unless ( $total_weld_count
+        && $seqno
+        && $self->[_ris_welded_seqno_]->{$seqno} );
+
     my $weld_len;
-    if ($seqno) {
-        if ( $is_closing_type{$type_or_tok} ) {
-            $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
-        }
-        elsif ( $is_opening_type{$type_or_tok} ) {
-            $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
-        }
+    if ( $is_closing_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
     }
-    if ( !defined($weld_len) ) { $weld_len = 0 }
+    elsif ( $is_opening_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
+    }
+    $weld_len = 0 unless ( defined($weld_len) );
     return $weld_len;
 }
 
@@ -6582,12 +6612,23 @@ sub weld_len_right_to_go {
     # weld to its right.
 
     # Back up at a blank.
-    return 0 if ( $i < 0 );
+    return 0 unless ( $total_weld_count && $i >= 0 );
     if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
-    return $type_sequence_to_go[$i]
-      ? $self->weld_len_right( $type_sequence_to_go[$i], $types_to_go[$i] )
-      : 0;
+    my $seqno = $type_sequence_to_go[$i];
+
+    return 0 unless ( $seqno && $self->[_ris_welded_seqno_]->{$seqno} );
+
+    my $weld_len;
+    my $type_or_tok = $types_to_go[$i];
+    if ( $is_closing_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
+    }
+    elsif ( $is_opening_type{$type_or_tok} ) {
+        $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
+    }
+    $weld_len = 0 unless ( defined($weld_len) );
+    return $weld_len;
 }
 
 sub mark_short_nested_blocks {
@@ -7897,10 +7938,10 @@ sub prepare_for_next_batch {
         # time-consuming to re-initialize the batch arrays and is not necessary
         # because the maximum valid token, $max_index_to_go, is carefully
         # controlled.  This means however that it is not possible to do any
-	# type of filter or map operation directly on these arrays.  And it is
-	# not possible to use negative indexes. As a precaution against program
-	# changes which might do this, sub pad_array_to_go adds some undefs at
-	# the end of the current batch of data.
+        # type of filter or map operation directly on these arrays.  And it is
+        # not possible to use negative indexes. As a precaution against program
+        # changes which might do this, sub pad_array_to_go adds some undefs at
+        # the end of the current batch of data.
         0 && do { #<<<
         @block_type_to_go            = ();
         @type_sequence_to_go         = ();
@@ -8125,7 +8166,9 @@ sub prepare_for_next_batch {
         my ($self) = @_;
 
         # Exception 1: Do not end line in a weld
-        return if ( $self->weld_len_right_to_go($max_index_to_go) );
+        return
+          if ( $total_weld_count
+            && $self->weld_len_right_to_go($max_index_to_go) );
 
         # Exception 2: just set a tentative breakpoint if we might be in a
         # one-line block
