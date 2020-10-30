@@ -3215,15 +3215,17 @@ EOM
                             # start just after the word 'prototype'
                             my $i_beg = $i + 1;
                             ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
-                                input_line      => $input_line,
-                                i               => $i,
-                                i_beg           => $i_beg,
-                                tok             => $tok,
-                                type            => $type,
-                                rtokens         => $rtokens,
-                                rtoken_map      => $rtoken_map,
-                                id_scan_state   => $id_scan_state,
-                                max_token_index => $max_token_index
+                                {
+                                    input_line      => $input_line,
+                                    i               => $i,
+                                    i_beg           => $i_beg,
+                                    tok             => $tok,
+                                    type            => $type,
+                                    rtokens         => $rtokens,
+                                    rtoken_map      => $rtoken_map,
+                                    id_scan_state   => $id_scan_state,
+                                    max_token_index => $max_token_index
+                                }
                             );
 
                    # If successful, mark as type 'q' to be consistent with other
@@ -5962,15 +5964,17 @@ sub scan_id_do {
 
         if ( $is_sub{$id_scan_state} ) {
             ( $i, $tok, $type, $id_scan_state ) = do_scan_sub(
-                input_line      => $input_line,
-                i               => $i,
-                i_beg           => $i_beg,
-                tok             => $tok,
-                type            => $type,
-                rtokens         => $rtokens,
-                rtoken_map      => $rtoken_map,
-                id_scan_state   => $id_scan_state,
-                max_token_index => $max_token_index
+                {
+                    input_line      => $input_line,
+                    i               => $i,
+                    i_beg           => $i_beg,
+                    tok             => $tok,
+                    type            => $type,
+                    rtokens         => $rtokens,
+                    rtoken_map      => $rtoken_map,
+                    id_scan_state   => $id_scan_state,
+                    max_token_index => $max_token_index
+                }
             );
         }
 
@@ -6790,17 +6794,17 @@ sub scan_identifier_do {
         # $in_attribute_list, %saw_function_definition,
         # $statement_type
 
-        my %input_hash = @_;
+        my ($rinput_hash) = @_;
 
-        my $input_line      = $input_hash{input_line};
-        my $i               = $input_hash{i};
-        my $i_beg           = $input_hash{i_beg};
-        my $tok             = $input_hash{tok};
-        my $type            = $input_hash{type};
-        my $rtokens         = $input_hash{rtokens};
-        my $rtoken_map      = $input_hash{rtoken_map};
-        my $id_scan_state   = $input_hash{id_scan_state};
-        my $max_token_index = $input_hash{max_token_index};
+        my $input_line      = $rinput_hash->{input_line};
+        my $i               = $rinput_hash->{i};
+        my $i_beg           = $rinput_hash->{i_beg};
+        my $tok             = $rinput_hash->{tok};
+        my $type            = $rinput_hash->{type};
+        my $rtokens         = $rinput_hash->{rtokens};
+        my $rtoken_map      = $rinput_hash->{rtoken_map};
+        my $id_scan_state   = $rinput_hash->{id_scan_state};
+        my $max_token_index = $rinput_hash->{max_token_index};
 
         # Determine the CALL TYPE
         # 1=sub

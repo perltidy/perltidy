@@ -61,26 +61,26 @@ EOM
 
     # Constructor may be called as a class method
     sub new {
-        my ( $class, %arg ) = @_;
+        my ( $class, $ri ) = @_;
         my $self = bless [], $class;
 
-        $self->[_jmax_]                      = $arg{jmax};
-        $self->[_rtokens_]                   = $arg{rtokens};
-        $self->[_rfields_]                   = $arg{rfields};
-        $self->[_rfield_lengths_]            = $arg{rfield_lengths};
-        $self->[_rpatterns_]                 = $arg{rpatterns};
-        $self->[_indentation_]               = $arg{indentation};
-        $self->[_leading_space_count_]       = $arg{leading_space_count};
-        $self->[_outdent_long_lines_]        = $arg{outdent_long_lines};
-        $self->[_list_type_]                 = $arg{list_type};
-        $self->[_is_hanging_side_comment_]   = $arg{is_hanging_side_comment};
-        $self->[_maximum_line_length_]       = $arg{maximum_line_length};
-        $self->[_rvertical_tightness_flags_] = $arg{rvertical_tightness_flags};
-        $self->[_is_terminal_ternary_]       = $arg{is_terminal_ternary};
-        $self->[_is_terminal_else_]          = $arg{is_terminal_else};
-        $self->[_j_terminal_match_]          = $arg{j_terminal_match};
-        $self->[_is_forced_break_]           = $arg{is_forced_break};
-        $self->[_end_group_]                 = $arg{end_group};
+        $self->[_jmax_]                      = $ri->{jmax};
+        $self->[_rtokens_]                   = $ri->{rtokens};
+        $self->[_rfields_]                   = $ri->{rfields};
+        $self->[_rfield_lengths_]            = $ri->{rfield_lengths};
+        $self->[_rpatterns_]                 = $ri->{rpatterns};
+        $self->[_indentation_]               = $ri->{indentation};
+        $self->[_leading_space_count_]       = $ri->{leading_space_count};
+        $self->[_outdent_long_lines_]        = $ri->{outdent_long_lines};
+        $self->[_list_type_]                 = $ri->{list_type};
+        $self->[_is_hanging_side_comment_]   = $ri->{is_hanging_side_comment};
+        $self->[_maximum_line_length_]       = $ri->{maximum_line_length};
+        $self->[_rvertical_tightness_flags_] = $ri->{rvertical_tightness_flags};
+        $self->[_is_terminal_ternary_]       = $ri->{is_terminal_ternary};
+        $self->[_is_terminal_else_]          = $ri->{is_terminal_else};
+        $self->[_j_terminal_match_]          = $ri->{j_terminal_match};
+        $self->[_is_forced_break_]           = $ri->{is_forced_break};
+        $self->[_end_group_]                 = $ri->{end_group};
 
         $self->[_ralignments_] = [];
 

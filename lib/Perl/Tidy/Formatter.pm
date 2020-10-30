@@ -13199,18 +13199,20 @@ sub set_continuation_breaks {
                 my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiU]$/;
 
                 $self->set_comma_breakpoints_do(
-                    depth               => $dd,
-                    i_opening_paren     => $opening_structure_index_stack[$dd],
-                    i_closing_paren     => $i,
-                    item_count          => $item_count_stack[$dd],
-                    identifier_count    => $identifier_count_stack[$dd],
-                    rcomma_index        => $comma_index[$dd],
-                    next_nonblank_type  => $next_nonblank_type,
-                    list_type           => $container_type[$dd],
-                    interrupted         => $interrupted_list[$dd],
-                    rdo_not_break_apart => \$do_not_break_apart,
-                    must_break_open     => $must_break_open,
-                    has_broken_sublist  => $has_broken_sublist[$dd],
+                    {
+                        depth            => $dd,
+                        i_opening_paren  => $opening_structure_index_stack[$dd],
+                        i_closing_paren  => $i,
+                        item_count       => $item_count_stack[$dd],
+                        identifier_count => $identifier_count_stack[$dd],
+                        rcomma_index     => $comma_index[$dd],
+                        next_nonblank_type  => $next_nonblank_type,
+                        list_type           => $container_type[$dd],
+                        interrupted         => $interrupted_list[$dd],
+                        rdo_not_break_apart => \$do_not_break_apart,
+                        must_break_open     => $must_break_open,
+                        has_broken_sublist  => $has_broken_sublist[$dd],
+                    }
                 );
                 $bp_count           = get_forced_breakpoint_count() - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
@@ -14418,20 +14420,20 @@ sub find_token_starting_list {
         # Given a list with some commas, set breakpoints at some of the
         # commas, if necessary, to make it easy to read.
 
-        my ( $self, %input_hash ) = @_;
+        my ( $self, $rinput_hash ) = @_;
 
-        my $depth               = $input_hash{depth};
-        my $i_opening_paren     = $input_hash{i_opening_paren};
-        my $i_closing_paren     = $input_hash{i_closing_paren};
-        my $item_count          = $input_hash{item_count};
-        my $identifier_count    = $input_hash{identifier_count};
-        my $rcomma_index        = $input_hash{rcomma_index};
-        my $next_nonblank_type  = $input_hash{next_nonblank_type};
-        my $list_type           = $input_hash{list_type};
-        my $interrupted         = $input_hash{interrupted};
-        my $rdo_not_break_apart = $input_hash{rdo_not_break_apart};
-        my $must_break_open     = $input_hash{must_break_open};
-        my $has_broken_sublist  = $input_hash{has_broken_sublist};
+        my $depth               = $rinput_hash->{depth};
+        my $i_opening_paren     = $rinput_hash->{i_opening_paren};
+        my $i_closing_paren     = $rinput_hash->{i_closing_paren};
+        my $item_count          = $rinput_hash->{item_count};
+        my $identifier_count    = $rinput_hash->{identifier_count};
+        my $rcomma_index        = $rinput_hash->{rcomma_index};
+        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
+        my $list_type           = $rinput_hash->{list_type};
+        my $interrupted         = $rinput_hash->{interrupted};
+        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
+        my $must_break_open     = $rinput_hash->{must_break_open};
+        my $has_broken_sublist  = $rinput_hash->{has_broken_sublist};
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );

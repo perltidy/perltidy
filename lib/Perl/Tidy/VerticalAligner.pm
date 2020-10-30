@@ -617,13 +617,15 @@ sub valign_input {
         {
 
             $self->valign_output_step_B(
-                leading_space_count       => $leading_space_count,
-                line                      => $rfields->[0],
-                line_length               => $rfield_lengths->[0],
-                side_comment_length       => 0,
-                outdent_long_lines        => $outdent_long_lines,
-                rvertical_tightness_flags => $rvertical_tightness_flags,
-                level                     => $level
+                {
+                    leading_space_count       => $leading_space_count,
+                    line                      => $rfields->[0],
+                    line_length               => $rfield_lengths->[0],
+                    side_comment_length       => 0,
+                    outdent_long_lines        => $outdent_long_lines,
+                    rvertical_tightness_flags => $rvertical_tightness_flags,
+                    level                     => $level
+                }
             );
 
             return;
@@ -652,27 +654,29 @@ sub valign_input {
     # --------------------------------------------------------------------
     $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths,
         $level_end );
-    $jmax = @{$rfields} - 1;    # TODO: move this into Line.pm
+    $jmax = @{$rfields} - 1;
 
     # --------------------------------------------------------------------
     # create an object to hold this line
     # --------------------------------------------------------------------
     my $new_line = Perl::Tidy::VerticalAligner::Line->new(
-        jmax                      => $jmax,
-        rtokens                   => $rtokens,
-        rfields                   => $rfields,
-        rpatterns                 => $rpatterns,
-        rfield_lengths            => $rfield_lengths,
-        indentation               => $indentation,
-        leading_space_count       => $leading_space_count,
-        outdent_long_lines        => $outdent_long_lines,
-        list_type                 => "",
-        is_hanging_side_comment   => $is_hanging_side_comment,
-        maximum_line_length       => $maximum_line_length_for_level,
-        rvertical_tightness_flags => $rvertical_tightness_flags,
-        is_terminal_ternary       => $is_terminal_ternary,
-        j_terminal_match          => $j_terminal_match,
-        is_forced_break           => $is_forced_break,
+        {
+            jmax                      => $jmax,
+            rtokens                   => $rtokens,
+            rfields                   => $rfields,
+            rpatterns                 => $rpatterns,
+            rfield_lengths            => $rfield_lengths,
+            indentation               => $indentation,
+            leading_space_count       => $leading_space_count,
+            outdent_long_lines        => $outdent_long_lines,
+            list_type                 => "",
+            is_hanging_side_comment   => $is_hanging_side_comment,
+            maximum_line_length       => $maximum_line_length_for_level,
+            rvertical_tightness_flags => $rvertical_tightness_flags,
+            is_terminal_ternary       => $is_terminal_ternary,
+            j_terminal_match          => $j_terminal_match,
+            is_forced_break           => $is_forced_break,
+        }
     );
 
     # --------------------------------------------------------------------
@@ -1455,13 +1459,15 @@ sub _flush_comment_lines {
     foreach my $item ( @{$rgroup_lines} ) {
         my ( $line, $line_len ) = @{$item};
         $self->valign_output_step_B(
-            leading_space_count       => $leading_space_count,
-            line                      => $line,
-            line_length               => $line_len,
-            side_comment_length       => 0,
-            outdent_long_lines        => $outdent_long_lines,
-            rvertical_tightness_flags => "",
-            level                     => $group_level,
+            {
+                leading_space_count       => $leading_space_count,
+                line                      => $line,
+                line_length               => $line_len,
+                side_comment_length       => 0,
+                outdent_long_lines        => $outdent_long_lines,
+                rvertical_tightness_flags => "",
+                level                     => $group_level,
+            }
         );
     }
 
@@ -1541,12 +1547,14 @@ sub _flush_group_lines {
 
     foreach my $line ( @{$rgroup_lines} ) {
         $self->valign_output_step_A(
-            line                 => $line,
-            min_ci_gap           => 0,
-            do_not_align         => 0,
-            group_leader_length  => $group_leader_length,
-            extra_leading_spaces => $extra_leading_spaces,
-            level                => $group_level,
+            {
+                line                 => $line,
+                min_ci_gap           => 0,
+                do_not_align         => 0,
+                group_leader_length  => $group_leader_length,
+                extra_leading_spaces => $extra_leading_spaces,
+                level                => $group_level,
+            }
         );
     }
 
@@ -3736,14 +3744,14 @@ sub valign_output_step_A {
     # been found. Then it is shipped to the next step.
     ###############################################################
 
-    my ( $self, %input_hash ) = @_;
+    my ( $self, $rinput_hash ) = @_;
 
-    my $line                 = $input_hash{line};
-    my $min_ci_gap           = $input_hash{min_ci_gap};
-    my $do_not_align         = $input_hash{do_not_align};
-    my $group_leader_length  = $input_hash{group_leader_length};
-    my $extra_leading_spaces = $input_hash{extra_leading_spaces};
-    my $level                = $input_hash{level};
+    my $line                 = $rinput_hash->{line};
+    my $min_ci_gap           = $rinput_hash->{min_ci_gap};
+    my $do_not_align         = $rinput_hash->{do_not_align};
+    my $group_leader_length  = $rinput_hash->{group_leader_length};
+    my $extra_leading_spaces = $rinput_hash->{extra_leading_spaces};
+    my $level                = $rinput_hash->{level};
 
     my $rfields                   = $line->get_rfields();
     my $rfield_lengths            = $line->get_rfield_lengths();
@@ -3815,13 +3823,15 @@ sub valign_output_step_A {
 
     # ship this line off
     $self->valign_output_step_B(
-        leading_space_count => $leading_space_count + $extra_leading_spaces,
-        line                => $str,
-        line_length         => $str_len,
-        side_comment_length => $side_comment_length,
-        outdent_long_lines  => $outdent_long_lines,
-        rvertical_tightness_flags => $rvertical_tightness_flags,
-        level                     => $level,
+        {
+            leading_space_count => $leading_space_count + $extra_leading_spaces,
+            line                => $str,
+            line_length         => $str_len,
+            side_comment_length => $side_comment_length,
+            outdent_long_lines  => $outdent_long_lines,
+            rvertical_tightness_flags => $rvertical_tightness_flags,
+            level                     => $level,
+        }
     );
     return;
 }
@@ -3973,15 +3983,15 @@ sub get_output_line_number {
         # and closing tokens.
         ###############################################################
 
-        my ( $self, %input_hash ) = @_;
+        my ( $self, $rinput_hash ) = @_;
 
-        my $leading_space_count       = $input_hash{leading_space_count};
-        my $str                       = $input_hash{line};
-        my $str_length                = $input_hash{line_length};
-        my $side_comment_length       = $input_hash{side_comment_length};
-        my $outdent_long_lines        = $input_hash{outdent_long_lines};
-        my $rvertical_tightness_flags = $input_hash{rvertical_tightness_flags};
-        my $level                     = $input_hash{level};
+        my $leading_space_count       = $rinput_hash->{leading_space_count};
+        my $str                       = $rinput_hash->{line};
+        my $str_length                = $rinput_hash->{line_length};
+        my $side_comment_length       = $rinput_hash->{side_comment_length};
+        my $outdent_long_lines        = $rinput_hash->{outdent_long_lines};
+        my $rvertical_tightness_flags = $rinput_hash->{rvertical_tightness_flags};
+        my $level                     = $rinput_hash->{level};
 
         my $last_level_written = $self->[_last_level_written_];
 
