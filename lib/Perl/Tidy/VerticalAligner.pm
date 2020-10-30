@@ -647,6 +647,14 @@ sub valign_input {
       $self->maximum_line_length_for_level($level);
 
     # --------------------------------------------------------------------
+    # It simplifies things to create a zero length side comment
+    # if none exists.
+    # --------------------------------------------------------------------
+    $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths,
+        $level_end );
+    $jmax = @{$rfields} - 1;    # TODO: move this into Line.pm
+
+    # --------------------------------------------------------------------
     # create an object to hold this line
     # --------------------------------------------------------------------
     my $new_line = Perl::Tidy::VerticalAligner::Line->new(
@@ -667,12 +675,6 @@ sub valign_input {
         j_terminal_match          => $j_terminal_match,
         is_forced_break           => $is_forced_break,
     );
-
-    # --------------------------------------------------------------------
-    # It simplifies things to create a zero length side comment
-    # if none exists.
-    # --------------------------------------------------------------------
-    $self->make_side_comment( $new_line, $level_end );
 
     # --------------------------------------------------------------------
     # Decide if this is a simple list of items.
@@ -763,23 +765,18 @@ sub make_side_comment {
 
     # create an empty side comment if none exists
 
-    my ( $self, $new_line, $level_end ) = @_;
+    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths, $level_end ) =
+      @_;
 
-    my $jmax    = $new_line->get_jmax();
-    my $rtokens = $new_line->get_rtokens();
+    my $jmax = @{$rfields} - 1;
 
     # if line does not have a side comment...
     if ( ( $jmax == 0 ) || ( $rtokens->[ $jmax - 1 ] ne '#' ) ) {
-        my $rfields        = $new_line->get_rfields();
-        my $rfield_lengths = $new_line->get_rfield_lengths();
-        my $rpatterns      = $new_line->get_rpatterns();
         $jmax += 1;
         $rtokens->[ $jmax - 1 ]  = '#';
         $rfields->[$jmax]        = '';
         $rfield_lengths->[$jmax] = 0;
         $rpatterns->[$jmax]      = '#';
-        $new_line->set_jmax($jmax);
-        $new_line->set_jmax_original_line($jmax);
     }
 
     # line has a side comment..
@@ -787,7 +784,6 @@ sub make_side_comment {
 
         # don't remember old side comment location for very long
         my $line_number = $self->get_output_line_number();
-        my $rfields     = $new_line->get_rfields();
         if (
             $line_number - $self->[_last_side_comment_line_number_] > 12
 
