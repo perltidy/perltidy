@@ -8466,7 +8466,6 @@ sub prepare_for_next_batch {
 
         foreach my $Ktoken_vars ( $K_first .. $K_last ) {
 
-            # pull out some values for this token
             my $rtoken_vars   = $rLL->[$Ktoken_vars];
             my $token         = $rtoken_vars->[_TOKEN_];
             my $type          = $rtoken_vars->[_TYPE_];
@@ -8547,10 +8546,6 @@ sub prepare_for_next_batch {
             # sub scan_list, which is better suited to dealing with them.
             if ($is_opening_BLOCK) {
 
-                my $level    = $rtoken_vars->[_LEVEL_];
-                my $slevel   = $rtoken_vars->[_SLEVEL_];
-                my $ci_level = $rtoken_vars->[_CI_LEVEL_];
-
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
@@ -8559,16 +8554,18 @@ sub prepare_for_next_batch {
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
                   $self->starting_one_line_block( $Ktoken_vars,
-                    $K_last_nonblank_code,
-                    $K_last, $level, $slevel, $ci_level );
+                    $K_last_nonblank_code, $K_last );
                 $self->clear_breakpoint_undo_stack();
 
                 # to simplify the logic below, set a flag to indicate if
                 # this opening brace is far from the keyword which introduces it
                 my $keyword_on_same_line = 1;
-                if (   ( $max_index_to_go >= 0 )
-                    && ( $last_nonblank_type eq ')' )
-                    && ( ( $slevel < $nesting_depth_to_go[0] ) || $too_long ) )
+                if (
+                       $max_index_to_go >= 0
+                    && $last_nonblank_type eq ')'
+                    && ( ( $rtoken_vars->[_SLEVEL_] < $nesting_depth_to_go[0] )
+                        || $too_long )
+                  )
                 {
                     $keyword_on_same_line = 0;
                 }
@@ -9087,8 +9084,7 @@ sub starting_one_line_block {
     # because otherwise we would always break at a semicolon within a one-line
     # block if the block contains multiple statements.
 
-    my ( $self, $Kj, $K_last_nonblank, $K_last, $level, $slevel, $ci_level ) =
-      @_;
+    my ( $self, $Kj, $K_last_nonblank, $K_last ) = @_;
 
     my $rbreak_container    = $self->[_rbreak_container_];
     my $rshort_nested       = $self->[_rshort_nested_];
@@ -9176,7 +9172,7 @@ sub starting_one_line_block {
             if ( $i_start > 0 )                                  { $i_start-- }
             if ( $types_to_go[$i_start] eq 'b' && $i_start > 0 ) { $i_start--; }
             my $lev = $levels_to_go[$i_start];
-            if ( $lev > $level ) { return 0 }
+            if ( $lev > $rLL->[$Kj]->[_LEVEL_] ) { return 0 }
         }
     }
 
