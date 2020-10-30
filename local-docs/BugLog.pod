@@ -2,12 +2,13 @@
 
 =over 4
 
-=item b<Update for git #44, fix exit status for assert-tidy/untidy>
+=item B<Update for git #44, fix exit status for assert-tidy/untidy>
 
 The exit status was always 0 for --assert-tidy if the user had turned off error
-messages with -quiet.  This has been fixed.
+messages with -quiet.  This was fixed by gluesys/master in 'fix exit
+status for assert-tidy/untidy options', 625d250.
 
-=item b<Fixed problem parsing extruded signature>
+=item B<Fixed problem parsing extruded signature>
 
 A parsing error was encountered in a test parsing the following extruded
 signature:
@@ -37,7 +38,7 @@ The file parses correctly now, with formatted output
       return "first=$first, third=$third";
   }
 
-=item b<Fixed several uses of undefined variables found in testing>
+=item B<Fixed several uses of undefined variables found in testing>
 
 Several instances of incorrect array indexing were found in testing and fixed.
 These each involved incorrectly indexing with index -1. They were found by
@@ -45,7 +46,7 @@ placing undefs at the end of arrays.  None of these was causing incorrect
 formatting. They were fixed 26 Oct 2020 in 'fixed several instances of
 incorrect array indexing', c60f694.
 
-=item b<Prevent syntax error by breaking dashed package names>
+=item B<Prevent syntax error by breaking dashed package names>
 
 In stress testing perltidy with the -extrude option, the following test snippet 
 
@@ -68,7 +69,7 @@ Rerunning gives
 
 This was fixed 26 Oct 2020 in 'prevent breaking package names with trailing dashes', 9234be4.
 
-=item b<Prevent syntax error by breaking dashed barewords>
+=item B<Prevent syntax error by breaking dashed barewords>
 
 In stress testing perltidy with the -extrude option, using the following test snippet
 
@@ -129,7 +130,7 @@ line with its surrounding tokens.  A rule was added to do this.  The new
 This update was added 26 Oct 2020, 'prevent syntax error by breaking dashed
 barewords', e121cae.
 
-=item b<more types of severe errors will prevent formatting>
+=item B<more types of severe errors will prevent formatting>
 
 Files for which 'severe errors' are found have always been output verbatim
 rather than being formatted.  The definition of 'severe error' has been
@@ -138,27 +139,27 @@ brace errors, and more than 3 "unexpected token type" parsing errors.  The goal
 is to avoid formatting a non-perl script or a perl script with severe errors.
 So for example the following snippet has a level error of 2
 
-{{{{
-}}
+  {{{{
+  }}
 
 was previously output with default parameters as
 
-{
-    {
-        {
-            {}
-        }
+  { 
+      {
+          {
+              {}
+          }
 
 
 along with an error message. But now it is just output verbatim as
 
-{{{{
-}}
+  {{{{
+  }}
 
 along with an error message.  This update was added 25 Oct 2020,
 'avoid formatting files with more types of severe errors', 2a86f51.
 
-=item b<added 'state' as keyword>
+=item B<added 'state' as keyword>
 
 A statement such as the following was generating an error message at the colon:
 
@@ -169,7 +170,7 @@ and the line now parses without error.  The 'state.t' test file for perl 5.31
 now formats without error.  This was added 18 Oct 2020 in "add 'state' as keyword",
 d73e15f.
 
-=item b<sub signatures no longer parsed with prototypes>
+=item B<sub signatures no longer parsed with prototypes>
 
 Simple signatures (those without commas) were being parsed with code originally
 written for prototypes. This prevented them from being formatted with the
@@ -202,7 +203,7 @@ This update was added 18 Oct 2020, in 'format all signatures separately from
 prototypes', e6a10f3.  The test file 'signatures.t' distributed with perl5.31
 formats without error now.
 
-=item b<fix parsing problem with $#>
+=item B<fix parsing problem with $#>
 
 A problem with parsing variables of the form $# and $#array was found in
 testing and fixed.  For most variables the leading sigil may be separated from
@@ -218,7 +219,7 @@ and is equivalent to $ans=40;
 This was being misparsed and was fixed 17 Oct 2020,  in
 'fixed parsing error with spaces in $#' a079cdb.
 
-=item b<fix missing line break for hash of subs with signatures>
+=item B<fix missing line break for hash of subs with signatures>
 
 During testing the following error was found and fixed.
 Given the following input snippet:
@@ -247,7 +248,7 @@ a signature with multiple parameters and short enough to be a one-line block,
 as in the last sub definition line.  This was fixed 17 Oct 2020
 in 'fix missing line break for hash of subs with signatures', 51428db.
 
-=item b<fix issues with prototype and signature parsing>
+=item B<fix issues with prototype and signature parsing>
 
 Problems with parsing prototypes and signatures were found during testing and
 fixed 17 Oct 2020 in 'fixed problem parsing multi-line signatures with
@@ -268,7 +269,7 @@ error:
         ) #foo)))
         { $a.$b }
 
-=item b<improve guess for pattern or division>
+=item B<improve guess for pattern or division>
 
 The following line caused a tokenization error in which the two slashes
 were parsed as a pattern.  
@@ -280,7 +281,7 @@ whose prototype is not known to perltidy, it has to guess whether the slash
 starts a pattern or is a division.  The guessing logic was rewritten and 
 improved 14 Oct 2020 in 'rewrote logic to guess if divide or pattern', afebe2f.
 
-=item b<fix -bos to keep isolated semicolon breaks after block braces>
+=item B<fix -bos to keep isolated semicolon breaks after block braces>
 
 The flag B<-bos>,  or B<--break-at-old-semicolon-breakpoints>, keeps breaks
 at old isolated semicolons. For example
@@ -298,7 +299,7 @@ semicolons, such as 'do' and anonymous subs. This was fixed 12 Oct 2020 in
       }
       ;
 
-=item b<keep break after 'use overload'>
+=item B<keep break after 'use overload'>
 
 If a line break occurs after B<use overload> then it will now be kept. Previously
 it was dropped.  For example, this would be kept intact:
@@ -361,14 +362,12 @@ corrected formatting, we would have
 
 =back
 
-
 =head1 Issues fixed after release 20200907
 
 This is a detailed log of changes since the release 20200907. All bugs were
 found with the help of automated random testing.
 
 =over
-
 
 =item B<Keep any space between a bareword and quote>
 
@@ -747,7 +746,7 @@ These are known issues which have not been fixed.
 
 =over 4
 
-=item b<lexical subs not fully supported>
+=item B<lexical subs not fully supported>
 
 Basic parsing of lexical subs works but some aspects of lexical subs are not yet functional. 
 One of these is that unlike regular subs, lexical subs can override names of builtin functions.
@@ -782,7 +781,7 @@ make different assumptions in this case.
 
 Another issue is that perltidy does not yet remember the extent of the scope of a lexical sub.
 
-=item b<issues with paren-less calls>
+=item B<issues with paren-less calls>
 
 Consider the following snippet:
 
@@ -804,7 +803,7 @@ The problem can be avoid if parens are used:
 
   ok ( open($stdin, "<&", $1), 'open ... "<&", $magical_fileno') ||  _diag $!;
 
-=item b<multiple sub paren calls>
+=item B<multiple sub paren calls>
 
 Perltidy currently flags as an error a closing paren followed by an opening
 paren, as in the following
@@ -812,3 +811,5 @@ paren, as in the following
   $subsubs[0]()(0)
 
 This syntax is ok.  The example is from test 'current_sub.t' in perl5.31.
+
+=back
