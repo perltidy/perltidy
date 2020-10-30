@@ -14,17 +14,19 @@
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.
-      Since this is a fairly new flag, the default is B<-nxci> to avoid disturbing 
-      existing formatting.  BUT if you use B<-ci=n> and B<-i=n> with the same value 
-      of B<n> you will probably want to set this flag.  
+      Since this is a fairly new flag, the default is -nxci to avoid disturbing 
+      existing formatting.  BUT you will probably see some improved formatting
+      in complex data structures by setting this flag if you currently use -ci=n 
+      and -i=n with the same value of 'n' (as is the case if you use -pbp, 
+      --perl-best-practices, where n=4).
 
     - Fix issue git #42, clarify how --break-at-old-logical-breakpoints works.
       The man page was updated to note that it does not cause all logical breakpoints
       to be replicated in the output file.
 
-    - Fix issue git #41, typo in manual regarding -fsb
+    - Fix issue git #41, typo in manual regarding -fsb.
 
-    - Some problems with parsing complex multi-line sub signatures have been fixed.  
+    - Some problems with parsing complex multi-line sub signatures have been fixed.
 
     - Fix issue git #40: when using the -bli option, a closing brace followed by 
       a semicolon was not being indented.  This applies to braces which require 
@@ -32,7 +34,8 @@
 
     - Added 'state' as a keyword.
 
-    - A more complete list of updates and changes is given in the file 
+    - Numerous minor issues that the average user would not encounter were found
+      and fixed. They can be seen in the more complete list of updates at 
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
