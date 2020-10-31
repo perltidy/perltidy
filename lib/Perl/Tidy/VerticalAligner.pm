@@ -466,28 +466,29 @@ sub valign_input {
     # token with the closing token to follow, then we will mark both
     # cached flags as valid.
     my $cached_line_type = get_cached_line_type();
-    my $cached_line_flag = get_cached_line_flag();
-    my $cached_seqno     = get_cached_seqno();
-    if ($rvertical_tightness_flags) {
-        if (   $cached_line_type
-            && $cached_seqno
-            && $self->group_line_count() <= 1
-            && $rvertical_tightness_flags->[2]
-            && $rvertical_tightness_flags->[2] == $cached_seqno )
-        {
-            $rvertical_tightness_flags->[3] ||= 1;
-            set_cached_line_valid(1);
+    if ($cached_line_type) {
+        my $cached_line_flag = get_cached_line_flag();
+        if ($rvertical_tightness_flags) {
+            my $cached_seqno = get_cached_seqno();
+            if (   $cached_seqno
+                && $self->group_line_count() <= 1
+                && $rvertical_tightness_flags->[2]
+                && $rvertical_tightness_flags->[2] == $cached_seqno )
+            {
+                $rvertical_tightness_flags->[3] ||= 1;
+                set_cached_line_valid(1);
+            }
         }
-    }
 
-    # do not join an opening block brace with an unbalanced line
-    # unless requested with a flag value of 2
-    if (   $cached_line_type == 3
-        && !$self->group_line_count()
-        && $cached_line_flag < 2
-        && $level_jump != 0 )
-    {
-        set_cached_line_valid(0);
+        # do not join an opening block brace with an unbalanced line
+        # unless requested with a flag value of 2
+        if (   $cached_line_type == 3
+            && !$self->group_line_count()
+            && $cached_line_flag < 2
+            && $level_jump != 0 )
+        {
+            set_cached_line_valid(0);
+        }
     }
 
     # caller might request no alignment in special cases
