@@ -588,7 +588,9 @@ sub new {
     initialize_grind_batch_of_CODE();
     initialize_adjusted_indentation();
     initialize_postponed_breakpoint();
-    prepare_for_next_batch();
+    initialize_batch_variables();
+    initialize_forced_breakpoint_vars();
+    initialize_gnu_batch_vars();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
@@ -7870,13 +7872,6 @@ EOM
 # CODE SECTION 7: Process lines of code
 #######################################
 
-sub prepare_for_next_batch {
-    initialize_forced_breakpoint_vars();
-    initialize_gnu_batch_vars();
-    initialize_batch_variables();
-    return;
-}
-
 {    ## begin closure process_line_of_CODE
 
     # The routines in this closure receive lines of code and combine them into
@@ -7942,6 +7937,8 @@ sub prepare_for_next_batch {
         # not possible to use negative indexes. As a precaution against program
         # changes which might do this, sub pad_array_to_go adds some undefs at
         # the end of the current batch of data.
+
+        # So 'long story short': this is a waste of time
         0 && do { #<<<
         @block_type_to_go            = ();
         @type_sequence_to_go         = ();
@@ -8155,7 +8152,10 @@ sub prepare_for_next_batch {
         # Done .. this batch is history
         $self->[_this_batch_] = [];
 
-        prepare_for_next_batch();
+        initialize_batch_variables();
+        initialize_forced_breakpoint_vars();
+        initialize_gnu_batch_vars()
+          if $rOpts_line_up_parentheses;
 
         return;
     }
