@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Fix problem parsing '$$*'>
+
+In random testing, an error was encountered parsing the following line
+
+  $self->{"mod_id"}=($$*1001)%(10**(rand()*6));
+                       ---^
+  found Number where operator expected (previous token underlined)
+
+The line parsed correctly with a space between the '$$' and the '*'. The
+problem had to do with an error in some newer code for postfix dereferencing,
+and this was fixed on 2 Nov 2020.
+
 =item B<Update for git #44, fix exit status for assert-tidy/untidy>
 
 The exit status was always 0 for --assert-tidy if the user had turned off error
