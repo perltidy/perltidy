@@ -134,12 +134,6 @@ EOM
         return $_[0]->[_rvertical_tightness_flags_];
     }
 
-    sub set_column {
-        ## FIXME: does caller ever supply $val??
-        my ( $self, $j, $val ) = @_;
-        return $self->[_ralignments_]->[$j]->set_column($val);
-    }
-
     sub get_alignment {
         my ( $self, $j ) = @_;
         return $self->[_ralignments_]->[$j];
@@ -151,16 +145,6 @@ EOM
         my $alignment = $_[0]->[_ralignments_]->[ $_[1] ];
         return unless defined($alignment);
         return $alignment->get_column();
-    }
-
-    sub get_starting_column {
-        my ( $self, $j ) = @_;
-        my $col;
-        my $alignment = $self->[_ralignments_]->[$j];
-        if ( defined($alignment) ) {
-            $col = $alignment->get_starting_column();
-        }
-        return $col;
     }
 
     sub increment_column {
@@ -185,22 +169,6 @@ EOM
         }
         else {
             return $self->get_column($j) - $self->get_column( $j - 1 );
-        }
-    }
-
-    sub field_width_growth {
-        my ( $self, $j ) = @_;
-        return $self->get_column($j) - $self->get_starting_column($j);
-    }
-
-    sub starting_field_width {
-        my ( $self, $j ) = @_;
-        if ( $j == 0 ) {
-            return $self->get_starting_column($j);
-        }
-        else {
-            return $self->get_starting_column($j) -
-              $self->get_starting_column( $j - 1 );
         }
     }
 

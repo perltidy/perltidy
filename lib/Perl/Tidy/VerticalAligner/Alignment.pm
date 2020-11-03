@@ -13,24 +13,18 @@ use warnings;
 our $VERSION = '20201001.02';
 
 #    _column_          # the current column number
-#    _starting_column_ # column number when created
 #    _saved_column_    # a place for temporary storage
 my $i = 0;
 use constant {
-    _column_          => $i++,
-    _starting_column_ => $i++,
-    _saved_column_    => $i++,
+    _column_       => $i++,
+    _saved_column_ => $i++,
 };
 
 sub new {
-    my ( $class, %arg ) = @_;
+    my ( $class, $rarg ) = @_;
     my $self = bless [], $class;
-    $self->[_column_]          = $arg{column};
-    $self->[_starting_column_] = $arg{starting_column};
-    $self->[_saved_column_]    = $arg{saved_column};
-    if ( !defined( $self->[_starting_column_] ) ) {
-        $self->[_starting_column_] = $self->[_column_];
-    }
+    $self->[_column_]       = $rarg->{column};
+    $self->[_saved_column_] = $rarg->{saved_column};
     return $self;
 }
 
@@ -64,25 +58,8 @@ sub get_column {
     return $_[0]->[_column_];
 }
 
-sub get_starting_column {
-    return $_[0]->[_starting_column_];
-}
-
-sub set_column {
-    my ( $self, $val ) = @_;
-    $self->[_column_] = $val;
-    return;
-}
-
-sub set_starting_column {
-    my ( $self, $val ) = @_;
-    $self->[_starting_column_] = $val;
-    return;
-}
-
 sub increment_column {
-    my ( $self, $val ) = @_;
-    $self->[_column_] += $val;
+    $_[0]->[_column_] += $_[1];
     return;
 }
 

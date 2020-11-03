@@ -1370,7 +1370,7 @@ sub install_new_alignments {
 
         # create initial alignments for the new group
         my $alignment =
-          Perl::Tidy::VerticalAligner::Alignment->new( column => $col );
+          Perl::Tidy::VerticalAligner::Alignment->new( { column => $col } );
         $new_line->set_alignment( $j, $alignment );
     }
     return;
