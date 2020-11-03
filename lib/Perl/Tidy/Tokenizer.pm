@@ -2804,7 +2804,8 @@ sub prepare_for_a_new_file {
 
             # must not be in multi-line quote
             # and must not be in an equation
-            if ( !$in_quote && ( operator_expected( 'b', '=', 'b' ) == TERM ) )
+            if ( !$in_quote
+                && ( operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
             {
                 $tokenizer_self->[_in_pod_] = 1;
                 return;
@@ -3116,7 +3117,7 @@ EOM
                 if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
                     my $next_type = $rtokens->[ $i + 1 ];
                     my $expecting =
-                      operator_expected( $prev_type, $tok, $next_type );
+                      operator_expected( [ $prev_type, $tok, $next_type ] );
 
                     # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
                     $combine_ok = 0 if ( $expecting == TERM );
@@ -3194,7 +3195,8 @@ EOM
             ###############################################################
 
             if ( $pre_type eq 'w' ) {
-                $expecting = operator_expected( $prev_type, $tok, $next_type );
+                $expecting =
+                  operator_expected( [ $prev_type, $tok, $next_type ] );
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -3727,7 +3729,8 @@ EOM
             # section 2: strings of digits
             ###############################################################
             elsif ( $pre_type eq 'd' ) {
-                $expecting = operator_expected( $prev_type, $tok, $next_type );
+                $expecting =
+                  operator_expected( [ $prev_type, $tok, $next_type ] );
                 error_if_expecting_OPERATOR("Number")
                   if ( $expecting == OPERATOR );
                 my $number = scan_number();
@@ -3748,7 +3751,7 @@ EOM
                 my $code = $tokenization_code->{$tok};
                 if ($code) {
                     $expecting =
-                      operator_expected( $prev_type, $tok, $next_type );
+                      operator_expected( [ $prev_type, $tok, $next_type ] );
                     $code->();
                     redo if $in_quote;
                 }
@@ -4474,6 +4477,15 @@ BEGIN {
 
 sub operator_expected {
 
+    # Returns a parameter indicating what types of tokens can occur next
+
+    # Call format:
+    #    $op_expected = operator_expected( [ $prev_type, $tok, $next_type ] );
+    # where
+    #    $prev_type is the type of the previous token (blank or not)
+    #    $tok is the current token
+    #    $next_type is the type of the next token (blank or not)
+
     # Many perl symbols have two or more meanings.  For example, '<<'
     # can be a shift operator or a here-doc operator.  The
     # interpretation of these symbols depends on the current state of
@@ -4512,16 +4524,27 @@ sub operator_expected {
     # the 'operator_expected' value by a simple hash lookup.  If there are
     # exceptions, that is an indication that a new type is needed.
 
-    my ( $prev_type, $tok, $next_type ) = @_;
+    my ($rarg) = @_;
 
-    # Many types are defined in the table, given the previous type
+    ##############
+    # Table lookup
+    ##############
+
+    # Many types are can be obtained by a table lookup given the previous type.
+    # This typically handles half or more of the calls.
     my $op_expected = $op_expected_table{$last_nonblank_type};
     goto RETURN if ( defined($op_expected) );
+
+    ######################
+    # Handle special cases
+    ######################
+
     $op_expected = UNKNOWN;
+    my ( $prev_type, $tok, $next_type ) = @{$rarg};
 
     # Types 'k', '}' and 'Z' depend on context
     # FIXME: Types 'i', 'n', 'v', 'q' currently also temporarily depend on
-    # context but that dependence should eventually be eliminated with better
+    # context but that dependence could eventually be eliminated with better
     # token type definition
 
     # identifier...
@@ -6427,7 +6450,9 @@ sub scan_identifier_do {
                 }
 
                 # POSTDEFREF: Postfix reference ->$* ->%*  ->@* ->** ->&* ->$#*
-                elsif ( $tok eq '*' && $identifier =~ /([\@\%\$\*\&]|\$\#)$/ ) {
+                elsif ($tok eq '*'
+                    && $identifier =~ /\-\>([\@\%\$\*\&]|\$\#)$/ )
+                {
                     $identifier .= $tok;
                 }
 
@@ -6455,6 +6480,7 @@ sub scan_identifier_do {
                     # You would have to use
                     #  $a = ${$:};
 
+                    # '$$' alone is punctuation variable for PID
                     $i = $i_save;
                     if   ( $tok eq '{' ) { $type = 't' }
                     else                 { $type = 'i' }
