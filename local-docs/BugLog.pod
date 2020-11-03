@@ -2,6 +2,11 @@
 
 =over 4
 
+=item B<added parameters -maxue=n and maxle=n>
+
+These parameters had tentatively been hardwired in the tokenizer.
+Now the user can control them or turn the checks off altogether.
+
 =item B<Fix problem parsing '$$*'>
 
 In random testing, an error was encountered parsing the following line
@@ -12,7 +17,8 @@ In random testing, an error was encountered parsing the following line
 
 The line parsed correctly with a space between the '$$' and the '*'. The
 problem had to do with an error in some newer code for postfix dereferencing,
-and this was fixed on 2 Nov 2020.
+and this was fixed on 2 Nov 2020,  
+'fix problem scanning '$$'; revise call to operator_expected', 49d993b.
 
 =item B<Update for git #44, fix exit status for assert-tidy/untidy>
 

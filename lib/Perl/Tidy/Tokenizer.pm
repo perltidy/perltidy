@@ -166,6 +166,8 @@ BEGIN {
         _extended_syntax_                    => $i++,
         _maximum_level_                      => $i++,
         _true_brace_error_count_             => $i++,
+        _rOpts_maximum_level_errors_         => $i++,
+        _rOpts_maximum_unexpected_errors_    => $i++,
     };
 }
 
@@ -247,11 +249,13 @@ sub new {
         look_for_selfloader  => 1,
         starting_line_number => 1,
         extended_syntax      => 0,
+        rOpts                => {},
     );
     my %args = ( %defaults, @args );
 
     # we are given an object with a get_line() method to supply source lines
     my $source_object = $args{source_object};
+    my $rOpts         = $args{rOpts};
 
     # we create another object with a get_line() and peek_ahead() method
     my $line_buffer_object = Perl::Tidy::LineBuffer->new($source_object);
@@ -327,6 +331,9 @@ sub new {
     $self->[_extended_syntax_]                    = $args{extended_syntax};
     $self->[_maximum_level_]                      = 0;
     $self->[_true_brace_error_count_]             = 0;
+    $self->[_rOpts_maximum_level_errors_] = $rOpts->{'maximum-level-errors'};
+    $self->[_rOpts_maximum_unexpected_errors_] =
+      $rOpts->{'maximum-unexpected-errors'};
     bless $self, $class;
 
     $tokenizer_self = $self;
@@ -457,15 +464,26 @@ sub report_tokenization_errors {
     # (i.e. unexpected binary characters)
     my $severe_error = $self->[_in_error_];
 
+    my $maxle = $self->[_rOpts_maximum_level_errors_];
+    my $maxue = $self->[_rOpts_maximum_unexpected_errors_];
+    $maxle = 1 unless defined($maxle);
+    $maxue = 3 unless defined($maxue);
+
     my $level = get_indentation_level();
     if ( $level != $tokenizer_self->[_starting_level_] ) {
         warning("final indentation level: $level\n");
         my $level_diff = $tokenizer_self->[_starting_level_] - $level;
+        if ( $level_diff < 0 ) { $level_diff = -$level_diff }
 
         # Set severe error flag if the level error is greater than 1.
         # The formatter can function for any level error but it is probably
         # best not to attempt formatting for a high level error.
-        $severe_error = 1 if ( $level_diff < -1 || $level_diff > 1 );
+        if ( $maxle > 0 && $level_diff > $maxle ) {
+            $severe_error = 1;
+            warning(<<EOM);
+Formatting will be skipped because level error '$level_diff' exceeds -maxle=$maxle; use -maxle=0 to force formatting
+EOM
+        }
     }
 
     check_final_nesting_depths();
@@ -554,7 +572,11 @@ sub report_tokenization_errors {
     # non-perl scripts, or that something is seriously wrong, so we should
     # avoid formatting them.  This can happen for example if we run perltidy on
     # a shell script or an html file.
-    if ( $tokenizer_self->[_unexpected_error_count_] > 3 ) {
+    my $ue_count = $tokenizer_self->[_unexpected_error_count_];
+    if ( $maxue > 0 && $ue_count > $maxue ) {
+        warning(<<EOM);
+Formatting will be skipped since unexpected token count = $ue_count > -maxue=$maxue; use -maxue=0 to force formatting
+EOM
         $severe_error = 1;
     }
 

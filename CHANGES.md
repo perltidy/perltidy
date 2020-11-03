@@ -6,11 +6,26 @@
       always 0 for --assert-tidy if the user had turned off all error messages with
       the -quiet.  This has been fixed.
 
-    - Add flag -mfs=n, --maximum-file-size-mb=n.  This parameter is provided to
+    - Add flag -maxfs=n, --maximum-file-size-mb=n.  This parameter is provided to
       avoid causing system problems by accidentally attempting to format an 
       extremely large data file. The default is n=10.  The command to increase 
       the limit to 20 MB for example would be  -mfs=20.  This only applies to
       files specified by filename on the command line.
+
+    - Skip formatting if too many indentation level errors.  This is controlled
+      with -maxle=n, --maximum-level-errors=n.  This means that if the ending 
+      indentation differs from the starting indentation by more than
+      n levels, the file will be output verbatim. The default is n=1. 
+      To skip this check, set n=0.
+
+    - Skip formatting if too many 'unexpected' tokenization errors.  This is controlled
+      with -maxue=n, --maximum-unexpected-errors=n.  This means that if the 
+      number of times the tokenizer found unexpected tokens is greater than n,
+      the file will be output verbatim. The intention is to avoid formatting
+      non-perl scripts. The default is n=3.  To skip this check, set n=0.
+      It is possible that some extended syntaxes will require setting
+      -maxue=0.  It would be better to try to work out a patch to perltidy to handle 
+      such cases.
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.
@@ -33,6 +48,9 @@
       semicolons, such as a 'do' block.
 
     - Added 'state' as a keyword.
+
+    - This version is about 15% faster than previous versions due to some optimization work 
+      using Devel::NYTProf.
 
     - Numerous minor issues that the average user would not encounter were found
       and fixed. They can be seen in the more complete list of updates at 

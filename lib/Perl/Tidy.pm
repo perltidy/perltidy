@@ -906,9 +906,9 @@ EOM
                 next;
             }
 
-	    # And avoid formatting extremely large files. Since perltidy reads
-	    # files into memory, trying to process an extremely large file
-	    # could cause system problems.
+            # And avoid formatting extremely large files. Since perltidy reads
+            # files into memory, trying to process an extremely large file
+            # could cause system problems.
             my $size_in_mb = ( -s $input_file ) / ( 1024 * 1024 );
             if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
                 $size_in_mb = sprintf( "%0.1f", $size_in_mb );
@@ -1393,6 +1393,7 @@ EOM
                 debugger_object    => $debugger_object,
                 diagnostics_object => $diagnostics_object,
                 tabsize            => $tabsize,
+                rOpts              => $rOpts,
 
                 starting_level      => $rOpts->{'starting-indentation-level'},
                 indent_columns      => $rOpts->{'indent-columns'},
@@ -2365,25 +2366,27 @@ sub generate_options {
     $category = 13;    # Debugging
     ########################################
 ##  $add_option->( 'DIAGNOSTICS',                     'I',    '!' );
-    $add_option->( 'DEBUG',                           'D',    '!' );
-    $add_option->( 'dump-cuddled-block-list',         'dcbl', '!' );
-    $add_option->( 'dump-defaults',                   'ddf',  '!' );
-    $add_option->( 'dump-long-names',                 'dln',  '!' );
-    $add_option->( 'dump-options',                    'dop',  '!' );
-    $add_option->( 'dump-profile',                    'dpro', '!' );
-    $add_option->( 'dump-short-names',                'dsn',  '!' );
-    $add_option->( 'dump-token-types',                'dtt',  '!' );
-    $add_option->( 'dump-want-left-space',            'dwls', '!' );
-    $add_option->( 'dump-want-right-space',           'dwrs', '!' );
-    $add_option->( 'fuzzy-line-length',               'fll',  '!' );
-    $add_option->( 'help',                            'h',    '' );
-    $add_option->( 'short-concatenation-item-length', 'scl',  '=i' );
-    $add_option->( 'show-options',                    'opt',  '!' );
-    $add_option->( 'timestamp',                       'ts',   '!' );
-    $add_option->( 'version',                         'v',    '' );
-    $add_option->( 'memoize',                         'mem',  '!' );
-    $add_option->( 'file-size-order',                 'fso',  '!' );
-    $add_option->( 'maximum-file-size-mb',            'mfs',  '=i' );
+    $add_option->( 'DEBUG',                           'D',     '!' );
+    $add_option->( 'dump-cuddled-block-list',         'dcbl',  '!' );
+    $add_option->( 'dump-defaults',                   'ddf',   '!' );
+    $add_option->( 'dump-long-names',                 'dln',   '!' );
+    $add_option->( 'dump-options',                    'dop',   '!' );
+    $add_option->( 'dump-profile',                    'dpro',  '!' );
+    $add_option->( 'dump-short-names',                'dsn',   '!' );
+    $add_option->( 'dump-token-types',                'dtt',   '!' );
+    $add_option->( 'dump-want-left-space',            'dwls',  '!' );
+    $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
+    $add_option->( 'fuzzy-line-length',               'fll',   '!' );
+    $add_option->( 'help',                            'h',     '' );
+    $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
+    $add_option->( 'show-options',                    'opt',   '!' );
+    $add_option->( 'timestamp',                       'ts',    '!' );
+    $add_option->( 'version',                         'v',     '' );
+    $add_option->( 'memoize',                         'mem',   '!' );
+    $add_option->( 'file-size-order',                 'fso',   '!' );
+    $add_option->( 'maximum-file-size-mb',            'maxfs', '=i' );
+    $add_option->( 'maximum-level-errors',            'maxle', '=i' );
+    $add_option->( 'maximum-unexpected-errors',       'maxue', '=i' );
 
     #---------------------------------------------------------------------
 
@@ -2527,6 +2530,8 @@ sub generate_options {
       maximum-fields-per-table=0
       maximum-line-length=80
       maximum-file-size-mb=10
+      maximum-level-errors=1
+      maximum-unexpected-errors=3
       memoize
       minimum-space-to-comment=4
       nobrace-left-and-indent
