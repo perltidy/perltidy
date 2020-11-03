@@ -3013,7 +3013,7 @@ EOM
                 }
             }
 
-            unless ( $tok =~ /^\s*$/ || $tok eq 'CORE::' ) {
+            unless ( $type eq 'b' || $tok eq 'CORE::' ) {
 
                 # try to catch some common errors
                 if ( ( $type eq 'n' ) && ( $tok ne '0' ) ) {
@@ -6172,7 +6172,8 @@ sub scan_identifier_do {
     my $message             = "";
     my $tok_is_blank;    # a flag to speed things up
 
-    my $in_prototype_or_signature = $container_type =~ /^sub\b/;
+    my $in_prototype_or_signature =
+      $container_type && $container_type =~ /^sub\b/;
 
     # these flags will be used to help figure out the type:
     my $saw_alpha;
