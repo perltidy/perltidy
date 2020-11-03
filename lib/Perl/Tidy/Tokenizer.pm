@@ -1,4 +1,4 @@
-######################################################################
+#####################################################################
 #
 # The Perl::Tidy::Tokenizer package is essentially a filter which
 # reads lines of perl source code from a source object and provides
@@ -97,6 +97,7 @@ use vars qw{
   %is_q_qq_qw_qx_qr_s_y_tr_m
   %is_sub
   %is_package
+  %is_comma_question_colon
 };
 
 # possible values of operator_expected()
@@ -2800,7 +2801,9 @@ sub prepare_for_a_new_file {
         $line_of_tokens->{_starting_in_quote} = $in_quote && $quote_type eq 'Q';
 
         # check for pod documentation
-        if ( ( $untrimmed_input_line =~ /^=[A-Za-z_]/ ) ) {
+        if ( substr( $untrimmed_input_line, 0, 1 ) eq '='
+            && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
+        {
 
             # must not be in multi-line quote
             # and must not be in an equation
@@ -2820,7 +2823,7 @@ sub prepare_for_a_new_file {
         # do not trim end because we might end in a quote (test: deken4.pl)
         # Perl::Tidy::Formatter will delete needless trailing blanks
         unless ( $in_quote && ( $quote_type eq 'Q' ) ) {
-            $input_line =~ s/^\s*//;    # trim left end
+            $input_line =~ s/^\s+//;    # trim left end
         }
 
         # Set a flag to indicate if we might be at an __END__ or __DATA__ line
@@ -2856,7 +2859,7 @@ sub prepare_for_a_new_file {
         my $max_tokens_wanted = 0; # this signals pre_tokenize to get all tokens
 
         # a little optimization for a full-line comment
-        if ( !$in_quote && ( $input_line =~ /^#/ ) ) {
+        if ( !$in_quote && substr( $input_line, 0, 1 ) eq '#' ) {
             $max_tokens_wanted = 1    # no use tokenizing a comment
         }
 
@@ -3066,7 +3069,7 @@ EOM
 
             # continue gathering identifier if necessary
             # but do not start on blanks and comments
-            if ( $id_scan_state && $pre_type !~ /[b#]/ ) {
+            if ( $id_scan_state && $pre_type ne 'b' && $pre_type ne '#' ) {
 
                 if ( $is_sub{$id_scan_state} || $is_package{$id_scan_state} ) {
                     scan_id();
@@ -3337,7 +3340,10 @@ EOM
                 }
 
                 # handle operator x (now we know it isn't $x=)
-                if ( ( $tok =~ /^x\d*$/ ) && ( $expecting == OPERATOR ) ) {
+                if (   $expecting == OPERATOR
+                    && substr( $tok, 0, 1 ) eq 'x'
+                    && $tok =~ /^x\d*$/ )
+                {
                     if ( $tok eq 'x' ) {
 
                         if ( $rtokens->[ $i + 1 ] eq '=' ) {    # x=
@@ -4169,7 +4175,7 @@ EOM
                   )
                 {
                     $total_ci += $in_statement_continuation
-                      unless ( $ci_string_in_tokenizer =~ /1$/ );
+                      unless ( substr( $ci_string_in_tokenizer, -1 ) eq '1' );
                 }
 
                 $ci_string_i               = $total_ci;
@@ -4190,9 +4196,11 @@ EOM
                 if ( length($nesting_block_string) > 1 )
                 {    # true for valid script
                     chop $nesting_block_string;
-                    $nesting_block_flag = ( $nesting_block_string =~ /1$/ );
+                    $nesting_block_flag =
+                      substr( $nesting_block_string, -1 ) eq '1';
                     chop $nesting_list_string;
-                    $nesting_list_flag = ( $nesting_list_string =~ /1$/ );
+                    $nesting_list_flag =
+                      substr( $nesting_list_string, -1 ) eq '1';
 
                     chop $ci_string_in_tokenizer;
                     $ci_string_sum = ones_count($ci_string_in_tokenizer);
@@ -4287,7 +4295,8 @@ EOM
                 # commas, this simplifies the -lp indentation logic, which
                 # counts commas.  For ?: it makes them stand out.
                 if ($nesting_list_flag) {
-                    if ( $type =~ /^[,\?\:]$/ ) {
+                    ##      $type =~ /^[,\?\:]$/
+                    if ( $is_comma_question_colon{$type} ) {
                         $in_statement_continuation = 0;
                     }
                 }
@@ -8463,6 +8472,10 @@ BEGIN {
 
     @q = qw(package);
     @is_package{@q} = (1) x scalar(@q);
+
+    @q = qw( ? : );
+    push @q, ',';
+    @is_comma_question_colon{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
     my @special_keywords = qw(
