@@ -467,7 +467,7 @@ sub report_tokenization_errors {
     my $maxle = $self->[_rOpts_maximum_level_errors_];
     my $maxue = $self->[_rOpts_maximum_unexpected_errors_];
     $maxle = 1 unless defined($maxle);
-    $maxue = 3 unless defined($maxue);
+    $maxue = 0 unless defined($maxue);
 
     my $level = get_indentation_level();
     if ( $level != $tokenizer_self->[_starting_level_] ) {
@@ -478,7 +478,7 @@ sub report_tokenization_errors {
         # Set severe error flag if the level error is greater than 1.
         # The formatter can function for any level error but it is probably
         # best not to attempt formatting for a high level error.
-        if ( $maxle > 0 && $level_diff > $maxle ) {
+        if ( $level_diff > $maxle ) {
             $severe_error = 1;
             warning(<<EOM);
 Formatting will be skipped because level error '$level_diff' exceeds -maxle=$maxle; use -maxle=0 to force formatting
@@ -571,7 +571,9 @@ EOM
     # Multiple "unexpected" type tokenization errors usually indicate parsing
     # non-perl scripts, or that something is seriously wrong, so we should
     # avoid formatting them.  This can happen for example if we run perltidy on
-    # a shell script or an html file.
+    # a shell script or an html file.  But unfortunately this check can
+    # interfere with some extended syntaxes, such as RPerl, so it has to be off
+    # by default.
     my $ue_count = $tokenizer_self->[_unexpected_error_count_];
     if ( $maxue > 0 && $ue_count > $maxue ) {
         warning(<<EOM);

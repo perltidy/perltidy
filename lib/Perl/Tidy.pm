@@ -2531,7 +2531,7 @@ sub generate_options {
       maximum-line-length=80
       maximum-file-size-mb=10
       maximum-level-errors=1
-      maximum-unexpected-errors=3
+      maximum-unexpected-errors=0
       memoize
       minimum-space-to-comment=4
       nobrace-left-and-indent

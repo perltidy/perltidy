@@ -3947,7 +3947,9 @@ B<--maximum-level-errors=n> or B<-maxle=n> specifies the maximum number of
 indentation level errors are allowed before perltidy skips formatting and just
 outputs a file verbatim.  The default is n=1.  This means that if the final indentation 
 of a script differs from the starting indentation by more than 1 levels, the file 
-will be output verbatim.  To skip this check completely, set n=0.
+will be output verbatim.  To avoid formatting if there are any indentation
+level errors use -maxle=0. To skip this check set n equal to a large number, 
+such as n=100.
 
 For example, the following script has level error of 3 and will be output verbatim
 
@@ -3955,22 +3957,19 @@ For example, the following script has level error of 3 and will be output verbat
     {{{
 
 
-    perltidy -maxle=0
+    perltidy -maxle=100
     {
         {
             {
 
 B<--maximum-unexpected-errors=n> or B<-maxue=n> specifies the maximum number of
 unexpected tokenization errors are allowed before formatting is skipped and a
-script is output verbatim.  The intention of this flag is to avoid accidentally
-formatting something like an html file, for example.  The default is n=3.  This
-means that if the number of times the tokenizer found unexpected tokens is
-greater than 3, the file will be output verbatim.  To skip this check
-completely, set n=0.
-
-It is possible that some extended syntaxes will require setting -maxue=0.  It
-would be better to try to work out a patch to perltidy to handle such cases
-cleanly so that the tokenizer is not left in an uncertain state.
+script is output verbatim.  This is off by default but can be turned on to
+avoid accidentally formatting something like an html file, for example.  If the
+number of times the tokenizer found unexpected tokens is greater than the
+parameter n, the file will be output verbatim.  To skip this check completely,
+set n equal to a large number or set n=0.  The default is n=0 (skip this check)
+to avoid causing problems with scripts using extended syntaxes. 
 
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file 
 showing the tokenization of all lines of code.
