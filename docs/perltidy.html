@@ -248,7 +248,7 @@
 <dt id="q---quiet"><b>-q</b>, <b>--quiet</b></dt>
 <dd>
 
-<p>Deactivate error messages and syntax checking (for running under an editor).</p>
+<p>Deactivate error messages (for running under an editor).</p>
 
 <p>For example, if you use a vi-style editor, such as vim, you may execute perltidy as a filter from within the editor using something like</p>
 
@@ -310,7 +310,7 @@
 <dt id="ast---assert-tidy"><b>-ast</b>, <b>--assert-tidy</b></dt>
 <dd>
 
-<p>This flag asserts that the input and output code streams are identical, or in other words that the input code is already &#39;tidy&#39; according to the formatting parameters. If this is not the case, an error message noting this is produced. This error message will cause the process to return a non-zero exit code. The test for this is made by comparing an MD5 hash value for the input and output code streams. This flag has no other effect on the functioning of perltidy. This might be useful for certain code maintenance operations.</p>
+<p>This flag asserts that the input and output code streams are identical, or in other words that the input code is already &#39;tidy&#39; according to the formatting parameters. If this is not the case, an error message noting this is produced. This error message will cause the process to return a non-zero exit code. The test for this is made by comparing an MD5 hash value for the input and output code streams. This flag has no other effect on the functioning of perltidy. This might be useful for certain code maintenance operations. Note: you will not see this message if you have error messages turned off with the -quiet flag.</p>
 
 </dd>
 <dt id="asu---assert-untidy"><b>-asu</b>, <b>--assert-untidy</b></dt>
@@ -1877,7 +1877,7 @@
             next if $x == $y;
         } } until $x++ &gt; $z;</code></pre>
 
-<p>When this flag is set perltidy makes a preliminary pass through the file and identifies all nested pairs of containers. To qualify as a nested pair, the closing container symbols must be immediately adjacent. The opening symbols must either be adjacent, or, if the outer opening symbol is an opening paren, they may be separated by any single non-container symbol or something that looks like a function evaluation.</p>
+<p>When this flag is set perltidy makes a preliminary pass through the file and identifies all nested pairs of containers. To qualify as a nested pair, the closing container symbols must be immediately adjacent and the opening symbols must either (1) be adjacent as in the above example, or (2) have an anonymous sub declaration following an outer opening container symbol which is not a code block brace, or (3) have an outer opening paren separated from the inner opening symbol by any single non-container symbol or something that looks like a function evaluation, as illustrated in the next examples.</p>
 
 <p>Any container symbol may serve as both the inner container of one pair and as the outer container of an adjacent pair. Consequently, any number of adjacent opening or closing symbols may join together in weld. For example, here are three levels of wrapped function calls:</p>
 
@@ -2431,10 +2431,47 @@
 <p>To prevent this, and thereby always form longer lines, use <b>-nboa</b>.</p>
 
 </dd>
+<dt id="Keeping-old-breakpoints-at-specific-token-types">Keeping old breakpoints at specific token types</dt>
+<dd>
+
+<p>Two command line parameters provide detailed control over whether perltidy should keep an old line break before or after a specific token type:</p>
+
+<p><b>-kbb=s</b> or <b>--keep-old-breakpoints-before=s</b>, and</p>
+
+<p><b>-kba=s</b> or <b>--keep-old-breakpoints-after=s</b></p>
+
+<p>These parameters are each followed by a quoted string, <b>s</b>, containing a list of token types (separated only by spaces). No more than one of each of these parameters should be specified, because repeating a command-line parameter always overwrites the previous one before perltidy ever sees it.</p>
+
+<p>For example, -kbb=&#39;=&gt;&#39; means that if an input line begins with a &#39;=&gt;&#39; then the output script should also have a line break before that token.</p>
+
+<p>For example, given the script:</p>
+
+<pre><code>    method &#39;foo&#39;
+      =&gt; [ Int, Int ]
+      =&gt; sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+      };
+
+    # perltidy [default]
+    method &#39;foo&#39; =&gt; [ Int, Int ] =&gt; sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+    };
+
+    # perltidy -kbb=&#39;=&gt;&#39;
+    method &#39;foo&#39;
+      =&gt; [ Int, Int ]
+      =&gt; sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+      };</code></pre>
+
+</dd>
 <dt id="iob---ignore-old-breakpoints"><b>-iob</b>, <b>--ignore-old-breakpoints</b></dt>
 <dd>
 
-<p>Use this flag to tell perltidy to ignore existing line breaks to the maximum extent possible. This will tend to produce the longest possible containers, regardless of type, which do not exceed the line length limit.</p>
+<p>Use this flag to tell perltidy to ignore existing line breaks to the maximum extent possible. This will tend to produce the longest possible containers, regardless of type, which do not exceed the line length limit. But please note that this parameter has priority over all other parameters requesting that certain old breakpoints be kept.</p>
 
 </dd>
 <dt id="kis---keep-interior-semicolons"><b>-kis</b>, <b>--keep-interior-semicolons</b></dt>
@@ -3057,6 +3094,29 @@
 
 <p><b>--file-size-order</b> or <b>-fso</b> will cause files to be processed in order of increasing size, when multiple files are being processed. This is useful during program development, when large numbers of files with varying sizes are processed, because it can reduce virtual memory usage.</p>
 
+<p><b>--maximum-file-size-mb=n</b> or <b>-maxfs=n</b> specifies the maximum file size in megabytes that perltidy will attempt to format. This parameter is provided to avoid causing system problems by accidentally attempting to format an extremely large data file. Most perl scripts are less than about 2 MB in size. The integer <b>n</b> has a default value of 10, so perltidy will skip formatting files which have a size greater than 10 MB. The command to increase the limit to 20 MB for example would be</p>
+
+<pre><code>  perltidy -maxfs=20</code></pre>
+
+<p>This only applies to files specified by filename on the command line.</p>
+
+<p><b>--maximum-level-errors=n</b> or <b>-maxle=n</b> specifies the maximum number of indentation level errors are allowed before perltidy skips formatting and just outputs a file verbatim. The default is <b>n=1</b>. This means that if the final indentation of a script differs from the starting indentation by more than 1 levels, the file will be output verbatim. To avoid formatting if there are any indentation level errors use -maxle=0. To skip this check you can either set n equal to a large number, such as <b>n=100</b>, or set <b>n=-1</b>.</p>
+
+<p>For example, the following script has level error of 3 and will be output verbatim</p>
+
+<pre><code>    Input and default output:
+    {{{
+
+
+    perltidy -maxle=100
+    {
+        {
+            {</code></pre>
+
+<p><b>--maximum-unexpected-errors=n</b> or <b>-maxue=n</b> specifies the maximum number of unexpected tokenization errors are allowed before formatting is skipped and a script is output verbatim. The intention is to avoid accidentally formatting a non-perl script, such as an html file for example. This check can be turned off by setting <b>n=0</b>.</p>
+
+<p>A recommended value is <b>n=3</b>. However, the default is <b>n=0</b> (skip this check) to avoid causing problems with scripts which have extended syntaxes.</p>
+
 <p><b>-DEBUG</b> will write a file with extension <i>.DEBUG</i> for each input file showing the tokenization of all lines of code.</p>
 
 </dd>
@@ -3370,7 +3430,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20201001.01</p>
+<p>This man page documents perltidy version 20201001.02</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

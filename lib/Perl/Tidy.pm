@@ -2321,6 +2321,8 @@ sub generate_options {
     $add_option->( 'break-at-old-semicolon-breakpoints', 'bos', '!' );
     $add_option->( 'break-at-old-ternary-breakpoints',   'bot', '!' );
     $add_option->( 'break-at-old-attribute-breakpoints', 'boa', '!' );
+    $add_option->( 'keep-old-breakpoints-before',        'kbb', '=s' );
+    $add_option->( 'keep-old-breakpoints-after',         'kba', '=s' );
     $add_option->( 'ignore-old-breakpoints',             'iob', '!' );
 
     ########################################

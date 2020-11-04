@@ -15,6 +15,8 @@
 #12 mangle4.mangle
 #13 extrude5.def
 #14 extrude5.extrude
+#15 kba1.def
+#16 kba1.kba1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -42,9 +44,12 @@ BEGIN {
         'def'       => "",
         'extrude'   => "--extrude",
         'here_long' => "-l=33",
-        'mangle'    => "--mangle",
-        'xci1'      => "-xci",
-        'xci2'      => "-pbp -nst -nse -xci",
+        'kba1'      => <<'----------',
+-kbb='=> ,' -kba='=>'
+----------
+        'mangle' => "--mangle",
+        'xci1'   => "-xci",
+        'xci2'   => "-pbp -nst -nse -xci",
     };
 
     ############################
@@ -124,6 +129,28 @@ $sth= $dbh->prepare (<<"END_OF_SELECT") or die "Couldn't prepare SQL" ;
     SELECT COUNT(duration),SUM(duration) 
     FROM logins WHERE username='$user'
 END_OF_SELECT
+
+----------
+
+        'kba1' => <<'----------',
+$this_env = join("", $before, $closures
+	  , $contents
+	  , ($defenv ? '': &balance_tags())
+	  , $reopens ); $_ = $after;
+
+method 'foo1'
+  => [ Int, Int ]
+  => sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
+
+method 'foo2'=>
+  [ Int, Int ]=>
+  sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
 
 ----------
 
@@ -490,6 +517,57 @@ $var{-y}
 1
 ;
 #14...........
+        },
+
+        'kba1.def' => {
+            source => "kba1",
+            params => "def",
+            expect => <<'#15...........',
+$this_env = join( "",
+    $before, $closures, $contents, ( $defenv ? '' : &balance_tags() ),
+    $reopens );
+$_ = $after;
+
+method 'foo1' => [ Int, Int ] => sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+};
+
+method 'foo2' => [ Int, Int ] => sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+};
+
+#15...........
+        },
+
+        'kba1.kba1' => {
+            source => "kba1",
+            params => "kba1",
+            expect => <<'#16...........',
+$this_env = join(
+    "", $before, $closures
+    , $contents
+    , ( $defenv ? '' : &balance_tags() )
+    , $reopens
+);
+$_ = $after;
+
+method 'foo1'
+  => [ Int, Int ]
+  => sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
+
+method 'foo2'  =>
+  [ Int, Int ] =>
+  sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
+
+#16...........
         },
     };
 

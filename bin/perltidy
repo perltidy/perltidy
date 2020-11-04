@@ -3058,12 +3058,56 @@ on a single line if possible.
 
 To prevent this, and thereby always form longer lines, use B<-nboa>.  
 
+
+=item Keeping old breakpoints at specific token types
+
+Two command line parameters provide detailed control over whether
+perltidy should keep an old line break before or after a specific
+token type:
+
+B<-kbb=s> or B<--keep-old-breakpoints-before=s>, and
+
+B<-kba=s> or B<--keep-old-breakpoints-after=s>
+
+These parameters are each followed by a quoted string, B<s>, containing
+a list of token types (separated only by spaces).  No more than one of each
+of these parameters should be specified, because repeating a
+command-line parameter always overwrites the previous one before
+perltidy ever sees it.
+
+For example, -kbb='=>' means that if an input line begins with a '=>' then the
+output script should also have a line break before that token.
+
+For example, given the script:
+
+    method 'foo'
+      => [ Int, Int ]
+      => sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+      };
+
+    # perltidy [default]
+    method 'foo' => [ Int, Int ] => sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+    };
+
+    # perltidy -kbb='=>'
+    method 'foo'
+      => [ Int, Int ]
+      => sub {
+        my ( $self, $x, $y ) = ( shift, @_ );
+        ...;
+      };
+
 =item B<-iob>,  B<--ignore-old-breakpoints>
 
 Use this flag to tell perltidy to ignore existing line breaks to the
 maximum extent possible.  This will tend to produce the longest possible
 containers, regardless of type, which do not exceed the line length
-limit.
+limit. But please note that this parameter has priority over all
+other parameters requesting that certain old breakpoints be kept.
 
 =item B<-kis>,  B<--keep-interior-semicolons>
 
@@ -3945,11 +3989,11 @@ This only applies to files specified by filename on the command line.
 
 B<--maximum-level-errors=n> or B<-maxle=n> specifies the maximum number of
 indentation level errors are allowed before perltidy skips formatting and just
-outputs a file verbatim.  The default is n=1.  This means that if the final indentation 
-of a script differs from the starting indentation by more than 1 levels, the file 
-will be output verbatim.  To avoid formatting if there are any indentation
-level errors use -maxle=0. To skip this check set n equal to a large number, 
-such as n=100.
+outputs a file verbatim.  The default is B<n=1>.  This means that if the final
+indentation of a script differs from the starting indentation by more than 1
+levels, the file will be output verbatim.  To avoid formatting if there are any
+indentation level errors use -maxle=0. To skip this check you can either set n
+equal to a large number, such as B<n=100>, or set B<n=-1>.
 
 For example, the following script has level error of 3 and will be output verbatim
 
@@ -3964,12 +4008,12 @@ For example, the following script has level error of 3 and will be output verbat
 
 B<--maximum-unexpected-errors=n> or B<-maxue=n> specifies the maximum number of
 unexpected tokenization errors are allowed before formatting is skipped and a
-script is output verbatim.  This is off by default but can be turned on to
-avoid accidentally formatting something like an html file, for example.  If the
-number of times the tokenizer found unexpected tokens is greater than the
-parameter n, the file will be output verbatim.  To skip this check completely,
-set n equal to a large number or set n=0.  The default is n=0 (skip this check)
-to avoid causing problems with scripts using extended syntaxes. 
+script is output verbatim.  The intention is to avoid accidentally formatting 
+a non-perl script, such as an html file for example.  This check can be turned
+off by setting B<n=0>.
+
+A recommended value is B<n=3>.  However, the default is B<n=0> (skip this check)
+to avoid causing problems with scripts which have extended syntaxes. 
 
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file 
 showing the tokenization of all lines of code.

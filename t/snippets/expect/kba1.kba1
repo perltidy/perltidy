@@ -1,0 +1,22 @@
+$this_env = join(
+    "", $before, $closures
+    , $contents
+    , ( $defenv ? '' : &balance_tags() )
+    , $reopens
+);
+$_ = $after;
+
+method 'foo1'
+  => [ Int, Int ]
+  => sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
+
+method 'foo2'  =>
+  [ Int, Int ] =>
+  sub {
+    my ( $self, $x, $y ) = ( shift, @_ );
+    ...;
+  };
+

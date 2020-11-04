@@ -2,6 +2,12 @@
 
 =over 4
 
+=item B<implement request RT #133649, added parameters -kbb=s and -kba=s>
+
+These parameters request that old breakpoints be kept before or after
+selected token types.  For example, -kbb='=>' means that newlines before
+fat commas should be kept. This was added 4 Nov 2020.
+
 =item B<added parameters -maxue=n and maxle=n>
 
 These parameters had tentatively been hardwired in the tokenizer.

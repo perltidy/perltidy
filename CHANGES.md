@@ -2,6 +2,15 @@
 
 ## 2020 10 01.02
 
+    - implement request RT #133649, delete-old-newlines selectively. Two parameters, 
+
+      -kbb=s or --keep-old-breakpoints-before=s, and
+      -kba=s or --keep-old-breakpoints-after=s
+
+      were added to request that old breakpoints be kept before or after
+      selected token types.  For example, -kbb='=>' means that newlines before
+      fat commas should be kept.
+      
     - Fix git #44, fix exit status for assert-tidy/untidy.  The exit status was
       always 0 for --assert-tidy if the user had turned off all error messages with
       the -quiet.  This has been fixed.
@@ -16,7 +25,10 @@
       controlled with -maxle=n, --maximum-level-errors=n.  This means that if 
       the ending indentation differs from the starting indentation by more than
       n levels, the file will be output verbatim. The default is n=1. 
-      To skip this check, set n=0.
+      To skip this check, set n=-1 or set n to a large number.
+
+    - A related new flag, --maximum-unexpected-errors=n, or -maxue=n, is available
+      but is off by default.
 
     - Add flag -xci, --extended-continuation-indentation, regarding issue git #28
       This flag causes continuation indentation to "extend" deeper into structures.

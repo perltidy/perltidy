@@ -14,13 +14,330 @@
 <ul id="index">
   <li><a href="#Issues-fixed-after-release-20201001">Issues fixed after release 20201001</a></li>
   <li><a href="#Issues-fixed-after-release-20200907">Issues fixed after release 20200907</a></li>
-  <li><a href="#POD-ERRORS">POD ERRORS</a></li>
+  <li><a href="#Open-Issues">Open Issues</a></li>
 </ul>
 
 <h1 id="Issues-fixed-after-release-20201001">Issues fixed after release 20201001</h1>
 
 <dl>
 
+<dt id="implement-request-RT-133649-added-parameters--kbb-s-and--kba-s"><b>implement request RT #133649, added parameters -kbb=s and -kba=s</b></dt>
+<dd>
+
+<p>These parameters request that old breakpoints be kept before or after selected token types. For example, -kbb=&#39;=&gt;&#39; means that newlines before fat commas should be kept. This was added 4 Nov 2020.</p>
+
+</dd>
+<dt id="added-parameters--maxue-n-and-maxle-n"><b>added parameters -maxue=n and maxle=n</b></dt>
+<dd>
+
+<p>These parameters had tentatively been hardwired in the tokenizer. Now the user can control them or turn the checks off altogether.</p>
+
+</dd>
+<dt id="Fix-problem-parsing"><b>Fix problem parsing &#39;$$*&#39;</b></dt>
+<dd>
+
+<p>In random testing, an error was encountered parsing the following line</p>
+
+<pre><code>  $self-&gt;{&quot;mod_id&quot;}=($$*1001)%(10**(rand()*6));
+                       ---^
+  found Number where operator expected (previous token underlined)</code></pre>
+
+<p>The line parsed correctly with a space between the &#39;$$&#39; and the &#39;*&#39;. The problem had to do with an error in some newer code for postfix dereferencing, and this was fixed on 2 Nov 2020, &#39;fix problem scanning &#39;$$&#39;; revise call to operator_expected&#39;, 49d993b.</p>
+
+</dd>
+<dt id="Update-for-git-44-fix-exit-status-for-assert-tidy-untidy"><b>Update for git #44, fix exit status for assert-tidy/untidy</b></dt>
+<dd>
+
+<p>The exit status was always 0 for --assert-tidy if the user had turned off error messages with -quiet. This was fixed by gluesys/master in &#39;fix exit status for assert-tidy/untidy options&#39;, 625d250.</p>
+
+</dd>
+<dt id="Fixed-problem-parsing-extruded-signature"><b>Fixed problem parsing extruded signature</b></dt>
+<dd>
+
+<p>A parsing error was encountered in a test parsing the following extruded signature:</p>
+
+<pre><code>  sub foo2
+  (
+  $
+  first
+  ,
+  $
+  ,
+  $
+  third
+  )
+  {
+  return
+  &quot;first=$first, third=$third&quot;
+  ;
+  }</code></pre>
+
+<p>The second &#39;$&#39; combined with the &#39;,&#39; on the next line to form a punctuation variable. This was fixed 20 Oct 2020 in &#39;fixed problem parsing extruded signature&#39;, 9b454f6.</p>
+
+<p>The file parses correctly now, with formatted output</p>
+
+<pre><code>  sub foo2 ( $first, $, $third ) {
+      return &quot;first=$first, third=$third&quot;;
+  }</code></pre>
+
+</dd>
+<dt id="Fixed-several-uses-of-undefined-variables-found-in-testing"><b>Fixed several uses of undefined variables found in testing</b></dt>
+<dd>
+
+<p>Several instances of incorrect array indexing were found in testing and fixed. These each involved incorrectly indexing with index -1. They were found by placing undefs at the end of arrays. None of these was causing incorrect formatting. They were fixed 26 Oct 2020 in &#39;fixed several instances of incorrect array indexing&#39;, c60f694.</p>
+
+</dd>
+<dt id="Prevent-syntax-error-by-breaking-dashed-package-names"><b>Prevent syntax error by breaking dashed package names</b></dt>
+<dd>
+
+<p>In stress testing perltidy with the -extrude option, the following test snippet</p>
+
+<pre><code>  use perl6-alpha;</code></pre>
+
+<p>was broken into sepate lines</p>
+
+<pre><code>  use
+  perl6
+  -
+  alpha
+  ;</code></pre>
+
+<p>A rule was added to prevent breaking around a dash separating two barewords. Rerunning gives</p>
+
+<pre><code>  use
+  perl6-alpha
+  ;</code></pre>
+
+<p>This was fixed 26 Oct 2020 in &#39;prevent breaking package names with trailing dashes&#39;, 9234be4.</p>
+
+</dd>
+<dt id="Prevent-syntax-error-by-breaking-dashed-barewords"><b>Prevent syntax error by breaking dashed barewords</b></dt>
+<dd>
+
+<p>In stress testing perltidy with the -extrude option, using the following test snippet</p>
+
+<pre><code>  my %var;
+  {
+      $var{-y}  = 1;
+      $var{-q}  = 1;
+      $var{-qq} = 1;
+      $var{-m}  = 1;
+      $var{y}   = 1;
+      $var{q}   = 1;
+      $var{qq}  = 1;
+      $var{m}   = 1;
+  }</code></pre>
+
+<p>a syntax error was created when newlines were placed before or after the dashes. It is necessary to always keep a dash on the same line with its surrounding tokens. A rule was added to do this. The new &#39;extruded&#39; result for the above snippet is:</p>
+
+<pre><code>  my%var
+  ;
+  {
+  $var{-y}
+  =
+  1
+  ;
+  $var{-q}
+  =
+  1
+  ;
+  $var{-qq}
+  =
+  1
+  ;
+  $var{-m}
+  =
+  1
+  ;
+  $var{y}
+  =
+  1
+  ;
+  $var{q}
+  =
+  1
+  ;
+  $var{qq}
+  =
+  1
+  ;
+  $var{m}
+  =
+  1
+  ;
+  }</code></pre>
+
+<p>This update was added 26 Oct 2020, &#39;prevent syntax error by breaking dashed barewords&#39;, e121cae.</p>
+
+</dd>
+<dt id="more-types-of-severe-errors-will-prevent-formatting"><b>more types of severe errors will prevent formatting</b></dt>
+<dd>
+
+<p>Files for which &#39;severe errors&#39; are found have always been output verbatim rather than being formatted. The definition of &#39;severe error&#39; has been expanded to include a final indentation level error greater than 1, more than 2 brace errors, and more than 3 &quot;unexpected token type&quot; parsing errors. The goal is to avoid formatting a non-perl script or a perl script with severe errors. So for example the following snippet has a level error of 2</p>
+
+<pre><code>  {{{{
+  }}</code></pre>
+
+<p>was previously output with default parameters as</p>
+
+<pre><code>  { 
+      {
+          {
+              {}
+          }</code></pre>
+
+<p>along with an error message. But now it is just output verbatim as</p>
+
+<pre><code>  {{{{
+  }}</code></pre>
+
+<p>along with an error message. This update was added 25 Oct 2020, &#39;avoid formatting files with more types of severe errors&#39;, 2a86f51.</p>
+
+</dd>
+<dt id="added-state-as-keyword"><b>added &#39;state&#39; as keyword</b></dt>
+<dd>
+
+<p>A statement such as the following was generating an error message at the colon:</p>
+
+<pre><code>   state $a : shared;</code></pre>
+
+<p>The problem was that &#39;state&#39; was not in the list of keywords. This has been fixed and the line now parses without error. The &#39;state.t&#39; test file for perl 5.31 now formats without error. This was added 18 Oct 2020 in &quot;add &#39;state&#39; as keyword&quot;, d73e15f.</p>
+
+</dd>
+<dt id="sub-signatures-no-longer-parsed-with-prototypes"><b>sub signatures no longer parsed with prototypes</b></dt>
+<dd>
+
+<p>Simple signatures (those without commas) were being parsed with code originally written for prototypes. This prevented them from being formatted with the usual formatting rules. This was changed so that all signatures are now formatted with the normal formatting rules. For example:</p>
+
+<pre><code> # Old, input and after formatting:
+ sub t123 ($list=wantarray) { $list ? &quot;list&quot; : &quot;scalar&quot; }
+
+ # New, after formatting
+ sub t123 ( $list = wantarray ) { $list ? &quot;list&quot; : &quot;scalar&quot; }</code></pre>
+
+<p>Notice that some spaces have been introduced within the signature. Previously the contents of the parens not changed unless the parens contained a list.</p>
+
+<p>This change introduced a problem parsing extended syntax within signatures which has been fixed. In the following snippet, the &#39;:&#39; caused a parsing error which was fixed.</p>
+
+<pre><code>  # perltidy -sal=&#39;method&#39;
+  method foo4 ( $class : $bar, $bubba ) { $class-&gt;bar($bar) }</code></pre>
+
+<p>The &#39;:&#39; here is given a type of &#39;A&#39;. This may be used to change the spacing around it. For example:</p>
+
+<pre><code>  # perltidy -sal=&#39;method&#39; -nwls=&#39;A&#39;
+  method foo4 ( $class: $bar, $bubba ) { $class-&gt;bar($bar) }</code></pre>
+
+<p>This update was added 18 Oct 2020, in &#39;format all signatures separately from prototypes&#39;, e6a10f3. The test file &#39;signatures.t&#39; distributed with perl5.31 formats without error now.</p>
+
+</dd>
+<dt id="fix-parsing-problem-with"><b>fix parsing problem with $#</b></dt>
+<dd>
+
+<p>A problem with parsing variables of the form $# and $#array was found in testing and fixed. For most variables the leading sigil may be separated from the remaining part of the identifier by whitespace. An exception is for a variable beginning with &#39;$#&#39;. If there is any space between the &#39;$&#39; and &#39;#&#39; then the &#39;#&#39; starts a comment. So the following snippet is has valid syntax and is equivalent to $ans=40;</p>
+
+<pre><code>    my $ #
+    #
+    ans = 40;</code></pre>
+
+<p>This was being misparsed and was fixed 17 Oct 2020, in &#39;fixed parsing error with spaces in $#&#39; a079cdb.</p>
+
+</dd>
+<dt id="fix-missing-line-break-for-hash-of-subs-with-signatures"><b>fix missing line break for hash of subs with signatures</b></dt>
+<dd>
+
+<p>During testing the following error was found and fixed. Given the following input snippet:</p>
+
+<pre><code>    get(
+        on_ready =&gt; sub ($worker) {
+            $on_ready-&gt;end;
+            return;
+        },
+        on_exit =&gt; sub ( $worker, $status ) { return; },
+    );</code></pre>
+
+<p>The resulting formatting was</p>
+
+<pre><code>    get(
+        on_ready =&gt; sub ($worker) {
+            $on_ready-&gt;end;
+            return;
+        }, on_exit =&gt; sub ( $worker, $status ) { return; },
+    );</code></pre>
+
+<p>Notice that the break after the comma has been lost. The problem was traced to a short-cut taken by the code looking for one-line blocks. The unique circumstances in which this occured involved a hash of anonymous subs, one with a signature with multiple parameters and short enough to be a one-line block, as in the last sub definition line. This was fixed 17 Oct 2020 in &#39;fix missing line break for hash of subs with signatures&#39;, 51428db.</p>
+
+</dd>
+<dt id="fix-issues-with-prototype-and-signature-parsing"><b>fix issues with prototype and signature parsing</b></dt>
+<dd>
+
+<p>Problems with parsing prototypes and signatures were found during testing and fixed 17 Oct 2020 in &#39;fixed problem parsing multi-line signatures with comments&#39;, 017fd07. For example the following snippet was mis-parsed because of the hash mark.</p>
+
+<pre><code>    sub test ( # comment ))) 
+        $x, $x) { $x+$y }</code></pre>
+
+<p>Complex signature expressions such as the following are now parsed without error:</p>
+
+<pre><code>    sub t086
+        ( #foo)))
+        $ #foo)))
+        a #foo)))
+        ) #foo)))
+        { $a.$b }</code></pre>
+
+</dd>
+<dt id="improve-guess-for-pattern-or-division"><b>improve guess for pattern or division</b></dt>
+<dd>
+
+<p>The following line caused a tokenization error in which the two slashes were parsed as a pattern.</p>
+
+<pre><code>   my $masksize = ceil( Opcode::opcodes / 8 );    # /</code></pre>
+
+<p>This problem was discovered in random testing. When a slash follows a bareword whose prototype is not known to perltidy, it has to guess whether the slash starts a pattern or is a division. The guessing logic was rewritten and improved 14 Oct 2020 in &#39;rewrote logic to guess if divide or pattern&#39;, afebe2f.</p>
+
+</dd>
+<dt id="fix--bos-to-keep-isolated-semicolon-breaks-after-block-braces"><b>fix -bos to keep isolated semicolon breaks after block braces</b></dt>
+<dd>
+
+<p>The flag <b>-bos</b>, or <b>--break-at-old-semicolon-breakpoints</b>, keeps breaks at old isolated semicolons. For example</p>
+
+<pre><code>    $z = sqrt($x**2 + $y**2)
+      ;</code></pre>
+
+<p>In testing it was found not to be doing this after braces which require semicolons, such as &#39;do&#39; and anonymous subs. This was fixed 12 Oct 2020 in &#39;fix -bos to work with semicolons after braces&#39;, 03ee7fc. For example</p>
+
+<pre><code>    my $dist = sub {
+        $z = sqrt( $x**2 + $y**2 )
+          ;
+      }
+      ;</code></pre>
+
+</dd>
+<dt id="keep-break-after-use-overload"><b>keep break after &#39;use overload&#39;</b></dt>
+<dd>
+
+<p>If a line break occurs after <b>use overload</b> then it will now be kept. Previously it was dropped. For example, this would be kept intact:</p>
+
+<pre><code>                use overload
+                    &#39;+&#39; =&gt; sub {
+                        print length $_[2], &quot;\n&quot;;
+                        my ( $x, $y ) = _order(@_);
+                        Number::Roman-&gt;new( int $x + $y );
+                    },
+                    &#39;-&#39; =&gt; sub {
+                        my ( $x, $y ) = _order(@_);
+                        Number::Roman-&gt;new( int $x - $y );
+                    },
+                    ...</code></pre>
+
+<p>This keeps the list from shifting to the right and can avoid problems in formatting the list with certain styles, including with the -xci flag. Fixed 12 Oct 2020 in &#39;keep break after use overload statement&#39;, 8485afa.</p>
+
+</dd>
+<dt id="added-flag--xci-to-improve-formatting-when--ci-and--i-are-equal-issue-git-28"><b>added flag -xci to improve formatting when -ci and -i are equal, issue git #28</b></dt>
+<dd>
+
+<p>This flag causes continuation indentation to &quot;extend&quot; deeper into structures. If you use <b>-ci=n</b> and <b>-i=n</b> with the same value of <b>n</b> you will probably want to set this flag. Since this is a fairly new flag, the default is <b>-nxci</b> to avoid disturbing existing formatting.</p>
+
+</dd>
 <dt id="terminal-braces-not-indenting-correctly-with--bli-formatting-issue-git-40"><b>terminal braces not indenting correctly with -bli formatting, issue git #40</b></dt>
 <dd>
 
@@ -425,22 +742,68 @@
 </dd>
 </dl>
 
-<h1 id="POD-ERRORS">POD ERRORS</h1>
+<h1 id="Open-Issues">Open Issues</h1>
 
-<p>Hey! <b>The above document had some coding errors, which are explained below:</b></p>
+<p>These are known issues which have not been fixed.</p>
 
 <dl>
 
-<dt id="Around-line-3">Around line 3:</dt>
+<dt id="lexical-subs-not-fully-supported"><b>lexical subs not fully supported</b></dt>
 <dd>
 
-<p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
+<p>Basic parsing of lexical subs works but some aspects of lexical subs are not yet functional. One of these is that unlike regular subs, lexical subs can override names of builtin functions.</p>
+
+<p>First consider the following snippet</p>
+
+<pre><code>  sub s { 
+    my $arg=$_[0];
+    print &quot;s called with arg $arg\n&quot;;
+  }
+  s(1);
+  s(2);</code></pre>
+
+<p>The &#39;s&#39; in the two last lines is the builtin s function, not the sub. Both perltidy and perl make the same assumption here. This program happens to still run but prints nothing. It will not run if the last semicolon is removed.</p>
+
+<p>Now consider the following snippet in which the sub has a preceding &#39;my&#39;</p>
+
+<pre><code>  use feature &#39;lexical_subs&#39;, &#39;signatures&#39;;
+  my sub s { 
+    my $arg=$_[0];
+    print &quot;s called with arg $arg\n&quot;;
+  }
+  s(1);
+  s(2);</code></pre>
+
+<p>The builtin function &#39;s&#39; is replaced by the sub s here, and the program runs. Perltidy will format this but it is assuming that the s in the two last lines are the builtin s function. If the last semicolon is removed, there will be an formatting error. So perltidy and perl make different assumptions in this case.</p>
+
+<p>Another issue is that perltidy does not yet remember the extent of the scope of a lexical sub.</p>
 
 </dd>
-<dt id="Around-line-36">Around line 36:</dt>
+<dt id="issues-with-paren-less-calls"><b>issues with paren-less calls</b></dt>
 <dd>
 
-<p>You forgot a &#39;=back&#39; before &#39;=head1&#39;</p>
+<p>Consider the following snippet:</p>
+
+<pre><code>  use Test::More;
+  ok open($stdin, &quot;&lt;&amp;&quot;, $1), &#39;open ... &quot;&lt;&amp;&quot;, $magical_fileno&#39;, ||  _diag $!;</code></pre>
+
+<p>Note the unusual situation of a comma followed by an &#39;||&#39;. Perltidy will format this satisfactorally but it will write an error message. The syntax is correct, however. Perl knows the prototype of the &#39;ok&#39; function, which is called here without parens, so the last comma marks the last arg and is needed to keep the || from attaching to the last arg.</p>
+
+<p>Full support of peren-less calls will probably never be implemented in perltidy because it would require that it parse all of the modules used to find the prototypes. This would make it impossible to run perltidy on small snippets of code from within an editor.</p>
+
+<p>The problem can be avoid if parens are used:</p>
+
+<pre><code>  ok ( open($stdin, &quot;&lt;&amp;&quot;, $1), &#39;open ... &quot;&lt;&amp;&quot;, $magical_fileno&#39;) ||  _diag $!;</code></pre>
+
+</dd>
+<dt id="multiple-sub-paren-calls"><b>multiple sub paren calls</b></dt>
+<dd>
+
+<p>Perltidy currently flags as an error a closing paren followed by an opening paren, as in the following</p>
+
+<pre><code>  $subsubs[0]()(0)</code></pre>
+
+<p>This syntax is ok. The example is from test &#39;current_sub.t&#39; in perl5.31.</p>
 
 </dd>
 </dl>

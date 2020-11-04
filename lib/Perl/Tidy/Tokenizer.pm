@@ -478,10 +478,10 @@ sub report_tokenization_errors {
         # Set severe error flag if the level error is greater than 1.
         # The formatter can function for any level error but it is probably
         # best not to attempt formatting for a high level error.
-        if ( $level_diff > $maxle ) {
+        if ( $maxle >= 0 && $level_diff > $maxle ) {
             $severe_error = 1;
             warning(<<EOM);
-Formatting will be skipped because level error '$level_diff' exceeds -maxle=$maxle; use -maxle=0 to force formatting
+Formatting will be skipped because level error '$level_diff' exceeds -maxle=$maxle; use -maxle=-1 to force formatting
 EOM
         }
     }

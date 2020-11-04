@@ -199,6 +199,10 @@ my (
     %right_bond_strength,
     %left_bond_strength,
 
+    # Hashes for -kbb=s and -kba=s
+    %keep_break_before_type,
+    %keep_break_after_type,
+
     # Initialized in check_options, modified by prepare_cuddled_block_types:
     %want_one_line_block,
 
@@ -380,6 +384,10 @@ BEGIN {
         _ris_seqno_controlling_ci_ => $i++,
         _save_logfile_             => $i++,
         _maximum_level_            => $i++,
+
+        _rKrange_code_without_comments_ => $i++,
+        _rbreak_before_Kfirst_          => $i++,
+        _rbreak_after_Klast_            => $i++,
 
     };
 
@@ -687,6 +695,10 @@ sub new {
 
     $self->[_rspecial_side_comment_type_] = {};
     $self->[_maximum_level_]              = 0;
+
+    $self->[_rKrange_code_without_comments_] = [];
+    $self->[_rbreak_before_Kfirst_]          = {};
+    $self->[_rbreak_after_Klast_]            = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -1336,7 +1348,20 @@ EOM
         '?' => ':',
     );
 
-    if ( $rOpts->{'ignore-old-breakpoints'} ) {
+    # note any requested old line breaks to keep
+    %keep_break_before_type = ();
+    %keep_break_after_type  = ();
+    if ( !$rOpts->{'ignore-old-breakpoints'} ) {
+
+        # FIXME: could check for valid types here.
+        # Invalid types are harmless but probably not intended.
+        my @types;
+        @types = ( split_words( $rOpts->{'keep-old-breakpoints-before'} ) );
+        @keep_break_before_type{@types} = (1) x scalar(@types);
+        @types = ( split_words( $rOpts->{'keep-old-breakpoints-after'} ) );
+        @keep_break_after_type{@types} = (1) x scalar(@types);
+    }
+    else {
         if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
             Warn("Conflicting parameters: -iob and -bom; -bom will be ignored\n"
             );
@@ -1347,6 +1372,14 @@ EOM
         }
         if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
             Warn("Conflicting parameters: -iob and -bos; -bos will be ignored\n"
+            );
+        }
+        if ( $rOpts->{'keep-old-breakpoints-before'} ) {
+            Warn("Conflicting parameters: -iob and -kbb; -kbb will be ignored\n"
+            );
+        }
+        if ( $rOpts->{'keep-old-breakpoints-after'} ) {
+            Warn("Conflicting parameters: -iob and -kba; -kba will be ignored\n"
             );
         }
 
@@ -4136,6 +4169,8 @@ EOM
     # remains fixed for the rest of this iteration.
     $self->respace_tokens();
 
+    $self->keep_old_line_breaks();
+
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
 
@@ -5640,6 +5675,7 @@ sub resync_lines_and_tokens {
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     my $rlines = $self->[_rlines_];
+    my @Krange_code_without_comments;
 
     # Re-construct the arrays of tokens associated with the original input lines
     # since they have probably changed due to inserting and deleting blanks
@@ -5694,6 +5730,12 @@ sub resync_lines_and_tokens {
                 $Kfirst    = $K_array[0];
                 $Klast     = $K_array[-1];
                 $Klast_out = $Klast;
+
+                # Save ranges of non-comment code. This will be used by
+                # sub keep_old_line_breaks.
+                if ( defined($Kfirst) && $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
+                    push @Krange_code_without_comments, [ $Kfirst, $Klast ];
+                }
             }
 
             # It is only safe to trim the actual line text if the input
@@ -5722,7 +5764,40 @@ sub resync_lines_and_tokens {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
     }
+    $self->[_rKrange_code_without_comments_] = \@Krange_code_without_comments;
 
+    return;
+}
+
+sub keep_old_line_breaks {
+
+    # Called once per file to find and mark any old line breaks which
+    # should be kept.  We will be translating the input hashes into
+    # token indexes.
+    my ($self) = @_;
+
+    return unless ( %keep_break_before_type || %keep_break_after_type );
+
+    my $rLL = $self->[_rLL_];
+
+    my $rKrange_code_without_comments =
+      $self->[_rKrange_code_without_comments_];
+    my $rbreak_before_Kfirst = $self->[_rbreak_before_Kfirst_];
+    my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
+
+    foreach my $item ( @{$rKrange_code_without_comments} ) {
+        my ( $Kfirst, $Klast ) = @{$item};
+
+        my $typeb = $rLL->[$Kfirst]->[_TYPE_];
+        if ( $keep_break_before_type{$typeb} ) {
+            $rbreak_before_Kfirst->{$Kfirst} = 1;
+        }
+
+        my $typee = $rLL->[$Klast]->[_TYPE_];
+        if ( $keep_break_after_type{$typee} ) {
+            $rbreak_after_Klast->{$Klast} = 1;
+        }
+    }
     return;
 }
 
@@ -8246,6 +8321,10 @@ EOM
         # initialize closure variables
         my $rK_range = $line_of_tokens->{_rK_range};
         ( $K_first, $K_last ) = @{$rK_range};
+
+        # remember original starting index in case it changes
+        my $K_first_true= $K_first;
+
         $rLL              = $self->[_rLL_];
         $radjusted_levels = $self->[_radjusted_levels_];
 
@@ -8453,6 +8532,14 @@ EOM
         {
             $forced_breakpoint_to_go[$max_index_to_go] = 1
               if ($rOpts_break_at_old_comma_breakpoints);
+            destroy_one_line_block();
+            $self->end_batch();
+        }
+
+        # Keep any requested breaks before this line.  Note that we have to
+        # use the original K_first because it may have been reduced above
+        # to add a blank.
+        if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
             destroy_one_line_block();
             $self->end_batch();
         }
@@ -8899,6 +8986,9 @@ EOM
 
             # if we are instructed to keep all old line breaks
             || !$rOpts->{'delete-old-newlines'}
+
+            # we have a request to keep a break after this line
+            || $self->[_rbreak_after_Klast_]->{$K_last}
 
             # if this is a line of the form 'use overload'. A break here
             # in the input file is a good break because it will allow
