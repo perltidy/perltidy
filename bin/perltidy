@@ -480,8 +480,13 @@ here-documents, they will remain.
 =item B<-et=n>,   B<--entab-leading-whitespace>
 
 This flag causes each B<n> initial space characters to be replaced by
-one tab character.  Note that the integer B<n> is completely independent
-of the integer specified for indentation parameter, B<-i=n>.
+one tab character.  
+
+The value of the integer B<n> can be any value but can be coordinated with the
+number of spaces used for intentation. For example, -et=4 -ci=4 -i=4 will
+produce one tab for each indentation level and and one for each continuation
+indentation level.  You may want to coordinate the value of B<n> with what your
+display software assumes for the spacing of a tab. 
 
 =item B<-t>,   B<--tabs>
 
@@ -489,7 +494,8 @@ This flag causes one leading tab character to be inserted for each level
 of indentation.  Certain other features are incompatible with this
 option, and if these options are also given, then a warning message will
 be issued and this flag will be unset.  One example is the B<-lp>
-option.
+option. This flag is retained for backwards compatability, but
+if you use tabs, the B<-et=n> flag is recommended.
 
 =item B<-dt=n>,   B<--default-tabsize=n>
 
