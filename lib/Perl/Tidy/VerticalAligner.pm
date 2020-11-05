@@ -429,7 +429,7 @@ sub valign_input {
     $is_outdented = 0 if $is_hanging_side_comment;
 
     # Identify a block comment.
-    my $is_block_comment = ( $jmax == 0 && $rfields->[0] =~ /^#/ );
+    my $is_block_comment = $jmax == 0 && substr( $rfields->[0], 0, 1 ) eq '#';
 
     # Block comment .. update count
     if ($is_block_comment) {
