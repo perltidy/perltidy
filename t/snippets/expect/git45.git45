@@ -1,0 +1,18 @@
+# git#45 -vtc=n and -wn were not working together
+if ( $self->_add_fqdn_host(
+    name  => $name,
+    realm => $realm ) )
+{
+    ...;
+}
+
+# do not stack )->pack(
+my $hlist = $control::control->Scrolled(
+    'HList',
+    drawbranch  => 1,
+    width       => 20,
+    -scrollbars => 'w'
+)->pack(
+    -side   => 'bottom',
+    -expand => 1 );
+

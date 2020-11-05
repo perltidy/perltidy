@@ -2,6 +2,11 @@
 
 =over 4
 
+=item B<fix issue git #45, -wn and -vtc=n now work together>
+
+When -wn was set, the -vtc=n flag was being ignored.  This was a simple fix
+made 5 Nov 2020 in 'fix issue git #45, -wn and -vtc=n now work together', 1fbc381.
+
 =item B<implement request RT #133649, added parameters -kbb=s and -kba=s>
 
 These parameters request that old breakpoints be kept before or after

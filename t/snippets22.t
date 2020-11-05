@@ -17,6 +17,8 @@
 #14 extrude5.extrude
 #15 kba1.def
 #16 kba1.kba1
+#17 git45.def
+#18 git45.git45
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -43,6 +45,7 @@ BEGIN {
 ----------
         'def'       => "",
         'extrude'   => "--extrude",
+        'git45'     => "-vtc=1 -wn",
         'here_long' => "-l=33",
         'kba1'      => <<'----------',
 -kbb='=> ,' -kba='=>'
@@ -121,6 +124,31 @@ catch {
         'extrude5' => <<'----------',
 use perl6-alpha;
 $var{-y} = 1;
+----------
+
+        'git45' => <<'----------',
+# git#45 -vtc=n and -wn were not working together
+if (
+    $self->_add_fqdn_host(
+        name  => $name,
+        realm => $realm
+    )
+  )
+{
+    ...;
+}
+
+# do not stack )->pack(
+my $hlist = $control::control->Scrolled(
+    'HList',
+    drawbranch  => 1,
+    width       => 20,
+    -scrollbars => 'w'
+)->pack(
+    -side   => 'bottom',
+    -expand => 1
+);
+
 ----------
 
         'here_long' => <<'----------',
@@ -568,6 +596,60 @@ method 'foo2'  =>
   };
 
 #16...........
+        },
+
+        'git45.def' => {
+            source => "git45",
+            params => "def",
+            expect => <<'#17...........',
+# git#45 -vtc=n and -wn were not working together
+if (
+    $self->_add_fqdn_host(
+        name  => $name,
+        realm => $realm
+    )
+  )
+{
+    ...;
+}
+
+# do not stack )->pack(
+my $hlist = $control::control->Scrolled(
+    'HList',
+    drawbranch  => 1,
+    width       => 20,
+    -scrollbars => 'w'
+)->pack(
+    -side   => 'bottom',
+    -expand => 1
+);
+
+#17...........
+        },
+
+        'git45.git45' => {
+            source => "git45",
+            params => "git45",
+            expect => <<'#18...........',
+# git#45 -vtc=n and -wn were not working together
+if ( $self->_add_fqdn_host(
+    name  => $name,
+    realm => $realm ) )
+{
+    ...;
+}
+
+# do not stack )->pack(
+my $hlist = $control::control->Scrolled(
+    'HList',
+    drawbranch  => 1,
+    width       => 20,
+    -scrollbars => 'w'
+)->pack(
+    -side   => 'bottom',
+    -expand => 1 );
+
+#18...........
         },
     };
 
