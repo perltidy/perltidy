@@ -49,7 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20201001.02';
+our $VERSION = '20201001.03';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -8324,7 +8324,7 @@ EOM
         ( $K_first, $K_last ) = @{$rK_range};
 
         # remember original starting index in case it changes
-        my $K_first_true= $K_first;
+        my $K_first_true = $K_first;
 
         $rLL              = $self->[_rLL_];
         $radjusted_levels = $self->[_radjusted_levels_];
@@ -18984,9 +18984,9 @@ sub set_vertical_tightness_flags {
             my $cvt = $closing_vertical_tightness{$token_next};
             if (
 
-		# Never append a trailing line like   ')->pack(' because it
-		# will throw off later alignment.  So this line must start at a
-		# deeper level than the next line (fix1 for welding, git #45).
+                # Never append a trailing line like   ')->pack(' because it
+                # will throw off later alignment.  So this line must start at a
+                # deeper level than the next line (fix1 for welding, git #45).
                 (
                     $nesting_depth_to_go[$ibeg_next] >=
                     $nesting_depth_to_go[ $iend_next + 1 ] + 1

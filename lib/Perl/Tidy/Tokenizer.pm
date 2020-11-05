@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20201001.02';
+our $VERSION = '20201001.03';
 
 use Perl::Tidy::LineBuffer;
 use Carp;
@@ -2846,7 +2846,7 @@ sub prepare_for_a_new_file {
         # Set a flag to indicate if we might be at an __END__ or __DATA__ line
         # This will be used below to avoid quoting a bare word followed by
         # a fat comma.
-        my $is_END_or_DATA; 
+        my $is_END_or_DATA;
 
         # trim start of this line unless we are continuing a quoted line
         # do not trim end because we might end in a quote (test: deken4.pl)
@@ -2857,7 +2857,6 @@ sub prepare_for_a_new_file {
             $is_END_or_DATA = substr( $input_line, 0, 1 ) eq '_'
               && $input_line =~ /^\s*__(END|DATA)__\s*$/;
         }
-
 
         # update the copy of the line for use in error messages
         # This must be exactly what we give the pre_tokenizer

@@ -1,6 +1,8 @@
 # Perltidy Change Log
 
-## 2020 10 01.02
+## 2020 10 01.03
+
+    - Fixed issue git #44, -vtc=n flag was ignored when -wn was set.
 
     - implement request RT #133649, delete-old-newlines selectively. Two parameters, 
 

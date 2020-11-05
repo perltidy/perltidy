@@ -399,13 +399,15 @@
 <dt id="et-n---entab-leading-whitespace"><b>-et=n</b>, <b>--entab-leading-whitespace</b></dt>
 <dd>
 
-<p>This flag causes each <b>n</b> initial space characters to be replaced by one tab character. Note that the integer <b>n</b> is completely independent of the integer specified for indentation parameter, <b>-i=n</b>.</p>
+<p>This flag causes each <b>n</b> initial space characters to be replaced by one tab character.</p>
+
+<p>The value of the integer <b>n</b> can be any value but can be coordinated with the number of spaces used for intentation. For example, <b>-et=4 -ci=4 -i=4</b> will produce one tab for each indentation level and and one for each continuation indentation level. You may want to coordinate the value of <b>n</b> with what your display software assumes for the spacing of a tab.</p>
 
 </dd>
 <dt id="t---tabs"><b>-t</b>, <b>--tabs</b></dt>
 <dd>
 
-<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option.</p>
+<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option. This flag is retained for backwards compatability, but if you use tabs, the <b>-et=n</b> flag is recommended.</p>
 
 </dd>
 <dt id="dt-n---default-tabsize-n"><b>-dt=n</b>, <b>--default-tabsize=n</b></dt>
@@ -3430,7 +3432,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20201001.02</p>
+<p>This man page documents perltidy version 20201001.03</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

@@ -483,7 +483,7 @@ This flag causes each B<n> initial space characters to be replaced by
 one tab character.  
 
 The value of the integer B<n> can be any value but can be coordinated with the
-number of spaces used for intentation. For example, -et=4 -ci=4 -i=4 will
+number of spaces used for intentation. For example, B<-et=4 -ci=4 -i=4> will
 produce one tab for each indentation level and and one for each continuation
 indentation level.  You may want to coordinate the value of B<n> with what your
 display software assumes for the spacing of a tab. 
@@ -4445,7 +4445,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20201001.02
+This man page documents perltidy version 20201001.03
 
 =head1 BUG REPORTS
 

@@ -8,7 +8,7 @@
 package Perl::Tidy::LineSink;
 use strict;
 use warnings;
-our $VERSION = '20201001.02';
+our $VERSION = '20201001.03';
 
 sub AUTOLOAD {
 
