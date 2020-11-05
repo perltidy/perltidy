@@ -3984,15 +3984,15 @@ sub get_output_line_number {
         # and closing tokens.
         ###############################################################
 
-        my ( $self, $rinput_hash ) = @_;
+        my ( $self, $rinput ) = @_;
 
-        my $leading_space_count       = $rinput_hash->{leading_space_count};
-        my $str                       = $rinput_hash->{line};
-        my $str_length                = $rinput_hash->{line_length};
-        my $side_comment_length       = $rinput_hash->{side_comment_length};
-        my $outdent_long_lines        = $rinput_hash->{outdent_long_lines};
-        my $rvertical_tightness_flags = $rinput_hash->{rvertical_tightness_flags};
-        my $level                     = $rinput_hash->{level};
+        my $leading_space_count       = $rinput->{leading_space_count};
+        my $str                       = $rinput->{line};
+        my $str_length                = $rinput->{line_length};
+        my $side_comment_length       = $rinput->{side_comment_length};
+        my $outdent_long_lines        = $rinput->{outdent_long_lines};
+        my $rvertical_tightness_flags = $rinput->{rvertical_tightness_flags};
+        my $level                     = $rinput->{level};
 
         my $last_level_written = $self->[_last_level_written_];
 
