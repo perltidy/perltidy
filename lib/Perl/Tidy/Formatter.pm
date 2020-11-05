@@ -18984,10 +18984,11 @@ sub set_vertical_tightness_flags {
             my $cvt = $closing_vertical_tightness{$token_next};
             if (
 
-                # never append a trailing line like   )->pack(
-                # because it will throw off later alignment
+		# Never append a trailing line like   ')->pack(' because it
+		# will throw off later alignment.  So this line must start at a
+		# deeper level than the next line (fix1 for welding, git #45).
                 (
-                    $nesting_depth_to_go[$ibeg_next] ==
+                    $nesting_depth_to_go[$ibeg_next] >=
                     $nesting_depth_to_go[ $iend_next + 1 ] + 1
                 )
                 && (
@@ -19014,7 +19015,8 @@ sub set_vertical_tightness_flags {
                         @types_to_go[ $ibeg_next + 1 .. $ibeg_next + 2 ] );
 
                     # append closing token if followed by comment or ';'
-                    if ( $str =~ /^b?[#;]/ ) { $ok = 1 }
+                    # or another closing token (fix2 for welding, git #45)
+                    if ( $str =~ /^b?[\)\]\}R#;]/ ) { $ok = 1 }
                 }
 
                 if ($ok) {
