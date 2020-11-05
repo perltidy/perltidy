@@ -113,6 +113,7 @@ in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
 This is probably an error introduced by a recent programming change. 
+Perl::Tidy::Formatter.pm reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
