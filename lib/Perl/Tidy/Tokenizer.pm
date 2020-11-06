@@ -98,6 +98,7 @@ use vars qw{
   %is_sub
   %is_package
   %is_comma_question_colon
+  %other_line_endings 
 };
 
 # possible values of operator_expected()
@@ -652,9 +653,12 @@ sub get_line {
     my $input_line_separator = "";
     if ( chomp($input_line) ) { $input_line_separator = $/ }
 
-    # TODO: what other characters should be included here?
-    if ( $input_line =~ s/((\r|\035|\032)+)$// ) {
-        $input_line_separator = $2 . $input_line_separator;
+    # The first test here very significantly speeds things up, but be sure to
+    # keep the regex and hash %other_line_endings the same.
+    if ( $other_line_endings{ substr( $input_line, -1 ) } ) {
+        if ( $input_line =~ s/((\r|\035|\032)+)$// ) {
+            $input_line_separator = $2 . $input_line_separator;
+        }
     }
 
     # for backwards compatibility we keep the line text terminated with
@@ -8503,6 +8507,12 @@ BEGIN {
     @q = qw( ? : );
     push @q, ',';
     @is_comma_question_colon{@q} = (1) x scalar(@q);
+
+    # Hash of other possible line endings which may occur. 
+    # Keep these coordinated with the regex where this is used.
+    # Note: chr(015)="\r".
+    @q = ( chr(015), chr(035), chr(032) );
+    @other_line_endings{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
     my @special_keywords = qw(
