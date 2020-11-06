@@ -233,7 +233,6 @@ sub make_line_information_string {
         my $square_bracket_depth = $line_of_tokens->{_square_bracket_depth};
         my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
-        ##my $rtoken_array = $line_of_tokens->{_rtoken_array};
 
         my $structural_indentation_level = $line_of_tokens->{_level_0};
 

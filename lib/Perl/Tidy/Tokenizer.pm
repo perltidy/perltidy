@@ -46,6 +46,7 @@ use vars qw{
   %is_block_function
   %is_block_list_function
   %saw_function_definition
+  %saw_use_module
 
   $brace_depth
   $paren_depth
@@ -98,7 +99,7 @@ use vars qw{
   %is_sub
   %is_package
   %is_comma_question_colon
-  %other_line_endings 
+  %other_line_endings
 };
 
 # possible values of operator_expected()
@@ -1235,6 +1236,7 @@ sub prepare_for_a_new_file {
     %is_block_function       = ();
     %is_block_list_function  = ();
     %saw_function_definition = ();
+    %saw_use_module          = ();
 
     # variables used to track depths of various containers
     # and report nesting errors
@@ -3694,9 +3696,29 @@ EOM
                 else {
 
                     scan_bare_identifier();
+
+                    if (   $statement_type eq 'use'
+                        && $last_nonblank_token eq 'use' )
+                    {
+                        $saw_use_module{$current_package}->{$tok} = 1;
+                    }
+
                     if ( $type eq 'w' ) {
 
                         if ( $expecting == OPERATOR ) {
+
+                            # Patch to avoid error message for RPerl overloaded
+                            # operator functions: use overload
+                            #    '+' => \&sse_add,
+                            #    '-' => \&sse_sub,
+                            #    '*' => \&sse_mul,
+                            #    '/' => \&sse_div;
+                            # FIXME: this should eventually be generalized
+                            if (   $saw_use_module{$current_package}->{'RPerl'}
+                                && $tok =~ /^sse_(mul|div|add|sub)$/ )
+                            {
+
+                            }
 
                             # don't complain about possible indirect object
                             # notation.
@@ -3708,7 +3730,7 @@ EOM
                             # This will call A::new but we have a 'new' in
                             # main:: which looks like a constant.
                             #
-                            if ( $last_nonblank_type eq 'C' ) {
+                            elsif ( $last_nonblank_type eq 'C' ) {
                                 if ( $tok !~ /::$/ ) {
                                     complain(<<EOM);
 Expecting operator after '$last_nonblank_token' but found bare word '$tok'
@@ -8508,7 +8530,7 @@ BEGIN {
     push @q, ',';
     @is_comma_question_colon{@q} = (1) x scalar(@q);
 
-    # Hash of other possible line endings which may occur. 
+    # Hash of other possible line endings which may occur.
     # Keep these coordinated with the regex where this is used.
     # Note: chr(015)="\r".
     @q = ( chr(015), chr(035), chr(032) );
