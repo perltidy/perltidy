@@ -2285,7 +2285,6 @@ sub generate_options {
     $add_option->( 'stack-closing-hash-brace',                'schb',  '!' );
     $add_option->( 'stack-closing-paren',                     'scp',   '!' );
     $add_option->( 'stack-closing-square-bracket',            'scsb',  '!' );
-    $add_option->( 'stack-opening-block-brace',               'sobb',  '!' );
     $add_option->( 'stack-opening-hash-brace',                'sohb',  '!' );
     $add_option->( 'stack-opening-paren',                     'sop',   '!' );
     $add_option->( 'stack-opening-square-bracket',            'sosb',  '!' );
@@ -2599,6 +2598,7 @@ sub generate_options {
         'outdent-long-lines' => [qw(outdent-long-quotes outdent-long-comments)],
         'nooutdent-long-lines' =>
           [qw(nooutdent-long-quotes nooutdent-long-comments)],
+        'oll'                 => [qw(outdent-long-lines)],
         'noll'                => [qw(nooutdent-long-lines)],
         'io'                  => [qw(indent-only)],
         'delete-all-comments' =>
