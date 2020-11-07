@@ -8075,21 +8075,16 @@ EOM
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
 
         # Add one token to the next batch.
+        # $Ktoken_vars = the index K in the global token array
+        # $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
+        #                unless they are temporarily being overriden 
 
         # NOTE: This routine needs to be coded efficiently because it is called
         # once per token.  I have gotten it down from the second slowest to the
         # eighth slowest, but that still seems rather slow for what it does.
 
-        # These closure variables have already been defined,
-        # for efficiency.
-        # my $rLL              = $self->[_rLL_];
-        # my $radjusted_levels = $self->[_radjusted_levels_];
-
-        # the array of tokens can be given if they are different from the
-        # input arrays.
-        if ( !defined($rtoken_vars) ) {
-            $rtoken_vars = $rLL->[$Ktoken_vars];
-        }
+        # This closure variable has already been defined, for efficiency:
+        #     my $radjusted_levels = $self->[_radjusted_levels_];
 
         my $type = $rtoken_vars->[_TYPE_];
 
@@ -8435,7 +8430,8 @@ EOM
               )
             {
                 my $Ktoken_vars = $K_first;
-                $self->store_token_to_go($Ktoken_vars);
+                my $rtoken_vars = $rLL->[$Ktoken_vars];
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
                 $self->end_batch();
             }
             else {
@@ -8637,7 +8633,7 @@ EOM
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
-                $self->store_token_to_go($Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
@@ -8707,7 +8703,7 @@ EOM
                         $self->end_batch();
 
                         # and now store this token at the start of a new line
-                        $self->store_token_to_go($Ktoken_vars);
+                        $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
                     }
                 }
 
@@ -8756,7 +8752,7 @@ EOM
                 if ($side_comment_follows) { $no_internal_newlines = 1 }
 
                 # store the closing curly brace
-                $self->store_token_to_go($Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
 
                 # ok, we just stored a closing curly brace.  Often, but
                 # not always, we want to end the line immediately.
@@ -8919,7 +8915,7 @@ EOM
                     $self->end_batch() if ($break_before_semicolon);
                 }
 
-                $self->store_token_to_go($Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
 
                 $self->end_batch()
                   unless (
@@ -8937,13 +8933,13 @@ EOM
                 # no newlines after seeing here-target
                 $no_internal_newlines = 2;
                 destroy_one_line_block();
-                $self->store_token_to_go($Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
             }
 
             # handle all other token types
             else {
 
-                $self->store_token_to_go($Ktoken_vars);
+                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
             }
 
             # remember two previous nonblank OUTPUT tokens
