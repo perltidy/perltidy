@@ -2420,6 +2420,16 @@ Here is an example illustrating a welded container within a welded containers:
             $m
         ) );
 
+The welded closing tokens are by default on a separate line but this can be
+modified with the B<-vtc=n> flag (described in the next section).  For example,
+the same example adding B<-vtc-2> is
+
+	# perltidy -wn -vtc=2
+        $x->badd( bmul(
+            $class->new( abs(
+                $sx * int( $xr->numify() ) & $sy * int( $yr->numify() ) ) ),
+            $m ) );
+
 This format option is quite general but there are some limitations.  
 
 One limitation is that any line length limit still applies and can cause long
@@ -4341,12 +4351,23 @@ dot is added, and the backup file will be F<somefile.pl~>  .
 The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
- D    anl asc  aws  b    bbb bbc bbs  bl   bli  boc bok  bol  bot  ce
- csc  dac dbc  dcsc ddf  dln dnl dop  dp   dpro dsc dsm  dsn  dtt  dwls
- dwrs dws f    fll  frm  fs  hsc html ibc  icb  icp iob  isbc lal  log
- lp   lsl ohbr okw  ola  oll opr opt  osbr otr  ple  pod  pvl  q
- sbc  sbl schb scp  scsb sct se  sfp  sfs  skp  sob sohb sop  sosb sot
- ssc  st  sts  syn  t    tac tbc toc  tp   tqw  tsc w    x    bar  kis
+ D      anl    asbl   asc    ast    asu    aws    b      baa    baao   
+ bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc    bok    
+ bol    bom    bos    bot    cblx   ce     conv   csc    cscb   cscw   
+ dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop    dp     dpro   
+ dsc    dsm    dsn    dtt    dwls   dwrs   dws    f      fll    frm    
+ fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    
+ hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    
+ hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik    
+ him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    
+ hsc    html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   
+ kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr   
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr    
+ ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp     
+ tqw    trp    ts     tsc    tso    vmll   w      wn     x      xci    
+ xs     
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
