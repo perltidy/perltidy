@@ -10269,6 +10269,18 @@ EOM
     my @unmatched_opening_indexes_in_this_batch;
     my @unmatched_closing_indexes_in_this_batch;
     my %comma_arrow_count;
+    my %is_opening_tok = (
+        '(' => 1,
+        '[' => 1,
+        '{' => 1,
+        '?' => 1
+    );
+    my %is_closing_tok = (
+        ')' => 1,
+        ']' => 1,
+        '}' => 1,
+        ':' => 1
+    );
 
     sub initialize_saved_opening_indentation {
         %saved_opening_indentation = ();
@@ -10301,10 +10313,10 @@ EOM
         foreach my $i ( 0 .. $max_index_to_go ) {
             if ( $type_sequence_to_go[$i] ) {
                 my $token = $tokens_to_go[$i];
-                if ( $token =~ /^[\(\[\{\?]$/ ) {
+                if ( $is_opening_tok{$token} ) {
                     push @unmatched_opening_indexes_in_this_batch, $i;
                 }
-                elsif ( $token =~ /^[\)\]\}\:]$/ ) {
+                elsif ( $is_closing_tok{$token} ) {
 
                     my $i_mate = pop @unmatched_opening_indexes_in_this_batch;
                     if ( defined($i_mate) && $i_mate >= 0 ) {
