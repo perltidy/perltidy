@@ -1996,7 +1996,7 @@ sub set_whitespace_flags {
         elsif ( $type eq 'i' ) {
 
             # never a space before ->
-            if ( $token =~ /^\-\>/ ) {
+            if ( substr( $token, 0, 2 ) eq '->' ) {
                 $ws = WS_NO;
             }
         }
@@ -2006,7 +2006,7 @@ sub set_whitespace_flags {
             $ws = WS_OPTIONAL if $last_type eq '-';
 
             # never a space before ->
-            if ( $token =~ /^\-\>/ ) {
+            if ( substr( $token, 0, 2 ) eq '->' ) {
                 $ws = WS_NO;
             }
         }
@@ -5150,9 +5150,10 @@ sub respace_tokens {
 
                 # Examples: <<snippets/space1.in>>
                 # change '$  var'  to '$var' etc
-                #        '-> new'  to '->new'
-                if ( $token =~ /^([\$\&\%\*\@]|\-\>)\s/ ) {
-                    $token =~ s/\s*//g;
+                if ( substr( $token, 1, 1 ) =~ /^\s$/
+                    && $token =~ /^[\$\&\%\*\@]/ )
+                {
+                    $token =~ s/\s+//g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
 
@@ -5162,9 +5163,16 @@ sub respace_tokens {
                 # 'new' with a possible blank between.
                 #
                 # Note: there is a related patch in sub set_whitespace_flags
-                if ( $token =~ /^\-\>(.*)$/ && $1 ) {
+                if (   substr( $token, 0, 1 ) eq '-'
+                    && $token =~ /^\-\>(.*)$/
+                    && $1 )
+                {
+
                     my $token_save = $1;
                     my $type_save  = $type;
+
+                    # Change '-> new'  to '->new'
+                    $token_save =~ s/^\s+//g;
 
                     # store a blank to left of arrow if necessary
                     my $Kprev = $self->K_previous_nonblank($KK);
@@ -8077,7 +8085,7 @@ EOM
         # Add one token to the next batch.
         # $Ktoken_vars = the index K in the global token array
         # $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
-        #                unless they are temporarily being overriden 
+        #                unless they are temporarily being overriden
 
         # NOTE: This routine needs to be coded efficiently because it is called
         # once per token.  I have gotten it down from the second slowest to the
@@ -8431,7 +8439,7 @@ EOM
             {
                 my $Ktoken_vars = $K_first;
                 my $rtoken_vars = $rLL->[$Ktoken_vars];
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                 $self->end_batch();
             }
             else {
@@ -8633,7 +8641,7 @@ EOM
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
                 # it, though, if we have to break before it.
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
 
                 # Look ahead to see if we might form a one-line block..
                 my $too_long =
@@ -8703,7 +8711,7 @@ EOM
                         $self->end_batch();
 
                         # and now store this token at the start of a new line
-                        $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                        $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                     }
                 }
 
@@ -8752,7 +8760,7 @@ EOM
                 if ($side_comment_follows) { $no_internal_newlines = 1 }
 
                 # store the closing curly brace
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
 
                 # ok, we just stored a closing curly brace.  Often, but
                 # not always, we want to end the line immediately.
@@ -8915,7 +8923,7 @@ EOM
                     $self->end_batch() if ($break_before_semicolon);
                 }
 
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
 
                 $self->end_batch()
                   unless (
@@ -8933,13 +8941,13 @@ EOM
                 # no newlines after seeing here-target
                 $no_internal_newlines = 2;
                 destroy_one_line_block();
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
             # handle all other token types
             else {
 
-                $self->store_token_to_go($Ktoken_vars, $rtoken_vars);
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
             # remember two previous nonblank OUTPUT tokens

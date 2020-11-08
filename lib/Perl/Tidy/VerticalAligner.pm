@@ -569,7 +569,10 @@ sub valign_input {
     # add dummy fields for else statement
     # --------------------------------------------------------------------
 
-    if (   $rfields->[0] =~ /^else\s*$/
+    # Note the trailing space after 'else' here. If there were no space between
+    # the else and the next '{' then we would not be able to do vertical
+    # alignment of the '{'.
+    if (   $rfields->[0] eq 'else '
         && $self->group_line_count()
         && $level_jump == 0 )
     {
@@ -586,7 +589,7 @@ sub valign_input {
     if ( $jmax <= 0 ) {
         $self->[_zero_count_]++;
 
-        if ( $self->group_line_count()
+        if ( @{$rgroup_lines}
             && !get_recoverable_spaces( $rgroup_lines->[0]->get_indentation() )
           )
         {
