@@ -8532,8 +8532,8 @@ BEGIN {
 
     # Hash of other possible line endings which may occur.
     # Keep these coordinated with the regex where this is used.
-    # Note: chr(015)="\r".
-    @q = ( chr(015), chr(035), chr(032) );
+    # Note: chr(13) = chr(015)="\r".
+    @q = ( chr(13), chr(29), chr(26) );
     @other_line_endings{@q} = (1) x scalar(@q);
 
     # These keywords are handled specially in the tokenizer code:
