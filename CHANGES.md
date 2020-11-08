@@ -15,7 +15,7 @@
       
     - Fix git #44, fix exit status for assert-tidy/untidy.  The exit status was
       always 0 for --assert-tidy if the user had turned off all error messages with
-      the -quiet.  This has been fixed.
+      the -quiet flag.  This has been fixed.
 
     - Add flag -maxfs=n, --maximum-file-size-mb=n.  This parameter is provided to
       avoid causing system problems by accidentally attempting to format an 
@@ -54,8 +54,8 @@
 
     - Added 'state' as a keyword.
 
-    - This version is about 15% faster than previous versions due to some optimization work 
-      using Devel::NYTProf.
+    - This version is about 15% faster than previous versions due to some optimizations
+      made with the help of Devel::NYTProf.
 
     - Numerous minor issues that the average user would not encounter were found
       and fixed. They can be seen in the more complete list of updates at 

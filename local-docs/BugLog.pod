@@ -2,6 +2,12 @@
 
 =over 4
 
+=item B<recognize overloaded RPerl operators to avoid error messages>
+
+RPerl uses some bareword operators which caused error messages.  An update
+was made to avoid this problem in files containing 'use RPerl'. This update was
+made 6 Nov 2020, f8bd088.
+
 =item B<fix issue git #45, -wn and -vtc=n now work together>
 
 When -wn was set, the -vtc=n flag was being ignored.  This was a simple fix
