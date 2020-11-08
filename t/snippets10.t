@@ -302,6 +302,9 @@ qr/3/ ~~ 12345;
 
     # remove unwanted spaces after $ and -> here
     &{ $ _ -> [1] }( delete $ _ [$#_   ]{ $_   ->     [0] } );
+
+    # this has both tabs and spaces to remove
+    $	 setup = $	 labels ->	 labelsetup( Output_Width 	=> 2.625) ;
 ----------
 
         'space2' => <<'----------',
@@ -620,6 +623,9 @@ qr/3/                   ~~ 12345;
 
     # remove unwanted spaces after $ and -> here
     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
+
+    # this has both tabs and spaces to remove
+    $setup = $labels->labelsetup( Output_Width => 2.625 );
 #9...........
         },
 

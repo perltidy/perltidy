@@ -286,6 +286,8 @@
 ../snippets22.t	extrude5.extrude
 ../snippets22.t	kba1.def
 ../snippets22.t	kba1.kba1
+../snippets22.t	git45.def
+../snippets22.t	git45.git45
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -426,5 +428,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets22.t	git45.def
-../snippets22.t	git45.git45
