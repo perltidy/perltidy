@@ -5150,10 +5150,13 @@ sub respace_tokens {
 
                 # Examples: <<snippets/space1.in>>
                 # change '$  var'  to '$var' etc
-                if ( substr( $token, 1, 1 ) =~ /^\s$/
-                    && $token =~ /^[\$\&\%\*\@]/ )
+                # change '@    '   to '@'
+                my ( $sigil, $word ) = split /\s+/, $token, 2;
+                if ( length($sigil) == 1
+                    && $sigil =~ /^[\$\&\%\*\@]$/ )
                 {
-                    $token =~ s/\s+//g;
+                    $token = $sigil;
+                    $token .= $word if ($word);
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
 
@@ -8122,7 +8125,7 @@ EOM
 
         ++$max_index_to_go;
         $K_to_go[$max_index_to_go]     = $Ktoken_vars;
-        $types_to_go[$max_index_to_go] = $rtoken_vars->[_TYPE_];
+        $types_to_go[$max_index_to_go] = $type;
 
         $old_breakpoint_to_go[$max_index_to_go]    = 0;
         $forced_breakpoint_to_go[$max_index_to_go] = 0;
