@@ -20,3 +20,13 @@ my $otherHashRef =
  }
  }
  : undef;
+
+my @globlist = ( grep { defined } @opt{qw( l q S t )} )
+  ? do {
+    local *DIR;
+    opendir DIR, './' or die "can't opendir './': $!";
+    my @a = grep { not /^\.+$/ } readdir DIR;
+    closedir DIR;
+    @a;
+  }
+  : ();

@@ -225,6 +225,16 @@ my $otherHashRef =
  }
  }
  : undef;
+
+my @globlist = ( grep { defined } @opt{qw( l q S t )} )
+  ? do {
+    local *DIR;
+    opendir DIR, './' or die "can't opendir './': $!";
+    my @a = grep { not /^\.+$/ } readdir DIR;
+    closedir DIR;
+    @a;
+  }
+  : ();
 ----------
     };
 
@@ -418,6 +428,16 @@ my $otherHashRef =
     }
   }
   : undef;
+
+my @globlist = ( grep { defined } @opt{qw( l q S t )} )
+  ? do {
+    local *DIR;
+    opendir DIR, './' or die "can't opendir './': $!";
+    my @a = grep { not /^\.+$/ } readdir DIR;
+    closedir DIR;
+    @a;
+  }
+  : ();
 #8...........
         },
 
@@ -447,6 +467,16 @@ my $otherHashRef =
       }
   }
   : undef;
+
+my @globlist = ( grep { defined } @opt{qw( l q S t )} )
+  ? do {
+      local *DIR;
+      opendir DIR, './' or die "can't opendir './': $!";
+      my @a = grep { not /^\.+$/ } readdir DIR;
+      closedir DIR;
+      @a;
+  }
+  : ();
 #9...........
         },
 
@@ -474,6 +504,16 @@ my $otherHashRef
         }
     }
     : undef;
+
+my @globlist = ( grep {defined} @opt{qw( l q S t )} )
+    ? do {
+        local *DIR;
+        opendir DIR, './' or die "can't opendir './': $!";
+        my @a = grep { not /^\.+$/ } readdir DIR;
+        closedir DIR;
+        @a;
+    }
+    : ();
 #10...........
         },
 
