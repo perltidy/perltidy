@@ -180,6 +180,9 @@ my (
     %is_equal_or_fat_comma,
     %is_block_with_ci,
     %is_comma_or_fat_comma,
+    %is_opening_sequence_token,
+    %is_closing_sequence_token,
+    %is_container_label_type,
 
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
@@ -531,6 +534,16 @@ BEGIN {
 
     @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
+
+    @q = qw< { ( [ ? >;
+    @is_opening_sequence_token{@q} = (1) x scalar(@q);
+
+    @q = qw< } ) ] : >;
+    @is_closing_sequence_token{@q} = (1) x scalar(@q);
+
+    # a hash needed by sub scan_list for labeling containers
+    @q = qw( k => && || ? : . );
+    @is_container_label_type{@q} = (1) x scalar(@q);
 
     # Braces -bbht etc must follow these. Note: experimentation with
     # including a simple comma shows that it adds little and can lead
@@ -9547,6 +9560,15 @@ sub compare_indentation_levels {
     my @forced_breakpoint_undo_stack;
     my $index_max_forced_break;
 
+    # Break before or after certain tokens based on user settings
+    my %break_before_or_after_token;
+
+    BEGIN {
+        my @q = qw( = . : ? and or xor && || );
+        push @q, ',';
+        @break_before_or_after_token{@q} = (1) x scalar(@q);
+    }
+
     sub initialize_forced_breakpoint_vars {
         $forced_breakpoint_count      = 0;
         $index_max_forced_break       = UNDEFINED_INDEX;
@@ -9586,11 +9608,12 @@ sub compare_indentation_levels {
         # no breaks between welded tokens
         return if ( $self->weld_len_right_to_go($i) );
 
-        # when called with certain tokens, use bond strengths to decide
-        # if we break before or after it
         my $token = $tokens_to_go[$i];
 
-        if ( $token =~ /^([\=\.\,\:\?]|and|or|xor|&&|\|\|)$/ ) {
+	# For certain tokens, use user settings to decide if we break before or
+	# after it
+        #    qw( = . : ? and or xor && || )
+        if ( $break_before_or_after_token{$token} ) {
             if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
         }
 
@@ -9607,12 +9630,14 @@ sub compare_indentation_levels {
             };
 
             ######################################################################
-          # NOTE: if we call set_closing_breakpoint below it will then call this
-          # routing back. So there is the possibility of an infinite loop if a
-          # programming error is made. As a precaution, I have added a check on
-          # the forced_breakpoint flag, so that we won't keep trying to set it.
-          # That will give additional protection against a loop.
+	    # NOTE: if we call set_closing_breakpoint below it will then call
+	    # this routing back. So there is the possibility of an infinite
+	    # loop if a programming error is made. As a precaution, I have
+	    # added a check on the forced_breakpoint flag, so that we won't
+	    # keep trying to set it.  That will give additional protection
+	    # against a loop.
             ######################################################################
+
             if (   $i_nonblank >= 0
                 && $nobreak_to_go[$i_nonblank] == 0
                 && !$forced_breakpoint_to_go[$i_nonblank] )
@@ -9627,7 +9652,8 @@ sub compare_indentation_levels {
                   = $i_nonblank;
 
                 # if we break at an opening container..break at the closing
-                if ( $tokens_to_go[$i_nonblank] =~ /^[\{\[\(\?]$/ ) {
+                if ( $is_opening_sequence_token{ $tokens_to_go[$i_nonblank] } )
+                {
                     $self->set_closing_breakpoint($i_nonblank);
                 }
             }
@@ -9709,7 +9735,6 @@ sub compare_indentation_levels {
     sub set_closing_breakpoint {
 
         # set a breakpoint at a matching closing token
-        # at present, this is only used to break at a ':' which matches a '?'
         my ( $self, $i_break ) = @_;
 
         if ( $mate_index_to_go[$i_break] >= 0 ) {
@@ -10276,18 +10301,6 @@ EOM
     my @unmatched_opening_indexes_in_this_batch;
     my @unmatched_closing_indexes_in_this_batch;
     my %comma_arrow_count;
-    my %is_opening_tok = (
-        '(' => 1,
-        '[' => 1,
-        '{' => 1,
-        '?' => 1
-    );
-    my %is_closing_tok = (
-        ')' => 1,
-        ']' => 1,
-        '}' => 1,
-        ':' => 1
-    );
 
     sub initialize_saved_opening_indentation {
         %saved_opening_indentation = ();
@@ -10320,10 +10333,10 @@ EOM
         foreach my $i ( 0 .. $max_index_to_go ) {
             if ( $type_sequence_to_go[$i] ) {
                 my $token = $tokens_to_go[$i];
-                if ( $is_opening_tok{$token} ) {
+                if ( $is_opening_sequence_token{$token} ) {
                     push @unmatched_opening_indexes_in_this_batch, $i;
                 }
-                elsif ( $is_closing_tok{$token} ) {
+                elsif ( $is_closing_sequence_token{$token} ) {
 
                     my $i_mate = pop @unmatched_opening_indexes_in_this_batch;
                     if ( defined($i_mate) && $i_mate >= 0 ) {
@@ -13742,7 +13755,7 @@ sub set_continuation_breaks {
             if ($type_sequence) {
 
                 # handle any postponed closing breakpoints
-                if ( $token =~ /^[\)\]\}\:]$/ ) {
+                if ( $is_closing_sequence_token{$token} ) {
                     if ( $type eq ':' ) {
                         $last_colon_sequence_number = $type_sequence;
 
@@ -13826,7 +13839,9 @@ sub set_continuation_breaks {
                 $i_equals[$depth]                      = -1;
                 $want_comma_break[$depth]              = 0;
                 $container_type[$depth] =
-                  ( $last_nonblank_type =~ /^(k|=>|&&|\|\||\?|\:|\.)$/ )
+
+                  #      k => && || ? : .
+                  $is_container_label_type{$last_nonblank_type}
                   ? $last_nonblank_token
                   : "";
                 $has_old_logical_breakpoints[$depth] = 0;
@@ -13930,7 +13945,7 @@ sub set_continuation_breaks {
                 #    5 - stable: even for one line blocks if vt=0
                 if (  !$is_long_term
                     && $saw_opening_structure
-                    && $tokens_to_go[$i_opening] =~ /^[\(\{\[]$/
+                    && $is_opening_token{ $tokens_to_go[$i_opening] }
                     && $index_before_arrow[ $depth + 1 ] > 0
                     && !$opening_vertical_tightness{ $tokens_to_go[$i_opening] }
                   )
