@@ -235,7 +235,7 @@ sub select_random_lines {
 sub reverse_random_lines { 
 
     # skip some fraction of the lines in a source file
-    # but keep lines in the original order
+    # and reverse the characters on a line
     my ($rsource, $frand) = @_;
 
     my %select;

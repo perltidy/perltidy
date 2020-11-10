@@ -2,7 +2,11 @@
 
 ## 2020 10 01.03
 
-    - Fixed issue git #44, -vtc=n flag was ignored when -wn was set.
+    - This release is being made to make available a number of new formatting 
+      parameters. No significant bugs have been found since the previous release, 
+      but several minor issues have been found and fixed as listed below.
+
+    - Fixed issue git #45, -vtc=n flag was ignored when -wn was set.
 
     - implement request RT #133649, delete-old-newlines selectively. Two parameters, 
 
@@ -46,8 +50,6 @@
 
     - Fix issue git #41, typo in manual regarding -fsb.
 
-    - Some problems with parsing complex multi-line sub signatures have been fixed.
-
     - Fix issue git #40: when using the -bli option, a closing brace followed by 
       a semicolon was not being indented.  This applies to braces which require 
       semicolons, such as a 'do' block.
@@ -56,6 +58,29 @@
 
     - This version is about 15% faster than previous versions due to some optimizations
       made with the help of Devel::NYTProf.
+
+    - Line breaks are now automatically placed after 'use overload' to 
+      improve formatting when there are numerous overloaded operators.  For
+      example
+ 
+        use overload
+          '+' => sub {
+          ...
+
+    - A number of minor problems with parsing signatures and prototypes have
+      been corrected, particularly multi-line signatures. Some signatures 
+      had previously been parsed as if they were prototypes, which meant the 
+      normal spacing rules were not applied.  For example
+   
+      OLD:
+        sub echo ($message= 'Hello World!' ) {
+            ...;
+        }
+
+      NEW:
+        sub echo ( $message = 'Hello World!' ) {
+            ...;
+        }
 
     - Numerous minor issues that the average user would not encounter were found
       and fixed. They can be seen in the more complete list of updates at 
