@@ -1,0 +1,2 @@
+# -bol is default, so test -nbol
+-nbol

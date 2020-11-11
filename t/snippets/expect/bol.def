@@ -1,0 +1,5 @@
+return
+  unless $cmd = $cmd
+  || ( $dot
+    && $Last_Shell )
+  || &prompt('|');

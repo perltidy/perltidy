@@ -428,3 +428,14 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets22.t	boa.boa
+../snippets23.t	boa.def
+../snippets23.t	bol.bol
+../snippets23.t	bol.def
+../snippets23.t	bot.bot
+../snippets23.t	bot.def
+../snippets23.t	hash_bang.def
+../snippets23.t	hash_bang.hash_bang
+../snippets23.t	listop1.listop1
+../snippets23.t	sbcp.def
+../snippets23.t	sbcp.sbcp1

@@ -3074,7 +3074,6 @@ on a single line if possible.
 
 To prevent this, and thereby always form longer lines, use B<-nboa>.  
 
-
 =item Keeping old breakpoints at specific token types
 
 Two command line parameters provide detailed control over whether

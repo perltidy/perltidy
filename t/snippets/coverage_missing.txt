@@ -4,12 +4,7 @@ assert-tidy
 assert-untidy
 backlink
 block-brace-vertical-tightness-list
-break-at-old-attribute-breakpoints
-break-at-old-keyword-breakpoints
-break-at-old-logical-breakpoints
-break-at-old-ternary-breakpoints
 cachedir
-closing-side-comment-list
 closing-side-comment-prefix
 closing-side-comment-warnings
 closing-token-indentation
@@ -97,7 +92,6 @@ libpods
 logfile
 logfile-gap
 look-for-autoloader
-look-for-hash-bang
 look-for-selfloader
 memoize
 no-profile
@@ -122,9 +116,7 @@ podverbose
 preserve-line-endings
 profile
 show-options
-stack-opening-block-brace
 standard-output
-static-block-comment-prefix
 static-side-comment-prefix
 stylesheet
 tabs

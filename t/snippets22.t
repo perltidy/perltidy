@@ -19,6 +19,7 @@
 #16 kba1.kba1
 #17 git45.def
 #18 git45.git45
+#19 boa.boa
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,10 +37,14 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bbhb2'   => "-bbhb=2 -bbp=2",
-        'bbhb3'   => "-bbhb=3 -bbp=3",
-        'bbhb4'   => "-bbhb=3 -bbp=3 -bbhbi=2 -bbpi=2",
-        'bbhb5'   => "-bbhb=3 -bbp=3 -bbhbi=1 -bbpi=1",
+        'bbhb2' => "-bbhb=2 -bbp=2",
+        'bbhb3' => "-bbhb=3 -bbp=3",
+        'bbhb4' => "-bbhb=3 -bbp=3 -bbhbi=2 -bbpi=2",
+        'bbhb5' => "-bbhb=3 -bbp=3 -bbhbi=1 -bbpi=1",
+        'boa'   => <<'----------',
+# -boa is default so we test nboa
+-nboa
+----------
         'braces7' => <<'----------',
 -bli -blil='*'
 ----------
@@ -68,6 +73,14 @@ nested => {
 asdf => 456, 
 yarg => 'yarp', 
 }, );
+----------
+
+        'boa' => <<'----------',
+my @field
+  : field
+  : Default(1)
+  : Get('Name' => 'foo') 
+  : Set('Name');
 ----------
 
         'braces' => <<'----------',
@@ -690,6 +703,14 @@ my $hlist = $control::control->Scrolled(
     -expand => 1 );
 
 #18...........
+        },
+
+        'boa.boa' => {
+            source => "boa",
+            params => "boa",
+            expect => <<'#19...........',
+my @field : field : Default(1) : Get('Name' => 'foo') : Set('Name');
+#19...........
         },
     };
 
