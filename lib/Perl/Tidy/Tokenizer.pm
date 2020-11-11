@@ -982,8 +982,11 @@ sub get_line {
         return $line_of_tokens;
     }
 
-    # update indentation levels for log messages
-    if ( $input_line !~ /^\s*$/ ) {
+    # Update indentation levels for log messages.
+    # Skip blank lines and block comments. Note that _line_of_text_ is the
+    # input line but trimmed from left to right.
+    my $lot = $tokenizer_self->[_line_of_text_];
+    if ( $lot && substr( $lot, 0, 1 ) ne '#' ) {
         my $rlevels = $line_of_tokens->{_rlevels};
         $line_of_tokens->{_guessed_indentation_level} =
           guess_old_indentation_level($input_line);
