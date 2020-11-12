@@ -1,0 +1,3 @@
+# do not weld interior or ending '{' without a keyword
+-wn -wnxl='.K{'
+

@@ -2280,6 +2280,7 @@ sub generate_options {
     $add_option->( 'paren-vertical-tightness',                'pvt',   '=i' );
     $add_option->( 'paren-vertical-tightness-closing',        'pvtc',  '=i' );
     $add_option->( 'weld-nested-containers',                  'wn',    '!' );
+    $add_option->( 'weld-nested-exclusion-list',              'wnxl',  '=s' );
     $add_option->( 'space-backslash-quote',                   'sbq',   '=i' );
     $add_option->( 'stack-closing-block-brace',               'scbb',  '!' );
     $add_option->( 'stack-closing-hash-brace',                'schb',  '!' );

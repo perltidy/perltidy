@@ -11,6 +11,11 @@
 #8 listop1.listop1
 #9 sbcp.def
 #10 sbcp.sbcp1
+#11 wnxl.def
+#12 wnxl.wnxl1
+#13 wnxl.wnxl2
+#14 wnxl.wnxl3
+#15 wnxl.wnxl4
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -44,6 +49,23 @@ BEGIN {
 ----------
         'sbcp1' => <<'----------',
 -sbc -sbcp='#x#'
+----------
+        'wnxl1' => <<'----------',
+# only weld parens, and only if leading keyword
+-wn -wnxl='^K( [ { q'
+----------
+        'wnxl2' => <<'----------',
+# do not weld leading '['
+-wn -wnxl='^['
+----------
+        'wnxl3' => <<'----------',
+# do not weld interior or ending '{' without a keyword
+-wn -wnxl='.K{'
+
+----------
+        'wnxl4' => <<'----------',
+# do not weld except parens or trailing brace with keyword
+-wn -wnxl='.K{ ^{ ['
 ----------
     };
 
@@ -95,6 +117,39 @@ my @sorted = map { $_->[0] }
 ## 'Dec', 'Nov'
     'Nov', 'Dec'
 );
+----------
+
+        'wnxl' => <<'----------',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols(
+        [ qw(
+            Perl_dump_fds
+            Perl_ErrorNo
+            Perl_GetVars
+            PL_sys_intern
+        ) ]
+    );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do {{
+    next if ($n % 2);
+    print $n, "\n";
+}} while ($n++ < 10);
+
+threads->create( sub {
+    my (%hash3);
+    share(%hash3);
+    $hash2{hash} = \%hash3;
+    $hash3{"thread"} = "yes";
+} )->join();
 ----------
     };
 
@@ -213,6 +268,207 @@ my @sorted =
     'Nov', 'Dec'
 );
 #10...........
+        },
+
+        'wnxl.def' => {
+            source => "wnxl",
+            params => "def",
+            expect => <<'#11...........',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols(
+        [
+            qw(
+              Perl_dump_fds
+              Perl_ErrorNo
+              Perl_GetVars
+              PL_sys_intern
+              )
+        ]
+    );
+}
+
+if (
+    _add_fqdn_host(
+        name => ...,
+        fqdn => ...
+    )
+  )
+{
+    ...;
+}
+
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
+
+threads->create(
+    sub {
+        my (%hash3);
+        share(%hash3);
+        $hash2{hash}     = \%hash3;
+        $hash3{"thread"} = "yes";
+    }
+)->join();
+#11...........
+        },
+
+        'wnxl.wnxl1' => {
+            source => "wnxl",
+            params => "wnxl1",
+            expect => <<'#12...........',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols(
+        [
+            qw(
+              Perl_dump_fds
+              Perl_ErrorNo
+              Perl_GetVars
+              PL_sys_intern
+              )
+        ]
+    );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
+
+threads->create(
+    sub {
+        my (%hash3);
+        share(%hash3);
+        $hash2{hash}     = \%hash3;
+        $hash3{"thread"} = "yes";
+    }
+)->join();
+#12...........
+        },
+
+        'wnxl.wnxl2' => {
+            source => "wnxl",
+            params => "wnxl2",
+            expect => <<'#13...........',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do { {
+    next if ( $n % 2 );
+    print $n, "\n";
+} } while ( $n++ < 10 );
+
+threads->create( sub {
+    my (%hash3);
+    share(%hash3);
+    $hash2{hash}     = \%hash3;
+    $hash3{"thread"} = "yes";
+} )->join();
+#13...........
+        },
+
+        'wnxl.wnxl3' => {
+            source => "wnxl",
+            params => "wnxl3",
+            expect => <<'#14...........',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
+
+threads->create( sub {
+    my (%hash3);
+    share(%hash3);
+    $hash2{hash}     = \%hash3;
+    $hash3{"thread"} = "yes";
+} )->join();
+#14...........
+        },
+
+        'wnxl.wnxl4' => {
+            source => "wnxl",
+            params => "wnxl4",
+            expect => <<'#15...........',
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols(
+        [
+            qw(
+              Perl_dump_fds
+              Perl_ErrorNo
+              Perl_GetVars
+              PL_sys_intern
+              )
+        ]
+    );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
+
+threads->create( sub {
+    my (%hash3);
+    share(%hash3);
+    $hash2{hash}     = \%hash3;
+    $hash3{"thread"} = "yes";
+} )->join();
+#15...........
         },
     };
 

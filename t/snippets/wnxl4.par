@@ -1,0 +1,2 @@
+# do not weld except parens or trailing brace with keyword
+-wn -wnxl='.K{ ^{ ['

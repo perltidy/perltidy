@@ -1493,7 +1493,7 @@
 <dt id="fse-string---format-skipping-end-string"><b>-fse=string</b>, <b>--format-skipping-end=string</b></dt>
 <dd>
 
-<p>The <b>-fse=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&gt;&gt;&gt;&#39;.</p>
+<p>The <b>-fse=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&lt;&lt;&lt;&#39;.</p>
 
 <p>The beginning and ending strings may be the same, but it is preferable to make them different for clarity.</p>
 
@@ -1940,6 +1940,34 @@
 <p>Another limitation is that an opening symbol which delimits quoted text cannot be included in a welded pair. This is because quote delimiters are treated specially in perltidy.</p>
 
 <p>Finally, the stacking of containers defined by this flag have priority over any other container stacking flags. This is because any welding is done first.</p>
+
+</dd>
+<dt id="wnxl-s---weld-nested-exclusion-list"><b>-wnxl=s</b>, <b>--weld-nested-exclusion-list</b></dt>
+<dd>
+
+<p>The <b>-wnxl=s</b> flag provides some control over the types of containers which can be welded. It does this by supplying a string <b>s</b> which is a list of things which should <b>not</b> be welded. This list is a string with spaces separating any number of items. Each item consists of up to three pieces of information: (1) an optional positiion, (2) an optional preceding type, and (3) a container type.</p>
+
+<p>The container type is required and is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. So for example the string</p>
+
+<pre><code>  -wnxl=&#39;[ { q&#39;</code></pre>
+
+<p>means do not include square-bracets, braces, or quotes in any welds. In other words, welds will only involve parens.</p>
+
+<p>Any of these container types may be prefixed with a position indicator which is either &#39;^&#39; (to indicate the start of a welded sequence) or &#39;.&#39; (to indicate the interior of a welded sequence).</p>
+
+<p>For example,</p>
+
+<pre><code>  -wnxl=&#39;.{&#39;</code></pre>
+
+<p>would mean to exclude all braces which do not start a welded sequence. Note that quotes always come last in a weld so a position indicator is not useful for them and is ignored if given.</p>
+
+<p>A third item of information which must go between these first two is an alphanumeric letter which limits the selection depending on the type of token immediately before the container. There are, at present, just two possible letters: &#39;k&#39; matches the previous token if it is any keyword, and &#39;K&#39; matches the previous token if it is not be a keyword.</p>
+
+<p>For example,</p>
+
+<pre><code>  -wnxl = &#39;{ [ ^K(&#39;</code></pre>
+
+<p>means the sequence of welds must not contain a brace, square-bracket, and must not begin with a paren which is preceded by something which is not a keyword. In other words, the weld must start with a paren preceded by keyword followed by more parens.</p>
 
 </dd>
 <dt id="Vertical-tightness-of-non-block-curly-braces-parentheses-and-square-brackets"><b>Vertical tightness</b> of non-block curly braces, parentheses, and square brackets.</dt>

@@ -2,6 +2,11 @@
 
 ## 2020 10 01.03
 
+    - Added flag -wnxl=s, --weld-nested-exclusion-list=s, to provide control which containers
+      are welded with the --weld-nested-containers parameter.  This is related to issue git #45.
+
+    - Merged pull request git #46 which fixes the docs regarding the -fse flag.
+
     - This release is being made to make available a number of new formatting 
       parameters. No significant bugs have been found since the previous release, 
       but several minor issues have been found and fixed as listed below.

@@ -1,0 +1,2 @@
+# only weld parens, and only if leading keyword
+-wn -wnxl='^K( [ { q'

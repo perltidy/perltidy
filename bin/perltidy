@@ -2442,6 +2442,47 @@ specially in perltidy.
 Finally, the stacking of containers defined by this flag have priority over
 any other container stacking flags.  This is because any welding is done first.
 
+=item B<-wnxl=s>,  B<--weld-nested-exclusion-list> 
+
+The B<-wnxl=s> flag provides some control over the types of containers which
+can be welded.  It does this by supplying a string B<s> which is a list of
+things which should B<not> be welded.  This list is a string with spaces
+separating any number of items.  Each item consists of up to three pieces of
+information: (1) an optional positiion, (2) an optional preceding type, and (3)
+a container type.
+
+The container type is required and is one of '(', '[', '{' or 'q'.  The first three of
+these are container tokens and the last represents a quoted list.  So for example the string
+
+  -wnxl='[ { q'
+
+means do not include square-bracets, braces, or quotes in any welds. In other words, welds
+will only involve parens.
+
+Any of these container types may be prefixed with a position indicator which is either '^'
+(to indicate the start of a welded sequence) or '.' (to indicate the interior of a welded sequence).
+
+For example,
+
+  -wnxl='.{'
+
+would mean to exclude all braces which do not start a welded sequence.  Note that
+quotes always come last in a weld so a position indicator is not useful for them
+and is ignored if given.
+
+A third item of information which must go between these first two is an alphanumeric
+letter which limits the selection depending on the type of token immediately before the 
+container. There are, at present, just two possible letters: 'k' matches the previous
+token if it is any keyword, and 'K' matches the previous token if it is not be a keyword.
+
+For example,
+
+  -wnxl = '{ [ ^K('
+
+means the sequence of welds must not contain a brace, square-bracket, and must
+not begin with a paren which is preceded by something which is not a keyword.
+In other words, the weld must start with a paren preceded by keyword followed
+by more parens.
 
 =item B<Vertical tightness> of non-block curly braces, parentheses, and square brackets.
 

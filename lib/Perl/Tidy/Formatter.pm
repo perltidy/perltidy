@@ -236,6 +236,8 @@ my (
     %stack_opening_token,
     %stack_closing_token,
 
+    %weld_nested_exclusion_rules,
+
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
     # Most can be configured by user parameters.
@@ -1501,7 +1503,121 @@ EOM
         }
     }
 
+    initialize_weld_nested_exclusion_rules($rOpts);
     return;
+}
+
+sub initialize_weld_nested_exclusion_rules {
+    my ($rOpts) = @_;
+    %weld_nested_exclusion_rules = ();
+
+    my $opt_name = 'weld-nested-exclusion-list';
+    my $str      = $rOpts->{$opt_name};
+    return unless ($str);
+    $str =~ s/^\s+//;
+    $str =~ s/\s+$//;
+    return unless ($str);
+
+    # There are four container tokens.  A unique key is made by combining each
+    # token and its type.
+    my %token_keys = (
+        '(' => '(',
+        '[' => '[',
+        '{' => '{',
+        'q' => 'q',
+    );
+
+    # We are parsing an exclusion list for nested welds. The list is a string
+    # with spaces separating any number of items.  Each item consists of three
+    # pieces of information:
+    # <optional position> <optional type> <type of container>
+    # <     ^ or .      > <    k or K   > <     ( [ {       >
+
+    # The last character is the required container type and must be one of:
+    # ( = paren
+    # [ = square bracket
+    # { = brace
+
+    # An optional leading position indicator:
+    # ^ means the leading token position in the weld
+    # . means a secondary token position in the weld
+    #   no position indicator means all positions match
+
+    # An optional alphanumeric character between the position and container
+    # token selects to which the rule applies:
+    # k = any keyword
+    # K = any non-keyword
+    #     no letter means any preceding type matches
+
+    # Examples:
+    # ^(  - the weld must not start with a paren
+    # .(  - the second and later tokens may not be parens
+    # (   - no parens in weld
+    # ^K(  - exclude a leading paren not preceded by a keyword
+    # .k(  - exclude a secondary paren preceded by a keyword
+    # [ {  - exclude all brackets and braces
+
+    my @items = split /\s+/, $str;
+    my $msg1;
+    my $msg2;
+    foreach my $item (@items) {
+        my $item_save = $item;
+        my $tok       = chop($item);
+        my $key       = $token_keys{$tok};
+        if ( !defined($key) ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+        if ( !defined( $weld_nested_exclusion_rules{$key} ) ) {
+            $weld_nested_exclusion_rules{$key} = [];
+        }
+        my $rflags = $weld_nested_exclusion_rules{$key};
+
+        # A 'q' means do not weld quotes
+        if ( $tok eq 'q' ) {
+            $rflags->[0] = '*';
+            $rflags->[1] = '*';
+            next;
+        }
+
+        my $pos    = '*';
+        my $select = '*';
+        if ($item) {
+            if ( $item =~ /^([\^\.])?([kK])?$/ ) {
+                $pos    = $1 if ($1);
+                $select = $2 if ($2);
+            }
+            else {
+                $msg1 .= " '$item_save'";
+                next;
+            }
+        }
+        if ( $pos eq '^' || $pos eq '*' ) {
+            if ( defined( $rflags->[0] ) && $rflags ne $select ) {
+                $msg1 .= " '$item_save'";
+            }
+            $rflags->[0] = $select;
+        }
+        if ( $pos eq '.' || $pos eq '*' ) {
+            if ( defined( $rflags->[1] ) && $rflags ne $select ) {
+                $msg1 .= " '$item_save'";
+            }
+            $rflags->[1] = $select;
+        }
+    }
+    if ($msg1) {
+        Warn(<<EOM);
+Unexpecting symbol(s) encountered in --$opt_name will be ignored:
+$msg1
+EOM
+    }
+    if ($msg2) {
+        Warn(<<EOM);
+Multiple specifications were encountered in the --weld-nested-exclusion-list for:
+$msg2
+Only the last will be used.
+EOM
+    }
 }
 
 sub initialize_whitespace_hashes {
@@ -6194,6 +6310,28 @@ sub find_nested_pairs {
     return \@nested_pairs;
 }
 
+sub is_excluded_weld {
+
+    # decide if this weld is excluded by user request
+    my ( $self, $KK, $is_leading ) = @_;
+    my $rLL         = $self->[_rLL_];
+    my $rtoken_vars = $rLL->[$KK];
+    my $token       = $rtoken_vars->[_TOKEN_];
+    my $rflags      = $weld_nested_exclusion_rules{$token};
+    return 0 unless ( defined($rflags) );
+    my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
+    return 0 unless ( defined($flag) );
+    return 1 if $flag eq '*';
+    my $Kp     = $self->K_previous_nonblank($KK);
+    my $type_p = 'b';
+    if ( defined($Kp) ) { $type_p = $rLL->[$Kp]->[_TYPE_] }
+
+    if ( $flag eq 'k' && $type_p eq 'k' || $flag eq 'K' && $type_p ne 'k' ) {
+        return 1;
+    }
+    return 0;
+}
+
 sub weld_nested_containers {
     my ($self) = @_;
 
@@ -6428,6 +6566,15 @@ sub weld_nested_containers {
             }
         }
 
+        # DO-NOT-WELD RULE 5: do not include welds excluded by user
+        if ( !$do_not_weld && %weld_nested_exclusion_rules ) {
+            $do_not_weld ||=
+              $self->is_excluded_weld( $Kouter_opening,
+                $starting_new_weld );
+            $do_not_weld ||=
+              $self->is_excluded_weld( $Kinner_opening, 0 );
+        }
+
         if ($do_not_weld) {
 
             # After neglecting a pair, we start measuring from start of point io
@@ -6543,6 +6690,10 @@ sub weld_nested_quotes {
 
     my $self = shift;
 
+    # See if quotes are excluded from welding
+    my $rflags = $weld_nested_exclusion_rules{'q'};
+    return if ( defined($rflags) && defined( $rflags->[1] ) );
+
     my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
     my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
 
@@ -6638,6 +6789,10 @@ sub weld_nested_quotes {
             # If welded, the line must not exceed allowed line length
             # Assume old line breaks for this estimate.
             next if ( $excess_line_length_K->( $KK, $Kn ) > 0 );
+
+            # Check weld exclusion rules for outer container
+            my $is_leading = !$self->[_rweld_len_left_opening_]->{$outer_seqno};
+            next if ( $self->is_excluded_weld( $KK, $is_leading ) );
 
             # OK to weld
             # FIXME: Are these always correct?
@@ -9610,8 +9765,8 @@ sub compare_indentation_levels {
 
         my $token = $tokens_to_go[$i];
 
-	# For certain tokens, use user settings to decide if we break before or
-	# after it
+        # For certain tokens, use user settings to decide if we break before or
+        # after it
         #    qw( = . : ? and or xor && || )
         if ( $break_before_or_after_token{$token} ) {
             if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
@@ -9630,12 +9785,12 @@ sub compare_indentation_levels {
             };
 
             ######################################################################
-	    # NOTE: if we call set_closing_breakpoint below it will then call
-	    # this routing back. So there is the possibility of an infinite
-	    # loop if a programming error is made. As a precaution, I have
-	    # added a check on the forced_breakpoint flag, so that we won't
-	    # keep trying to set it.  That will give additional protection
-	    # against a loop.
+            # NOTE: if we call set_closing_breakpoint below it will then call
+            # this routing back. So there is the possibility of an infinite
+            # loop if a programming error is made. As a precaution, I have
+            # added a check on the forced_breakpoint flag, so that we won't
+            # keep trying to set it.  That will give additional protection
+            # against a loop.
             ######################################################################
 
             if (   $i_nonblank >= 0

@@ -1,0 +1,30 @@
+if ( $PLATFORM eq 'aix' ) {
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
+}
+
+if ( _add_fqdn_host(
+    name => ...,
+    fqdn => ...
+) )
+{
+    ...;
+}
+
+do {
+    {
+        next if ( $n % 2 );
+        print $n, "\n";
+    }
+} while ( $n++ < 10 );
+
+threads->create( sub {
+    my (%hash3);
+    share(%hash3);
+    $hash2{hash}     = \%hash3;
+    $hash3{"thread"} = "yes";
+} )->join();

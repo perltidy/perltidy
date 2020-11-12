@@ -1,0 +1,2 @@
+# do not weld leading '['
+-wn -wnxl='^['
