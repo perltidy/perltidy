@@ -17907,6 +17907,7 @@ sub K_mate_index {
     my %block_type_map;
     my %keyword_map;
     my %operator_map;
+    my %is_w_n_C;
 
     BEGIN {
 
@@ -17944,6 +17945,12 @@ sub K_mate_index {
             '-=' => '+=',
             '*=' => '+=',
             '/=' => '+=',
+        );
+
+        %is_w_n_C = (
+            'w' => 1,
+            'n' => 1,
+            'C' => 1,
         );
     }
 
@@ -18314,7 +18321,8 @@ sub K_mate_index {
 
                 # Mark most things before arrows as a quote to
                 # get them to line up. Testfile: mixed.pl.
-                if ( ( $i < $iend - 1 ) && ( $type =~ /^[wnC]$/ ) ) {
+                #                      $type =~ /^[wnC]$/ 
+                if ( $i < $iend - 1 && $is_w_n_C{$type} ) {
                     my $next_type = $types_to_go[ $i + 1 ];
                     my $i_next_nonblank =
                       ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
