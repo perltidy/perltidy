@@ -1945,29 +1945,65 @@
 <dt id="wnxl-s---weld-nested-exclusion-list"><b>-wnxl=s</b>, <b>--weld-nested-exclusion-list</b></dt>
 <dd>
 
-<p>The <b>-wnxl=s</b> flag provides some control over the types of containers which can be welded. It does this by supplying a string <b>s</b> which is a list of things which should <b>not</b> be welded. This list is a string with spaces separating any number of items. Each item consists of up to three pieces of information: (1) an optional positiion, (2) an optional preceding type, and (3) a container type.</p>
+<p>The <b>-wnxl=s</b> flag provides some control over the types of containers which can be welded. The <b>-wn</b> flag by default is &quot;greedy&quot; in welding adjacent containers. If it welds more types of containers than desired, this flag can reduce the amount of welding by specifying a list of things which should <b>not</b> be welded.</p>
 
-<p>The container type is required and is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. So for example the string</p>
+<p>The logic in perltidy to apply this is straightforward. As each token is being considered for joining a weld, any exclusion rules are consulted and used to reject the weld if necessary.</p>
+
+<p>This list is a string with space-separated items. Each item consists of up to three pieces of information: (1) an optional positiion, (2) an optional preceding type, and (3) a container type.</p>
+
+<p>The required piece of information, a container type, is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. For example the string</p>
 
 <pre><code>  -wnxl=&#39;[ { q&#39;</code></pre>
 
-<p>means do not include square-bracets, braces, or quotes in any welds. In other words, welds will only involve parens.</p>
+<p>means do <b>NOT</b> include square-bracets, braces, or quotes in any welds. The only unspecified container is &#39;(&#39;, so this string means that only welds involving parens will be made.</p>
 
-<p>Any of these container types may be prefixed with a position indicator which is either &#39;^&#39; (to indicate the start of a welded sequence) or &#39;.&#39; (to indicate the interior of a welded sequence).</p>
+<p>To illustrate this terminology, following welded snippet consists of a chain of three welded containers with types &#39;(&#39; &#39;[&#39; and &#39;q&#39;:</p>
 
-<p>For example,</p>
+<pre><code>    # perltidy -wn
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );</code></pre>
 
-<pre><code>  -wnxl=&#39;.{&#39;</code></pre>
+<p>Even though the qw term uses parens as the quote delimiter, it has a special type &#39;q&#39; here. If it appears in a weld it always appears at the end of the welded chain.</p>
 
-<p>would mean to exclude all braces which do not start a welded sequence. Note that quotes always come last in a weld so a position indicator is not useful for them and is ignored if given.</p>
+<p>Any of the container types &#39;[&#39;, &#39;{&#39;, and &#39;(&#39; may be prefixed with a position indicator which is either &#39;^&#39;, to indicate the first token of a welded sequence, or &#39;.&#39;, to indicate an interior token of a welded sequence. (Since a quoted string &#39;q&#39; always ends a chain it does need a position indicator).</p>
 
-<p>A third item of information which must go between these first two is an alphanumeric letter which limits the selection depending on the type of token immediately before the container. There are, at present, just two possible letters: &#39;k&#39; matches the previous token if it is any keyword, and &#39;K&#39; matches the previous token if it is not be a keyword.</p>
+<p>If we do not want a sequence of welded containers to start with a square bracket we could use</p>
 
-<p>For example,</p>
+<pre><code>  -wnxl=&#39;^[&#39;</code></pre>
 
-<pre><code>  -wnxl = &#39;{ [ ^K(&#39;</code></pre>
+<p>In the above snippet, there is a square bracket but it does not start the chain, so the formatting would be unchanged with this restriction.</p>
 
-<p>means the sequence of welds must not contain a brace, square-bracket, and must not begin with a paren which is preceded by something which is not a keyword. In other words, the weld must start with a paren preceded by keyword followed by more parens.</p>
+<p>A third optional item of information which can be given is an alphanumeric letter which limits the selection depending on the type of token immediately before the container. If given, it goes just before the container symbol. There are, at present, just two possible letters: &#39;k&#39; matches if the previous token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;), and &#39;K&#39; matches if the previous token is not a keyword.</p>
+
+<p>For example, compare</p>
+
+<pre><code>        # perltidy -wn 
+        if ( defined( $_Cgi_Query{
+            $Config{&#39;methods&#39;}{&#39;authentication&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}{&#39;username&#39;}
+        } ) )</code></pre>
+
+<p>with</p>
+
+<pre><code>        # perltidy -wn -wnxl=&#39;^K( {&#39;
+        if ( defined(
+            $_Cgi_Query{ $Config{&#39;methods&#39;}{&#39;authentication&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}
+                  {&#39;username&#39;} }
+        ) )</code></pre>
+
+<p>The first case does maximum welding. In the second case the leading paren is retained by the rule (it would have been rejected if preceded by a non-keyword) but the curly brace is rejected.</p>
+
+<p>Here are some additional example strings and their meanings:</p>
+
+<pre><code>    &#39;^(&#39;   - the weld must not start with a paren
+    &#39;.(&#39;   - the second and later tokens may not be parens
+    &#39;(&#39;    - no parens in a weld
+    &#39;^K(&#39;  - exclude a leading paren preceded by a non-keyword
+    &#39;.k(&#39;  - exclude a secondary paren preceded by a keyword
+    &#39;[ {&#39;  - exclude all brackets and braces</code></pre>
 
 </dd>
 <dt id="Vertical-tightness-of-non-block-curly-braces-parentheses-and-square-brackets"><b>Vertical tightness</b> of non-block curly braces, parentheses, and square brackets.</dt>

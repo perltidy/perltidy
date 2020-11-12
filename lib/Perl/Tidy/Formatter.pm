@@ -1518,8 +1518,7 @@ sub initialize_weld_nested_exclusion_rules {
     $str =~ s/\s+$//;
     return unless ($str);
 
-    # There are four container tokens.  A unique key is made by combining each
-    # token and its type.
+    # There are four container tokens.  
     my %token_keys = (
         '(' => '(',
         '[' => '[',

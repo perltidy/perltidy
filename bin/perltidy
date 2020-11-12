@@ -2445,44 +2445,90 @@ any other container stacking flags.  This is because any welding is done first.
 =item B<-wnxl=s>,  B<--weld-nested-exclusion-list> 
 
 The B<-wnxl=s> flag provides some control over the types of containers which
-can be welded.  It does this by supplying a string B<s> which is a list of
-things which should B<not> be welded.  This list is a string with spaces
-separating any number of items.  Each item consists of up to three pieces of
-information: (1) an optional positiion, (2) an optional preceding type, and (3)
-a container type.
+can be welded.  The B<-wn> flag by default is "greedy" in welding
+adjacent containers.  If it welds more types of containers than desired,
+this flag can reduce the amount of welding by specifying a list of
+things which should B<not> be welded. 
 
-The container type is required and is one of '(', '[', '{' or 'q'.  The first three of
-these are container tokens and the last represents a quoted list.  So for example the string
+The logic in perltidy to apply this is straightforward.  As each token is being
+considered for joining a weld, any exclusion rules are consulted and used to
+reject the weld if necessary.
+
+This list is a string with space-separated items.  Each item consists of up to
+three pieces of information: (1) an optional positiion, (2) an optional
+preceding type, and (3) a container type.
+
+The required piece of information, a container type, is one of '(', '[', '{' or
+'q'.  The first three of these are container tokens and the last represents a
+quoted list.  For example the string
 
   -wnxl='[ { q'
 
-means do not include square-bracets, braces, or quotes in any welds. In other words, welds
-will only involve parens.
+means do B<NOT> include square-bracets, braces, or quotes in any welds.  The only unspecified
+container is '(', so this string means that only welds involving parens will be made. 
 
-Any of these container types may be prefixed with a position indicator which is either '^'
-(to indicate the start of a welded sequence) or '.' (to indicate the interior of a welded sequence).
+To illustrate this terminology, following welded snippet consists of 
+a chain of three welded containers with types '(' '[' and 'q':
 
-For example,
+    # perltidy -wn
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
 
-  -wnxl='.{'
+Even though the qw term uses parens as the quote delimiter, it has a special
+type 'q' here. If it appears in a weld it always appears at the end of the
+welded chain.
 
-would mean to exclude all braces which do not start a welded sequence.  Note that
-quotes always come last in a weld so a position indicator is not useful for them
-and is ignored if given.
+Any of the container types '[', '{', and '(' may be prefixed with a position
+indicator which is either '^', to indicate the first token of a welded
+sequence, or '.', to indicate an interior token of a welded sequence.  (Since
+a quoted string 'q' always ends a chain it does need a position indicator).
 
-A third item of information which must go between these first two is an alphanumeric
-letter which limits the selection depending on the type of token immediately before the 
-container. There are, at present, just two possible letters: 'k' matches the previous
-token if it is any keyword, and 'K' matches the previous token if it is not be a keyword.
+If we do not want a sequence of welded containers to start with a square
+bracket we could use
 
-For example,
+  -wnxl='^['
 
-  -wnxl = '{ [ ^K('
+In the above snippet, there is a square bracket but it does not start the chain,
+so the formatting would be unchanged with this restriction.
 
-means the sequence of welds must not contain a brace, square-bracket, and must
-not begin with a paren which is preceded by something which is not a keyword.
-In other words, the weld must start with a paren preceded by keyword followed
-by more parens.
+A third optional item of information which can be given is an alphanumeric
+letter which limits the selection depending on the type of token immediately
+before the container.  If given, it goes just before the container symbol.
+There are, at present, just two possible letters: 'k' matches if the previous
+token is a perl builtin keyword (such as 'if', 'while'), and 'K' matches if the
+previous token is not a keyword. 
+
+For example, compare
+
+        # perltidy -wn 
+        if ( defined( $_Cgi_Query{
+            $Config{'methods'}{'authentication'}{'remote'}{'cgi'}{'username'}
+        } ) )
+
+with
+
+        # perltidy -wn -wnxl='^K( {'
+        if ( defined(
+            $_Cgi_Query{ $Config{'methods'}{'authentication'}{'remote'}{'cgi'}
+                  {'username'} }
+        ) )
+
+The first case does maximum welding. In the second case the leading paren is
+retained by the rule (it would have been rejected if preceded by a non-keyword)
+but the curly brace is rejected.
+
+Here are some additional example strings and their meanings:
+
+    '^('   - the weld must not start with a paren
+    '.('   - the second and later tokens may not be parens
+    '('    - no parens in a weld
+    '^K('  - exclude a leading paren preceded by a non-keyword
+    '.k('  - exclude a secondary paren preceded by a keyword
+    '[ {'  - exclude all brackets and braces
 
 =item B<Vertical tightness> of non-block curly braces, parentheses, and square brackets.
 

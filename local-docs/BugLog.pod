@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<added option -wnxl=s to give control of welding by the -wn parameter>
+
+The parameter string can restrict the types of containers which are welded. This
+was added 11 Nov 2020 in 'added -wnxl=s for control of -wn', 2e642d2.
+
+=item B<merged pull request git #46>
+
+The man page gave the incorrect string for -fse. This was fixed 11 Nov 2020 in 1f9869e.
+
 =item B<recognize overloaded RPerl operators to avoid error messages>
 
 RPerl uses some bareword operators which caused error messages.  An update
