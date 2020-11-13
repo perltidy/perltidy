@@ -1209,14 +1209,6 @@ sub dump_functions {
     return;
 }
 
-sub ones_count {
-
-    # count number of 1's in a string of 1's and 0's
-    # example: ones_count("010101010101") gives 6
-    my $str = shift;
-    return $str =~ tr/1/0/;
-}
-
 sub prepare_for_a_new_file {
 
     # previous tokens needed to determine what to expect next
@@ -2936,7 +2928,7 @@ sub prepare_for_a_new_file {
                     $routput_token_type->[$i] = $type;
 
                 }
-                $tok = $quote_character unless ( $quote_character =~ /^\s*$/ );
+                $tok = $quote_character if ($quote_character); 
 
                 # scan for the end of the quote or pattern
                 (
@@ -3874,7 +3866,9 @@ EOM
         my $container_environment = '';
         my $im                    = -1;    # previous $i value
         my $num;
-        my $ci_string_sum = ones_count($ci_string_in_tokenizer);
+
+        # Count the number of '1's in the string (previously sub ones_count)
+        my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
 
 # Computing Token Indentation
 #
@@ -4202,7 +4196,7 @@ EOM
 
                 $ci_string_in_tokenizer .=
                   ( $intervening_secondary_structure != 0 ) ? '1' : '0';
-                $ci_string_sum = ones_count($ci_string_in_tokenizer);
+                $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
                 $continuation_string_in_tokenizer .=
                   ( $in_statement_continuation > 0 ) ? '1' : '0';
 
@@ -4259,7 +4253,7 @@ EOM
                       substr( $nesting_list_string, -1 ) eq '1';
 
                     chop $ci_string_in_tokenizer;
-                    $ci_string_sum = ones_count($ci_string_in_tokenizer);
+                    $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
 
                     $in_statement_continuation =
                       chop $continuation_string_in_tokenizer;
