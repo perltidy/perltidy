@@ -165,6 +165,7 @@ my (
     %is_keyword_returning_list,
     %is_if_unless_and_or_last_next_redo_return,
     %is_if_elsif_else_unless_while_until_for_foreach,
+    %is_if_unless_while_until_for,
     %is_last_next_redo_return,
     %is_sort_map_grep,
     %is_sort_map_grep_eval,
@@ -477,6 +478,10 @@ BEGIN {
     # patch for SWITCH/CASE: added 'case' and 'when'
     @q = qw(if elsif else unless while until for foreach case when catch);
     @is_if_elsif_else_unless_while_until_for_foreach{@q} =
+      (1) x scalar(@q);
+
+    @q = qw(if unless while until for);
+    @is_if_unless_while_until_for{@q} =
       (1) x scalar(@q);
 
     @q = qw(last next redo return);
@@ -1518,7 +1523,7 @@ sub initialize_weld_nested_exclusion_rules {
     $str =~ s/\s+$//;
     return unless ($str);
 
-    # There are four container tokens.  
+    # There are four container tokens.
     my %token_keys = (
         '(' => '(',
         '[' => '[',
@@ -6568,10 +6573,8 @@ sub weld_nested_containers {
         # DO-NOT-WELD RULE 5: do not include welds excluded by user
         if ( !$do_not_weld && %weld_nested_exclusion_rules ) {
             $do_not_weld ||=
-              $self->is_excluded_weld( $Kouter_opening,
-                $starting_new_weld );
-            $do_not_weld ||=
-              $self->is_excluded_weld( $Kinner_opening, 0 );
+              $self->is_excluded_weld( $Kouter_opening, $starting_new_weld );
+            $do_not_weld ||= $self->is_excluded_weld( $Kinner_opening, 0 );
         }
 
         if ($do_not_weld) {
@@ -8577,7 +8580,8 @@ EOM
             # output a blank line before block comments
             if (
                 # unless we follow a blank or comment line
-                $self->[_last_line_leading_type_] !~ /^[#b]$/
+                $self->[_last_line_leading_type_] ne '#'
+                && $self->[_last_line_leading_type_] ne 'b'
 
                 # only if allowed
                 && $rOpts->{'blanks-before-comments'}
@@ -10145,7 +10149,8 @@ EOM
 
                 # break before certain key blocks except one-liners
                 if ( $leading_type eq 'k' ) {
-                    if ( $leading_token =~ /^(BEGIN|END)$/ ) {
+                    if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' )
+                    {
                         $want_blank = $rOpts->{'blank-lines-before-subs'}
                           if ( terminal_type_i( $imin, $imax ) ne '}' );
                     }
@@ -12792,9 +12797,8 @@ sub set_continuation_breaks {
 
     my ( $self, $saw_good_break, $rcolon_list ) = @_;
 
-# @{$rcolon_list} is a list of all the ? and : tokens in the batch, in order.
-# Previously, it was obtained with this very inefficient code:
-#   my @colon_list  = grep { /^[\?\:]$/ } @types_to_go[ 0 .. $max_index_to_go ];
+    # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
+    # order.
 
     use constant DEBUG_BREAKPOINTS => 0;
 
@@ -12897,7 +12901,8 @@ sub set_continuation_breaks {
                 && $i_next_nonblank <= $imax
                 && (   $want_break_before{$next_nonblank_type}
                     || $token_lengths_to_go[$i_next_nonblank] > 2
-                    || $next_nonblank_type =~ /^[\,\(\[\{L]$/ )
+                    || $next_nonblank_type eq ','
+                    || $is_opening_type{$next_nonblank_type} )
               )
             {
                 $strength -= $tiny_bias;
@@ -13008,7 +13013,7 @@ sub set_continuation_breaks {
             # the next line and we already have a possible break
             if (
                    !$must_break
-                && ( $next_nonblank_type =~ /^[\;\,]$/ )
+                && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
                 && (
                     (
                         $leading_spaces +
@@ -13171,7 +13176,8 @@ sub set_continuation_breaks {
                 # before the closing bracket or not.
                 if (  !$too_long
                     && $i_test + 1 < $imax
-                    && $next_nonblank_type !~ /^[,\}\]\)R]$/ )
+                    && $next_nonblank_type ne ','
+                    && !$is_closing_type{$next_nonblank_type} )
                 {
                     $too_long = $next_length >= $maximum_line_length;
                 }
@@ -13196,18 +13202,21 @@ sub set_continuation_breaks {
                 && $too_long
                 && $i_lowest == $i_test
                 && $token_lengths_to_go[$i_test] > 1
-                && $next_nonblank_type =~ /^[\;\,]$/ )
+                && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
+              )
             {
                 $too_long = 0;
             }
 
+            # we are done if...
             last
               if (
-                ( $i_test == $imax )    # we're done if no more tokens,
-                || (
-                    ( $i_lowest >= 0 )    # or no more space and we have a break
-                    && $too_long
-                )
+
+                # ... no more space and we have a break
+                $too_long && $i_lowest >= 0
+
+                # ... or no more tokens
+                || $i_test == $imax
               );
         }
 
@@ -13302,8 +13311,13 @@ sub set_continuation_breaks {
 
         # set a forced breakpoint at a container opening, if necessary, to
         # signal a break at a closing container.  Excepting '(' for now.
-        if ( $tokens_to_go[$i_lowest] =~ /^[\{\[]$/
-            && !$forced_breakpoint_to_go[$i_lowest] )
+        if (
+            (
+                   $tokens_to_go[$i_lowest] eq '{'
+                || $tokens_to_go[$i_lowest] eq '['
+            )
+            && !$forced_breakpoint_to_go[$i_lowest]
+          )
         {
             $self->set_closing_breakpoint($i_lowest);
         }
@@ -13798,7 +13812,8 @@ sub set_continuation_breaks {
                 && $i > 0
 
                 # if one of these keywords:
-                && $token =~ /^(if|unless|while|until|for)$/
+                #   /^(if|unless|while|until|for)$/
+                && $is_if_unless_while_until_for{$token}
 
                 # but do not break at something like '1 while'
                 && ( $last_nonblank_type ne 'n' || $i > 2 )
@@ -13932,7 +13947,7 @@ sub set_continuation_breaks {
                         my $inc = ( $type eq ':' ) ? 0 : 1;
                         $self->set_forced_breakpoint( $i - $inc );
                     }
-                } ## end if ( $token =~ /^[\)\]\}\:]$/[{[(])
+                } ## end if ( $is_closing_sequence_token{$token} )
 
                 # set breaks at ?/: if they will get separated (and are
                 # not a ?/: chain), or if the '?' is at the end of the
@@ -14391,8 +14406,11 @@ sub set_continuation_breaks {
                               ? $i_opening - 2
                               : $i_opening - 1;
 
-                            if (   $types_to_go[$i_prev] eq ','
-                                && $types_to_go[ $i_prev - 1 ] =~ /^[\)\}]$/ )
+                            if (
+                                $types_to_go[$i_prev] eq ','
+                                && (   $types_to_go[ $i_prev - 1 ] eq ')'
+                                    || $types_to_go[ $i_prev - 1 ] eq '}' )
+                              )
                             {
                                 $self->set_forced_breakpoint($i_prev);
                             }
@@ -14614,7 +14632,7 @@ sub set_continuation_breaks {
                 # on a line
                 || (   $type eq 'Q'
                     && $i_opening >= $max_index_to_go - 2
-                    && $token =~ /^['"]$/ )
+                    && ( $token eq "'" || $token eq '"' ) )
               );
         } ## end for ( my $dd = $current_depth...)
 
@@ -16778,7 +16796,8 @@ sub send_lines_to_vertical_aligner {
         $self->[_last_output_short_opening_token_]
 
           # line ends in opening token
-          = $type_end =~ /^[\{\(\[L]$/
+          #              /^[\{\(\[L]$/
+          = $is_opening_type{$type_end}
 
           # and either
           && (
@@ -16787,7 +16806,8 @@ sub send_lines_to_vertical_aligner {
 
             # or is a single token followed by opening token.
             # Note that sub identifiers have blanks like 'sub doit'
-            || ( $Kend - $Kbeg <= 2 && $token_beg !~ /\s+/ )
+            #                                 $token_beg !~ /\s+/
+            || ( $Kend - $Kbeg <= 2 && index( $token_beg, ' ' ) < 0 )
           )
 
           # and limit total to 10 character widths
@@ -18231,9 +18251,8 @@ sub K_mate_index {
                 #        my ( $a, $b, $c, $d, $e, $f ) = @_;
                 #    }
                 if ( $raw_tok eq '(' ) {
-                    my $ci = $ci_levels_to_go[$ibeg];
-                    if (   $container_name{$depth} =~ /^\+(if|unless)/
-                        && $ci )
+                    if (   $ci_levels_to_go[$ibeg]
+                        && $container_name{$depth} =~ /^\+(if|unless)/ )
                     {
                         $tok .= $container_name{$depth};
                     }
@@ -18253,7 +18272,6 @@ sub K_mate_index {
 
                     # remove sub names to allow one-line sub braces to align
                     # regardless of name
-                    #if ( $block_type =~ /^sub / ) { $block_type = 'sub' }
                     if ( $block_type =~ /$SUB_PATTERN/ ) { $block_type = 'sub' }
 
                     # allow all control-type blocks to align
@@ -18321,7 +18339,7 @@ sub K_mate_index {
 
                 # Mark most things before arrows as a quote to
                 # get them to line up. Testfile: mixed.pl.
-                #                      $type =~ /^[wnC]$/ 
+                #                      $type =~ /^[wnC]$/
                 if ( $i < $iend - 1 && $is_w_n_C{$type} ) {
                     my $next_type = $types_to_go[ $i + 1 ];
                     my $i_next_nonblank =
@@ -18396,7 +18414,9 @@ sub make_paren_name {
     }
 
     # Finally, remove any leading arrows
-    $name =~ s/^->//;
+    if ( substr( $name, 0, 2 ) eq '->' ) {
+        $name = substr( $name, 2 );
+    }
     return $name;
 }
 
@@ -18525,7 +18545,9 @@ sub make_paren_name {
         # For -lp formatting se use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
-        if ( $type_beg eq 'q' && $token_beg =~ /^[\)\}\]\>]/ ) {
+        if ( $type_beg eq 'q'
+            && ( $is_closing_token{$token_beg} || $token_beg eq '>' ) )
+        {
             my $K_next_nonblank = $self->K_next_code($K_beg);
             if ( defined($K_next_nonblank) ) {
                 my $type_sequence = $rLL->[$K_next_nonblank]->[_TYPE_SEQUENCE_];
@@ -18542,7 +18564,7 @@ sub make_paren_name {
         }
 
         # if we are at a closing token of some type..
-        if ( $type_beg =~ /^[\)\}\]R]$/ ) {
+        if ( $is_closing_type{$type_beg} ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -18595,7 +18617,7 @@ sub make_paren_name {
 
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
-                    && $types_to_go[$iend] =~ /^[\)\}\]R]$/ )
+                    && $is_closing_type{ $types_to_go[$iend] } )
 
               )
             {
@@ -18848,7 +18870,7 @@ sub make_paren_name {
             # indented, but this is better than frequently leaving it not
             # indented enough.
             my $last_spaces = get_spaces($last_indentation_written);
-            if ( $last_leading_token !~ /^[\}\]\)]$/ ) {
+            if ( !$is_closing_token{$last_leading_token} ) {
                 $last_spaces +=
                   get_recoverable_spaces($last_indentation_written);
             }
