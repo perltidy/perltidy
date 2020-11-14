@@ -7593,7 +7593,7 @@ sub process_all_lines {
 
             # set special flags
             my $skip_line = 0;
-            if ( $line_type =~ /^POD/ ) {
+            if ( substr( $line_type, 0, 3 ) eq 'POD' ) {
 
                 # Pod docs should have a preceding blank line.  But stay
                 # out of __END__ and __DATA__ sections, because
@@ -7614,7 +7614,7 @@ sub process_all_lines {
 
             # leave the blank counters in a predictable state
             # after __END__ or __DATA__
-            elsif ( $line_type =~ /^(END_START|DATA_START)$/ ) {
+            elsif ( $line_type eq 'END_START' || $line_type eq 'DATA_START' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
                 $self->[_saw_END_or_DATA_] = 1;
             }
@@ -10539,15 +10539,6 @@ EOM
         # These will be used by sub get_opening_indentation.
 
         my ( $self, $ri_first, $ri_last, $rindentation_list ) = @_;
-
-        # we no longer need indentations of any saved indentations which
-        # are unmatched closing tokens in this batch, because we will
-        # never encounter them again.  So we can delete them to keep
-        # the hash size down.
-        foreach (@unmatched_closing_indexes_in_this_batch) {
-            my $seqno = $type_sequence_to_go[$_];
-            delete $saved_opening_indentation{$seqno};
-        }
 
         # we need to save indentations of any unmatched opening tokens
         # in this batch because we may need them in a subsequent batch.
@@ -17025,9 +17016,13 @@ sub send_lines_to_vertical_aligner {
                     #     $PDL::IO::Pic::biggrays
                     #     ? ( m/GIF/          ? 0 : 1 )
                     #     : ( m/GIF|RAST|IFF/ ? 0 : 1 );
-                    if (   $i == $ibeg + 2
-                        && $types_to_go[$ibeg] =~ /^[\.\:\?]$/
-                        && $types_to_go[ $i - 1 ] eq 'b' )
+                    if (
+                           $i == $ibeg + 2
+                        && $types_to_go[ $i - 1 ] eq 'b'
+                        && (   $types_to_go[$ibeg] eq '.'
+                            || $types_to_go[$ibeg] eq ':'
+                            || $types_to_go[$ibeg] eq '?' )
+                      )
                     {
                         $alignment_type = "";
                     }
@@ -17085,10 +17080,13 @@ sub send_lines_to_vertical_aligner {
                     && $types_to_go[ $i - 1 ] eq 'b'
 
                     # and previous token IS one of these:
-                    && ( $vert_last_nonblank_type =~ /^[\,\;]$/ )
+                    && (   $vert_last_nonblank_type eq ','
+                        || $vert_last_nonblank_type eq ';' )
 
                     # and it's NOT one of these
-                    && ( $type !~ /^[b\#\)\]\}]$/ )
+                    && (   $type ne 'b'
+                        && $type ne '#'
+                        && !$is_closing_token{$type} )
 
                     # then go ahead and align
                   )
