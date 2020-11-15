@@ -2,6 +2,30 @@
 
 =over 4
 
+=item B<fixed problem with vertical alignments involving 'if' statements>
+
+An update was made to break vertical alignment when a new sequence of if-like
+statements or ternary statements is encountered.  This situation was causing a
+loss of alignment in some cases.  For example
+
+  OLD:
+    $m1 = 0;
+    if ( $value =~ /\bset\b/i )      { $m0 = 1; }
+    if ( $value =~ /\barithmetic/i ) { $m1 = 1; }
+    if    ( $m0 && !$m1 ) { $CONFIG[1] = 0; }
+    elsif ( !$m0 && $m1 ) { $CONFIG[1] = 1; }
+    else                  { $ok        = 0; last; }
+
+ NEW:
+    $m1 = 0;
+    if    ( $value =~ /\bset\b/i )      { $m0        = 1; }
+    if    ( $value =~ /\barithmetic/i ) { $m1        = 1; }
+    if    ( $m0 && !$m1 )               { $CONFIG[1] = 0; }
+    elsif ( !$m0 && $m1 )               { $CONFIG[1] = 1; }
+    else                                { $ok        = 0; last; }
+
+This update was made 15 Nov 2020.
+
 =item B<added option -wnxl=s to give control of welding by the -wn parameter>
 
 The parameter string can restrict the types of containers which are welded. This

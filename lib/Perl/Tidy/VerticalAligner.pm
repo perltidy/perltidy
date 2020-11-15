@@ -398,7 +398,6 @@ sub valign_input {
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
     my $is_terminal_statement     = $rline_hash->{is_terminal_statement};
-    my $do_not_pad                = $rline_hash->{do_not_pad};
     my $rvertical_tightness_flags = $rline_hash->{rvertical_tightness_flags};
     my $level_jump                = $rline_hash->{level_jump};
     my $rfields                   = $rline_hash->{rfields};
@@ -407,6 +406,8 @@ sub valign_input {
     my $rfield_lengths            = $rline_hash->{rfield_lengths};
     my $terminal_block_type       = $rline_hash->{terminal_block_type};
     my $batch_count               = $rline_hash->{batch_count};
+    my $break_alignment_before    = $rline_hash->{break_alignment_before};
+    my $break_alignment_after     = $rline_hash->{break_alignment_after};
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
@@ -491,9 +492,6 @@ sub valign_input {
         }
     }
 
-    # caller might request no alignment in special cases
-    if ($do_not_pad) { $self->_flush_group_lines() }
-
     # shouldn't happen:
     if ( $level < 0 ) { $level = 0 }
 
@@ -552,13 +550,17 @@ sub valign_input {
         }
     }
 
+    my $rgroup_lines = $self->[_rgroup_lines_];
+    if ( $break_alignment_before && @{$rgroup_lines} ) {
+        $rgroup_lines->[-1]->set_end_group(1);
+    }
+
     # --------------------------------------------------------------------
     # add dummy fields for terminal ternary
     # --------------------------------------------------------------------
     my $j_terminal_match;
 
-    my $rgroup_lines = $self->[_rgroup_lines_];
-    if ( $is_terminal_ternary && $self->group_line_count() ) {
+    if ( $is_terminal_ternary && @{$rgroup_lines} ) {
         $j_terminal_match =
           fix_terminal_ternary( $rgroup_lines->[-1], $rfields, $rtokens,
             $rpatterns, $rfield_lengths, $group_level, );
@@ -573,7 +575,7 @@ sub valign_input {
     # the else and the next '{' then we would not be able to do vertical
     # alignment of the '{'.
     if (   $rfields->[0] eq 'else '
-        && $self->group_line_count()
+        && @{$rgroup_lines}
         && $level_jump == 0 )
     {
 
@@ -640,14 +642,22 @@ sub valign_input {
     }
 
     # programming check: (shouldn't happen)
-    # an error here implies an incorrect call was made
+    # The number of tokens which separate the fields must always be
+    # one less than the number of fields. If this is not true then
+    # an error has been made by the Formatter in defining these
+    # quantities.  See Formatter.pm/sub make_alignment_patterns.
     if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
-        my $nt = @{$rtokens};
-        my $nf = @{$rfields};
-        $self->warning(
+        my $nt  = @{$rtokens};
+        my $nf  = @{$rfields};
+        my $msg = <<EOM;
 "Program bug in Perl::Tidy::VerticalAligner - number of tokens = $nt should be one less than number of fields: $nf)\n"
-        );
+EOM
+        $self->warning($msg);
         $self->report_definite_bug();
+
+        # TODO: this has never happened, but we should probably call Die here.
+        # Needs some testing
+        # Perl::Tidy::Die($msg);
     }
     my $maximum_line_length_for_level =
       $self->maximum_line_length_for_level($level);
@@ -680,6 +690,7 @@ sub valign_input {
             is_terminal_ternary       => $is_terminal_ternary,
             j_terminal_match          => $j_terminal_match,
             is_forced_break           => $is_forced_break,
+            end_group                 => $break_alignment_after,
         }
     );
 
@@ -2403,7 +2414,8 @@ EOM
             return ( $max_lev_diff, $saw_side_comment );
         }
 
-        my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
+        my $has_terminal_match  = $rlines->[-1]->get_j_terminal_match();
+        my $is_terminal_ternary = $rlines->[-1]->get_is_terminal_ternary();
 
         # ignore hanging side comments in these operations
         my @filtered   = grep { !$_->get_is_hanging_side_comment() } @{$rlines};
@@ -2549,37 +2561,70 @@ EOM
             }
         }
 
-        # Loop to process each subgroups
+        # Loop to process each subgroup
         foreach my $item (@subgroups) {
             my ( $jbeg, $jend ) = @{$item};
 
-            # look for complete ternary or if/elsif/else blocks
             my $nlines = $jend - $jbeg + 1;
+
+            ####################################################
+            # Look for complete if/elsif/else and ternary blocks
+            ####################################################
+
+            # We are looking for a common '$dividing_token' like these:
+
+            #    if    ( $b and $s ) { $p->{'type'} = 'a'; }
+            #    elsif ($b)          { $p->{'type'} = 'b'; }
+            #    elsif ($s)          { $p->{'type'} = 's'; }
+            #    else                { $p->{'type'} = ''; }
+            #                        ^----------- dividing_token
+
+            #   my $severity =
+            #      !$routine                     ? '[PFX]'
+            #     : $routine =~ /warn.*_d\z/     ? '[DS]'
+            #     : $routine =~ /ck_warn/        ? 'W'
+            #     : $routine =~ /ckWARN\d*reg_d/ ? 'S'
+            #     : $routine =~ /ckWARN\d*reg/   ? 'W'
+            #     : $routine =~ /vWARN\d/        ? '[WDS]'
+            #     :                                '[PFX]';
+            #                                    ^----------- dividing_token
+
+            # Only look for groups which are more than 2 lines long.  Two lines
+            # can get messed up doing this, probably due to the various
+            # two-line rules.
+
+            my $dividing_token;
             my %token_line_count;
-            for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
-                my %seen;
-                my $line    = $rnew_lines->[$jj];
-                my $rtokens = $line->get_rtokens();
-                foreach my $tok ( @{$rtokens} ) {
-                    if ( !$seen{$tok} ) {
-                        $seen{$tok}++;
-                        $token_line_count{$tok}++;
+            if ( $nlines > 2 ) {
+
+                for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+                    my %seen;
+                    my $line    = $rnew_lines->[$jj];
+                    my $rtokens = $line->get_rtokens();
+                    foreach my $tok ( @{$rtokens} ) {
+                        if ( !$seen{$tok} ) {
+                            $seen{$tok}++;
+                            $token_line_count{$tok}++;
+                        }
+                    }
+                }
+
+                foreach my $tok ( keys %token_line_count ) {
+                    if ( $token_line_count{$tok} == $nlines ) {
+                        if (   substr( $tok, 0, 1 ) eq '?'
+                            || substr( $tok, 0, 1 ) eq '{'
+                            && $tok =~ /^\{\d+if/ )
+                        {
+                            $dividing_token = $tok;
+                            last;
+                        }
                     }
                 }
             }
 
-            # Look for if/else/elsif and ternary blocks
-            my $is_full_block;
-            foreach my $tok ( keys %token_line_count ) {
-                if ( $token_line_count{$tok} == $nlines ) {
-                    if ( $tok =~ /^\?/ || $tok =~ /^\{\d+if/ ) {
-                        $is_full_block = 1;
-                        last;
-                    }
-                }
-            }
-
+            #####################################################
             # Loop over lines to remove unwanted alignment tokens
+            #####################################################
             for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
                 my $line    = $rnew_lines->[$jj];
                 my $rtokens = $line->get_rtokens();
@@ -2589,6 +2634,8 @@ EOM
                 my $imax = @{$rtokens} - 2;
                 my $delete_above_level;
                 my $deleted_assignment_token;
+
+                my $saw_dividing_token = "";
 
                 # Loop over all alignment tokens
                 for ( my $i = 0 ; $i <= $imax ; $i++ ) {
@@ -2605,17 +2652,31 @@ EOM
 
                     # But now we modify this with exceptions...
 
-                    # If this is a complete ternary or if/elsif/else block,
-                    # remove all alignments which are not also in every line
-                    $delete_me ||=
-                      ( $is_full_block && $token_line_count{$tok} < $nlines );
+                    # EXCEPTION 1: If we are in a complete ternary or
+                    # if/elsif/else group, and this token is not on every line
+                    # of the group, should we delete it to preserve overall
+                    # alignment?
+                    if ($dividing_token) {
+                        if ( $token_line_count{$tok} >= $nlines ) {
+                            $saw_dividing_token ||= $tok eq $dividing_token;
+                        }
+                        else {
 
-                    # Remove all tokens above a certain level following a
-                    # previous deletion.  For example, we have to remove tagged
-                    # higher level alignment tokens following a => deletion
-                    # because the tags of higher level tokens will now be
-                    # incorrect. For example, this will prevent aligning commas
-                    # as follows after deleting the second =>
+                            # For shorter runs, delete toks to save alignment.
+                            # For longer runs, keep toks after the '{' or '?'
+                            # to allow sub-alignments within braces.  The
+                            # number 5 lines is arbitrary but seems to work ok.
+                            $delete_me ||=
+                              ( $nlines < 5 || !$saw_dividing_token );
+                        }
+                    }
+
+                    # EXCEPTION 2: Remove all tokens above a certain level
+                    # following a previous deletion.  For example, we have to
+                    # remove tagged higher level alignment tokens following a
+                    # '=>' deletion because the tags of higher level tokens
+                    # will now be incorrect. For example, this will prevent
+                    # aligning commas as follows after deleting the second '=>'
                     #    $w->insert(
                     #	ListBox => origin => [ 270, 160 ],
                     #	size    => [ 200,           55 ],
@@ -2627,7 +2688,8 @@ EOM
                         else { $delete_above_level = undef }
                     }
 
-                    # Remove all but certain tokens after an assignment deletion
+                    # EXCEPTION 3: Remove all but certain tokens after an
+                    # assignment deletion.
                     if (
                         $deleted_assignment_token
                         && ( $lev > $group_level
@@ -2637,11 +2699,9 @@ EOM
                         $delete_me ||= 1;
                     }
 
-                    # Turn off deletion in some special cases..
-
-                    # Do not touch the first line of a terminal
-                    # match, such as below, because j_terminal has already
-                    # been set.
+                    # EXCEPTION 4: Do not touch the first line of a 2 line
+                    # terminal match, such as below, because j_terminal has
+                    # already been set.
                     #    if ($tag) { $tago = "<$tag>"; $tagc = "</$tag>"; }
                     #    else      { $tago = $tagc = ''; }
                     # But see snippets 'else1.t' and 'else2.t'
@@ -2650,6 +2710,7 @@ EOM
                         && $has_terminal_match
                         && $nlines == 2 );
 
+                    # EXCEPTION 5: misc additional rules for commas and equals
                     if ($delete_me) {
 
                         # okay to delete second and higher copies of a token

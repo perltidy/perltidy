@@ -252,8 +252,8 @@ EOM
     sub get_end_group { return $_[0]->[_end_group_] }
 
     sub set_end_group {
-        my ( $self, $j, $val ) = @_;
-        $self->[_end_group_]->[$j] = $val;
+        my ( $self, $val ) = @_;
+        $self->[_end_group_] = $val;
         return;
     }
 

@@ -16669,12 +16669,33 @@ sub send_lines_to_vertical_aligner {
               )
         );
 
+        my $break_alignment_before = $is_outdented_line || $do_not_pad;
+        my $break_alignment_after  = $is_outdented_line;
+
+        # flush at an 'if' which follows a line with (1) terminal semicolon
+        # or (2) terminal block_type which is not an 'if'.  This prevents
+        # unwanted alignment between the lines.
+        if ( $type_beg eq 'k' && $token_beg eq 'if' ) {
+            my $Km           = $self->K_previous_code($Kbeg);
+            my $type_m       = 'b';
+            my $block_type_m = 'b';
+            if ( defined($Km) ) {
+                $type_m       = $rLL->[$Km]->[_TYPE_];
+                $block_type_m = $rLL->[$Km]->[_BLOCK_TYPE_];
+            }
+
+            # break after anything that is not if-like
+            $break_alignment_before ||= $type_m eq ';'
+              || ( $type_m eq '}'
+                && $block_type_m ne 'if'
+                && $block_type_m ne 'unless'
+                && $block_type_m ne 'elsif'
+                && $block_type_m ne 'else' );
+        }
+
         my $rvertical_tightness_flags =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
             $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
-
-        # flush an outdented line to avoid any unwanted vertical alignment
-        $self->flush_vertical_aligner() if ($is_outdented_line);
 
         # Set a flag at the final ':' of a ternary chain to request
         # vertical alignment of the final term.  Here is a
@@ -16755,7 +16776,6 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
         $rvalign_hash->{is_terminal_statement}     = $is_semicolon_terminated;
-        $rvalign_hash->{do_not_pad}                = $do_not_pad;
         $rvalign_hash->{rvertical_tightness_flags} = $rvertical_tightness_flags;
         $rvalign_hash->{level_jump}                = $level_jump;
         $rvalign_hash->{rfields}                   = $rfields;
@@ -16764,14 +16784,13 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
         $rvalign_hash->{terminal_block_type}       = $terminal_block_type;
         $rvalign_hash->{batch_count}               = $batch_count;
+        $rvalign_hash->{break_alignment_before}    = $break_alignment_before;
+        $rvalign_hash->{break_alignment_after}     = $break_alignment_after;
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
 
         $in_comma_list = $type_end eq ',' && $forced_breakpoint;
-
-        # flush an outdented line to avoid any unwanted vertical alignment
-        $self->flush_vertical_aligner() if ($is_outdented_line);
 
         $do_not_pad = 0;
 

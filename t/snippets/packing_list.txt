@@ -299,6 +299,11 @@
 ../snippets23.t	listop1.listop1
 ../snippets23.t	sbcp.def
 ../snippets23.t	sbcp.sbcp1
+../snippets23.t	wnxl.def
+../snippets23.t	wnxl.wnxl1
+../snippets23.t	wnxl.wnxl2
+../snippets23.t	wnxl.wnxl3
+../snippets23.t	wnxl.wnxl4
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -439,8 +444,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets23.t	wnxl.def
-../snippets23.t	wnxl.wnxl1
-../snippets23.t	wnxl.wnxl2
-../snippets23.t	wnxl.wnxl3
-../snippets23.t	wnxl.wnxl4
