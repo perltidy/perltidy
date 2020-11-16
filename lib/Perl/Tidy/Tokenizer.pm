@@ -698,24 +698,24 @@ sub get_line {
         _line_type                 => 'EOF',
         _line_text                 => $input_line,
         _line_number               => $input_line_number,
-        _rtoken_type               => undef,
-        _rtokens                   => undef,
-        _rlevels                   => undef,
-        _rslevels                  => undef,
-        _rblock_type               => undef,
-        _rcontainer_type           => undef,
-        _rcontainer_environment    => undef,
-        _rtype_sequence            => undef,
-        _rnesting_tokens           => undef,
-        _rci_levels                => undef,
-        _rnesting_blocks           => undef,
         _guessed_indentation_level => 0,
-        _starting_in_quote    => 0,                    # to be set by subroutine
-        _ending_in_quote      => 0,
-        _curly_brace_depth    => $brace_depth,
-        _square_bracket_depth => $square_bracket_depth,
-        _paren_depth          => $paren_depth,
-        _quote_character      => '',
+        _curly_brace_depth         => $brace_depth,
+        _square_bracket_depth      => $square_bracket_depth,
+        _paren_depth               => $paren_depth,
+        _quote_character           => '',
+##        _rtoken_type               => undef,
+##        _rtokens                   => undef,
+##        _rlevels                   => undef,
+##        _rslevels                  => undef,
+##        _rblock_type               => undef,
+##        _rcontainer_type           => undef,
+##        _rcontainer_environment    => undef,
+##        _rtype_sequence            => undef,
+##        _rnesting_tokens           => undef,
+##        _rci_levels                => undef,
+##        _rnesting_blocks           => undef,
+##        _starting_in_quote         => 0,
+##        _ending_in_quote           => 0,
     };
 
     # must print line unchanged if we are in a here document
@@ -1743,10 +1743,10 @@ sub prepare_for_a_new_file {
             #   /^(print|printf|sort|exec|system)$/
             if (
                 $is_indirect_object_taker{$last_nonblank_token}
-
                 || ( ( $last_nonblank_token eq '(' )
                     && $is_indirect_object_taker{ $paren_type[$paren_depth] } )
-                || ( $last_nonblank_type =~ /^[Uw]$/ )    # possible object
+                || (   $last_nonblank_type eq 'w'
+                    || $last_nonblank_type eq 'U' )    # possible object
               )
             {
                 $type = 'Z';
