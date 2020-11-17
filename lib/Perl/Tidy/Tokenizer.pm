@@ -14,7 +14,7 @@
 # The Tokenizer returns a reference to a data structure 'line_of_tokens'
 # containing one tokenized line for each call to its get_line() method.
 #
-# WARNING: This is not a real class yet.  Only one tokenizer my be used.
+# WARNING: This is not a real class.  Only one tokenizer my be used.
 #
 ########################################################################
 
@@ -1611,6 +1611,139 @@ sub prepare_for_a_new_file {
         return;
     }
 
+    use constant VERIFY_FASTSCAN => 0;
+    my %fast_scan_context;
+
+    BEGIN {
+        %fast_scan_context = (
+            '$' => SCALAR_CONTEXT,
+            '*' => SCALAR_CONTEXT,
+            '@' => LIST_CONTEXT,
+            '%' => LIST_CONTEXT,
+            '&' => UNKNOWN_CONTEXT,
+        );
+    }
+
+    sub scan_identifier_fast {
+
+        # This is a wrapper for sub scan_identifier. It does a fast preliminary
+        # scan for certain common identifiers:
+        #   '$var', '@var', %var, *var, &var, '@{...}', '%{...}'
+        # If it does not find one of these, or this is a restart, it calls the
+        # original scanner directly.
+
+	# This gives the same results as the full scanner in about 1/4 the
+	# total runtime for a typical input stream.
+
+        my $i_begin   = $i;
+        my $tok_begin = $tok;
+        my $fast_scan_type;
+
+        ###############################
+        # quick scan with leading sigil
+        ###############################
+        if (  !$id_scan_state
+            && $i + 1 <= $max_token_index
+            && $fast_scan_context{$tok} )
+        {
+            $context = $fast_scan_context{$tok};
+
+            # look for $var, @var, ...
+            if ( $rtoken_type->[ $i + 1 ] eq 'w' ) {
+                my $pretype_next = "";
+                my $i_next       = $i + 2;
+                if ( $i_next <= $max_token_index ) {
+                    if (   $rtoken_type->[$i_next] eq 'b'
+                        && $i_next < $max_token_index )
+                    {
+                        $i_next += 1;
+                    }
+                    $pretype_next = $rtoken_type->[$i_next];
+                }
+                if ( $pretype_next ne ':' && $pretype_next ne "'" ) {
+
+                    # Found type 'i' like '$var', '@var', or '%var'
+                    $identifier     = $tok . $rtokens->[ $i + 1 ];
+                    $tok            = $identifier;
+                    $type           = 'i';
+                    $i              = $i + 1;
+                    $fast_scan_type = $type;
+                }
+            }
+
+            # Look for @{ or %{  .
+            # But we must let the full scanner handle things ${ because it may
+            # keep going to get a complete identifier like '${#}'  .
+            elsif (
+                $rtoken_type->[ $i + 1 ] eq '{'
+                && (   $tok_begin eq '@'
+                    || $tok_begin eq '%' )
+              )
+            {
+
+                $identifier     = $tok;
+                $type           = 't';
+                $fast_scan_type = $type;
+            }
+        }
+
+        ############################
+        # Quick scan with leading ->
+        # Look for ->[ and ->{
+        ############################
+        elsif (
+               $tok eq '->'
+            && $i < $max_token_index
+            && (   $rtokens->[ $i + 1 ] eq '{'
+                || $rtokens->[ $i + 1 ] eq '[' )
+          )
+        {
+            $type           = $tok;
+            $fast_scan_type = $type;
+            $identifier     = $tok;
+            $context        = UNKNOWN_CONTEXT;
+        }
+
+        #######################################
+        # Verify correctness during development
+        #######################################
+        if ( VERIFY_FASTSCAN && $fast_scan_type ) {
+
+            # We will call the full method
+            my $identifier_simple = $identifier;
+            my $tok_simple        = $tok;
+            my $fast_scan_type    = $type;
+            my $i_simple          = $i;
+            my $context_simple    = $context;
+
+            $tok = $tok_begin;
+            $i   = $i_begin;
+            scan_identifier();
+
+            if (   $tok ne $tok_simple
+                || $type ne $fast_scan_type
+                || $i != $i_simple
+                || $identifier ne $identifier_simple
+                || $id_scan_state
+                || $context ne $context_simple )
+            {
+                print STDERR <<EOM;
+scan_identifier_fast differs from scan_identifier:
+simple:  i=$i_simple, tok=$tok_simple, type=$fast_scan_type, ident=$identifier_simple, context='$context_simple
+full:    i=$i, tok=$tok, type=$type, ident=$identifier, context='$context state=$id_scan_state
+EOM
+            }
+        }
+
+        ###################################################
+        # call full scanner if fast method did not succeed
+        ###################################################
+        if ( !$fast_scan_type ) {
+            scan_identifier();
+        }
+        return;
+    }
+
     sub scan_id {
         ( $i, $tok, $type, $id_scan_state ) =
           scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
@@ -1623,6 +1756,96 @@ sub prepare_for_a_new_file {
         ( $i, $type, $number ) =
           scan_number_do( $input_line, $i, $rtoken_map, $type,
             $max_token_index );
+        return $number;
+    }
+
+    use constant VERIFY_FASTNUM => 0;
+
+    sub scan_number_fast {
+
+        # This is a wrapper for sub scan_number. It does a fast preliminary
+        # scan for a simple integer.  It calls the original scan_number if it
+        # does not find one.
+
+        my $i_begin   = $i;
+        my $tok_begin = $tok;
+        my $number;
+
+        ##################################
+        # Quick check for (signed) integer
+        ##################################
+
+        # This will be the string of digits:
+        my $i_d   = $i;
+        my $tok_d = $tok;
+        my $typ_d = $rtoken_type->[$i_d];
+
+        # check for signed integer
+        my $sign = "";
+        if (   $typ_d ne 'd'
+            && ( $typ_d eq '+' || $typ_d eq '-' )
+            && $i_d < $max_token_index )
+        {
+            $sign = $tok_d;
+            $i_d++;
+            $tok_d = $rtokens->[$i_d];
+            $typ_d = $rtoken_type->[$i_d];
+        }
+
+        # Handle integers
+        if (
+            $typ_d eq 'd'
+            && (
+                $i_d == $max_token_index
+                || (   $i_d < $max_token_index
+                    && $rtoken_type->[ $i_d + 1 ] ne '.'
+                    && $rtoken_type->[ $i_d + 1 ] ne 'w' )
+            )
+          )
+        {
+            # Let let full scanner handle multi-digit integers beginning with
+            # '0' because there could be error messages.  For example, '009' is
+            # not a valid number.
+
+            if ( $tok_d eq '0' || substr( $tok_d, 0, 1 ) ne '0' ) {
+                $number = $sign . $tok_d;
+                $type   = 'n';
+                $i      = $i_d;
+            }
+        }
+
+        #######################################
+        # Verify correctness during development
+        #######################################
+        if ( VERIFY_FASTNUM && defined($number) ) {
+
+            # We will call the full method
+            my $type_simple   = $type;
+            my $i_simple      = $i;
+            my $number_simple = $number;
+
+            $tok    = $tok_begin;
+            $i      = $i_begin;
+            $number = scan_number();
+
+            if (   $type ne $type_simple
+                || ( $i != $i_simple && $i <= $max_token_index )
+                || $number ne $number_simple )
+            {
+                print STDERR <<EOM;
+scan_number_fast differs from scan_number:
+simple:  i=$i_simple, type=$type_simple, number=$number_simple
+full:  i=$i, type=$type, number=$number
+EOM
+            }
+        }
+
+        #########################################
+        # call full scanner if may not be integer
+        #########################################
+        if ( !defined($number) ) {
+            $number = scan_number();
+        }
         return $number;
     }
 
@@ -1732,7 +1955,7 @@ sub prepare_for_a_new_file {
             # start looking for a scalar
             error_if_expecting_OPERATOR("Scalar")
               if ( $expecting == OPERATOR );
-            scan_identifier();
+            scan_identifier_fast();
 
             if ( $identifier eq '$^W' ) {
                 $tokenizer_self->[_saw_perl_dash_w_] = 1;
@@ -2014,6 +2237,7 @@ sub prepare_for_a_new_file {
 
             # ATTRS: for a '{' following an attribute list, reset
             # things to look like we just saw the sub name
+            # FIXME: need to end with \b here??
             if ( $statement_type =~ /^sub/ ) {
                 $last_nonblank_token = $statement_type;
                 $last_nonblank_type  = 'i';
@@ -2171,7 +2395,7 @@ sub prepare_for_a_new_file {
                 # For example we probably don't want & as sub call here:
                 #    Fcntl::S_IRUSR & $mode;
                 if ( $expecting == TERM || $next_type ne 'b' ) {
-                    scan_identifier();
+                    scan_identifier_fast();
                 }
             }
             else {
@@ -2251,7 +2475,7 @@ sub prepare_for_a_new_file {
         '*' => sub {    # typeglob, or multiply?
 
             if ( $expecting == TERM ) {
-                scan_identifier();
+                scan_identifier_fast();
             }
             else {
 
@@ -2347,7 +2571,7 @@ sub prepare_for_a_new_file {
         '+' => sub {    # what kind of plus?
 
             if ( $expecting == TERM ) {
-                my $number = scan_number();
+                my $number = scan_number_fast();
 
                 # unary plus is safest assumption if not a number
                 if ( !defined($number) ) { $type = 'p'; }
@@ -2362,7 +2586,7 @@ sub prepare_for_a_new_file {
 
             error_if_expecting_OPERATOR("Array")
               if ( $expecting == OPERATOR );
-            scan_identifier();
+            scan_identifier_fast();
         },
         '%' => sub {    # hash or modulo?
 
@@ -2371,7 +2595,7 @@ sub prepare_for_a_new_file {
                 if ( $next_type ne 'b' ) { $expecting = TERM }
             }
             if ( $expecting == TERM ) {
-                scan_identifier();
+                scan_identifier_fast();
             }
         },
         '[' => sub {
@@ -2426,7 +2650,7 @@ sub prepare_for_a_new_file {
                 }
             }
             elsif ( $expecting == TERM ) {
-                my $number = scan_number();
+                my $number = scan_number_fast();
 
                 # maybe part of bareword token? unary is safest
                 if ( !defined($number) ) { $type = 'm'; }
@@ -2573,7 +2797,7 @@ sub prepare_for_a_new_file {
 
             # if -> points to a bare word, we must scan for an identifier,
             # otherwise something like ->y would look like the y operator
-            scan_identifier();
+            scan_identifier_fast();
         },
 
         # type = 'pp' for pre-increment, '++' for post-increment
@@ -2928,7 +3152,7 @@ sub prepare_for_a_new_file {
                     $routput_token_type->[$i] = $type;
 
                 }
-                $tok = $quote_character if ($quote_character); 
+                $tok = $quote_character if ($quote_character);
 
                 # scan for the end of the quote or pattern
                 (
@@ -3787,7 +4011,8 @@ EOM
                   operator_expected( [ $prev_type, $tok, $next_type ] );
                 error_if_expecting_OPERATOR("Number")
                   if ( $expecting == OPERATOR );
-                my $number = scan_number();
+
+                my $number = scan_number_fast();
                 if ( !defined($number) ) {
 
                     # shouldn't happen - we should always get a number
@@ -4196,7 +4421,8 @@ EOM
 
                 $ci_string_in_tokenizer .=
                   ( $intervening_secondary_structure != 0 ) ? '1' : '0';
-                $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
+                $ci_string_sum =
+                  ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
                 $continuation_string_in_tokenizer .=
                   ( $in_statement_continuation > 0 ) ? '1' : '0';
 
@@ -4253,7 +4479,8 @@ EOM
                       substr( $nesting_list_string, -1 ) eq '1';
 
                     chop $ci_string_in_tokenizer;
-                    $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
+                    $ci_string_sum =
+                      ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
 
                     $in_statement_continuation =
                       chop $continuation_string_in_tokenizer;

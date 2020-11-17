@@ -61,7 +61,7 @@
 
     - Added 'state' as a keyword.
 
-    - This version is about 15% faster than previous versions due to some optimizations
+    - This version is about 20% faster than the previous version due to optimizations
       made with the help of Devel::NYTProf.
 
     - Line breaks are now automatically placed after 'use overload' to 
