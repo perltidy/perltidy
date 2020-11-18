@@ -1,0 +1,10 @@
+# align all '{' and runs of '='
+if    ( $line =~ /^NAME>(.*)/i )       { $Cookies{'name'} = $1; }
+elsif ( $line =~ /^EMAIL>(.*)/i )      { $email = $1; }
+elsif ( $line =~ /^IP_ADDRESS>(.*)/i ) { $ipaddress = $1; }
+elsif ( $line =~ /^<!--(.*)-->/i )     { $remoteuser = $1; }
+elsif ( $line =~ /^PASSWORD>(.*)/i )   { next; }
+elsif ( $line =~ /^IMAGE>(.*)/i )      { $image_url = $1; }
+elsif ( $line =~ /^LINKNAME>(.*)/i )   { $linkname = $1; }
+elsif ( $line =~ /^LINKURL>(.*)/i )    { $linkurl = $1; }
+else                                   { $body .= $line; }

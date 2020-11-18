@@ -16,6 +16,7 @@
 #13 wnxl.wnxl2
 #14 wnxl.wnxl3
 #15 wnxl.wnxl4
+#16 align34.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -73,6 +74,19 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align34' => <<'----------',
+# align all '{' and runs of '='
+if    ( $line =~ /^NAME>(.*)/i )       { $Cookies{'name'} = $1; }
+elsif ( $line =~ /^EMAIL>(.*)/i )      { $email = $1; }
+elsif ( $line =~ /^IP_ADDRESS>(.*)/i ) { $ipaddress = $1; }
+elsif ( $line =~ /^<!--(.*)-->/i )     { $remoteuser = $1; }
+elsif ( $line =~ /^PASSWORD>(.*)/i )   { next; }
+elsif ( $line =~ /^IMAGE>(.*)/i )      { $image_url = $1; }
+elsif ( $line =~ /^LINKNAME>(.*)/i )   { $linkname = $1; }
+elsif ( $line =~ /^LINKURL>(.*)/i )    { $linkurl = $1; }
+else                                   { $body .= $line; }
+----------
 
         'boa' => <<'----------',
 my @field
@@ -469,6 +483,23 @@ threads->create( sub {
     $hash3{"thread"} = "yes";
 } )->join();
 #15...........
+        },
+
+        'align34.def' => {
+            source => "align34",
+            params => "def",
+            expect => <<'#16...........',
+# align all '{' and runs of '='
+if    ( $line =~ /^NAME>(.*)/i )       { $Cookies{'name'} = $1; }
+elsif ( $line =~ /^EMAIL>(.*)/i )      { $email           = $1; }
+elsif ( $line =~ /^IP_ADDRESS>(.*)/i ) { $ipaddress       = $1; }
+elsif ( $line =~ /^<!--(.*)-->/i )     { $remoteuser      = $1; }
+elsif ( $line =~ /^PASSWORD>(.*)/i )   { next; }
+elsif ( $line =~ /^IMAGE>(.*)/i )      { $image_url = $1; }
+elsif ( $line =~ /^LINKNAME>(.*)/i )   { $linkname  = $1; }
+elsif ( $line =~ /^LINKURL>(.*)/i )    { $linkurl   = $1; }
+else                                   { $body .= $line; }
+#16...........
         },
     };
 
