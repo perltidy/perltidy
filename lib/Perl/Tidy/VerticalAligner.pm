@@ -1104,8 +1104,9 @@ sub check_match {
     my ( $self, $new_line, $old_line ) = @_;
 
     # returns a flag and a value as follows:
-    #    return (1, $imax_align)     if the line matches and fits
-    #    return (0, $imax_align)     if the line does not match or fit
+    #    return (0, $imax_align)     if the line does not match
+    #    return (1, $imax_align)     if the line matches but does not fit
+    #    return (2, $imax_align)     if the line matches and fits
 
     # Variable $imax_align will be set to indicate the maximum token index to
     # be matched in the subsequent left-to-right sweep, in the case that this
@@ -1281,13 +1282,13 @@ sub check_match {
 
         EXPLAIN_CHECK_MATCH
           && print "match and fit, imax_align=$imax_align, jmax=$jmax\n";
-        return ( 1, $jlimit );
+        return ( 2, $jlimit );
     }
     else {
 
         EXPLAIN_CHECK_MATCH
           && print "match but no fit, imax_align=$imax_align, jmax=$jmax\n";
-        return ( 0, $jlimit );
+        return ( 1, $jlimit );
     }
 
   NO_MATCH:
@@ -1754,10 +1755,11 @@ EOM
 
             # See if the new line matches and fits the current group,
             # if it still exists. Flush the current group if not.
+            my $match_code;
             if ($group_line_count) {
-                my ( $is_match, $imax_align ) =
+                ( $match_code, my $imax_align ) =
                   $self->check_match( $new_line, $base_line );
-                if ( !$is_match ) { end_rgroup($imax_align) }
+                if ( $match_code != 2 ) { end_rgroup($imax_align) }
             }
 
             # Store the new line
@@ -1765,11 +1767,27 @@ EOM
 
             if ( defined($j_terminal_match) ) {
 
-                # if there is only one line in the group (maybe due to failure
-                # to match perfectly with previous lines), then align the ? or
-                # { of this terminal line with the previous one unless that
-                # would make the line too long
+                # Decide if we should fix a terminal match. We can either:
+                # 1. fix it and prevent the sweep from changing it, or
+                # 2. leave it alone and let sweep try to fix it.
+
+                # The current logic is to fix it if:
+                # -it has not joined to previous lines,
+                # -and either the previous subgroup has just 1 line, or
+                # -this line matched but did not fit (so sweep won't work)
+                my $fixit;
                 if ( $group_line_count == 1 ) {
+                    $fixit ||= $match_code;
+                    if ( !$fixit ) {
+                        if ( @{$rgroups} > 1 ) {
+                            my ( $jbegx, $jendx ) = @{ $rgroups->[-2] };
+                            my $nlines = $jendx - $jbegx + 1;
+                            $fixit ||= $nlines <= 1;
+                        }
+                    }
+                }
+
+                if ($fixit) {
                     $base_line = $new_line;
                     my $col_now = $base_line->get_column($j_terminal_match);
 
@@ -1894,13 +1912,14 @@ sub sweep_left_to_right {
         }
 
         # Special treatment of two one-line groups isolated from other lines,
-        # unless they form a simple list.  The alignment in this case can look
-        # strange in some cases.
+        # unless they form a simple list or a terminal match.  Otherwise the
+        # alignment can look strange in some cases.
         if (   $jend == $jbeg
             && $jend_m == $jbeg_m
             && !$rlines->[$jbeg]->get_list_type()
             && ( $ng == 1 || $istop_mm < 0 )
-            && ( $ng == $ng_max || $istop < 0 ) )
+            && ( $ng == $ng_max || $istop < 0 )
+            && !$line->get_j_terminal_match() )
         {
 
             # We will just align a leading equals
