@@ -126,14 +126,14 @@ BEGIN {
     # produce a lot of output It should be 0 except when debugging small
     # scripts.
 
-    use constant VALIGN_DEBUG_FLAG_TABS => 0;
+    use constant DEBUG_TABS => 0;
 
     my $debug_warning = sub {
         print STDOUT "VALIGN_DEBUGGING with key $_[0]\n";
         return;
     };
 
-    VALIGN_DEBUG_FLAG_TABS && $debug_warning->('TABS');
+    DEBUG_TABS && $debug_warning->('TABS');
 
 }
 
@@ -335,6 +335,8 @@ sub push_group_line {
     return;
 }
 
+use constant DEBUG_VALIGN => 0;
+
 sub valign_input {
 
     # Place one line in the current vertical group.
@@ -456,7 +458,7 @@ sub valign_input {
 
     my $group_level = $self->[_group_level_];
 
-    0 && do {
+    DEBUG_VALIGN && do {
         my $nlines = $self->group_line_count();
         print STDOUT
 "Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count force=$is_forced_break, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
@@ -722,7 +724,7 @@ EOM
     # --------------------------------------------------------------------
     # Some old debugging stuff
     # --------------------------------------------------------------------
-    0 && do {
+    DEBUG_VALIGN && do {
         print STDOUT "exiting valign_input fields:";
         dump_array( @{$rfields} );
         print STDOUT "exiting valign_input tokens:";
@@ -4542,7 +4544,7 @@ sub valign_output_step_D {
 
                 # shouldn't happen - program error counting whitespace
                 # - skip entabbing
-                VALIGN_DEBUG_FLAG_TABS
+                DEBUG_TABS
                   && $self->warning(
 "Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
                   );
@@ -4560,7 +4562,7 @@ sub valign_output_step_D {
 
                 # But it could be an outdented comment
                 if ( $line !~ /^\s*#/ ) {
-                    VALIGN_DEBUG_FLAG_TABS
+                    DEBUG_TABS
                       && $self->warning(
 "Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
                       );
@@ -4577,7 +4579,7 @@ sub valign_output_step_D {
 
                 # shouldn't happen - program error counting whitespace
                 # we'll skip entabbing
-                VALIGN_DEBUG_FLAG_TABS
+                DEBUG_TABS
                   && $self->warning(
 "Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
                   );
@@ -4646,7 +4648,7 @@ sub valign_output_step_D {
 
             # shouldn't happen:
             if ( $space_count < 0 ) {
-                VALIGN_DEBUG_FLAG_TABS
+                DEBUG_TABS
                   && $self->warning(
 "Error in get_leading_string: for level=$group_level count=$leading_whitespace_count\n"
                   );
