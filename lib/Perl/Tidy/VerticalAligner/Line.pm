@@ -147,15 +147,6 @@ EOM
         return $alignment->get_column();
     }
 
-    sub increment_column {
-        my ( $self, $k, $pad ) = @_;
-        my $alignment = $self->[_ralignments_]->[$k];
-        if ( defined($alignment) ) {
-            $alignment->increment_column($pad);
-        }
-        return;
-    }
-
     sub set_alignments {
         my ( $self, @args ) = @_;
         @{ $self->[_ralignments_] } = @args;
@@ -175,15 +166,18 @@ EOM
     sub increase_field_width {
 
         my ( $self, $j, $pad ) = @_;
-        my $jmax = $self->get_jmax();
-        for my $k ( $j .. $jmax ) {
-            $self->increment_column( $k, $pad );
+        my $jmax = $self->[_jmax_];
+        foreach ( $j .. $jmax ) {
+            my $alignment = $self->[_ralignments_]->[$_];
+            if ( defined($alignment) ) {
+                $alignment->increment_column($pad);
+            }
         }
         return;
     }
 
     sub get_available_space_on_right {
-        my $jmax = $_[0]->get_jmax();
+        my $jmax = $_[0]->[_jmax_];
         return $_[0]->[_maximum_line_length_] - $_[0]->get_column($jmax);
     }
 
@@ -213,24 +207,6 @@ EOM
         return;
     }
 
-    sub set_indentation {
-        my ( $self, $val ) = @_;
-        $self->[_indentation_] = $val;
-        return;
-    }
-
-    sub set_leading_space_count {
-        my ( $self, $val ) = @_;
-        $self->[_leading_space_count_] = $val;
-        return;
-    }
-
-    sub set_outdent_long_lines {
-        my ( $self, $val ) = @_;
-        $self->[_outdent_long_lines_] = $val;
-        return;
-    }
-
     sub set_list_type {
         my ( $self, $val ) = @_;
         $self->[_list_type_] = $val;
@@ -256,8 +232,6 @@ EOM
         $self->[_end_group_] = $val;
         return;
     }
-
 }
 
 1;
-
