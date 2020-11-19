@@ -1774,7 +1774,6 @@ sub set_whitespace_flags {
     my $rLL  = $self->[_rLL_];
     use constant DEBUG_WHITE => 0;
 
-    my $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
     my $rOpts_space_function_paren  = $rOpts->{'space-function-paren'};
