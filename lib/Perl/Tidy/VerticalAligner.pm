@@ -1307,8 +1307,8 @@ sub check_fit {
     my ( $self, $new_line, $old_line ) = @_;
 
     # The new line has alignments identical to the current group. Now we have
-    # to fit the new line into the group without causing a field
-    # to exceed the line length limit.
+    # to fit the new line into the group without causing a field to exceed the
+    # line length limit.
     #   return true if successful
     #   return false if not successful
 
@@ -1318,8 +1318,10 @@ sub check_fit {
     my $padding_available   = $old_line->get_available_space_on_right();
     my $jmax_old            = $old_line->get_jmax();
 
-    # safety check ... only lines with equal array lengths should arrive here
-    # from sub check_match
+    # Safety check ... only lines with equal array sizes should arrive here
+    # from sub check_match.  So if this error occurs, look at recent changes in
+    # sub check_match.  It is only supposed to check the fit of lines with
+    # identical numbers of alignment tokens.
     if ( $jmax_old ne $jmax ) {
 
         $self->warning(<<EOM);

@@ -5,7 +5,7 @@
 - compare formatting with the new version with previous version on all files in test area
 - run a blinker test (activate option -I and look for 'Blinker' in DIAGNOSTICS)
 - run a timing test: compare run time with previous version
-- profile with 'nytprof' with different parameters and compare with previous version: For example
+- profile with Devel::NYTProf with different parameters and compare with previous version: For example
   perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
   nytprofhtml --open
 - run random testing on final version for a significant time before releasing (several days)
@@ -29,11 +29,11 @@
 - run podchecker on all .pod files
 - run ispell on all .pod files
 - Be sure builds at Travis.CI and Appveyor are clean for all version of perl
-- update VERSION numbers in these files (build.pl can do this):
+- update VERSION numbers in all modules and some docs (build.pl can do this):
    - lib/Perl/Tidy.pm
    - lib/Perl/Tidy.pod
    - bin/perltidy
-   - local-docs/ChangeLog.pod
+   - CHANGES.md
 - make manifest
     - check MANIFEST over very carefully
     - sometimes it is necessary to remove MANIFEST and then do "make manifest"
@@ -43,7 +43,7 @@
    - make test
    - make dist
 - *IMPORTANT:* Now untar the file (perhaps in /tmp) and take a look at the
-  contents.  Be sure it does not have unwanted stuff
+  contents.  Be sure it does not have unwanted files.
    - If necessary, remove MANIFEST, fix MANIFEST.SKIP and run make manifest again
 - Do test installs on several systems 
 - Upload Release to CPAN
