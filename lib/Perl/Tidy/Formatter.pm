@@ -1535,7 +1535,7 @@ sub initialize_weld_nested_exclusion_rules {
     # with spaces separating any number of items.  Each item consists of three
     # pieces of information:
     # <optional position> <optional type> <type of container>
-    # <     ^ or .      > <    k or K   > <     ( [ {       >
+    # <     ^ or .      > <[k K f F w W]> <     ( [ {       >
 
     # The last character is the required container type and must be one of:
     # ( = paren
@@ -1551,6 +1551,10 @@ sub initialize_weld_nested_exclusion_rules {
     # token selects to which the rule applies:
     # k = any keyword
     # K = any non-keyword
+    # f = function
+    # F = not a function call
+    # w = function or keyword
+    # W = not a function or keyword
     #     no letter means any preceding type matches
 
     # Examples:
@@ -1587,7 +1591,7 @@ sub initialize_weld_nested_exclusion_rules {
         my $pos    = '*';
         my $select = '*';
         if ($item) {
-            if ( $item =~ /^([\^\.])?([kK])?$/ ) {
+            if ( $item =~ /^([\^\.])?([kKfFwW])?$/ ) {
                 $pos    = $1 if ($1);
                 $select = $2 if ($2);
             }
@@ -6325,14 +6329,35 @@ sub is_excluded_weld {
     my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
     return 0 unless ( defined($flag) );
     return 1 if $flag eq '*';
-    my $Kp     = $self->K_previous_nonblank($KK);
-    my $type_p = 'b';
-    if ( defined($Kp) ) { $type_p = $rLL->[$Kp]->[_TYPE_] }
 
-    if ( $flag eq 'k' && $type_p eq 'k' || $flag eq 'K' && $type_p ne 'k' ) {
-        return 1;
+    my ( $is_f, $is_k, $is_w );
+    my $Kp = $self->K_previous_nonblank($KK);
+    if ( defined($Kp) ) {
+        my $type_p  = $rLL->[$Kp]->[_TYPE_];
+        my $token_p = $rLL->[$Kp]->[_TOKEN_];
+
+        # keyword?
+        $is_k = $type_p eq 'k';
+
+        # function call? Use the same definition as used for
+        # the parameter 'space-function-paren'
+        $is_f =
+             $type_p =~ /^[wUG]$/
+          || $type_p eq '->'
+          || $type_p =~ /^[wi]$/ && $token_p =~ /^(\&|->)/;
+
+        # either keyword or function call?
+        $is_w = $is_k || $is_f;
     }
-    return 0;
+
+    my $match;
+    if    ( $flag eq 'k' ) { $match = $is_k }
+    elsif ( $flag eq 'K' ) { $match = !$is_k }
+    elsif ( $flag eq 'f' ) { $match = $is_f }
+    elsif ( $flag eq 'F' ) { $match = !$is_f }
+    elsif ( $flag eq 'w' ) { $match = $is_w }
+    elsif ( $flag eq 'W' ) { $match = !$is_w }
+    return $match;
 }
 
 sub weld_nested_containers {

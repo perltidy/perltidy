@@ -1945,19 +1945,19 @@
 <dt id="wnxl-s---weld-nested-exclusion-list"><b>-wnxl=s</b>, <b>--weld-nested-exclusion-list</b></dt>
 <dd>
 
-<p>The <b>-wnxl=s</b> flag provides some control over the types of containers which can be welded. The <b>-wn</b> flag by default is &quot;greedy&quot; in welding adjacent containers. If it welds more types of containers than desired, this flag can reduce the amount of welding by specifying a list of things which should <b>not</b> be welded.</p>
+<p>The <b>-wnxl=s</b> flag provides some control over the types of containers which can be welded. The <b>-wn</b> flag by default is &quot;greedy&quot; in welding adjacent containers. If it welds more types of containers than desired, this flag provides a capability to reduce the amount of welding by specifying a list of things which should <b>not</b> be welded.</p>
 
-<p>The logic in perltidy to apply this is straightforward. As each token is being considered for joining a weld, any exclusion rules are consulted and used to reject the weld if necessary.</p>
+<p>The logic in perltidy to apply this is straightforward. As each container token is being considered for joining a weld, any exclusion rules are consulted and used to reject the weld if necessary.</p>
 
 <p>This list is a string with space-separated items. Each item consists of up to three pieces of information: (1) an optional positiion, (2) an optional preceding type, and (3) a container type.</p>
 
-<p>The required piece of information, a container type, is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. For example the string</p>
+<p>The only required piece of information is a container type, which is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. For example the string</p>
 
 <pre><code>  -wnxl=&#39;[ { q&#39;</code></pre>
 
 <p>means do <b>NOT</b> include square-bracets, braces, or quotes in any welds. The only unspecified container is &#39;(&#39;, so this string means that only welds involving parens will be made.</p>
 
-<p>To illustrate this terminology, following welded snippet consists of a chain of three welded containers with types &#39;(&#39; &#39;[&#39; and &#39;q&#39;:</p>
+<p>To illustrate, following welded snippet consists of a chain of three welded containers with types &#39;(&#39; &#39;[&#39; and &#39;q&#39;:</p>
 
 <pre><code>    # perltidy -wn
     skip_symbols( [ qw(
@@ -1971,13 +1971,20 @@
 
 <p>Any of the container types &#39;[&#39;, &#39;{&#39;, and &#39;(&#39; may be prefixed with a position indicator which is either &#39;^&#39;, to indicate the first token of a welded sequence, or &#39;.&#39;, to indicate an interior token of a welded sequence. (Since a quoted string &#39;q&#39; always ends a chain it does need a position indicator).</p>
 
-<p>If we do not want a sequence of welded containers to start with a square bracket we could use</p>
+<p>For example, if we do not want a sequence of welded containers to start with a square bracket we could use</p>
 
 <pre><code>  -wnxl=&#39;^[&#39;</code></pre>
 
-<p>In the above snippet, there is a square bracket but it does not start the chain, so the formatting would be unchanged with this restriction.</p>
+<p>In the above snippet, there is a square bracket but it does not start the chain, so the formatting would be unchanged if it were formatted with this restriction.</p>
 
-<p>A third optional item of information which can be given is an alphanumeric letter which limits the selection depending on the type of token immediately before the container. If given, it goes just before the container symbol. There are, at present, just two possible letters: &#39;k&#39; matches if the previous token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;), and &#39;K&#39; matches if the previous token is not a keyword.</p>
+<p>A third optional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the container. If given, it goes just before the container symbol. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
+
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;), 
+ &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
+ &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;F&#39; matches if &#39;f&#39; does not.
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
+ &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
 
 <p>For example, compare</p>
 
@@ -1994,7 +2001,7 @@
                   {&#39;username&#39;} }
         ) )</code></pre>
 
-<p>The first case does maximum welding. In the second case the leading paren is retained by the rule (it would have been rejected if preceded by a non-keyword) but the curly brace is rejected.</p>
+<p>The first case does maximum welding. In the second case the leading paren is retained by the rule (it would have been rejected if preceded by a non-keyword) but the curly brace is rejected by the rule.</p>
 
 <p>Here are some additional example strings and their meanings:</p>
 

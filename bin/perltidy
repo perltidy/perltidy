@@ -2445,30 +2445,30 @@ any other container stacking flags.  This is because any welding is done first.
 =item B<-wnxl=s>,  B<--weld-nested-exclusion-list> 
 
 The B<-wnxl=s> flag provides some control over the types of containers which
-can be welded.  The B<-wn> flag by default is "greedy" in welding
-adjacent containers.  If it welds more types of containers than desired,
-this flag can reduce the amount of welding by specifying a list of
-things which should B<not> be welded. 
+can be welded.  The B<-wn> flag by default is "greedy" in welding adjacent
+containers.  If it welds more types of containers than desired, this flag
+provides a capability to reduce the amount of welding by specifying a list
+of things which should B<not> be welded. 
 
-The logic in perltidy to apply this is straightforward.  As each token is being
-considered for joining a weld, any exclusion rules are consulted and used to
-reject the weld if necessary.
+The logic in perltidy to apply this is straightforward.  As each container
+token is being considered for joining a weld, any exclusion rules are consulted
+and used to reject the weld if necessary.
 
 This list is a string with space-separated items.  Each item consists of up to
 three pieces of information: (1) an optional positiion, (2) an optional
 preceding type, and (3) a container type.
 
-The required piece of information, a container type, is one of '(', '[', '{' or
-'q'.  The first three of these are container tokens and the last represents a
-quoted list.  For example the string
+The only required piece of information is a container type, which is one of
+'(', '[', '{' or 'q'.  The first three of these are container tokens and the
+last represents a quoted list.  For example the string
 
   -wnxl='[ { q'
 
 means do B<NOT> include square-bracets, braces, or quotes in any welds.  The only unspecified
 container is '(', so this string means that only welds involving parens will be made. 
 
-To illustrate this terminology, following welded snippet consists of 
-a chain of three welded containers with types '(' '[' and 'q':
+To illustrate, following welded snippet consists of a chain of three welded
+containers with types '(' '[' and 'q':
 
     # perltidy -wn
     skip_symbols( [ qw(
@@ -2487,20 +2487,26 @@ indicator which is either '^', to indicate the first token of a welded
 sequence, or '.', to indicate an interior token of a welded sequence.  (Since
 a quoted string 'q' always ends a chain it does need a position indicator).
 
-If we do not want a sequence of welded containers to start with a square
-bracket we could use
+For example, if we do not want a sequence of welded containers to start with a
+square bracket we could use
 
   -wnxl='^['
 
 In the above snippet, there is a square bracket but it does not start the chain,
-so the formatting would be unchanged with this restriction.
+so the formatting would be unchanged if it were formatted with this restriction.
 
 A third optional item of information which can be given is an alphanumeric
-letter which limits the selection depending on the type of token immediately
-before the container.  If given, it goes just before the container symbol.
-There are, at present, just two possible letters: 'k' matches if the previous
-token is a perl builtin keyword (such as 'if', 'while'), and 'K' matches if the
-previous token is not a keyword. 
+letter which is used to limit the selection further depending on the type of
+token immediately before the container.  If given, it goes just before the
+container symbol.  The possible letters are currently 'k', 'K', 'f', 'F',
+'w', and 'W', with these meanings:
+
+ 'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'), 
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
+ 'f' matches if the previous token is a function other than a keyword.
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
 
 For example, compare
 
@@ -2519,7 +2525,7 @@ with
 
 The first case does maximum welding. In the second case the leading paren is
 retained by the rule (it would have been rejected if preceded by a non-keyword)
-but the curly brace is rejected.
+but the curly brace is rejected by the rule.
 
 Here are some additional example strings and their meanings:
 
