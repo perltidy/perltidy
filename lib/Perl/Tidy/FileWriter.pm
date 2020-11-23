@@ -207,7 +207,7 @@ sub write_code_line {
     if ( defined($K) ) {
 
         # Convergence check: we are checking if all defined K values arrive in
-        # the order which was defined by the caller.  Quite checking if any
+        # the order which was defined by the caller.  Quit checking if any
         # unexpected K value arrives.
         if ( $self->[_K_arrival_order_matches_] ) {
             my $Kt = pop @{ $self->[_rK_checklist_] };
