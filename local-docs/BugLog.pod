@@ -2,6 +2,34 @@
 
 =over 4
 
+=item B<fix to prevent conversion of a block comment to hanging side comment>
+
+A rare situation was identified during testing in which a block comment could
+be converted to be a hanging side comment.  For example:
+
+    sub macro_get_names {    #
+    #
+    # %name = macro_get_names();  (key=macrohandle, value=macroname)
+    #
+        local (%name) = ();
+        ...
+    }
+
+For the following specific contitions the block comment in line 2 could be
+converted into a hanging side comment, which is undesirable:
+
+   1. It contains nothing except for a '#'
+   2. It follows a line with side comment
+   3. It has indentation level > 0
+
+An update was made to prevent this from happening.  There are two cases,
+depending on the value of --maximum-consecutive-blank-lines, or -mbl.  If this
+value is positive (the default) then a blank line is inserted above the block
+comment to prevent it from becoming a hanging side comment.  If this -mbl is
+zero, then the comment is converted to be a static block comment which again
+prevents it from becoming a hanging side comment. This fix was made 23 Nov
+2020.
+
 =item B<improved convergence test>
 
 A better test for convergence has been added. When iterations are requested,
@@ -9,7 +37,7 @@ the new test will stop after the first pass if no changes in line break
 locations are made.  Previously, at least two passes were required to verify
 convergnece unless the output stream had the same checksum as the input stream.
 Extensive testing has been made to verify the correctness of the new test.
-This update was made 23 Nov 2020.
+This update was made 23 Nov 2020, 29efb63.
 
 =item B<fixed problem with vertical alignments involving 'if' statements>
 

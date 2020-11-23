@@ -148,6 +148,7 @@ my (
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
     $rOpts_stack_closing_block_brace,
+    $rOpts_maximum_consecutive_blank_lines,
 
     $rOpts_recombine,
     $rOpts_add_newlines,
@@ -1434,8 +1435,10 @@ EOM
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
-    $rOpts_recombine                 = $rOpts->{'recombine'};
-    $rOpts_add_newlines              = $rOpts->{'add-newlines'};
+    $rOpts_maximum_consecutive_blank_lines =
+      $rOpts->{'maximum-consecutive-blank-lines'};
+    $rOpts_recombine    = $rOpts->{'recombine'};
+    $rOpts_add_newlines = $rOpts->{'add-newlines'};
     $rOpts_break_at_old_comma_breakpoints =
       $rOpts->{'break-at-old-comma-breakpoints'};
     $rOpts_ignore_old_breakpoints    = $rOpts->{'ignore-old-breakpoints'};
@@ -4426,14 +4429,19 @@ sub dump_verbatim {
         # extract what we need for this line..
 
         my $input_line_number = $line_of_tokens->{_line_number};
-
-        my $rK_range = $line_of_tokens->{_rK_range};
+        my $input_line        = $line_of_tokens->{_line_text};
+        my $rK_range          = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
-        my $jmax = -1;
-        if ( defined($Kfirst) ) { $jmax = $Klast - $Kfirst }
-        my $input_line = $line_of_tokens->{_line_text};
+        my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
 
+        my $is_block_comment        = 0;
+        my $has_side_comment        = 0;
         my $is_static_block_comment = 0;
+
+        if ( $jmax >= 0 && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+            if   ( $jmax == 0 ) { $is_block_comment = 1; }
+            else                { $has_side_comment = 1 }
+        }
 
         # Handle a continued quote..
         if ( $line_of_tokens->{_starting_in_quote} ) {
@@ -4444,17 +4452,13 @@ sub dump_verbatim {
                 if ( ( $input_line =~ "\t" ) ) {
                     $self->note_embedded_tab($input_line_number);
                 }
-                $Last_line_had_side_comment = 0;
-                return 'VB';
+                $CODE_type = 'VB';
+                goto RETURN;
             }
         }
 
-        my $is_block_comment =
-          ( $jmax == 0 && $rLL->[$Kfirst]->[_TYPE_] eq '#' );
-
         # Write line verbatim if we are in a formatting skip section
         if ($In_format_skipping_section) {
-            $Last_line_had_side_comment = 0;
 
             # Note: extra space appended to comment simplifies pattern matching
             if ( $is_block_comment
@@ -4464,7 +4468,8 @@ sub dump_verbatim {
                 $In_format_skipping_section = 0;
                 write_logfile_entry("Exiting formatting skip section\n");
             }
-            return 'FS';
+            $CODE_type = 'FS';
+            goto RETURN;
         }
 
         # See if we are entering a formatting skip section
@@ -4475,8 +4480,8 @@ sub dump_verbatim {
         {
             $In_format_skipping_section = 1;
             write_logfile_entry("Entering formatting skip section\n");
-            $Last_line_had_side_comment = 0;
-            return 'FS';
+            $CODE_type = 'FS';
+            goto RETURN;
         }
 
         # ignore trailing blank tokens (they will get deleted later)
@@ -4486,8 +4491,8 @@ sub dump_verbatim {
 
         # Handle a blank line..
         if ( $jmax < 0 ) {
-            $Last_line_had_side_comment = 0;
-            return 'BL';
+            $CODE_type = 'BL';
+            goto RETURN;
         }
 
         # see if this is a static block comment (starts with ## by default)
@@ -4528,25 +4533,36 @@ sub dump_verbatim {
                                                     # like this
           )
         {
-            $Last_line_had_side_comment = 1;
-            return 'HSC';
+            $has_side_comment = 1;
+            $CODE_type        = 'HSC';
+            goto RETURN;
         }
-
-        # remember if this line has a side comment
-        $Last_line_had_side_comment =
-          ( $jmax > 0 && $rLL->[$Klast]->[_TYPE_] eq '#' );
 
         # Handle a block (full-line) comment..
         if ($is_block_comment) {
 
             if ($is_static_block_comment_without_leading_space) {
-                return 'SBCX';
+                $CODE_type = 'SBCX';
+                goto RETURN;
             }
             elsif ($is_static_block_comment) {
-                return 'SBC';
+                $CODE_type = 'SBC';
+                goto RETURN;
+            }
+            elsif ($Last_line_had_side_comment
+                && !$rOpts_maximum_consecutive_blank_lines
+                && $rLL->[$Kfirst]->[_LEVEL_] > 0 )
+            {
+                # Emergency fix to keep a block comment from becoming a hanging
+                # side comment.  This fix is for the case that blank lines
+                # cannot be inserted.  There is related code in sub
+                # 'process_line_of_CODE'
+                $CODE_type = 'SBCX';
+                goto RETURN;
             }
             else {
-                return 'BC';
+                $CODE_type = 'BC';
+                goto RETURN;
             }
         }
 
@@ -4582,7 +4598,11 @@ sub dump_verbatim {
 
             # This code type has lower priority than others
             $CODE_type = 'VER' unless ($CODE_type);
+            goto RETURN;
         }
+
+      RETURN:
+        $Last_line_had_side_comment = $has_side_comment;
         return $CODE_type;
     }
 } ## end closure scan_comments
@@ -8645,13 +8665,13 @@ EOM
                 # only if allowed
                 && $rOpts->{'blanks-before-comments'}
 
-                # if this is NOT an empty comment
-                && (   $rtok_first->[_TOKEN_] ne '#' 
-
-                # FIXME: FUTURE UPDATE; still needs to be coordinated with user parameters
-		# unless following a side comment (otherwise need to insert
-		# blank to prevent creating a hanging side comment)
-                    ) #|| $last_line_had_side_comment )
+                # if this is NOT an empty comment, unless it follows a side
+                # comment and could become a hanging side comment.
+                && (
+                    $rtok_first->[_TOKEN_] ne '#'
+                    || (   $last_line_had_side_comment
+                        && $rLL->[$K_first]->[_LEVEL_] > 0 )
+                )
 
                 # not after a short line ending in an opening token
                 # because we already have space above this comment.
@@ -8683,11 +8703,11 @@ EOM
             else {
 
                 # switching to new output stream
-                $self->flush();    
-                
+                $self->flush();
+
                 # Note that last arg in call here is 'undef' for comments
                 $file_writer_object->write_code_line(
-                    $rtok_first->[_TOKEN_] . "\n", undef ); 
+                    $rtok_first->[_TOKEN_] . "\n", undef );
                 $self->[_last_line_leading_type_] = '#';
             }
             return;

@@ -123,7 +123,7 @@ sub length { return length($_[0]) }    # side comment
                              # hanging side comment
                              # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
 
-# side comments following open brace are not currently treated as hanging side comments
+# a blank will be inserted to prevent forming a hanging side comment
 sub macro_get_names { #
 # 
 # %name = macro_get_names();  (key=macrohandle, value=macroname)
@@ -359,7 +359,7 @@ my ( $a, $b, $c ) = @_;    # test -nsak="my for"
 # an initial hash bang line cannot be deleted with -dp
 sub length { return length( $_[0] ) }
 
-# side comments following open brace are not currently treated as hanging side comments
+# a blank will be inserted to prevent forming a hanging side comment
 sub macro_get_names {
     #
     # %name = macro_get_names();  (key=macrohandle, value=macroname)
