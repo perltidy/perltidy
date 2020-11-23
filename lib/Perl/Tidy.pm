@@ -1454,8 +1454,8 @@ EOM
                 }
                 elsif ($do_convergence_test) {
 
-                    # FIXME: future convergence test
-                    ## $stop_now ||= defined($iteration_of_formatter_convergence); 
+                    # stop if the formatter has converged
+                    $stop_now ||= defined($iteration_of_formatter_convergence); 
 
                     my $digest = $md5_hex->($sink_buffer);
                     if ( !defined( $saw_md5{$digest} ) ) {
