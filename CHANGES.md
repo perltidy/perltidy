@@ -66,9 +66,11 @@
 
     - A better test for convergence has been added. When iterations are requested,
       the new test will stop after the first pass if no changes in line break
-      locations are made.  Previously, at least two passes were required to verify
-      convergnece unless the output stream had the same checksum as the input stream.
-      Extensive testing has been made to verify the correctness of the new test.
+      locations are made.  Previously, file checksums were used and required at least two 
+      passes to verify convergence unless no formatting changes were made.  With the new test, 
+      only a single pass is needed when formatting changes are limited to adjustments of 
+      indentation and whitespace on the lines of code.  Extensive testing has been made to
+      verify the correctness of the new convergence test.
 
     - Line breaks are now automatically placed after 'use overload' to 
       improve formatting when there are numerous overloaded operators.  For
