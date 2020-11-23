@@ -20303,7 +20303,8 @@ sub wrapup {
 
     $file_writer_object->report_line_length_errors();
 
-    $self->[_converged_] = $file_writer_object->get_convergence_check();
+    $self->[_converged_] = $file_writer_object->get_convergence_check()
+      || $rOpts->{'indent-only'};
 
     return;
 }
