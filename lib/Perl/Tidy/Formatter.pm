@@ -1836,6 +1836,18 @@ sub set_whitespace_flags {
             && $last_token eq '{'
             && $rLL->[ $j + 1 ]->[_TYPE_] eq 'w' );
 
+	# Patch to count a sign separated from a number as a single token, as
+	# in the following line. Otherwise, it takes two steps to converge:
+        #    deg2rad(-  0.5)
+        if (   ( $type eq 'm' || $type eq 'p' )
+            && $j < $jmax + 1
+            && $rLL->[ $j + 1 ]->[_TYPE_] eq 'b'
+            && $rLL->[ $j + 2 ]->[_TYPE_] eq 'n'
+            && $rLL->[ $j + 2 ]->[_TOKEN_] =~ /^\d/ )
+        {
+            $j_here = $j + 2;
+        }
+
         # $j_next is where a closing token should be if
         # the container has a single token
         if ( $j_here + 1 > $jmax ) { return (WS_NO) }

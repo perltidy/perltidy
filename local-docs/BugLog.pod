@@ -2,6 +2,29 @@
 
 =over 4
 
+=item B<fix for formatting signed numbers with spaces>
+
+In developing an improved convergence test, an issue slowing convergence
+was found related to signed numbers as in the following line, 
+
+    @london = (deg2rad(-  0.5), deg2rad(90 - 51.3));
+
+The leading '-' here is separated from the following number '0.5'. This is handled
+by tokenizing the minus as type 'm' and the number as type 'n'.  The whitespace
+between them is removed in formatting, and so the space is gone in the output.
+But a little problem is that the default rule for placing spaces within the
+parens is based on the token count, after the first formatting the result is
+
+    @london = ( deg2rad( -0.5 ), deg2rad( 90 - 51.3 ) );
+
+The next time it is formatted, the '-0.5' counts as one token, resulting in 
+
+    @london = ( deg2rad(-0.5), deg2rad( 90 - 51.3 ) );
+
+Notice that the space within the parens around the '-0.5' is gone. An update
+was made to fix this, so that the final state is reached in one step.  This fix
+was made 23 Nov 2020.
+
 =item B<fix to prevent conversion of a block comment to hanging side comment>
 
 A rare situation was identified during testing in which a block comment could
