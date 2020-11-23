@@ -79,6 +79,9 @@ use Perl::Tidy::Tokenizer;
 use Perl::Tidy::VerticalAligner;
 local $| = 1;
 
+# this can be turned on for extra checking during development
+use constant DEVEL_MODE => 0;
+
 use vars qw{
   $VERSION
   @ISA
@@ -1313,6 +1316,7 @@ EOM
         my $debugger_object_final = $debugger_object;
         my $logger_object_final   = $logger_object;
         my $fh_tee_final          = $fh_tee;
+        my $iteration_of_formatter_convergence;
 
         foreach my $iter ( 1 .. $max_iterations ) {
 
@@ -1418,6 +1422,16 @@ EOM
             #---------------------------------------------------------------
             $source_object->close_input_file();
 
+            # see if the formatter is converged
+            if (   $max_iterations > 1
+                && !defined($iteration_of_formatter_convergence)
+                && $formatter->can('get_convergence_check') )
+            {
+                if ( $formatter->get_convergence_check() ) {
+                    $iteration_of_formatter_convergence = $iter;
+                }
+            }
+
             # line source for next iteration (if any) comes from the current
             # temporary output buffer
             if ( $iter < $max_iterations ) {
@@ -1432,12 +1446,16 @@ EOM
                 # stop iterations if errors or converged
                 my $stop_now = $tokenizer->report_tokenization_errors();
                 $stop_now ||= $tokenizer->get_unexpected_error_count();
+                my $stopping_on_error = $stop_now;
                 if ($stop_now) {
                     $convergence_log_message = <<EOM;
 Stopping iterations because of severe errors.                       
 EOM
                 }
                 elsif ($do_convergence_test) {
+
+                    # FIXME: future convergence test
+                    ## $stop_now ||= defined($iteration_of_formatter_convergence); 
 
                     my $digest = $md5_hex->($sink_buffer);
                     if ( !defined( $saw_md5{$digest} ) ) {
@@ -1476,6 +1494,19 @@ EOM
                 } ## end if ($do_convergence_test)
 
                 if ($stop_now) {
+
+                    if (DEVEL_MODE) { #<<<
+                    if ( defined($iteration_of_formatter_convergence) ) {
+                        if ( $iteration_of_formatter_convergence < $iter - 1 ) {
+                            print STDERR
+"STRANGE Early conv in $display_name: Stopping on it=$iter, converged in formatter on $iteration_of_formatter_convergence\n";
+                        }
+                    }
+                    elsif ( !$stopping_on_error ) {
+                        print STDERR
+"STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
+                    }
+                    }
 
                     # we are stopping the iterations early;
                     # copy the output stream to its final destination

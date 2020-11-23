@@ -395,6 +395,7 @@ BEGIN {
         _rKrange_code_without_comments_ => $i++,
         _rbreak_before_Kfirst_          => $i++,
         _rbreak_after_Klast_            => $i++,
+        _converged_                     => $i++,
 
     };
 
@@ -414,6 +415,7 @@ BEGIN {
         _rK_to_go_                 => $i++,
         _batch_count_              => $i++,
         _rix_seqno_controlling_ci_ => $i++,
+        _batch_CODE_type_          => $i++,
     };
 
     # Sequence number assigned to the root of sequence tree.
@@ -720,6 +722,7 @@ sub new {
     $self->[_rKrange_code_without_comments_] = [];
     $self->[_rbreak_before_Kfirst_]          = {};
     $self->[_rbreak_after_Klast_]            = {};
+    $self->[_converged_]                     = 0;
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -856,6 +859,11 @@ EOM
         return;
     }
 } ## end closure for diagnostics routines
+
+sub get_convergence_check {
+    my ($self) = @_;
+    return $self->[_converged_];
+}
 
 sub get_added_semicolon_count {
     my $self = shift;
@@ -1535,7 +1543,7 @@ sub initialize_weld_nested_exclusion_rules {
     # with spaces separating any number of items.  Each item consists of three
     # pieces of information:
     # <optional position> <optional type> <type of container>
-    # <     ^ or .      > <[k K f F w W]> <     ( [ {       >
+    # <     ^ or .      > <    k or K   > <     ( [ {       >
 
     # The last character is the required container type and must be one of:
     # ( = paren
@@ -1551,7 +1559,7 @@ sub initialize_weld_nested_exclusion_rules {
     # token selects to which the rule applies:
     # k = any keyword
     # K = any non-keyword
-    # f = function
+    # f = function call
     # F = not a function call
     # w = function or keyword
     # W = not a function or keyword
@@ -5824,6 +5832,7 @@ sub resync_lines_and_tokens {
     my $Klimit = $self->[_Klimit_];
     my $rlines = $self->[_rlines_];
     my @Krange_code_without_comments;
+    my @Klast_valign_code;
 
     # Re-construct the arrays of tokens associated with the original input lines
     # since they have probably changed due to inserting and deleting blanks
@@ -5846,6 +5855,7 @@ sub resync_lines_and_tokens {
     foreach my $line_of_tokens ( @{$rlines} ) {
         $iline++;
         my $line_type = $line_of_tokens->{_line_type};
+        my $CODE_type = $line_of_tokens->{_code_type};
         if ( $line_type eq 'CODE' ) {
 
             my @K_array;
@@ -5853,7 +5863,7 @@ sub resync_lines_and_tokens {
             if ( $Knext <= $Kmax ) {
                 $inext = $rLL->[$Knext]->[_LINE_INDEX_];
                 while ( $inext <= $iline ) {
-                    push @{K_array}, $Knext;
+                    push @K_array, $Knext;
                     $Knext += 1;
                     if ( $Knext > $Kmax ) {
                         $inext = undef;
@@ -5879,10 +5889,22 @@ sub resync_lines_and_tokens {
                 $Klast     = $K_array[-1];
                 $Klast_out = $Klast;
 
-                # Save ranges of non-comment code. This will be used by
-                # sub keep_old_line_breaks.
-                if ( defined($Kfirst) && $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
-                    push @Krange_code_without_comments, [ $Kfirst, $Klast ];
+                if ( defined($Kfirst) ) {
+
+                    # Save ranges of non-comment code. This will be used by
+                    # sub keep_old_line_breaks.
+                    if ( $rLL->[$Kfirst]->[_TYPE_] ne '#' ) {
+                        push @Krange_code_without_comments, [ $Kfirst, $Klast ];
+                    }
+
+                    # Only save ending K indexes of code types which are blank
+                    # or 'VER'.  These will be used for a convergence check.
+                    # See related code in sub 'send_lines_to_vertical_aligner'.
+                    if (  !$CODE_type
+                        || $CODE_type eq 'VER' )
+                    {
+                        push @Klast_valign_code, $Klast;
+                    }
                 }
             }
 
@@ -5913,6 +5935,10 @@ sub resync_lines_and_tokens {
         Fault("unexpected tokens at end of file when reconstructing lines");
     }
     $self->[_rKrange_code_without_comments_] = \@Krange_code_without_comments;
+
+    # Setup the convergence test in the FileWriter based on line-ending indexes
+    my $file_writer_object = $self->[_file_writer_object_];
+    $file_writer_object->setup_convergence_test( \@Klast_valign_code );
 
     return;
 }
@@ -8167,6 +8193,7 @@ EOM
     my $line_of_tokens;
     my $no_internal_newlines;
     my $side_comment_follows;
+    my $CODE_type;
 
     # range of K of tokens for the current line
     my ( $K_first, $K_last );
@@ -8179,20 +8206,23 @@ EOM
         $last_nonblank_token,       $last_nonblank_type,
         $last_nonblank_block_type,  $K_last_nonblank_code,
         $K_last_last_nonblank_code, $looking_for_else,
-        $is_static_block_comment,
+        $is_static_block_comment,   $batch_CODE_type,
+        $last_line_had_side_comment,
     );
 
     # Called once at the start of a new file
     sub initialize_process_line_of_CODE {
-        $last_nonblank_token       = ';';
-        $last_nonblank_type        = ';';
-        $last_last_nonblank_token  = ';';
-        $last_last_nonblank_type   = ';';
-        $last_nonblank_block_type  = "";
-        $K_last_nonblank_code      = undef;
-        $K_last_last_nonblank_code = undef;
-        $looking_for_else          = 0;
-        $is_static_block_comment   = 0;
+        $last_nonblank_token        = ';';
+        $last_nonblank_type         = ';';
+        $last_last_nonblank_token   = ';';
+        $last_last_nonblank_type    = ';';
+        $last_nonblank_block_type   = "";
+        $K_last_nonblank_code       = undef;
+        $K_last_last_nonblank_code  = undef;
+        $looking_for_else           = 0;
+        $is_static_block_comment    = 0;
+        $batch_CODE_type            = "";
+        $last_line_had_side_comment = 0;
         return;
     }
 
@@ -8318,6 +8348,7 @@ EOM
         }
 
         ++$max_index_to_go;
+        $batch_CODE_type               = $CODE_type;
         $K_to_go[$max_index_to_go]     = $Ktoken_vars;
         $types_to_go[$max_index_to_go] = $type;
 
@@ -8413,6 +8444,7 @@ EOM
         $this_batch->[_ending_in_quote_]   = $ending_in_quote;
         $this_batch->[_max_index_to_go_]   = $max_index_to_go;
         $this_batch->[_rK_to_go_]          = \@K_to_go;
+        $this_batch->[_batch_CODE_type_]   = $batch_CODE_type;
 
         # The flag $is_static_block_comment applies to the line which just
         # arrived. So it only applies if we are outputting that line.
@@ -8422,6 +8454,9 @@ EOM
           && $K_to_go[0] == $K_first ? $is_static_block_comment : 0;
 
         $self->[_this_batch_] = $this_batch;
+
+        $last_line_had_side_comment =
+          $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq '#';
 
         $self->grind_batch_of_CODE();
 
@@ -8515,9 +8550,9 @@ EOM
         # lengths below the requested maximum line length.
 
         $line_of_tokens = $my_line_of_tokens;
+        $CODE_type      = $line_of_tokens->{_code_type};
         my $input_line_number = $line_of_tokens->{_line_number};
         my $input_line        = $line_of_tokens->{_line_text};
-        my $CODE_type         = $line_of_tokens->{_code_type};
 
         # initialize closure variables
         my $rK_range = $line_of_tokens->{_rK_range};
@@ -8610,8 +8645,13 @@ EOM
                 # only if allowed
                 && $rOpts->{'blanks-before-comments'}
 
-                # if this is NOT an empty comment line
-                && $rtok_first->[_TOKEN_] ne '#'
+                # if this is NOT an empty comment
+                && (   $rtok_first->[_TOKEN_] ne '#' 
+
+                # FIXME: FUTURE UPDATE; still needs to be coordinated with user parameters
+		# unless following a side comment (otherwise need to insert
+		# blank to prevent creating a hanging side comment)
+                    ) #|| $last_line_had_side_comment )
 
                 # not after a short line ending in an opening token
                 # because we already have space above this comment.
@@ -8641,9 +8681,13 @@ EOM
                 $self->end_batch();
             }
             else {
-                $self->flush();    # switching to new output stream
+
+                # switching to new output stream
+                $self->flush();    
+                
+                # Note that last arg in call here is 'undef' for comments
                 $file_writer_object->write_code_line(
-                    $rtok_first->[_TOKEN_] . "\n" );
+                    $rtok_first->[_TOKEN_] . "\n", undef ); 
                 $self->[_last_line_leading_type_] = '#';
             }
             return;
@@ -16641,6 +16685,15 @@ sub send_lines_to_vertical_aligner {
         $Kend      = $Kend_next;
         $type_end  = $type_end_next;
 
+        # Only forward ending K values of non-comments down the pipeline.
+        # This is equivalent to checking that the last CODE_type is blank or
+        # equal to 'VER'. See also sub resync_lines_and_tokens for related
+        # coding.  Note that '$batch_CODE_type' is the code type of the line
+        # to which the ending token belongs.
+        my $batch_CODE_type = $this_batch->[_batch_CODE_type_];
+        my $Kend_code =
+          $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
+
         # We use two slightly different definitions of level jump at the end
         # of line:
         #  $ljump is the level jump needed by 'sub set_adjusted_indentation'
@@ -16810,6 +16863,7 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{batch_count}               = $batch_count;
         $rvalign_hash->{break_alignment_before}    = $break_alignment_before;
         $rvalign_hash->{break_alignment_after}     = $break_alignment_after;
+        $rvalign_hash->{Kend}                      = $Kend_code;
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
@@ -20216,6 +20270,8 @@ sub wrapup {
     $vao->report_anything_unusual();
 
     $file_writer_object->report_line_length_errors();
+
+    $self->[_converged_] = $file_writer_object->get_convergence_check();
 
     return;
 }

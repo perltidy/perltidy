@@ -64,6 +64,12 @@
     - This version is about 20% faster than the previous version due to optimizations
       made with the help of Devel::NYTProf.
 
+    - A better test for convergence has been added. When iterations are requested,
+      the new test will stop after the first pass if no changes in line break
+      locations are made.  Previously, at least two passes were required to verify
+      convergnece unless the output stream had the same checksum as the input stream.
+      Extensive testing has been made to verify the correctness of the new test.
+
     - Line breaks are now automatically placed after 'use overload' to 
       improve formatting when there are numerous overloaded operators.  For
       example

@@ -410,6 +410,10 @@ sub valign_input {
     my $batch_count               = $rline_hash->{batch_count};
     my $break_alignment_before    = $rline_hash->{break_alignment_before};
     my $break_alignment_after     = $rline_hash->{break_alignment_after};
+    my $Kend                      = $rline_hash->{Kend};
+
+    # The index '$Kend' is a value which passed along with the line text to sub
+    # 'write_code_line' for a convergence check.
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
@@ -544,7 +548,8 @@ sub valign_input {
 
             # Note that for a comment group we are not storing a line
             # but rather just the text and its length.
-            $self->push_group_line( [ $rfields->[0], $rfield_lengths->[0] ] );
+            $self->push_group_line(
+                [ $rfields->[0], $rfield_lengths->[0], $Kend ] );
             return;
         }
         else {
@@ -614,7 +619,8 @@ sub valign_input {
         {
             $self->[_group_type_]                  = 'COMMENT';
             $self->[_comment_leading_space_count_] = $leading_space_count;
-            $self->push_group_line( [ $rfields->[0], $rfield_lengths->[0] ] );
+            $self->push_group_line(
+                [ $rfields->[0], $rfield_lengths->[0], $Kend ] );
             return;
         }
 
@@ -632,7 +638,8 @@ sub valign_input {
                     side_comment_length       => 0,
                     outdent_long_lines        => $outdent_long_lines,
                     rvertical_tightness_flags => $rvertical_tightness_flags,
-                    level                     => $level
+                    level                     => $level,
+                    Kend                      => $Kend,
                 }
             );
 
@@ -693,6 +700,7 @@ EOM
             j_terminal_match          => $j_terminal_match,
             is_forced_break           => $is_forced_break,
             end_group                 => $break_alignment_after,
+            Kend                      => $Kend,
         }
     );
 
@@ -1477,7 +1485,7 @@ sub _flush_comment_lines {
     my $outdent_long_lines = 0;
 
     foreach my $item ( @{$rgroup_lines} ) {
-        my ( $line, $line_len ) = @{$item};
+        my ( $line, $line_len, $Kend ) = @{$item};
         $self->valign_output_step_B(
             {
                 leading_space_count       => $leading_space_count,
@@ -1487,6 +1495,7 @@ sub _flush_comment_lines {
                 outdent_long_lines        => $outdent_long_lines,
                 rvertical_tightness_flags => "",
                 level                     => $group_level,
+                Kend                      => $Kend,
             }
         );
     }
@@ -3847,6 +3856,7 @@ sub valign_output_step_A {
     my $outdent_long_lines        = $line->get_outdent_long_lines();
     my $maximum_field_index       = $line->get_jmax();
     my $rvertical_tightness_flags = $line->get_rvertical_tightness_flags();
+    my $Kend                      = $line->get_Kend();
 
     # add any extra spaces
     if ( $leading_space_count > $group_leader_length ) {
@@ -3919,6 +3929,7 @@ sub valign_output_step_A {
             outdent_long_lines  => $outdent_long_lines,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             level                     => $level,
+            Kend                      => $Kend,
         }
     );
     return;
@@ -3987,6 +3998,7 @@ sub get_output_line_number {
     my $cached_line_valid;
     my $cached_line_leading_space_count;
     my $cached_seqno_string;
+    my $cached_line_Kend;
     my $seqno_string;
     my $last_nonblank_seqno_string;
 
@@ -4037,6 +4049,7 @@ sub get_output_line_number {
         $cached_line_valid               = 0;
         $cached_line_leading_space_count = 0;
         $cached_seqno_string             = "";
+        $cached_line_Kend                = undef;
 
         # These vars hold a string of sequence numbers joined together used by
         # the cache
@@ -4052,12 +4065,14 @@ sub get_output_line_number {
             $self->valign_output_step_C(
                 $cached_line_text,
                 $cached_line_leading_space_count,
-                $self->[_last_level_written_]
+                $self->[_last_level_written_],
+                $cached_line_Kend,
             );
             $cached_line_type        = 0;
             $cached_line_text        = "";
             $cached_line_text_length = 0;
             $cached_seqno_string     = "";
+            $cached_line_Kend        = undef,;
         }
         return;
     }
@@ -4080,6 +4095,7 @@ sub get_output_line_number {
         my $outdent_long_lines        = $rinput->{outdent_long_lines};
         my $rvertical_tightness_flags = $rinput->{rvertical_tightness_flags};
         my $level                     = $rinput->{level};
+        my $Kend                      = $rinput->{Kend};
 
         my $last_level_written = $self->[_last_level_written_];
 
@@ -4148,9 +4164,10 @@ sub get_output_line_number {
 
             # Dump an invalid cached line
             if ( !$cached_line_valid ) {
-                $self->valign_output_step_C( $cached_line_text,
-                    $cached_line_leading_space_count,
-                    $last_level_written );
+                $self->valign_output_step_C(
+                    $cached_line_text,   $cached_line_leading_space_count,
+                    $last_level_written, $cached_line_Kend
+                );
             }
 
             # Handle cached line ending in OPENING tokens
@@ -4173,9 +4190,10 @@ sub get_output_line_number {
                     $level        = $last_level_written;
                 }
                 else {
-                    $self->valign_output_step_C( $cached_line_text,
-                        $cached_line_leading_space_count,
-                        $last_level_written );
+                    $self->valign_output_step_C(
+                        $cached_line_text,   $cached_line_leading_space_count,
+                        $last_level_written, $cached_line_Kend
+                    );
                 }
             }
 
@@ -4318,15 +4336,17 @@ sub get_output_line_number {
                     $level                 = $last_level_written;
                 }
                 else {
-                    $self->valign_output_step_C( $cached_line_text,
-                        $cached_line_leading_space_count,
-                        $last_level_written );
+                    $self->valign_output_step_C(
+                        $cached_line_text,   $cached_line_leading_space_count,
+                        $last_level_written, $cached_line_Kend
+                    );
                 }
             }
         }
         $cached_line_type        = 0;
         $cached_line_text        = "";
         $cached_line_text_length = 0;
+        $cached_line_Kend        = undef;
 
         # make the line to be written
         my $line        = $leading_string . $str;
@@ -4346,7 +4366,8 @@ sub get_output_line_number {
 
         # write or cache this line
         if ( !$open_or_close || $side_comment_length > 0 ) {
-            $self->valign_output_step_C( $line, $leading_space_count, $level );
+            $self->valign_output_step_C( $line, $leading_space_count, $level,
+                $Kend );
         }
         else {
             $cached_line_text                = $line;
@@ -4357,6 +4378,7 @@ sub get_output_line_number {
             $cached_line_valid               = $valid;
             $cached_line_leading_space_count = $leading_space_count;
             $cached_seqno_string             = $seqno_string;
+            $cached_line_Kend                = $Kend;
         }
 
         $self->[_last_level_written_]       = $level;
@@ -4400,7 +4422,7 @@ sub get_output_line_number {
         if ( $valign_buffer_filling && $diff ) {
             my $max_valign_buffer = @valign_buffer;
             foreach my $i ( 0 .. $max_valign_buffer - 1 ) {
-                my ( $line, $leading_space_count, $level ) =
+                my ( $line, $leading_space_count, $level, $Kend ) =
                   @{ $valign_buffer[$i] };
                 my $ws = substr( $line, 0, $diff );
                 if ( ( length($ws) == $diff ) && $ws =~ /^\s+$/ ) {
@@ -4412,7 +4434,8 @@ sub get_output_line_number {
                       $self->level_change( $leading_space_count, $diff,
                         $level );
                 }
-                $valign_buffer[$i] = [ $line, $leading_space_count, $level ];
+                $valign_buffer[$i] =
+                  [ $line, $leading_space_count, $level, $Kend ];
             }
         }
         return;
@@ -4502,7 +4525,7 @@ sub valign_output_step_D {
     # Write one vertically aligned line of code to the output object.
     ###############################################################
 
-    my ( $self, $line, $leading_space_count, $level ) = @_;
+    my ( $self, $line, $leading_space_count, $level, $Kend ) = @_;
 
     # The line is currently correct if there is no tabbing (recommended!)
     # We may have to lop off some leading spaces and replace with tabs.
@@ -4589,7 +4612,8 @@ sub valign_output_step_D {
         }
     }
     my $file_writer_object = $self->[_file_writer_object_];
-    $file_writer_object->write_code_line( $line . "\n" );
+    $file_writer_object->write_code_line( $line . "\n", $Kend );
+
     return;
 }
 

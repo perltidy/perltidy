@@ -58,6 +58,10 @@ BEGIN {
         _line_length_error_count_    => $i++,
         _max_output_line_length_     => $i++,
         _max_output_line_length_at_  => $i++,
+        _rK_checklist_               => $i++,
+        _K_arrival_order_matches_    => $i++,
+        _K_sequence_error_msg_       => $i++,
+        _K_last_arrival_             => $i++,
     };
 }
 
@@ -89,8 +93,43 @@ sub new {
     $self->[_line_length_error_count_]    = 0;
     $self->[_max_output_line_length_]     = 0;
     $self->[_max_output_line_length_at_]  = 0;
+    $self->[_rK_checklist_]               = [];
+    $self->[_K_arrival_order_matches_]    = 0;
+    $self->[_K_sequence_error_msg_]       = "";
+    $self->[_K_last_arrival_]             = -1;
     bless $self, $class;
     return $self;
+}
+
+sub setup_convergence_test {
+    my ( $self, $rlist ) = @_;
+    if ( @{$rlist} ) {
+
+        # We are going to destroy the list, so make a copy
+        # and put in reverse order so we can pop values
+        my @list = @{$rlist};
+        if ( $list[0] < $list[-1] ) {
+            @list = reverse @list;
+        }
+        $self->[_rK_checklist_] = \@list;
+    }
+    $self->[_K_arrival_order_matches_] = 1;
+    $self->[_K_sequence_error_msg_]    = "";
+    $self->[_K_last_arrival_]          = -1;
+    return;
+}
+
+sub get_convergence_check {
+    my ($self) = @_;
+    my $rlist = $self->[_rK_checklist_];
+
+    # converged if all K arrived and in correct order
+    return $self->[_K_arrival_order_matches_] && !@{$rlist};
+}
+
+sub get_K_sequence_error_msg {
+    my ($self) = @_;
+    return $self->[_K_sequence_error_msg_];
 }
 
 sub get_output_line_number {
@@ -149,8 +188,7 @@ sub write_blank_code_line {
 }
 
 sub write_code_line {
-    my $self = shift;
-    my $a    = shift;
+    my ( $self, $a, $K ) = @_;
 
     if ( $a =~ /^\s*$/ ) {
         my $rOpts = $self->[_rOpts_];
@@ -165,6 +203,41 @@ sub write_code_line {
         $self->[_consecutive_nonblank_lines_]++;
     }
     $self->write_line($a);
+
+    if ( defined($K) ) {
+
+        # Convergence check: we are checking if all defined K values arrive in
+        # the order which was defined by the caller.  Quite checking if any
+        # unexpected K value arrives.
+        if ( $self->[_K_arrival_order_matches_] ) {
+            my $Kt = pop @{ $self->[_rK_checklist_] };
+            if ( !defined($Kt) || $Kt != $K ) {
+                $self->[_K_arrival_order_matches_] = 0;
+            }
+        }
+
+        # check for out-of-order arrivals of K (shouldn't happen).
+        if ( !$self->[_K_sequence_error_msg_] ) {
+            my $K_prev = $self->[_K_last_arrival_];
+            if ( $K < $K_prev ) {
+                my $str = $a;
+                chomp $str;
+                if ( length($str) > 80 ) {
+                    $str = substr( $str, 0, 80 ) . "...";
+                }
+                my $msg = <<EOM;
+Lines have arrived out of order in sub 'write_code_line'
+as detected by token index K=$K arriving after index K=$K_prev. The line
+$str
+EOM
+
+                # TODO: This message should go out as a warning after testing
+                # For now it is being stored.
+                $self->[_K_sequence_error_msg_] = $msg;
+            }
+        }
+        $self->[_K_last_arrival_] = $K;
+    }
     return;
 }
 
@@ -261,4 +334,3 @@ sub report_line_length_errors {
     return;
 }
 1;
-

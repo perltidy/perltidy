@@ -31,6 +31,7 @@ BEGIN {
         _j_terminal_match_          => $i++,
         _is_forced_break_           => $i++,
         _end_group_                 => $i++,
+        _Kend_                      => $i++,
     };
 }
 
@@ -81,6 +82,7 @@ EOM
         $self->[_j_terminal_match_]          = $ri->{j_terminal_match};
         $self->[_is_forced_break_]           = $ri->{is_forced_break};
         $self->[_end_group_]                 = $ri->{end_group};
+        $self->[_Kend_]                      = $ri->{Kend};
 
         $self->[_ralignments_] = [];
 
@@ -94,6 +96,7 @@ EOM
     sub get_rfield_lengths { return $_[0]->[_rfield_lengths_] }
     sub get_rpatterns      { return $_[0]->[_rpatterns_] }
     sub get_indentation    { return $_[0]->[_indentation_] }
+    sub get_Kend           { return $_[0]->[_Kend_] }
 
     sub get_j_terminal_match {
         return $_[0]->[_j_terminal_match_];
@@ -235,3 +238,4 @@ EOM
 }
 
 1;
+
