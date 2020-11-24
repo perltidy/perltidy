@@ -1637,6 +1637,7 @@ $msg2
 Only the last will be used.
 EOM
     }
+    return;
 }
 
 sub initialize_whitespace_hashes {

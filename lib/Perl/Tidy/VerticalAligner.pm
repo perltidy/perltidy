@@ -4072,7 +4072,7 @@ sub get_output_line_number {
             $cached_line_text        = "";
             $cached_line_text_length = 0;
             $cached_seqno_string     = "";
-            $cached_line_Kend        = undef,;
+            $cached_line_Kend        = undef;
         }
         return;
     }
