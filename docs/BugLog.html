@@ -21,6 +21,30 @@
 
 <dl>
 
+<dt id="fix-to-stop-at-1-iteration-when-using---indent-only"><b>fix to stop at 1 iteration when using --indent-only</b></dt>
+<dd>
+
+<p>Previously, for the combination --indent-only and -conv, two iterations would be done. Only one iteration is necessary in this case.</p>
+
+</dd>
+<dt id="fix-for-formatting-signed-numbers-with-spaces"><b>fix for formatting signed numbers with spaces</b></dt>
+<dd>
+
+<p>In developing an improved convergence test, an issue slowing convergence was found related to signed numbers as in the following line,</p>
+
+<pre><code>    @london = (deg2rad(-  0.5), deg2rad(90 - 51.3));</code></pre>
+
+<p>The leading &#39;-&#39; here is separated from the following number &#39;0.5&#39;. This is handled by tokenizing the minus as type &#39;m&#39; and the number as type &#39;n&#39;. The whitespace between them is removed in formatting, and so the space is gone in the output. But a little problem is that the default rule for placing spaces within the parens is based on the token count, after the first formatting the result is</p>
+
+<pre><code>    @london = ( deg2rad( -0.5 ), deg2rad( 90 - 51.3 ) );</code></pre>
+
+<p>The next time it is formatted, the &#39;-0.5&#39; counts as one token, resulting in</p>
+
+<pre><code>    @london = ( deg2rad(-0.5), deg2rad( 90 - 51.3 ) );</code></pre>
+
+<p>Notice that the space within the parens around the &#39;-0.5&#39; is gone. An update was made to fix this, so that the final state is reached in one step. This fix was made 23 Nov 2020.</p>
+
+</dd>
 <dt id="fix-to-prevent-conversion-of-a-block-comment-to-hanging-side-comment"><b>fix to prevent conversion of a block comment to hanging side comment</b></dt>
 <dd>
 

@@ -2,6 +2,11 @@
 
 =over 4
 
+=item B<fix to stop at 1 iteration when using --indent-only>
+
+Previously, for the combination --indent-only and -conv, two iterations
+would be done.  Only one iteration is necessary in this case.
+
 =item B<fix for formatting signed numbers with spaces>
 
 In developing an improved convergence test, an issue slowing convergence
