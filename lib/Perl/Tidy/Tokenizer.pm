@@ -170,6 +170,8 @@ BEGIN {
         _true_brace_error_count_             => $i++,
         _rOpts_maximum_level_errors_         => $i++,
         _rOpts_maximum_unexpected_errors_    => $i++,
+        _rOpts_logfile_                      => $i++,
+        _rOpts_                              => $i++,
     };
 }
 
@@ -336,6 +338,8 @@ sub new {
     $self->[_rOpts_maximum_level_errors_] = $rOpts->{'maximum-level-errors'};
     $self->[_rOpts_maximum_unexpected_errors_] =
       $rOpts->{'maximum-unexpected-errors'};
+    $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
+    $self->[_rOpts_]         = $rOpts;
     bless $self, $class;
 
     $tokenizer_self = $self;
@@ -983,10 +987,10 @@ sub get_line {
     }
 
     # Update indentation levels for log messages.
-    # Skip blank lines and block comments. Note that _line_of_text_ is the
-    # input line but trimmed from left to right.
+    # Skip blank lines and also block comments, unless a logfile is requested.
+    # Note that _line_of_text_ is the input line but trimmed from left to right.
     my $lot = $tokenizer_self->[_line_of_text_];
-    if ( $lot && substr( $lot, 0, 1 ) ne '#' ) {
+    if ( $lot && ( $self->[_rOpts_logfile_] || substr( $lot, 0, 1 ) ne '#' ) ) {
         my $rlevels = $line_of_tokens->{_rlevels};
         $line_of_tokens->{_guessed_indentation_level} =
           guess_old_indentation_level($input_line);
