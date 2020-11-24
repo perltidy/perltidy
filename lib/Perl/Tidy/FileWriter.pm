@@ -188,9 +188,20 @@ sub write_blank_code_line {
 }
 
 sub write_code_line {
-    my ( $self, $a, $K ) = @_;
+    my ( $self, $str, $K ) = @_;
 
-    if ( $a =~ /^\s*$/ ) {
+    # Check for a blank line; this messy manipulation is almost three times
+    # faster than just testing if $str=~/^\s*$/ here
+    my $chomp_str = $str;
+    chomp $chomp_str;
+    if (  !length($chomp_str)
+        || substr( $chomp_str, -1, 1 ) eq ' ' && $str =~ /^\s*$/ )
+    {
+
+        # Blank lines go out anther way, so it is rare to get here. One way is
+        # if there are hanging side comments and -dsc is used.
+        # TODO: track all the ways down and avoid sending untrimmed blank lines 
+        # this way.
         my $rOpts = $self->[_rOpts_];
         return
           if ( $self->[_consecutive_blank_lines_] >=
@@ -202,8 +213,12 @@ sub write_code_line {
         $self->[_consecutive_blank_lines_] = 0;
         $self->[_consecutive_nonblank_lines_]++;
     }
-    $self->write_line($a);
 
+    $self->write_line($str);
+
+    #----------------------------
+    # Convergence and error check
+    #----------------------------
     if ( defined($K) ) {
 
         # Convergence check: we are checking if all defined K values arrive in
@@ -220,7 +235,6 @@ sub write_code_line {
         if ( !$self->[_K_sequence_error_msg_] ) {
             my $K_prev = $self->[_K_last_arrival_];
             if ( $K < $K_prev ) {
-                my $str = $a;
                 chomp $str;
                 if ( length($str) > 80 ) {
                     $str = substr( $str, 0, 80 ) . "...";
@@ -242,24 +256,24 @@ EOM
 }
 
 sub write_line {
-    my ( $self, $a ) = @_;
+    my ( $self, $str ) = @_;
 
-    # TODO: go through and see if the test is necessary here
-    if ( $a =~ /\n$/ ) { $self->[_output_line_number_]++; }
+    $self->[_line_sink_object_]->write_line($str);
 
-    $self->[_line_sink_object_]->write_line($a);
+    if ( chomp $str ) { $self->[_output_line_number_]++; }
 
     # This calculation of excess line length ignores any internal tabs
     my $rOpts  = $self->[_rOpts_];
-    my $exceed = length($a) - $rOpts->{'maximum-line-length'} - 1;
-    if ( $a =~ /^\t+/g ) {
-        $exceed += pos($a) * ( $rOpts->{'indent-columns'} - 1 );
+    my $len_str = length($str);
+    my $exceed = $len_str - $rOpts->{'maximum-line-length'};
+    if ( $str && substr( $str, 0, 1 ) eq "\t" && $str =~ /^\t+/g ) {
+        $exceed += pos($str) * $rOpts->{'indent-columns'};
     }
 
     # Note that we just incremented output line number to future value
     # so we must subtract 1 for current line number
-    if ( length($a) > 1 + $self->[_max_output_line_length_] ) {
-        $self->[_max_output_line_length_] = length($a) - 1;
+    if ( $len_str > $self->[_max_output_line_length_] ) {
+        $self->[_max_output_line_length_] = $len_str;
         $self->[_max_output_line_length_at_] =
           $self->[_output_line_number_] - 1;
     }
