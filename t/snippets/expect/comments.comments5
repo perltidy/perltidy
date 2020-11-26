@@ -30,7 +30,7 @@ sub macro_get_names {
 
 {
     my $IGNORE = 0;
-    
+
     # A blank line interrupts the hsc's; this is a block comment
 
 }

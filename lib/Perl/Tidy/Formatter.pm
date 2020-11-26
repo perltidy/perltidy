@@ -161,6 +161,12 @@ my (
     $rOpts_one_line_block_semicolons,
     $rOpts_break_at_old_semicolon_breakpoints,
 
+    $rOpts_tee_side_comments,
+    $rOpts_tee_block_comments,
+    $rOpts_tee_pod,
+    $rOpts_delete_side_comments,
+    $rOpts_delete_closing_side_comments,
+
     # Static hashes initialized in a BEGIN block
     %is_assignment,
     %is_keyword_returning_list,
@@ -623,6 +629,7 @@ sub new {
     initialize_batch_variables();
     initialize_forced_breakpoint_vars();
     initialize_gnu_batch_vars();
+    initialize_write_line();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
         rOpts              => $rOpts,
@@ -1449,6 +1456,13 @@ EOM
     $rOpts_break_at_old_semicolon_breakpoints =
       $rOpts->{'break-at-old-semicolon-breakpoints'};
 
+    $rOpts_tee_side_comments    = $rOpts->{'tee-side-comments'};
+    $rOpts_tee_block_comments   = $rOpts->{'tee-block-comments'};
+    $rOpts_tee_pod              = $rOpts->{'tee-pod'};
+    $rOpts_delete_side_comments = $rOpts->{'delete-side-comments'};
+    $rOpts_delete_closing_side_comments =
+      $rOpts->{'delete-closing-side-comments'};
+
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
     %opening_vertical_tightness = (
@@ -1837,8 +1851,8 @@ sub set_whitespace_flags {
             && $last_token eq '{'
             && $rLL->[ $j + 1 ]->[_TYPE_] eq 'w' );
 
-	# Patch to count a sign separated from a number as a single token, as
-	# in the following line. Otherwise, it takes two steps to converge:
+        # Patch to count a sign separated from a number as a single token, as
+        # in the following line. Otherwise, it takes two steps to converge:
         #    deg2rad(-  0.5)
         if (   ( $type eq 'm' || $type eq 'p' )
             && $j < $jmax + 1
@@ -4143,276 +4157,224 @@ sub make_closing_side_comment_prefix {
 # CODE SECTION 4: receive lines from the tokenizer
 ##################################################
 
-sub write_line {
-
-    # This routine originally received lines of code and immediately processed
-    # them.  That was efficient when memory was limited, but now it just saves
-    # the lines it receives.  They get processed all together after the last
-    # line is received.
-
-    # As tokenized lines are received they are converted to the format needed
-    # for the final formatting.
-    my ( $self, $line_of_tokens_old ) = @_;
-    my $rLL           = $self->[_rLL_];
-    my $Klimit        = $self->[_Klimit_];
-    my $rlines_new    = $self->[_rlines_];
-    my $maximum_level = $self->[_maximum_level_];
-
-    my $Kfirst;
-    my $line_of_tokens = {};
-    foreach my $key (
-        qw(
-        _curly_brace_depth
-        _ending_in_quote
-        _guessed_indentation_level
-        _line_number
-        _line_text
-        _line_type
-        _paren_depth
-        _quote_character
-        _square_bracket_depth
-        _starting_in_quote
-        )
-      )
-    {
-        $line_of_tokens->{$key} = $line_of_tokens_old->{$key};
-    }
-
-    # Data needed by Logger
-    $line_of_tokens->{_level_0}          = 0;
-    $line_of_tokens->{_ci_level_0}       = 0;
-    $line_of_tokens->{_nesting_blocks_0} = "";
-    $line_of_tokens->{_nesting_tokens_0} = "";
-
-    # Needed to avoid trimming quotes
-    $line_of_tokens->{_ended_in_blank_token} = undef;
-
-    my $line_type     = $line_of_tokens_old->{_line_type};
-    my $input_line_no = $line_of_tokens_old->{_line_number} - 1;
-    if ( $line_type eq 'CODE' ) {
-
-        my $rtokens         = $line_of_tokens_old->{_rtokens};
-        my $rtoken_type     = $line_of_tokens_old->{_rtoken_type};
-        my $rblock_type     = $line_of_tokens_old->{_rblock_type};
-        my $rcontainer_type = $line_of_tokens_old->{_rcontainer_type};
-        my $rcontainer_environment =
-          $line_of_tokens_old->{_rcontainer_environment};
-        my $rtype_sequence  = $line_of_tokens_old->{_rtype_sequence};
-        my $rlevels         = $line_of_tokens_old->{_rlevels};
-        my $rslevels        = $line_of_tokens_old->{_rslevels};
-        my $rci_levels      = $line_of_tokens_old->{_rci_levels};
-        my $rnesting_blocks = $line_of_tokens_old->{_rnesting_blocks};
-        my $rnesting_tokens = $line_of_tokens_old->{_rnesting_tokens};
-
-        my $jmax = @{$rtokens} - 1;
-        if ( $jmax >= 0 ) {
-            $Kfirst = defined($Klimit) ? $Klimit + 1 : 0;
-            foreach my $j ( 0 .. $jmax ) {
-
-                # Clip negative nesting depths to zero to avoid problems.
-                # Negative values can occur in files with unbalanced containers
-                my $slevel = $rslevels->[$j];
-                if ( $slevel < 0 ) { $slevel = 0 }
-
-                if ( $rlevels->[$j] > $maximum_level ) {
-                    $maximum_level = $rlevels->[$j];
-                }
-
-              # But do not clip the 'level' variable yet. We will do this later,
-              # in sub 'store_token_to_go'. The reason is that in files with
-              # level errors, the logic in 'weld_cuddled_else' uses a stack
-              # logic that will give bad welds if we clip levels here.
-                ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
-
-                my @tokary;
-                @tokary[
-                  _TOKEN_,         _TYPE_,
-                  _BLOCK_TYPE_,    _CONTAINER_ENVIRONMENT_,
-                  _TYPE_SEQUENCE_, _LEVEL_,
-                  _LEVEL_TRUE_,    _SLEVEL_,
-                  _CI_LEVEL_,      _LINE_INDEX_,
-                  ]
-                  = (
-                    $rtokens->[$j],        $rtoken_type->[$j],
-                    $rblock_type->[$j],    $rcontainer_environment->[$j],
-                    $rtype_sequence->[$j], $rlevels->[$j],
-                    $rlevels->[$j],        $slevel,
-                    $rci_levels->[$j],     $input_line_no,
-                  );
-                push @{$rLL}, \@tokary;
-            }
-
-            $Klimit = @{$rLL} - 1;
-
-            # Need to remember if we can trim the input line
-            $line_of_tokens->{_ended_in_blank_token} =
-              $rtoken_type->[$jmax] eq 'b';
-
-            $line_of_tokens->{_level_0}          = $rlevels->[0];
-            $line_of_tokens->{_ci_level_0}       = $rci_levels->[0];
-            $line_of_tokens->{_nesting_blocks_0} = $rnesting_blocks->[0];
-            $line_of_tokens->{_nesting_tokens_0} = $rnesting_tokens->[0];
-        }
-    }
-
-    $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
-    $line_of_tokens->{_code_type} = "";
-    $self->[_Klimit_]             = $Klimit;
-    $self->[_maximum_level_]      = $maximum_level;
-
-    push @{$rlines_new}, $line_of_tokens;
-    return;
-}
-
-#############################################
-# CODE SECTION 5: Pre-process the entire file
-#############################################
-
-sub finish_formatting {
-
-    my ( $self, $severe_error ) = @_;
-
-    # The file has been tokenized and is ready to be formatted.
-    # All of the relevant data is stored in $self, ready to go.
-
-    # Check the maximum level. If it is extremely large we will
-    # give up and output the file verbatim.
-    my $maximum_level       = $self->[_maximum_level_];
-    my $maximum_table_index = $#maximum_line_length;
-    if ( !$severe_error && $maximum_level > $maximum_table_index ) {
-        $severe_error ||= 1;
-        Warn(<<EOM);
-The maximum indentation level, $maximum_level, exceeds the builtin limit of $maximum_table_index.
-Something may be wrong; formatting will be skipped. 
-EOM
-    }
-
-    # output file verbatim if severe error or no formatting requested
-    if ( $severe_error || $rOpts->{notidy} ) {
-        $self->dump_verbatim();
-        $self->wrapup();
-        return;
-    }
-
-    # Update the 'save_logfile' flag based to include any tokenization errors.
-    # We can save time by skipping logfile calls if it is not going to be saved.
-    my $logger_object = $self->[_logger_object_];
-    if ($logger_object) {
-        $self->[_save_logfile_] = $logger_object->get_save_logfile();
-    }
-
-    # Make a pass through the lines, looking at lines of CODE and identifying
-    # special processing needs, such format skipping sections marked by
-    # special comments
-    $self->scan_comments();
-
-    # Make sure everything looks good
-    DEVEL_MODE && self->check_line_hashes();
-
-    # Future: Place to Begin future Iteration Loop
-    # foreach my $it_count(1..$maxit) {
-
-    # Future: We must reset some things after the first iteration.
-    # This includes:
-    #   - resetting levels if there was any welding
-    #   - resetting any phantom semicolons
-    #   - dealing with any line numbering issues so we can relate final lines
-    #     line numbers with input line numbers.
-    #
-    # If ($it_count>1) {
-    #   Copy {level_raw} to [_LEVEL_] if ($it_count>1)
-    #   Renumber lines
-    # }
-
-    # Make a pass through all tokens, adding or deleting any whitespace as
-    # required.  Also make any other changes, such as adding semicolons.
-    # All token changes must be made here so that the token data structure
-    # remains fixed for the rest of this iteration.
-    $self->respace_tokens();
-
-    $self->keep_old_line_breaks();
-
-    # Implement any welding needed for the -wn or -cb options
-    $self->weld_containers();
-
-    # Locate small nested blocks which should not be broken
-    $self->mark_short_nested_blocks();
-
-    $self->adjust_indentation_levels();
-
-    # Finishes formatting and write the result to the line sink.
-    # Eventually this call should just change the 'rlines' data according to the
-    # new line breaks and then return so that we can do an internal iteration
-    # before continuing with the next stages of formatting.
-    $self->process_all_lines();
-
-    ############################################################
-    # A possible future decomposition of 'process_all_lines()' follows.
-    # Benefits:
-    # - allow perltidy to do an internal iteration which eliminates
-    #   many unnecessary steps, such as re-parsing and vertical alignment.
-    #   This will allow iterations to be automatic.
-    # - consolidate all length calculations to allow utf8 alignment
-    ############################################################
-
-    # Future: Check for convergence of beginning tokens on CODE lines
-
-    # Future: End of Iteration Loop
-
-    # Future: add_padding($rargs);
-
-    # Future: add_closing_side_comments($rargs);
-
-    # Future: vertical_alignment($rargs);
-
-    # Future: output results
-
-    # A final routine to tie up any loose ends
-    $self->wrapup();
-    return;
-}
-
-sub dump_verbatim {
-    my $self   = shift;
-    my $rlines = $self->[_rlines_];
-    foreach my $line ( @{$rlines} ) {
-        my $input_line = $line->{_line_text};
-        $self->write_unindented_line($input_line);
-    }
-    return;
-}
-
-{    ## begin closure scan_comments
-
-    # This routine is called once per file at the start of processing to
-    # make a pass through the lines, looking at lines of CODE and identifying
-    # special processing needs, such format skipping sections marked by
-    # special comments.
+{    ## begin closure write_line
 
     my $Last_line_had_side_comment;
     my $In_format_skipping_section;
     my $Saw_VERSION_in_this_file;
 
-    sub scan_comments {
-        my $self   = shift;
-        my $rlines = $self->[_rlines_];
+    sub initialize_write_line {
 
-        $Last_line_had_side_comment = undef;
-        $In_format_skipping_section = undef;
-        $Saw_VERSION_in_this_file   = undef;
+        $Last_line_had_side_comment = 0;
+        $In_format_skipping_section = 0;
+        $Saw_VERSION_in_this_file   = 0;
 
-        # Loop over all lines
-        foreach my $line_of_tokens ( @{$rlines} ) {
-            my $line_type = $line_of_tokens->{_line_type};
-            next unless ( $line_type eq 'CODE' );
-            my $CODE_type = $self->get_CODE_type($line_of_tokens);
-            $line_of_tokens->{_code_type} = $CODE_type;
+    }
+
+    sub write_line {
+
+      # This routine originally received lines of code and immediately processed
+      # them.  That was efficient when memory was limited, but now it just saves
+      # the lines it receives.  They get processed all together after the last
+      # line is received.
+
+       # As tokenized lines are received they are converted to the format needed
+       # for the final formatting.
+        my ( $self, $line_of_tokens_old ) = @_;
+        my $rLL           = $self->[_rLL_];
+        my $Klimit        = $self->[_Klimit_];
+        my $rlines_new    = $self->[_rlines_];
+        my $maximum_level = $self->[_maximum_level_];
+
+        my $Kfirst;
+        my $line_of_tokens = {};
+        foreach my $key (
+            qw(
+            _curly_brace_depth
+            _ending_in_quote
+            _guessed_indentation_level
+            _line_number
+            _line_text
+            _line_type
+            _paren_depth
+            _quote_character
+            _square_bracket_depth
+            _starting_in_quote
+            )
+          )
+        {
+            $line_of_tokens->{$key} = $line_of_tokens_old->{$key};
         }
+
+        # Data needed by Logger
+        $line_of_tokens->{_level_0}          = 0;
+        $line_of_tokens->{_ci_level_0}       = 0;
+        $line_of_tokens->{_nesting_blocks_0} = "";
+        $line_of_tokens->{_nesting_tokens_0} = "";
+
+        # Needed to avoid trimming quotes
+        $line_of_tokens->{_ended_in_blank_token} = undef;
+
+        my $line_type     = $line_of_tokens_old->{_line_type};
+        my $input_line_no = $line_of_tokens_old->{_line_number} - 1;
+        my $CODE_type     = "";
+        my $tee_output;
+        if ( $line_type eq 'CODE' ) {
+
+            my $rtokens         = $line_of_tokens_old->{_rtokens};
+            my $rtoken_type     = $line_of_tokens_old->{_rtoken_type};
+            my $rblock_type     = $line_of_tokens_old->{_rblock_type};
+            my $rcontainer_type = $line_of_tokens_old->{_rcontainer_type};
+            my $rcontainer_environment =
+              $line_of_tokens_old->{_rcontainer_environment};
+            my $rtype_sequence  = $line_of_tokens_old->{_rtype_sequence};
+            my $rlevels         = $line_of_tokens_old->{_rlevels};
+            my $rslevels        = $line_of_tokens_old->{_rslevels};
+            my $rci_levels      = $line_of_tokens_old->{_rci_levels};
+            my $rnesting_blocks = $line_of_tokens_old->{_rnesting_blocks};
+            my $rnesting_tokens = $line_of_tokens_old->{_rnesting_tokens};
+
+            my $jmax = @{$rtokens} - 1;
+            if ( $jmax >= 0 ) {
+                $Kfirst = defined($Klimit) ? $Klimit + 1 : 0;
+                foreach my $j ( 0 .. $jmax ) {
+
+                 # Clip negative nesting depths to zero to avoid problems.
+                 # Negative values can occur in files with unbalanced containers
+                    my $slevel = $rslevels->[$j];
+                    if ( $slevel < 0 ) { $slevel = 0 }
+
+                    if ( $rlevels->[$j] > $maximum_level ) {
+                        $maximum_level = $rlevels->[$j];
+                    }
+
+		    # But do not clip the 'level' variable yet. We will do this
+		    # later, in sub 'store_token_to_go'. The reason is that in
+		    # files with level errors, the logic in 'weld_cuddled_else'
+		    # uses a stack logic that will give bad welds if we clip
+		    # levels here.
+                    ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
+
+                    my @tokary;
+                    @tokary[
+                      _TOKEN_,         _TYPE_,
+                      _BLOCK_TYPE_,    _CONTAINER_ENVIRONMENT_,
+                      _TYPE_SEQUENCE_, _LEVEL_,
+                      _LEVEL_TRUE_,    _SLEVEL_,
+                      _CI_LEVEL_,      _LINE_INDEX_,
+                      ]
+                      = (
+                        $rtokens->[$j],        $rtoken_type->[$j],
+                        $rblock_type->[$j],    $rcontainer_environment->[$j],
+                        $rtype_sequence->[$j], $rlevels->[$j],
+                        $rlevels->[$j],        $slevel,
+                        $rci_levels->[$j],     $input_line_no,
+                      );
+                    push @{$rLL}, \@tokary;
+                } ## end foreach my $j ( 0 .. $jmax )
+
+                $Klimit = @{$rLL} - 1;
+
+                # Need to remember if we can trim the input line
+                $line_of_tokens->{_ended_in_blank_token} =
+                  $rtoken_type->[$jmax] eq 'b';
+
+                $line_of_tokens->{_level_0}          = $rlevels->[0];
+                $line_of_tokens->{_ci_level_0}       = $rci_levels->[0];
+                $line_of_tokens->{_nesting_blocks_0} = $rnesting_blocks->[0];
+                $line_of_tokens->{_nesting_tokens_0} = $rnesting_tokens->[0];
+            } ## end if ( $jmax >= 0 )
+
+            $CODE_type =
+              $self->get_CODE_type( $line_of_tokens, $Kfirst, $Klimit );
+
+            $tee_output ||=
+                 $rOpts_tee_block_comments
+              && $jmax == 0
+              && $rLL->[$Kfirst]->[_TYPE_] eq '#';
+
+            $tee_output ||=
+                 $rOpts_tee_side_comments
+              && defined($Kfirst)
+              && $Klimit > $Kfirst
+              && $rLL->[$Klimit]->[_TYPE_] eq '#';
+
+            my $delete_side_comment =
+                 $rOpts_delete_side_comments
+              && defined($Kfirst)
+              && $line_type ne 'FS'
+              && $rLL->[$Klimit]->[_TYPE_] eq '#'
+              && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' );
+
+            if (   $rOpts_delete_closing_side_comments
+                && defined($Kfirst)
+                && $Klimit > $Kfirst
+                && $line_type ne 'FS'
+                && $rLL->[$Klimit]->[_TYPE_] eq '#' )
+            {
+                my $token  = $rLL->[$Klimit]->[_TOKEN_];
+                my $K_m    = $Klimit - 1;
+                my $type_m = $rLL->[$K_m]->[_TYPE_];
+                if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
+                my $last_nonblank_block_type = $rLL->[$K_m]->[_BLOCK_TYPE_];
+                if (   $token =~ /$closing_side_comment_prefix_pattern/
+                    && $last_nonblank_block_type =~
+                    /$closing_side_comment_list_pattern/ )
+                {
+                    $delete_side_comment = 1;
+                }
+            } ## end if ( $rOpts_delete_closing_side_comments...)
+
+            if ($delete_side_comment) {
+                pop @{$rLL};
+                $Klimit -= 1;
+                if (   $Klimit > $Kfirst
+                    && $rLL->[$Klimit]->[_TYPE_] eq 'b' )
+                {
+                    pop @{$rLL};
+                    $Klimit -= 1;
+                }
+
+                # The -io option outputs the line text, so we have to update
+                # the line text so that the comment does not reappear
+                my $line = "";
+                foreach my $KK ( $Kfirst .. $Klimit ) {
+                    $line .= $rLL->[$KK]->[_TOKEN_];
+                }
+                $line_of_tokens->{_line_text} = $line;
+
+                # If we delete a hanging side comment the line becomes blank.
+                # We are deleting hanging side comments when -dac is used
+                # in order to keep the code output the same as older versions.
+                if ( $CODE_type eq 'HSC' ) { $CODE_type = 'BL' }
+            }
+
+        } ## end if ( $line_type eq 'CODE')
+
+        # Handle line of non-code
+        else {
+            $tee_output ||= $rOpts_tee_pod
+              && substr( $line_type, 0, 3 ) eq 'POD';
+        }
+
+        # Finish storing line variables
+        if ($tee_output) {
+            my $fh_tee    = $self->[_fh_tee_];
+            my $line_text = $line_of_tokens_old->{_line_text};
+            $fh_tee->print($line_text) if ($fh_tee);
+        }
+
+        $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
+        $line_of_tokens->{_code_type} = $CODE_type;
+        $self->[_Klimit_]             = $Klimit;
+        $self->[_maximum_level_]      = $maximum_level;
+
+        push @{$rlines_new}, $line_of_tokens;
         return;
     }
 
     sub get_CODE_type {
-        my ( $self, $line_of_tokens ) = @_;
+        my ( $self, $line_of_tokens, $Kfirst, $Klast ) = @_;
 
         # We are looking at a line of code and setting a flag to
         # describe any special processing that it requires
@@ -4430,8 +4392,7 @@ sub dump_verbatim {
         # 'VER'=VERSION statement
         # '' or (undefined) - no restructions
 
-        my $rLL    = $self->[_rLL_];
-        my $Klimit = $self->[_Klimit_];
+        my $rLL = $self->[_rLL_];
 
         my $rOpts_format_skipping = $rOpts->{'format-skipping'};
 
@@ -4443,9 +4404,7 @@ sub dump_verbatim {
 
         my $input_line_number = $line_of_tokens->{_line_number};
         my $input_line        = $line_of_tokens->{_line_text};
-        my $rK_range          = $line_of_tokens->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
-        my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
+        my $jmax              = defined($Kfirst) ? $Klast - $Kfirst : -1;
 
         my $is_block_comment        = 0;
         my $has_side_comment        = 0;
@@ -4618,7 +4577,121 @@ sub dump_verbatim {
         $Last_line_had_side_comment = $has_side_comment;
         return $CODE_type;
     }
-} ## end closure scan_comments
+
+} ## end closure write_line
+
+#############################################
+# CODE SECTION 5: Pre-process the entire file
+#############################################
+
+sub finish_formatting {
+
+    my ( $self, $severe_error ) = @_;
+
+    # The file has been tokenized and is ready to be formatted.
+    # All of the relevant data is stored in $self, ready to go.
+
+    # Check the maximum level. If it is extremely large we will
+    # give up and output the file verbatim.
+    my $maximum_level       = $self->[_maximum_level_];
+    my $maximum_table_index = $#maximum_line_length;
+    if ( !$severe_error && $maximum_level > $maximum_table_index ) {
+        $severe_error ||= 1;
+        Warn(<<EOM);
+The maximum indentation level, $maximum_level, exceeds the builtin limit of $maximum_table_index.
+Something may be wrong; formatting will be skipped. 
+EOM
+    }
+
+    # output file verbatim if severe error or no formatting requested
+    if ( $severe_error || $rOpts->{notidy} ) {
+        $self->dump_verbatim();
+        $self->wrapup();
+        return;
+    }
+
+    # Update the 'save_logfile' flag based to include any tokenization errors.
+    # We can save time by skipping logfile calls if it is not going to be saved.
+    my $logger_object = $self->[_logger_object_];
+    if ($logger_object) {
+        $self->[_save_logfile_] = $logger_object->get_save_logfile();
+    }
+
+    # Make sure everything looks good
+    DEVEL_MODE && self->check_line_hashes();
+
+    # Future: Place to Begin future Iteration Loop
+    # foreach my $it_count(1..$maxit) {
+
+    # Future: We must reset some things after the first iteration.
+    # This includes:
+    #   - resetting levels if there was any welding
+    #   - resetting any phantom semicolons
+    #   - dealing with any line numbering issues so we can relate final lines
+    #     line numbers with input line numbers.
+    #
+    # If ($it_count>1) {
+    #   Copy {level_raw} to [_LEVEL_] if ($it_count>1)
+    #   Renumber lines
+    # }
+
+    # Make a pass through all tokens, adding or deleting any whitespace as
+    # required.  Also make any other changes, such as adding semicolons.
+    # All token changes must be made here so that the token data structure
+    # remains fixed for the rest of this iteration.
+    $self->respace_tokens();
+
+    $self->keep_old_line_breaks();
+
+    # Implement any welding needed for the -wn or -cb options
+    $self->weld_containers();
+
+    # Locate small nested blocks which should not be broken
+    $self->mark_short_nested_blocks();
+
+    $self->adjust_indentation_levels();
+
+    # Finishes formatting and write the result to the line sink.
+    # Eventually this call should just change the 'rlines' data according to the
+    # new line breaks and then return so that we can do an internal iteration
+    # before continuing with the next stages of formatting.
+    $self->process_all_lines();
+
+    ############################################################
+    # A possible future decomposition of 'process_all_lines()' follows.
+    # Benefits:
+    # - allow perltidy to do an internal iteration which eliminates
+    #   many unnecessary steps, such as re-parsing and vertical alignment.
+    #   This will allow iterations to be automatic.
+    # - consolidate all length calculations to allow utf8 alignment
+    ############################################################
+
+    # Future: Check for convergence of beginning tokens on CODE lines
+
+    # Future: End of Iteration Loop
+
+    # Future: add_padding($rargs);
+
+    # Future: add_closing_side_comments($rargs);
+
+    # Future: vertical_alignment($rargs);
+
+    # Future: output results
+
+    # A final routine to tie up any loose ends
+    $self->wrapup();
+    return;
+}
+
+sub dump_verbatim {
+    my $self   = shift;
+    my $rlines = $self->[_rlines_];
+    foreach my $line ( @{$rlines} ) {
+        my $input_line = $line->{_line_text};
+        $self->write_unindented_line($input_line);
+    }
+    return;
+}
 
 {    ## begin closure check_line_hashes
 
@@ -7690,9 +7763,6 @@ sub process_all_lines {
                 {
                     $self->want_blank_line();
                 }
-                if ( $rOpts->{'tee-pod'} ) {
-                    $fh_tee->print($input_line) if ($fh_tee);
-                }
             }
 
             # leave the blank counters in a predictable state
@@ -8658,9 +8728,6 @@ EOM
         ######################################
         if ($is_comment) {
 
-            if ( $rOpts->{'tee-block-comments'} ) {
-                $fh_tee->print($input_line) if ($fh_tee);
-            }
             if ( $rOpts->{'delete-block-comments'} ) {
                 $self->flush();
                 return;
@@ -8748,19 +8815,6 @@ EOM
             $self->flush();
             my $line = $input_line;
 
-            # delete side comments if requested with -io
-            if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
-                if ( $rOpts->{'delete-side-comments'} ) {
-                    $line = "";
-                    foreach my $KK ( $K_first .. $K_last - 1 ) {
-                        $line .= $rLL->[$KK]->[_TOKEN_];
-                    }
-                }
-                if ( $rOpts->{'tee-side-comments'} ) {
-                    $fh_tee->print($input_line) if ($fh_tee);
-                }
-            }
-
             # Fix for rt #125506 Unexpected string formating
             # in which leading space of a terminal quote was removed
             $line =~ s/\s+$//;
@@ -8838,25 +8892,6 @@ EOM
             my $type          = $rtoken_vars->[_TYPE_];
             my $block_type    = $rtoken_vars->[_BLOCK_TYPE_];
             my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-
-            if ( $type eq '#' ) {
-
-                if (
-                    $rOpts->{'delete-side-comments'}
-
-                    # delete closing side comments if necessary
-                    || (   $rOpts->{'delete-closing-side-comments'}
-                        && $token =~ /$closing_side_comment_prefix_pattern/
-                        && $last_nonblank_block_type =~
-                        /$closing_side_comment_list_pattern/ )
-                  )
-                {
-                    if ( $types_to_go[$max_index_to_go] eq 'b' ) {
-                        unstore_token_to_go();
-                    }
-                    last;
-                }
-            }
 
             # If we are continuing after seeing a right curly brace, flush
             # buffer unless we see what we are looking for, as in
@@ -9240,17 +9275,10 @@ EOM
 
         my $type = $rLL->[$K_last]->[_TYPE_];
 
-        if ( $type eq '#' && $rOpts->{'tee-side-comments'} ) {
-            $fh_tee->print($input_line) if ($fh_tee);
-        }
-
         # we have to flush ..
         if (
 
             # if there is a side comment...
-            # Even if we deleted it! Otherwise,
-            # i-K indexing will have a gap and be incorrect ( see RT #132059)
-            ## ( ( $type eq '#' ) && !$rOpts->{'delete-side-comments'} )
             $type eq '#'
 
             # if this line ends in a quote
