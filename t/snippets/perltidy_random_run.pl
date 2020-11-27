@@ -74,6 +74,14 @@ my $do_syntax_check    = $rsetup->{syntax_check};
 my $delete_good_output = $rsetup->{delete_good_output};
 my $FILES_file         = $rsetup->{files};
 my $PROFILES_file      = $rsetup->{profiles};
+my $perltidy           = $rsetup->{perltidy};
+
+my $binfile = "perltidy";
+if ($perltidy) {
+    $binfile = "perl $perltidy";
+}
+
+   
 
 $FILES_file         = "FILES.txt"    unless ($FILES_file);
 $PROFILES_file      = "PROFILES.txt" unless ($PROFILES_file);
@@ -183,7 +191,7 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
 
         print STDERR "\n-----\nRun '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
-        my $cmd = "perltidy <$ifile >$ofile -pro=$profile";
+        my $cmd = "$binfile <$ifile >$ofile -pro=$profile";
         print STDERR "$cmd\n";
         system $cmd;
         my $efile   = "perltidy.ERR";

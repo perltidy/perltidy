@@ -11,6 +11,7 @@ our $rsetup;    # the setup hash
 my $config_file   = "config.txt";
 my $FILES_file    = "FILES.txt";
 my $PROFILES_file = "PROFILES.txt";
+my $perltidy = "";
 my $rfiles    = [];
 my $rprofiles = [];
 
@@ -73,6 +74,8 @@ while (1) {
     my $chain_mode         = $rsetup->{chain_mode};
     my $do_syntax_check    = $rsetup->{syntax_check};
     my $delete_good_output = $rsetup->{delete_good_output};
+    my $perltidy_version   = $rsetup->{perltidy};
+    $perltidy_version = "[default]" unless ($perltidy_version);
     print <<EOM;
 ===Main Menu===
 R   - Read a config file
@@ -83,6 +86,7 @@ $profile_info
 C   - Chain mode               : $chain_mode
 D   - Delete good output?      : $delete_good_output
 S   - Syntax check?            : $do_syntax_check
+V   - perltidy Version         : $perltidy_version
 Q   - Quit without saving config file
 W   - Write config, FILES.txt, PROFILES.txt, GO.sh and eXit
 EOM
@@ -116,6 +120,16 @@ EOM
     elsif ( $ans eq 'S' ) {
         $do_syntax_check = ifyes("Do syntax checking? [Y/N]","N");
         $rsetup->{syntax_check} = $do_syntax_check;
+    }
+    elsif ( $ans eq 'V' ) {
+        my $test =
+          query("Enter the full path to the perltidy binary, or <cr> for default");
+        if ( $test && !-e $test ) {
+            next
+              unless (
+                ifyes("I cannot find that, do you want to use it anyway?") );
+        }
+        $rsetup->{perltidy} = $test;
     }
     elsif ( $ans eq 'Q' ) {
         last if ( ifyes("Quit without saving? [Y/N]") );
@@ -275,6 +289,7 @@ sub default_config {
         syntax_check       => 0,
         profiles           => $PROFILES_file,
         files              => $FILES_file,
+        perltidy           => $perltidy,
     };
     return;
 }
@@ -298,7 +313,8 @@ unlink $0;
 nohup nice -n19 perltidy_random_run.pl >>nohup.my 2>>nohup.my
 EOM
     system("chmod +x $runme");
-    print STDOUT "now enter ./$runme\n";
+    print STDOUT "Edit $config_file if you want to make any changes\n";
+    print STDOUT "then enter ./$runme\n";
 }
 
 sub write_config {
