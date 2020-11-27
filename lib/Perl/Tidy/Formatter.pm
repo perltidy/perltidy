@@ -1013,9 +1013,12 @@ sub check_options {
     # eliminate any old csc's which fall below the line count threshold.
     # We cannot do this if warnings are turned on, though, because we
     # might delete some text which has been added.  So that must
-    # be handled when comments are created.
+    # be handled when comments are created.  And we cannot do this
+    # with -io because -csc will be skipped altogether.
     if ( $rOpts->{'closing-side-comments'} ) {
-        if ( !$rOpts->{'closing-side-comment-warnings'} ) {
+        if (   !$rOpts->{'closing-side-comment-warnings'}
+            && !$rOpts->{'indent-only'} )
+        {
             $rOpts->{'delete-closing-side-comments'} = 1;
         }
     }
@@ -4219,7 +4222,15 @@ sub make_closing_side_comment_prefix {
         my $input_line_no = $line_of_tokens_old->{_line_number} - 1;
         my $CODE_type     = "";
         my $tee_output;
-        if ( $line_type eq 'CODE' ) {
+
+        # Handle line of non-code
+        if ( $line_type ne 'CODE' ) {
+            $tee_output ||= $rOpts_tee_pod
+              && substr( $line_type, 0, 3 ) eq 'POD';
+        }
+
+        # Handle line of code
+        else {
 
             my $rtokens         = $line_of_tokens_old->{_rtokens};
             my $rtoken_type     = $line_of_tokens_old->{_rtoken_type};
@@ -4248,11 +4259,11 @@ sub make_closing_side_comment_prefix {
                         $maximum_level = $rlevels->[$j];
                     }
 
-		    # But do not clip the 'level' variable yet. We will do this
-		    # later, in sub 'store_token_to_go'. The reason is that in
-		    # files with level errors, the logic in 'weld_cuddled_else'
-		    # uses a stack logic that will give bad welds if we clip
-		    # levels here.
+                    # But do not clip the 'level' variable yet. We will do this
+                    # later, in sub 'store_token_to_go'. The reason is that in
+                    # files with level errors, the logic in 'weld_cuddled_else'
+                    # uses a stack logic that will give bad welds if we clip
+                    # levels here.
                     ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
 
                     my @tokary;
@@ -4299,17 +4310,23 @@ sub make_closing_side_comment_prefix {
               && $Klimit > $Kfirst
               && $rLL->[$Klimit]->[_TYPE_] eq '#';
 
+            # Handle any requested side comment deletions. It is easier to get
+            # this done here rather than farther down the pipeline because IO
+            # lines take a different route, and because lines with deleted HSC
+            # become BL lines.  An since we are deleting now, we have to also
+            # handle any tee- requests before the side comments vanish.
+            goto END_CODE
+              if ( $CODE_type && $CODE_type ne 'HSC' && $CODE_type ne 'IO' );
+
             my $delete_side_comment =
                  $rOpts_delete_side_comments
               && defined($Kfirst)
-              && $line_type ne 'FS'
               && $rLL->[$Klimit]->[_TYPE_] eq '#'
               && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' );
 
             if (   $rOpts_delete_closing_side_comments
                 && defined($Kfirst)
                 && $Klimit > $Kfirst
-                && $line_type ne 'FS'
                 && $rLL->[$Klimit]->[_TYPE_] eq '#' )
             {
                 my $token  = $rLL->[$Klimit]->[_TOKEN_];
@@ -4336,26 +4353,22 @@ sub make_closing_side_comment_prefix {
                 }
 
                 # The -io option outputs the line text, so we have to update
-                # the line text so that the comment does not reappear
-                my $line = "";
-                foreach my $KK ( $Kfirst .. $Klimit ) {
-                    $line .= $rLL->[$KK]->[_TOKEN_];
+                # the line text so that the comment does not reappear.
+                if ( $CODE_type eq 'IO' ) {
+                    my $line = "";
+                    foreach my $KK ( $Kfirst .. $Klimit ) {
+                        $line .= $rLL->[$KK]->[_TOKEN_];
+                    }
+                    $line_of_tokens->{_line_text} = $line . "\n";
                 }
-                $line_of_tokens->{_line_text} = $line;
 
                 # If we delete a hanging side comment the line becomes blank.
-                # We are deleting hanging side comments when -dac is used
-                # in order to keep the code output the same as older versions.
                 if ( $CODE_type eq 'HSC' ) { $CODE_type = 'BL' }
             }
 
         } ## end if ( $line_type eq 'CODE')
 
-        # Handle line of non-code
-        else {
-            $tee_output ||= $rOpts_tee_pod
-              && substr( $line_type, 0, 3 ) eq 'POD';
-        }
+      END_CODE:
 
         # Finish storing line variables
         if ($tee_output) {
