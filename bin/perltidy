@@ -703,8 +703,10 @@ control.  For all practical purposes one either does or does not want to be
 sure that the output is converged, and there is no penalty to using a large
 iteration limit since perltidy will check for convergence and stop iterating as
 soon as possible.  The default is B<-nconv> (no convergence check).  Using
-B<-conv> will approximately double run time since normally one extra iteration
-is required to verify convergence.
+B<-conv> will approximately double run time since typically one extra iteration
+is required to verify convergence.  No extra iterations are required if no new
+line breaks are made, and two extra iterations are occasionally needed when
+reformatting complex code structures, such as deeply nested ternary statements.
 
 =back
 

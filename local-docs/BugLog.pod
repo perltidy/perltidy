@@ -2,6 +2,12 @@
 
 =over 4
 
+=item B<do not automatically delete closing side comments with --indent-only>
+
+For the parameter combination --indent-only and --closing-side-comments, old
+closing side comments were getting deleted but new closing side comments were
+not made.  A fix was made to prevent this deletion.  This fix was made 27 Nov 2020.
+
 =item B<fix to stop at 1 iteration when using --indent-only>
 
 Previously, for the combination --indent-only and -conv, two iterations
