@@ -4630,9 +4630,6 @@ EOM
         $self->[_save_logfile_] = $logger_object->get_save_logfile();
     }
 
-    # Make sure everything looks good
-    DEVEL_MODE && self->check_line_hashes();
-
     # Future: Place to Begin future Iteration Loop
     # foreach my $it_count(1..$maxit) {
 
@@ -4705,57 +4702,6 @@ sub dump_verbatim {
     }
     return;
 }
-
-{    ## begin closure check_line_hashes
-
-    # This code checks that no autovivification occurs in the 'line' hash.
-    # Almost all other storage has been moved to arrays to avoid possible
-    # autovivification errors, which are easy to introduce with typos and
-    # difficult to track down, but the hash is more appropriate for structures
-    # like this which are shared between modules.  So it needs to be checked.
-
-    my %valid_line_hash;
-
-    BEGIN {
-
-        # These keys are defined for each line in the formatter
-        # Each line must have exactly these quantities
-        my @valid_line_keys = qw(
-          _curly_brace_depth
-          _ending_in_quote
-          _guessed_indentation_level
-          _line_number
-          _line_text
-          _line_type
-          _paren_depth
-          _quote_character
-          _rK_range
-          _square_bracket_depth
-          _starting_in_quote
-          _ended_in_blank_token
-          _code_type
-
-          _ci_level_0
-          _level_0
-          _nesting_blocks_0
-          _nesting_tokens_0
-        );
-
-        @valid_line_hash{@valid_line_keys} = (1) x scalar(@valid_line_keys);
-    }
-
-    sub check_line_hashes {
-        my $self   = shift;
-        my $rlines = $self->[_rlines_];
-        foreach my $rline ( @{$rlines} ) {
-            my $iline     = $rline->{_line_number};
-            my $line_type = $rline->{_line_type};
-            check_keys( $rline, \%valid_line_hash,
-                "Checkpoint: line number =$iline,  line_type=$line_type", 1 );
-        }
-        return;
-    }
-} ## end closure check_line_hashes
 
 sub respace_tokens {
 
