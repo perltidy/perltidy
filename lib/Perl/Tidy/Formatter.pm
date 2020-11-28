@@ -4865,12 +4865,19 @@ sub respace_tokens {
 
     my $K_end_q = sub {
         my ($KK)  = @_;
+        my $Num   = @{$rLL};
         my $K_end = $KK;
-        my $Kn    = $self->K_next_nonblank($KK);
-        while ( defined($Kn) && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
+
+        my $Kn = $KK + 1;
+        if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
+
+        while ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
             $K_end = $Kn;
-            $Kn    = $self->K_next_nonblank($Kn);
+
+            $Kn += 1;
+            if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
         }
+
         return $K_end;
     };
 
@@ -5399,7 +5406,7 @@ sub respace_tokens {
 
                 # clean up spaces in package identifiers, like
                 #   "package        Bob::Dog;"
-                if ($token =~ /^package\s/) {
+                if ( $token =~ /^package\s/ ) {
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
@@ -5534,31 +5541,34 @@ sub respace_tokens {
                 else {
 
                     # we are encountered new qw token...see if multiline
-                    my $K_end = $K_end_q->($KK);
-                    if ( $ALLOW_BREAK_MULTILINE_QW && $K_end != $KK ) {
+                    if ($ALLOW_BREAK_MULTILINE_QW) {
+                        my $K_end = $K_end_q->($KK);
+                        if ( $K_end != $KK ) {
 
-                        # Starting multiline qw...
-                        # set flag equal to the ending K
-                        $in_multiline_qw = $K_end;
+                            # Starting multiline qw...
+                            # set flag equal to the ending K
+                            $in_multiline_qw = $K_end;
 
-                        # Split off the leading part so that the formatter can
-                        # put a line break there if necessary
-                        if ( $token =~ /^(qw\s*.)(.*)$/ ) {
-                            my $part1 = $1;
-                            my $part2 = $2;
-                            if ($part2) {
-                                my $rcopy =
-                                  copy_token_as_type( $rtoken_vars, 'q',
-                                    $part1 );
-                                $store_token_and_space->(
-                                    $rcopy, $rwhitespace_flags->[$KK] == WS_YES
-                                );
-                                $token = $part2;
-                                $rtoken_vars->[_TOKEN_] = $token;
+                          # Split off the leading part so that the formatter can
+                          # put a line break there if necessary
+                            if ( $token =~ /^(qw\s*.)(.*)$/ ) {
+                                my $part1 = $1;
+                                my $part2 = $2;
+                                if ($part2) {
+                                    my $rcopy =
+                                      copy_token_as_type( $rtoken_vars, 'q',
+                                        $part1 );
+                                    $store_token_and_space->(
+                                        $rcopy,
+                                        $rwhitespace_flags->[$KK] == WS_YES
+                                    );
+                                    $token = $part2;
+                                    $rtoken_vars->[_TOKEN_] = $token;
 
-                                # Second part goes without intermediate blank
-                                $store_token->($rtoken_vars);
-                                next;
+                                   # Second part goes without intermediate blank
+                                    $store_token->($rtoken_vars);
+                                    next;
+                                }
                             }
                         }
                     }
