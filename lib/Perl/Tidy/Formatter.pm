@@ -350,6 +350,7 @@ BEGIN {
         _rbreak_container_        => $i++,
         _rshort_nested_           => $i++,
         _length_function_         => $i++,
+        _is_encoded_data_         => $i++,
         _fh_tee_                  => $i++,
         _sink_object_             => $i++,
         _file_writer_object_      => $i++,
@@ -600,11 +601,13 @@ sub new {
         diagnostics_object => undef,
         logger_object      => undef,
         length_function    => sub { return length( $_[0] ) },
+        is_encoded_data    => "",
         fh_tee             => undef,
     );
     my %args = ( %defaults, @args );
 
     my $length_function    = $args{length_function};
+    my $is_encoded_data    = $args{is_encoded_data};
     my $fh_tee             = $args{fh_tee};
     my $logger_object      = $args{logger_object};
     my $diagnostics_object = $args{diagnostics_object};
@@ -681,6 +684,7 @@ sub new {
     $self->[_rbreak_container_]      = {};    # prevent one-line blocks
     $self->[_rshort_nested_]         = {};    # blocks not forced open
     $self->[_length_function_]       = $length_function;
+    $self->[_is_encoded_data_]       = $is_encoded_data;
 
     # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
@@ -4172,6 +4176,7 @@ sub make_closing_side_comment_prefix {
         $In_format_skipping_section = 0;
         $Saw_VERSION_in_this_file   = 0;
 
+        return;
     }
 
     sub write_line {
@@ -4695,6 +4700,7 @@ sub respace_tokens {
     my $Klimit_old      = $self->[_Klimit_];
     my $rlines          = $self->[_rlines_];
     my $length_function = $self->[_length_function_];
+    my $is_encoded_data = $self->[_is_encoded_data_];
 
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
@@ -4796,7 +4802,10 @@ sub respace_tokens {
 
         # Find the length of this token.  Later it may be adjusted if phantom
         # or ignoring side comment lengths.
-        my $token_length = $length_function->( $item->[_TOKEN_] );
+        my $token_length =
+            $is_encoded_data
+          ? $length_function->( $item->[_TOKEN_] )
+          : length( $item->[_TOKEN_] );
 
         # handle comments
         my $is_comment = $type eq '#';

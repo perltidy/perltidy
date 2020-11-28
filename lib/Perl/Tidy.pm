@@ -1376,6 +1376,7 @@ EOM
                     diagnostics_object => $diagnostics_object,
                     sink_object        => $sink_object,
                     length_function    => $length_function,
+                    is_encoded_data    => $is_encoded_data,
                     fh_tee             => $fh_tee,
                 );
             }
