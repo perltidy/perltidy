@@ -5397,6 +5397,13 @@ sub respace_tokens {
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
 
+                # clean up spaces in package identifiers, like
+                #   "package        Bob::Dog;"
+                if ($token =~ /^package\s/) {
+                    $token =~ s/\s+/ /g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+
                 # trim identifiers of trailing blanks which can occur
                 # under some unusual circumstances, such as if the
                 # identifier 'witch' has trailing blanks on input here:
@@ -10193,7 +10200,7 @@ EOM
                     }
 
                     # break before all package declarations
-                    elsif ( $leading_token =~ /^(package\s)/ ) {
+                    elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
                         $want_blank = $rOpts->{'blank-lines-before-packages'};
                     }
                 }

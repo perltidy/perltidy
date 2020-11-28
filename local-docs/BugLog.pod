@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<removed excess spaces in a package declaration>
+
+Testing revealed that for a line such as
+
+   package        Bob::Dog;
+
+which has extra spaces or even tabs after the keyword 'package', the
+extra spaces or tabs were not being removed.  This was fixed 28 Nov 2020.
+The line now formats to
+
+    package Bob::Dog;
+
 =item B<do not automatically delete closing side comments with --indent-only>
 
 For the parameter combination --indent-only and --closing-side-comments, old
