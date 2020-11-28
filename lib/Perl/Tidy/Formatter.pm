@@ -4315,19 +4315,20 @@ sub make_closing_side_comment_prefix {
             # lines take a different route, and because lines with deleted HSC
             # become BL lines.  An since we are deleting now, we have to also
             # handle any tee- requests before the side comments vanish.
-            goto END_CODE
-              if ( $CODE_type && $CODE_type ne 'HSC' && $CODE_type ne 'IO' );
-
             my $delete_side_comment =
                  $rOpts_delete_side_comments
               && defined($Kfirst)
               && $rLL->[$Klimit]->[_TYPE_] eq '#'
-              && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' );
+              && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' )
+              && ( !$CODE_type || $CODE_type eq 'HSC' || $CODE_type eq 'IO' );
 
             if (   $rOpts_delete_closing_side_comments
+                && !$delete_side_comment
                 && defined($Kfirst)
                 && $Klimit > $Kfirst
-                && $rLL->[$Klimit]->[_TYPE_] eq '#' )
+                && $rLL->[$Klimit]->[_TYPE_] eq '#'
+                && ( !$CODE_type || $CODE_type eq 'HSC' || $CODE_type eq 'IO' )
+              )
             {
                 my $token  = $rLL->[$Klimit]->[_TOKEN_];
                 my $K_m    = $Klimit - 1;
@@ -4367,8 +4368,6 @@ sub make_closing_side_comment_prefix {
             }
 
         } ## end if ( $line_type eq 'CODE')
-
-      END_CODE:
 
         # Finish storing line variables
         if ($tee_output) {
@@ -4630,21 +4629,6 @@ EOM
         $self->[_save_logfile_] = $logger_object->get_save_logfile();
     }
 
-    # Future: Place to Begin future Iteration Loop
-    # foreach my $it_count(1..$maxit) {
-
-    # Future: We must reset some things after the first iteration.
-    # This includes:
-    #   - resetting levels if there was any welding
-    #   - resetting any phantom semicolons
-    #   - dealing with any line numbering issues so we can relate final lines
-    #     line numbers with input line numbers.
-    #
-    # If ($it_count>1) {
-    #   Copy {level_raw} to [_LEVEL_] if ($it_count>1)
-    #   Renumber lines
-    # }
-
     # Make a pass through all tokens, adding or deleting any whitespace as
     # required.  Also make any other changes, such as adding semicolons.
     # All token changes must be made here so that the token data structure
@@ -4666,27 +4650,6 @@ EOM
     # new line breaks and then return so that we can do an internal iteration
     # before continuing with the next stages of formatting.
     $self->process_all_lines();
-
-    ############################################################
-    # A possible future decomposition of 'process_all_lines()' follows.
-    # Benefits:
-    # - allow perltidy to do an internal iteration which eliminates
-    #   many unnecessary steps, such as re-parsing and vertical alignment.
-    #   This will allow iterations to be automatic.
-    # - consolidate all length calculations to allow utf8 alignment
-    ############################################################
-
-    # Future: Check for convergence of beginning tokens on CODE lines
-
-    # Future: End of Iteration Loop
-
-    # Future: add_padding($rargs);
-
-    # Future: add_closing_side_comments($rargs);
-
-    # Future: vertical_alignment($rargs);
-
-    # Future: output results
 
     # A final routine to tie up any loose ends
     $self->wrapup();

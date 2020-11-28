@@ -158,12 +158,17 @@ EOM
 
     sub current_field_width {
         my ( $self, $j ) = @_;
-        if ( $j == 0 ) {
-            return $self->get_column($j);
+        my $col_j  = 0;
+        my $col_jm = 0;
+
+        my $alignment_j = $self->[_ralignments_]->[$j];
+        $col_j = $alignment_j->get_column() if defined($alignment_j);
+
+        if ( $j > 0 ) {
+            my $alignment_jm = $self->[_ralignments_]->[ $j - 1 ];
+            $col_jm = $alignment_jm->get_column() if defined($alignment_jm);
         }
-        else {
-            return $self->get_column($j) - $self->get_column( $j - 1 );
-        }
+        return $col_j - $col_jm;
     }
 
     sub increase_field_width {
