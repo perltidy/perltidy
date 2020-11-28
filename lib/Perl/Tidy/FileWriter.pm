@@ -9,6 +9,8 @@ use strict;
 use warnings;
 our $VERSION = '20201001.03';
 
+use constant DEVEL_MODE => 0;
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
@@ -34,6 +36,8 @@ sub DESTROY {
 
     # required to avoid call to AUTOLOAD in some versions of perl
 }
+
+my $input_stream_name = "";
 
 # Maximum number of little messages; probably need not be changed.
 my $MAX_NAG_MESSAGES = 6;
@@ -63,6 +67,13 @@ BEGIN {
         _K_sequence_error_msg_       => $i++,
         _K_last_arrival_             => $i++,
     };
+}
+
+sub warning {
+    my ( $self, $msg ) = @_;
+    my $logger_object = $self->[_logger_object_];
+    if ($logger_object) { $logger_object->warning($msg); }
+    return;
 }
 
 sub write_logfile_entry {
@@ -97,6 +108,13 @@ sub new {
     $self->[_K_arrival_order_matches_]    = 0;
     $self->[_K_sequence_error_msg_]       = "";
     $self->[_K_last_arrival_]             = -1;
+
+    # save input stream name for local error messages
+    $input_stream_name = "";
+    if ($logger_object) {
+        $input_stream_name = $logger_object->get_input_stream_name();
+    }
+
     bless $self, $class;
     return $self;
 }
@@ -190,30 +208,8 @@ sub write_blank_code_line {
 sub write_code_line {
     my ( $self, $str, $K ) = @_;
 
-    # Check for a blank line; this messy manipulation is almost three times
-    # faster than just testing if $str=~/^\s*$/ here
-    my $chomp_str = $str;
-    chomp $chomp_str;
-    if (  !length($chomp_str)
-        || substr( $chomp_str, -1, 1 ) eq ' ' && $str =~ /^\s*$/ )
-    {
-
-        # Blank lines go out anther way, so it is rare to get here. One way is
-        # if there are hanging side comments and -dsc is used.
-        # TODO: track all the ways down and avoid sending untrimmed blank lines 
-        # this way.
-        my $rOpts = $self->[_rOpts_];
-        return
-          if ( $self->[_consecutive_blank_lines_] >=
-            $rOpts->{'maximum-consecutive-blank-lines'} );
-        $self->[_consecutive_blank_lines_]++;
-        $self->[_consecutive_nonblank_lines_] = 0;
-    }
-    else {
-        $self->[_consecutive_blank_lines_] = 0;
-        $self->[_consecutive_nonblank_lines_]++;
-    }
-
+    $self->[_consecutive_blank_lines_] = 0;
+    $self->[_consecutive_nonblank_lines_]++;
     $self->write_line($str);
 
     #----------------------------
@@ -231,7 +227,13 @@ sub write_code_line {
             }
         }
 
-        # check for out-of-order arrivals of K (shouldn't happen).
+        # Check for out-of-order arrivals of index K. The K values are the
+        # token indexes of the last token of code lines, and they should come
+        # out in increasing order.  Otherwise something is seriously wrong.
+        # Most likely a recent programming change to VerticalAligner.pm has
+        # caused lines to go out in the wrong order.  This could happen if
+        # either the cache or buffer that it uses are emptied in the wrong
+        # order.
         if ( !$self->[_K_sequence_error_msg_] ) {
             my $K_prev = $self->[_K_last_arrival_];
             if ( $K < $K_prev ) {
@@ -239,15 +241,24 @@ sub write_code_line {
                 if ( length($str) > 80 ) {
                     $str = substr( $str, 0, 80 ) . "...";
                 }
+
                 my $msg = <<EOM;
+While operating on input stream with name: '$input_stream_name'
 Lines have arrived out of order in sub 'write_code_line'
-as detected by token index K=$K arriving after index K=$K_prev. The line
+as detected by token index K=$K arriving after index K=$K_prev in the following line:
 $str
+This is probably due to a recent programming change and needs to be fixed.
 EOM
 
-                # TODO: This message should go out as a warning after testing
-                # For now it is being stored.
+                # FIXME: it would be best to set a 'severe_error' flag here and
+                # tell caller to output the original file
+                $self->warning($msg);
+
+                # Only issue this warning once
                 $self->[_K_sequence_error_msg_] = $msg;
+
+                # stop here in DEVEL mode so this issue doesn't get missed
+                DEVEL_MODE && Perl::Tidy::Die($msg);
             }
         }
         $self->[_K_last_arrival_] = $K;
@@ -263,9 +274,9 @@ sub write_line {
     if ( chomp $str ) { $self->[_output_line_number_]++; }
 
     # This calculation of excess line length ignores any internal tabs
-    my $rOpts  = $self->[_rOpts_];
+    my $rOpts   = $self->[_rOpts_];
     my $len_str = length($str);
-    my $exceed = $len_str - $rOpts->{'maximum-line-length'};
+    my $exceed  = $len_str - $rOpts->{'maximum-line-length'};
     if ( $str && substr( $str, 0, 1 ) eq "\t" && $str =~ /^\t+/g ) {
         $exceed += pos($str) * $rOpts->{'indent-columns'};
     }
