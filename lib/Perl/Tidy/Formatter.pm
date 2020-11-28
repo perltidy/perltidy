@@ -4864,18 +4864,17 @@ sub respace_tokens {
     };
 
     my $K_end_q = sub {
-        my ($KK)  = @_;
-        my $Num   = @{$rLL};
+        my ($KK) = @_;
         my $K_end = $KK;
 
         my $Kn = $KK + 1;
-        if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
+        if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
 
-        while ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
+        while ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
             $K_end = $Kn;
 
             $Kn += 1;
-            if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
+            if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
         }
 
         return $K_end;
@@ -5024,9 +5023,10 @@ sub respace_tokens {
             $previous_nonblank_token_2 = $rLL_new->[$Kpp]->[_TOKEN_];
         }
 
-        my $Kn                  = $self->K_next_nonblank($KK);
         my $next_nonblank_token = "";
-        if ( defined($Kn) ) {
+        my $Kn                  = $KK + 1;
+        if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
+        if ( $Kn <= $Kmax ) {
             $next_nonblank_token = $rLL->[$Kn]->[_TOKEN_];
         }
 
@@ -6274,6 +6274,7 @@ sub find_nested_pairs {
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
+    my $Num = @{$rLL};
 
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
@@ -6298,8 +6299,12 @@ sub find_nested_pairs {
         my $K_inner_closing = $K_closing_container->{$inner_seqno};
 
         # See if it is immediately followed by another, outer closing token
-        my $K_outer_closing = $self->K_next_nonblank($K_inner_closing);
-        next unless ( defined($K_outer_closing) );
+        my $K_outer_closing = $K_inner_closing + 1;
+        $K_outer_closing += 1
+          if ( $K_outer_closing < $Num
+            && $rLL->[$K_outer_closing]->[_TYPE_] eq 'b' );
+
+        next unless ( $K_outer_closing < $Num );
         my $outer_seqno = $rLL->[$K_outer_closing]->[_TYPE_SEQUENCE_];
         next unless ($outer_seqno);
         my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
@@ -6796,6 +6801,7 @@ sub weld_nested_quotes {
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
+    my $Num = @{$rLL};
 
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
@@ -6854,8 +6860,11 @@ sub weld_nested_quotes {
         if ( $is_opening_token{$token} ) {
 
             # see if the next token is a quote of some type
-            my $Kn = $self->K_next_nonblank($KK);
-            next unless $Kn;
+            my $Kn = $KK + 1;
+            $Kn += 1
+              if ( $Kn < $Num && $rLL->[$Kn]->[_TYPE_] eq 'b' );
+            next unless ( $Kn < $Num );
+
             my $next_token = $rLL->[$Kn]->[_TOKEN_];
             my $next_type  = $rLL->[$Kn]->[_TYPE_];
             next
@@ -7204,8 +7213,10 @@ sub non_indenting_braces {
         return unless ( $token eq '{' && $block_type );
 
         # followed by a comment
-        my $K_sc = $self->K_next_nonblank($KK);
-        return unless defined($K_sc);
+        my $K_sc = $KK + 1;
+        $K_sc += 1
+          if ( $K_sc <= $Kmax && $rLL->[$K_sc]->[_TYPE_] eq 'b' );
+        return unless ( $K_sc <= $Kmax );
         my $type_sc = $rLL->[$K_sc]->[_TYPE_];
         return unless ( $type_sc eq '#' );
 
