@@ -166,6 +166,9 @@ my (
     $rOpts_tee_pod,
     $rOpts_delete_side_comments,
     $rOpts_delete_closing_side_comments,
+    $rOpts_format_skipping,
+    $rOpts_indent_only,
+    $rOpts_static_block_comments,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1469,6 +1472,9 @@ EOM
     $rOpts_delete_side_comments = $rOpts->{'delete-side-comments'};
     $rOpts_delete_closing_side_comments =
       $rOpts->{'delete-closing-side-comments'};
+    $rOpts_format_skipping       = $rOpts->{'format-skipping'};
+    $rOpts_indent_only           = $rOpts->{'indent-only'};
+    $rOpts_static_block_comments = $rOpts->{'static-block-comments'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -4396,54 +4402,31 @@ sub make_closing_side_comment_prefix {
         # We are looking at a line of code and setting a flag to
         # describe any special processing that it requires
 
-        # Possible CODE_types are as follows.
-        # 'BL' = Blank Line
-        # 'VB' = Verbatim - line goes out verbatim
-        # 'IO' = Indent Only - line goes out unchanged except for indentation
+        # Possible CODE_types
+        # 'VB'  = Verbatim - line goes out verbatim (a quote)
+        # 'FS'  = Format Skipping - line goes out verbatim
+        # 'BL'  = Blank Line
+        # 'HSC' = Hanging Side Comment - fix this hanging side comment
+        # 'SBCX'= Static Block Comment Without Leading Space
+        # 'SBC' = Static Block Comment
+        # 'BC'  = Block Comment - an ordinary full line comment
+        # 'IO'  = Indent Only - line goes out unchanged except for indentation
         # 'NIN' = No Internal Newlines - line does not get broken
-        # 'HSC'=Hanging Side Comment - fix this hanging side comment
-        # 'BC'=Block Comment - an ordinary full line comment
-        # 'SBC'=Static Block Comment - a block comment which does not get
-        #      indented
-        # 'SBCX'=Static Block Comment Without Leading Space
-        # 'VER'=VERSION statement
-        # '' or (undefined) - no restructions
+        # 'VER' = VERSION statement
+        # ''    = ordinary line of code with no restructions
 
         my $rLL = $self->[_rLL_];
 
-        my $rOpts_format_skipping = $rOpts->{'format-skipping'};
+        my $CODE_type  = "";
+        my $input_line = $line_of_tokens->{_line_text};
+        my $jmax       = defined($Kfirst) ? $Klast - $Kfirst : -1;
 
-        my $CODE_type            = $rOpts->{'indent-only'} ? 'IO' : "";
-        my $no_internal_newlines = 1 - $rOpts_add_newlines;
-        if ( !$CODE_type && $no_internal_newlines ) { $CODE_type = 'NIN' }
-
-        # extract what we need for this line..
-
-        my $input_line_number = $line_of_tokens->{_line_number};
-        my $input_line        = $line_of_tokens->{_line_text};
-        my $jmax              = defined($Kfirst) ? $Klast - $Kfirst : -1;
-
-        my $is_block_comment        = 0;
-        my $has_side_comment        = 0;
-        my $is_static_block_comment = 0;
+        my $is_block_comment = 0;
+        my $has_side_comment = 0;
 
         if ( $jmax >= 0 && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
             if   ( $jmax == 0 ) { $is_block_comment = 1; }
             else                { $has_side_comment = 1 }
-        }
-
-        # Handle a continued quote..
-        if ( $line_of_tokens->{_starting_in_quote} ) {
-
-            # A line which is entirely a quote or pattern must go out
-            # verbatim.  Note: the \n is contained in $input_line.
-            if ( $jmax <= 0 ) {
-                if ( ( $input_line =~ "\t" ) ) {
-                    $self->note_embedded_tab($input_line_number);
-                }
-                $CODE_type = 'VB';
-                goto RETURN;
-            }
         }
 
         # Write line verbatim if we are in a formatting skip section
@@ -4459,6 +4442,21 @@ sub make_closing_side_comment_prefix {
             }
             $CODE_type = 'FS';
             goto RETURN;
+        }
+
+        # Check for a continued quote..
+        if ( $line_of_tokens->{_starting_in_quote} ) {
+
+            # A line which is entirely a quote or pattern must go out
+            # verbatim.  Note: the \n is contained in $input_line.
+            if ( $jmax <= 0 ) {
+                if ( ( $input_line =~ "\t" ) ) {
+                    my $input_line_number = $line_of_tokens->{_line_number};
+                    $self->note_embedded_tab($input_line_number);
+                }
+                $CODE_type = 'VB';
+                goto RETURN;
+            }
         }
 
         # See if we are entering a formatting skip section
@@ -4478,13 +4476,14 @@ sub make_closing_side_comment_prefix {
             $jmax--;
         }
 
-        # Handle a blank line..
+        # blank line..
         if ( $jmax < 0 ) {
             $CODE_type = 'BL';
             goto RETURN;
         }
 
         # see if this is a static block comment (starts with ## by default)
+        my $is_static_block_comment                       = 0;
         my $is_static_block_comment_without_leading_space = 0;
         if (   $is_block_comment
             && $rOpts->{'static-block-comments'}
@@ -4555,6 +4554,18 @@ sub make_closing_side_comment_prefix {
             }
         }
 
+        # End of comments. Handle a line of normal code:
+
+        if ($rOpts_indent_only) {
+            $CODE_type = 'IO';
+            goto RETURN;
+        }
+
+        if ( !$rOpts_add_newlines ) {
+            $CODE_type = 'NIN';
+            goto RETURN;
+        }
+
         #   Patch needed for MakeMaker.  Do not break a statement
         #   in which $VERSION may be calculated.  See MakeMaker.pm;
         #   this is based on the coding in it.
@@ -4586,7 +4597,7 @@ sub make_closing_side_comment_prefix {
             write_logfile_entry("passing VERSION line; -npvl deactivates\n");
 
             # This code type has lower priority than others
-            $CODE_type = 'VER' unless ($CODE_type);
+            $CODE_type = 'VER';
             goto RETURN;
         }
 
