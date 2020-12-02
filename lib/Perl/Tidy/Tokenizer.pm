@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20201001.03';
+our $VERSION = '20201202';
 
 use Perl::Tidy::LineBuffer;
 use Carp;
@@ -1636,8 +1636,8 @@ sub prepare_for_a_new_file {
         # If it does not find one of these, or this is a restart, it calls the
         # original scanner directly.
 
-	# This gives the same results as the full scanner in about 1/4 the
-	# total runtime for a typical input stream.
+        # This gives the same results as the full scanner in about 1/4 the
+        # total runtime for a typical input stream.
 
         my $i_begin   = $i;
         my $tok_begin = $tok;

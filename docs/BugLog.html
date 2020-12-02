@@ -21,10 +21,28 @@
 
 <dl>
 
+<dt id="removed-excess-spaces-in-a-package-declaration"><b>removed excess spaces in a package declaration</b></dt>
+<dd>
+
+<p>Testing revealed that for a line such as</p>
+
+<pre><code>   package        Bob::Dog;</code></pre>
+
+<p>which has extra spaces or even tabs after the keyword &#39;package&#39;, the extra spaces or tabs were not being removed. This was fixed 28 Nov 2020, 008443d. The line now formats to</p>
+
+<pre><code>    package Bob::Dog;</code></pre>
+
+</dd>
+<dt id="do-not-automatically-delete-closing-side-comments-with---indent-only"><b>do not automatically delete closing side comments with --indent-only</b></dt>
+<dd>
+
+<p>For the parameter combination --indent-only and --closing-side-comments, old closing side comments were getting deleted but new closing side comments were not made. A fix was made to prevent this deletion. This fix was made 27 Nov 2020, 957e0ca.</p>
+
+</dd>
 <dt id="fix-to-stop-at-1-iteration-when-using---indent-only"><b>fix to stop at 1 iteration when using --indent-only</b></dt>
 <dd>
 
-<p>Previously, for the combination --indent-only and -conv, two iterations would be done. Only one iteration is necessary in this case.</p>
+<p>Previously, for the combination --indent-only and -conv, two iterations would be done. Only one iteration is necessary in this case. Fix made 23 Nov 2020, ae493d8.</p>
 
 </dd>
 <dt id="fix-for-formatting-signed-numbers-with-spaces"><b>fix for formatting signed numbers with spaces</b></dt>
@@ -42,7 +60,7 @@
 
 <pre><code>    @london = ( deg2rad(-0.5), deg2rad( 90 - 51.3 ) );</code></pre>
 
-<p>Notice that the space within the parens around the &#39;-0.5&#39; is gone. An update was made to fix this, so that the final state is reached in one step. This fix was made 23 Nov 2020.</p>
+<p>Notice that the space within the parens around the &#39;-0.5&#39; is gone. An update was made to fix this, so that the final state is reached in one step. This fix was made 23 Nov 2020, f477c8b.</p>
 
 </dd>
 <dt id="fix-to-prevent-conversion-of-a-block-comment-to-hanging-side-comment"><b>fix to prevent conversion of a block comment to hanging side comment</b></dt>
@@ -60,11 +78,11 @@
 
 <p>For the following specific contitions the block comment in line 2 could be converted into a hanging side comment, which is undesirable:</p>
 
-<pre><code>   1. It contains nothing except for a &#39;#&#39;
+<pre><code>   1. The line contains nothing except for a &#39;#&#39; with no leading space
    2. It follows a line with side comment
    3. It has indentation level &gt; 0</code></pre>
 
-<p>An update was made to prevent this from happening. There are two cases, depending on the value of --maximum-consecutive-blank-lines, or -mbl. If this value is positive (the default) then a blank line is inserted above the block comment to prevent it from becoming a hanging side comment. If this -mbl is zero, then the comment is converted to be a static block comment which again prevents it from becoming a hanging side comment. This fix was made 23 Nov 2020.</p>
+<p>An update was made to prevent this from happening. There are two cases, depending on the value of --maximum-consecutive-blank-lines, or -mbl. If this value is positive (the default) then a blank line is inserted above the block comment to prevent it from becoming a hanging side comment. If this -mbl is zero, then the comment is converted to be a static block comment which again prevents it from becoming a hanging side comment. This fix was made 23 Nov 2020, 2eb3de1.</p>
 
 </dd>
 <dt id="improved-convergence-test"><b>improved convergence test</b></dt>
@@ -94,7 +112,7 @@
     elsif ( !$m0 &amp;&amp; $m1 )               { $CONFIG[1] = 1; }
     else                                { $ok        = 0; last; }</code></pre>
 
-<p>This update was made 15 Nov 2020.</p>
+<p>This update was made 15 Nov 2020, 2b7784d.</p>
 
 </dd>
 <dt id="added-option--wnxl-s-to-give-control-of-welding-by-the--wn-parameter"><b>added option -wnxl=s to give control of welding by the -wn parameter</b></dt>

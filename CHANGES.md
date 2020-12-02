@@ -1,15 +1,19 @@
 # Perltidy Change Log
 
-## 2020 10 01.03
+## 2020 12 02
+
+    - This release is being made primarily to make available a several new formatting 
+      parameters, in particular -xci, -kbb=s, -kba=s, and -wnxl=s. No significant 
+      bugs have been found since the previous release, but numerous minor issues have 
+      been found and fixed as listed below.
+
+    - This version is about 20% faster than the previous version due to optimizations
+      made with the help of Devel::NYTProf.
 
     - Added flag -wnxl=s, --weld-nested-exclusion-list=s, to provide control which containers
       are welded with the --weld-nested-containers parameter.  This is related to issue git #45.
 
     - Merged pull request git #46 which fixes the docs regarding the -fse flag.
-
-    - This release is being made to make available a number of new formatting 
-      parameters. No significant bugs have been found since the previous release, 
-      but several minor issues have been found and fixed as listed below.
 
     - Fixed issue git #45, -vtc=n flag was ignored when -wn was set.
 
@@ -60,9 +64,6 @@
       semicolons, such as a 'do' block.
 
     - Added 'state' as a keyword.
-
-    - This version is about 20% faster than the previous version due to optimizations
-      made with the help of Devel::NYTProf.
 
     - A better test for convergence has been added. When iterations are requested,
       the new test will stop after the first pass if no changes in line break

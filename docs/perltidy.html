@@ -534,7 +534,7 @@
 <dt id="conv---converge"><b>-conv</b>, <b>--converge</b></dt>
 <dd>
 
-<p>This flag is equivalent to <b>-it=4</b> and is included to simplify iteration control. For all practical purposes one either does or does not want to be sure that the output is converged, and there is no penalty to using a large iteration limit since perltidy will check for convergence and stop iterating as soon as possible. The default is <b>-nconv</b> (no convergence check). Using <b>-conv</b> will approximately double run time since normally one extra iteration is required to verify convergence.</p>
+<p>This flag is equivalent to <b>-it=4</b> and is included to simplify iteration control. For all practical purposes one either does or does not want to be sure that the output is converged, and there is no penalty to using a large iteration limit since perltidy will check for convergence and stop iterating as soon as possible. The default is <b>-nconv</b> (no convergence check). Using <b>-conv</b> will approximately double run time since typically one extra iteration is required to verify convergence. No extra iterations are required if no new line breaks are made, and two extra iterations are occasionally needed when reformatting complex code structures, such as deeply nested ternary statements.</p>
 
 </dd>
 </dl>
@@ -3522,7 +3522,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20201001.03</p>
+<p>This man page documents perltidy version 20201202</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

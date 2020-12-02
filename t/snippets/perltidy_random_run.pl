@@ -343,10 +343,7 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
 
         # Set input file for next run
         $ifile = $ifile_original;
-        if ( $case < 4 ) {
-            $ifile = $ofile;
-        }
-        elsif ( $chain_mode && !$err ) {
+        if ( $case >= 4 && $chain_mode && !$err ) {
 	    # 'Chaining' means the next run formats the output of the previous
 	    # run instead of formatting the original file.
             # 0 = no chaining

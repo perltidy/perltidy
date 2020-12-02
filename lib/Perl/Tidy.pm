@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20201001.03';
+    $VERSION = '20201202';
 }
 
 sub DESTROY {
@@ -1456,7 +1456,7 @@ EOM
                 elsif ($do_convergence_test) {
 
                     # stop if the formatter has converged
-                    $stop_now ||= defined($iteration_of_formatter_convergence); 
+                    $stop_now ||= defined($iteration_of_formatter_convergence);
 
                     my $digest = $md5_hex->($sink_buffer);
                     if ( !defined( $saw_md5{$digest} ) ) {
@@ -1473,8 +1473,12 @@ EOM
                             # end states.  This has happened in the past
                             # but at present there are no known instances.
                             $convergence_log_message = <<EOM;
-Blinking. Output for iteration $iter same as for $saw_md5{$digest}. 
+BLINKER. Output for iteration $iter same as for $saw_md5{$digest}. 
 EOM
+                            $stopping_on_error ||= $convergence_log_message;
+                            if (DEVEL_MODE) {
+                                print STDERR $convergence_log_message;
+                            }
                             $diagnostics_object->write_diagnostics(
                                 $convergence_log_message)
                               if $diagnostics_object;
@@ -1496,17 +1500,24 @@ EOM
 
                 if ($stop_now) {
 
-                    if (DEVEL_MODE) { #<<<
-                    if ( defined($iteration_of_formatter_convergence) ) {
-                        if ( $iteration_of_formatter_convergence < $iter - 1 ) {
-                            print STDERR
+                    if (DEVEL_MODE) {
+
+                        if ( defined($iteration_of_formatter_convergence) ) {
+
+                            # This message cannot appear unless the formatter
+                            # convergence test above is temporarily skipped for
+                            # testing.
+                            if ( $iteration_of_formatter_convergence <
+                                $iter - 1 )
+                            {
+                                print STDERR
 "STRANGE Early conv in $display_name: Stopping on it=$iter, converged in formatter on $iteration_of_formatter_convergence\n";
+                            }
                         }
-                    }
-                    elsif ( !$stopping_on_error ) {
-                        print STDERR
+                        elsif ( !$stopping_on_error ) {
+                            print STDERR
 "STRANGE no conv in $display_name: stopping on it=$iter, but not converged in formatter\n";
-                    }
+                        }
                     }
 
                     # we are stopping the iterations early;

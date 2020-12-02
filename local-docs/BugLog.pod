@@ -9,7 +9,7 @@ Testing revealed that for a line such as
    package        Bob::Dog;
 
 which has extra spaces or even tabs after the keyword 'package', the
-extra spaces or tabs were not being removed.  This was fixed 28 Nov 2020.
+extra spaces or tabs were not being removed.  This was fixed 28 Nov 2020, 008443d.
 The line now formats to
 
     package Bob::Dog;
@@ -18,12 +18,12 @@ The line now formats to
 
 For the parameter combination --indent-only and --closing-side-comments, old
 closing side comments were getting deleted but new closing side comments were
-not made.  A fix was made to prevent this deletion.  This fix was made 27 Nov 2020.
+not made.  A fix was made to prevent this deletion.  This fix was made 27 Nov 2020, 957e0ca.
 
 =item B<fix to stop at 1 iteration when using --indent-only>
 
 Previously, for the combination --indent-only and -conv, two iterations
-would be done.  Only one iteration is necessary in this case.
+would be done.  Only one iteration is necessary in this case.  Fix made 23 Nov 2020, ae493d8.
 
 =item B<fix for formatting signed numbers with spaces>
 
@@ -46,7 +46,7 @@ The next time it is formatted, the '-0.5' counts as one token, resulting in
 
 Notice that the space within the parens around the '-0.5' is gone. An update
 was made to fix this, so that the final state is reached in one step.  This fix
-was made 23 Nov 2020.
+was made 23 Nov 2020, f477c8b.
 
 =item B<fix to prevent conversion of a block comment to hanging side comment>
 
@@ -64,7 +64,7 @@ be converted to be a hanging side comment.  For example:
 For the following specific contitions the block comment in line 2 could be
 converted into a hanging side comment, which is undesirable:
 
-   1. It contains nothing except for a '#'
+   1. The line contains nothing except for a '#' with no leading space
    2. It follows a line with side comment
    3. It has indentation level > 0
 
@@ -74,7 +74,7 @@ value is positive (the default) then a blank line is inserted above the block
 comment to prevent it from becoming a hanging side comment.  If this -mbl is
 zero, then the comment is converted to be a static block comment which again
 prevents it from becoming a hanging side comment. This fix was made 23 Nov
-2020.
+2020, 2eb3de1.
 
 =item B<improved convergence test>
 
@@ -107,7 +107,7 @@ loss of alignment in some cases.  For example
     elsif ( !$m0 && $m1 )               { $CONFIG[1] = 1; }
     else                                { $ok        = 0; last; }
 
-This update was made 15 Nov 2020.
+This update was made 15 Nov 2020, 2b7784d.
 
 =item B<added option -wnxl=s to give control of welding by the -wn parameter>
 

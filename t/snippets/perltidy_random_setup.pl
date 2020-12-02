@@ -872,7 +872,7 @@ EOM
 
             # Case 2 creates the smallest possible output file size
             if ( $case == 2 ) {
-                $rrandom_parameters = ["--mangle -dsc -dac -i=0 -ci=0 -it=2"];
+                $rrandom_parameters = ["-dsm -dac -i=0 -ci=0 -it=2 -mbl=0"];
             }
 
             # Case 3 checks extrude from mangle (case 2)

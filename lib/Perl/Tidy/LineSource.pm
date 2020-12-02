@@ -8,7 +8,7 @@
 package Perl::Tidy::LineSource;
 use strict;
 use warnings;
-our $VERSION = '20201001.03';
+our $VERSION = '20201202';
 
 sub AUTOLOAD {
 
