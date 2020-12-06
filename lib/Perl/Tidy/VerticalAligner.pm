@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20201202';
+our $VERSION = '20201207';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -3008,6 +3008,7 @@ sub delete_null_alignments {
         }    # End loopover lines
         $end_match->();
     }    # End loop over subgroups
+    return;
 } ## end sub delete_null_alignments
 
 sub fat_comma_to_comma {

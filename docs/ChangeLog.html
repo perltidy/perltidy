@@ -1,6 +1,26 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2020 12 02</h2>
+<h2>2020 12 07</h2>
+
+<pre><code>- Fixed issue git #47, incorrect welding of anonymous subs. 
+  An incorrect weld format was being made when the --weld-nested-containers option
+  (-wn) was used in to format a function which returns a list of anonymous subs.
+  For example, the following snippet was incorrectly being welded.
+
+$promises[$i]-&gt;then(
+    sub { $all-&gt;resolve(@_); () },
+    sub {
+        $results-&gt;[$i] = [@_];
+        $all-&gt;reject(@$results) if --$remaining &lt;= 0;
+        return ();
+    }
+);
+
+This was due to an error introduced in v20201201 related to parsing sub
+signatures.  Reformatting with the current version will fix the problem.
+</code></pre>
+
+<h2>2020 12 01</h2>
 
 <pre><code>- This release is being made primarily to make available a several new formatting 
   parameters, in particular -xci, -kbb=s, -kba=s, and -wnxl=s. No significant 

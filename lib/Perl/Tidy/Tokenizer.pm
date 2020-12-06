@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20201202';
+our $VERSION = '20201207';
 
 use Perl::Tidy::LineBuffer;
 use Carp;
