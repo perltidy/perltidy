@@ -2593,7 +2593,12 @@ EOM
             }
         }
 
-        # Loop to process each subgroup
+        # flag to allow skipping pass 2
+        my $saw_large_group;
+
+        ############################################################
+        # PASS 1 over subgroups to remove unmatched alignment tokens
+        ############################################################
         foreach my $item (@subgroups) {
             my ( $jbeg, $jend ) = @{$item};
 
@@ -2668,6 +2673,7 @@ EOM
                 my $deleted_assignment_token;
 
                 my $saw_dividing_token = "";
+                $saw_large_group ||= $nlines > 2 && $imax > 1;
 
                 # Loop over all alignment tokens
                 for ( my $i = 0 ; $i <= $imax ; $i++ ) {
@@ -2807,9 +2813,202 @@ EOM
                 }
             }    # End loopover lines
         }    # End loop over subgroups
+
+        #################################################
+        # PASS 2 over subgroups to remove null alignments
+        #################################################
+
+        # This works but is currently deactivated pending more testing
+        if (0) { #<<<
+        delete_null_alignments( $rnew_lines, $rline_hashes, \@subgroups,
+            $saw_list_type )
+          if ($saw_large_group);
+        }
+
         return ( $max_lev_diff, $saw_side_comment );
     }
 }
+
+sub delete_null_alignments {
+    my ( $rnew_lines, $rline_hashes, $rsubgroups, $saw_list_type ) = @_;
+
+    # This is an optional second pass for deleting alignment tokens which can
+    # occasionally improve alignment.  We look for and remove 'null
+    # alignments', which are alignments that require no padding.  So we can
+    # 'cheat' and delete them. For example, notice the '=~' alignment in the
+    # first two lines of the following code:
+
+    #    $sysname .= 'del' if $self->label =~ /deletion/;
+    #    $sysname .= 'ins' if $self->label =~ /insertion/;
+    #    $sysname .= uc $self->allele_ori->seq if $self->allele_ori->seq;
+
+    # These '=~' tokens are already aligned because they are both the same
+    # distance from the previous alignment token, the 'if'.  So we can
+    # eliminate them as alignments.  The advantage is that in some cases, such
+    # as this one, this will allow other tokens to be aligned. In this case we
+    # then get the 'if' tokens to align:
+
+    #   $sysname .= 'del'                     if $self->label =~ /deletion/;
+    #   $sysname .= 'ins'                     if $self->label =~ /insertion/;
+    #   $sysname .= uc $self->allele_ori->seq if $self->allele_ori->seq;
+
+    # The following rules for limiting this operation have been found to
+    # work well and avoid problems:
+
+    # Rule 1. We only consider a sequence of lines which have the same
+    # sequence of alignment tokens.
+
+    # Rule 2. We never eliminate the first alignment token.  One reason is that
+    # lines may have different leading indentation spaces, so keeping the
+    # first alignment token insures that our length measurements start at
+    # a well-defined point.  Another reason is that nothing is gained because
+    # the left-to-right sweep can always handle alignment of this token.
+
+    # Rule 3. We require that the first alignment token exist in either
+    # a previous line or a subsequent line.  The reason is that this avoids
+    # changing two-line matches which go through special logic.
+
+    # Rule 4. Do not delete a token which occurs in a previous or subsequent
+    # line. For example, in the above example, it was ok to eliminate the '=~'
+    # token from two lines because it did not occur in a surrounding line.
+    # If it did occur in a surrounding line, the result could be confusing
+    # or even incorrectly aligned.
+
+    # A consequence of these rules is that we only need to consider subgroups
+    # with at least 3 lines and 2 alignment tokens.
+
+    # The subgroup line index range
+    my ( $jbeg, $jend );
+
+    # Vars to keep track of the start of a current sequence of matching
+    # lines.
+    my $rtokens_match;
+    my $rfield_lengths_match;
+    my $j_match_beg;
+    my $j_match_end;
+    my $imax_match;
+    my $rneed_pad;
+
+    # Vars for a line being tested
+    my $rtokens;
+    my $rfield_lengths;
+    my $imax;
+
+    my $start_match = sub {
+        my ($jj) = @_;
+        $rtokens_match        = $rtokens;
+        $rfield_lengths_match = $rfield_lengths;
+        $j_match_beg          = $jj;
+        $j_match_end          = $jj;
+        $imax_match           = $imax;
+        $rneed_pad            = [];
+        return;
+    };
+
+    my $add_to_match = sub {
+        my ($jj) = @_;
+        $j_match_end = $jj;
+
+        # Keep track of any padding that would be needed for each token
+        for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+            next if ( $rneed_pad->[$i] );
+            my $length       = $rfield_lengths->[$i];
+            my $length_match = $rfield_lengths_match->[$i];
+            if ( $length ne $length_match ) { $rneed_pad->[$i] = 1 }
+        }
+    };
+
+    my $end_match = sub {
+        return unless ( $j_match_end > $j_match_beg );
+        my $nlines    = $j_match_end - $j_match_beg + 1;
+        my $rhash_beg = $rline_hashes->[$j_match_beg];
+        my $rhash_end = $rline_hashes->[$j_match_end];
+        my @idel;
+
+        # Do not delete unless the first token also occurs in a surrounding line
+        my $tok0 = $rtokens_match->[0];
+        return
+          unless (
+            (
+                   $j_match_beg > $jbeg
+                && $rnew_lines->[ $j_match_beg - 1 ]->get_rtokens()->[0] eq
+                $tok0
+            )
+            || (   $j_match_end < $jend
+                && $rnew_lines->[ $j_match_end + 1 ]->get_rtokens()->[0] eq
+                $tok0 )
+          );
+
+        # Note that we are skipping the token at i=0
+        for ( my $i = 1 ; $i <= $imax_match ; $i++ ) {
+
+            # do not delete a token which requires padding to align
+            next if ( $rneed_pad->[$i] );
+
+            my $tok = $rtokens_match->[$i];
+
+            # Do not delete a token which occurs in a surrounding line
+            next
+              if ( $j_match_beg > $jbeg
+                && defined( $rline_hashes->[ $j_match_beg - 1 ]->{$tok} ) );
+            next
+              if ( $j_match_end < $jend
+                && defined( $rline_hashes->[ $j_match_end + 1 ]->{$tok} ) );
+
+            # ok to delete
+            push @idel, $i;
+            ##print "ok to delete tok=$tok\n";
+        }
+        if (@idel) {
+            foreach my $j ( $j_match_beg .. $j_match_end ) {
+                delete_selected_tokens( $rnew_lines->[$j], \@idel,
+                    $saw_list_type );
+            }
+        }
+    };
+
+    foreach my $item ( @{$rsubgroups} ) {
+        ( $jbeg, $jend ) = @{$item};
+        my $nlines = $jend - $jbeg + 1;
+        next unless ( $nlines > 2 );
+
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            my $line = $rnew_lines->[$jj];
+            $rtokens        = $line->get_rtokens();
+            $rfield_lengths = $line->get_rfield_lengths();
+            $imax           = @{$rtokens} - 2;
+
+            # start a new match group
+            if ( $jj == $jbeg ) {
+                $start_match->($jj);
+                next;
+            }
+
+            # see if all tokens of this line match the current group
+            my $match;
+            if ( $imax == $imax_match ) {
+                for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                    my $tok       = $rtokens->[$i];
+                    my $tok_match = $rtokens_match->[$i];
+                    last if ( $tok ne $tok_match );
+                }
+                $match = 1;
+            }
+
+            # yes, they all match
+            if ($match) {
+                $add_to_match->($jj);
+            }
+
+            # now, this line does not match
+            else {
+                $end_match->();
+                $start_match->($jj);
+            }
+        }    # End loopover lines
+        $end_match->();
+    }    # End loop over subgroups
+} ## end sub delete_null_alignments
 
 sub fat_comma_to_comma {
     my ($str) = @_;

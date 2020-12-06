@@ -284,7 +284,7 @@ EOM
 
 sub default_config {
     $rsetup = {
-        chain_mode         => 1,
+        chain_mode         => 2,
         delete_good_output => 1,
         syntax_check       => 0,
         profiles           => $PROFILES_file,
