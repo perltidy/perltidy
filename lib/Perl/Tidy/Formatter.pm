@@ -6330,11 +6330,68 @@ sub find_nested_pairs {
         my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
         next unless ( $is_closing_token{$token_outer_closing} );
 
-        # Yes .. this is a possible nesting pair.  Now we have to check the
-        # opening tokens.  The can be separated by a small amount.
+        # Now we have to check the opening tokens.
         my $K_outer_opening = $K_opening_container->{$outer_seqno};
         my $K_inner_opening = $K_opening_container->{$inner_seqno};
         next unless defined($K_outer_opening) && defined($K_inner_opening);
+
+        # Verify that the inner opening token is the next container after the
+        # outer opening token.
+        my $K_io_check = $rLL->[$K_outer_opening]->[_KNEXT_SEQ_ITEM_];
+        next unless defined($K_io_check);
+        if ( $K_io_check != $K_inner_opening ) {
+
+            # The inner opening container does not immediately follow the outer
+            # opening container, but we may still allow a weld if they are
+            # separated by a sub signature.  For example, we may have something
+            # like this, where $K_io_check may be at the first 'x' instead of
+            # 'io'.  So we need to hop over the signature and see if we arrive
+            # at 'io'.
+
+            #            oo               io
+            #             |     x       x |
+            #   $obj->then( sub ( $code ) {
+            #       ...
+            #       return $c->render(text => '', status => $code);
+            #   } );
+            #   | |
+            #  ic oc
+
+            next if $rLL->[$K_inner_opening]->[_BLOCK_TYPE_] ne 'sub';
+            next if $rLL->[$K_io_check]->[_TOKEN_] ne '(';
+            my $seqno_signature = $rLL->[$K_io_check]->[_TYPE_SEQUENCE_];
+            next unless defined($seqno_signature);
+            my $K_signature_closing = $K_closing_container->{$seqno_signature};
+            next unless defined($K_signature_closing);
+            my $K_test = $rLL->[$K_signature_closing]->[_KNEXT_SEQ_ITEM_];
+            next
+              unless ( defined($K_test) && $K_test == $K_inner_opening );
+
+            # OK, we have arrived at 'io' in the above diagram.  We should put
+            # a limit on the length or complexity of the signature here.  There
+            # is no perfect way to do this, one way is to put a limit on token
+            # count.  For consistency with older versions, we should allow a
+            # signature with a single variable to weld, but not with
+            # multiple variables.  A single variable as in 'sub ($code) {' can
+            # have a $Kdiff of 2 to 4, depending on spacing.
+
+            # But two variables like 'sub ($v1,$v2) {' can have a diff of 4 to
+            # 7, depending on spacing. So to keep formatting consistent with
+            # previous versions, we will also avoid welding if there is a comma
+            # in the signature.
+
+            my $Kdiff = $K_signature_closing - $K_io_check;
+            next if ( $Kdiff > 4 );
+
+            my $saw_comma;
+            foreach my $KK ( $K_io_check + 1 .. $K_signature_closing - 1 ) {
+                if ( $rLL->[$KK]->[_TYPE_] eq ',' ) { $saw_comma = 1; last }
+            }
+            next if ($saw_comma);
+        }
+
+        # Yes .. this is a possible nesting pair.
+        # They can be separated by a small amount.
         my $K_diff = $K_inner_opening - $K_outer_opening;
 
         # Count nonblank characters separating them.

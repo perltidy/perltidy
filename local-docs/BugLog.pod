@@ -1,3 +1,40 @@
+=head1 Issues fixed after release 20201202
+
+=over 4
+
+=item B<Fix for issue git #47>
+
+This issue has to do with the --weld-nested-containers option in the specific
+case of formatting a function which returns a list of anonymous subs.  For
+example
+
+    $promises[$i]->then(
+        sub { $all->resolve(@_); () },
+        sub {
+            $results->[$i] = [@_];
+            $all->reject(@$results) if --$remaining <= 0;
+            return ();
+        }
+    );
+
+A bug introduced in v20201202 caused an incorrect welding to occur
+when the -wn flag was set
+
+    $promises[$i]->then( sub { $all->resolve(@_); () },
+        sub {
+        $results->[$i] = [@_];
+        $all->reject(@$results) if --$remaining <= 0;
+        return ();
+        } );
+
+This bug has been fixed, and code which has been incorrectly formatted will be
+correctly formatted with the next release.  The bug was a result of a new
+coding introduced in v20201202 for fixing some issues with parsing sub
+signatures.  Previously they were sometimes parsed the same as prototypes and
+sometimes as lists, now they are always parsed as lists.
+
+=back
+
 =head1 Issues fixed after release 20201001
 
 =over 4
