@@ -1,0 +1,28 @@
+# cannot weld here
+$promises[$i]->then(
+    sub { $all->resolve(@_); () },
+    sub {
+        $results->[$i] = [@_];
+        $all->reject(@$results) if --$remaining <= 0;
+        return ();
+    }
+);
+
+sub _absolutize { [
+    map { _is_scoped($_) ? $_ : [ [ [ 'pc', 'scope' ] ], ' ', @$_ ] }
+      @{ shift() } ] }
+
+$c->helpers->log->debug( sub {
+    my $req    = $c->req;
+    my $method = $req->method;
+    my $path   = $req->url->path->to_abs_string;
+    $c->helpers->timing->begin('mojo.timer');
+    return qq{$method "$path"};
+} ) unless $stash->{'mojo.static'};
+
+# A single signature var can weld
+return Mojo::Promise->resolve($query_params)->then(&_reveal_event)->then(
+    sub ($code) {
+        return $c->render( text => '', status => $code );
+    }
+);
