@@ -4269,6 +4269,8 @@ Line Break Control
  -wba=s  want break after tokens in string; i.e. wba=': .'
  -wbb=s  want break before tokens in string
  -wn     weld nested: combines opening and closing tokens when both are adjacent
+ -wnxl=s weld nested exclusion list: provides some control over the types of
+         containers which can be welded
 
 Following Old Breakpoints
  -kis    keep interior semicolons.  Allows multiple statements per line.
