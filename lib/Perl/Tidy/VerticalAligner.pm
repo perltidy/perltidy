@@ -2000,7 +2000,7 @@ sub sweep_left_to_right {
 
     BEGIN {
         my @q = qw(
-          => = ? if unless or ||
+          => = ? if unless or || {
         );
         push @q, ',';
         @is_good_alignment_token{@q} = (1) x scalar(@q);
