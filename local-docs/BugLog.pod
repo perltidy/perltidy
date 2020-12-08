@@ -1,3 +1,15 @@
+=head1 Issues fixed after release 20201207
+
+=over 4
+
+=item B<Fix for issue git #49, exit status not correctly set>
+
+The exit status flag was not being set for the -w option if the -se or if the -q flag
+were set.  Issue git #44 was similar but a special case of the problem.  The 
+problem was fixed 8 Dec 2020.
+
+=back
+
 =head1 Issues fixed after release 20201202
 
 =over 4

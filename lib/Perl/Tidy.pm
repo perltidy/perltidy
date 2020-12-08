@@ -383,6 +383,15 @@ sub find_input_line_ending {
 
 my $Warn_count;
 my $fh_stderr;
+
+# Bump Warn_count only: it is essential to bump the count on all warnings, even
+# if no message goes out, so that the correct exit status is set.
+sub Warn_count_bump { $Warn_count++; return }
+
+# Output Warn message only
+sub Warn_msg { my $msg = shift; $fh_stderr->print($msg); return }
+
+# Output Warn message and bump Warn count
 sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
 sub perltidy {
@@ -1572,7 +1581,7 @@ EOM
                     $logger_object->interrupt_logfile();
                     $logger_object->warning( $diff_msg . "\n" );
                     $logger_object->resume_logfile();
-                    $Warn_count ||= 1;   # insure correct exit if -q flag is set
+                    ## $Warn_count ||= 1;   # logger warning does this now
                 }
             }
             if ( $rOpts->{'assert-untidy'} ) {
@@ -1581,7 +1590,7 @@ EOM
                     $logger_object->warning(
 "assertion failure: '--assert-untidy' is set but output equals input\n"
                     );
-                    $Warn_count ||= 1;   # insure correct exit if -q flag is set
+                    ## $Warn_count ||= 1;   # logger warning does this now
                 }
             }
 

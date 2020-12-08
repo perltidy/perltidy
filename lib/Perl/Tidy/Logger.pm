@@ -351,6 +351,9 @@ sub warning {
     #use constant WARNING_LIMIT => 50;
     my $WARNING_LIMIT = 50;
 
+    # Always bump the warn count, even if no message goes out
+    Perl::Tidy::Warn_count_bump();
+
     my $rOpts = $self->{_rOpts};
     unless ( $rOpts->{'quiet'} ) {
 
@@ -362,7 +365,7 @@ sub warning {
             ( $fh_warnings, my $filename ) =
               Perl::Tidy::streamhandle( $warning_file, 'w', $is_encoded_data );
             $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
-            Perl::Tidy::Warn("## Please see file $filename\n")
+            Perl::Tidy::Warn_msg("## Please see file $filename\n")
               unless ref($warning_file);
             $self->{_fh_warnings} = $fh_warnings;
             $fh_warnings->print("Perltidy version is $Perl::Tidy::VERSION\n");
