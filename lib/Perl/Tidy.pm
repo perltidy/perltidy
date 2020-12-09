@@ -845,6 +845,14 @@ EOM
           map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
     }
 
+    # Remove duplicate filenames.  Otherwise, for example if the user entered
+    #     perltidy -b myfile.pl myfile.pl
+    # the backup version of the original would be lost.
+    if ( $number_of_files > 1 ) {
+        my %seen = ();
+        @ARGV = grep { !$seen{$_}++ } @ARGV;
+    }
+
     while ( my $input_file = shift @ARGV ) {
         my $fileroot;
         my @input_file_stat;

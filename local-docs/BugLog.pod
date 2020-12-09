@@ -2,6 +2,20 @@
 
 =over 4
 
+=item B<Avoid processing a file more than once>
+
+In the unlikely event that  a user enters a filename more than once on the
+command line to perltidy, as for 'file1.pl' here
+   
+  perltidy file1.pl file1.pl 
+
+then that file will be processed more than once. This looks harmless, but if
+the user was also using the -b (backup) parameter, then the original backup
+would be overwritten, which is not good.  To avoid this, a filter has been
+placed on the list of files to remove duplicates.  9 Dec 2020.
+
+=back
+
 =item B<Fix for issue git #49, exit status not correctly set>
 
 The exit status flag was not being set for the -w option if the -se or if the -q flag
