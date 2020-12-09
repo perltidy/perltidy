@@ -2,6 +2,45 @@
 
 =over 4
 
+=item B<Improve vertical alignment of lines ending in fat comma>
+
+A minor adjustment was made to the rule for aligning lines which end in '=>'.
+When there are just two lines in an alignment group, the alignment is avoided
+if the first of the two ends in a '=>'.  Previously, alignment was avoided
+if either ended in a '=>'.  The old rule was preventing some good alignments 
+in a later stage of the iteration.  In the following example, the last
+two lines are processed separately because they do not match the comma
+in 'sprintf'.  The new rule allows the fat comma alignment to eventually
+get made later in the iteration. Update made 9 Dec 2020.
+
+    # OLD 
+    $template->param(
+        classlist => $classlist,
+        ...,
+        suggestion => $suggestion,
+        totspent   => sprintf( "%.2f", $totspent ),
+        totcomtd   => sprintf( "%.2f", $totcomtd ),
+        totavail   => sprintf( "%.2f", $totavail ),
+        nobudget => $#results == -1 ? 1 : 0,
+        intranetcolorstylesheet =>
+          C4::Context->preference("intranetcolorstylesheet"),
+        ...
+    );
+
+    # NEW
+    $template->param(
+        classlist => $classlist,
+        ...,
+        suggestion              => $suggestion,
+        totspent                => sprintf( "%.2f", $totspent ),
+        totcomtd                => sprintf( "%.2f", $totcomtd ),
+        totavail                => sprintf( "%.2f", $totavail ),
+        nobudget                => $#results == -1 ? 1 : 0,
+        intranetcolorstylesheet =>
+          C4::Context->preference("intranetcolorstylesheet"),
+        ...
+    );
+
 =item B<Avoid processing a file more than once>
 
 In the unlikely event that  a user enters a filename more than once on the

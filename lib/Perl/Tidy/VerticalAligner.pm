@@ -3641,14 +3641,12 @@ sub Dump_tree_groups {
                 $saw_if_or ||= $is_if_or{$raw_tok};
             }
 
-            # Look for a line ending in a bare '=>'
-            # These make marginal matches with just two lines.
-            $line_ending_fat_comma = (
-                     $j == $jmax_1 - 2
-                  && $raw_tok eq '=>'
-                  && ( $rfield_lengths_0->[ $j + 1 ] == 2
-                    || $rfield_lengths_1->[ $j + 1 ] == 2 )
-            );
+	    # When the first of the two lines ends in a bare '=>' this will
+	    # probably be marginal match.
+            $line_ending_fat_comma =
+                 $j == $jmax_1 - 2
+              && $raw_tok eq '=>'
+              && $rfield_lengths_0->[ $j + 1 ] == 2;
 
             my $pad = $rfield_lengths_1->[$j] - $rfield_lengths_0->[$j];
             if ( $j == 0 ) {
