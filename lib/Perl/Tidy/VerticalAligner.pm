@@ -1999,11 +1999,38 @@ sub sweep_left_to_right {
     my %is_good_alignment_token;
 
     BEGIN {
+
+        # One of the most difficult aspects of vertical alignment is knowing
+        # when not to align.  Alignment can go from looking very nice to very
+        # bad when overdone.  In the sweep algorithm there are two special
+        # cases where we may need to limit padding to a '$short_pad' distance
+        # to avoid some very ugly formatting:
+
+        # 1. Two isolated lines with partial alignment
+        # 2. A 'tail-wag-dog' situation, in which a single terminal
+        #    line with partial alignment could cause a significant pad
+        #    increase in many previous lines if allowed to join the alignment.
+
+        # For most alignment tokens, we will allow only a small pad to be
+        # introduced (the hardwired $short_pad variable) . But for some 'good'
+        # alignments we can be less restrictive.
+
+        # These are 'good' alignments, which are allowed more padding:
         my @q = qw(
           => = ? if unless or || {
         );
         push @q, ',';
-        @is_good_alignment_token{@q} = (1) x scalar(@q);
+        @is_good_alignment_token{@q} = (0) x scalar(@q);
+
+        # Promote a few of these to 'best', with essentially no pad limit:
+        $is_good_alignment_token{'='}      = 1;
+        $is_good_alignment_token{'if'}     = 1;
+        $is_good_alignment_token{'unless'} = 1;
+
+        # Note the hash values are set so that:
+        #         if ($is_good_alignment_token{$raw_tok}) => best
+        # if defined ($is_good_alignment_token{$raw_tok}) => good or best
+
     }
 
     sub do_left_to_right_sweep {
@@ -2019,7 +2046,7 @@ sub sweep_left_to_right {
 
             # Move the alignment column of token $itok to $col_want for a
             # sequence of groups.
-            my ( $ngb, $nge, $itok, $col_want ) = @_;
+            my ( $ngb, $nge, $itok, $col_want, $raw_tok ) = @_;
             return unless ( defined($ngb) && $nge > $ngb );
             foreach my $ng ( $ngb .. $nge ) {
 
@@ -2029,9 +2056,13 @@ sub sweep_left_to_right {
                 my $avail = $line->get_available_space_on_right();
                 my $move  = $col_want - $col;
                 if ( $move > 0 ) {
+
+                    # limit padding increase in isolated two lines
                     next
                       if ( defined( $rmax_move->{$ng} )
-                        && $move > $rmax_move->{$ng} );
+                        && $move > $rmax_move->{$ng}
+                        && !$is_good_alignment_token{$raw_tok} );
+
                     $line->increase_field_width( $itok, $move );
                 }
                 elsif ( $move < 0 ) {
@@ -2108,10 +2139,11 @@ sub sweep_left_to_right {
                 my $is_blocked = defined( $blocking_level[$ng] )
                   && $lev > $blocking_level[$ng];
 
-                # RULE: prevent a 'tail-wag-dog' syndrom, meaning: Do not let
-                # one or two lines with a different number of alignments open
-                # up a big gap in a large block.  For example, we will prevent
-                # something like this, where the first line prys open the rest:
+                # TAIL-WAG-DOG RULE: prevent a 'tail-wag-dog' syndrom, meaning:
+                # Do not let one or two lines with a **different number of
+                # alignments** open up a big gap in a large block.  For
+                # example, we will prevent something like this, where the first
+                # line prys open the rest:
 
             #  $worksheet->write( "B7", "http://www.perl.com", undef, $format );
             #  $worksheet->write( "C7", "",                    $format );
@@ -2129,22 +2161,30 @@ sub sweep_left_to_right {
                 my $lines_below = $lines_total - $lines_above;
 
                 # Increase the tolerable gap for certain favorable factors
-                my $factor = 1;
-                if (
-                    $is_good_alignment_token{$raw_tok}
+                my $factor    = 1;
+                my $top_level = $lev == $group_level;
+
+                # Align best top level alignment tokens like '=', 'if', ...
+                # A factor of 10 allows a gap of up to 40 spaces
+                if ( $top_level && $is_good_alignment_token{$raw_tok} ) {
+                    $factor = 10;
+                }
+
+                # Otherwise allow some minimal padding of good alignments
+                elsif (
+
+                    defined( $is_good_alignment_token{$raw_tok} )
 
                     # We have to be careful if there are just 2 lines.  This
                     # two-line factor allows large gaps only for 2 lines which
                     # are simple lists with fewer items on the second line. It
                     # gives results similar to previous versions of perltidy.
                     && (   $lines_total > 2
-                        || $group_list_type
-                        && $jmax < $jmax_m
-                        && $lev == $group_level )
+                        || $group_list_type && $jmax < $jmax_m && $top_level )
                   )
                 {
                     $factor += 1;
-                    if ( $lev == $group_level ) {
+                    if ($top_level) {
                         $factor += 1;
                     }
                 }
@@ -2179,7 +2219,7 @@ sub sweep_left_to_right {
                     }
 
                     $move_to_common_column->(
-                        $ng_first, $ng - 1, $itok, $col_want
+                        $ng_first, $ng - 1, $itok, $col_want, $raw_tok
                     );
                     $ng_first        = $ng;
                     $col_want        = $col;
@@ -2199,8 +2239,9 @@ sub sweep_left_to_right {
             } ## end loop over groups
 
             if ( $ng_end > $ng_first ) {
-                $move_to_common_column->( $ng_first, $ng_end, $itok,
-                    $col_want );
+                $move_to_common_column->(
+                    $ng_first, $ng_end, $itok, $col_want, $raw_tok
+                );
             } ## end loop over groups for one task
         } ## end loop over tasks
 
@@ -3641,8 +3682,8 @@ sub Dump_tree_groups {
                 $saw_if_or ||= $is_if_or{$raw_tok};
             }
 
-	    # When the first of the two lines ends in a bare '=>' this will
-	    # probably be marginal match.
+            # When the first of the two lines ends in a bare '=>' this will
+            # probably be marginal match.
             $line_ending_fat_comma =
                  $j == $jmax_1 - 2
               && $raw_tok eq '=>'

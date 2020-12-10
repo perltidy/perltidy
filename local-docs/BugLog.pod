@@ -2,6 +2,34 @@
 
 =over 4
 
+=item B<Improve vertical alignment in some marginal matches>
+
+In perltidy a 'marginal match' occurs for example when two lines share some
+alignment tokens but are somewhat different.  When this happens some limits are
+placed on the size of the padding spaces that can be introduced.  In this
+update the amount of allowed padding is significatly increased for certain
+'good' alignment tokens.  Results of extensive testing were favorable provided 
+that the change is restricted to alignments of '=', 'if' and 'unless'.  Update
+made 10 Dec 2020.
+
+    # OLD
+    my @roles = $self->role_names;
+    my $role_names = join "|", @roles;
+
+    # NEW
+    my @roles      = $self->role_names;
+    my $role_names = join "|", @roles;
+
+    # OLD
+    $sysname .= 'del' if $self->label =~ /deletion/;
+    $sysname .= 'ins' if $self->label =~ /insertion/;
+    $sysname .= uc $self->allele_ori->seq if $self->allele_ori->seq;
+
+    # NEW
+    $sysname .= 'del'                     if $self->label =~ /deletion/;
+    $sysname .= 'ins'                     if $self->label =~ /insertion/;
+    $sysname .= uc $self->allele_ori->seq if $self->allele_ori->seq;
+
 =item B<Improve vertical alignment of lines ending in fat comma>
 
 A minor adjustment was made to the rule for aligning lines which end in '=>'.
