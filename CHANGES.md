@@ -1,5 +1,15 @@
 # Perltidy Change Log
 
+## 2020 12 07 xx
+
+    - Fixed issue git #49, -se breaks warnings exit status behavior.
+    The exit status flag was not always being set when the -se flag was set.
+
+    - Some minor issues that the average user would not encounter were found
+      and fixed. They can be seen in the more complete list of updates at 
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+
 ## 2020 12 07
 
     - Fixed issue git #47, incorrect welding of anonymous subs. 

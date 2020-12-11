@@ -2,6 +2,56 @@
 
 =over 4
 
+=item B<Improve vertical alignment in some two-line matches>
+
+When two lines would be perfectly aligned except for the line length limit,
+previously they would only be aligned if they had a common leading equals.  The
+update removes this restriction and allows as many alignments to be made as
+possible.  The results are generally improved.  This update was made 11 Dec 2020.
+Some examples:
+
+# In this example the side comments were limiting the matches
+
+    # OLD
+    shift @data if @data and $data[0] =~ /Contributed\s+Perl/;    # Skip header
+    pop @data if @data and $data[-1] =~ /^\w/;    # Skip footer, like
+
+    # NEW
+    shift @data if @data and $data[0]  =~ /Contributed\s+Perl/;    # Skip header
+    pop @data   if @data and $data[-1] =~ /^\w/;    # Skip footer, like
+
+# The same is true here.
+
+    # OLD
+    if ($tvg::o_span) { $tvg::hour_span = $tvg::o_span; }
+    if ( $tvg::hour_span % 2 > 0 ) { $tvg::hour_span++; }    # Multiple of 2
+
+    # NEW
+    if ($tvg::o_span)              { $tvg::hour_span = $tvg::o_span; }
+    if ( $tvg::hour_span % 2 > 0 ) { $tvg::hour_span++; }    # Multiple of 2
+
+In the next example, the first comma is now aligned but not the second, because
+of the line length limit:
+
+    # OLD
+    is( MyClass->meta, $mc, '... these metas are still the same thing' );
+    is( MyClass->meta->meta, $mc->meta, '... these meta-metas are the same thing' );
+
+    # NEW
+    is( MyClass->meta,       $mc, '... these metas are still the same thing' );
+    is( MyClass->meta->meta, $mc->meta, '... these meta-metas are the same thing' );
+
+In this last example, the first comma is not aligned, but space allows
+alignment to resumes with the second comma.  
+
+    # OLD
+    is( $obj->name, $COMPRESS_FILE, "   Name now set to '$COMPRESS_FILE'" );
+    is( $obj->prefix, '', "   Prefix now empty" );
+
+    # NEW
+    is( $obj->name, $COMPRESS_FILE, "   Name now set to '$COMPRESS_FILE'" );
+    is( $obj->prefix, '',           "   Prefix now empty" );
+
 =item B<Improve vertical alignment in some marginal matches>
 
 In perltidy a 'marginal match' occurs for example when two lines share some
@@ -10,7 +60,7 @@ placed on the size of the padding spaces that can be introduced.  In this
 update the amount of allowed padding is significatly increased for certain
 'good' alignment tokens.  Results of extensive testing were favorable provided 
 that the change is restricted to alignments of '=', 'if' and 'unless'.  Update
-made 10 Dec 2020.
+made 10 Dec 2020, a585f0b.
 
     # OLD
     my @roles = $self->role_names;
@@ -39,7 +89,7 @@ if either ended in a '=>'.  The old rule was preventing some good alignments
 in a later stage of the iteration.  In the following example, the last
 two lines are processed separately because they do not match the comma
 in 'sprintf'.  The new rule allows the fat comma alignment to eventually
-get made later in the iteration. Update made 9 Dec 2020.
+get made later in the iteration. Update made 9 Dec 2020, ca0ddf4.
 
     # OLD 
     $template->param(
@@ -79,7 +129,7 @@ command line to perltidy, as for 'file1.pl' here
 then that file will be processed more than once. This looks harmless, but if
 the user was also using the -b (backup) parameter, then the original backup
 would be overwritten, which is not good.  To avoid this, a filter has been
-placed on the list of files to remove duplicates.  9 Dec 2020.
+placed on the list of files to remove duplicates.  9 Dec 2020, 646a542.
 
 =back
 
@@ -87,7 +137,7 @@ placed on the list of files to remove duplicates.  9 Dec 2020.
 
 The exit status flag was not being set for the -w option if the -se or if the -q flag
 were set.  Issue git #44 was similar but a special case of the problem.  The 
-problem was fixed 8 Dec 2020.
+problem was fixed 8 Dec 2020, cb6028f.
 
 =back
 
@@ -124,7 +174,7 @@ This bug has been fixed, and code which has been incorrectly formatted will be
 correctly formatted with the next release.  The bug was a result of a new
 coding introduced in v20201202 for fixing some issues with parsing sub
 signatures.  Previously they were sometimes parsed the same as prototypes and
-sometimes as lists, now they are always parsed as lists.
+sometimes as lists, now they are always parsed as lists. Fixed 6 Dec 2020, 6fd0c4f.
 
 =back
 

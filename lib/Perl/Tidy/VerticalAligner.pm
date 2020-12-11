@@ -1131,6 +1131,11 @@ sub check_match {
     my $GoToMsg = "";
     use constant EXPLAIN_CHECK_MATCH => 0;
 
+    # This is a flag for testing alignment by sub sweep_left_to_right only.
+    # This test can help find problems with the alignment logic.
+    # This flag should normally be zero.
+    use constant TEST_SWEEP_ONLY => 0;
+
     my $is_hanging_side_comment = $new_line->get_is_hanging_side_comment();
     my $rtokens                 = $new_line->get_rtokens();
     my $rfields                 = $new_line->get_rfields();
@@ -1288,7 +1293,7 @@ sub check_match {
 
     # The tokens match. Now See if there is space for this line in the
     # current group.
-    if ( $self->check_fit( $new_line, $old_line ) ) {
+    if ( $self->check_fit( $new_line, $old_line ) && !TEST_SWEEP_ONLY ) {
 
         EXPLAIN_CHECK_MATCH
           && print "match and fit, imax_align=$imax_align, jmax=$jmax\n";
@@ -1927,12 +1932,20 @@ sub sweep_left_to_right {
         # Special treatment of two one-line groups isolated from other lines,
         # unless they form a simple list or a terminal match.  Otherwise the
         # alignment can look strange in some cases.
-        if (   $jend == $jbeg
+        if (
+               $jend == $jbeg
             && $jend_m == $jbeg_m
             && !$rlines->[$jbeg]->get_list_type()
             && ( $ng == 1 || $istop_mm < 0 )
             && ( $ng == $ng_max || $istop < 0 )
-            && !$line->get_j_terminal_match() )
+            && !$line->get_j_terminal_match()
+
+            # Only do this for imperfect matches. This is normally true except
+            # when two perfect matches cannot form a group because the line
+            # length limit would be exceeded. In that case we can still try
+            # to match as many alignments as possible.
+            && ( $imax != $imax_m || $istop_m != $imax_m )
+          )
         {
 
             # We will just align a leading equals
@@ -2464,6 +2477,9 @@ EOM
 
     }
 
+    # This flag is for testing only and should normally be zero.
+    use constant TEST_DELETE_NULL => 0;
+
     sub delete_unmatched_tokens {
         my ( $rlines, $group_level ) = @_;
 
@@ -2859,11 +2875,13 @@ EOM
         # PASS 2 over subgroups to remove null alignments
         #################################################
 
-        # This works but is currently deactivated pending more testing
-        if (0) { #<<<
-        delete_null_alignments( $rnew_lines, $rline_hashes, \@subgroups,
-            $saw_list_type )
-          if ($saw_large_group);
+        # This pass is only used for testing. It is helping to identify
+        # alignment situations which might be improved with a future more
+        # general algorithm which adds a tail matching capability.
+        if (TEST_DELETE_NULL) {
+            delete_null_alignments( $rnew_lines, $rline_hashes, \@subgroups,
+                $saw_list_type )
+              if ($saw_large_group);
         }
 
         return ( $max_lev_diff, $saw_side_comment );

@@ -628,10 +628,10 @@ sub update_VERSION {
     my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
-	# Look for and turn off any DEVEL_MODE, DEBUG_XXX, VERIFY_XXX,
+	# Look for and turn off any DEVEL_MODE, DEBUG_XXX, VERIFY_XXX, TEST_XXX,
 	# and EXPLAIN_XXX constants
         if ( $line =~
-/^(\s*use\s+constant\s+(?:DEBUG|DEVEL|EXPLAIN|VERIFY)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/
+/^(\s*use\s+constant\s+(?:DEBUG|DEVEL|EXPLAIN|VERIFY|TEST)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/
           )
         {
             if ( $2 != 0 ) {
