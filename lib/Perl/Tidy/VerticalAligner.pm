@@ -3898,15 +3898,14 @@ sub Dump_tree_groups {
             $imax_align = $jfirst_bad - 1;
         }
 
-        # FIXME: This is a future update, postponed until the variable 'CI' is
-        # available for each line so that two lines with different CI values
-        # can be rejected.
-
         # Two marginal match lines with leading '=' lie at the
         # boundary of good and bad alignment, so we only align if the pad
         # distance is small.  There is no perfect value, but 3 or 4 spaces
-        # seems to be a fairly good
-        # compromise.
+        # seems to be a fairly good compromise.
+
+        # Note: This is a perfectly good feature, but the benefits may not be
+        # sufficient to justify changing existing formatting.  So for now it
+        # will remain an unimplemented experimental feature.
         if (   TEST_MARGINAL_EQ_ALIGNMENT
             && $imax_align < 0
             && defined($j0_eq_pad)
