@@ -16952,6 +16952,7 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{break_alignment_before}    = $break_alignment_before;
         $rvalign_hash->{break_alignment_after}     = $break_alignment_after;
         $rvalign_hash->{Kend}                      = $Kend_code;
+        $rvalign_hash->{ci_level}                  = $ci_levels_to_go[$ibeg];
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);

@@ -411,6 +411,7 @@ sub valign_input {
     my $break_alignment_before    = $rline_hash->{break_alignment_before};
     my $break_alignment_after     = $rline_hash->{break_alignment_after};
     my $Kend                      = $rline_hash->{Kend};
+    my $ci_level                  = $rline_hash->{ci_level};
 
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
@@ -701,6 +702,7 @@ EOM
             is_forced_break           => $is_forced_break,
             end_group                 => $break_alignment_after,
             Kend                      => $Kend,
+            ci_level                  => $ci_level,
         }
     );
 
@@ -2630,10 +2632,18 @@ EOM
             my ( $i_eq_l, $tok_eq_l, $pat_eq_l ) = @{ $equals_info[$jl] };
             my ( $i_eq_r, $tok_eq_r, $pat_eq_r ) = @{ $equals_info[$jr] };
             if ( defined($i_eq_l) && defined($i_eq_r) ) {
-                if (   $tok_eq_l eq $tok_eq_r
+
+                # Also, do not align equals across a change in ci level
+                my $ci_jump = $rnew_lines->[$jl]->get_ci_level() !=
+                  $rnew_lines->[$jr]->get_ci_level();
+
+                if (
+                       $tok_eq_l eq $tok_eq_r
                     && $i_eq_l == 0
                     && $i_eq_r == 0
-                    && substr( $pat_eq_l, 0, 1 ) ne substr( $pat_eq_r, 0, 1 ) )
+                    && ( substr( $pat_eq_l, 0, 1 ) ne substr( $pat_eq_r, 0, 1 )
+                        || $ci_jump )
+                  )
                 {
                     $rnew_lines->[$jl]->set_end_group(1);
                 }
@@ -3630,6 +3640,8 @@ sub Dump_tree_groups {
     my %is_assignment;
     my %is_good_alignment;
 
+    use constant TEST_MARGINAL_EQ_ALIGNMENT => 0;
+
     BEGIN {
 
         my @q = qw(
@@ -3691,6 +3703,7 @@ sub Dump_tree_groups {
         my $raw_tokb = "";    # first token seen at group level
         my $jfirst_bad;
         my $line_ending_fat_comma;    # is last token just a '=>' ?
+        my $j0_eq_pad;
 
         for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
@@ -3711,6 +3724,11 @@ sub Dump_tree_groups {
             if ( $j == 0 ) {
                 $pad += $line_1->get_leading_space_count() -
                   $line_0->get_leading_space_count();
+
+                # Remember the pad at a leading equals
+                if ( $raw_tok eq '=' && $lev == $group_level ) {
+                    $j0_eq_pad = $pad;
+                }
             }
 
             if ( $pad < 0 )        { $pad     = -$pad }
@@ -3745,8 +3763,6 @@ sub Dump_tree_groups {
         }
 
         $is_marginal = 1 if ( $is_marginal == 0 && $line_ending_fat_comma );
-
-        if ( !defined($jfirst_bad) ) { $jfirst_bad = $jmax_1 - 1; }
 
         # Turn off the "marginal match" flag in some cases...
         # A "marginal match" occurs when the alignment tokens agree
@@ -3871,9 +3887,35 @@ sub Dump_tree_groups {
                 }
             }
         }
-        if ( $is_marginal && $imax_align > $jfirst_bad - 1 ) {
+
+        ##if ( !defined($jfirst_bad) ) { $jfirst_bad = $jmax_1 - 1; }
+
+        # For a marginal match, only keep matches before the first 'bad' match
+        if (   $is_marginal
+            && defined($jfirst_bad)
+            && $imax_align > $jfirst_bad - 1 )
+        {
             $imax_align = $jfirst_bad - 1;
         }
+
+        # FIXME: This is a future update, postponed until the variable 'CI' is
+        # available for each line so that two lines with different CI values
+        # can be rejected.
+
+        # Two marginal match lines with leading '=' lie at the
+        # boundary of good and bad alignment, so we only align if the pad
+        # distance is small.  There is no perfect value, but 3 or 4 spaces
+        # seems to be a fairly good
+        # compromise.
+        if (   TEST_MARGINAL_EQ_ALIGNMENT
+            && $imax_align < 0
+            && defined($j0_eq_pad)
+            && $j0_eq_pad >= -4
+            && $j0_eq_pad <= 4 )
+        {
+            $imax_align = 0;
+        }
+
         return ( $is_marginal, $imax_align );
     }
 }
