@@ -2,6 +2,24 @@
 
 =over 4
 
+=item B<Do not align equals across changes in continuation indentation>
+
+A rule was added to prevent vertical alignment of lines with leading '=' across
+a change in continuation indentation. Sometimes aligning across a change in CI
+can come out okay, but sometimes it can be very poor. For example:
+
+    # BAD:
+    $!               = 2, die qq/$0: can't stat -${arg}'s "$file"./
+	unless $time = ( stat($file) )[$STAT_MTIME];
+
+    # FIXED:
+    $! = 2, die qq/$0: can't stat -${arg}'s "$file"./
+      unless $time = ( stat($file) )[$STAT_MTIME];
+
+The second line is a continuation of the first, and this update prevents this
+alignment.  The above 'BAD' formatting was in the previous developmental
+version of perltidy, not the previous release. This update added 12 Dec 2020.
+
 =item B<Improve vertical alignment in some two-line matches>
 
 When two lines would be perfectly aligned except for the line length limit,
