@@ -33,6 +33,7 @@ BEGIN {
         _end_group_                 => $i++,
         _Kend_                      => $i++,
         _ci_level_                  => $i++,
+        _imax_pair_                 => $i++,
     };
 }
 
@@ -85,6 +86,7 @@ EOM
         $self->[_end_group_]                 = $ri->{end_group};
         $self->[_Kend_]                      = $ri->{Kend};
         $self->[_ci_level_]                  = $ri->{ci_level};
+        $self->[_imax_pair_]                 = $ri->{imax_pair};
 
         $self->[_ralignments_] = [];
 
@@ -100,6 +102,14 @@ EOM
     sub get_indentation    { return $_[0]->[_indentation_] }
     sub get_Kend           { return $_[0]->[_Kend_] }
     sub get_ci_level       { return $_[0]->[_ci_level_] }
+
+    sub get_imax_pair { return $_[0]->[_imax_pair_] }
+
+    sub set_imax_pair {
+        my ( $self, $val ) = @_;
+        $self->[_imax_pair_] = $val;
+        return;
+    }
 
     sub get_j_terminal_match {
         return $_[0]->[_j_terminal_match_];

@@ -703,6 +703,7 @@ EOM
             end_group                 => $break_alignment_after,
             Kend                      => $Kend,
             ci_level                  => $ci_level,
+            imax_pair                 => -1,
         }
     );
 
@@ -1544,40 +1545,36 @@ sub _flush_group_lines {
 
     #########################################################################
     # Section 2: Handle line(s) of CODE.  Most of the actual work of vertical
-    # aligning happens here in seven steps:
+    # aligning happens here in the following steps:
     #########################################################################
 
     # STEP 1: Remove most unmatched tokens. They block good alignments.
     my ( $max_lev_diff, $saw_side_comment ) =
       delete_unmatched_tokens( $rgroup_lines, $group_level );
 
-    # STEP 2: Construct a tree of matched lines and delete some small deeper
-    # levels of tokens.  They also block good alignments.
-    prune_alignment_tree($rgroup_lines) if ($max_lev_diff);
-
-    # STEP 3: Sweep top to bottom, forming subgroups of lines with exactly
+    # STEP 2: Sweep top to bottom, forming subgroups of lines with exactly
     # matching common alignments.  The indexes of these subgroups are in the
     # return variable.
     my $rgroups = $self->sweep_top_down( $rgroup_lines, $group_level );
 
-    # STEP 4: Sweep left to right through the lines, looking for leading
+    # STEP 3: Sweep left to right through the lines, looking for leading
     # alignment tokens shared by groups.
     sweep_left_to_right( $rgroup_lines, $rgroups, $group_level )
       if ( @{$rgroups} > 1 );
 
-    # STEP 5: Move side comments to a common column if possible.
+    # STEP 4: Move side comments to a common column if possible.
     if ($saw_side_comment) {
         $self->adjust_side_comments( $rgroup_lines, $rgroups );
     }
 
-    # STEP 6: For the -lp option, increase the indentation of lists
+    # STEP 5: For the -lp option, increase the indentation of lists
     # to the desired amount, but do not exceed the line length limit.
     my $extra_leading_spaces =
       $self->[_extra_indent_ok_]
       ? get_extra_leading_spaces( $rgroup_lines, $rgroups )
       : 0;
 
-    # STEP 7: Output the lines.
+    # STEP 6: Output the lines.
     # All lines in this batch have the same basic leading spacing:
     my $group_leader_length = $rgroup_lines->[0]->get_leading_space_count();
 
@@ -2894,6 +2891,13 @@ EOM
               if ($saw_large_group);
         }
 
+        # PASS 3: Construct a tree of matched lines and delete some small deeper
+        # levels of tokens.  They also block good alignments.
+        prune_alignment_tree($rnew_lines) if ($max_lev_diff);
+
+        # PASS 4: compare all lines for common tokens
+        match_line_pairs( $rnew_lines, $rline_hashes, \@subgroups );
+
         return ( $max_lev_diff, $saw_side_comment );
     }
 }
@@ -3079,6 +3083,57 @@ sub delete_null_alignments {
     }    # End loop over subgroups
     return;
 } ## end sub delete_null_alignments
+
+sub match_line_pairs {
+    my ( $rnew_lines, $rline_hashes, $rsubgroups ) = @_;
+
+    # The subgroup line index range
+    my ( $jbeg, $jend );
+
+    # Previous line vars
+    my ( $line_m, $rtokens_m, $imax_m );
+
+    # Current line vars
+    my ( $line, $rtokens, $imax );
+
+    foreach my $item ( @{$rsubgroups} ) {
+        ( $jbeg, $jend ) = @{$item};
+        my $nlines = $jend - $jbeg + 1;
+        next unless ( $nlines > 1 );
+
+        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+
+            $line_m    = $line;
+            $rtokens_m = $rtokens;
+            $imax_m    = $imax;
+
+            $line    = $rnew_lines->[$jj];
+            $rtokens = $line->get_rtokens();
+            $imax    = @{$rtokens} - 2;
+
+            # nothing to do for first line
+            next if ( $jj == $jbeg );
+
+            # find number of leading common tokens
+            my $imax_min  = $imax_m < $imax ? $imax_m : $imax;
+            my $i_nomatch = $imax_min + 1;
+            for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+                my $tok   = $rtokens->[$i];
+                my $tok_m = $rtokens_m->[$i];
+                if ( $tok ne $tok_m ) {
+                    $i_nomatch = $i;
+                    last;
+                }
+
+            } ## end loop over tokens
+            $line_m->set_imax_pair( $i_nomatch - 1 );
+
+        } ## end loop over lines
+        $line->set_imax_pair(-1);
+
+    } ## end loop over subgroups
+    return;
+}
 
 sub fat_comma_to_comma {
     my ($str) = @_;
@@ -3693,6 +3748,7 @@ sub Dump_tree_groups {
         my $rfield_lengths_1 = $line_1->get_rfield_lengths();
         my $rpatterns_0      = $line_0->get_rpatterns();
         my $rpatterns_1      = $line_1->get_rpatterns();
+        my $imax_pair        = $line_1->get_imax_pair();
 
         # We will scan the alignment tokens and set a flag '$is_marginal' if
         # it seems that the an alignment would look bad.  If we pass
@@ -3816,79 +3872,80 @@ sub Dump_tree_groups {
           && $jmax_1 == 2
           && $sc_term0 ne $sc_term1;
 
+        ########################################
+        # return unless this is a marginal match
+        ########################################
+        goto RETURN if ( !$is_marginal );
+
         # Undo the marginal match flag in certain cases,
-        if ($is_marginal) {
 
-            # Two lines with a leading equals-like operator are allowed to
-            # align if the patterns to the left of the equals are the same.
-            # For example the following two lines are a marginal match but have
-            # the same left side patterns, so we will align the equals.
-            #     my $orig = my $format = "^<<<<< ~~\n";
-            #     my $abc  = "abc";
-            # But these have a different left pattern so they will not be
-            # aligned
-            #     $xmldoc .= $`;
-            #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
+        # Two lines with a leading equals-like operator are allowed to
+        # align if the patterns to the left of the equals are the same.
+        # For example the following two lines are a marginal match but have
+        # the same left side patterns, so we will align the equals.
+        #     my $orig = my $format = "^<<<<< ~~\n";
+        #     my $abc  = "abc";
+        # But these have a different left pattern so they will not be
+        # aligned
+        #     $xmldoc .= $`;
+        #     $self->{'leftovers'} .= "<bx-seq:seq" . $';
 
-            # First line semicolon terminated but second not, usually ok:
-            #               my $want = "'ab', 'a', 'b'";
-            #               my $got  = join( ", ",
-            #                    map { defined($_) ? "'$_'" : "undef" }
-            #                          @got );
-            #  First line not semicolon terminated, Not OK to match:
-            #   $$href{-NUM_TEXT_FILES} = $$href{-NUM_BINARY_FILES} =
-            #      $$href{-NUM_DIRS} = 0;
-            my $pat0 = $rpatterns_0->[0];
-            my $pat1 = $rpatterns_1->[0];
+        # First line semicolon terminated but second not, usually ok:
+        #               my $want = "'ab', 'a', 'b'";
+        #               my $got  = join( ", ",
+        #                    map { defined($_) ? "'$_'" : "undef" }
+        #                          @got );
+        #  First line not semicolon terminated, Not OK to match:
+        #   $$href{-NUM_TEXT_FILES} = $$href{-NUM_BINARY_FILES} =
+        #      $$href{-NUM_DIRS} = 0;
+        my $pat0 = $rpatterns_0->[0];
+        my $pat1 = $rpatterns_1->[0];
 
-            ##########################################################
-            # Turn off the marginal flag for some types of assignments
-            ##########################################################
-            if ( $is_assignment{$raw_tokb} ) {
+        ##########################################################
+        # Turn off the marginal flag for some types of assignments
+        ##########################################################
+        if ( $is_assignment{$raw_tokb} ) {
 
-                # undo marginal flag if first line is semicolon terminated
-                # and leading patters match
-                if ($sc_term0) {    # && $sc_term1) {
-                    $is_marginal = $pat0 ne $pat1;
-                }
+            # undo marginal flag if first line is semicolon terminated
+            # and leading patters match
+            if ($sc_term0) {    # && $sc_term1) {
+                $is_marginal = $pat0 ne $pat1;
             }
-            elsif ( $raw_tokb eq '=>' ) {
+        }
+        elsif ( $raw_tokb eq '=>' ) {
 
-                # undo marginal flag if patterns match
-                $is_marginal = $pat0 ne $pat1 || $line_ending_fat_comma;
-            }
-            elsif ( $raw_tokb eq '=~' ) {
+            # undo marginal flag if patterns match
+            $is_marginal = $pat0 ne $pat1 || $line_ending_fat_comma;
+        }
+        elsif ( $raw_tokb eq '=~' ) {
 
-                # undo marginal flag if both lines are semicolon terminated
-                # and leading patters match
-                if ( $sc_term1 && $sc_term0 ) {
-                    $is_marginal = $pat0 ne $pat1;
-                }
-            }
-
-            ######################################################
-            # Turn off the marginal flag if we saw an 'if' or 'or'
-            ######################################################
-
-            # A trailing 'if' and 'or' often gives a good alignment
-            # For example, we can align these:
-            #  return -1     if $_[0] =~ m/^CHAPT|APPENDIX/;
-            #  return $1 + 0 if $_[0] =~ m/^SECT(\d*)$/;
-
-            # or
-            #  $d_in_m[2] = 29          if ( &Date_LeapYear($y) );
-            #  $d         = $d_in_m[$m] if ( $d > $d_in_m[$m] );
-
-            if ($saw_if_or) {
-
-                # undo marginal flag if both lines are semicolon terminated
-                if ( $sc_term0 && $sc_term1 ) {
-                    $is_marginal = 0;
-                }
+            # undo marginal flag if both lines are semicolon terminated
+            # and leading patters match
+            if ( $sc_term1 && $sc_term0 ) {
+                $is_marginal = $pat0 ne $pat1;
             }
         }
 
-        ##if ( !defined($jfirst_bad) ) { $jfirst_bad = $jmax_1 - 1; }
+        ######################################################
+        # Turn off the marginal flag if we saw an 'if' or 'or'
+        ######################################################
+
+        # A trailing 'if' and 'or' often gives a good alignment
+        # For example, we can align these:
+        #  return -1     if $_[0] =~ m/^CHAPT|APPENDIX/;
+        #  return $1 + 0 if $_[0] =~ m/^SECT(\d*)$/;
+
+        # or
+        #  $d_in_m[2] = 29          if ( &Date_LeapYear($y) );
+        #  $d         = $d_in_m[$m] if ( $d > $d_in_m[$m] );
+
+        if ($saw_if_or) {
+
+            # undo marginal flag if both lines are semicolon terminated
+            if ( $sc_term0 && $sc_term1 ) {
+                $is_marginal = 0;
+            }
+        }
 
         # For a marginal match, only keep matches before the first 'bad' match
         if (   $is_marginal
@@ -3898,23 +3955,50 @@ sub Dump_tree_groups {
             $imax_align = $jfirst_bad - 1;
         }
 
-        # Two marginal match lines with leading '=' lie at the
-        # boundary of good and bad alignment, so we only align if the pad
-        # distance is small.  There is no perfect value, but 3 or 4 spaces
-        # seems to be a fairly good compromise.
+        ###########################################################
+        # Allow sweep to match lines with leading '=' in some cases
+        ###########################################################
+        if ( $imax_align < 0 && defined($j0_eq_pad) ) {
 
-        # Note: This is a perfectly good feature, but the benefits may not be
-        # sufficient to justify changing existing formatting.  So for now it
-        # will remain an unimplemented experimental feature.
-        if (   TEST_MARGINAL_EQ_ALIGNMENT
-            && $imax_align < 0
-            && defined($j0_eq_pad)
-            && $j0_eq_pad >= -4
-            && $j0_eq_pad <= 4 )
-        {
-            $imax_align = 0;
+            if (
+
+                # If there is a following line with leading equals, then let
+                # the sweep align them without restriction.  For example,
+                # the first two lines here are a marginal match, but they
+                # are followed by a line with leading equals, so the sweep-lr
+                # logic can align all of the lines:
+
+                #   $date[1] = $month_to_num{ $date[1] };           # <--line_0
+                #   @xdate = split( /[:\/\s]/, $log->field('t') );  # <--line_1
+                #   $day  = sprintf( "%04d/%02d/%02d", @date[ 2, 1, 0 ] );
+                #   $time = sprintf( "%02d:%02d:%02d", @date[ 3 .. 5 ] );
+
+                $imax_pair >= 0
+
+                # Experimental logic to allow alignment if there is a small pad.
+                # This works fine but would change some formatting.
+                || (   TEST_MARGINAL_EQ_ALIGNMENT
+                    && $j0_eq_pad >= -4
+                    && $j0_eq_pad <= 4 )
+              )
+            {
+
+                # But do not do this if there is a comma before the '='.
+                # For example, the first two lines below have commas and
+                # therefore are not allowed to align with lines 3 & 4:
+
+                # my ( $x, $y ) = $self->Size();                      #<--line_0
+                # my ( $left, $top, $right, $bottom ) = $self->Window(); #<--l_1
+                # my $vx = $right - $left;
+                # my $vy = $bottom - $top;
+
+                if ( $rpatterns_0->[0] !~ /,/ && $rpatterns_1->[0] !~ /,/ ) {
+                    $imax_align = 0;
+                }
+            }
         }
 
+      RETURN:
         return ( $is_marginal, $imax_align );
     }
 }

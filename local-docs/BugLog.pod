@@ -2,6 +2,25 @@
 
 =over 4
 
+=item B<Improved some marginal vertical alignments>
+
+This update fixed a rare situation in which some vertical alignment was missed.
+The problem had to do with two lines being incorrectly marked as a marginal
+match. A new routine, 'match_line_pairs' was added to set a flag with the
+information needed to detect and prevent this. This fix was made 13 Dec 2020.
+
+    # OLD
+    $sec = $sec + ( 60 * $min );
+    $graphcpu[$sec] = $line;
+    $secmax  = $sec  if ( $sec > $secmax );
+    $linemax = $line if ( $line > $linemax );
+
+    # NEW
+    $sec            = $sec + ( 60 * $min );
+    $graphcpu[$sec] = $line;
+    $secmax         = $sec  if ( $sec > $secmax );
+    $linemax        = $line if ( $line > $linemax );
+
 =item B<Do not align equals across changes in continuation indentation>
 
 A rule was added to prevent vertical alignment of lines with leading '=' across
