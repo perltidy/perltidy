@@ -2,12 +2,48 @@
 
 =over 4
 
+=item B<Improved vertical alignments by avoiding pruning step>
+
+There is a step in vertical alignment where the alignments are formed into a
+tree with different levels, and some deeper levels are pruned to preserve
+higher level alignments.  This usually works well, but some deeper alignments
+can be lost, which is what was happening in the example below.  It turns out
+that if the tree pruning is skipped when alignments vary monotonically across
+lines, as in the example, then better alignments is achieved when a later pass
+is made with the 'sweep' pass.
+
+    # OLD
+    my $cmd = shift @ARGV;
+    if    ( $cmd eq "new" )         { $force_new = 1; }
+    elsif ( $cmd eq "interactive" ) { $interactive = 1; $batch       = 0; }
+    elsif ( $cmd eq "batch" )       { $batch       = 1; $interactive = 0; }
+    elsif ( $cmd eq "use_old" )     { $use_old = 1; }
+    elsif ( $cmd eq "show" )        { $show    = 1; last; }
+    elsif ( $cmd eq "showall" )     { $showall = 1; last; }
+    elsif ( $cmd eq "show_all" )    { $showall = 1; last; }
+    elsif ( $cmd eq "remove" )      { $remove  = 1; last; }
+    elsif ( $cmd eq "help" )        { $help    = 1; last; }
+
+    # NEW
+    my $cmd = shift @ARGV;
+    if    ( $cmd eq "new" )         { $force_new   = 1; }
+    elsif ( $cmd eq "interactive" ) { $interactive = 1; $batch       = 0; }
+    elsif ( $cmd eq "batch" )       { $batch       = 1; $interactive = 0; }
+    elsif ( $cmd eq "use_old" )     { $use_old     = 1; }
+    elsif ( $cmd eq "show" )        { $show        = 1; last; }
+    elsif ( $cmd eq "showall" )     { $showall     = 1; last; }
+    elsif ( $cmd eq "show_all" )    { $showall     = 1; last; }
+    elsif ( $cmd eq "remove" )      { $remove      = 1; last; }
+    elsif ( $cmd eq "help" )        { $help        = 1; last; }
+
+This update was made 14 Dec 2020.
+
 =item B<Improved some marginal vertical alignments>
 
 This update fixed a rare situation in which some vertical alignment was missed.
 The problem had to do with two lines being incorrectly marked as a marginal
 match. A new routine, 'match_line_pairs' was added to set a flag with the
-information needed to detect and prevent this. This fix was made 13 Dec 2020.
+information needed to detect and prevent this. This fix was made 13 Dec 2020, 9a8e49b.
 
     # OLD
     $sec = $sec + ( 60 * $min );
@@ -37,15 +73,15 @@ can come out okay, but sometimes it can be very poor. For example:
 
 The second line is a continuation of the first, and this update prevents this
 alignment.  The above 'BAD' formatting was in the previous developmental
-version of perltidy, not the previous release. This update added 12 Dec 2020.
+version of perltidy, not the previous release. This update added 12 Dec 2020, 5b56147.
 
 =item B<Improve vertical alignment in some two-line matches>
 
 When two lines would be perfectly aligned except for the line length limit,
 previously they would only be aligned if they had a common leading equals.  The
 update removes this restriction and allows as many alignments to be made as
-possible.  The results are generally improved.  This update was made 11 Dec 2020.
-Some examples:
+possible.  The results are generally improved.  This update was made 11 Dec 2020,
+f3c6cd8.  Some examples:
 
 # In this example the side comments were limiting the matches
 
@@ -78,8 +114,8 @@ of the line length limit:
     is( MyClass->meta,       $mc, '... these metas are still the same thing' );
     is( MyClass->meta->meta, $mc->meta, '... these meta-metas are the same thing' );
 
-In this last example, the first comma is not aligned, but space allows
-alignment to resumes with the second comma.  
+In this last example, the first comma is not aligned, but alignment resumes
+after the second comma.
 
     # OLD
     is( $obj->name, $COMPRESS_FILE, "   Name now set to '$COMPRESS_FILE'" );

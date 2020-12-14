@@ -2038,6 +2038,7 @@ sub sweep_left_to_right {
         $is_good_alignment_token{'='}      = 1;
         $is_good_alignment_token{'if'}     = 1;
         $is_good_alignment_token{'unless'} = 1;
+        $is_good_alignment_token{'=>'}     = 1
 
         # Note the hash values are set so that:
         #         if ($is_good_alignment_token{$raw_tok}) => best
@@ -3296,7 +3297,7 @@ sub get_line_token_info {
             }
         };
     } ## end loop over lines
-    return $rline_values;
+    return ( $rline_values, $all_monotonic );
 }
 
 sub prune_alignment_tree {
@@ -3362,7 +3363,12 @@ sub prune_alignment_tree {
 
     # Note that the caller had this info but we have to redo this now because
     # alignment tokens may have been deleted.
-    my $rline_values = get_line_token_info($rlines);
+    my ( $rline_values, $all_monotonic ) = get_line_token_info($rlines);
+
+    # If all the lines have levels which increase monotonically from left to
+    # right, then the sweep-left-to-right pass can do a better job of alignment
+    # than pruning, and without deleting alignments.
+    return if ($all_monotonic);
 
     # Contents of $rline_values
     #   [
@@ -3770,11 +3776,12 @@ sub Dump_tree_groups {
             }
 
             # When the first of the two lines ends in a bare '=>' this will
-            # probably be marginal match.
+            # probably be marginal match.  (For a bare =>, the next field length
+            # will be 2 or 3, depending on side comment)
             $line_ending_fat_comma =
                  $j == $jmax_1 - 2
               && $raw_tok eq '=>'
-              && $rfield_lengths_0->[ $j + 1 ] == 2;
+              && $rfield_lengths_0->[ $j + 1 ] <= 3;
 
             my $pad = $rfield_lengths_1->[$j] - $rfield_lengths_0->[$j];
             if ( $j == 0 ) {
