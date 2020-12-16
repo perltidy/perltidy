@@ -2,15 +2,40 @@
 
 =over 4
 
+=item B<Rewrote sub check_match>
+
+Moved inner part of sub check_match into sub match_line_pair in order to
+make info available earlier.  This gave some minor alignment improvements.
+
+    # OLD:
+    @tests = (
+        @common,     '$_',
+        '"\$_"',     '@_',
+        '"\@_"',     '??N',
+        '"??N"',     chr 256,
+        '"\x{100}"', chr 65536,
+        '"\x{10000}"', ord 'N' == 78 ? ( chr 11, '"\013"' ) : ()
+    );
+
+    # NEW:
+    @tests = (
+        @common,       '$_',
+        '"\$_"',       '@_',
+        '"\@_"',       '??N',
+        '"??N"',       chr 256,
+        '"\x{100}"',   chr 65536,
+        '"\x{10000}"', ord 'N' == 78 ? ( chr 11, '"\013"' ) : ()
+    );
+
 =item B<Improved vertical alignments by avoiding pruning step>
 
 There is a step in vertical alignment where the alignments are formed into a
 tree with different levels, and some deeper levels are pruned to preserve
-higher level alignments.  This usually works well, but some deeper alignments
-can be lost, which is what was happening in the example below.  It turns out
-that if the tree pruning is skipped when alignments vary monotonically across
-lines, as in the example, then better alignments is achieved when a later pass
-is made with the 'sweep' pass.
+lower level alignments.  This usually works well, but some deeper alignments
+will be lost, which is what was happening in the example below.  It turns out
+that if the tree pruning is skipped when alignment depths increase
+monotonically across lines, as in the example, then better overall alignment is
+achieved by the subsequent 'sweep' pass. 
 
     # OLD
     my $cmd = shift @ARGV;
