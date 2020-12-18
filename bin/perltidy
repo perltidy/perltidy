@@ -1191,6 +1191,28 @@ If formatted in this way, the program will not run (at least with recent version
 
 Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators.  So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged.  Likewise, whitespace around barewords is left unchanged.  The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.
 
+In perltidy this is implemented in the tokenizer by marking token following a
+B<print> keyword as a special type B<Z>.  When formatting is being done,
+whitespace following this token type is generally left unchanged as a precaution
+against changing program behavior.  This is excessively conservative but simple
+and easy to implement.  Keywords which are treated similarly to B<print> include
+B<printf>, B<sort>, B<exec>, B<system>.  Changes in spacing around parameters
+following these keywords may have to be made manually.  For example, the space,
+or lack of space, after the parameter $foo in the following line will be
+unchanged in formatting.
+
+   system($foo );
+   system($foo);
+
+To find if a token is of type B<Z> you can use B<perltidy -DEBUG>. For the 
+first line above the result is
+
+   1: system($foo );
+   1: kkkkkk{ZZZZb};
+
+which shows that B<system> is type B<k> (keyword) and $foo is type B<Z>.
+
+
 =item Note2: Perltidy's whitespace rules are not perfect
 
 Despite these precautions, it is still possible to introduce syntax errors with

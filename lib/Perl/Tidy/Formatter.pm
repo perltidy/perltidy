@@ -350,6 +350,7 @@ BEGIN {
         _ris_bli_container_       => $i++,
         _rparent_of_seqno_        => $i++,
         _rchildren_of_seqno_      => $i++,
+        _ris_list_by_seqno_       => $i++,
         _rbreak_container_        => $i++,
         _rshort_nested_           => $i++,
         _length_function_         => $i++,
@@ -684,6 +685,7 @@ sub new {
     $self->[_ris_bli_container_]     = {};
     $self->[_rparent_of_seqno_]      = {};
     $self->[_rchildren_of_seqno_]    = {};
+    $self->[_ris_list_by_seqno_]     = {};
     $self->[_rbreak_container_]      = {};    # prevent one-line blocks
     $self->[_rshort_nested_]         = {};    # blocks not forced open
     $self->[_length_function_]       = $length_function;
@@ -5633,6 +5635,21 @@ sub respace_tokens {
         $self->[_K_first_seq_item_] = $KNEXT;
     }
 
+    # find and remember lists by sequence number
+    # TODO: eventually this should hold a name for the list
+    my $ris_list_by_seqno = {};
+    foreach my $seqno ( keys %{$K_opening_container} ) {
+        my $K_opening  = $K_opening_container->{$seqno};
+        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
+        next if ($block_type);
+        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+        next unless ($rtype_count);
+        my $fat_comma_count = $rtype_count->{'=>'};
+        my $comma_count     = $rtype_count->{','};
+        my $is_list = ( $fat_comma_count || $comma_count && $comma_count > 1 );
+        $ris_list_by_seqno->{$seqno} = $is_list;
+    }
+
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
     my $Klimit;
@@ -5648,6 +5665,7 @@ sub respace_tokens {
     $self->[_rhas_broken_container_] = $rhas_broken_container;
     $self->[_rparent_of_seqno_]      = $rparent_of_seqno;
     $self->[_rchildren_of_seqno_]    = $rchildren_of_seqno;
+    $self->[_ris_list_by_seqno_]     = $ris_list_by_seqno;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -5866,28 +5884,9 @@ sub is_list {
 
     # Return true if the immediate contents of a container appears to be a
     # list.
-
     my ( $self, $seqno ) = @_;
     return unless defined($seqno);
-
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_opening           = $K_opening_container->{$seqno};
-    return unless ( defined($K_opening) );
-
-    my $rLL        = $self->[_rLL_];
-    my $block_type = $rLL->[$K_opening]->[_BLOCK_TYPE_];
-    return if ($block_type);
-
-    my $token = $rLL->[$K_opening]->[_TOKEN_];
-    return if ( $token eq ':' );
-
-    # We will require at least 2 commas or 1 fat comma in the
-    # immediate lower level.
-    my $rtype_count_by_seqno = $self->[_rtype_count_by_seqno_];
-    my $fat_comma_count      = $rtype_count_by_seqno->{$seqno}->{'=>'};
-    my $comma_count          = $rtype_count_by_seqno->{$seqno}->{','};
-    my $is_list = ( $fat_comma_count || $comma_count && $comma_count > 1 );
-    return $is_list;
+    return $self->[_ris_list_by_seqno_]->{$seqno};
 }
 
 sub resync_lines_and_tokens {
@@ -11063,7 +11062,7 @@ sub insert_additional_breaks {
             && $i_break_right <= $i_l )
         {
             splice( @{$ri_first}, $line_number, 1, ( $i_f, $i_break_right ) );
-            splice( @{$ri_last}, $line_number, 1, ( $i_break_left, $i_l ) );
+            splice( @{$ri_last},  $line_number, 1, ( $i_break_left, $i_l ) );
         }
     }
     return;
