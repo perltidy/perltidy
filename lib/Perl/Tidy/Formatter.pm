@@ -18648,8 +18648,18 @@ sub make_paren_name {
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
 
+        my $type_beg      = $types_to_go[$ibeg];
+        my $token_beg     = $tokens_to_go[$ibeg];
+        my $K_beg         = $K_to_go[$ibeg];
+        my $ibeg_weld_fix = $ibeg;
+        my $seqno_beg     = $type_sequence_to_go[$ibeg];
+        my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
+
+        my $is_closing_qw = ( $type_beg eq 'q' && $iend > $ibeg );
+
         my $is_semicolon_terminated = $terminal_type eq ';'
-          && $nesting_depth_to_go[$iend] < $nesting_depth_to_go[$ibeg];
+          && ( $nesting_depth_to_go[$iend] < $nesting_depth_to_go[$ibeg]
+            || $is_closing_qw );
 
         # NOTE: A future improvement would be to make it semicolon terminated
         # even if it does not have a semicolon but is followed by a closing
@@ -18697,13 +18707,6 @@ sub make_paren_name {
             $is_leading,          $opening_exists
         );
 
-        my $type_beg      = $types_to_go[$ibeg];
-        my $token_beg     = $tokens_to_go[$ibeg];
-        my $K_beg         = $K_to_go[$ibeg];
-        my $ibeg_weld_fix = $ibeg;
-        my $seqno_beg     = $type_sequence_to_go[$ibeg];
-        my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
-
         # Update the $is_bli flag as we go. It is initially 1.
         # We note seeing a leading opening brace by setting it to 2.
         # If we get to the closing brace without seeing the opening then we
@@ -18728,9 +18731,7 @@ sub make_paren_name {
         # For -lp formatting se use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
-        if ( $type_beg eq 'q'
-            && ( $is_closing_token{$token_beg} || $token_beg eq '>' ) )
-        {
+        if ($is_closing_qw) {
             my $K_next_nonblank = $self->K_next_code($K_beg);
             if ( defined($K_next_nonblank) ) {
                 my $type_sequence = $rLL->[$K_next_nonblank]->[_TYPE_SEQUENCE_];
@@ -18747,7 +18748,7 @@ sub make_paren_name {
         }
 
         # if we are at a closing token of some type..
-        if ( $is_closing_type{$type_beg} ) {
+        if ( $is_closing_type{$type_beg} || $is_closing_qw ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -18906,6 +18907,32 @@ sub make_paren_name {
                 # need to remove some spaces to get a valid hash key.
                 my $tok = $tokens_to_go[$ibeg];
                 my $cti = $closing_token_indentation{$tok};
+
+                # Fix the value of 'cti' for an isloated non-welded closing qw
+                # delimiter.
+                if ( $is_closing_qw && $ibeg_weld_fix == $ibeg ) {
+
+                    # A quote delimiter which is not a container will not have
+                    # a cti value defined.  In this case use the style of a
+                    # paren. For example
+                    #   my @words = (
+                    #      qw/
+                    #        far
+                    #        farfar
+                    #        farfars far
+                    #      /,
+                    #   );
+                    if ( !defined($cti) && length($tok) == 1 ) {
+                        $cti = $closing_token_indentation{')'};
+                    }
+
+                    # A non-welded closing qw cannot currently use -cti=1
+                    # because that option requires a sequence number to find
+                    # the opening indentation, and qw quote delimiters are not
+                    # sequenced items.
+                    if ( defined($cti) && $cti == 1 ) { $cti = 0 }
+                }
+
                 if ( !defined($cti) ) {
 
                     # $cti may not be defined for several reasons.

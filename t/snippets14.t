@@ -760,7 +760,7 @@ use Blast::IPS::MathUtils qw(
   set_interpolation_points
   table_row_interpolation
   two_point_interpolation
-  );                       # with -kgb, break around isolated 'local' below
+);                         # with -kgb, break around isolated 'local' below
 use Text::Warp();
 local ($delta2print) =
   ( defined $size ) ? int( $size / 50 ) : $defaultdelta2print;
@@ -784,7 +784,7 @@ use Blast::IPS::MathUtils qw(
   set_interpolation_points
   table_row_interpolation
   two_point_interpolation
-  );                       # with -kgb, break around isolated 'local' below
+);                         # with -kgb, break around isolated 'local' below
 use Text::Warp();
 
 local ($delta2print) =

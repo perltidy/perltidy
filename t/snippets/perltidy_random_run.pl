@@ -48,18 +48,18 @@ Please run 'perltidy_random_setup.pl' first
 EOM
 }
 
-my $nf_beg    = 1;
+my $nf_beg = 1;
 my $np_beg = 1;
 if ( @ARGV > 1 ) {
     print STDERR "Too many args\n";
     die $usage;
 }
-elsif ($ARGV[0]) {
-    my $arg=$ARGV[0];
+elsif ( $ARGV[0] ) {
+    my $arg = $ARGV[0];
     if ( $arg && $arg =~ /^(\d+)\.(\d+)$/ ) {
-        $nf_beg    = $1;
+        $nf_beg = $1;
         $np_beg = $2;
-        print STDERR "\nRestarting with arg $arg\n"
+        print STDERR "\nRestarting with arg $arg\n";
     }
     else {
         print STDERR "First arg '$arg' not of form m.n\n";
@@ -81,8 +81,6 @@ if ($perltidy) {
     $binfile = "perl $perltidy";
 }
 
-   
-
 $FILES_file         = "FILES.txt"    unless ($FILES_file);
 $PROFILES_file      = "PROFILES.txt" unless ($PROFILES_file);
 $chain_mode         = 0              unless defined($chain_mode);
@@ -92,7 +90,7 @@ $delete_good_output = 1              unless defined($delete_good_output);
 my $rfiles    = read_list($FILES_file);
 my $rprofiles = read_list($PROFILES_file);
 
-my @files = @{$rfiles};
+my @files  = @{$rfiles};
 my $nfiles = @files;
 print STDOUT "got $nfiles files\n";
 if ( !@files ) { die "No files found\n" }
@@ -113,7 +111,7 @@ if ( !@profiles ) {
     push @profiles, $fname;
 }
 
-my $rsummary   = [];
+my $rsummary = [];
 my @problems;
 
 my $stop_file = 'stop.now';
@@ -141,8 +139,8 @@ EOM
 my $file_count = 0;
 my $case       = 0;
 MAIN_LOOP:
-for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
-    my $file=$files[$nf-1];
+for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
+    my $file = $files[ $nf - 1 ];
 
     # remove any previously saved files
     if (@saved_for_deletion) {
@@ -153,7 +151,7 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
     }
 
     next unless -e $file;
-    $file_count=$nf;
+    $file_count = $nf;
     my $ifile                 = $file;
     my $ifile_original        = $ifile;
     my $ifile_size            = -s $ifile;
@@ -177,8 +175,8 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
     my $starting_syntax_ok = 1;
 
     # Inner loop over profiles for a given file
-    for (my $np=$np_beg; $np<=$np_end; $np++) {
-    my $profile=$profiles[$np-1];
+    for ( my $np = $np_beg ; $np <= $np_end ; $np++ ) {
+        my $profile = $profiles[ $np - 1 ];
 
         $case = $np;
         my $error_count_this_case = 0;
@@ -189,7 +187,8 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
         my $ofile   = "ofile.$ext";
         my $chkfile = "chkfile.$ext";
 
-        print STDERR "\n-----\nRun '$nf.$np' : profile='$profile', ifile='$ifile'\n";
+        print STDERR
+          "\n-----\nRun '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
         my $cmd = "$binfile <$ifile >$ofile -pro=$profile";
         print STDERR "$cmd\n";
@@ -233,11 +232,18 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
                 }
             }
 
-            # Check for unexpectedly very small file size
-            elsif ( $case > 3 && $ofile_size < 0.6 * $ofile_size_min_expected )
+            # Check for an unexpectedly very small file size...
+            # NOTE: file sizes can often be unexpectly small when operating on
+            # random text.  For example, if a random line begins with an '='
+            # then when a --delete-pod parameter is set, everything from there
+            # on gets deleted.
+            # But we still want to catch zero size files, since they might
+            # indicate a code crash.  So I have lowered the fraction in this
+            # test to a small value.
+            elsif ( $case > 3 && $ofile_size < 0.1 * $ofile_size_min_expected )
             {
                 print STDERR
-"**ERROR for ofile=$ofile: size = $ofile_size < $ofile_size_min_expected = min expected\n";
+"**ERROR for ofile=$ofile: size = $ofile_size << $ofile_size_min_expected = min expected\n";
                 push @size_errors, $ofile;
                 $error_count_this_file++;
                 $error_count_this_case++;
@@ -344,8 +350,9 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
         # Set input file for next run
         $ifile = $ifile_original;
         if ( $case >= 4 && $chain_mode && !$err ) {
-	    # 'Chaining' means the next run formats the output of the previous
-	    # run instead of formatting the original file.
+
+            # 'Chaining' means the next run formats the output of the previous
+            # run instead of formatting the original file.
             # 0 = no chaining
             # 1 = always chain unless error
             # 2 = random chaining
@@ -449,8 +456,8 @@ for (my $nf=$nf_beg; $nf<=$nf_end; $nf++) {
       )
     {
         push @problems, $file_count;
-    }  ## end inner loop over profiles
-}  ## end outer loop over files
+    } ## end inner loop over profiles
+} ## end outer loop over files
 
 if (@saved_for_deletion) {
     foreach (@saved_for_deletion) {
@@ -513,16 +520,16 @@ EOM
 write_runme();
 
 # Write a restart file
-my ($nf, $np);
+my ( $nf, $np );
 if ( $case < $np_end ) {
     $nf = $file_count;
     $np = $case + 1;
-    write_GO($nf, $np); 
+    write_GO( $nf, $np );
 }
 elsif ( $file_count < $nf_end ) {
     $nf = $file_count + 1;
     $np = 1;
-    write_GO($nf, $np); 
+    write_GO( $nf, $np );
 }
 
 print STDERR <<EOM;
@@ -587,9 +594,9 @@ EOM
 
 sub write_GO {
 
-    my ($nf, $np) = @_;
+    my ( $nf, $np ) = @_;
     my $runme = "GO.sh";
-    unlink $runme if (-e $runme);
+    unlink $runme if ( -e $runme );
     my $fh;
     open( $fh, '>', $runme ) || die "cannot open $runme: $!\n";
     $fh->print(<<EOM);

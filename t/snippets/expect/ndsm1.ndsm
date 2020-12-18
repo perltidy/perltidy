@@ -12,5 +12,5 @@ sub numerically { $a <=> $b };
 sub Numerically { $a <=> $b };    # trapped semicolon
 @: = qw;2c72656b636168
   2020202020
-  ;;
+;;
 __;

@@ -2,10 +2,63 @@
 
 =over 4
 
+=item B<Fix git #51, closing quote pattern delimiters not following -cti flag settings>
+
+Closing pattern delimiter tokens of qw quotes were not following the -cti flag
+settings for containers in all cases, as would be expected, in particular when
+followed by a comma.  For example, the closing qw paren below was indented with
+continuation indentation but would not have that extra indentation if it
+followed the default -cpi setting for a paren: 
+
+    # OLD:
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ),
+        @trig
+    );
+
+    # NEW
+    @EXPORT = (
+        qw(
+            i Re Im rho theta arg
+            sqrt log ln
+            log10 logn cbrt root
+            cplx cplxe
+        ),
+        @trig
+    );
+
+This update makes closing qw quote terminators follow the settings for their
+corresponding container tokens as closely as possible.  In addition, for
+closing quote tokens which are not containers, the setting for a closing paren
+will now be followed.  For example
+
+    @EXPORT = (
+        qw#
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        #,
+        @trig
+    );
+
+This update was added 18 Dec 2020.
+
+=item B<Update manual pages regarding issue git #50>
+
+Additional wording was added to the man pages regarding situations in which
+perltidy does not change whitespace.  This update was added 17 Dec 2020.
+
 =item B<Rewrote sub check_match>
 
 Moved inner part of sub check_match into sub match_line_pair in order to
 make info available earlier.  This gave some minor alignment improvements.
+This was done 16 Dec 2020.
 
     # OLD:
     @tests = (
