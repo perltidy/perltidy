@@ -2789,7 +2789,7 @@ EOM
         prune_alignment_tree($rnew_lines) if ($max_lev_diff);
 
         # PASS 4: compare all lines for common tokens
-        match_line_pairs( $rlines, $rnew_lines, \@subgroups );
+        match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
 
         return ( $max_lev_diff, $saw_side_comment );
     }
@@ -2978,7 +2978,7 @@ sub delete_null_alignments {
 } ## end sub delete_null_alignments
 
 sub match_line_pairs {
-    my ( $rlines, $rnew_lines, $rsubgroups ) = @_;
+    my ( $rlines, $rnew_lines, $rsubgroups, $group_level ) = @_;
 
     # Compare each pair of lines and save information about common matches
     # $rlines     = list of lines including hanging side comments
@@ -2986,7 +2986,7 @@ sub match_line_pairs {
     # $rsubgroups = list of subgroups of the new lines
 
     # TODO:
-    # Change: imax_pair => pair_match_info = ref to array
+    # Maybe change: imax_pair => pair_match_info = ref to array
     #  = [$imax_align, $rMsg, ... ]
     #  This may eventually have multi-level match info
 
@@ -3072,16 +3072,18 @@ sub match_line_pairs {
             # left with scalars on the left.  We will also prevent
             # any partial alignments.
 
-          # FIXME: can set return code 1 if the = is below line level, i.e.
+          # set return code 2 if the = is at line level, but
+          # set return code 1 if the = is below line level, i.e.
           #    sub new { my ( $p, $v ) = @_; bless \$v, $p }
           #    sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
-          # but keep as is until verification with old routine is finished.
 
             elsif (
                 ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) )
             {
-                $GoToMsg     = "mixed commas/no-commas before equals";
-                $return_code = 2;
+                $GoToMsg = "mixed commas/no-commas before equals";
+                if ( $lev eq $group_level ) {
+                    $return_code = 2;
+                }
                 goto NO_MATCH;
             }
         }
@@ -3092,7 +3094,7 @@ sub match_line_pairs {
       NO_MATCH:
 
         EXPLAIN_COMPARE_PATTERNS
-          && print STDERR "no match because $GoToMsg";
+          && print STDERR "no match because $GoToMsg\n";
 
         return ( $return_code, \$GoToMsg );
 
