@@ -190,7 +190,7 @@ my (
     %is_closing_token,
     %is_equal_or_fat_comma,
     %is_block_with_ci,
-    %is_comma_or_fat_comma,
+    %is_counted_type,
     %is_opening_sequence_token,
     %is_closing_sequence_token,
     %is_container_label_type,
@@ -572,9 +572,9 @@ BEGIN {
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
-    @q = qw( => );
+    @q = qw( => ; );
     push @q, ',';
-    @is_comma_or_fat_comma{@q} = (1) x scalar(@q);
+    @is_counted_type{@q} = (1) x scalar(@q);
 
     # These block types can take ci.  This is used by the -xci option.
     # Note that the 'sub' in this list is an anonymous sub.  To be more correct
@@ -1705,7 +1705,7 @@ sub initialize_whitespace_hashes {
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
       &&= ||= //= <=> A k f w F n C Y U G v
-      #;
+    #;
 
     my @spaces_left_side = qw<
       t ! ~ m p { \ h pp mm Z j
@@ -4852,7 +4852,7 @@ sub respace_tokens {
             $nonblank_token_count++;
 
             # count selected types
-            if ( $is_comma_or_fat_comma{$type} ) {
+            if ( $is_counted_type{$type} ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
                     $rtype_count_by_seqno->{$seqno}->{$type}++;
@@ -5646,7 +5646,10 @@ sub respace_tokens {
         next unless ($rtype_count);
         my $fat_comma_count = $rtype_count->{'=>'};
         my $comma_count     = $rtype_count->{','};
-        my $is_list = ( $fat_comma_count || $comma_count && $comma_count > 1 );
+        my $semicolon_count = $rtype_count->{';'};
+
+        # This definition of a list is sufficient for our needs
+        my $is_list = ( $fat_comma_count || $comma_count ) && !$semicolon_count;
         $ris_list_by_seqno->{$seqno} = $is_list;
     }
 
@@ -5880,13 +5883,51 @@ sub get_old_line_count {
     return $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_] + 1;
 }
 
-sub is_list {
+sub is_list_by_seqno {
 
     # Return true if the immediate contents of a container appears to be a
     # list.
     my ( $self, $seqno ) = @_;
     return unless defined($seqno);
     return $self->[_ris_list_by_seqno_]->{$seqno};
+}
+
+sub is_list_by_K {
+
+    # Return true if token K is in a list
+    my ( $self, $KK ) = @_;
+    return unless defined($KK);
+
+    my $rLL   = $self->[_rLL_];
+    my $KNEXT = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+
+    # Find the sequence number of the parent container, if any
+    my $parent_seqno;
+    while ( defined($KNEXT) ) {
+        my $KK = $KNEXT;
+        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
+        my $rtoken_vars   = $rLL->[$KK];
+        my $type          = $rtoken_vars->[_TYPE_];
+        my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        # if next container token is closing, it is the parent seqno
+        if ( $is_closing_type{$type} ) {
+            $parent_seqno = $type_sequence;
+            last;
+        }
+
+        # if next container token is opening, we want its parent container
+        elsif ( $is_opening_type{$type} ) {
+            $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+            last;
+        }
+
+        # must be ternary - keep going
+    }
+
+    # then return the list type of the parent container
+    return unless defined($parent_seqno);
+    return $self->[_ris_list_by_seqno_]->{$parent_seqno};
 }
 
 sub resync_lines_and_tokens {
@@ -7453,7 +7494,7 @@ sub adjust_container_indentation {
         next unless ( $is_equal_or_fat_comma{$prev_type} );
 
         # This is only for list containers
-        next unless $self->is_list($seqno);
+        next unless $self->is_list_by_seqno($seqno);
 
         # and only for broken lists
         next unless $ris_broken_container->{$seqno};
@@ -12545,7 +12586,7 @@ sub insert_breaks_before_list_opening_containers {
         next unless ( $is_equal_or_fat_comma{$prev_type} );
 
         # This must be a list (this will exclude all code blocks)
-        next unless $self->is_list($seqno);
+        next unless $self->is_list_by_seqno($seqno);
 
         # Never break a weld
         next if ( $self->weld_len_left( $seqno, $token_end ) );
@@ -12567,7 +12608,7 @@ sub insert_breaks_before_list_opening_containers {
             $ok_to_break = $rhas_broken_container->{$seqno};
             if ( !$ok_to_break ) {
                 my $parent = $rparent_of_seqno->{$seqno};
-                $ok_to_break = $self->is_list($parent);
+                $ok_to_break = $self->is_list_by_seqno($parent);
             }
         }
 
@@ -17019,7 +17060,7 @@ sub send_lines_to_vertical_aligner {
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
           { ? : => && || ~~ !~~ =~ !~ // <=> ->
-          #;
+        #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
         # These 'tokens' are not aligned. We need this to remove [
