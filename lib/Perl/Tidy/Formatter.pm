@@ -18696,6 +18696,7 @@ sub make_paren_name {
         my $seqno_beg     = $type_sequence_to_go[$ibeg];
         my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
+        # Note the end of any qw list, which needs special treatment
         my $is_closing_qw = ( $type_beg eq 'q' && $iend > $ibeg );
 
         my $is_semicolon_terminated = $terminal_type eq ';'
@@ -18763,13 +18764,8 @@ sub make_paren_name {
             else { $is_bli_beg = 0 }
         }
 
-        # QW PATCH 2 (Testing)
-        # At an isolated closing token of a qw quote which is welded to
-        # a following closing token, we will locally change its type to
-        # be the same as its token. This will allow formatting to be the
-        # same as for an ordinary closing token.
-
-        # For -lp formatting se use $ibeg_weld_fix to get around the problem
+        # QW PATCH for the combination -lp -wn
+        # For -lp formatting use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
         if ($is_closing_qw) {
@@ -18783,7 +18779,6 @@ sub make_paren_name {
                     if ( $itest <= $max_index_to_go ) {
                         $ibeg_weld_fix = $itest;
                     }
-                    $type_beg = ')';    ##$token_beg;
                 }
             }
         }
@@ -19219,6 +19214,32 @@ sub make_paren_name {
             $last_indentation_written    = $indentation;
             $last_unadjusted_indentation = $leading_spaces_to_go[$ibeg];
             $last_leading_token          = $tokens_to_go[$ibeg];
+
+            # Patch to make a line which is the end of a qw quote work with the
+            # -lp option.  Make $token_beg look like a closing token as some
+            # type even if it is not.  This veriable will become
+            # $last_leading_token at the end of this loop.  Then, if the -lp
+            # style is selected, and the next line is also a
+            # closing token, it will not get more indentation than this line.
+            # We need to do this because qw quotes (at present) only get
+            # continuation indentation, not one level of indentation, so we
+            # need to turn off the -lp indentation.
+
+            # ... a picture is worth a thousand words:
+
+            # perltidy -wn -gnu (Without this patch):
+            #   ok(defined(
+            #       $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
+            #       2981014)])
+            #             ));
+
+            # perltidy -wn -gnu (With this patch):
+            #  ok(defined(
+            #      $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
+            #      2981014)])
+            #  ));
+            if ($is_closing_qw) { $last_leading_token = ')' }
+
         }
 
         # be sure lines with leading closing tokens are not outdented more
