@@ -4852,7 +4852,8 @@ sub respace_tokens {
             $nonblank_token_count++;
 
             # count selected types
-            if ( $is_counted_type{$type} ) {
+            # ignore phantom semicolons which have length 0
+            if ( $is_counted_type{$type} && $token_length > 0 ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
                     $rtype_count_by_seqno->{$seqno}->{$type}++;
@@ -5649,8 +5650,9 @@ sub respace_tokens {
         my $semicolon_count = $rtype_count->{';'};
 
         # This definition of a list is sufficient for our needs
-        my $is_list = ( $fat_comma_count || $comma_count ) && !$semicolon_count;
-        $ris_list_by_seqno->{$seqno} = $is_list;
+        if ( ( $fat_comma_count || $comma_count ) && !$semicolon_count ) {
+            $ris_list_by_seqno->{$seqno} = $seqno;
+        }
     }
 
     # Reset memory to be the new array
@@ -5899,20 +5901,36 @@ sub is_list_by_K {
     return unless defined($KK);
 
     my $rLL   = $self->[_rLL_];
-    my $KNEXT = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+    my $KNEXT = $KK;
 
-    # Find the sequence number of the parent container, if any
+    # Find the sequence number of the parent list container, if any.
+    # For example, consider the following with seqno=5 of the '[' and ']'
+    # being called with index K of the first token of each line:
+
+    #                                              # result
+    #    push @tests,                              # -
+    #      [                                       # -
+    #        sub { 99 },   'do {&{%s} for 1,2}',   # 5
+    #        '(&{})(&{})', undef,                  # 5
+    #        [ 2, 2, 0 ],  0                       # 5
+    #      ];                                      # -
+
     my $parent_seqno;
     while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
+        my $Kt = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
-        my $rtoken_vars   = $rLL->[$KK];
+        my $rtoken_vars   = $rLL->[$Kt];
         my $type          = $rtoken_vars->[_TYPE_];
         my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
 
         # if next container token is closing, it is the parent seqno
         if ( $is_closing_type{$type} ) {
-            $parent_seqno = $type_sequence;
+            if ( $Kt > $KK ) {
+                $parent_seqno = $type_sequence;
+            }
+            else {
+                $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+            }
             last;
         }
 
@@ -5925,7 +5943,7 @@ sub is_list_by_K {
         # must be ternary - keep going
     }
 
-    # then return the list type of the parent container
+    # return the list name of the parent container, if any
     return unless defined($parent_seqno);
     return $self->[_ris_list_by_seqno_]->{$parent_seqno};
 }
@@ -16695,6 +16713,8 @@ sub reduce_lp_indentation {
 # CODE SECTION 13: Preparing batches for vertical alignment
 ###########################################################
 
+use constant TEST_NEW_LIST_METHOD => 0;
+
 sub send_lines_to_vertical_aligner {
 
     my ($self) = @_;
@@ -16971,13 +16991,31 @@ sub send_lines_to_vertical_aligner {
             $rfield_lengths->[-1] += 2;
         }
 
+        #################################################
+        # TESTING different methods for indicating a list
+        #################################################
+
+        # TODO:
+        # - change 'is_forced_break' to 'is_list'
+        # - compare list names in vertical aligner
+        # - try using K of lowest level comma instead of Kbeg
+        # - maybe combine the best of both list methods
+
+        # Old method:  Works well; a few problems, esp with side comments
+        my $list_flag_old = $forced_breakpoint || $in_comma_list;
+
+        # Test method: Working well but still has a few quirks
+        my $list_flag_new = $self->is_list_by_K($Kbeg);
+
+        my $list_flag = TEST_NEW_LIST_METHOD ? $list_flag_new : $list_flag_old;
+
         # send this new line down the pipe
         my $rvalign_hash = {};
-        $rvalign_hash->{level}           = $lev;
-        $rvalign_hash->{level_end}       = $level_end;
-        $rvalign_hash->{level_adj}       = $level_adj;
-        $rvalign_hash->{indentation}     = $indentation;
-        $rvalign_hash->{is_forced_break} = $forced_breakpoint || $in_comma_list;
+        $rvalign_hash->{level}                     = $lev;
+        $rvalign_hash->{level_end}                 = $level_end;
+        $rvalign_hash->{level_adj}                 = $level_adj;
+        $rvalign_hash->{indentation}               = $indentation;
+        $rvalign_hash->{is_forced_break}           = $list_flag;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
         $rvalign_hash->{is_terminal_statement}     = $is_semicolon_terminated;
