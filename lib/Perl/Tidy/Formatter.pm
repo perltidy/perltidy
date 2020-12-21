@@ -4852,8 +4852,7 @@ sub respace_tokens {
             $nonblank_token_count++;
 
             # count selected types
-            # ignore phantom semicolons which have length 0
-            if ( $is_counted_type{$type} && $token_length > 0 ) {
+            if ( $is_counted_type{$type} ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
                     $rtype_count_by_seqno->{$seqno}->{$type}++;
@@ -5302,6 +5301,30 @@ sub respace_tokens {
                     }
                 }
                 elsif ( $is_closing_token{$token} ) {
+
+                    # Insert a tentative missing semicolon if the next token is
+                    # a closing block brace
+                    if (
+                           $type eq '}'
+                        && $token eq '}'
+
+                        # not preceded by a ';'
+                        && $last_nonblank_type ne ';'
+
+                        # and this is not a VERSION stmt (is all one line, we
+                        # are not inserting semicolons on one-line blocks)
+                        && $CODE_type ne 'VER'
+
+                        # and we are allowed to add semicolons
+                        && $rOpts->{'add-semicolons'}
+                      )
+                    {
+                        $add_phantom_semicolon->($KK);
+                    }
+
+                    # Update the stack...  Note that we do this after adding
+                    # any phantom semicolons so that they will be counted in
+                    # the correct container.
                     $depth_next--;
 
                     # keep track of broken lists for later formatting
@@ -5321,26 +5344,6 @@ sub respace_tokens {
                                 $rhas_broken_container->{$seqno_outer} = 1;
                             }
                         }
-                    }
-
-                    # Insert a tentative missing semicolon if the next token is
-                    # a closing block brace
-                    if (
-                           $type eq '}'
-                        && $token eq '}'
-
-                        # not preceded by a ';'
-                        && $last_nonblank_type ne ';'
-
-                   # and this is not a VERSION stmt (is all one line, we are not
-                   # inserting semicolons on one-line blocks)
-                        && $CODE_type ne 'VER'
-
-                        # and we are allowed to add semicolons
-                        && $rOpts->{'add-semicolons'}
-                      )
-                    {
-                        $add_phantom_semicolon->($KK);
                     }
                 }
             }
@@ -18702,11 +18705,22 @@ sub make_paren_name {
         # options that the user has set regarding special indenting and
         # outdenting.
 
-        # This routine is mainly concerned with outdenting closing tokens but
-        # has become a 'catchall' for a variety of special problems involving
-        # ci.  Note that there is some overlap with the functions of sub
-        # undo_ci, which was processed earlier, so care has to be taken to keep
-        # them coordinated.
+        # This routine has to resolve a number of complex interacting issues,
+        # including:
+        # 1. The various -cti=n type flags, which contain the desired change in
+        #    indentation for lines ending in commas and semicolons, should be
+        #    followed,
+        # 2. qw quotes require special processing and do not fit perfectly
+        #    with normal containers,
+        # 3. formatting with -wn can complicate things, especially with qw
+        #    quotes,
+        # 4. formatting with the -lp option is complicated, and does not
+        #    work well with qw quotes and with -wn formatting.
+        # 5. a number of special situations, such as 'cuddled' formatting.
+        # 6. This routine is mainly concerned with outdenting closing tokens 
+        #    but note that there is some overlap with the functions of sub
+        #    undo_ci, which was processed earlier, so care has to be taken to
+        #    keep them coordinated.
 
         my (
             $self,       $ibeg,
