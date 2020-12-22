@@ -337,6 +337,11 @@ sub push_group_line {
 
 use constant DEBUG_VALIGN => 0;
 
+# Flag for use during conversion to using new $list_seqno
+# to identify lists of items.  The flag 'is_forced_break' will
+# be removed when conversion is complete.
+use constant TEST_LIST_SEQNO => 0;
+
 sub valign_input {
 
     # Place one line in the current vertical group.
@@ -397,6 +402,7 @@ sub valign_input {
     my $level_adj                 = $rline_hash->{level_adj};
     my $indentation               = $rline_hash->{indentation};
     my $is_forced_break           = $rline_hash->{is_forced_break};
+    my $list_seqno                = $rline_hash->{list_seqno};
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
     my $is_terminal_statement     = $rline_hash->{is_terminal_statement};
@@ -693,13 +699,13 @@ EOM
             indentation               => $indentation,
             leading_space_count       => $leading_space_count,
             outdent_long_lines        => $outdent_long_lines,
+            list_seqno                => $list_seqno,
             list_type                 => "",
             is_hanging_side_comment   => $is_hanging_side_comment,
             maximum_line_length       => $maximum_line_length_for_level,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             is_terminal_ternary       => $is_terminal_ternary,
             j_terminal_match          => $j_terminal_match,
-            is_forced_break           => $is_forced_break,
             end_group                 => $break_alignment_after,
             Kend                      => $Kend,
             ci_level                  => $ci_level,
@@ -709,11 +715,13 @@ EOM
 
     # --------------------------------------------------------------------
     # Decide if this is a simple list of items.
-    # There are 3 list types: none, comma, comma-arrow.
-    # We use this below to be less restrictive in deciding what to align.
+    # We use this to be less restrictive in deciding what to align.
     # --------------------------------------------------------------------
-    if ($is_forced_break) {
-        decide_if_list($new_line);
+    if (TEST_LIST_SEQNO) {
+        decide_if_list($new_line) if ($list_seqno);
+    }
+    else {
+        decide_if_list($new_line) if ($is_forced_break);
     }
 
     # --------------------------------------------------------------------
@@ -1823,10 +1831,11 @@ sub sweep_left_to_right {
         # Special treatment of two one-line groups isolated from other lines,
         # unless they form a simple list or a terminal match.  Otherwise the
         # alignment can look strange in some cases.
+        my $list_type = $rlines->[$jbeg]->get_list_type();
         if (
                $jend == $jbeg
             && $jend_m == $jbeg_m
-            && !$rlines->[$jbeg]->get_list_type()
+            && !( $list_type && !TEST_LIST_SEQNO )
             && ( $ng == 1 || $istop_mm < 0 )
             && ( $ng == $ng_max || $istop < 0 )
             && !$line->get_j_terminal_match()
@@ -1839,8 +1848,10 @@ sub sweep_left_to_right {
           )
         {
 
-            # We will just align a leading equals
-            next unless ( $imax_min >= 0 && $rtokens->[0] =~ /^=\d/ );
+            # We will just align assignments and simple lists
+            next
+              unless ( $imax_min >= 0 && $rtokens->[0] =~ /^=\d/
+                || ( TEST_LIST_SEQNO && $list_type ) );
 
             # In this case we will limit padding to one indent distance.  This
             # is a compromise to keep some vertical alignment but prevent large
@@ -2992,10 +3003,11 @@ sub match_line_pairs {
 
     # Previous line vars
     my ( $line_m, $rtokens_m, $rpatterns_m, $rfield_lengths_m, $imax_m,
-        $list_type_m );
+        $list_type_m, $ci_level_m );
 
     # Current line vars
-    my ( $line, $rtokens, $rpatterns, $rfield_lengths, $imax, $list_type );
+    my ( $line, $rtokens, $rpatterns, $rfield_lengths, $imax, $list_type,
+        $ci_level );
 
     use constant EXPLAIN_COMPARE_PATTERNS => 0;
 
@@ -3115,6 +3127,7 @@ sub match_line_pairs {
             $rfield_lengths_m = $rfield_lengths;
             $imax_m           = $imax;
             $list_type_m      = $list_type;
+            $ci_level_m       = $ci_level;
 
             $line           = $rnew_lines->[$jj];
             $rtokens        = $line->get_rtokens();
@@ -3122,9 +3135,12 @@ sub match_line_pairs {
             $rfield_lengths = $line->get_rfield_lengths();
             $imax           = @{$rtokens} - 2;
             $list_type      = $line->get_list_type();
+            $ci_level       = $line->get_ci_level();
 
             # nothing to do for first line
             next if ( $jj == $jbeg );
+
+            my $ci_jump = $ci_level - $ci_level_m;
 
             my $imax_min = $imax_m < $imax ? $imax_m : $imax;
 
@@ -3146,6 +3162,9 @@ sub match_line_pairs {
             ##############################
             elsif ( $list_type && $list_type eq $list_type_m ) {
 
+                # do not align lists across a ci jump with new list method
+                if ( TEST_LIST_SEQNO && $ci_jump ) { $imax_min = -1 }
+
                 my $i_nomatch = $imax_min + 1;
                 for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
                     my $tok   = $rtokens->[$i];
@@ -3155,6 +3174,7 @@ sub match_line_pairs {
                         last;
                     }
                 }
+
                 $imax_align = $i_nomatch - 1;
             }
 

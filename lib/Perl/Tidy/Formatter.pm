@@ -16716,8 +16716,6 @@ sub reduce_lp_indentation {
 # CODE SECTION 13: Preparing batches for vertical alignment
 ###########################################################
 
-use constant TEST_NEW_LIST_METHOD => 0;
-
 sub send_lines_to_vertical_aligner {
 
     my ($self) = @_;
@@ -16994,23 +16992,12 @@ sub send_lines_to_vertical_aligner {
             $rfield_lengths->[-1] += 2;
         }
 
-        #################################################
-        # TESTING different methods for indicating a list
-        #################################################
+        # List flag for old method:  Works well; a few problems, esp with side
+        # comments.  This will eventually be replaced with the new method.
+        my $is_forced_break = $forced_breakpoint || $in_comma_list;
 
-        # TODO:
-        # - change 'is_forced_break' to 'is_list'
-        # - compare list names in vertical aligner
-        # - try using K of lowest level comma instead of Kbeg
-        # - maybe combine the best of both list methods
-
-        # Old method:  Works well; a few problems, esp with side comments
-        my $list_flag_old = $forced_breakpoint || $in_comma_list;
-
-        # Test method: Working well but still has a few quirks
-        my $list_flag_new = $self->is_list_by_K($Kbeg);
-
-        my $list_flag = TEST_NEW_LIST_METHOD ? $list_flag_new : $list_flag_old;
+        # List flag for new method: Works well but needs more testing
+        my $list_seqno = $self->is_list_by_K($Kbeg);
 
         # send this new line down the pipe
         my $rvalign_hash = {};
@@ -17018,7 +17005,8 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{level_end}                 = $level_end;
         $rvalign_hash->{level_adj}                 = $level_adj;
         $rvalign_hash->{indentation}               = $indentation;
-        $rvalign_hash->{is_forced_break}           = $list_flag;
+        $rvalign_hash->{is_forced_break}           = $is_forced_break;
+        $rvalign_hash->{list_seqno}                = $list_seqno;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
         $rvalign_hash->{is_terminal_statement}     = $is_semicolon_terminated;
@@ -18717,7 +18705,7 @@ sub make_paren_name {
         # 4. formatting with the -lp option is complicated, and does not
         #    work well with qw quotes and with -wn formatting.
         # 5. a number of special situations, such as 'cuddled' formatting.
-        # 6. This routine is mainly concerned with outdenting closing tokens 
+        # 6. This routine is mainly concerned with outdenting closing tokens
         #    but note that there is some overlap with the functions of sub
         #    undo_ci, which was processed earlier, so care has to be taken to
         #    keep them coordinated.
