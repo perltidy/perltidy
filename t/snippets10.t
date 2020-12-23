@@ -760,7 +760,7 @@ sub arrange_topframe {
 # This test snippet is from package bbbike v3.214 by Slaven Rezic; GPL 2.0 licence
 sub arrange_topframe {
   my (@order) = (
-    $hslabel_frame, $km_frame, $speed_frame[0],
+    $hslabel_frame,  $km_frame,   $speed_frame[0],
     $power_frame[0], $wind_frame, $percent_frame, $temp_frame,
     @speed_frame[1 .. $#speed_frame],
     @power_frame[1 .. $#power_frame],

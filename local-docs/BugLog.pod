@@ -2,6 +2,49 @@
 
 =over 4
 
+=item B<improve list marking method>
+
+In the process of making vertical alignments, lines which are simple lists of
+items are treated different from other lines. The old method for finding and
+marking these lines had a few problems which are corrected with this update.
+The main problem was that the old method ran into trouble when there were side
+comments.  For example, the old method was not marking the following list and
+as a result the two columns of values were not aligned:
+
+    # OLD
+    return (
+        $startpos, $ldelpos - $startpos,         # PREFIX
+        $ldelpos,  1,                            # OPENING BRACKET
+        $ldelpos + 1, $endpos - $ldelpos - 2,    # CONTENTS
+        $endpos - 1, 1,                          # CLOSING BRACKET
+        $endpos, length($$textref) - $endpos,    # REMAINDER
+    );
+
+    # NEW
+    return (
+        $startpos,    $ldelpos - $startpos,           # PREFIX
+        $ldelpos,     1,                              # OPENING BRACKET
+        $ldelpos + 1, $endpos - $ldelpos - 2,         # CONTENTS
+        $endpos - 1,  1,                              # CLOSING BRACKET
+        $endpos,      length($$textref) - $endpos,    # REMAINDER
+    );
+
+Another problem was that occasionally unwanted alignments were made between
+lines which were not really lists because the lines were incorrectly marked.
+For example (note padding after first comma)
+
+    # OLD: (undesirable alignment)
+    my ( $isig2, $chisq ) = ( 1 / ( $sig * $sig ), 0 );
+    my ( $ym,    $al, $cov, $bet, $olda, $ochisq, $di, $pivt, $info ) =
+      map { null } ( 0 .. 8 );
+
+    # NEW: (no alignment)
+    my ( $isig2, $chisq ) = ( 1 / ( $sig * $sig ), 0 );
+    my ( $ym, $al, $cov, $bet, $olda, $ochisq, $di, $pivt, $info ) =
+      map { null } ( 0 .. 8 );
+
+This update was made 22 Dec 2020.
+
 =item B<Fix git #51, closing quote pattern delimiters not following -cti flag settings>
 
 Closing pattern delimiter tokens of qw quotes were not following the -cti flag

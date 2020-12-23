@@ -1,6 +1,6 @@
 $this_env = join(
     "", $before, $closures
-    , $contents
+    ,   $contents
     , ( $defenv ? '' : &balance_tags() )
     , $reopens
 );

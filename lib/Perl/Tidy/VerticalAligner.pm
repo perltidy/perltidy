@@ -340,7 +340,7 @@ use constant DEBUG_VALIGN => 0;
 # Flag for use during conversion to using new $list_seqno
 # to identify lists of items.  The flag 'is_forced_break' will
 # be removed when conversion is complete.
-use constant TEST_LIST_SEQNO => 0;
+use constant TEST_OLD_LIST => 0;
 
 sub valign_input {
 
@@ -717,7 +717,7 @@ EOM
     # Decide if this is a simple list of items.
     # We use this to be less restrictive in deciding what to align.
     # --------------------------------------------------------------------
-    if (TEST_LIST_SEQNO) {
+    if ( !TEST_OLD_LIST ) {
         decide_if_list($new_line) if ($list_seqno);
     }
     else {
@@ -1549,6 +1549,11 @@ sub _flush_group_lines {
             my $imax_pair = $line_1->get_imax_pair();
             if ( $imax_pair > $imax_align ) { $imax_align = $imax_pair }
 
+            ## flag for possible future use:
+            ## my $is_isolated_pair = $imax_pair < 0
+            ##  && ( $jbeg == 0
+            ##    || $rall_lines->[ $jbeg - 1 ]->get_imax_pair() < 0 );
+
             my ( $is_marginal, $imax_align_fix ) =
               is_marginal_match( $line_0, $line_1, $grp_level, $imax_align );
             if ($is_marginal) {
@@ -1739,6 +1744,64 @@ EOM
     }
 }
 
+sub two_line_pad {
+
+    my ( $line_m, $line, $imax_min ) = @_;
+
+    # Given:
+    #  two isolated (list) lines
+    #  imax_min = number of common alignment tokens
+    # Return:
+    #  $pad_max = maximum suggested pad distnce
+    #           = 0 if alignment not recommended
+    # Method:
+    # Note that this is only for two lines which do not have alignment tokens
+    # in common with any other lines.  It is intended for lists, but it might
+    # also be used for two non-list lines with a common leading '='.
+
+    # Use a minimum pad distance not less than the minimum of two mean
+    # field lengths.  The idea is to avoid aligning lines with very
+    # different field lengths, like these two:
+    #   [
+    #       'VARCHAR', DBI::SQL_VARCHAR, undef, "'", "'", undef, 0, 1,
+    #       1, 0, 0, 0, undef, 0, 0
+    #   ];
+    my $short_pad        = 4;
+    my $rfield_lengths   = $line->get_rfield_lengths();
+    my $rfield_lengths_m = $line_m->get_rfield_lengths();
+
+    # Safety check
+    my $jmax_m = $line_m->get_jmax();
+    my $jmax   = $line->get_jmax();
+    if ( $imax_min > $jmax_m - 2 ) { $imax_min = $jmax_m - 2 }
+    if ( $imax_min > $jmax - 2 )   { $imax_min = $jmax - 2 }
+
+    my $avg   = 0;
+    my $avg_m = 0;
+    for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+        $avg_m += $rfield_lengths_m->[$i];
+        $avg   += $rfield_lengths->[$i];
+    }
+    $avg   /= ( $imax_min + 1 );
+    $avg_m /= ( $imax_min + 1 );
+    my $avg_min = $avg <= $avg_m ? $avg : $avg_m;
+
+    my $pad_max = $short_pad;
+    if ( $pad_max < $avg_min ) { $pad_max = $avg_min }
+    my $pad_first = $rfield_lengths->[0] - $rfield_lengths_m->[0];
+
+    # Usually we allow pads to occur wherever they can go, but for two
+    # list lines we will not align if the first pad is too large. This
+    # can avoid some poor alignments of two lines. For example, this is
+    # not so good:
+    #   [
+    #       0, 'OPpLVREF_SV',    'SV', 1, 'OPpLVREF_AV', 'AV', 2,
+    #       'OPpLVREF_HV', 'HV', 3,    'OPpLVREF_CV', 'CV',
+    #   ];
+    $pad_max = 0 if ( $pad_first < -$pad_max || $pad_first > $pad_max );
+    return $pad_max;
+}
+
 sub sweep_left_to_right {
 
     my ( $rlines, $rgroups, $group_level ) = @_;
@@ -1835,7 +1898,7 @@ sub sweep_left_to_right {
         if (
                $jend == $jbeg
             && $jend_m == $jbeg_m
-            && !( $list_type && !TEST_LIST_SEQNO )
+            && !( $list_type && TEST_OLD_LIST )
             && ( $ng == 1 || $istop_mm < 0 )
             && ( $ng == $ng_max || $istop < 0 )
             && !$line->get_j_terminal_match()
@@ -1849,16 +1912,20 @@ sub sweep_left_to_right {
         {
 
             # We will just align assignments and simple lists
+            next unless ( $imax_min >= 0 );
             next
-              unless ( $imax_min >= 0 && $rtokens->[0] =~ /^=\d/
-                || ( TEST_LIST_SEQNO && $list_type ) );
+              unless ( $rtokens->[0] =~ /^=\d/
+                || ( !TEST_OLD_LIST && $list_type ) );
 
-            # In this case we will limit padding to one indent distance.  This
+            # In this case we will limit padding to a short distance.  This
             # is a compromise to keep some vertical alignment but prevent large
             # gaps, which do not look good for just two lines.
+            my $pad_max =
+              two_line_pad( $rlines->[$jbeg], $rlines->[$jbeg_m], $imax_min );
+            next unless ($pad_max);
             my $ng_m = $ng - 1;
-            $max_move{"$ng_m"} = $short_pad;
-            $max_move{"$ng"}   = $short_pad;
+            $max_move{"$ng_m"} = $pad_max;
+            $max_move{"$ng"}   = $pad_max;
         }
 
         # Loop to find all common leading tokens.
@@ -3163,7 +3230,7 @@ sub match_line_pairs {
             elsif ( $list_type && $list_type eq $list_type_m ) {
 
                 # do not align lists across a ci jump with new list method
-                if ( TEST_LIST_SEQNO && $ci_jump ) { $imax_min = -1 }
+                if ( !TEST_OLD_LIST && $ci_jump ) { $imax_min = -1 }
 
                 my $i_nomatch = $imax_min + 1;
                 for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {

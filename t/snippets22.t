@@ -628,7 +628,7 @@ method 'foo2' => [ Int, Int ] => sub {
             expect => <<'#16...........',
 $this_env = join(
     "", $before, $closures
-    , $contents
+    ,   $contents
     , ( $defenv ? '' : &balance_tags() )
     , $reopens
 );
