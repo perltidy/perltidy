@@ -16808,7 +16808,6 @@ sub send_lines_to_vertical_aligner {
     }
 
     # loop to prepare each line for shipment
-    my $in_comma_list;
     my ( $Kbeg, $type_beg, $token_beg );
     my ( $Kend, $type_end );
     for my $n ( 0 .. $n_last_line ) {
@@ -16992,10 +16991,6 @@ sub send_lines_to_vertical_aligner {
             $rfield_lengths->[-1] += 2;
         }
 
-        # List flag for old method:  Works well; a few problems, esp with side
-        # comments.  This will eventually be replaced with the new method.
-        my $is_forced_break = $forced_breakpoint || $in_comma_list;
-
         # List flag for new method: Works well but needs more testing
         my $list_seqno = $self->is_list_by_K($Kbeg);
 
@@ -17005,7 +17000,6 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{level_end}                 = $level_end;
         $rvalign_hash->{level_adj}                 = $level_adj;
         $rvalign_hash->{indentation}               = $indentation;
-        $rvalign_hash->{is_forced_break}           = $is_forced_break;
         $rvalign_hash->{list_seqno}                = $list_seqno;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
@@ -17025,8 +17019,6 @@ sub send_lines_to_vertical_aligner {
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
-
-        $in_comma_list = $type_end eq ',' && $forced_breakpoint;
 
         $do_not_pad = 0;
 

@@ -337,11 +337,6 @@ sub push_group_line {
 
 use constant DEBUG_VALIGN => 0;
 
-# Flag for use during conversion to using new $list_seqno
-# to identify lists of items.  The flag 'is_forced_break' will
-# be removed when conversion is complete.
-use constant TEST_OLD_LIST => 0;
-
 sub valign_input {
 
     # Place one line in the current vertical group.
@@ -401,7 +396,6 @@ sub valign_input {
     my $level_end                 = $rline_hash->{level_end};
     my $level_adj                 = $rline_hash->{level_adj};
     my $indentation               = $rline_hash->{indentation};
-    my $is_forced_break           = $rline_hash->{is_forced_break};
     my $list_seqno                = $rline_hash->{list_seqno};
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
@@ -472,7 +466,7 @@ sub valign_input {
     DEBUG_VALIGN && do {
         my $nlines = $self->group_line_count();
         print STDOUT
-"Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count force=$is_forced_break, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
+"Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
     };
 
     # Validate cached line if necessary: If we can produce a container
@@ -717,12 +711,7 @@ EOM
     # Decide if this is a simple list of items.
     # We use this to be less restrictive in deciding what to align.
     # --------------------------------------------------------------------
-    if ( !TEST_OLD_LIST ) {
-        decide_if_list($new_line) if ($list_seqno);
-    }
-    else {
-        decide_if_list($new_line) if ($is_forced_break);
-    }
+    decide_if_list($new_line) if ($list_seqno);
 
     # --------------------------------------------------------------------
     # Append this line to the current group (or start new group)
@@ -1898,7 +1887,6 @@ sub sweep_left_to_right {
         if (
                $jend == $jbeg
             && $jend_m == $jbeg_m
-            && !( $list_type && TEST_OLD_LIST )
             && ( $ng == 1 || $istop_mm < 0 )
             && ( $ng == $ng_max || $istop < 0 )
             && !$line->get_j_terminal_match()
@@ -1915,7 +1903,7 @@ sub sweep_left_to_right {
             next unless ( $imax_min >= 0 );
             next
               unless ( $rtokens->[0] =~ /^=\d/
-                || ( !TEST_OLD_LIST && $list_type ) );
+                || $list_type );
 
             # In this case we will limit padding to a short distance.  This
             # is a compromise to keep some vertical alignment but prevent large
@@ -3230,7 +3218,7 @@ sub match_line_pairs {
             elsif ( $list_type && $list_type eq $list_type_m ) {
 
                 # do not align lists across a ci jump with new list method
-                if ( !TEST_OLD_LIST && $ci_jump ) { $imax_min = -1 }
+                if ($ci_jump) { $imax_min = -1 }
 
                 my $i_nomatch = $imax_min + 1;
                 for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
