@@ -355,7 +355,7 @@ sub numerically { $a <=> $b }
 sub Numerically { $a <=> $b };    # trapped semicolon
 @: = qw;2c72656b636168
   2020202020
-;;
+  ;;
 __;
 #14...........
         },
@@ -378,7 +378,7 @@ sub numerically { $a <=> $b };
 sub Numerically { $a <=> $b };    # trapped semicolon
 @: = qw;2c72656b636168
   2020202020
-;;
+  ;;
 __;
 #15...........
         },

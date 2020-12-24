@@ -76,21 +76,34 @@ followed the default -cpi setting for a paren:
     );
 
 This update makes closing qw quote terminators follow the settings for their
-corresponding container tokens as closely as possible.  In addition, for
-closing quote tokens which are not containers, the setting for a closing paren
-will now be followed.  For example
+corresponding container tokens as closely as possible.  For a closing '>'
+the setting for a closing paren will now be followed.  Other closing qw 
+terminators will remain indented, to minimize changes to existing formatting.  
+For example ('>' is outdented):
 
     @EXPORT = (
-        qw#
+        qw<
           i Re Im rho theta arg
           sqrt log ln
           log10 logn cbrt root
           cplx cplxe
-        #,
+        >,
         @trig
     );
 
-This update was added 18 Dec 2020.
+but (';' remains indented):
+
+    @EXPORT = (
+        qw;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ;,
+        @trig
+    );
+
+This update was added 18 Dec 2020 and modified 24 Dec.
 
 =item B<Update manual pages regarding issue git #50>
 

@@ -18983,15 +18983,22 @@ sub make_paren_name {
                     # A quote delimiter which is not a container will not have
                     # a cti value defined.  In this case use the style of a
                     # paren. For example
-                    #   my @words = (
-                    #      qw/
+                    #   my @fars = (
+                    #      qw<
                     #        far
                     #        farfar
                     #        farfars far
-                    #      /,
+                    #      >,
                     #   );
                     if ( !defined($cti) && length($tok) == 1 ) {
+
+                        # something other than ')', '}', ']' ; use flag for ')'
                         $cti = $closing_token_indentation{')'};
+
+                        # But for now, do not outdent non-container qw
+                        # delimiters because it would would change existing
+                        # formatting.
+                        if ( $tok ne '>' ) { $cti = 3 }
                     }
 
                     # A non-welded closing qw cannot currently use -cti=1
