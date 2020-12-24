@@ -1743,51 +1743,39 @@ sub two_line_pad {
     # Return:
     #  $pad_max = maximum suggested pad distnce
     #           = 0 if alignment not recommended
-    # Method:
     # Note that this is only for two lines which do not have alignment tokens
     # in common with any other lines.  It is intended for lists, but it might
     # also be used for two non-list lines with a common leading '='.
 
-    # Use a minimum pad distance not less than the minimum of two mean
-    # field lengths.  The idea is to avoid aligning lines with very
-    # different field lengths, like these two:
+    # Allow alignment if the difference in the two unpadded line lengths
+    # is not more than either line length.  The idea is to avoid
+    # aligning lines with very different field lengths, like these two:
+
     #   [
     #       'VARCHAR', DBI::SQL_VARCHAR, undef, "'", "'", undef, 0, 1,
     #       1, 0, 0, 0, undef, 0, 0
     #   ];
-    my $short_pad        = 4;
     my $rfield_lengths   = $line->get_rfield_lengths();
     my $rfield_lengths_m = $line_m->get_rfield_lengths();
 
-    # Safety check
-    my $jmax_m = $line_m->get_jmax();
-    my $jmax   = $line->get_jmax();
-    if ( $imax_min > $jmax_m - 2 ) { $imax_min = $jmax_m - 2 }
-    if ( $imax_min > $jmax - 2 )   { $imax_min = $jmax - 2 }
+    # Safety check - shouldn't happen
+    return 0
+      unless $imax_min < @{$rfield_lengths} && $imax_min < @{$rfield_lengths_m};
 
-    my $avg   = 0;
-    my $avg_m = 0;
+    my $lensum_m = 0;
+    my $lensum   = 0;
     for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
-        $avg_m += $rfield_lengths_m->[$i];
-        $avg   += $rfield_lengths->[$i];
+        $lensum_m += $rfield_lengths_m->[$i];
+        $lensum   += $rfield_lengths->[$i];
     }
-    $avg   /= ( $imax_min + 1 );
-    $avg_m /= ( $imax_min + 1 );
-    my $avg_min = $avg <= $avg_m ? $avg : $avg_m;
 
-    my $pad_max = $short_pad;
-    if ( $pad_max < $avg_min ) { $pad_max = $avg_min }
-    my $pad_first = $rfield_lengths->[0] - $rfield_lengths_m->[0];
+    my ( $lenmin, $lenmax ) =
+      $lensum >= $lensum_m ? ( $lensum_m, $lensum ) : ( $lensum, $lensum_m );
 
-    # Usually we allow pads to occur wherever they can go, but for two
-    # list lines we will not align if the first pad is too large. This
-    # can avoid some poor alignments of two lines. For example, this is
-    # not so good:
-    #   [
-    #       0, 'OPpLVREF_SV',    'SV', 1, 'OPpLVREF_AV', 'AV', 2,
-    #       'OPpLVREF_HV', 'HV', 3,    'OPpLVREF_CV', 'CV',
-    #   ];
-    $pad_max = 0 if ( $pad_first < -$pad_max || $pad_first > $pad_max );
+    # all or none:
+    my $pad_max = $lenmax;
+    if ( $lenmax > 2 * $lenmin ) { $pad_max = 0 }
+
     return $pad_max;
 }
 
