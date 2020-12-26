@@ -5898,25 +5898,15 @@ sub get_old_line_count {
     return $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_] + 1;
 }
 
-sub is_list_by_seqno {
+sub parent_seqno_by_K {
 
-    # Return true if the immediate contents of a container appears to be a
-    # list.
-    my ( $self, $seqno ) = @_;
-    return unless defined($seqno);
-    return $self->[_ris_list_by_seqno_]->{$seqno};
-}
-
-sub is_list_by_K {
-
-    # Return true if token K is in a list
+    # Return the sequence number of the parent container of token K, if any.
     my ( $self, $KK ) = @_;
     return unless defined($KK);
 
     my $rLL   = $self->[_rLL_];
     my $KNEXT = $KK;
 
-    # Find the sequence number of the parent list container, if any.
     # For example, consider the following with seqno=5 of the '[' and ']'
     # being called with index K of the first token of each line:
 
@@ -5953,12 +5943,29 @@ sub is_list_by_K {
             last;
         }
 
-        # must be ternary - keep going
+        # not a container - must be ternary - keep going
     }
 
-    # return the list name of the parent container, if any
+    return $parent_seqno;
+}
+
+sub is_list_by_K {
+
+    # Return true if token K is in a list
+    my ( $self, $KK ) = @_;
+
+    my $parent_seqno = $self->parent_seqno_by_K($KK);
     return unless defined($parent_seqno);
     return $self->[_ris_list_by_seqno_]->{$parent_seqno};
+}
+
+sub is_list_by_seqno {
+
+    # Return true if the immediate contents of a container appears to be a
+    # list.
+    my ( $self, $seqno ) = @_;
+    return unless defined($seqno);
+    return $self->[_ris_list_by_seqno_]->{$seqno};
 }
 
 sub resync_lines_and_tokens {
