@@ -427,7 +427,7 @@ __PACKAGE__->load_components(
     qw(
       PK::Auto
       Core
-      )
+    )
 );
 #4...........
         },

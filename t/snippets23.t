@@ -346,7 +346,7 @@ if ( $PLATFORM eq 'aix' ) {
               Perl_ErrorNo
               Perl_GetVars
               PL_sys_intern
-              )
+            )
         ]
     );
 }
@@ -391,7 +391,7 @@ if ( $PLATFORM eq 'aix' ) {
               Perl_ErrorNo
               Perl_GetVars
               PL_sys_intern
-              )
+            )
         ]
     );
 }
@@ -506,7 +506,7 @@ if ( $PLATFORM eq 'aix' ) {
               Perl_ErrorNo
               Perl_GetVars
               PL_sys_intern
-              )
+            )
         ]
     );
 }

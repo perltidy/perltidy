@@ -365,7 +365,7 @@ if ( $PLATFORM eq 'aix' ) {
               Perl_ErrorNo
               Perl_GetVars
               PL_sys_intern
-              )
+            )
         ]
     );
 }
@@ -470,7 +470,7 @@ use_all_ok(
       PPI::Normal
       PPI::Util
       PPI::Cache
-      }
+    }
 );
 #17...........
         },

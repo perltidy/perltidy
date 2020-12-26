@@ -409,6 +409,10 @@ BEGIN {
         _rbreak_after_Klast_            => $i++,
         _converged_                     => $i++,
 
+        _rstarting_multiline_qw_seqno_by_K_ => $i++,
+        _rending_multiline_qw_seqno_by_K_   => $i++,
+        _rKrange_multiline_qw_by_seqno_     => $i++,
+
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -740,6 +744,10 @@ sub new {
     $self->[_rbreak_before_Kfirst_]          = {};
     $self->[_rbreak_after_Klast_]            = {};
     $self->[_converged_]                     = 0;
+
+    $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
+    $self->[_rending_multiline_qw_seqno_by_K_]   = {};
+    $self->[_rKrange_multiline_qw_by_seqno_]     = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -1705,7 +1713,7 @@ sub initialize_whitespace_hashes {
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
       &&= ||= //= <=> A k f w F n C Y U G v
-    #;
+      #;
 
     my @spaces_left_side = qw<
       t ! ~ m p { \ h pp mm Z j
@@ -4652,6 +4660,8 @@ EOM
     # All token changes must be made here so that the token data structure
     # remains fixed for the rest of this iteration.
     $self->respace_tokens();
+
+    $self->find_multiline_qw();
 
     $self->keep_old_line_breaks();
 
@@ -7694,6 +7704,81 @@ sub bli_adjustment {
         }
     }
     return;
+}
+
+sub find_multiline_qw {
+
+    my $self = shift;
+
+    # Multiline qw quotes are not sequenced items like containers { [ (
+    # but behave in some respects in a similar way. So this routine finds them
+    # and creates a separate sequence number system for later use.
+
+    # This is straightforward because they always begin at the end of one line
+    # and and at the beginning of a later line. This is true no matter how we
+    # finally make our line breaks, so we can find them before deciding on new
+    # line breaks.
+
+    my $rstarting_multiline_qw_seqno_by_K = {};
+    my $rending_multiline_qw_seqno_by_K   = {};
+    my $rKrange_multiline_qw_by_seqno     = {};
+
+    my $rlines = $self->[_rlines_];
+    my $rLL    = $self->[_rLL_];
+    my $qw_seqno;
+    my $num_qw_seqno = 0;
+    my $K_start_multiline_qw;
+
+    foreach my $line_of_tokens ( @{$rlines} ) {
+
+        my $line_type = $line_of_tokens->{_line_type};
+        next unless ( $line_type eq 'CODE' );
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        next unless ( defined($Kfirst) && defined($Klast) );   # skip blank line
+        if ( defined($K_start_multiline_qw) ) {
+            my $type = $rLL->[$Kfirst]->[_TYPE_];
+
+            # shouldn't happen
+            if ( $type ne 'q' ) {
+                DEVEL_MODE && print STDERR <<EOM;
+STRANGE: started multiline qw at K=$K_start_multiline_qw but didn't see q qw at K=$Kfirst\n";
+EOM
+                $K_start_multiline_qw = undef;
+                next;
+            }
+            my $Kprev  = $self->K_previous_nonblank($Kfirst);
+            my $Knext  = $self->K_next_nonblank($Kfirst);
+            my $type_m = defined($Kprev) ? $rLL->[$Kprev]->[_TYPE_] : 'b';
+            my $type_p = defined($Knext) ? $rLL->[$Knext]->[_TYPE_] : 'b';
+            if ( $type_m eq 'q' && $type_p ne 'q' ) {
+                $rending_multiline_qw_seqno_by_K->{$Kfirst} = $qw_seqno;
+                $rKrange_multiline_qw_by_seqno->{$qw_seqno} =
+                  [ $K_start_multiline_qw, $Kfirst ];
+                $K_start_multiline_qw = undef;
+                $qw_seqno             = undef;
+            }
+        }
+        if ( !defined($K_start_multiline_qw)
+            && $rLL->[$Klast]->[_TYPE_] eq 'q' )
+        {
+            my $Kprev  = $self->K_previous_nonblank($Klast);
+            my $Knext  = $self->K_next_nonblank($Klast);
+            my $type_m = defined($Kprev) ? $rLL->[$Kprev]->[_TYPE_] : 'b';
+            my $type_p = defined($Knext) ? $rLL->[$Knext]->[_TYPE_] : 'b';
+            if ( $type_m ne 'q' && $type_p eq 'q' ) {
+                $num_qw_seqno++;
+                $qw_seqno             = 'q' . $num_qw_seqno;
+                $K_start_multiline_qw = $Klast;
+                $rstarting_multiline_qw_seqno_by_K->{$Klast} = $qw_seqno;
+            }
+        }
+    }
+    $self->[_rstarting_multiline_qw_seqno_by_K_] =
+      $rstarting_multiline_qw_seqno_by_K;
+    $self->[_rending_multiline_qw_seqno_by_K_] =
+      $rending_multiline_qw_seqno_by_K;
+    $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
 }
 
 ######################################
@@ -10757,10 +10842,36 @@ EOM
 
         my ( $self, $ri_first, $ri_last, $rindentation_list ) = @_;
 
+        # QW INDENTATION PATCH 1:
+        # Also save indentation for multiline qw quotes
+        my @i_qw;
+        my $seqno_qw_opening;
+        if ( $types_to_go[$max_index_to_go] eq 'q' ) {
+            my $KK = $K_to_go[$max_index_to_go];
+            $seqno_qw_opening =
+              $self->[_rstarting_multiline_qw_seqno_by_K_]->{$KK};
+            if ($seqno_qw_opening) {
+                push @i_qw, $max_index_to_go;
+            }
+        }
+
         # we need to save indentations of any unmatched opening tokens
         # in this batch because we may need them in a subsequent batch.
-        foreach (@unmatched_opening_indexes_in_this_batch) {
+        foreach ( @unmatched_opening_indexes_in_this_batch, @i_qw ) {
+
             my $seqno = $type_sequence_to_go[$_];
+
+            if ( !$seqno ) {
+                if ( $seqno_qw_opening && $_ == $max_index_to_go ) {
+                    $seqno = $seqno_qw_opening;
+                }
+                else {
+
+                    # shouldn't happen
+                    $seqno = 'UNKNOWN';
+                }
+            }
+
             $saved_opening_indentation{$seqno} = [
                 lookup_opening_indentation(
                     $_, $ri_first, $ri_last, $rindentation_list
@@ -17081,7 +17192,7 @@ sub send_lines_to_vertical_aligner {
         @q = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
           { ? : => && || ~~ !~~ =~ !~ // <=> ->
-        #;
+          #;
         @is_vertical_alignment_type{@q} = (1) x scalar(@q);
 
         # These 'tokens' are not aligned. We need this to remove [
@@ -18728,12 +18839,17 @@ sub make_paren_name {
         my $seqno_beg     = $type_sequence_to_go[$ibeg];
         my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
-        # Note the end of any qw list, which needs special treatment
-        my $is_closing_qw = ( $type_beg eq 'q' && $iend > $ibeg );
+        # QW INDENTATION PATCH 3:
+        my $seqno_qw_closing;
+        if ( $type_beg eq 'q' && $ibeg == 0 ) {
+            my $KK = $K_to_go[$ibeg];
+            $seqno_qw_closing =
+              $self->[_rending_multiline_qw_seqno_by_K_]->{$KK};
+        }
 
         my $is_semicolon_terminated = $terminal_type eq ';'
           && ( $nesting_depth_to_go[$iend] < $nesting_depth_to_go[$ibeg]
-            || $is_closing_qw );
+            || $seqno_qw_closing );
 
         # NOTE: A future improvement would be to make it semicolon terminated
         # even if it does not have a semicolon but is followed by a closing
@@ -18800,7 +18916,7 @@ sub make_paren_name {
         # For -lp formatting use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
-        if ($is_closing_qw) {
+        if ($seqno_qw_closing) {
             my $K_next_nonblank = $self->K_next_code($K_beg);
             if ( defined($K_next_nonblank) ) {
                 my $type_sequence = $rLL->[$K_next_nonblank]->[_TYPE_SEQUENCE_];
@@ -18816,7 +18932,7 @@ sub make_paren_name {
         }
 
         # if we are at a closing token of some type..
-        if ( $is_closing_type{$type_beg} || $is_closing_qw ) {
+        if ( $is_closing_type{$type_beg} || $seqno_qw_closing ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -18825,7 +18941,7 @@ sub make_paren_name {
                 $is_leading,          $opening_exists
               )
               = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
-                $ri_last, $rindentation_list );
+                $ri_last, $rindentation_list, $seqno_qw_closing );
 
             # First set the default behavior:
             if (
@@ -18978,7 +19094,7 @@ sub make_paren_name {
 
                 # Fix the value of 'cti' for an isloated non-welded closing qw
                 # delimiter.
-                if ( $is_closing_qw && $ibeg_weld_fix == $ibeg ) {
+                if ( $seqno_qw_closing && $ibeg_weld_fix == $ibeg ) {
 
                     # A quote delimiter which is not a container will not have
                     # a cti value defined.  In this case use the style of a
@@ -19277,8 +19393,12 @@ sub make_paren_name {
             #      $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
             #      2981014)])
             #  ));
-            if ($is_closing_qw) { $last_leading_token = ')' }
-
+            ## if ($seqno_qw_closing) { $last_leading_token = ')' }
+            if ( $seqno_qw_closing
+                && ( length($token_beg) > 1 || $token_beg eq '>' ) )
+            {
+                $last_leading_token = ')';
+            }
         }
 
         # be sure lines with leading closing tokens are not outdented more
@@ -19383,19 +19503,22 @@ sub get_opening_indentation {
     #              in this batch
     # $rindentation_list - reference to a list containing the indentation
     #            used for each line.
+    # $qw_seqno - optional sequence number to use if normal seqno not defined
+    #           (TODO: would be more general to just look this up from index i)
     #
     # return:
     #   -the indentation of the line which contained the opening token
     #    which matches the token at index $i_opening
     #   -and its offset (number of columns) from the start of the line
     #
-    my ( $self, $i_closing, $ri_first, $ri_last, $rindentation_list ) = @_;
+    my ( $self, $i_closing, $ri_first, $ri_last, $rindentation_list, $qw_seqno )
+      = @_;
 
     # first, see if the opening token is in the current batch
     my $i_opening = $mate_index_to_go[$i_closing];
     my ( $indent, $offset, $is_leading, $exists );
     $exists = 1;
-    if ( $i_opening >= 0 ) {
+    if ( defined($i_opening) && $i_opening >= 0 ) {
 
         # it is..look up the indentation
         ( $indent, $offset, $is_leading ) =
@@ -19405,8 +19528,10 @@ sub get_opening_indentation {
 
     # if not, it should have been stored in the hash by a previous batch
     else {
+        my $seqno = $type_sequence_to_go[$i_closing];
+        $seqno = $qw_seqno unless ($seqno);
         ( $indent, $offset, $is_leading, $exists ) =
-          get_saved_opening_indentation( $type_sequence_to_go[$i_closing] );
+          get_saved_opening_indentation($seqno);
     }
     return ( $indent, $offset, $is_leading, $exists );
 }

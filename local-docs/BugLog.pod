@@ -2,6 +2,81 @@
 
 =over 4
 
+=item B<improve formatting of multiline qw>
+
+This update adds a sequence numbering system for multiline qw quotes.  In the
+perltidy tokenizer normal container pair types, like { }, (), [], are given
+unique serial numbers which are used as keys to data structures.  qw quoted
+lists do not get serial numbers by the tokenizer, so this update creates a
+separate serial number scheme for them to correct this problem.  One formatting
+problem that this solves is that of preventing the closing token of a multiline
+quote from being outdented more than the opening token.  This is a general
+formatting rule which should be followed. Without a sequence
+number, the closing qw token could not lookup its corresponding opening
+indentation so it had to resort to a default, breaking the rule, as in the following:
+
+    # OLD, perltidy -wn
+    # qw line
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+        ) ); #<-- outdented more than 'sort'
+    }
+
+    # Here is the same with a list instead of a qw; note how the
+    # closing sort paren does not outdent more than the 'sort' line.
+    # This is the desired result for qw.
+    # perltidy -wn
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort (
+
+                '!',          'a', 'b', 'd', 'h', 'i', 'm', 'o', 'q', 'r', 'u',
+                'autobundle', 'clean',
+                'make',       'test', 'install', 'force', 'reload', 'look'
+            ) );  #<-- not outdented more than 'sort'
+    }
+
+    # NEW (perltidy -wn)
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+            ) ); #<-- not outdented more than sort
+    }
+
+Here is another example
+    # OLD:
+    $_->meta->make_immutable(
+        inline_constructor => 0,
+        constructor_name   => "_new",
+        inline_accessors   => 0,
+        )
+        for qw(
+        Class::XYZ::Package
+        Class::XYZ::Module
+        Class::XYZ::Class
+
+        Class::XYZ::Overload
+    );  #<-- outdented more than the line with 'for qw('
+
+    # NEW:
+    $_->meta->make_immutable(
+        inline_constructor => 0,
+        constructor_name   => "_new",
+        inline_accessors   => 0,
+      )
+      for qw(
+      Class::XYZ::Package
+      Class::XYZ::Module
+      Class::XYZ::Class
+
+      Class::XYZ::Overload
+      ); #<-- outdented same as the line with 'for qw('
+
 =item B<improve list marking method>
 
 In the process of making vertical alignments, lines which are simple lists of

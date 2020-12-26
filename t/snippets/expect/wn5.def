@@ -9,5 +9,5 @@ use_all_ok(
       PPI::Normal
       PPI::Util
       PPI::Cache
-      }
+    }
 );
