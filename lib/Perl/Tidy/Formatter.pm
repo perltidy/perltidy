@@ -412,7 +412,7 @@ BEGIN {
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
         _rKrange_multiline_qw_by_seqno_     => $i++,
-
+        _rcontains_multiline_qw_by_seqno_   => $i++,
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -748,6 +748,7 @@ sub new {
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
     $self->[_rending_multiline_qw_seqno_by_K_]   = {};
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
+    $self->[_rcontains_multiline_qw_by_seqno_]   = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -7729,6 +7730,7 @@ sub find_multiline_qw {
     my $rstarting_multiline_qw_seqno_by_K = {};
     my $rending_multiline_qw_seqno_by_K   = {};
     my $rKrange_multiline_qw_by_seqno     = {};
+    my $rcontains_multiline_qw_by_seqno   = {};
 
     my $rlines = $self->[_rlines_];
     my $rLL    = $self->[_rLL_];
@@ -7781,11 +7783,48 @@ EOM
             }
         }
     }
+
+    # For the -lp option we need to mark all parent containers of
+    # multiline quotes
+    if ($rOpts_line_up_parentheses) {
+
+        while ( my ( $qw_seqno, $rKrange ) =
+            each %{$rKrange_multiline_qw_by_seqno} )
+        {
+            my ( $Kbeg, $Kend ) = @{$rKrange};
+            my $parent_seqno = $self->parent_seqno_by_K($Kend);
+            next unless ($parent_seqno);
+
+            # If the first outer container exactly surrounds this qw, then -lp
+            # formatting seems to work so we will not mark it.
+            my $Kp      = $self->K_previous_nonblank($Kbeg) if defined($Kbeg);
+            my $Kn      = $self->K_next_nonblank($Kend)     if defined($Kend);
+            my $seqno_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_SEQUENCE_] : undef;
+            my $seqno_n = defined($Kn) ? $rLL->[$Kn]->[_TYPE_SEQUENCE_] : undef;
+            my $is_tightly_contained =
+              defined($seqno_p) && defined($seqno_n) && $seqno_p eq $seqno_n;
+
+            $rcontains_multiline_qw_by_seqno->{$parent_seqno} =
+              !$is_tightly_contained;
+
+            # continue up the tree marking parent containers
+            while (1) {
+                $parent_seqno = $self->[_rparent_of_seqno_]->{$parent_seqno};
+                last
+                  unless ( defined($parent_seqno)
+                    && $parent_seqno ne SEQ_ROOT );
+                $rcontains_multiline_qw_by_seqno->{$parent_seqno} = 1;
+            }
+        }
+    }
+
     $self->[_rstarting_multiline_qw_seqno_by_K_] =
       $rstarting_multiline_qw_seqno_by_K;
     $self->[_rending_multiline_qw_seqno_by_K_] =
       $rending_multiline_qw_seqno_by_K;
     $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
+    $self->[_rcontains_multiline_qw_by_seqno_] =
+      $rcontains_multiline_qw_by_seqno;
 }
 
 ######################################
@@ -16482,6 +16521,12 @@ sub get_available_spaces_to_go {
             my $align_paren     = 0;
             my $excess          = 0;
 
+            my $last_nonblank_seqno;
+            if ( defined($K_last_nonblank) ) {
+                $last_nonblank_seqno =
+                  $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
+            }
+
             # initialization on empty stack..
             if ( $max_gnu_stack_index == 0 ) {
                 $space_count = $level * $rOpts_indent_columns;
@@ -16495,6 +16540,14 @@ sub get_available_spaces_to_go {
             # if last nonblank token was not structural indentation,
             # just use standard increment
             elsif ( $last_nonblank_type ne '{' ) {
+                $space_count += $standard_increment;
+            }
+
+            # if this container holds a qw, add the standard increment
+            elsif ($last_nonblank_seqno
+                && $self->[_rcontains_multiline_qw_by_seqno_]
+                ->{$last_nonblank_seqno} )
+            {
                 $space_count += $standard_increment;
             }
 
