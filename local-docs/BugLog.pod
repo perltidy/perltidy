@@ -2,6 +2,35 @@
 
 =over 4
 
+=item B<Avoid -lp style formatting of lists containing multiline qw quotes>
+
+The -lp formatting style often does not work well when lists contain multiline qw
+quotes.  This update avoids this problem by not formatting such lists with the
+-lp style.  For example,
+
+    # OLD, perltidy -gnu
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ),
+        @trig,
+              ); 
+
+
+    # NEW, perltidy -gnu
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        ),
+        @trig,
+    );
+
 =item B<improve formatting of multiline qw>
 
 This update adds a sequence numbering system for multiline qw quotes.  In the

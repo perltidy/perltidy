@@ -7795,17 +7795,22 @@ EOM
             my $parent_seqno = $self->parent_seqno_by_K($Kend);
             next unless ($parent_seqno);
 
-            # If the first outer container exactly surrounds this qw, then -lp
+            # If the parent container exactly surrounds this qw, then -lp
             # formatting seems to work so we will not mark it.
-            my $Kp      = $self->K_previous_nonblank($Kbeg) if defined($Kbeg);
-            my $Kn      = $self->K_next_nonblank($Kend)     if defined($Kend);
-            my $seqno_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_SEQUENCE_] : undef;
+            my $is_tightly_contained;
+            my $Kn      = $self->K_next_nonblank($Kend);
             my $seqno_n = defined($Kn) ? $rLL->[$Kn]->[_TYPE_SEQUENCE_] : undef;
-            my $is_tightly_contained =
-              defined($seqno_p) && defined($seqno_n) && $seqno_p eq $seqno_n;
+            if ( defined($seqno_n) && $seqno_n eq $parent_seqno ) {
 
-            $rcontains_multiline_qw_by_seqno->{$parent_seqno} =
-              !$is_tightly_contained;
+                my $Kp = $self->K_previous_nonblank($Kbeg);
+                my $seqno_p =
+                  defined($Kp) ? $rLL->[$Kp]->[_TYPE_SEQUENCE_] : undef;
+                if ( defined($seqno_p) && $seqno_p eq $parent_seqno ) {
+                    $is_tightly_contained = 1;
+                }
+            }
+            $rcontains_multiline_qw_by_seqno->{$parent_seqno} = 1
+              unless ($is_tightly_contained);
 
             # continue up the tree marking parent containers
             while (1) {
