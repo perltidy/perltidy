@@ -2,6 +2,42 @@
 
 =over 4
 
+=item B<Improved vertical alignment of some edge cases>
+
+The existing rules for aligning two lines with very different lengths were
+rejecting some good alignments, such as the first line of numbers in the example
+below:
+
+    # OLD:
+    @gg_3 = (
+        [
+            0.0, 1.360755E-2, 9.569446E-4, 9.569446E-4,
+            1.043498E-3, 1.043498E-3
+        ],
+        [
+            9.569446E-4, 9.569446E-4, 0.0, 7.065964E-5,
+            1.422811E-4, 1.422811E-4
+        ],
+        ...
+    );
+
+    # NEW:
+    @gg_3 = (
+        [
+            0.0,         1.360755E-2, 9.569446E-4, 9.569446E-4,
+            1.043498E-3, 1.043498E-3
+        ],
+        [
+            9.569446E-4, 9.569446E-4, 0.0, 7.065964E-5,
+            1.422811E-4, 1.422811E-4
+        ],
+        ...
+    );
+
+The rule in sub 'two_line_pad' was updated to allow alignment of any lists
+if the patterns match exactly (all numbers in this case).  Updated
+27-Dec-2020.
+
 =item B<Avoid -lp style formatting of lists containing multiline qw quotes>
 
 The -lp formatting style often does not work well when lists contain multiline qw

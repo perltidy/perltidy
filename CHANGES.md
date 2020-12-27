@@ -2,17 +2,27 @@
 
 ## 2020 12 07 xx
 
+    - Fixed issue git #51, in which closing quote pattern delimiters not always
+    following the settings specified by the --closing-token-indentation=n settings.
+    Now qw closing delimiters ')', '}' and ']' follow these flags, and the
+    delimiter '>' follows the flag for ')'.  Other qw pattern delimiters remain
+    indented as the are now.  This change will cause some small formatting changes
+    in some existing programs.
+
     - Fixed issue git #49, -se breaks warnings exit status behavior.
     The exit status flag was not always being set when the -se flag was set.
 
+    - Some minor improvements have been made to the rules for formatting
+    some edge vertical alignment cases, usually involving two dissimilar lines.
+
     - Some minor issues that the average user would not encounter were found
-      and fixed. They can be seen in the more complete list of updates at 
+      and fixed. They can be seen in the more complete list of updates at
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2020 12 07
 
-    - Fixed issue git #47, incorrect welding of anonymous subs. 
+    - Fixed issue git #47, incorrect welding of anonymous subs.
       An incorrect weld format was being made when the --weld-nested-containers option
       (-wn) was used in to format a function which returns a list of anonymous subs.
       For example, the following snippet was incorrectly being welded.

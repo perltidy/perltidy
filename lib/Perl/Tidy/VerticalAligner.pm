@@ -1772,9 +1772,20 @@ sub two_line_pad {
     my ( $lenmin, $lenmax ) =
       $lensum >= $lensum_m ? ( $lensum_m, $lensum ) : ( $lensum, $lensum_m );
 
-    # all or none:
+    my $patterns_match;
+    if ( $line_m->get_list_type() && $line->get_list_type() ) {
+        $patterns_match = 1;
+        my $rpatterns_m = $line_m->get_rpatterns();
+        my $rpatterns   = $line->get_rpatterns();
+        for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+            my $pat   = $rpatterns->[$i];
+            my $pat_m = $rpatterns_m->[$i];
+            if ( $pat ne $pat_m ) { $patterns_match = 0; last }
+        }
+    }
+
     my $pad_max = $lenmax;
-    if ( $lenmax > 2 * $lenmin ) { $pad_max = 0 }
+    if ( !$patterns_match && $lenmax > 2 * $lenmin ) { $pad_max = 0 }
 
     return $pad_max;
 }
