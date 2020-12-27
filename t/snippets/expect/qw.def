@@ -1,0 +1,41 @@
+    # do not outdent ending ) more than initial qw line
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+            ) );
+    }
+
+    # outdent ')' even if opening is not '('
+    @EXPORT = (
+        qw)
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        ),
+        @trig
+    );
+
+    # outdent '>' like ')'
+    @EXPORT = (
+        qw<
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        >,
+        @trig
+    );
+
+    # but ';' not outdented
+    @EXPORT = (
+        qw;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ;,
+        @trig
+    );

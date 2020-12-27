@@ -19,6 +19,7 @@
 #16 align34.def
 #17 git47.def
 #18 git47.git47
+#19 qw.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -172,6 +173,50 @@ my $date = localtime();
 my @sorted = map { $_->[0] }
   sort { $a->[1] <=> $b->[1] }
   map { [ $_, rand ] } @list;
+----------
+
+        'qw' => <<'----------',
+    # do not outdent ending ) more than initial qw line
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+        ) );
+    }
+
+    # outdent ')' even if opening is not '('
+    @EXPORT = (
+        qw)
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        ),
+        @trig
+    );
+
+    # outdent '>' like ')'
+    @EXPORT = (
+        qw<
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        >,
+        @trig
+    );
+
+    # but ';' not outdented
+    @EXPORT = (
+        qw;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ;,
+        @trig
+    );
 ----------
 
         'sbcp' => <<'----------',
@@ -619,6 +664,54 @@ return Mojo::Promise->resolve($query_params)->then(&_reveal_event)->then(sub ($c
   return $c->render(text => '', status => $code);
 });
 #18...........
+        },
+
+        'qw.def' => {
+            source => "qw",
+            params => "def",
+            expect => <<'#19...........',
+    # do not outdent ending ) more than initial qw line
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+            ) );
+    }
+
+    # outdent ')' even if opening is not '('
+    @EXPORT = (
+        qw)
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        ),
+        @trig
+    );
+
+    # outdent '>' like ')'
+    @EXPORT = (
+        qw<
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        >,
+        @trig
+    );
+
+    # but ';' not outdented
+    @EXPORT = (
+        qw;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ;,
+        @trig
+    );
+#19...........
         },
     };
 
