@@ -2,6 +2,29 @@
 
 =over 4
 
+=item B<Fixed very minor inconsistency in redefining lists after prune step>
+
+In rare cases it is necessary to update the type of lists, and this
+influences vertical alignment. This update fixes a minor inconsistency
+in doing this.  In some rare cases with complex list elements vertical
+alignment can be improved.
+
+            # OLD
+            return join( '',
+                $pre,   '<IMG ',   $iconsizes{$alt} || '',
+                $align, 'BORDER=', $nav_border,
+                ' ALT="', $alt,        "\"\n",
+                ' SRC="', $ICONSERVER, "/$icon",
+                '">' );
+
+            # NEW
+            return join( '',
+                $pre,     '<IMG ',     $iconsizes{$alt} || '',
+                $align,   'BORDER=',   $nav_border,
+                ' ALT="', $alt,        "\"\n",
+                ' SRC="', $ICONSERVER, "/$icon",
+                '">' );
+
 =item B<Improved vertical alignment of some edge cases>
 
 The existing rules for aligning two lines with very different lengths were

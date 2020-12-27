@@ -2221,11 +2221,10 @@ sub sweep_left_to_right {
 
 sub delete_selected_tokens {
 
-    my ( $line_obj, $ridel, $new_list_ok ) = @_;
+    my ( $line_obj, $ridel ) = @_;
 
     # $line_obj    is the line to be modified
     # $ridel       is a ref to list of indexes to be deleted
-    # $new_list_ok is flag giving permission to convert non-list to list
 
     # remove an unused alignment token(s) to improve alignment chances
 
@@ -2306,41 +2305,21 @@ EOM
         $line_obj->set_j_terminal_match(undef);
     }
 
-    # update list type based on new leading token
-    my $old_list_type = $line_obj->get_list_type();
-    my $new_list_type = "";
-    if ( $rtokens_new->[0] =~ /^(=>|,)/ ) {
-        $new_list_type = $rtokens_new->[0];
-    }
+    # update list type -
+    if ( $line_obj->get_list_seqno() ) {
 
-    # An existing list will still be a list but with possibly different leading
-    # token
-    if ($old_list_type) {
-        if ( $old_list_type ne $new_list_type ) {
-            $line_obj->set_list_type($new_list_type);
+        ## This works, but for efficiency see if we need to make a change:
+        ## decide_if_list($line_obj);
+
+        # An existing list will still be a list but with possibly different
+        # leading token
+        my $old_list_type = $line_obj->get_list_type();
+        my $new_list_type = "";
+        if ( $rtokens_new->[0] =~ /^(=>|,)/ ) {
+            $new_list_type = $rtokens_new->[0];
         }
-    }
-
-    # A non-list line could become a list if all non-list tokens have been
-    # deleted. But only do this if the "new_list_ok" flag is set.  The following
-    # two-line snippet shows an example of unwanted => alignement which can
-    # occur if we promote lines to be lists without permission:
-    #  $w1->bin( $xc, $yc,   { Panel => 3 } );
-    #  $w1->env( 0, 1, 0, 1, { Axis  => 'Box' } );
-    elsif ( $new_list_type && $new_list_ok ) {
-        my ( $raw_tok, $lev, $tag, $tok_count ) =
-          decode_alignment_token($new_list_type);
-
-        # But for lines with leading commas, we will require that they be
-        # tagged before converting a line from non-list to a list.
-        if ($tag) {
-            for ( my $i = 1 ; $i < @{$rtokens_new} - 1 ; $i++ ) {
-                if ( $rtokens_new->[$i] !~ /^(,|=>)/ ) {
-                    $new_list_type = "";
-                    last;
-                }
-            }
-            $line_obj->set_list_type($new_list_type) if ($new_list_type);
+        if ( !$old_list_type || $old_list_type ne $new_list_type ) {
+            decide_if_list($line_obj);
         }
     }
 
@@ -2480,15 +2459,11 @@ EOM
 
         # create a hash of tokens for each line
         my $rline_hashes = [];
-        my $saw_list_type;
         foreach my $line ( @{$rnew_lines} ) {
             my $rhash     = {};
             my $rtokens   = $line->get_rtokens();
             my $rpatterns = $line->get_rpatterns();
-            if ( !$saw_list_type && $line->get_list_type() ) {
-                $saw_list_type = 1;
-            }
-            my $i = 0;
+            my $i         = 0;
             my ( $i_eq, $tok_eq, $pat_eq );
             my ( $lev_min, $lev_max );
             foreach my $tok ( @{$rtokens} ) {
@@ -2831,7 +2806,7 @@ EOM
 
                 # Process all deletion requests for this line
                 if (@idel) {
-                    delete_selected_tokens( $line, \@idel, $saw_list_type );
+                    delete_selected_tokens( $line, \@idel );
                 }
             }    # End loopover lines
         }    # End loop over subgroups
@@ -2844,8 +2819,7 @@ EOM
         # alignment situations which might be improved with a future more
         # general algorithm which adds a tail matching capability.
         if (TEST_DELETE_NULL) {
-            delete_null_alignments( $rnew_lines, $rline_hashes, \@subgroups,
-                $saw_list_type )
+            delete_null_alignments( $rnew_lines, $rline_hashes, \@subgroups )
               if ($saw_large_group);
         }
 
@@ -2861,7 +2835,7 @@ EOM
 }
 
 sub delete_null_alignments {
-    my ( $rnew_lines, $rline_hashes, $rsubgroups, $saw_list_type ) = @_;
+    my ( $rnew_lines, $rline_hashes, $rsubgroups ) = @_;
 
     # This is an optional second pass for deleting alignment tokens which can
     # occasionally improve alignment.  We look for and remove 'null
@@ -2992,8 +2966,7 @@ sub delete_null_alignments {
         }
         if (@idel) {
             foreach my $j ( $j_match_beg .. $j_match_end ) {
-                delete_selected_tokens( $rnew_lines->[$j], \@idel,
-                    $saw_list_type );
+                delete_selected_tokens( $rnew_lines->[$j], \@idel );
             }
         }
     };
