@@ -677,7 +677,7 @@ EOM
     # if none exists.
     # --------------------------------------------------------------------
     $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths,
-        $level_end );
+        $level_end, $level );
     $jmax = @{$rfields} - 1;
 
     # --------------------------------------------------------------------
@@ -789,12 +789,17 @@ sub join_hanging_comment {
     return 1;
 }
 
+# Switch for comparing side comment forgetting methods. This can eventually
+# be removed.
+use constant TEST_OLD_SIDE_COMMENT_METHOD => 0;
+
 sub make_side_comment {
 
     # create an empty side comment if none exists
 
-    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths, $level_end ) =
-      @_;
+    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths, $level_end,
+        $level )
+      = @_;
 
     my $jmax = @{$rfields} - 1;
 
@@ -810,15 +815,19 @@ sub make_side_comment {
     # line has a side comment..
     else {
 
-        # don't remember old side comment location for very long
-        my $line_number = $self->get_output_line_number();
-        if (
-            $line_number - $self->[_last_side_comment_line_number_] > 12
+        # don't remember old side comment location for very long...
+        my $line_number   = $self->get_output_line_number();
+        my $last_sc_level = $self->[_last_side_comment_level_];
 
-            # and don't remember comment location across block level changes
-            || (   $level_end < $self->[_last_side_comment_level_]
-                && $rfields->[0] =~ /^}/ )
-          )
+        # OLD METHOD: forget side comment location across block level changes.
+        # NEW METHOD: forget side comment location unless old level matches
+        # either leading or trailing level.
+        my $is_level_change = TEST_OLD_SIDE_COMMENT_METHOD
+          ? $level_end < $last_sc_level  && $rfields->[0] =~ /^}/
+          : $level_end != $last_sc_level && $level != $last_sc_level;
+
+          if ( $line_number - $self->[_last_side_comment_line_number_] > 12
+            || $is_level_change )
         {
             $self->forget_side_comment();
         }
@@ -1169,6 +1178,7 @@ sub check_match {
             $GoToMsg = "Not all tokens match: $imax_align != $jlimit\n";
             goto NO_MATCH;
         }
+
     }
 
     # The tokens match, but the lines must have identical number of
@@ -1176,6 +1186,24 @@ sub check_match {
     if ( $maximum_field_index != $jmax ) {
         $GoToMsg = "token count differs";
         goto NO_MATCH;
+    }
+
+    # FOR TESTING ONLY: if we do not mix lines with and without side comments
+    # in the top-down sweep, then lines without side comments cannot influence
+    # side comment locations.  The results of this test are interesting but not
+    # always better.  But it could be that some combination of the two
+    # possibilities can give better overall results, so this test patch is
+    # temporarily retained for further experimentation.
+    if (0) { #<<<
+    my $sc_len_base = $base_line->get_rfield_lengths()->[$maximum_field_index];
+    my $sc_len      = $new_line->get_rfield_lengths()->[$jmax];
+    if ( $sc_len == 0 && $sc_len_base > 0 || $sc_len > 0 && $sc_len_base == 0 )
+    {
+        EXPLAIN_CHECK_MATCH
+          && print
+          "match but sc mismatch, imax_align=$imax_align, jmax=$jmax\n";
+        return ( 1, $jlimit );
+    }
     }
 
     # The tokens match. Now See if there is space for this line in the

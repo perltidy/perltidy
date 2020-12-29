@@ -2,12 +2,114 @@
 
 =over 4
 
+=item B<Improve rule for forgetting last side comment location>
+
+The code which aligns side comments remembers the most recent side comment and
+in some cases tries to start aligning at that column for later side comments.
+Sometimes the old side comment column was being remembered too long, causing
+occasional poor formatting and causing a noticable and unexpected drift of side
+comment locations to the right.  The rule for forgetting the previous side
+comment column has been modified to reduce this problem.  The new rule is
+essentially to forget the previous side comment location at a new side comment
+with different indentation level or significant number of lines without side
+comments (about 12).  The previous implementation forgetting changes in
+indentation level across code blocks only.  Below is an example where the old
+method gets into trouble and the new method is ok:
+
+        # OLD:
+        foreach my $r (@$array) {
+            $Dat{Data}{ uc $r->[0] } = join( ";", @$r );    # store all info
+            my $name = $Dat{GivenName}{ uc $r->[0] } || $r->[1];
+
+            # pass array as ad-hoc string, mark missing values
+            $Dat{Data}{ uc $r->[0] } = join(
+                ";",
+                (
+                    uc $r->[0], uc $name,                   # symbol, name
+                    $r->[2],    $r->[3], $r->[4],           # price, date, time
+                    $r->[5],    $r->[6],                    # change, %change
+                    $r->[7],    "-", "-", "-",    # vol, avg vol, bid,ask
+                    $r->[8],               $r->[9],     # previous, open
+                    "$r->[10] - $r->[11]", $r->[12],    # day range,year range,
+                    "-",                   "-", "-", "-", "-"
+                )
+            );                                          # eps,p/e,div,yld,cap
+        }
+
+The second side comment is at a deeper indentation level but was not being forgotten,
+causing line length limits to interfere with later alignment. The new rule gives
+a better result:
+
+        # NEW:
+        foreach my $r (@$array) {
+            $Dat{Data}{ uc $r->[0] } = join( ";", @$r );    # store all info
+            my $name = $Dat{GivenName}{ uc $r->[0] } || $r->[1];
+
+            # pass array as ad-hoc string, mark missing values
+            $Dat{Data}{ uc $r->[0] } = join(
+                ";",
+                (
+                    uc $r->[0], uc $name,               # symbol, name
+                    $r->[2],    $r->[3], $r->[4],       # price, date, time
+                    $r->[5],    $r->[6],                # change, %change
+                    $r->[7],    "-", "-", "-",          # vol, avg vol, bid,ask
+                    $r->[8],               $r->[9],     # previous, open
+                    "$r->[10] - $r->[11]", $r->[12],    # day range,year range,
+                    "-",                   "-", "-", "-", "-"
+                )
+            );    # eps,p/e,div,yld,cap
+        }
+
+The following exampel shows an unexpected alignment in the cascade of trailing
+comments which are aligned but slowly separating from their closing containers:
+
+    # OLD:
+    {
+        $a = [
+            Cascade    => $menu_cb,
+            -menuitems => [
+                [ Checkbutton => 'Oil checked', -variable => \$OIL ],
+                [
+                    Button   => 'See current values',
+                    -command => [
+                        \&see_vars, $TOP,
+
+                    ],    # end see_vars
+                ],        # end button
+            ],            # end checkbutton menuitems
+        ];                # end checkbuttons cascade
+    }
+
+This was caused by forgetting side comments only across code block changes. The new
+result is more reasonable: 
+
+    # NEW:
+    {
+        $a = [
+            Cascade    => $menu_cb,
+            -menuitems => [
+                [ Checkbutton => 'Oil checked', -variable => \$OIL ],
+                [
+                    Button   => 'See current values',
+                    -command => [
+                        \&see_vars, $TOP,
+
+                    ],    # end see_vars
+                ],    # end button
+            ],    # end checkbutton menuitems
+        ];    # end checkbuttons cascade
+    }
+
+This change will cause occasional differences in side comment locations from
+previous versions but overall it gives fewer unexpected results so it is a worthwhile
+change.  29-Dec-2020.
+
 =item B<Fixed very minor inconsistency in redefining lists after prune step>
 
 In rare cases it is necessary to update the type of lists, and this
 influences vertical alignment. This update fixes a minor inconsistency
 in doing this.  In some rare cases with complex list elements vertical
-alignment can be improved.
+alignment can be improved.  27 Dec, 2020, 751faec.
 
             # OLD
             return join( '',
@@ -59,7 +161,7 @@ below:
 
 The rule in sub 'two_line_pad' was updated to allow alignment of any lists
 if the patterns match exactly (all numbers in this case).  Updated
-27-Dec-2020.
+27-Dec-2020, 035d2b7.
 
 =item B<Avoid -lp style formatting of lists containing multiline qw quotes>
 
@@ -89,6 +191,8 @@ quotes.  This update avoids this problem by not formatting such lists with the
         ),
         @trig,
     );
+
+27-Dec-2020, 948c9bd.
 
 =item B<improve formatting of multiline qw>
 
@@ -165,6 +269,8 @@ Here is another example
       Class::XYZ::Overload
       ); #<-- outdented same as the line with 'for qw('
 
+26 Dec 2020, cdbf0e4.
+
 =item B<improve list marking method>
 
 In the process of making vertical alignments, lines which are simple lists of
@@ -206,7 +312,7 @@ For example (note padding after first comma)
     my ( $ym, $al, $cov, $bet, $olda, $ochisq, $di, $pivt, $info ) =
       map { null } ( 0 .. 8 );
 
-This update was made 22 Dec 2020.
+This update was made 22 Dec 2020, 36d4c35.
 
 =item B<Fix git #51, closing quote pattern delimiters not following -cti flag settings>
 
@@ -266,7 +372,7 @@ but (';' remains indented):
         @trig
     );
 
-This update was added 18 Dec 2020 and modified 24 Dec.
+This update was added 18 Dec 2020 and modified 24 Dec 2020, 538688f.
 
 =item B<Update manual pages regarding issue git #50>
 
@@ -277,7 +383,7 @@ perltidy does not change whitespace.  This update was added 17 Dec 2020.
 
 Moved inner part of sub check_match into sub match_line_pair in order to
 make info available earlier.  This gave some minor alignment improvements.
-This was done 16 Dec 2020.
+This was done 16 Dec 2020, 7ba4f3b.
 
     # OLD:
     @tests = (
@@ -333,7 +439,7 @@ achieved by the subsequent 'sweep' pass.
     elsif ( $cmd eq "remove" )      { $remove      = 1; last; }
     elsif ( $cmd eq "help" )        { $help        = 1; last; }
 
-This update was made 14 Dec 2020.
+This update was made 14 Dec 2020, 44e0afa.
 
 =item B<Improved some marginal vertical alignments>
 
