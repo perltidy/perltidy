@@ -2,7 +2,7 @@
 
 ## 2020 12 07 xx
 
-    - Fixed issue git #51, in which closing quote pattern delimiters not always
+    - Fixed issue git #51, in which closing qw pattern delimiters not always
     following the settings specified by the --closing-token-indentation=n settings.
     Now qw closing delimiters ')', '}' and ']' follow these flags, and the
     delimiter '>' follows the flag for ')'.  Other qw pattern delimiters remain
@@ -14,6 +14,8 @@
 
     - Some minor improvements have been made to the rules for formatting
     some edge vertical alignment cases, usually involving two dissimilar lines.
+
+    - Some improvements have been made to the location of side comments.
 
     - Some minor issues that the average user would not encounter were found
       and fixed. They can be seen in the more complete list of updates at

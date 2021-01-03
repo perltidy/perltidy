@@ -2,6 +2,32 @@
 
 =over 4
 
+=item B<Further improvement in rules for forgetting last side comment location>
+
+The code for forgetting the last side comment location was rewritten to improve
+formatting in some edge cases.  The update also fixes a very rare problem
+discovered during testing and illustrated with the following snippet.  The
+problem occurs for the particular combination of parameters -sct -act=2 and
+when a closing paren has a side comment:
+
+    OLD: perltidy -sct -act=2
+    foreach $line (
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        [0, 4, 8], [2, 4, 6])                                     # diagonals
+
+    NEW: perltidy -sct -act=2
+    foreach $line (
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        [0, 4, 8], [2, 4, 6])    # diagonals
+
+In the old version the last side comment was aligned before the closing paren
+was attached to the previous line, causing the final side comment to be far to
+the right.  A patch in the new version just places it at the default location.
+This is the best than can be done for now, but is preferable to the old
+formatting.
+
 =item B<Improve rule for forgetting last side comment location>
 
 The code which aligns side comments remembers the most recent side comment and
@@ -102,7 +128,7 @@ result is more reasonable:
 
 This change will cause occasional differences in side comment locations from
 previous versions but overall it gives fewer unexpected results so it is a worthwhile
-change.  29-Dec-2020.
+change.  29-Dec-2020, 76993f4.
 
 =item B<Fixed very minor inconsistency in redefining lists after prune step>
 
