@@ -7830,6 +7830,8 @@ EOM
     $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
     $self->[_rcontains_multiline_qw_by_seqno_] =
       $rcontains_multiline_qw_by_seqno;
+
+    return;
 }
 
 ######################################
@@ -15447,7 +15449,7 @@ sub find_token_starting_list {
 
                 if ( $number_of_fields_best != 1 ) {
                     my $spaces_wanted_2 =
-                      1 + $pair_width - $columns;             # for 2 fields
+                      1 + $pair_width - $columns;    # for 2 fields
                     if ( $available_spaces > $spaces_wanted_2 ) {
                         $spaces_wanted = $spaces_wanted_2;
                     }
