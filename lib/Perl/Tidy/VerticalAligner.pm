@@ -4375,6 +4375,25 @@ sub adjust_side_comments {
 
     my $last_side_comment_column = $self->[_last_side_comment_column_];
 
+    # Forget the last side comment if this comment might join a cached line
+    if ( my $cached_line_type = get_cached_line_type() ) {
+
+        # PATCH: Forget last side comment col if we might join the next
+        # line to this line. Otherwise side comment alignment will get
+        # messed up.  For example, in the following test script
+        # with using 'perltidy -sct -act=2', the last comment would try to
+        # align with the previous and then be in the wrong column when
+        # the lines are combined:
+
+        # foreach $line (
+        #    [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        #    [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        #    [0, 4, 8], [2, 4, 6]
+        #  )                                     # diagonals
+        $last_side_comment_column = 0
+          if ( $cached_line_type == 2 || $cached_line_type == 4 );
+    }
+
     # If there are multiple groups we will do two passes
     # so that we can find a common alignment for all groups.
     my $MAX_PASS = @todo > 1 ? 2 : 1;
@@ -4810,23 +4829,6 @@ sub get_output_line_number {
                 $open_or_close, $tightness_flag, $seqno, $valid, $seqno_beg,
                 $seqno_end
             ) = @{$rvertical_tightness_flags};
-
-            # PATCH: Forget last side comment col if we might join the next
-            # line to this line. Otherwise side comment alignment will get
-            # messed up.  For example, in the following test script the last
-            # comment would try to align with the previous comment and then be
-            # in the wrong column when the lines are combined:
-
-            # # perltidy -sct -act=2
-            # foreach $line (
-            #    [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
-            #    [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
-            #    [0, 4, 8], [2, 4, 6]
-            #  )                                     # diagonals
-
-            if ( $open_or_close == 2 || $open_or_close == 4 ) {
-                $self->forget_side_comment();
-            }
         }
 
         $seqno_string = $seqno_end;

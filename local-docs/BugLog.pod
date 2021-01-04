@@ -2,6 +2,12 @@
 
 =over 4
 
+=item B<Moved previous patch to a better location>
+
+The previous patch was moved to a location where it only applies if
+there is a side comment on the line with a closing token.  This minimizes
+changes to other side comment locations.
+
 =item B<Further improvement in rules for forgetting last side comment location>
 
 The code for forgetting the last side comment location was rewritten to improve
@@ -26,7 +32,7 @@ In the old version the last side comment was aligned before the closing paren
 was attached to the previous line, causing the final side comment to be far to
 the right.  A patch in the new version just places it at the default location.
 This is the best than can be done for now, but is preferable to the old
-formatting.
+formatting. 3 Jan 2021, e57d8db.
 
 =item B<Improve rule for forgetting last side comment location>
 
