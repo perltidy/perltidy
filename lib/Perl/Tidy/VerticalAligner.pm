@@ -1279,24 +1279,6 @@ sub check_match {
         goto NO_MATCH;
     }
 
-    # FOR TESTING ONLY: if we do not mix lines with and without side comments
-    # in the top-down sweep, then lines without side comments cannot influence
-    # side comment locations.  The results of this test are interesting but not
-    # always better.  But it could be that some combination of the two
-    # possibilities can give better overall results, so this test patch is
-    # temporarily retained for further experimentation.
-    if (0) { #<<<
-    my $sc_len_base = $base_line->get_rfield_lengths()->[$maximum_field_index];
-    my $sc_len      = $new_line->get_rfield_lengths()->[$jmax];
-    if ( $sc_len == 0 && $sc_len_base > 0 || $sc_len > 0 && $sc_len_base == 0 )
-    {
-        EXPLAIN_CHECK_MATCH
-          && print
-          "match but sc mismatch, imax_align=$imax_align, jmax=$jmax\n";
-        return ( 1, $jlimit );
-    }
-    }
-
     # The tokens match. Now See if there is space for this line in the
     # current group.
     if ( $self->check_fit( $new_line, $base_line ) && !TEST_SWEEP_ONLY ) {
