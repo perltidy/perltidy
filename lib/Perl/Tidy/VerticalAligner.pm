@@ -677,7 +677,7 @@ EOM
     # It simplifies things to create a zero length side comment
     # if none exists.
     # --------------------------------------------------------------------
-    $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths);
+    $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths );
     $jmax = @{$rfields} - 1;
 
     # --------------------------------------------------------------------
@@ -793,7 +793,7 @@ sub make_side_comment {
 
     # create an empty side comment if none exists
 
-    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths) = @_;
+    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths ) = @_;
 
     my $jmax = @{$rfields} - 1;
 
@@ -1092,119 +1092,6 @@ my %is_closing_block_type;
 BEGIN {
     @_ = qw< } ] >;
     @is_closing_block_type{@_} = (1) x scalar(@_);
-}
-
-sub first_side_comment {
-    my ( $self, $line_number, $level, $rfields, $is_hanging_side_comment,
-        $num5 ) = @_;
-
-    # Upon encountering the first side comment of a group, decide if
-    # a previous side comment should be forgotten.  This involves
-    # checking several rules.
-
-    # RULE1: Never forget comment before a hanging side comment
-    goto RETURN if ($is_hanging_side_comment);
-
-    # RULE2: Forget a side comment after a short line difference,
-    # where 'short line difference' is computed from a formula.
-    my $line_diff = $line_number - $self->[_last_side_comment_line_number_];
-    my $alev_diff = abs( $level - $self->[_last_side_comment_level_] );
-
-    # TAIL-WAG-DOG factor
-    $num5 = 1 unless ($num5);
-
-    my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
-
-    goto FORGET
-      if ( $line_diff > $short_diff );
-
-    # RULE3: Forget a side comment if this line is at lower level and
-    # ends a block
-    my $last_sc_level = $self->[_last_side_comment_level_];
-    goto FORGET
-      if ( $level < $last_sc_level
-        && $is_closing_block_type{ substr( $rfields->[0], 0, 1 ) } );
-
-    # Otherwise, keep it alive
-    goto RETURN;
-
-  FORGET:
-    $self->forget_side_comment();
-
-  RETURN:
-    return;
-}
-
-sub side_comment_scan {
-
-    my ( $self, $rlines, $group_level ) = @_;
-
-    # Scan the side comments of a group and:
-    # - find subgroups of side comments
-    # - forget a previous side comment if necessary
-
-    my $rsc_groups = [];
-    my ( $jbeg, $jend );
-
-    my $jj_group_beg;
-    my $last_side_comment_column = $self->[_last_side_comment_column_];
-    my $last_side_comment_line_number =
-      $self->[_last_side_comment_line_number_];
-    my $last_sc_level = $self->[_last_side_comment_level_];
-
-    my $ng;
-    my $jbeg0;
-    my $leading_line;
-    my $num5 = 0;
-
-    # form side comment groups
-    for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
-        my $line   = $rlines->[$jj];
-        my $jmax   = $line->get_jmax();
-        my $sc_len = $line->get_rfield_lengths()->[$jmax];
-        next unless ($sc_len);
-        if ( !defined($jbeg0) ) {
-            $ng    = 0;
-            $jbeg0 = $jbeg = $jend = $jj;
-            $num5  = 1;
-        }
-        else {
-            my $ldiff = $jj - $jbeg0;
-
-            # Count number of comments in the 5 lines after the first comment
-            if ( $ng == 0 && $ldiff <= 5 ) {
-                $num5++;
-            }
-
-            ( $jbeg, $jend ) = @{ $rsc_groups->[$ng] };
-            if ( $ldiff <= SC_LONG_LINE_DIFF ) {
-                $jend = $jj;
-            }
-            else {
-                $ng++;
-                $jbeg = $jend = $jj;
-            }
-        }
-        $rsc_groups->[$ng] = [ $jbeg, $jend ];
-    }
-
-    # At the first side comment of a group, decide if a previous side
-    # comment should be forgotten.
-    goto RETURN unless ( defined($jbeg0) );
-
-    my $line                    = $rlines->[$jbeg0];
-    my $rfields                 = $line->get_rfields();
-    my $is_hanging_side_comment = $line->get_is_hanging_side_comment();
-    my $line_number =
-      $jbeg0 + $self->[_file_writer_object_]->get_output_line_number();
-
-    $self->first_side_comment( $line_number, $group_level, $rfields,
-        $is_hanging_side_comment, $num5 );
-
-    # Future update: mark lines which start and end groups
-
-  RETURN:
-    return $jend;
 }
 
 sub check_match {
@@ -1537,11 +1424,6 @@ sub _flush_group_lines {
     my ( $max_lev_diff, $saw_side_comment ) =
       delete_unmatched_tokens( $rgroup_lines, $group_level );
 
-    # STEP 1A: study side comments
-    my $j_sc_last;
-    $j_sc_last = $self->side_comment_scan( $rgroup_lines, $group_level )
-      if ($saw_side_comment);
-
     # STEP 2: Sweep top to bottom, forming subgroups of lines with exactly
     # matching common alignments.  The indexes of these subgroups are in the
     # return variable.
@@ -1554,7 +1436,7 @@ sub _flush_group_lines {
 
     # STEP 4: Move side comments to a common column if possible.
     if ($saw_side_comment) {
-        $self->adjust_side_comments( $rgroup_lines, $rgroups, $j_sc_last );
+        $self->adjust_side_comments( $rgroup_lines, $rgroups );
     }
 
     # STEP 5: For the -lp option, increase the indentation of lists
@@ -4320,17 +4202,83 @@ sub forget_side_comment {
     return;
 }
 
+sub is_good_side_comment_column {
+    my ( $self, $line, $line_number, $level, $num5 ) = @_;
+
+    # Upon encountering the first side comment of a group, decide if
+    # a previous side comment should be forgotten.  This involves
+    # checking several rules.
+
+    # Return true to keep old comment location
+    # Return false to forget old comment location
+
+    my $rfields                 = $line->get_rfields();
+    my $is_hanging_side_comment = $line->get_is_hanging_side_comment();
+
+    # RULE1: Never forget comment before a hanging side comment
+    goto KEEP if ($is_hanging_side_comment);
+
+    # RULE2: Forget a side comment after a short line difference,
+    # where 'short line difference' is computed from a formula.
+    my $line_diff = $line_number - $self->[_last_side_comment_line_number_];
+    my $alev_diff = abs( $level - $self->[_last_side_comment_level_] );
+
+    # TAIL-WAG-DOG factor
+    $num5 = 1 unless ($num5);
+
+    my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
+
+    goto FORGET
+      if ( $line_diff > $short_diff );
+
+    # RULE3: Forget a side comment if this line is at lower level and
+    # ends a block
+    my $last_sc_level = $self->[_last_side_comment_level_];
+    goto FORGET
+      if ( $level < $last_sc_level
+        && $is_closing_block_type{ substr( $rfields->[0], 0, 1 ) } );
+
+    # RULE 4: Forget the last side comment if this comment might join a cached
+    # line.
+    if ( my $cached_line_type = get_cached_line_type() ) {
+
+        # PATCH: Forget last side comment col if we might join the next
+        # line to this line. Otherwise side comment alignment will get
+        # messed up.  For example, in the following test script
+        # with using 'perltidy -sct -act=2', the last comment would try to
+        # align with the previous and then be in the wrong column when
+        # the lines are combined:
+
+        # foreach $line (
+        #    [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        #    [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        #    [0, 4, 8], [2, 4, 6]
+        #  )                                     # diagonals
+        goto FORGET
+          if ( $cached_line_type == 2 || $cached_line_type == 4 );
+    }
+
+    # Otherwise, keep it alive
+    goto KEEP;
+
+  FORGET:
+    return 0;
+
+  KEEP:
+    return 1;
+}
+
 sub adjust_side_comments {
 
-    my ( $self, $rlines, $rgroups, $j_sc_last ) = @_;
+    my ( $self, $rlines, $rgroups ) = @_;
+
+    # Align any side comments
 
     my $group_level        = $self->[_group_level_];
     my $continuing_sc_flow = $self->[_last_side_comment_length_] > 0
       && $group_level == $self->[_last_level_written_];
 
-    # Try to align the side comments
-
-    # Look for any nonblank side comments
+    # Find the first nonblank comment
     my $j_sc_beg;
     my @todo;
     my $ng = -1;
@@ -4355,26 +4303,28 @@ sub adjust_side_comments {
     # done if nothing to do
     return unless @todo;
 
-    my $last_side_comment_column = $self->[_last_side_comment_column_];
-
-    # Forget the last side comment if this comment might join a cached line
-    if ( my $cached_line_type = get_cached_line_type() ) {
-
-        # PATCH: Forget last side comment col if we might join the next
-        # line to this line. Otherwise side comment alignment will get
-        # messed up.  For example, in the following test script
-        # with using 'perltidy -sct -act=2', the last comment would try to
-        # align with the previous and then be in the wrong column when
-        # the lines are combined:
-
-        # foreach $line (
-        #    [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
-        #    [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
-        #    [0, 4, 8], [2, 4, 6]
-        #  )                                     # diagonals
-        $last_side_comment_column = 0
-          if ( $cached_line_type == 2 || $cached_line_type == 4 );
+    # Count number of comments in the 5 lines after the first comment
+    my $num5 = 1;
+    for ( my $jj = $j_sc_beg + 1 ; $jj < @{$rlines} ; $jj++ ) {
+        my $ldiff = $jj - $j_sc_beg;
+        last if ( $ldiff > 5 );
+        my $line   = $rlines->[$jj];
+        my $jmax   = $line->get_jmax();
+        my $sc_len = $line->get_rfield_lengths()->[$jmax];
+        next unless ($sc_len);
+        $num5++;
     }
+
+    # Forget the old side comment location if necessary
+    my $line = $rlines->[$j_sc_beg];
+    my $lnum =
+      $j_sc_beg + $self->[_file_writer_object_]->get_output_line_number();
+
+    my $keep_it =
+      $self->is_good_side_comment_column( $line, $lnum, $group_level, $num5 );
+
+    my $last_side_comment_column =
+      $keep_it ? $self->[_last_side_comment_column_] : 0;
 
     # If there are multiple groups we will do two passes
     # so that we can find a common alignment for all groups.
@@ -4466,20 +4416,20 @@ sub adjust_side_comments {
         } ## end loop over groups
     } ## end loop over passes
 
-##    # Find and remember the last side comment
-##    # (this is now pre-computed by sub side_comment_scan)
-##    my $j_sc_last;
-##    my $ng_last = $todo[-1];
-##    my ( $jbeg, $jend ) = @{ $rgroups->[$ng_last] };
-##    for ( my $jj = $jend ; $jj >= $jbeg ; $jj-- ) {
-##        my $line = $rlines->[$jj];
-##        my $jmax = $line->get_jmax();
-##        if ( $line->get_rfield_lengths()->[$jmax] ) {
-##            $j_sc_last = $jj;
-##            last;
-##        }
-##    }
+    # Find the last side comment
+    my $j_sc_last;
+    my $ng_last = $todo[-1];
+    my ( $jbeg, $jend ) = @{ $rgroups->[$ng_last] };
+    for ( my $jj = $jend ; $jj >= $jbeg ; $jj-- ) {
+        my $line = $rlines->[$jj];
+        my $jmax = $line->get_jmax();
+        if ( $line->get_rfield_lengths()->[$jmax] ) {
+            $j_sc_last = $jj;
+            last;
+        }
+    }
 
+    # Save final side comment info for the next batch
     if ( defined($j_sc_last) ) {
         my $line_number =
           $self->[_file_writer_object_]->get_output_line_number() + $j_sc_last;
