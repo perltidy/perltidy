@@ -362,6 +362,9 @@ sub update_version_number {
 
     my $Tidy_pm_file = $lib_path . "Tidy.pm";
 
+    my $saw_pod = scan_for_pod( @sources );
+    return if ($saw_pod);
+
     # I have removed this one; it was useful in development
     # CS  Check that Selected files have the current VERSION
 
@@ -584,6 +587,65 @@ EOM
     return 1;
 }
 
+sub scan_for_pod {
+
+    # perltidy .pm files should not contain pod text
+    my (@sources) = @_;
+
+    foreach my $source_file (@sources) {
+
+        if ( !-f $source_file ) {
+            print <<EOM;
+Sorry, the following source file is not a file
+$source_file
+Please fix this to be the actual file and rerun
+EOM
+            return;
+        }
+
+        if ( -l $source_file ) {
+            print <<EOM;
+Sorry, the following file is a symlink
+$source_file
+I don't want to edit links; Please fix this to point to the actual file and rerun
+EOM
+            return;
+        }
+    }
+
+    my @files_with_pod;
+    while ( my $source_file = shift @sources ) {
+        next unless ( $source_file =~ /\.pm$/ );
+        my $result = qx/grep "^=cut" $source_file/;
+        if ($result) {
+           push @files_with_pod, $source_file;
+        }
+    }
+
+    my $saw_pod = @files_with_pod;
+print <<EOM;
+-------------------------------------------------------------------
+Scanning for pod in .pm files...
+EOM
+
+    if ($saw_pod) {
+        local $" = ') (';
+        query(<<EOM);
+Found files with pod text: (@files_with_pod);
+The convention in perltidy is not to have pod code in '.pm' files.
+Please remove the pod text before continuing, hit <cr> to continue
+-------------------------------------------------------------------
+EOM
+    }
+    else {
+        print <<EOM;
+OK - no pod text found in .pm files
+-------------------------------------------------------------------
+EOM
+    }
+
+    return $saw_pod;
+}
 sub make_tag_script {
     my ( $new_VERSION, $runme ) = @_;
     if ( open( RUN, ">$runme" ) ) {
