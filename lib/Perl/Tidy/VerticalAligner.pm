@@ -4220,11 +4220,28 @@ sub is_good_side_comment_column {
 
     # RULE2: Forget a side comment after a short line difference,
     # where 'short line difference' is computed from a formula.
+    # Using a smooth formula helps minimize sudden large changes.
     my $line_diff = $line_number - $self->[_last_side_comment_line_number_];
     my $alev_diff = abs( $level - $self->[_last_side_comment_level_] );
 
-    # TAIL-WAG-DOG factor
+    # '$num5' is the number of comments in the first 5 lines after the first
+    # comment.  It is needed to keep a compact group of side comments from
+    # being influenced by a more distant side comment.
     $num5 = 1 unless ($num5);
+
+    # Some values:
+
+    #        $adiff  $num5   $short_diff
+    #        0       *       12
+    #        1       1       6
+    #        1       2       4
+    #        1       3       3
+    #        1       4       2
+    #        2       1       4
+    #        2       2       2
+    #        2       3       1
+    #        3       1       3
+    #        3       2       1
 
     my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
 
