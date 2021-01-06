@@ -1530,9 +1530,12 @@ sub _flush_group_lines {
             ## my $is_isolated_pair = $imax_pair < 0
             ##  && ( $jbeg == 0
             ##    || $rall_lines->[ $jbeg - 1 ]->get_imax_pair() < 0 );
+            my $imax_prev =
+              $jbeg > 0 ? $rall_lines->[ $jbeg - 1 ]->get_imax_pair() : -1;
 
             my ( $is_marginal, $imax_align_fix ) =
-              is_marginal_match( $line_0, $line_1, $grp_level, $imax_align );
+              is_marginal_match( $line_0, $line_1, $grp_level, $imax_align,
+                $imax_prev );
             if ($is_marginal) {
                 combine_fields( $line_0, $line_1, $imax_align_fix );
             }
@@ -3842,7 +3845,7 @@ sub Dump_tree_groups {
 
     sub is_marginal_match {
 
-        my ( $line_0, $line_1, $group_level, $imax_align ) = @_;
+        my ( $line_0, $line_1, $group_level, $imax_align, $imax_prev ) = @_;
 
         # Decide if we should align two lines:
         #   return true if the two lines should not be aligned
@@ -3881,6 +3884,7 @@ sub Dump_tree_groups {
         my $jfirst_bad;
         my $line_ending_fat_comma;    # is last token just a '=>' ?
         my $j0_eq_pad;
+        my $j0_max_pad = 0;
 
         for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
@@ -3906,6 +3910,9 @@ sub Dump_tree_groups {
                 # Remember the pad at a leading equals
                 if ( $raw_tok eq '=' && $lev == $group_level ) {
                     $j0_eq_pad = $pad;
+                    $j0_max_pad =
+                      0.5 * ( $rfield_lengths_1->[0] + $rfield_lengths_0->[0] );
+                    $j0_max_pad = 4 if ($j0_max_pad < 4);
                 }
             }
 
@@ -4084,24 +4091,32 @@ sub Dump_tree_groups {
 
             if (
 
-                # If there is a following line with leading equals, then let
-                # the sweep align them without restriction.  For example,
-                # the first two lines here are a marginal match, but they
-                # are followed by a line with leading equals, so the sweep-lr
-                # logic can align all of the lines:
+                # If there is a following line with leading equals, or
+                # preceding line with leading equals, then let the sweep align
+                # them without restriction.  For example, the first two lines
+                # here are a marginal match, but they are followed by a line
+                # with leading equals, so the sweep-lr logic can align all of
+                # the lines:
 
-                #   $date[1] = $month_to_num{ $date[1] };           # <--line_0
-                #   @xdate = split( /[:\/\s]/, $log->field('t') );  # <--line_1
-                #   $day  = sprintf( "%04d/%02d/%02d", @date[ 2, 1, 0 ] );
-                #   $time = sprintf( "%02d:%02d:%02d", @date[ 3 .. 5 ] );
+                #  $date[1] = $month_to_num{ $date[1] };            # <--line_0
+                #  @xdate   = split( /[:\/\s]/, $log->field('t') ); # <--line_1
+                #  $day     = sprintf( "%04d/%02d/%02d", @date[ 2, 1, 0 ] );
+                #  $time    = sprintf( "%02d:%02d:%02d", @date[ 3 .. 5 ] );
 
-                $imax_pair >= 0
+                # Likewise, if we reverse the two pairs we want the same result
 
-                # Experimental logic to allow alignment if there is a small pad.
-                # This works fine but would change some formatting.
-                || (   TEST_MARGINAL_EQ_ALIGNMENT
-                    && $j0_eq_pad >= -4
-                    && $j0_eq_pad <= 4 )
+                #  $day     = sprintf( "%04d/%02d/%02d", @date[ 2, 1, 0 ] );
+                #  $time    = sprintf( "%02d:%02d:%02d", @date[ 3 .. 5 ] );
+                #  $date[1] = $month_to_num{ $date[1] };            # <--line_0
+                #  @xdate   = split( /[:\/\s]/, $log->field('t') ); # <--line_1
+
+                (
+                       $imax_pair >= 0
+                    || $imax_prev >= 0
+                    || TEST_MARGINAL_EQ_ALIGNMENT
+                )
+                && $j0_eq_pad >= -$j0_max_pad
+                && $j0_eq_pad <= $j0_max_pad 
               )
             {
 

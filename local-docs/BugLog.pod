@@ -2,6 +2,29 @@
 
 =over 4
 
+=item B<Improve alignment of leading equals in rare situation>
+
+A rare case in which a vertical alignment opportunity of leading equals was
+missed has been fixed. This involved lines with additional varying alignment
+tokens, such as 'unless' and second '=' in lines 1-3 below.  In this example
+lines 4 and 5 were not 'looking' backwards to align their leading equals.
+
+    # OLD:
+    $them = 'localhost' unless ( $them = shift );
+    $cmd  = '!print'    unless ( $cmd  = shift );
+    $port = 2345        unless ( $port = shift );
+    $saddr = 'S n a4 x8';
+    $SIG{'INT'} = 'dokill';
+    
+    # NEW
+    $them       = 'localhost' unless ( $them = shift );
+    $cmd        = '!print'    unless ( $cmd  = shift );
+    $port       = 2345        unless ( $port = shift );
+    $saddr      = 'S n a4 x8';
+    $SIG{'INT'} = 'dokill';
+
+Fixed 5 Jan 2021.
+
 =item B<Moved previous patch to a better location>
 
 The previous patch was moved to a location where it only applies if
