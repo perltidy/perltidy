@@ -2,8 +2,15 @@
 use strict;
 use warnings;
 
-# This program stress-tests perltidy by running it repeatedly
-# with random parameters on a variety of files.
+# This is one of a set of programs for doing random testing of perltidy.  The
+# goal is to try to crash perltidy.  The programs are:
+
+#   random_file_generator.pl  [optional initial step]
+#   perltidy_random_setup.pl  [setup step]
+#   perltidy_random_run.pl    [this program]
+
+# This program does the actual run based on the setup info made in the
+# previous step.
 
 my $usage = <<EOM;
 
@@ -18,6 +25,8 @@ You can stop the run any time by creating a file "stop.now"
 
 You can restart by running './GO.sh' which is written
 when this run stops.
+
+A RUNME.sh file will be generated to help find problems in nohup.my
 
 EOM
 
@@ -39,6 +48,7 @@ getopts( 'h', \%opts ) or die "$usage";
 if ( $opts{h} ) { die "$usage" }
 
 our $rsetup;    # the config info
+my $hash='#';
 
 my $config_file = "config.txt";
 if ( !-e $config_file ) {
@@ -187,12 +197,12 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         my $ofile   = "ofile.$ext";
         my $chkfile = "chkfile.$ext";
 
+        print STDERR "\n" . $hash . '>' x 60 . "\n";
         print STDERR
-          "\n-----\nRun '$nf.$np' : profile='$profile', ifile='$ifile'\n";
+          "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
         my $cmd = "$binfile <$ifile >$ofile -pro=$profile";
-        print STDERR "$cmd\n";
-        system $cmd;
+        system_echo($cmd,$hash);
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
         if ( -e $efile )   { rename $efile,   "ERR.$ext" }
@@ -275,7 +285,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         if ( $do_syntax_check && $starting_syntax_ok ) {
             my $synfile = "$ofile.syntax";
             my $cmd     = "perl -c $ofile 2>$synfile";
-            system($cmd);
+            system_echo($cmd,$hash);
             my $fh;
             if ( open( $fh, '<', $synfile ) ) {
                 my @lines     = <$fh>;
@@ -283,7 +293,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                 if ( $case == 1 ) {
                     $starting_syntax_ok = $syntax_ok;
                     unlink $synfile;
-                    if ($syntax_ok) { print STDERR "syntax OK for $ofile\n"; }
+                    if ($syntax_ok) { print STDERR "$hash syntax OK for $ofile\n"; }
                 }
                 elsif ($syntax_ok) {
                     unlink $synfile;
@@ -302,8 +312,8 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         # run perltidy on the output to see if it can be reformatted
         # without errors
         my $cmd2 = "perltidy <$ofile >$chkfile";
-        system $cmd2;
-        print STDERR "$cmd2\n";
+        system_echo($cmd2,$hash);
+        #print STDERR "$cmd2\n";
         my $err;
         if ( -e $efile ) {
             rename $efile, "$chkfile.ERR";
@@ -388,14 +398,12 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             else {
                 foreach (@created) {
                     unlink $_ if ( -e $_ );
-                    ##print STDERR "deleting $_\n";
                 }
                 foreach (@saved_for_deletion) {
                     unlink $_ if ( -e $_ );
-                    ##print STDERR "deleting $_\n";
                 }
                 @saved_for_deletion = ();
-                print STDERR "deleting $ofile, not needed\n";
+                print STDERR "$hash deleting $ofile, not needed\n";
             }
         }
 
@@ -563,31 +571,31 @@ sub report_results {
     my $efile_case_max        = $rh->{maximum_error_case};
 
     print STDERR <<EOM;
-------------------------------------------------
-Original input file: $ifile_original
-ifile size : $ifile_size
-$error_count files had errors when reformatted
-$missing_ofile_count output files were missing 
-$missing_chkfile_count check output files were missing
+$hash ------------------------------------------------
+$hash Original input file: $ifile_original
+$hash ifile size : $ifile_size
+$hash $error_count files had errors when reformatted
+$hash $missing_ofile_count output files were missing 
+$hash $missing_chkfile_count check output files were missing
 EOM
 
     print STDERR <<EOM if ( defined($ofile_size_min) );
 
-Minimum output size: $ofile_size_min for case $ofile_case_min
-Maximum output size: $ofile_size_max for case $ofile_case_max
+$hash Minimum output size: $ofile_size_min for case $ofile_case_min
+$hash Maximum output size: $ofile_size_max for case $ofile_case_max
 EOM
 
     print STDERR <<EOM if ( defined($chkfile_size_min) );
 
-Minimum rerun size: $chkfile_size_min for case $chkfile_case_min
-Maximum rerun size: $chkfile_size_max for case $chkfile_case_max
+$hash Minimum rerun size: $chkfile_size_min for case $chkfile_case_min
+$hash Maximum rerun size: $chkfile_size_max for case $chkfile_case_max
 EOM
 
     print STDERR <<EOM if ( defined($efile_size_min) );
 
-Number of error files: $efile_count 
-Minimum error file size: $efile_size_min for case $efile_case_min
-Maximum error file size: $efile_size_max for case $efile_case_max
+$hash Number of error files: $efile_count 
+$hash Minimum error file size: $efile_size_min for case $efile_case_min
+$hash Maximum error file size: $efile_size_max for case $efile_case_max
 EOM
     return;
 }
@@ -631,6 +639,7 @@ my @lines=<IN>;
 my $nlines=@lines;
 foreach my $line (@lines) {
     $lno++;
+    next if ($line =~ /^#/);
     if (   $line =~ /uninitialized/
         || $line =~ /A fault was/
         || length($line) > 80 )
@@ -709,4 +718,11 @@ sub read_list {
     }
     $fh->close();
     return $rlist;
+}
+
+sub system_echo {
+    my ( $cmd, $prefix ) = @_;
+    my $str = $prefix ? $prefix . " " . $cmd : $cmd;
+    print STDERR "$str\n";
+    system($cmd);
 }

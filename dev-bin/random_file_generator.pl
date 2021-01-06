@@ -2,39 +2,33 @@
 use strict;
 use warnings;
 
-# Do not use too source files
+# This is one of a set of programs for doing random testing of perltidy.  The
+# goal is to try to crash perltidy.  The programs are:
+
+#   random_file_generator.pl  [this file]
+#   perltidy_random_setup.pl  [next step]
+#   perltidy_random_run.pl    [final step]
+
+# This program creates some random files for testing perltidy. You must supply
+# as input args the names of a number of actual source files for it to read and
+# manipulate into random files.
+
+# Do not use too many source files
 my $MAX_SOURCES = 10;
 
 my $usage = <<EOM;
-Run perltidy repeatedly on a selected file with randomly generated parameters:
+Create a set of random files for testing perltidy
 
-    perltidy_random_parameters file1 [file2 [ ... Num
+    random_file_generator file1 [file2 [ ... Num
 
-file1 ... are the names of a text to be formatted
-Num is the number of times, default 1000;
+    file1 file2 ... are perl scripts (or other text files)
+    Num is the number of random files to generate [default 100]
 
-You can stop the run any time by creating a file "stop.now"
+Example: generate 100 random files from the scripts in the upper directory:
+
+    random_file_generator.pl ../*.pl 100
+
 EOM
-
-# Random testing of Perl::Tidy
-# Given:
-#  - a list of files
-#  - a list of options
-
-# Write out a logfile of results:
-# name, exit flag, isize, osize
-# gzip name.in, name.in.tdy, name.par, name.ERR
-
-# Also save nohup.out, and echo each file as you go
-# Looking for perl complaints
-
-# Structure:
-#  logfile.txt
-#  files/  - has text input files for random selection
-#  tmp/    - has zipped output
-
-# Continually generate files with random parameters and some randomly removed
-# lines and run perltidy.
 
 my @source_files = @ARGV;
 

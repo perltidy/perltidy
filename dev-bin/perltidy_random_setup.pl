@@ -3,23 +3,44 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-# This program sets up a run of perltidy with random parameters and files.
-# This is an interactive program which writes a config file and a run script
-# for the actual run.
+# This is one of a set of programs for doing random testing of perltidy.  The
+# goal is to try to crash perltidy.  These programs have been very helpful in
+# finding subtle bugs but they are a work in progress and continually evolving.
+# The programs are:
+
+#   random_file_generator.pl  [optional first step]
+#   perltidy_random_setup.pl  [this file]
+#   perltidy_random_run.pl    [next step]
+
+# This program is interactive and helps setup the files.  It writes a config
+# file and a run script for the next program which actually does the runs.
+
+# You should create a temporary directory for this work.
 
 our $rsetup;    # the setup hash
 my $config_file   = "config.txt";
 my $FILES_file    = "FILES.txt";
 my $PROFILES_file = "PROFILES.txt";
-my $perltidy = "";
-my $rfiles    = [];
-my $rprofiles = [];
+my $perltidy      = "";
+my $rfiles        = [];
+my $rprofiles     = [];
 
-# Run this in a temporary directory to setup the actual run
 query(<<EOM);
 
-Be sure you should be in a temporary directory which can be deleted when
-this is finished. Hit <cr>.
+IMPORTANT: You should start this program in an empty directory that you create
+specifically for this test.  After testing you will probably want to delete the
+entire directory.  It is useful to create this empty directory just below a
+directory full of actual perl scripts which can be read as test input.
+
+You may want to put a special copy of perltidy in this directory for testing,
+probably setting all constants DEVEL_MODE => 1.  (You can make this with
+the pm2pl script).
+
+If you want to test on random files, you should generate them first in this
+directory with 'random_file_generator.pl'.  That is currently a separate
+program but will eventually be incorporated into this program.
+
+Hit <cr> to continue, or hit control-C to quit.
 
 EOM
 
@@ -27,15 +48,15 @@ EOM
 default_config();
 
 if ( -e $config_file ) {
-    if ( ifyes("Read the existing config.txt file? [Y/N]", "Y") ) {
+    if ( ifyes( "Read the existing config.txt file? [Y/N]", "Y" ) ) {
         read_config($config_file);
     }
 }
 
 if ( -e $FILES_file ) {
-    if (ifyes("Found $FILES_file, read it ? [Y/N]", "Y") ) {
+    if ( ifyes( "Found $FILES_file, read it ? [Y/N]", "Y" ) ) {
         $rfiles = read_list($FILES_file);
-        my $nfiles=@{$rfiles};
+        my $nfiles = @{$rfiles};
         print STDOUT "found $nfiles files\n";
     }
 }
@@ -46,9 +67,9 @@ if ( !@{$rfiles} ) {
 }
 
 if ( -e $PROFILES_file ) {
-    if (ifyes("Found $PROFILES_file, read it ? [Y/N]", "Y") ) {
+    if ( ifyes( "Found $PROFILES_file, read it ? [Y/N]", "Y" ) ) {
         $rprofiles = read_list($PROFILES_file);
-        my $nfiles=@{$rprofiles};
+        my $nfiles = @{$rprofiles};
         print STDOUT "found $nfiles profiles\n";
     }
 }
@@ -58,7 +79,7 @@ if ( !@{$rprofiles} ) {
     $rprofiles = filter_profiles($rprofiles);
 }
 
-$rsetup->{'syntax_check'} = ifyes(<<EOM,"N");
+$rsetup->{'syntax_check'} = ifyes( <<EOM, "N" );
 Do you want to check syntax with perl -c ?
 This will cause any BEGIN blocks in them to execute, which
 can introduce a security concern.
@@ -66,9 +87,9 @@ Enter 'N' unless you very familiar with the test scripts.
 Y/N:
 EOM
 
-my $file_info=get_file_info();
+my $file_info    = get_file_info();
 my $profile_info = get_profile_info();
-my $nprofiles = @{$rprofiles};
+my $nprofiles    = @{$rprofiles};
 while (1) {
     my $files              = $rsetup->{files};
     my $chain_mode         = $rsetup->{chain_mode};
@@ -100,30 +121,32 @@ EOM
         edit_config();
     }
     elsif ( $ans eq 'F' ) {
-            define_files();
-            $rfiles = filter_files($rfiles);
-            $file_info=get_file_info()
+        define_files();
+        $rfiles    = filter_files($rfiles);
+        $file_info = get_file_info();
     }
     elsif ( $ans eq 'P' ) {
-            make_profiles();
-            $rprofiles = filter_profiles($rprofiles);
-            $profile_info = get_profile_info();
+        make_profiles();
+        $rprofiles    = filter_profiles($rprofiles);
+        $profile_info = get_profile_info();
     }
     elsif ( $ans eq 'C' ) {
         $chain_mode = get_num("Chaining: 0=no, 1=always,2=random");
         $rsetup->{chain_mode} = $chain_mode;
     }
     elsif ( $ans eq 'D' ) {
-        $delete_good_output = ifyes("Delete needless good output files? [Y/N]","Y");
+        $delete_good_output =
+          ifyes( "Delete needless good output files? [Y/N]", "Y" );
         $rsetup->{delete_good_output} = $delete_good_output;
     }
     elsif ( $ans eq 'S' ) {
-        $do_syntax_check = ifyes("Do syntax checking? [Y/N]","N");
+        $do_syntax_check = ifyes( "Do syntax checking? [Y/N]", "N" );
         $rsetup->{syntax_check} = $do_syntax_check;
     }
     elsif ( $ans eq 'V' ) {
         my $test =
-          query("Enter the full path to the perltidy binary, or <cr> for default");
+          query(
+            "Enter the full path to the perltidy binary, or <cr> for default");
         if ( $test && !-e $test ) {
             next
               unless (
@@ -250,14 +273,14 @@ EOM
 
 sub get_profile_info {
 
-    my $nprofiles     = @{$rprofiles};
-    my $profile0 = "(none)";
-    my $profileN = "(none)";
+    my $nprofiles = @{$rprofiles};
+    my $profile0  = "(none)";
+    my $profileN  = "(none)";
     if ($nprofiles) {
         $profile0 = $rprofiles->[0];
         $profileN = $rprofiles->[-1];
     }
-    my $profile_info  = <<EOM;
+    my $profile_info = <<EOM;
     Number of Files: $nprofiles
     First profile     : $profile0
     Last profile      : $profileN
@@ -267,14 +290,14 @@ EOM
 
 sub get_file_info {
 
-    my $nfiles     = @{$rfiles};
-    my $file0 = "(none)";
-    my $fileN = "(none)";
+    my $nfiles = @{$rfiles};
+    my $file0  = "(none)";
+    my $fileN  = "(none)";
     if ($nfiles) {
         $file0 = $rfiles->[0];
         $fileN = $rfiles->[-1];
     }
-    my $file_info  = <<EOM;
+    my $file_info = <<EOM;
     Number of Files: $nfiles
     First file     : $file0
     Last file      : $fileN
@@ -348,7 +371,7 @@ EOM
         die;
     }
 
-    # read the config file 
+    # read the config file
     do $ifile;
 
     return;
@@ -482,11 +505,11 @@ sub get_num {
 
 {    # make_profiles
 
-     # This will generate N random profiles for perltidy
+    # This will generate N random profiles for perltidy
 
-     # usage:
-     #   make_profiles(20)
-     #   - to make 20 random profiles
+    # usage:
+    #   make_profiles(20)
+    #   - to make 20 random profiles
 
     my @parameters;
 
@@ -823,7 +846,7 @@ sub get_num {
         my $nfiles_old = @{$rprofiles};
         my $case       = 0;
         if ( $nfiles_old > 0 ) {
-            my $profile_info  = get_profile_info();
+            my $profile_info = get_profile_info();
             print $profile_info;
             print "There are already $nfiles_old existing files";
             while (1) {
@@ -837,15 +860,15 @@ EOM
                 elsif ( $ans eq 'A' ) {
                     foreach my $fname ( @{$rprofiles} ) {
                         if ( $fname =~ /\.([\d]+$)/ ) {
-                            if ( $1 > $case) { $case= $1 }
+                            if ( $1 > $case ) { $case = $1 }
                         }
                     }
                     last;
                 }
                 elsif ( $ans eq 'D' ) {
-                    my $num=get_num("Number to keep:",$nfiles_old);
-                    if ($num > $nfiles_old || $num <=0 ) {
-                       query("Sorry, must keep 0 to $nfiles_old, hit <cr>");
+                    my $num = get_num( "Number to keep:", $nfiles_old );
+                    if ( $num > $nfiles_old || $num <= 0 ) {
+                        query("Sorry, must keep 0 to $nfiles_old, hit <cr>");
                     }
                     else {
                         @{$rprofiles} = @{$rprofiles}[ 0 .. $num - 1 ];
@@ -856,7 +879,7 @@ EOM
             }
         }
         my $max_cases =
-            get_num( "Number of new random profiles to generate", 50);
+          get_num( "Number of new random profiles to generate", 50 );
         for ( 1 .. $max_cases ) {
             $case += 1;
             my $profile = "profile.$case";
@@ -932,8 +955,8 @@ EOM
         );
 
         my %option_range = (
-            'format' => [ 'tidy', 'html' ],    #, 'user' ],
-            'output-line-ending' => [ 'dos', 'win', 'mac', 'unix' ],
+            'format'             => [ 'tidy', 'html' ],    #, 'user' ],
+            'output-line-ending' => [ 'dos',  'win', 'mac', 'unix' ],
 
             'space-backslash-quote'         => [ 0, 2 ],
             'block-brace-tightness'         => [ 0, 2 ],
