@@ -6,7 +6,7 @@ use File::Copy;
 use File::Temp qw(tempfile);
 $| = 1;
 
-# a script to help make a new version of perltidy 
+# a script to help make a new version of perltidy
 
 # First cd to the git root directory, so that all paths are then given from the
 # git root
@@ -36,8 +36,8 @@ chdir $git_home;
 # add a perlver step
 # add a browse the tar file step
 
-my $logfile = "dev-bin/build.log";
-my $changelog = "CHANGES.md"; 
+my $logfile   = "dev-bin/build.log";
+my $changelog = "CHANGES.md";
 my $fh_log;
 
 # These are the main steps, in approximate order, for making a new version
@@ -55,16 +55,16 @@ my $rcode = {
           unless $rstatus->{CHK} eq 'OK';
         $rstatus->{CHK} = 'OK';
     },
-    'V'    => \&update_version_number,
-    'PC'   => \&run_perl_critic,
-    'TIDY'  => \&run_tidyall,
+    'V'        => \&update_version_number,
+    'PC'       => \&run_perl_critic,
+    'TIDY'     => \&run_tidyall,
     'MANIFEST' => \&make_manifest,
-    'T'    => \&make_tests,
-    'DOCS'  => \&make_docs,
-    'DIST' => \&make_dist,
-    'CL'   => sub {openurl($changelog)},
-    'LOG'  => sub { openurl($logfile) },
-    'HTML' => sub { openurl("docs/index.html") },
+    'T'        => \&make_tests,
+    'DOCS'     => \&make_docs,
+    'DIST'     => \&make_dist,
+    'CL'       => sub { openurl($changelog) },
+    'LOG'      => sub { openurl($logfile) },
+    'HTML'     => sub { openurl("docs/index.html") },
 };
 
 open( $fh_log, ">", $logfile ) or die "cannot open log file $logfile: $!\n";
@@ -113,7 +113,7 @@ sub autopilot {
                 hitcr("Step '$step' FAILED; stopping Autopilot.");
                 return;
             }
-            return if (!ifyes("Step '$step' Done; Continue [Y/N]"));
+            return if ( !ifyes("Step '$step' Done; Continue [Y/N]") );
         }
     }
     return;
@@ -160,7 +160,7 @@ sub run_tidyall {
     $fh->close();
     if ( !@errors ) {
         $rstatus->{'TIDY'} = 'OK';
-        $rstatus->{'PC'} = 'TBD';
+        $rstatus->{'PC'}   = 'TBD';
         hitcr("Source OK.");
         return;
     }
@@ -180,7 +180,7 @@ sub run_perl_critic {
         hitcr("Strange: cannot open '$pcoutput': $!.");
         return;
     }
-    my @lines = <$fh>;
+    my @lines  = <$fh>;
     my @errors = grep { !/source OK\s*$/ } @lines;
     foreach my $line (@lines) { $fh_log->print($line) }
     $fh->close();
@@ -356,13 +356,14 @@ sub update_version_number {
       Tidy/VerticalAligner/Alignment.pm
       Tidy/VerticalAligner/Line.pm
     );
+
     foreach my $module (@more) {
         push @sources, $lib_path . $module;
     }
 
     my $Tidy_pm_file = $lib_path . "Tidy.pm";
 
-    my $saw_pod = scan_for_pod( @sources );
+    my $saw_pod = scan_for_pod(@sources);
     return if ($saw_pod);
 
     # I have removed this one; it was useful in development
@@ -407,7 +408,7 @@ EOM
     }
     elsif ( $ans eq 'CA' ) {
         my $new_VERSION = $reported_VERSION;
-        my $ok = update_all_sources( $new_VERSION, @sources );
+        my $ok          = update_all_sources( $new_VERSION, @sources );
         $rstatus->{'V'} = $ok ? 'OK' : 'TBD';
         return;
     }
@@ -416,7 +417,7 @@ EOM
     # but it is not on the menu because it would be confusing
     elsif ( $ans eq 'CS' ) {
         my $new_VERSION = $reported_VERSION;
-        my @check = grep { ifyes("Check $_? [Y/N]") } @sources;
+        my @check       = grep { ifyes("Check $_? [Y/N]") } @sources;
         update_all_sources( $new_VERSION, @check );
         return;
     }
@@ -429,8 +430,8 @@ EOM
 
 sub get_new_development_version {
     my ($reported_VERSION) = @_;
-    my $new_VERSION = $reported_VERSION;
-    my @parts = split /\./, $reported_VERSION;
+    my $new_VERSION        = $reported_VERSION;
+    my @parts              = split /\./, $reported_VERSION;
     if ( @parts == 1 ) {
 
         # first development after release
@@ -467,8 +468,8 @@ sub get_new_release_version {
     my ( $day, $month, $year ) = (localtime)[ 3, 4, 5 ];
     $year  += 1900;
     $month += 1;
-    $month = sprintf "%02d", $month;
-    $day   = sprintf "%02d", $day;
+    $month       = sprintf "%02d", $month;
+    $day         = sprintf "%02d", $day;
     $new_VERSION = "$year$month$day";
 
     if ( !ifyes("Suggest VERSION $new_VERSION, OK [Y/N]") ) {
@@ -589,7 +590,11 @@ EOM
 
 sub scan_for_pod {
 
-    # perltidy .pm files should not contain pod text
+    # perltidy .pm files should not contain pod text.  The reason is that pod
+    # is frequently used as a debugging aid to temporarily remove blocks of
+    # code. Mixing pod for debugging and pod for documentation would be
+    # confusing.  Any pod markers left in a .pm file are probably leftovers
+    # from debugging and need to be removed.
     my (@sources) = @_;
 
     foreach my $source_file (@sources) {
@@ -618,12 +623,12 @@ EOM
         next unless ( $source_file =~ /\.pm$/ );
         my $result = qx/grep "^=cut" $source_file/;
         if ($result) {
-           push @files_with_pod, $source_file;
+            push @files_with_pod, $source_file;
         }
     }
 
     my $saw_pod = @files_with_pod;
-print <<EOM;
+    print <<EOM;
 -------------------------------------------------------------------
 Scanning for pod in .pm files...
 EOM
@@ -633,7 +638,7 @@ EOM
         query(<<EOM);
 Found files with pod text: (@files_with_pod);
 The convention in perltidy is not to have pod code in '.pm' files.
-Please remove the pod text before continuing, hit <cr> to continue
+Please remove the pod text before continuing, hit <cr> to continue.
 -------------------------------------------------------------------
 EOM
     }
@@ -646,6 +651,7 @@ EOM
 
     return $saw_pod;
 }
+
 sub make_tag_script {
     my ( $new_VERSION, $runme ) = @_;
     if ( open( RUN, ">$runme" ) ) {
@@ -686,12 +692,12 @@ sub update_VERSION {
     }
     my $in_pod;
     my $in_md;
-    my $is_md_file = $source_file eq 'CHANGES.md';
+    my $is_md_file  = $source_file eq 'CHANGES.md';
     my $is_pod_file = !$is_md_file && $source_file !~ /\.pm/;
     while ( my $line = <$fh> ) {
 
-	# Look for and turn off any DEVEL_MODE, DEBUG_XXX, VERIFY_XXX, TEST_XXX,
-	# and EXPLAIN_XXX constants
+        # Look for and turn off any DEVEL_MODE, DEBUG_XXX, VERIFY_XXX, TEST_XXX,
+        # and EXPLAIN_XXX constants
         if ( $line =~
 /^(\s*use\s+constant\s+(?:DEBUG|DEVEL|EXPLAIN|VERIFY|TEST)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/
           )
@@ -740,19 +746,20 @@ EOM
 
         # looking for VERSION in markdown
         elsif ($is_md_file) {
-                # CHANGES.md has a line like this:
-                # ## 2018 xx xx
-                if ( $line =~ /## \d\d\d\d/ ) {
-                    $old_VERSION_line = $line;
-                    chomp $old_VERSION_line;
-                    my $spaced_new_VERSION = $new_VERSION;
-                    if ( $spaced_new_VERSION =~ /(\d\d\d\d)(\d\d)(\d\d.*)/ ) {
-                        $spaced_new_VERSION = "$1 $2 $3";
-                    }
-                    $new_VERSION_line = "## $spaced_new_VERSION";
-                    $line             = $new_VERSION_line . "\n";
+
+            # CHANGES.md has a line like this:
+            # ## 2018 xx xx
+            if ( $line =~ /## \d\d\d\d/ ) {
+                $old_VERSION_line = $line;
+                chomp $old_VERSION_line;
+                my $spaced_new_VERSION = $new_VERSION;
+                if ( $spaced_new_VERSION =~ /(\d\d\d\d)(\d\d)(\d\d.*)/ ) {
+                    $spaced_new_VERSION = "$1 $2 $3";
                 }
-	}
+                $new_VERSION_line = "## $spaced_new_VERSION";
+                $line             = $new_VERSION_line . "\n";
+            }
+        }
 
         # looking for version in module
         else {
@@ -812,7 +819,7 @@ sub openurl {
     my $url      = shift;
     my $platform = $^O;
     my $cmd;
-    if ( $platform eq 'darwin' ) { $cmd = "open \"$url\""; }    # OS X
+    if    ( $platform eq 'darwin' ) { $cmd = "open \"$url\""; }    # OS X
     elsif ( $platform eq 'MSWin32' or $platform eq 'msys' ) {
         $cmd = "start \"\" \"$url\"";
     }    # Windows native or MSYS / Git Bash
