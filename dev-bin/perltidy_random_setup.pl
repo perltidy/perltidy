@@ -25,6 +25,9 @@ my $perltidy      = "";
 my $rfiles        = [];
 my $rprofiles     = [];
 
+# if file 'perltidy.pl' is found here then make that the default
+if ( -e './perltidy.pl' ) { $perltidy = './perltidy.pl' }
+
 query(<<EOM);
 
 IMPORTANT: You should start this program in an empty directory that you create

@@ -38,8 +38,14 @@ if ( $max_cases !~ /^\d+$/ ) {
     $max_cases = 100;
 }
 
-# only work on regular source_files with non-zero length
+# Only work on regular source_files with non-zero length
 @source_files=grep {-f $_ && !-z $_} @source_files;
+
+# Sort from largest to smallest; that way we work with the largest files
+@source_files =
+  map  { $_->[0] }
+  sort { $b->[1] <=> $a->[1] }
+  map  { [ $_, -e $_ ? -s $_ : 0 ] } @source_files;
 
 if ( !@source_files ) { die "$usage" }
 

@@ -517,9 +517,9 @@ EOM
 else {
     print STDERR <<EOM;
 
-========================
-No obvious problems seen
-========================
+$hash ========================
+$hash No obvious problems seen
+$hash ========================
 EOM
 
 }
@@ -541,10 +541,10 @@ elsif ( $file_count < $nf_end ) {
 }
 
 print STDERR <<EOM;
-Next: run 'RUNME.pl' or do this by hand:
-Look for lines longer than 80 characters
-grep 'Thank you' and 'bug in perltidy' in all .ERR files
-Search STDERR for 'uninitialized' and other warnings
+$hash Next: run 'RUNME.pl' or do this by hand:
+$hash Look for lines longer than 80 characters
+$hash grep 'Thank you' and 'bug in perltidy' in all .ERR files
+$hash Search STDERR for 'uninitialized' and other warnings
 EOM
 
 sub report_results {
@@ -640,8 +640,11 @@ my $nlines=@lines;
 foreach my $line (@lines) {
     $lno++;
     next if ($line =~ /^#/);
+
     if (   $line =~ /uninitialized/
+        || $line =~ /undefined/
         || $line =~ /A fault was/
+        || $line =~ /STRANGE/
         || length($line) > 80 )
     {
 
