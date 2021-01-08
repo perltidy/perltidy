@@ -1436,7 +1436,7 @@ sub _flush_group_lines {
 
     # STEP 4: Move side comments to a common column if possible.
     if ($saw_side_comment) {
-        $self->adjust_side_comments( $rgroup_lines, $rgroups );
+        $self->align_side_comments( $rgroup_lines, $rgroups );
     }
 
     # STEP 5: For the -lp option, increase the indentation of lists
@@ -1530,6 +1530,7 @@ sub _flush_group_lines {
             ## my $is_isolated_pair = $imax_pair < 0
             ##  && ( $jbeg == 0
             ##    || $rall_lines->[ $jbeg - 1 ]->get_imax_pair() < 0 );
+
             my $imax_prev =
               $jbeg > 0 ? $rall_lines->[ $jbeg - 1 ]->get_imax_pair() : -1;
 
@@ -1559,6 +1560,11 @@ sub _flush_group_lines {
 
         # Partition the set of lines into final alignment subgroups
         # and store the alignments with the lines.
+
+        # The alignment subgroups we are making here are groups of consecutive
+        # lines which have (1) identical alignment tokens and (2) do not
+        # exceed the allowable maximum line length.  A later sweep from
+        # left-to-right ('sweep_lr') will handle additional alignments.
 
         # transfer args to closure variables
         $rall_lines = $rlines;
@@ -1670,8 +1676,8 @@ EOM
             if ( defined($j_terminal_match) ) {
 
                 # Decide if we should fix a terminal match. We can either:
-                # 1. fix it and prevent the sweep from changing it, or
-                # 2. leave it alone and let sweep try to fix it.
+                # 1. fix it and prevent the sweep_lr from changing it, or
+                # 2. leave it alone and let sweep_lr try to fix it.
 
                 # The current logic is to fix it if:
                 # -it has not joined to previous lines,
@@ -2431,7 +2437,6 @@ EOM
         }
 
         my $has_terminal_match  = $rlines->[-1]->get_j_terminal_match();
-        my $is_terminal_ternary = $rlines->[-1]->get_is_terminal_ternary();
 
         # ignore hanging side comments in these operations
         my @filtered   = grep { !$_->get_is_hanging_side_comment() } @{$rlines};
@@ -3819,6 +3824,8 @@ sub Dump_tree_groups {
     my %is_assignment;
     my %is_good_alignment;
 
+    # This test did not give sufficiently better results to use as an update,
+    # but the flag is worth keeping as a starting point for future testing.
     use constant TEST_MARGINAL_EQ_ALIGNMENT => 0;
 
     BEGIN {
@@ -3847,22 +3854,40 @@ sub Dump_tree_groups {
 
         my ( $line_0, $line_1, $group_level, $imax_align, $imax_prev ) = @_;
 
-        # Decide if we should align two lines:
-        #   return true if the two lines should not be aligned
-        #   return false if it is okay to align the two lines
+        # Decide if we should undo some or all of the common alignments of a
+        # group of just two lines.
 
-        # This routine is a hodgepodge of rules which work fairly well. But
-        # there are no perfect rules for this, and this routine will probably
-        # need to be updated from time to time.
+        # Given:
+        #   $line_0 and $line_1 - the two lines
+        #   $group_level = the indentation level of the group being processed
+        #   $imax_align = the maximum index of the common alignment tokens
+        #                 of the two lines
+        #   $imax_prev  = the maximum index of the common alignment tokens
+        #                 with the line before $line_0 (=-1 of does not exist)
 
-        return if ( defined( $line_1->get_j_terminal_match() ) );
+        # Return:
+        #   $is_marginal = true if the two lines should NOT be fully aligned
+        #                = false if the two lines can remain fully aligned
+        #   $imax_align  = the index of the highest alignment token shared by
+        #                  these two lines to keep if the match is marginal.
+
+        # When we have an alignment group of just two lines like this, we are
+        # working in the twilight zone of what looks good and what looks bad.
+        # This routine is a collection of rules which work have been found to
+        # work fairly well, but it will need to be updated from time to time.
+
+        my $is_marginal = 0;
+
+        # always keep alignments of a terminal else or ternary
+        goto RETURN if ( defined( $line_1->get_j_terminal_match() ) );
 
         # always align lists
         my $group_list_type = $line_0->get_list_type();
-        return if ($group_list_type);
+        goto RETURN if ($group_list_type);
 
+        # always align hanging side comments
         my $is_hanging_side_comment = $line_1->get_is_hanging_side_comment();
-        return if ($is_hanging_side_comment);
+        goto RETURN if ($is_hanging_side_comment);
 
         my $jmax_0           = $line_0->get_jmax();
         my $jmax_1           = $line_1->get_jmax();
@@ -3872,11 +3897,10 @@ sub Dump_tree_groups {
         my $rfield_lengths_1 = $line_1->get_rfield_lengths();
         my $rpatterns_0      = $line_0->get_rpatterns();
         my $rpatterns_1      = $line_1->get_rpatterns();
-        my $imax_pair        = $line_1->get_imax_pair();
+        my $imax_next        = $line_1->get_imax_pair();
 
         # We will scan the alignment tokens and set a flag '$is_marginal' if
-        # it seems that the an alignment would look bad.  If we pass
-        my $is_marginal        = 0;
+        # it seems that the an alignment would look bad.
         my $max_pad            = 0;
         my $saw_good_alignment = 0;
         my $saw_if_or;        # if we saw an 'if' or 'or' at group level
@@ -4111,7 +4135,7 @@ sub Dump_tree_groups {
                 #  @xdate   = split( /[:\/\s]/, $log->field('t') ); # <--line_1
 
                 (
-                       $imax_pair >= 0
+                       $imax_next >= 0
                     || $imax_prev >= 0
                     || TEST_MARGINAL_EQ_ALIGNMENT
                 )
@@ -4271,12 +4295,11 @@ sub is_good_side_comment_column {
         && $is_closing_block_type{ substr( $rfields->[0], 0, 1 ) } );
 
     # RULE 4: Forget the last side comment if this comment might join a cached
-    # line.
+    # line ...
     if ( my $cached_line_type = get_cached_line_type() ) {
 
-        # PATCH: Forget last side comment col if we might join the next
-        # line to this line. Otherwise side comment alignment will get
-        # messed up.  For example, in the following test script
+        # ... otherwise side comment alignment will get messed up.
+        # For example, in the following test script
         # with using 'perltidy -sct -act=2', the last comment would try to
         # align with the previous and then be in the wrong column when
         # the lines are combined:
@@ -4300,17 +4323,33 @@ sub is_good_side_comment_column {
     return 1;
 }
 
-sub adjust_side_comments {
+sub align_side_comments {
 
     my ( $self, $rlines, $rgroups ) = @_;
 
-    # Align any side comments
+    # Align any side comments in this batch of lines
+
+    # Given:
+    #  $rlines  - the lines
+    #  $rgroups - the partition of the lines into groups
+    # 
+    # We will be working group-by-group because all side comments 
+    # (real or fake) in each group are already aligned. So we just have
+    # to make alignments between groups wherever possible.
+
+    # An unusual aspect is that within each group we have aligned both real
+    # and fake side comments.  This has the consequence that the lengths of
+    # long lines without real side comments can cause 'push' all side comments
+    # to the right.  This seems unusual, but testing with and without this
+    # feature shows that it is usually better this way.  Othewise, side
+    # comments can be hidden between long lines without side comments and
+    # thus be harder to read.
 
     my $group_level        = $self->[_group_level_];
     my $continuing_sc_flow = $self->[_last_side_comment_length_] > 0
       && $group_level == $self->[_last_level_written_];
 
-    # Find the first nonblank comment
+    # Find groups with side comments, and remember the first nonblank comment
     my $j_sc_beg;
     my @todo;
     my $ng = -1;
@@ -4332,10 +4371,11 @@ sub adjust_side_comments {
         }
     }
 
-    # done if nothing to do
+    # done if no groups with side comments
     return unless @todo;
 
-    # Count number of comments in the 5 lines after the first comment
+    # Count $num5 = number of comments in the 5 lines after the first comment
+    # This is an important factor in a decision formula 
     my $num5 = 1;
     for ( my $jj = $j_sc_beg + 1 ; $jj < @{$rlines} ; $jj++ ) {
         my $ldiff = $jj - $j_sc_beg;
@@ -4351,10 +4391,8 @@ sub adjust_side_comments {
     my $line = $rlines->[$j_sc_beg];
     my $lnum =
       $j_sc_beg + $self->[_file_writer_object_]->get_output_line_number();
-
     my $keep_it =
       $self->is_good_side_comment_column( $line, $lnum, $group_level, $num5 );
-
     my $last_side_comment_column =
       $keep_it ? $self->[_last_side_comment_column_] : 0;
 
@@ -4461,7 +4499,7 @@ sub adjust_side_comments {
         }
     }
 
-    # Save final side comment info for the next batch
+    # Save final side comment info for possible use by the next batch
     if ( defined($j_sc_last) ) {
         my $line_number =
           $self->[_file_writer_object_]->get_output_line_number() + $j_sc_last;
@@ -4665,10 +4703,6 @@ sub get_output_line_number {
 
     sub get_cached_line_type {
         return $cached_line_type;
-    }
-
-    sub get_cached_line_valid {
-        return $cached_line_valid;
     }
 
     sub set_cached_line_valid {
