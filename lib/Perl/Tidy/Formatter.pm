@@ -4871,6 +4871,17 @@ sub respace_tokens {
             }
         }
 
+        # For reference, here is how to get the parent sequence number.
+        # This is not used because it is slower than finding it on the fly
+        # in sub parent_seqno_by_K:
+
+        # my $seqno_parent =
+        #     $type_sequence && $is_opening_token{$token}
+        #   ? $seqno_stack{ $depth_next - 2 }
+        #   : $seqno_stack{ $depth_next - 1 };
+        # my $KK = @{$rLL_new};
+        # $rseqno_of_parent_by_K->{$KK} = $seqno_parent;
+
         # and finally, add this item to the new array
         push @{$rLL_new}, $item;
     };
@@ -5902,10 +5913,16 @@ sub get_old_line_count {
 sub parent_seqno_by_K {
 
     # Return the sequence number of the parent container of token K, if any.
+
     my ( $self, $KK ) = @_;
     return unless defined($KK);
 
-    my $rLL   = $self->[_rLL_];
+    # Note: This routine is relatively slow. I tried replacing it with a hash
+    # which is easily created in sub respace_tokens. But the total time with a
+    # hash was greater because this routine is called once per line whereas a
+    # hash must be created token-by-token.
+
+    my $rLL = $self->[_rLL_];
     my $KNEXT = $KK;
 
     # For example, consider the following with seqno=5 of the '[' and ']'
@@ -17169,7 +17186,7 @@ sub send_lines_to_vertical_aligner {
             $rfield_lengths->[-1] += 2;
         }
 
-        # List flag for new method: Works well but needs more testing
+        # Set flag which tells if this line is contained in a multi-line list
         my $list_seqno = $self->is_list_by_K($Kbeg);
 
         # send this new line down the pipe
