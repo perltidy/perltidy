@@ -28,7 +28,6 @@ BEGIN {
         _maximum_line_length_       => $i++,
         _rvertical_tightness_flags_ => $i++,
         _is_terminal_ternary_       => $i++,
-        _is_terminal_else_          => $i++,
         _j_terminal_match_          => $i++,
         _end_group_                 => $i++,
         _Kend_                      => $i++,
@@ -81,7 +80,6 @@ EOM
         $self->[_maximum_line_length_]       = $ri->{maximum_line_length};
         $self->[_rvertical_tightness_flags_] = $ri->{rvertical_tightness_flags};
         $self->[_is_terminal_ternary_]       = $ri->{is_terminal_ternary};
-        $self->[_is_terminal_else_]          = $ri->{is_terminal_else};
         $self->[_j_terminal_match_]          = $ri->{j_terminal_match};
         $self->[_end_group_]                 = $ri->{end_group};
         $self->[_Kend_]                      = $ri->{Kend};
@@ -120,10 +118,6 @@ EOM
         my ( $self, $val ) = @_;
         $self->[_j_terminal_match_] = $val;
         return;
-    }
-
-    sub get_is_terminal_else {
-        return $_[0]->[_is_terminal_else_];
     }
 
     sub get_is_terminal_ternary {
