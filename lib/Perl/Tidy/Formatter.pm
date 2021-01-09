@@ -769,40 +769,6 @@ sub new {
 # CODE SECTION 2: Some Basic Utilities
 ######################################
 
-sub check_keys {
-    my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
-
-    # Check the keys of a hash:
-    # $rtest   = ref to hash to test
-    # $rvalid  = ref to hash with valid keys
-
-    # $msg = a message to write in case of error
-    # $exact_match defines the type of check:
-    #     = false: test hash must not have unknown key
-    #     = true:  test hash must have exactly same keys as known hash
-    my @unknown_keys =
-      grep { !exists $rvalid->{$_} } keys %{$rtest};
-    my @missing_keys =
-      grep { !exists $rtest->{$_} } keys %{$rvalid};
-    my $error = @unknown_keys;
-    if ($exact_match) { $error ||= @missing_keys }
-    if ($error) {
-        local $" = ')(';
-        my @expected_keys = sort keys %{$rvalid};
-        @unknown_keys = sort @unknown_keys;
-        Die(<<EOM);
-------------------------------------------------------------------------
-Program error detected checking hash keys
-Message is: '$msg'
-Expected keys: (@expected_keys)
-Unknown key(s): (@unknown_keys)
-Missing key(s): (@missing_keys)
-------------------------------------------------------------------------
-EOM
-    }
-    return;
-}
-
 {    ## begin closure for logger routines
     my $logger_object;
 
@@ -6125,13 +6091,13 @@ sub keep_old_line_breaks {
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
 
-        my $typeb = $rLL->[$Kfirst]->[_TYPE_];
-        if ( $keep_break_before_type{$typeb} ) {
+        my $type_first = $rLL->[$Kfirst]->[_TYPE_];
+        if ( $keep_break_before_type{$type_first} ) {
             $rbreak_before_Kfirst->{$Kfirst} = 1;
         }
 
-        my $typee = $rLL->[$Klast]->[_TYPE_];
-        if ( $keep_break_after_type{$typee} ) {
+        my $type_last = $rLL->[$Klast]->[_TYPE_];
+        if ( $keep_break_after_type{$type_last} ) {
             $rbreak_after_Klast->{$Klast} = 1;
         }
     }
@@ -6160,7 +6126,7 @@ sub weld_containers {
     # Note that weld_nested_containers() changes the _LEVEL_ values, so
     # weld_cuddled_blocks must use the _TRUE_LEVEL_ values instead.
 
-    # Here is a good test case to  Be sure that both cuddling and welding
+    # Here is a good test case to be sure that both cuddling and welding
     # are working and not interfering with each other: <<snippets/ce_wn1.in>>
 
     #   perltidy -wn -ce
@@ -6202,6 +6168,8 @@ sub cumulative_length_before_K {
 }
 
 sub cumulative_length_after_K {
+
+    # NOTE: This routine not currently called; could be deleted
     my ( $self, $KK ) = @_;
     my $rLL = $self->[_rLL_];
     return $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
@@ -10895,11 +10863,6 @@ EOM
     sub is_unbalanced_batch {
         return @unmatched_opening_indexes_in_this_batch +
           @unmatched_closing_indexes_in_this_batch;
-    }
-
-    sub comma_arrow_count {
-        my $seqno = shift;
-        return $comma_arrow_count{$seqno};
     }
 
     sub match_opening_and_closing_tokens {
@@ -18350,68 +18313,6 @@ sub pad_token {
 
     foreach my $i ( $ipad .. $max_index_to_go ) {
         $summed_lengths_to_go[ $i + 1 ] += $pad_spaces;
-    }
-    return;
-}
-
-sub mate_index_to_go {
-    my ( $self, $i ) = @_;
-
-    # NOTE: This works but is too inefficient, but is retained for info.
-
-    # Return the matching index of a container or ternary pair
-    # This is equivalent to the array @mate_index_to_go
-    my $K      = $K_to_go[$i];
-    my $K_mate = $self->K_mate_index($K);
-    my $i_mate = -1;
-    if ( defined($K_mate) ) {
-        $i_mate = $i + ( $K_mate - $K );
-        if ( $i_mate < 0 || $i_mate > $max_index_to_go ) {
-            $i_mate = -1;
-        }
-    }
-    my $i_mate_alt = $mate_index_to_go[$i];
-
-    # FIXME: Old Debug code which can be removed eventually
-    if ( 0 && $i_mate_alt != $i_mate ) {
-        my $tok       = $tokens_to_go[$i];
-        my $type      = $types_to_go[$i];
-        my $tok_mate  = '*';
-        my $type_mate = '*';
-        if ( $i_mate >= 0 && $i_mate <= $max_index_to_go ) {
-            $tok_mate  = $tokens_to_go[$i_mate];
-            $type_mate = $types_to_go[$i_mate];
-        }
-        my $seq  = $type_sequence_to_go[$i];
-        my $file = get_input_stream_name();
-
-        Warn(
-"mate_index: file '$file': i=$i, imate=$i_mate, should be $i_mate_alt, K=$K, K_mate=$K_mate\ntype=$type, tok=$tok, seq=$seq, max=$max_index_to_go, tok_mate=$tok_mate, type_mate=$type_mate"
-        );
-    }
-    return $i_mate;
-}
-
-sub K_mate_index {
-
-   # Given the index K of an opening or closing container,  or ?/: ternary pair,
-   # return the index K of the other member of the pair.
-    my ( $self, $K ) = @_;
-    return unless defined($K);
-    my $rLL   = $self->[_rLL_];
-    my $seqno = $rLL->[$K]->[_TYPE_SEQUENCE_];
-    return unless ($seqno);
-
-    my $K_opening = $self->[_K_opening_container_]->{$seqno};
-    if ( defined($K_opening) ) {
-        if ( $K != $K_opening ) { return $K_opening }
-        return $self->[_K_closing_container_]->{$seqno};
-    }
-
-    $K_opening = $self->[_K_opening_ternary_]->{$seqno};
-    if ( defined($K_opening) ) {
-        if ( $K != $K_opening ) { return $K_opening }
-        return $self->[_K_closing_ternary_]->{$seqno};
     }
     return;
 }

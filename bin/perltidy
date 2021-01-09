@@ -416,7 +416,13 @@ Use n columns per indentation level (default n=4).
 The default maximum line length is n=80 characters.  Perltidy will try
 to find line break points to keep lines below this length. However, long
 quotes and side comments may cause lines to exceed this length. 
-Setting B<-l=0> is equivalent to setting B<-l=(a large number)>. 
+
+The default length of 80 comes from the past when this was the standard CRT
+screen width.  Many programmers prefer to increase this to something like 120.
+
+Setting B<-l=0> is equivalent to setting B<-l=(a very large number)>.  But this is
+not recommended because, for example, a very long list will be formatted in a
+single long line.
 
 =item B<-vmll>, B<--variable-maximum-line-length>
 

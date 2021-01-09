@@ -11,7 +11,7 @@ through the results.
 When this type of testing was begun, several dozen problems were quickly
 identified and fixed.  The most common problem was that an uninitialized
 variable was referenced in some way.  It has been some time since a new problem
-was detected with these scripts, but it is important to periodically run these
+was detected with these scripts, but it is important to run these
 tests periodically, and always before a release, because new coding and new
 parameters may introduce bugs.
 
@@ -28,7 +28,7 @@ personal bin directory.
 ## Prepare a temporary directory
 
 First collect a large number (say 50 or more) of arbitrary perl scripts in a
-single directory.  These files can also contain arbitrary other files, such as
+single directory.  You may also include other arbitrary files, such as
 text or html files.
 
 Then create a temporary sub directory and enter it, say
@@ -86,7 +86,7 @@ menu.  You will be generating profiles here (a profile being a file with a
 random set of perltidy parameters). The number of random profiles is set to 50
 but I sometimes increase it to 100 or 200.  Every input file will be run
 against every random profile, so this can significantly increase the total run
-time. The main menu looks like this (I am not sure if this will format correctly):
+time. The main menu looks like this: 
 
 ```
 R   - Read a config file

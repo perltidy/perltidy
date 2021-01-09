@@ -2427,19 +2427,19 @@ sub generate_options {
     ########################################
     $category = 13;    # Debugging
     ########################################
-##  $add_option->( 'DIAGNOSTICS',                     'I',    '!' );
-    $add_option->( 'DEBUG',                           'D',     '!' );
-    $add_option->( 'dump-cuddled-block-list',         'dcbl',  '!' );
-    $add_option->( 'dump-defaults',                   'ddf',   '!' );
-    $add_option->( 'dump-long-names',                 'dln',   '!' );
-    $add_option->( 'dump-options',                    'dop',   '!' );
-    $add_option->( 'dump-profile',                    'dpro',  '!' );
-    $add_option->( 'dump-short-names',                'dsn',   '!' );
-    $add_option->( 'dump-token-types',                'dtt',   '!' );
-    $add_option->( 'dump-want-left-space',            'dwls',  '!' );
-    $add_option->( 'dump-want-right-space',           'dwrs',  '!' );
-    $add_option->( 'fuzzy-line-length',               'fll',   '!' );
-    $add_option->( 'help',                            'h',     '' );
+    $add_option->( 'DIAGNOSTICS',             'I',    '!' ) if (DEVEL_MODE);
+    $add_option->( 'DEBUG',                   'D',    '!' );
+    $add_option->( 'dump-cuddled-block-list', 'dcbl', '!' );
+    $add_option->( 'dump-defaults',           'ddf',  '!' );
+    $add_option->( 'dump-long-names',         'dln',  '!' );
+    $add_option->( 'dump-options',            'dop',  '!' );
+    $add_option->( 'dump-profile',            'dpro', '!' );
+    $add_option->( 'dump-short-names',        'dsn',  '!' );
+    $add_option->( 'dump-token-types',        'dtt',  '!' );
+    $add_option->( 'dump-want-left-space',    'dwls', '!' );
+    $add_option->( 'dump-want-right-space',   'dwrs', '!' );
+    $add_option->( 'fuzzy-line-length',       'fll',  '!' );
+    $add_option->( 'help',                    'h',    '' );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
     $add_option->( 'show-options',                    'opt',   '!' );
     $add_option->( 'timestamp',                       'ts',    '!' );
