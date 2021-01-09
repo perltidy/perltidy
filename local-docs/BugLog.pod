@@ -2,6 +2,50 @@
 
 =over 4
 
+=item B<Improve indentation of multiline qw quotes when -xci flag is set>
+
+The indentation of multiline qw quotes runs into problems when there is nesting,
+as in the following.
+
+    # OLD: perltidy -xci -ci=4
+    for my $feep (
+        qw{
+        pwage      pwchange   pwclass    pwcomment
+        pwexpire   pwgecos    pwpasswd   pwquota
+        }
+        )
+
+The problem is that multiline qw quotes do not get the same indentation
+treatment as lists. 
+
+This update fixes this in the following circumstances:
+
+  - the leading qw( and trailing ) are on separate lines
+  - the closing token is one of ) } ] >
+  - the -xci flag is set
+
+The above example becomes
+
+    # NEW: perltidy -xci -ci=4
+    for my $feep (
+        qw{
+            pwage      pwchange   pwclass    pwcomment
+            pwexpire   pwgecos    pwpasswd   pwquota
+        }
+        )
+
+The reason that the -xci flag is required is to minimize unexpected changes to
+existing scripts.  The extra indentation is removed if the -wn flag is also
+given, so both old and new versions with -wn give
+
+    # OLD and NEW: perltidy -wn -xci -ci=4
+    for my $feep ( qw{
+        pwage      pwchange   pwclass    pwcomment
+        pwexpire   pwgecos    pwpasswd   pwquota
+    } )
+
+This update added 8 Jan 2021.
+
 =item B<Improve alignment of leading equals in rare situation>
 
 A rare case in which a vertical alignment opportunity of leading equals was

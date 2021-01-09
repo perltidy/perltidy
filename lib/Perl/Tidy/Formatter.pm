@@ -413,6 +413,7 @@ BEGIN {
         _rending_multiline_qw_seqno_by_K_   => $i++,
         _rKrange_multiline_qw_by_seqno_     => $i++,
         _rcontains_multiline_qw_by_seqno_   => $i++,
+        _rmultiline_qw_has_extra_level_     => $i++,
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -749,6 +750,7 @@ sub new {
     $self->[_rending_multiline_qw_seqno_by_K_]   = {};
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
     $self->[_rcontains_multiline_qw_by_seqno_]   = {};
+    $self->[_rmultiline_qw_has_extra_level_]     = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -5922,7 +5924,7 @@ sub parent_seqno_by_K {
     # hash was greater because this routine is called once per line whereas a
     # hash must be created token-by-token.
 
-    my $rLL = $self->[_rLL_];
+    my $rLL   = $self->[_rLL_];
     my $KNEXT = $KK;
 
     # For example, consider the following with seqno=5 of the '[' and ']'
@@ -7078,10 +7080,25 @@ sub weld_nested_quotes {
             $rweld_len_left_closing->{$outer_seqno}  = 1;
             $rweld_len_right_opening->{$outer_seqno} = 2;
 
-            # QW PATCH 1 (Testing)
-            # undo CI for welded quotes
-            foreach my $K ( $Kn .. $Kt_end ) {
-                $rLL->[$K]->[_CI_LEVEL_] = 0;
+            # Undo one indentation level if an extra level was added to this
+            # multiline quote
+            my $qw_seqno = $self->[_rstarting_multiline_qw_seqno_by_K_]->{$Kn};
+            if (   $qw_seqno
+                && $self->[_rmultiline_qw_has_extra_level_]->{$qw_seqno} )
+            {
+                foreach my $K ( $Kn + 1 .. $Kt_end - 1 ) {
+                    $rLL->[$K]->[_LEVEL_] -= 1;
+                }
+                $rLL->[$Kn]->[_CI_LEVEL_]     = 0;
+                $rLL->[$Kt_end]->[_CI_LEVEL_] = 0;
+            }
+
+            # undo CI for other welded quotes
+            else {
+
+                foreach my $K ( $Kn .. $Kt_end ) {
+                    $rLL->[$K]->[_CI_LEVEL_] = 0;
+                }
             }
 
             # Change the level of a closing qw token to be that of the outer
@@ -7748,6 +7765,7 @@ sub find_multiline_qw {
     my $rending_multiline_qw_seqno_by_K   = {};
     my $rKrange_multiline_qw_by_seqno     = {};
     my $rcontains_multiline_qw_by_seqno   = {};
+    my $rmultiline_qw_has_extra_level     = {};
 
     my $rlines = $self->[_rlines_];
     my $rLL    = $self->[_rLL_];
@@ -7801,6 +7819,41 @@ EOM
         }
     }
 
+    # Give multiline qw lists extra indentation instead of CI.  This option
+    # works well but is currently only activated when the -xci flag is set.
+    # The reason is to avoid unexpected changes in formatting.
+    if ( $rOpts->{'extended-continuation-indentation'} ) {
+        while ( my ( $qw_seqno, $rKrange ) =
+            each %{$rKrange_multiline_qw_by_seqno} )
+        {
+            my ( $Kbeg, $Kend ) = @{$rKrange};
+
+            # require isolated closing token
+            my $token_end = $rLL->[$Kend]->[_TOKEN_];
+            next
+              unless ( length($token_end) == 1
+                && ( $is_closing_token{$token_end} || $token_end eq '>' ) );
+
+            # require isolated opening token
+            my $token_beg = $rLL->[$Kbeg]->[_TOKEN_];
+
+            # allow space(s) after the qw
+            if ( length($token_beg) > 3 && substr( $token_beg, 2, 1 ) eq ' ' ) {
+                $token_beg =~ s/\s+//;
+            }
+
+            next unless ( length($token_beg) == 3 );
+
+            foreach my $KK ( $Kbeg + 1 .. $Kend - 1 ) {
+                $rLL->[$KK]->[_LEVEL_]++;
+                $rLL->[$KK]->[_CI_LEVEL_] = 0;
+            }
+
+            # set flag for -wn option, which will remove the level
+            $rmultiline_qw_has_extra_level->{$qw_seqno} = 1;
+        }
+    }
+
     # For the -lp option we need to mark all parent containers of
     # multiline quotes
     if ($rOpts_line_up_parentheses) {
@@ -7847,6 +7900,7 @@ EOM
     $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
     $self->[_rcontains_multiline_qw_by_seqno_] =
       $rcontains_multiline_qw_by_seqno;
+    $self->[_rmultiline_qw_has_extra_level_] = $rmultiline_qw_has_extra_level;
 
     return;
 }
