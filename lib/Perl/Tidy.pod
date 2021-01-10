@@ -432,7 +432,7 @@ The module 'Perl::Tidy' comes with a binary 'perltidy' which is installed when t
 
 =head1 VERSION
 
-This man page documents Perl::Tidy version 20201207
+This man page documents Perl::Tidy version 20210111
 
 =head1 LICENSE
 

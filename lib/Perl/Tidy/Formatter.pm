@@ -49,7 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20201207';
+our $VERSION = '20210111';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -19142,7 +19142,7 @@ sub make_paren_name {
                     #      qw<
                     #        far
                     #        farfar
-                    #        farfars far
+                    #        farfars-far
                     #      >,
                     #   );
                     if ( !defined($cti) && length($tok) == 1 ) {

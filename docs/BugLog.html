@@ -12,11 +12,658 @@
 
 
 <ul id="index">
+  <li><a href="#Issues-fixed-after-release-20201207">Issues fixed after release 20201207</a></li>
   <li><a href="#Issues-fixed-after-release-20201202">Issues fixed after release 20201202</a></li>
   <li><a href="#Issues-fixed-after-release-20201001">Issues fixed after release 20201001</a></li>
   <li><a href="#Issues-fixed-after-release-20200907">Issues fixed after release 20200907</a></li>
   <li><a href="#Open-Issues">Open Issues</a></li>
+  <li><a href="#POD-ERRORS">POD ERRORS</a></li>
 </ul>
+
+<h1 id="Issues-fixed-after-release-20201207">Issues fixed after release 20201207</h1>
+
+<dl>
+
+<dt id="Improve-indentation-of-multiline-qw-quotes-when--xci-flag-is-set"><b>Improve indentation of multiline qw quotes when -xci flag is set</b></dt>
+<dd>
+
+<p>The indentation of multiline qw quotes runs into problems when there is nesting, as in the following.</p>
+
+<pre><code>    # OLD: perltidy -xci -ci=4
+    for my $feep (
+        qw{
+        pwage      pwchange   pwclass    pwcomment
+        pwexpire   pwgecos    pwpasswd   pwquota
+        }
+        )</code></pre>
+
+<p>The problem is that multiline qw quotes do not get the same indentation treatment as lists.</p>
+
+<p>This update fixes this in the following circumstances:</p>
+
+<pre><code>  - the leading qw( and trailing ) are on separate lines
+  - the closing token is one of ) } ] &gt;
+  - the -xci flag is set</code></pre>
+
+<p>The above example becomes</p>
+
+<pre><code>    # NEW: perltidy -xci -ci=4
+    for my $feep (
+        qw{
+            pwage      pwchange   pwclass    pwcomment
+            pwexpire   pwgecos    pwpasswd   pwquota
+        }
+        )</code></pre>
+
+<p>The reason that the -xci flag is required is to minimize unexpected changes to existing scripts. The extra indentation is removed if the -wn flag is also given, so both old and new versions with -wn give</p>
+
+<pre><code>    # OLD and NEW: perltidy -wn -xci -ci=4
+    for my $feep ( qw{
+        pwage      pwchange   pwclass    pwcomment
+        pwexpire   pwgecos    pwpasswd   pwquota
+    } )</code></pre>
+
+<p>This update added 8 Jan 2021, 474cfa8.</p>
+
+</dd>
+<dt id="Improve-alignment-of-leading-equals-in-rare-situation"><b>Improve alignment of leading equals in rare situation</b></dt>
+<dd>
+
+<p>A rare case in which a vertical alignment opportunity of leading equals was missed has been fixed. This involved lines with additional varying alignment tokens, such as &#39;unless&#39; and second &#39;=&#39; in lines 1-3 below. In this example lines 4 and 5 were not &#39;looking&#39; backwards to align their leading equals.</p>
+
+<pre><code>    # OLD:
+    $them = &#39;localhost&#39; unless ( $them = shift );
+    $cmd  = &#39;!print&#39;    unless ( $cmd  = shift );
+    $port = 2345        unless ( $port = shift );
+    $saddr = &#39;S n a4 x8&#39;;
+    $SIG{&#39;INT&#39;} = &#39;dokill&#39;;
+
+    # NEW
+    $them       = &#39;localhost&#39; unless ( $them = shift );
+    $cmd        = &#39;!print&#39;    unless ( $cmd  = shift );
+    $port       = 2345        unless ( $port = shift );
+    $saddr      = &#39;S n a4 x8&#39;;
+    $SIG{&#39;INT&#39;} = &#39;dokill&#39;;</code></pre>
+
+<p>Fixed 5 Jan 2021, 9244678.</p>
+
+</dd>
+<dt id="Moved-previous-patch-to-a-better-location"><b>Moved previous patch to a better location</b></dt>
+<dd>
+
+<p>The previous patch was moved to a location where it only applies if there is a side comment on the line with a closing token. This minimizes changes to other side comment locations.</p>
+
+</dd>
+<dt id="Further-improvement-in-rules-for-forgetting-last-side-comment-location"><b>Further improvement in rules for forgetting last side comment location</b></dt>
+<dd>
+
+<p>The code for forgetting the last side comment location was rewritten to improve formatting in some edge cases. The update also fixes a very rare problem discovered during testing and illustrated with the following snippet. The problem occurs for the particular combination of parameters -sct -act=2 and when a closing paren has a side comment:</p>
+
+<pre><code>    OLD: perltidy -sct -act=2
+    foreach $line (
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        [0, 4, 8], [2, 4, 6])                                     # diagonals
+
+    NEW: perltidy -sct -act=2
+    foreach $line (
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],    # rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
+        [0, 4, 8], [2, 4, 6])    # diagonals</code></pre>
+
+<p>In the old version the last side comment was aligned before the closing paren was attached to the previous line, causing the final side comment to be far to the right. A patch in the new version just places it at the default location. This is the best than can be done for now, but is preferable to the old formatting. 3 Jan 2021, e57d8db.</p>
+
+</dd>
+<dt id="Improve-rule-for-forgetting-last-side-comment-location"><b>Improve rule for forgetting last side comment location</b></dt>
+<dd>
+
+<p>The code which aligns side comments remembers the most recent side comment and in some cases tries to start aligning at that column for later side comments. Sometimes the old side comment column was being remembered too long, causing occasional poor formatting and causing a noticable and unexpected drift of side comment locations to the right. The rule for forgetting the previous side comment column has been modified to reduce this problem. The new rule is essentially to forget the previous side comment location at a new side comment with different indentation level or significant number of lines without side comments (about 12). The previous implementation forgetting changes in indentation level across code blocks only. Below is an example where the old method gets into trouble and the new method is ok:</p>
+
+<pre><code>        # OLD:
+        foreach my $r (@$array) {
+            $Dat{Data}{ uc $r-&gt;[0] } = join( &quot;;&quot;, @$r );    # store all info
+            my $name = $Dat{GivenName}{ uc $r-&gt;[0] } || $r-&gt;[1];
+
+            # pass array as ad-hoc string, mark missing values
+            $Dat{Data}{ uc $r-&gt;[0] } = join(
+                &quot;;&quot;,
+                (
+                    uc $r-&gt;[0], uc $name,                   # symbol, name
+                    $r-&gt;[2],    $r-&gt;[3], $r-&gt;[4],           # price, date, time
+                    $r-&gt;[5],    $r-&gt;[6],                    # change, %change
+                    $r-&gt;[7],    &quot;-&quot;, &quot;-&quot;, &quot;-&quot;,    # vol, avg vol, bid,ask
+                    $r-&gt;[8],               $r-&gt;[9],     # previous, open
+                    &quot;$r-&gt;[10] - $r-&gt;[11]&quot;, $r-&gt;[12],    # day range,year range,
+                    &quot;-&quot;,                   &quot;-&quot;, &quot;-&quot;, &quot;-&quot;, &quot;-&quot;
+                )
+            );                                          # eps,p/e,div,yld,cap
+        }</code></pre>
+
+<p>The second side comment is at a deeper indentation level but was not being forgotten, causing line length limits to interfere with later alignment. The new rule gives a better result:</p>
+
+<pre><code>        # NEW:
+        foreach my $r (@$array) {
+            $Dat{Data}{ uc $r-&gt;[0] } = join( &quot;;&quot;, @$r );    # store all info
+            my $name = $Dat{GivenName}{ uc $r-&gt;[0] } || $r-&gt;[1];
+
+            # pass array as ad-hoc string, mark missing values
+            $Dat{Data}{ uc $r-&gt;[0] } = join(
+                &quot;;&quot;,
+                (
+                    uc $r-&gt;[0], uc $name,               # symbol, name
+                    $r-&gt;[2],    $r-&gt;[3], $r-&gt;[4],       # price, date, time
+                    $r-&gt;[5],    $r-&gt;[6],                # change, %change
+                    $r-&gt;[7],    &quot;-&quot;, &quot;-&quot;, &quot;-&quot;,          # vol, avg vol, bid,ask
+                    $r-&gt;[8],               $r-&gt;[9],     # previous, open
+                    &quot;$r-&gt;[10] - $r-&gt;[11]&quot;, $r-&gt;[12],    # day range,year range,
+                    &quot;-&quot;,                   &quot;-&quot;, &quot;-&quot;, &quot;-&quot;, &quot;-&quot;
+                )
+            );    # eps,p/e,div,yld,cap
+        }</code></pre>
+
+<p>The following exampel shows an unexpected alignment in the cascade of trailing comments which are aligned but slowly separating from their closing containers:</p>
+
+<pre><code>    # OLD:
+    {
+        $a = [
+            Cascade    =&gt; $menu_cb,
+            -menuitems =&gt; [
+                [ Checkbutton =&gt; &#39;Oil checked&#39;, -variable =&gt; \$OIL ],
+                [
+                    Button   =&gt; &#39;See current values&#39;,
+                    -command =&gt; [
+                        \&amp;see_vars, $TOP,
+
+                    ],    # end see_vars
+                ],        # end button
+            ],            # end checkbutton menuitems
+        ];                # end checkbuttons cascade
+    }</code></pre>
+
+<p>This was caused by forgetting side comments only across code block changes. The new result is more reasonable:</p>
+
+<pre><code>    # NEW:
+    {
+        $a = [
+            Cascade    =&gt; $menu_cb,
+            -menuitems =&gt; [
+                [ Checkbutton =&gt; &#39;Oil checked&#39;, -variable =&gt; \$OIL ],
+                [
+                    Button   =&gt; &#39;See current values&#39;,
+                    -command =&gt; [
+                        \&amp;see_vars, $TOP,
+
+                    ],    # end see_vars
+                ],    # end button
+            ],    # end checkbutton menuitems
+        ];    # end checkbuttons cascade
+    }</code></pre>
+
+<p>This change will cause occasional differences in side comment locations from previous versions but overall it gives fewer unexpected results so it is a worthwhile change. 29-Dec-2020, 76993f4.</p>
+
+</dd>
+<dt id="Fixed-very-minor-inconsistency-in-redefining-lists-after-prune-step"><b>Fixed very minor inconsistency in redefining lists after prune step</b></dt>
+<dd>
+
+<p>In rare cases it is necessary to update the type of lists, and this influences vertical alignment. This update fixes a minor inconsistency in doing this. In some rare cases with complex list elements vertical alignment can be improved. 27 Dec, 2020, 751faec.</p>
+
+<pre><code>            # OLD
+            return join( &#39;&#39;,
+                $pre,   &#39;&lt;IMG &#39;,   $iconsizes{$alt} || &#39;&#39;,
+                $align, &#39;BORDER=&#39;, $nav_border,
+                &#39; ALT=&quot;&#39;, $alt,        &quot;\&quot;\n&quot;,
+                &#39; SRC=&quot;&#39;, $ICONSERVER, &quot;/$icon&quot;,
+                &#39;&quot;&gt;&#39; );
+
+            # NEW
+            return join( &#39;&#39;,
+                $pre,     &#39;&lt;IMG &#39;,     $iconsizes{$alt} || &#39;&#39;,
+                $align,   &#39;BORDER=&#39;,   $nav_border,
+                &#39; ALT=&quot;&#39;, $alt,        &quot;\&quot;\n&quot;,
+                &#39; SRC=&quot;&#39;, $ICONSERVER, &quot;/$icon&quot;,
+                &#39;&quot;&gt;&#39; );</code></pre>
+
+</dd>
+<dt id="Improved-vertical-alignment-of-some-edge-cases"><b>Improved vertical alignment of some edge cases</b></dt>
+<dd>
+
+<p>The existing rules for aligning two lines with very different lengths were rejecting some good alignments, such as the first line of numbers in the example below:</p>
+
+<pre><code>    # OLD:
+    @gg_3 = (
+        [
+            0.0, 1.360755E-2, 9.569446E-4, 9.569446E-4,
+            1.043498E-3, 1.043498E-3
+        ],
+        [
+            9.569446E-4, 9.569446E-4, 0.0, 7.065964E-5,
+            1.422811E-4, 1.422811E-4
+        ],
+        ...
+    );
+
+    # NEW:
+    @gg_3 = (
+        [
+            0.0,         1.360755E-2, 9.569446E-4, 9.569446E-4,
+            1.043498E-3, 1.043498E-3
+        ],
+        [
+            9.569446E-4, 9.569446E-4, 0.0, 7.065964E-5,
+            1.422811E-4, 1.422811E-4
+        ],
+        ...
+    );</code></pre>
+
+<p>The rule in sub &#39;two_line_pad&#39; was updated to allow alignment of any lists if the patterns match exactly (all numbers in this case). Updated 27-Dec-2020, 035d2b7.</p>
+
+</dd>
+<dt id="Avoid--lp-style-formatting-of-lists-containing-multiline-qw-quotes"><b>Avoid -lp style formatting of lists containing multiline qw quotes</b></dt>
+<dd>
+
+<p>The -lp formatting style often does not work well when lists contain multiline qw quotes. This update avoids this problem by not formatting such lists with the -lp style. For example,</p>
+
+<pre><code>    # OLD, perltidy -gnu
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ),
+        @trig,
+              );
+
+
+    # NEW, perltidy -gnu
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        ),
+        @trig,
+    );</code></pre>
+
+<p>27-Dec-2020, 948c9bd.</p>
+
+</dd>
+<dt id="improve-formatting-of-multiline-qw"><b>improve formatting of multiline qw</b></dt>
+<dd>
+
+<p>This update adds a sequence numbering system for multiline qw quotes. In the perltidy tokenizer normal container pair types, like { }, (), [], are given unique serial numbers which are used as keys to data structures. qw quoted lists do not get serial numbers by the tokenizer, so this update creates a separate serial number scheme for them to correct this problem. One formatting problem that this solves is that of preventing the closing token of a multiline quote from being outdented more than the opening token. This is a general formatting rule which should be followed. Without a sequence number, the closing qw token could not lookup its corresponding opening indentation so it had to resort to a default, breaking the rule, as in the following:</p>
+
+<pre><code>    # OLD, perltidy -wn
+    # qw line
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+        ) ); #&lt;-- outdented more than &#39;sort&#39;
+    }
+
+    # Here is the same with a list instead of a qw; note how the
+    # closing sort paren does not outdent more than the &#39;sort&#39; line.
+    # This is the desired result for qw.
+    # perltidy -wn
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort (
+
+                &#39;!&#39;,          &#39;a&#39;, &#39;b&#39;, &#39;d&#39;, &#39;h&#39;, &#39;i&#39;, &#39;m&#39;, &#39;o&#39;, &#39;q&#39;, &#39;r&#39;, &#39;u&#39;,
+                &#39;autobundle&#39;, &#39;clean&#39;,
+                &#39;make&#39;,       &#39;test&#39;, &#39;install&#39;, &#39;force&#39;, &#39;reload&#39;, &#39;look&#39;
+            ) );  #&lt;-- not outdented more than &#39;sort&#39;
+    }
+
+    # NEW (perltidy -wn)
+    if ( $pos == 0 ) {
+        @return = grep( /^$word/,
+            sort qw(
+              ! a b d h i m o q r u autobundle clean
+              make test install force reload look
+            ) ); #&lt;-- not outdented more than sort
+    }</code></pre>
+
+<p>Here is another example # OLD: $_-&gt;meta-&gt;make_immutable( inline_constructor =&gt; 0, constructor_name =&gt; &quot;_new&quot;, inline_accessors =&gt; 0, ) for qw( Class::XYZ::Package Class::XYZ::Module Class::XYZ::Class</p>
+
+<pre><code>        Class::XYZ::Overload
+    );  #&lt;-- outdented more than the line with &#39;for qw(&#39;
+
+    # NEW:
+    $_-&gt;meta-&gt;make_immutable(
+        inline_constructor =&gt; 0,
+        constructor_name   =&gt; &quot;_new&quot;,
+        inline_accessors   =&gt; 0,
+      )
+      for qw(
+      Class::XYZ::Package
+      Class::XYZ::Module
+      Class::XYZ::Class
+
+      Class::XYZ::Overload
+      ); #&lt;-- outdented same as the line with &#39;for qw(&#39;</code></pre>
+
+<p>26 Dec 2020, cdbf0e4.</p>
+
+</dd>
+<dt id="improve-list-marking-method"><b>improve list marking method</b></dt>
+<dd>
+
+<p>In the process of making vertical alignments, lines which are simple lists of items are treated different from other lines. The old method for finding and marking these lines had a few problems which are corrected with this update. The main problem was that the old method ran into trouble when there were side comments. For example, the old method was not marking the following list and as a result the two columns of values were not aligned:</p>
+
+<pre><code>    # OLD
+    return (
+        $startpos, $ldelpos - $startpos,         # PREFIX
+        $ldelpos,  1,                            # OPENING BRACKET
+        $ldelpos + 1, $endpos - $ldelpos - 2,    # CONTENTS
+        $endpos - 1, 1,                          # CLOSING BRACKET
+        $endpos, length($$textref) - $endpos,    # REMAINDER
+    );
+
+    # NEW
+    return (
+        $startpos,    $ldelpos - $startpos,           # PREFIX
+        $ldelpos,     1,                              # OPENING BRACKET
+        $ldelpos + 1, $endpos - $ldelpos - 2,         # CONTENTS
+        $endpos - 1,  1,                              # CLOSING BRACKET
+        $endpos,      length($$textref) - $endpos,    # REMAINDER
+    );</code></pre>
+
+<p>Another problem was that occasionally unwanted alignments were made between lines which were not really lists because the lines were incorrectly marked. For example (note padding after first comma)</p>
+
+<pre><code>    # OLD: (undesirable alignment)
+    my ( $isig2, $chisq ) = ( 1 / ( $sig * $sig ), 0 );
+    my ( $ym,    $al, $cov, $bet, $olda, $ochisq, $di, $pivt, $info ) =
+      map { null } ( 0 .. 8 );
+
+    # NEW: (no alignment)
+    my ( $isig2, $chisq ) = ( 1 / ( $sig * $sig ), 0 );
+    my ( $ym, $al, $cov, $bet, $olda, $ochisq, $di, $pivt, $info ) =
+      map { null } ( 0 .. 8 );</code></pre>
+
+<p>This update was made 22 Dec 2020, 36d4c35.</p>
+
+</dd>
+<dt id="Fix-git-51-closing-quote-pattern-delimiters-not-following--cti-flag-settings"><b>Fix git #51, closing quote pattern delimiters not following -cti flag settings</b></dt>
+<dd>
+
+<p>Closing pattern delimiter tokens of qw quotes were not following the -cti flag settings for containers in all cases, as would be expected, in particular when followed by a comma. For example, the closing qw paren below was indented with continuation indentation but would not have that extra indentation if it followed the default -cpi setting for a paren:</p>
+
+<pre><code>    # OLD:
+    @EXPORT = (
+        qw(
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ),
+        @trig
+    );
+
+    # NEW
+    @EXPORT = (
+        qw(
+            i Re Im rho theta arg
+            sqrt log ln
+            log10 logn cbrt root
+            cplx cplxe
+        ),
+        @trig
+    );</code></pre>
+
+<p>This update makes closing qw quote terminators follow the settings for their corresponding container tokens as closely as possible. For a closing &#39;&gt;&#39; the setting for a closing paren will now be followed. Other closing qw terminators will remain indented, to minimize changes to existing formatting. For example (&#39;&gt;&#39; is outdented):</p>
+
+<pre><code>    @EXPORT = (
+        qw&lt;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+        &gt;,
+        @trig
+    );</code></pre>
+
+<p>but (&#39;;&#39; remains indented):</p>
+
+<pre><code>    @EXPORT = (
+        qw;
+          i Re Im rho theta arg
+          sqrt log ln
+          log10 logn cbrt root
+          cplx cplxe
+          ;,
+        @trig
+    );</code></pre>
+
+<p>This update was added 18 Dec 2020 and modified 24 Dec 2020, 538688f.</p>
+
+</dd>
+<dt id="Update-manual-pages-regarding-issue-git-50"><b>Update manual pages regarding issue git #50</b></dt>
+<dd>
+
+<p>Additional wording was added to the man pages regarding situations in which perltidy does not change whitespace. This update was added 17 Dec 2020.</p>
+
+</dd>
+<dt id="Rewrote-sub-check_match"><b>Rewrote sub check_match</b></dt>
+<dd>
+
+<p>Moved inner part of sub check_match into sub match_line_pair in order to make info available earlier. This gave some minor alignment improvements. This was done 16 Dec 2020, 7ba4f3b.</p>
+
+<pre><code>    # OLD:
+    @tests = (
+        @common,     &#39;$_&#39;,
+        &#39;&quot;\$_&quot;&#39;,     &#39;@_&#39;,
+        &#39;&quot;\@_&quot;&#39;,     &#39;??N&#39;,
+        &#39;&quot;??N&quot;&#39;,     chr 256,
+        &#39;&quot;\x{100}&quot;&#39;, chr 65536,
+        &#39;&quot;\x{10000}&quot;&#39;, ord &#39;N&#39; == 78 ? ( chr 11, &#39;&quot;\013&quot;&#39; ) : ()
+    );
+
+    # NEW:
+    @tests = (
+        @common,       &#39;$_&#39;,
+        &#39;&quot;\$_&quot;&#39;,       &#39;@_&#39;,
+        &#39;&quot;\@_&quot;&#39;,       &#39;??N&#39;,
+        &#39;&quot;??N&quot;&#39;,       chr 256,
+        &#39;&quot;\x{100}&quot;&#39;,   chr 65536,
+        &#39;&quot;\x{10000}&quot;&#39;, ord &#39;N&#39; == 78 ? ( chr 11, &#39;&quot;\013&quot;&#39; ) : ()
+    );</code></pre>
+
+</dd>
+<dt id="Improved-vertical-alignments-by-avoiding-pruning-step"><b>Improved vertical alignments by avoiding pruning step</b></dt>
+<dd>
+
+<p>There is a step in vertical alignment where the alignments are formed into a tree with different levels, and some deeper levels are pruned to preserve lower level alignments. This usually works well, but some deeper alignments will be lost, which is what was happening in the example below. It turns out that if the tree pruning is skipped when alignment depths increase monotonically across lines, as in the example, then better overall alignment is achieved by the subsequent &#39;sweep&#39; pass.</p>
+
+<pre><code>    # OLD
+    my $cmd = shift @ARGV;
+    if    ( $cmd eq &quot;new&quot; )         { $force_new = 1; }
+    elsif ( $cmd eq &quot;interactive&quot; ) { $interactive = 1; $batch       = 0; }
+    elsif ( $cmd eq &quot;batch&quot; )       { $batch       = 1; $interactive = 0; }
+    elsif ( $cmd eq &quot;use_old&quot; )     { $use_old = 1; }
+    elsif ( $cmd eq &quot;show&quot; )        { $show    = 1; last; }
+    elsif ( $cmd eq &quot;showall&quot; )     { $showall = 1; last; }
+    elsif ( $cmd eq &quot;show_all&quot; )    { $showall = 1; last; }
+    elsif ( $cmd eq &quot;remove&quot; )      { $remove  = 1; last; }
+    elsif ( $cmd eq &quot;help&quot; )        { $help    = 1; last; }
+
+    # NEW
+    my $cmd = shift @ARGV;
+    if    ( $cmd eq &quot;new&quot; )         { $force_new   = 1; }
+    elsif ( $cmd eq &quot;interactive&quot; ) { $interactive = 1; $batch       = 0; }
+    elsif ( $cmd eq &quot;batch&quot; )       { $batch       = 1; $interactive = 0; }
+    elsif ( $cmd eq &quot;use_old&quot; )     { $use_old     = 1; }
+    elsif ( $cmd eq &quot;show&quot; )        { $show        = 1; last; }
+    elsif ( $cmd eq &quot;showall&quot; )     { $showall     = 1; last; }
+    elsif ( $cmd eq &quot;show_all&quot; )    { $showall     = 1; last; }
+    elsif ( $cmd eq &quot;remove&quot; )      { $remove      = 1; last; }
+    elsif ( $cmd eq &quot;help&quot; )        { $help        = 1; last; }</code></pre>
+
+<p>This update was made 14 Dec 2020, 44e0afa.</p>
+
+</dd>
+<dt id="Improved-some-marginal-vertical-alignments"><b>Improved some marginal vertical alignments</b></dt>
+<dd>
+
+<p>This update fixed a rare situation in which some vertical alignment was missed. The problem had to do with two lines being incorrectly marked as a marginal match. A new routine, &#39;match_line_pairs&#39; was added to set a flag with the information needed to detect and prevent this. This fix was made 13 Dec 2020, 9a8e49b.</p>
+
+<pre><code>    # OLD
+    $sec = $sec + ( 60 * $min );
+    $graphcpu[$sec] = $line;
+    $secmax  = $sec  if ( $sec &gt; $secmax );
+    $linemax = $line if ( $line &gt; $linemax );
+
+    # NEW
+    $sec            = $sec + ( 60 * $min );
+    $graphcpu[$sec] = $line;
+    $secmax         = $sec  if ( $sec &gt; $secmax );
+    $linemax        = $line if ( $line &gt; $linemax );</code></pre>
+
+</dd>
+<dt id="Do-not-align-equals-across-changes-in-continuation-indentation"><b>Do not align equals across changes in continuation indentation</b></dt>
+<dd>
+
+<p>A rule was added to prevent vertical alignment of lines with leading &#39;=&#39; across a change in continuation indentation. Sometimes aligning across a change in CI can come out okay, but sometimes it can be very poor. For example:</p>
+
+<pre><code>    # BAD:
+    $!               = 2, die qq/$0: can&#39;t stat -${arg}&#39;s &quot;$file&quot;./
+        unless $time = ( stat($file) )[$STAT_MTIME];
+
+    # FIXED:
+    $! = 2, die qq/$0: can&#39;t stat -${arg}&#39;s &quot;$file&quot;./
+      unless $time = ( stat($file) )[$STAT_MTIME];</code></pre>
+
+<p>The second line is a continuation of the first, and this update prevents this alignment. The above &#39;BAD&#39; formatting was in the previous developmental version of perltidy, not the previous release. This update added 12 Dec 2020, 5b56147.</p>
+
+</dd>
+<dt id="Improve-vertical-alignment-in-some-two-line-matches"><b>Improve vertical alignment in some two-line matches</b></dt>
+<dd>
+
+<p>When two lines would be perfectly aligned except for the line length limit, previously they would only be aligned if they had a common leading equals. The update removes this restriction and allows as many alignments to be made as possible. The results are generally improved. This update was made 11 Dec 2020, f3c6cd8. Some examples:</p>
+
+<p># In this example the side comments were limiting the matches</p>
+
+<pre><code>    # OLD
+    shift @data if @data and $data[0] =~ /Contributed\s+Perl/;    # Skip header
+    pop @data if @data and $data[-1] =~ /^\w/;    # Skip footer, like
+
+    # NEW
+    shift @data if @data and $data[0]  =~ /Contributed\s+Perl/;    # Skip header
+    pop @data   if @data and $data[-1] =~ /^\w/;    # Skip footer, like</code></pre>
+
+<p># The same is true here.</p>
+
+<pre><code>    # OLD
+    if ($tvg::o_span) { $tvg::hour_span = $tvg::o_span; }
+    if ( $tvg::hour_span % 2 &gt; 0 ) { $tvg::hour_span++; }    # Multiple of 2
+
+    # NEW
+    if ($tvg::o_span)              { $tvg::hour_span = $tvg::o_span; }
+    if ( $tvg::hour_span % 2 &gt; 0 ) { $tvg::hour_span++; }    # Multiple of 2</code></pre>
+
+<p>In the next example, the first comma is now aligned but not the second, because of the line length limit:</p>
+
+<pre><code>    # OLD
+    is( MyClass-&gt;meta, $mc, &#39;... these metas are still the same thing&#39; );
+    is( MyClass-&gt;meta-&gt;meta, $mc-&gt;meta, &#39;... these meta-metas are the same thing&#39; );
+
+    # NEW
+    is( MyClass-&gt;meta,       $mc, &#39;... these metas are still the same thing&#39; );
+    is( MyClass-&gt;meta-&gt;meta, $mc-&gt;meta, &#39;... these meta-metas are the same thing&#39; );</code></pre>
+
+<p>In this last example, the first comma is not aligned, but alignment resumes after the second comma.</p>
+
+<pre><code>    # OLD
+    is( $obj-&gt;name, $COMPRESS_FILE, &quot;   Name now set to &#39;$COMPRESS_FILE&#39;&quot; );
+    is( $obj-&gt;prefix, &#39;&#39;, &quot;   Prefix now empty&quot; );
+
+    # NEW
+    is( $obj-&gt;name, $COMPRESS_FILE, &quot;   Name now set to &#39;$COMPRESS_FILE&#39;&quot; );
+    is( $obj-&gt;prefix, &#39;&#39;,           &quot;   Prefix now empty&quot; );</code></pre>
+
+</dd>
+<dt id="Improve-vertical-alignment-in-some-marginal-matches"><b>Improve vertical alignment in some marginal matches</b></dt>
+<dd>
+
+<p>In perltidy a &#39;marginal match&#39; occurs for example when two lines share some alignment tokens but are somewhat different. When this happens some limits are placed on the size of the padding spaces that can be introduced. In this update the amount of allowed padding is significatly increased for certain &#39;good&#39; alignment tokens. Results of extensive testing were favorable provided that the change is restricted to alignments of &#39;=&#39;, &#39;if&#39; and &#39;unless&#39;. Update made 10 Dec 2020, a585f0b.</p>
+
+<pre><code>    # OLD
+    my @roles = $self-&gt;role_names;
+    my $role_names = join &quot;|&quot;, @roles;
+
+    # NEW
+    my @roles      = $self-&gt;role_names;
+    my $role_names = join &quot;|&quot;, @roles;
+
+    # OLD
+    $sysname .= &#39;del&#39; if $self-&gt;label =~ /deletion/;
+    $sysname .= &#39;ins&#39; if $self-&gt;label =~ /insertion/;
+    $sysname .= uc $self-&gt;allele_ori-&gt;seq if $self-&gt;allele_ori-&gt;seq;
+
+    # NEW
+    $sysname .= &#39;del&#39;                     if $self-&gt;label =~ /deletion/;
+    $sysname .= &#39;ins&#39;                     if $self-&gt;label =~ /insertion/;
+    $sysname .= uc $self-&gt;allele_ori-&gt;seq if $self-&gt;allele_ori-&gt;seq;</code></pre>
+
+</dd>
+<dt id="Improve-vertical-alignment-of-lines-ending-in-fat-comma"><b>Improve vertical alignment of lines ending in fat comma</b></dt>
+<dd>
+
+<p>A minor adjustment was made to the rule for aligning lines which end in &#39;=&gt;&#39;. When there are just two lines in an alignment group, the alignment is avoided if the first of the two ends in a &#39;=&gt;&#39;. Previously, alignment was avoided if either ended in a &#39;=&gt;&#39;. The old rule was preventing some good alignments in a later stage of the iteration. In the following example, the last two lines are processed separately because they do not match the comma in &#39;sprintf&#39;. The new rule allows the fat comma alignment to eventually get made later in the iteration. Update made 9 Dec 2020, ca0ddf4.</p>
+
+<pre><code>    # OLD
+    $template-&gt;param(
+        classlist =&gt; $classlist,
+        ...,
+        suggestion =&gt; $suggestion,
+        totspent   =&gt; sprintf( &quot;%.2f&quot;, $totspent ),
+        totcomtd   =&gt; sprintf( &quot;%.2f&quot;, $totcomtd ),
+        totavail   =&gt; sprintf( &quot;%.2f&quot;, $totavail ),
+        nobudget =&gt; $#results == -1 ? 1 : 0,
+        intranetcolorstylesheet =&gt;
+          C4::Context-&gt;preference(&quot;intranetcolorstylesheet&quot;),
+        ...
+    );
+
+    # NEW
+    $template-&gt;param(
+        classlist =&gt; $classlist,
+        ...,
+        suggestion              =&gt; $suggestion,
+        totspent                =&gt; sprintf( &quot;%.2f&quot;, $totspent ),
+        totcomtd                =&gt; sprintf( &quot;%.2f&quot;, $totcomtd ),
+        totavail                =&gt; sprintf( &quot;%.2f&quot;, $totavail ),
+        nobudget                =&gt; $#results == -1 ? 1 : 0,
+        intranetcolorstylesheet =&gt;
+          C4::Context-&gt;preference(&quot;intranetcolorstylesheet&quot;),
+        ...
+    );</code></pre>
+
+</dd>
+<dt id="Avoid-processing-a-file-more-than-once"><b>Avoid processing a file more than once</b></dt>
+<dd>
+
+<p>In the unlikely event that a user enters a filename more than once on the command line to perltidy, as for &#39;file1.pl&#39; here</p>
+
+<pre><code>  perltidy file1.pl file1.pl </code></pre>
+
+<p>then that file will be processed more than once. This looks harmless, but if the user was also using the -b (backup) parameter, then the original backup would be overwritten, which is not good. To avoid this, a filter has been placed on the list of files to remove duplicates. 9 Dec 2020, 646a542.</p>
+
+</dd>
+</dl>
+
+<dl>
+
+<dt id="Fix-for-issue-git-49-exit-status-not-correctly-set"><b>Fix for issue git #49, exit status not correctly set</b></dt>
+<dd>
+
+<p>The exit status flag was not being set for the -w option if the -se or if the -q flag were set. Issue git #44 was similar but a special case of the problem. The problem was fixed 8 Dec 2020, cb6028f.</p>
+
+</dd>
+</dl>
 
 <h1 id="Issues-fixed-after-release-20201202">Issues fixed after release 20201202</h1>
 
@@ -45,7 +692,7 @@
         return ();
         } );</code></pre>
 
-<p>This bug has been fixed, and code which has been incorrectly formatted will be correctly formatted with the next release. The bug was a result of a new coding introduced in v20201202 for fixing some issues with parsing sub signatures. Previously they were sometimes parsed the same as prototypes and sometimes as lists, now they are always parsed as lists.</p>
+<p>This bug has been fixed, and code which has been incorrectly formatted will be correctly formatted with the next release. The bug was a result of a new coding introduced in v20201202 for fixing some issues with parsing sub signatures. Previously they were sometimes parsed the same as prototypes and sometimes as lists, now they are always parsed as lists. Fixed 6 Dec 2020, 6fd0c4f.</p>
 
 </dd>
 </dl>
@@ -955,6 +1602,20 @@
 <pre><code>  $subsubs[0]()(0)</code></pre>
 
 <p>This syntax is ok. The example is from test &#39;current_sub.t&#39; in perl5.31.</p>
+
+</dd>
+</dl>
+
+<h1 id="POD-ERRORS">POD ERRORS</h1>
+
+<p>Hey! <b>The above document had some coding errors, which are explained below:</b></p>
+
+<dl>
+
+<dt id="Around-line-711">Around line 711:</dt>
+<dd>
+
+<p>&#39;=item&#39; outside of any &#39;=over&#39;</p>
 
 </dd>
 </dl>

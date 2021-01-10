@@ -1,24 +1,60 @@
 # Perltidy Change Log
 
-## 2020 12 07 xx
+## 2021 01 11
 
-    - Fixed issue git #51, in which closing qw pattern delimiters not always
+    - Fixed issue git #49, -se breaks warnings exit status behavior.
+    The exit status flag was not always being set when the -se flag was set.
+
+    - Some improvements have been made in the method for aligning side comments.
+    One of the problems that was fixed is that there was a tendency for side comment
+    placement to drift to the right in long scripts.  Programs with side comments
+    may have a few changes.
+
+    - Some improvements have been made in formatting qw quoted lists.  This
+    fixes issue git #51, in which closing qw pattern delimiters not always
     following the settings specified by the --closing-token-indentation=n settings.
     Now qw closing delimiters ')', '}' and ']' follow these flags, and the
     delimiter '>' follows the flag for ')'.  Other qw pattern delimiters remain
     indented as the are now.  This change will cause some small formatting changes
     in some existing programs.
 
-    - Fixed issue git #49, -se breaks warnings exit status behavior.
-    The exit status flag was not always being set when the -se flag was set.
+    - Another change involving qw lists is that they get full indentation,
+    rather than just continuation indentation, if
+
+         (1) the closing delimiter is one of } ) ] > and is on a separate line,
+         (2) the opening delimiter  (i.e. 'qw{' ) is also on a separate line, and
+         (3) the -xci flag (--extended-continuation-indentation) is set.
+
+    This improves formatting when qw lists are contained in other lists. For example,
+
+            # OLD: perltidy
+            foreach $color (
+                qw(
+                AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
+                SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
+                ),
+                qw(
+                LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
+                SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
+                )
+              )
+
+            # NEW, perltidy -xci
+            foreach $color (
+                qw(
+                    AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
+                    SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
+                ),
+                qw(
+                    LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
+                    SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
+                )
+              )
 
     - Some minor improvements have been made to the rules for formatting
     some edge vertical alignment cases, usually involving two dissimilar lines.
 
-    - Some improvements have been made to the location of side comments.
-
-    - Some minor issues that the average user would not encounter were found
-      and fixed. They can be seen in the more complete list of updates at
+    - A more complete list of updates is at
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 

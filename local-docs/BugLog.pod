@@ -44,7 +44,7 @@ given, so both old and new versions with -wn give
         pwexpire   pwgecos    pwpasswd   pwquota
     } )
 
-This update added 8 Jan 2021.
+This update added 8 Jan 2021, 474cfa8.
 
 =item B<Improve alignment of leading equals in rare situation>
 
@@ -59,7 +59,7 @@ lines 4 and 5 were not 'looking' backwards to align their leading equals.
     $port = 2345        unless ( $port = shift );
     $saddr = 'S n a4 x8';
     $SIG{'INT'} = 'dokill';
-    
+
     # NEW
     $them       = 'localhost' unless ( $them = shift );
     $cmd        = '!print'    unless ( $cmd  = shift );
@@ -67,7 +67,7 @@ lines 4 and 5 were not 'looking' backwards to align their leading equals.
     $saddr      = 'S n a4 x8';
     $SIG{'INT'} = 'dokill';
 
-Fixed 5 Jan 2021.
+Fixed 5 Jan 2021, 9244678.
 
 =item B<Moved previous patch to a better location>
 
@@ -277,7 +277,7 @@ quotes.  This update avoids this problem by not formatting such lists with the
           cplx cplxe
           ),
         @trig,
-              ); 
+              );
 
 
     # NEW, perltidy -gnu
@@ -666,7 +666,7 @@ two lines are processed separately because they do not match the comma
 in 'sprintf'.  The new rule allows the fat comma alignment to eventually
 get made later in the iteration. Update made 9 Dec 2020, ca0ddf4.
 
-    # OLD 
+    # OLD
     $template->param(
         classlist => $classlist,
         ...,

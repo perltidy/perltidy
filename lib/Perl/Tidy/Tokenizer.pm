@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20201207';
+our $VERSION = '20210111';
 
 use Perl::Tidy::LineBuffer;
 use Carp;
@@ -3990,7 +3990,7 @@ EOM
                           )
                         {
                             $statement_type = $tok;    # next '{' is block
-                            $type = 'k';    # for keyword syntax coloring
+                            $type           = 'k'; # for keyword syntax coloring
                         }
 
                         # patch for SWITCH/CASE if switch and given not keywords

@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20201207';
+    $VERSION = '20210111';
 }
 
 sub DESTROY {
@@ -2801,7 +2801,7 @@ sub generate_options {
               blank-lines-before-subs=0
               blank-lines-before-packages=0
               notabs
-              )
+            )
         ],
 
         # 'extrude' originally deleted pod and comments, but to keep it
@@ -2833,7 +2833,7 @@ sub generate_options {
               nofuzzy-line-length
               notabs
               norecombine
-              )
+            )
         ],
 
         # this style tries to follow the GNU Coding Standards (which do
@@ -2842,7 +2842,7 @@ sub generate_options {
         'gnu-style' => [
             qw(
               lp bl noll pt=2 bt=2 sbt=2 cpi=1 csbi=1 cbi=1
-              )
+            )
         ],
 
         # Style suggested in Damian Conway's Perl Best Practices
@@ -3612,7 +3612,7 @@ sub Win_OS_Type {
             90 => "Me"
         },
         2 => {
-            0  => "2000",          # or NT 4, see below
+            0  => "2000",      # or NT 4, see below
             1  => "XP/.Net",
             2  => "Win2003",
             51 => "NT3.51"

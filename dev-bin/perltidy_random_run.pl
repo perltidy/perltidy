@@ -478,9 +478,9 @@ if (@saved_for_deletion) {
 if (@problems) {
     print STDERR <<EOM;
 
-=============================
-SUMMARY OF POSSIBLE PROBLEMS:
-=============================
+$hash =============================
+$hash SUMMARY OF POSSIBLE PROBLEMS:
+$hash =============================
 EOM
 
     foreach my $nf (@problems) {
@@ -491,8 +491,8 @@ EOM
         my $num = @chkfile_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-Some check files with errors (search above for '**ERROR'):
-(@chkfile_errors[1..$num-1])
+$hash Some check files with errors (search above for '**ERROR'):
+$hash (@chkfile_errors[1..$num-1])
 EOM
     }
     if (@size_errors) {
@@ -500,8 +500,8 @@ EOM
         my $num = @size_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-Some files with definite size errors (search above for '**ERROR'):
-(@size_errors[1..$num-1])
+$hash Some files with definite size errors (search above for '**ERROR'):
+$hash (@size_errors[1..$num-1])
 EOM
     }
     if (@syntax_errors) {
@@ -509,8 +509,8 @@ EOM
         my $num = @syntax_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-Some files with definite size errors (search above for '**ERROR'):
-(@syntax_errors[1..$num-1])
+$hash Some files with definite size errors (search above for '**ERROR'):
+$hash (@syntax_errors[1..$num-1])
 EOM
     }
 }

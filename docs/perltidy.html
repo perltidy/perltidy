@@ -356,7 +356,11 @@
 <dt id="l-n---maximum-line-length-n"><b>-l=n</b>, <b>--maximum-line-length=n</b></dt>
 <dd>
 
-<p>The default maximum line length is n=80 characters. Perltidy will try to find line break points to keep lines below this length. However, long quotes and side comments may cause lines to exceed this length. Setting <b>-l=0</b> is equivalent to setting <b>-l=(a large number)</b>.</p>
+<p>The default maximum line length is n=80 characters. Perltidy will try to find line break points to keep lines below this length. However, long quotes and side comments may cause lines to exceed this length.</p>
+
+<p>The default length of 80 comes from the past when this was the standard CRT screen width. Many programmers prefer to increase this to something like 120.</p>
+
+<p>Setting <b>-l=0</b> is equivalent to setting <b>-l=(a very large number)</b>. But this is not recommended because, for example, a very long list will be formatted in a single long line.</p>
 
 </dd>
 <dt id="vmll---variable-maximum-line-length"><b>-vmll</b>, <b>--variable-maximum-line-length</b></dt>
@@ -568,11 +572,33 @@
 <dt id="xci---extended-continuation-indentation"><b>-xci</b>, <b>--extended-continuation-indentation</b></dt>
 <dd>
 
-<p>This flag causes continuation indentation to &quot;extend&quot; deeper into structures. If you use <b>-ci=n</b> and <b>-i=n</b> with the same value of <b>n</b> you will probably want to set this flag. Since this is a fairly new flag, the default is <b>-nxci</b> to avoid disturbing existing formatting.</p>
+<p>This flag allows perltidy to use some improvements which have been made to its indentation model. One of the things it does is &quot;extend&quot; continuation indentation deeper into structures, hence the name. The improved indentation is particularly noticable when the flags <b>-ci=n</b> and <b>-i=n</b> use the same value of <b>n</b>. There are no significant disadvantages to using this flag, but to avoid disturbing existing formatting the default is not to use it, <b>-nxci</b>.</p>
 
-<p>Here is an explanation. There are two common strategies for continuation indentation. One is the strategy recommend in the original perl style guidelines, in which <b>-ci=2</b> and <b>-i=4</b>. The other is the strategy is the strategy recommended for example in the &quot;Perl Best Practices&quot; book by Conway, in which <b>-ci=4</b> and <b>-i=4</b>. The default formatting in perltidy works fairly well with the orignal perl style, but problems arise when <b>-ci</b> and <b>-i</b> are given equal values as in the <b>pbp</b> style, particularly with ternary statements. The <b>-xci</b> flag was added to fix this. It may be used with any value of <b>-ci</b> but is particularly helpful when <b>-ci</b> and <b>-i</b> are given similar values.</p>
+<p>Please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a> for an example of how this flag can improve the formatting of ternary statements. It can also improve indentation of some multi-line qw lists as shown below.</p>
 
-<p>For an illustration, please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a>.</p>
+<pre><code>            # perltidy
+            foreach $color (
+                qw(
+                AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
+                SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
+                ),
+                qw(
+                LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
+                SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
+                )
+              )
+
+            # perltidy -xci
+            foreach $color (
+                qw(
+                    AntiqueWhite3 Bisque1 Bisque2 Bisque3 Bisque4
+                    SlateBlue3 RoyalBlue1 SteelBlue2 DeepSkyBlue3
+                ),
+                qw(
+                    LightBlue1 DarkSlateGray1 Aquamarine2 DarkSeaGreen2
+                    SeaGreen1 Yellow1 IndianRed1 IndianRed2 Tan1 Tan4
+                )
+              )</code></pre>
 
 </dd>
 <dt id="sil-n---starting-indentation-level-n"><b>-sil=n</b> <b>--starting-indentation-level=n</b></dt>
@@ -912,6 +938,18 @@
 <p>If formatted in this way, the program will not run (at least with recent versions of perl) because the $x is taken to be a filehandle and / is assumed to start a quote. In a complex program, there might happen to be a / which terminates the multiline quote without a syntax error, allowing the program to run, but not as intended.</p>
 
 <p>Related issues arise with other binary operator symbols, such as + and -, and in older versions of perl there could be problems with ternary operators. So to avoid changing program behavior, perltidy has the simple rule that whitespace around possible filehandles is left unchanged. Likewise, whitespace around barewords is left unchanged. The reason is that if the barewords are defined in other modules, or in code that has not even been written yet, perltidy will not have seen their prototypes and must treat them cautiously.</p>
+
+<p>In perltidy this is implemented in the tokenizer by marking token following a <b>print</b> keyword as a special type <b>Z</b>. When formatting is being done, whitespace following this token type is generally left unchanged as a precaution against changing program behavior. This is excessively conservative but simple and easy to implement. Keywords which are treated similarly to <b>print</b> include <b>printf</b>, <b>sort</b>, <b>exec</b>, <b>system</b>. Changes in spacing around parameters following these keywords may have to be made manually. For example, the space, or lack of space, after the parameter $foo in the following line will be unchanged in formatting.</p>
+
+<pre><code>   system($foo );
+   system($foo);</code></pre>
+
+<p>To find if a token is of type <b>Z</b> you can use <b>perltidy -DEBUG</b>. For the first line above the result is</p>
+
+<pre><code>   1: system($foo );
+   1: kkkkkk{ZZZZb};</code></pre>
+
+<p>which shows that <b>system</b> is type <b>k</b> (keyword) and $foo is type <b>Z</b>.</p>
 
 </dd>
 <dt id="Note2:-Perltidys-whitespace-rules-are-not-perfect">Note2: Perltidy&#39;s whitespace rules are not perfect</dt>
@@ -3522,7 +3560,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20201207</p>
+<p>This man page documents perltidy version 20210111</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20201207';
+our $VERSION = '20210111';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -2436,7 +2436,7 @@ EOM
             return ( $max_lev_diff, $saw_side_comment );
         }
 
-        my $has_terminal_match  = $rlines->[-1]->get_j_terminal_match();
+        my $has_terminal_match = $rlines->[-1]->get_j_terminal_match();
 
         # ignore hanging side comments in these operations
         my @filtered   = grep { !$_->get_is_hanging_side_comment() } @{$rlines};
@@ -3936,7 +3936,7 @@ sub Dump_tree_groups {
                     $j0_eq_pad = $pad;
                     $j0_max_pad =
                       0.5 * ( $rfield_lengths_1->[0] + $rfield_lengths_0->[0] );
-                    $j0_max_pad = 4 if ($j0_max_pad < 4);
+                    $j0_max_pad = 4 if ( $j0_max_pad < 4 );
                 }
             }
 
@@ -4140,7 +4140,7 @@ sub Dump_tree_groups {
                     || TEST_MARGINAL_EQ_ALIGNMENT
                 )
                 && $j0_eq_pad >= -$j0_max_pad
-                && $j0_eq_pad <= $j0_max_pad 
+                && $j0_eq_pad <= $j0_max_pad
               )
             {
 
@@ -4332,8 +4332,8 @@ sub align_side_comments {
     # Given:
     #  $rlines  - the lines
     #  $rgroups - the partition of the lines into groups
-    # 
-    # We will be working group-by-group because all side comments 
+    #
+    # We will be working group-by-group because all side comments
     # (real or fake) in each group are already aligned. So we just have
     # to make alignments between groups wherever possible.
 
@@ -4375,7 +4375,7 @@ sub align_side_comments {
     return unless @todo;
 
     # Count $num5 = number of comments in the 5 lines after the first comment
-    # This is an important factor in a decision formula 
+    # This is an important factor in a decision formula
     my $num5 = 1;
     for ( my $jj = $j_sc_beg + 1 ; $jj < @{$rlines} ; $jj++ ) {
         my $ldiff = $jj - $j_sc_beg;
