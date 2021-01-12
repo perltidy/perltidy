@@ -203,3 +203,9 @@ To update the list of covered parameters, run
 ```
   make_coverage_report.pl
 ```
+
+This shows which parameters are included in test cases.  Most are covered, 
+and when new parameters are added there should also be corresponding test
+cases added. But a problem is that perltidy has so many parameters that it is
+not possible to write enough tests to test all combinations.  This problem
+is addressed with the random testing scripts in the ```git/dev-bin``` directory.

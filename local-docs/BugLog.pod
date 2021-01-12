@@ -2,6 +2,27 @@
 
 =over 4
 
+=item B<Fixed unusual blinker>
+
+The following blinker was found in random testing. The following statement 
+(with @j starting at level 0)
+
+    @j = ( $x, $y, $z );
+
+run with the following profile
+
+    --indent-columns=5
+    --continuation-indentation=7
+    --maximum-line-length=20
+    --break-before-paren-and-indent=2
+    --break-before-paren=2
+    --maximum-fields-per-table=4
+
+caused an oscillation between two states.  An unusual feature which contributed
+to the problem is the very large ci value. This is fixed in a patch made 12 Jan
+2021.
+
+
 =item B<Improve indentation of multiline qw quotes when -xci flag is set>
 
 The indentation of multiline qw quotes runs into problems when there is nesting,

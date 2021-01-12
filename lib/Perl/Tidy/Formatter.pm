@@ -10651,6 +10651,8 @@ EOM
                 || (
                     $comma_count_in_batch
                     && (   $rOpts_maximum_fields_per_table > 0
+                        && $rOpts_maximum_fields_per_table <=
+                        $comma_count_in_batch
                         || $rOpts_comma_arrow_breakpoints == 0 )
                 )
 
