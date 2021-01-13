@@ -6698,8 +6698,10 @@ sub weld_nested_containers {
               $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
             $starting_indent = 0;
             if ( !$rOpts_variable_maximum_line_length ) {
-                my $level = $rLL->[$Kfirst]->[_LEVEL_];
-                $starting_indent = $rOpts_indent_columns * $level;
+                my $level    = $rLL->[$Kfirst]->[_LEVEL_];
+                my $ci_level = $rLL->[$Kfirst]->[_CI_LEVEL_];
+                $starting_indent = $rOpts_indent_columns * $level +
+                  $ci_level * $rOpts_continuation_indentation;
             }
 
             # DO-NOT-WELD RULE 1:

@@ -2,14 +2,20 @@
 
 =over 4
 
-=item B<Fixed unusual blinker>
+=item B<Correct formula for estimating line length with -wn option>
+
+A formula used to estimating maximum line length when the -wn option is set was
+missing a term for continuation indentation.  No actual changes in formatting
+have been seen.  This update made 12 Jan 2021.
+
+=item B<Fixed unusual blinker related to large -ci and -mft=n>
 
 The following blinker was found in random testing. The following statement 
 (with @j starting at level 0)
 
     @j = ( $x, $y, $z );
 
-run with the following profile
+run with the following parameters
 
     --indent-columns=5
     --continuation-indentation=7
