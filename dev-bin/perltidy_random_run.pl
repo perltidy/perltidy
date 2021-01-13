@@ -253,7 +253,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             elsif ( $case > 3 && $ofile_size < 0.1 * $ofile_size_min_expected )
             {
                 print STDERR
-"**ERROR for ofile=$ofile: size = $ofile_size << $ofile_size_min_expected = min expected\n";
+"**ERROR:SIZE for ofile=$ofile: size = $ofile_size << $ofile_size_min_expected = min expected\n";
                 push @size_errors, $ofile;
                 $error_count_this_file++;
                 $error_count_this_case++;
@@ -299,7 +299,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                     unlink $synfile;
                 }
                 else {
-                    print STDERR "**ERROR syntax** see $synfile\n";
+                    print STDERR "**ERROR:SYNTAX** see $synfile\n";
                     $error_count++;
                     push @syntax_errors, $synfile;
                     $error_count_this_file++;
@@ -322,7 +322,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                 $has_starting_error = 1;
             }
             elsif ( !$has_starting_error ) {
-                print STDERR "**ERROR reformatting** see $chkfile.ERR\n";
+                print STDERR "**ERROR:CHK** see $chkfile.ERR\n";
                 $error_count++;
                 push @chkfile_errors, $chkfile;
                 $error_count_this_file++;
@@ -330,7 +330,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             }
         }
         if ( !-e $chkfile ) {
-            print STDERR "**WARNING** missing checkfile output $chkfile\n";
+            print STDERR "**WARNING:CHK** missing checkfile output $chkfile\n";
             $missing_chkfile_count++;
             $err = 1;
             $error_count_this_file++;
@@ -491,8 +491,8 @@ EOM
         my $num = @chkfile_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-$hash Some check files with errors (search above for '**ERROR'):
-$hash (@chkfile_errors[1..$num-1])
+$hash Some check files with errors (search above for '**ERROR:CHK'):
+$hash (@chkfile_errors[0..$num-1])
 EOM
     }
     if (@size_errors) {
@@ -500,8 +500,8 @@ EOM
         my $num = @size_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-$hash Some files with definite size errors (search above for '**ERROR'):
-$hash (@size_errors[1..$num-1])
+$hash Some files with definite size errors (search above for '**ERROR:SIZE'):
+$hash (@size_errors[0..$num-1])
 EOM
     }
     if (@syntax_errors) {
@@ -509,8 +509,8 @@ EOM
         my $num = @syntax_errors;
         $num = 20 if ( $num > 20 );
         print STDERR <<EOM;
-$hash Some files with definite size errors (search above for '**ERROR'):
-$hash (@syntax_errors[1..$num-1])
+$hash Some files with definite syntax errors (search above for '**ERROR:SYNTAX'):
+$hash (@syntax_errors[0..$num-1])
 EOM
     }
 }
