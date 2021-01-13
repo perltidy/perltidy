@@ -1,6 +1,29 @@
-=head1 Issues fixed after release 20201207
+=head1 Issues fixed after release 20210111
 
 =over 4
+
+=item B<Fixed incorrect guess of division vs pattern>
+
+A syntax error was produced in random testing when perltidy was fed
+the following line:
+
+    sub _DR () { pi2 /360 } sub _RD () { 360 /pi2 }
+
+The bareword 'pi2' was not recognized and the text between the two slashes
+was a taken as a possible pattern argument in a parenless call to pi2.  Two
+fixes were made to fix this. Perltidy looks for 'pi' but not 'pi2', so the
+first fix was to expand its table to include all variations of 'pi' in Trig.pm.
+Second, the fact that the first slash was followed by a number should have
+tipped the guess to favor division, so this was fixed.
+As it was, a backup spacing rule was used, which favored a pattern.
+
+The formatted result is now
+
+    sub _DR () { pi2 / 360 }
+    sub _RD () { 360 / pi2 }
+
+This update was made 13 Jan 2021.
+
 
 =item B<Correct formula for estimating line length with -wn option>
 
@@ -28,6 +51,11 @@ caused an oscillation between two states.  An unusual feature which contributed
 to the problem is the very large ci value. This is fixed in a patch made 12 Jan
 2021.
 
+=back
+
+=head1 Issues fixed after release 20201207
+
+=over 4
 
 =item B<Improve indentation of multiline qw quotes when -xci flag is set>
 

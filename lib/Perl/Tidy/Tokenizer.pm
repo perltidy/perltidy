@@ -5797,6 +5797,20 @@ sub guess_if_pattern_or_conditional {
     return ( $is_pattern, $msg );
 }
 
+my %is_known_constant;
+my %is_known_function;
+
+BEGIN {
+
+    # Constants like 'pi' in Trig.pm are common
+    my @q = qw(pi pi2 pi4 pip2 pip4);
+    @{is_known_constant}{@q} = (1) x scalar(@q);
+
+    # parenless calls of 'ok' are common
+    @q = qw( ok );
+    @{is_known_function}{@q} = (1) x scalar(@q);
+}
+
 sub guess_if_pattern_or_division {
 
     # this routine is called when we have encountered a / following an
@@ -5881,15 +5895,20 @@ sub guess_if_pattern_or_division {
 
                     # Both pattern and divide can work here...
 
-                    # A very common bare word in math expressions is 'pi'
-                    if ( $last_nonblank_token eq 'pi' ) {
-                        $msg .= "division (pattern works too but saw 'pi')\n";
+                    # Increase weight of divide if a pure number follows
+                    $divide_expected += $next_token =~ /^\d+$/;
+
+                    # Check for known constants in the numerator, like 'pi'
+                    if ( $is_known_constant{$last_nonblank_token} ) {
+                        $msg .=
+"division (pattern works too but saw known constant '$last_nonblank_token')\n";
                         $is_pattern = 0;
                     }
 
                     # A very common bare word in pattern expressions is 'ok'
-                    elsif ( $last_nonblank_token eq 'ok' ) {
-                        $msg .= "pattern (division works too but saw 'ok')\n";
+                    elsif ( $is_known_function{$last_nonblank_token} ) {
+                        $msg .=
+"pattern (division works too but saw '$last_nonblank_token')\n";
                         $is_pattern = 1;
                     }
 
