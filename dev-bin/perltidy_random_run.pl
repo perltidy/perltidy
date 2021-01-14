@@ -131,6 +131,8 @@ my @chkfile_errors;
 my @size_errors;
 my @syntax_errors;
 my @saved_for_deletion;
+my @blinkers;
+my @strange;
 
 if ( $nf_beg < 1 ) { $nf_beg = 1 }
 if ( $np_beg < 1 ) { $np_beg = 1 }
@@ -183,6 +185,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
     my $efile_count   = 0;
     my $has_starting_error;
     my $starting_syntax_ok = 1;
+    my $tmperr = "STDERR.txt";
 
     # Inner loop over profiles for a given file
     for ( my $np = $np_beg ; $np <= $np_end ; $np++ ) {
@@ -201,12 +204,30 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         print STDERR
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
-        my $cmd = "$binfile <$ifile >$ofile -pro=$profile";
+        if (-e $tmperr) {unlink $tmperr}
+        my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
         system_echo($cmd,$hash);
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
         if ( -e $efile )   { rename $efile,   "ERR.$ext" }
         if ( -e $logfile ) { rename $logfile, "LOG.$ext" }
+        if ( -e $tmperr && !-z $tmperr ) {
+            open(IN,"<",$tmperr);
+            foreach my $line(<IN>) {
+                if ($line=~/BLINKER/) {
+                    push @blinkers, $ofile;
+                    $error_count_this_file++;
+                    $error_count_this_case++;
+                }
+                if ($line=~/STRANGE/) {
+                    push @strange, $ofile;
+                    $error_count_this_file++;
+                    $error_count_this_case++;
+                }
+                print STDERR $line;
+            }
+            close(IN);
+        }
 
         if ( !-e $ofile ) {
             print STDERR "**Warning** missing output $ofile\n";
@@ -511,6 +532,24 @@ EOM
         print STDERR <<EOM;
 $hash Some files with definite syntax errors (search above for '**ERROR:SYNTAX'):
 $hash (@syntax_errors[0..$num-1])
+EOM
+    }
+    if (@blinkers) {
+        local $" = ')(';
+        my $num = @blinkers;
+        $num = 20 if ( $num > 20 );
+        print STDERR <<EOM;
+$hash Some files with blinkers (search above for 'BLINKER'):
+$hash (@blinkers[0..$num-1])
+EOM
+    }
+    if (@strange) {
+        local $" = ')(';
+        my $num = @strange;
+        $num = 20 if ( $num > 20 );
+        print STDERR <<EOM;
+$hash Some files with STRANGE message (search above for 'STRANGE'):
+$hash (@strange[0..$num-1])
 EOM
     }
 }
