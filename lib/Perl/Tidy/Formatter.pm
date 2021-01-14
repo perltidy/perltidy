@@ -6687,6 +6687,11 @@ sub weld_nested_containers {
         # two semi-stable states, if we do not weld.  So the rules for
         # not welding have to be carefully defined and tested.
         my $do_not_weld;
+
+        my $is_one_line_weld;
+
+        my $iline_oc = $outer_closing->[_LINE_INDEX_];
+
         if ( !$touch_previous_pair ) {
 
             # If this pair is not adjacent to the previous pair (skipped or
@@ -6702,6 +6707,20 @@ sub weld_nested_containers {
                 my $ci_level = $rLL->[$Kfirst]->[_CI_LEVEL_];
                 $starting_indent = $rOpts_indent_columns * $level +
                   $ci_level * $rOpts_continuation_indentation;
+            }
+
+            # An existing one-line weld is a line in which
+            # (1) the containers are all on one line, and
+            # (2) the line does not exceed the allowable length, and
+            # (3) there are no good line breaks (comma or semicolon).
+            # This flag is used to avoid creating blinkers.
+            if ( $iline_oo == $iline_oc && $excess_length_to_K->($Klast) <= 0 )
+            {
+                my $rtype_count =
+                  $self->[_rtype_count_by_seqno_]->{$inner_seqno};
+                $is_one_line_weld = 1
+                  unless ( $rtype_count
+                    && ( $rtype_count->{','} || $rtype_count->{';'} ) );
             }
 
             # DO-NOT-WELD RULE 1:
@@ -6727,7 +6746,6 @@ sub weld_nested_containers {
             # $top_label->set_text( gettext(
             #    "Unable to create personal directory - check permissions.") );
 
-            my $iline_oc = $outer_closing->[_LINE_INDEX_];
             my $token_oo = $outer_opening->[_TOKEN_];
             if (   $iline_oc == $iline_oo + 1
                 && $iline_io == $iline_ic
@@ -6775,7 +6793,7 @@ sub weld_nested_containers {
         #    $_[0]->();
         # } );
 
-        if ( $iline_ic == $iline_io ) {
+        if ( !$is_one_line_weld && $iline_ic == $iline_io ) {
 
             my $token_oo = $outer_opening->[_TOKEN_];
             $do_not_weld ||= $token_oo eq '(';

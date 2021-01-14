@@ -2,6 +2,57 @@
 
 =over 4
 
+=item B<Fixed blinker related to large -ci, short line length and -wn>
+
+In random testing with convergence a 'blinker' (oscillating states) was found
+for the following script
+
+    sub _prompt {
+
+          print $_[0];
+          return (
+                readline
+                       (*{$_[1]})!~
+                       /^q/i)
+                 ; # Return false if user types 'q'
+
+    }
+
+with the following specific parameters:
+
+    --maximum-line-length=32
+    --indent-columns=6
+    --continuation-indentation=7
+    --weld-nested-containers
+    --extended-continuation-indentation
+    --noadd-whitespace
+
+The other state was
+
+    sub _prompt {
+
+          print $_[0];
+          return (
+                readline(
+                      *{
+                            $_
+                                   [
+                                   1
+                                   ]
+                      }
+                )!~/^q/i
+                 )
+                 ; # Return false if user types 'q'
+
+    }
+
+All of the listed parameters are required to cause this, but the main cause
+is the very large continuation indentation and short line length.  Welding 
+was being turned on and off in this case.  Normally welding is not done if
+all containers are on a single line, but an exception was made to detect 
+a situation like this and keep the welded string together. Updated 13 Jan 2021.
+
+
 =item B<Fixed incorrect guess of division vs pattern>
 
 A syntax error was produced in random testing when perltidy was fed
@@ -22,8 +73,7 @@ The formatted result is now
     sub _DR () { pi2 / 360 }
     sub _RD () { 360 / pi2 }
 
-This update was made 13 Jan 2021.
-
+This update was made 13 Jan 2021, a50ecf8.
 
 =item B<Correct formula for estimating line length with -wn option>
 
@@ -49,7 +99,7 @@ run with the following parameters
 
 caused an oscillation between two states.  An unusual feature which contributed
 to the problem is the very large ci value. This is fixed in a patch made 12 Jan
-2021.
+2021, 9a97dba.
 
 =back
 
