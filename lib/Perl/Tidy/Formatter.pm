@@ -7557,8 +7557,12 @@ sub adjust_container_indentation {
         # This is only for list containers
         next unless $self->is_list_by_seqno($seqno);
 
-        # and only for broken lists
-        next unless $ris_broken_container->{$seqno};
+        # and only for broken lists. 
+        # Require container to span 3 or more line to avoid blinkers,
+        # so line difference must be 2 or more.
+        next
+          if ( $ris_broken_container->{$seqno}
+            && $ris_broken_container->{$seqno} <= 1 );
 
         # NOTE: We are adjusting indentation of the opening container. The
         # closing container will normally follow the indentation of the opening

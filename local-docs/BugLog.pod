@@ -2,6 +2,34 @@
 
 =over 4
 
+=item B<Fixed blinker related to large -ci, short line length and -bbsbi=2 -bbsb=1>
+
+A blinking state was discovered in testing between the following two states
+
+    my$table=
+         [[1,2,3],[2,4,6],[3,6,9],
+         ];
+
+    my$table=
+        [[1,2,3],[2,4,6],[3,6,9],];
+
+with these parameters
+
+    --continuation-indentation=5
+    --maximum-line-length=31
+    --break-before-square-bracket-and-indent=2
+    --break-before-square-bracket=1
+    --noadd-whitespace
+
+The problem was found to be caused by the -bbsb parameters causing
+the indentation level of the first square bracket to change depending
+upon whether the term was broken on input or not.  Two fixes would correct
+this. One is to turn off the option if the -ci=n value exceeds the -i=n
+value. The other is to require a broken container to span at least three
+lines before turning this option on.  The latter option was made
+to sub 'adjust_container_indentation'.  With this change the snippet remains
+stable at the second state above. Fixed 14 Jan 2021.
+
 =item B<Fixed blinker related to large -ci, short line length and -wn>
 
 In random testing with convergence a 'blinker' (oscillating states) was found
