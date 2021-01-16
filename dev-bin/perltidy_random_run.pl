@@ -133,6 +133,7 @@ my @syntax_errors;
 my @saved_for_deletion;
 my @blinkers;
 my @strange;
+my @uninitialized;
 
 if ( $nf_beg < 1 ) { $nf_beg = 1 }
 if ( $np_beg < 1 ) { $np_beg = 1 }
@@ -215,12 +216,20 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             open(IN,"<",$tmperr);
             foreach my $line(<IN>) {
                 if ($line=~/BLINKER/) {
+                    $error_count++;
                     push @blinkers, $ofile;
                     $error_count_this_file++;
                     $error_count_this_case++;
                 }
                 if ($line=~/STRANGE/) {
+                    $error_count++;
                     push @strange, $ofile;
+                    $error_count_this_file++;
+                    $error_count_this_case++;
+                }
+                if ($line=~/uninitialized/) {
+                    $error_count++;
+                    push @uninitialized, $ofile;
                     $error_count_this_file++;
                     $error_count_this_case++;
                 }
@@ -550,6 +559,15 @@ EOM
         print STDERR <<EOM;
 $hash Some files with STRANGE message (search above for 'STRANGE'):
 $hash (@strange[0..$num-1])
+EOM
+    }
+    if (@uninitialized) {
+        local $" = ')(';
+        my $num = @uninitialized;
+        $num = 20 if ( $num > 20 );
+        print STDERR <<EOM;
+$hash Some files caused 'uninitialized' vars:
+$hash (@uninitialized[0..$num-1])
 EOM
     }
 }

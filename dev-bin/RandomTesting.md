@@ -165,3 +165,11 @@ Also run
 
 which will help scan the ```nohup.my``` file for certain keywords.  
 
+## Additional scripts
+
+The files of parameters which are automatically are long and contain
+many parameters which are on by default or which are not relevant, such
+as the various flags for controlling html.  A script which removes
+these to assist in locating a problem is
+
+ -  perltidy\_minimal\_flags.pl

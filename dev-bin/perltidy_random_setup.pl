@@ -527,7 +527,8 @@ sub get_num {
         open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
         while ( my $line = <IN> ) {
             next if $line =~ /#/;
-            chomp $line, push @parameters, $line;
+            chomp $line; 
+            push @parameters, $line;
         }
         close IN;
         unlink $tmpnam if ( -e $tmpnam );
