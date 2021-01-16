@@ -6165,8 +6165,11 @@ sub scan_bare_identifier_do {
               )
             {
 
-                # may not be indirect object unless followed by a space
-                if ( $input_line =~ m/\G\s+/gc ) {
+                # may not be indirect object unless followed by a space;
+                # updated 2021-01-16 to consider newline to be a space.
+                if ( pos($input_line) == length($input_line)
+                    || $input_line =~ m/\G\s+/gc )
+                {
                     $type = 'Y';
 
                     # Abandon Hope ...

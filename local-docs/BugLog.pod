@@ -2,10 +2,39 @@
 
 =over 4
 
+=item B<Fixed blinker related to line break at indirect object>
+
+In random testing a blinker was reduced to the following snippet
+
+    {
+             print FILE
+              GD::Barcode
+              ->new();
+    }
+
+which switched to the following state on each iteration
+
+    {
+             print FILE GD::Barcode
+              ->new();
+    }
+
+with the following parameters
+
+    --maximum-line-length=20
+    --indent-columns=9
+    --continuation-indentation=1
+
+The problem was that the token 'FILE' was either parsed as type 'Y'
+or 'Z' depending on the existance of a subsequent space.  These have
+different line break rules, causing a blinker. The problem was
+fixed by modifying the tokenizer to consider a newline to be a space.
+Updated 16 Jan 2021.
+
 =item B<Turn off -bli if -bar is set>
 
 A conflict arises if both B<-bli> and B<-bar> are set. In this case a warning message
-is given and B<-bli> is turned off.
+is given and B<-bli> is turned off.  Updated 15 Jan 2021.
 
 =item B<Fixed blinker related to large -ci, short line length and -bbsbi=2 -bbsb=1>
 
