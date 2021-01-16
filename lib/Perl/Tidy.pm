@@ -3298,20 +3298,30 @@ sub check_options {
         $rOpts->{'indent-block-comments'} = 1;
     }
 
+    # -bar cannot be used with -bl or -bli; arbitrarily keep -bar
+    if ( $rOpts->{'opening-brace-always-on-right'} ) {
+
+        if ( $rOpts->{'opening-brace-on-new-line'} ) {
+            Warn(<<EOM);
+ Conflict: you specified both 'opening-brace-always-on-right' (-bar) and 
+  'opening-brace-on-new-line' (-bl).  Ignoring -bl.
+EOM
+            $rOpts->{'opening-brace-on-new-line'} = 0;
+        }
+        if ( $rOpts->{'brace-left-and-indent'} ) {
+            Warn(<<EOM);
+ Conflict: you specified both 'opening-brace-always-on-right' (-bar) and 
+  '--brace-left-and-indent' (-bli).  Ignoring -bli. 
+EOM
+            $rOpts->{'brace-left-and-indent'} = 0;
+        }
+    }
+
     # -bli flag implies -bl
     if ( $rOpts->{'brace-left-and-indent'} ) {
         $rOpts->{'opening-brace-on-new-line'} = 1;
     }
 
-    if (   $rOpts->{'opening-brace-always-on-right'}
-        && $rOpts->{'opening-brace-on-new-line'} )
-    {
-        Warn(<<EOM);
- Conflict: you specified both 'opening-brace-always-on-right' (-bar) and 
-  'opening-brace-on-new-line' (-bl).  Ignoring -bl. 
-EOM
-        $rOpts->{'opening-brace-on-new-line'} = 0;
-    }
 
     # it simplifies things if -bl is 0 rather than undefined
     if ( !defined( $rOpts->{'opening-brace-on-new-line'} ) ) {
