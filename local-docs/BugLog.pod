@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Modified spacing rule for token type Y>
+
+A space following a token type 'Y' (filehandle) should not be removed.
+Otherwise it might be converted into type 'Z' (possible filehandle). If
+that were to happen, the space could not be added back automatically
+in later formatting, so the user would have to do it by hand.  This
+fix prevents this from happening.
+
 =item B<Fixed blinker related to line break at indirect object>
 
 In random testing a blinker was reduced to the following snippet
