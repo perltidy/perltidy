@@ -1391,31 +1391,36 @@ EOM
         if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
             Warn("Conflicting parameters: -iob and -bom; -bom will be ignored\n"
             );
+            $rOpts->{'break-at-old-method-breakpoints'} = 0;
         }
         if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
             Warn("Conflicting parameters: -iob and -boc; -boc will be ignored\n"
             );
+            $rOpts->{'break-at-old-comma-breakpoints'} = 0;
         }
         if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
             Warn("Conflicting parameters: -iob and -bos; -bos will be ignored\n"
             );
+            $rOpts->{'break-at-old-semicolon-breakpoints'} = 0;
         }
         if ( $rOpts->{'keep-old-breakpoints-before'} ) {
             Warn("Conflicting parameters: -iob and -kbb; -kbb will be ignored\n"
             );
+            $rOpts->{'keep-old-breakpoints-before'} = "";
         }
         if ( $rOpts->{'keep-old-breakpoints-after'} ) {
             Warn("Conflicting parameters: -iob and -kba; -kba will be ignored\n"
             );
+            $rOpts->{'keep-old-breakpoints-after'} = "";
         }
 
-        # Note: there are additional parameters that can be made inactive by
-        # -iob, but they are on by default so we would generate excessive
-        # warnings if we noted them. They are:
-        # $rOpts->{'break-at-old-keyword-breakpoints'}
-        # $rOpts->{'break-at-old-logical-breakpoints'}
-        # $rOpts->{'break-at-old-ternary-breakpoints'}
-        # $rOpts->{'break-at-old-attribute-breakpoints'}
+	# Note: These additional parameters are made inactive by -iob.
+	# They are silently turned off here because they are on by default.
+        # We would generate unexpected warnings if we issued a warning.
+        $rOpts->{'break-at-old-keyword-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-logical-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-ternary-breakpoints'}   = 0;
+        $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
     }
 
     # very frequently used parameters made global for efficiency
@@ -7948,8 +7953,9 @@ sub process_all_lines {
     # set locations for blanks around long runs of keywords
     my $rwant_blank_line_after = $self->keyword_group_scan();
 
-    my $line_type = "";
-    my $i         = -1;
+    my $line_type      = "";
+    my $i_last_POD_END = -1;
+    my $i              = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $i++;
 
@@ -7984,6 +7990,7 @@ sub process_all_lines {
         # put a blank line after an =cut which comes before __END__ and __DATA__
         # (required by podchecker)
         if ( $last_line_type eq 'POD_END' && !$self->[_saw_END_or_DATA_] ) {
+            $i_last_POD_END = $i;
             $file_writer_object->reset_consecutive_blank_lines();
             if ( !$in_format_skipping_section && $input_line !~ /^\s*$/ ) {
                 $self->want_blank_line();
@@ -8009,6 +8016,9 @@ sub process_all_lines {
 
                 # But: the keep-old-blank-lines flag has priority over kgb flags
                 $kgb_keep = 1 if ( $rOpts_keep_old_blank_lines == 2 );
+
+                # Do not delete a blank line following an =cut
+                $kgb_keep = 1 if ( $i - $i_last_POD_END < 3 );
 
                 if ( $rOpts_keep_old_blank_lines && $kgb_keep ) {
                     $self->flush($CODE_type);

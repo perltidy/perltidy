@@ -2,6 +2,35 @@
 
 =over 4
 
+=item B<Do not let -kgb option delete essential blank after =cut>
+
+A blinking state was found in random testing for the following snippet
+
+    =head1 TODO
+    
+    handle UNIMARC encodings
+    
+    =cut
+    
+    use strict;
+    use warnings;
+
+when run with the following parameters
+
+    --keyword-group-blanks-size='2.8'
+    --keyword-group-blanks-before=0
+
+The space after the =cut was alternately being added as an essential blank
+which is required by pod utilities, and then deleted by these parameters.
+This was fixed 17 Jan 2021.
+
+=item B<Turn off -boc flag if -iob is set>
+
+In random testing, the cause of a blinker was traced to both flags
+--ignore-old-breakpoints and --break-at-old-comma-breakpoints being set.
+There is a warning message but the -boc flag was not actually being
+turned off. This was fixed 17 Jan 2021.
+
 =item B<Modified spacing rule for token type Y>
 
 A space following a token type 'Y' (filehandle) should not be removed.
