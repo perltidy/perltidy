@@ -2550,6 +2550,11 @@ EOM
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
           || $typel eq 'Z'
 
+          # Added 'Y' here 16 Jan 2021 to prevent -mangle option from removing 
+          # space after type Y. Otherwise, it will get parsed as type 'Z' later
+          # and any space would have to be added back manually if desired.
+          || $typel eq 'Y'
+
           # Perl is sensitive to whitespace after the + here:
           #  $b = xvals $a + 0.1 * yvals $a;
           || $typell eq 'Z' && $typel =~ /^[\/\?\+\-\*]$/
@@ -2560,9 +2565,10 @@ EOM
                 # keep paren separate in 'use Foo::Bar ()'
                 ( $typel eq 'w' && $typell eq 'k' && $tokenll eq 'use' )
 
-                # keep any space between filehandle and paren:
+                # OLD: keep any space between filehandle and paren:
                 # file mangle.t with --mangle:
-                || $typel eq 'Y'
+                # NEW: this test is no longer necessary here (moved above)
+                ## || $typel eq 'Y'
 
                 # must have space between grep and left paren; "grep(" will fail
                 || $is_sort_grep_map{$tokenl}
