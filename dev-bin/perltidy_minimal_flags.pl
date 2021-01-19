@@ -8,17 +8,14 @@ write a reduced version which omits default and other non-essential
 parameters.  This is an aid for debugging blinkers.
 
 Usage:
-   $0 profile.1 [ profile.2 [ ...
-
-Writes:
-   profile.1.min [ profile.2.min [ ...
+   $0 profile.1 >profile.min
 
 EOM
 
-if (!@ARGV) {
-   die $usage;
+if ( !@ARGV == 1 ) {
+    die $usage;
 }
-my @files       = @ARGV;
+my $ifile       = $ARGV[0];
 my $ris_default = get_defaults();
 
 my $ris_non_essential = {};
@@ -38,55 +35,50 @@ my @q                 = qw(
 );
 @{$ris_non_essential}{@q} = (1) x scalar(@q);
 
-foreach my $file (@files) {
-    my @lines;
-    my $format = "tidy";
-    open( IN, "<", $file ) || die "cannot open $file: $!\n";
-    while ( my $line = <IN> ) {
-        chomp $line;
-        $line =~ s/^\s+//;
-        $line =~ s/\s+$//;
-        if    ( $line =~ /-?-format=html$/ ) { $format = 'html' }
-        if    ( $line =~ /-?-format=html$/ ) { $format = 'tidy' }
-        elsif ( $line =~ /-?-html$/ )        { $format = 'html' }
-        elsif ( $line =~ /-?-tidy$/ )        { $format = 'tidy' }
+my @lines;
+my $format = "tidy";
+open( IN, "<", $ifile ) || die "cannot open $ifile: $!\n";
+while ( my $line = <IN> ) {
+    chomp $line;
+    $line =~ s/^\s+//;
+    $line =~ s/\s+$//;
+    if    ( $line =~ /-?-format=html$/ ) { $format = 'html' }
+    if    ( $line =~ /-?-format=html$/ ) { $format = 'tidy' }
+    elsif ( $line =~ /-?-html$/ )        { $format = 'html' }
+    elsif ( $line =~ /-?-tidy$/ )        { $format = 'tidy' }
 
-        # filter out defaults
+    # filter out defaults
+    my $key = $line;
+    $key =~ s/^--//;
+    next if ( $ris_default->{$key} );
+    next if ( $key =~ /^perl-syntax-check-flags/ );
+
+    # remove flags not related to formatting
+    next if ( $ris_non_essential->{$key} );
+
+    push @lines, $line;
+}
+close IN;
+
+# remove html and pod flags in tidy mode
+if ( $format ne 'html' ) {
+    my @newlines;
+    foreach my $line (@lines) {
         my $key = $line;
         $key =~ s/^--//;
-        next if ( $ris_default->{$key} );
-        next if ( $key =~ /^perl-syntax-check-flags/ );
 
-        # remove flags not related to formatting
-        next if ( $ris_non_essential->{$key} );
-
-        push @lines, $line;
-    }
-    close IN;
-
-    # remove html and pod flags in tidy mode
-    if ( $format ne 'html' ) {
-        my @newlines;
-        foreach my $line (@lines) {
-            my $key = $line;
-            $key =~ s/^--//;
-
-            #next if ( $key =~ /html/ || $key =~ /pod/ );
-            next
-              if ( $key =~
+        #next if ( $key =~ /html/ || $key =~ /pod/ );
+        next
+          if ( $key =~
 /^(html|nohtml|pod|nopod|backlink|cachedir|stylesheet|profile|libpods|frames|title)/
-              );
-            push @newlines, $line;
-        }
-        @lines = @newlines;
+          );
+        push @newlines, $line;
     }
+    @lines = @newlines;
+}
 
-    my $ofile = $file . ".min";
-    open( OUT, ">", $ofile ) || die "cannot open $ofile: $!\n";
-    foreach my $line (@lines) {
-        print OUT $line . "\n";
-    }
-    close OUT;
+foreach my $line (@lines) {
+    print STDOUT $line . "\n";
 }
 
 sub get_defaults {
