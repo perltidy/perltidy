@@ -13285,6 +13285,8 @@ sub set_continuation_breaks {
     # This is a sufficient but not necessary condition for colon chain
     my $is_colon_chain = ( $colons_in_order && @{$rcolon_list} > 2 );
 
+    my $Msg = "";
+
     #-------------------------------------------------------
     # BEGINNING of main loop to set continuation breakpoints
     # Keep iterating until we reach the end
@@ -13354,6 +13356,7 @@ sub set_continuation_breaks {
               )
             {
                 $strength -= $tiny_bias;
+                DEBUG_BREAKPOINTS && do { $Msg .= " :-bias at i=$i_test" };
             }
 
             # otherwise increase strength a bit if this token would be at the
@@ -13366,6 +13369,7 @@ sub set_continuation_breaks {
                   $starting_sum;
                 if ( $len >= $maximum_line_length ) {
                     $strength += $tiny_bias;
+                    DEBUG_BREAKPOINTS && do { $Msg .= " :+bias at i=$i_test" };
                 }
             }
 
@@ -13404,6 +13408,8 @@ sub set_continuation_breaks {
               )
             {
                 $self->set_forced_breakpoint($i_next_nonblank);
+                DEBUG_BREAKPOINTS
+                  && do { $Msg .= " :Forced break at i=$i_next_nonblank" };
             }
 
             if (
@@ -13454,6 +13460,8 @@ sub set_continuation_breaks {
                 if ( $strength < NO_BREAK - 1 ) {
                     $strength   = $lowest_strength - $tiny_bias;
                     $must_break = 1;
+                    DEBUG_BREAKPOINTS
+                      && do { $Msg .= " :set must_break at i=$i_next_nonblank" };
                 }
             }
 
@@ -13471,7 +13479,12 @@ sub set_continuation_breaks {
                 )
               )
             {
-                last if ( $i_lowest >= 0 );
+                if ( $i_lowest >= 0 ) {
+                    DEBUG_BREAKPOINTS && do {
+                        $Msg .= " :quit at good terminal='$next_nonblank_type'";
+                    };
+                    last;
+                }
             }
 
             # Avoid a break which would strand a single punctuation
@@ -13494,6 +13507,9 @@ sub set_continuation_breaks {
               )
             {
                 $i_test = min( $imax, $inext_to_go[$i_test] );
+                DEBUG_BREAKPOINTS && do {
+                    $Msg .= " :redo at i=$i_test";
+                };
                 redo;
             }
 
@@ -13503,8 +13519,13 @@ sub set_continuation_breaks {
                 # break at previous best break if it would have produced
                 # a leading alignment of certain common tokens, and it
                 # is different from the latest candidate break
-                last
-                  if ($leading_alignment_type);
+                if ($leading_alignment_type) {
+                    DEBUG_BREAKPOINTS && do {
+                        $Msg .=
+" :last at leading_alignment='$leading_alignment_type'";
+                    };
+                    last;
+                }
 
                 # Force at least one breakpoint if old code had good
                 # break It is only called if a breakpoint is required or
@@ -13512,8 +13533,7 @@ sub set_continuation_breaks {
                 # over time.  A goal is to try to be sure that, if a new
                 # side comment is introduced into formatted text, then
                 # the same breakpoints will occur.  scbreak.t
-                last
-                  if (
+                if (
                     $i_test == $imax            # we are at the end
                     && !get_forced_breakpoint_count()
                     && $saw_good_break          # old line had good break
@@ -13523,7 +13543,14 @@ sub set_continuation_breaks {
                     && $i_lowest >= 0           # and we saw a possible break
                     && $i_lowest < $imax - 1    # (but not just before this ;)
                     && $strength - $lowest_strength < 0.5 * WEAK # and it's good
-                  );
+                  )
+                {
+
+                    DEBUG_BREAKPOINTS && do {
+                        $Msg .= " :last at good old break\n";
+                    };
+                    last;
+                }
 
                 # Do not skip past an important break point in a short final
                 # segment.  For example, without this check we would miss the
@@ -13551,9 +13578,14 @@ sub set_continuation_breaks {
                     # Make this break for math operators for now
                     my $ir = $inext_to_go[$i_lowest];
                     my $il = $iprev_to_go[$ir];
-                    last
-                      if ( $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
-                        || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ );
+                    if (   $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
+                        || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ )
+                    {
+                        DEBUG_BREAKPOINTS && do {
+                            $Msg .= " :last-noskip_short";
+                        };
+                        last;
+                    }
                 }
 
                 # Update the minimum bond strength location
@@ -13562,7 +13594,12 @@ sub set_continuation_breaks {
                 $lowest_next_token      = $next_nonblank_token;
                 $lowest_next_type       = $next_nonblank_type;
                 $i_lowest_next_nonblank = $i_next_nonblank;
-                last if $must_break;
+                if ($must_break) {
+                    DEBUG_BREAKPOINTS && do {
+                        $Msg .= " :last-must_break";
+                    };
+                    last;
+                }
 
                 # set flags to remember if a break here will produce a
                 # leading alignment of certain common tokens
@@ -13628,6 +13665,9 @@ sub set_continuation_breaks {
                     && !$is_closing_type{$next_nonblank_type} )
                 {
                     $too_long = $next_length >= $maximum_line_length;
+                    DEBUG_BREAKPOINTS && do {
+                        $Msg .= " :too_long=$too_long" if ($too_long);
+                    }
                 }
             }
 
@@ -13654,18 +13694,27 @@ sub set_continuation_breaks {
               )
             {
                 $too_long = 0;
+                DEBUG_BREAKPOINTS && do {
+                    $Msg .= " :do_not_strand next='$next_nonblank_type'";
+                };
             }
 
             # we are done if...
-            last
-              if (
+            if (
 
                 # ... no more space and we have a break
                 $too_long && $i_lowest >= 0
 
                 # ... or no more tokens
                 || $i_test == $imax
-              );
+              )
+            {
+                DEBUG_BREAKPOINTS && do {
+                    $Msg .=
+" :Done-too_long=$too_long or i_lowest=$i_lowest or $i_test==imax";
+                };
+                last;
+            }
         }
 
         #-------------------------------------------------------
@@ -13718,7 +13767,8 @@ sub set_continuation_breaks {
 
         DEBUG_BREAKPOINTS
           && print STDOUT
-          "BREAK: best is i = $i_lowest strength = $lowest_strength\n";
+"BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
+        $Msg = "";
 
         #-------------------------------------------------------
         # ?/: rule 2 : if we break at a '?', then break at its ':'
@@ -13786,6 +13836,9 @@ sub set_continuation_breaks {
         # update indentation size
         if ( $i_begin <= $imax ) {
             $leading_spaces = leading_spaces_to_go($i_begin);
+            DEBUG_BREAKPOINTS
+              && print STDOUT
+              "updating leading spaces to be $leading_spaces at i=$i_begin\n";
         }
     }
 
@@ -16338,6 +16391,8 @@ sub get_available_spaces_to_go {
         return $item;
     }
 
+    use constant TEST_LP_FIX => 0;
+
     sub set_leading_whitespace {
 
         # This routine defines leading whitespace for the case of -lp formatting
@@ -16351,6 +16406,17 @@ sub get_available_spaces_to_go {
 
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
+
+        # Patch created 19-Jan-2021 to fix blinkers. But causes a few differences with
+        # old formatting which need to be checked more.
+        if ( TEST_LP_FIX && $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq 'b' ) {
+
+            $leading_spaces_to_go[$max_index_to_go] =
+              $leading_spaces_to_go[ $max_index_to_go - 1 ];
+            $reduced_spaces_to_go[$max_index_to_go] =
+              $reduced_spaces_to_go[ $max_index_to_go - 1 ];
+            return;
+        }
 
         my $rbreak_container = $self->[_rbreak_container_];
         my $rshort_nested    = $self->[_rshort_nested_];
