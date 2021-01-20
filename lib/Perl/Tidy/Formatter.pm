@@ -6683,6 +6683,12 @@ sub weld_nested_containers {
         my $iline_io = $inner_opening->[_LINE_INDEX_];
         my $iline_ic = $inner_closing->[_LINE_INDEX_];
 
+        # RULE: do not weld to a hash brace unless it is preceded by @
+        if ( $inner_opening->[_TYPE_] eq 'L' ) {
+            my $Kp  = $self->K_previous_nonblank($Kinner_opening);
+            next unless ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq '@' );
+        }
+
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
 

@@ -2,6 +2,97 @@
 
 =over 4
 
+=item B<added rule for -wn, do not weld to a hash brace>
+
+In random testing, the following two alternating states
+
+    # State 1
+    {
+        if ( defined
+        ($symbol_table{$direccion}) )
+    }
+    
+    # State 2
+    {
+        if (defined (
+                $symbol_table{
+                    $direccion}
+            )
+        )
+    }
+
+were occuring with the following particular parameter set
+
+    --weld-nested-containers
+    --maximum-line-length=40
+    --continuation-indentation=7
+    --paren-tightness=2
+    --extended-continuation-indentation
+
+The problem was traced to welding to the opening hash brace.  A rule
+was added to prevent this, and testing with a large body of code
+showed that it did not significantly change existing formatting. With
+this change, the above snippet formats in the stable state
+
+    {
+        if (defined(
+            $symbol_table{$direccion}
+        ))
+    }
+
+20 Jan 2021.
+
+=item B<Some issues with the -lp option>
+
+Random testing revealed dome problems involving the B<-lp> option which are
+fixed with this update.
+
+The first problem is illustrated with the following snippet
+
+    $cron =
+      pkgfile( $PACKAGE,
+              "cron.$type" ) ;
+
+which alternately switches to this format
+    
+    $cron =
+      pkgfile( $PACKAGE,
+               "cron.$type"
+      ) ;
+
+when processed with these particular parameters:
+
+    --indent-columns=1
+    --maximum-line-length=26
+    --line-up-parentheses
+    --space-terminal-semicolon
+
+The last parameter, a space before the semicolon, is the main cause of
+the problem. Without it the problem does not occur.
+
+Another problem is illustrated with the following snippet
+
+    Alien::FillOutTemplate(
+                "$main::libdir/to-$main::desttype/$main::filetype/spec",
+                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
+                %fields
+    );
+
+which alternately formats to this form
+
+    # perltidy -lp
+    Alien::FillOutTemplate(
+                "$main::libdir/to-$main::desttype/$main::filetype/spec",
+                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
+                %fields );
+
+when formatted with the single parameter B<-lp>.  These problems can be corrected by
+not processing blank tokens in the sub which sets the leading whitespace for
+the -lp option, 'sub set_leading_whitespace'.  However, this fix can change
+some existing formatting with the -lp flag, so this coding is not yet activated.
+It can be turned on for testing with the internal flag 'TEST_LP_FIX'.
+
+
 =item B<Do not let -kgb option delete essential blank after =cut>
 
 A blinking state was found in random testing for the following snippet
