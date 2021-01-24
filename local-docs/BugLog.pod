@@ -2,6 +2,37 @@
 
 =over 4
 
+=item B<Some issues with the -lp option>
+
+Random testing revealed some problems involving the B<-lp> option which are
+fixed with this update.
+
+The problem is illustrated with the following snippet
+
+    # perltidy -lp
+    Alien::FillOutTemplate(
+                "$main::libdir/to-$main::desttype/$main::filetype/spec",
+                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
+                %fields
+    );
+
+which alternately formats to this form
+
+    # perltidy -lp
+    Alien::FillOutTemplate(
+                "$main::libdir/to-$main::desttype/$main::filetype/spec",
+                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
+                %fields );
+
+when formatted with the single parameter B<-lp>.  A number of similar examples
+were found in testing. The problem was traced to the treatment of the space
+which perltidy tentatively adds wherever there is a newline, just in case 
+the formatted output has different line breaks.  The problem was that the
+indentation level of these spaces was being set as the level of the next token
+rather than the previous token. Normally the indentation level of a space has
+no effect, but the B<-lp> option does use it and this caused the problem.
+This was fixed 23 Jan 2021.
+
 =item B<added rule for -wn, do not weld to a hash brace>
 
 In random testing, the following two alternating states
@@ -41,57 +72,6 @@ this change, the above snippet formats in the stable state
     }
 
 20 Jan 2021.
-
-=item B<Some issues with the -lp option>
-
-Random testing revealed dome problems involving the B<-lp> option which are
-fixed with this update.
-
-The first problem is illustrated with the following snippet
-
-    $cron =
-      pkgfile( $PACKAGE,
-              "cron.$type" ) ;
-
-which alternately switches to this format
-    
-    $cron =
-      pkgfile( $PACKAGE,
-               "cron.$type"
-      ) ;
-
-when processed with these particular parameters:
-
-    --indent-columns=1
-    --maximum-line-length=26
-    --line-up-parentheses
-    --space-terminal-semicolon
-
-The last parameter, a space before the semicolon, is the main cause of
-the problem. Without it the problem does not occur.
-
-Another problem is illustrated with the following snippet
-
-    Alien::FillOutTemplate(
-                "$main::libdir/to-$main::desttype/$main::filetype/spec",
-                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
-                %fields
-    );
-
-which alternately formats to this form
-
-    # perltidy -lp
-    Alien::FillOutTemplate(
-                "$main::libdir/to-$main::desttype/$main::filetype/spec",
-                "$workdir/$fields{NAME}-$fields{VERSION}-$fields{RELEASE}.spec",
-                %fields );
-
-when formatted with the single parameter B<-lp>.  These problems can be corrected by
-not processing blank tokens in the sub which sets the leading whitespace for
-the -lp option, 'sub set_leading_whitespace'.  However, this fix can change
-some existing formatting with the -lp flag, so this coding is not yet activated.
-It can be turned on for testing with the internal flag 'TEST_LP_FIX'.
-
 
 =item B<Do not let -kgb option delete essential blank after =cut>
 

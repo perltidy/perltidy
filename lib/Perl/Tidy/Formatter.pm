@@ -4879,6 +4879,17 @@ sub respace_tokens {
             my $rcopy = copy_token_as_type( $item, 'b', ' ' );
             $rcopy->[_LINE_INDEX_] =
               $rLL_new->[-1]->[_LINE_INDEX_];
+
+            # Patch 23-Jan-2021 to fix -lp blinkers:
+            # The level and ci_level of newly created spaces should be the same
+            # as the previous token.  Otherwise the coding for the -lp option,
+            # in sub set_leading_whitespace, can create a blinking state in
+            # some rare cases.
+            $rcopy->[_LEVEL_] =
+              $rLL_new->[-1]->[_LEVEL_];
+            $rcopy->[_CI_LEVEL_] =
+              $rLL_new->[-1]->[_CI_LEVEL_];
+
             $store_token->($rcopy);
         }
 
@@ -16397,8 +16408,6 @@ sub get_available_spaces_to_go {
         return $item;
     }
 
-    use constant TEST_LP_FIX => 0;
-
     sub set_leading_whitespace {
 
         # This routine defines leading whitespace for the case of -lp formatting
@@ -16412,17 +16421,6 @@ sub get_available_spaces_to_go {
 
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
-
-        # Patch created 19-Jan-2021 to fix blinkers. But causes a few differences with
-        # old formatting which need to be checked more.
-        if ( TEST_LP_FIX && $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq 'b' ) {
-
-            $leading_spaces_to_go[$max_index_to_go] =
-              $leading_spaces_to_go[ $max_index_to_go - 1 ];
-            $reduced_spaces_to_go[$max_index_to_go] =
-              $reduced_spaces_to_go[ $max_index_to_go - 1 ];
-            return;
-        }
 
         my $rbreak_container = $self->[_rbreak_container_];
         my $rshort_nested    = $self->[_rshort_nested_];
