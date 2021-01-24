@@ -38,10 +38,10 @@ push @contents,
                      )
              ),
              $c->Tr(
-                  { -valign => 'top' },
-                  $c->td(
-                          $c->table(
-                                     $c->Tr(
+                     { -valign => 'top' },
+                     $c->td(
+                             $c->table(
+                                        $c->Tr(
                                             $c->td(
                                                    { -valign => 'top' },
                                                    $c->strong(" Document Type ")
@@ -56,31 +56,33 @@ push @contents,
                                                     -default => "$doc_type"
                                                 )
                                             )
-                                     )
-                          )
-                  ),
-                  $c->td(
-                      $c->table(
-                          $c->Tr(
-                              $c->td(
-                                  { -valign => 'top' },
-                                  $c->strong(
-                                      " Relevant Discipline ", $c->br(), "Area "
-                                  )
-                              ),
-                              $c->td(
-                                      { -valign => 'top' },
-                                      $c->scrolling_list(
+                                        )
+                             )
+                     ),
+                     $c->td(
+                             $c->table(
+                                        $c->Tr(
+                                             $c->td(
+                                                    { -valign => 'top' },
+                                                    $c->strong(
+                                                        " Relevant Discipline ",
+                                                        $c->br(),
+                                                        "Area "
+                                                    )
+                                             ),
+                                             $c->td(
+                                                 { -valign => 'top' },
+                                                 $c->scrolling_list(
                                                      -tabindex => "5",
                                                      -name     => "discipline",
                                                      -values => [@discipValues],
                                                      -labels => \%discipLabels,
                                                      -default => "$discipline"
-                                      ),
-                              )
-                          )
-                      )
-                  )
+                                                 ),
+                                             )
+                                        )
+                             )
+                     )
              ),
              $c->Tr(
                      { -valign => 'top' },
@@ -131,7 +133,8 @@ push @contents,
                                        $c->Tr(
                                            $c->td(
                                                { -valign => 'top' },
-                                               "Description", $c->br(),
+                                               "Description",
+                                               $c->br(),
                                                $c->small("Maximum 750 letters.")
                                            ),
                                            $c->td(

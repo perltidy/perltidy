@@ -1,5 +1,11 @@
 # Perltidy Change Log
 
+## 2021 01 xx
+
+    - Fixed a rare problem with -lp formatting which could cause alternating 
+    output states.  Except for some very deeply nested data structures,
+    most scripts formatted with this option will not be changed.
+
 ## 2021 01 11
 
     - Fixed issue git #49, -se breaks warnings exit status behavior.
