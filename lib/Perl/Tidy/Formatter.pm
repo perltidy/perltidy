@@ -17181,6 +17181,15 @@ sub send_lines_to_vertical_aligner {
             $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
+        else {
+
+            # Patch for git #51, a bare closing qw paren was not outdented 
+            # if the flag '-nodelete-old-newlines is set
+            my $Kbeg_next = $self->K_next_code($Kend);
+            if ( defined($Kbeg_next) ) {
+                 $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+            }
+        }
 
         # level jump at end of line for the vertical aligner:
         my $level_jump =
@@ -19137,6 +19146,11 @@ sub make_paren_name {
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
                     && $is_closing_type{ $types_to_go[$iend] } )
+
+                # Alternate Patch for git #51, isolated closing qw token not
+                # outdented if no-delete-old-newlines is set. This works, but
+                # a more general patch elsewhere fixes the real problem: ljump.
+                # || ( $seqno_qw_closing && $ibeg == $i_terminal )
 
               )
             {

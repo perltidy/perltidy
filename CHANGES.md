@@ -2,6 +2,9 @@
 
 ## 2021 01 xx
 
+    - Fixed issue git #51, a closing qw bare paren was not being outdented when
+    the -nodelete-old-newlines flag was set.
+
     - Fixed a rare problem with -lp formatting which could cause alternating 
     output states.  Except for some very deeply nested data structures,
     most scripts formatted with this option will not be changed.

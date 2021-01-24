@@ -2,6 +2,44 @@
 
 =over 4
 
+=item B<Fix for issue git #51, closing qw paren not outdented when -ndnl is set>
+
+The problem is that a bare closing qw paren was not being outdented 
+if the flag '-nodelete-old-newlines is set. For example
+
+    # OLD (OK, outdented): perltidy -ci=4 -xci
+    {
+        modules => [
+            qw(
+                JSON
+            )
+        ],
+    }
+
+
+    # OLD (indented) : perltidy -ndnl -ci=4 -xci
+    {
+        modules => [
+            qw(
+                JSON
+                )
+        ],
+    }
+
+    # FIXED: perltidy -ndnl -ci=4 -xci
+    {
+        modules => [
+            qw(
+                JSON
+            )
+        ],
+    }
+
+The problem happened because the -ndnl flag forces each line to be written
+immediately, so the next line (which needs to be checked in this case) was not
+available when the outdent decision had to be made.  A patch to work around
+this was added 24 Jan 2021.
+
 =item B<Some issues with the -lp option>
 
 Random testing revealed some problems involving the B<-lp> option which are
