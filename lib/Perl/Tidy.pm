@@ -1486,9 +1486,12 @@ EOM
                         my $iterm = $iter - 1;
                         if ( $saw_md5{$digest} != $iterm ) {
 
-                            # Blinking (oscillating) between two stable
-                            # end states.  This has happened in the past
-                            # but at present there are no known instances.
+                            # Blinking (oscillating) between two or more stable
+                            # end states.  This is unlikely to occur with normal
+                            # parameters, but it can occur in stress testing 
+                            # with extreme parameter values, such as very short
+                            # maximum line lengths.  We want to catch and fix
+                            # them when they happen.
                             $convergence_log_message = <<EOM;
 BLINKER. Output for iteration $iter same as for $saw_md5{$digest}. 
 EOM
@@ -3322,7 +3325,6 @@ EOM
         $rOpts->{'opening-brace-on-new-line'} = 1;
     }
 
-
     # it simplifies things if -bl is 0 rather than undefined
     if ( !defined( $rOpts->{'opening-brace-on-new-line'} ) ) {
         $rOpts->{'opening-brace-on-new-line'} = 0;
@@ -3386,6 +3388,17 @@ EOM
         }
         my $joined_words = join ' ', @filtered_word_list;
         $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
+    }
+
+    # The freeze-whitespace option is currently a derived option which has its
+    # own key
+    $rOpts->{'freeze-whitespace'} = !$rOpts->{'add-whitespace'}
+      && !$rOpts->{'delete-old-whitespace'};
+
+    # Turn off certain options if whitespace is frozen
+    # Note: vertical alignment will be automatically shut off
+    if ( $rOpts->{'freeze-whitespace'} ) {
+        $rOpts->{'logical-padding'} = 0;
     }
 
     # Define $tabsize, the number of spaces per tab for use in

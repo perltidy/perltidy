@@ -170,6 +170,10 @@ my (
     $rOpts_indent_only,
     $rOpts_static_block_comments,
 
+    $rOpts_add_whitespace,
+    $rOpts_delete_old_whitespace,
+    $rOpts_freeze_whitespace,
+
     # Static hashes initialized in a BEGIN block
     %is_assignment,
     %is_keyword_returning_list,
@@ -1414,8 +1418,8 @@ EOM
             $rOpts->{'keep-old-breakpoints-after'} = "";
         }
 
-	# Note: These additional parameters are made inactive by -iob.
-	# They are silently turned off here because they are on by default.
+        # Note: These additional parameters are made inactive by -iob.
+        # They are silently turned off here because they are on by default.
         # We would generate unexpected warnings if we issued a warning.
         $rOpts->{'break-at-old-keyword-breakpoints'}   = 0;
         $rOpts->{'break-at-old-logical-breakpoints'}   = 0;
@@ -1459,6 +1463,10 @@ EOM
     $rOpts_format_skipping       = $rOpts->{'format-skipping'};
     $rOpts_indent_only           = $rOpts->{'indent-only'};
     $rOpts_static_block_comments = $rOpts->{'static-block-comments'};
+
+    $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
+    $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
+    $rOpts_freeze_whitespace     = $rOpts->{'freeze-whitespace'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -2555,7 +2563,7 @@ EOM
           # (testfiles prnterr1.t with --extrude and mangle.t with --mangle)
           || $typel eq 'Z'
 
-          # Added 'Y' here 16 Jan 2021 to prevent -mangle option from removing 
+          # Added 'Y' here 16 Jan 2021 to prevent -mangle option from removing
           # space after type Y. Otherwise, it will get parsed as type 'Z' later
           # and any space would have to be added back manually if desired.
           || $typel eq 'Y'
@@ -4713,8 +4721,6 @@ sub respace_tokens {
     my $CODE_type = "";
     my $line_type = "";
 
-    my $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
-    my $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
     my $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
 
@@ -5252,7 +5258,13 @@ sub respace_tokens {
                 # white space BEFORE the token is needed
                 next if ( $KK >= $Klast );    # skip terminal blank
                 my $Knext = $KK + 1;
-                my $ws    = $rwhitespace_flags->[$Knext];
+
+                if ($rOpts_freeze_whitespace) {
+                    $store_token->($rtoken_vars);
+                    next;
+                }
+
+                my $ws = $rwhitespace_flags->[$Knext];
                 if (   $ws == -1
                     || $rOpts_delete_old_whitespace )
                 {
@@ -5285,10 +5297,8 @@ sub respace_tokens {
                     next unless ($do_not_delete);
                 }
 
-                # make it just one character if allowed
-                if ($rOpts_add_whitespace) {
-                    $rtoken_vars->[_TOKEN_] = ' ';
-                }
+                # make it just one character
+                $rtoken_vars->[_TOKEN_] = ' ';
                 $store_token->($rtoken_vars);
                 next;
             }
@@ -6696,7 +6706,7 @@ sub weld_nested_containers {
 
         # RULE: do not weld to a hash brace unless it is preceded by @
         if ( $inner_opening->[_TYPE_] eq 'L' ) {
-            my $Kp  = $self->K_previous_nonblank($Kinner_opening);
+            my $Kp = $self->K_previous_nonblank($Kinner_opening);
             next unless ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq '@' );
         }
 
@@ -7585,7 +7595,7 @@ sub adjust_container_indentation {
         # This is only for list containers
         next unless $self->is_list_by_seqno($seqno);
 
-        # and only for broken lists. 
+        # and only for broken lists.
         # Require container to span 3 or more line to avoid blinkers,
         # so line difference must be 2 or more.
         next
@@ -17183,11 +17193,12 @@ sub send_lines_to_vertical_aligner {
         }
         else {
 
-            # Patch for git #51, a bare closing qw paren was not outdented 
+            # Patch for git #51, a bare closing qw paren was not outdented
             # if the flag '-nodelete-old-newlines is set
             my $Kbeg_next = $self->K_next_code($Kend);
             if ( defined($Kbeg_next) ) {
-                 $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+                $ljump =
+                  $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
             }
         }
 
@@ -17448,7 +17459,6 @@ sub send_lines_to_vertical_aligner {
         my ( $self, $ri_first, $ri_last ) = @_;
         my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
 
-        my $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
         my $ralignment_type_to_go;
 
         # Initialize the alignment array. Note that closing side comments can

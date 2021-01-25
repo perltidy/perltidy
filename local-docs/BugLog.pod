@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Revise coding for the --freeze-whitespace option>
+
+Random testing produced some blinking states which were traced to an incorrect
+implementation of the B<--freeze-whitespace> option (which is mainly useful
+in stress testing perltidy).  A related flag, --add-whitespace is involved.
+This update corrects these problems.  Test cases include b057, b183, b242.
+24 Jan 2021.
+
 =item B<Fix for issue git #51, closing qw paren not outdented when -ndnl is set>
 
 The problem is that a bare closing qw paren was not being outdented 
