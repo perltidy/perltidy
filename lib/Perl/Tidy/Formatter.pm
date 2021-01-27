@@ -5670,12 +5670,18 @@ sub respace_tokens {
         next if ($block_type);
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next unless ($rtype_count);
-        my $fat_comma_count = $rtype_count->{'=>'};
+        ##my $fat_comma_count = $rtype_count->{'=>'};
         my $comma_count     = $rtype_count->{','};
         my $semicolon_count = $rtype_count->{';'};
 
-        # This definition of a list is sufficient for our needs
-        if ( ( $fat_comma_count || $comma_count ) && !$semicolon_count ) {
+	# We will define a list to be a container with one or more commas and
+	# no semicolons.  Previously we allowed either a comma or fat comma,
+        # but requiring a comma gives a guarantee later routines that there 
+        # is a good line break point within the list.  This is useful because
+        # we are mainly concerned with formatting and vertically aligning 
+        # multiple-line lists here.
+        ##if ( ( $fat_comma_count || $comma_count ) && !$semicolon_count ) {
+        if ( $comma_count && !$semicolon_count ) {
             $ris_list_by_seqno->{$seqno} = $seqno;
         }
     }
