@@ -5661,8 +5661,7 @@ sub respace_tokens {
         $self->[_K_first_seq_item_] = $KNEXT;
     }
 
-    # find and remember lists by sequence number
-    # TODO: eventually this should hold a name for the list
+    # Find and remember lists by sequence number
     my $ris_list_by_seqno = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
         my $K_opening  = $K_opening_container->{$seqno};
@@ -5670,17 +5669,15 @@ sub respace_tokens {
         next if ($block_type);
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next unless ($rtype_count);
-        ##my $fat_comma_count = $rtype_count->{'=>'};
         my $comma_count     = $rtype_count->{','};
         my $semicolon_count = $rtype_count->{';'};
 
-	# We will define a list to be a container with one or more commas and
-	# no semicolons.  Previously we allowed either a comma or fat comma,
-        # but requiring a comma gives a guarantee later routines that there 
+        # We will define a list to be a container with one or more commas and
+        # no semicolons.  Previously we allowed either a comma or fat comma,
+        # but requiring a comma gives a guarantee later routines that there
         # is a good line break point within the list.  This is useful because
-        # we are mainly concerned with formatting and vertically aligning 
+        # we are mainly concerned with formatting and vertically aligning
         # multiple-line lists here.
-        ##if ( ( $fat_comma_count || $comma_count ) && !$semicolon_count ) {
         if ( $comma_count && !$semicolon_count ) {
             $ris_list_by_seqno->{$seqno} = $seqno;
         }
@@ -7571,13 +7568,16 @@ sub adjust_container_indentation {
 
     # Loop over all opening container tokens
     my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
     foreach my $seqno ( keys %{$K_opening_container} ) {
-        my $KK = $K_opening_container->{$seqno};
 
-        # this routine is not for code block braces
-        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
-        next if ($block_type);
+        # This is only for list containers
+        next unless $self->is_list_by_seqno($seqno);
+
+        my $KK        = $K_opening_container->{$seqno};
+        my $K_closing = $K_closing_container->{$seqno};
+        next unless defined($K_closing);
 
         # These flags only apply if the corresponding -bb* flags
         # have been set to non-default values
@@ -7598,21 +7598,63 @@ sub adjust_container_indentation {
         }
         next unless ( $is_equal_or_fat_comma{$prev_type} );
 
-        # This is only for list containers
-        next unless $self->is_list_by_seqno($seqno);
-
-        # and only for broken lists.
-        # Require container to span 3 or more line to avoid blinkers,
-        # so line difference must be 2 or more.
-        next
-          if ( $ris_broken_container->{$seqno}
-            && $ris_broken_container->{$seqno} <= 1 );
-
         # NOTE: We are adjusting indentation of the opening container. The
         # closing container will normally follow the indentation of the opening
         # container automatically, so this is not currently done.
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
         next unless ($ci);
+
+        # and only for broken lists.
+        # Require container to span 3 or more line to avoid blinkers,
+        # so line difference must be 2 or more.
+        next
+          if (!$ris_broken_container->{$seqno}
+            || $ris_broken_container->{$seqno} <= 1 );
+
+        # To avoid blinkers, we only want to change ci if this container
+        # will definitely be broken.  We are doing this before the final
+        # decision is made, so we have to use whatever information we can.
+        # In most cases it wouldn't make any difference if we added the ci
+        # or not, but there are some edge cases where adding the ci can
+        # cause blinking states, so we need to try to only add ci if the
+        # container will really be broken.  One of the following
+        # conditions will be taken as sufficient:
+        #  (1) the container is permanently broken by blank lines,
+        #      side comments, here docs, pod, ..
+        #  (2) contains multiple fat commas or
+        #  (3) that this container token starts a new line, or
+        #  (4) container is too long for one line
+
+        # (1) TBD: is permanently broken container: not yet implemented.
+
+        # (2) or the opening paren, bracket, or brace starts a new line
+        my $opening_container_starts_line =
+          $rLL->[$KK]->[_LINE_INDEX_] > $rLL->[$Kprev]->[_LINE_INDEX_];
+        if ( !$opening_container_starts_line ) { #<<<
+
+        # (3) or it contains multiple fat commas
+        my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$seqno};
+        my $fat_comma_count = $rtype_count->{'=>'};
+        if ( !$fat_comma_count || $fat_comma_count < 2 ) { #<<<
+
+        # (4) or the net container length exceeds maximum line length
+        my $starting_indent = 0;
+        if ( !$rOpts_variable_maximum_line_length ) {
+            my $level = $rLL->[$KK]->[_LEVEL_];
+            $starting_indent = $rOpts_indent_columns * $level +
+              $ci * $rOpts_continuation_indentation;
+        }
+        my $length = $self->cumulative_length_before_K($K_closing) -
+          $self->cumulative_length_before_K($KK);
+        my $excess_length =
+          $starting_indent + $length - $rOpts_maximum_line_length;
+
+        next if ( $excess_length <= 0 );
+
+        } ## end (3) fat comma test
+        } ## end (2) opening container token starts new line
+
+        # OK to change ci...
 
         # option 1: outdent
         if ( $flag == 1 ) {

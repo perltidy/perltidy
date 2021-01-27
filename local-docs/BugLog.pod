@@ -2,6 +2,24 @@
 
 =over 4
 
+=item B<Avoid blinking states associated with -bbpi and similar flags>
+
+Random testing with extreme parameter values revealed blinking states
+associated with the -bbpi and related flags.  The problem was that
+continuation indentation was sometimes being added according to the flag
+but the lists were not actually being broken.  After this was fixed
+the following cases ran correctly: 
+
+b024 b035 b036 b040 b042 b047 b049 b050 b051 b052 b053 b054 b057 b062 b063 b073
+b074 b076 b080 b083 b085 b086 b087 b088 b102 b103 b104 b106 b107 b108 b115 b118
+b121 b123 b125 b127 b132 b137 b139 b140 b141 b143 b144 b148 b159 b175 b177 b180
+b181 b188 b189 b200 b201 b202 b204 b207 b212 b213 b214 b226 b227 b228 b229 b230
+b232 b239 b240 b241 b243 b248 b250 b255 b277 b286 b287 b290 b293 b298 b301 b306
+b308 b328 b351 b353 b357 b378 b380 b390 b391 b393 b394 b399 b400 b401 b406 b413
+b415 b416 b430 b431 b442 b447 b463 b470 b491 b495
+
+27 Jan 2021.
+
 =item B<Revise coding for the --freeze-whitespace option>
 
 Random testing produced some blinking states which were traced to an incorrect
