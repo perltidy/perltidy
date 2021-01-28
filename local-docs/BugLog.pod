@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<fix some edge blinker cases involving -bbxi=n esp. with -boc>
+
+The following cases were fixed with this update:
+
+b041 b182 b184 b366 b367 b368 b370 b371 b382 b420 b432 b438 b464 b466 b467 b468
+b500 b501 b508 b509 b510 b512 b513 b514 b515 b516 b526 b528 b529 b531 b544 b545
+b547 b548 b549 b556 b557 b568 b571 b581 b583 b584 b585 b594 b595 b596 b597 b598
+b599 b600 b601 b602 b608 b041 b182 b184 b355 b356 b366 b367 b368 b371 b420 b432
+b464 b465 b466 b467 b468 b500 b501 b508 b509 b510 b512 b513 b514 b515 b516 b526
+b528 b529 b531 b544 b545 b547 b548 b549 b556 b557 b568 b571 b581 b583 b584
+
+28 Jan 2021.
+
 =item B<fix problem with combination -cab=2 and bbhbi=n>
 
 Random testing produced a number of cases in which the combination
@@ -14,7 +27,7 @@ b046 b061 b081 b084 b089 b093 b130 b133 b135 b138 b142 b145 b147 b150 b165 b173
 b191 b211 b294 b309 b360 b363 b364 b365 b373 b386 b387 b388 b392 b437 b440 b472
 b488 b489
 
-27 Jan 2021.
+27 Jan 2021, 6d710de.
 
 =item B<fix problem with -freeze-whitespace>
 
@@ -28,7 +41,7 @@ b037 b038 b043 b059 b060 b067 b072 b215 b225 b267 b273 b276 b279 b282 b289 b292
 b300 b303 b354 b374 b375 b383 b384 b402 b403 b404 b405 b436 b441 b445 b446 b471
 b485 b498 b499
 
-27 Jan 2021.
+27 Jan 2021, 6d710de.
 
 =item B<Avoid blinking states associated with -bbpi and similar flags>
 

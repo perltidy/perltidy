@@ -7602,12 +7602,28 @@ sub adjust_container_indentation {
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
         next unless ($ci);
 
-        # and only for broken lists.
-        # Require container to span 3 or more line to avoid blinkers,
+        # Require  a container to span 3 or more lines to avoid blinkers,
         # so line difference must be 2 or more.
+        my $min_req = 2;
+
+        # But for -boc we want to see a break at an interior list comma to be
+        # sure the list stays broken.  It is sufficient to require at least two 
+        # non-blank lines within the block.
+        if ($rOpts_break_at_old_comma_breakpoints) {
+            my $iline = $rLL->[$KK]->[_LINE_INDEX_];
+            my $Knext = $self->K_next_nonblank($KK);
+            next unless ( defined($Knext) );
+            my $iline_next = $rLL->[$Knext]->[_LINE_INDEX_];
+            $min_req++ if ( $iline_next != $iline );
+        }
+
         next
           if (!$ris_broken_container->{$seqno}
-            || $ris_broken_container->{$seqno} <= 1 );
+            || $ris_broken_container->{$seqno} < $min_req );
+
+        # TBD: This should work but needs testing Otherwise, it should always
+        # be ok to do this if there are three or more interior lines.
+        # goto OK if ($ris_broken_container->{$seqno} >= 4 );
 
         # To avoid blinkers, we only want to change ci if this container
         # will definitely be broken.  We are doing this before the final
@@ -7629,9 +7645,10 @@ sub adjust_container_indentation {
             $starting_indent = $rOpts_indent_columns * $level +
               ( $ci - 1 ) * $rOpts_continuation_indentation;
 
-            if ( $flag == 2 ) {
-                $starting_indent += $rOpts_indent_columns;
-            }
+## Use old level in length estimates
+##            if ( $flag == 2 ) {
+##                $starting_indent += $rOpts_indent_columns;
+##            }
         }
         my $K_closing = $K_closing_container->{$seqno};
         next unless defined($K_closing);
@@ -7642,6 +7659,7 @@ sub adjust_container_indentation {
 
         # Always OK to change ci if the net container length exceeds maximum
         # line length
+        ## TBD: Needs TESTING: if ( $excess_length > $rOpts_continuation_indentation ) { goto OK }
         if ( $excess_length > 0 ) { goto OK }
 
         # Otherwise, not ok if -cab=2: the -cab=2 option tries to make a
@@ -19801,7 +19819,7 @@ sub set_vertical_tightness_flags {
     my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0 ];
 
     # The vertical tightness mechanism can add whitespace, so whitespace can
-    # continually increase if we allowed it when the -fws flag is set.  
+    # continually increase if we allowed it when the -fws flag is set.
     # See case b499 for an example.
     return $rvertical_tightness_flags if ($rOpts_freeze_whitespace);
 
