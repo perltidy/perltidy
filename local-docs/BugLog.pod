@@ -2,6 +2,34 @@
 
 =over 4
 
+=item B<fix problem with combination -cab=2 and bbhbi=n>
+
+Random testing produced a number of cases in which the combination
+-cab=2 and bbhbi=n and similar flags were in conflict, causing alternating
+states.  This was fixed by not changing ci for containers which 
+can fit entirely on one line, which is what -cab=2 says to do. The
+following cases were fixed with this update:
+
+b046 b061 b081 b084 b089 b093 b130 b133 b135 b138 b142 b145 b147 b150 b165 b173
+b191 b211 b294 b309 b360 b363 b364 b365 b373 b386 b387 b388 b392 b437 b440 b472
+b488 b489
+
+27 Jan 2021.
+
+=item B<fix problem with -freeze-whitespace>
+
+Random testing produced a case in which the --freeze-whitespace flag
+(which is mainly useful for testing) could cause a blank space
+which kept increasing. The problem was caused by the "vertical tightness"
+mechanism.  Turning it off when the -freeze-whitespace-flag is on
+fixed the problem.  The following cases were fixed with this update:
+
+b037 b038 b043 b059 b060 b067 b072 b215 b225 b267 b273 b276 b279 b282 b289 b292
+b300 b303 b354 b374 b375 b383 b384 b402 b403 b404 b405 b436 b441 b445 b446 b471
+b485 b498 b499
+
+27 Jan 2021.
+
 =item B<Avoid blinking states associated with -bbpi and similar flags>
 
 Random testing with extreme parameter values revealed blinking states
@@ -18,7 +46,7 @@ b232 b239 b240 b241 b243 b248 b250 b255 b277 b286 b287 b290 b293 b298 b301 b306
 b308 b328 b351 b353 b357 b378 b380 b390 b391 b393 b394 b399 b400 b401 b406 b413
 b415 b416 b430 b431 b442 b447 b463 b470 b491 b495
 
-27 Jan 2021.
+27 Jan 2021, 96144a3.
 
 =item B<Revise coding for the --freeze-whitespace option>
 
@@ -26,7 +54,7 @@ Random testing produced some blinking states which were traced to an incorrect
 implementation of the B<--freeze-whitespace> option (which is mainly useful
 in stress testing perltidy).  A related flag, --add-whitespace is involved.
 This update corrects these problems.  Test cases include b057, b183, b242.
-24 Jan 2021.
+24 Jan 2021, 9956a57.
 
 =item B<Fix for issue git #51, closing qw paren not outdented when -ndnl is set>
 
@@ -64,7 +92,7 @@ if the flag '-nodelete-old-newlines is set. For example
 The problem happened because the -ndnl flag forces each line to be written
 immediately, so the next line (which needs to be checked in this case) was not
 available when the outdent decision had to be made.  A patch to work around
-this was added 24 Jan 2021.
+this was added 24 Jan 2021, 52996fb.
 
 =item B<Some issues with the -lp option>
 
@@ -95,7 +123,7 @@ the formatted output has different line breaks.  The problem was that the
 indentation level of these spaces was being set as the level of the next token
 rather than the previous token. Normally the indentation level of a space has
 no effect, but the B<-lp> option does use it and this caused the problem.
-This was fixed 23 Jan 2021.
+This was fixed 23 Jan 2021, edc7878.
 
 =item B<added rule for -wn, do not weld to a hash brace>
 
@@ -135,7 +163,7 @@ this change, the above snippet formats in the stable state
         ))
     }
 
-20 Jan 2021.
+20 Jan 2021, 4021436.
 
 =item B<Do not let -kgb option delete essential blank after =cut>
 
@@ -157,14 +185,14 @@ when run with the following parameters
 
 The space after the =cut was alternately being added as an essential blank
 which is required by pod utilities, and then deleted by these parameters.
-This was fixed 17 Jan 2021.
+This was fixed 17 Jan 2021, b9a5f5d.
 
 =item B<Turn off -boc flag if -iob is set>
 
 In random testing, the cause of a blinker was traced to both flags
 --ignore-old-breakpoints and --break-at-old-comma-breakpoints being set.
 There is a warning message but the -boc flag was not actually being
-turned off. This was fixed 17 Jan 2021.
+turned off. This was fixed 17 Jan 2021, b9a5f5d.
 
 =item B<Modified spacing rule for token type Y>
 
@@ -172,7 +200,7 @@ A space following a token type 'Y' (filehandle) should not be removed.
 Otherwise it might be converted into type 'Z' (possible filehandle). If
 that were to happen, the space could not be added back automatically
 in later formatting, so the user would have to do it by hand.  This
-fix prevents this from happening.
+fix prevents this from happening. 17 Jan 2021, bef9a83.
 
 =item B<Fixed blinker related to line break at indirect object>
 
@@ -201,12 +229,12 @@ The problem was that the token 'FILE' was either parsed as type 'Y'
 or 'Z' depending on the existance of a subsequent space.  These have
 different line break rules, causing a blinker. The problem was
 fixed by modifying the tokenizer to consider a newline to be a space.
-Updated 16 Jan 2021.
+Updated 16 Jan 2021, d40cca9.
 
 =item B<Turn off -bli if -bar is set>
 
 A conflict arises if both B<-bli> and B<-bar> are set. In this case a warning message
-is given and B<-bli> is turned off.  Updated 15 Jan 2021.
+is given and B<-bli> is turned off.  Updated 15 Jan 2021, ef69531.
 
 =item B<Fixed blinker related to large -ci, short line length and -bbsbi=2 -bbsb=1>
 
@@ -234,7 +262,7 @@ this. One is to turn off the option if the -ci=n value exceeds the -i=n
 value. The other is to require a broken container to span at least three
 lines before turning this option on.  The latter option was made
 to sub 'adjust_container_indentation'.  With this change the snippet remains
-stable at the second state above. Fixed 14 Jan 2021.
+stable at the second state above. Fixed 14 Jan 2021, 5c793a1.
 
 =item B<Fixed blinker related to large -ci, short line length and -wn>
 
@@ -284,8 +312,8 @@ All of the listed parameters are required to cause this, but the main cause
 is the very large continuation indentation and short line length.  Welding 
 was being turned on and off in this case.  Normally welding is not done if
 all containers are on a single line, but an exception was made to detect 
-a situation like this and keep the welded string together. Updated 13 Jan 2021.
-
+a situation like this and keep the welded string together. 
+Updated 13 Jan 2021, 5c793a1.
 
 =item B<Fixed incorrect guess of division vs pattern>
 

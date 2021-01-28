@@ -7575,9 +7575,7 @@ sub adjust_container_indentation {
         # This is only for list containers
         next unless $self->is_list_by_seqno($seqno);
 
-        my $KK        = $K_opening_container->{$seqno};
-        my $K_closing = $K_closing_container->{$seqno};
-        next unless defined($K_closing);
+        my $KK = $K_opening_container->{$seqno};
 
         # These flags only apply if the corresponding -bb* flags
         # have been set to non-default values
@@ -7617,42 +7615,59 @@ sub adjust_container_indentation {
         # In most cases it wouldn't make any difference if we added the ci
         # or not, but there are some edge cases where adding the ci can
         # cause blinking states, so we need to try to only add ci if the
-        # container will really be broken.  One of the following
-        # conditions will be taken as sufficient:
-        #  (1) the container is permanently broken by blank lines,
-        #      side comments, here docs, pod, ..
-        #  (2) contains multiple fat commas or
-        #  (3) that this container token starts a new line, or
-        #  (4) container is too long for one line
+        # container will really be broken.
 
-        # (1) TBD: is permanently broken container: not yet implemented.
+        # It is always ok to make this change for a permanently broken
+        # container (broken by side comment, blank lines, here-doc,..)
+        my $is_permanently_broken = 0;   ## TBD; need to set flag in sub respace
+        goto OK if ($is_permanently_broken);
 
-        # (2) or the opening paren, bracket, or brace starts a new line
-        my $opening_container_starts_line =
-          $rLL->[$KK]->[_LINE_INDEX_] > $rLL->[$Kprev]->[_LINE_INDEX_];
-        if ( !$opening_container_starts_line ) { #<<<
-
-        # (3) or it contains multiple fat commas
-        my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$seqno};
-        my $fat_comma_count = $rtype_count->{'=>'};
-        if ( !$fat_comma_count || $fat_comma_count < 2 ) { #<<<
-
-        # (4) or the net container length exceeds maximum line length
+        # See if this container could fit on a single line
         my $starting_indent = 0;
         if ( !$rOpts_variable_maximum_line_length ) {
             my $level = $rLL->[$KK]->[_LEVEL_];
             $starting_indent = $rOpts_indent_columns * $level +
-              $ci * $rOpts_continuation_indentation;
+              ( $ci - 1 ) * $rOpts_continuation_indentation;
+
+            if ( $flag == 2 ) {
+                $starting_indent += $rOpts_indent_columns;
+            }
         }
+        my $K_closing = $K_closing_container->{$seqno};
+        next unless defined($K_closing);
         my $length = $self->cumulative_length_before_K($K_closing) -
           $self->cumulative_length_before_K($KK);
         my $excess_length =
           $starting_indent + $length - $rOpts_maximum_line_length;
 
-        next if ( $excess_length <= 0 );
+        # Always OK to change ci if the net container length exceeds maximum
+        # line length
+        if ( $excess_length > 0 ) { goto OK }
 
-        } ## end (3) fat comma test
-        } ## end (2) opening container token starts new line
+        # Otherwise, not ok if -cab=2: the -cab=2 option tries to make a
+        # one-line container so we should not change ci in that case.
+        else {
+            next
+              if ( $rOpts_comma_arrow_breakpoints
+                && $rOpts_comma_arrow_breakpoints == 2 );
+        }
+
+        # A sufficient condition is if the opening paren, bracket, or brace
+        # starts a new line
+        my $opening_container_starts_line =
+          $rLL->[$KK]->[_LINE_INDEX_] > $rLL->[$Kprev]->[_LINE_INDEX_];
+        if ($opening_container_starts_line) { goto OK }
+
+        # A sufficient condition is if the container contains multiple fat
+        # commas
+        my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$seqno};
+        my $fat_comma_count = $rtype_count->{'=>'};
+        if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
+
+        # Not OK to change ci..
+        next;
+
+      OK:
 
         # OK to change ci...
 
@@ -19784,6 +19799,11 @@ sub set_vertical_tightness_flags {
     # the vertical aligner
 
     my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0 ];
+
+    # The vertical tightness mechanism can add whitespace, so whitespace can
+    # continually increase if we allowed it when the -fws flag is set.  
+    # See case b499 for an example.
+    return $rvertical_tightness_flags if ($rOpts_freeze_whitespace);
 
     # Uses these parameters:
     #   $rOpts_block_brace_tightness
