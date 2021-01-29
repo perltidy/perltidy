@@ -6713,6 +6713,14 @@ sub weld_nested_containers {
             next unless ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq '@' );
         }
 
+        # RULE: do not weld to a square bracket without commas
+        if ( $inner_opening->[_TYPE_] eq '[' ) {
+            my $rtype_count = $self->[_rtype_count_by_seqno_]->{$inner_seqno};
+            next unless ($rtype_count);
+            my $comma_count = $rtype_count->{','};
+            next unless ($comma_count);
+        }
+
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
 
@@ -6753,15 +6761,10 @@ sub weld_nested_containers {
             # An existing one-line weld is a line in which
             # (1) the containers are all on one line, and
             # (2) the line does not exceed the allowable length, and
-            # (3) there are no good line breaks (comma or semicolon).
             # This flag is used to avoid creating blinkers.
             if ( $iline_oo == $iline_oc && $excess_length_to_K->($Klast) <= 0 )
             {
-                my $rtype_count =
-                  $self->[_rtype_count_by_seqno_]->{$inner_seqno};
-                $is_one_line_weld = 1
-                  unless ( $rtype_count
-                    && ( $rtype_count->{','} || $rtype_count->{';'} ) );
+                $is_one_line_weld = 1;
             }
 
             # DO-NOT-WELD RULE 1:
@@ -6842,7 +6845,7 @@ sub weld_nested_containers {
 
         # DO-NOT-WELD RULE 3:
         # Do not weld if this makes our line too long
-        $do_not_weld ||= $excess_length_to_K->($Kinner_opening) > 0;
+        $do_not_weld ||= $excess_length_to_K->($Kinner_opening) >= 0;
 
         # DO-NOT-WELD RULE 4; implemented for git#10:
         # Do not weld an opening -ce brace if the next container is on a single

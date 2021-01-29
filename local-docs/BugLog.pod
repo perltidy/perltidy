@@ -2,6 +2,49 @@
 
 =over 4
 
+=item B<fix additional edge blinker cases involving -wn>
+
+Some blinking cases produced in random testing were traced to welding in
+very short lines (length = 20 for example) in which a weld was made to
+a square bracket containing just a single parameter, so that it had no
+good internal breaking points. A rule was added to avoid welding to a
+square bracket not containing any commas. The following cases were fixed
+with the update: 
+
+b002 b003 b005 b006 b007 b009 b010 b014 b015 b017 b020 b111 b112 b113 b124 b126
+b128 b151 b153 b439 b606
+
+29 Jan 2021.
+
+=item B<fix additional edge blinker cases involving -wn>
+
+Random testing produced some blinking states which were traced to the
+precision of a line length test. In sub weld_nested_containers, the
+test
+
+    $do_not_weld ||= $excess_length_to_K->($Kinner_opening) > 0;
+
+was changed to allow a 1 character margin of error:
+
+    $do_not_weld ||= $excess_length_to_K->($Kinner_opening) >= 0;
+
+The following cases were fixed with this update:
+
+b025 b075 b091 b109 b110 b152 b154 b155 b162 b168 b176 b422 b423 b424 b425 b426
+b565
+
+29 Jan 2021.
+
+=item B<fix some edge blinker cases involving -wn>
+
+Random testing produced some blinking states which were eliminated by a
+simplification of the definition of a one_line_weld in sub
+weld_nested_containers.  The following cases were fixed with this update:
+
+b131 b134 b136 b205 b233 b238 b284 b350 b352 b358 b385 b487 b604 b605
+
+29 Jan 2021.
+
 =item B<fix some edge blinker cases involving -bbxi=n esp. with -boc>
 
 The following cases were fixed with this update:
