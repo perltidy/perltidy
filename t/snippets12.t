@@ -166,8 +166,9 @@ use_all_ok(
             my $compass = uc( opposite_direction( line_to_canvas_direction(
                 @{ $coords[0] }, @{ $coords[1] } ) ) );
         
-            # do not weld to a one-line block because the function could get separated
-	    # from its opening paren 
+            # OLD: do not weld to a one-line block because the function could
+	    # get separated from its opening paren.
+            # NEW: (30-jan-2021): keep one-line block together for stability
             $_[0]->code_handler
                  ( sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
 
@@ -512,8 +513,9 @@ use_all_ok( qw{
                 )
             );
 
-      # do not weld to a one-line block because the function could get separated
-      # from its opening paren
+            # OLD: do not weld to a one-line block because the function could
+            # get separated from its opening paren.
+            # NEW: (30-jan-2021): keep one-line block together for stability
             $_[0]->code_handler(
                 sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
 
@@ -546,10 +548,11 @@ use_all_ok( qw{
                 @{ $coords[0] }, @{ $coords[1] }
             ) ) );
 
-      # do not weld to a one-line block because the function could get separated
-      # from its opening paren
-            $_[0]->code_handler(
-                sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
+            # OLD: do not weld to a one-line block because the function could
+            # get separated from its opening paren.
+            # NEW: (30-jan-2021): keep one-line block together for stability
+            $_[0]->code_handler
+              ( sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
 
             # another example; do not weld because the sub is not broken
             $wrapped->add_around_modifier(

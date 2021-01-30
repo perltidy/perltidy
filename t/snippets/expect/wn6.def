@@ -13,8 +13,9 @@
                 )
             );
 
-      # do not weld to a one-line block because the function could get separated
-      # from its opening paren
+            # OLD: do not weld to a one-line block because the function could
+            # get separated from its opening paren.
+            # NEW: (30-jan-2021): keep one-line block together for stability
             $_[0]->code_handler(
                 sub { $morexxxxxxxxxxxxxxxxxx .= $_[1] . ":" . $_[0] . "\n" } );
 

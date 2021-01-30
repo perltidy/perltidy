@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<adjust line length and token count tolerances for -wn>
+
+Most remaining edge cases of blinking states involving the -wn parameter have
+been fixed by adjusting some tolerances in sub weld_nested_containers.  The
+following cases are fixed with this update:
+
+b156 b157 b186 b196 b454 b520 b527 b530 b532 b533 b534 b612 b614 b625 b627
+
+This update has no effect for realistic parameter settings.
+
+30 Jan 2021.
+
 =item B<fix additional edge blinker cases involving -wn>
 
 Some blinking cases produced in random testing were traced to welding in
@@ -14,7 +26,7 @@ with the update:
 b002 b003 b005 b006 b007 b009 b010 b014 b015 b017 b020 b111 b112 b113 b124 b126
 b128 b151 b153 b439 b606
 
-29 Jan 2021.
+29 Jan 2021, 33f1f2b.
 
 =item B<fix additional edge blinker cases involving -wn>
 
@@ -33,7 +45,7 @@ The following cases were fixed with this update:
 b025 b075 b091 b109 b110 b152 b154 b155 b162 b168 b176 b422 b423 b424 b425 b426
 b565
 
-29 Jan 2021.
+29 Jan 2021, 33f1f2b.
 
 =item B<fix some edge blinker cases involving -wn>
 
@@ -43,7 +55,7 @@ weld_nested_containers.  The following cases were fixed with this update:
 
 b131 b134 b136 b205 b233 b238 b284 b350 b352 b358 b385 b487 b604 b605
 
-29 Jan 2021.
+29 Jan 2021, 33f1f2b.
 
 =item B<fix some edge blinker cases involving -bbxi=n esp. with -boc>
 

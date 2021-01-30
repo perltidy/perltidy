@@ -6653,6 +6653,12 @@ sub weld_nested_containers {
     # line length and gets broken in a bad spot.
     my $length_tol = 1;
 
+    # Sometimes the total starting indentation can increase at a later stage,
+    # for example the -bli command will move an opening brace inward one level
+    # instead of one ci.  To avoid blinkers, we add an extra length tolerance.
+    $length_tol +=
+      abs( $rOpts_indent_columns - $rOpts_continuation_indentation );
+
     my $excess_length_to_K = sub {
         my ($K) = @_;
 
@@ -6697,6 +6703,15 @@ sub weld_nested_containers {
         my $Kinner_opening = $K_opening_container->{$inner_seqno};
         my $Kouter_closing = $K_closing_container->{$outer_seqno};
         my $Kinner_closing = $K_closing_container->{$inner_seqno};
+
+        # RULE: do not weld if inner container has <= 3 tokens unless the next
+        # token is a heredoc (so we know there will be multiple lines)
+        if ( $Kinner_closing - $Kinner_opening <= 4 ) {
+            my $Knext_nonblank = $self->K_next_nonblank($Kinner_opening);
+            next unless defined($Knext_nonblank);
+            my $type = $rLL->[$Knext_nonblank]->[_TYPE_];
+            next unless ( $type eq 'h' );
+        }
 
         my $outer_opening = $rLL->[$Kouter_opening];
         my $inner_opening = $rLL->[$Kinner_opening];
@@ -6762,7 +6777,9 @@ sub weld_nested_containers {
             # (1) the containers are all on one line, and
             # (2) the line does not exceed the allowable length, and
             # This flag is used to avoid creating blinkers.
-            if ( $iline_oo == $iline_oc && $excess_length_to_K->($Klast) <= 0 )
+            # For stability, we remove the length tolerance which has been added
+            if (   $iline_oo == $iline_oc
+                && $excess_length_to_K->($Klast) <= $length_tol )
             {
                 $is_one_line_weld = 1;
             }
@@ -7610,7 +7627,7 @@ sub adjust_container_indentation {
         my $min_req = 2;
 
         # But for -boc we want to see a break at an interior list comma to be
-        # sure the list stays broken.  It is sufficient to require at least two 
+        # sure the list stays broken.  It is sufficient to require at least two
         # non-blank lines within the block.
         if ($rOpts_break_at_old_comma_breakpoints) {
             my $iline = $rLL->[$KK]->[_LINE_INDEX_];
