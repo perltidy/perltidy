@@ -2,6 +2,31 @@
 
 =over 4
 
+=item B<rewrite and combine coding for -bbx=n and -bbxi=n>
+
+Random testing produced a large number of blinking states involving parameters
+such as --break-before-parens=n and --break-before-parens-and-indent=n and
+similar pairs.  The problem was traced to the fact that the former parameter
+was implemented late in the pipeline whereas the latter parameter was
+implemented early in the pipeline. Normally there was no problem, but in some
+extreme cases, often involving very short maximum line lengths, this could
+produce alternating output states.  The problem was resolved by combining the
+implementation of both flags in a single new sub to avoid any inconsistencies.
+The following cases were fixed with this update:
+
+b018 b066 b071 b079 b090 b105 b146 b149 b158 b160 b161 b163 b164 b166 b167 b169
+b170 b171 b172 b178 b185 b190 b192 b203 b206 b222 b223 b224 b237 b359 b362 b377
+b379 b381 b382 b389 b395 b407 b408 b409 b410 b411 b412 b414 b417 b418 b419 b421
+b433 b438 b443 b444 b478 b483 b484 b486 b490 b492 b493 b494 b496 b506 b507 b517
+b521 b522 b524 b525 b535 b537 b539 b541 b543 b546 b550 b551 b555 b564 b566 b567
+b569 b570 b572 b573 b575 b576 b577 b578 b579 b580 b582 b586 b587 b588 b589 b590
+b591 b592 b593 b603 b607 b609 b613 b615 b616 b623 b624 b630 b635 b636 b638 b639
+b640 b641 b643 b646 b648 b649 b658 b659 b665 b667 b668 b669 b671 b672 b673 b674
+b675 b676 b678 b679 b680 b681 b682 b683 b684 b686 b687 b689 b691 b692 b693 b694
+b695 b696 b697 b701 b705 b706 b720 b722 b728 b732 b745
+
+31 Jan 2021.
+
 =item B<adjust line length and token count tolerances for -wn>
 
 Most remaining edge cases of blinking states involving the -wn parameter have
@@ -12,7 +37,7 @@ b156 b157 b186 b196 b454 b520 b527 b530 b532 b533 b534 b612 b614 b625 b627
 
 This update has no effect for realistic parameter settings.
 
-30 Jan 2021.
+30 Jan 2021, d359a60.
 
 =item B<fix additional edge blinker cases involving -wn>
 
