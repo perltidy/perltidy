@@ -2,6 +2,25 @@
 
 =over 4
 
+=item B<redefine list to have at least one internal comma>
+
+Random testing produced some blinking states which could be fixed by changing
+the definition of a list, for formatting purposes, to have one or more
+interior commas rather than simply one or more commas.  The difference is that
+something with a single terminal comma, like '( $x, )', is no longer 
+classified as a list.  This makes no difference except when perltidy is 
+stress tested with unusual parameters.
+
+The following cases were fixed with this update:
+
+b116 b119 b122 b174 b179 b187 b361 b369 b370 b372 b376 b427 b428 b448 b449 b450
+b451 b452 b453 b469 b473 b474 b475 b476 b477 b479 b480 b481 b482 b497 b552 b553
+b554 b558 b559 b634 b637 b642 b644 b645 b647 b650 b661 b662 b663 b664 b666 b677
+b685 b688 b698 b699 b700 b702 b703 b704 b711 b712 b715 b716 b717 b718 b721 b730
+b734 b741 b742
+
+1 Feb 2021.
+
 =item B<rewrite and combine coding for -bbx=n and -bbxi=n>
 
 Random testing produced a large number of blinking states involving parameters
@@ -25,7 +44,7 @@ b640 b641 b643 b646 b648 b649 b658 b659 b665 b667 b668 b669 b671 b672 b673 b674
 b675 b676 b678 b679 b680 b681 b682 b683 b684 b686 b687 b689 b691 b692 b693 b694
 b695 b696 b697 b701 b705 b706 b720 b722 b728 b732 b745
 
-31 Jan 2021.
+31 Jan 2021, 10e8bfd.
 
 =item B<adjust line length and token count tolerances for -wn>
 

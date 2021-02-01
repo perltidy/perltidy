@@ -5347,6 +5347,15 @@ sub respace_tokens {
                         $add_phantom_semicolon->($KK);
                     }
 
+                    # Do not include terminal commas in counts
+                    if (   $last_nonblank_type eq ','
+                        || $last_nonblank_type eq '=>' )
+                    {
+                        my $seqno = $seqno_stack{ $depth_next - 1 };
+                        $rtype_count_by_seqno->{$seqno}->{$last_nonblank_type}--
+                          if ($seqno);
+                    }
+
                     # Update the stack...  Note that we do this after adding
                     # any phantom semicolons so that they will be counted in
                     # the correct container.
@@ -5365,7 +5374,9 @@ sub respace_tokens {
                         if ( $lx_open < $lx_close ) {
                             $ris_broken_container->{$type_sequence} =
                               $lx_close - $lx_open;
-                            if ( defined($seqno_outer) ) {
+                            if ( $rtype_count_by_seqno->{$seqno_test}->{','}
+                                && defined($seqno_outer) )
+                            {
                                 $rhas_broken_container->{$seqno_outer} = 1;
                             }
                         }
@@ -7564,173 +7575,7 @@ sub whitespace_cycle_adjustment {
     return;
 }
 
-sub adjust_container_indentation {
-
-    # Called once per file to implement the -bbhb* and related flags:
-
-    # -bbhbi=n
-    # -bbsbi=n
-    # -bbpi=n
-
-    # where:
-
-    # n=0  default indentation (usually one ci)
-    # n=1  outdent one ci
-    # n=2  indent one level (minus one ci)
-    # n=3  indent one extra ci [This may be dropped]
-
-    my ($self) = @_;
-
-    return unless %container_indentation_options;
-
-    my $rLL = $self->[_rLL_];
-    return unless ( defined($rLL) && @{$rLL} );
-
-    # Option 2 needs the following array:
-    my $radjusted_levels = $self->[_radjusted_levels_];
-
-    # Loop over all opening container tokens
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $ris_broken_container = $self->[_ris_broken_container_];
-    foreach my $seqno ( keys %{$K_opening_container} ) {
-
-        # This is only for list containers
-        next unless $self->is_list_by_seqno($seqno);
-
-        my $KK = $K_opening_container->{$seqno};
-
-        # These flags only apply if the corresponding -bb* flags
-        # have been set to non-default values
-        my $rtoken_vars = $rLL->[$KK];
-        my $token       = $rtoken_vars->[_TOKEN_];
-        my $flag        = $container_indentation_options{$token};
-        next unless ($flag);
-
-        # Require previous nonblank to be certain types (= and =>)
-        # Note similar coding in sub insert_breaks_before...
-        my $Kprev = $KK - 1;
-        next if ( $Kprev < 0 );
-        my $prev_type = $rLL->[$Kprev]->[_TYPE_];
-        if ( $prev_type eq 'b' ) {
-            $Kprev--;
-            next if ( $Kprev < 0 );
-            $prev_type = $rLL->[$Kprev]->[_TYPE_];
-        }
-        next unless ( $is_equal_or_fat_comma{$prev_type} );
-
-        # NOTE: We are adjusting indentation of the opening container. The
-        # closing container will normally follow the indentation of the opening
-        # container automatically, so this is not currently done.
-        my $ci = $rLL->[$KK]->[_CI_LEVEL_];
-        next unless ($ci);
-
-        # Require  a container to span 3 or more lines to avoid blinkers,
-        # so line difference must be 2 or more.
-        my $min_req = 2;
-
-        # But for -boc we want to see a break at an interior list comma to be
-        # sure the list stays broken.  It is sufficient to require at least two
-        # non-blank lines within the block.
-        if ($rOpts_break_at_old_comma_breakpoints) {
-            my $iline = $rLL->[$KK]->[_LINE_INDEX_];
-            my $Knext = $self->K_next_nonblank($KK);
-            next unless ( defined($Knext) );
-            my $iline_next = $rLL->[$Knext]->[_LINE_INDEX_];
-            $min_req++ if ( $iline_next != $iline );
-        }
-
-        next
-          if (!$ris_broken_container->{$seqno}
-            || $ris_broken_container->{$seqno} < $min_req );
-
-        # TBD: This should work but needs testing Otherwise, it should always
-        # be ok to do this if there are three or more interior lines.
-        # goto OK if ($ris_broken_container->{$seqno} >= 4 );
-
-        # To avoid blinkers, we only want to change ci if this container
-        # will definitely be broken.  We are doing this before the final
-        # decision is made, so we have to use whatever information we can.
-        # In most cases it wouldn't make any difference if we added the ci
-        # or not, but there are some edge cases where adding the ci can
-        # cause blinking states, so we need to try to only add ci if the
-        # container will really be broken.
-
-        # It is always ok to make this change for a permanently broken
-        # container (broken by side comment, blank lines, here-doc,..)
-        my $is_permanently_broken = 0;   ## TBD; need to set flag in sub respace
-        goto OK if ($is_permanently_broken);
-
-        # See if this container could fit on a single line
-        my $starting_indent = 0;
-        if ( !$rOpts_variable_maximum_line_length ) {
-            my $level = $rLL->[$KK]->[_LEVEL_];
-            $starting_indent = $rOpts_indent_columns * $level +
-              ( $ci - 1 ) * $rOpts_continuation_indentation;
-
-## Use old level in length estimates
-##            if ( $flag == 2 ) {
-##                $starting_indent += $rOpts_indent_columns;
-##            }
-        }
-        my $K_closing = $K_closing_container->{$seqno};
-        next unless defined($K_closing);
-        my $length = $self->cumulative_length_before_K($K_closing) -
-          $self->cumulative_length_before_K($KK);
-        my $excess_length =
-          $starting_indent + $length - $rOpts_maximum_line_length;
-
-        # Always OK to change ci if the net container length exceeds maximum
-        # line length
-        ## TBD: Needs TESTING: if ( $excess_length > $rOpts_continuation_indentation ) { goto OK }
-        if ( $excess_length > 0 ) { goto OK }
-
-        # Otherwise, not ok if -cab=2: the -cab=2 option tries to make a
-        # one-line container so we should not change ci in that case.
-        else {
-            next
-              if ( $rOpts_comma_arrow_breakpoints
-                && $rOpts_comma_arrow_breakpoints == 2 );
-        }
-
-        # A sufficient condition is if the opening paren, bracket, or brace
-        # starts a new line
-        my $opening_container_starts_line =
-          $rLL->[$KK]->[_LINE_INDEX_] > $rLL->[$Kprev]->[_LINE_INDEX_];
-        if ($opening_container_starts_line) { goto OK }
-
-        # A sufficient condition is if the container contains multiple fat
-        # commas
-        my $rtype_count     = $self->[_rtype_count_by_seqno_]->{$seqno};
-        my $fat_comma_count = $rtype_count->{'=>'};
-        if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
-
-        # Not OK to change ci..
-        next;
-
-      OK:
-
-        # OK to change ci...
-
-        # option 1: outdent
-        if ( $flag == 1 ) {
-            $ci -= 1;
-        }
-
-        # option 2: indent one level
-        elsif ( $flag == 2 ) {
-            $ci -= 1;
-            $radjusted_levels->[$KK] += 1;
-        }
-
-        # option 3: for testing only, probably will be deleted
-        elsif ( $flag == 3 ) {
-            $ci += 1;
-        }
-        $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
-    }
-    return;
-}
+use constant DEBUG_BBX => 0;
 
 sub break_before_list_opening_containers {
 
@@ -7784,17 +7629,6 @@ sub break_before_list_opening_containers {
         # This must be a list (this will exclude all code blocks)
         next unless $self->is_list_by_seqno($seqno);
 
-        # For stability, we will require a list to have at least two commas or
-        # one comma and one fat comma
-        my $rtype_count = $self->[_rtype_count_by_seqno_]->{$seqno};
-        next unless ($rtype_count);
-        my $comma_count = $rtype_count->{','};
-        next unless ($comma_count);
-        my $fat_comma_count = $rtype_count->{'=>'};
-        if ( $comma_count < 2 ) {
-            next unless ($fat_comma_count);
-        }
-
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
 
         # Option 1 = stable, try to follow input
@@ -7844,9 +7678,13 @@ sub break_before_list_opening_containers {
         # the container will really be broken.  The following tests are made to
         # avoid this problem.
 
+        DEBUG_BBX
+          && print STDOUT
+"DEBUG_BBX: Possible break at token = $token with option=$break_option\n";
+
         # Require a container to span 3 or more lines to avoid blinkers,
         # so line difference must be 2 or more.
-        my $min_req = 2;
+        my $min_req = 1;
 
         # But for -boc we want to see a break at an interior list comma to be
         # sure the list stays broken.  It is sufficient to require at least two
@@ -7856,7 +7694,7 @@ sub break_before_list_opening_containers {
             my $Knext = $self->K_next_nonblank($KK);
             next unless ( defined($Knext) );
             my $iline_next = $rLL->[$Knext]->[_LINE_INDEX_];
-            $min_req++ if ( $iline_next != $iline );
+            $min_req = 3 if ( $iline_next != $iline );
         }
         next
           if (!$ris_broken_container->{$seqno}
@@ -7903,13 +7741,20 @@ sub break_before_list_opening_containers {
 
         # A sufficient condition is if the container contains multiple fat
         # commas
+        my $rtype_count = $self->[_rtype_count_by_seqno_]->{$seqno};
+        next unless ($rtype_count);
+        my $fat_comma_count = $rtype_count->{'=>'};
         if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
+
+        next;
 
         #################################################################
         # Part 3: Looks OK: apply -bbx=n and any related -bbxi=n flag
         #################################################################
 
       OK:
+
+        DEBUG_BBX && print STDOUT "DEBUG_BBX: OK to break\n";
 
         # Set a flag for actual implementation later in
         # sub insert_breaks_before_list_opening_containers
@@ -7945,10 +7790,11 @@ sub break_before_list_opening_containers {
             $radjusted_levels->[$KK] += 1;
         }
 
-        # option 3: for testing only, probably will be deleted
-        elsif ( $ci_flag == 3 ) {
-            $ci += 1;
+        # unknown option
+        else {
+            # Shouldn't happen - leave ci unchanged
         }
+
         $rLL->[$KK]->[_CI_LEVEL_] = $ci if ( $ci >= 0 );
     }
 
