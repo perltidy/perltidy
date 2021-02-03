@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<rewrite sub break_before_list_opening_containers>
+
+sub break_before_list_opening_containers was rewritten to reduce the chance
+of producing alternating states.
+
+The following cases were fixed with this update:
+
+b030 b032 b455 b456 b458 b459 b460 b461 b462 b536 b622 b651 b652 b653 b708 b709
+b710 b713 b714 b719 b723 b724 b725 b726 b727 b729 b731 b733 b735 b736 b737 b738
+b739 b740 b743 b744
+
+3 Feb 2021.
+
 =item B<redefine list to have at least one internal comma>
 
 Random testing produced some blinking states which could be fixed by changing
@@ -19,7 +32,7 @@ b554 b558 b559 b634 b637 b642 b644 b645 b647 b650 b661 b662 b663 b664 b666 b677
 b685 b688 b698 b699 b700 b702 b703 b704 b711 b712 b715 b716 b717 b718 b721 b730
 b734 b741 b742
 
-1 Feb 2021.
+1 Feb 2021, 35078f7.
 
 =item B<rewrite and combine coding for -bbx=n and -bbxi=n>
 

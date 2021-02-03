@@ -349,6 +349,7 @@ BEGIN {
         _K_first_seq_item_        => $i++,
         _rK_phantom_semicolons_   => $i++,
         _rtype_count_by_seqno_    => $i++,
+        _rlec_count_by_seqno_     => $i++,
         _ris_broken_container_    => $i++,
         _rhas_broken_container_   => $i++,
         _ris_bli_container_       => $i++,
@@ -690,6 +691,7 @@ sub new {
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
     $self->[_rtype_count_by_seqno_]  = {};
+    $self->[_rlec_count_by_seqno_]   = {};
     $self->[_ris_broken_container_]  = {};
     $self->[_rhas_broken_container_] = {};
     $self->[_ris_bli_container_]     = {};
@@ -4719,6 +4721,9 @@ sub respace_tokens {
     my $rLL_new = [];    # This is the new array
     my $KK      = 0;
     my $rtoken_vars;
+    my $Ktoken_vars;                   # the old K value of $rtoken_vars
+    my ( $Kfirst_old, $Klast_old );    # Range of old line
+    my $Klast_old_code;                # K of last token if side comment
     my $Kmax = @{$rLL} - 1;
 
     my $CODE_type = "";
@@ -4750,6 +4755,7 @@ sub respace_tokens {
     my $depth_next            = 0;
     my $depth_next_max        = 0;
     my $rtype_count_by_seqno  = {};
+    my $rlec_count_by_seqno   = {};
     my $ris_broken_container  = {};
     my $rhas_broken_container = {};
     my $rparent_of_seqno      = {};
@@ -4759,6 +4765,7 @@ sub respace_tokens {
     my $last_nonblank_token      = ';';
     my $last_nonblank_block_type = '';
     my $nonblank_token_count     = 0;
+    my $last_nonblank_token_lx   = 0;
     my $store_token              = sub {
         my ($item) = @_;
 
@@ -4848,6 +4855,7 @@ sub respace_tokens {
             $last_nonblank_type       = $type;
             $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
+            $last_nonblank_token_lx   = $item->[_LINE_INDEX_];
             $nonblank_token_count++;
 
             # count selected types
@@ -4855,6 +4863,11 @@ sub respace_tokens {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if ( defined($seqno) ) {
                     $rtype_count_by_seqno->{$seqno}->{$type}++;
+
+                    # Count line-ending commas for -bbx
+                    if ( $type eq ',' && $Ktoken_vars == $Klast_old_code ) {
+                        $rlec_count_by_seqno->{$seqno}++;
+                    }
                 }
             }
         }
@@ -5118,6 +5131,8 @@ sub respace_tokens {
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
         next unless defined($Kfirst);
+        ( $Kfirst_old, $Klast_old ) = ( $Kfirst, $Klast );
+        $Klast_old_code = $Klast_old;
 
         # Check for correct sequence of token indexes...
         # An error here means that sub write_line() did not correctly
@@ -5201,6 +5216,19 @@ sub respace_tokens {
 
         # Handle normal line..
 
+        # Define index of last token before any side comment for comma counts
+        my $type_end = $rLL->[$Klast_old_code]->[_TYPE_];
+        if ( ( $type_end eq '#' || $type_end eq 'b' )
+            && $Klast_old_code > $Kfirst_old )
+        {
+            $Klast_old_code--;
+            if (   $rLL->[$Klast_old_code]->[_TYPE_] eq 'b'
+                && $Klast_old_code > $Kfirst_old )
+            {
+                $Klast_old_code--;
+            }
+        }
+
         # Insert any essential whitespace between lines
         # if last line was normal CODE.
         # Patch for rt #125012: use K_previous_code rather than '_nonblank'
@@ -5246,6 +5274,7 @@ sub respace_tokens {
         # loop to copy all tokens on this line, with any changes
         my $type_sequence;
         for ( my $KK = $Kfirst ; $KK <= $Klast ; $KK++ ) {
+            $Ktoken_vars = $KK;
             $rtoken_vars = $rLL->[$KK];
             my $token              = $rtoken_vars->[_TOKEN_];
             my $type               = $rtoken_vars->[_TYPE_];
@@ -5352,8 +5381,15 @@ sub respace_tokens {
                         || $last_nonblank_type eq '=>' )
                     {
                         my $seqno = $seqno_stack{ $depth_next - 1 };
-                        $rtype_count_by_seqno->{$seqno}->{$last_nonblank_type}--
-                          if ($seqno);
+                        if ($seqno) {
+                            $rtype_count_by_seqno->{$seqno}
+                              ->{$last_nonblank_type}--;
+                            if (   $last_nonblank_type eq ','
+                                && $rlec_count_by_seqno->{$seqno} )
+                            {
+                                $rlec_count_by_seqno->{$seqno}--;
+                            }
+                        }
                     }
 
                     # Update the stack...  Note that we do this after adding
@@ -5708,6 +5744,7 @@ sub respace_tokens {
     $self->[_K_closing_ternary_]     = $K_closing_ternary;
     $self->[_rK_phantom_semicolons_] = $rK_phantom_semicolons;
     $self->[_rtype_count_by_seqno_]  = $rtype_count_by_seqno;
+    $self->[_rlec_count_by_seqno_]   = $rlec_count_by_seqno;
     $self->[_ris_broken_container_]  = $ris_broken_container;
     $self->[_rhas_broken_container_] = $rhas_broken_container;
     $self->[_rparent_of_seqno_]      = $rparent_of_seqno;
@@ -7600,6 +7637,14 @@ sub break_before_list_opening_containers {
     my $radjusted_levels      = $self->[_radjusted_levels_];
     my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
     my $rlines                = $self->[_rlines_];
+    my $rtype_count_by_seqno  = $self->[_rtype_count_by_seqno_];
+    my $rlec_count_by_seqno   = $self->[_rlec_count_by_seqno_];
+
+    my $length_tol =
+      max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
+    if ($rOpts_ignore_old_breakpoints) {
+        $length_tol += $rOpts_maximum_line_length;
+    }
 
     my $rbreak_before_container_by_seqno = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
@@ -7610,12 +7655,15 @@ sub break_before_list_opening_containers {
 
         my $KK = $K_opening_container->{$seqno};
 
+        # This must be a list (this will exclude all code blocks)
+        next unless $self->is_list_by_seqno($seqno);
+
         # Only for types of container tokens with a non-default break option
         my $token        = $rLL->[$KK]->[_TOKEN_];
         my $break_option = $break_before_container_types{$token};
         next unless ($break_option);
 
-        # Require previous nonblank to be certain types (= and =>)
+        # Require previous nonblank to be '=' or '=>'
         my $Kprev = $KK - 1;
         next if ( $Kprev < 0 );
         my $prev_type = $rLL->[$Kprev]->[_TYPE_];
@@ -7626,10 +7674,11 @@ sub break_before_list_opening_containers {
         }
         next unless ( $is_equal_or_fat_comma{$prev_type} );
 
-        # This must be a list (this will exclude all code blocks)
-        next unless $self->is_list_by_seqno($seqno);
-
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
+
+        DEBUG_BBX
+          && print STDOUT
+          "DEBUG_BBX: Looking at token = $token with option=$break_option\n";
 
         # Option 1 = stable, try to follow input
         if ( $break_option == 1 ) {
@@ -7678,12 +7727,11 @@ sub break_before_list_opening_containers {
         # the container will really be broken.  The following tests are made to
         # avoid this problem.
 
-        DEBUG_BBX
-          && print STDOUT
-"DEBUG_BBX: Possible break at token = $token with option=$break_option\n";
+        # Container must be broken
+        next if ( !$ris_broken_container->{$seqno} );
 
-        # Require a container to span 3 or more lines to avoid blinkers,
-        # so line difference must be 2 or more.
+        # Require a container to span 2 or more lines, so difference
+        # in line number must be at least 1
         my $min_req = 1;
 
         # But for -boc we want to see a break at an interior list comma to be
@@ -7696,15 +7744,30 @@ sub break_before_list_opening_containers {
             my $iline_next = $rLL->[$Knext]->[_LINE_INDEX_];
             $min_req = 3 if ( $iline_next != $iline );
         }
-        next
-          if (!$ris_broken_container->{$seqno}
-            || $ris_broken_container->{$seqno} < $min_req );
+        next if ( $ris_broken_container->{$seqno} < $min_req );
 
-        # It is always ok to make this change for a permanently broken
-        # container (broken by side comment, blank lines, here-doc,..)
-        ## TBD; need to implement this flag in sub respace tokens
-        my $is_permanently_broken = 0;
-        goto OK if ($is_permanently_broken);
+        # OK if this contains a broken container
+        if ( $rhas_broken_container->{$seqno} ) { goto OK }
+
+        # Line ending comma count
+        my $lec = $rlec_count_by_seqno->{$seqno};
+
+        # A single container must have at least 1 line-ending comma:
+        next unless $lec;
+
+        # Considering a single container with 1 line-ending comma ...
+        my $K_closing = $K_closing_container->{$seqno};
+
+        # OK if the container contains multiple fat commas
+        # Better: multiple lines with fat commas
+        if ( !$rOpts_ignore_old_breakpoints ) {
+            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+            next unless ($rtype_count);
+            my $fat_comma_count = $rtype_count->{'=>'};
+            DEBUG_BBX
+              && print STDOUT "BBX: fat comma count=$fat_comma_count\n";
+            if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
+        }
 
         # See if this container could fit on a single line.
         # Use the least possble indentation in the estmate.
@@ -7714,38 +7777,22 @@ sub break_before_list_opening_containers {
             $starting_indent = $rOpts_indent_columns * $level +
               ( $ci - 1 ) * $rOpts_continuation_indentation;
         }
-        my $K_closing = $K_closing_container->{$seqno};
-        next unless defined($K_closing);
         my $length = $self->cumulative_length_before_K($K_closing) -
           $self->cumulative_length_before_K($KK);
         my $excess_length =
           $starting_indent + $length - $rOpts_maximum_line_length;
+        DEBUG_BBX
+          && print STDOUT
+"excess=$excess_length: starting=$starting_indent, length=$length, ci=$ci\n";
 
-        # Always OK if the net container length exceeds maximum line length
-        if ( $excess_length > 0 ) { goto OK }
-
-        # Otherwise, not ok if -cab=2: the -cab=2 option tries to make a
-        # one-line container so we should not change ci in that case.
-        #FIXME: only need this check if container has some fat commas
-        else {
-            next
-              if ( $rOpts_comma_arrow_breakpoints
-                && $rOpts_comma_arrow_breakpoints == 2 );
+        # OK if the net container definitely breaks on length
+        if ( $excess_length > $length_tol ) {
+            DEBUG_BBX
+              && print STDOUT "BBX: excess_length=$excess_length\n";
+            goto OK;
         }
 
-        # A sufficient condition is if the opening paren, bracket, or brace
-        # starts a new line
-        my $opening_container_starts_line =
-          $rLL->[$KK]->[_LINE_INDEX_] > $rLL->[$Kprev]->[_LINE_INDEX_];
-        if ($opening_container_starts_line) { goto OK }
-
-        # A sufficient condition is if the container contains multiple fat
-        # commas
-        my $rtype_count = $self->[_rtype_count_by_seqno_]->{$seqno};
-        next unless ($rtype_count);
-        my $fat_comma_count = $rtype_count->{'=>'};
-        if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
-
+        # Otherwise skip it
         next;
 
         #################################################################
