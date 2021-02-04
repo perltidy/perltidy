@@ -2,6 +2,21 @@
 
 =over 4
 
+=item B<reset -bbxi=2 to -bbxi=0 if -lp is set to avoid blinking states>
+
+The options of the form bbxi=2, such as break-before-paren-and-indent=2, have
+been found to cause blinking states if the -lp flag is set. Both of these
+options are fairly rare. To correct this the -bbxi=2 flag is now reset to
+-bbxi=0 if the -lp flag is set.  Note that -bbxi=2 and -bbxi=0 give the same
+formatting result with the common setting -ci=4 and -i=4.
+
+The following cases were fixed with this update:
+
+b396 b397 b398 b429 b435 b457 b502 b503 b504 b505 b538 b540 b542 b617 b618 b619
+b620 b621
+
+3 Feb 2021.
+
 =item B<rewrite sub break_before_list_opening_containers>
 
 sub break_before_list_opening_containers was rewritten to reduce the chance

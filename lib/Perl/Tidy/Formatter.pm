@@ -1259,22 +1259,20 @@ EOM
     }
 
     %container_indentation_options = ();
-    for ( $rOpts->{'break-before-hash-brace-and-indent'} ) {
-        my $tok = '{';
-        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_;
-        }
-    }
-    for ( $rOpts->{'break-before-square-bracket-and-indent'} ) {
-        my $tok = '[';
-        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_;
-        }
-    }
-    for ( $rOpts->{'break-before-paren-and-indent'} ) {
-        my $tok = '(';
-        if ( defined($_) && $_ > 0 && $break_before_container_types{$tok} ) {
-            $container_indentation_options{$tok} = $_;
+    foreach my $pair (
+        [ 'break-before-hash-brace-and-indent',     '{' ],
+        [ 'break-before-square-bracket-and-indent', '[' ],
+        [ 'break-before-paren-and-indent',          '(' ],
+      )
+    {
+        my ( $key, $tok ) = @{$pair};
+        my $opt = $rOpts->{$key};
+        if ( defined($opt) && $opt > 0 && $break_before_container_types{$tok} )
+        {
+
+            # -lp is not compatable with opt=3, silently set to opt=0
+            if ( $rOpts->{'line-up-parentheses'} && $opt == 2 ) { $opt = 0 }
+            $container_indentation_options{$tok} = $opt;
         }
     }
 
@@ -7655,8 +7653,12 @@ sub break_before_list_opening_containers {
 
         my $KK = $K_opening_container->{$seqno};
 
+        my $is_list  = $self->is_list_by_seqno($seqno);
+        my $has_list = $rhas_broken_container->{$seqno};
+
         # This must be a list (this will exclude all code blocks)
-        next unless $self->is_list_by_seqno($seqno);
+        # or contain a list
+        next unless ( $is_list || $has_list );
 
         # Only for types of container tokens with a non-default break option
         my $token        = $rLL->[$KK]->[_TOKEN_];
@@ -7693,7 +7695,7 @@ sub break_before_list_opening_containers {
         #  - this list contains a broken container, or
         #  - this list is contained in a broken list
         elsif ( $break_option == 2 ) {
-            my $ok_to_break = $rhas_broken_container->{$seqno};
+            my $ok_to_break = $has_list;
             if ( !$ok_to_break ) {
                 my $parent = $rparent_of_seqno->{$seqno};
                 $ok_to_break = $self->is_list_by_seqno($parent);
