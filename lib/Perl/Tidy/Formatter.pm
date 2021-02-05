@@ -338,35 +338,37 @@ BEGIN {
     # Array index names for $self (which is an array ref)
     $i = 0;
     use constant {
-        _rlines_                  => $i++,
-        _rlines_new_              => $i++,
-        _rLL_                     => $i++,
-        _Klimit_                  => $i++,
-        _K_opening_container_     => $i++,
-        _K_closing_container_     => $i++,
-        _K_opening_ternary_       => $i++,
-        _K_closing_ternary_       => $i++,
-        _K_first_seq_item_        => $i++,
-        _rK_phantom_semicolons_   => $i++,
-        _rtype_count_by_seqno_    => $i++,
-        _rlec_count_by_seqno_     => $i++,
-        _ris_broken_container_    => $i++,
-        _rhas_broken_container_   => $i++,
-        _ris_bli_container_       => $i++,
-        _rparent_of_seqno_        => $i++,
-        _rchildren_of_seqno_      => $i++,
-        _ris_list_by_seqno_       => $i++,
-        _rbreak_container_        => $i++,
-        _rshort_nested_           => $i++,
-        _length_function_         => $i++,
-        _is_encoded_data_         => $i++,
-        _fh_tee_                  => $i++,
-        _sink_object_             => $i++,
-        _file_writer_object_      => $i++,
-        _vertical_aligner_object_ => $i++,
-        _logger_object_           => $i++,
-        _radjusted_levels_        => $i++,
-        _this_batch_              => $i++,
+        _rlines_                           => $i++,
+        _rlines_new_                       => $i++,
+        _rLL_                              => $i++,
+        _Klimit_                           => $i++,
+        _K_opening_container_              => $i++,
+        _K_closing_container_              => $i++,
+        _K_opening_ternary_                => $i++,
+        _K_closing_ternary_                => $i++,
+        _K_first_seq_item_                 => $i++,
+        _rK_phantom_semicolons_            => $i++,
+        _rtype_count_by_seqno_             => $i++,
+        _rlec_count_by_seqno_              => $i++,
+        _ris_broken_container_             => $i++,
+        _ris_permanently_broken_container_ => $i++,
+        _rhas_broken_container_            => $i++,
+        _rwant_reduced_ci_                 => $i++,
+        _ris_bli_container_                => $i++,
+        _rparent_of_seqno_                 => $i++,
+        _rchildren_of_seqno_               => $i++,
+        _ris_list_by_seqno_                => $i++,
+        _rbreak_container_                 => $i++,
+        _rshort_nested_                    => $i++,
+        _length_function_                  => $i++,
+        _is_encoded_data_                  => $i++,
+        _fh_tee_                           => $i++,
+        _sink_object_                      => $i++,
+        _file_writer_object_               => $i++,
+        _vertical_aligner_object_          => $i++,
+        _logger_object_                    => $i++,
+        _radjusted_levels_                 => $i++,
+        _this_batch_                       => $i++,
 
         _last_output_short_opening_token_ => $i++,
 
@@ -690,18 +692,20 @@ sub new {
     $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
-    $self->[_rtype_count_by_seqno_]  = {};
-    $self->[_rlec_count_by_seqno_]   = {};
-    $self->[_ris_broken_container_]  = {};
-    $self->[_rhas_broken_container_] = {};
-    $self->[_ris_bli_container_]     = {};
-    $self->[_rparent_of_seqno_]      = {};
-    $self->[_rchildren_of_seqno_]    = {};
-    $self->[_ris_list_by_seqno_]     = {};
-    $self->[_rbreak_container_]      = {};    # prevent one-line blocks
-    $self->[_rshort_nested_]         = {};    # blocks not forced open
-    $self->[_length_function_]       = $length_function;
-    $self->[_is_encoded_data_]       = $is_encoded_data;
+    $self->[_rtype_count_by_seqno_]             = {};
+    $self->[_rlec_count_by_seqno_]              = {};
+    $self->[_ris_broken_container_]             = {};
+    $self->[_ris_permanently_broken_container_] = {};
+    $self->[_rhas_broken_container_]            = {};
+    $self->[_rwant_reduced_ci_]                 = {};
+    $self->[_ris_bli_container_]                = {};
+    $self->[_rparent_of_seqno_]                 = {};
+    $self->[_rchildren_of_seqno_]               = {};
+    $self->[_ris_list_by_seqno_]                = {};
+    $self->[_rbreak_container_]                 = {};  # prevent one-line blocks
+    $self->[_rshort_nested_]                    = {};  # blocks not forced open
+    $self->[_length_function_]                  = $length_function;
+    $self->[_is_encoded_data_]                  = $is_encoded_data;
 
     # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
@@ -1270,8 +1274,16 @@ EOM
         if ( defined($opt) && $opt > 0 && $break_before_container_types{$tok} )
         {
 
-            # -lp is not compatable with opt=3, silently set to opt=0
-            if ( $rOpts->{'line-up-parentheses'} && $opt == 2 ) { $opt = 0 }
+            # (1) -lp is not compatable with opt=2, silently set to opt=0
+            # (2) opt=0 and 2 give same result if -i=-ci; but opt=0 is faster
+            if ( $opt == 2 ) {
+                if (   $rOpts->{'line-up-parentheses'}
+                    || $rOpts->{'indent-columns'} ==
+                    $rOpts->{'continuation-indentation'} )
+                {
+                    $opt = 0;
+                }
+            }
             $container_indentation_options{$tok} = $opt;
         }
     }
@@ -4748,23 +4760,33 @@ sub respace_tokens {
     my $rK_phantom_semicolons = [];
 
     my %seqno_stack;
-    my %KK_stack;                      # Note: old K index
-    my %K_opening_by_seqno    = ();    # Note: old K index
-    my $depth_next            = 0;
-    my $depth_next_max        = 0;
-    my $rtype_count_by_seqno  = {};
-    my $rlec_count_by_seqno   = {};
-    my $ris_broken_container  = {};
-    my $rhas_broken_container = {};
-    my $rparent_of_seqno      = {};
-    my $rchildren_of_seqno    = {};
+    my %KK_stack;                                 # Note: old K index
+    my %K_opening_by_seqno               = ();    # Note: old K index
+    my $depth_next                       = 0;
+    my $depth_next_max                   = 0;
+    my $rtype_count_by_seqno             = {};
+    my $rlec_count_by_seqno              = {};
+    my $ris_broken_container             = {};
+    my $ris_permanently_broken_container = {};
+    my $rhas_broken_container            = {};
+    my $rparent_of_seqno                 = {};
+    my $rchildren_of_seqno               = {};
 
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
     my $last_nonblank_block_type = '';
     my $nonblank_token_count     = 0;
     my $last_nonblank_token_lx   = 0;
-    my $store_token              = sub {
+
+    my $set_permanently_broken = sub {
+        my ($seqno) = @_;
+        while ( defined($seqno) ) {
+            $ris_permanently_broken_container->{$seqno} = 1;
+            $seqno = $rparent_of_seqno->{$seqno};
+        }
+        return;
+    };
+    my $store_token = sub {
         my ($item) = @_;
 
         # This will be the index of this item in the new array
@@ -4833,12 +4855,19 @@ sub respace_tokens {
                 $token_length = $length_function->( $item->[_TOKEN_] );
             }
 
-           # Mark length of side comments as just 1 if their lengths are ignored
+            # Mark length of side comments as just 1 if sc lengths are ignored
             if ( $rOpts_ignore_side_comment_lengths
                 && ( !$CODE_type || $CODE_type eq 'HSC' ) )
             {
                 $token_length = 1;
             }
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if ( defined($seqno)
+                && !$ris_permanently_broken_container->{$seqno} )
+            {
+                $set_permanently_broken->($seqno);
+            }
+
         }
 
         $item->[_TOKEN_LENGTH_] = $token_length;
@@ -5202,6 +5231,16 @@ sub respace_tokens {
                     Fault(
                         "Program bug. A hanging side comment has been mismarked"
                     );
+                }
+            }
+
+            if ( $CODE_type eq 'BL' ) {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if (   defined($seqno)
+                    && !$ris_permanently_broken_container->{$seqno}
+                    && $rOpts_maximum_consecutive_blank_lines )
+                {
+                    $set_permanently_broken->($seqno);
                 }
             }
 
@@ -7628,9 +7667,11 @@ sub break_before_list_opening_containers {
     return unless ( defined($rLL) && @{$rLL} );
 
     # Loop over all opening container tokens
-    my $K_opening_container   = $self->[_K_opening_container_];
-    my $K_closing_container   = $self->[_K_closing_container_];
-    my $ris_broken_container  = $self->[_ris_broken_container_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $ris_broken_container = $self->[_ris_broken_container_];
+    my $ris_permanently_broken_container =
+      $self->[_ris_permanently_broken_container_];
     my $rhas_broken_container = $self->[_rhas_broken_container_];
     my $radjusted_levels      = $self->[_radjusted_levels_];
     my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
@@ -7645,6 +7686,7 @@ sub break_before_list_opening_containers {
     }
 
     my $rbreak_before_container_by_seqno = {};
+    my $rwant_reduced_ci                 = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
 
         #################################################################
@@ -7682,7 +7724,7 @@ sub break_before_list_opening_containers {
           && print STDOUT
           "DEBUG_BBX: Looking at token = $token with option=$break_option\n";
 
-        # Option 1 = stable, try to follow input
+        # -bbx=1 = stable, try to follow input
         if ( $break_option == 1 ) {
 
             my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
@@ -7691,7 +7733,7 @@ sub break_before_list_opening_containers {
             next unless ( $KK == $Kfirst );
         }
 
-        # Option 2 = only if complex list, meaning:
+        # -bbx=2 = only if complex list, meaning:
         #  - this list contains a broken container, or
         #  - this list is contained in a broken list
         elsif ( $break_option == 2 ) {
@@ -7703,7 +7745,7 @@ sub break_before_list_opening_containers {
             next unless ($ok_to_break);
         }
 
-        # Option 3 = always break
+        # -bbx=3 = always break
         elsif ( $break_option == 3 ) {
 
             # ok to break
@@ -7714,51 +7756,56 @@ sub break_before_list_opening_containers {
             # ok to break
         }
 
+        # Set a flag for actual implementation later in
+        # sub insert_breaks_before_list_opening_containers
+        $rbreak_before_container_by_seqno->{$seqno} = 1;
+
+        # -bbxi=0: Nothing more to do if the ci value remains unchanged
+        my $ci_flag = $container_indentation_options{$token};
+        next unless ($ci_flag);
+
+        # -bbxi=1: This option removes ci and is handled in
+        # later sub set_adjusted_indentation
+        if ( $ci_flag == 1 ) {
+            $rwant_reduced_ci->{$seqno} = 1;
+            next;
+        }
+
+        # -bbxi=2 ...
+
         #################################################################
-        # Part 2: Perform Tests to be sure this container will be broken
+        # Part 2: Perform tests before commiting to changing ci and level
         #################################################################
 
-        # Before setting a flag to break before the opening container, we need
+        # Before changing the ci level of the opening container, we need
         # to be sure that the container will be broken in the later stages of
         # formatting.  We have to do this because we are working early in the
         # formatting pipeline.  A problem can occur if we change the ci or
         # level of the opening token but do not actually break the container
         # open as expected.  In most cases it wouldn't make any difference if
-        # we added the ci or not, but there are some edge cases where adding
-        # the ci can cause blinking states, so we need to try to only add ci if
-        # the container will really be broken.  The following tests are made to
-        # avoid this problem.
+        # we changed ci or not, but there are some edge cases where this
+        # can cause blinking states, so we need to try to only change ci if
+        # the container will really be broken.
 
-        # Container must be broken
+        # Only consider containers already broken
         next if ( !$ris_broken_container->{$seqno} );
 
-        # Require a container to span 2 or more lines, so difference
-        # in line number must be at least 1
-        my $min_req = 1;
-
-        # But for -boc we want to see a break at an interior list comma to be
-        # sure the list stays broken.  It is sufficient to require at least two
-        # non-blank lines within the block.
-        if ($rOpts_break_at_old_comma_breakpoints) {
-            my $iline = $rLL->[$KK]->[_LINE_INDEX_];
-            my $Knext = $self->K_next_nonblank($KK);
-            next unless ( defined($Knext) );
-            my $iline_next = $rLL->[$Knext]->[_LINE_INDEX_];
-            $min_req = 3 if ( $iline_next != $iline );
+        # Always ok to change ci for permanently broken containers
+        if ( $ris_permanently_broken_container->{$seqno} ) {
+            goto OK;
         }
-        next if ( $ris_broken_container->{$seqno} < $min_req );
 
-        # OK if this contains a broken container
+        # Always OK if this list contains a broken sub-container
         if ( $rhas_broken_container->{$seqno} ) { goto OK }
 
-        # Line ending comma count
-        my $lec = $rlec_count_by_seqno->{$seqno};
+        # From here on we are considering a single container...
 
         # A single container must have at least 1 line-ending comma:
-        next unless $lec;
+        next unless ( $rlec_count_by_seqno->{$seqno} );
 
-        # Considering a single container with 1 line-ending comma ...
-        my $K_closing = $K_closing_container->{$seqno};
+        # Since it has a line-ending comma, it will stay broken if the -boc
+        # flag is set
+        if ($rOpts_break_at_old_comma_breakpoints) { goto OK }
 
         # OK if the container contains multiple fat commas
         # Better: multiple lines with fat commas
@@ -7771,15 +7818,16 @@ sub break_before_list_opening_containers {
             if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
         }
 
-        # See if this container could fit on a single line.
-        # Use the least possble indentation in the estmate.
+        # The last check we can make is to see if this container could fit on a
+        # single line.  Use the least possble indentation in the estmate.
         my $starting_indent = 0;
         if ( !$rOpts_variable_maximum_line_length ) {
             my $level = $rLL->[$KK]->[_LEVEL_];
             $starting_indent = $rOpts_indent_columns * $level +
               ( $ci - 1 ) * $rOpts_continuation_indentation;
         }
-        my $length = $self->cumulative_length_before_K($K_closing) -
+        my $K_closing = $K_closing_container->{$seqno};
+        my $length    = $self->cumulative_length_before_K($K_closing) -
           $self->cumulative_length_before_K($KK);
         my $excess_length =
           $starting_indent + $length - $rOpts_maximum_line_length;
@@ -7805,10 +7853,6 @@ sub break_before_list_opening_containers {
 
         DEBUG_BBX && print STDOUT "DEBUG_BBX: OK to break\n";
 
-        # Set a flag for actual implementation later in
-        # sub insert_breaks_before_list_opening_containers
-        $rbreak_before_container_by_seqno->{$seqno} = 1;
-
         # -bbhbi=n
         # -bbsbi=n
         # -bbpi=n
@@ -7819,9 +7863,6 @@ sub break_before_list_opening_containers {
         # n=1  outdent one ci
         # n=2  indent one level (minus one ci)
         # n=3  indent one extra ci [This may be dropped]
-
-        my $ci_flag = $container_indentation_options{$token};
-        next unless ($ci_flag);
 
         # NOTE: We are adjusting indentation of the opening container. The
         # closing container will normally follow the indentation of the opening
@@ -7849,6 +7890,7 @@ sub break_before_list_opening_containers {
 
     $self->[_rbreak_before_container_by_seqno_] =
       $rbreak_before_container_by_seqno;
+    $self->[_rwant_reduced_ci_] = $rwant_reduced_ci;
     return;
 }
 
@@ -19173,6 +19215,7 @@ sub make_paren_name {
         my $rLL                      = $self->[_rLL_];
         my $ris_bli_container        = $self->[_ris_bli_container_];
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
+        my $rwant_reduced_ci         = $self->[_rwant_reduced_ci_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
@@ -19244,6 +19287,23 @@ sub make_paren_name {
             $opening_indentation, $opening_offset,
             $is_leading,          $opening_exists
         );
+
+        # Honor any flag to reduce -ci set by the -bbxi=n option
+        if ( $seqno_beg && $rwant_reduced_ci->{$seqno_beg} ) {
+
+            # if this is an opening, it must be alone on the line
+            if ( $is_closing_type{$type_beg} || $ibeg == $iend ) {
+                $adjust_indentation = 1;
+            }
+            elsif ( $iend <= $ibeg + 2 ) {
+                my $inext = $inext_to_go[$ibeg];
+                if ( $inext
+                    && ( $inext > $iend || $types_to_go[$inext] eq '#' ) )
+                {
+                    $adjust_indentation = 1;
+                }
+            }
+        }
 
         # Update the $is_bli flag as we go. It is initially 1.
         # We note seeing a leading opening brace by setting it to 2.

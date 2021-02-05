@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<further simplify -bbxi=n implementation>
+
+This update adds a new variable which indicates if a container is permanently
+broken due to a side comment or blank line. This helps reduce the number of
+cases where the -bbxi=n flag cannot be applied.  Another change was to
+always apply the -bbx=n flag, even if the -bbxi=n flag cannot be applied.
+These two flags now operate almost exactly as in previous versions but without
+the blinking problem.  The only difference is that now the -bbxi=n flag
+with n>0 will revert to n=0 for some short containers which might not be 
+broken open.
+
 =item B<reset -bbxi=2 to -bbxi=0 if -lp is set to avoid blinking states>
 
 The options of the form bbxi=2, such as break-before-paren-and-indent=2, have
@@ -15,7 +26,7 @@ The following cases were fixed with this update:
 b396 b397 b398 b429 b435 b457 b502 b503 b504 b505 b538 b540 b542 b617 b618 b619
 b620 b621
 
-3 Feb 2021.
+3 Feb 2021, 67ab0ef.
 
 =item B<rewrite sub break_before_list_opening_containers>
 
@@ -28,7 +39,7 @@ b030 b032 b455 b456 b458 b459 b460 b461 b462 b536 b622 b651 b652 b653 b708 b709
 b710 b713 b714 b719 b723 b724 b725 b726 b727 b729 b731 b733 b735 b736 b737 b738
 b739 b740 b743 b744
 
-3 Feb 2021.
+3 Feb 2021, 5083ab9.
 
 =item B<redefine list to have at least one internal comma>
 
