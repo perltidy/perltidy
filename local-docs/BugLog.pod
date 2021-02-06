@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<add rule to avoid welding at some barewords>
+
+A rule was added to prevent certain rare blinking states involving welding.
+The rule is that if an opening container is immediately followed by a bareword which is
+unknown, a weld will be avoided. 
+
+The following cases were fixed with this update: b611 b626.
+
+6 Feb 2021.
+
 =item B<further simplify -bbxi=n implementation>
 
 This update adds a new variable which indicates if a container is permanently

@@ -6702,6 +6702,15 @@ sub is_excluded_weld {
     return $match;
 }
 
+# types needed for welding RULE 6
+my %type_ok_after_bareword;
+
+BEGIN {
+
+    my @q = qw# => -> { ( [ #;
+    @type_ok_after_bareword{@q} = (1) x scalar(@q);
+}
+
 sub weld_nested_containers {
     my ($self) = @_;
 
@@ -6987,6 +6996,29 @@ sub weld_nested_containers {
             $do_not_weld ||=
               $self->is_excluded_weld( $Kouter_opening, $starting_new_weld );
             $do_not_weld ||= $self->is_excluded_weld( $Kinner_opening, 0 );
+        }
+
+        # DO-NOT-WELD RULE 6: Do not weld to a container which is followed on
+        # the same line by an unknown bareword token.  This can cause
+        # blinkers (cases b626, b611).
+        if ( !$do_not_weld ) {
+            my $Knext_io = $self->K_next_nonblank($Kinner_opening);
+            next unless ( defined($Knext_io) );
+            my $iline_io_next = $rLL->[$Knext_io]->[_LINE_INDEX_];
+            if ( $iline_io_next == $iline_io ) {
+                my $type_io_next = $rLL->[$Knext_io]->[_TYPE_];
+
+                # Note: may need to eventually also include other types here,
+                # such as 'Z' and 'Y':   if ($type_io_next =~ /^[ZYw]$/) {
+                if ( $type_io_next eq 'w' ) {
+                    my $Knext_io2 = $self->K_next_nonblank($Knext_io);
+                    next unless ( defined($Knext_io) );
+                    my $type_io_next2 = $rLL->[$Knext_io2]->[_TYPE_];
+                    if ( !$type_ok_after_bareword{$type_io_next2} ) {
+                        $do_not_weld = 1;
+                    }
+                }
+            }
         }
 
         if ($do_not_weld) {
