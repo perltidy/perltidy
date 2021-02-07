@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Fix rare problem involving interaction of -olbn=n and -wn flags>
+
+Random testing revealed a rare alternating state which could occur when both
+flags --one-line-block-nesting=n and --weld-nested-containers are set, and the
+maximum line length is set very low.  The problem was fixed by ignoring the
+first flag at welded tokens.  This should not have any effect on scripts with
+realistic parameter values.
+
+The following case was fixed with this update: b690.
+
+6 Feb 2021.
+
 =item B<add rule to avoid welding at some barewords>
 
 A rule was added to prevent certain rare blinking states involving welding.
@@ -10,7 +22,7 @@ unknown, a weld will be avoided.
 
 The following cases were fixed with this update: b611 b626.
 
-6 Feb 2021.
+6 Feb 2021, 5083ab9.
 
 =item B<further simplify -bbxi=n implementation>
 

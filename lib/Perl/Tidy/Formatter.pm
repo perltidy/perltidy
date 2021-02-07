@@ -7387,6 +7387,7 @@ sub mark_short_nested_blocks {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rbreak_container    = $self->[_rbreak_container_];
     my $rshort_nested       = $self->[_rshort_nested_];
+    my $ris_welded_seqno    = $self->[_ris_welded_seqno_];
     my $rlines              = $self->[_rlines_];
 
     # Variables needed for estimating line lengths
@@ -7434,6 +7435,12 @@ sub mark_short_nested_blocks {
             # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
             # loop control lines above.
             Fault("sequence = $type_sequence not defined at K=$KK");
+        }
+
+        # Patch: do not mark short blocks with welds.
+        # In some cases blinkers can form (case b690).
+        if ( $ris_welded_seqno->{$type_sequence} ) {
+            next;
         }
 
         # We are just looking at code blocks
