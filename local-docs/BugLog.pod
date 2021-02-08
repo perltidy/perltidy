@@ -2,6 +2,53 @@
 
 =over 4
 
+=item B<Restrict references to old line breaks>
+
+A number of cases of blinking states were traced to code which biased
+the breaking of long lines to existing breaks.  This was fixed by restricting
+this coding to just use old comma line break points.
+
+The following cases were fixed with this update:
+
+b193 b194 b195 b197 b198 b199 b216 b217 b218 b219 b220 b221 b244 b245 b246 b247
+b249 b251 b252 b253 b254 b256 b257 b258 b259 b260 b261 b262 b263 b264 b265 b266
+b268 b269 b270 b271 b272 b274 b275 b278 b280 b281 b283 b285 b288 b291 b295 b296
+b297 b299 b302 b304 b305 b307 b310 b311 b312 b313 b314 b315 b316 b317 b318 b319
+b320 b321 b322 b323 b324 b325 b326 b327 b329 b330 b331 b332 b333 b334 b335 b336
+b337 b338 b339 b340 b341 b342 b343 b344 b345 b346 b347 b348 b349
+
+8 Feb 2021.
+
+=item B<Avoid breaking a line after an optional ending comma>
+
+Given the following input line with a length of 81, the default formatting
+will break at the last comma:
+
+    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures );
+
+    # perltidy -sil=1 -iob
+    emit_subroutine_test( $test_file, $name, $capitalization_scheme,
+        $failures );
+
+But if the input line has a comma at the end of the list
+
+    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures, );
+
+# Then the break is at the last comma
+    
+    # OLD: perltidy -sil=1 -iob
+    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures,
+    );
+
+This update causes the break to be at the previous comma, so that the output
+is similar to the output without the needless ending comma:
+
+    # NEW: perltidy -sil=1 -iob
+    emit_subroutine_test( $test_file, $name, $capitalization_scheme,
+        $failures, );
+
+8 Feb 2021.
+
 =item B<Fix rare problem involving interaction of -olbn=n and -wn flags>
 
 Random testing revealed a rare alternating state which could occur when both
@@ -12,7 +59,7 @@ realistic parameter values.
 
 The following case was fixed with this update: b690.
 
-6 Feb 2021.
+6 Feb 2021, 3e96930.
 
 =item B<add rule to avoid welding at some barewords>
 
@@ -22,7 +69,7 @@ unknown, a weld will be avoided.
 
 The following cases were fixed with this update: b611 b626.
 
-6 Feb 2021, 5083ab9.
+6 Feb 2021, 6b1f44a
 
 =item B<further simplify -bbxi=n implementation>
 

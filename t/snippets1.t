@@ -450,7 +450,8 @@ ok(       ( $obj->name() eq $obj2->name() )
 sub is_miniwhile {    # check for one-line loop (`foo() while $y--')
     my $op = shift;
     return (
-              !null($op) and null( $op->sibling )
+             !null($op)
+          and null( $op->sibling )
           and $op->ppaddr eq "pp_null"
           and class($op) eq "UNOP"
           and (

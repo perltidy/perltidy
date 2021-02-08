@@ -254,8 +254,8 @@ $full_index = 1          if $opt_i;
 $query_all  = $opt_A     if $opt_A;
 
 # not aligning multiple '='s here
-$start = $end = $len = $ismut = $number = $allele_ori = $allele_mut =
-  $proof = $xxxxreg = $reg = $dist = '';
+$start = $end = $len = $ismut = $number = $allele_ori = $allele_mut = $proof =
+  $xxxxreg = $reg = $dist = '';
 #6...........
         },
 

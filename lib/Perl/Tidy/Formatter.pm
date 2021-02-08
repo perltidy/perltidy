@@ -3210,8 +3210,8 @@ EOM
         my $list_str            = $left_bond_strength{'?'};
 
         my ( $block_type, $i_next, $i_next_nonblank, $next_nonblank_token,
-            $next_nonblank_type, $next_token, $next_type, $total_nesting_depth,
-        );
+            $next_nonblank_type, $next_token, $next_type,
+            $total_nesting_depth, );
 
         # main loop to compute bond strengths between each pair of tokens
         foreach my $i ( 0 .. $max_index_to_go ) {
@@ -3574,8 +3574,14 @@ EOM
                   : $next_nonblank_token
               : $next_nonblank_type;
 
-            # add any bias set by sub scan_list at old comma break points.
-            if ( $type eq ',' ) { $bond_str += $bond_strength_to_go[$i] }
+            if ( $type eq ',' ) {
+
+                # add any bias set by sub scan_list at old comma break points
+                $bond_str += $bond_strength_to_go[$i];
+
+                # Avoid breaking at a useless terminal comma
+                $bond_str += 0.001 if ( $next_nonblank_type eq '}' );
+            }
 
             # bias left token
             elsif ( defined( $bias{$left_key} ) ) {
@@ -13609,24 +13615,13 @@ sub set_continuation_breaks {
             $strength = $bond_strength_to_go[$i_test];
             if ( $type eq 'b' ) { $strength = $last_strength }
 
-            # use old breaks as a tie-breaker.  For example to
-            # prevent blinkers with -pbp in this code:
-
-##@keywords{
-##    qw/ARG OUTPUT PROTO CONSTRUCTOR RETURNS DESC PARAMS SEEALSO EXAMPLE/}
-##    = ();
-
-            # At the same time try to prevent a leading * in this code
-            # with the default formatting:
-            #
-##                return
-##                    factorial( $a + $b - 1 ) / factorial( $a - 1 ) / factorial( $b - 1 )
-##                  * ( $x**( $a - 1 ) )
-##                  * ( ( 1 - $x )**( $b - 1 ) );
-
-            # reduce strength a bit to break ties at an old breakpoint ...
+            # reduce strength a bit to break ties at an old comma breakpoint ...
             if (
+
                 $old_breakpoint_to_go[$i_test]
+
+                # Patch: limited to just commas to avoid blinking states
+                && $type eq ','
 
                 # which is a 'good' breakpoint, meaning ...
                 # we don't want to break before it
@@ -20232,8 +20227,8 @@ sub set_vertical_tightness_flags {
                 my $valid_flag = 1;
                 my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
                 @{$rvertical_tightness_flags} =
-                  ( 2, $spaces, $type_sequence_to_go[$ibeg_next], $valid_flag,
-                  );
+                  ( 2, $spaces, $type_sequence_to_go[$ibeg_next],
+                    $valid_flag, );
             }
         }
     }
