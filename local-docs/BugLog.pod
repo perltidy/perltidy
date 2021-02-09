@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Modified rule for breaking lines at old commas>
+
+Random testing produced some blinking cases resulting from the treatment of old
+line breaks at commas not contained within containers.  The following cases
+were fixed with this update:
+
+b064 b065 b068 b210 b747
+
+This change has no effect on scripts with normal parameter values.
+9 Feb 2021.
+
 =item B<Restrict references to old line breaks>
 
 A number of cases of blinking states were traced to code which biased
@@ -17,37 +28,7 @@ b297 b299 b302 b304 b305 b307 b310 b311 b312 b313 b314 b315 b316 b317 b318 b319
 b320 b321 b322 b323 b324 b325 b326 b327 b329 b330 b331 b332 b333 b334 b335 b336
 b337 b338 b339 b340 b341 b342 b343 b344 b345 b346 b347 b348 b349
 
-8 Feb 2021.
-
-=item B<Avoid breaking a line after an optional ending comma>
-
-Given the following input line with a length of 81, the default formatting
-will break at the last comma:
-
-    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures );
-
-    # perltidy -sil=1 -iob
-    emit_subroutine_test( $test_file, $name, $capitalization_scheme,
-        $failures );
-
-But if the input line has a comma at the end of the list
-
-    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures, );
-
-# Then the break is at the last comma
-    
-    # OLD: perltidy -sil=1 -iob
-    emit_subroutine_test( $test_file, $name, $capitalization_scheme, $failures,
-    );
-
-This update causes the break to be at the previous comma, so that the output
-is similar to the output without the needless ending comma:
-
-    # NEW: perltidy -sil=1 -iob
-    emit_subroutine_test( $test_file, $name, $capitalization_scheme,
-        $failures, );
-
-8 Feb 2021.
+8 Feb 2021, 66be455.
 
 =item B<Fix rare problem involving interaction of -olbn=n and -wn flags>
 

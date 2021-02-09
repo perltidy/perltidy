@@ -3579,8 +3579,6 @@ EOM
                 # add any bias set by sub scan_list at old comma break points
                 $bond_str += $bond_strength_to_go[$i];
 
-                # Avoid breaking at a useless terminal comma
-                $bond_str += 0.001 if ( $next_nonblank_type eq '}' );
             }
 
             # bias left token
@@ -14325,6 +14323,8 @@ sub set_continuation_breaks {
         # (2) there was exactly one old break before the first comma break
         # (3) OLD: there are multiple old comma breaks
         # (3) NEW: there are one or more old comma breaks (see return example)
+        # (4) the first comma is at the starting level ...
+        #     ... fixes cases b064 b065 b068 b210 b747
         #
         # For example, we will follow the user and break after
         # 'print' in this snippet:
@@ -14352,8 +14352,10 @@ sub set_continuation_breaks {
         #          ;
         #
         my $i_first_comma = $comma_index[$dd]->[0];
-        if ( $old_breakpoint_to_go[$i_first_comma] ) {
-            my $level_comma = $levels_to_go[$i_first_comma];
+        my $level_comma   = $levels_to_go[$i_first_comma];
+        if (   $old_breakpoint_to_go[$i_first_comma]
+            && $level_comma == $levels_to_go[0] )
+        {
             my $ibreak      = -1;
             my $obp_count   = 0;
             for ( my $ii = $i_first_comma - 1 ; $ii >= 0 ; $ii -= 1 ) {
