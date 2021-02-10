@@ -8447,6 +8447,12 @@ sub keyword_group_scan {
     #     $rhash_of_desires->{$i} = 2 means we want blank line $i removed
     my $rhash_of_desires = {};
 
+    # Nothing to do if no blanks can be output. This test added to fix
+    # case b760.
+    if ( !$rOpts_maximum_consecutive_blank_lines ) {
+        return $rhash_of_desires;
+    }
+
     my $Opt_blanks_before = $rOpts->{'keyword-group-blanks-before'};   # '-kgbb'
     my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
     my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
@@ -8809,6 +8815,10 @@ EOM
             # file but it is not being retained. So we can silently return.
             return $rhash_of_desires;
         }
+
+        # This is not for keywords in lists ( keyword 'my' can occur in lists,
+        # see case b760)
+        next if ( $self->is_list_by_K($K_first) );
 
         my $level    = $rLL->[$K_first]->[_LEVEL_];
         my $type     = $rLL->[$K_first]->[_TYPE_];

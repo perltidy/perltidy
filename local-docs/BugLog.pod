@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Skip processing -kgb* flags in lists or if -maximum-consecutive-blank-lines=0>
+
+Random testing produced an alternating state which was caused by -kgb flags
+being active on keywords which were in a list rather than a code block. A check
+was added to prevent this.  Also, the -kgb* flags have no effect if no blank
+lines can be output, so a check was added for this situation.  This fixes case
+b760.
+
+10 Feb 2021.
+
 =item B<Modify tolerance in testing for welds>
 
 Random testing with unusual parameters produced some blinking weld states which
@@ -11,7 +21,7 @@ cases were fixed with this update:
 b746 b748 b749 b750 b752 b753 b754 b755 b756 b758 b759 b771 b772 b773 b774
 b782 b783 b784 b785 b786
 
-9 Feb 2021.
+9 Feb 2021, a4609ac.
 
 =item B<Modified rule for breaking lines at old commas>
 
