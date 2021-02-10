@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Modify tolerance in testing for welds>
+
+Random testing with unusual parameters produced some blinking weld states which
+were fixed by modifying a tolerance used in a line length test.  The following
+cases were fixed with this update:
+
+b746 b748 b749 b750 b752 b753 b754 b755 b756 b758 b759 b771 b772 b773 b774
+b782 b783 b784 b785 b786
+
+9 Feb 2021.
+
 =item B<Modified rule for breaking lines at old commas>
 
 Random testing produced some blinking cases resulting from the treatment of old
@@ -11,7 +22,7 @@ were fixed with this update:
 b064 b065 b068 b210 b747
 
 This change has no effect on scripts with normal parameter values.
-9 Feb 2021.
+9 Feb 2021, 5c23661.
 
 =item B<Restrict references to old line breaks>
 

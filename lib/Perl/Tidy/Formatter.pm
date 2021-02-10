@@ -6857,6 +6857,8 @@ sub weld_nested_containers {
 
         my $iline_oc = $outer_closing->[_LINE_INDEX_];
 
+        my $is_old_weld = ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
+
         if ( !$touch_previous_pair ) {
 
             # If this pair is not adjacent to the previous pair (skipped or
@@ -6962,8 +6964,11 @@ sub weld_nested_containers {
         }
 
         # DO-NOT-WELD RULE 3:
-        # Do not weld if this makes our line too long
-        $do_not_weld ||= $excess_length_to_K->($Kinner_opening) >= 0;
+        # Do not weld if this makes our line too long.
+        # Use a tolerance which depends on if the old tokens were welded
+        # (fixes cases b746 b748 b749 b750 b752 b753 b754 b755 b756 b758 b759)
+        $do_not_weld ||= $excess_length_to_K->($Kinner_opening) >=
+          ( $is_old_weld ? $length_tol : 0 );
 
         # DO-NOT-WELD RULE 4; implemented for git#10:
         # Do not weld an opening -ce brace if the next container is on a single
@@ -14356,8 +14361,8 @@ sub set_continuation_breaks {
         if (   $old_breakpoint_to_go[$i_first_comma]
             && $level_comma == $levels_to_go[0] )
         {
-            my $ibreak      = -1;
-            my $obp_count   = 0;
+            my $ibreak    = -1;
+            my $obp_count = 0;
             for ( my $ii = $i_first_comma - 1 ; $ii >= 0 ; $ii -= 1 ) {
                 if ( $old_breakpoint_to_go[$ii] ) {
                     $obp_count++;
