@@ -2,6 +2,24 @@
 
 =over 4
 
+=item B<Do not break one-line block at here target>
+
+A blinking state produced by random testing was traced to a line of coding
+which which unnecessarily prevented one-line blocks from being formed when a
+here-target was encountered.  This has been fixed.
+
+For example, the code block in the following contains a here target and was being
+broken into two lines:
+
+    unless ($INC{$file}) {
+        die <<"END_DIE" }
+
+These will now be output with the blocks intact, like this
+
+    unless ($INC{$file}) { die <<"END_DIE" }
+
+This fixes case b523. 11 Feb 2021.
+
 =item B<Skip processing -kgb* flags in lists or if -maximum-consecutive-blank-lines=0>
 
 Random testing produced an alternating state which was caused by -kgb flags
@@ -10,7 +28,7 @@ was added to prevent this.  Also, the -kgb* flags have no effect if no blank
 lines can be output, so a check was added for this situation.  This fixes case
 b760.
 
-10 Feb 2021.
+10 Feb 2021, 177fc3a.
 
 =item B<Modify tolerance in testing for welds>
 

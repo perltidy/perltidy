@@ -9906,7 +9906,7 @@ EOM
 
                 # no newlines after seeing here-target
                 $no_internal_newlines = 2;
-                destroy_one_line_block();
+                ## destroy_one_line_block();  # deleted to fix case b529
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
