@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<Fix conflict of -kbl=0 and essential space after =cut>
+
+Random testing produced a case where a blank line after an =cut
+was alternately being deleted and added due to a conflict with
+the flag setting -keep-old-blank-lines=0.  This was resolved by giving
+prioritiy to the essential blank line after the =cut line.
+
+This fixes case b860. 11 Feb 2021.
+
 =item B<Do not break one-line block at here target>
 
 A blinking state produced by random testing was traced to a line of coding
@@ -18,7 +27,7 @@ These will now be output with the blocks intact, like this
 
     unless ($INC{$file}) { die <<"END_DIE" }
 
-This fixes case b523. 11 Feb 2021.
+This fixes case b523. 11 Feb 2021, 6d5bb74.
 
 =item B<Skip processing -kgb* flags in lists or if -maximum-consecutive-blank-lines=0>
 

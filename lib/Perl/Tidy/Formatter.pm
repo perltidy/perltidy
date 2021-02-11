@@ -8347,21 +8347,29 @@ sub process_all_lines {
             # Handle blank lines
             if ( $CODE_type eq 'BL' ) {
 
-                # If keep-old-blank-lines is zero, we delete all
-                # old blank lines and let the blank line rules generate any
-                # needed blanks.
+                # Keep this blank? Start with the flag -kbl=n, where
+                #   n=0 ignore all old blank lines
+                #   n=1 stable: keep old blanks, but limited by -mbl=n
+                #   n=2 keep all old blank lines, regardless of -mbl=n
+                # If n=0 we delete all old blank lines and let blank line
+                # rules generate any needed blank lines.
+                my $kgb_keep = $rOpts_keep_old_blank_lines;
 
-                # and delete lines requested by the keyword-group logic
-                my $kgb_keep = !( defined( $rwant_blank_line_after->{$i} )
-                    && $rwant_blank_line_after->{$i} == 2 );
+		# Then delete lines requested by the keyword-group logic if
+		# allowed
+                if (   $kgb_keep == 1
+                    && defined( $rwant_blank_line_after->{$i} )
+                    && $rwant_blank_line_after->{$i} == 2 )
+                {
+                    $kgb_keep = 0;
+                }
 
-                # But: the keep-old-blank-lines flag has priority over kgb flags
-                $kgb_keep = 1 if ( $rOpts_keep_old_blank_lines == 2 );
+                # But always keep a blank line following an =cut
+                if ( $i - $i_last_POD_END < 3 && !$kgb_keep ) {
+                    $kgb_keep = 1;
+                }
 
-                # Do not delete a blank line following an =cut
-                $kgb_keep = 1 if ( $i - $i_last_POD_END < 3 );
-
-                if ( $rOpts_keep_old_blank_lines && $kgb_keep ) {
+                if ($kgb_keep) {
                     $self->flush($CODE_type);
                     $file_writer_object->write_blank_code_line(
                         $rOpts_keep_old_blank_lines == 2 );
