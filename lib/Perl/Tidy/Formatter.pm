@@ -2879,6 +2879,10 @@ EOM
         @right_bond_strength{@q} =
           ( 0.91 * NOMINAL + 0.09 * WEAK ) x scalar(@q);
 
+        # Define left strength of unary plus and minus (fixes case b511)
+        $left_bond_strength{p} = $left_bond_strength{'+'};
+        $left_bond_strength{m} = $left_bond_strength{'-'};
+
         # breaking BEFORE these is just ok:
         @q                       = qw# >> << #;
         @right_bond_strength{@q} = (STRONG) x scalar(@q);

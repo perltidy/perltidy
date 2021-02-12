@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Define left side bond strengths for unary plus and minus>
+
+Random testing produced a blinking state which was traced to the unary plus not
+having a defined strength in the line break algorithm.  This was fixed by
+setting it to be the same as the left strength of a plus.  This fixes case
+b511.
+12 Feb 2021.
+
 =item B<Fix problem with breaking at an = sign>
 
 Random testing produced some blinking cases which were related to
