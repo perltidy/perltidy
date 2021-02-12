@@ -14568,7 +14568,12 @@ sub set_continuation_breaks {
                         # the loop because if we are at a closing token (such
                         # as '}') which forms a one-line block, this break might
                         # get undone.
-                        $want_previous_breakpoint = $i;
+
+                        # And do not do this at an equals if the user wants breaks
+                        # before an equals (blinker cases b434 b903)
+                        unless ($type eq '=' && $want_break_before{$type}) {
+                            $want_previous_breakpoint = $i;
+                        }
                     } ## end if ( $next_nonblank_type...)
                 } ## end if ($rOpts_break_at_old_keyword_breakpoints)
 

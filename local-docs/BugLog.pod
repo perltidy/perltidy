@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix problem with breaking at an = sign>
+
+Random testing produced some blinking cases which were related to
+detecting an old good breakpoint at an equals.  If the user requested that
+a break be done before an equals, and the input script had a break
+after an equals, then that break should not have been marked as
+a good existing break point before a keyword.  This update
+fixes cases b434 b903.
+
+11 Feb 2021.
+
 =item B<Fix conflict of -kbl=0 and essential space after =cut>
 
 Random testing produced a case where a blank line after an =cut
