@@ -4859,6 +4859,23 @@ sub get_output_line_number {
                     }
                 }
 
+                # Do not join the lines if this produces a line too long.
+                # This prevents blinking caused by the combination -xci -pvt=2
+                # in which a one-line block alternately forms and breaks,
+                # causing -xci to alternately turn on and off (case b765). 
+                # This does not normally happen but can during stress testing.
+                if ( $gap > 0 ) {
+                    my $test_line_length =
+                      $cached_line_text_length + $gap + $str_length; 
+                    my $maximum_line_length =
+                      $self->maximum_line_length_for_level($last_level_written);
+
+                    # Add a small tolerance in the length test (fixes case b862)
+                    if ( $test_line_length > $maximum_line_length - 2 ) {
+                        $gap = -1;
+                    }
+                }
+
                 if ( $gap >= 0 && defined($seqno_beg) ) {
                     $leading_string        = $cached_line_text . ' ' x $gap;
                     $leading_string_length = $cached_line_text_length + $gap;
