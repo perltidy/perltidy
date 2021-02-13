@@ -2,6 +2,22 @@
 
 =over 4
 
+=item B<Keep space between binary plus or minus and a bareword>
+
+This update makes a space between a binary + or - and a bareword
+an essential whitespace. Otherwise, they may be converted into unary
++ or - on the next pass, which can lead to blinking states.
+Fixes cases b660 b670 b780 b781 b787 b788 b790.
+
+13 Feb 2021.
+
+=item B<Prevent breaks after unary plus and minus>
+
+Some alternating states were produced when extremely maximum line lengths
+forced a break after a unary plus or minus.  Fixes cases b670 b790.
+
+13 Feb 2021.
+
 =item B<Add line length test for the -vtc=2 option>
 
 Random testing produced a number of cases of blinking states which were caused
@@ -13,7 +29,7 @@ prevent this.  This fixes these cases:
 b654 b655 b656 b657 b761 b762 b763 b764 b765 b766 b767 b768 b769 b862 b904 b905
 b906 b907 b913 b914 b915 b916 b917 b918 b919
 
-13 Feb 2021.
+13 Feb 2021, f79a4f1.
 
 =item B<Define left side bond strengths for unary plus and minus>
 

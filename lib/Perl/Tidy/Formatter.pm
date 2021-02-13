@@ -2380,6 +2380,7 @@ EOM
     my %essential_whitespace_filter_r1;
     my %essential_whitespace_filter_l2;
     my %essential_whitespace_filter_r2;
+    my %is_type_with_space_before_bareword;
 
     BEGIN {
 
@@ -2423,6 +2424,19 @@ EOM
         # BUT some might if followed by these left token types
         @q = qw( h Z );
         @essential_whitespace_filter_l2{@q} = (1) x scalar(@q);
+
+        # Keep a space between certain types and any bareword:
+        # Q: keep a space between a quote and a bareword to prevent the
+        #    bareword from becoming a quote modifier.
+        # &: do not remove space between an '&' and a bare word because
+        #    it may turn into a function evaluation, like here
+        #    between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
+        #      $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
+        # +-: binary plus and minus would get converted into unary
+        #     plus and minus on next pass through the tokenizer. This can
+        #     lead to blinkers: cases b660 b670 b780 b781 b787 b788 b790
+        @q = qw( Q & + - );
+        @is_type_with_space_before_bareword{@q} = (1) x scalar(@q);
 
     }
 
@@ -2523,19 +2537,12 @@ EOM
                 #   $a = - III;
                 || $tokenl_is_dash && $typer =~ /^[wC]$/
 
-                # keep a space between a quote and a bareword to prevent the
-                # bareword from becoming a quote modifier.
-                || $typel eq 'Q'
+                # keep space between types Q & + - and a bareword
+                || $is_type_with_space_before_bareword{$typel}
 
                 # keep a space between a token ending in '$' and any word;
                 # this caused trouble:  "die @$ if $@"
                 || $typel eq 'i' && $tokenl =~ /\$$/
-
-               # do not remove space between an '&' and a bare word because
-               # it may turn into a function evaluation, like here
-               # between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
-               #    $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
-                || $typel eq '&'
 
                 # don't combine $$ or $# with any alphanumeric
                 # (testfile mangle.t with --mangle)
@@ -2882,6 +2889,11 @@ EOM
         # Define left strength of unary plus and minus (fixes case b511)
         $left_bond_strength{p} = $left_bond_strength{'+'};
         $left_bond_strength{m} = $left_bond_strength{'-'};
+
+        # And make right strength of unary plus and minus very high.
+        # Fixes cases b670 b790
+        $right_bond_strength{p} = NO_BREAK;
+        $right_bond_strength{m} = NO_BREAK;
 
         # breaking BEFORE these is just ok:
         @q                       = qw# >> << #;
@@ -8359,8 +8371,8 @@ sub process_all_lines {
                 # rules generate any needed blank lines.
                 my $kgb_keep = $rOpts_keep_old_blank_lines;
 
-		# Then delete lines requested by the keyword-group logic if
-		# allowed
+                # Then delete lines requested by the keyword-group logic if
+                # allowed
                 if (   $kgb_keep == 1
                     && defined( $rwant_blank_line_after->{$i} )
                     && $rwant_blank_line_after->{$i} == 2 )
@@ -14573,9 +14585,9 @@ sub set_continuation_breaks {
                         # as '}') which forms a one-line block, this break might
                         # get undone.
 
-                        # And do not do this at an equals if the user wants breaks
-                        # before an equals (blinker cases b434 b903)
-                        unless ($type eq '=' && $want_break_before{$type}) {
+                        # And do not do this at an equals if the user wants
+                        # breaks before an equals (blinker cases b434 b903)
+                        unless ( $type eq '=' && $want_break_before{$type} ) {
                             $want_previous_breakpoint = $i;
                         }
                     } ## end if ( $next_nonblank_type...)
@@ -14976,7 +14988,7 @@ sub set_continuation_breaks {
                         || $rOpts_comma_arrow_breakpoints == 2
                     )
 
-                  # and we made some breakpoints between the opening and closing
+                    # and we made breakpoints between the opening and closing
                     && ( $breakpoint_undo_stack[$current_depth] <
                         get_forced_breakpoint_undo_count() )
 
