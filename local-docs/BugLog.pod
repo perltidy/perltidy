@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Use increased line length tolerance if ci exceeds i>
+
+In testing perltidy with random input parameters, some blinking states occurred
+when the value of -ci was significantly larger than the value of -i.  (In
+actual practice, -ci is not normally set greater than -i).  This update adds a
+tolerance to line length tests which avoids this problem.  This fixes the
+following cases
+
+b775 b776 b826 b908 b910 b911 b923 b925 b926 b927
+
+14 Feb 2021.
+
 =item B<Keep space between binary plus or minus and a bareword>
 
 This update makes a space between a binary + or - and a bareword
@@ -9,14 +21,14 @@ an essential whitespace. Otherwise, they may be converted into unary
 + or - on the next pass, which can lead to blinking states.
 Fixes cases b660 b670 b780 b781 b787 b788 b790.
 
-13 Feb 2021.
+13 Feb 2021, cf414fe.
 
 =item B<Prevent breaks after unary plus and minus>
 
 Some alternating states were produced when extremely maximum line lengths
 forced a break after a unary plus or minus.  Fixes cases b670 b790.
 
-13 Feb 2021.
+13 Feb 2021, cf414fe.
 
 =item B<Add line length test for the -vtc=2 option>
 

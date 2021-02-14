@@ -3045,7 +3045,7 @@ being forced because B<-boc> is used).  The possible values of B<n> are:
  n=1 stable: break at all commas after => if container is open,
      EXCEPT FOR one-line containers
  n=2 break at all commas after =>, BUT try to form the maximum
-     maximum one-line container lengths
+     one-line container lengths
  n=3 do not treat commas after => specially at all 
  n=4 break everything: like n=0 but ALSO break a short container with
      a => not followed by a comma when -vt=0 is used
