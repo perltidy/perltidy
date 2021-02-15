@@ -641,6 +641,7 @@ sub valign_input {
                     outdent_long_lines        => $outdent_long_lines,
                     rvertical_tightness_flags => $rvertical_tightness_flags,
                     level                     => $level,
+                    level_end                 => $level_end,
                     Kend                      => $Kend,
                 }
             );
@@ -703,6 +704,8 @@ EOM
             end_group                 => $break_alignment_after,
             Kend                      => $Kend,
             ci_level                  => $ci_level,
+            level                     => $level,
+            level_end                 => $level_end,
             imax_pair                 => -1,
         }
     );
@@ -1365,16 +1368,17 @@ sub _flush_comment_lines {
     my $outdent_long_lines = 0;
 
     foreach my $item ( @{$rgroup_lines} ) {
-        my ( $line, $line_len, $Kend ) = @{$item};
+        my ( $str, $str_len, $Kend ) = @{$item};
         $self->valign_output_step_B(
             {
                 leading_space_count       => $leading_space_count,
-                line                      => $line,
-                line_length               => $line_len,
+                line                      => $str,
+                line_length               => $str_len,
                 side_comment_length       => 0,
                 outdent_long_lines        => $outdent_long_lines,
                 rvertical_tightness_flags => "",
                 level                     => $group_level,
+                level_end                 => $group_level,
                 Kend                      => $Kend,
             }
         );
@@ -4538,6 +4542,7 @@ sub valign_output_step_A {
     my $maximum_field_index       = $line->get_jmax();
     my $rvertical_tightness_flags = $line->get_rvertical_tightness_flags();
     my $Kend                      = $line->get_Kend();
+    my $level_end                 = $line->get_level_end();
 
     # add any extra spaces
     if ( $leading_space_count > $group_leader_length ) {
@@ -4610,6 +4615,7 @@ sub valign_output_step_A {
             outdent_long_lines  => $outdent_long_lines,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             level                     => $level,
+            level_end                 => $level_end,
             Kend                      => $Kend,
         }
     );
@@ -4772,6 +4778,7 @@ sub get_output_line_number {
         my $outdent_long_lines        = $rinput->{outdent_long_lines};
         my $rvertical_tightness_flags = $rinput->{rvertical_tightness_flags};
         my $level                     = $rinput->{level};
+        my $level_end                 = $rinput->{level_end};
         my $Kend                      = $rinput->{Kend};
 
         my $last_level_written = $self->[_last_level_written_];
@@ -4831,12 +4838,12 @@ sub get_output_line_number {
 
         $seqno_string = $seqno_end;
 
-       # handle any cached line ..
-       # either append this line to it or write it out
-       # Note: the function length() is used in this next test out of caution.
-       # All testing has shown that the variable $cached_line_text_length is
-       # correct, but its calculation is complex and a loss of cached text would
-       # be a disaster.
+        # handle any cached line ..
+        # either append this line to it or write it out
+        # Note: the function length() is used in this next test out of caution.
+        # All testing has shown that the variable $cached_line_text_length is
+        # correct, but its calculation is complex and a loss of cached text
+        # would be a disaster.
         if ( length($cached_line_text) ) {
 
             # Dump an invalid cached line
@@ -4859,14 +4866,15 @@ sub get_output_line_number {
                     }
                 }
 
-                # Do not join the lines if this produces a line too long.
-                # This prevents blinking caused by the combination -xci -pvt=2
-                # in which a one-line block alternately forms and breaks,
-                # causing -xci to alternately turn on and off (case b765). 
-                # This does not normally happen but can during stress testing.
-                if ( $gap > 0 ) {
+                # Do not join the lines if this might produce a one-line
+                # container which exceeds the maximum line length.  This is
+                # necessary prevent blinking, particularly with the combination
+                # -xci -pvt=2.  In that case a one-line block alternately forms
+                # and breaks, causing -xci to alternately turn on and off (case
+                # b765).
+                if ( $gap >= 0 && defined($level_end) && $level > $level_end ) {
                     my $test_line_length =
-                      $cached_line_text_length + $gap + $str_length; 
+                      $cached_line_text_length + $gap + $str_length;
                     my $maximum_line_length =
                       $self->maximum_line_length_for_level($last_level_written);
 

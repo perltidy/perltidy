@@ -32,6 +32,8 @@ BEGIN {
         _end_group_                 => $i++,
         _Kend_                      => $i++,
         _ci_level_                  => $i++,
+        _level_                     => $i++,
+        _level_end_                 => $i++,
         _imax_pair_                 => $i++,
     };
 }
@@ -84,6 +86,8 @@ EOM
         $self->[_end_group_]                 = $ri->{end_group};
         $self->[_Kend_]                      = $ri->{Kend};
         $self->[_ci_level_]                  = $ri->{ci_level};
+        $self->[_level_]                     = $ri->{level};
+        $self->[_level_end_]                 = $ri->{level_end};
         $self->[_imax_pair_]                 = $ri->{imax_pair};
 
         $self->[_ralignments_] = [];
@@ -100,6 +104,8 @@ EOM
     sub get_indentation    { return $_[0]->[_indentation_] }
     sub get_Kend           { return $_[0]->[_Kend_] }
     sub get_ci_level       { return $_[0]->[_ci_level_] }
+    sub get_level          { return $_[0]->[_level_] }
+    sub get_level_end      { return $_[0]->[_level_end_] }
     sub get_list_seqno     { return $_[0]->[_list_seqno_] }
 
     sub get_imax_pair { return $_[0]->[_imax_pair_] }
