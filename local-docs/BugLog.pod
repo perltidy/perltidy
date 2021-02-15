@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Restrict breaking at old uncontained commas>
+
+Random testing with very short maximum line lengths produced some blinking
+states which were traced to duplicating old comma breakpoints which
+were not really good breakpoints. A patch was made to be more selective.
+
+These cases are fixed with this update: b610 b757 b931
+
+15 Feb 2021.
+
 =item B<Modify line length test for the -vtc=2 option>
 
 The line length test which was added Feb 13 2021 turns out to be more restrictive
@@ -10,7 +20,7 @@ would be formed.  This prevents it from needlessly changing existing formatting.
 
 The following cases were re-activated after this update: b654 b655 b656 b862
 
-15 Feb 2021.
+15 Feb 2021, 4673fdd.
 
 =item B<Use increased line length tolerance if ci exceeds i>
 

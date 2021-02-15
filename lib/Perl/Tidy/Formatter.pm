@@ -14421,7 +14421,15 @@ sub set_continuation_breaks {
                 # it can lead to "blinkers".
                 my $ibreakm = $ibreak;
                 $ibreakm-- if ( $types_to_go[$ibreakm] eq 'b' );
-                if ( $ibreakm >= 0 && $types_to_go[$ibreakm] !~ /^[\(\{\[L]$/ )
+
+                # In order to avoid blinkers we have to be fairly restrictive.
+                # This has been updated to avoid breaking at any sequenced item,
+                # so now ternary operators are included, plus closing tokens.
+                # (see case b931, which is similar to the above print example)
+                ##This works too but is a little more restrictive:
+                ##if ( $ibreakm >= 0 && !$type_sequence_to_go[$ibreakm] ) {
+                if (   $ibreakm >= 0
+                    && $types_to_go[$ibreakm] !~ /^[\(\{\[L\?\:]$/ )
                 {
                     $self->set_forced_breakpoint($ibreak);
                 }
