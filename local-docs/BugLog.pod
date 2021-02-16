@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Do not weld to a hash brace>
+
+The reason is that it has a very strong bond strength to the next token, so a
+line break after it may not work.  Previously we allowed welding to something
+like '@{' but even that caused blinking states (cases b751, b779).
+
+This will not change much existing code.  This update fixes cases b751 b779.
+
+16 Feb 2021.
+
 =item B<Avoid line breaks after token type 'G'>
 
 Random testing whith very short maximum line lengths produced some blinking
@@ -13,7 +23,7 @@ brace.
 
 This update fixes these cases: b900 b902 b928 b929
 
-15 Feb 2021.
+15 Feb 2021, f005a95.
 
 =item B<Restrict breaking at old uncontained commas>
 

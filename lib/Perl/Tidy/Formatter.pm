@@ -6844,10 +6844,12 @@ sub weld_nested_containers {
         my $iline_io = $inner_opening->[_LINE_INDEX_];
         my $iline_ic = $inner_closing->[_LINE_INDEX_];
 
-        # RULE: do not weld to a hash brace unless it is preceded by @
+        # RULE: do not weld to a hash brace.  The reason is that it has a very
+        # strong bond strength to the next token, so a line break after it
+        # may not work.  Previously we allowed welding to something like @{
+        # but that caused blinking states (cases b751, b779).
         if ( $inner_opening->[_TYPE_] eq 'L' ) {
-            my $Kp = $self->K_previous_nonblank($Kinner_opening);
-            next unless ( defined($Kp) && $rLL->[$Kp]->[_TOKEN_] eq '@' );
+            next;
         }
 
         # RULE: do not weld to a square bracket without commas
@@ -14429,7 +14431,7 @@ sub set_continuation_breaks {
 
                 # In order to avoid blinkers we have to be fairly restrictive.
                 # This has been updated to avoid breaking at any sequenced item,
-                # so now ternary operators are included, plus closing tokens.
+                # so now ternary operators are included.
                 # (see case b931, which is similar to the above print example)
                 ##This works too but is a little more restrictive:
                 ##if ( $ibreakm >= 0 && !$type_sequence_to_go[$ibreakm] ) {
