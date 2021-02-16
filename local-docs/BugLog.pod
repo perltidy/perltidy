@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Avoid line breaks after token type 'G'>
+
+Random testing whith very short maximum line lengths produced some blinking
+states which were traced to the tokenizer alternately parsed an unknown
+bareword as type 'w' or type 'G', depending on whether or not an opening block
+brace immediately followed on the same line.  To fix this, a rule was added
+which prevents a line break between a type 'G' token and an opening code block
+brace.
+
+This update fixes these cases: b900 b902 b928 b929
+
+15 Feb 2021.
+
 =item B<Restrict breaking at old uncontained commas>
 
 Random testing with very short maximum line lengths produced some blinking
@@ -10,7 +23,7 @@ were not really good breakpoints. A patch was made to be more selective.
 
 These cases are fixed with this update: b610 b757 b931
 
-15 Feb 2021.
+15 Feb 2021, 98b41a0.
 
 =item B<Modify line length test for the -vtc=2 option>
 

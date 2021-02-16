@@ -3183,6 +3183,11 @@ EOM
         $nobreak_rhs{'F'}      = NO_BREAK;
         $nobreak_rhs{'CORE::'} = NO_BREAK;
 
+        # To prevent the tokenizer from switching between types 'w' and 'G' we
+        # need to avoid breaking between type 'G' and the following code block
+        # brace. Fixes case b929.
+        $nobreak_rhs{G} = NO_BREAK;
+
         #---------------------------------------------------------------
         # Bond Strength BEGIN Section 3.
         # Define tables and values for applying a small bias to the above
