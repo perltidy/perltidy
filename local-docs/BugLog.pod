@@ -2,6 +2,11 @@
 
 =over 4
 
+=item B<Do not apply -xci if it would put tokens beyond the maximum line length>
+
+This update fixes cases b899 b935.
+17 Feb 2021.
+
 =item B<Do not weld to a hash brace>
 
 The reason is that it has a very strong bond strength to the next token, so a
@@ -10,7 +15,7 @@ like '@{' but even that caused blinking states (cases b751, b779).
 
 This will not change much existing code.  This update fixes cases b751 b779.
 
-16 Feb 2021.
+16 Feb 2021, eb2f4e7.
 
 =item B<Avoid line breaks after token type 'G'>
 

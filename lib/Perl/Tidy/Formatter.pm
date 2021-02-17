@@ -8074,6 +8074,19 @@ sub extended_ci {
                 $rOpts_maximum_line_length )
           );
 
+        # Do not apply -xci if adding extra ci will put the container contents
+        # beyond the line length limit (fixes cases b899 b935)
+        my $starting_indent = 0;
+        if ( !$rOpts_variable_maximum_line_length ) {
+            my $level    = $rLL->[$K_opening]->[_LEVEL_];
+            my $ci_level = $rLL->[$K_opening]->[_CI_LEVEL_];
+            $starting_indent = $rOpts_indent_columns * $level +
+              $ci_level * $rOpts_continuation_indentation;
+        }
+        next
+          if ( $starting_indent + $rOpts_continuation_indentation >
+            $rOpts_maximum_line_length );
+
         # This becomes the next controlling container
         push @seqno_stack, $seqno_top if ($seqno_top);
         $seqno_top = $seqno;
