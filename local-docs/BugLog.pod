@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Modify space rule between binary plus or minus and a bareword>
+
+The update of 13 Feb 2021, cf414fe, has been modified to be less restrictive.
+Space between a binary plus and minus and a bareword may now be removed in
+some cases where no tokenization ambiguity exists.
+18 Feb 2021.
+
 =item B<Do not apply -xci if it would put tokens beyond the maximum line length>
 
 This update fixes cases b899 b935.

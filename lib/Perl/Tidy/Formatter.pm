@@ -2432,10 +2432,7 @@ EOM
         #    it may turn into a function evaluation, like here
         #    between '&' and 'O_ACCMODE', producing a syntax error [File.pm]
         #      $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
-        # +-: binary plus and minus would get converted into unary
-        #     plus and minus on next pass through the tokenizer. This can
-        #     lead to blinkers: cases b660 b670 b780 b781 b787 b788 b790
-        @q = qw( Q & + - );
+        @q = qw( Q & );
         @is_type_with_space_before_bareword{@q} = (1) x scalar(@q);
 
     }
@@ -2537,8 +2534,16 @@ EOM
                 #   $a = - III;
                 || $tokenl_is_dash && $typer =~ /^[wC]$/
 
-                # keep space between types Q & + - and a bareword
+                # keep space between types Q & and a bareword
                 || $is_type_with_space_before_bareword{$typel}
+
+                # +-: binary plus and minus before a bareword could get
+                # converted into unary plus and minus on next pass through the
+                # tokenizer. This can lead to blinkers: cases b660 b670 b780
+                # b781 b787 b788 b790 So we keep a space unless the +/- clearly
+                # follows an operator
+                || ( ( $typel eq '+' || $typel eq '-' )
+                    && $typell !~ /^[niC\)\}\]R]$/ )
 
                 # keep a space between a token ending in '$' and any word;
                 # this caused trouble:  "die @$ if $@"
