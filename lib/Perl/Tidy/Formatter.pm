@@ -7198,6 +7198,10 @@ sub weld_nested_quotes {
         return 1;
     };
 
+    # Length tolerance - same as for sub weld_nested
+    my $length_tol =
+      1 + abs( $rOpts_indent_columns - $rOpts_continuation_indentation );
+
     my $excess_line_length_K = sub {
         my ( $KK, $Ktest ) = @_;
 
@@ -7208,7 +7212,6 @@ sub weld_nested_quotes {
         my $starting_lentot =
           $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
         my $starting_indent = 0;
-        my $length_tol      = 1;
         if ( !$rOpts_variable_maximum_line_length ) {
             my $level = $rLL->[$Kfirst]->[_LEVEL_];
             $starting_indent = $rOpts_indent_columns * $level;
@@ -7253,29 +7256,48 @@ sub weld_nested_quotes {
                 && $next_token =~ /^q/ );
 
             # The token before the closing container must also be a quote
-            my $K_closing = $K_closing_container->{$outer_seqno};
-            my $Kt_end    = $self->K_previous_nonblank($K_closing);
-            next unless $rLL->[$Kt_end]->[_TYPE_] eq $next_type;
+            my $Kouter_closing = $K_closing_container->{$outer_seqno};
+            my $Kinner_closing = $self->K_previous_nonblank($Kouter_closing);
+            next unless $rLL->[$Kinner_closing]->[_TYPE_] eq $next_type;
+
+            # This is an inner opening container
+            my $Kinner_opening = $Kn;
 
             # Do not weld to single-line quotes. Nothing is gained, and it may
             # look bad.
-            next if ( $Kt_end == $Kn );
+            next if ( $Kinner_closing == $Kinner_opening );
 
             # Only weld to quotes delimited with container tokens. This is
             # because welding to arbitrary quote delimiters can produce code
             # which is less readable than without welding.
-            my $closing_delimiter = substr( $rLL->[$Kt_end]->[_TOKEN_], -1, 1 );
+            my $closing_delimiter =
+              substr( $rLL->[$Kinner_closing]->[_TOKEN_], -1, 1 );
             next
               unless ( $is_closing_token{$closing_delimiter}
                 || $closing_delimiter eq '>' );
 
             # Now make sure that there is just a single quote in the container
             next
-              unless ( $is_single_quote->( $Kn + 1, $Kt_end - 1, $next_type ) );
+              unless (
+                $is_single_quote->(
+                    $Kinner_opening + 1,
+                    $Kinner_closing - 1,
+                    $next_type
+                )
+              );
+
+            my $Kouter_opening = $K_opening_container->{$outer_seqno};
+            my $iline_oo       = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
+            my $iline_io       = $rLL->[$Kinner_opening]->[_LINE_INDEX_];
+            my $iline_oc       = $rLL->[$Kouter_closing]->[_LINE_INDEX_];
+            my $iline_ic       = $rLL->[$Kinner_closing]->[_LINE_INDEX_];
+            my $is_old_weld =
+              ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
 
             # If welded, the line must not exceed allowed line length
             # Assume old line breaks for this estimate.
-            next if ( $excess_line_length_K->( $KK, $Kn ) > 0 );
+            my $excess = $excess_line_length_K->( $KK, $Kinner_opening );
+            next if ( $excess >= ( $is_old_weld ? $length_tol : 0 ) );
 
             # Check weld exclusion rules for outer container
             my $is_leading = !$self->[_rweld_len_left_opening_]->{$outer_seqno};
@@ -7288,21 +7310,22 @@ sub weld_nested_quotes {
 
             # Undo one indentation level if an extra level was added to this
             # multiline quote
-            my $qw_seqno = $self->[_rstarting_multiline_qw_seqno_by_K_]->{$Kn};
+            my $qw_seqno =
+              $self->[_rstarting_multiline_qw_seqno_by_K_]->{$Kinner_opening};
             if (   $qw_seqno
                 && $self->[_rmultiline_qw_has_extra_level_]->{$qw_seqno} )
             {
-                foreach my $K ( $Kn + 1 .. $Kt_end - 1 ) {
+                foreach my $K ( $Kinner_opening + 1 .. $Kinner_closing - 1 ) {
                     $rLL->[$K]->[_LEVEL_] -= 1;
                 }
-                $rLL->[$Kn]->[_CI_LEVEL_]     = 0;
-                $rLL->[$Kt_end]->[_CI_LEVEL_] = 0;
+                $rLL->[$Kinner_opening]->[_CI_LEVEL_] = 0;
+                $rLL->[$Kinner_closing]->[_CI_LEVEL_] = 0;
             }
 
             # undo CI for other welded quotes
             else {
 
-                foreach my $K ( $Kn .. $Kt_end ) {
+                foreach my $K ( $Kinner_opening .. $Kinner_closing ) {
                     $rLL->[$K]->[_CI_LEVEL_] = 0;
                 }
             }
@@ -7310,7 +7333,8 @@ sub weld_nested_quotes {
             # Change the level of a closing qw token to be that of the outer
             # containing token. This will allow -lp indentation to function
             # correctly in the vertical aligner.
-            $rLL->[$Kt_end]->[_LEVEL_] = $rLL->[$K_closing]->[_LEVEL_];
+            $rLL->[$Kinner_closing]->[_LEVEL_] =
+              $rLL->[$Kouter_closing]->[_LEVEL_];
         }
     }
     return;

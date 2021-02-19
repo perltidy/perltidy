@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Modify length tolerance for welding to qw lists>
+
+Several cases of alternating states were produced in random testing which
+were caused by line length limits being reached when welding to qw lists.
+This was fixed by adding a small tolerance to line length tests.
+
+This fixes cases b654 b655 b943 b944 b967 b968 b969 b970.
+
+19 Feb 2021.
+
 =item B<Modify space rule between binary plus or minus and a bareword>
 
 The update of 13 Feb 2021, cf414fe, has been modified to be less restrictive.
