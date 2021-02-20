@@ -1058,7 +1058,6 @@ sub check_options {
         $rOpts->{'continuation-indentation'} = $rOpts->{'indent-columns'};
     }
 
-
     if ( $rOpts->{'line-up-parentheses'} ) {
 
         if (   $rOpts->{'indent-only'}
@@ -6778,6 +6777,9 @@ sub weld_nested_containers {
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
 
+    my $rOpts_break_at_old_method_breakpoints =
+      $rOpts->{'break-at-old-method-breakpoints'};
+
     # This array will hold the sequence numbers of the tokens to be welded.
     my @welds;
 
@@ -7064,6 +7066,25 @@ sub weld_nested_containers {
                     if ( !$type_ok_after_bareword{$type_io_next2} ) {
                         $do_not_weld = 1;
                     }
+                }
+            }
+        }
+
+        # DO-NOT-WELD RULE 7: Do not weld if this conflicts with -bom
+        # (case b973)
+        if (  !$do_not_weld
+            && $rOpts_break_at_old_method_breakpoints
+            && $iline_io > $iline_oo )
+        {
+
+            foreach my $iline ( $iline_oo + 1 .. $iline_io ) {
+                my $rK_range = $rlines->[$iline]->{_rK_range};
+                next unless defined($rK_range);
+                my ( $Kfirst, $Klast ) = @{$rK_range};
+                next unless defined($Kfirst);
+                if ( $rLL->[$Kfirst]->[_TYPE_] eq '->' ) {
+                    $do_not_weld = 1;
+                    last;
                 }
             }
         }

@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Add weld rule to avoid conflict between -wn and -bom>
+
+Testing with ramdom input parameters produced states which were oscillating
+because of a conflict between the -wn and -bom parameters.  The problem
+was resolved by giving the -bom parameter priority over -wn.
+
+These cases are fixed with this update: b966 b973
+
+20 Feb 2021.
+
 =item B<Limit the value of -ci=n to that of -i=n when -xci is set>
 
 Testing with random input parameters produced a number of oscillating states
@@ -13,7 +23,7 @@ because a value of -ci greater than -i would not normally be used in practice.
 These cases are fixed with this update:
 b707 b770 b912 b920 b930 b933 b939 b940 b941 b942 b978 b974 b979 b980 b981
 
-20 Feb 2021.
+20 Feb 2021, c16c5ee.
 
 =item B<Modify length tolerance for welding to qw lists>
 
@@ -23,7 +33,7 @@ This was fixed by adding a small tolerance to line length tests.
 
 This fixes cases b654 b655 b943 b944 b967 b968 b969 b970.
 
-19 Feb 2021.
+19 Feb 2021, 0baafc8.
 
 =item B<Modify space rule between binary plus or minus and a bareword>
 
