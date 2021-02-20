@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Limit the value of -ci=n to that of -i=n when -xci is set>
+
+Testing with random input parameters produced a number of oscillating states
+which had both parameter -xci as well as a value of -ci=n which exceeded the
+value of -i=n.  To correct this, perltidy will silently reduce the -ci value to
+the -i value when -xci is also set.  This should not change existing formatting  
+because a value of -ci greater than -i would not normally be used in practice.
+
+These cases are fixed with this update:
+b707 b770 b912 b920 b930 b933 b939 b940 b941 b942 b978 b974 b979 b980 b981
+
+20 Feb 2021.
+
 =item B<Modify length tolerance for welding to qw lists>
 
 Several cases of alternating states were produced in random testing which
@@ -17,12 +30,12 @@ This fixes cases b654 b655 b943 b944 b967 b968 b969 b970.
 The update of 13 Feb 2021, cf414fe, has been modified to be less restrictive.
 Space between a binary plus and minus and a bareword may now be removed in
 some cases where no tokenization ambiguity exists.
-18 Feb 2021.
+18 Feb 2021, a8564c8.
 
 =item B<Do not apply -xci if it would put tokens beyond the maximum line length>
 
 This update fixes cases b899 b935.
-17 Feb 2021.
+17 Feb 2021, b955a7c.
 
 =item B<Do not weld to a hash brace>
 
