@@ -14601,6 +14601,8 @@ sub set_continuation_breaks {
         my $rOpts_break_at_old_ternary_breakpoints =
           $rOpts->{'break-at-old-ternary-breakpoints'};
 
+        my $ris_broken_container = $self->[_ris_broken_container_];
+
         $starting_depth = $nesting_depth_to_go[0];
 
         $block_type                 = ' ';
@@ -14772,14 +14774,24 @@ sub set_continuation_breaks {
                         # look for old lines with leading ')->' or ') ->'
                         # and, when found, force a break before the
                         # opening paren and after the previous closing paren.
-                        if (
-                               $i_line_start >= 0
-                            && $types_to_go[$i_line_start] eq '}'
-                            && (   $i == $i_line_start + 1
+                        my $ok = (
+                                 $i_line_start >= 0
+                              && $types_to_go[$i_line_start] eq '}'
+                              && ( $i == $i_line_start + 1
                                 || $i == $i_line_start + 2
                                 && $types_to_go[ $i - 1 ] eq 'b' )
-                          )
-                        {
+                        );
+
+                        # Patch to avoid blinkes: but do not do this unless
+                        # line difference is > 1 (see case b977)
+                        if ($ok) {
+                            my $seqno = $type_sequence_to_go[$i_line_start];
+                            if ( $ris_broken_container->{$seqno} <= 1 ) {
+                                $ok = 0;
+                            }
+                        }
+
+                        if ($ok) {
                             $self->set_forced_breakpoint( $i_line_start - 1 );
                             $self->set_forced_breakpoint(
                                 $mate_index_to_go[$i_line_start] );

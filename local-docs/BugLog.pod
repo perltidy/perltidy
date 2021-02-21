@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Restrict -bom at cuddled method calls>
+
+The -bom flag tries to keep old breakpoints at lines beginning with '->' and
+also with some lines beginning with ')->'.  These latter lines can lead to
+blinking states in cases where the opening paren is on the previous line.  To
+fix this, a restriction was added that the line difference between the opening
+and closing parens should be more than 1.
+
+This fixes case b977.
+
+21 Feb 2021
+
 =item B<Add weld rule to avoid conflict between -wn and -bom>
 
 Testing with ramdom input parameters produced states which were oscillating
