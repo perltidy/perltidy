@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Add tolerance to one-line block length tests>
+
+Testing with random input parameters produced some cases in which a stable
+solution could not be found due to attempts to form one-line blocks near the
+end of a long line.  The problem was fixed by adding a small tolerance to the
+line length test.  This does not change existing formatting.
+
+This fixes cases b069 b070 b077 b078.
+
+21 Feb 2021
+
 =item B<Restrict -bom at cuddled method calls>
 
 The -bom flag tries to keep old breakpoints at lines beginning with '->' and
@@ -12,7 +23,7 @@ and closing parens should be more than 1.
 
 This fixes case b977.
 
-21 Feb 2021
+21 Feb 2021, 28114e9.
 
 =item B<Add weld rule to avoid conflict between -wn and -bom>
 

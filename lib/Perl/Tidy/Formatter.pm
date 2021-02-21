@@ -10273,6 +10273,14 @@ sub starting_one_line_block {
         return 0;
     }
 
+    # TESTING: Patch to leave this block broken if it contains a broken
+    # sub-container.  This patch fixes cases b069 b070 b077 b078. It improved
+    # coding in most cases but there are still a few issues so it was not
+    # implemented. 
+    ##if ( $self->[_rhas_broken_container_]->{$type_sequence} ) {
+    ##    return 0;
+    ##}
+
     my $ris_bli_container = $self->[_ris_bli_container_];
     my $is_bli            = $ris_bli_container->{$type_sequence};
 
@@ -10380,8 +10388,14 @@ sub starting_one_line_block {
 
     my $pos = total_line_length( $i_start, $max_index_to_go ) - 1;
 
+    # Use a small tolerence in the length test to avoid blinking states.
+    # This patch fixes cases b069 b070 b077 b078. See comments above for
+    # another way to fix these cases.  We would need at least 2 spaces if
+    # this is going to be an empty block, like '{ }'
+    my $tol = 2;
+
     # see if length is too long to even start
-    if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
+    if ( $pos + $tol > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
         return 1;
     }
 
