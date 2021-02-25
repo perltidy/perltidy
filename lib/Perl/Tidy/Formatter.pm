@@ -224,6 +224,7 @@ my (
 
     # Initialized in check_options, modified by prepare_cuddled_block_types:
     %want_one_line_block,
+    %is_braces_left_exclude_block,
 
     # Initialized in sub prepare_cuddled_block_types
     $rcuddled_block_types,
@@ -1042,6 +1043,10 @@ sub check_options {
     # Make initial list of desired one line block types
     # They will be modified by 'prepare_cuddled_block_types'
     %want_one_line_block = %is_sort_map_grep_eval;
+
+    # Default is to exclude one-line block types from -bl formatting
+    # FIXME: Eventually a flag should be added to modify this.
+    %is_braces_left_exclude_block = %is_sort_map_grep_eval;
 
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
@@ -9735,8 +9740,18 @@ EOM
                 # decide if user requested break before '{'
                 my $want_break =
 
+                  # This test was added to minimize changes in -bl formatting
+                  # caused by other changes to fix cases b562 .. b983
+                  # Previously, the -bl flag was being applied almost randomly
+                  # to sort/map/grep/eval blocks, depending on if they were
+                  # flagged as possible one-line blocks.  usually time they
+                  # were not given -bl formatting.  The following flag was
+                  # added to minimize changes to existing formatting.
+                  $is_braces_left_exclude_block{$block_type}
+                  ? 0
+
                   # use -bl flag if not a sub block of any type
-                  $block_type !~ /$ANYSUB_PATTERN/
+                  : $block_type !~ /$ANYSUB_PATTERN/
                   ? $rOpts->{'opening-brace-on-new-line'}
 
                   # use -sbl flag for a named sub block
@@ -10276,7 +10291,7 @@ sub starting_one_line_block {
     # TESTING: Patch to leave this block broken if it contains a broken
     # sub-container.  This patch fixes cases b069 b070 b077 b078. It improved
     # coding in most cases but there are still a few issues so it was not
-    # implemented. 
+    # implemented.
     ##if ( $self->[_rhas_broken_container_]->{$type_sequence} ) {
     ##    return 0;
     ##}
@@ -10388,15 +10403,36 @@ sub starting_one_line_block {
 
     my $pos = total_line_length( $i_start, $max_index_to_go ) - 1;
 
-    # Use a small tolerence in the length test to avoid blinking states.
-    # This patch fixes cases b069 b070 b077 b078. See comments above for
-    # another way to fix these cases.  We would need at least 2 spaces if
-    # this is going to be an empty block, like '{ }'
-    my $tol = 2;
-
-    # see if length is too long to even start
-    if ( $pos + $tol > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
+    # see if block starting location is too great to even start
+    if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
         return 1;
+    }
+
+    # See if everything to the closing token will fit on one line
+    # This is part of an update to fix cases b562 .. b983
+    my $K_closing = $self->[_K_closing_container_]->{$type_sequence};
+    return 0 unless ( defined($K_closing) );
+    my $container_length = $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
+      $rLL->[$Kj]->[_CUMULATIVE_LENGTH_];
+
+    my $excess =
+      $pos + 1 +
+      $container_length -
+      $maximum_line_length[ $levels_to_go[$i_start] ];
+
+    if ( $excess > 0 ) {
+
+        # line is too long...  there is no chance of forming a one line block
+        # if the excess is more than 1 char
+        return 0 if ( $excess > 1 );
+
+        # ... and give up if it is not a one-line block on input.
+        # note: for a one-line block on input, it may be possible to keep
+        # it as a one-line block (by removing a needless semicolon ).
+        my $K_start = $K_to_go[$i_start];
+        my $ldiff =
+          $rLL->[$K_closing]->[_LINE_INDEX_] - $rLL->[$K_start]->[_LINE_INDEX_];
+        return 0 if ($ldiff);
     }
 
     foreach my $Ki ( $Kj + 1 .. $K_last ) {
@@ -18401,6 +18437,42 @@ sub get_seqno {
         my ( $ibeg, $ibeg_next, $ibegm, $iend, $iendm, $ipad, $pad_spaces,
             $tok_next, $type_next, $has_leading_op_next, $has_leading_op );
 
+        # Patch to produce padding in the first line of short code blocks.
+        # This is part of an update to fix cases b562 .. b983.
+        # This is needed to compensate for a change which was made in 'sub
+        # starting_one_line_block' to prevent blinkers.  Previously, that sub
+        # would not look at the total block size and rely on sub
+        # set_continuation_breaks to break up long blocks. Consequently, the
+        # first line of those batches would end in the opening block brace of a
+        # sort/map/grep/eval block.  When this was changed to immediately check
+        # for blocks which were too long, the opening block brace would go out
+        # in a single batch, and the block contents would go out as the next
+        # batch.  This caused the logic in this routine which decides if the
+        # first line should be padded to be incorrect.  To fix this, we set a
+        # flag if the previous batch ended in an opening sort/map/grep/eval
+        # block brace, and use it to adjust the logic to compensate.
+
+        # For example, the following would have previously been a single batch
+        # but now is two batches.  We want to pad the line starting in '$dir':
+        #    my (@indices) =                      # batch n-1  (prev batch n)
+        #      sort {                             # batch n-1  (prev batch n)
+        #            $dir eq 'left'               # batch n
+        #          ? $cells[$a] <=> $cells[$b]    # batch n
+        #          : $cells[$b] <=> $cells[$a];   # batch n
+        #      } ( 0 .. $#cells );                # batch n
+
+        my $rLL   = $self->[_rLL_];
+        my $K0    = $K_to_go[0];
+        my $Kprev = $self->K_previous_code($K0);
+        my $is_short_block;
+        if ( defined($Kprev)
+            && $rLL->[$Kprev]->[_BLOCK_TYPE_] )
+        {
+            my $block_type = $rLL->[$Kprev]->[_BLOCK_TYPE_];
+            $is_short_block = $is_sort_map_grep_eval{$block_type};
+            $is_short_block ||= $want_one_line_block{$block_type};
+        }
+
         # looking at each line of this batch..
         foreach my $line ( 0 .. $max_line - 1 ) {
 
@@ -18510,6 +18582,9 @@ sub get_seqno {
                     }
 
                     # otherwise, we might pad if it looks really good
+                    elsif ($is_short_block) {
+                        $ipad = $ibeg;
+                    }
                     else {
 
                         # we might pad token $ibeg, so be sure that it
@@ -18656,12 +18731,14 @@ sub get_seqno {
                 $types_match = $matches_without_bang =
                   $types_to_go[$inext_next] eq $types_to_go[ $ipad + 1 ];
             }
-
             if (
 
                 # either we have multiple continuation lines to follow
                 # and we are not padding the first token
-                ( $logical_continuation_lines > 1 && $ipad > 0 )
+                (
+                    $logical_continuation_lines > 1
+                    && ( $ipad > 0 || $is_short_block )
+                )
 
                 # or..
                 || (

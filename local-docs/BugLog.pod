@@ -2,6 +2,25 @@
 
 =over 4
 
+=item B<Improve one-line block length tests>
+
+Some oscillating states produced in random parameter tests were traced
+to problems with forming one-line blocks.  A more precise length test
+was added to fix this.
+
+This fixes cases b562 b563 b574 b777 b778 b924 b936 b975 b976 b983.
+
+In the process of fixing this issue, a glitch was discovered in the previous
+coding of the -bl (braces-left) flag that caused somewhat random results for
+block types sort/map/grep/eval.  The problem was a conflict between the logic
+for forming one-line blocks and the logic for applying the -bl flag.
+Usually, -bl formatting was not applied to these block types, but occasionally
+it was.  To minimize changes in existing formatting, in the new version the -bl
+flag is not applied to these block types.  A future flag could be added to give
+user control over which of these block types are under -bl control.
+
+25 Feb 2021
+
 =item B<Add tolerance to one-line block length tests>
 
 Testing with random input parameters produced some cases in which a stable
@@ -11,7 +30,7 @@ line length test.  This does not change existing formatting.
 
 This fixes cases b069 b070 b077 b078.
 
-21 Feb 2021
+21 Feb 2021, 0b97b94.
 
 =item B<Restrict -bom at cuddled method calls>
 
