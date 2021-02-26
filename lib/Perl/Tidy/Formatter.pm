@@ -6914,6 +6914,28 @@ sub weld_nested_containers {
             my ( $Kfirst, $Klast ) = @{$rK_range};
             $starting_lentot =
               $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+
+            # Patch to avoid blinkers, case b965: add a possible gap to the
+            # starting length to avoid blinking problems when the -i=n is
+            # large. For example, the following with -i=9 may have a gap of 6
+            # between the opening paren and the next token if vertical
+            # tightness is set. We have to include the gap in our estimate
+            # because the _CUMULATIVE_LENGTH_
+            # values have maximum space lengths of 1.
+
+            #              if(      $codonTable
+            #                       ->is_start_codon
+            #                       (substr( $seq,0,3 )))
+
+            my $gap = max(
+                0,
+                $rOpts_indent_columns - (
+                    $rLL->[$Kouter_opening]->[_CUMULATIVE_LENGTH_] -
+                      $starting_lentot
+                )
+            );
+            $starting_lentot += $gap;
+
             $starting_indent = 0;
             if ( !$rOpts_variable_maximum_line_length ) {
                 my $level    = $rLL->[$Kfirst]->[_LEVEL_];

@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Add a gap calculation in line length tests with -vmll>
+
+This fixes case b965.  The -vmll flag can produce gaps in lines which need to
+be included in weld line length estimates.
+
+26 Feb 2021.
+
 =item B<Update rule for spacing paren after constant function>
 
 Random testing produced an unstable state for the following snippet (case b934)
