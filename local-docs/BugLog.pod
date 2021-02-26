@@ -2,6 +2,31 @@
 
 =over 4
 
+=item B<Update rule for spacing paren after constant function>
+
+Random testing produced an unstable state for the following snippet (case b934)
+
+        sub pi();
+        if (
+            $t >
+            pi( )
+              )
+
+when run with these parameters:
+
+  --continuation-indentation=6
+  --maximum-line-length=17
+  --paren-vertical-tightness-closing=2
+
+The formatting was stable without the first line, which declares 'pi' to be
+a constant sub.  The problem was fixed by updating a regex to treat the spacing
+of a paren following a sub the same for the two token types, 'U' or 'C' 
+(constant function).
+
+This fixes case b934.
+
+26 Feb 2021.
+
 =item B<Improve line length test for the -vtc=2 option>
 
 This is a small change to the update of 13 Feb 2021, f79a4f1. Random testing

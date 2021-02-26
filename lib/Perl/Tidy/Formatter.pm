@@ -2156,7 +2156,8 @@ sub set_whitespace_flags {
             # 'w' and 'i' checks for something like:
             #   myfun(    &myfun(   ->myfun(
             # -----------------------------------------------------
-            elsif (( $last_type =~ /^[wUG]$/ )
+            # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
+            elsif (( $last_type =~ /^[wCUG]$/ )
                 || ( $last_type =~ /^[wi]$/ && $last_token =~ /^(\&|->)/ ) )
             {
                 $ws = WS_NO unless ($rOpts_space_function_paren);
