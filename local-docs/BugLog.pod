@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Restrict previous update to just -vmll>
+
+The previous update was found to occasionally needlessly change existing
+formatting with very long long lines.  So it is restricted to just when -vmll
+is set.  For example, it is ok to keep the long quote following the opening
+paren in the following case.
+
+  # perltidy -gnu
+  ok( "got to the end without dieing (note without DEBUGGING passing this test means nothing)"
+    );
+
+26 Feb 2021.
+
 =item B<Add a gap calculation in line length tests with -vmll>
 
 This fixes case b965.  The -vmll flag can produce gaps in lines which need to

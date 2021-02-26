@@ -458,9 +458,6 @@ sub valign_input {
 
     # Reset side comment location if we are entering a new block from level 0.
     # This is intended to keep them from drifting too far to the right.
-    # Programming Note: this seems to be the only spot where '$level_end' is
-    # used now.  (Formerly it was used in step_B). So eventually it can be
-    # removed elsewhere.
     if ( $terminal_block_type && $level_adj == 0 && $level_end > $level ) {
         $self->forget_side_comment();
     }
@@ -4875,10 +4872,16 @@ sub get_output_line_number {
                 # -xci -pvt=2.  In that case a one-line block alternately forms
                 # and breaks, causing -xci to alternately turn on and off (case
                 # b765).
-                # Patched to fix cases b656 b862 b971 b972: always do the check.
-                # The reason is that the -vmll option can cause changes in the
-                # maximum line length, leading to blinkers if not checked.
-                if ( $gap >= 0 ) {
+                # Patched to fix cases b656 b862 b971 b972: always do the check
+                # if -vmll is set.  The reason is that the -vmll option can
+                # cause changes in the maximum line length, leading to blinkers
+                # if not checked.
+                if (
+                    $gap >= 0
+                    && ( $self->[_rOpts_variable_maximum_line_length_]
+                        || ( defined($level_end) && $level > $level_end ) )
+                  )
+                {
                     my $test_line_length =
                       $cached_line_text_length + $gap + $str_length;
                     my $maximum_line_length =
