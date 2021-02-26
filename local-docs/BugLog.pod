@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Improve line length test for the -vtc=2 option>
+
+This is a small change to the update of 13 Feb 2021, f79a4f1. Random testing
+produced additional blinking states caused by the combination of -vtc=2 and
+-vmll flag, plus several others. The problem was that a line length check in
+the vertical aligner was being skipped as an optimization if it didn't appear
+necessary. The unusual properties of the -vmll flag require that the check
+always be done.
+
+This fixes cases b656 b862 b971 b972.
+
+26 Feb 2021.
+
 =item B<Improve one-line block length tests>
 
 Some oscillating states produced in random parameter tests were traced
@@ -19,7 +32,7 @@ it was.  To minimize changes in existing formatting, in the new version the -bl
 flag is not applied to these block types.  A future flag could be added to give
 user control over which of these block types are under -bl control.
 
-25 Feb 2021
+25 Feb 2021, 92bec8d.
 
 =item B<Add tolerance to one-line block length tests>
 
