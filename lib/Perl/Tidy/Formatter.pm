@@ -20682,7 +20682,9 @@ sub set_vertical_tightness_flags {
             {
 
                 # add an extra space at each newline
-                if ( $i == 0 ) { $leading_block_text .= ' ' }
+                if ( $i == 0 && $types_to_go[$i] ne 'b' ) {
+                    $leading_block_text .= ' ';
+                }
 
                 # add the token text
                 $leading_block_text .= $tokens_to_go[$i];

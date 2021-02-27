@@ -2,6 +2,44 @@
 
 =over 4
 
+=item B<Avoid double spaces in -csc text output>
+
+Random testing produced some rare cases where two spaces could occur
+in -csc text.  This happened when there were multiple lines and the
+formatter placed a leading blank in one of the continuation lines
+as padding. This has been fixed.
+
+For example
+
+    while (
+        <>;
+      )
+    {
+       ...
+    } ## end while ( <>; )
+
+Previously, the last line had an extra space after the ';'
+
+    } ## end while ( <>;  )
+
+Another example
+
+    while (
+        do {
+            { package DB; @a = caller( $i++ ) }
+        }
+      )
+    {
+      ...
+    } ## end while ( do { { package DB...}})
+
+Previously the last line had an extra space between the opening braces:
+
+    } ## end while ( do {  { package DB...}})
+
+27 Feb 2021.
+
+
 =item B<Remove control of debug flag -fll>
 
 Random testing produced an unstable state when a debug flag, -nfll, was set.
