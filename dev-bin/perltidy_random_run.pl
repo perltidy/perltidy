@@ -48,7 +48,7 @@ getopts( 'h', \%opts ) or die "$usage";
 if ( $opts{h} ) { die "$usage" }
 
 our $rsetup;    # the config info
-my $hash='#';
+my $hash = '#';
 
 my $config_file = "config.txt";
 if ( !-e $config_file ) {
@@ -80,6 +80,7 @@ elsif ( $ARGV[0] ) {
 read_config($config_file);
 
 my $chain_mode         = $rsetup->{chain_mode};
+my $append_flags       = $rsetup->{append_flags};
 my $do_syntax_check    = $rsetup->{syntax_check};
 my $delete_good_output = $rsetup->{delete_good_output};
 my $FILES_file         = $rsetup->{files};
@@ -123,6 +124,8 @@ if ( !@profiles ) {
 
 my $rsummary = [];
 my @problems;
+
+my $BLINKDIR = "BLINKERS";
 
 my $stop_file = 'stop.now';
 if ( -e $stop_file ) { unlink $stop_file }
@@ -186,7 +189,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
     my $efile_count   = 0;
     my $has_starting_error;
     my $starting_syntax_ok = 1;
-    my $tmperr = "STDERR.txt";
+    my $tmperr             = "STDERR.txt";
 
     # Inner loop over profiles for a given file
     for ( my $np = $np_beg ; $np <= $np_end ; $np++ ) {
@@ -205,29 +208,31 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         print STDERR
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
-        if (-e $tmperr) {unlink $tmperr}
-        my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
-        system_echo($cmd,$hash);
+        if ( -e $tmperr ) { unlink $tmperr }
+        #my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
+        my $cmd = "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
+        system_echo( $cmd, $hash );
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
         if ( -e $efile )   { rename $efile,   "ERR.$ext" }
         if ( -e $logfile ) { rename $logfile, "LOG.$ext" }
         if ( -e $tmperr && !-z $tmperr ) {
-            open(IN,"<",$tmperr);
-            foreach my $line(<IN>) {
-                if ($line=~/BLINKER/) {
-                    $error_count++;
+            open( IN, "<", $tmperr );
+            foreach my $line (<IN>) {
+                if ( $line =~ /BLINKER/ ) {
+                    ##$error_count++;
                     push @blinkers, $ofile;
                     $error_count_this_file++;
                     $error_count_this_case++;
+                    save_blinker_info( "$np.$nf", $ofile, $profile, $tmperr );
                 }
-                if ($line=~/STRANGE/) {
+                if ( $line =~ /STRANGE/ ) {
                     $error_count++;
                     push @strange, $ofile;
                     $error_count_this_file++;
                     $error_count_this_case++;
                 }
-                if ($line=~/uninitialized/) {
+                if ( $line =~ /uninitialized/ ) {
                     $error_count++;
                     push @uninitialized, $ofile;
                     $error_count_this_file++;
@@ -315,7 +320,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         if ( $do_syntax_check && $starting_syntax_ok ) {
             my $synfile = "$ofile.syntax";
             my $cmd     = "perl -c $ofile 2>$synfile";
-            system_echo($cmd,$hash);
+            system_echo( $cmd, $hash );
             my $fh;
             if ( open( $fh, '<', $synfile ) ) {
                 my @lines     = <$fh>;
@@ -323,7 +328,9 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
                 if ( $case == 1 ) {
                     $starting_syntax_ok = $syntax_ok;
                     unlink $synfile;
-                    if ($syntax_ok) { print STDERR "$hash syntax OK for $ofile\n"; }
+                    if ($syntax_ok) {
+                        print STDERR "$hash syntax OK for $ofile\n";
+                    }
                 }
                 elsif ($syntax_ok) {
                     unlink $synfile;
@@ -342,7 +349,8 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
         # run perltidy on the output to see if it can be reformatted
         # without errors
         my $cmd2 = "perltidy <$ofile >$chkfile";
-        system_echo($cmd2,$hash);
+        system_echo( $cmd2, $hash );
+
         #print STDERR "$cmd2\n";
         my $err;
         if ( -e $efile ) {
@@ -505,7 +513,7 @@ if (@saved_for_deletion) {
 }
 
 # Summarize results..
-if (@problems) {
+if (@problems || @blinkers) {
     print STDERR <<EOM;
 
 $hash =============================
@@ -550,6 +558,9 @@ EOM
         print STDERR <<EOM;
 $hash Some files with blinkers (search above for 'BLINKER'):
 $hash (@blinkers[0..$num-1])
+next step...
+cd BLINKERS
+blinker_prep.pl B*
 EOM
     }
     if (@strange) {
@@ -603,6 +614,34 @@ $hash Look for lines longer than 80 characters
 $hash grep 'Thank you' and 'bug in perltidy' in all .ERR files
 $hash Search STDERR for 'uninitialized' and other warnings
 EOM
+
+sub save_blinker_info {
+    my ( $runname, $ofile, $profile, $tmperr ) = @_;
+
+    return unless "$BLINKDIR";
+    if ( !-d $BLINKDIR ) {
+        unless ( mkdir($BLINKDIR) ) {
+            print STDERR "Unable to create $BLINKDIR\n";
+            $BLINKDIR = "";
+            return;
+        }
+        return unless ( -d $BLINKDIR );
+    }
+
+    my $blink_dir = "$BLINKDIR/Blinker-" . "$runname";
+    if ( !-d $blink_dir ) {
+        unless ( mkdir $blink_dir ) {
+            print STDERR "unable to crreate $blink_dir\n";
+            return;
+        }
+        return unless ( -d $blink_dir );
+    }
+
+    system("cp $ofile $blink_dir");
+    system("cp $profile $blink_dir");
+    system("cat $tmperr >$blink_dir/README.txt");
+    return;
+}
 
 sub report_results {
 

@@ -56,6 +56,10 @@ while ( my $line = <IN> ) {
     # remove flags not related to formatting
     next if ( $ris_non_essential->{$key} );
 
+    # Turn off iterations
+    if ( $key =~ /^(iterations|it)=/ ) { $line = '##' . $line }
+    if ( $key =~ /^(converge|conv)/ )  { $line = '##' . $line }
+
     push @lines, $line;
 }
 close IN;

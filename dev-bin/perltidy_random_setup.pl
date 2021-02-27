@@ -96,6 +96,7 @@ my $nprofiles    = @{$rprofiles};
 while (1) {
     my $files              = $rsetup->{files};
     my $chain_mode         = $rsetup->{chain_mode};
+    my $append_flags       = $rsetup->{append_flags};
     my $do_syntax_check    = $rsetup->{syntax_check};
     my $delete_good_output = $rsetup->{delete_good_output};
     my $perltidy_version   = $rsetup->{perltidy};
@@ -110,6 +111,7 @@ $profile_info
 C   - Chain mode               : $chain_mode
 D   - Delete good output?      : $delete_good_output
 S   - Syntax check?            : $do_syntax_check
+A   - Append flags             : $append_flags
 V   - perltidy Version         : $perltidy_version
 Q   - Quit without saving config file
 W   - Write config, FILES.txt, PROFILES.txt, GO.sh and eXit
@@ -136,6 +138,10 @@ EOM
     elsif ( $ans eq 'C' ) {
         $chain_mode = get_num("Chaining: 0=no, 1=always,2=random");
         $rsetup->{chain_mode} = $chain_mode;
+    }
+    elsif ( $ans eq 'A' ) {
+        my $str = query("Enter any flags to append");
+        $rsetup->{append_flags} = $str;
     }
     elsif ( $ans eq 'D' ) {
         $delete_good_output =
@@ -316,6 +322,7 @@ sub default_config {
         profiles           => $PROFILES_file,
         files              => $FILES_file,
         perltidy           => $perltidy,
+        append_flags       => "",
     };
     return;
 }
@@ -1013,6 +1020,9 @@ EOM
             'default-tabsize'          => [ 0, 8 ],
             'entab-leading-whitespace' => [ 0, 8 ],
 
+            # always iterate
+            'iterations' => [ 6, 10 ],
+
             'want-break-after'   => \@operators,
             'want-break-before'  => \@operators,
             'want-left-space'    => \@operators,
@@ -1090,6 +1100,7 @@ EOM
           logfile
           logfile-gap
           look-for-hash-bang
+          maximum-file-size-mb
           notidy
           outfile
           output-file-extension
@@ -1105,6 +1116,8 @@ EOM
           tee-side-comments
           version
           delete-pod
+          tabs
+          entab-leading-whitespace
         );
 
         my %skip;
