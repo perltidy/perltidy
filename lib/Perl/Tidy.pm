@@ -3390,6 +3390,16 @@ EOM
         $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
     }
 
+    # Turn on fuzzy-line-length unless this is an extrude run, as determined
+    # by the -i and -ci settings. Otherwise blinkers can form (case b935)
+    if ( !$rOpts->{'fuzzy-line-length'} ) {
+        if (   $rOpts->{'maximum-line-length'} != 1
+            || $rOpts->{'continuation-indentation'} != 0 )
+        {
+            $rOpts->{'fuzzy-line-length'} = 1;
+        }
+    }
+
     # The freeze-whitespace option is currently a derived option which has its
     # own key
     $rOpts->{'freeze-whitespace'} = !$rOpts->{'add-whitespace'}

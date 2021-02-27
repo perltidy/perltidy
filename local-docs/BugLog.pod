@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Remove control of debug flag -fll>
+
+Random testing produced an unstable state when a debug flag, -nfll, was set.
+The only time it is appropriate to set this flag is if the -extrude option is
+set, so a check was added to verify this.  This fixes case b935.
+
+27 Feb 2021.
+
 =item B<Restrict previous update to just -vmll>
 
 The previous update was found to occasionally needlessly change existing
@@ -13,14 +21,14 @@ paren in the following case.
   ok( "got to the end without dieing (note without DEBUGGING passing this test means nothing)"
     );
 
-26 Feb 2021.
+26 Feb 2021, 2b88464.
 
 =item B<Add a gap calculation in line length tests with -vmll>
 
 This fixes case b965.  The -vmll flag can produce gaps in lines which need to
 be included in weld line length estimates.
 
-26 Feb 2021.
+26 Feb 2021, a643cf2.
 
 =item B<Update rule for spacing paren after constant function>
 
@@ -43,7 +51,7 @@ a constant sub.  The problem was fixed by updating a regex to treat the spacing
 of a paren following a sub the same for the two token types, 'U' or 'C' 
 (constant function).
 
-This fixes case b934.
+This fixes case b934, 12bfdfe.
 
 26 Feb 2021.
 
@@ -58,7 +66,7 @@ always be done.
 
 This fixes cases b656 b862 b971 b972.
 
-26 Feb 2021.
+26 Feb 2021, 80107e0.
 
 =item B<Improve one-line block length tests>
 
