@@ -9,6 +9,7 @@
   perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
   nytprofhtml --open
 - run random testing on final version for a significant time before releasing (several days)
+- rerun all resolved blinker test cases to verify that all still run correctly
 - run 'author tests' on a much larger body of code than is covered by the .t
   files.
     - compare results of the current version with previous version

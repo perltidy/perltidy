@@ -9238,6 +9238,12 @@ EOM
             }
         }
 
+        # Do not start a batch with a blank token.
+        # Fixes cases b149 b888 b984 b985 b986 b987
+        else {
+            if ( $type eq 'b' ) { return }
+        }
+
         ++$max_index_to_go;
         $batch_CODE_type               = $CODE_type;
         $K_to_go[$max_index_to_go]     = $Ktoken_vars;

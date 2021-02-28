@@ -2,6 +2,43 @@
 
 =over 4
 
+=item B<Do not start a batch with a blank token>
+
+Perltidy does final formatting in discrete batches of tokens, where a batch is
+a continuous section of the total token list.  A batch begins a new line and
+will be broken into one or more lines.  If a batch starts with a blank token it
+will simply be skipped on on output. However, some rare problems have been
+found in random testing which can occur if a batch starts with a blank.  An 
+example is case b984 which has the following parameters:
+
+        # this is file 'b984.pro'
+        --block-brace-vertical-tightness=2
+        --indent-columns=10
+        --maximum-line-length=27
+        --outdent-keywords
+        --variable-maximum-line-length
+
+          # OLD: perltidy -pro=b984.pro
+          unless (
+                    exists $self->{
+                              'accession_number'} )
+          {         return "unknown";
+          }
+
+          # NEW: perltidy -pro=b984.pro
+          unless (
+                    exists $self->{
+                              'accession_number'} )
+          {       return "unknown";
+          }
+
+Both look OK, but the OLD version did not outdent the keyword 'return'
+as requested with the -okw flag.
+
+This update fixes cases b149 b888 b984 b985 b986 b987.
+
+28 Feb 2021.
+
 =item B<Avoid double spaces in -csc text output>
 
 Random testing produced some rare cases where two spaces could occur
@@ -37,7 +74,7 @@ Previously the last line had an extra space between the opening braces:
 
     } ## end while ( do {  { package DB...}})
 
-27 Feb 2021.
+27 Feb 2021, b22e891.
 
 
 =item B<Remove control of debug flag -fll>
@@ -46,7 +83,7 @@ Random testing produced an unstable state when a debug flag, -nfll, was set.
 The only time it is appropriate to set this flag is if the -extrude option is
 set, so a check was added to verify this.  This fixes case b935.
 
-27 Feb 2021.
+27 Feb 2021, 9155b3d.
 
 =item B<Restrict previous update to just -vmll>
 
