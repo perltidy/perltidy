@@ -2,6 +2,38 @@
 
 =over 4
 
+=item B<Update tokenizer recognition of indirect object>
+
+This is the parameter file b990.pro:
+    --noadd-whitespace
+    --continuation-indentation=0
+    --maximum-line-length=7
+    --space-terminal-semicolon
+
+Applying perltidy -pro=b990.pro to the following snippet gave two states
+
+    # State 1
+    print
+    H;
+
+    # State 2
+    print H
+    ;
+
+The tokenizer was alternately parsing 'H' as either possble indirect object, 'Z',
+or indirect object, 'Y'.  Two fixes were tested. The first was to modify
+the tokenizer to recognize a ';' as well as a space as a direct object
+terminator. An alternative fix is to not allowing a break before type 'Y'
+so that the tokenizer kept parsing as type 'Y'.  Both fixes work, but the latter fix
+would change existing formatting by the -extrude option, so the first fix was
+used.  With this fix, the stable state is 'State 1' above.
+
+This update is a generalization of the update L<Fixed blinker related to line break at indirect object>
+of 16 Jan 2021.
+
+This fixes case b990.
+1 Mar 2021.
+
 =item B<Do not start a batch with a blank token>
 
 Perltidy does final formatting in discrete batches of tokens, where a batch is
@@ -37,7 +69,7 @@ as requested with the -okw flag.
 
 This update fixes cases b149 b888 b984 b985 b986 b987.
 
-28 Feb 2021.
+28 Feb 2021, 8aaf599.
 
 =item B<Avoid double spaces in -csc text output>
 
