@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix several minor weld issues>
+
+Some edge cases for the welding parameter -wn have been fixed.  There are
+no other currently known weld issues.  Some debug code for welding has been
+left in the code for possible future use.
+
+This fixes cases b109 b110 b520 b756 b901 b937 b965 b982 b988 b991 b992 b993
+
+3 Mar 2021.
+
 =item B<Update tokenizer recognition of indirect object>
 
 This is the parameter file b990.pro:
