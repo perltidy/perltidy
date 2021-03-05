@@ -354,6 +354,7 @@ BEGIN {
         _ris_broken_container_             => $i++,
         _ris_permanently_broken_container_ => $i++,
         _rhas_broken_container_            => $i++,
+        _rhas_broken_list_                 => $i++,
         _rwant_reduced_ci_                 => $i++,
         _ris_bli_container_                => $i++,
         _rparent_of_seqno_                 => $i++,
@@ -698,6 +699,7 @@ sub new {
     $self->[_ris_broken_container_]             = {};
     $self->[_ris_permanently_broken_container_] = {};
     $self->[_rhas_broken_container_]            = {};
+    $self->[_rhas_broken_list_]                 = {};
     $self->[_rwant_reduced_ci_]                 = {};
     $self->[_ris_bli_container_]                = {};
     $self->[_rparent_of_seqno_]                 = {};
@@ -4814,6 +4816,7 @@ sub respace_tokens {
     my $ris_broken_container             = {};
     my $ris_permanently_broken_container = {};
     my $rhas_broken_container            = {};
+    my $rhas_broken_list                 = {};
     my $rparent_of_seqno                 = {};
     my $rchildren_of_seqno               = {};
 
@@ -5478,27 +5481,6 @@ sub respace_tokens {
                     # any phantom semicolons so that they will be counted in
                     # the correct container.
                     $depth_next--;
-
-                    # keep track of broken lists for later formatting
-                    my $seqno_test  = $seqno_stack{$depth_next};
-                    my $KK_open     = $KK_stack{$depth_next};
-                    my $seqno_outer = $seqno_stack{ $depth_next - 1 };
-                    if (   defined($seqno_test)
-                        && defined($KK_open)
-                        && $seqno_test == $type_sequence )
-                    {
-                        my $lx_open  = $rLL->[$KK_open]->[_LINE_INDEX_];
-                        my $lx_close = $rLL->[$KK]->[_LINE_INDEX_];
-                        if ( $lx_open < $lx_close ) {
-                            $ris_broken_container->{$type_sequence} =
-                              $lx_close - $lx_open;
-                            if ( $rtype_count_by_seqno->{$seqno_test}->{','}
-                                && defined($seqno_outer) )
-                            {
-                                $rhas_broken_container->{$seqno_outer} = 1;
-                            }
-                        }
-                    }
                 }
             }
 
@@ -5796,22 +5778,39 @@ sub respace_tokens {
     # Find and remember lists by sequence number
     my $ris_list_by_seqno = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
-        my $K_opening  = $K_opening_container->{$seqno};
+        my $K_opening = $K_opening_container->{$seqno};
+        next unless defined($K_opening);
+
+        # only for lists, not for code blocks
         my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
         next if ($block_type);
+
+        # code errors may leave undefined closing tokens
+        my $K_closing = $K_closing_container->{$seqno};
+        next unless defined($K_closing);
+
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next unless ($rtype_count);
         my $comma_count     = $rtype_count->{','};
+        my $fat_comma_count = $rtype_count->{'=>'};
         my $semicolon_count = $rtype_count->{';'};
 
         # We will define a list to be a container with one or more commas and
-        # no semicolons.  Previously we allowed either a comma or fat comma,
-        # but requiring a comma gives a guarantee later routines that there
-        # is a good line break point within the list.  This is useful because
-        # we are mainly concerned with formatting and vertically aligning
-        # multiple-line lists here.
-        if ( $comma_count && !$semicolon_count ) {
-            $ris_list_by_seqno->{$seqno} = $seqno;
+        # no semicolons.
+        my $is_list = ( $comma_count || $fat_comma_count ) && !$semicolon_count;
+        if ($is_list) { $ris_list_by_seqno->{$seqno} = $seqno }
+
+        my $lx_open   = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+        my $lx_close  = $rLL_new->[$K_closing]->[_LINE_INDEX_];
+        my $line_diff = $lx_close - $lx_open;
+
+        if ($line_diff) {
+            $ris_broken_container->{$seqno} = $line_diff;
+            my $seqno_parent = $rparent_of_seqno->{$seqno};
+            if ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+                $rhas_broken_container->{$seqno_parent} = 1;
+                $rhas_broken_list->{$seqno_parent}      = 1 if ($is_list);
+            }
         }
     }
 
@@ -5829,6 +5828,7 @@ sub respace_tokens {
     $self->[_rlec_count_by_seqno_]   = $rlec_count_by_seqno;
     $self->[_ris_broken_container_]  = $ris_broken_container;
     $self->[_rhas_broken_container_] = $rhas_broken_container;
+    $self->[_rhas_broken_list_]      = $rhas_broken_list;
     $self->[_rparent_of_seqno_]      = $rparent_of_seqno;
     $self->[_rchildren_of_seqno_]    = $rchildren_of_seqno;
     $self->[_ris_list_by_seqno_]     = $ris_list_by_seqno;
@@ -7930,6 +7930,7 @@ sub break_before_list_opening_containers {
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_permanently_broken_container =
       $self->[_ris_permanently_broken_container_];
+    my $rhas_broken_list      = $self->[_rhas_broken_list_];
     my $rhas_broken_container = $self->[_rhas_broken_container_];
     my $radjusted_levels      = $self->[_radjusted_levels_];
     my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
@@ -7954,7 +7955,7 @@ sub break_before_list_opening_containers {
         my $KK = $K_opening_container->{$seqno};
 
         my $is_list  = $self->is_list_by_seqno($seqno);
-        my $has_list = $rhas_broken_container->{$seqno};
+        my $has_list = $rhas_broken_list->{$seqno};
 
         # This must be a list (this will exclude all code blocks)
         # or contain a list
@@ -13430,10 +13431,7 @@ sub insert_breaks_before_list_opening_containers {
     my $nmax = @{$ri_right} - 1;
     return unless ( $nmax >= 0 );
 
-    my $rLL                   = $self->[_rLL_];
-    my $ris_broken_container  = $self->[_ris_broken_container_];
-    my $rhas_broken_container = $self->[_rhas_broken_container_];
-    my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
+    my $rLL = $self->[_rLL_];
 
     my $rbreak_before_container_by_seqno =
       $self->[_rbreak_before_container_by_seqno_];
@@ -14957,11 +14955,13 @@ sub set_continuation_breaks {
                                 && $types_to_go[ $i - 1 ] eq 'b' )
                         );
 
-                        # Patch to avoid blinkes: but do not do this unless
+                        # Patch to avoid blinkers: but do not do this unless
                         # line difference is > 1 (see case b977)
                         if ($ok) {
                             my $seqno = $type_sequence_to_go[$i_line_start];
-                            if ( $ris_broken_container->{$seqno} <= 1 ) {
+                            if (   $ris_broken_container->{$seqno}
+                                && $ris_broken_container->{$seqno} <= 1 )
+                            {
                                 $ok = 0;
                             }
                         }
@@ -17019,6 +17019,8 @@ sub get_available_spaces_to_go {
         my $rbreak_container = $self->[_rbreak_container_];
         my $rshort_nested    = $self->[_rshort_nested_];
         my $rLL              = $self->[_rLL_];
+        my $rbreak_before_container_by_seqno =
+          $self->[_rbreak_before_container_by_seqno_];
 
         # find needed previous nonblank tokens
         my $last_nonblank_token      = '';
@@ -17095,6 +17097,8 @@ sub get_available_spaces_to_go {
             my $last_equals = $last_gnu_equals{$total_depth};
             if ( $last_equals && $last_equals > $line_start_index_to_go ) {
 
+                my $seqno = $type_sequence_to_go[$max_index_to_go];
+
                 # find the position if we break at the '='
                 my $i_test = $last_equals;
                 if ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
@@ -17106,6 +17110,8 @@ sub get_available_spaces_to_go {
                   total_line_length( $i_test, $max_index_to_go );
                 my $mll = $maximum_line_length[ $levels_to_go[$i_test] ];
 
+                my $bbc_flag = $break_before_container_types{$token};
+
                 if (
 
                     # the equals is not just before an open paren (testing)
@@ -17114,6 +17120,12 @@ sub get_available_spaces_to_go {
                     # if we are beyond the midpoint
                     $gnu_position_predictor >
                     $mll - $rOpts_maximum_line_length / 2
+
+                    # if a -bbx flag WANTS a break before this opening token
+                    || ( $seqno && $rbreak_before_container_by_seqno->{$seqno} )
+
+                    # or if we MIGHT want a break (fixes case b826 b909 b989)
+                    || ( $bbc_flag && $bbc_flag >= 2 )
 
                     # or we are beyond the 1/4 point and there was an old
                     # break at the equals

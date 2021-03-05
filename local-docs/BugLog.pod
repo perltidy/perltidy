@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix issue git#54 involving -bbp=n and -bbpi=n>
+
+In this issue, different results were obtained depending upon the existance of
+a comma in a list.  To fix this, the definition of a list was adjusted from
+requiring one or more commas to requiring either a fat comma or a comma.
+
+At the same time, a known problem involving the combination -lp -bbp=n -bbpi=n
+was fixed.  This fixes cases b826 b909 b989.
+
+4 Mar 2021.
+
 =item B<Fix several minor weld issues>
 
 Some edge cases for the welding parameter -wn have been fixed.  There are
@@ -10,7 +21,7 @@ left in the code for possible future use.
 
 This fixes cases b109 b110 b520 b756 b901 b937 b965 b982 b988 b991 b992 b993
 
-3 Mar 2021.
+3 Mar 2021, cfef087.
 
 =item B<Update tokenizer recognition of indirect object>
 
@@ -42,7 +53,7 @@ This update is a generalization of the update L<Fixed blinker related to line br
 of 16 Jan 2021.
 
 This fixes case b990.
-1 Mar 2021.
+1 Mar 2021, 49cd66f.
 
 =item B<Do not start a batch with a blank token>
 

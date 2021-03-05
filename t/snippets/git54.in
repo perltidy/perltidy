@@ -1,0 +1,53 @@
+# testing sensitivity to excess commas
+my $definition =>
+    (
+    {
+        key1 => value1
+    },
+    {
+        key2 => value2
+    },
+    );
+
+my $definition =>
+    (
+    {
+        key => value
+    }
+    );
+
+my $definition =>
+    (
+    {
+        key => value
+    },
+    );
+
+my $definition =>
+    (
+    {
+        key => value,
+    },
+    );
+
+my $list =
+    (
+      {
+        key => $value,
+        key => $value,
+        key => $value,
+        key => $value,
+        key => $value,
+      },
+    ) ;
+
+my $list =
+    (
+      {
+        key => $value,
+        key => $value,
+        key => $value,
+        key => $value,
+        key => $value,
+      }
+    ) ;
