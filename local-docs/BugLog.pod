@@ -2,6 +2,30 @@
 
 =over 4
 
+=item B<Fix for issue git #53, do not align spaced function parens>
+
+Introducing a space before a function call paren had a side effect of
+allowing the vertical aligner to align the parens, as in the example.
+
+    # OLD and NEW, default without -sfp:
+    log_something_with_long_function( 'This is a log message.', 2 );
+    Coro::AnyEvent::sleep( 3, 4 );
+
+    # OLD: perltidy -sfp 
+    log_something_with_long_function ( 'This is a log message.', 2 );
+    Coro::AnyEvent::sleep            ( 3, 4 );
+
+    # NEW: perltidy -sfp 
+    log_something_with_long_function ( 'This is a log message.', 2 );
+    Coro::AnyEvent::sleep ( 3, 4 );
+
+This update changes the default to not do this vertical alignment.  This should
+have been the default but this side-effect was missed when the -sfp parameter
+was added.  Note that parens following keywords are likewise not vertically
+aligned.
+
+5 Mar 2021.
+
 =item B<Fix issue git#54 involving -bbp=n and -bbpi=n>
 
 In this issue, different results were obtained depending upon the existance of
@@ -11,7 +35,7 @@ requiring one or more commas to requiring either a fat comma or a comma.
 At the same time, a known problem involving the combination -lp -bbp=n -bbpi=n
 was fixed.  This fixes cases b826 b909 b989.
 
-4 Mar 2021.
+4 Mar 2021, 872d4b4.
 
 =item B<Fix several minor weld issues>
 

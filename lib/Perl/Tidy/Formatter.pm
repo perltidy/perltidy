@@ -5781,13 +5781,18 @@ sub respace_tokens {
         my $K_opening = $K_opening_container->{$seqno};
         next unless defined($K_opening);
 
-        # only for lists, not for code blocks
-        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
-        next if ($block_type);
-
         # code errors may leave undefined closing tokens
         my $K_closing = $K_closing_container->{$seqno};
         next unless defined($K_closing);
+
+        my $lx_open   = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+        my $lx_close  = $rLL_new->[$K_closing]->[_LINE_INDEX_];
+        my $line_diff = $lx_close - $lx_open;
+        $ris_broken_container->{$seqno} = $line_diff;
+
+        # The rest is only for lists, not for code blocks
+        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
+        next if ($block_type);
 
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next unless ($rtype_count);
@@ -5800,12 +5805,7 @@ sub respace_tokens {
         my $is_list = ( $comma_count || $fat_comma_count ) && !$semicolon_count;
         if ($is_list) { $ris_list_by_seqno->{$seqno} = $seqno }
 
-        my $lx_open   = $rLL_new->[$K_opening]->[_LINE_INDEX_];
-        my $lx_close  = $rLL_new->[$K_closing]->[_LINE_INDEX_];
-        my $line_diff = $lx_close - $lx_open;
-
         if ($line_diff) {
-            $ris_broken_container->{$seqno} = $line_diff;
             my $seqno_parent = $rparent_of_seqno->{$seqno};
             if ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
                 $rhas_broken_container->{$seqno_parent} = 1;
@@ -14959,10 +14959,12 @@ sub set_continuation_breaks {
                         # line difference is > 1 (see case b977)
                         if ($ok) {
                             my $seqno = $type_sequence_to_go[$i_line_start];
-                            if (   $ris_broken_container->{$seqno}
-                                && $ris_broken_container->{$seqno} <= 1 )
+                            if (  !$ris_broken_container->{$seqno}
+                                || $ris_broken_container->{$seqno} <= 1 )
                             {
                                 $ok = 0;
+                                print
+                                  "BOOGA, $ris_broken_container->{$seqno}\n";
                             }
                         }
 
@@ -18230,6 +18232,22 @@ sub send_lines_to_vertical_aligner {
                             $alignment_type = ""
                               unless $vert_last_nonblank_token =~
                               /^(if|unless|elsif)$/;
+                        }
+
+                        # Do not align a spaced-function-paren - fixes git #53
+                        # Note that index $i-1 is a blank token if we get here
+                        if ( $i > $ibeg + 1 ) {
+                            my $type_m  = $types_to_go[ $i - 2 ];
+                            my $token_m = $tokens_to_go[ $i - 2 ];
+
+                            # this is the same test as 'space-function-paren'
+                            if (   $type_m =~ /^[wUG]$/
+                                || $type_m eq '->'
+                                || $type_m  =~ /^[wi]$/
+                                && $token_m =~ /^(\&|->)/ )
+                            {
+                                $alignment_type = "";
+                            }
                         }
                     }
 
