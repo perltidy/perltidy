@@ -2,12 +2,25 @@
 
 =over 4
 
+=item B<Fix edge formatting cases with parameter -bbx=2>
+
+Random testing produced some cases where formatting with parameters of the form
+--break-before-..=2 can lead to unstable final states.  The problem lies in the
+definition of a broken list.  The problem is fixed by defining a broken
+list for this particular flag to be a list with at least one non-terminal
+line-ending comma.  This insures that the list will remain broken on subsequent
+iterations.  This fixes cases b789 and b938.
+
+6 Mar 2021.
+
 =item B<Add flag -fpva, --function-paren-vertical-alignment>
 
 A flag -fpva, --function-paren-vertical-alignment, is added to
 prevent vertical alignment of function parens when the -sfp flag is used.
 This is on by default, so that existing formatting remains unchanged unless
 the user requests that vertical alignment not occur with -nfpva.
+
+5 Mar 2021, 312be4c.
 
 =item B<Fix for issue git #53, do not align spaced function parens>
 

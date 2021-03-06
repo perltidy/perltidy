@@ -354,8 +354,8 @@ BEGIN {
         _rlec_count_by_seqno_              => $i++,
         _ris_broken_container_             => $i++,
         _ris_permanently_broken_container_ => $i++,
-        _rhas_broken_container_            => $i++,
         _rhas_broken_list_                 => $i++,
+        _rhas_broken_list_with_lec_        => $i++,
         _rwant_reduced_ci_                 => $i++,
         _ris_bli_container_                => $i++,
         _rparent_of_seqno_                 => $i++,
@@ -699,8 +699,8 @@ sub new {
     $self->[_rlec_count_by_seqno_]              = {};
     $self->[_ris_broken_container_]             = {};
     $self->[_ris_permanently_broken_container_] = {};
-    $self->[_rhas_broken_container_]            = {};
     $self->[_rhas_broken_list_]                 = {};
+    $self->[_rhas_broken_list_with_lec_]        = {};
     $self->[_rwant_reduced_ci_]                 = {};
     $self->[_ris_bli_container_]                = {};
     $self->[_rparent_of_seqno_]                 = {};
@@ -4819,8 +4819,8 @@ sub respace_tokens {
     my $rlec_count_by_seqno              = {};
     my $ris_broken_container             = {};
     my $ris_permanently_broken_container = {};
-    my $rhas_broken_container            = {};
     my $rhas_broken_list                 = {};
+    my $rhas_broken_list_with_lec        = {};
     my $rparent_of_seqno                 = {};
     my $rchildren_of_seqno               = {};
 
@@ -5812,8 +5812,14 @@ sub respace_tokens {
         if ($line_diff) {
             my $seqno_parent = $rparent_of_seqno->{$seqno};
             if ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
-                $rhas_broken_container->{$seqno_parent} = 1;
-                $rhas_broken_list->{$seqno_parent}      = 1 if ($is_list);
+                $rhas_broken_list->{$seqno_parent} = 1 if ($is_list);
+
+                # We need to mark broken lists with non-terminal line-ending
+                # commas for the -bbx=2 parameter. This insures that the list
+                # will stay broken.  Otherwise the flag -bbx=2 can be unstable.
+                # This fixes case b789 and b938.
+                $rhas_broken_list_with_lec->{$seqno_parent} = 1
+                  if ( $rlec_count_by_seqno->{$seqno} );
             }
         }
     }
@@ -5822,20 +5828,20 @@ sub respace_tokens {
     $self->[_rLL_] = $rLL_new;
     my $Klimit;
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
-    $self->[_Klimit_]                = $Klimit;
-    $self->[_K_opening_container_]   = $K_opening_container;
-    $self->[_K_closing_container_]   = $K_closing_container;
-    $self->[_K_opening_ternary_]     = $K_opening_ternary;
-    $self->[_K_closing_ternary_]     = $K_closing_ternary;
-    $self->[_rK_phantom_semicolons_] = $rK_phantom_semicolons;
-    $self->[_rtype_count_by_seqno_]  = $rtype_count_by_seqno;
-    $self->[_rlec_count_by_seqno_]   = $rlec_count_by_seqno;
-    $self->[_ris_broken_container_]  = $ris_broken_container;
-    $self->[_rhas_broken_container_] = $rhas_broken_container;
-    $self->[_rhas_broken_list_]      = $rhas_broken_list;
-    $self->[_rparent_of_seqno_]      = $rparent_of_seqno;
-    $self->[_rchildren_of_seqno_]    = $rchildren_of_seqno;
-    $self->[_ris_list_by_seqno_]     = $ris_list_by_seqno;
+    $self->[_Klimit_]                    = $Klimit;
+    $self->[_K_opening_container_]       = $K_opening_container;
+    $self->[_K_closing_container_]       = $K_closing_container;
+    $self->[_K_opening_ternary_]         = $K_opening_ternary;
+    $self->[_K_closing_ternary_]         = $K_closing_ternary;
+    $self->[_rK_phantom_semicolons_]     = $rK_phantom_semicolons;
+    $self->[_rtype_count_by_seqno_]      = $rtype_count_by_seqno;
+    $self->[_rlec_count_by_seqno_]       = $rlec_count_by_seqno;
+    $self->[_ris_broken_container_]      = $ris_broken_container;
+    $self->[_rhas_broken_list_]          = $rhas_broken_list;
+    $self->[_rhas_broken_list_with_lec_] = $rhas_broken_list_with_lec;
+    $self->[_rparent_of_seqno_]          = $rparent_of_seqno;
+    $self->[_rchildren_of_seqno_]        = $rchildren_of_seqno;
+    $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -7934,13 +7940,13 @@ sub break_before_list_opening_containers {
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_permanently_broken_container =
       $self->[_ris_permanently_broken_container_];
-    my $rhas_broken_list      = $self->[_rhas_broken_list_];
-    my $rhas_broken_container = $self->[_rhas_broken_container_];
-    my $radjusted_levels      = $self->[_radjusted_levels_];
-    my $rparent_of_seqno      = $self->[_rparent_of_seqno_];
-    my $rlines                = $self->[_rlines_];
-    my $rtype_count_by_seqno  = $self->[_rtype_count_by_seqno_];
-    my $rlec_count_by_seqno   = $self->[_rlec_count_by_seqno_];
+    my $rhas_broken_list          = $self->[_rhas_broken_list_];
+    my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
+    my $radjusted_levels          = $self->[_radjusted_levels_];
+    my $rparent_of_seqno          = $self->[_rparent_of_seqno_];
+    my $rlines                    = $self->[_rlines_];
+    my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
+    my $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
 
     my $length_tol =
       max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
@@ -7958,8 +7964,9 @@ sub break_before_list_opening_containers {
 
         my $KK = $K_opening_container->{$seqno};
 
-        my $is_list  = $self->is_list_by_seqno($seqno);
-        my $has_list = $rhas_broken_list->{$seqno};
+        my $is_list           = $self->is_list_by_seqno($seqno);
+        my $has_list          = $rhas_broken_list->{$seqno};
+        my $has_list_with_lec = $rhas_broken_list_with_lec->{$seqno};
 
         # This must be a list (this will exclude all code blocks)
         # or contain a list
@@ -7985,7 +7992,7 @@ sub break_before_list_opening_containers {
 
         DEBUG_BBX
           && print STDOUT
-          "DEBUG_BBX: Looking at token = $token with option=$break_option\n";
+"BBX: Looking at seqno=$seqno, token = $token with option=$break_option\n";
 
         # -bbx=1 = stable, try to follow input
         if ( $break_option == 1 ) {
@@ -7997,10 +8004,10 @@ sub break_before_list_opening_containers {
         }
 
         # -bbx=2 = only if complex list, meaning:
-        #  - this list contains a broken container, or
+        #  - this list contains a broken list with line-ending comma, or
         #  - this list is contained in a broken list
         elsif ( $break_option == 2 ) {
-            my $ok_to_break = $has_list;
+            my $ok_to_break = $has_list_with_lec;
             if ( !$ok_to_break ) {
                 my $parent = $rparent_of_seqno->{$seqno};
                 $ok_to_break = $self->is_list_by_seqno($parent);
@@ -8022,6 +8029,8 @@ sub break_before_list_opening_containers {
         # Set a flag for actual implementation later in
         # sub insert_breaks_before_list_opening_containers
         $rbreak_before_container_by_seqno->{$seqno} = 1;
+        DEBUG_BBX
+          && print STDOUT "BBX: ok to break at seqno=$seqno\n";
 
         # -bbxi=0: Nothing more to do if the ci value remains unchanged
         my $ci_flag = $container_indentation_options{$token};
@@ -8058,8 +8067,9 @@ sub break_before_list_opening_containers {
             goto OK;
         }
 
-        # Always OK if this list contains a broken sub-container
-        if ( $rhas_broken_container->{$seqno} ) { goto OK }
+        # Always OK if this list contains a broken sub-container with
+        # a non-terminal line-ending comma
+        if ($has_list_with_lec) { goto OK }
 
         # From here on we are considering a single container...
 
@@ -8096,7 +8106,7 @@ sub break_before_list_opening_containers {
           $starting_indent + $length - $rOpts_maximum_line_length;
         DEBUG_BBX
           && print STDOUT
-"excess=$excess_length: starting=$starting_indent, length=$length, ci=$ci\n";
+"BBX: excess=$excess_length: starting=$starting_indent, length=$length, ci=$ci\n";
 
         # OK if the net container definitely breaks on length
         if ( $excess_length > $length_tol ) {
@@ -8114,7 +8124,7 @@ sub break_before_list_opening_containers {
 
       OK:
 
-        DEBUG_BBX && print STDOUT "DEBUG_BBX: OK to break\n";
+        DEBUG_BBX && print STDOUT "BBX: OK to break\n";
 
         # -bbhbi=n
         # -bbsbi=n
@@ -15485,6 +15495,7 @@ sub set_continuation_breaks {
                                 my $test1 = $nesting_depth_to_go[$i_opening];
                                 my $test2 = $nesting_depth_to_go[$i_start_2];
                                 if ( $test2 == $test1 ) {
+
                                     $self->set_forced_breakpoint(
                                         $i_start_2 - 1 );
                                 }
