@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Add flag -fpva, --function-paren-vertical-alignment>
+
+A flag -fpva, --function-paren-vertical-alignment, is added to
+prevent vertical alignment of function parens when the -sfp flag is used.
+This is on by default, so that existing formatting remains unchanged unless
+the user requests that vertical alignment not occur with -nfpva.
+
 =item B<Fix for issue git #53, do not align spaced function parens>
 
 Introducing a space before a function call paren had a side effect of
@@ -24,7 +31,7 @@ have been the default but this side-effect was missed when the -sfp parameter
 was added.  Note that parens following keywords are likewise not vertically
 aligned.
 
-5 Mar 2021.
+5 Mar 2021, 00431bf.
 
 =item B<Fix issue git#54 involving -bbp=n and -bbpi=n>
 

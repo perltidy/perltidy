@@ -173,6 +173,7 @@ my (
     $rOpts_add_whitespace,
     $rOpts_delete_old_whitespace,
     $rOpts_freeze_whitespace,
+    $rOpts_function_paren_vertical_alignment,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1498,6 +1499,9 @@ EOM
     $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
     $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
     $rOpts_freeze_whitespace     = $rOpts->{'freeze-whitespace'};
+
+    $rOpts_function_paren_vertical_alignment =
+      $rOpts->{'function-paren-vertical-alignment'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -14963,8 +14967,6 @@ sub set_continuation_breaks {
                                 || $ris_broken_container->{$seqno} <= 1 )
                             {
                                 $ok = 0;
-                                print
-                                  "BOOGA, $ris_broken_container->{$seqno}\n";
                             }
                         }
 
@@ -18234,9 +18236,12 @@ sub send_lines_to_vertical_aligner {
                               /^(if|unless|elsif)$/;
                         }
 
-                        # Do not align a spaced-function-paren - fixes git #53
-                        # Note that index $i-1 is a blank token if we get here
-                        if ( $i > $ibeg + 1 ) {
+                        # Do not align a spaced-function-paren if requested.
+                        # Issue git #53.  Note that $i-1 is a blank token if we
+                        # get here.
+                        if (  !$rOpts_function_paren_vertical_alignment
+                            && $i > $ibeg + 1 )
+                        {
                             my $type_m  = $types_to_go[ $i - 2 ];
                             my $token_m = $tokens_to_go[ $i - 2 ];
 

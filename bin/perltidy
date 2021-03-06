@@ -1332,6 +1332,21 @@ reformatted with -sfp:
 In this particular case the syntax error can be removed if the line order is
 reversed, so that Perl parses 'sub filename' first. 
 
+=item B<-fpva>  or B<--function-paren-vertical-alignment>
+
+A side-effect of using the B<-sfp> flag is that the parens may become vertically
+aligned. For example,
+
+    # perltidy -sfp
+    myfun     ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );
+
+This is the default behavior.  To prevent this alignment use B<-nfpva>:
+
+    # perltidy -sfp -nfpva
+    myfun ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );
+
 =item B<-spp=n>  or B<--space-prototype-paren=n>
 
 This flag can be used to control whether a function prototype is preceded by a space.  For example, the following prototype does not have a space.
@@ -3862,11 +3877,11 @@ aligned in the following statement:
             Proto    => 'tcp'
         );
 
-The only explicit control on vertical alignment is to turn it off using
-B<-novalign>, a flag mainly intended for debugging.  However, vertical
-alignment can be forced to stop and restart by selectively introducing blank
-lines.  For example, a blank has been inserted in the following code
-to keep somewhat similar things aligned.
+Vertical alignment can be completely turned off using B<-novalign>, a flag
+mainly intended for debugging.  However, vertical alignment can be forced to
+stop and restart by selectively introducing blank lines.  For example, a blank
+has been inserted in the following code to keep somewhat similar things
+aligned.
 
     %option_range = (
         'format'             => [ 'tidy', 'html', 'user' ],
@@ -3879,6 +3894,20 @@ to keep somewhat similar things aligned.
         'square-bracket-tightness' => [ 0, 2 ],
     );
 
+Vertical alignment is implemented by locally increasing an existing blank space
+to produce alignment with an adjacent line.  It cannot occur if there is no
+blank space to increase.  So if a particular space is removed by one of the
+existing controls then vertical alignment cannot occur. Likewise, if a space is
+added with one of the controls, then vertical alignment might occur.
+
+For example, 
+
+        # perltidy -nwls='=>'
+        $data = $pkg->new(
+            PeerAddr=> join( ".", @port[ 0 .. 3 ] ),
+            PeerPort=> $port[4] * 256 + $port[5],
+            Proto=> 'tcp'
+        );
 
 =head2 Other Controls
 

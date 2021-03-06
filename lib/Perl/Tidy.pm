@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2020 by Steve Hancock
+#    Copyright (c) 2000-2021 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -2269,6 +2269,7 @@ sub generate_options {
     $add_option->( 'brace-tightness',                           'bt',    '=i' );
     $add_option->( 'delete-old-whitespace',                     'dws',   '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
+    $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
     $add_option->( 'keyword-paren-inner-tightness-list',        'kpitl', '=s' );
     $add_option->( 'logical-padding',                           'lop',   '!' );
@@ -2580,6 +2581,7 @@ sub generate_options {
       delete-old-newlines
       delete-semicolons
       extended-syntax
+      function-paren-vertical-alignment
       fuzzy-line-length
       hanging-side-comments
       indent-block-comments
@@ -4206,7 +4208,7 @@ sub show_version {
     print STDOUT <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2020, Steve Hancock
+Copyright 2000-2021, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.

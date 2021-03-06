@@ -3,6 +3,9 @@
 # Contents:
 #1 git54.def
 #2 git54.git54
+#3 fpva.def
+#4 fpva.fpva1
+#5 fpva.fpva2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -21,6 +24,8 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'   => "",
+        'fpva1' => "-sfp",
+        'fpva2' => "-sfp -nfpva",
         'git54' => "-bbp=3 -bbpi=2 -ci=4 -lp",
     };
 
@@ -28,6 +33,14 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'fpva' => <<'----------',
+log_something_with_long_function( 'This is a log message.', 2 );
+Coro::AnyEvent::sleep( 3, 4 );
+use Carp ();
+use File::Spec ();
+use File::Path ();
+----------
 
         'git54' => <<'----------',
 # testing sensitivity to excess commas
@@ -203,6 +216,42 @@ my $list =
       }
     );
 #2...........
+        },
+
+        'fpva.def' => {
+            source => "fpva",
+            params => "def",
+            expect => <<'#3...........',
+log_something_with_long_function( 'This is a log message.', 2 );
+Coro::AnyEvent::sleep( 3, 4 );
+use Carp       ();
+use File::Spec ();
+use File::Path ();
+#3...........
+        },
+
+        'fpva.fpva1' => {
+            source => "fpva",
+            params => "fpva1",
+            expect => <<'#4...........',
+log_something_with_long_function ( 'This is a log message.', 2 );
+Coro::AnyEvent::sleep            ( 3, 4 );
+use Carp       ();
+use File::Spec ();
+use File::Path ();
+#4...........
+        },
+
+        'fpva.fpva2' => {
+            source => "fpva",
+            params => "fpva2",
+            expect => <<'#5...........',
+log_something_with_long_function ( 'This is a log message.', 2 );
+Coro::AnyEvent::sleep ( 3, 4 );
+use Carp ();
+use File::Spec ();
+use File::Path ();
+#5...........
         },
     };
 
