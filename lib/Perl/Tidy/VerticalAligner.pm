@@ -4787,6 +4787,7 @@ sub get_output_line_number {
         # perl527/(method.t.2, reg_mesg.t, mime-header.t)
 
         # handle outdenting of long lines:
+        my $is_outdented_line;
         if ($outdent_long_lines) {
             my $excess =
               $str_length -
@@ -4807,6 +4808,7 @@ sub get_output_line_number {
                 }
                 $outdented_line_count++;
                 $self->[_outdented_line_count_] = $outdented_line_count;
+                $is_outdented_line = 1;
             }
         }
 
@@ -5075,8 +5077,10 @@ sub get_output_line_number {
             }
         }
 
-        # write or cache this line
-        if ( !$open_or_close || $side_comment_length > 0 ) {
+        # write or cache this line ...
+        # fix for case b999: do not cache an outdented line
+        if ( !$open_or_close || $side_comment_length > 0 || $is_outdented_line )
+        {
             $self->valign_output_step_C( $line, $leading_space_count, $level,
                 $Kend );
         }

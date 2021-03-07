@@ -2,6 +2,30 @@
 
 =over 4
 
+=item B<Fix problem with -vtc=n and outdented long lines>
+
+Random testing produced an issue with -vtc=1 and an outdented long
+line.  The parameters for b999 are
+
+    --maximum-line-length=75
+    --paren-vertical-tightness-closing=1
+
+File 'b999.in' state 1 is
+
+                while ( $line =~
+    s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e
+                  )
+
+and state 2 is
+
+                while ( $line =~
+    s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e)
+
+The problem was fixed by turning off caching for outdented long lines.
+This fixes case b999.
+
+7 Mar 2021.
+
 =item B<Fix problem with combination -lp and -wbb='='>
 
 Random testing produced case b932 in which the combination -lp and -wbb='='
@@ -29,7 +53,7 @@ check the -wba flag setting.
 
 This update fixes case b932.
 
-7 Mar 2021.
+7 Mar 2021, 63129c3.
 
 =item B<Fix edge formatting cases with parameter -bbx=2>
 

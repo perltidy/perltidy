@@ -2,12 +2,43 @@
 
 ## 2021 01 xx
 
+    - Fixed issue git #55 regarding lack of coordination of the --break-before-xxx
+    flags and the --line-up-parens flag.
+
+    - Fixed issue git #54 regarding irregular application of the --break-before-paren
+    and similar --break-before-xxx flags, in which lists without commas were not 
+    being formatted according to these flags.
+
+    - Fixed issue git #53. A flag was added to turn off alignment of spaced function 
+    parens.  If the --space-function-paren, -sfp flag is set, a side-effect is that the
+    spaced function parens may get vertically aligned.  This can be undesirable,
+    so a new parameter '--function-paren-vertical-alignment', or '-fpva', has been
+    added to turn this vertical alignment off. The default is '-fpva', so that 
+    existing formatting is not changed.  Use '-nfpva' to turn off unwanted
+    vertical alignment.  To illustrate the possibilities:
+
+        # perltidy [default]
+        myfun( $aaa, $b, $cc );
+        mylongfun( $a, $b, $c );
+
+        # perltidy -sfp
+        myfun     ( $aaa, $b, $cc );
+        mylongfun ( $a, $b, $c );
+    
+        # perltidy -sfp -nfpva
+        myfun ( $aaa, $b, $cc );
+        mylongfun ( $a, $b, $c );
+
     - Fixed issue git #51, a closing qw bare paren was not being outdented when
     the -nodelete-old-newlines flag was set.
 
-    - Fixed a rare problem with -lp formatting which could cause alternating 
-    output states.  Except for some very deeply nested data structures,
-    most scripts formatted with this option will not be changed.
+    - Fixed numerous edge cases involving unusual parameter combinations which
+      could cause alternating output states.  Most scripts will not be
+      changed by these fixes.
+
+    - A more complete list of updates is at
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2021 01 11
 
