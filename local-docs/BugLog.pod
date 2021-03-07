@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<Adjust line length tolerance for welding>
+
+A minor tolerance adjustment was needed to fix some edge welding cases.
+
+This fixes cases
+b995 b998 b1000 b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018 
+
+7 Mar 2021.
+
 =item B<Fix problem with -vtc=n and outdented long lines>
 
 Random testing produced an issue with -vtc=1 and an outdented long

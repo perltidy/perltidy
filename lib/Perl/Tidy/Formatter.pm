@@ -7120,7 +7120,9 @@ EOM
         if ( !$do_not_weld_rule ) {
             my $excess = $excess_length_to_K->($Kinner_opening);
 
-            if ( $excess > 0 ) { $do_not_weld_rule = 3 }
+            # Use '>=' instead of '=' here to fix cases b995 b998 b1000
+            # b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018 
+            if ( $excess >= 0 ) { $do_not_weld_rule = 3 }
             if (DEBUG_WELD) {
                 $Msg .=
 "RULE 3 test: excess length to K=$Kinner_opening is $excess ( > 0 ?) \n";
