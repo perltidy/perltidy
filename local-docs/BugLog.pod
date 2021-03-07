@@ -2,6 +2,35 @@
 
 =over 4
 
+=item B<Fix problem with combination -lp and -wbb='='>
+
+Random testing produced case b932 in which the combination -lp and -wbb='='
+was not stable. 
+
+File 'b932.par' is:
+
+    --line-up-parentheses
+    --maximum-line-length=51
+    --want-break-before='='
+
+File 'b932.in' in the desired state is:
+
+    my @parts
+      = decompose( '(\s+|/|\!|=)',
+                   $line, undef, 1, undef, '["\']' );
+
+The alternate state is
+
+    my @parts = decompose( '(\s+|/|\!|=)',
+                     $line, undef, 1, undef, '["\']' );
+
+The problem was that the -lp code which set a line break at the equals did not
+check the -wba flag setting.
+
+This update fixes case b932.
+
+7 Mar 2021.
+
 =item B<Fix edge formatting cases with parameter -bbx=2>
 
 Random testing produced some cases where formatting with parameters of the form
@@ -11,7 +40,7 @@ list for this particular flag to be a list with at least one non-terminal
 line-ending comma.  This insures that the list will remain broken on subsequent
 iterations.  This fixes cases b789 and b938.
 
-6 Mar 2021.
+6 Mar 2021, 360d669.
 
 =item B<Add flag -fpva, --function-paren-vertical-alignment>
 

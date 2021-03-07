@@ -10842,6 +10842,10 @@ sub compare_indentation_levels {
 
         return unless defined $i && $i >= 0;
 
+        # Back up at a blank in case we need an = break.
+        # This is a backup fix for cases like b932.
+        if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
+
         # no breaks between welded tokens
         return if ( $self->weld_len_right_to_go($i) );
 
@@ -15496,8 +15500,16 @@ sub set_continuation_breaks {
                                 my $test2 = $nesting_depth_to_go[$i_start_2];
                                 if ( $test2 == $test1 ) {
 
-                                    $self->set_forced_breakpoint(
-                                        $i_start_2 - 1 );
+                                    # Back up at a blank (fixes case b932)
+                                    my $ibr = $i_start_2 - 1;
+                                    if (   $ibr > 0
+                                        && $types_to_go[$ibr] eq 'b' )
+                                    {
+                                        $ibr--;
+                                    }
+
+                                    $self->set_forced_breakpoint($ibr);
+
                                 }
                             } ## end if ( defined($i_start_2...))
                         } ## end if ( defined($item) )
