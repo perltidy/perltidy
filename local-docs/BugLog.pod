@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Simplify sub weld_nested_containers>
+
+This update consolidates a number of specialized rules for welding into
+fewer, simpler rules which accomplish the same effect.  
+
+These cases are fixed with this update:
+b186 b520 b872 b937 b996 b997 b1002 b1003 b1004 b1005 b1006 b1013 b1014 
+
+There are no current open issues with the weld logic.
+
+10 Mar 2021.
+
 =item B<Adjust line length tolerance for welding>
 
 A minor tolerance adjustment was needed to fix some edge welding cases.
@@ -9,7 +21,7 @@ A minor tolerance adjustment was needed to fix some edge welding cases.
 This fixes cases
 b995 b998 b1000 b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018 
 
-7 Mar 2021.
+7 Mar 2021, b9166ca.
 
 =item B<Fix problem with -vtc=n and outdented long lines>
 
@@ -33,7 +45,7 @@ and state 2 is
 The problem was fixed by turning off caching for outdented long lines.
 This fixes case b999.
 
-7 Mar 2021.
+7 Mar 2021, 3da7e41.
 
 =item B<Fix problem with combination -lp and -wbb='='>
 

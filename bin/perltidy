@@ -2884,8 +2884,10 @@ is an abbreviation for B<-sot -sct>.
 
 Please note that if both opening and closing tokens are to be stacked, then the
 newer flag B<-weld-nested-containers> may be preferable because it insures that
-stacking is always done symmetrically.  It does this by working on formatting
-globally rather than locally, as the B<-sot> and B<-sct> flags do.
+stacking is always done symmetrically.  It also removes an extra level of
+unnecessary indentation within welded containers.  It is able to do this
+because it works on formatting globally rather than locally, as the B<-sot> and
+B<-sct> flags do.
 
 =item B<-dnl>,  B<--delete-old-newlines>
 

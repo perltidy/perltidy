@@ -6804,24 +6804,29 @@ sub weld_nested_containers {
     # Variables needed for estimating line lengths
     my $starting_indent;
     my $starting_lentot;
-    my $multiline_gap;
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
-    my $max_gap = max( $rOpts_indent_columns, $rOpts_continuation_indentation );
+    # Define a tolarance for new welds to avoid turning welding on and off
+    my $multiline_tol =
+      1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     my $excess_length_to_K = sub {
         my ($K) = @_;
 
         # Estimate the length from the line start to a given token
-        my $length = $self->cumulative_length_before_K($K) - $starting_lentot;
+        my $length =
+          $self->cumulative_length_before_K($K) - $starting_lentot + 1;
+
+        # Add a tolerance for welds over multiple lines to avoid blinkers
+        my $iline_K = $rLL->[$K]->[_LINE_INDEX_];
+        my $tol     = ( $iline_K > $iline_outer_opening ) ? $multiline_tol : 0;
+
         my $excess_length =
-          $starting_indent + $length +
-          $multiline_gap -
-          $rOpts_maximum_line_length;
+          $starting_indent + $length + $tol - $rOpts_maximum_line_length;
 
         DEBUG_WELD && print <<EOM;
-excess length before K=$K is excess=$excess_length, gap=$multiline_gap, length=$length, starting_length=$starting_lentot, indent=$starting_indent
+at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_length=$starting_lentot, indent=$starting_indent line(K)=$iline_K , line_start = $iline_outer_opening
 EOM
 
         return ($excess_length);
@@ -6876,10 +6881,6 @@ EOM
         my $outer_closing = $rLL->[$Kouter_closing];
         my $inner_closing = $rLL->[$Kinner_closing];
 
-        my $iline_oo = $outer_opening->[_LINE_INDEX_];
-        my $iline_io = $inner_opening->[_LINE_INDEX_];
-        my $iline_ic = $inner_closing->[_LINE_INDEX_];
-
         # RULE: do not weld to a hash brace.  The reason is that it has a very
         # strong bond strength to the next token, so a line break after it
         # may not work.  Previously we allowed welding to something like @{
@@ -6888,7 +6889,7 @@ EOM
             next;
         }
 
-        # RULE: do not weld to a square bracket without commas
+        # RULE: do not weld to a square bracket which does not contain commas
         if ( $inner_opening->[_TYPE_] eq '[' ) {
             my $rtype_count = $self->[_rtype_count_by_seqno_]->{$inner_seqno};
             next unless ($rtype_count);
@@ -6916,29 +6917,24 @@ EOM
           defined($previous_pair) && $outer_seqno == $previous_pair->[0];
         $previous_pair = $item;
 
-        # Set a flag if we should not weld. It sometimes looks best not to weld
-        # when the opening and closing tokens are very close.  However, there
-        # is a danger that we will create a "blinker", which oscillates between
-        # two semi-stable states, if we do not weld.  So the rules for
-        # not welding have to be carefully defined and tested.
         my $do_not_weld_rule = 0;
         my $Msg              = "";
-
         my $is_one_line_weld;
 
+        my $iline_oo = $outer_opening->[_LINE_INDEX_];
+        my $iline_io = $inner_opening->[_LINE_INDEX_];
+        my $iline_ic = $inner_closing->[_LINE_INDEX_];
         my $iline_oc = $outer_closing->[_LINE_INDEX_];
-
-        my $is_old_weld = ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
+        my $token_oo = $outer_opening->[_TOKEN_];
 
         if (DEBUG_WELD) {
-            my $len_oo = $rLL->[$Kouter_opening]->[_CUMULATIVE_LENGTH_];
-            my $len_io = $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_];
-            my $tok_oo = $rLL->[$Kouter_opening]->[_TOKEN_];
-            my $tok_io = $rLL->[$Kinner_opening]->[_TOKEN_];
+            my $token_io = $rLL->[$Kinner_opening]->[_TOKEN_];
+            my $len_oo   = $rLL->[$Kouter_opening]->[_CUMULATIVE_LENGTH_];
+            my $len_io   = $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_];
             $Msg .= <<EOM;
 Pair seqo=$outer_seqno seqi=$inner_seqno  lines: loo=$iline_oo lio=$iline_io lic=$iline_ic loc=$iline_oc
 Koo=$Kouter_opening Kio=$Kinner_opening Kic=$Kinner_closing Koc=$Kouter_closing lenoo=$len_oo lenio=$len_io
-tokens '$tok_oo' .. '$tok_io'
+tokens '$token_oo' .. '$token_io'
 EOM
         }
 
@@ -6958,6 +6954,18 @@ EOM
 
             my $rK_range = $rlines->[$iline_oo]->{_rK_range};
             my ( $Kfirst, $Klast ) = @{$rK_range};
+
+            # Back up and count length from a token like '=' or '=>' if -lp is
+            # used; this fixes b520
+            if ($rOpts_line_up_parentheses) {
+                my $Kprev = $self->K_previous_nonblank($Kfirst);
+                if ( defined($Kprev)
+                    && substr( $rLL->[$Kprev]->[_TYPE_], 0, 1 ) eq '=' )
+                {
+                    $Kfirst = $Kprev;
+                }
+            }
+
             $starting_lentot =
               $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
 
@@ -6968,59 +6976,6 @@ EOM
 
                 $starting_indent = $rOpts_indent_columns * $level +
                   $ci_level * $rOpts_continuation_indentation;
-
-                # If a line starts with any kind of sequence item, it may be
-                # subject to additional indentation changes.  To avoid making
-                # a bad weld we add a tolerance. See case b186
-                my $type_sequence = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
-                if ($type_sequence) { $starting_indent += $max_gap }
-            }
-
-            # Patch to avoid blinkers, case b965: add a possible gap to the
-            # starting indentation to avoid blinking problems when the -i=n is
-            # large. For example, the following with -i=9 may have a gap of 6
-            # between the opening paren and the next token if vertical
-            # tightness is set. We have to include the gap in our estimate
-            # because the _CUMULATIVE_LENGTH_
-            # values have maximum space lengths of 1.
-
-            # case b965
-            #              if(      $codonTable
-            #                       ->is_start_codon
-            #                       (substr( $seq,0,3 )))
-
-            $multiline_gap = 0;
-            if ( $iline_io > $iline_oo ) {
-
-                # Note that we are measuring to the end of the line ($Klast)
-                # rather than the container, $Kouter_opening
-                $multiline_gap = max(
-                    0,
-                    $max_gap - (
-                        $rLL->[$Klast]->[_CUMULATIVE_LENGTH_] -
-                          $starting_lentot
-                    )
-                );
-
-                # The -xci flag is not yet processed and could add one ci
-                # level later. So assume max possible ci (case b982).
-                if (  !$ci_level
-                    && $rOpts->{'extended-continuation-indentation'} )
-                {
-                    $multiline_gap += $rOpts_continuation_indentation;
-                }
-
-                if (DEBUG_WELD) {
-                    my $len_Klast  = $rLL->[$Klast]->[_CUMULATIVE_LENGTH_];
-                    my $tok_Klast  = $rLL->[$Klast]->[_TOKEN_];
-                    my $tok_Kfirst = $rLL->[$Kfirst]->[_TOKEN_];
-
-                    print <<EOM;
-gap calculation for K==$Kfirst .. $Klast, tokens = '$tok_Kfirst' .. '$tok_Klast'
-gap = max_gap - (length-to-Klast-starting_length) =
-$multiline_gap = $len_Klast - $starting_lentot
-EOM
-                }
             }
 
             # An existing one-line weld is a line in which
@@ -7057,7 +7012,6 @@ EOM
             # $top_label->set_text( gettext(
             #    "Unable to create personal directory - check permissions.") );
 
-            my $token_oo = $outer_opening->[_TOKEN_];
             if (   $iline_oc == $iline_oo + 1
                 && $iline_io == $iline_ic
                 && $token_oo eq '(' )
@@ -7108,8 +7062,6 @@ EOM
             && !$is_one_line_weld
             && $iline_ic == $iline_io )
         {
-
-            my $token_oo = $outer_opening->[_TOKEN_];
             $do_not_weld_rule = 2 if ( $token_oo eq '(' );
         }
 
@@ -7118,10 +7070,11 @@ EOM
         # Use a tolerance which depends on if the old tokens were welded
         # (fixes cases b746 b748 b749 b750 b752 b753 b754 b755 b756 b758 b759)
         if ( !$do_not_weld_rule ) {
+
             my $excess = $excess_length_to_K->($Kinner_opening);
 
             # Use '>=' instead of '=' here to fix cases b995 b998 b1000
-            # b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018 
+            # b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018
             if ( $excess >= 0 ) { $do_not_weld_rule = 3 }
             if (DEBUG_WELD) {
                 $Msg .=
@@ -7313,7 +7266,7 @@ EOM
     }
 
     #####################################
-    # DEBUG
+    # OLD DEBUG CODE
     #####################################
     if (0) {
         my $count = 0;
