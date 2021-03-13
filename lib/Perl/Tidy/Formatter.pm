@@ -425,6 +425,7 @@ BEGIN {
         _rcontains_multiline_qw_by_seqno_   => $i++,
         _rmultiline_qw_has_extra_level_     => $i++,
         _rbreak_before_container_by_seqno_  => $i++,
+        _ris_essential_old_breakpoint_      => $i++,
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -768,6 +769,7 @@ sub new {
     $self->[_rmultiline_qw_has_extra_level_]     = {};
 
     $self->[_rbreak_before_container_by_seqno_] = {};
+    $self->[_ris_essential_old_breakpoint_]     = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -6247,6 +6249,35 @@ sub resync_lines_and_tokens {
     my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->setup_convergence_test( \@Klast_valign_code );
 
+    # Mark essential old breakpoints if combination -iob -lp is used.  These
+    # two options do not work well together, but we can avoid turning one off by
+    # ignoring -iob at certain essential line breaks.  Fixes b1021.
+    if ( $rOpts_ignore_old_breakpoints && $rOpts_line_up_parentheses ) {
+        my $ris_essential_old_breakpoint =
+          $self->[_ris_essential_old_breakpoint_];
+        my $iline = -1;
+        my ( $Kfirst, $Klast );
+        foreach my $line_of_tokens ( @{$rlines} ) {
+            $iline++;
+            my $line_type = $line_of_tokens->{_line_type};
+            if ( $line_type ne 'CODE' ) {
+                ( $Kfirst, $Klast ) = ( undef, undef );
+                next;
+            }
+            my ( $Kfirst_prev, $Klast_prev ) = ( $Kfirst, $Klast );
+            ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+            next unless defined($Klast_prev);
+            next unless defined($Klast);
+            my $level_first = $rLL->[$Kfirst]->[_LEVEL_];
+            my $level_last  = $rLL->[$Klast]->[_LEVEL_];
+            my $type_last   = $rLL->[$Klast]->[_TOKEN_];
+            next
+              unless ( $level_last > $level_first
+                || $is_closing_type{$type_last} );
+            $ris_essential_old_breakpoint->{$Klast_prev} = 1;
+        }
+    }
+
     return;
 }
 
@@ -6784,10 +6815,11 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                 = $self->[_rLL_];
-    my $rlines              = $self->[_rlines_];
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
+    my $rLL                          = $self->[_rLL_];
+    my $rlines                       = $self->[_rlines_];
+    my $K_opening_container          = $self->[_K_opening_container_];
+    my $K_closing_container          = $self->[_K_closing_container_];
+    my $ris_essential_old_breakpoint = $self->[_ris_essential_old_breakpoint_];
 
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
@@ -6807,7 +6839,6 @@ sub weld_nested_containers {
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
-    # Define a tolarance for new welds to avoid turning welding on and off
     my $multiline_tol =
       1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
@@ -6954,28 +6985,54 @@ EOM
 
             my $rK_range = $rlines->[$iline_oo]->{_rK_range};
             my ( $Kfirst, $Klast ) = @{$rK_range};
+            my $Kref = $Kfirst;
 
-            # Back up and count length from a token like '=' or '=>' if -lp is
-            # used; this fixes b520
-            if ($rOpts_line_up_parentheses) {
-                my $Kprev = $self->K_previous_nonblank($Kfirst);
-                if ( defined($Kprev)
-                    && substr( $rLL->[$Kprev]->[_TYPE_], 0, 1 ) eq '=' )
-                {
-                    $Kfirst = $Kprev;
+            my $Kprev = $self->K_previous_nonblank($Kfirst);
+            if ( defined($Kprev) ) {
+
+                # The -iob and -wn flags do not work well together. To avoid
+                # blinking states we have to override -iob at certain key line
+                # breaks. This fixes case b1019.
+                $ris_essential_old_breakpoint->{$Kprev} = 1;
+
+                # Back up and count length from a token like '=' or '=>' if -lp
+                # is used; this fixes b520
+                if ($rOpts_line_up_parentheses) {
+                    if ( substr( $rLL->[$Kprev]->[_TYPE_], 0, 1 ) eq '=' ) {
+                        $Kref = $Kprev;
+                    }
                 }
             }
 
             $starting_lentot =
-              $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+              $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
 
             $starting_indent = 0;
-            my $level    = $rLL->[$Kfirst]->[_LEVEL_];
-            my $ci_level = $rLL->[$Kfirst]->[_CI_LEVEL_];
+            my $level    = $rLL->[$Kref]->[_LEVEL_];
+            my $ci_level = $rLL->[$Kref]->[_CI_LEVEL_];
             if ( !$rOpts_variable_maximum_line_length ) {
 
                 $starting_indent = $rOpts_indent_columns * $level +
                   $ci_level * $rOpts_continuation_indentation;
+            }
+
+            # Avoid problem areas with the -wn -lp combination.
+            # The combination -wn -lp -dws -naws does not work well and can
+            # cause blinkers. See case b1020. It will probably only occur
+            # in stress testing.  For this situation we will only weld if we
+            # start at a 'good' location.
+            if (   $ci_level
+                && $rOpts_line_up_parentheses
+                && $rOpts_delete_old_whitespace
+                && !$rOpts_add_whitespace )
+            {
+                my $type_first = $rLL->[$Kfirst]->[_TYPE_];
+                my $type_prev  = $rLL->[$Kprev]->[_TYPE_];
+                unless ( $type_prev =~ /^[=\,\.\{\[\(\L]/
+                    || $type_first =~ /^[=\,\.\{\[\(\L]/ )
+                {
+                    next;
+                }
             }
 
             # An existing one-line weld is a line in which
@@ -10197,7 +10254,12 @@ EOM
         }
 
         # mark old line breakpoints in current output stream
-        if ( $max_index_to_go >= 0 && !$rOpts_ignore_old_breakpoints ) {
+        if (
+            $max_index_to_go >= 0
+            && (  !$rOpts_ignore_old_breakpoints
+                || $self->[_ris_essential_old_breakpoint_]->{$K_last} )
+          )
+        {
             my $jobp = $max_index_to_go;
             if ( $types_to_go[$max_index_to_go] eq 'b' && $max_index_to_go > 0 )
             {

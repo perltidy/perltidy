@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix problems with combinations of -iob -lp -wn -dws -naws>
+
+Testing with random parameters produced some situation where the parameter -iob
+interfered with convergence when parameters -lp and/or -wn were also set.  The
+combination -wn -lp -dws -naws also produced some non-converging states in
+testing.  This update fixes these issues.
+
+The following cases are fixed: b1019 b1020 b1021 b1023
+
+13 Mar 2021.
+
 =item B<Simplify sub weld_nested_containers>
 
 This update consolidates a number of specialized rules for welding into
@@ -12,7 +23,7 @@ b186 b520 b872 b937 b996 b997 b1002 b1003 b1004 b1005 b1006 b1013 b1014
 
 There are no current open issues with the weld logic.
 
-10 Mar 2021.
+10 Mar 2021, cf3ed23.
 
 =item B<Adjust line length tolerance for welding>
 
