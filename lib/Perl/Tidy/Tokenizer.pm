@@ -5194,6 +5194,11 @@ sub code_block_type {
 
     # check bareword
     elsif ( $last_nonblank_type eq 'w' ) {
+
+        # check for syntax 'use MODULE LIST'
+        # This fixes b1022 b1025 b1027 b1028 b1029 b1030 b1031
+        return "" if ( $statement_type eq 'use' );
+
         return decide_if_code_block( $i, $rtokens, $rtoken_type,
             $max_token_index );
     }

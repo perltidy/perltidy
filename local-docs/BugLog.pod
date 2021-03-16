@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Fix error in parsing use statement curly brace>
+
+Testing with random parameters produced some cases where the -xci option was
+not producing stable results when the maximum line length was set to a very
+small value.  The problem was traced to the tokenizer misparsing a hash brace
+of a use statement as a code block type. This influences the value of
+continuation indentation within the braces. The problem was fixed.
+
+This fixes cases b1022 b1025 b1026 b1027 b1028 b1029 b1030
+
+16 Mar 2021.
+
 =item B<Fix problems with combinations of -iob -lp -wn -dws -naws>
 
 Testing with random parameters produced some situation where the parameter -iob
