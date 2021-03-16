@@ -8208,6 +8208,9 @@ sub extended_ci {
 
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
+    my $rlines                   = $self->[_rlines_];
+
+    my %available_space;
 
     # Loop over all opening container tokens
     my $K_opening_container  = $self->[_K_opening_container_];
@@ -8218,13 +8221,35 @@ sub extended_ci {
     my $KLAST;
     my $KNEXT = $self->[_K_first_seq_item_];
 
+    # The following variable can be used to allow a little extra space to
+    # avoid blinkers.  A value $len_tol = 20 fixed the following
+    # fixes cases: b1025 b1026 b1027 b1028 b1029 b1030 but NOT b1031.
+    # It turned out that the real problem was misparsing a list brace as
+    # a code block in a 'use' statement when the line length was extremely
+    # small.  A value of 0 works now, but a slightly larger value can
+    # be used to minimize the chance of a blinker.
+    my $len_tol = 0;
+
     while ( defined($KNEXT) ) {
 
         # Fix all tokens up to the next sequence item if we are changing CI
         if ($seqno_top) {
-            my $count = 0;
+
+            my $space  = $available_space{$seqno_top};
+            my $length = $rLL->[$KLAST]->[_CUMULATIVE_LENGTH_];
+            my $count  = 0;
             for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
-                if ( !$rLL->[$Kt]->[_CI_LEVEL_] ) {
+
+                # but do not include tokens which might exceed the line length
+                # ... This fixes case b1031
+                my $length_before = $length;
+                $length = $rLL->[$Kt]->[_CUMULATIVE_LENGTH_];
+                if (
+                    !$rLL->[$Kt]->[_CI_LEVEL_]
+                    && (   $length - $length_before < $space
+                        || $rLL->[$Kt]->[_TYPE_] eq '#' )
+                  )
+                {
                     $rLL->[$Kt]->[_CI_LEVEL_] = 1;
                     $rseqno_controlling_my_ci->{$Kt} = $seqno_top;
                     $count++;
@@ -8297,9 +8322,15 @@ sub extended_ci {
             $starting_indent = $rOpts_indent_columns * $level +
               $ci_level * $rOpts_continuation_indentation;
         }
-        next
-          if ( $starting_indent + $rOpts_continuation_indentation >
-            $rOpts_maximum_line_length );
+
+        # remember how much space is available for patch b1031 above
+        my $space =
+          $rOpts_maximum_line_length -
+          $len_tol -
+          $starting_indent -
+          $rOpts_continuation_indentation;
+        next if ( $space < 0 );
+        $available_space{$seqno} = $space;
 
         # This becomes the next controlling container
         push @seqno_stack, $seqno_top if ($seqno_top);
