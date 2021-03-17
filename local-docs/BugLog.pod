@@ -2,13 +2,22 @@
 
 =over 4
 
+=item B<Fix definition of list within list for -bbx flags>
+
+Testing produced a blinking state involving a -bbx=2 flag with an unusual
+combination of other parameters.  The problem was traced to the definition of a
+list containg another list being too restrictive.  This update fixes case
+1024.
+
+17 Mar 2021.
+
 =item B<Fix problem with -xci and long tokens>
 
 Testing produced an unstable situation involving the -xci flag and tokens
 which exceed the maximum line length.  This fix identifies this situation
 and locally deactivates the -xci flag.  This fixes case b1031.
 
-16 Mar 2021.
+16 Mar 2021, 7a6be43.
 
 =item B<Fix error in parsing use statement curly brace>
 
@@ -20,7 +29,7 @@ continuation indentation within the braces. The problem was fixed.
 
 This fixes cases b1022 b1025 b1026 b1027 b1028 b1029 b1030
 
-16 Mar 2021.
+16 Mar 2021, 6371be2.
 
 =item B<Fix problems with combinations of -iob -lp -wn -dws -naws>
 
@@ -31,7 +40,7 @@ testing.  This update fixes these issues.
 
 The following cases are fixed: b1019 b1020 b1021 b1023
 
-13 Mar 2021.
+13 Mar 2021, 71adc77.
 
 =item B<Simplify sub weld_nested_containers>
 

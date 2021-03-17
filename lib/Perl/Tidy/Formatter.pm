@@ -354,6 +354,7 @@ BEGIN {
         _rlec_count_by_seqno_              => $i++,
         _ris_broken_container_             => $i++,
         _ris_permanently_broken_container_ => $i++,
+        _rhas_list_                        => $i++,
         _rhas_broken_list_                 => $i++,
         _rhas_broken_list_with_lec_        => $i++,
         _rwant_reduced_ci_                 => $i++,
@@ -700,6 +701,7 @@ sub new {
     $self->[_rlec_count_by_seqno_]              = {};
     $self->[_ris_broken_container_]             = {};
     $self->[_ris_permanently_broken_container_] = {};
+    $self->[_rhas_list_]                        = {};
     $self->[_rhas_broken_list_]                 = {};
     $self->[_rhas_broken_list_with_lec_]        = {};
     $self->[_rwant_reduced_ci_]                 = {};
@@ -4821,6 +4823,7 @@ sub respace_tokens {
     my $rlec_count_by_seqno              = {};
     my $ris_broken_container             = {};
     my $ris_permanently_broken_container = {};
+    my $rhas_list                        = {};
     my $rhas_broken_list                 = {};
     my $rhas_broken_list_with_lec        = {};
     my $rparent_of_seqno                 = {};
@@ -5809,19 +5812,21 @@ sub respace_tokens {
         # We will define a list to be a container with one or more commas and
         # no semicolons.
         my $is_list = ( $comma_count || $fat_comma_count ) && !$semicolon_count;
-        if ($is_list) { $ris_list_by_seqno->{$seqno} = $seqno }
-
-        if ($line_diff) {
+        if ($is_list) {
+            $ris_list_by_seqno->{$seqno} = $seqno;
             my $seqno_parent = $rparent_of_seqno->{$seqno};
             if ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
-                $rhas_broken_list->{$seqno_parent} = 1 if ($is_list);
+                $rhas_list->{$seqno_parent} = 1;
+                if ($line_diff) {
+                    $rhas_broken_list->{$seqno_parent} = 1;
 
-                # We need to mark broken lists with non-terminal line-ending
-                # commas for the -bbx=2 parameter. This insures that the list
-                # will stay broken.  Otherwise the flag -bbx=2 can be unstable.
-                # This fixes case b789 and b938.
-                $rhas_broken_list_with_lec->{$seqno_parent} = 1
-                  if ( $rlec_count_by_seqno->{$seqno} );
+                    # We need to mark broken lists with non-terminal
+                    # line-ending commas for the -bbx=2 parameter. This insures
+                    # that the list will stay broken.  Otherwise the flag
+                    # -bbx=2 can be unstable.  This fixes case b789 and b938.
+                    $rhas_broken_list_with_lec->{$seqno_parent} = 1
+                      if ( $rlec_count_by_seqno->{$seqno} );
+                }
             }
         }
     }
@@ -5839,6 +5844,7 @@ sub respace_tokens {
     $self->[_rtype_count_by_seqno_]      = $rtype_count_by_seqno;
     $self->[_rlec_count_by_seqno_]       = $rlec_count_by_seqno;
     $self->[_ris_broken_container_]      = $ris_broken_container;
+    $self->[_rhas_list_]                 = $rhas_list;
     $self->[_rhas_broken_list_]          = $rhas_broken_list;
     $self->[_rhas_broken_list_with_lec_] = $rhas_broken_list_with_lec;
     $self->[_rparent_of_seqno_]          = $rparent_of_seqno;
@@ -7952,6 +7958,7 @@ sub break_before_list_opening_containers {
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_permanently_broken_container =
       $self->[_ris_permanently_broken_container_];
+    my $rhas_list                 = $self->[_rhas_list_];
     my $rhas_broken_list          = $self->[_rhas_broken_list_];
     my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
     my $radjusted_levels          = $self->[_radjusted_levels_];
@@ -7977,11 +7984,13 @@ sub break_before_list_opening_containers {
         my $KK = $K_opening_container->{$seqno};
 
         my $is_list           = $self->is_list_by_seqno($seqno);
-        my $has_list          = $rhas_broken_list->{$seqno};
+        my $has_list          = $rhas_list->{$seqno};
+        my $has_broken_list   = $rhas_broken_list->{$seqno};
         my $has_list_with_lec = $rhas_broken_list_with_lec->{$seqno};
 
         # This must be a list (this will exclude all code blocks)
-        # or contain a list
+        # or contain a list.
+        # Note: switched from testing has_broken_list to has_list to fix b1024.
         next unless ( $is_list || $has_list );
 
         # Only for types of container tokens with a non-default break option
