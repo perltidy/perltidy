@@ -7026,17 +7026,28 @@ EOM
             # The combination -wn -lp -dws -naws does not work well and can
             # cause blinkers. See case b1020. It will probably only occur
             # in stress testing.  For this situation we will only weld if we
-            # start at a 'good' location.
+            # start at a 'good' location.  Added 'if' to fix case b1032.
             if (   $ci_level
                 && $rOpts_line_up_parentheses
                 && $rOpts_delete_old_whitespace
                 && !$rOpts_add_whitespace )
             {
-                my $type_first = $rLL->[$Kfirst]->[_TYPE_];
-                my $type_prev  = $rLL->[$Kprev]->[_TYPE_];
-                unless ( $type_prev =~ /^[=\,\.\{\[\(\L]/
-                    || $type_first =~ /^[=\,\.\{\[\(\L]/ )
+                my $type_first  = $rLL->[$Kfirst]->[_TYPE_];
+                my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
+                my $token_first = $rLL->[$Kfirst]->[_TOKEN_];
+                unless (
+                       $type_prev  =~ /^[=\,\.\{\[\(\L]/
+                    || $type_first =~ /^[=\,\.\{\[\(\L]/
+                    || $type_first eq '||'
+                    || (   $type_first eq 'k' && $token_first eq 'if'
+                        || $token_first eq 'or' )
+                  )
                 {
+                    if (DEBUG_WELD) {
+                        $Msg .=
+"Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev'\n";
+                        print $Msg;
+                    }
                     next;
                 }
             }
@@ -8215,6 +8226,7 @@ sub extended_ci {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
+    my $ris_list_by_seqno        = $self->[_ris_list_by_seqno_];
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
     my $rlines                   = $self->[_rlines_];
@@ -8244,18 +8256,21 @@ sub extended_ci {
         # Fix all tokens up to the next sequence item if we are changing CI
         if ($seqno_top) {
 
-            my $space  = $available_space{$seqno_top};
-            my $length = $rLL->[$KLAST]->[_CUMULATIVE_LENGTH_];
-            my $count  = 0;
+            my $is_list = $ris_list_by_seqno->{$seqno_top};
+            my $space   = $available_space{$seqno_top};
+            my $length  = $rLL->[$KLAST]->[_CUMULATIVE_LENGTH_];
+            my $count   = 0;
             for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
 
-                # but do not include tokens which might exceed the line length
+                # But do not include tokens which might exceed the line length
+                # and are not in a list.
                 # ... This fixes case b1031
                 my $length_before = $length;
                 $length = $rLL->[$Kt]->[_CUMULATIVE_LENGTH_];
                 if (
                     !$rLL->[$Kt]->[_CI_LEVEL_]
-                    && (   $length - $length_before < $space
+                    && (   $is_list
+                        || $length - $length_before < $space
                         || $rLL->[$Kt]->[_TYPE_] eq '#' )
                   )
                 {

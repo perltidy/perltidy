@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Fix rare problem with combination -lp -wn -naws>
+
+This update fixes case b1032 by includeing lines starting with 'if', 'or', and
+|| among the stable breakpoints for welding when -lp -naws flags are also
+set.
+
+This update also modifies update 7a6be43 of 16 Mar 2021 to exclude list items
+when checking token lengths.  This reduces changes to existing formatting
+while still fixing the problem in case b1031. 
+
+18 Mar 2021.
+
 =item B<Fix definition of list within list for -bbx flags>
 
 Testing produced a blinking state involving a -bbx=2 flag with an unusual
@@ -9,7 +21,7 @@ combination of other parameters.  The problem was traced to the definition of a
 list containg another list being too restrictive.  This update fixes case
 1024.
 
-17 Mar 2021.
+17 Mar 2021, 7f5da0a.
 
 =item B<Fix problem with -xci and long tokens>
 
