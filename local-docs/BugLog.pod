@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Fix issue git #57, Warn_count was not initialized>
+
+This update fixes issue git #57, in which a warning flag was not getting zeroed
+on each new call to perltidy.
+
+19 Mar 2021.
+
 =item B<Fix rare problem with combination -lp -wn -naws>
 
 This update fixes case b1032 by includeing lines starting with 'if', 'or', and
@@ -12,7 +19,7 @@ This update also modifies update 7a6be43 of 16 Mar 2021 to exclude list items
 when checking token lengths.  This reduces changes to existing formatting
 while still fixing the problem in case b1031. 
 
-18 Mar 2021.
+18 Mar 2021, 6200034.
 
 =item B<Fix definition of list within list for -bbx flags>
 

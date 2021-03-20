@@ -419,6 +419,9 @@ sub perltidy {
         postfilter            => undef,
     );
 
+    # Fix for issue git #57
+    $Warn_count = 0;
+
     # don't overwrite callers ARGV
     local @ARGV   = @ARGV;
     local *STDERR = *STDERR;
