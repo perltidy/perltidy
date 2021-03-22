@@ -1669,18 +1669,21 @@ sub initialize_weld_nested_exclusion_rules {
                 next;
             }
         }
+
+        my $err;
         if ( $pos eq '^' || $pos eq '*' ) {
-            if ( defined( $rflags->[0] ) && $rflags ne $select ) {
-                $msg1 .= " '$item_save'";
+            if ( defined( $rflags->[0] ) && $rflags->[0] ne $select ) {
+                $err = 1;
             }
             $rflags->[0] = $select;
         }
         if ( $pos eq '.' || $pos eq '*' ) {
-            if ( defined( $rflags->[1] ) && $rflags ne $select ) {
-                $msg1 .= " '$item_save'";
+            if ( defined( $rflags->[1] ) && $rflags->[1] ne $select ) {
+                $err = 1;
             }
             $rflags->[1] = $select;
         }
+        if ($err) { $msg2 .= " '$item_save'"; }
     }
     if ($msg1) {
         Warn(<<EOM);
@@ -1690,7 +1693,7 @@ EOM
     }
     if ($msg2) {
         Warn(<<EOM);
-Multiple specifications were encountered in the --weld-nested-exclusion-list for:
+Multiple specifications were encountered in the --weld-nested-exclusion-list at:
 $msg2
 Only the last will be used.
 EOM

@@ -2,12 +2,19 @@
 
 =over 4
 
+=item B<Fix error message for multiple conflicting specifications in -wnxl>
+
+There was an error in the coding for an error message which checks for
+conflicting requests in the -wnxl parameter.
+
+Fixed 21 Mar 2021.
+
 =item B<Fix issue git #57, Warn_count was not initialized>
 
 This update fixes issue git #57, in which a warning flag was not getting zeroed
 on each new call to perltidy.
 
-19 Mar 2021.
+19 Mar 2021, b6d296a.
 
 =item B<Fix rare problem with combination -lp -wn -naws>
 
