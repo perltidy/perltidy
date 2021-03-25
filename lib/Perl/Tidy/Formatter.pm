@@ -254,6 +254,7 @@ my (
     %stack_closing_token,
 
     %weld_nested_exclusion_rules,
+    %line_up_parentheses_exclusion_rules,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -351,12 +352,17 @@ BEGIN {
         _K_first_seq_item_                 => $i++,
         _rK_phantom_semicolons_            => $i++,
         _rtype_count_by_seqno_             => $i++,
+        _ris_function_call_paren_          => $i++,
         _rlec_count_by_seqno_              => $i++,
         _ris_broken_container_             => $i++,
         _ris_permanently_broken_container_ => $i++,
         _rhas_list_                        => $i++,
         _rhas_broken_list_                 => $i++,
         _rhas_broken_list_with_lec_        => $i++,
+        _rhas_code_block_                  => $i++,
+        _rhas_broken_code_block_           => $i++,
+        _rhas_ternary_                     => $i++,
+        _ris_excluded_lp_container_        => $i++,
         _rwant_reduced_ci_                 => $i++,
         _ris_bli_container_                => $i++,
         _rparent_of_seqno_                 => $i++,
@@ -698,12 +704,17 @@ sub new {
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
     $self->[_rtype_count_by_seqno_]             = {};
+    $self->[_ris_function_call_paren_]          = {};
     $self->[_rlec_count_by_seqno_]              = {};
     $self->[_ris_broken_container_]             = {};
     $self->[_ris_permanently_broken_container_] = {};
     $self->[_rhas_list_]                        = {};
     $self->[_rhas_broken_list_]                 = {};
     $self->[_rhas_broken_list_with_lec_]        = {};
+    $self->[_rhas_code_block_]                  = {};
+    $self->[_rhas_broken_code_block_]           = {};
+    $self->[_rhas_ternary_]                     = {};
+    $self->[_ris_excluded_lp_container_]        = {};
     $self->[_rwant_reduced_ci_]                 = {};
     $self->[_ris_bli_container_]                = {};
     $self->[_rparent_of_seqno_]                 = {};
@@ -1578,6 +1589,7 @@ EOM
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
+    initialize_line_up_parentheses_exclusion_rules($rOpts);
     return;
 }
 
@@ -1693,11 +1705,120 @@ EOM
     }
     if ($msg2) {
         Warn(<<EOM);
-Multiple specifications were encountered in the --weld-nested-exclusion-list at:
+Multiple specifications were encountered in the --weld-nested-exclusion-list for:
 $msg2
 Only the last will be used.
 EOM
     }
+    return;
+}
+
+sub initialize_line_up_parentheses_exclusion_rules {
+    my ($rOpts) = @_;
+    %line_up_parentheses_exclusion_rules = ();
+    my $opt_name = 'line-up-parentheses-exclusion-list';
+    my $str      = $rOpts->{$opt_name};
+    return unless ($str);
+    $str =~ s/^\s+//;
+    $str =~ s/\s+$//;
+    return unless ($str);
+
+    # The format is space separated items, where each item must consist of a
+    # string with a token type preceded by an optional text token and followed
+    # by an integer:
+    # For example:
+    #    W(1
+    #  = (flag1)(key)(flag2), where
+    #    flag1 = 'W'
+    #    key = '('
+    #    flag2 = '1'
+
+    my @items = split /\s+/, $str;
+    my $msg1;
+    my $msg2;
+    foreach my $item (@items) {
+        my $item_save = $item;
+        my ( $flag1, $key, $flag2 );
+        if ( $item =~ /^([^\(\]\{]*)?([\(\{\[])(\d)?$/ ) {
+            $flag1 = $1 if $1;
+            $key   = $2 if $2;
+            $flag2 = $3 if $3;
+        }
+        else {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        if ( !defined($key) ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        # Check for valid flag1
+        if    ( !defined($flag1) ) { $flag1 = '*' }
+        elsif ( $flag1 !~ /^[kKfFwW\*]$/ ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        # Check for valid flag2
+        # 0 or blank: ignore container contents
+        # 1 all containers with sublists match
+        # 2 all containers with sublists, code blocks or ternary operators match
+        # ... this could be extended in the future
+        if    ( !defined($flag2) ) { $flag2 = 0 }
+        elsif ( $flag2 !~ /^[012]$/ ) {
+            $msg1 .= " '$item_save'";
+            next;
+        }
+
+        if ( !defined( $line_up_parentheses_exclusion_rules{$key} ) ) {
+            $line_up_parentheses_exclusion_rules{$key} = [ $flag1, $flag2 ];
+            next;
+        }
+
+        # check for multiple conflicting specifications
+        my $rflags = $line_up_parentheses_exclusion_rules{$key};
+        my $err;
+        if ( defined( $rflags->[0] ) && $rflags->[0] ne $flag1 ) {
+            $err = 1;
+            $rflags->[0] = $flag1;
+        }
+        if ( defined( $rflags->[1] ) && $rflags->[1] ne $flag2 ) {
+            $err = 1;
+            $rflags->[1] = $flag2;
+        }
+        $msg2 .= " '$item_save'" if ($err);
+        next;
+    }
+    if ($msg1) {
+        Warn(<<EOM);
+Unexpecting symbol(s) encountered in --$opt_name will be ignored:
+$msg1
+EOM
+    }
+    if ($msg2) {
+        Warn(<<EOM);
+Multiple specifications were encountered in the $opt_name at:
+$msg2
+Only the last will be used.
+EOM
+    }
+
+    # Speedup: Turn off -lp if it is not used
+    my $all_off = 1;
+    foreach my $key (qw# ( { [ #) {
+        my $rflags = $line_up_parentheses_exclusion_rules{$key};
+        if ( defined($rflags) ) {
+            my ( $flag1, $flag2 ) = @{$rflags};
+            if ( $flag1 && $flag1 ne '*' ) { $all_off = 0; last }
+            if ($flag2)                    { $all_off = 0; last }
+        }
+    }
+    if ($all_off) {
+        $rOpts->{'line-up-parentheses'} = "";
+    }
+
     return;
 }
 
@@ -1855,7 +1976,8 @@ sub set_whitespace_flags {
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
     my $rOpts_space_function_paren  = $rOpts->{'space-function-paren'};
 
-    my $rwhitespace_flags = [];
+    my $rwhitespace_flags       = [];
+    my $ris_function_call_paren = {};
 
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
@@ -2169,12 +2291,19 @@ sub set_whitespace_flags {
             # 'w' and 'i' checks for something like:
             #   myfun(    &myfun(   ->myfun(
             # -----------------------------------------------------
+
+            # Note that at this point an identifier may still have a leading
+            # arrow, but the arrow will be split off during token respacing.
+            # After that, the token may become a bare word without leading
+            # arrow.  The point is, it is best to mark function call parens
+            # right here before that happens.
             # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
             elsif (( $last_type =~ /^[wCUG]$/ )
                 || ( $last_type =~ /^[wi]$/ && $last_token =~ /^(\&|->)/ ) )
             {
                 $ws = WS_NO unless ($rOpts_space_function_paren);
                 $set_container_ws_by_keyword->( $last_token, $seqno );
+                $ris_function_call_paren->{$seqno} = 1;
             }
 
             # space between something like $i and ( in <<snippets/space2.in>>
@@ -2360,6 +2489,7 @@ sub set_whitespace_flags {
     if ( $rOpts->{'tight-secret-operators'} ) {
         new_secret_operator_whitespace( $rLL, $rwhitespace_flags );
     }
+    $self->[_ris_function_call_paren_] = $ris_function_call_paren;
     return $rwhitespace_flags;
 
 } ## end sub set_whitespace_flags
@@ -4734,6 +4864,8 @@ EOM
 
     $self->adjust_indentation_levels();
 
+    $self->set_excluded_lp_containers();
+
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
     # new line breaks and then return so that we can do an internal iteration
@@ -4826,9 +4958,14 @@ sub respace_tokens {
     my $rlec_count_by_seqno              = {};
     my $ris_broken_container             = {};
     my $ris_permanently_broken_container = {};
+    my $ris_list_by_seqno                = {};
     my $rhas_list                        = {};
     my $rhas_broken_list                 = {};
     my $rhas_broken_list_with_lec        = {};
+    my $rhas_code_block                  = {};
+    my $rhas_broken_code_block           = {};
+    my $rhas_ternary                     = {};
+    my $ris_excluded_lp_container        = {};
     my $rparent_of_seqno                 = {};
     my $rchildren_of_seqno               = {};
 
@@ -5494,6 +5631,13 @@ sub respace_tokens {
                     # the correct container.
                     $depth_next--;
                 }
+
+                # For ternary, note parent but do not include as child
+                else {
+                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+                }
             }
 
             # Modify certain tokens here for whitespace
@@ -5788,7 +5932,6 @@ sub respace_tokens {
     }
 
     # Find and remember lists by sequence number
-    my $ris_list_by_seqno = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
         my $K_opening = $K_opening_container->{$seqno};
         next unless defined($K_opening);
@@ -5802,10 +5945,24 @@ sub respace_tokens {
         my $line_diff = $lx_close - $lx_open;
         $ris_broken_container->{$seqno} = $line_diff;
 
-        # The rest is only for lists, not for code blocks
+        # Handle code blocks
         my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
-        next if ($block_type);
+        if ($block_type) {
 
+            # The -lp option needs to know if a container holds a code block
+            next unless ($rOpts_line_up_parentheses);
+
+            my $seqno_parent = $rparent_of_seqno->{$seqno};
+            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+                $rhas_code_block->{$seqno_parent}        = 1;
+                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
+                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
+            }
+
+            next;
+        }
+
+        # Handle lists
         my $rtype_count = $rtype_count_by_seqno->{$seqno};
         next unless ($rtype_count);
         my $comma_count     = $rtype_count->{','};
@@ -5818,7 +5975,7 @@ sub respace_tokens {
         if ($is_list) {
             $ris_list_by_seqno->{$seqno} = $seqno;
             my $seqno_parent = $rparent_of_seqno->{$seqno};
-            if ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
                 $rhas_list->{$seqno_parent} = 1;
                 if ($line_diff) {
                     $rhas_broken_list->{$seqno_parent} = 1;
@@ -5830,7 +5987,17 @@ sub respace_tokens {
                     $rhas_broken_list_with_lec->{$seqno_parent} = 1
                       if ( $rlec_count_by_seqno->{$seqno} );
                 }
+                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
             }
+        }
+    }
+
+    # Find containers with ternaries, needed for -lp formatting.
+    foreach my $seqno ( keys %{$K_opening_ternary} ) {
+        my $seqno_parent = $rparent_of_seqno->{$seqno};
+        while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+            $rhas_ternary->{$seqno_parent} = 1;
+            $seqno_parent = $rparent_of_seqno->{$seqno_parent};
         }
     }
 
@@ -5850,6 +6017,9 @@ sub respace_tokens {
     $self->[_rhas_list_]                 = $rhas_list;
     $self->[_rhas_broken_list_]          = $rhas_broken_list;
     $self->[_rhas_broken_list_with_lec_] = $rhas_broken_list_with_lec;
+    $self->[_rhas_code_block_]           = $rhas_code_block;
+    $self->[_rhas_broken_code_block_]    = $rhas_broken_code_block;
+    $self->[_rhas_ternary_]              = $rhas_ternary;
     $self->[_rparent_of_seqno_]          = $rparent_of_seqno;
     $self->[_rchildren_of_seqno_]        = $rchildren_of_seqno;
     $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
@@ -6770,18 +6940,14 @@ sub is_excluded_weld {
     my ( $is_f, $is_k, $is_w );
     my $Kp = $self->K_previous_nonblank($KK);
     if ( defined($Kp) ) {
-        my $type_p  = $rLL->[$Kp]->[_TYPE_];
-        my $token_p = $rLL->[$Kp]->[_TOKEN_];
+        my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
+        my $type_p = $rLL->[$Kp]->[_TYPE_];
 
         # keyword?
         $is_k = $type_p eq 'k';
 
-        # function call? Use the same definition as used for
-        # the parameter 'space-function-paren'
-        $is_f =
-             $type_p =~ /^[wUG]$/
-          || $type_p eq '->'
-          || $type_p =~ /^[wi]$/ && $token_p =~ /^(\&|->)/;
+        # function call?
+        $is_f = $self->[_ris_function_call_paren_]->{$seqno};
 
         # either keyword or function call?
         $is_w = $is_k || $is_f;
@@ -8004,7 +8170,9 @@ sub break_before_list_opening_containers {
 
         # This must be a list (this will exclude all code blocks)
         # or contain a list.
-        # Note: switched from testing has_broken_list to has_list to fix b1024.
+        # Note1: switched from 'has_broken_list' to 'has_list' to fix b1024.
+        # Note2: 'has_list' previously was just one level deep, but has been
+        #  changed to include all levels. This does not change much formatting.
         next unless ( $is_list || $has_list );
 
         # Only for types of container tokens with a non-default break option
@@ -8554,6 +8722,106 @@ EOM
       $rcontains_multiline_qw_by_seqno;
     $self->[_rmultiline_qw_has_extra_level_] = $rmultiline_qw_has_extra_level;
 
+    return;
+}
+
+sub is_excluded_lp {
+
+    # decide if this container is excluded by user request
+    # returns true if this token is excluded (i.e., may not use -lp)
+    # returns false otherwise
+
+    # note similarity with sub 'is_excluded_weld'
+    my ( $self, $KK ) = @_;
+    my $rLL         = $self->[_rLL_];
+    my $rtoken_vars = $rLL->[$KK];
+    my $token       = $rtoken_vars->[_TOKEN_];
+    my $rflags      = $line_up_parentheses_exclusion_rules{$token};
+    return 0 unless ( defined($rflags) );
+    my ( $flag1, $flag2 ) = @{$rflags};
+
+    # There are two flags:
+    # flag1 excludes based on the preceding nonblank word
+    # flag2 excludes based on the contents of the container
+    return 0 unless ( defined($flag1) );
+    return 1 if $flag1 eq '*';
+
+    # Find the previous token
+    my ( $is_f, $is_k, $is_w );
+    my $Kp = $self->K_previous_nonblank($KK);
+    if ( defined($Kp) ) {
+        my $type_p = $rLL->[$Kp]->[_TYPE_];
+        my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        # keyword?
+        $is_k = $type_p eq 'k';
+
+        # function call?
+        $is_f = $self->[_ris_function_call_paren_]->{$seqno};
+
+        # either keyword or function call?
+        $is_w = $is_k || $is_f;
+    }
+
+    # Check for exclusion based on flag1 and the previous token:
+    my $match;
+    if    ( $flag1 eq 'k' ) { $match = $is_k }
+    elsif ( $flag1 eq 'K' ) { $match = !$is_k }
+    elsif ( $flag1 eq 'f' ) { $match = $is_f }
+    elsif ( $flag1 eq 'F' ) { $match = !$is_f }
+    elsif ( $flag1 eq 'w' ) { $match = $is_w }
+    elsif ( $flag1 eq 'W' ) { $match = !$is_w }
+    return $match if ($match);
+
+    # Check for exclusion based on flag2 and the container contents
+    # Current options to filter on contents:
+    # 0 or blank: ignore container contents
+    # 1 exclude non-lists or lists with sublists
+    # 2 same as 1 but also exclude lists with code blocks
+
+    # Note:
+    # Containers with multiline-qw containers are automatically
+    # excluded so do not need to be checked.
+    if ($flag2) {
+
+        my $seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        my $is_list        = $self->[_ris_list_by_seqno_]->{$seqno};
+        my $has_list       = $self->[_rhas_list_]->{$seqno};
+        my $has_code_block = $self->[_rhas_code_block_]->{$seqno};
+        my $has_ternary    = $self->[_rhas_ternary_]->{$seqno};
+        if (  !$is_list
+            || $has_list
+            || $flag2 eq '2' && ( $has_code_block || $has_ternary ) )
+        {
+            $match = 1;
+        }
+    }
+    return $match;
+}
+
+sub set_excluded_lp_containers {
+
+    my ($self) = @_;
+    return unless ($rOpts_line_up_parentheses);
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    my $K_opening_container       = $self->[_K_opening_container_];
+    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+
+    foreach my $seqno ( keys %{$K_opening_container} ) {
+        my $KK = $K_opening_container->{$seqno};
+        next unless defined($KK);
+
+        # code blocks are always excluded by the -lp coding so we can skip them
+        next if ( $rLL->[$KK]->[_BLOCK_TYPE_] );
+
+        # see if a user exclusion rule turns off -lp for this container
+        if ( $self->is_excluded_lp($KK) ) {
+            $ris_excluded_lp_container->{$seqno} = 1;
+        }
+    }
     return;
 }
 
@@ -17118,9 +17386,10 @@ sub get_available_spaces_to_go {
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
 
-        my $rbreak_container = $self->[_rbreak_container_];
-        my $rshort_nested    = $self->[_rshort_nested_];
-        my $rLL              = $self->[_rLL_];
+        my $rbreak_container          = $self->[_rbreak_container_];
+        my $rshort_nested             = $self->[_rshort_nested_];
+        my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+        my $rLL                       = $self->[_rLL_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
 
@@ -17395,6 +17664,13 @@ sub get_available_spaces_to_go {
 
             # if this is a BLOCK, add the standard increment
             elsif ($last_nonblank_block_type) {
+                $space_count += $standard_increment;
+            }
+
+            # add the standard increment for containers excluded by user rules
+            elsif ( defined($last_nonblank_seqno)
+                && $ris_excluded_lp_container->{$last_nonblank_seqno} )
+            {
                 $space_count += $standard_increment;
             }
 

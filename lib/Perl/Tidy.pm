@@ -1491,7 +1491,7 @@ EOM
 
                             # Blinking (oscillating) between two or more stable
                             # end states.  This is unlikely to occur with normal
-                            # parameters, but it can occur in stress testing 
+                            # parameters, but it can occur in stress testing
                             # with extreme parameter values, such as very short
                             # maximum line lengths.  We want to catch and fix
                             # them when they happen.
@@ -2251,6 +2251,7 @@ sub generate_options {
     $add_option->( 'continuation-indentation',           'ci',   '=i' );
     $add_option->( 'extended-continuation-indentation',  'xci',  '!' );
     $add_option->( 'line-up-parentheses',                'lp',   '!' );
+    $add_option->( 'line-up-parentheses-exclusion-list', 'lpxl', '=s' );
     $add_option->( 'outdent-keyword-list',               'okwl', '=s' );
     $add_option->( 'outdent-keywords',                   'okw',  '!' );
     $add_option->( 'outdent-labels',                     'ola',  '!' );
@@ -2782,6 +2783,9 @@ sub generate_options {
         'noconverge' => [qw(it=1)],
         'conv'       => [qw(it=4)],
         'nconv'      => [qw(it=1)],
+
+        'line-up-function-parentheses' => [ qw(lp), q#lpxl=[ { F(2# ],
+        'lfp'                          => [qw(line-up-function-parentheses)],
 
         # 'mangle' originally deleted pod and comments, but to keep it
         # reversible, it no longer does.  But if you really want to

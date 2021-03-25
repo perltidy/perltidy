@@ -2,12 +2,20 @@
 
 =over 4
 
+=item B<Add flag -lpxl=s to provide control over -lp formatting>
+
+The flag -lpxl=s provides control over which containers get -lp formatting.
+A shortcut flag -lfp is also added for limiting -lp to simple function calls.
+
+Updated 25 Mar 2021.
+
+
 =item B<Fix error message for multiple conflicting specifications in -wnxl>
 
 There was an error in the coding for an error message which checks for
 conflicting requests in the -wnxl parameter.
 
-Fixed 21 Mar 2021.
+Fixed 21 Mar 2021, 2ef97a2.
 
 =item B<Fix issue git #57, Warn_count was not initialized>
 

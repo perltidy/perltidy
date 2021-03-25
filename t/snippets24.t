@@ -6,6 +6,12 @@
 #3 fpva.def
 #4 fpva.fpva1
 #5 fpva.fpva2
+#6 lpxl.def
+#7 lpxl.lpxl1
+#8 lpxl.lpxl2
+#9 lpxl.lpxl3
+#10 lpxl.lpxl4
+#11 lpxl.lpxl5
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -27,6 +33,17 @@ BEGIN {
         'fpva1' => "-sfp",
         'fpva2' => "-sfp -nfpva",
         'git54' => "-bbp=3 -bbpi=2 -ci=4 -lp",
+        'lpxl1' => "-lp",
+        'lpxl2' => "-lfp",
+        'lpxl3' => <<'----------',
+-lp -lpxl='{ [ ('
+----------
+        'lpxl4' => <<'----------',
+-lp -lpxl='{ [ W(1'
+----------
+        'lpxl5' => <<'----------',
+-lp -lpxl='{ [ F(2'
+----------
     };
 
     ############################
@@ -96,6 +113,69 @@ my $list =
         key => $value,
       }
     ) ;
+----------
+
+        'lpxl' => <<'----------',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+      "Connecting to DB.",
+      "Extra-Parameters: " . join("<->", $extra_parms),
+      "Config: " . join("<->", %config)
+     );
+
+# simple function call with code block
+$m->command(-label   => 'Save',
+            -command => sub { print "DOS\n"; save_dialog($win); });
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run            => \%runparam,
+    -file           => '',
+    -parse          => 1,
+    -signif         => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+    local (
+        $len,    $pts,      @colspec, $char, $cols,
+        $repeat, $celldata, $at_text, $after_text
+    );
+
+# square bracket with sublists
+$data = [
+         ListElem->new(id => 0, val => 100),
+         ListElem->new(id => 2, val => 50),
+         ListElem->new(id => 1, val => 10),
+        ];
+
+# curly brace with sublists
+$behaviour = {
+              cat   => {nap    => "lap",   eat  => "meat"},
+              dog   => {prowl  => "growl", pool => "drool"},
+              mouse => {nibble => "kibble"},
+             };
 ----------
     };
 
@@ -252,6 +332,412 @@ use Carp ();
 use File::Spec ();
 use File::Path ();
 #5...........
+        },
+
+        'lpxl.def' => {
+            source => "lpxl",
+            params => "def",
+            expect => <<'#6...........',
+# simple function call
+my $loanlength = getLoanLength(
+    $borrower->{'categorycode'},    # sc1
+    $iteminformation->{'itemtype'},
+    $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command(
+    -label   => 'Save',
+    -command => sub { print "DOS\n"; save_dialog($win); }
+);
+
+# function call, ternary in list
+return OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+    $len,    $pts,      @colspec, $char, $cols,
+    $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#6...........
+        },
+
+        'lpxl.lpxl1' => {
+            source => "lpxl",
+            params => "lpxl1",
+            expect => <<'#7...........',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+                                      {
+                                        propA => "a",
+                                        propB => "b",
+                                        propC => "c",
+                                      }
+);
+
+# function call with sublist
+debug(
+       "Connecting to DB.",
+       "Extra-Parameters: " . join( "<->", $extra_parms ),
+       "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command( -label   => 'Save',
+             -command => sub { print "DOS\n"; save_dialog($win); } );
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+                   $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+                   'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+                -run    => \%runparam,
+                -file   => '',
+                -parse  => 1,
+                -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+        $len,    $pts,      @colspec, $char, $cols,
+        $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+          ListElem->new( id => 0, val => 100 ),
+          ListElem->new( id => 2, val => 50 ),
+          ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+               cat   => { nap    => "lap",   eat  => "meat" },
+               dog   => { prowl  => "growl", pool => "drool" },
+               mouse => { nibble => "kibble" },
+};
+#7...........
+        },
+
+        'lpxl.lpxl2' => {
+            source => "lpxl",
+            params => "lpxl2",
+            expect => <<'#8...........',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command(
+    -label   => 'Save',
+    -command => sub { print "DOS\n"; save_dialog($win); } );
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+    $len,    $pts,      @colspec, $char, $cols,
+    $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#8...........
+        },
+
+        'lpxl.lpxl3' => {
+            source => "lpxl",
+            params => "lpxl3",
+            expect => <<'#9...........',
+# simple function call
+my $loanlength = getLoanLength(
+    $borrower->{'categorycode'},    # sc1
+    $iteminformation->{'itemtype'},
+    $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command(
+    -label   => 'Save',
+    -command => sub { print "DOS\n"; save_dialog($win); } );
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+    $len,    $pts,      @colspec, $char, $cols,
+    $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#9...........
+        },
+
+        'lpxl.lpxl4' => {
+            source => "lpxl",
+            params => "lpxl4",
+            expect => <<'#10...........',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command( -label   => 'Save',
+             -command => sub { print "DOS\n"; save_dialog($win); } );
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+                   $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+                   'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+        $len,    $pts,      @colspec, $char, $cols,
+        $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#10...........
+        },
+
+        'lpxl.lpxl5' => {
+            source => "lpxl",
+            params => "lpxl5",
+            expect => <<'#11...........',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command(
+    -label   => 'Save',
+    -command => sub { print "DOS\n"; save_dialog($win); } );
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+    $len,    $pts,      @colspec, $char, $cols,
+    $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#11...........
         },
     };
 

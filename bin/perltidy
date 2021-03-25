@@ -842,6 +842,92 @@ B<-ndnl>.  The reason is that the B<-lp> indentation style can require
 the careful coordination of an arbitrary number of break points in
 hierarchical lists, and these flags may prevent that.
 
+=item B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
+
+The B<-lp> indentation style works well for some types of coding but can
+produce very long lines when variables have long names and/or containers are
+very deeply nested.  The B<-lpxl=s> flag can help mitigate this problem by
+providing control over the containers to which the B<-lp> indentation style is
+applied.  The B<-lp> flag by default is "greedy" and applies to as many
+containers as possible.  This flag specifies a list of things which should
+B<not> be use B<-lp> indentation.
+
+This list is a string with space-separated items.  Each item consists of up to
+three pieces of information in this order: (1) an optional letter code (2) a
+required container type, and (3) an optional numeric code.
+
+The only required piece of information is a container type, which is one of
+'(', '[', or '{'.  For example the string
+
+  -lpxl='[ {'
+
+means do B<NOT> include use -lp formatting within square-bracets or braces.  The only unspecified
+container is '(', so this string means that only the contens within parens will use -lp indentation.
+
+An optional numeric code may follow any of the container types to further refine the selection based
+on container contents.  The numeric codes are:
+
+  '0' or blank: no check on contents
+  '1' reject -lp unless the contents is a simple list without sublists
+  '2' reject -lp unless the contents is a simple list without sublists, without
+      code blocks, and without ternary operators
+
+For example,
+
+  -lpxl = '[ { (2'
+
+means only apply -lp to parenthesized lists which do not contain any sublists,
+code blocks or ternary expressions.
+
+A third optional item of information which can be given for parens is an alphanumeric
+letter which is used to limit the selection further depending on the type of
+token immediately before the paren.  The possible letters are currently 'k',
+'K', 'f', 'F', 'w', and 'W', with these meanings:
+
+ 'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
+ 'f' matches if the previous token is a function other than a keyword.
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+
+For example,
+
+  -lpxl = '[ { F(2'
+
+means only apply -lp to parenthesized lists which follow a function call and
+which do not contain any sublists, code blocks or ternary expressions.  The logic
+of writing these codes is counter-intuitive because they describe what is not
+getting the -lp indentation.  So the 'F' indicates that non-function calls are
+not getting -lp, or in other words that function calls are getting the -lp indentation.
+To simplify things, the next section has a shortcut form for the previous
+example, since it is expected to be the most useful.
+
+=item B<-lfp>,  B<--line-up-function-parentheses>
+
+This is a shortcut for
+
+  -lp -lpxl = '[ { F(2'
+
+which means only apply -lp to parenthesized lists which follow a function call
+and which do not contain any sublists, code blocks or ternary expressions. For
+example,
+
+    # perltidy -lfp
+    my $loanlength = getLoanLength(
+                                    $borrower->{'categorycode'},
+                                    $iteminformation->{'itemtype'},
+                                    $borrower->{'branchcode'}
+    );
+
+    # perltidy -lfp
+    @month_of_year = (
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    );
+
+The first of these examples is a simple function call, but the second is not.
+
 =item B<-cti=n>, B<--closing-token-indentation>
 
 The B<-cti=n> flag controls the indentation of a line beginning with 
@@ -2484,7 +2570,7 @@ Here is an example illustrating a welded container within a welded containers:
 
 The welded closing tokens are by default on a separate line but this can be
 modified with the B<-vtc=n> flag (described in the next section).  For example,
-the same example adding B<-vtc-2> is
+the same example adding B<-vtc=2> is
 
 	# perltidy -wn -vtc=2
         $x->badd( bmul(
@@ -2517,7 +2603,7 @@ token is being considered for joining a weld, any exclusion rules are consulted
 and used to reject the weld if necessary.
 
 This list is a string with space-separated items.  Each item consists of up to
-three pieces of information: (1) an optional positiion, (2) an optional
+three pieces of information: (1) an optional position, (2) an optional
 preceding type, and (3) a container type.
 
 The only required piece of information is a container type, which is one of
@@ -2563,7 +2649,7 @@ token immediately before the container.  If given, it goes just before the
 container symbol.  The possible letters are currently 'k', 'K', 'f', 'F',
 'w', and 'W', with these meanings:
 
- 'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'), 
+ 'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
  'f' matches if the previous token is a function other than a keyword.
  'F' matches if 'f' does not.
