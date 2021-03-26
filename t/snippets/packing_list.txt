@@ -313,6 +313,12 @@
 ../snippets24.t	fpva.def
 ../snippets24.t	fpva.fpva1
 ../snippets24.t	fpva.fpva2
+../snippets24.t	lpxl.def
+../snippets24.t	lpxl.lpxl1
+../snippets24.t	lpxl.lpxl2
+../snippets24.t	lpxl.lpxl3
+../snippets24.t	lpxl.lpxl4
+../snippets24.t	lpxl.lpxl5
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -453,9 +459,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets24.t	lpxl.def
-../snippets24.t	lpxl.lpxl1
-../snippets24.t	lpxl.lpxl2
-../snippets24.t	lpxl.lpxl3
-../snippets24.t	lpxl.lpxl4
-../snippets24.t	lpxl.lpxl5

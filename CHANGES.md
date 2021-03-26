@@ -4,8 +4,8 @@
 
     - Fixed issue git #57 regarding uninitialized warning flag.
 
-    - Added flag -lpxl for issue git #56, providing some control over which
-    containers get -lp indentation. 
+    - Added experimental flag -lpxl=s requested in issue git #56 to provide some
+    control over which containers get -lp indentation.
 
     - Fixed issue git #55 regarding lack of coordination of the --break-before-xxx
     flags and the --line-up-parens flag.

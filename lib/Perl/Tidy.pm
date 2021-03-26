@@ -2784,8 +2784,10 @@ sub generate_options {
         'conv'       => [qw(it=4)],
         'nconv'      => [qw(it=1)],
 
-        'line-up-function-parentheses' => [ qw(lp), q#lpxl=[ { F(2# ],
-        'lfp'                          => [qw(line-up-function-parentheses)],
+        # FIXME: possible future shortcut.  This will remain deactivated until
+        # the -lpxl flag is no longer experimental.
+        # 'line-up-function-parentheses' => [ qw(lp), q#lpxl=[ { F(2# ],
+        # 'lfp'                          => [qw(line-up-function-parentheses)],
 
         # 'mangle' originally deleted pod and comments, but to keep it
         # reversible, it no longer does.  But if you really want to

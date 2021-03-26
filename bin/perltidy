@@ -844,9 +844,12 @@ hierarchical lists, and these flags may prevent that.
 
 =item B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
 
+This is an experimental parameter; the details might change as experience
+with it is gained.
+
 The B<-lp> indentation style works well for some types of coding but can
 produce very long lines when variables have long names and/or containers are
-very deeply nested.  The B<-lpxl=s> flag can help mitigate this problem by
+very deeply nested.  The B<-lpxl=s> flag is intended to help mitigate this problem by
 providing control over the containers to which the B<-lp> indentation style is
 applied.  The B<-lp> flag by default is "greedy" and applies to as many
 containers as possible.  This flag specifies a list of things which should
@@ -897,36 +900,9 @@ For example,
 
 means only apply -lp to parenthesized lists which follow a function call and
 which do not contain any sublists, code blocks or ternary expressions.  The logic
-of writing these codes is counter-intuitive because they describe what is not
+of writing these codes is somewhat counter-intuitive because they describe what is not
 getting the -lp indentation.  So the 'F' indicates that non-function calls are
 not getting -lp, or in other words that function calls are getting the -lp indentation.
-To simplify things, the next section has a shortcut form for the previous
-example, since it is expected to be the most useful.
-
-=item B<-lfp>,  B<--line-up-function-parentheses>
-
-This is a shortcut for
-
-  -lp -lpxl = '[ { F(2'
-
-which means only apply -lp to parenthesized lists which follow a function call
-and which do not contain any sublists, code blocks or ternary expressions. For
-example,
-
-    # perltidy -lfp
-    my $loanlength = getLoanLength(
-                                    $borrower->{'categorycode'},
-                                    $iteminformation->{'itemtype'},
-                                    $borrower->{'branchcode'}
-    );
-
-    # perltidy -lfp
-    @month_of_year = (
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    );
-
-The first of these examples is a simple function call, but the second is not.
 
 =item B<-cti=n>, B<--closing-token-indentation>
 

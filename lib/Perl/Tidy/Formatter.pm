@@ -1816,7 +1816,13 @@ EOM
         }
     }
     if ($all_off) {
-        $rOpts->{'line-up-parentheses'} = "";
+
+        # FIXME: This works but is currently deactivated because at present
+        # users of -lp could see some discontinuities in formatting,
+        # such as those involving the choice of breaks at '='.  After
+        # these issues have been checked and resolved it should be reactivated
+        # as a speedup.
+        ## $rOpts->{'line-up-parentheses'} = "";
     }
 
     return;
