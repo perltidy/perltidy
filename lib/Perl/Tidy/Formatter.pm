@@ -6435,9 +6435,12 @@ sub resync_lines_and_tokens {
     $file_writer_object->setup_convergence_test( \@Klast_valign_code );
 
     # Mark essential old breakpoints if combination -iob -lp is used.  These
-    # two options do not work well together, but we can avoid turning one off by
-    # ignoring -iob at certain essential line breaks.  Fixes b1021.
+    # two options do not work well together, but we can avoid turning -iob off
+    # by ignoring -iob at certain essential line breaks.
+    # Fixes cases b1021 b1023 b1034 b1048 b1049 b1050 b1056 b1058
     if ( $rOpts_ignore_old_breakpoints && $rOpts_line_up_parentheses ) {
+        my %is_assignment_or_fat_comma = %is_assignment;
+        $is_assignment_or_fat_comma{'=>'} = 1;
         my $ris_essential_old_breakpoint =
           $self->[_ris_essential_old_breakpoint_];
         my $iline = -1;
@@ -6451,14 +6454,14 @@ sub resync_lines_and_tokens {
             }
             my ( $Kfirst_prev, $Klast_prev ) = ( $Kfirst, $Klast );
             ( $Kfirst, $Klast ) = @{ $line_of_tokens->{_rK_range} };
+
             next unless defined($Klast_prev);
-            next unless defined($Klast);
-            my $level_first = $rLL->[$Kfirst]->[_LEVEL_];
-            my $level_last  = $rLL->[$Klast]->[_LEVEL_];
-            my $type_last   = $rLL->[$Klast]->[_TOKEN_];
+            next unless defined($Kfirst);
+            my $type_last  = $rLL->[$Klast_prev]->[_TOKEN_];
+            my $type_first = $rLL->[$Kfirst]->[_TOKEN_];
             next
-              unless ( $level_last > $level_first
-                || $is_closing_type{$type_last} );
+              unless ( $is_assignment_or_fat_comma{$type_last}
+                || $is_assignment_or_fat_comma{$type_first} );
             $ris_essential_old_breakpoint->{$Klast_prev} = 1;
         }
     }

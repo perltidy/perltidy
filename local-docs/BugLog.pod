@@ -2,12 +2,25 @@
 
 =over 4
 
+=item B<Fix problems with combinations of -iob -lp>
+
+This is an correction to the update of 13 Mar 2021, 71adc77.  Random testing
+produced several additional problems with convergence involving the combination
+-iob -lp.  This update fixes the problem by overriding -iob at some breakpoins
+which are essential to the -lp parameter.
+
+This update fixes these old cases: b1021 b1023
+
+and these new cases: b1034 b1048 b1049 b1050 b1056 b1058
+
+27 Mar 2021
+
 =item B<Add flag -lpxl=s to provide control over -lp formatting>
 
 The flag -lpxl=s provides control over which containers get -lp formatting.
 A shortcut flag -lfp is also added for limiting -lp to simple function calls.
 
-Updated 25 Mar 2021.
+Updated 25 Mar 2021, bfc00fp.
 
 
 =item B<Fix error message for multiple conflicting specifications in -wnxl>
