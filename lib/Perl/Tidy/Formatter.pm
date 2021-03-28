@@ -5981,8 +5981,17 @@ sub respace_tokens {
         if ($is_list) {
             $ris_list_by_seqno->{$seqno} = $seqno;
             my $seqno_parent = $rparent_of_seqno->{$seqno};
+            my $depth        = 0;
             while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
-                $rhas_list->{$seqno_parent} = 1;
+                $depth++;
+
+                # for $rhas_list we need to save the minimum depth
+                if (  !$rhas_list->{$seqno_parent}
+                    || $rhas_list->{$seqno_parent} > $depth )
+                {
+                    $rhas_list->{$seqno_parent} = $depth;
+                }
+
                 if ($line_diff) {
                     $rhas_broken_list->{$seqno_parent} = 1;
 
@@ -8180,9 +8189,9 @@ sub break_before_list_opening_containers {
         # This must be a list (this will exclude all code blocks)
         # or contain a list.
         # Note1: switched from 'has_broken_list' to 'has_list' to fix b1024.
-        # Note2: 'has_list' previously was just one level deep, but has been
-        #  changed to include all levels. This does not change much formatting.
-        next unless ( $is_list || $has_list );
+        # Note2: 'has_list' holds the depth to the sub-list.  We will require
+        #  a depth of just 1
+        next unless ( $is_list || $has_list && $has_list == 1 );
 
         # Only for types of container tokens with a non-default break option
         my $token        = $rLL->[$KK]->[_TOKEN_];
