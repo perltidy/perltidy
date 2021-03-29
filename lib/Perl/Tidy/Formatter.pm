@@ -200,6 +200,8 @@ my (
     %is_closing_sequence_token,
     %is_container_label_type,
 
+    @all_operators,
+
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
     %is_do_follower,
@@ -545,6 +547,13 @@ BEGIN {
     # This usually improves appearance so it seems ok.
     @q = qw(&& || and or : ? . + - * /);
     @is_chain_operator{@q} = (1) x scalar(@q);
+
+    # Operators that the user can request break before or after.
+    # Note that some are keywords
+    @all_operators = qw(% + - * / x != == >= <= =~ !~ < > | &
+      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+      . : ? && || and or err xor
+    );
 
     # We can remove semicolons after blocks preceded by these keywords
     @q =
@@ -1230,11 +1239,6 @@ EOM
     }
 
     # implement user break preferences
-    my @all_operators = qw(% + - * / x != == >= <= =~ !~ < > | &
-      = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-      . : ? && || and or err xor
-    );
-
     my $break_after = sub {
         my @toks = @_;
         foreach my $tok (@toks) {
@@ -11162,7 +11166,12 @@ sub compare_indentation_levels {
     my %break_before_or_after_token;
 
     BEGIN {
-        my @q = qw( = . : ? and or xor && || );
+
+        # Updated to use all operators. This fixes case b1054
+        # Here is the previous simplified version:
+        ## my @q = qw( . : ? and or xor && || );
+        my @q = @all_operators;
+
         push @q, ',';
         @break_before_or_after_token{@q} = (1) x scalar(@q);
     }
@@ -11211,16 +11220,18 @@ sub compare_indentation_levels {
         return if ( $self->weld_len_right_to_go($i) );
 
         my $token = $tokens_to_go[$i];
+        my $type  = $types_to_go[$i];
 
         # For certain tokens, use user settings to decide if we break before or
         # after it
-        #    qw( = . : ? and or xor && || )
-        if ( $break_before_or_after_token{$token} ) {
+        if ( $break_before_or_after_token{$token}
+            && ( $type eq $token || $type eq 'k' ) )
+        {
             if ( $want_break_before{$token} && $i >= 0 ) { $i-- }
         }
 
         # breaks are forced before 'if' and 'unless'
-        elsif ( $is_if_unless{$token} ) { $i-- }
+        elsif ( $is_if_unless{$token} && $type eq 'k' ) { $i-- }
 
         if ( $i >= 0 && $i <= $max_index_to_go ) {
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;

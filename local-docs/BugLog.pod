@@ -2,6 +2,27 @@
 
 =over 4
 
+=item B<Follow user requests better to break before operators>
+
+Random testing produced some cases in which user requests to break before selected
+operators were not being followed.  For example
+
+    # OLD: perltidy -wbb='.='
+    $value .=
+      ( grep /\s/, ( $value, $next ) )
+      ? " $next"
+      : $next;
+
+    # FIXED: perltidy -wbb='.='
+    $value
+      .= ( grep /\s/, ( $value, $next ) )
+      ? " $next"
+      : $next;
+
+This fixes case b1054.
+
+28 Mar 2021.
+
 =item B<Fix problems with combinations of -iob -lp>
 
 This is an correction to the update of 13 Mar 2021, 71adc77.  Random testing
@@ -13,7 +34,7 @@ This update fixes these old cases: b1021 b1023
 
 and these new cases: b1034 b1048 b1049 b1050 b1056 b1058
 
-27 Mar 2021
+27 Mar 2021, cc94623.
 
 =item B<Add flag -lpxl=s to provide control over -lp formatting>
 
