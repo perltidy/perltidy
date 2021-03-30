@@ -7392,7 +7392,11 @@ EOM
         # DO-NOT-WELD RULE 6: Do not weld to a container which is followed on
         # the same line by an unknown bareword token.  This can cause
         # blinkers (cases b626, b611).
-        if ( !$do_not_weld_rule ) {
+        # Patched for cases b1057 b1064: skip RULE 6 for a one-line weld.
+        # Note: Another, more general fix is to remove the check on line
+        # numbers and always do this. That was tested and works, and may be
+        # necessary in the future, but it could change some existing code.
+        if ( !$do_not_weld_rule && !$is_one_line_weld ) {
             my $Knext_io = $self->K_next_nonblank($Kinner_opening);
             next unless ( defined($Knext_io) );
             my $iline_io_next = $rLL->[$Knext_io]->[_LINE_INDEX_];
@@ -7403,7 +7407,7 @@ EOM
                 # such as 'Z' and 'Y':   if ($type_io_next =~ /^[ZYw]$/) {
                 if ( $type_io_next eq 'w' ) {
                     my $Knext_io2 = $self->K_next_nonblank($Knext_io);
-                    next unless ( defined($Knext_io) );
+                    next unless ( defined($Knext_io2) );
                     my $type_io_next2 = $rLL->[$Knext_io2]->[_TYPE_];
                     if ( !$type_ok_after_bareword{$type_io_next2} ) {
                         $do_not_weld_rule = 6;

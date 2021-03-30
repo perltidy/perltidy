@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix rule for welding with barewords>
+
+Random testing produced a case which was not converging due to a rule
+which avoids welding when a bareword follows.  The rule was modified to allow
+an exception for an existing one-line weld.  A non-fatal typo was also
+discovered and fixed.
+
+This fixes cases b1057 b1064.
+
+29 Mar 2021.
+
 =item B<Fix conflict between -wba='||' and -opr>
 
 Random testing produced a problem with convergence due to a conflict
