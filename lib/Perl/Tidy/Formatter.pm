@@ -20973,6 +20973,10 @@ sub set_vertical_tightness_flags {
                 || $iend_next == $ibeg_next + 2
                 && $types_to_go[$iend_next] eq '#' )
 
+            # Fix for case b1060 when both -baoo and -otr are set:
+            # to avoid blinking, honor the -baoo flag over the -otr flag.
+            && $token_end ne '||' && $token_end ne '&&'
+
             # looks bad if we align vertically with the wrong container
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
           )

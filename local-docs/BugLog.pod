@@ -2,6 +2,29 @@
 
 =over 4
 
+=item B<Fix conflict between -wba='||' and -opr>
+
+Random testing produced a problem with convergence due to a conflict
+between two parameters for the following code
+
+    my $lxy =
+      ( @$cx - @$cy ) ||
+      (
+        length ( int ( $cx->[-1] ) ) -
+        length ( int ( $cy->[-1] ) ) );
+
+when using these parameters
+
+    --break-after-all-operators
+    --maximum-line-length=61
+    --opening-paren-right
+
+Both the '||' and the '(' want to be at the end of a line according to the
+parameters.  The problem is resolved by giving priority to the '||'.  This
+fixes case b1060.
+
+29 Mar 2021
+
 =item B<Follow user requests better to break before operators>
 
 Random testing produced some cases in which user requests to break before selected
@@ -21,7 +44,7 @@ operators were not being followed.  For example
 
 This fixes case b1054.
 
-28 Mar 2021.
+28 Mar 2021, 94f0877.
 
 =item B<Fix problems with combinations of -iob -lp>
 
