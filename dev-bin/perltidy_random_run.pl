@@ -209,8 +209,10 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
           "$hash>Run '$nf.$np' : profile='$profile', ifile='$ifile'\n";
 
         if ( -e $tmperr ) { unlink $tmperr }
+
         #my $cmd = "$binfile <$ifile >$ofile -pro=$profile 2>$tmperr";
-        my $cmd = "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
+        my $cmd =
+          "$binfile <$ifile >$ofile -pro=$profile $append_flags 2>$tmperr";
         system_echo( $cmd, $hash );
         my $efile   = "perltidy.ERR";
         my $logfile = "perltidy.LOG";
@@ -513,7 +515,7 @@ if (@saved_for_deletion) {
 }
 
 # Summarize results..
-if (@problems || @blinkers) {
+if ( @problems || @blinkers ) {
     print STDERR <<EOM;
 
 $hash =============================
@@ -736,6 +738,8 @@ my $nlines=@lines;
 foreach my $line (@lines) {
     $lno++;
     next if ($line =~ /^#/);
+    next if ($line =~ /Unicode non-character/);
+    next if ($line =~ /does not map to utf8/);
 
     if (   $line =~ /uninitialized/
         || $line =~ /undefined/
