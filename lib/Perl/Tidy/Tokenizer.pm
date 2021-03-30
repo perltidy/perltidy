@@ -5017,7 +5017,9 @@ sub operator_expected {
             # For example, from RT#130344:
             #   use lib $FindBin::Bin . '/lib';
             if ( $statement_type ne 'use' ) {
-                complain("operator in print statement not recommended\n");
+                complain(
+"operator in possible indirect object location not recommended\n"
+                );
             }
             $op_expected = OPERATOR;
         }
