@@ -366,6 +366,7 @@ BEGIN {
         _rhas_ternary_                     => $i++,
         _ris_excluded_lp_container_        => $i++,
         _rwant_reduced_ci_                 => $i++,
+        _rno_xci_by_seqno_                 => $i++,
         _ris_bli_container_                => $i++,
         _rparent_of_seqno_                 => $i++,
         _rchildren_of_seqno_               => $i++,
@@ -725,6 +726,7 @@ sub new {
     $self->[_rhas_ternary_]                     = {};
     $self->[_ris_excluded_lp_container_]        = {};
     $self->[_rwant_reduced_ci_]                 = {};
+    $self->[_rno_xci_by_seqno_]                 = {};
     $self->[_ris_bli_container_]                = {};
     $self->[_rparent_of_seqno_]                 = {};
     $self->[_rchildren_of_seqno_]               = {};
@@ -8172,6 +8174,7 @@ sub break_before_list_opening_containers {
     my $rlines                    = $self->[_rlines_];
     my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     my $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
+    my $rno_xci_by_seqno          = $self->[_rno_xci_by_seqno_];
 
     my $length_tol =
       max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
@@ -8236,11 +8239,22 @@ sub break_before_list_opening_containers {
         #  - this list contains a broken list with line-ending comma, or
         #  - this list is contained in a broken list
         elsif ( $break_option == 2 ) {
+
             my $ok_to_break = $has_list_with_lec;
             if ( !$ok_to_break ) {
+
+                # Turn off -xci if -bbx=2 and this container has a sublist but
+                # not a broken sublist. This avoids creating blinkers.  The
+                # problem is that -xci can cause one-line lists to break open,
+                # and thereby creating formatting instability.
+                # This fixes cases b1033 b1036 b1037 b1038 b1042 b1043 b1044
+                # b1045 b1046 b1047 b1051 b1052 b1061.
+                if ($has_list) { $rno_xci_by_seqno->{$seqno} = 1 }
+
                 my $parent = $rparent_of_seqno->{$seqno};
                 $ok_to_break = $self->is_list_by_seqno($parent);
             }
+
             next unless ($ok_to_break);
         }
 
@@ -8427,6 +8441,7 @@ sub extended_ci {
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
     my $rlines                   = $self->[_rlines_];
+    my $rno_xci_by_seqno         = $self->[_rno_xci_by_seqno_];
 
     my %available_space;
 
@@ -8511,6 +8526,11 @@ sub extended_ci {
                 $rseqno_controlling_my_ci->{$KK} = $seqno_top;
                 $ris_seqno_controlling_ci->{$seqno_top}++;
             }
+            next;
+        }
+
+        # Skip if requested by -bbx to avoid blinkers
+        if ( $rno_xci_by_seqno->{$seqno} ) {
             next;
         }
 

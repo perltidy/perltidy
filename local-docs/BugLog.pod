@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Avoid conflict of -bbp=2 and -xci>
+
+Random testing produced a number of cases of unstable formatting when both -xci
+and -bbp=2 or similar flags were set.  The problem was that -xci can cause
+one-line blocks to break open, causing the -bbp=2 flag to continually switch
+formatting.  The problem is fixed by locally turning off -xci at containers
+which do not themselves contain broken containers.
+
+This fixes cases 
+b1033 b1036 b1037 b1038 b1042 b1043 b1044 b1045 b1046 b1047 b1051 b1052 b1061.
+
+30 Mar 2021.
+
 =item B<Fix rule for welding with barewords>
 
 Random testing produced a case which was not converging due to a rule
@@ -11,7 +24,7 @@ discovered and fixed.
 
 This fixes cases b1057 b1064.
 
-29 Mar 2021.
+29 Mar 2021, d677082.
 
 =item B<Fix conflict between -wba='||' and -opr>
 
@@ -34,7 +47,7 @@ Both the '||' and the '(' want to be at the end of a line according to the
 parameters.  The problem is resolved by giving priority to the '||'.  This
 fixes case b1060.
 
-29 Mar 2021
+29 Mar 2021, 6921a7d.
 
 =item B<Follow user requests better to break before operators>
 
