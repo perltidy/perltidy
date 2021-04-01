@@ -391,7 +391,7 @@
 <p>The default is not to use this, which can also be indicated using <b>-wc=0</b>.</p>
 
 </dd>
-<dt id="tabs">tabs</dt>
+<dt id="Tabs"><b>Tabs</b></dt>
 <dd>
 
 <p>Using tab characters will almost certainly lead to future portability and maintenance problems, so the default and recommendation is not to use them. For those who prefer tabs, however, there are two different options.</p>
@@ -611,7 +611,7 @@
 <p>If the default method does not work correctly, or you want to change the starting level, use <b>-sil=n</b>, to force the starting level to be n.</p>
 
 </dd>
-<dt id="List-indentation-using--lp---line-up-parentheses">List indentation using <b>-lp</b>, <b>--line-up-parentheses</b></dt>
+<dt id="List-indentation-using--lp---line-up-parentheses"><b>List indentation</b> using <b>-lp</b>, <b>--line-up-parentheses</b></dt>
 <dd>
 
 <p>By default, perltidy indents lists with 4 spaces, or whatever value is specified with <b>-i=n</b>. Here is a small list formatted in this way:</p>
@@ -637,6 +637,50 @@
 <p>Note: The <b>-lp</b> option may not be used together with the <b>-t</b> tabs option. It may, however, be used with the <b>-et=n</b> tab method.</p>
 
 <p>In addition, any parameter which significantly restricts the ability of perltidy to choose newlines will conflict with <b>-lp</b> and will cause <b>-lp</b> to be deactivated. These include <b>-io</b>, <b>-fnl</b>, <b>-nanl</b>, and <b>-ndnl</b>. The reason is that the <b>-lp</b> indentation style can require the careful coordination of an arbitrary number of break points in hierarchical lists, and these flags may prevent that.</p>
+
+</dd>
+<dt id="lpxl-s---line-up-parentheses-exclusion-list"><b>-lpxl=s</b>, <b>--line-up-parentheses-exclusion-list</b></dt>
+<dd>
+
+<p>This is an experimental parameter; the details might change as experience with it is gained.</p>
+
+<p>The <b>-lp</b> indentation style works well for some types of coding but can produce very long lines when variables have long names and/or containers are very deeply nested. The <b>-lpxl=s</b> flag is intended to help mitigate this problem by providing control over the containers to which the <b>-lp</b> indentation style is applied. The <b>-lp</b> flag by default is &quot;greedy&quot; and applies to as many containers as possible. This flag specifies a list of things which should <b>not</b> be use <b>-lp</b> indentation.</p>
+
+<p>This list is a string with space-separated items. Each item consists of up to three pieces of information in this order: (1) an optional letter code (2) a required container type, and (3) an optional numeric code.</p>
+
+<p>The only required piece of information is a container type, which is one of &#39;(&#39;, &#39;[&#39;, or &#39;{&#39;. For example the string</p>
+
+<pre><code>  -lpxl=&#39;[ {&#39;</code></pre>
+
+<p>means do <b>NOT</b> include use -lp formatting within square-bracets or braces. The only unspecified container is &#39;(&#39;, so this string means that only the contens within parens will use -lp indentation.</p>
+
+<p>An optional numeric code may follow any of the container types to further refine the selection based on container contents. The numeric codes are:</p>
+
+<pre><code>  &#39;0&#39; or blank: no check on contents
+  &#39;1&#39; reject -lp unless the contents is a simple list without sublists
+  &#39;2&#39; reject -lp unless the contents is a simple list without sublists, without
+      code blocks, and without ternary operators</code></pre>
+
+<p>For example,</p>
+
+<pre><code>  -lpxl = &#39;[ { (2&#39;</code></pre>
+
+<p>means only apply -lp to parenthesized lists which do not contain any sublists, code blocks or ternary expressions.</p>
+
+<p>A third optional item of information which can be given for parens is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
+
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
+ &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;F&#39; matches if &#39;f&#39; does not.
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
+ &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+
+<p>For example,</p>
+
+<pre><code>  -lpxl = &#39;[ { F(2&#39;</code></pre>
+
+<p>means only apply -lp to parenthesized lists which follow a function call and which do not contain any sublists, code blocks or ternary expressions. The logic of writing these codes is somewhat counter-intuitive because they describe what is not getting the -lp indentation. So the &#39;F&#39; indicates that non-function calls are not getting -lp, or in other words that function calls are getting the -lp indentation.</p>
 
 </dd>
 <dt id="cti-n---closing-token-indentation"><b>-cti=n</b>, <b>--closing-token-indentation</b></dt>
@@ -736,7 +780,7 @@
 <p>This command is equivalent to <b>--outdent-long-quotes</b> and <b>--outdent-long-comments</b>, and it is included for compatibility with previous versions of perltidy. The negation of this also works, <b>-noll</b> or <b>--nooutdent-long-lines</b>, and is equivalent to setting <b>-nolq</b> and <b>-nolc</b>.</p>
 
 </dd>
-<dt id="Outdenting-Labels:--ola---outdent-labels">Outdenting Labels: <b>-ola</b>, <b>--outdent-labels</b></dt>
+<dt id="Outdenting-Labels:--ola---outdent-labels"><b>Outdenting Labels:</b> <b>-ola</b>, <b>--outdent-labels</b></dt>
 <dd>
 
 <p>This command will cause labels to be outdented by 2 spaces (or whatever <b>-ci</b> has been set to), if possible. This is the default. For example:</p>
@@ -751,7 +795,7 @@
 <p>Use <b>-nola</b> to not outdent labels.</p>
 
 </dd>
-<dt id="Outdenting-Keywords">Outdenting Keywords</dt>
+<dt id="Outdenting-Keywords"><b>Outdenting Keywords</b></dt>
 <dd>
 
 <dl>
@@ -773,7 +817,7 @@
 <p>The default is not to do this.</p>
 
 </dd>
-<dt id="Specifying-Outdented-Keywords:--okwl-string---outdent-keyword-list-string">Specifying Outdented Keywords: <b>-okwl=string</b>, <b>--outdent-keyword-list=string</b></dt>
+<dt id="Specifying-Outdented-Keywords:--okwl-string---outdent-keyword-list-string"><b>Specifying Outdented Keywords:</b> <b>-okwl=string</b>, <b>--outdent-keyword-list=string</b></dt>
 <dd>
 
 <p>This command can be used to change the keywords which are outdented with the <b>-okw</b> command. The parameter <b>string</b> is a required list of perl keywords, which should be placed in quotes if there are more than one. By itself, it does not cause any outdenting to occur, so the <b>-okw</b> command is still required.</p>
@@ -798,7 +842,7 @@
 <p>This flag causes your original whitespace to remain unchanged, and causes the rest of the whitespace commands in this section, the Code Indentation section, and the Comment Control section to be ignored.</p>
 
 </dd>
-<dt id="Tightness-of-curly-braces-parentheses-and-square-brackets">Tightness of curly braces, parentheses, and square brackets.</dt>
+<dt id="Tightness-of-curly-braces-parentheses-and-square-brackets"><b>Tightness of curly braces, parentheses, and square brackets</b></dt>
 <dd>
 
 <p>Here the term &quot;tightness&quot; will mean the closeness with which pairs of enclosing tokens, such as parentheses, contain the quantities within. A numerical value of 0, 1, or 2 defines the tightness, with 0 being least tight and 2 being most tight. Spaces within containers are always symmetric, so if there is a space after a <code>(</code> then there will be a space before the corresponding <code>)</code>.</p>
@@ -884,7 +928,7 @@
 <p>Setting this option allows perltidy to remove some old whitespace between characters, if necessary. This is the default. If you do not want any old whitespace removed, use <b>-ndws</b> or <b>--nodelete-old-whitespace</b>.</p>
 
 </dd>
-<dt id="Detailed-whitespace-controls-around-tokens">Detailed whitespace controls around tokens</dt>
+<dt id="Detailed-whitespace-controls-around-tokens"><b>Detailed whitespace controls around tokens</b></dt>
 <dd>
 
 <p>For those who want more detailed control over the whitespace around tokens, there are four parameters which can directly modify the default whitespace rules built into perltidy for any token. They are:</p>
@@ -918,7 +962,7 @@
 <p><b>WARNING</b> Be sure to put these tokens in quotes to avoid having them misinterpreted by your command shell.</p>
 
 </dd>
-<dt id="Note1:-Perltidy-does-always-follow-whitespace-controls">Note1: Perltidy does always follow whitespace controls</dt>
+<dt id="Note1:-Perltidy-does-always-follow-whitespace-controls"><b>Note1: Perltidy does always follow whitespace controls</b></dt>
 <dd>
 
 <p>The various parameters controlling whitespace within a program are requests which perltidy follows as well as possible, but there are a number of situations where changing whitespace could change program behavior and is not done. Some of these are obvious; for example, we should not remove the space between the two plus symbols in &#39;$x+ +$y&#39; to avoid creating a &#39;++&#39; operator. Some are more subtle and involve the whitespace around bareword symbols and locations of possible filehandles. For example, consider the problem of formatting the following subroutine:</p>
@@ -952,7 +996,7 @@
 <p>which shows that <b>system</b> is type <b>k</b> (keyword) and $foo is type <b>Z</b>.</p>
 
 </dd>
-<dt id="Note2:-Perltidys-whitespace-rules-are-not-perfect">Note2: Perltidy&#39;s whitespace rules are not perfect</dt>
+<dt id="Note2:-Perltidys-whitespace-rules-are-not-perfect"><b>Note2: Perltidy&#39;s whitespace rules are not perfect</b></dt>
 <dd>
 
 <p>Despite these precautions, it is still possible to introduce syntax errors with some asymmetric whitespace rules, particularly when call parameters are not placed in containg parens or braces. For example, the following two lines will be parsed by perl without a syntax error:</p>
@@ -984,7 +1028,7 @@
 <p>To avoid subtle parsing problems like this, it is best to avoid spacing a binary operator asymetrically with a space on the left but not on the right.</p>
 
 </dd>
-<dt id="Space-between-specific-keywords-and-opening-paren">Space between specific keywords and opening paren</dt>
+<dt id="Space-between-specific-keywords-and-opening-paren"><b>Space between specific keywords and opening paren</b></dt>
 <dd>
 
 <p>When an opening paren follows a Perl keyword, no space is introduced after the keyword, unless it is (by default) one of these:</p>
@@ -1010,7 +1054,7 @@
 <p>To put a space after all keywords, see the next item.</p>
 
 </dd>
-<dt id="Space-between-all-keywords-and-opening-parens">Space between all keywords and opening parens</dt>
+<dt id="Space-between-all-keywords-and-opening-parens"><b>Space between all keywords and opening parens</b></dt>
 <dd>
 
 <p>When an opening paren follows a function or keyword, no space is introduced after the keyword except for the keywords noted in the previous item. To always put a space between a function or keyword and its opening paren, use the command:</p>
@@ -1020,7 +1064,7 @@
 <p>You may also want to use the flag <b>-sfp</b> (next item) too.</p>
 
 </dd>
-<dt id="Space-between-all-function-names-and-opening-parens">Space between all function names and opening parens</dt>
+<dt id="Space-between-all-function-names-and-opening-parens"><b>Space between all function names and opening parens</b></dt>
 <dd>
 
 <p>When an opening paren follows a function the default and recommended formatting is not to introduce a space. To cause a space to be introduced use:</p>
@@ -1038,6 +1082,22 @@
   sub filename { return $0 }</code></pre>
 
 <p>In this particular case the syntax error can be removed if the line order is reversed, so that Perl parses &#39;sub filename&#39; first.</p>
+
+</dd>
+<dt id="fpva-or---function-paren-vertical-alignment"><b>-fpva</b> or <b>--function-paren-vertical-alignment</b></dt>
+<dd>
+
+<p>A side-effect of using the <b>-sfp</b> flag is that the parens may become vertically aligned. For example,</p>
+
+<pre><code>    # perltidy -sfp
+    myfun     ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );</code></pre>
+
+<p>This is the default behavior. To prevent this alignment use <b>-nfpva</b>:</p>
+
+<pre><code>    # perltidy -sfp -nfpva
+    myfun ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );</code></pre>
 
 </dd>
 <dt id="spp-n-or---space-prototype-paren-n"><b>-spp=n</b> or <b>--space-prototype-paren=n</b></dt>
@@ -1134,7 +1194,7 @@
       :               1;</code></pre>
 
 </dd>
-<dt id="Trimming-whitespace-around-qw-quotes">Trimming whitespace around <code>qw</code> quotes</dt>
+<dt id="Trimming-whitespace-around-qw-quotes"><b>Trimming whitespace around <code>qw</code> quotes</b></dt>
 <dd>
 
 <p><b>-tqw</b> or <b>--trim-qw</b> provide the default behavior of trimming spaces around multi-line <code>qw</code> quotes and indenting them appropriately.</p>
@@ -1142,7 +1202,7 @@
 <p><b>-ntqw</b> or <b>--notrim-qw</b> cause leading and trailing whitespace around multi-line <code>qw</code> quotes to be left unchanged. This option will not normally be necessary, but was added for testing purposes, because in some versions of perl, trimming <code>qw</code> quotes changes the syntax tree.</p>
 
 </dd>
-<dt id="b-sbq-n-or-b--space-backslash-quote-n">b&lt;-sbq=n&gt; or b&lt;--space-backslash-quote=n&gt;</dt>
+<dt id="sbq-n-or---space-backslash-quote-n"><b>-sbq=n</b> or <b>--space-backslash-quote=n</b></dt>
 <dd>
 
 <p>lines like</p>
@@ -1152,7 +1212,7 @@
 
 <p>can confuse syntax highlighters unless a space is included between the backslash and the single or double quotation mark.</p>
 
-<p>this can be controlled with the value of b&lt;n&gt; as follows:</p>
+<p>this can be controlled with the value of <b>n</b> as follows:</p>
 
 <pre><code>    -sbq=0 means no space between the backslash and quote
     -sbq=1 means follow the example of the source code
@@ -1161,7 +1221,7 @@
 <p>The default is <b>-sbq=1</b>, meaning that a space will be used if there is one in the source code.</p>
 
 </dd>
-<dt id="Trimming-trailing-whitespace-from-lines-of-POD">Trimming trailing whitespace from lines of POD</dt>
+<dt id="Trimming-trailing-whitespace-from-lines-of-POD"><b>Trimming trailing whitespace from lines of POD</b></dt>
 <dd>
 
 <p><b>-trp</b> or <b>--trim-pod</b> will remove trailing whitespace from lines of POD. The default is not to do this.</p>
@@ -1245,7 +1305,7 @@
 <p>A comment is considered to be a hanging side comment if (1) it immediately follows a line with a side comment, or another hanging side comment, and (2) there is some leading whitespace on the line. To deactivate this feature, use <b>-nhsc</b> or <b>--nohanging-side-comments</b>. If block comments are preceded by a blank line, or have no leading whitespace, they will not be mistaken as hanging side comments.</p>
 
 </dd>
-<dt id="Closing-Side-Comments">Closing Side Comments</dt>
+<dt id="Closing-Side-Comments"><b>Closing Side Comments</b></dt>
 <dd>
 
 <p>A closing side comment is a special comment which perltidy can automatically create and place after the closing brace of a code block. They can be useful for code maintenance and debugging. The command <b>-csc</b> (or <b>--closing-side-comments</b>) adds or updates closing side comments. For example, here is a small code snippet</p>
@@ -1393,7 +1453,7 @@
 </ul>
 
 </dd>
-<dt id="Static-Block-Comments">Static Block Comments</dt>
+<dt id="Static-Block-Comments"><b>Static Block Comments</b></dt>
 <dd>
 
 <p>Static block comments are block comments with a special leading pattern, <code>##</code> by default, which will be treated slightly differently from other block comments. They effectively behave as if they had glue along their left and top edges, because they stick to the left edge and previous line when there is no blank spaces in those places. This option is particularly useful for controlling how commented code is displayed.</p>
@@ -1462,7 +1522,7 @@
 </dl>
 
 </dd>
-<dt id="Static-Side-Comments">Static Side Comments</dt>
+<dt id="Static-Side-Comments"><b>Static Side Comments</b></dt>
 <dd>
 
 <p>Static side comments are side comments with a special leading pattern. This option can be useful for controlling how commented code is displayed when it is a side comment.</p>
@@ -1963,7 +2023,7 @@
             $m
         ) );</code></pre>
 
-<p>The welded closing tokens are by default on a separate line but this can be modified with the <b>-vtc=n</b> flag (described in the next section). For example, the same example adding <b>-vtc-2</b> is</p>
+<p>The welded closing tokens are by default on a separate line but this can be modified with the <b>-vtc=n</b> flag (described in the next section). For example, the same example adding <b>-vtc=2</b> is</p>
 
 <pre><code>        # perltidy -wn -vtc=2
         $x-&gt;badd( bmul(
@@ -1987,7 +2047,7 @@
 
 <p>The logic in perltidy to apply this is straightforward. As each container token is being considered for joining a weld, any exclusion rules are consulted and used to reject the weld if necessary.</p>
 
-<p>This list is a string with space-separated items. Each item consists of up to three pieces of information: (1) an optional positiion, (2) an optional preceding type, and (3) a container type.</p>
+<p>This list is a string with space-separated items. Each item consists of up to three pieces of information: (1) an optional position, (2) an optional preceding type, and (3) a container type.</p>
 
 <p>The only required piece of information is a container type, which is one of &#39;(&#39;, &#39;[&#39;, &#39;{&#39; or &#39;q&#39;. The first three of these are container tokens and the last represents a quoted list. For example the string</p>
 
@@ -2017,7 +2077,7 @@
 
 <p>A third optional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the container. If given, it goes just before the container symbol. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;), 
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -2274,7 +2334,9 @@
                     push( @lines, &quot;$w1 $w2 $w3 $w4\n&quot; );
                 } } } }</code></pre>
 
-<p>To simplify input even further for the case in which both opening and closing non-block containers are stacked, the flag <b>-sac</b> or <b>--stack-all-containers</b> is an abbreviation for <b>-sot -sot</b>.</p>
+<p>To simplify input even further for the case in which both opening and closing non-block containers are stacked, the flag <b>-sac</b> or <b>--stack-all-containers</b> is an abbreviation for <b>-sot -sct</b>.</p>
+
+<p>Please note that if both opening and closing tokens are to be stacked, then the newer flag <b>-weld-nested-containers</b> may be preferable because it insures that stacking is always done symmetrically. It also removes an extra level of unnecessary indentation within welded containers. It is able to do this because it works on formatting globally rather than locally, as the <b>-sot</b> and <b>-sct</b> flags do.</p>
 
 </dd>
 <dt id="dnl---delete-old-newlines"><b>-dnl</b>, <b>--delete-old-newlines</b></dt>
@@ -2291,7 +2353,7 @@
 <p>This flag does not prevent perltidy from eliminating existing line breaks; see <b>--freeze-newlines</b> to completely prevent changes to line break points.</p>
 
 </dd>
-<dt id="Controlling-whether-perltidy-breaks-before-or-after-operators">Controlling whether perltidy breaks before or after operators</dt>
+<dt id="Controlling-whether-perltidy-breaks-before-or-after-operators"><b>Controlling whether perltidy breaks before or after operators</b></dt>
 <dd>
 
 <p>Four command line parameters provide some control over whether a line break should be before or after specific token types. Two parameters give detailed control:</p>
@@ -2408,7 +2470,7 @@
  n=1 stable: break at all commas after =&gt; if container is open,
      EXCEPT FOR one-line containers
  n=2 break at all commas after =&gt;, BUT try to form the maximum
-     maximum one-line container lengths
+     one-line container lengths
  n=3 do not treat commas after =&gt; specially at all 
  n=4 break everything: like n=0 but ALSO break a short container with
      a =&gt; not followed by a comma when -vt=0 is used
@@ -2550,7 +2612,7 @@
 <p>To prevent this, and thereby always form longer lines, use <b>-nboa</b>.</p>
 
 </dd>
-<dt id="Keeping-old-breakpoints-at-specific-token-types">Keeping old breakpoints at specific token types</dt>
+<dt id="Keeping-old-breakpoints-at-specific-token-types"><b>Keeping old breakpoints at specific token types</b></dt>
 <dd>
 
 <p>Two command line parameters provide detailed control over whether perltidy should keep an old line break before or after a specific token type:</p>
@@ -2721,7 +2783,7 @@
 <p>This parameter is a list of block type keywords to which the flag <b>-blbc</b> should apply. The section <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a> explains how to list block types.</p>
 
 </dd>
-<dt id="Note-on-using-the--blao-and--blbc-options">Note on using the <b>-blao</b> and <b>-blbc</b> options.</dt>
+<dt id="Note-on-using-the--blao-and--blbc-options"><b>Note on using the</b> <b>-blao</b> and <b>-blbc</b> options.</dt>
 <dd>
 
 <p>These blank line controls introduce a certain minimum number of blank lines in the text, but the final number of blank lines may be greater, depending on values of the other blank line controls and the number of old blank lines. A consequence is that introducing blank lines with these and other controls cannot be exactly undone, so some experimentation with these controls is recommended before using them.</p>
@@ -2955,7 +3017,7 @@
 <p>The <b>-xci</b> flag was developed after the <b>-pbp</b> parameters were published so you need to include it separately.</p>
 
 </dd>
-<dt id="One-line-blocks">One-line blocks</dt>
+<dt id="One-line-blocks"><b>One-line blocks</b></dt>
 <dd>
 
 <p>There are a few points to note regarding one-line blocks. A one-line block is something like this,</p>
@@ -3043,7 +3105,7 @@
             Proto    =&gt; &#39;tcp&#39;
         );</code></pre>
 
-<p>The only explicit control on vertical alignment is to turn it off using <b>-novalign</b>, a flag mainly intended for debugging. However, vertical alignment can be forced to stop and restart by selectively introducing blank lines. For example, a blank has been inserted in the following code to keep somewhat similar things aligned.</p>
+<p>Vertical alignment can be completely turned off using <b>-novalign</b>, a flag mainly intended for debugging. However, vertical alignment can be forced to stop and restart by selectively introducing blank lines. For example, a blank has been inserted in the following code to keep somewhat similar things aligned.</p>
 
 <pre><code>    %option_range = (
         &#39;format&#39;             =&gt; [ &#39;tidy&#39;, &#39;html&#39;, &#39;user&#39; ],
@@ -3056,11 +3118,22 @@
         &#39;square-bracket-tightness&#39; =&gt; [ 0, 2 ],
     );</code></pre>
 
+<p>Vertical alignment is implemented by locally increasing an existing blank space to produce alignment with an adjacent line. It cannot occur if there is no blank space to increase. So if a particular space is removed by one of the existing controls then vertical alignment cannot occur. Likewise, if a space is added with one of the controls, then vertical alignment might occur.</p>
+
+<p>For example,</p>
+
+<pre><code>        # perltidy -nwls=&#39;=&gt;&#39;
+        $data = $pkg-&gt;new(
+            PeerAddr=&gt; join( &quot;.&quot;, @port[ 0 .. 3 ] ),
+            PeerPort=&gt; $port[4] * 256 + $port[5],
+            Proto=&gt; &#39;tcp&#39;
+        );</code></pre>
+
 <h2 id="Other-Controls">Other Controls</h2>
 
 <dl>
 
-<dt id="Deleting-selected-text">Deleting selected text</dt>
+<dt id="Deleting-selected-text"><b>Deleting selected text</b></dt>
 <dd>
 
 <p>Perltidy can selectively delete comments and/or pod documentation. The command <b>-dac</b> or <b>--delete-all-comments</b> will delete all comments <b>and</b> all pod documentation, leaving just code and any leading system control lines.</p>
@@ -3072,7 +3145,7 @@
 <p>The negatives of these commands also work, and are the defaults. When block comments are deleted, any leading &#39;hash-bang&#39; will be retained. Also, if the <b>-x</b> flag is used, any system commands before a leading hash-bang will be retained (even if they are in the form of comments).</p>
 
 </dd>
-<dt id="Writing-selected-text-to-a-file">Writing selected text to a file</dt>
+<dt id="Writing-selected-text-to-a-file"><b>Writing selected text to a file</b></dt>
 <dd>
 
 <p>When perltidy writes a formatted text file, it has the ability to also send selected text to a file with a <i>.TEE</i> extension. This text can include comments and pod documentation.</p>
@@ -3086,7 +3159,7 @@
 <p>The negatives of these commands also work, and are the defaults.</p>
 
 </dd>
-<dt id="Using-a-.perltidyrc-command-file">Using a <i>.perltidyrc</i> command file</dt>
+<dt id="Using-a-.perltidyrc-command-file"><b>Using a <i>.perltidyrc</i> command file</b></dt>
 <dd>
 
 <p>If you use perltidy frequently, you probably won&#39;t be happy until you create a <i>.perltidyrc</i> file to avoid typing commonly-used parameters. Perltidy will first look in your current directory for a command file named <i>.perltidyrc</i>. If it does not find one, it will continue looking for one in other standard locations.</p>
@@ -3141,7 +3214,7 @@
 </ul>
 
 </dd>
-<dt id="Creating-a-new-abbreviation">Creating a new abbreviation</dt>
+<dt id="Creating-a-new-abbreviation"><b>Creating a new abbreviation</b></dt>
 <dd>
 
 <p>A special notation is available for use in a <i>.perltidyrc</i> file for creating an abbreviation for a group of options. This can be used to create a shorthand for one or more styles which are frequently, but not always, used. The notation is to group the options within curly braces which are preceded by the name of the alias (without leading dashes), like this:</p>
@@ -3170,7 +3243,7 @@
 <p>Please note: do not use this flag unless you are sure your script needs it. Parsing errors can occur if it does not have a hash-bang, or, for example, if the actual first hash-bang is in a here-doc. In that case a parsing error will occur because the tokenization will begin in the middle of the here-doc.</p>
 
 </dd>
-<dt id="Making-a-file-unreadable">Making a file unreadable</dt>
+<dt id="Making-a-file-unreadable"><b>Making a file unreadable</b></dt>
 <dd>
 
 <p>The goal of perltidy is to improve the readability of files, but there are two commands which have the opposite effect, <b>--mangle</b> and <b>--extrude</b>. They are actually merely aliases for combinations of other parameters. Both of these strip all possible whitespace, but leave comments and pod documents, so that they are essentially reversible. The difference between these is that <b>--mangle</b> puts the fewest possible line breaks in a script while <b>--extrude</b> puts the maximum possible. Note that these options do not provided any meaningful obfuscation, because perltidy can be used to reformat the files. They were originally developed to help test the tokenization logic of perltidy, but they have other uses. One use for <b>--mangle</b> is the following:</p>
@@ -3184,7 +3257,7 @@
 <p>Another use for <b>--mangle</b> is to combine it with <b>-dac</b> to reduce the file size of a perl script.</p>
 
 </dd>
-<dt id="Debugging">Debugging</dt>
+<dt id="Debugging"><b>Debugging</b></dt>
 <dd>
 
 <p>The following flags are available for debugging:</p>
@@ -3239,7 +3312,7 @@
 <p><b>-DEBUG</b> will write a file with extension <i>.DEBUG</i> for each input file showing the tokenization of all lines of code.</p>
 
 </dd>
-<dt id="Working-with-MakeMaker-AutoLoader-and-SelfLoader">Working with MakeMaker, AutoLoader and SelfLoader</dt>
+<dt id="Working-with-MakeMaker-AutoLoader-and-SelfLoader"><b>Working with MakeMaker, AutoLoader and SelfLoader</b></dt>
 <dd>
 
 <p>The first $VERSION line of a file which might be eval&#39;d by MakeMaker is passed through unchanged except for indentation. Use <b>--nopass-version-line</b>, or <b>-npvl</b>, to deactivate this feature.</p>
@@ -3249,7 +3322,7 @@
 <p>Likewise, if the SelfLoader module is used, perltidy will continue formatting code after seeing a __DATA__ line. Use <b>--nolook-for-selfloader</b>, or <b>-nlsl</b>, to deactivate this feature.</p>
 
 </dd>
-<dt id="Working-around-problems-with-older-version-of-Perl">Working around problems with older version of Perl</dt>
+<dt id="Working-around-problems-with-older-version-of-Perl"><b>Working around problems with older version of Perl</b></dt>
 <dd>
 
 <p>Perltidy contains a number of rules which help avoid known subtleties and problems with older versions of perl, and these rules always take priority over whatever formatting flags have been set. For example, perltidy will usually avoid starting a new line with a bareword, because this might cause problems if <code>use strict</code> is active.</p>
@@ -3345,7 +3418,7 @@
 <p>This flag controls the use of Html::Entities for html formatting. By default, the module Html::Entities is used to encode special symbols. This may not be the right thing for some browser/language combinations. Use --nohtml-entities or -nhent to prevent this.</p>
 
 </dd>
-<dt id="Style-Sheets">Style Sheets</dt>
+<dt id="Style-Sheets"><b>Style Sheets</b></dt>
 <dd>
 
 <p>Style sheets make it very convenient to control and adjust the appearance of html pages. The default behavior is to write a page of html with an embedded style sheet.</p>
@@ -3361,7 +3434,7 @@
 <p>The use of style sheets is encouraged, but a web page without a style sheets can be created with the flag <b>-nss</b>. Use this option if you must to be sure that older browsers (roughly speaking, versions prior to 4.0 of Netscape Navigator and Internet Explorer) can display the syntax-coloring of the html files.</p>
 
 </dd>
-<dt id="Controlling-HTML-properties">Controlling HTML properties</dt>
+<dt id="Controlling-HTML-properties"><b>Controlling HTML properties</b></dt>
 <dd>
 
 <p>Note: It is usually more convenient to accept the default properties and then edit the stylesheet which is produced. However, this section shows how to control the properties with flags to perltidy.</p>
@@ -3490,7 +3563,7 @@
 
 <dl>
 
-<dt id="Parsing-Limitations">Parsing Limitations</dt>
+<dt id="Parsing-Limitations"><b>Parsing Limitations</b></dt>
 <dd>
 
 <p>Perltidy should work properly on most perl scripts. It does a lot of self-checking, but still, it is possible that an error could be introduced and go undetected. Therefore, it is essential to make careful backups and to test reformatted scripts.</p>
@@ -3500,7 +3573,7 @@
 <p>If you encounter a bug, please report it.</p>
 
 </dd>
-<dt id="What-perltidy-does-not-parse-and-format">What perltidy does not parse and format</dt>
+<dt id="What-perltidy-does-not-parse-and-format"><b>What perltidy does not parse and format</b></dt>
 <dd>
 
 <p>Perltidy indents but does not reformat comments and <code>qw</code> quotes. Perltidy does not in any way modify the contents of here documents or quoted text, even if they contain source code. (You could, however, reformat them separately). Perltidy does not format &#39;format&#39; sections in any way. And, of course, it does not modify pod documents.</p>
@@ -3512,25 +3585,25 @@
 
 <dl>
 
-<dt id="Temporary-files">Temporary files</dt>
+<dt id="Temporary-files"><b>Temporary files</b></dt>
 <dd>
 
 <p>Under the -html option with the default --pod2html flag, a temporary file is required to pass text to Pod::Html. Unix systems will try to use the POSIX tmpnam() function. Otherwise the file <i>perltidy.TMP</i> will be temporarily created in the current working directory.</p>
 
 </dd>
-<dt id="Special-files-when-standard-input-is-used">Special files when standard input is used</dt>
+<dt id="Special-files-when-standard-input-is-used"><b>Special files when standard input is used</b></dt>
 <dd>
 
 <p>When standard input is used, the log file, if saved, is <i>perltidy.LOG</i>, and any errors are written to <i>perltidy.ERR</i> unless the <b>-se</b> flag is set. These are saved in the current working directory.</p>
 
 </dd>
-<dt id="Files-overwritten">Files overwritten</dt>
+<dt id="Files-overwritten"><b>Files overwritten</b></dt>
 <dd>
 
 <p>The following file extensions are used by perltidy, and files with these extensions may be overwritten or deleted: <i>.ERR</i>, <i>.LOG</i>, <i>.TEE</i>, and/or <i>.tdy</i>, <i>.html</i>, and <i>.bak</i>, depending on the run type and settings.</p>
 
 </dd>
-<dt id="Files-extensions-limitations">Files extensions limitations</dt>
+<dt id="Files-extensions-limitations"><b>Files extensions limitations</b></dt>
 <dd>
 
 <p>Perltidy does not operate on files for which the run could produce a file with a duplicated file extension. These extensions include <i>.LOG</i>, <i>.ERR</i>, <i>.TEE</i>, and perhaps <i>.tdy</i> and <i>.bak</i>, depending on the run type. The purpose of this rule is to prevent generating confusing filenames such as <i>somefile.tdy.tdy.tdy</i>.</p>
@@ -3560,7 +3633,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20210111</p>
+<p>This man page documents perltidy version 20210402</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

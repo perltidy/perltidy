@@ -1,5 +1,54 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2021 04 02</h2>
+
+<pre><code>- This release fixes several non-critical bugs which have been found since the last
+release.  An effort has been made to keep existing formatting unchanged.
+
+- Fixed issue git #57 regarding uninitialized warning flag.
+
+- Added experimental flag -lpxl=s requested in issue git #56 to provide some
+control over which containers get -lp indentation.
+
+- Fixed issue git #55 regarding lack of coordination of the --break-before-xxx
+flags and the --line-up-parens flag.
+
+- Fixed issue git #54 regarding irregular application of the --break-before-paren
+and similar --break-before-xxx flags, in which lists without commas were not 
+being formatted according to these flags.
+
+- Fixed issue git #53. A flag was added to turn off alignment of spaced function 
+parens.  If the --space-function-paren, -sfp flag is set, a side-effect is that the
+spaced function parens may get vertically aligned.  This can be undesirable,
+so a new parameter '--function-paren-vertical-alignment', or '-fpva', has been
+added to turn this vertical alignment off. The default is '-fpva', so that 
+existing formatting is not changed.  Use '-nfpva' to turn off unwanted
+vertical alignment.  To illustrate the possibilities:
+
+    # perltidy [default]
+    myfun( $aaa, $b, $cc );
+    mylongfun( $a, $b, $c );
+
+    # perltidy -sfp
+    myfun     ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );
+
+    # perltidy -sfp -nfpva
+    myfun ( $aaa, $b, $cc );
+    mylongfun ( $a, $b, $c );
+
+- Fixed issue git #51, a closing qw bare paren was not being outdented when
+the -nodelete-old-newlines flag was set.
+
+- Fixed numerous edge cases involving unusual parameter combinations which
+  could cause alternating output states.  Most scripts will not be
+  changed by these fixes.
+
+- A more complete list of updates is at
+
+       https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+</code></pre>
+
 <h2>2021 01 11</h2>
 
 <pre><code>- Fixed issue git #49, -se breaks warnings exit status behavior.

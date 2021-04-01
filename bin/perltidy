@@ -468,7 +468,7 @@ although B<-wc=n> may of course be used without B<-vmll>.
 
 The default is not to use this, which can also be indicated using B<-wc=0>.
 
-=item tabs
+=item B<Tabs>
 
 Using tab characters will almost certainly lead to future portability
 and maintenance problems, so the default and recommendation is not to
@@ -800,7 +800,7 @@ guessed indentation will be wrong.
 If the default method does not work correctly, or you want to change the
 starting level, use B<-sil=n>, to force the starting level to be n.
 
-=item List indentation using B<-lp>, B<--line-up-parentheses>
+=item B<List indentation> using B<-lp>, B<--line-up-parentheses>
 
 By default, perltidy indents lists with 4 spaces, or whatever value
 is specified with B<-i=n>.  Here is a small list formatted in this way:
@@ -1031,7 +1031,7 @@ B<--outdent-long-comments>, and it is included for compatibility with previous
 versions of perltidy.  The negation of this also works, B<-noll> or
 B<--nooutdent-long-lines>, and is equivalent to setting B<-nolq> and B<-nolc>.
 
-=item Outdenting Labels: B<-ola>,  B<--outdent-labels>
+=item B<Outdenting Labels:> B<-ola>,  B<--outdent-labels>
 
 This command will cause labels to be outdented by 2 spaces (or whatever B<-ci>
 has been set to), if possible.  This is the default.  For example:
@@ -1045,7 +1045,7 @@ has been set to), if possible.  This is the default.  For example:
 
 Use B<-nola> to not outdent labels. 
 
-=item Outdenting Keywords
+=item B<Outdenting Keywords>
 
 =over 4
 
@@ -1069,7 +1069,7 @@ For example, using C<perltidy -okw> on the previous example gives:
 
 The default is not to do this.  
 
-=item Specifying Outdented Keywords: B<-okwl=string>,  B<--outdent-keyword-list=string>
+=item B<Specifying Outdented Keywords:> B<-okwl=string>,  B<--outdent-keyword-list=string>
 
 This command can be used to change the keywords which are outdented with
 the B<-okw> command.  The parameter B<string> is a required list of perl
@@ -1099,7 +1099,7 @@ causes the rest of the whitespace commands in this section, the
 Code Indentation section, and
 the Comment Control section to be ignored.
 
-=item Tightness of curly braces, parentheses, and square brackets.
+=item B<Tightness of curly braces, parentheses, and square brackets>
 
 Here the term "tightness" will mean the closeness with which
 pairs of enclosing tokens, such as parentheses, contain the quantities
@@ -1207,7 +1207,7 @@ between characters, if necessary.  This is the default.  If you
 do not want any old whitespace removed, use B<-ndws> or
 B<--nodelete-old-whitespace>.
 
-=item Detailed whitespace controls around tokens
+=item B<Detailed whitespace controls around tokens>
 
 For those who want more detailed control over the whitespace around
 tokens, there are four parameters which can directly modify the default
@@ -1256,7 +1256,7 @@ and look at the .DEBUG file to see the tokenization.
 B<WARNING> Be sure to put these tokens in quotes to avoid having them
 misinterpreted by your command shell.
 
-=item Note1: Perltidy does always follow whitespace controls 
+=item B<Note1: Perltidy does always follow whitespace controls>
 
 The various parameters controlling whitespace within a program are requests which perltidy follows as well as possible, but there are a number of situations where changing whitespace could change program behavior and is not done.  Some of these are obvious; for example, we should not remove the space between the two plus symbols in '$x+ +$y' to avoid creating a '++' operator. Some are more subtle and involve the whitespace around bareword symbols and locations of possible filehandles.  For example, consider the problem of formatting the following subroutine:
 
@@ -1297,8 +1297,7 @@ first line above the result is
 
 which shows that B<system> is type B<k> (keyword) and $foo is type B<Z>.
 
-
-=item Note2: Perltidy's whitespace rules are not perfect
+=item B<Note2: Perltidy's whitespace rules are not perfect>
 
 Despite these precautions, it is still possible to introduce syntax errors with
 some asymmetric whitespace rules, particularly when call parameters are not
@@ -1332,7 +1331,7 @@ But the following will give a syntax error:
 To avoid subtle parsing problems like this, it is best to avoid spacing a
 binary operator asymetrically with a space on the left but not on the right.
 
-=item Space between specific keywords and opening paren
+=item B<Space between specific keywords and opening paren>
 
 When an opening paren follows a Perl keyword, no space is introduced after the
 keyword, unless it is (by default) one of these:
@@ -1360,7 +1359,7 @@ keywords (my, local, our) you could use B<-nsak="*" -sak="my local our">.
 
 To put a space after all keywords, see the next item.
 
-=item Space between all keywords and opening parens
+=item B<Space between all keywords and opening parens>
 
 When an opening paren follows a function or keyword, no space is introduced
 after the keyword except for the keywords noted in the previous item.  To
@@ -1371,7 +1370,7 @@ B<-skp>  or B<--space-keyword-paren>
 
 You may also want to use the flag B<-sfp> (next item) too.
 
-=item Space between all function names and opening parens
+=item B<Space between all function names and opening parens>
 
 When an opening paren follows a function the default and recommended formatting
 is not to introduce a space.  To cause a space to be introduced use:
@@ -1520,7 +1519,7 @@ B<-nlop>:
       :               1;
 
 
-=item Trimming whitespace around C<qw> quotes
+=item B<Trimming whitespace around C<qw> quotes>
 
 B<-tqw> or B<--trim-qw> provide the default behavior of trimming
 spaces around multi-line C<qw> quotes and indenting them appropriately.
@@ -1530,7 +1529,7 @@ multi-line C<qw> quotes to be left unchanged.  This option will not
 normally be necessary, but was added for testing purposes, because in
 some versions of perl, trimming C<qw> quotes changes the syntax tree.
 
-=item b<-sbq=n>  or b<--space-backslash-quote=n>
+=item B<-sbq=n>  or B<--space-backslash-quote=n>
 
 lines like
 
@@ -1539,7 +1538,7 @@ lines like
 
 can confuse syntax highlighters unless a space is included between the backslash and the single or double quotation mark.
 
-this can be controlled with the value of b<n> as follows:
+this can be controlled with the value of B<n> as follows:
 
     -sbq=0 means no space between the backslash and quote
     -sbq=1 means follow the example of the source code
@@ -1547,7 +1546,7 @@ this can be controlled with the value of b<n> as follows:
 
 The default is B<-sbq=1>, meaning that a space will be used if there is one in the source code.
 
-=item Trimming trailing whitespace from lines of POD
+=item B<Trimming trailing whitespace from lines of POD>
 
 B<-trp> or B<--trim-pod> will remove trailing whitespace from lines of POD.
 The default is not to do this.
@@ -1639,7 +1638,7 @@ To deactivate this feature, use B<-nhsc> or B<--nohanging-side-comments>.
 If block comments are preceded by a blank line, or have no leading
 whitespace, they will not be mistaken as hanging side comments.
 
-=item Closing Side Comments
+=item B<Closing Side Comments>
 
 A closing side comment is a special comment which perltidy can
 automatically create and place after the closing brace of a code block.
@@ -1849,7 +1848,7 @@ else.  You can always remove them with B<-dcsc>.
 
 =back
 
-=item Static Block Comments
+=item B<Static Block Comments>
 
 Static block comments are block comments with a special leading pattern,
 C<##> by default, which will be treated slightly differently from other
@@ -1942,7 +1941,7 @@ spaces (or whatever B<-ci=n> has been set to), if possible.
 
 =back
 
-=item Static Side Comments
+=item B<Static Side Comments>
 
 Static side comments are side comments with a special leading pattern.
 This option can be useful for controlling how commented code is displayed
@@ -2968,7 +2967,7 @@ This flag does not prevent perltidy from eliminating existing line
 breaks; see B<--freeze-newlines> to completely prevent changes to line
 break points.
 
-=item Controlling whether perltidy breaks before or after operators
+=item B<Controlling whether perltidy breaks before or after operators>
 
 Four command line parameters provide some control over whether
 a line break should be before or after specific token types.
@@ -3298,7 +3297,7 @@ on a single line if possible.
 
 To prevent this, and thereby always form longer lines, use B<-nboa>.  
 
-=item Keeping old breakpoints at specific token types
+=item B<Keeping old breakpoints at specific token types>
 
 Two command line parameters provide detailed control over whether
 perltidy should keep an old line break before or after a specific
@@ -3501,7 +3500,7 @@ This parameter is a list of block type keywords to which the flag B<-blbc>
 should apply.  The section L<"Specifying Block Types"> explains how to list
 block types.
 
-=item Note on using the B<-blao> and B<-blbc> options.
+=item B<Note on using the> B<-blao> and B<-blbc> options.
 
 These blank line controls introduce a certain minimum number of blank lines in
 the text, but the final number of blank lines may be greater, depending on
@@ -3823,7 +3822,7 @@ snippet illustrates these options.
 The B<-xci> flag was developed after the B<-pbp> parameters were published so you need
 to include it separately.
 
-=item  One-line blocks 
+=item B<One-line blocks>
 
 There are a few points to note regarding one-line blocks.  A one-line
 block is something like this,
@@ -3977,7 +3976,7 @@ For example,
 
 =over 4
 
-=item Deleting selected text 
+=item B<Deleting selected text>
 
 Perltidy can selectively delete comments and/or pod documentation.  The
 command B<-dac> or  B<--delete-all-comments> will delete all comments
@@ -3996,7 +3995,7 @@ block comments are deleted, any leading 'hash-bang' will be retained.
 Also, if the B<-x> flag is used, any system commands before a leading
 hash-bang will be retained (even if they are in the form of comments).
 
-=item Writing selected text to a file
+=item B<Writing selected text to a file>
 
 When perltidy writes a formatted text file, it has the ability to also
 send selected text to a file with a F<.TEE> extension.  This text can
@@ -4014,7 +4013,7 @@ B<--tee-block-comments> and B<-tsc> or  B<--tee-side-comments>.
 
 The negatives of these commands also work, and are the defaults.  
 
-=item Using a F<.perltidyrc> command file
+=item B<Using a F<.perltidyrc> command file>
 
 If you use perltidy frequently, you probably won't be happy until you
 create a F<.perltidyrc> file to avoid typing commonly-used parameters.
@@ -4107,7 +4106,7 @@ and B<--dump-short-names>, all described below, may all be helpful.
 
 =back
 
-=item Creating a new abbreviation
+=item B<Creating a new abbreviation>
 
 A special notation is available for use in a F<.perltidyrc> file
 for creating an abbreviation for a group
@@ -4152,7 +4151,7 @@ Parsing errors can occur if it does not have a hash-bang, or, for example, if
 the actual first hash-bang is in a here-doc. In that case a parsing error will
 occur because the tokenization will begin in the middle of the here-doc.
 
-=item  Making a file unreadable
+=item B<Making a file unreadable>
 
 The goal of perltidy is to improve the readability of files, but there
 are two commands which have the opposite effect, B<--mangle> and
@@ -4179,7 +4178,7 @@ to make the minimum number of one-line blocks.
 Another use for B<--mangle> is to combine it with B<-dac> to reduce
 the file size of a perl script.
 
-=item  Debugging 
+=item B<Debugging>
 
 The following flags are available for debugging:
 
@@ -4271,7 +4270,7 @@ to avoid causing problems with scripts which have extended syntaxes.
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file 
 showing the tokenization of all lines of code.
 
-=item Working with MakeMaker, AutoLoader and SelfLoader
+=item B<Working with MakeMaker, AutoLoader and SelfLoader>
 
 The first $VERSION line of a file which might be eval'd by MakeMaker
 is passed through unchanged except for indentation.  
@@ -4285,7 +4284,7 @@ Likewise, if the SelfLoader module is used, perltidy will continue formatting
 code after seeing a __DATA__ line.
 Use B<--nolook-for-selfloader>, or B<-nlsl>, to deactivate this feature.
 
-=item Working around problems with older version of Perl 
+=item B<Working around problems with older version of Perl>
 
 Perltidy contains a number of rules which help avoid known subtleties
 and problems with older versions of perl, and these rules always
@@ -4409,7 +4408,7 @@ default, the module Html::Entities is used to encode special symbols.
 This may not be the right thing for some browser/language
 combinations.  Use --nohtml-entities or -nhent to prevent this.
 
-=item  Style Sheets
+=item  B<Style Sheets>
 
 Style sheets make it very convenient to control and adjust the
 appearance of html pages.  The default behavior is to write a page of
@@ -4438,7 +4437,7 @@ must to be sure that older browsers (roughly speaking, versions prior to
 4.0 of Netscape Navigator and Internet Explorer) can display the
 syntax-coloring of the html files.
 
-=item  Controlling HTML properties
+=item  B<Controlling HTML properties>
 
 Note: It is usually more convenient to accept the default properties
 and then edit the stylesheet which is produced.  However, this section
@@ -4613,7 +4612,7 @@ used.
 
 =over 4
 
-=item  Parsing Limitations
+=item  B<Parsing Limitations>
 
 Perltidy should work properly on most perl scripts.  It does a lot of
 self-checking, but still, it is possible that an error could be
@@ -4628,7 +4627,7 @@ it leaves a message in the log file.
 
 If you encounter a bug, please report it.
 
-=item  What perltidy does not parse and format
+=item  B<What perltidy does not parse and format>
 
 Perltidy indents but does not reformat comments and C<qw> quotes. 
 Perltidy does not in any way modify the contents of here documents or
@@ -4642,27 +4641,27 @@ in any way.  And, of course, it does not modify pod documents.
 
 =over 4
 
-=item Temporary files
+=item B<Temporary files>
 
 Under the -html option with the default --pod2html flag, a temporary file is
 required to pass text to Pod::Html.  Unix systems will try to use the POSIX
 tmpnam() function.  Otherwise the file F<perltidy.TMP> will be temporarily
 created in the current working directory.
 
-=item Special files when standard input is used
+=item B<Special files when standard input is used>
 
 When standard input is used, the log file, if saved, is F<perltidy.LOG>,
 and any errors are written to F<perltidy.ERR> unless the B<-se> flag is
 set.  These are saved in the current working directory.  
 
-=item Files overwritten
+=item B<Files overwritten>
 
 The following file extensions are used by perltidy, and files with these
 extensions may be overwritten or deleted: F<.ERR>, F<.LOG>, F<.TEE>,
 and/or F<.tdy>, F<.html>, and F<.bak>, depending on the run type and
 settings.
 
-=item  Files extensions limitations
+=item  B<Files extensions limitations>
 
 Perltidy does not operate on files for which the run could produce a file with
 a duplicated file extension.  These extensions include F<.LOG>, F<.ERR>,
@@ -4703,7 +4702,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20210111
+This man page documents perltidy version 20210402
 
 =head1 BUG REPORTS
 

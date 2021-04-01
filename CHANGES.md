@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2021 01 xx
+## 2021 04 02
+
+    - This release fixes several non-critical bugs which have been found since the last
+    release.  An effort has been made to keep existing formatting unchanged.
 
     - Fixed issue git #57 regarding uninitialized warning flag.
 
