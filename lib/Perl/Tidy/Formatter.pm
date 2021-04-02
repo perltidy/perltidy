@@ -8442,6 +8442,7 @@ sub extended_ci {
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
     my $rlines                   = $self->[_rlines_];
     my $rno_xci_by_seqno         = $self->[_rno_xci_by_seqno_];
+    my $ris_bli_container        = $self->[_ris_bli_container_];
 
     my %available_space;
 
@@ -8531,6 +8532,11 @@ sub extended_ci {
 
         # Skip if requested by -bbx to avoid blinkers
         if ( $rno_xci_by_seqno->{$seqno} ) {
+            next;
+        }
+
+        # Skip if this is a -bli container (this fixes case b1065)
+        if ( $ris_bli_container->{$seqno} ) {
             next;
         }
 

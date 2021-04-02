@@ -1,3 +1,19 @@
+
+=head1 Issues fixed after release 20210402
+
+=over 4
+
+=item B<Avoid conflict of -bli and -xci>
+
+Random testing produced a case with the combination -bli and -xci which did not
+converge. This was fixed by turning off -xci for braces under -bli control.
+
+This fixes case b1065.
+
+2 Apr 2021.
+
+=back
+
 =head1 Issues fixed after release 20210111
 
 =over 4
@@ -13,7 +29,7 @@ which do not themselves contain broken containers.
 This fixes cases 
 b1033 b1036 b1037 b1038 b1042 b1043 b1044 b1045 b1046 b1047 b1051 b1052 b1061.
 
-30 Mar 2021.
+30 Mar 2021, 2b05051.
 
 =item B<Fix rule for welding with barewords>
 
