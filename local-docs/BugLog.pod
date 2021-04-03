@@ -3,6 +3,16 @@
 
 =over 4
 
+=item B<Fix rare convergence problem with -wn>
+
+Random testing produced some cases in which unusual parameter combinations
+caused lack of convergence for the -wn flag.  The problem was fixed by
+adjusting a tolerance in the line length calculation.
+
+This fixes cases b1041 b1055.
+
+2 Apr 2021.
+
 =item B<Avoid conflict of -bli and -xci>
 
 Random testing produced a case with the combination -bli and -xci which did not

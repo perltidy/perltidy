@@ -4127,6 +4127,10 @@ Space before and after the curly braces is optional.
 
 For a specific example, the following line
 
+        oneliner { --maximum-line-length=0 --noadd-newlines }
+
+or equivalently with abbreviations
+
 	oneliner { -l=0 -nanl }
 
 could be placed in a F<.perltidyrc> file to temporarily override the maximum

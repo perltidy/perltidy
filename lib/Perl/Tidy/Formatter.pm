@@ -7035,6 +7035,7 @@ sub weld_nested_containers {
     # Variables needed for estimating line lengths
     my $starting_indent;
     my $starting_lentot;
+    my $starting_level;
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
@@ -7050,7 +7051,17 @@ sub weld_nested_containers {
 
         # Add a tolerance for welds over multiple lines to avoid blinkers
         my $iline_K = $rLL->[$K]->[_LINE_INDEX_];
-        my $tol     = ( $iline_K > $iline_outer_opening ) ? $multiline_tol : 0;
+        my $level_K = $rLL->[$K]->[_LEVEL_];
+        my $tol     = 0;
+        if (
+            $iline_K > $iline_outer_opening
+
+            # fix for cases b1041 b1055:
+            || $level_K > $starting_level
+          )
+        {
+            $tol = $multiline_tol;
+        }
 
         my $excess_length =
           $starting_indent + $length + $tol - $rOpts_maximum_line_length;
@@ -7207,11 +7218,11 @@ EOM
               $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
 
             $starting_indent = 0;
-            my $level    = $rLL->[$Kref]->[_LEVEL_];
+            $starting_level  = $rLL->[$Kref]->[_LEVEL_];
             my $ci_level = $rLL->[$Kref]->[_CI_LEVEL_];
             if ( !$rOpts_variable_maximum_line_length ) {
 
-                $starting_indent = $rOpts_indent_columns * $level +
+                $starting_indent = $rOpts_indent_columns * $starting_level +
                   $ci_level * $rOpts_continuation_indentation;
             }
 
@@ -7300,7 +7311,7 @@ EOM
                     }
                 }
             }
-        }
+        } ## end starting new weld sequence
 
         # DO-NOT-WELD RULE 2:
         # Do not weld an opening paren to an inner one line brace block
@@ -7443,9 +7454,9 @@ EOM
             $starting_lentot =
               $self->cumulative_length_before_K($Kinner_opening);
             $starting_indent = 0;
+            $starting_level  = $inner_opening->[_LEVEL_];
             if ( !$rOpts_variable_maximum_line_length ) {
-                my $level = $inner_opening->[_LEVEL_];
-                $starting_indent = $rOpts_indent_columns * $level;
+                $starting_indent = $rOpts_indent_columns * $starting_level;
             }
 
             if (DEBUG_WELD) {

@@ -315,7 +315,6 @@
 ../snippets24.t	fpva.fpva2
 ../snippets24.t	lpxl.def
 ../snippets24.t	lpxl.lpxl1
-../snippets24.t	lpxl.lpxl2
 ../snippets24.t	lpxl.lpxl3
 ../snippets24.t	lpxl.lpxl4
 ../snippets24.t	lpxl.lpxl5
