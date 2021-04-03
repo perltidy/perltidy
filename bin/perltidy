@@ -4124,16 +4124,19 @@ where B<newword> is the abbreviation, and B<opt1>, etc, are existing parameters
 I<or other abbreviations>.  The main syntax requirement is that the new
 abbreviation along with its opening curly brace must begin on a new line.
 Space before and after the curly braces is optional.
-For a
-specific example, the following line
 
-	airy {-bl -pt=0 -bt=0 -sbt=0}
+For a specific example, the following line
 
-could be placed in a F<.perltidyrc> file, and then invoked at will with
+	oneliner { -l=0 -nanl }
 
-	perltidy -airy somefile.pl
+could be placed in a F<.perltidyrc> file to temporarily override the maximum
+line length with a large value, and to temporarily prevent newlines from being
+added.  All other settings in the F<.perltidyrc> file still apply.  Thus it
+provides a way to format a long 'one liner' when perltidy is invoked with
 
-(Either C<-airy> or C<--airy> may be used).
+	perltidy --oneliner ...
+
+(Either C<-oneliner> or C<--oneliner> may be used).   
 
 =item Skipping leading non-perl commands with B<-x> or B<--look-for-hash-bang>
 
