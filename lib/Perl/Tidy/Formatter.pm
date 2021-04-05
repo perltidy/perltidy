@@ -7035,7 +7035,6 @@ sub weld_nested_containers {
     # Variables needed for estimating line lengths
     my $starting_indent;
     my $starting_lentot;
-    my $starting_level;
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
@@ -7051,17 +7050,7 @@ sub weld_nested_containers {
 
         # Add a tolerance for welds over multiple lines to avoid blinkers
         my $iline_K = $rLL->[$K]->[_LINE_INDEX_];
-        my $level_K = $rLL->[$K]->[_LEVEL_];
-        my $tol     = 0;
-        if (
-            $iline_K > $iline_outer_opening
-
-            # fix for cases b1041 b1055:
-            || $level_K > $starting_level
-          )
-        {
-            $tol = $multiline_tol;
-        }
+        my $tol     = ( $iline_K > $iline_outer_opening ) ? $multiline_tol : 0;
 
         my $excess_length =
           $starting_indent + $length + $tol - $rOpts_maximum_line_length;
@@ -7218,12 +7207,34 @@ EOM
               $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
 
             $starting_indent = 0;
-            $starting_level  = $rLL->[$Kref]->[_LEVEL_];
+            my $level    = $rLL->[$Kref]->[_LEVEL_];
             my $ci_level = $rLL->[$Kref]->[_CI_LEVEL_];
+
             if ( !$rOpts_variable_maximum_line_length ) {
 
-                $starting_indent = $rOpts_indent_columns * $starting_level +
+                $starting_indent = $rOpts_indent_columns * $level +
                   $ci_level * $rOpts_continuation_indentation;
+
+                # Switch to using the outer opening token as the reference
+                # point if a line break before it would make a longer line.
+                # Fixes case b1055 and is also an alternate fix for b1065.
+                my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
+                if ( $Kref < $Kouter_opening ) {
+                    my $ci_level_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
+                    my $lentot_oo =
+                      $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
+                    my $starting_indent_oo = $rOpts_indent_columns * $level_oo +
+                      $ci_level_oo * $rOpts_continuation_indentation;
+                    if ( $lentot_oo - $starting_lentot <
+                        $starting_indent_oo - $starting_indent )
+                    {
+                        $Kref            = $Kouter_opening;
+                        $level           = $level_oo;
+                        $ci_level        = $ci_level_oo;
+                        $starting_lentot = $lentot_oo;
+                        $starting_indent = $starting_indent_oo;
+                    }
+                }
             }
 
             # Avoid problem areas with the -wn -lp combination.
@@ -7454,9 +7465,9 @@ EOM
             $starting_lentot =
               $self->cumulative_length_before_K($Kinner_opening);
             $starting_indent = 0;
-            $starting_level  = $inner_opening->[_LEVEL_];
             if ( !$rOpts_variable_maximum_line_length ) {
-                $starting_indent = $rOpts_indent_columns * $starting_level;
+                my $level = $inner_opening->[_LEVEL_];
+                $starting_indent = $rOpts_indent_columns * $level;
             }
 
             if (DEBUG_WELD) {
@@ -8546,7 +8557,10 @@ sub extended_ci {
             next;
         }
 
-        # Skip if this is a -bli container (this fixes case b1065)
+        # Skip if this is a -bli container (this fixes case b1065) Note: case
+        # b1065 is also fixed by the update for b1055, so this update is not
+        # essential now.  But there does not seem to be a good reason to add
+        # xci and bli together, so the update is retained.
         if ( $ris_bli_container->{$seqno} ) {
             next;
         }

@@ -2654,10 +2654,12 @@ Here are some additional example strings and their meanings:
 
     '^('   - the weld must not start with a paren
     '.('   - the second and later tokens may not be parens
+    '.w('  - the second and later tokens may not keyword or function call parens
     '('    - no parens in a weld
     '^K('  - exclude a leading paren preceded by a non-keyword
     '.k('  - exclude a secondary paren preceded by a keyword
     '[ {'  - exclude all brackets and braces
+    '[ ( ^K{' - exclude everthing except nested structures like do {{  ... }}
 
 =item B<Vertical tightness> of non-block curly braces, parentheses, and square brackets.
 

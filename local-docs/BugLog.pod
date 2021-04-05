@@ -3,6 +3,13 @@
 
 =over 4
 
+=item B<Improve previous -wn update>
+
+The previous update produced some problems in testing which are corrected
+with this update.
+
+5 Apr 2021.
+
 =item B<Fix rare convergence problem with -wn>
 
 Random testing produced some cases in which unusual parameter combinations
