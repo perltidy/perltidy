@@ -3,6 +3,19 @@
 
 =over 4
 
+=item B<Modify a condition for applying -bbx=2>
+
+Random testing produced some edge cases in which formatting with the -bbx=2 flags,
+in combination with certain other parameters, was not converging.  An existing
+criterion for the -bbx=2 flag to apply is that there be a broken sub-list with at
+least one line-ending comma.  This was updated to also require either a fat comma or
+one additional line-ending comma.  This filters out some problem cases without
+changing much existing formatting.
+
+This update fixes cases b1068 b1069 b1070 b1072 b1073 b1076.
+
+5 Apr 2021.
+
 =item B<Improve previous -wn update>
 
 The previous update produced some problems in testing which are corrected

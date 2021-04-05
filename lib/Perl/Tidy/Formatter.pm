@@ -6001,12 +6001,22 @@ sub respace_tokens {
                 if ($line_diff) {
                     $rhas_broken_list->{$seqno_parent} = 1;
 
-                    # We need to mark broken lists with non-terminal
+                    # Patch1: We need to mark broken lists with non-terminal
                     # line-ending commas for the -bbx=2 parameter. This insures
                     # that the list will stay broken.  Otherwise the flag
                     # -bbx=2 can be unstable.  This fixes case b789 and b938.
-                    $rhas_broken_list_with_lec->{$seqno_parent} = 1
-                      if ( $rlec_count_by_seqno->{$seqno} );
+
+                    # Patch2: Updated to also require either one fat comma or
+                    # one more line-ending comma.  Fixes cases b1069 b1070
+                    # b1072 b1076.
+                    if (
+                        $rlec_count_by_seqno->{$seqno}
+                        && (   $rlec_count_by_seqno->{$seqno} > 1
+                            || $rtype_count_by_seqno->{$seqno}->{'=>'} )
+                      )
+                    {
+                        $rhas_broken_list_with_lec->{$seqno_parent} = 1;
+                    }
                 }
                 $seqno_parent = $rparent_of_seqno->{$seqno_parent};
             }
