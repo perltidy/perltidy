@@ -3,6 +3,38 @@
 
 =over 4
 
+=item B<Fix problem with excess blank line generation with -blao>
+
+Random testing produced some cases where excess blank lines could be generated
+with the parameter -blank-lines-after-opening-block.  Case b1073 has the
+following script
+
+    sub stop {
+
+        1;
+    }
+
+and the following parameters
+
+    --blank-lines-after-opening-block=2
+    --maximum-consecutive-blank-lines=10
+    --maximum-line-length=15
+
+When run, blank lines keep getting generated until the maximum is reached.
+This has been fixed.
+
+6 Apr 2021.
+
+
+=item B<Fix edge case involving -wn and -lp or -bbao>
+
+A change was made to a welding rule involving the -lp option or -wbb='=', and
+very short maximum line lengths.  This correctly fixes case b1041. It replaces
+a fix for this case reported on 2 Apr 2021.
+
+5 Apr 2021.
+
+
 =item B<Modify a condition for applying -bbx=2>
 
 Random testing produced some edge cases in which formatting with the -bbx=2 flags,
@@ -14,14 +46,14 @@ changing much existing formatting.
 
 This update fixes cases b1068 b1069 b1070 b1072 b1073 b1076.
 
-5 Apr 2021.
+5 Apr 2021, 16c4591.
 
 =item B<Improve previous -wn update>
 
 The previous update produced some problems in testing which are corrected
 with this update.
 
-5 Apr 2021.
+5 Apr 2021, ffef089.
 
 =item B<Fix rare convergence problem with -wn>
 
@@ -31,7 +63,7 @@ adjusting a tolerance in the line length calculation.
 
 This fixes cases b1041 b1055.
 
-2 Apr 2021.
+2 Apr 2021, a8b6259.
 
 =item B<Avoid conflict of -bli and -xci>
 
@@ -40,7 +72,7 @@ converge. This was fixed by turning off -xci for braces under -bli control.
 
 This fixes case b1065.
 
-2 Apr 2021.
+2 Apr 2021, d20ea80.
 
 =back
 

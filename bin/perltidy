@@ -3481,6 +3481,9 @@ with an opening block brace of a specified type.  By default, this only applies
 to the block of a named B<sub>, but this can be changed (see B<-blaol> below).
 The default is not to do this (B<i=0>).
 
+If the value of B<i> is greater than the limit specified with the parameter
+B<--maximum-consecutive-blank-lines=n>, it will be reduced to that value.
+
 Please see the note below on using the B<-blao> and B<-blbc> options.
 
 =item B<-blbc=i> or B<--blank-lines-before-closing-block=i>
@@ -3518,7 +3521,7 @@ this using
   perltidy -blao=2 -blbc=2 -blaol='*' -blbcl='*' filename
 
 Now suppose the script continues to be developed, but at some later date we
-decide we don't want these spaces after all. we might expect that running with
+decide we don't want these spaces after all. We might expect that running with
 the flags B<-blao=0> and B<-blbc=0> will undo them.  However, by default
 perltidy retains single blank lines, so the blank lines remain.  
 

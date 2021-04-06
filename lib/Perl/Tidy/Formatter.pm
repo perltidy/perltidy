@@ -7205,9 +7205,13 @@ EOM
                 $ris_essential_old_breakpoint->{$Kprev} = 1;
 
                 # Back up and count length from a token like '=' or '=>' if -lp
-                # is used; this fixes b520
-                if ($rOpts_line_up_parentheses) {
-                    if ( substr( $rLL->[$Kprev]->[_TYPE_], 0, 1 ) eq '=' ) {
+                # is used (this fixes b520)
+                # ...or if a break is wanted before there (this fixes b1041).
+                my $type_prev = $rLL->[$Kprev]->[_TYPE_];
+                if (   $rOpts_line_up_parentheses
+                    || $want_break_before{$type_prev} )
+                {
+                    if ( substr( $type_prev, 0, 1 ) eq '=' ) {
                         $Kref = $Kprev;
                     }
                 }
@@ -11499,9 +11503,10 @@ sub compare_indentation_levels {
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
-        my $file_writer_object = $self->[_file_writer_object_];
 
-        my $this_batch = $self->[_this_batch_];
+        my $file_writer_object = $self->[_file_writer_object_];
+        my $rlines             = $self->[_rlines_];
+        my $this_batch         = $self->[_this_batch_];
         $batch_count++;
 
         my $starting_in_quote        = $this_batch->[_starting_in_quote_];
@@ -11952,14 +11957,35 @@ EOM
 
             # write requested number of blank lines after an opening block brace
             if ( $iterm >= $imin && $types_to_go[$iterm] eq '{' ) {
-                if (   $rOpts->{'blank-lines-after-opening-block'}
+                my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
+                if (   $nblanks
                     && $block_type_to_go[$iterm]
                     && $block_type_to_go[$iterm] =~
                     /$blank_lines_after_opening_block_pattern/ )
                 {
-                    my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
-                    $self->flush_vertical_aligner();
-                    $file_writer_object->require_blank_code_lines($nblanks);
+
+                    if ( $nblanks > $rOpts_maximum_consecutive_blank_lines ) {
+                        $nblanks = $rOpts_maximum_consecutive_blank_lines;
+                    }
+
+                    # Reduce by the existing blank count .. fixes case b1073
+                    my $Kterm = $K_to_go[$iterm];
+                    my $iline = $rLL->[$Kterm]->[_LINE_INDEX_] + 1;
+                    while ( $nblanks > 0 ) {
+                        my $line_of_tokens = $rlines->[$iline];
+                        last unless defined($line_of_tokens);
+                        my $line_type = $line_of_tokens->{_line_type};
+                        last
+                          if ( $line_type ne 'CODE'
+                            || $line_of_tokens->{_code_type} ne 'BL' );
+                        $nblanks--;
+                        $iline++;
+                    }
+
+                    if ($nblanks) {
+                        $self->flush_vertical_aligner();
+                        $file_writer_object->require_blank_code_lines($nblanks);
+                    }
                 }
             }
         }

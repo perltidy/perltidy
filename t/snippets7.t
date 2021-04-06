@@ -52,6 +52,7 @@ BEGIN {
 -blbc=1
 -blaol='*'
 -blbcl='*'
+-mbl=2
 ----------
         'rt119970' => "-wn",
     };
