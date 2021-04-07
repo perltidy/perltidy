@@ -8962,7 +8962,7 @@ sub process_all_lines {
     my $rwant_blank_line_after = $self->keyword_group_scan();
 
     my $line_type      = "";
-    my $i_last_POD_END = -1;
+    my $i_last_POD_END = -10;
     my $i              = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $i++;
@@ -11503,10 +11503,9 @@ sub compare_indentation_levels {
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
-
         my $file_writer_object = $self->[_file_writer_object_];
-        my $rlines             = $self->[_rlines_];
-        my $this_batch         = $self->[_this_batch_];
+
+        my $this_batch = $self->[_this_batch_];
         $batch_count++;
 
         my $starting_in_quote        = $this_batch->[_starting_in_quote_];
@@ -11957,35 +11956,14 @@ EOM
 
             # write requested number of blank lines after an opening block brace
             if ( $iterm >= $imin && $types_to_go[$iterm] eq '{' ) {
-                my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
-                if (   $nblanks
+                if (   $rOpts->{'blank-lines-after-opening-block'}
                     && $block_type_to_go[$iterm]
                     && $block_type_to_go[$iterm] =~
                     /$blank_lines_after_opening_block_pattern/ )
                 {
-
-                    if ( $nblanks > $rOpts_maximum_consecutive_blank_lines ) {
-                        $nblanks = $rOpts_maximum_consecutive_blank_lines;
-                    }
-
-                    # Reduce by the existing blank count .. fixes case b1073
-                    my $Kterm = $K_to_go[$iterm];
-                    my $iline = $rLL->[$Kterm]->[_LINE_INDEX_] + 1;
-                    while ( $nblanks > 0 ) {
-                        my $line_of_tokens = $rlines->[$iline];
-                        last unless defined($line_of_tokens);
-                        my $line_type = $line_of_tokens->{_line_type};
-                        last
-                          if ( $line_type ne 'CODE'
-                            || $line_of_tokens->{_code_type} ne 'BL' );
-                        $nblanks--;
-                        $iline++;
-                    }
-
-                    if ($nblanks) {
-                        $self->flush_vertical_aligner();
-                        $file_writer_object->require_blank_code_lines($nblanks);
-                    }
+                    my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
+                    $self->flush_vertical_aligner();
+                    $file_writer_object->require_blank_code_lines($nblanks);
                 }
             }
         }

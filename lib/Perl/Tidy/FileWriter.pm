@@ -47,25 +47,26 @@ BEGIN {
     # Array index names for variables
     my $i = 0;
     use constant {
-        _line_sink_object_           => $i++,
-        _logger_object_              => $i++,
-        _rOpts_                      => $i++,
-        _output_line_number_         => $i++,
-        _consecutive_blank_lines_    => $i++,
-        _consecutive_nonblank_lines_ => $i++,
-        _first_line_length_error_    => $i++,
-        _max_line_length_error_      => $i++,
-        _last_line_length_error_     => $i++,
-        _first_line_length_error_at_ => $i++,
-        _max_line_length_error_at_   => $i++,
-        _last_line_length_error_at_  => $i++,
-        _line_length_error_count_    => $i++,
-        _max_output_line_length_     => $i++,
-        _max_output_line_length_at_  => $i++,
-        _rK_checklist_               => $i++,
-        _K_arrival_order_matches_    => $i++,
-        _K_sequence_error_msg_       => $i++,
-        _K_last_arrival_             => $i++,
+        _line_sink_object_            => $i++,
+        _logger_object_               => $i++,
+        _rOpts_                       => $i++,
+        _output_line_number_          => $i++,
+        _consecutive_blank_lines_     => $i++,
+        _consecutive_nonblank_lines_  => $i++,
+        _consecutive_new_blank_lines_ => $i++,
+        _first_line_length_error_     => $i++,
+        _max_line_length_error_       => $i++,
+        _last_line_length_error_      => $i++,
+        _first_line_length_error_at_  => $i++,
+        _max_line_length_error_at_    => $i++,
+        _last_line_length_error_at_   => $i++,
+        _line_length_error_count_     => $i++,
+        _max_output_line_length_      => $i++,
+        _max_output_line_length_at_   => $i++,
+        _rK_checklist_                => $i++,
+        _K_arrival_order_matches_     => $i++,
+        _K_sequence_error_msg_        => $i++,
+        _K_last_arrival_              => $i++,
     };
 }
 
@@ -89,25 +90,26 @@ sub new {
     my ( $class, $line_sink_object, $rOpts, $logger_object ) = @_;
 
     my $self = [];
-    $self->[_line_sink_object_]           = $line_sink_object;
-    $self->[_logger_object_]              = $logger_object;
-    $self->[_rOpts_]                      = $rOpts;
-    $self->[_output_line_number_]         = 1;
-    $self->[_consecutive_blank_lines_]    = 0;
-    $self->[_consecutive_nonblank_lines_] = 0;
-    $self->[_first_line_length_error_]    = 0;
-    $self->[_max_line_length_error_]      = 0;
-    $self->[_last_line_length_error_]     = 0;
-    $self->[_first_line_length_error_at_] = 0;
-    $self->[_max_line_length_error_at_]   = 0;
-    $self->[_last_line_length_error_at_]  = 0;
-    $self->[_line_length_error_count_]    = 0;
-    $self->[_max_output_line_length_]     = 0;
-    $self->[_max_output_line_length_at_]  = 0;
-    $self->[_rK_checklist_]               = [];
-    $self->[_K_arrival_order_matches_]    = 0;
-    $self->[_K_sequence_error_msg_]       = "";
-    $self->[_K_last_arrival_]             = -1;
+    $self->[_line_sink_object_]            = $line_sink_object;
+    $self->[_logger_object_]               = $logger_object;
+    $self->[_rOpts_]                       = $rOpts;
+    $self->[_output_line_number_]          = 1;
+    $self->[_consecutive_blank_lines_]     = 0;
+    $self->[_consecutive_nonblank_lines_]  = 0;
+    $self->[_consecutive_new_blank_lines_] = 0;
+    $self->[_first_line_length_error_]     = 0;
+    $self->[_max_line_length_error_]       = 0;
+    $self->[_last_line_length_error_]      = 0;
+    $self->[_first_line_length_error_at_]  = 0;
+    $self->[_max_line_length_error_at_]    = 0;
+    $self->[_last_line_length_error_at_]   = 0;
+    $self->[_line_length_error_count_]     = 0;
+    $self->[_max_output_line_length_]      = 0;
+    $self->[_max_output_line_length_at_]   = 0;
+    $self->[_rK_checklist_]                = [];
+    $self->[_K_arrival_order_matches_]     = 0;
+    $self->[_K_sequence_error_msg_]        = "";
+    $self->[_K_last_arrival_]              = -1;
 
     # save input stream name for local error messages
     $input_stream_name = "";
@@ -163,6 +165,10 @@ sub get_consecutive_nonblank_lines {
     return $_[0]->[_consecutive_nonblank_lines_];
 }
 
+sub get_consecutive_blank_lines {
+    return $_[0]->[_consecutive_blank_lines_];
+}
+
 sub reset_consecutive_blank_lines {
     $_[0]->[_consecutive_blank_lines_] = 0;
     return;
@@ -199,16 +205,26 @@ sub write_blank_code_line {
       if (!$forced
         && $self->[_consecutive_blank_lines_] >=
         $rOpts->{'maximum-consecutive-blank-lines'} );
-    $self->[_consecutive_blank_lines_]++;
+
     $self->[_consecutive_nonblank_lines_] = 0;
+
+    if ( !$forced && $self->[_consecutive_new_blank_lines_] > 0 ) {
+        $self->[_consecutive_new_blank_lines_]--;
+        return;
+    }
+
     $self->write_line("\n");
+    $self->[_consecutive_blank_lines_]++;
+    $self->[_consecutive_new_blank_lines_]++ if ($forced);
+
     return;
 }
 
 sub write_code_line {
     my ( $self, $str, $K ) = @_;
 
-    $self->[_consecutive_blank_lines_] = 0;
+    $self->[_consecutive_blank_lines_]     = 0;
+    $self->[_consecutive_new_blank_lines_] = 0;
     $self->[_consecutive_nonblank_lines_]++;
     $self->write_line($str);
 

@@ -3481,9 +3481,6 @@ with an opening block brace of a specified type.  By default, this only applies
 to the block of a named B<sub>, but this can be changed (see B<-blaol> below).
 The default is not to do this (B<i=0>).
 
-If the value of B<i> is greater than the limit specified with the parameter
-B<--maximum-consecutive-blank-lines=n>, it will be reduced to that value.
-
 Please see the note below on using the B<-blao> and B<-blbc> options.
 
 =item B<-blbc=i> or B<--blank-lines-before-closing-block=i>
