@@ -3,6 +3,15 @@
 
 =over 4
 
+=item B<Improve treatment of -vmll with -wn>
+
+Random testing showed a weakness in the treatment of the -vmll flag
+in combination with the -wn flag.  This has been fixed.
+
+This fixes cases b866 b1074 b1075 b1084 b1086 b1087 b1088
+
+8 Apr 2021.
+
 =item B<Merge weld rule 6 into rule 3>
 
 One of the welding rules, RULE 6, has been merged into RULE 3 for
@@ -11,7 +20,7 @@ followed by a bare word, which can cause instability in some cases.
 The updated code is less restrictive and fixes some cases
 recently found with random testing, b1078 b1091.
 
-8 Apr 2021.
+8 Apr 2021, f28ab55.
 
 =item B<Moved logic of previous update to the FileWriter module>
 
@@ -19,7 +28,7 @@ The previous update regarding blank line generation was not sufficiently
 general to handle all possible parameter combinations. The problem was solved
 and simplified by moving the logic to a lower level, in the FileWriter module.
 
-6 Apr 2021.
+6 Apr 2021, 756e930.
 
 =item B<Fix problem with excess blank line generation with -blao>
 
@@ -41,7 +50,7 @@ and the following parameters
 When run, blank lines keep getting generated until the maximum is reached.
 This has been fixed.
 
-6 Apr 2021.
+6 Apr 2021, 9216298.
 
 
 =item B<Fix edge case involving -wn and -lp or -bbao>

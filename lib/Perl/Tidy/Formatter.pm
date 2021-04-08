@@ -7224,31 +7224,34 @@ EOM
             my $level    = $rLL->[$Kref]->[_LEVEL_];
             my $ci_level = $rLL->[$Kref]->[_CI_LEVEL_];
 
-            if ( !$rOpts_variable_maximum_line_length ) {
+            $starting_indent = $rOpts_indent_columns * $level +
+              $ci_level * $rOpts_continuation_indentation;
 
-                $starting_indent = $rOpts_indent_columns * $level +
-                  $ci_level * $rOpts_continuation_indentation;
-
-                # Switch to using the outer opening token as the reference
-                # point if a line break before it would make a longer line.
-                # Fixes case b1055 and is also an alternate fix for b1065.
-                my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
-                if ( $Kref < $Kouter_opening ) {
-                    my $ci_level_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
-                    my $lentot_oo =
-                      $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
-                    my $starting_indent_oo = $rOpts_indent_columns * $level_oo +
-                      $ci_level_oo * $rOpts_continuation_indentation;
-                    if ( $lentot_oo - $starting_lentot <
-                        $starting_indent_oo - $starting_indent )
-                    {
-                        $Kref            = $Kouter_opening;
-                        $level           = $level_oo;
-                        $ci_level        = $ci_level_oo;
-                        $starting_lentot = $lentot_oo;
-                        $starting_indent = $starting_indent_oo;
-                    }
+            # Switch to using the outer opening token as the reference
+            # point if a line break before it would make a longer line.
+            # Fixes case b1055 and is also an alternate fix for b1065.
+            my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
+            if ( $Kref < $Kouter_opening ) {
+                my $ci_level_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
+                my $lentot_oo =
+                  $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
+                my $starting_indent_oo = $rOpts_indent_columns * $level_oo +
+                  $ci_level_oo * $rOpts_continuation_indentation;
+                if ( $lentot_oo - $starting_lentot <
+                    $starting_indent_oo - $starting_indent )
+                {
+                    $Kref            = $Kouter_opening;
+                    $level           = $level_oo;
+                    $ci_level        = $ci_level_oo;
+                    $starting_lentot = $lentot_oo;
+                    $starting_indent = $starting_indent_oo;
                 }
+            }
+
+	    # Revised -vmll treatment to fix cases b866 b1074 b1075 b1084 b1086
+	    # b1087 b1088
+            if ($rOpts_variable_maximum_line_length) {
+                $starting_indent -= $level * $rOpts_indent_columns;
             }
 
             # Avoid problem areas with the -wn -lp combination.
