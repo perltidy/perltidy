@@ -3,6 +3,16 @@
 
 =over 4
 
+=item B<Merge weld rule 6 into rule 3>
+
+One of the welding rules, RULE 6, has been merged into RULE 3 for
+generality.  This rule restricts welding to an opening container
+followed by a bare word, which can cause instability in some cases.
+The updated code is less restrictive and fixes some cases
+recently found with random testing, b1078 b1091.
+
+8 Apr 2021.
+
 =item B<Moved logic of previous update to the FileWriter module>
 
 The previous update regarding blank line generation was not sufficiently

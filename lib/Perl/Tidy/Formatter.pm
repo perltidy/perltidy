@@ -7374,7 +7374,32 @@ EOM
         # (fixes cases b746 b748 b749 b750 b752 b753 b754 b755 b756 b758 b759)
         if ( !$do_not_weld_rule ) {
 
-            my $excess = $excess_length_to_K->($Kinner_opening);
+            # Measure to a little beyond the inner opening token if it is
+            # followed by a bare word, which may have unusual line break rules.
+
+            # NOTE: Originally this was OLD RULE 6: do not weld to a container
+            # which is followed on the same line by an unknown bareword token.
+            # This can cause blinkers (cases b626, b611).  But OK to weld one
+            # line welds to fix cases b1057 b1064.  For generality, OLD RULE 6
+            # has been merged into RULE 3 here to also fix cases b1078 b1091.
+
+            my $K_for_length = $Kinner_opening;
+            my $Knext_io     = $self->K_next_nonblank($Kinner_opening);
+            next unless ( defined($Knext_io) );    # shouldn't happen
+            my $type_io_next = $rLL->[$Knext_io]->[_TYPE_];
+
+            # Note: may need to eventually also include other types here,
+            # such as 'Z' and 'Y':   if ($type_io_next =~ /^[ZYw]$/) {
+            if ( $type_io_next eq 'w' ) {
+                my $Knext_io2 = $self->K_next_nonblank($Knext_io);
+                next unless ( defined($Knext_io2) );
+                my $type_io_next2 = $rLL->[$Knext_io2]->[_TYPE_];
+                if ( !$type_ok_after_bareword{$type_io_next2} ) {
+                    $K_for_length = $Knext_io2;
+                }
+            }
+
+            my $excess = $excess_length_to_K->($K_for_length);
 
             # Use '>=' instead of '=' here to fix cases b995 b998 b1000
             # b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018
@@ -7427,32 +7452,7 @@ EOM
             $do_not_weld_rule = 5;
         }
 
-        # DO-NOT-WELD RULE 6: Do not weld to a container which is followed on
-        # the same line by an unknown bareword token.  This can cause
-        # blinkers (cases b626, b611).
-        # Patched for cases b1057 b1064: skip RULE 6 for a one-line weld.
-        # Note: Another, more general fix is to remove the check on line
-        # numbers and always do this. That was tested and works, and may be
-        # necessary in the future, but it could change some existing code.
-        if ( !$do_not_weld_rule && !$is_one_line_weld ) {
-            my $Knext_io = $self->K_next_nonblank($Kinner_opening);
-            next unless ( defined($Knext_io) );
-            my $iline_io_next = $rLL->[$Knext_io]->[_LINE_INDEX_];
-            if ( $iline_io_next == $iline_io ) {
-                my $type_io_next = $rLL->[$Knext_io]->[_TYPE_];
-
-                # Note: may need to eventually also include other types here,
-                # such as 'Z' and 'Y':   if ($type_io_next =~ /^[ZYw]$/) {
-                if ( $type_io_next eq 'w' ) {
-                    my $Knext_io2 = $self->K_next_nonblank($Knext_io);
-                    next unless ( defined($Knext_io2) );
-                    my $type_io_next2 = $rLL->[$Knext_io2]->[_TYPE_];
-                    if ( !$type_ok_after_bareword{$type_io_next2} ) {
-                        $do_not_weld_rule = 6;
-                    }
-                }
-            }
-        }
+        # DO-NOT-WELD RULE 6: This has been merged into RULE 3 above.
 
         # DO-NOT-WELD RULE 7: Do not weld if this conflicts with -bom
         # (case b973)

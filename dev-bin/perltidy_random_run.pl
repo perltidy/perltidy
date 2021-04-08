@@ -350,7 +350,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
 
         # run perltidy on the output to see if it can be reformatted
         # without errors
-        my $cmd2 = "perltidy <$ofile >$chkfile";
+        my $cmd2 = "$binfile <$ofile >$chkfile";
         system_echo( $cmd2, $hash );
 
         #print STDERR "$cmd2\n";

@@ -208,6 +208,8 @@ sub write_blank_code_line {
 
     $self->[_consecutive_nonblank_lines_] = 0;
 
+    # Balance old blanks against new (forced) blanks instead of writing them.
+    # This fixes case b1073.
     if ( !$forced && $self->[_consecutive_new_blank_lines_] > 0 ) {
         $self->[_consecutive_new_blank_lines_]--;
         return;
