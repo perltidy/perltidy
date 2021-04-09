@@ -7039,6 +7039,9 @@ sub weld_nested_containers {
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
 
+    my $rOpts_ignore_side_comment_lengths =
+      $rOpts->{'ignore-side-comment-lengths'};
+
     # This array will hold the sequence numbers of the tokens to be welded.
     my @welds;
 
@@ -7069,6 +7072,34 @@ sub weld_nested_containers {
 at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_length=$starting_lentot, indent=$starting_indent line(K)=$iline_K , line_start = $iline_outer_opening
 EOM
 
+        return ($excess_length);
+    };
+
+    my $excess_length_of_line = sub {
+        my ( $Kfirst, $Klast ) = @_;
+        my $length_before_Kfirst =
+          $Kfirst <= 0
+          ? 0
+          : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+        my $level    = $rLL->[$Kfirst]->[_LEVEL_];
+        my $ci_level = $rLL->[$Kfirst]->[_CI_LEVEL_];
+        my $indent   = $rOpts_indent_columns * $level +
+          $ci_level * $rOpts_continuation_indentation;
+        if ($rOpts_variable_maximum_line_length) {
+            $indent -= $level * $rOpts_indent_columns;
+        }
+
+        my $Kend = $Klast;
+        if (   $rOpts_ignore_side_comment_lengths
+            && $rLL->[$Klast]->[_TYPE_] eq '#' )
+        {
+            my $Kprev = $self->K_previous_nonblank($Klast);
+            if ( defined($Kprev) && $Kprev >= $Kfirst ) { $Kend = $Kprev }
+        }
+
+        my $length =
+          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
+        my $excess_length = $indent + $length - $rOpts_maximum_line_length;
         return ($excess_length);
     };
 
@@ -7248,8 +7279,8 @@ EOM
                 }
             }
 
-	    # Revised -vmll treatment to fix cases b866 b1074 b1075 b1084 b1086
-	    # b1087 b1088
+            # Revised -vmll treatment to fix cases b866 b1074 b1075 b1084 b1086
+            # b1087 b1088
             if ($rOpts_variable_maximum_line_length) {
                 $starting_indent -= $level * $rOpts_indent_columns;
             }
@@ -7288,9 +7319,10 @@ EOM
             # (1) the containers are all on one line, and
             # (2) the line does not exceed the allowable length, and
             # This flag is used to avoid creating blinkers.
-            # For stability, we remove the length tolerance which has been added
+            # Changed 'excess_length_to_K' to 'excess_length_of_line'
+            # to get exact lengths and fix b604 b605.
             if (   $iline_oo == $iline_oc
-                && $excess_length_to_K->($Klast) <= 0 )
+                && $excess_length_of_line->( $Kfirst, $Klast ) <= 0 )
             {
                 $is_one_line_weld = 1;
             }
@@ -21959,3 +21991,4 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
+

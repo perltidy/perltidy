@@ -3,6 +3,14 @@
 
 =over 4
 
+=item B<Slight change in weld length calculation>
+
+Random testing produced some cases of instability with some unusual input
+parameter combinations involving the -wn parameter.  This was fixed by revising
+a line length calculation.  This fixes cases b604 and b605.
+
+9 Apr 2021.
+
 =item B<Improve treatment of -vmll with -wn>
 
 Random testing showed a weakness in the treatment of the -vmll flag
@@ -10,7 +18,7 @@ in combination with the -wn flag.  This has been fixed.
 
 This fixes cases b866 b1074 b1075 b1084 b1086 b1087 b1088
 
-8 Apr 2021.
+8 Apr 2021, a6effa3.
 
 =item B<Merge weld rule 6 into rule 3>
 
