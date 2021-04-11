@@ -7008,6 +7008,129 @@ BEGIN {
 
 use constant DEBUG_WELD => 0;
 
+sub setup_new_weld_measurements {
+
+    # Define quantities to check for excess line lengths when welded
+
+    my ( $self, $Kouter_opening, $Kinner_opening ) = @_;
+
+    # Given indexes of outer and inner opening containers to be welded:
+    #   $Kouter_opening, $Kinner_opening
+
+    # Returns these variables:
+    #   $ok_to_weld = true (weld ok) or false (do not weld here)
+    #   $starting_indent = starting indentation
+    #   $starting_lentot = starting cumulative length
+    #   $msg = diagnostic message for debugging
+
+    # Note: This sub is used by sub 'weld_nested_containers' and
+    # sub 'weld_nested_quotes'.
+
+    my $rLL    = $self->[_rLL_];
+    my $rlines = $self->[_rlines_];
+
+    my $starting_level;
+    my $starting_ci;
+    my $starting_indent;
+    my $starting_lentot;
+    my $msg = "";
+
+    my $iline_oo = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
+    my $rK_range = $rlines->[$iline_oo]->{_rK_range};
+    my ( $Kfirst, $Klast ) = @{$rK_range};
+
+    # Define a reference index from which to start measuring
+    my $Kref  = $Kfirst;
+    my $Kprev = $self->K_previous_nonblank($Kfirst);
+    if ( defined($Kprev) ) {
+
+        # The -iob and -wn flags do not work well together. To avoid
+        # blinking states we have to override -iob at certain key line
+        # breaks.
+        $self->[_ris_essential_old_breakpoint_]->{$Kprev} = 1;
+
+        # Back up and count length from a token like '=' or '=>' if -lp
+        # is used (this fixes b520)
+        # ...or if a break is wanted before there
+        my $type_prev = $rLL->[$Kprev]->[_TYPE_];
+        if (   $rOpts_line_up_parentheses
+            || $want_break_before{$type_prev} )
+        {
+            if ( substr( $type_prev, 0, 1 ) eq '=' ) {
+                $Kref = $Kprev;
+            }
+        }
+    }
+
+    # Define the starting measurements we will need
+    $starting_lentot =
+      $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
+    $starting_level  = $rLL->[$Kref]->[_LEVEL_];
+    $starting_ci     = $rLL->[$Kref]->[_CI_LEVEL_];
+    $starting_indent = $rOpts_indent_columns * $starting_level +
+      $starting_ci * $rOpts_continuation_indentation;
+
+    # Now fix these if necessary to avoid known problems...
+
+    # FIX1: Switch to using the outer opening token as the reference
+    # point if a line break before it would make a longer line.
+    # Fixes case b1055 and is also an alternate fix for b1065.
+    my $starting_level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
+    if ( $Kref < $Kouter_opening ) {
+        my $starting_ci_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
+        my $lentot_oo = $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
+        my $starting_indent_oo =
+          $rOpts_indent_columns * $starting_level_oo +
+          $starting_ci_oo * $rOpts_continuation_indentation;
+        if ( $lentot_oo - $starting_lentot <
+            $starting_indent_oo - $starting_indent )
+        {
+            $Kref            = $Kouter_opening;
+            $starting_level  = $starting_level_oo;
+            $starting_ci     = $starting_ci_oo;
+            $starting_lentot = $lentot_oo;
+            $starting_indent = $starting_indent_oo;
+        }
+    }
+
+    # The -vmll treatment here ignores the level but not the continuation
+    # indentation.  This fixes cases b866 b1074 b1075 b1084 b1086 b1087 b1088
+    if ($rOpts_variable_maximum_line_length) {
+        $starting_indent -= $starting_level * $rOpts_indent_columns;
+    }
+
+    my $ok_to_weld = 1;
+
+    # FIX2: Avoid problem areas with the -wn -lp combination.
+    # The combination -wn -lp -dws -naws does not work well and can
+    # cause blinkers. See case b1020. It will probably only occur
+    # in stress testing.  For this situation we will only weld if we
+    # start at a 'good' location.  Added 'if' to fix case b1032.
+    if (   $starting_ci
+        && $rOpts_line_up_parentheses
+        && $rOpts_delete_old_whitespace
+        && !$rOpts_add_whitespace )
+    {
+        my $type_first  = $rLL->[$Kfirst]->[_TYPE_];
+        my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
+        my $token_first = $rLL->[$Kfirst]->[_TOKEN_];
+        unless (
+               $type_prev  =~ /^[=\,\.\{\[\(\L]/
+            || $type_first =~ /^[=\,\.\{\[\(\L]/
+            || $type_first eq '||'
+            || (   $type_first eq 'k' && $token_first eq 'if'
+                || $token_first eq 'or' )
+          )
+        {
+            $msg =
+"Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev'\n";
+            $ok_to_weld = 0;
+        }
+    }
+
+    return ( $ok_to_weld, $starting_indent, $starting_lentot, $msg );
+}
+
 sub weld_nested_containers {
     my ($self) = @_;
 
@@ -7024,11 +7147,10 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                          = $self->[_rLL_];
-    my $rlines                       = $self->[_rlines_];
-    my $K_opening_container          = $self->[_K_opening_container_];
-    my $K_closing_container          = $self->[_K_closing_container_];
-    my $ris_essential_old_breakpoint = $self->[_ris_essential_old_breakpoint_];
+    my $rLL                 = $self->[_rLL_];
+    my $rlines              = $self->[_rlines_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
@@ -7048,6 +7170,7 @@ sub weld_nested_containers {
     # Variables needed for estimating line lengths
     my $starting_indent;
     my $starting_lentot;
+
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
@@ -7223,97 +7346,16 @@ EOM
             $iline_outer_opening   = $iline_oo;
             $weld_count_this_start = 0;
 
+            ( my $ok_to_weld, $starting_indent, $starting_lentot, my $msg ) =
+              $self->setup_new_weld_measurements( $Kouter_opening,
+                $Kinner_opening );
+            if ( !$ok_to_weld ) {
+                if (DEBUG_WELD) { print $msg}
+                next;
+            }
+
             my $rK_range = $rlines->[$iline_oo]->{_rK_range};
             my ( $Kfirst, $Klast ) = @{$rK_range};
-            my $Kref = $Kfirst;
-
-            my $Kprev = $self->K_previous_nonblank($Kfirst);
-            if ( defined($Kprev) ) {
-
-                # The -iob and -wn flags do not work well together. To avoid
-                # blinking states we have to override -iob at certain key line
-                # breaks. This fixes case b1019.
-                $ris_essential_old_breakpoint->{$Kprev} = 1;
-
-                # Back up and count length from a token like '=' or '=>' if -lp
-                # is used (this fixes b520)
-                # ...or if a break is wanted before there (this fixes b1041).
-                my $type_prev = $rLL->[$Kprev]->[_TYPE_];
-                if (   $rOpts_line_up_parentheses
-                    || $want_break_before{$type_prev} )
-                {
-                    if ( substr( $type_prev, 0, 1 ) eq '=' ) {
-                        $Kref = $Kprev;
-                    }
-                }
-            }
-
-            $starting_lentot =
-              $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
-
-            $starting_indent = 0;
-            my $level    = $rLL->[$Kref]->[_LEVEL_];
-            my $ci_level = $rLL->[$Kref]->[_CI_LEVEL_];
-
-            $starting_indent = $rOpts_indent_columns * $level +
-              $ci_level * $rOpts_continuation_indentation;
-
-            # Switch to using the outer opening token as the reference
-            # point if a line break before it would make a longer line.
-            # Fixes case b1055 and is also an alternate fix for b1065.
-            my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
-            if ( $Kref < $Kouter_opening ) {
-                my $ci_level_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
-                my $lentot_oo =
-                  $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
-                my $starting_indent_oo = $rOpts_indent_columns * $level_oo +
-                  $ci_level_oo * $rOpts_continuation_indentation;
-                if ( $lentot_oo - $starting_lentot <
-                    $starting_indent_oo - $starting_indent )
-                {
-                    $Kref            = $Kouter_opening;
-                    $level           = $level_oo;
-                    $ci_level        = $ci_level_oo;
-                    $starting_lentot = $lentot_oo;
-                    $starting_indent = $starting_indent_oo;
-                }
-            }
-
-            # Revised -vmll treatment to fix cases b866 b1074 b1075 b1084 b1086
-            # b1087 b1088
-            if ($rOpts_variable_maximum_line_length) {
-                $starting_indent -= $level * $rOpts_indent_columns;
-            }
-
-            # Avoid problem areas with the -wn -lp combination.
-            # The combination -wn -lp -dws -naws does not work well and can
-            # cause blinkers. See case b1020. It will probably only occur
-            # in stress testing.  For this situation we will only weld if we
-            # start at a 'good' location.  Added 'if' to fix case b1032.
-            if (   $ci_level
-                && $rOpts_line_up_parentheses
-                && $rOpts_delete_old_whitespace
-                && !$rOpts_add_whitespace )
-            {
-                my $type_first  = $rLL->[$Kfirst]->[_TYPE_];
-                my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
-                my $token_first = $rLL->[$Kfirst]->[_TOKEN_];
-                unless (
-                       $type_prev  =~ /^[=\,\.\{\[\(\L]/
-                    || $type_first =~ /^[=\,\.\{\[\(\L]/
-                    || $type_first eq '||'
-                    || (   $type_first eq 'k' && $token_first eq 'if'
-                        || $token_first eq 'or' )
-                  )
-                {
-                    if (DEBUG_WELD) {
-                        $Msg .=
-"Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev'\n";
-                        print $Msg;
-                    }
-                    next;
-                }
-            }
 
             # An existing one-line weld is a line in which
             # (1) the containers are all on one line, and
@@ -7653,6 +7695,9 @@ sub weld_nested_quotes {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rlines              = $self->[_rlines_];
 
+    my $starting_indent;
+    my $starting_lentot;
+
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
         foreach my $K ( $Kbeg .. $Kend ) {
@@ -7666,27 +7711,6 @@ sub weld_nested_quotes {
     # Length tolerance - same as previously used for sub weld_nested
     my $length_tol =
       1 + abs( $rOpts_indent_columns - $rOpts_continuation_indentation );
-
-    my $excess_line_length_K = sub {
-        my ( $KK, $Ktest ) = @_;
-
-        # what is the excess length if we add token $Ktest to the line with $KK?
-        my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
-        my $rK_range = $rlines->[$iline]->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
-        my $starting_lentot =
-          $Kfirst <= 0 ? 0 : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
-        my $starting_indent = 0;
-        if ( !$rOpts_variable_maximum_line_length ) {
-            my $level = $rLL->[$Kfirst]->[_LEVEL_];
-            $starting_indent = $rOpts_indent_columns * $level;
-        }
-
-        my $length = $rLL->[$Ktest]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
-        my $excess_length =
-          $starting_indent + $length + $length_tol - $rOpts_maximum_line_length;
-        return $excess_length;
-    };
 
     # look for single qw quotes nested in containers
     my $KNEXT = $self->[_K_first_seq_item_];
@@ -7751,6 +7775,10 @@ sub weld_nested_quotes {
                 )
               );
 
+            # OK: This is a candidate for welding
+            my $Msg = "";
+            my $do_not_weld;
+
             my $Kouter_opening = $K_opening_container->{$outer_seqno};
             my $iline_oo       = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
             my $iline_io       = $rLL->[$Kinner_opening]->[_LINE_INDEX_];
@@ -7760,15 +7788,59 @@ sub weld_nested_quotes {
               ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
 
             # If welded, the line must not exceed allowed line length
-            # Assume old line breaks for this estimate.
-            my $excess = $excess_line_length_K->( $KK, $Kinner_opening );
-            next if ( $excess >= ( $is_old_weld ? $length_tol : 0 ) );
+            ( my $ok_to_weld, $starting_indent, $starting_lentot, my $msg ) =
+              $self->setup_new_weld_measurements( $Kouter_opening,
+                $Kinner_opening );
+            if ( !$ok_to_weld ) {
+                if (DEBUG_WELD) { print $msg}
+                next;
+            }
+
+            my $length =
+              $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
+            my $excess =
+              $starting_indent + $length +
+              $length_tol -
+              $rOpts_maximum_line_length;
+
+            my $excess_max = ( $is_old_weld ? $length_tol : 0 );
+            if ( $excess >= $excess_max ) {
+                $do_not_weld = 1;
+            }
+
+            if (DEBUG_WELD) {
+                if ( !$is_old_weld ) { $is_old_weld = "" }
+                $Msg .=
+"excess=$excess>=$excess_max, length_tol=$length_tol, is_old_weld='$is_old_weld'\n";
+            }
 
             # Check weld exclusion rules for outer container
-            my $is_leading = !$self->[_rweld_len_left_opening_]->{$outer_seqno};
-            next if ( $self->is_excluded_weld( $KK, $is_leading ) );
+            if ( !$do_not_weld ) {
+                my $is_leading =
+                  !$self->[_rweld_len_left_opening_]->{$outer_seqno};
+                if ( $self->is_excluded_weld( $KK, $is_leading ) ) {
+                    if (DEBUG_WELD) {
+                        $Msg .=
+"No qw weld due to weld exclusion rules for outer container\n";
+                    }
+                    $do_not_weld = 1;
+                }
+            }
+
+            if ($do_not_weld) {
+                if (DEBUG_WELD) {
+                    $Msg .= "Not Welding QW\n";
+                    print $Msg;
+                }
+                next;
+            }
 
             # OK to weld
+            if (DEBUG_WELD) {
+                $Msg .= "Welding QW\n";
+                print $Msg;
+            }
+
             # FIXME: Are these always correct?
             $rweld_len_left_closing->{$outer_seqno}  = 1;
             $rweld_len_right_opening->{$outer_seqno} = 2;
@@ -21991,4 +22063,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-

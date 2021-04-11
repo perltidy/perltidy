@@ -3,13 +3,24 @@
 
 =over 4
 
+=item B<Unify coding for welded quotes and other welded containers>
+
+Random testing produced some cases where welded quotes were not converging.
+These were found to be due to the same problem previouly encountered and fixed
+for normal containers. The problem was fixed by moving the corrected coding
+to a new common sub.
+
+This update fixes cases b1066 b1067 b1071 b1079 b1080.
+
+10 Apr 2021.
+
 =item B<Slight change in weld length calculation>
 
 Random testing produced some cases of instability with some unusual input
 parameter combinations involving the -wn parameter.  This was fixed by revising
 a line length calculation.  This fixes cases b604 and b605.
 
-9 Apr 2021.
+9 Apr 2021, a25cfaa.
 
 =item B<Improve treatment of -vmll with -wn>
 
