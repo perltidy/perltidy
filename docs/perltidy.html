@@ -411,7 +411,7 @@
 <dt id="t---tabs"><b>-t</b>, <b>--tabs</b></dt>
 <dd>
 
-<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option. This flag is retained for backwards compatability, but if you use tabs, the <b>-et=n</b> flag is recommended.</p>
+<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option. This flag is retained for backwards compatibility, but if you use tabs, the <b>-et=n</b> flag is recommended.</p>
 
 </dd>
 <dt id="dt-n---default-tabsize-n"><b>-dt=n</b>, <b>--default-tabsize=n</b></dt>
@@ -572,7 +572,7 @@
 <dt id="xci---extended-continuation-indentation"><b>-xci</b>, <b>--extended-continuation-indentation</b></dt>
 <dd>
 
-<p>This flag allows perltidy to use some improvements which have been made to its indentation model. One of the things it does is &quot;extend&quot; continuation indentation deeper into structures, hence the name. The improved indentation is particularly noticable when the flags <b>-ci=n</b> and <b>-i=n</b> use the same value of <b>n</b>. There are no significant disadvantages to using this flag, but to avoid disturbing existing formatting the default is not to use it, <b>-nxci</b>.</p>
+<p>This flag allows perltidy to use some improvements which have been made to its indentation model. One of the things it does is &quot;extend&quot; continuation indentation deeper into structures, hence the name. The improved indentation is particularly noticeable when the flags <b>-ci=n</b> and <b>-i=n</b> use the same value of <b>n</b>. There are no significant disadvantages to using this flag, but to avoid disturbing existing formatting the default is not to use it, <b>-nxci</b>.</p>
 
 <p>Please see the section <a href="#pbp---perl-best-practices">&quot;<b>-pbp</b>, <b>--perl-best-practices</b>&quot;</a> for an example of how this flag can improve the formatting of ternary statements. It can also improve indentation of some multi-line qw lists as shown below.</p>
 
@@ -652,7 +652,7 @@
 
 <pre><code>  -lpxl=&#39;[ {&#39;</code></pre>
 
-<p>means do <b>NOT</b> include use -lp formatting within square-bracets or braces. The only unspecified container is &#39;(&#39;, so this string means that only the contens within parens will use -lp indentation.</p>
+<p>means do <b>NOT</b> include use -lp formatting within square-bracets or braces. The only unspecified container is &#39;(&#39;, so this string means that only the contents within parens will use -lp indentation.</p>
 
 <p>An optional numeric code may follow any of the container types to further refine the selection based on container contents. The numeric codes are:</p>
 
@@ -999,7 +999,7 @@
 <dt id="Note2:-Perltidys-whitespace-rules-are-not-perfect"><b>Note2: Perltidy&#39;s whitespace rules are not perfect</b></dt>
 <dd>
 
-<p>Despite these precautions, it is still possible to introduce syntax errors with some asymmetric whitespace rules, particularly when call parameters are not placed in containg parens or braces. For example, the following two lines will be parsed by perl without a syntax error:</p>
+<p>Despite these precautions, it is still possible to introduce syntax errors with some asymmetric whitespace rules, particularly when call parameters are not placed in containing parens or braces. For example, the following two lines will be parsed by perl without a syntax error:</p>
 
 <pre><code>  # original programming, syntax ok
   my @newkeys = map $_-$nrecs+@data, @oldkeys;

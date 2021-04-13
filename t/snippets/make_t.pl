@@ -589,7 +589,7 @@ sub truncate_string {
         }
 
         # use the first part of the actual string because we have
-        # turned all commas, etc into spaces for testing lenghts
+        # turned all commas, etc into spaces for testing lengths
         $short = substr( $long, 0, length($short) ) . "...";
     }
     return ($short);

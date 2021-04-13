@@ -2,7 +2,7 @@
 use strict;
 my @files = @ARGV;
 my %saw;
-# Look at a number of .pro profiles and show ther common flags.
+# Look at a number of .pro profiles and show their common flags.
 # This can help pinpoint the flags which are causing an issue.
 foreach my $file (@files) {
     open( IN, "<", $file ) || die "cannot open $file: $!\n";

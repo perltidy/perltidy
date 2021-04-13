@@ -152,7 +152,7 @@ which may be helpful.  But most problems and issues identified by the script
 are not actual problems with perltidy, so going through these results can take
 some time.
 
-For example, you might have a random script which has a line begining with
+For example, you might have a random script which has a line beginning with
 ```=txt```, so perl will take that as the start of pod.  Then if the flag to
 delete pod is set, the output file will be truncated and this could trigger a
 warning that the output file looks too short.

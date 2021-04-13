@@ -500,7 +500,7 @@ This flag causes one leading tab character to be inserted for each level
 of indentation.  Certain other features are incompatible with this
 option, and if these options are also given, then a warning message will
 be issued and this flag will be unset.  One example is the B<-lp>
-option. This flag is retained for backwards compatability, but
+option. This flag is retained for backwards compatibility, but
 if you use tabs, the B<-et=n> flag is recommended.
 
 =item B<-dt=n>,   B<--default-tabsize=n>
@@ -749,7 +749,7 @@ number of spaces assigned to a full indentation level on the B<-i=n> command, or
 This flag allows perltidy to use some improvements which have been made to its
 indentation model. One of the things it does is "extend" continuation
 indentation deeper into structures, hence the name.  The improved indentation
-is particularly noticable when the flags B<-ci=n> and B<-i=n> use the same value of
+is particularly noticeable when the flags B<-ci=n> and B<-i=n> use the same value of
 B<n>. There are no significant disadvantages to using this flag, but to avoid
 disturbing existing formatting the default is not to use it, B<-nxci>.
 
@@ -865,7 +865,7 @@ The only required piece of information is a container type, which is one of
   -lpxl='[ {'
 
 means do B<NOT> include use -lp formatting within square-bracets or braces.  The only unspecified
-container is '(', so this string means that only the contens within parens will use -lp indentation.
+container is '(', so this string means that only the contents within parens will use -lp indentation.
 
 An optional numeric code may follow any of the container types to further refine the selection based
 on container contents.  The numeric codes are:
@@ -1301,7 +1301,7 @@ which shows that B<system> is type B<k> (keyword) and $foo is type B<Z>.
 
 Despite these precautions, it is still possible to introduce syntax errors with
 some asymmetric whitespace rules, particularly when call parameters are not
-placed in containg parens or braces.  For example, the following two lines will
+placed in containing parens or braces.  For example, the following two lines will
 be parsed by perl without a syntax error:
 
   # original programming, syntax ok
@@ -2659,7 +2659,7 @@ Here are some additional example strings and their meanings:
     '^K('  - exclude a leading paren preceded by a non-keyword
     '.k('  - exclude a secondary paren preceded by a keyword
     '[ {'  - exclude all brackets and braces
-    '[ ( ^K{' - exclude everthing except nested structures like do {{  ... }}
+    '[ ( ^K{' - exclude everything except nested structures like do {{  ... }}
 
 =item B<Vertical tightness> of non-block curly braces, parentheses, and square brackets.
 

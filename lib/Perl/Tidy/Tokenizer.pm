@@ -2527,7 +2527,7 @@ EOM
                 $in_attribute_list = 1;
             }
 
-            # Withing a signature, unless we are in a ternary.  For example,
+            # Within a signature, unless we are in a ternary.  For example,
             # from 't/filter_example.t':
             #    method foo4 ( $class: $bar ) { $class->bar($bar) }
             elsif ( $paren_type[$paren_depth] =~ /^sub\b/
@@ -7698,7 +7698,7 @@ sub scan_number_do {
            |([0-7_]+               # string of octal digits 
            (\.([0-7][0-7_]*)?)?    # optional decimal and fraction
            [Pp][+-]?[0-7]          # REQUIRED exponent, no underscore
-           [0-7_]*)                # Additonal exponent digits, with underscores
+           [0-7_]*)                # Additional exponent digits, with underscores
 
            # or octal integer
            |([0-7_]+)               # string of octal digits 
