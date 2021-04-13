@@ -107,7 +107,7 @@ use constant {
 ----------
 
         'align20' => <<'----------',
-# marginal two-line match; differnt lhs patterns; do not align
+# marginal two-line match; different lhs patterns; do not align
 $w[$i] = $t;
 $t = 1000000;
 ----------
@@ -139,7 +139,7 @@ my $abc = "abc";
 ----------
 
         'align24' => <<'----------',
-# Do not align interior fat commas here; differnt container types
+# Do not align interior fat commas here; different container types
 my $p    = TAP::Parser::SubclassTest->new(
     {
         exec    => [ $cat            => $file ],
@@ -331,7 +331,7 @@ return (
             source => "align20",
             params => "def",
             expect => <<'#12...........',
-# marginal two-line match; differnt lhs patterns; do not align
+# marginal two-line match; different lhs patterns; do not align
 $w[$i] = $t;
 $t = 1000000;
 #12...........
@@ -379,7 +379,7 @@ my $abc  = "abc";
             source => "align24",
             params => "def",
             expect => <<'#16...........',
-# Do not align interior fat commas here; differnt container types
+# Do not align interior fat commas here; different container types
 my $p = TAP::Parser::SubclassTest->new(
     {
         exec    => [ $cat => $file ],

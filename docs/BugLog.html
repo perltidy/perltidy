@@ -137,7 +137,7 @@
 <dt id="Fix-definition-of-list-within-list-for--bbx-flags"><b>Fix definition of list within list for -bbx flags</b></dt>
 <dd>
 
-<p>Testing produced a blinking state involving a -bbx=2 flag with an unusual combination of other parameters. The problem was traced to the definition of a list containg another list being too restrictive. This update fixes case 1024.</p>
+<p>Testing produced a blinking state involving a -bbx=2 flag with an unusual combination of other parameters. The problem was traced to the definition of a list containing another list being too restrictive. This update fixes case 1024.</p>
 
 <p>17 Mar 2021, 7f5da0a.</p>
 
@@ -286,7 +286,7 @@
 <dt id="Fix-issue-git-54-involving--bbp-n-and--bbpi-n"><b>Fix issue git#54 involving -bbp=n and -bbpi=n</b></dt>
 <dd>
 
-<p>In this issue, different results were obtained depending upon the existance of a comma in a list. To fix this, the definition of a list was adjusted from requiring one or more commas to requiring either a fat comma or a comma.</p>
+<p>In this issue, different results were obtained depending upon the existence of a comma in a list. To fix this, the definition of a list was adjusted from requiring one or more commas to requiring either a fat comma or a comma.</p>
 
 <p>At the same time, a known problem involving the combination -lp -bbp=n -bbpi=n was fixed. This fixes cases b826 b909 b989.</p>
 
@@ -408,7 +408,7 @@
 <p>The previous update was found to occasionally needlessly change existing formatting with very long long lines. So it is restricted to just when -vmll is set. For example, it is ok to keep the long quote following the opening paren in the following case.</p>
 
 <pre><code>  # perltidy -gnu
-  ok( &quot;got to the end without dieing (note without DEBUGGING passing this test means nothing)&quot;
+  ok( &quot;got to the end without dying (note without DEBUGGING passing this test means nothing)&quot;
     );</code></pre>
 
 <p>26 Feb 2021, 2b88464.</p>
@@ -543,7 +543,7 @@
 <dt id="Avoid-line-breaks-after-token-type-G"><b>Avoid line breaks after token type &#39;G&#39;</b></dt>
 <dd>
 
-<p>Random testing whith very short maximum line lengths produced some blinking states which were traced to the tokenizer alternately parsed an unknown bareword as type &#39;w&#39; or type &#39;G&#39;, depending on whether or not an opening block brace immediately followed on the same line. To fix this, a rule was added which prevents a line break between a type &#39;G&#39; token and an opening code block brace.</p>
+<p>Random testing with very short maximum line lengths produced some blinking states which were traced to the tokenizer alternately parsed an unknown bareword as type &#39;w&#39; or type &#39;G&#39;, depending on whether or not an opening block brace immediately followed on the same line. To fix this, a rule was added which prevents a line break between a type &#39;G&#39; token and an opening code block brace.</p>
 
 <p>This update fixes these cases: b900 b902 b928 b929</p>
 
@@ -934,7 +934,7 @@
         )
     }</code></pre>
 
-<p>were occuring with the following particular parameter set</p>
+<p>were occurring with the following particular parameter set</p>
 
 <pre><code>    --weld-nested-containers
     --maximum-line-length=40
@@ -1011,7 +1011,7 @@
     --indent-columns=9
     --continuation-indentation=1</code></pre>
 
-<p>The problem was that the token &#39;FILE&#39; was either parsed as type &#39;Y&#39; or &#39;Z&#39; depending on the existance of a subsequent space. These have different line break rules, causing a blinker. The problem was fixed by modifying the tokenizer to consider a newline to be a space. Updated 16 Jan 2021, d40cca9.</p>
+<p>The problem was that the token &#39;FILE&#39; was either parsed as type &#39;Y&#39; or &#39;Z&#39; depending on the existence of a subsequent space. These have different line break rules, causing a blinker. The problem was fixed by modifying the tokenizer to consider a newline to be a space. Updated 16 Jan 2021, d40cca9.</p>
 
 </dd>
 <dt id="Turn-off--bli-if--bar-is-set"><b>Turn off -bli if -bar is set</b></dt>
@@ -1231,7 +1231,7 @@
 <dt id="Improve-rule-for-forgetting-last-side-comment-location"><b>Improve rule for forgetting last side comment location</b></dt>
 <dd>
 
-<p>The code which aligns side comments remembers the most recent side comment and in some cases tries to start aligning at that column for later side comments. Sometimes the old side comment column was being remembered too long, causing occasional poor formatting and causing a noticable and unexpected drift of side comment locations to the right. The rule for forgetting the previous side comment column has been modified to reduce this problem. The new rule is essentially to forget the previous side comment location at a new side comment with different indentation level or significant number of lines without side comments (about 12). The previous implementation forgetting changes in indentation level across code blocks only. Below is an example where the old method gets into trouble and the new method is ok:</p>
+<p>The code which aligns side comments remembers the most recent side comment and in some cases tries to start aligning at that column for later side comments. Sometimes the old side comment column was being remembered too long, causing occasional poor formatting and causing a noticeable and unexpected drift of side comment locations to the right. The rule for forgetting the previous side comment column has been modified to reduce this problem. The new rule is essentially to forget the previous side comment location at a new side comment with different indentation level or significant number of lines without side comments (about 12). The previous implementation forgetting changes in indentation level across code blocks only. Below is an example where the old method gets into trouble and the new method is ok:</p>
 
 <pre><code>        # OLD:
         foreach my $r (@$array) {
@@ -1702,7 +1702,7 @@
 <dt id="Improve-vertical-alignment-in-some-marginal-matches"><b>Improve vertical alignment in some marginal matches</b></dt>
 <dd>
 
-<p>In perltidy a &#39;marginal match&#39; occurs for example when two lines share some alignment tokens but are somewhat different. When this happens some limits are placed on the size of the padding spaces that can be introduced. In this update the amount of allowed padding is significatly increased for certain &#39;good&#39; alignment tokens. Results of extensive testing were favorable provided that the change is restricted to alignments of &#39;=&#39;, &#39;if&#39; and &#39;unless&#39;. Update made 10 Dec 2020, a585f0b.</p>
+<p>In perltidy a &#39;marginal match&#39; occurs for example when two lines share some alignment tokens but are somewhat different. When this happens some limits are placed on the size of the padding spaces that can be introduced. In this update the amount of allowed padding is significantly increased for certain &#39;good&#39; alignment tokens. Results of extensive testing were favorable provided that the change is restricted to alignments of &#39;=&#39;, &#39;if&#39; and &#39;unless&#39;. Update made 10 Dec 2020, a585f0b.</p>
 
 <pre><code>    # OLD
     my @roles = $self-&gt;role_names;
@@ -2172,7 +2172,7 @@
         }, on_exit =&gt; sub ( $worker, $status ) { return; },
     );</code></pre>
 
-<p>Notice that the break after the comma has been lost. The problem was traced to a short-cut taken by the code looking for one-line blocks. The unique circumstances in which this occured involved a hash of anonymous subs, one with a signature with multiple parameters and short enough to be a one-line block, as in the last sub definition line. This was fixed 17 Oct 2020 in &#39;fix missing line break for hash of subs with signatures&#39;, 51428db.</p>
+<p>Notice that the break after the comma has been lost. The problem was traced to a short-cut taken by the code looking for one-line blocks. The unique circumstances in which this occurred involved a hash of anonymous subs, one with a signature with multiple parameters and short enough to be a one-line block, as in the last sub definition line. This was fixed 17 Oct 2020 in &#39;fix missing line break for hash of subs with signatures&#39;, 51428db.</p>
 
 </dd>
 <dt id="fix-issues-with-prototype-and-signature-parsing"><b>fix issues with prototype and signature parsing</b></dt>
@@ -2336,7 +2336,7 @@
 <dt id="fix-incorrect-parsing-of-certain-deprecated-empty-here-docs"><b>fix incorrect parsing of certain deprecated empty here-docs </b></dt>
 <dd>
 
-<p>The following snippet was being incorrecly parsed:</p>
+<p>The following snippet was being incorrectly parsed:</p>
 
 <pre><code> print &lt;&lt;
  # Hello World 13!
@@ -2591,7 +2591,7 @@
 <dt id="crash-due-to-bad-index-named-j_terminal_match"><b>crash due to bad index named &#39;$j_terminal_match&#39;</b></dt>
 <dd>
 
-<p>This crash was due to an index error which caused a non-existant object to be referenced. The problem is fixed 2020-09-07 in &quot;fix problem of undefined values involving j_terminal_match&quot;, c5bfa77. The particular parameters which caused this were:</p>
+<p>This crash was due to an index error which caused a non-existent object to be referenced. The problem is fixed 2020-09-07 in &quot;fix problem of undefined values involving j_terminal_match&quot;, c5bfa77. The particular parameters which caused this were:</p>
 
 <pre><code>    --noadd-newlines --nowant-left-space=&#39;=&#39; </code></pre>
 
@@ -2695,7 +2695,7 @@
 <pre><code>  use Test::More;
   ok open($stdin, &quot;&lt;&amp;&quot;, $1), &#39;open ... &quot;&lt;&amp;&quot;, $magical_fileno&#39;, ||  _diag $!;</code></pre>
 
-<p>Note the unusual situation of a comma followed by an &#39;||&#39;. Perltidy will format this satisfactorally but it will write an error message. The syntax is correct, however. Perl knows the prototype of the &#39;ok&#39; function, which is called here without parens, so the last comma marks the last arg and is needed to keep the || from attaching to the last arg.</p>
+<p>Note the unusual situation of a comma followed by an &#39;||&#39;. Perltidy will format this satisfactorily but it will write an error message. The syntax is correct, however. Perl knows the prototype of the &#39;ok&#39; function, which is called here without parens, so the last comma marks the last arg and is needed to keep the || from attaching to the last arg.</p>
 
 <p>Full support of peren-less calls will probably never be implemented in perltidy because it would require that it parse all of the modules used to find the prototypes. This would make it impossible to run perltidy on small snippets of code from within an editor.</p>
 

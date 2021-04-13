@@ -245,7 +245,7 @@ while still fixing the problem in case b1031.
 
 Testing produced a blinking state involving a -bbx=2 flag with an unusual
 combination of other parameters.  The problem was traced to the definition of a
-list containg another list being too restrictive.  This update fixes case
+list containing another list being too restrictive.  This update fixes case
 1024.
 
 17 Mar 2021, 7f5da0a.
@@ -401,7 +401,7 @@ aligned.
 
 =item B<Fix issue git#54 involving -bbp=n and -bbpi=n>
 
-In this issue, different results were obtained depending upon the existance of
+In this issue, different results were obtained depending upon the existence of
 a comma in a list.  To fix this, the definition of a list was adjusted from
 requiring one or more commas to requiring either a fat comma or a comma.
 
@@ -543,7 +543,7 @@ is set.  For example, it is ok to keep the long quote following the opening
 paren in the following case.
 
   # perltidy -gnu
-  ok( "got to the end without dieing (note without DEBUGGING passing this test means nothing)"
+  ok( "got to the end without dying (note without DEBUGGING passing this test means nothing)"
     );
 
 26 Feb 2021, 2b88464.
@@ -692,7 +692,7 @@ This will not change much existing code.  This update fixes cases b751 b779.
 
 =item B<Avoid line breaks after token type 'G'>
 
-Random testing whith very short maximum line lengths produced some blinking
+Random testing with very short maximum line lengths produced some blinking
 states which were traced to the tokenizer alternately parsed an unknown
 bareword as type 'w' or type 'G', depending on whether or not an opening block
 brace immediately followed on the same line.  To fix this, a rule was added
@@ -1174,7 +1174,7 @@ In random testing, the following two alternating states
         )
     }
 
-were occuring with the following particular parameter set
+were occurring with the following particular parameter set
 
     --weld-nested-containers
     --maximum-line-length=40
@@ -1256,7 +1256,7 @@ with the following parameters
     --continuation-indentation=1
 
 The problem was that the token 'FILE' was either parsed as type 'Y'
-or 'Z' depending on the existance of a subsequent space.  These have
+or 'Z' depending on the existence of a subsequent space.  These have
 different line break rules, causing a blinker. The problem was
 fixed by modifying the tokenizer to consider a newline to be a space.
 Updated 16 Jan 2021, d40cca9.
@@ -1503,7 +1503,7 @@ formatting. 3 Jan 2021, e57d8db.
 The code which aligns side comments remembers the most recent side comment and
 in some cases tries to start aligning at that column for later side comments.
 Sometimes the old side comment column was being remembered too long, causing
-occasional poor formatting and causing a noticable and unexpected drift of side
+occasional poor formatting and causing a noticeable and unexpected drift of side
 comment locations to the right.  The rule for forgetting the previous side
 comment column has been modified to reduce this problem.  The new rule is
 essentially to forget the previous side comment location at a new side comment
@@ -2029,7 +2029,7 @@ after the second comma.
 In perltidy a 'marginal match' occurs for example when two lines share some
 alignment tokens but are somewhat different.  When this happens some limits are
 placed on the size of the padding spaces that can be introduced.  In this
-update the amount of allowed padding is significatly increased for certain
+update the amount of allowed padding is significantly increased for certain
 'good' alignment tokens.  Results of extensive testing were favorable provided 
 that the change is restricted to alignments of '=', 'if' and 'unless'.  Update
 made 10 Dec 2020, a585f0b.
@@ -2544,7 +2544,7 @@ The resulting formatting was
 
 Notice that the break after the comma has been lost.  The problem was traced to
 a short-cut taken by the code looking for one-line blocks. The unique
-circumstances in which this occured involved a hash of anonymous subs, one with
+circumstances in which this occurred involved a hash of anonymous subs, one with
 a signature with multiple parameters and short enough to be a one-line block,
 as in the last sub definition line.  This was fixed 17 Oct 2020
 in 'fix missing line break for hash of subs with signatures', 51428db.
@@ -2723,7 +2723,7 @@ This was fixed 20 Sep 2020 in 'fixed_uninitialized_value', 8d6c4ed.
 
 =item B<fix incorrect parsing of certain deprecated empty here-docs >
 
-The following snippet was being incorrecly parsed:
+The following snippet was being incorrectly parsed:
 
  print <<
  # Hello World 13!
@@ -2979,7 +2979,7 @@ out in the wrong order.  This was fixed 11 Sep 2020.
 
 =item B<crash due to bad index named '$j_terminal_match'>
 
-This crash was due to an index error which caused a non-existant object to be
+This crash was due to an index error which caused a non-existent object to be
 referenced. The problem is fixed 2020-09-07 in "fix problem of undefined values involving j_terminal_match",
 c5bfa77.  The particular parameters which caused this were:
 
@@ -3090,7 +3090,7 @@ Consider the following snippet:
   ok open($stdin, "<&", $1), 'open ... "<&", $magical_fileno', ||  _diag $!;
 
 Note the unusual situation of a comma followed by an '||'.  Perltidy will format this
-satisfactorally but it will write an error message. The syntax is correct, however.
+satisfactorily but it will write an error message. The syntax is correct, however.
 Perl knows the prototype of the 'ok' function, which is called here without parens,
 so the last comma marks the last arg and is needed to keep the || from attaching
 to the last arg.

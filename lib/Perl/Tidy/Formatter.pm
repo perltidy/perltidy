@@ -7963,7 +7963,7 @@ sub mark_short_nested_blocks {
     #   sub cxt_two { sort { $a <=> $b } test_if_list() }
 
     # The 'sort' block is short and nested within an outer sub block.
-    # Normally, the existance of the 'sort' block will force the sub block to
+    # Normally, the existence of the 'sort' block will force the sub block to
     # break open, but this is not always desirable. Here we will set a flag for
     # the sort block to prevent this.  To give the user control, we will
     # follow the input file formatting.  If either of the blocks is broken in
@@ -8432,7 +8432,7 @@ sub break_before_list_opening_containers {
         # -bbxi=2 ...
 
         #################################################################
-        # Part 2: Perform tests before commiting to changing ci and level
+        # Part 2: Perform tests before committing to changing ci and level
         #################################################################
 
         # Before changing the ci level of the opening container, we need
@@ -9853,7 +9853,7 @@ EOM
         # Add one token to the next batch.
         # $Ktoken_vars = the index K in the global token array
         # $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
-        #                unless they are temporarily being overriden
+        #                unless they are temporarily being overridden
 
         # NOTE: This routine needs to be coded efficiently because it is called
         # once per token.  I have gotten it down from the second slowest to the
@@ -12018,7 +12018,7 @@ EOM
             # Check correctness of the mapping between the i and K token
             # indexes.  (The K index is the global index, the i index is the
             # batch index).  It is important to do this check because an error
-            # would be disasterous.  The reason that we should never see an
+            # would be disastrous.  The reason that we should never see an
             # index error here is that sub 'store_token_to_go' has a check to
             # make sure that the indexes in batches remain continuous.  Since
             # sub 'store_token_to_go' controls feeding tokens into batches, so
