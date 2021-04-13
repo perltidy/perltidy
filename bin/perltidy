@@ -2775,20 +2775,20 @@ token.  If desired, vertical tightness controls can be applied
 independently to each of the closing container token types.
 
 The parameters for controlling parentheses are B<-pvt=n> or
-B<--paren-vertical-tightness=n>, and B<-pcvt=n> or
+B<--paren-vertical-tightness=n>, and B<-pvtc=n> or
 B<--paren-vertical-tightness-closing=n>.
 
 Likewise, the parameters for square brackets are B<-sbvt=n> or
-B<--square-bracket-vertical-tightness=n>, and B<-sbcvt=n> or
+B<--square-bracket-vertical-tightness=n>, and B<-sbvtc=n> or
 B<--square-bracket-vertical-tightness-closing=n>.
 
 Finally, the parameters for controlling non-code block braces are
-B<-bvt=n> or B<--brace-vertical-tightness=n>, and B<-bcvt=n> or
+B<-bvt=n> or B<--brace-vertical-tightness=n>, and B<-bvtc=n> or
 B<--brace-vertical-tightness-closing=n>.
 
 In fact, the parameter B<-vt=n> is actually just an abbreviation for
 B<-pvt=n -bvt=n sbvt=n>, and likewise B<-vtc=n> is an abbreviation
-for B<-pvtc=n -bvtc=n sbvtc=n>.
+for B<-pvtc=n -bvtc=n -sbvtc=n>.
 
 =item B<-bbvt=n> or B<--block-brace-vertical-tightness=n>
 
