@@ -5957,34 +5957,59 @@ sub respace_tokens {
         my $line_diff = $lx_close - $lx_open;
         $ris_broken_container->{$seqno} = $line_diff;
 
-        # Handle code blocks
-        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
-        if ($block_type) {
+        # See if this is a list
+        my $is_list;
+        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+        if ($rtype_count) {
+            my $comma_count     = $rtype_count->{','};
+            my $fat_comma_count = $rtype_count->{'=>'};
+            my $semicolon_count = $rtype_count->{';'};
 
-            # The -lp option needs to know if a container holds a code block
-            next unless ($rOpts_line_up_parentheses);
+            # We will define a list to be a container with one or more commas
+            # and no semicolons.
+            $is_list =
+              ( $comma_count || $fat_comma_count ) && !$semicolon_count;
 
-            my $seqno_parent = $rparent_of_seqno->{$seqno};
-            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
-                $rhas_code_block->{$seqno_parent}        = 1;
-                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
-                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
-            }
-
-            next;
         }
 
-        # Handle lists
-        my $rtype_count = $rtype_count_by_seqno->{$seqno};
-        next unless ($rtype_count);
-        my $comma_count     = $rtype_count->{','};
-        my $fat_comma_count = $rtype_count->{'=>'};
-        my $semicolon_count = $rtype_count->{';'};
+        # Look for a block brace marked as uncertain.  If the tokenizer thinks
+        # its guess is uncertain for the type of a brace following an unknown
+        # bareword then it adds a trailing space as a signal.  We can fix the
+        # type here now that we have had a better look at the contents of the
+        # container. This fixes case b1085. To find the corresponding code in
+        # Tokenizer.pm search for 'b1085' with an editor.
+        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
+        if ( $block_type && substr( $block_type, -1, 1 ) eq ' ' ) {
 
-        # We will define a list to be a container with one or more commas and
-        # no semicolons.
-        my $is_list = ( $comma_count || $fat_comma_count ) && !$semicolon_count;
-        if ($is_list) {
+            # Always remove the trailing space
+            $block_type =~ s/\s+$//;
+
+            # Try to filter out parenless sub calls
+            my ( $Knn1, $Knn2 );
+            my ( $type_nn1, $type_nn2 ) = ( 'b', 'b' );
+            $Knn1 = $self->K_next_nonblank( $K_opening, $rLL_new );
+            $Knn2 = $self->K_next_nonblank( $Knn1, $rLL_new ) if defined($Knn1);
+            $type_nn1 = $rLL_new->[$Knn1]->[_TYPE_] if ( defined($Knn1) );
+            $type_nn2 = $rLL_new->[$Knn2]->[_TYPE_] if ( defined($Knn2) );
+            if ( $type_nn1 eq 'w' && $type_nn2 =~ /^[wiqQGCZ]$/ ) {
+                $is_list = 0;
+            }
+
+            # Convert to a hash brace if it looks like it holds a list
+            if ($is_list) {
+
+                $block_type = "";
+
+                $rLL_new->[$K_opening]->[_CI_LEVEL_] = 1;
+                $rLL_new->[$K_closing]->[_CI_LEVEL_] = 1;
+            }
+
+            $rLL_new->[$K_opening]->[_BLOCK_TYPE_] = $block_type;
+            $rLL_new->[$K_closing]->[_BLOCK_TYPE_] = $block_type;
+        }
+
+        # Handle a list container
+        if ( $is_list && !$block_type ) {
             $ris_list_by_seqno->{$seqno} = $seqno;
             my $seqno_parent = $rparent_of_seqno->{$seqno};
             my $depth        = 0;
@@ -6018,6 +6043,17 @@ sub respace_tokens {
                         $rhas_broken_list_with_lec->{$seqno_parent} = 1;
                     }
                 }
+                $seqno_parent = $rparent_of_seqno->{$seqno_parent};
+            }
+        }
+
+        # Handle code blocks ...
+        # The -lp option needs to know if a container holds a code block
+        elsif ( $block_type && $rOpts_line_up_parentheses ) {
+            my $seqno_parent = $rparent_of_seqno->{$seqno};
+            while ( defined($seqno_parent) && $seqno_parent ne SEQ_ROOT ) {
+                $rhas_code_block->{$seqno_parent}        = 1;
+                $rhas_broken_code_block->{$seqno_parent} = $line_diff;
                 $seqno_parent = $rparent_of_seqno->{$seqno_parent};
             }
         }
@@ -22063,3 +22099,4 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
+

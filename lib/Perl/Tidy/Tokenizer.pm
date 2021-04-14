@@ -5352,6 +5352,16 @@ sub decide_if_code_block {
                 $code_block_type = "";
             }
         }
+
+        if ( $code_block_type && $pre_types[$j] eq '}' ) {
+
+            # Patch for case b1085: if we hit the sentinal token then it is
+            # uncertain if this is a block.  If this brace follows a bareword,
+            # then append a space as a signal to the formatter that this may
+            # not be a block brace.  To find the corresponding code in
+            # Formatter.pm search for 'b1085'.
+            $code_block_type .= " " if ( $code_block_type =~ /^\w/ );
+        }
     }
 
     return $code_block_type;
@@ -7698,7 +7708,7 @@ sub scan_number_do {
            |([0-7_]+               # string of octal digits 
            (\.([0-7][0-7_]*)?)?    # optional decimal and fraction
            [Pp][+-]?[0-7]          # REQUIRED exponent, no underscore
-           [0-7_]*)                # Additional exponent digits, with underscores
+           [0-7_]*)                # Additional exponent digits with underscores
 
            # or octal integer
            |([0-7_]+)               # string of octal digits 

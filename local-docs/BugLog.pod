@@ -3,6 +3,17 @@
 
 =over 4
 
+=item B<Correct brace types mismarked by tokenizer>
+
+Testing with random parameters produced a case in which a brace following an
+unknown bareword was marked by the tokenizer as a code block brace rather than
+a hash brace.  This can cause poor formatting.  The problem was solved by
+having the tokenizer send a signal to the formatter if a block type was
+guessed.  The formatter has more information and can fix the problem.  This
+fixes case b1085.
+
+11 Apr 2021.
+
 =item B<Unify coding for welded quotes and other welded containers>
 
 Random testing produced some cases where welded quotes were not converging.
@@ -12,7 +23,7 @@ to a new common sub.
 
 This update fixes cases b1066 b1067 b1071 b1079 b1080.
 
-10 Apr 2021.
+10 Apr 2021, 5d73dd5.
 
 =item B<Slight change in weld length calculation>
 
