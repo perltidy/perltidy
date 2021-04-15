@@ -3,6 +3,30 @@
 
 =over 4
 
+=item B<Fix problem parsing anonymous subs with attribute lists>
+
+Random testing produced case b994 with unstable formatting:
+
+    do
+    sub :
+    lvalue
+    {
+    return;
+    }
+
+when run with parameters:
+
+    --continuation-indentation=0
+    --ignore-old-breakpoints
+    --maximum-line-length=7
+    --opening-anonymous-sub-brace-on-new-line
+
+The line 'sub :' was being correctly parsed but the following opening block
+brace was not correctly marked as an anonymous sub brace.  This fixes cases
+b994 and b1053.
+
+15 Apr 2021.
+
 =item B<Correct brace types mismarked by tokenizer>
 
 Testing with random parameters produced a case in which a brace following an

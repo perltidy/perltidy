@@ -7163,6 +7163,8 @@ sub scan_identifier_do {
         my $id_scan_state   = $rinput_hash->{id_scan_state};
         my $max_token_index = $rinput_hash->{max_token_index};
 
+        my $i_entry = $i;
+
         # Determine the CALL TYPE
         # 1=sub
         # 2=(
@@ -7236,9 +7238,9 @@ sub scan_identifier_do {
             $proto = $1;
             $attrs = $2;
 
-       # Append the prototype to the starting token if it is 'sub' or
-       # 'prototype'.  This is not necessary but for compatibility with previous
-       # versions when the -csc flag is used:
+            # Append the prototype to the starting token if it is 'sub' or
+            # 'prototype'.  This is not necessary but for compatibility with
+            # previous versions when the -csc flag is used:
             if ( $proto && ( $match || $call_type == PROTOTYPE_CALL ) ) {
                 $tok .= $proto;
             }
@@ -7251,7 +7253,12 @@ sub scan_identifier_do {
             }
 
             $match ||= 1;
+
+            # Patch part #1 to fixes cases b994 and b1053:
+            # Mark an anonymous sub keyword without prototype as type 'k', i.e.
+            #    'sub : lvalue { ...'
             $type = 'i';
+            if ( $tok eq 'sub' && !$proto ) { $type = 'k' }
         }
 
         if ($match) {
@@ -7280,6 +7287,19 @@ sub scan_identifier_do {
                 ( $i, $error ) = inverse_pretoken_map( $i, $pos, $rtoken_map,
                     $max_token_index );
                 if ($error) { warning("Possibly invalid sub\n") }
+
+            # Patch part #2 to fixes cases b994 and b1053:
+            # Do not let spaces be part of the token of an anonymous sub keyword
+            # which we marked as type 'k' above...i.e. for something like:
+            #    'sub : lvalue { ...'
+            # Back up and let it be parsed as a blank
+                if (   $type eq 'k'
+                    && $attrs
+                    && $i > $i_entry
+                    && substr( $rtokens->[$i], 0, 1 ) eq ' ' )
+                {
+                    $i--;
+                }
 
                 # check for multiple definitions of a sub
                 ( $next_nonblank_token, my $i_next ) =
@@ -7327,8 +7347,11 @@ sub scan_identifier_do {
             # of the sub so the next opening brace can be labeled.
             # Setting 'statement_type' causes any ':'s to introduce
             # attributes.
-            elsif ( $next_nonblank_token eq ':' ) {
-                $statement_type = $tok if ( $call_type == SUB_CALL );
+            elsif ( $next_nonblank_token eq ':') { 
+                if ( $call_type == SUB_CALL ) {
+                    $statement_type =
+                      substr( $tok, 0, 3 ) eq 'sub' ? $tok : 'sub';
+                }
             }
 
             # if we stopped before an open paren ...
@@ -7343,9 +7366,12 @@ sub scan_identifier_do {
                 if ( !$saw_opening_paren ) {
                     $id_scan_state = 'sub';    # we must come back to get proto
                 }
-                $statement_type = $tok if ( $call_type == SUB_CALL );
+                if ( $call_type == SUB_CALL ) {
+                    $statement_type =
+                      substr( $tok, 0, 3 ) eq 'sub' ? $tok : 'sub';
+                }
             }
-            elsif ($next_nonblank_token) {     # EOF technically ok
+            elsif ($next_nonblank_token) {    # EOF technically ok
                 $subname = "" unless defined($subname);
                 warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
