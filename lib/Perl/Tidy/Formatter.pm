@@ -15433,7 +15433,15 @@ sub set_continuation_breaks {
             }
 
             $last_old_breakpoint_count = $old_breakpoint_count;
-            if ( $old_breakpoint_to_go[$i] ) {
+
+            # Fixed for case b1097 to not consider old breaks at highly
+            # stressed locations, such as types 'L' and 'R'.  It might be
+            # useful to generalize this concept in the future by looking at
+            # actual bond strengths.
+            if (   $old_breakpoint_to_go[$i]
+                && $type ne 'L'
+                && $next_nonblank_type ne 'R' )
+            {
                 $i_line_end   = $i;
                 $i_line_start = $i_next_nonblank;
 

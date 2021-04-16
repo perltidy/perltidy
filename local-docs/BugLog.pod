@@ -3,6 +3,32 @@
 
 =over 4
 
+=item B<Fix rare line break problem>
+
+Random testing produced case b1097 with this parameter set
+
+    --brace-vertical-tightness-closing=1
+    --continuation-indentation=8
+    --indent-columns=10
+    --maximum-line-length=36
+
+and either this output
+
+          my (@files) = @{
+                    $args{-files} };
+
+or this output
+
+          my (@files) =
+                  @{ $args{-files}
+                  };
+
+The different results were caused by the unusual combination of parameters.
+The problem was fixed by not allowing the formatter to consider existing breaks
+at highly stressed locations such as these.
+
+15 Apr 2021.
+
 =item B<Fix problem parsing anonymous subs with attribute lists>
 
 Random testing produced case b994 with unstable formatting:
@@ -25,7 +51,7 @@ The line 'sub :' was being correctly parsed but the following opening block
 brace was not correctly marked as an anonymous sub brace.  This fixes cases
 b994 and b1053.
 
-15 Apr 2021.
+15 Apr 2021, 84c1123.
 
 =item B<Correct brace types mismarked by tokenizer>
 
@@ -36,7 +62,7 @@ having the tokenizer send a signal to the formatter if a block type was
 guessed.  The formatter has more information and can fix the problem.  This
 fixes case b1085.
 
-11 Apr 2021.
+11 Apr 2021, 7d23bf4.
 
 =item B<Unify coding for welded quotes and other welded containers>
 
