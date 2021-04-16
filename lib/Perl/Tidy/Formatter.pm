@@ -5018,6 +5018,15 @@ sub respace_tokens {
             if ( $is_opening_token{$token} ) {
 
                 $K_opening_container->{$type_sequence} = $KK_new;
+
+                # Fix for case b1100: Count a line ending in ', [' as having
+                # a line-ending comma.  Otherwise, these commas can be hidden
+                # with something like --opening-square-bracket-right
+                if (   $Ktoken_vars == $Klast_old_code
+                    && $last_nonblank_type eq ',' )
+                {
+                    $rlec_count_by_seqno->{$type_sequence}++;
+                }
             }
             elsif ( $is_closing_token{$token} ) {
 

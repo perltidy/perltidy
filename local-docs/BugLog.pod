@@ -1,7 +1,15 @@
-
 =head1 Issues fixed after release 20210402
 
 =over 4
+
+=item B<Fix problem involving -bbx=2 -xci -osbr and similar -otr flags>
+
+Random testing produced case b1100 in which the output style produced
+by the --opening-token-right flags interfered with counting line-ending
+commas, and this in turn caused the -bbx flag to turn off the -xci flag.
+This problem was fixed.
+
+15 Apr 2021.
 
 =item B<Fix rare line break problem>
 
