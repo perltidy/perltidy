@@ -2478,6 +2478,11 @@ EOM
         },
         '*' => sub {    # typeglob, or multiply?
 
+            if ( $expecting == UNKNOWN && $last_nonblank_type eq 'Z' ) {
+                if ( $next_type ne 'b' && $next_type ne '(' ) {
+                    $expecting = TERM;
+                }
+            }
             if ( $expecting == TERM ) {
                 scan_identifier_fast();
             }
@@ -2594,9 +2599,11 @@ EOM
         },
         '%' => sub {    # hash or modulo?
 
-            # first guess is hash if no following blank
+            # first guess is hash if no following blank or paren
             if ( $expecting == UNKNOWN ) {
-                if ( $next_type ne 'b' ) { $expecting = TERM }
+                if ( $next_type ne 'b' && $next_type ne '(' ) {
+                    $expecting = TERM;
+                }
             }
             if ( $expecting == TERM ) {
                 scan_identifier_fast();
@@ -4737,6 +4744,9 @@ EOM
 # hash lookup table of operator expected values
 my %op_expected_table;
 
+# exceptions to perl's weird parsing rules after type 'Z'
+my %is_weird_parsing_rule_exception;
+
 BEGIN {
 
     # Always expecting TERM following these types:
@@ -4763,7 +4773,13 @@ BEGIN {
     push @q, ')';
     @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
 
+    # Fix for git #62: added '*' and '%'
+    @q = qw( < ? * % );
+    @{is_weird_parsing_rule_exception}{@q} = (OPERATOR) x scalar(@q);
+
 }
+
+use constant DEBUG_OPERATOR_EXPECTED => 0;
 
 sub operator_expected {
 
@@ -4989,7 +5005,7 @@ sub operator_expected {
         # The 'weird parsing rules' of next section do not work for '<' and '?'
         # It is best to mark them as unknown.  Test case:
         #  print $fh <DATA>;
-        elsif ( $tok =~ /^[\<\?]$/ ) {
+        elsif ( $is_weird_parsing_rule_exception{$tok} ) {
             $op_expected = UNKNOWN;
         }
 
@@ -5032,11 +5048,9 @@ sub operator_expected {
 
   RETURN:
 
-    # debug and diagnostics can go here..
-
-    0 && do {
+    DEBUG_OPERATOR_EXPECTED && do {
         print STDOUT
-"EXPECT: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
+"OPERATOR_EXPECTED: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
     };
 
     return $op_expected;
@@ -7347,7 +7361,7 @@ sub scan_identifier_do {
             # of the sub so the next opening brace can be labeled.
             # Setting 'statement_type' causes any ':'s to introduce
             # attributes.
-            elsif ( $next_nonblank_token eq ':') { 
+            elsif ( $next_nonblank_token eq ':' ) {
                 if ( $call_type == SUB_CALL ) {
                     $statement_type =
                       substr( $tok, 0, 3 ) eq 'sub' ? $tok : 'sub';
@@ -9049,3 +9063,4 @@ BEGIN {
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
 }
 1;
+
