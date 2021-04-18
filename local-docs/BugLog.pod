@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Avoid welding at sort/map/grep paren calls>
+
+Random testing produced several cases of unstable welds in which the inner
+container something like 'sort ('.  The problem was that there are special
+rules which prevent a break following such a paren.  The problem was fixed by
+preventing welds at these locations.
+
+This update fixes cases b1077 b1092 b1093 b1094 b1104 b1105 b1108.
+
+17 Apr 2021.
+
 =item B<Fix issue git#62>
 
 This fixes issue git #62.  A similar issue for the % operator was fixed.

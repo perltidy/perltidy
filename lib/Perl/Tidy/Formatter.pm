@@ -3841,7 +3841,7 @@ EOM
             # Sixth Approximation. Welds.
             #---------------------------------------------------------------
 
-            # Do not allow a break within welds,
+            # Do not allow a break within welds
             if ( $seqno && $total_weld_count ) {
                 if ( $self->weld_len_right( $seqno, $type ) ) {
                     $strength = NO_BREAK;
@@ -6940,6 +6940,7 @@ sub find_nested_pairs {
         #        ^--K_o_o                                             ^--K_i_o
         #       @array) )
         my $Kn_first = $K_outer_opening;
+        my $Kn_last_nonblank;
         for (
             my $Kn = $K_outer_opening + 1 ;
             $Kn <= $K_inner_opening ;
@@ -6949,6 +6950,7 @@ sub find_nested_pairs {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
             if ( !$nonblank_count )        { $Kn_first = $Kn }
             if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
+            $Kn_last_nonblank = $Kn;
 
             # skip chain of identifier tokens
             my $last_type    = $type;
@@ -6959,6 +6961,18 @@ sub find_nested_pairs {
 
             $nonblank_count++;
             last if ( $nonblank_count > 2 );
+        }
+
+        # Patch for b1104: do not weld to a paren preceded by sort/map/grep
+        # because the special line break rules may cause a blinking state
+        if (   defined($Kn_last_nonblank)
+            && $rLL->[$K_inner_opening]->[_TOKEN_] eq '('
+            && $rLL->[$Kn_last_nonblank]->[_TYPE_] eq 'k' )
+        {
+            my $token = $rLL->[$Kn_last_nonblank]->[_TOKEN_];
+
+            # Turn off welding at sort/map/grep (
+            if ( $is_sort_map_grep{$token} ) { $nonblank_count = 10 }
         }
 
         if (
@@ -22116,4 +22130,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-
