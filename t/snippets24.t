@@ -11,6 +11,7 @@
 #8 lpxl.lpxl3
 #9 lpxl.lpxl4
 #10 lpxl.lpxl5
+#11 git63.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -111,6 +112,11 @@ my $list =
         key => $value,
       }
     ) ;
+----------
+
+        'git63' => <<'----------',
+my $fragment = $parser-> #parse_html_string
+  parse_balanced_chunk($I);
 ----------
 
         'lpxl' => <<'----------',
@@ -668,6 +674,15 @@ $behaviour = {
     mouse => { nibble => "kibble" },
 };
 #10...........
+        },
+
+        'git63.def' => {
+            source => "git63",
+            params => "def",
+            expect => <<'#11...........',
+my $fragment = $parser->    #parse_html_string
+  parse_balanced_chunk($I);
+#11...........
         },
     };
 

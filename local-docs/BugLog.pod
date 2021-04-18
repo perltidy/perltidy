@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix issue git#63>
+
+The following lines produced an error message due to the side comment
+
+    my $fragment = $parser->    #parse_html_string
+      parse_balanced_chunk($I);
+
+This has been fixed.
+18 Apr 2021.
+
 =item B<Avoid welding at sort/map/grep paren calls>
 
 Random testing produced several cases of unstable welds in which the inner
@@ -11,12 +21,12 @@ preventing welds at these locations.
 
 This update fixes cases b1077 b1092 b1093 b1094 b1104 b1105 b1108.
 
-17 Apr 2021.
+17 Apr 2021, d679b48.
 
 =item B<Fix issue git#62>
 
 This fixes issue git #62.  A similar issue for the % operator was fixed.
-17 Apr 2021.
+17 Apr 2021, f80d677.
 
 =item B<Fix problem involving -bbx=2 -xci -osbr and similar -otr flags>
 
@@ -25,7 +35,7 @@ by the --opening-token-right flags interfered with counting line-ending
 commas, and this in turn caused the -bbx flag to turn off the -xci flag.
 This problem was fixed.
 
-15 Apr 2021.
+15 Apr 2021, 21ef53b.
 
 =item B<Fix rare line break problem>
 
@@ -51,7 +61,7 @@ The different results were caused by the unusual combination of parameters.
 The problem was fixed by not allowing the formatter to consider existing breaks
 at highly stressed locations such as these.
 
-15 Apr 2021.
+15 Apr 2021, 9f15b9d.
 
 =item B<Fix problem parsing anonymous subs with attribute lists>
 

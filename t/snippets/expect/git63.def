@@ -1,0 +1,2 @@
+my $fragment = $parser->    #parse_html_string
+  parse_balanced_chunk($I);

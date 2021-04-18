@@ -3950,6 +3950,14 @@ EOM
 
                             }
 
+                            # Fix part 1 for git #63 in which a comment falls
+                            # between an -> and the following word.  An
+                            # alternate fix would be to change operator_expected
+                            # to return an UNKNOWN for this type.
+                            elsif ( $last_nonblank_type eq '->' ) {
+
+                            }
+
                             # don't complain about possible indirect object
                             # notation.
                             # For example:
@@ -3977,7 +3985,10 @@ EOM
                         # functions
                         $next_tok = $rtokens->[ $i + 1 ];
                         if ( $next_tok eq '(' ) {
-                            $type = 'U';
+
+                            # Fix part 2 for git #63.  Leave type as 'w' to keep
+                            # the type the same as if the -> were not separated
+                            $type = 'U' unless ( $last_nonblank_type eq '->' );
                         }
 
                         # underscore after file test operator is file handle
@@ -9063,4 +9074,3 @@ BEGIN {
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
 }
 1;
-
