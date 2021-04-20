@@ -3860,6 +3860,13 @@ EOM
 
             $bond_strength_to_go[$i] = $strength;
 
+            # Fix for case c001: be sure NO_BREAK's are enforced by later
+            # routines, except at a '?' because '?' as quote delimiter is
+            # deprecated.
+            if ( $strength >= NO_BREAK && $next_nonblank_type ne '?' ) {
+                $nobreak_to_go[$i] ||= 1;
+            }
+
             DEBUG_BOND && do {
                 my $str = substr( $token, 0, 15 );
                 $str .= ' ' x ( 16 - length($str) );

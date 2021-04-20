@@ -2,6 +2,44 @@
 
 =over 4
 
+=item B<Fix a bad line break choice at a slash>
+
+Random testing produced case c001 in which the following snipppet
+
+   ok $mi/(@mtime-1) >= 0.75 && $ai/(@atime-1) >= 0.75 &&
+	     $ss/(@mtime+@atime) >= 0.2;
+
+when processed with these parameters
+
+    --maximum-line-length=20
+    --nowant-right-space=' / '
+    --want-break-before='* /'
+
+produced the following result
+
+    ok $mi
+      /( @mtime - 1 ) >=
+      0.75
+      && $ai
+      /( @atime - 1 )
+      >= 0.75
+      && $ss
+      /( @mtime +
+          @atime ) >=
+      0.2;
+
+using 'perl -cw' on this snippet gives a syntax error
+
+    syntax error at /tmp/issues.t line 5, near "/( "
+        (Might be a runaway multi-line // string starting on line 2)
+
+The error is due to perl's weird parsing rules near a possible indrect object.
+This is a situation where perltidy must ignore a user spacing and line break
+request.  This should have been done but in this case a flag to prevent this
+was not being propagated to later stages of formatting.  This has been fixed.
+
+20 Apr 2021.
+
 =item B<Fix rare problem with -lp -wn>
 
 Random testing produced case b1114 which gave unstable formatting with these 
@@ -18,7 +56,7 @@ and this snippet
     is(length(pack("j", 0)),
         $Config{ivsize});
 
-Fixed 19 Apr 2021.
+Fixed 19 Apr 2021, eeeaf09.
 
 =item B<Fix issue git#63>
 
@@ -27,7 +65,7 @@ The following lines produced an error message due to the side comment
     my $fragment = $parser->    #parse_html_string
       parse_balanced_chunk($I);
 
-Fixed 18 Apr 2021.
+Fixed 18 Apr 2021, c2030cf.
 
 =item B<Avoid welding at sort/map/grep paren calls>
 
