@@ -7420,12 +7420,23 @@ EOM
             # (1) the containers are all on one line, and
             # (2) the line does not exceed the allowable length, and
             # This flag is used to avoid creating blinkers.
-            # Changed 'excess_length_to_K' to 'excess_length_of_line'
+            # FIX1: Changed 'excess_length_to_K' to 'excess_length_of_line'
             # to get exact lengths and fix b604 b605.
-            if (   $iline_oo == $iline_oc
-                && $excess_length_of_line->( $Kfirst, $Klast ) <= 0 )
-            {
-                $is_one_line_weld = 1;
+            if ( $iline_oo == $iline_oc ) {
+                my $excess = $excess_length_of_line->( $Kfirst, $Klast );
+                if ( $excess <= 0 ) {
+
+                    # FIX2: Patch for b1114: add a tolerance of one level if
+                    # this line has an unbalanced start.  This helps prevent
+                    # blinkers in unusual cases for lines near the length limit
+                    # by making it more likely that RULE 2 will prevent a weld.
+                    my $level_diff =
+                      $outer_opening->[_LEVEL_] - $rLL->[$Kfirst]->[_LEVEL_];
+
+                    if ( !$level_diff || $excess + $rOpts_indent_columns <= 0 ) {
+                        $is_one_line_weld = 1;
+                    }
+                }
             }
 
             # DO-NOT-WELD RULE 1:

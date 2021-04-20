@@ -2,6 +2,24 @@
 
 =over 4
 
+=item B<Fix rare problem with -lp -wn>
+
+Random testing produced case b1114 which gave unstable formatting with these 
+parameters
+
+    --noadd-whitespace
+    --indent-columns=8
+    --line-up-parentheses
+    --maximum-line-length=25
+    --weld-nested-containers
+
+and this snippet
+
+    is(length(pack("j", 0)),
+        $Config{ivsize});
+
+Fixed 19 Apr 2021.
+
 =item B<Fix issue git#63>
 
 The following lines produced an error message due to the side comment
@@ -9,8 +27,7 @@ The following lines produced an error message due to the side comment
     my $fragment = $parser->    #parse_html_string
       parse_balanced_chunk($I);
 
-This has been fixed.
-18 Apr 2021.
+Fixed 18 Apr 2021.
 
 =item B<Avoid welding at sort/map/grep paren calls>
 
