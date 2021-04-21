@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Adjust line break rules for uncontained commas>
+
+Random testing produced case c1119 which was unstable due to the formatting
+rules for breaking lines at commas which occur outside of containers. The
+rules were modified to fix the problem.
+
+20 Apr 2021.
+
 =item B<Fix a bad line break choice at a slash>
 
 Random testing produced case c001 in which the following snipppet
@@ -38,7 +46,7 @@ This is a situation where perltidy must ignore a user spacing and line break
 request.  This should have been done but in this case a flag to prevent this
 was not being propagated to later stages of formatting.  This has been fixed.
 
-20 Apr 2021.
+20 Apr 2021, 4fbc69a.
 
 =item B<Fix rare problem with -lp -wn>
 

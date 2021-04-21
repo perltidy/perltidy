@@ -7440,7 +7440,8 @@ EOM
                     my $level_diff =
                       $outer_opening->[_LEVEL_] - $rLL->[$Kfirst]->[_LEVEL_];
 
-                    if ( !$level_diff || $excess + $rOpts_indent_columns <= 0 ) {
+                    if ( !$level_diff || $excess + $rOpts_indent_columns <= 0 )
+                    {
                         $is_one_line_weld = 1;
                     }
                 }
@@ -15313,21 +15314,28 @@ sub set_continuation_breaks {
             # Changed rule from multiple old commas to just one here:
             if ( $ibreak >= 0 && $obp_count == 1 && $old_comma_break_count > 0 )
             {
-                # Do not to break before an opening token because
-                # it can lead to "blinkers".
                 my $ibreakm = $ibreak;
                 $ibreakm-- if ( $types_to_go[$ibreakm] eq 'b' );
+                if ( $ibreakm >= 0 ) {
 
-                # In order to avoid blinkers we have to be fairly restrictive.
-                # This has been updated to avoid breaking at any sequenced item,
-                # so now ternary operators are included.
-                # (see case b931, which is similar to the above print example)
-                ##This works too but is a little more restrictive:
-                ##if ( $ibreakm >= 0 && !$type_sequence_to_go[$ibreakm] ) {
-                if (   $ibreakm >= 0
-                    && $types_to_go[$ibreakm] !~ /^[\(\{\[L\?\:]$/ )
-                {
-                    $self->set_forced_breakpoint($ibreak);
+                    # In order to avoid blinkers we have to be fairly
+                    # restrictive:
+
+                    # Rule 1: Do not to break before an opening token
+                    # Rule 2: avoid breaking at ternary operators
+                    # (see b931, which is similar to the above print example)
+                    # Rule 3: Do not break at chain operators to fix case b1119
+                    #  - The previous test was '$typem !~ /^[\(\{\[L\?\:]$/'
+
+                    # These rules can be made even more restrictive in the
+                    # future if necessary.
+
+                    my $typem = $types_to_go[$ibreakm];
+                    if (   !$is_chain_operator{$typem}
+                        && !$is_opening_type{$typem} )
+                    {
+                        $self->set_forced_breakpoint($ibreak);
+                    }
                 }
             }
         }
