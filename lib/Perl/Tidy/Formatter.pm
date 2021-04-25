@@ -174,6 +174,7 @@ my (
     $rOpts_delete_old_whitespace,
     $rOpts_freeze_whitespace,
     $rOpts_function_paren_vertical_alignment,
+    $rOpts_whitespace_cycle,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -279,8 +280,10 @@ my (
     $closing_side_comment_list_pattern,
 
     # Table to efficiently find indentation and max line length
-    # from level.  Initialized in sub 'find_nested_pairs'
-    @maximum_line_length,
+    # from level.
+    @maximum_line_length_at_level,
+    @maximum_text_length_at_level,
+    @indentation_spaces_at_level,
 
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
@@ -1578,20 +1581,52 @@ EOM
     );
 
     # Create a table of maximum line length vs level for later efficient use.
-    # This avoids continually checking the -vmll flag. We will make the
-    # table very long to be sure it will not be exceeded.  But we have to
-    # choose a fixed length.  A check will be made at the start of sub
-    # 'finish_formatting' to be sure it is not exceeded.  Note, some
-    # of my standard test problems have indentation levels of about 150,
-    # so this should be fairly large.
+    # Also make a table of the indentation due to level alone.  The actual
+    # indentation is this value plus any continuation indentation.  We will
+    # make the tables very long to be sure it will not be exceeded.  But we have
+    # to choose a fixed length.  A check will be made at the start of sub
+    # 'finish_formatting' to be sure it is not exceeded.  Note, some of my
+    # standard test problems have indentation levels of about 150, so this
+    # should be fairly large.
     my $level_max = 1000;
     foreach my $level ( 0 .. $level_max ) {
-        $maximum_line_length[$level] = $rOpts_maximum_line_length;
+        $maximum_line_length_at_level[$level] = $rOpts_maximum_line_length;
+        $indentation_spaces_at_level[$level]  = $level * $rOpts_indent_columns;
     }
+
+    # Correct the indentation table if the -wc=n flag is used
+    $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
+    if ($rOpts_whitespace_cycle) {
+        if ( $rOpts_whitespace_cycle > 0 ) {
+            foreach my $level ( 0 .. $level_max ) {
+                my $level_mod = $level % $rOpts_whitespace_cycle;
+                $indentation_spaces_at_level[$level] =
+                  $level_mod * $rOpts_indent_columns;
+            }
+        }
+        else {
+            $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'} = 0;
+        }
+    }
+
+    
+    # Correct the maximum line length table if the -vmll flag is used
     if ($rOpts_variable_maximum_line_length) {
         foreach my $level ( 0 .. $level_max ) {
-            $maximum_line_length[$level] += $level * $rOpts_indent_columns;
+            $maximum_line_length_at_level[$level] +=
+              $indentation_spaces_at_level[$level];
         }
+    }
+
+    # Make a table of the maximum available text length at each level. This is
+    # often more useful than the maximum line length. This is defined as the
+    # difference between the maximum line length and the number of indentation
+    # spaces due to level only.  The spaces due to continuation indentation
+    # must still be subtracted to get the actual maximum available text length.
+    foreach my $level ( 0 .. $level_max ) {
+        $maximum_text_length_at_level[$level] =
+          $maximum_line_length_at_level[$level] -
+          $indentation_spaces_at_level[$level];
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
@@ -4842,7 +4877,7 @@ sub finish_formatting {
     # Check the maximum level. If it is extremely large we will
     # give up and output the file verbatim.
     my $maximum_level       = $self->[_maximum_level_];
-    my $maximum_table_index = $#maximum_line_length;
+    my $maximum_table_index = $#maximum_line_length_at_level;
     if ( !$severe_error && $maximum_level > $maximum_table_index ) {
         $severe_error ||= 1;
         Warn(<<EOM);
@@ -7076,7 +7111,8 @@ use constant DEBUG_WELD => 0;
 
 sub setup_new_weld_measurements {
 
-    # Define quantities to check for excess line lengths when welded
+    # Define quantities to check for excess line lengths when welded.
+    # Called by sub 'weld_nested_containers' and sub 'weld_nested_quotes'
 
     my ( $self, $Kouter_opening, $Kinner_opening ) = @_;
 
@@ -7089,16 +7125,13 @@ sub setup_new_weld_measurements {
     #   $starting_lentot = starting cumulative length
     #   $msg = diagnostic message for debugging
 
-    # Note: This sub is used by sub 'weld_nested_containers' and
-    # sub 'weld_nested_quotes'.
-
     my $rLL    = $self->[_rLL_];
     my $rlines = $self->[_rlines_];
 
     my $starting_level;
     my $starting_ci;
-    my $starting_indent;
     my $starting_lentot;
+    my $maximum_text_length;
     my $msg = "";
 
     my $iline_oo = $rLL->[$Kouter_opening]->[_LINE_INDEX_];
@@ -7131,9 +7164,10 @@ sub setup_new_weld_measurements {
     # Define the starting measurements we will need
     $starting_lentot =
       $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
-    $starting_level  = $rLL->[$Kref]->[_LEVEL_];
-    $starting_ci     = $rLL->[$Kref]->[_CI_LEVEL_];
-    $starting_indent = $rOpts_indent_columns * $starting_level +
+    $starting_level = $rLL->[$Kref]->[_LEVEL_];
+    $starting_ci    = $rLL->[$Kref]->[_CI_LEVEL_];
+
+    $maximum_text_length = $maximum_text_length_at_level[$starting_level] -
       $starting_ci * $rOpts_continuation_indentation;
 
     # Now fix these if necessary to avoid known problems...
@@ -7145,24 +7179,24 @@ sub setup_new_weld_measurements {
     if ( $Kref < $Kouter_opening ) {
         my $starting_ci_oo = $rLL->[$Kouter_opening]->[_CI_LEVEL_];
         my $lentot_oo = $rLL->[ $Kouter_opening - 1 ]->[_CUMULATIVE_LENGTH_];
-        my $starting_indent_oo =
-          $rOpts_indent_columns * $starting_level_oo +
+        my $maximum_text_length_oo =
+          $maximum_text_length_at_level[$starting_level_oo] -
           $starting_ci_oo * $rOpts_continuation_indentation;
-        if ( $lentot_oo - $starting_lentot <
-            $starting_indent_oo - $starting_indent )
-        {
-            $Kref            = $Kouter_opening;
-            $starting_level  = $starting_level_oo;
-            $starting_ci     = $starting_ci_oo;
-            $starting_lentot = $lentot_oo;
-            $starting_indent = $starting_indent_oo;
-        }
-    }
 
-    # The -vmll treatment here ignores the level but not the continuation
-    # indentation.  This fixes cases b866 b1074 b1075 b1084 b1086 b1087 b1088
-    if ($rOpts_variable_maximum_line_length) {
-        $starting_indent -= $starting_level * $rOpts_indent_columns;
+        # The excess length to any cumulative length K = lenK is either
+        #     $excess = $lenk - ($lentot    + $maximum_text_length),     or
+        #     $excess = $lenk - ($lentot_oo + $maximum_text_length_oo),
+        # so the worst case (maximum excess) corresponds to the configuration
+        # with minimum value of the sum: $lentot + $maximum_text_length
+        if ( $lentot_oo + $maximum_text_length_oo <
+            $starting_lentot + $maximum_text_length )
+        {
+            $Kref                = $Kouter_opening;
+            $starting_level      = $starting_level_oo;
+            $starting_ci         = $starting_ci_oo;
+            $starting_lentot     = $lentot_oo;
+            $maximum_text_length = $maximum_text_length_oo;
+        }
     }
 
     my $ok_to_weld = 1;
@@ -7194,7 +7228,7 @@ sub setup_new_weld_measurements {
         }
     }
 
-    return ( $ok_to_weld, $starting_indent, $starting_lentot, $msg );
+    return ( $ok_to_weld, $maximum_text_length, $starting_lentot, $msg );
 }
 
 sub weld_nested_containers {
@@ -7234,8 +7268,8 @@ sub weld_nested_containers {
     my @welds;
 
     # Variables needed for estimating line lengths
-    my $starting_indent;
-    my $starting_lentot;
+    my $maximum_text_length;    # maximum spaces available for text
+    my $starting_lentot;        # cumulative text to start of current line
 
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
@@ -7246,7 +7280,7 @@ sub weld_nested_containers {
     my $excess_length_to_K = sub {
         my ($K) = @_;
 
-        # Estimate the length from the line start to a given token
+        # Return estimated excess line length from the line start to token $K
         my $length =
           $self->cumulative_length_before_K($K) - $starting_lentot + 1;
 
@@ -7254,11 +7288,10 @@ sub weld_nested_containers {
         my $iline_K = $rLL->[$K]->[_LINE_INDEX_];
         my $tol     = ( $iline_K > $iline_outer_opening ) ? $multiline_tol : 0;
 
-        my $excess_length =
-          $starting_indent + $length + $tol - $rOpts_maximum_line_length;
+        my $excess_length = $length + $tol - $maximum_text_length;
 
         DEBUG_WELD && print <<EOM;
-at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_length=$starting_lentot, indent=$starting_indent line(K)=$iline_K , line_start = $iline_outer_opening
+at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_lentot=$starting_lentot, maximum_text_length=$maximum_text_length, line(K)=$iline_K , line_start = $iline_outer_opening
 EOM
 
         return ($excess_length);
@@ -7266,18 +7299,13 @@ EOM
 
     my $excess_length_of_line = sub {
         my ( $Kfirst, $Klast ) = @_;
+
         my $length_before_Kfirst =
           $Kfirst <= 0
           ? 0
           : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
-        my $level    = $rLL->[$Kfirst]->[_LEVEL_];
-        my $ci_level = $rLL->[$Kfirst]->[_CI_LEVEL_];
-        my $indent   = $rOpts_indent_columns * $level +
-          $ci_level * $rOpts_continuation_indentation;
-        if ($rOpts_variable_maximum_line_length) {
-            $indent -= $level * $rOpts_indent_columns;
-        }
 
+        # backup before a side comment if necessary
         my $Kend = $Klast;
         if (   $rOpts_ignore_side_comment_lengths
             && $rLL->[$Klast]->[_TYPE_] eq '#' )
@@ -7288,7 +7316,17 @@ EOM
 
         my $length =
           $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
-        my $excess_length = $indent + $length - $rOpts_maximum_line_length;
+
+        my $level           = $rLL->[$Kfirst]->[_LEVEL_];
+        my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
+        my $max_text_length = $maximum_text_length_at_level[$level] -
+          $ci_level * $rOpts_continuation_indentation;
+
+        my $excess_length = $length - $max_text_length;
+
+        DEBUG_WELD
+          && print
+"Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
         return ($excess_length);
     };
 
@@ -7412,8 +7450,8 @@ EOM
             $iline_outer_opening   = $iline_oo;
             $weld_count_this_start = 0;
 
-            ( my $ok_to_weld, $starting_indent, $starting_lentot, my $msg ) =
-              $self->setup_new_weld_measurements( $Kouter_opening,
+            ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg )
+              = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
             if ( !$ok_to_weld ) {
                 if (DEBUG_WELD) { print $msg}
@@ -7631,13 +7669,13 @@ EOM
         if ($do_not_weld_rule) {
 
             # After neglecting a pair, we start measuring from start of point io
+            my $starting_level    = $inner_opening->[_LEVEL_];
+            my $starting_ci_level = $inner_opening->[_CI_LEVEL_];
             $starting_lentot =
               $self->cumulative_length_before_K($Kinner_opening);
-            $starting_indent = 0;
-            if ( !$rOpts_variable_maximum_line_length ) {
-                my $level = $inner_opening->[_LEVEL_];
-                $starting_indent = $rOpts_indent_columns * $level;
-            }
+            $maximum_text_length =
+              $maximum_text_length_at_level[$starting_level] -
+              $starting_ci_level * $rOpts_continuation_indentation;
 
             if (DEBUG_WELD) {
                 $Msg .= "Not welding due to RULE $do_not_weld_rule\n";
@@ -7773,8 +7811,8 @@ sub weld_nested_quotes {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rlines              = $self->[_rlines_];
 
-    my $starting_indent;
     my $starting_lentot;
+    my $maximum_text_length;
 
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
@@ -7866,8 +7904,8 @@ sub weld_nested_quotes {
               ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
 
             # If welded, the line must not exceed allowed line length
-            ( my $ok_to_weld, $starting_indent, $starting_lentot, my $msg ) =
-              $self->setup_new_weld_measurements( $Kouter_opening,
+            ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg )
+              = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
             if ( !$ok_to_weld ) {
                 if (DEBUG_WELD) { print $msg}
@@ -7876,10 +7914,7 @@ sub weld_nested_quotes {
 
             my $length =
               $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
-            my $excess =
-              $starting_indent + $length +
-              $length_tol -
-              $rOpts_maximum_line_length;
+            my $excess = $length + $length_tol - $maximum_text_length;
 
             my $excess_max = ( $is_old_weld ? $length_tol : 0 );
             if ( $excess >= $excess_max ) {
@@ -11157,8 +11192,11 @@ sub starting_one_line_block {
 
     my $pos = total_line_length( $i_start, $max_index_to_go ) - 1;
 
+    my $maximum_line_length =
+      $maximum_line_length_at_level[ $levels_to_go[$i_start] ];
+
     # see if block starting location is too great to even start
-    if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
+    if ( $pos > $maximum_line_length ) {
         return 1;
     }
 
@@ -11169,10 +11207,7 @@ sub starting_one_line_block {
     my $container_length = $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
       $rLL->[$Kj]->[_CUMULATIVE_LENGTH_];
 
-    my $excess =
-      $pos + 1 +
-      $container_length -
-      $maximum_line_length[ $levels_to_go[$i_start] ];
+    my $excess = $pos + 1 + $container_length - $maximum_line_length;
 
     # Add a small tolerance for welded tokens (case b901)
     if ( $self->[_ris_welded_seqno_]->{$type_sequence} ) {
@@ -11205,7 +11240,7 @@ sub starting_one_line_block {
         my $nobreak       = $rshort_nested->{$type_sequence};
 
         # Return false result if we exceed the maximum line length,
-        if ( $pos > $maximum_line_length[ $levels_to_go[$i_start] ] ) {
+        if ( $pos > $maximum_line_length ) {
             return 0;
         }
 
@@ -11285,7 +11320,7 @@ sub starting_one_line_block {
                     else { $pos += $rLL->[ $Ki + 1 ]->[_TOKEN_LENGTH_] }
                 }
 
-                if ( $pos >= $maximum_line_length[ $levels_to_go[$i_start] ] ) {
+                if ( $pos >= $maximum_line_length ) {
                     return 0;
                 }
             }
@@ -14326,7 +14361,7 @@ sub correct_lp_indentation {
                         }
                     }
                     $right_margin =
-                      $maximum_line_length[ $levels_to_go[$ibeg] ] -
+                      $maximum_line_length_at_level[ $levels_to_go[$ibeg] ] -
                       $max_length;
                     if ( $right_margin < 0 ) { $right_margin = 0 }
                 }
@@ -14526,7 +14561,7 @@ sub set_continuation_breaks {
         my $lowest_next_type       = 'b';
         my $i_lowest_next_nonblank = -1;
         my $maximum_line_length =
-          $maximum_line_length[ $levels_to_go[$i_begin] ];
+          $maximum_line_length_at_level[ $levels_to_go[$i_begin] ];
 
         #-------------------------------------------------------
         # BEGINNING of inner loop to find the best next breakpoint
@@ -16723,8 +16758,8 @@ sub find_token_starting_list {
         my $need_lp_break_open = $must_break_open;
         if ( $rOpts_line_up_parentheses && !$must_break_open ) {
             my $columns_if_unbroken =
-              $maximum_line_length[ $levels_to_go[$i_opening_minus] ] -
-              total_line_length( $i_opening_minus, $i_opening_paren );
+              $maximum_line_length_at_level[ $levels_to_go[$i_opening_minus] ]
+              - total_line_length( $i_opening_minus, $i_opening_paren );
             $need_lp_break_open =
                  ( $max_length[0] > $columns_if_unbroken )
               || ( $max_length[1] > $columns_if_unbroken )
@@ -17396,7 +17431,7 @@ sub get_maximum_fields_wanted {
 sub table_columns_available {
     my $i_first_comma = shift;
     my $columns =
-      $maximum_line_length[ $levels_to_go[$i_first_comma] ] -
+      $maximum_line_length_at_level[ $levels_to_go[$i_first_comma] ] -
       leading_spaces_to_go($i_first_comma);
 
     # Patch: the vertical formatter does not line up lines whose lengths
@@ -17557,7 +17592,7 @@ sub excess_line_length {
     }
 
     # return the excess
-    return $length - $maximum_line_length[ $levels_to_go[$ibeg] ];
+    return $length - $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 }
 
 sub get_spaces {
@@ -17777,7 +17812,8 @@ sub get_available_spaces_to_go {
 
                 my $test_position =
                   total_line_length( $i_test, $max_index_to_go );
-                my $mll = $maximum_line_length[ $levels_to_go[$i_test] ];
+                my $mll =
+                  $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
 
                 my $bbc_flag = $break_before_container_types{$token};
 
@@ -17823,7 +17859,8 @@ sub get_available_spaces_to_go {
         }
 
         my $halfway =
-          $maximum_line_length[$level] - $rOpts_maximum_line_length / 2;
+          $maximum_line_length_at_level[$level] -
+          $rOpts_maximum_line_length / 2;
 
         # Check for decreasing depth ..
         # Note that one token may have both decreasing and then increasing
@@ -18173,7 +18210,7 @@ sub get_available_spaces_to_go {
         # (result of trial-and-error testing)
         my $spaces_needed =
           $gnu_position_predictor -
-          $maximum_line_length[ $levels_to_go[$mx_index_to_go] ] + 2;
+          $maximum_line_length_at_level[ $levels_to_go[$mx_index_to_go] ] + 2;
 
         return if ( $spaces_needed <= 0 );
 
@@ -19729,7 +19766,7 @@ sub get_seqno {
 
                     my $length_t = total_line_length( $ibeg, $iend );
                     if ( $pad_spaces + $length_t <=
-                        $maximum_line_length[ $levels_to_go[$ibeg] ] )
+                        $maximum_line_length_at_level[ $levels_to_go[$ibeg] ] )
                     {
                         $self->pad_token( $ipad, $pad_spaces );
                     }
@@ -21464,7 +21501,7 @@ sub set_vertical_tightness_flags {
                 # (ie, we may allow one token to exceed the text length limit)
                 && (
                     $new_line_length <
-                    $maximum_line_length[$leading_block_text_level]
+                    $maximum_line_length_at_level[$leading_block_text_level]
 
                     || length($leading_block_text) + $added_length <
                     $rOpts_closing_side_comment_maximum_text
@@ -21747,7 +21784,9 @@ sub set_vertical_tightness_flags {
           length($block_type) +
           length( $rOpts->{'closing-side-comment-prefix'} ) +
           $levels_to_go[$i_terminal] * $rOpts_indent_columns + 3;
-        if ( $length > $maximum_line_length[$leading_block_text_level] ) {
+        if (
+            $length > $maximum_line_length_at_level[$leading_block_text_level] )
+        {
             $csc_text = $saved_text;
         }
         return $csc_text;
