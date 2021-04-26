@@ -2,13 +2,27 @@
 
 =over 4
 
+=item B<Fix line break rules for uncontained commas + cleanups>
+
+This is an adjustment of update 344519e which had to do with breaking lines
+with commas which were not inside of a container.   In a few cases it was
+producing very long lines when B<-l=0> was set.  The solution was to remove the
+concatenation operator from the list of operators at which breaks were
+prevented.
+
+Other updates are: Remove unused indentation table. Correct maximum_line_length
+table for -vmll when -wc is also set.  Also fix whitespace rule for '$ ='
+within a signature to fix case b1123.
+
+26 Apr 2021.
+
 =item B<Fix problem with -wn and -wc=n>
 
 Random testing produced some cases in which the -wn flag was unstable when
 -wc=n was used with very small n.  This has been fixed.
 
 This fixes cases: b1098 b1107
-25 Apr 2021.
+25 Apr 2021, 92babdf.
 
 =item B<Adjust line break rules for uncontained commas>
 
@@ -16,7 +30,7 @@ Random testing produced case c1119 which was unstable due to the formatting
 rules for breaking lines at commas which occur outside of containers. The
 rules were modified to fix the problem.
 
-20 Apr 2021.
+20 Apr 2021, 344519e.
 
 =item B<Fix a bad line break choice at a slash>
 

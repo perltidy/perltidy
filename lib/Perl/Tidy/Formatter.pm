@@ -283,7 +283,6 @@ my (
     # from level.
     @maximum_line_length_at_level,
     @maximum_text_length_at_level,
-    @indentation_spaces_at_level,
 
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
@@ -1581,27 +1580,37 @@ EOM
     );
 
     # Create a table of maximum line length vs level for later efficient use.
-    # Also make a table of the indentation due to level alone.  The actual
-    # indentation is this value plus any continuation indentation.  We will
-    # make the tables very long to be sure it will not be exceeded.  But we have
-    # to choose a fixed length.  A check will be made at the start of sub
-    # 'finish_formatting' to be sure it is not exceeded.  Note, some of my
-    # standard test problems have indentation levels of about 150, so this
-    # should be fairly large.
+    # We will make the tables very long to be sure it will not be exceeded.
+    # But we have to choose a fixed length.  A check will be made at the start
+    # of sub 'finish_formatting' to be sure it is not exceeded.  Note, some of
+    # my standard test problems have indentation levels of about 150, so this
+    # should be fairly large.  If the choice of a maximum level ever becomes
+    # an issue then these table values could be returned in a sub with a simple
+    # memoization scheme.
+
+    # Also create a table of the maximum spaces available for text due to the
+    # level only.  If a line has continuation indentation, then that space must
+    # be subtracted from the table value.  This table is used for preliminary
+    # estimates in welding, extended_ci, BBX, and marking short blocks.
     my $level_max = 1000;
+
+    # The basic scheme:
     foreach my $level ( 0 .. $level_max ) {
+        my $indent = $level * $rOpts_indent_columns;
         $maximum_line_length_at_level[$level] = $rOpts_maximum_line_length;
-        $indentation_spaces_at_level[$level]  = $level * $rOpts_indent_columns;
+        $maximum_text_length_at_level[$level] =
+          $rOpts_maximum_line_length - $indent;
     }
 
-    # Correct the indentation table if the -wc=n flag is used
+    # Correct the maximum_text_length table if the -wc=n flag is used
     $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
     if ($rOpts_whitespace_cycle) {
         if ( $rOpts_whitespace_cycle > 0 ) {
             foreach my $level ( 0 .. $level_max ) {
                 my $level_mod = $level % $rOpts_whitespace_cycle;
-                $indentation_spaces_at_level[$level] =
-                  $level_mod * $rOpts_indent_columns;
+                my $indent    = $level_mod * $rOpts_indent_columns;
+                $maximum_text_length_at_level[$level] =
+                  $rOpts_maximum_line_length - $indent;
             }
         }
         else {
@@ -1609,24 +1618,14 @@ EOM
         }
     }
 
-    
-    # Correct the maximum line length table if the -vmll flag is used
+    # Correct the tables if the -vmll flag is used.  These values override the
+    # previous values.
     if ($rOpts_variable_maximum_line_length) {
         foreach my $level ( 0 .. $level_max ) {
-            $maximum_line_length_at_level[$level] +=
-              $indentation_spaces_at_level[$level];
+            $maximum_text_length_at_level[$level] = $rOpts_maximum_line_length;
+            $maximum_line_length_at_level[$level] =
+              $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
         }
-    }
-
-    # Make a table of the maximum available text length at each level. This is
-    # often more useful than the maximum line length. This is defined as the
-    # difference between the maximum line length and the number of indentation
-    # spaces due to level only.  The spaces due to continuation indentation
-    # must still be subtracted to get the actual maximum available text length.
-    foreach my $level ( 0 .. $level_max ) {
-        $maximum_text_length_at_level[$level] =
-          $maximum_line_length_at_level[$level] -
-          $indentation_spaces_at_level[$level];
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
@@ -1959,6 +1958,7 @@ sub initialize_whitespace_hashes {
     $binary_ws_rules{'R'}{'{'} = WS_NO;
     $binary_ws_rules{'t'}{'L'} = WS_NO;
     $binary_ws_rules{'t'}{'{'} = WS_NO;
+    $binary_ws_rules{'t'}{'='} = WS_OPTIONAL;    # for signatures; fixes b1123
     $binary_ws_rules{'}'}{'L'} = WS_NO;
     $binary_ws_rules{'}'}{'{'} = WS_OPTIONAL;    # RT#129850; was WS_NO
     $binary_ws_rules{'$'}{'L'} = WS_NO;
@@ -8102,7 +8102,7 @@ sub mark_short_nested_blocks {
     my $rlines              = $self->[_rlines_];
 
     # Variables needed for estimating line lengths
-    my $starting_indent;
+    my $maximum_text_length;
     my $starting_lentot;
     my $length_tol = 1;
 
@@ -8111,8 +8111,7 @@ sub mark_short_nested_blocks {
 
         # Estimate the length from the line start to a given token
         my $length = $self->cumulative_length_before_K($K) - $starting_lentot;
-        my $excess_length =
-          $starting_indent + $length + $length_tol - $rOpts_maximum_line_length;
+        my $excess_length = $length + $length_tol - $maximum_text_length;
         return ($excess_length);
     };
 
@@ -8185,11 +8184,11 @@ sub mark_short_nested_blocks {
         # be different from the input script)
         $starting_lentot =
           $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-        $starting_indent = 0;
-        if ( !$rOpts_variable_maximum_line_length ) {
-            my $level = $rLL->[$KK]->[_LEVEL_];
-            $starting_indent = $rOpts_indent_columns * $level;
-        }
+        my $level    = $rLL->[$KK]->[_LEVEL_];
+        my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
+        $maximum_text_length =
+          $maximum_text_length_at_level[$level] -
+          $ci_level * $rOpts_continuation_indentation;
 
         # Dump the stack if block is too long and skip this block
         if ( $excess_length_to_K->($K_closing) > 0 ) {
@@ -8591,21 +8590,18 @@ sub break_before_list_opening_containers {
         }
 
         # The last check we can make is to see if this container could fit on a
-        # single line.  Use the least possble indentation in the estmate.
-        my $starting_indent = 0;
-        if ( !$rOpts_variable_maximum_line_length ) {
-            my $level = $rLL->[$KK]->[_LEVEL_];
-            $starting_indent = $rOpts_indent_columns * $level +
-              ( $ci - 1 ) * $rOpts_continuation_indentation;
-        }
-        my $K_closing = $K_closing_container->{$seqno};
-        my $length    = $self->cumulative_length_before_K($K_closing) -
+        # single line.  Use the least possble indentation in the estmate (ci=0),
+        # so we are not subtracting $ci * $rOpts_continuation_indentation from
+        # tablulated $maximum_text_length  value.
+        my $level               = $rLL->[$KK]->[_LEVEL_];
+        my $maximum_text_length = $maximum_text_length_at_level[$level];
+        my $K_closing           = $K_closing_container->{$seqno};
+        my $length = $self->cumulative_length_before_K($K_closing) -
           $self->cumulative_length_before_K($KK);
-        my $excess_length =
-          $starting_indent + $length - $rOpts_maximum_line_length;
+        my $excess_length = $length - $maximum_text_length;
         DEBUG_BBX
           && print STDOUT
-"BBX: excess=$excess_length: starting=$starting_indent, length=$length, ci=$ci\n";
+"BBX: excess=$excess_length: maximum_text_length=$maximum_text_length, length=$length, ci=$ci\n";
 
         # OK if the net container definitely breaks on length
         if ( $excess_length > $length_tol ) {
@@ -8821,20 +8817,16 @@ sub extended_ci {
 
         # Do not apply -xci if adding extra ci will put the container contents
         # beyond the line length limit (fixes cases b899 b935)
-        my $starting_indent = 0;
-        if ( !$rOpts_variable_maximum_line_length ) {
-            my $level    = $rLL->[$K_opening]->[_LEVEL_];
-            my $ci_level = $rLL->[$K_opening]->[_CI_LEVEL_];
-            $starting_indent = $rOpts_indent_columns * $level +
-              $ci_level * $rOpts_continuation_indentation;
-        }
+        my $level    = $rLL->[$K_opening]->[_LEVEL_];
+        my $ci_level = $rLL->[$K_opening]->[_CI_LEVEL_];
+        my $maximum_text_length =
+          $maximum_text_length_at_level[$level] -
+          $ci_level * $rOpts_continuation_indentation;
 
         # remember how much space is available for patch b1031 above
         my $space =
-          $rOpts_maximum_line_length -
-          $len_tol -
-          $starting_indent -
-          $rOpts_continuation_indentation;
+          $maximum_text_length - $len_tol - $rOpts_continuation_indentation;
+
         next if ( $space < 0 );
         $available_space{$seqno} = $space;
 
@@ -15271,6 +15263,14 @@ sub set_continuation_breaks {
         return ( $bp_count, $do_not_break_apart );
     }
 
+    # These types are excluded at breakpoints to prevent blinking
+    my %is_uncontained_comma_break_excluded_type;
+
+    BEGIN {
+        my @q = qw< L { ( [ ? : + - >;
+        @is_uncontained_comma_break_excluded_type{@q} = (1) x scalar(@q);
+    }
+
     sub do_uncontained_comma_breaks {
 
         # Handle commas not in containers...
@@ -15362,13 +15362,12 @@ sub set_continuation_breaks {
                     # Rule 3: Do not break at chain operators to fix case b1119
                     #  - The previous test was '$typem !~ /^[\(\{\[L\?\:]$/'
 
-                    # These rules can be made even more restrictive in the
-                    # future if necessary.
+                    # Be sure to test any changes to these rules against runs
+                    # with -l=0 such as the 'bbvt' test (perltidyrc_colin)
+                    # series.
 
                     my $typem = $types_to_go[$ibreakm];
-                    if (   !$is_chain_operator{$typem}
-                        && !$is_opening_type{$typem} )
-                    {
+                    if ( !$is_uncontained_comma_break_excluded_type{$typem} ) {
                         $self->set_forced_breakpoint($ibreak);
                     }
                 }
