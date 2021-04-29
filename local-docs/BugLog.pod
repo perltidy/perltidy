@@ -2,6 +2,32 @@
 
 =over 4
 
+=item B<Update docs for git #64 regarding -lp and side comments>
+
+The wording regarding when -lp reverts to the default indentation scheme
+has been revised to include side comment as follows:
+
+In situations where perltidy does not have complete freedom to choose line
+breaks it may temporarily revert to its default indentation method.  This can
+occur for example if there are blank lines, block comments, multi-line quotes,
+or side comments between the opening and closing parens, braces, or brackets.
+
+The word 'may' is significant for side comments.  In a list which is just one
+level deep side comments will work (perhaps with -iscl if side comments are
+long).  For example this is ok
+
+    # perltidy -lp
+    $gif->arc(
+               50, 50,     # Center x, y.
+               30, 30,     # Width, Height.
+               0,  360,    # Start Angle, End Angle.
+               $red
+    );
+
+But if a list is more than one level deep then the default indentation is used.
+
+28 Apr 2021.
+
 =item B<Fix line break rules for uncontained commas + cleanups>
 
 This is an adjustment of update 344519e which had to do with breaking lines
