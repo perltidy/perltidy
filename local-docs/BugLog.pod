@@ -2,6 +2,38 @@
 
 =over 4
 
+=item B<Restrict use of flag -cab=3 to simple structures>
+
+Logic was added to turn off -cab=3 in complex structures.  Otherwise,
+instability can occur.  When it is overridden the behavior of the closest
+match, -cab=2, is used instead.
+
+For example, using these parameters for case b1113
+
+    --noadd-whitespace
+    --break-before-hash-brace-and-indent=2
+    --break-before-hash-brace=1
+    --comma-arrow-breakpoints=3
+    --continuation-indentation=9
+    --maximum-line-length=76
+    --variable-maximum-line-length
+
+formatting of the following snippet was unstable:
+
+    $STYLESHEET{'html-light'}={
+        'tags'=>{
+            'predefined identifier'=>
+                     {
+                'start'=>'<font color="#2040a0"><strong>',
+                'stop'=>'</strong></font>'
+                     },
+        }
+    };
+
+This update fixes cases b1096 b1113.
+
+29 Apr 2021.
+
 =item B<Update docs for git #64 regarding -lp and side comments>
 
 The wording regarding when -lp reverts to the default indentation scheme

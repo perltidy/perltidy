@@ -438,6 +438,7 @@ BEGIN {
         _rmultiline_qw_has_extra_level_     => $i++,
         _rbreak_before_container_by_seqno_  => $i++,
         _ris_essential_old_breakpoint_      => $i++,
+        _roverride_cab3_                    => $i++,
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -796,6 +797,7 @@ sub new {
 
     $self->[_rbreak_before_container_by_seqno_] = {};
     $self->[_ris_essential_old_breakpoint_]     = {};
+    $self->[_roverride_cab3_]                   = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -5022,6 +5024,7 @@ sub respace_tokens {
     my $ris_excluded_lp_container        = {};
     my $rparent_of_seqno                 = {};
     my $rchildren_of_seqno               = {};
+    my $roverride_cab3                   = {};
 
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
@@ -6119,6 +6122,32 @@ sub respace_tokens {
         }
     }
 
+    # Set a flag to turn off -cab=3 in complex structures.  Otherwise,
+    # instability can occur.  When it is overridden the behavior of the closest
+    # match, -cab=2, will be used instead.  This fixes cases b1096 b1113.
+    if ( $rOpts_comma_arrow_breakpoints == 3 ) {
+        foreach my $seqno ( keys %{$K_opening_container} ) {
+
+            my $rtype_count = $rtype_count_by_seqno->{$seqno};
+            next unless ( $rtype_count && $rtype_count->{'=>'} );
+
+            # override -cab=3 if this contains a sub-list
+            if ( $rhas_list->{$seqno} ) {
+                $roverride_cab3->{$seqno} = 1;
+            }
+
+            # or if this is a sub-list of its parent container
+            else {
+                my $seqno_parent = $rparent_of_seqno->{$seqno};
+                if ( defined($seqno_parent)
+                    && $ris_list_by_seqno->{$seqno_parent} )
+                {
+                    $roverride_cab3->{$seqno} = 1;
+                }
+            }
+        }
+    }
+
     # Reset memory to be the new array
     $self->[_rLL_] = $rLL_new;
     my $Klimit;
@@ -6141,6 +6170,7 @@ sub respace_tokens {
     $self->[_rparent_of_seqno_]          = $rparent_of_seqno;
     $self->[_rchildren_of_seqno_]        = $rchildren_of_seqno;
     $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
+    $self->[_roverride_cab3_]            = $roverride_cab3;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -15153,7 +15183,8 @@ sub set_continuation_breaks {
         @last_nonblank_type,            @old_breakpoint_count_stack,
         @opening_structure_index_stack, @rfor_semicolon_list,
         @has_old_logical_breakpoints,   @rand_or_list,
-        @i_equals,
+        @i_equals,                      @override_cab3,
+        @type_sequence_stack,
     );
 
     # these arrays must retain values between calls
@@ -15794,6 +15825,11 @@ sub set_continuation_breaks {
             #------------------------------------------------------------
             if ( $depth > $current_depth ) {
 
+                $type_sequence_stack[$depth] = $type_sequence;
+                $override_cab3[$depth] =
+                     $rOpts_comma_arrow_breakpoints == 3
+                  && $type_sequence
+                  && $self->[_roverride_cab3_]->{$type_sequence};
                 $breakpoint_stack[$depth] = get_forced_breakpoint_count();
                 $breakpoint_undo_stack[$depth] =
                   get_forced_breakpoint_undo_count();
@@ -15963,6 +15999,10 @@ sub set_continuation_breaks {
 
                         # or user wants to form long blocks with arrows
                         || $rOpts_comma_arrow_breakpoints == 2
+
+                        # if -cab=3 is overriden then use -cab=2 behavior
+                        || $rOpts_comma_arrow_breakpoints == 3
+                        && $override_cab3[$current_depth]
                     )
 
                     # and we made breakpoints between the opening and closing
@@ -16301,7 +16341,9 @@ sub set_continuation_breaks {
             if ( $type eq '=>' ) {
                 next if ( $last_nonblank_type eq '=>' );
                 next if $rOpts_break_at_old_comma_breakpoints;
-                next if $rOpts_comma_arrow_breakpoints == 3;
+                next
+                  if ( $rOpts_comma_arrow_breakpoints == 3
+                    && !$override_cab3[$depth] );
                 $want_comma_break[$depth]   = 1;
                 $index_before_arrow[$depth] = $i_last_nonblank_token;
                 next;
@@ -16317,6 +16359,9 @@ sub set_continuation_breaks {
             # not a list.  Note that '=' could be in any of the = operators
             # (lextest.t). We can't just use the reported environment
             # because it can be incorrect in some cases.
+
+            # QUESTION: can this logic be simplfied by using the newer
+            # _ris_list_by_seqno_ flag?
             elsif ( ( $type =~ /^[\;\<\>\~]$/ || $is_assignment{$type} )
                 && $container_environment_to_go[$i] ne 'LIST' )
             {
