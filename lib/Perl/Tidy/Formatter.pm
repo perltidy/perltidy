@@ -4943,6 +4943,19 @@ sub dump_verbatim {
     return;
 }
 
+my %wU;
+my %wiq;
+
+BEGIN {
+
+    # added 'U' to fix cases b1125 b1126 b1127
+    my @q = qw(w U);
+    @{wU}{@q} = (1) x scalar(@q);
+
+    @q = qw(w i q Q G C Z);
+    @{wiq}{@q} = (1) x scalar(@q);
+}
+
 sub respace_tokens {
 
     my $self = shift;
@@ -6045,7 +6058,9 @@ sub respace_tokens {
             $Knn2 = $self->K_next_nonblank( $Knn1, $rLL_new ) if defined($Knn1);
             $type_nn1 = $rLL_new->[$Knn1]->[_TYPE_] if ( defined($Knn1) );
             $type_nn2 = $rLL_new->[$Knn2]->[_TYPE_] if ( defined($Knn2) );
-            if ( $type_nn1 eq 'w' && $type_nn2 =~ /^[wiqQGCZ]$/ ) {
+
+            #   if ( $type_nn1 =~ /^[wU]$/ && $type_nn2 =~ /^[wiqQGCZ]$/ ) {
+            if ( $wU{$type_nn1} && $wiq{$type_nn2} ) {
                 $is_list = 0;
             }
 

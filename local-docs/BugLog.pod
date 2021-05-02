@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Correct brace types mismarked by tokenizer>
+
+This is a generalization of commit 7d23bf4 to fix some additional cases
+found in random testing in which the type of a curly brace could not be
+determined in the tokenizer and was not being corrected by the formatter.
+
+This fixes cases b1125 b1126 b1127.
+
+2 May 2021.
+
 =item B<Avoid instability of combination -bbx=2 -lp and -xci>
 
 Random testing produced several cases in which the flags -bbx=2 -lp and -xci
