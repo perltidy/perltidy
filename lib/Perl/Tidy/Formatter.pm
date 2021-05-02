@@ -8476,18 +8476,18 @@ sub break_before_list_opening_containers {
         #################################################################
 
         my $KK = $K_opening_container->{$seqno};
+        next if ( $rLL->[$KK]->[_BLOCK_TYPE_] );
 
-        my $is_list           = $self->is_list_by_seqno($seqno);
-        my $has_list          = $rhas_list->{$seqno};
-        my $has_broken_list   = $rhas_broken_list->{$seqno};
-        my $has_list_with_lec = $rhas_broken_list_with_lec->{$seqno};
-
-        # This must be a list (this will exclude all code blocks)
-        # or contain a list.
+        # This must be a list or contain a list.
         # Note1: switched from 'has_broken_list' to 'has_list' to fix b1024.
         # Note2: 'has_list' holds the depth to the sub-list.  We will require
         #  a depth of just 1
+        my $is_list  = $self->is_list_by_seqno($seqno);
+        my $has_list = $rhas_list->{$seqno};
         next unless ( $is_list || $has_list && $has_list == 1 );
+
+        my $has_broken_list   = $rhas_broken_list->{$seqno};
+        my $has_list_with_lec = $rhas_broken_list_with_lec->{$seqno};
 
         # Only for types of container tokens with a non-default break option
         my $token        = $rLL->[$KK]->[_TOKEN_];
@@ -8520,12 +8520,12 @@ sub break_before_list_opening_containers {
             next unless ( $KK == $Kfirst );
         }
 
-        # -bbx=2 = only if complex list, meaning:
-        #  - this list contains a broken list with line-ending comma, or
-        #  - this list is contained in a broken list
+        # -bbx=2 => apply this style only for a 'complex' list
         elsif ( $break_option == 2 ) {
 
+            #  break if this list contains a broken list with line-ending comma
             my $ok_to_break = $has_list_with_lec;
+
             if ( !$ok_to_break ) {
 
                 # Turn off -xci if -bbx=2 and this container has a sublist but
@@ -8537,10 +8537,21 @@ sub break_before_list_opening_containers {
                 if ($has_list) { $rno_xci_by_seqno->{$seqno} = 1 }
 
                 my $parent = $rparent_of_seqno->{$seqno};
-                $ok_to_break = $self->is_list_by_seqno($parent);
+                $ok_to_break ||= $self->is_list_by_seqno($parent);
+            }
+
+            # Patch to fix b1099 for -lp
+            #  ok in -lp mode if this is a list which contains a list
+            if ( !$ok_to_break && $rOpts_line_up_parentheses ) {
+                $ok_to_break ||= $is_list && $has_list;
             }
 
             next unless ($ok_to_break);
+
+            # Patch: turn off -xci if -bbx=2 and -lp
+            # This fixes cases b1090 b1095 b1101 b1116 b1118 b1121 b1122
+            $rno_xci_by_seqno->{$seqno} = 1 if ($rOpts_line_up_parentheses);
+
         }
 
         # -bbx=3 = always break
@@ -15490,6 +15501,8 @@ sub set_continuation_breaks {
         my $rOpts_break_at_old_ternary_breakpoints =
           $rOpts->{'break-at-old-ternary-breakpoints'};
 
+        my $rLL                  = $self->[_rLL_];
+        my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
         my $ris_broken_container = $self->[_ris_broken_container_];
 
         $starting_depth = $nesting_depth_to_go[0];
