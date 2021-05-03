@@ -5580,6 +5580,16 @@ sub respace_tokens {
                 my $rcopy = copy_token_as_type( $rLL->[$Kfirst], 'b', ' ' );
                 $rcopy->[_LINE_INDEX_] =
                   $rLL_new->[-1]->[_LINE_INDEX_];
+
+                # The level and ci_level of newly created spaces should be the
+                # same as the previous token. Otherwise blinking states can
+                # be created if the -lp mode is used. See similar coding in
+                # sub 'store_token_and_space'.  Fixes cases b1109 b1110.
+                $rcopy->[_LEVEL_] =
+                  $rLL_new->[-1]->[_LEVEL_];
+                $rcopy->[_CI_LEVEL_] =
+                  $rLL_new->[-1]->[_CI_LEVEL_];
+
                 $store_token->($rcopy);
             }
         }

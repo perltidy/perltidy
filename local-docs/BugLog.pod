@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Fix some rare issues with the -lp option>
+
+Random testing produced some rare cases of unstable formatting involving the
+B<-lp> option which are fixed with this update.  This is a generalization of
+commit edc7878 of 23 Jan 2021.  This fixes cases b1109 b1110.
+
+2 May 2021.
+
 =item B<Correct brace types mismarked by tokenizer>
 
 This is a generalization of commit 7d23bf4 to fix some additional cases
