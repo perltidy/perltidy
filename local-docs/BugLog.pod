@@ -2,13 +2,26 @@
 
 =over 4
 
-=item B<Add option -pvtc=3, requested in rt136416>
+=item B<Fix problem of conflict of -otr and -lp>
+
+Several random test cases produced an instability involving -otr and -lp.
+In -lp mode, when an opening paren follows an equals and is far to the right,
+a break is made at the equals to minimize the indentation of the next lines.
+The -otr flag is a suggestion that an opening paren should be place on the right.
+A check has been made to avoid this in -lp mode following an equals, since
+that defeats the purpose of the original break.
+
+This fixes cases b964 b1040 b1062 b1083 b1089.
+
+4 May 2021.
+
+=item B<Add option -pvtc=3, requested in rt136417>
 
 A new integer option, n=3, has been added to the vertical tightness closing flags.
 For a container with n=3, the closing token will behave as for n=0 if the opening
 token is preceded by an '=' or '=>', and like n=1 otherwise.
 
-3 May 2021.
+3 May 2021, 93063a7.
 
 =item B<Fix vertical alignment issue in rt136416>
 
@@ -21,7 +34,7 @@ rt#136416.  The example is
 An update was made to reject alignments in use statements with different module names.
 The test file t/snippets/align35.in has more examples.
 
-3 May 2021.
+3 May 2021, 048126c.
 
 =item B<Fix some rare issues with the -lp option>
 

@@ -21389,6 +21389,12 @@ sub set_vertical_tightness_flags {
         # doing it after indentation has been set, we avoid changes
         # to the indentation.  Actual movement of the token takes place
         # in sub valign_output_step_B.
+
+        # Note added 4 May 2021: the man page suggests that the -otr flags
+        # are mainly for opening tokens following commas.  But this seems
+        # to have been generalized long ago to include other situations.
+        # I checked the coding back to 2012 and it is essentially the same
+        # as here, so it is best to leave this unchanged for now.
         #--------------------------------------------------------------
         if (
             $opening_token_right{ $tokens_to_go[$ibeg_next] }
@@ -21409,6 +21415,9 @@ sub set_vertical_tightness_flags {
             # Fix for case b1060 when both -baoo and -otr are set:
             # to avoid blinking, honor the -baoo flag over the -otr flag.
             && $token_end ne '||' && $token_end ne '&&'
+
+            # Keep break after '=' if -lp. Fixes b964 b1040 b1062 b1083 b1089.
+            && !( $token_end eq '=' && $rOpts_line_up_parentheses )
 
             # looks bad if we align vertically with the wrong container
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
