@@ -8740,6 +8740,8 @@ sub break_before_list_opening_containers {
     return;
 }
 
+use constant DEBUG_XCI => 0;
+
 sub extended_ci {
 
     # This routine implements the -xci (--extended-continuation-indentation)
@@ -8884,14 +8886,18 @@ sub extended_ci {
         # Require different input lines. This will filter out a large number
         # of small hash braces and array brackets.  If we accidentally filter
         # out an important container, it will get fixed on the next pass.
-        next
-          if (
+        if (
             $rLL->[$K_opening]->[_LINE_INDEX_] ==
             $rLL->[$K_closing]->[_LINE_INDEX_]
             && ( $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
                 $rLL->[$K_opening]->[_CUMULATIVE_LENGTH_] >
                 $rOpts_maximum_line_length )
-          );
+          )
+        {
+            DEBUG_XCI
+              && print "XCI: Skipping seqno=$seqno, require different lines\n";
+            next;
+        }
 
         # Do not apply -xci if adding extra ci will put the container contents
         # beyond the line length limit (fixes cases b899 b935)
@@ -8905,7 +8911,12 @@ sub extended_ci {
         my $space =
           $maximum_text_length - $len_tol - $rOpts_continuation_indentation;
 
-        next if ( $space < 0 );
+        if ( $space < 0 ) {
+            DEBUG_XCI && print "XCI: Skipping seqno=$seqno, space=$space\n";
+            next;
+        }
+        DEBUG_XCI && print "XCI: OK seqno=$seqno, space=$space\n";
+
         $available_space{$seqno} = $space;
 
         # This becomes the next controlling container
