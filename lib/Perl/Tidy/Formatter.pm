@@ -439,6 +439,7 @@ BEGIN {
         _rbreak_before_container_by_seqno_  => $i++,
         _ris_essential_old_breakpoint_      => $i++,
         _roverride_cab3_                    => $i++,
+        _ris_assigned_structure_            => $i++,
     };
 
     # Array index names for _this_batch_ (in above list)
@@ -798,6 +799,7 @@ sub new {
     $self->[_rbreak_before_container_by_seqno_] = {};
     $self->[_ris_essential_old_breakpoint_]     = {};
     $self->[_roverride_cab3_]                   = {};
+    $self->[_ris_assigned_structure_]           = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -5038,6 +5040,7 @@ sub respace_tokens {
     my $rparent_of_seqno                 = {};
     my $rchildren_of_seqno               = {};
     my $roverride_cab3                   = {};
+    my $ris_assigned_structure           = {};
 
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
@@ -5663,6 +5666,14 @@ sub respace_tokens {
             if ($type_sequence) {
 
                 if ( $is_opening_token{$token} ) {
+
+                    if (   $last_nonblank_type eq '='
+                        || $last_nonblank_type eq '=>' )
+                    {
+                        $ris_assigned_structure->{$type_sequence} =
+                          $last_nonblank_type;
+                    }
+
                     my $seqno_parent = $seqno_stack{ $depth_next - 1 };
                     $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
                     push @{ $rchildren_of_seqno->{$seqno_parent} },
@@ -6196,6 +6207,7 @@ sub respace_tokens {
     $self->[_rchildren_of_seqno_]        = $rchildren_of_seqno;
     $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
     $self->[_roverride_cab3_]            = $roverride_cab3;
+    $self->[_ris_assigned_structure_]    = $ris_assigned_structure;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -21299,6 +21311,14 @@ sub set_vertical_tightness_flags {
         {
             my $ovt = $opening_vertical_tightness{$token_next};
             my $cvt = $closing_vertical_tightness{$token_next};
+
+            # Implement cvt=3: like cvt=0 for assigned structures, like cvt=1
+            # otherwise.  Added for rt136417.
+            if ( $cvt == 3 ) {
+                my $seqno = $type_sequence_to_go[$ibeg_next];
+                $cvt = $self->[_ris_assigned_structure_]->{$seqno} ? 0 : 1;
+            }
+
             if (
 
                 # Never append a trailing line like   ')->pack(' because it

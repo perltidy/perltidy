@@ -13,6 +13,8 @@
 #10 lpxl.lpxl5
 #11 git63.def
 #12 align35.def
+#13 rt136417.def
+#14 rt136417.rt136417
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -44,6 +46,7 @@ BEGIN {
         'lpxl5' => <<'----------',
 -lp -lpxl='{ [ F(2'
 ----------
+        'rt136417' => "-vtc=3",
     };
 
     ############################
@@ -202,6 +205,17 @@ $behaviour = {
               dog   => {prowl  => "growl", pool => "drool"},
               mouse => {nibble => "kibble"},
              };
+----------
+
+        'rt136417' => <<'----------',
+function(
+  #
+  a, b, c);
+
+%hash = (
+  a => b,
+  c => d,
+);
 ----------
     };
 
@@ -730,6 +744,37 @@ use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
 use constant COUNTUP   => reverse 1, 2, 3, 4, 5;
 use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
 #12...........
+        },
+
+        'rt136417.def' => {
+            source => "rt136417",
+            params => "def",
+            expect => <<'#13...........',
+function(
+    #
+    a, b, c
+);
+
+%hash = (
+    a => b,
+    c => d,
+);
+#13...........
+        },
+
+        'rt136417.rt136417' => {
+            source => "rt136417",
+            params => "rt136417",
+            expect => <<'#14...........',
+function(
+    #
+    a, b, c );
+
+%hash = (
+    a => b,
+    c => d,
+);
+#14...........
         },
     };
 

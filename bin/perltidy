@@ -2696,9 +2696,11 @@ B<--vertical-tightness-closing=n>, where
         by a semicolon or another closing token, and is not in 
         a list environment.
  -vtc=2 never break before a closing token.
+ -vtc=3 Like -vtc=1 except always break before a closing token
+        if the corresponding opening token follows an = or =>.
 
-The rules for B<-vtc=1> are designed to maintain a reasonable balance
-between tightness and readability in complex lists.
+The rules for B<-vtc=1> and B<-vtc=3> are designed to maintain a reasonable
+balance between tightness and readability in complex lists.
 
 =item *
 
@@ -2738,6 +2740,24 @@ Here are some examples:
                        two   => 'II',
                        three => 'III',
                        four  => 'IV', );
+
+    # perltidy -vtc=3
+    my_function(
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV', );
+
+    # perltidy -vtc=3
+    %romanNumerals = (
+        one   => 'I',
+        two   => 'II',
+        three => 'III',
+        four  => 'IV',
+    );
+
+In the last example for B<-vtc=3>, the opening paren is preceded by an equals
+so the closing paren is placed on a new line.
 
 The difference between B<-vt=1> and B<-vt=2> is shown here:
 

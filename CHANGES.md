@@ -1,5 +1,13 @@
 # Perltidy Change Log
 
+## 2021 xx xx
+
+    - Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
+
+    - A more complete list of updates is at
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+
 ## 2021 04 02
 
     - This release fixes several non-critical bugs which have been found since the last

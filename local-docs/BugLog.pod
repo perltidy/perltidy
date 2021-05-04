@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Add option -pvtc=3, requested in rt136416>
+
+A new integer option, n=3, has been added to the vertical tightness closing flags.
+For a container with n=3, the closing token will behave as for n=0 if the opening
+token is preceded by an '=' or '=>', and like n=1 otherwise.
+
+3 May 2021.
+
 =item B<Fix vertical alignment issue in rt136416>
 
 This update fixes a problem with unwanted vertical alignment rasied in

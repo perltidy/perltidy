@@ -1,0 +1,8 @@
+function(
+    #
+    a, b, c );
+
+%hash = (
+    a => b,
+    c => d,
+);
