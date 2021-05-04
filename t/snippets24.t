@@ -12,6 +12,7 @@
 #9 lpxl.lpxl4
 #10 lpxl.lpxl5
 #11 git63.def
+#12 align35.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -49,6 +50,27 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'align35' => <<'----------',
+# differnt module names, do not align commas (fixes rt136416)
+use File::Spec::Functions 'catfile', 'catdir';
+use Mojo::Base 'Mojolicious', '-signatures';
+
+# same module names, align fat commas
+use constant PI => 4 * atan2 1, 1;
+use constant TWOPI => 2 * PI;
+use constant FOURPI => 4 * PI;
+
+# same module names, align commas
+use TestCounter '3rd-party', 0, '3rd-party no longer visible';
+use TestCounter 'replace', 1, 'replacement now visible';
+use TestCounter 'root';
+
+# same module name, align fat commas but not commas
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+use constant COUNTUP => reverse 1, 2, 3, 4, 5;
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+----------
 
         'fpva' => <<'----------',
 log_something_with_long_function( 'This is a log message.', 2 );
@@ -683,6 +705,31 @@ $behaviour = {
 my $fragment = $parser->    #parse_html_string
   parse_balanced_chunk($I);
 #11...........
+        },
+
+        'align35.def' => {
+            source => "align35",
+            params => "def",
+            expect => <<'#12...........',
+# differnt module names, do not align commas (fixes rt136416)
+use File::Spec::Functions 'catfile', 'catdir';
+use Mojo::Base 'Mojolicious', '-signatures';
+
+# same module names, align fat commas
+use constant PI     => 4 * atan2 1, 1;
+use constant TWOPI  => 2 * PI;
+use constant FOURPI => 4 * PI;
+
+# same module names, align commas
+use TestCounter '3rd-party', 0, '3rd-party no longer visible';
+use TestCounter 'replace',   1, 'replacement now visible';
+use TestCounter 'root';
+
+# same module name, align fat commas but not commas
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+use constant COUNTUP   => reverse 1, 2, 3, 4, 5;
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+#12...........
         },
     };
 

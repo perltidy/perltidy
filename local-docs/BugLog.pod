@@ -2,13 +2,26 @@
 
 =over 4
 
+=item B<Fix vertical alignment issue in rt136416>
+
+This update fixes a problem with unwanted vertical alignment rasied in
+rt#136416.  The example is
+
+    use File::Spec::Functions 'catfile', 'catdir';
+    use Mojo::Base 'Mojolicious',        '-signatures';
+
+An update was made to reject alignments in use statements with different module names.
+The test file t/snippets/align35.in has more examples.
+
+3 May 2021.
+
 =item B<Fix some rare issues with the -lp option>
 
 Random testing produced some rare cases of unstable formatting involving the
 B<-lp> option which are fixed with this update.  This is a generalization of
 commit edc7878 of 23 Jan 2021.  This fixes cases b1109 b1110.
 
-2 May 2021.
+2 May 2021, a8d1c8b.
 
 =item B<Correct brace types mismarked by tokenizer>
 
@@ -18,7 +31,7 @@ determined in the tokenizer and was not being corrected by the formatter.
 
 This fixes cases b1125 b1126 b1127.
 
-2 May 2021.
+2 May 2021i, dac97cb.
 
 =item B<Avoid instability of combination -bbx=2 -lp and -xci>
 
@@ -28,7 +41,7 @@ were causing formatting instability.  The fix is to locally turn off -xci when
 
 This fixes cases b1090 b1095 b1101 b1116 b1118 b1121 b1122 b1099
 
-1 May 2021.
+1 May 2021, 4cb81ba.
 
 =item B<Restrict use of flag -cab=3 to simple structures>
 

@@ -20073,8 +20073,16 @@ sub pad_token {
         my @field_lengths = ();
         my $i_start       = $ibeg;
 
+        # For a 'use' statement, use the module name as container name.
+        # Fixes issue rt136416.
+        my $cname = "";
+        if ( $types_to_go[$ibeg] eq 'k' && $tokens_to_go[$ibeg] eq 'use' ) {
+            my $inext = $inext_to_go[$ibeg];
+            if ( $inext <= $iend ) { $cname = $tokens_to_go[$inext] }
+        }
+
         my $depth          = 0;
-        my %container_name = ( 0 => "" );
+        my %container_name = ( 0 => "$cname" );
 
         my $j = 0;    # field index
 
@@ -20354,6 +20362,12 @@ sub pad_token {
                 if ( $type eq '!' ) { $type_fix = '' }
 
                 $patterns[$j] .= $type_fix;
+
+                # remove any zero-level name at first fat comma
+                if ( $depth == 0 && $type eq '=>' ) {
+                    $container_name{$depth} = "";
+                }
+
             }
         }
 

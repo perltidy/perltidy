@@ -1,0 +1,18 @@
+# differnt module names, do not align commas (fixes rt136416)
+use File::Spec::Functions 'catfile', 'catdir';
+use Mojo::Base 'Mojolicious', '-signatures';
+
+# same module names, align fat commas
+use constant PI     => 4 * atan2 1, 1;
+use constant TWOPI  => 2 * PI;
+use constant FOURPI => 4 * PI;
+
+# same module names, align commas
+use TestCounter '3rd-party', 0, '3rd-party no longer visible';
+use TestCounter 'replace',   1, 'replacement now visible';
+use TestCounter 'root';
+
+# same module name, align fat commas but not commas
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+use constant COUNTUP   => reverse 1, 2, 3, 4, 5;
+use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
