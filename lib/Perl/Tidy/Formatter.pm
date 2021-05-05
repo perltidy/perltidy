@@ -7621,11 +7621,29 @@ EOM
         #    $_[0]->();
         # } );
 
+        # Updated to fix cases b1082 b1102 b1106 b1115:
+        # Also, do not weld to an intact inner block if the outer opening token
+        # is on a different line. For example, this prevents oscillation
+        # between these two states in case b1106:
+
+        #    return map{
+        #        ($_,[$self->$_(@_[1..$#_])])
+        #    }@every;
+
+        #    return map { (
+        #        $_, [ $self->$_( @_[ 1 .. $#_ ] ) ]
+        #    ) } @every;
+
+        # The effect of this change on typical code is very minimal.  Sometimes
+        # it may take a second iteration to converge, but this gives protection
+        # against blinking.
+
         if (   !$do_not_weld_rule
             && !$is_one_line_weld
             && $iline_ic == $iline_io )
         {
-            $do_not_weld_rule = 2 if ( $token_oo eq '(' );
+            $do_not_weld_rule = 2
+              if ( $token_oo eq '(' || $iline_oo != $iline_io );
         }
 
         # DO-NOT-WELD RULE 3:

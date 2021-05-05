@@ -2,6 +2,37 @@
 
 =over 4
 
+=item B<Update welding rule to avoid blinking states>
+
+Random testing with unusual parameter combinations produced some unstable welds.
+For example case b1106 has these parameters
+
+    --noadd-whitespace
+    --continuation-indentation=6
+    --delete-old-whitespace
+    --line-up-parentheses
+    --maximum-line-length=36
+    --variable-maximum-line-length
+    --weld-nested-containers
+
+and was switching between these two states:
+
+            return map{
+                ($_,[$self->$_(@_[1..$#_])])
+            }@every;
+
+            return map { (
+                $_, [ $self->$_( @_[ 1 .. $#_ ] ) ]
+            ) } @every;
+
+An existing rule, WELD RULE 2, was updated to prevent welding to an intact
+one-line weld, as in the first snippet, if it is on a separate line from the
+first opening token.  With this change, both of these states are stable.
+
+This update fixes cases b1082 b1102 b1106 b1115.
+
+4 May 2021.
+
 =item B<Fix problem of conflict of -otr and -lp>
 
 Several random test cases produced an instability involving -otr and -lp.

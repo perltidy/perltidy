@@ -339,7 +339,9 @@ my ( $a, $b, $c ) = @_;    # test -nsak="my for"
             # fixed RULE 1 only applies to '('
             my $res = eval { { $die_on_fetch, 0 } };
 
-            my $res = eval { { $die_on_fetch, 0 } };
+            my $res = eval {
+                { $die_on_fetch, 0 }
+            };
 
             # fixed RULE 2 applies to any inner opening token; this is a stable
             # state with -wn
