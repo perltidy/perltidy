@@ -7899,6 +7899,37 @@ sub weld_nested_quotes {
     my $starting_lentot;
     my $maximum_text_length;
 
+    my $excess_length_of_last_line = sub {
+        my ( $Kfirst, $Klast ) = @_;
+
+        # Return the excess length of the last line of a multiline qw quote.
+        # Note that we do not have to check for an ending side comment here
+        # because there will not be one if another closing container token
+        # immediately follows the closing qw container token.
+
+        my $length_before_Kfirst =
+          $Kfirst <= 0
+          ? 0
+          : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+
+        my $Kend = $Klast;
+
+        my $length =
+          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
+
+        my $level           = $rLL->[$Kfirst]->[_LEVEL_];
+        my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
+        my $max_text_length = $maximum_text_length_at_level[$level] -
+          $ci_level * $rOpts_continuation_indentation;
+
+        my $excess_length = $length - $max_text_length;
+
+        DEBUG_WELD
+          && print
+"QW: Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
+        return ($excess_length);
+    };
+
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
         foreach my $K ( $Kbeg .. $Kend ) {
@@ -8020,6 +8051,27 @@ sub weld_nested_quotes {
                     if (DEBUG_WELD) {
                         $Msg .=
 "No qw weld due to weld exclusion rules for outer container\n";
+                    }
+                    $do_not_weld = 1;
+                }
+            }
+
+            # Check the length of the last line (fixes case b1039)
+            if ( !$do_not_weld ) {
+                my $rK_range_ic = $rlines->[$iline_ic]->{_rK_range};
+                my ( $Kfirst_ic, $Klast_ic ) = @{$rK_range_ic};
+                my $excess_ic =
+                  $excess_length_of_last_line->( $Kfirst_ic, $Kouter_closing );
+
+                # Allow extra space for additional welded closing container(s)
+                # and a space and comma or semicolon.
+                my $len_right_closing =
+                  $self->[_rweld_len_right_closing_]->{$outer_seqno};
+                $len_right_closing = 0 unless ( defined($len_right_closing) );
+                if ( $excess_ic + $len_right_closing + 2 > 0 ) {
+                    if (DEBUG_WELD) {
+                        $Msg .=
+"No qw weld due to excess ending line length=$excess_ic + $len_right_closing + 2 > 0\n";
                     }
                     $do_not_weld = 1;
                 }

@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Test length of closing multiline qw quote before welding>
+
+Random testing produced an unstable state which was due to not checking for
+excessive length of the last line of a multiline qw quote.  A check was added,
+this fixes issue b1039.
+
+5 May 2021.
+
 =item B<Update welding rule to avoid blinking states>
 
 Random testing with unusual parameter combinations produced some unstable welds.
@@ -31,7 +39,7 @@ first opening token.  With this change, both of these states are stable.
 
 This update fixes cases b1082 b1102 b1106 b1115.
 
-4 May 2021.
+4 May 2021, 07efa9d.
 
 =item B<Fix problem of conflict of -otr and -lp>
 
@@ -44,7 +52,7 @@ that defeats the purpose of the original break.
 
 This fixes cases b964 b1040 b1062 b1083 b1089.
 
-4 May 2021.
+4 May 2021, 24a0d32.
 
 =item B<Add option -pvtc=3, requested in rt136417>
 
