@@ -2,13 +2,66 @@
 
 =over 4
 
+=item B<Improve indentation of welded multiline qw quotes>
+
+Formatting of multiline qw lists with welding works best if the
+opening and closing qw tokens are on separate lines, like this:
+
+    # perltidy -wn
+    my $mon_name = ( qw(
+        January February March April
+        May June July August
+        September October November December
+    ) )[$mon];
+
+    # perltidy -wn -lp
+    my $mon_name = ( qw(
+                     January February March April
+                     May June July August
+                     September October November December
+    ) )[$mon];
+
+Otherwise formatting can be poor, particularly if the last line
+has text and a closing container.
+
+    # OLD: perltidy -wn
+    my $mon_name = ( qw(January February March April
+        May June July August
+    September October November December) )[$mon];
+
+Note that perltidy does not change the line breaks within multiline quotes, so
+they must be changed by hand if desired.
+
+This update indents the last line of a multiline quote which contains both
+text and the closing token, such as:
+
+    # NEW: perltidy -wn
+    my $mon_name = ( qw(January February March April
+        May June July August
+        September October November December) )[$mon];
+
+This update is only when the -lp flag is not used.   If -lp is used and the
+last line contains text, the last line is still outdented:
+
+    $ OLD and NEW: perltidy -wn -lp
+    my $mon_name = ( qw(January February March April
+                     May June July August
+    September October November December) )[$mon];
+
+This is difficult to fix.  The best solution is to place the closing qw qw
+containers on a separate line.
+
+This fix is for case c002.
+
+6 May 2021.
+
 =item B<Test length of closing multiline qw quote before welding>
 
 Random testing produced an unstable state which was due to not checking for
 excessive length of the last line of a multiline qw quote.  A check was added,
 this fixes issue b1039.
 
-5 May 2021.
+5 May 2021, b72ad24.
 
 =item B<Update welding rule to avoid blinking states>
 

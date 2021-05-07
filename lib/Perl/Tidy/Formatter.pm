@@ -8120,8 +8120,13 @@ sub weld_nested_quotes {
             # Change the level of a closing qw token to be that of the outer
             # containing token. This will allow -lp indentation to function
             # correctly in the vertical aligner.
-            $rLL->[$Kinner_closing]->[_LEVEL_] =
-              $rLL->[$Kouter_closing]->[_LEVEL_];
+            # Patch to fix c002: but not if it contains text and is not -lp.
+            if ( $rOpts_line_up_parentheses
+                || length( $rLL->[$Kinner_closing]->[_TOKEN_] ) == 1 )
+            {
+                $rLL->[$Kinner_closing]->[_LEVEL_] =
+                  $rLL->[$Kouter_closing]->[_LEVEL_];
+            }
         }
     }
     return;
