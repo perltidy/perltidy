@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Added warning when -ci has to be reduced; ref rt #136415>
+
+In commit c16c5ee an update was made to prevent instability with -xci when
+the value of -ci exceeds -i (which is not recommended).  This update adds a
+warning message to avoid confusing the user.
+
+7 May 2021.
+
 =item B<Improve indentation of welded multiline qw quotes>
 
 Formatting of multiline qw lists with welding works best if the

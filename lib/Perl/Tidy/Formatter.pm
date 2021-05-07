@@ -1097,6 +1097,12 @@ sub check_options {
         && $rOpts->{'extended-continuation-indentation'} )
     {
         $rOpts->{'continuation-indentation'} = $rOpts->{'indent-columns'};
+        Warn(<<EOM);
+-----------------------------------------------------------------------
+Reducing the value of --continuation-indentation to the value of --indent-columns.
+This is required when -xci is used to avoid possible formatting instability.
+-----------------------------------------------------------------------
+EOM
     }
 
     if ( $rOpts->{'line-up-parentheses'} ) {
