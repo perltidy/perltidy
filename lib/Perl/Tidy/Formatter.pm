@@ -175,6 +175,7 @@ my (
     $rOpts_freeze_whitespace,
     $rOpts_function_paren_vertical_alignment,
     $rOpts_whitespace_cycle,
+    $rOpts_ignore_side_comment_lengths,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1529,6 +1530,8 @@ EOM
 
     $rOpts_function_paren_vertical_alignment =
       $rOpts->{'function-paren-vertical-alignment'};
+    $rOpts_ignore_side_comment_lengths =
+      $rOpts->{'ignore-side-comment-lengths'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -5000,9 +5003,6 @@ sub respace_tokens {
     my $CODE_type = "";
     my $line_type = "";
 
-    my $rOpts_ignore_side_comment_lengths =
-      $rOpts->{'ignore-side-comment-lengths'};
-
     # Set the whitespace flags, which indicate the token spacing preference.
     my $rwhitespace_flags = $self->set_whitespace_flags();
 
@@ -7298,6 +7298,45 @@ sub setup_new_weld_measurements {
     return ( $ok_to_weld, $maximum_text_length, $starting_lentot, $msg );
 }
 
+sub excess_line_length_for_Krange {
+    my ( $self, $Kfirst, $Klast ) = @_;
+
+    # returns $excess_length =
+    #   by how many characters a line composed of tokens $Kfirst .. $Klast will
+    #   exceed the allowed line length
+
+    my $rLL = $self->[_rLL_];
+    my $length_before_Kfirst =
+      $Kfirst <= 0
+      ? 0
+      : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
+
+    # backup before a side comment if necessary
+    my $Kend = $Klast;
+    if (   $rOpts_ignore_side_comment_lengths
+        && $rLL->[$Klast]->[_TYPE_] eq '#' )
+    {
+        my $Kprev = $self->K_previous_nonblank($Klast);
+        if ( defined($Kprev) && $Kprev >= $Kfirst ) { $Kend = $Kprev }
+    }
+
+    # get the length of the text
+    my $length = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
+
+    # get the size of the text window
+    my $level           = $rLL->[$Kfirst]->[_LEVEL_];
+    my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
+    my $max_text_length = $maximum_text_length_at_level[$level] -
+      $ci_level * $rOpts_continuation_indentation;
+
+    my $excess_length = $length - $max_text_length;
+
+    DEBUG_WELD
+      && print
+"Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
+    return ($excess_length);
+}
+
 sub weld_nested_containers {
     my ($self) = @_;
 
@@ -7327,9 +7366,6 @@ sub weld_nested_containers {
 
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
-
-    my $rOpts_ignore_side_comment_lengths =
-      $rOpts->{'ignore-side-comment-lengths'};
 
     # This array will hold the sequence numbers of the tokens to be welded.
     my @welds;
@@ -7361,39 +7397,6 @@ sub weld_nested_containers {
 at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_lentot=$starting_lentot, maximum_text_length=$maximum_text_length, line(K)=$iline_K , line_start = $iline_outer_opening
 EOM
 
-        return ($excess_length);
-    };
-
-    my $excess_length_of_line = sub {
-        my ( $Kfirst, $Klast ) = @_;
-
-        my $length_before_Kfirst =
-          $Kfirst <= 0
-          ? 0
-          : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
-
-        # backup before a side comment if necessary
-        my $Kend = $Klast;
-        if (   $rOpts_ignore_side_comment_lengths
-            && $rLL->[$Klast]->[_TYPE_] eq '#' )
-        {
-            my $Kprev = $self->K_previous_nonblank($Klast);
-            if ( defined($Kprev) && $Kprev >= $Kfirst ) { $Kend = $Kprev }
-        }
-
-        my $length =
-          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
-
-        my $level           = $rLL->[$Kfirst]->[_LEVEL_];
-        my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
-        my $max_text_length = $maximum_text_length_at_level[$level] -
-          $ci_level * $rOpts_continuation_indentation;
-
-        my $excess_length = $length - $max_text_length;
-
-        DEBUG_WELD
-          && print
-"Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
         return ($excess_length);
     };
 
@@ -7535,7 +7538,8 @@ EOM
             # FIX1: Changed 'excess_length_to_K' to 'excess_length_of_line'
             # to get exact lengths and fix b604 b605.
             if ( $iline_oo == $iline_oc ) {
-                my $excess = $excess_length_of_line->( $Kfirst, $Klast );
+                my $excess =
+                  $self->excess_line_length_for_Krange( $Kfirst, $Klast );
                 if ( $excess <= 0 ) {
 
                     # FIX2: Patch for b1114: add a tolerance of one level if
@@ -7899,37 +7903,6 @@ sub weld_nested_quotes {
     my $starting_lentot;
     my $maximum_text_length;
 
-    my $excess_length_of_last_line = sub {
-        my ( $Kfirst, $Klast ) = @_;
-
-        # Return the excess length of the last line of a multiline qw quote.
-        # Note that we do not have to check for an ending side comment here
-        # because there will not be one if another closing container token
-        # immediately follows the closing qw container token.
-
-        my $length_before_Kfirst =
-          $Kfirst <= 0
-          ? 0
-          : $rLL->[ $Kfirst - 1 ]->[_CUMULATIVE_LENGTH_];
-
-        my $Kend = $Klast;
-
-        my $length =
-          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] - $length_before_Kfirst;
-
-        my $level           = $rLL->[$Kfirst]->[_LEVEL_];
-        my $ci_level        = $rLL->[$Kfirst]->[_CI_LEVEL_];
-        my $max_text_length = $maximum_text_length_at_level[$level] -
-          $ci_level * $rOpts_continuation_indentation;
-
-        my $excess_length = $length - $max_text_length;
-
-        DEBUG_WELD
-          && print
-"QW: Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
-        return ($excess_length);
-    };
-
     my $is_single_quote = sub {
         my ( $Kbeg, $Kend, $quote_type ) = @_;
         foreach my $K ( $Kbeg .. $Kend ) {
@@ -8061,7 +8034,8 @@ sub weld_nested_quotes {
                 my $rK_range_ic = $rlines->[$iline_ic]->{_rK_range};
                 my ( $Kfirst_ic, $Klast_ic ) = @{$rK_range_ic};
                 my $excess_ic =
-                  $excess_length_of_last_line->( $Kfirst_ic, $Kouter_closing );
+                  $self->excess_line_length_for_Krange( $Kfirst_ic,
+                    $Kouter_closing );
 
                 # Allow extra space for additional welded closing container(s)
                 # and a space and comma or semicolon.
