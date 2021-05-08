@@ -2,13 +2,22 @@
 
 =over 4
 
+=item B<Correct brace types mismarked by tokenizer, update>
+
+This is a generalization of commit 7d3bf4 in which the tokenizer sends a signal
+to the formatter if the type of a brace following an unknown bareword had to be
+guessed.  The formatter has more information and can fix the problem.  This
+fixes case b1128.
+
+8 May 2021.
+
 =item B<Added warning when -ci has to be reduced; ref rt #136415>
 
 In commit c16c5ee an update was made to prevent instability with -xci when
 the value of -ci exceeds -i (which is not recommended).  This update adds a
 warning message to avoid confusing the user.
 
-7 May 2021.
+7 May 2021, e9e14e4.
 
 =item B<Improve indentation of welded multiline qw quotes>
 
@@ -61,7 +70,7 @@ containers on a separate line.
 
 This fix is for case c002.
 
-6 May 2021.
+6 May 2021, 176f8a7.
 
 =item B<Test length of closing multiline qw quote before welding>
 

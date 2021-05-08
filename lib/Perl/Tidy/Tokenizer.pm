@@ -5378,13 +5378,12 @@ sub decide_if_code_block {
             }
         }
 
-        if ( $code_block_type && $pre_types[$j] eq '}' ) {
+        if ($code_block_type) {
 
-            # Patch for case b1085: if we hit the sentinal token then it is
-            # uncertain if this is a block.  If this brace follows a bareword,
-            # then append a space as a signal to the formatter that this may
-            # not be a block brace.  To find the corresponding code in
-            # Formatter.pm search for 'b1085'.
+            # Patch for cases b1085 b1128: It is uncertain if this is a block.
+            # If this brace follows a bareword, then append a space as a signal
+            # to the formatter that this may not be a block brace.  To find the
+            # corresponding code in Formatter.pm search for 'b1085'.
             $code_block_type .= " " if ( $code_block_type =~ /^\w/ );
         }
     }
