@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Fix some edge welding cases>
+
+Some adjustments in welding coding was made to maintain stability for some
+unusual parameter combinations.
+
+This fixes cases b1111 b1112.
+9 May 2021.
+
 =item B<Improve tolerance for welding qw quotes>
 
 The tolerance for welding qw quotes has been update to be the same as used
@@ -40,7 +48,7 @@ It has no effect if -lp is not used.
         CroakWinError
     )]);
 
-9 May 2021.
+9 May 2021, ad8870b.
 
 =item B<Correct brace types mismarked by tokenizer, update>
 
@@ -49,7 +57,7 @@ to the formatter if the type of a brace following an unknown bareword had to be
 guessed.  The formatter has more information and can fix the problem.  This
 fixes case b1128.
 
-8 May 2021.
+8 May 2021, b3eaf23.
 
 =item B<Added warning when -ci has to be reduced; ref rt #136415>
 

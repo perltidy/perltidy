@@ -7230,6 +7230,15 @@ sub setup_new_weld_measurements {
         {
             if ( substr( $type_prev, 0, 1 ) eq '=' ) {
                 $Kref = $Kprev;
+
+                # Backup to the start of the previous line if it ends in =>
+                # Fixes case b1112.
+                if ( $type_prev eq '=>' ) {
+                    my $iline_prev = $rLL->[$Kprev]->[_LINE_INDEX_];
+                    my $rK_range   = $rlines->[$iline_prev]->{_rK_range};
+                    my ( $Kfirst, $Klast ) = @{$rK_range};
+                    $Kref = $Kfirst;
+                }
             }
         }
     }
@@ -7279,16 +7288,21 @@ sub setup_new_weld_measurements {
     # cause blinkers. See case b1020. It will probably only occur
     # in stress testing.  For this situation we will only weld if we
     # start at a 'good' location.  Added 'if' to fix case b1032.
+    # Require blank before certain previous characters to fix b1111.
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
-        && !$rOpts_add_whitespace )
+        && !$rOpts_add_whitespace
+        && defined($Kprev) )
     {
         my $type_first  = $rLL->[$Kfirst]->[_TYPE_];
-        my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
         my $token_first = $rLL->[$Kfirst]->[_TOKEN_];
+        my $type_prev   = $rLL->[$Kprev]->[_TYPE_];
+        my $type_pp     = 'b';
+        if ( $Kprev >= 0 ) { $type_pp = $rLL->[ $Kprev - 1 ]->[_TYPE_] }
         unless (
-               $type_prev  =~ /^[=\,\.\{\[\(\L]/
+               $type_prev  =~ /^[\,\.]/
+            || $type_prev  =~ /^[=\{\[\(\L]/ && $type_pp eq 'b'
             || $type_first =~ /^[=\,\.\{\[\(\L]/
             || $type_first eq '||'
             || (   $type_first eq 'k' && $token_first eq 'if'
