@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Improve tolerance for welding qw quotes>
+
+The tolerance for welding qw quotes has been update to be the same as used
+for welding other tokens.  This fixes case b1129.
+
+9 May 2021.
+
 =item B<Revise weld tolerances, simplify code, fix welded ci>
 
 The welding process uses a tolerance to keep results stable.  Basically, a zero

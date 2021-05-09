@@ -7928,8 +7928,8 @@ sub weld_nested_quotes {
     };
 
     # Length tolerance - same as previously used for sub weld_nested
-    my $length_tol =
-      1 + abs( $rOpts_indent_columns - $rOpts_continuation_indentation );
+    my $multiline_tol =
+      1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     # look for single qw quotes nested in containers
     my $KNEXT = $self->[_K_first_seq_item_];
@@ -8017,9 +8017,9 @@ sub weld_nested_quotes {
 
             my $length =
               $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_] - $starting_lentot;
-            my $excess = $length + $length_tol - $maximum_text_length;
+            my $excess = $length + $multiline_tol - $maximum_text_length;
 
-            my $excess_max = ( $is_old_weld ? $length_tol : 0 );
+            my $excess_max = ( $is_old_weld ? $multiline_tol : 0 );
             if ( $excess >= $excess_max ) {
                 $do_not_weld = 1;
             }
@@ -8027,7 +8027,7 @@ sub weld_nested_quotes {
             if (DEBUG_WELD) {
                 if ( !$is_old_weld ) { $is_old_weld = "" }
                 $Msg .=
-"excess=$excess>=$excess_max, length_tol=$length_tol, is_old_weld='$is_old_weld'\n";
+"excess=$excess>=$excess_max, multiline_tol=$multiline_tol, is_old_weld='$is_old_weld'\n";
             }
 
             # Check weld exclusion rules for outer container
