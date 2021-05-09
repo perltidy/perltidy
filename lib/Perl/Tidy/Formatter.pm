@@ -7386,26 +7386,6 @@ sub weld_nested_containers {
     my $multiline_tol =
       1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
-    my $excess_length_to_K = sub {
-        my ($K) = @_;
-
-        # Return estimated excess line length from the line start to token $K
-        my $length =
-          $self->cumulative_length_before_K($K) - $starting_lentot + 1;
-
-        # Add a tolerance for welds over multiple lines to avoid blinkers
-        my $iline_K = $rLL->[$K]->[_LINE_INDEX_];
-        my $tol     = ( $iline_K > $iline_outer_opening ) ? $multiline_tol : 0;
-
-        my $excess_length = $length + $tol - $maximum_text_length;
-
-        DEBUG_WELD && print <<EOM;
-at index $K excess length to K is $excess_length, tol=$tol, length=$length, starting_lentot=$starting_lentot, maximum_text_length=$maximum_text_length, line(K)=$iline_K , line_start = $iline_outer_opening
-EOM
-
-        return ($excess_length);
-    };
-
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
         my $KK      = $K_opening_container->{$seqno};
@@ -7500,6 +7480,11 @@ EOM
         my $iline_ic = $inner_closing->[_LINE_INDEX_];
         my $iline_oc = $outer_closing->[_LINE_INDEX_];
         my $token_oo = $outer_opening->[_TOKEN_];
+
+        my $is_multiline_weld =
+             $iline_oo == $iline_io
+          && $iline_ic == $iline_oc
+          && $iline_io != $iline_ic;
 
         if (DEBUG_WELD) {
             my $token_io = $rLL->[$Kinner_opening]->[_TOKEN_];
@@ -7687,14 +7672,29 @@ EOM
                 }
             }
 
-            my $excess = $excess_length_to_K->($K_for_length);
+            # Use a tolerance for welds over multiple lines to avoid blinkers.
+            # We can use zero tolerance if it looks like we are working on an
+            # existing weld.
+            my $tol =
+              $is_one_line_weld || $is_multiline_weld
+              ? 0
+              : $multiline_tol;
 
-            # Use '>=' instead of '=' here to fix cases b995 b998 b1000
-            # b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018
-            if ( $excess >= 0 ) { $do_not_weld_rule = 3 }
+            # By how many characters does this exceed the text window?
+            my $excess =
+              $self->cumulative_length_before_K($K_for_length) -
+              $starting_lentot + 1 + $tol -
+              $maximum_text_length;
+
+            # Old patch: Use '>=0' instead of '> 0' here to fix cases b995 b998
+            # b1000 b1001 b1007 b1008 b1009 b1010 b1011 b1012 b1016 b1017 b1018
+            # Revised patch: New tolerance definition allows going back to '> 0'
+            # here.  This fixes case b1124.  See also cases b1087 and b1087a.
+            if ( $excess > 0 ) { $do_not_weld_rule = 3 }
+
             if (DEBUG_WELD) {
                 $Msg .=
-"RULE 3 test: excess length to K=$Kinner_opening is $excess ( > 0 ?) \n";
+"RULE 3 test: excess length to K=$Kinner_opening is $excess > 0 with tol= $tol ?) \n";
             }
         }
 
@@ -7818,6 +7818,14 @@ EOM
             for ( my $KK = $Kstart ; $KK <= $Kstop ; $KK++ ) {
                 $rLL->[$KK]->[_LEVEL_] += $dlevel;
             }
+
+            # Copy opening ci level to help break at = for -lp mode (case b1124)
+            $rLL->[$Kinner_opening]->[_CI_LEVEL_] =
+              $rLL->[$Kouter_opening]->[_CI_LEVEL_];
+
+            # But do not copy the closing ci level ... it can give poor results
+            ## $rLL->[$Kinner_closing]->[_CI_LEVEL_] =
+            ##  $rLL->[$Kouter_closing]->[_CI_LEVEL_];
         }
     }
 

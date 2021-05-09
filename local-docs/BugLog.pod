@@ -2,6 +2,39 @@
 
 =over 4
 
+=item B<Revise weld tolerances, simplify code, fix welded ci>
+
+The welding process uses a tolerance to keep results stable.  Basically, a zero
+tolerance is used if it looks like it is welding an existing weld, while a
+finite tolerance is used otherwise.  The effect is to reject a few marginal
+welds to gain stability. The coding to do this was simplified and the tolerance
+was made more precise to fix case b1124.
+
+Another change with this update is that at welded containers, the value of the
+-ci flag of an outer opening token is transferred to the inner opening token.
+This may improve some indentation in a few cases if the -lp flag is also used.
+It has no effect if -lp is not used.
+
+    # OLD: perltidy -wn -gnu
+    emit_symbols([qw(
+     ctermid
+     get_sysinfo
+     Perl_OS2_init
+     ...
+     CroakWinError
+    )]);
+
+    # NEW: perltidy -wn -gnu
+    emit_symbols([qw(
+        ctermid
+        get_sysinfo
+        Perl_OS2_init
+        ...
+        CroakWinError
+    )]);
+
+9 May 2021.
+
 =item B<Correct brace types mismarked by tokenizer, update>
 
 This is a generalization of commit 7d3bf4 in which the tokenizer sends a signal
