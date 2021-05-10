@@ -2,20 +2,43 @@
 
 =over 4
 
+=item B<Do not apply -lp formatting to containers with here-doc text>
+
+If a container contains text of a here-doc then the indentation is fixed by
+the here-doc text, so applying -lp formatting does not work well.  So this
+update turns off the -lp formatting in this case.
+
+But note that if a container contains a here target but not the here text so it
+still gets the -lp indentation:
+
+    # perltidy -lp
+    &WH::Spell::AddSpell(
+                          "Cause Light Wounds", "WFP",
+                          "CauseLightWounds",   <<'EOH');
+    ...
+    EOH
+
+This fixes case b1081.
+
+10 May 2021.
+
+EOH
+
 =item B<Fix some edge welding cases>
 
 Some adjustments in welding coding was made to maintain stability for some
 unusual parameter combinations.
 
 This fixes cases b1111 b1112.
-9 May 2021.
+
+9 May 2021, 68f619a.
 
 =item B<Improve tolerance for welding qw quotes>
 
 The tolerance for welding qw quotes has been update to be the same as used
 for welding other tokens.  This fixes case b1129.
 
-9 May 2021.
+9 May 2021, d1de85f.
 
 =item B<Revise weld tolerances, simplify code, fix welded ci>
 

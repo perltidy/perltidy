@@ -435,7 +435,6 @@ BEGIN {
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
         _rKrange_multiline_qw_by_seqno_     => $i++,
-        _rcontains_multiline_qw_by_seqno_   => $i++,
         _rmultiline_qw_has_extra_level_     => $i++,
         _rbreak_before_container_by_seqno_  => $i++,
         _ris_essential_old_breakpoint_      => $i++,
@@ -611,7 +610,7 @@ BEGIN {
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
-    @q = qw( => ; );
+    @q = qw( => ; h );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
 
@@ -794,7 +793,6 @@ sub new {
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
     $self->[_rending_multiline_qw_seqno_by_K_]   = {};
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
-    $self->[_rcontains_multiline_qw_by_seqno_]   = {};
     $self->[_rmultiline_qw_has_extra_level_]     = {};
 
     $self->[_rbreak_before_container_by_seqno_] = {};
@@ -5054,6 +5052,8 @@ sub respace_tokens {
     my $nonblank_token_count     = 0;
     my $last_nonblank_token_lx   = 0;
 
+    my %K_first_here_doc_by_seqno;
+
     my $set_permanently_broken = sub {
         my ($seqno) = @_;
         while ( defined($seqno) ) {
@@ -5179,6 +5179,11 @@ sub respace_tokens {
                     # Count line-ending commas for -bbx
                     if ( $type eq ',' && $Ktoken_vars == $Klast_old_code ) {
                         $rlec_count_by_seqno->{$seqno}++;
+                    }
+
+                    # Remember index of first here doc target
+                    if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
+                        $K_first_here_doc_by_seqno{$seqno} = $KK_new;
                     }
                 }
             }
@@ -6164,6 +6169,19 @@ sub respace_tokens {
         }
     }
 
+    # Turn off -lp for containers with here-docs with text within a container,
+    # since they have their own fixed indentation.  Fixes case b1081.
+    if ($rOpts_line_up_parentheses) {
+        foreach my $seqno ( keys %K_first_here_doc_by_seqno ) {
+            my $Kh      = $K_first_here_doc_by_seqno{$seqno};
+            my $Kc      = $K_closing_container->{$seqno};
+            my $line_Kh = $rLL_new->[$Kh]->[_LINE_INDEX_];
+            my $line_Kc = $rLL_new->[$Kc]->[_LINE_INDEX_];
+            next if ( $line_Kh == $line_Kc );
+            $ris_excluded_lp_container->{$seqno} = 1;
+        }
+    }
+
     # Set a flag to turn off -cab=3 in complex structures.  Otherwise,
     # instability can occur.  When it is overridden the behavior of the closest
     # match, -cab=2, will be used instead.  This fixes cases b1096 b1113.
@@ -6214,6 +6232,8 @@ sub respace_tokens {
     $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
     $self->[_roverride_cab3_]            = $roverride_cab3;
     $self->[_ris_assigned_structure_]    = $ris_assigned_structure;
+
+    $self->[_ris_excluded_lp_container_] = $ris_excluded_lp_container;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -9053,8 +9073,9 @@ sub find_multiline_qw {
     my $rstarting_multiline_qw_seqno_by_K = {};
     my $rending_multiline_qw_seqno_by_K   = {};
     my $rKrange_multiline_qw_by_seqno     = {};
-    my $rcontains_multiline_qw_by_seqno   = {};
     my $rmultiline_qw_has_extra_level     = {};
+
+    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
 
     my $rlines = $self->[_rlines_];
     my $rLL    = $self->[_rLL_];
@@ -9168,7 +9189,8 @@ EOM
                     $is_tightly_contained = 1;
                 }
             }
-            $rcontains_multiline_qw_by_seqno->{$parent_seqno} = 1
+
+            $ris_excluded_lp_container->{$parent_seqno} = 1
               unless ($is_tightly_contained);
 
             # continue up the tree marking parent containers
@@ -9177,7 +9199,7 @@ EOM
                 last
                   unless ( defined($parent_seqno)
                     && $parent_seqno ne SEQ_ROOT );
-                $rcontains_multiline_qw_by_seqno->{$parent_seqno} = 1;
+                $ris_excluded_lp_container->{$parent_seqno} = 1;
             }
         }
     }
@@ -9187,8 +9209,6 @@ EOM
     $self->[_rending_multiline_qw_seqno_by_K_] =
       $rending_multiline_qw_seqno_by_K;
     $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
-    $self->[_rcontains_multiline_qw_by_seqno_] =
-      $rcontains_multiline_qw_by_seqno;
     $self->[_rmultiline_qw_has_extra_level_] = $rmultiline_qw_has_extra_level;
 
     return;
@@ -18185,6 +18205,7 @@ sub get_available_spaces_to_go {
             }
 
             # add the standard increment for containers excluded by user rules
+            # or which contain here-docs or multiline qw text
             elsif ( defined($last_nonblank_seqno)
                 && $ris_excluded_lp_container->{$last_nonblank_seqno} )
             {
@@ -18194,14 +18215,6 @@ sub get_available_spaces_to_go {
             # if last nonblank token was not structural indentation,
             # just use standard increment
             elsif ( $last_nonblank_type ne '{' ) {
-                $space_count += $standard_increment;
-            }
-
-            # if this container holds a qw, add the standard increment
-            elsif ($last_nonblank_seqno
-                && $self->[_rcontains_multiline_qw_by_seqno_]
-                ->{$last_nonblank_seqno} )
-            {
                 $space_count += $standard_increment;
             }
 
