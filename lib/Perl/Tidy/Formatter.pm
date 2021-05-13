@@ -16153,7 +16153,7 @@ sub set_continuation_breaks {
 
                     my $tol = $length_tol;
                     if (   $length_tol_multiline_increase
-                        && $self->[_ris_broken_container_]->{$type_sequence} )
+                        && $ris_broken_container->{$type_sequence} )
                     {
                         $tol += $length_tol_multiline_increase;
                     }
@@ -16708,21 +16708,28 @@ sub find_token_starting_list {
     # When testing to see if a block will fit on one line, some
     # previous token(s) may also need to be on the line; particularly
     # if this is a sub call.  So we will look back at least one
-    # token. NOTE: This isn't perfect, but not critical, because
-    # if we mis-identify a block, it will be wrapped and therefore
-    # fixed the next time it is formatted.
+    # token.
     my ( $self, $i_opening_paren ) = @_;
-    my $i_opening_minus = $i_opening_paren;
-    my $im1             = $i_opening_paren - 1;
-    my $im2             = $i_opening_paren - 2;
-    my $typem1          = $im1 >= 0 ? $types_to_go[$im1] : 'b';
-    my $typem2          = $im2 >= 0 ? $types_to_go[$im2] : 'b';
 
-    if ( $typem1 eq ',' || ( $typem1 eq 'b' && $typem2 eq ',' ) ) {
-        $i_opening_minus = $i_opening_paren;
+    # This will be the return index
+    my $i_opening_minus = $i_opening_paren;
+
+    return $i_opening_minus if ( $i_opening_minus <= 0 );
+
+    my $im1 = $i_opening_paren - 1;
+    my ( $iprev_nb, $type_prev_nb ) = ( $im1, $types_to_go[$im1] );
+    if ( $type_prev_nb eq 'b' && $iprev_nb > 0 ) {
+        $iprev_nb -= 1;
+        $type_prev_nb = $types_to_go[$iprev_nb];
+    }
+
+    if ( $type_prev_nb eq ',' ) {
+
+        # a previous comma is a good break point
+        # $i_opening_minus = $i_opening_paren;
     }
     elsif ( $tokens_to_go[$i_opening_paren] eq '(' ) {
-        $i_opening_minus = $im1 if $im1 >= 0;
+        $i_opening_minus = $im1;
 
         # walk back to improve length estimate
         for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
@@ -16731,10 +16738,7 @@ sub find_token_starting_list {
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
     }
-    elsif ( $typem1 eq 'k' ) { $i_opening_minus = $im1 }
-    elsif ( $typem1 eq 'b' && $im2 >= 0 && $types_to_go[$im2] eq 'k' ) {
-        $i_opening_minus = $im2;
-    }
+    elsif ( $type_prev_nb eq 'k' ) { $i_opening_minus = $iprev_nb }
     return $i_opening_minus;
 }
 
