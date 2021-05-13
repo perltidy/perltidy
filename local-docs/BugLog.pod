@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Adjust tolerances for some line length tests>
+
+Random testing produced some edge cases of unstable formatting involving the -lp
+format.  These were fixed by using a slightly larger tolerance in the length test
+for containers which were broken in the input file.
+
+This fixes cases b1059 b1063 b1117.
+
+13 May 2021.
+
 =item B<Do not apply -lp formatting to containers with here-doc text>
 
 If a container contains text of a here-doc then the indentation is fixed by

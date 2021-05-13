@@ -15347,16 +15347,33 @@ sub set_continuation_breaks {
     my ( @has_broken_sublist, @dont_align, @want_comma_break );
 
     my $length_tol;
+    my $length_tol_multiline_increase;
 
     sub initialize_scan_list {
         @dont_align         = ();
         @has_broken_sublist = ();
         @want_comma_break   = ();
 
-        # Use an increased line length tolerance when -ci > -i
-        # to avoid blinking states (case b923 and others).
+        # Define a tolerance to use a tolerance when checking if closed
+        # containers will fit on one line.  This is necessary to avoid
+        # formatting instability. The basic tolerance is based on the
+        # following:
+
+        # - Always allow for at least one extra space after a closing token so
+        # that we do not strand a comma or semicolon. (oneline.t).
+
+        # - Use an increased line length tolerance when -ci > -i to avoid
+        # blinking states (case b923 and others).
         $length_tol =
           1 + max( 0, $rOpts_continuation_indentation - $rOpts_indent_columns );
+
+        # In addition, use a few characters of extra tolerance for broken lines
+        # when -lp is used to help prevent instability. This is currently only
+        # necessary for -lp which has a more variable indentation.  At least 3
+        # characters have been found to be required.
+        # Fixes cases b1059 b1063 b1117.
+        $length_tol_multiline_increase = 0;
+        if ($rOpts_line_up_parentheses) { $length_tol_multiline_increase = 3 }
 
         return;
     }
@@ -16127,15 +16144,22 @@ sub set_continuation_breaks {
                 # mark term as long if the length between opening and closing
                 # parens exceeds allowed line length
                 if ( !$is_long_term && $saw_opening_structure ) {
+
                     my $i_opening_minus =
                       $self->find_token_starting_list($i_opening);
 
-                    # Note: we have to allow for at least one extra space after
-                    # a closing token so that we do not strand a comma or
-                    # semicolon. (oneline.t).
-                    $is_long_term =
-                      $self->excess_line_length( $i_opening_minus, $i ) >
-                      -$length_tol;
+                    my $excess =
+                      $self->excess_line_length( $i_opening_minus, $i );
+
+                    my $tol = $length_tol;
+                    if (   $length_tol_multiline_increase
+                        && $self->[_ris_broken_container_]->{$type_sequence} )
+                    {
+                        $tol += $length_tol_multiline_increase;
+                    }
+
+                    $is_long_term = $excess + $tol > 0;
+
                 } ## end if ( !$is_long_term &&...)
 
                 # We've set breaks after all comma-arrows.  Now we have to
