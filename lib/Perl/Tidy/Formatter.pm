@@ -430,6 +430,7 @@ BEGIN {
         _rKrange_code_without_comments_ => $i++,
         _rbreak_before_Kfirst_          => $i++,
         _rbreak_after_Klast_            => $i++,
+        _rwant_container_open_          => $i++,
         _converged_                     => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
@@ -788,6 +789,7 @@ sub new {
     $self->[_rKrange_code_without_comments_] = [];
     $self->[_rbreak_before_Kfirst_]          = {};
     $self->[_rbreak_after_Klast_]            = {};
+    $self->[_rwant_container_open_]          = {};
     $self->[_converged_]                     = 0;
 
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
@@ -6679,16 +6681,66 @@ sub keep_old_line_breaks {
     # Called once per file to find and mark any old line breaks which
     # should be kept.  We will be translating the input hashes into
     # token indexes.
+
+    # A flag is set as follows:
+    # = 1 make a hard break (flush the current batch)
+    #     best for something like leading commas (-kbb=',')
+    # = 2 make a soft break (keep building current batch)
+    #     best for something like leading ->
+
     my ($self) = @_;
 
-    return unless ( %keep_break_before_type || %keep_break_after_type );
-
     my $rLL = $self->[_rLL_];
-
     my $rKrange_code_without_comments =
       $self->[_rKrange_code_without_comments_];
     my $rbreak_before_Kfirst = $self->[_rbreak_before_Kfirst_];
     my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
+    my $rwant_container_open = $self->[_rwant_container_open_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $ris_broken_container = $self->[_ris_broken_container_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+
+    # This code moved here from sub scan_list to fix b1120
+    if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
+        foreach my $item ( @{$rKrange_code_without_comments} ) {
+            my ( $Kfirst, $Klast ) = @{$item};
+            my $type  = $rLL->[$Kfirst]->[_TYPE_];
+            my $token = $rLL->[$Kfirst]->[_TOKEN_];
+
+            # leading '->' use a value of 2 which causes a soft
+            # break rather than a hard break
+            if ( $type eq '->' ) {
+                $rbreak_before_Kfirst->{$Kfirst} = 2;
+            }
+
+            # leading ')->' use a special flag to insure that both
+            # opening and closing parens get opened
+            # Fix for b1120: only for parens, not braces
+            elsif ( $token eq ')' ) {
+                my $Kn = $self->K_next_nonblank($Kfirst);
+                next
+                  unless ( defined($Kn)
+                    && $Kn <= $Klast
+                    && $rLL->[$Kn]->[_TYPE_] eq '->' );
+                my $seqno = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
+                next unless ($seqno);
+
+		# Patch to avoid blinkers: but do not do this unless the
+		# container holds a list, or the opening and closing parens are
+		# separated by more than one line.
+                # Fixes case b977.
+                next
+                  if (
+                    !$ris_list_by_seqno->{$seqno}
+                    && (  !$ris_broken_container->{$seqno}
+                        || $ris_broken_container->{$seqno} <= 1 )
+                  );
+                $rwant_container_open->{$seqno} = 1;
+            }
+        }
+    }
+
+    return unless ( %keep_break_before_type || %keep_break_after_type );
 
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
@@ -10607,10 +10659,17 @@ EOM
 
         # Keep any requested breaks before this line.  Note that we have to
         # use the original K_first because it may have been reduced above
-        # to add a blank.
+        # to add a blank.  The value of the flag is as follows:
+        #   1 => hard break, flush the batch
+        #   2 => soft break, set breakpoint and continue building the batch
         if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
             destroy_one_line_block();
-            $self->end_batch();
+            if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} == 2 ) {
+                $self->set_forced_breakpoint($max_index_to_go);
+            }
+            else {
+                $self->end_batch();
+            }
         }
 
         # loop to process the tokens one-by-one
@@ -11018,7 +11077,8 @@ EOM
 
         }    # end of loop over all tokens in this 'line_of_tokens'
 
-        my $type = $rLL->[$K_last]->[_TYPE_];
+        my $type       = $rLL->[$K_last]->[_TYPE_];
+        my $break_flag = $self->[_rbreak_after_Klast_]->{$K_last};
 
         # we have to flush ..
         if (
@@ -11037,11 +11097,11 @@ EOM
             # to keep a label at the end of a line
             || $type eq 'J'
 
+            # if we have a hard break request
+            || $break_flag && $break_flag != 2
+
             # if we are instructed to keep all old line breaks
             || !$rOpts->{'delete-old-newlines'}
-
-            # we have a request to keep a break after this line
-            || $self->[_rbreak_after_Klast_]->{$K_last}
 
             # if this is a line of the form 'use overload'. A break here
             # in the input file is a good break because it will allow
@@ -11066,6 +11126,11 @@ EOM
         {
             destroy_one_line_block();
             $self->end_batch();
+        }
+
+        # Check for a soft break request
+        if ( $max_index_to_go >= 0 && $break_flag && $break_flag == 2 ) {
+            $self->set_forced_breakpoint($max_index_to_go);
         }
 
         # mark old line breakpoints in current output stream
@@ -12402,6 +12467,7 @@ EOM
         # of tokens would otherwise cause trouble.
 
         my ($self) = @_;
+        my $rwant_container_open = $self->[_rwant_container_open_];
 
         @unmatched_opening_indexes_in_this_batch = ();
         @unmatched_closing_indexes_in_this_batch = ();
@@ -12409,12 +12475,22 @@ EOM
         my $comma_arrow_count_contained = 0;
 
         foreach my $i ( 0 .. $max_index_to_go ) {
-            if ( $type_sequence_to_go[$i] ) {
+            my $seqno = $type_sequence_to_go[$i];
+            if ($seqno) {
                 my $token = $tokens_to_go[$i];
                 if ( $is_opening_sequence_token{$token} ) {
+
+                    if ( $rwant_container_open->{$seqno} ) {
+                        $self->set_forced_breakpoint($i);
+                    }
+
                     push @unmatched_opening_indexes_in_this_batch, $i;
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
+
+                    if ( $rwant_container_open->{$seqno} ) {
+                        $self->set_forced_breakpoint( $i - 1 );
+                    }
 
                     my $i_mate = pop @unmatched_opening_indexes_in_this_batch;
                     if ( defined($i_mate) && $i_mate >= 0 ) {
@@ -15658,8 +15734,6 @@ sub set_continuation_breaks {
           $rOpts->{'break-at-old-keyword-breakpoints'};
         my $rOpts_break_at_old_logical_breakpoints =
           $rOpts->{'break-at-old-logical-breakpoints'};
-        my $rOpts_break_at_old_method_breakpoints =
-          $rOpts->{'break-at-old-method-breakpoints'};
         my $rOpts_break_at_old_ternary_breakpoints =
           $rOpts->{'break-at-old-ternary-breakpoints'};
 
@@ -15831,52 +15905,9 @@ sub set_continuation_breaks {
                 $self->set_forced_breakpoint( $i - 1 );
             } ## end if ( $type eq 'k' && $i...)
 
-            # remember locations of -> if this is a pre-broken method chain
-            if ( $type eq '->' ) {
-                if ($rOpts_break_at_old_method_breakpoints) {
-
-                    # Case 1: look for lines with leading pointers
-                    if ( $i == $i_line_start ) {
-                        $self->set_forced_breakpoint( $i - 1 );
-                    }
-
-                    # Case 2: look for cuddled pointer calls
-                    else {
-
-                        # look for old lines with leading ')->' or ') ->'
-                        # and, when found, force a break before the
-                        # opening paren and after the previous closing paren.
-                        my $ok = (
-                                 $i_line_start >= 0
-                              && $types_to_go[$i_line_start] eq '}'
-                              && ( $i == $i_line_start + 1
-                                || $i == $i_line_start + 2
-                                && $types_to_go[ $i - 1 ] eq 'b' )
-                        );
-
-                        # Patch to avoid blinkers: but do not do this unless
-                        # line difference is > 1 (see case b977)
-                        if ($ok) {
-                            my $seqno = $type_sequence_to_go[$i_line_start];
-                            if (  !$ris_broken_container->{$seqno}
-                                || $ris_broken_container->{$seqno} <= 1 )
-                            {
-                                $ok = 0;
-                            }
-                        }
-
-                        if ($ok) {
-                            $self->set_forced_breakpoint( $i_line_start - 1 );
-                            $self->set_forced_breakpoint(
-                                $mate_index_to_go[$i_line_start] );
-                        }
-                    }
-                }
-            } ## end if ( $type eq '->' )
-
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
-            elsif ( $type eq '||' ) {
+            if ( $type eq '||' ) {
                 push @{ $rand_or_list[$depth][2] }, $i;
                 ++$has_old_logical_breakpoints[$depth]
                   if ( ( $i == $i_line_start || $i == $i_line_end )
@@ -22449,3 +22480,4 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
+

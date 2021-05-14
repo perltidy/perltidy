@@ -3262,6 +3262,7 @@ This flag will also look for and keep a 'cuddled' style of calls,
 in which lines begin with a closing paren followed by a call arrow, 
 as in this example:
 
+  # perltidy -bom -wn
   my $q = $rs->related_resultset(
       'CDs'
   )->related_resultset(

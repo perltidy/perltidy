@@ -2,6 +2,104 @@
 
 =over 4
 
+=item B<Rewrite coding for -bom flag>
+
+Random testing produced some examples of formatting instability involving the
+-bom flag in combination with certain other flags which are fixed with this update.
+As part of this update, a previous update to fix case b977 (21 Feb 2021, commit 28114e9)
+was revised to use a better criterion for deciding when not to keep a ')->' break.
+The previous criterion was that the opening and closing containers should be separated
+by more than one line.  The new criterion is that they should contain a list.  This
+still fixes case b977.  Another case, b1120, was fixed by requiring that only parentheses
+expressions be considered for keeping a line break, not '}->' or ']->'.
+
+Some issues are illustrated in the following examples using '-bom -gnu'.
+In the first example the leading ')->' was being lost due to the old b977 fix:
+
+    # input:
+    $show = $top->Entry( '-width' => 20,
+                       )->pack('-side' => 'left');
+
+    # OLD: perltidy -gnu -bom
+    $show = $top->Entry('-width' => 20,)->pack('-side' => 'left');
+
+    # NEW: perltidy -gnu -bom
+    $show = $top->Entry(
+                        '-width' => 20,
+                       )->pack('-side' => 'left');
+
+
+In the following example a leading '->' was being lost. The NEW version keeps
+the leading '->' but has to give up on the -lp alignment because of complexity:
+
+        # input
+        $_make_phase_arg = join(" ",
+                           map {CPAN::HandleConfig
+                                 ->safe_quote($_)} @{$prefs->{$phase}{args}},
+                          );
+
+        # OLD: perltidy -gnu -bom
+        $_make_phase_arg = join(" ",
+                                map { CPAN::HandleConfig->safe_quote($_) }
+                                  @{$prefs->{$phase}{args}},
+                               );
+
+        # NEW: perltidy -gnu -bom
+        $_make_phase_arg = join(
+            " ",
+            map {
+                CPAN::HandleConfig
+                  ->safe_quote($_)
+            } @{$prefs->{$phase}{args}},
+        );
+
+
+In the following example, a leading ')->' was being converted to a leading '->' due
+to the old b977 fix:
+
+    # Starting script
+    $lb = $t->Scrolled("Listbox", -scrollbars => "osoe"
+                      )->pack(-fill => "both", -expand => 1);
+
+    # OLD: perltidy -bom -gnu
+    $lb = $t->Scrolled( "Listbox", -scrollbars => "osoe" )
+      ->pack( -fill => "both", -expand => 1 );
+
+    # NEW: perltidy -bom -gnu
+    $lb = $t->Scrolled(
+                       "Listbox", -scrollbars => "osoe"
+                      )->pack(-fill => "both", -expand => 1);
+
+In the following example, a leading ')->' was being lost, again due to the
+old b977 fix:
+
+    $myDiag->Label(-text => $text,
+                                  )->pack(-fill => 'x',
+                                                  -padx => 3,
+                                                  -pady => 3);
+
+    # OLD: -gnu -bom
+    $myDiag->Label(-text => $text,)->pack(
+                                          -fill => 'x',
+                                          -padx => 3,
+                                          -pady => 3
+                                         );
+
+    # NEW -gnu -bom
+    $myDiag->Label(
+                   -text => $text,
+      )->pack(
+              -fill => 'x',
+              -padx => 3,
+              -pady => 3
+             );
+
+
+This update fixes case b1120 and revises the fix for b977.
+
+13 May 2021.
+
+
 =item B<Adjust tolerances for some line length tests>
 
 Random testing produced some edge cases of unstable formatting involving the -lp
@@ -10,7 +108,7 @@ for containers which were broken in the input file.
 
 This fixes cases b1059 b1063 b1117.
 
-13 May 2021.
+13 May 2021, 24a11d3.
 
 =item B<Do not apply -lp formatting to containers with here-doc text>
 
@@ -30,9 +128,7 @@ still gets the -lp indentation:
 
 This fixes case b1081.
 
-10 May 2021.
-
-EOH
+10 May 2021, 4f7a56b.
 
 =item B<Fix some edge welding cases>
 
