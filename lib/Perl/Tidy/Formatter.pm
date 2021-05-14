@@ -177,6 +177,14 @@ my (
     $rOpts_whitespace_cycle,
     $rOpts_ignore_side_comment_lengths,
 
+    $rOpts_break_at_old_attribute_breakpoints,
+    $rOpts_break_at_old_keyword_breakpoints,
+    $rOpts_break_at_old_logical_breakpoints,
+    $rOpts_break_at_old_ternary_breakpoints,
+    $rOpts_short_concatenation_item_length,
+    $rOpts_closing_side_comment_else_flag,
+    $rOpts_fuzzy_line_length,
+
     # Static hashes initialized in a BEGIN block
     %is_assignment,
     %is_keyword_returning_list,
@@ -1538,6 +1546,20 @@ EOM
       $rOpts->{'function-paren-vertical-alignment'};
     $rOpts_ignore_side_comment_lengths =
       $rOpts->{'ignore-side-comment-lengths'};
+
+    $rOpts_break_at_old_attribute_breakpoints =
+      $rOpts->{'break-at-old-attribute-breakpoints'};
+    $rOpts_break_at_old_keyword_breakpoints =
+      $rOpts->{'break-at-old-keyword-breakpoints'};
+    $rOpts_break_at_old_logical_breakpoints =
+      $rOpts->{'break-at-old-logical-breakpoints'};
+    $rOpts_break_at_old_ternary_breakpoints =
+      $rOpts->{'break-at-old-ternary-breakpoints'};
+    $rOpts_short_concatenation_item_length =
+      $rOpts->{'short-concatenation-item-length'};
+    $rOpts_closing_side_comment_else_flag =
+      $rOpts->{'closing-side-comment-else-flag'};
+    $rOpts_fuzzy_line_length = $rOpts->{'fuzzy-line-length'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -3436,9 +3458,6 @@ EOM
 
         # patch-its always ok to break at end of line
         $nobreak_to_go[$max_index_to_go] = 0;
-
-        my $rOpts_short_concatenation_item_length =
-          $rOpts->{'short-concatenation-item-length'};
 
         # we start a new set of bias values for each line
         %bias = %bias_hash;
@@ -6725,9 +6744,9 @@ sub keep_old_line_breaks {
                 my $seqno = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
                 next unless ($seqno);
 
-		# Patch to avoid blinkers: but do not do this unless the
-		# container holds a list, or the opening and closing parens are
-		# separated by more than one line.
+                # Patch to avoid blinkers: but do not do this unless the
+                # container holds a list, or the opening and closing parens are
+                # separated by more than one line.
                 # Fixes case b977.
                 next
                   if (
@@ -13257,9 +13276,6 @@ sub break_equals {
         # $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end ) = @_;
 
-        my $rOpts_short_concatenation_item_length =
-          $rOpts->{'short-concatenation-item-length'};
-
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
         my @joint;
@@ -14770,8 +14786,6 @@ sub set_continuation_breaks {
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
 
-    my $rOpts_fuzzy_line_length = $rOpts->{'fuzzy-line-length'};
-
     $self->set_bond_strengths();
 
     my $imin = 0;
@@ -15423,7 +15437,7 @@ sub set_continuation_breaks {
     my ( @has_broken_sublist, @dont_align, @want_comma_break );
 
     my $length_tol;
-    my $length_tol_multiline_increase;
+    my $length_tol_boost;
 
     sub initialize_scan_list {
         @dont_align         = ();
@@ -15448,8 +15462,8 @@ sub set_continuation_breaks {
         # necessary for -lp which has a more variable indentation.  At least 3
         # characters have been found to be required.
         # Fixes cases b1059 b1063 b1117.
-        $length_tol_multiline_increase = 0;
-        if ($rOpts_line_up_parentheses) { $length_tol_multiline_increase = 3 }
+        $length_tol_boost = 0;
+        if ($rOpts_line_up_parentheses) { $length_tol_boost = 3 }
 
         return;
     }
@@ -15728,15 +15742,6 @@ sub set_continuation_breaks {
         # final breakpoints.
 
         # It is called once per batch if the batch is a list.
-        my $rOpts_break_at_old_attribute_breakpoints =
-          $rOpts->{'break-at-old-attribute-breakpoints'};
-        my $rOpts_break_at_old_keyword_breakpoints =
-          $rOpts->{'break-at-old-keyword-breakpoints'};
-        my $rOpts_break_at_old_logical_breakpoints =
-          $rOpts->{'break-at-old-logical-breakpoints'};
-        my $rOpts_break_at_old_ternary_breakpoints =
-          $rOpts->{'break-at-old-ternary-breakpoints'};
-
         my $rLL                  = $self->[_rLL_];
         my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
         my $ris_broken_container = $self->[_ris_broken_container_];
@@ -16182,12 +16187,11 @@ sub set_continuation_breaks {
                     my $excess =
                       $self->excess_line_length( $i_opening_minus, $i );
 
-                    my $tol = $length_tol;
-                    if (   $length_tol_multiline_increase
-                        && $ris_broken_container->{$type_sequence} )
-                    {
-                        $tol += $length_tol_multiline_increase;
-                    }
+                    my $tol =
+                         $length_tol_boost
+                      && $ris_broken_container->{$type_sequence}
+                      ? $length_tol + $length_tol_boost
+                      : $length_tol;
 
                     $is_long_term = $excess + $tol > 0;
 
@@ -22019,9 +22023,6 @@ sub set_vertical_tightness_flags {
           = @_;
         my $csc_text = $block_leading_text;
 
-        my $rOpts_closing_side_comment_else_flag =
-          $rOpts->{'closing-side-comment-else-flag'};
-
         if (   $block_type eq 'elsif'
             && $rOpts_closing_side_comment_else_flag == 0 )
         {
@@ -22480,4 +22481,3 @@ sub wrapup {
 
 } ## end package Perl::Tidy::Formatter
 1;
-
