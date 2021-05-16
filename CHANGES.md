@@ -4,6 +4,11 @@
 
     - Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
 
+    - Some nested structures formatted with the -lp indentation option may have
+      some changes in indentation.  This is due to some updates which were made to
+      prevent formatting instability when line lengths are limited by the maximum line
+      length. Most scripts will not be affected.
+
     - A more complete list of updates is at
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod

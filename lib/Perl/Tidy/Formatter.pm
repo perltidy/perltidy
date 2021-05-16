@@ -5110,8 +5110,9 @@ sub respace_tokens {
                 # Fix for case b1100: Count a line ending in ', [' as having
                 # a line-ending comma.  Otherwise, these commas can be hidden
                 # with something like --opening-square-bracket-right
-                if (   $Ktoken_vars == $Klast_old_code
-                    && $last_nonblank_type eq ',' )
+                if (   $last_nonblank_type eq ','
+                    && $Ktoken_vars == $Klast_old_code
+                    && $Ktoken_vars > $Kfirst_old )
                 {
                     $rlec_count_by_seqno->{$type_sequence}++;
                 }
@@ -5750,7 +5751,9 @@ sub respace_tokens {
                         if ($seqno) {
                             $rtype_count_by_seqno->{$seqno}
                               ->{$last_nonblank_type}--;
-                            if (   $last_nonblank_type eq ','
+
+                            if (   $KK == $Kfirst
+                                && $last_nonblank_type eq ','
                                 && $rlec_count_by_seqno->{$seqno} )
                             {
                                 $rlec_count_by_seqno->{$seqno}--;
@@ -8729,7 +8732,12 @@ sub break_before_list_opening_containers {
         elsif ( $break_option == 2 ) {
 
             #  break if this list contains a broken list with line-ending comma
-            my $ok_to_break = $has_list_with_lec;
+            my $ok_to_break;
+            my $Msg = "";
+            if ($has_list_with_lec) {
+                $ok_to_break = 1;
+                $Msg         = "has list with lec;";
+            }
 
             if ( !$ok_to_break ) {
 
@@ -8742,21 +8750,33 @@ sub break_before_list_opening_containers {
                 if ($has_list) { $rno_xci_by_seqno->{$seqno} = 1 }
 
                 my $parent = $rparent_of_seqno->{$seqno};
-                $ok_to_break ||= $self->is_list_by_seqno($parent);
+                if ( $self->is_list_by_seqno($parent) ) {
+                    $Msg         = "parent is list";
+                    $ok_to_break = 1;
+                }
             }
 
             # Patch to fix b1099 for -lp
             #  ok in -lp mode if this is a list which contains a list
             if ( !$ok_to_break && $rOpts_line_up_parentheses ) {
-                $ok_to_break ||= $is_list && $has_list;
+                if ( $is_list && $has_list ) {
+                    $ok_to_break = 1;
+                    $Msg         = "is list or has list";
+                }
             }
 
-            next unless ($ok_to_break);
+            if ( !$ok_to_break ) {
+                DEBUG_BBX
+                  && print STDOUT "Not breaking at seqno=$seqno: $Msg\n";
+                next;
+            }
+
+            DEBUG_BBX
+              && print STDOUT "OK to break at seqno=$seqno: $Msg\n";
 
             # Patch: turn off -xci if -bbx=2 and -lp
             # This fixes cases b1090 b1095 b1101 b1116 b1118 b1121 b1122
             $rno_xci_by_seqno->{$seqno} = 1 if ($rOpts_line_up_parentheses);
-
         }
 
         # -bbx=3 = always break

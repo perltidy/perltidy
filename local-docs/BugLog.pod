@@ -2,16 +2,26 @@
 
 =over 4
 
+=item B<Fix inconsistency involving counting commas>
+
+Random testing produced a formatting instability involving the combination of
+flags -bbp=2 -xci -vt=2 -bvtc=2.  The problem was traced to an error in
+counting the number of line ending commas in lists.
+
+This fixes case b1130.
+
+15 May 2021.
+
 =item B<Slightly modify line breaks for -lp indentation>
 
-Random testing produced a edge case of formatting instability for -lp indentation
+Random testing produced an edge case of formatting instability for -lp indentation
 which was traced to checking for an old line break at a '=>'.  This has been fixed.
 Some existing formatting with deeply nested structures may be slightly changed due
 to the fix, but most existing formatting will be unchanged.
 
 This fixes b1035.
 
-15 May 2021.
+15 May 2021, dd42648.
 
 
 =item B<Rewrite coding for -bom flag>
