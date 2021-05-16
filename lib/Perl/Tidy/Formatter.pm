@@ -18098,10 +18098,11 @@ sub get_available_spaces_to_go {
                     || ( $bbc_flag && $bbc_flag >= 2 )
 
                     # or we are beyond the 1/4 point and there was an old
-                    # break at the equals
+                    # break at an assignment (not '=>') [fix for b1035]
                     || (
                         $gnu_position_predictor >
                         $mll - $rOpts_maximum_line_length * 3 / 4
+                        && $types_to_go[$last_equals] ne '=>'
                         && (
                             $old_breakpoint_to_go[$last_equals]
                             || (   $last_equals > 0
@@ -18347,8 +18348,8 @@ sub get_available_spaces_to_go {
         if ( $type eq '=>' ) {
             $gnu_arrow_count{$total_depth}++;
 
-            # tentatively treating '=>' like '=' for estimating breaks
-            # TODO: this could use some experimentation
+            # remember '=>' like '=' for estimating breaks (but see above note
+            # for b1035)
             $last_gnu_equals{$total_depth} = $max_index_to_go;
         }
 

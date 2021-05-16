@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Slightly modify line breaks for -lp indentation>
+
+Random testing produced a edge case of formatting instability for -lp indentation
+which was traced to checking for an old line break at a '=>'.  This has been fixed.
+Some existing formatting with deeply nested structures may be slightly changed due
+to the fix, but most existing formatting will be unchanged.
+
+This fixes b1035.
+
+15 May 2021.
+
+
 =item B<Rewrite coding for -bom flag>
 
 Random testing produced some examples of formatting instability involving the
@@ -97,7 +109,7 @@ old b977 fix:
 
 This update fixes case b1120 and revises the fix for b977.
 
-13 May 2021.
+13 May 2021, d0ac5e9.
 
 
 =item B<Adjust tolerances for some line length tests>
