@@ -354,45 +354,45 @@ BEGIN {
     # Array index names for $self (which is an array ref)
     $i = 0;
     use constant {
-        _rlines_                           => $i++,
-        _rlines_new_                       => $i++,
-        _rLL_                              => $i++,
-        _Klimit_                           => $i++,
-        _K_opening_container_              => $i++,
-        _K_closing_container_              => $i++,
-        _K_opening_ternary_                => $i++,
-        _K_closing_ternary_                => $i++,
-        _K_first_seq_item_                 => $i++,
-        _rK_phantom_semicolons_            => $i++,
-        _rtype_count_by_seqno_             => $i++,
-        _ris_function_call_paren_          => $i++,
-        _rlec_count_by_seqno_              => $i++,
-        _ris_broken_container_             => $i++,
-        _ris_permanently_broken_container_ => $i++,
-        _rhas_list_                        => $i++,
-        _rhas_broken_list_                 => $i++,
-        _rhas_broken_list_with_lec_        => $i++,
-        _rhas_code_block_                  => $i++,
-        _rhas_broken_code_block_           => $i++,
-        _rhas_ternary_                     => $i++,
-        _ris_excluded_lp_container_        => $i++,
-        _rwant_reduced_ci_                 => $i++,
-        _rno_xci_by_seqno_                 => $i++,
-        _ris_bli_container_                => $i++,
-        _rparent_of_seqno_                 => $i++,
-        _rchildren_of_seqno_               => $i++,
-        _ris_list_by_seqno_                => $i++,
-        _rbreak_container_                 => $i++,
-        _rshort_nested_                    => $i++,
-        _length_function_                  => $i++,
-        _is_encoded_data_                  => $i++,
-        _fh_tee_                           => $i++,
-        _sink_object_                      => $i++,
-        _file_writer_object_               => $i++,
-        _vertical_aligner_object_          => $i++,
-        _logger_object_                    => $i++,
-        _radjusted_levels_                 => $i++,
-        _this_batch_                       => $i++,
+        _rlines_                    => $i++,
+        _rlines_new_                => $i++,
+        _rLL_                       => $i++,
+        _Klimit_                    => $i++,
+        _K_opening_container_       => $i++,
+        _K_closing_container_       => $i++,
+        _K_opening_ternary_         => $i++,
+        _K_closing_ternary_         => $i++,
+        _K_first_seq_item_          => $i++,
+        _rK_phantom_semicolons_     => $i++,
+        _rtype_count_by_seqno_      => $i++,
+        _ris_function_call_paren_   => $i++,
+        _rlec_count_by_seqno_       => $i++,
+        _ris_broken_container_      => $i++,
+        _ris_permanently_broken_    => $i++,
+        _rhas_list_                 => $i++,
+        _rhas_broken_list_          => $i++,
+        _rhas_broken_list_with_lec_ => $i++,
+        _rhas_code_block_           => $i++,
+        _rhas_broken_code_block_    => $i++,
+        _rhas_ternary_              => $i++,
+        _ris_excluded_lp_container_ => $i++,
+        _rwant_reduced_ci_          => $i++,
+        _rno_xci_by_seqno_          => $i++,
+        _ris_bli_container_         => $i++,
+        _rparent_of_seqno_          => $i++,
+        _rchildren_of_seqno_        => $i++,
+        _ris_list_by_seqno_         => $i++,
+        _rbreak_container_          => $i++,
+        _rshort_nested_             => $i++,
+        _length_function_           => $i++,
+        _is_encoded_data_           => $i++,
+        _fh_tee_                    => $i++,
+        _sink_object_               => $i++,
+        _file_writer_object_        => $i++,
+        _vertical_aligner_object_   => $i++,
+        _logger_object_             => $i++,
+        _radjusted_levels_          => $i++,
+        _this_batch_                => $i++,
 
         _last_output_short_opening_token_ => $i++,
 
@@ -726,28 +726,28 @@ sub new {
     $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
     $self->[_rK_phantom_semicolons_] =
       undef;    # for undoing phantom semicolons if iterating
-    $self->[_rtype_count_by_seqno_]             = {};
-    $self->[_ris_function_call_paren_]          = {};
-    $self->[_rlec_count_by_seqno_]              = {};
-    $self->[_ris_broken_container_]             = {};
-    $self->[_ris_permanently_broken_container_] = {};
-    $self->[_rhas_list_]                        = {};
-    $self->[_rhas_broken_list_]                 = {};
-    $self->[_rhas_broken_list_with_lec_]        = {};
-    $self->[_rhas_code_block_]                  = {};
-    $self->[_rhas_broken_code_block_]           = {};
-    $self->[_rhas_ternary_]                     = {};
-    $self->[_ris_excluded_lp_container_]        = {};
-    $self->[_rwant_reduced_ci_]                 = {};
-    $self->[_rno_xci_by_seqno_]                 = {};
-    $self->[_ris_bli_container_]                = {};
-    $self->[_rparent_of_seqno_]                 = {};
-    $self->[_rchildren_of_seqno_]               = {};
-    $self->[_ris_list_by_seqno_]                = {};
-    $self->[_rbreak_container_]                 = {};  # prevent one-line blocks
-    $self->[_rshort_nested_]                    = {};  # blocks not forced open
-    $self->[_length_function_]                  = $length_function;
-    $self->[_is_encoded_data_]                  = $is_encoded_data;
+    $self->[_rtype_count_by_seqno_]      = {};
+    $self->[_ris_function_call_paren_]   = {};
+    $self->[_rlec_count_by_seqno_]       = {};
+    $self->[_ris_broken_container_]      = {};
+    $self->[_ris_permanently_broken_]    = {};
+    $self->[_rhas_list_]                 = {};
+    $self->[_rhas_broken_list_]          = {};
+    $self->[_rhas_broken_list_with_lec_] = {};
+    $self->[_rhas_code_block_]           = {};
+    $self->[_rhas_broken_code_block_]    = {};
+    $self->[_rhas_ternary_]              = {};
+    $self->[_ris_excluded_lp_container_] = {};
+    $self->[_rwant_reduced_ci_]          = {};
+    $self->[_rno_xci_by_seqno_]          = {};
+    $self->[_ris_bli_container_]         = {};
+    $self->[_rparent_of_seqno_]          = {};
+    $self->[_rchildren_of_seqno_]        = {};
+    $self->[_ris_list_by_seqno_]         = {};
+    $self->[_rbreak_container_]          = {};    # prevent one-line blocks
+    $self->[_rshort_nested_]             = {};    # blocks not forced open
+    $self->[_length_function_]           = $length_function;
+    $self->[_is_encoded_data_]           = $is_encoded_data;
 
     # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
@@ -5034,38 +5034,33 @@ sub respace_tokens {
     # we will be setting token lengths as we go
     my $cumulative_length = 0;
 
-    # We also define these hash indexes giving container token array indexes
-    # as a function of the container sequence numbers.  For example,
-    my $K_opening_container = {};    # opening [ { or (
-    my $K_closing_container = {};    # closing ] } or )
-    my $K_opening_ternary   = {};    # opening ? of ternary
-    my $K_closing_ternary   = {};    # closing : of ternary
-
-    # List of new K indexes of phantom semicolons
-    # This will be needed if we want to undo them for iterations
-    my $rK_phantom_semicolons = [];
-
     my %seqno_stack;
-    my %KK_stack;                                 # Note: old K index
-    my %K_opening_by_seqno               = ();    # Note: old K index
-    my $depth_next                       = 0;
-    my $depth_next_max                   = 0;
-    my $rtype_count_by_seqno             = {};
-    my $rlec_count_by_seqno              = {};
-    my $ris_broken_container             = {};
-    my $ris_permanently_broken_container = {};
-    my $ris_list_by_seqno                = {};
-    my $rhas_list                        = {};
-    my $rhas_broken_list                 = {};
-    my $rhas_broken_list_with_lec        = {};
-    my $rhas_code_block                  = {};
-    my $rhas_broken_code_block           = {};
-    my $rhas_ternary                     = {};
-    my $ris_excluded_lp_container        = {};
-    my $rparent_of_seqno                 = {};
-    my $rchildren_of_seqno               = {};
-    my $roverride_cab3                   = {};
-    my $ris_assigned_structure           = {};
+    my %KK_stack;                   # Note: old K index
+    my %K_opening_by_seqno = ();    # Note: old K index
+    my $depth_next         = 0;
+    my $depth_next_max     = 0;
+
+    my $K_closing_container       = $self->[_K_closing_container_];
+    my $K_closing_ternary         = $self->[_K_closing_ternary_];
+    my $K_opening_container       = $self->[_K_opening_container_];
+    my $K_opening_ternary         = $self->[_K_opening_ternary_];
+    my $rK_phantom_semicolons     = $self->[_rK_phantom_semicolons_];
+    my $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
+    my $rhas_broken_code_block    = $self->[_rhas_broken_code_block_];
+    my $rhas_broken_list          = $self->[_rhas_broken_list_];
+    my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
+    my $rhas_code_block           = $self->[_rhas_code_block_];
+    my $rhas_list                 = $self->[_rhas_list_];
+    my $rhas_ternary              = $self->[_rhas_ternary_];
+    my $ris_assigned_structure    = $self->[_ris_assigned_structure_];
+    my $ris_broken_container      = $self->[_ris_broken_container_];
+    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+    my $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
+    my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
+    my $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
+    my $roverride_cab3            = $self->[_roverride_cab3_];
+    my $rparent_of_seqno          = $self->[_rparent_of_seqno_];
+    my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
 
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
@@ -5078,7 +5073,7 @@ sub respace_tokens {
     my $set_permanently_broken = sub {
         my ($seqno) = @_;
         while ( defined($seqno) ) {
-            $ris_permanently_broken_container->{$seqno} = 1;
+            $ris_permanently_broken->{$seqno} = 1;
             $seqno = $rparent_of_seqno->{$seqno};
         }
         return;
@@ -5170,7 +5165,7 @@ sub respace_tokens {
             }
             my $seqno = $seqno_stack{ $depth_next - 1 };
             if ( defined($seqno)
-                && !$ris_permanently_broken_container->{$seqno} )
+                && !$ris_permanently_broken->{$seqno} )
             {
                 $set_permanently_broken->($seqno);
             }
@@ -5381,6 +5376,9 @@ sub respace_tokens {
             $rLL_new->[$Ktop]->[_SLEVEL_] =
               $rLL->[$KK]->[_SLEVEL_];
 
+            # Save list of new K indexes of phantom semicolons.
+            # This will be needed if we want to undo them for iterations in
+            # future coding.
             push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
 
             # Then store a new blank
@@ -5549,7 +5547,7 @@ sub respace_tokens {
             if ( $CODE_type eq 'BL' ) {
                 my $seqno = $seqno_stack{ $depth_next - 1 };
                 if (   defined($seqno)
-                    && !$ris_permanently_broken_container->{$seqno}
+                    && !$ris_permanently_broken->{$seqno}
                     && $rOpts_maximum_consecutive_blank_lines )
                 {
                     $set_permanently_broken->($seqno);
@@ -6236,28 +6234,7 @@ sub respace_tokens {
     $self->[_rLL_] = $rLL_new;
     my $Klimit;
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
-    $self->[_Klimit_]                    = $Klimit;
-    $self->[_K_opening_container_]       = $K_opening_container;
-    $self->[_K_closing_container_]       = $K_closing_container;
-    $self->[_K_opening_ternary_]         = $K_opening_ternary;
-    $self->[_K_closing_ternary_]         = $K_closing_ternary;
-    $self->[_rK_phantom_semicolons_]     = $rK_phantom_semicolons;
-    $self->[_rtype_count_by_seqno_]      = $rtype_count_by_seqno;
-    $self->[_rlec_count_by_seqno_]       = $rlec_count_by_seqno;
-    $self->[_ris_broken_container_]      = $ris_broken_container;
-    $self->[_rhas_list_]                 = $rhas_list;
-    $self->[_rhas_broken_list_]          = $rhas_broken_list;
-    $self->[_rhas_broken_list_with_lec_] = $rhas_broken_list_with_lec;
-    $self->[_rhas_code_block_]           = $rhas_code_block;
-    $self->[_rhas_broken_code_block_]    = $rhas_broken_code_block;
-    $self->[_rhas_ternary_]              = $rhas_ternary;
-    $self->[_rparent_of_seqno_]          = $rparent_of_seqno;
-    $self->[_rchildren_of_seqno_]        = $rchildren_of_seqno;
-    $self->[_ris_list_by_seqno_]         = $ris_list_by_seqno;
-    $self->[_roverride_cab3_]            = $roverride_cab3;
-    $self->[_ris_assigned_structure_]    = $ris_assigned_structure;
-
-    $self->[_ris_excluded_lp_container_] = $ris_excluded_lp_container;
+    $self->[_Klimit_] = $Klimit;
 
     # DEBUG OPTION: make sure the new array looks okay.
     # This is no longer needed but should be retained for future development.
@@ -8654,11 +8631,10 @@ sub break_before_list_opening_containers {
     return unless ( defined($rLL) && @{$rLL} );
 
     # Loop over all opening container tokens
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $ris_broken_container = $self->[_ris_broken_container_];
-    my $ris_permanently_broken_container =
-      $self->[_ris_permanently_broken_container_];
+    my $K_opening_container       = $self->[_K_opening_container_];
+    my $K_closing_container       = $self->[_K_closing_container_];
+    my $ris_broken_container      = $self->[_ris_broken_container_];
+    my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
     my $rhas_list                 = $self->[_rhas_list_];
     my $rhas_broken_list          = $self->[_rhas_broken_list_];
     my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
@@ -8827,7 +8803,7 @@ sub break_before_list_opening_containers {
         next if ( !$ris_broken_container->{$seqno} );
 
         # Always ok to change ci for permanently broken containers
-        if ( $ris_permanently_broken_container->{$seqno} ) {
+        if ( $ris_permanently_broken->{$seqno} ) {
             goto OK;
         }
 
