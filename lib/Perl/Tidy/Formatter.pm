@@ -7622,8 +7622,9 @@ EOM
                     # this line has an unbalanced start.  This helps prevent
                     # blinkers in unusual cases for lines near the length limit
                     # by making it more likely that RULE 2 will prevent a weld.
-                    my $level_diff =
-                      $outer_opening->[_LEVEL_] - $rLL->[$Kfirst]->[_LEVEL_];
+                    # FIX3: for b1131: only use level difference in -lp mode.
+                    my $level_diff = $rOpts_line_up_parentheses
+                      && $outer_opening->[_LEVEL_] - $rLL->[$Kfirst]->[_LEVEL_];
 
                     if ( !$level_diff || $excess + $rOpts_indent_columns <= 0 )
                     {
