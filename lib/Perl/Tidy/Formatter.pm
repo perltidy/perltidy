@@ -8713,7 +8713,7 @@ sub break_before_list_opening_containers {
             my $Msg = "";
             if ($has_list_with_lec) {
                 $ok_to_break = 1;
-                $Msg         = "has list with lec;";
+                DEBUG_BBX && do { $Msg = "has list with lec;" };
             }
 
             if ( !$ok_to_break ) {
@@ -8728,7 +8728,7 @@ sub break_before_list_opening_containers {
 
                 my $parent = $rparent_of_seqno->{$seqno};
                 if ( $self->is_list_by_seqno($parent) ) {
-                    $Msg         = "parent is list";
+                    DEBUG_BBX && do { $Msg = "parent is list" };
                     $ok_to_break = 1;
                 }
             }
@@ -8738,7 +8738,7 @@ sub break_before_list_opening_containers {
             if ( !$ok_to_break && $rOpts_line_up_parentheses ) {
                 if ( $is_list && $has_list ) {
                     $ok_to_break = 1;
-                    $Msg         = "is list or has list";
+                    DEBUG_BBX && do { $Msg = "is list or has list" };
                 }
             }
 
