@@ -12393,7 +12393,7 @@ EOM
             # would be disastrous.  The reason that we should never see an
             # index error here is that sub 'store_token_to_go' has a check to
             # make sure that the indexes in batches remain continuous.  Since
-            # sub 'store_token_to_go' controls feeding tokens into batches, so
+            # sub 'store_token_to_go' controls feeding tokens into batches,
             # no index discrepancies should occur unless a recent programming
             # change has introduced a bug.
             if ( defined($index_error) ) {
