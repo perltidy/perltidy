@@ -901,10 +901,11 @@ EOM
                     if ( $input_file =~ /^\'(.+)\'$/ ) { $input_file = $1 }
                     if ( $input_file =~ /^\"(.+)\"$/ ) { $input_file = $1 }
                     my $pattern = fileglob_to_re($input_file);
-                    if ( opendir( DIR, './' ) ) {
+                    my $dh;
+                    if ( opendir( $dh, './' ) ) {
                         my @files =
-                          grep { /$pattern/ && !-d $_ } readdir(DIR);
-                        closedir(DIR);
+                          grep { /$pattern/ && !-d $_ } readdir($dh);
+                        closedir($dh);
                         if (@files) {
                             unshift @ARGV, @files;
                             next;
