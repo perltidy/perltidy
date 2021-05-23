@@ -835,27 +835,27 @@ EOM
     # Ready to go...
     # main loop to process all files in argument list
     #---------------------------------------------------------------
-    my $number_of_files = @ARGV;
-    my $formatter       = undef;
-    my $tokenizer       = undef;
+    my $formatter = undef;
+    my $tokenizer = undef;
+
+    # Remove duplicate filenames.  Otherwise, for example if the user entered
+    #     perltidy -b myfile.pl myfile.pl
+    # the backup version of the original would be lost.
+    if ( @ARGV > 1 ) {
+        my %seen = ();
+        @ARGV = grep { !$seen{$_}++ } @ARGV;
+    }
 
     # If requested, process in order of increasing file size
     # This can significantly reduce perl's virtual memory usage during testing.
-    if ( $number_of_files > 1 && $rOpts->{'file-size-order'} ) {
+    if ( @ARGV > 1 && $rOpts->{'file-size-order'} ) {
         @ARGV =
           map  { $_->[0] }
           sort { $a->[1] <=> $b->[1] }
           map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
     }
 
-    # Remove duplicate filenames.  Otherwise, for example if the user entered
-    #     perltidy -b myfile.pl myfile.pl
-    # the backup version of the original would be lost.
-    if ( $number_of_files > 1 ) {
-        my %seen = ();
-        @ARGV = grep { !$seen{$_}++ } @ARGV;
-    }
-
+    my $number_of_files = @ARGV;
     while ( my $input_file = shift @ARGV ) {
         my $fileroot;
         my @input_file_stat;

@@ -9,7 +9,7 @@ to -lp formatting mode.
 
 This fixes case b1131.
 
-21 May 2021.
+21 May 2021, a4ec4c1.
 
 =item B<Fix inconsistency involving counting commas>
 
@@ -19,7 +19,7 @@ counting the number of line ending commas in lists.
 
 This fixes case b1130.
 
-15 May 2021.
+15 May 2021, 90cceb1.
 
 =item B<Slightly modify line breaks for -lp indentation>
 
