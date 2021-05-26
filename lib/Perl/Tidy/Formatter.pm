@@ -8194,10 +8194,8 @@ sub weld_nested_quotes {
             # Change the level of a closing qw token to be that of the outer
             # containing token. This will allow -lp indentation to function
             # correctly in the vertical aligner.
-            # Patch to fix c002: but not if it contains text and is not -lp.
-            if ( $rOpts_line_up_parentheses
-                || length( $rLL->[$Kinner_closing]->[_TOKEN_] ) == 1 )
-            {
+            # Patch to fix c002: but not if it contains text
+            if ( length( $rLL->[$Kinner_closing]->[_TOKEN_] ) == 1 ) {
                 $rLL->[$Kinner_closing]->[_LEVEL_] =
                   $rLL->[$Kouter_closing]->[_LEVEL_];
             }
@@ -18912,7 +18910,6 @@ sub send_lines_to_vertical_aligner {
         $rvalign_hash->{list_seqno}                = $list_seqno;
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
-        $rvalign_hash->{is_terminal_statement}     = $is_semicolon_terminated;
         $rvalign_hash->{rvertical_tightness_flags} = $rvertical_tightness_flags;
         $rvalign_hash->{level_jump}                = $level_jump;
         $rvalign_hash->{rfields}                   = $rfields;
@@ -19364,7 +19361,17 @@ sub get_seqno {
         }
 
         # Loop over all lines of the batch ...
+
+        # Workaround for problem c007, in which the combination -lp -xci
+        # can produce a "Program bug" message in unusual circumstances.
+        my $skip_SECTION_1 = $rOpts_line_up_parentheses
+          && $rOpts->{'extended-continuation-indentation'};
+
         foreach my $line ( 0 .. $max_line ) {
+
+            my $ibeg = $ri_first->[$line];
+            my $iend = $ri_last->[$line];
+            my $lev  = $levels_to_go[$ibeg];
 
             ####################################
             # SECTION 1: Undo needless common CI
@@ -19388,10 +19395,7 @@ sub get_seqno {
             #        sort { $a <=> $b }
             #        grep { $lookup->{$_} ne $default } keys %$lookup );
 
-            my $ibeg = $ri_first->[$line];
-            my $iend = $ri_last->[$line];
-            my $lev  = $levels_to_go[$ibeg];
-            if ( $line > 0 ) {
+            if ( $line > 0 && !$skip_SECTION_1 ) {
 
                 # if we have started a chain..
                 if ($line_1) {

@@ -118,7 +118,6 @@ BEGIN {
         _zero_count_                  => $i++,
         _last_leading_space_count_    => $i++,
         _comment_leading_space_count_ => $i++,
-        _extra_indent_ok_             => $i++,
     };
 
     # Debug flag. This is a relic from the original program development
@@ -191,7 +190,6 @@ sub new {
     $self->[_zero_count_]                  = 0;
     $self->[_comment_leading_space_count_] = 0;
     $self->[_last_leading_space_count_]    = 0;
-    $self->[_extra_indent_ok_]             = 0;
 
     # Memory of what has been processed
     $self->[_last_level_written_]            = -1;
@@ -400,7 +398,6 @@ sub valign_input {
     my $list_seqno                = $rline_hash->{list_seqno};
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
-    my $is_terminal_statement     = $rline_hash->{is_terminal_statement};
     my $rvertical_tightness_flags = $rline_hash->{rvertical_tightness_flags};
     my $level_jump                = $rline_hash->{level_jump};
     my $rfields                   = $rline_hash->{rfields};
@@ -507,20 +504,7 @@ sub valign_input {
     # or if vertical alignment is turned off for debugging
     if ( $level != $group_level || $is_outdented || !$self->[_rOpts_valign_] ) {
 
-        # we are allowed to shift a group of lines to the right if its
-        # level is greater than the previous and next group
-        $self->[_extra_indent_ok_] =
-          (      $level < $group_level
-              && $self->[_last_level_written_] < $group_level );
-
-        $self->_flush_group_lines();
-
-        # If we know that this line will get flushed out by itself because
-        # of level changes, we can leave the extra_indent_ok flag set.
-        # That way, if we get an external flush call, we will still be
-        # able to do some -lp alignment if necessary.
-        $self->[_extra_indent_ok_] =
-          ( $is_terminal_statement && $level > $group_level );
+        $self->_flush_group_lines( $level - $group_level );
 
         $group_level = $level;
         $self->[_group_level_] = $group_level;
@@ -729,7 +713,7 @@ EOM
 
     # Force break after jump to lower level
     if ( $level_jump < 0 ) {
-        $self->_flush_group_lines();
+        $self->_flush_group_lines($level_jump);
     }
 
     # --------------------------------------------------------------------
@@ -1396,7 +1380,10 @@ sub _flush_group_lines {
 
     # This is the vertical aligner internal flush, which leaves the cache
     # intact
-    my ($self) = @_;
+    my ( $self, $level_jump ) = @_;
+
+    # $level_jump = $next_level-$group_level, if known
+    #             = undef if not known
 
     my $rgroup_lines = $self->[_rgroup_lines_];
     return unless ( @{$rgroup_lines} );
@@ -1445,8 +1432,29 @@ sub _flush_group_lines {
 
     # STEP 5: For the -lp option, increase the indentation of lists
     # to the desired amount, but do not exceed the line length limit.
+
+    # We are allowed to shift a group of lines to the right if:
+    #  (1) its level is greater than the level of the previous group, and
+    #  (2) its level is greater than the level of the next line to be written.
+
+    my $extra_indent_ok;
+    if ( $group_level > $self->[_last_level_written_] ) {
+
+        # Use the level jump to next line to come, if given
+        if ( defined($level_jump) ) {
+            $extra_indent_ok = $level_jump < 0;
+        }
+
+        # Otherwise, assume the next line has the level of the end of last line.
+        # This fixes case c008.
+        else {
+            my $level_end = $rgroup_lines->[-1]->get_level_end();
+            $extra_indent_ok = $group_level > $level_end;
+        }
+    }
+
     my $extra_leading_spaces =
-      $self->[_extra_indent_ok_]
+      $extra_indent_ok
       ? get_extra_leading_spaces( $rgroup_lines, $rgroups )
       : 0;
 
@@ -5098,7 +5106,6 @@ sub get_output_line_number {
 
         $self->[_last_level_written_]       = $level;
         $self->[_last_side_comment_length_] = $side_comment_length;
-        $self->[_extra_indent_ok_]          = 0;
         return;
     }
 }

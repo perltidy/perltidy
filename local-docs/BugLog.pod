@@ -2,6 +2,99 @@
 
 =over 4
 
+=item B<Fix several problems with -lp formatting>
+
+This update fixes several problems with -lp formatting which are all somewhat
+related.
+
+ISSUE #1 (case c002): A problem involving -lp -wn and certain qw lists
+
+The last line of a welded qw list was being outdented even if it contained text
+as well as the closing container token.  This update fixes the problem and
+simplifies the logic.
+
+A few examples (all use 'perltidy -wn -lp'):
+
+    # OLD and NEW: OK, closing qw paren is on separate line
+    $roads->add_capacity_path( qw( CoolCity 10 ChocolateGulch 8
+                               PecanPeak 10 BlueberryWoods 6
+                               HotCity
+    ) );
+
+    # OLD: poor; outdented text not aligned with previous text
+    $roads->add_capacity_path( qw( CoolCity 10 ChocolateGulch 8
+                               PecanPeak 10 BlueberryWoods 6
+    HotCity ) );
+
+    # NEW:
+    $roads->add_capacity_path( qw( CoolCity 10 ChocolateGulch 8
+                               PecanPeak 10 BlueberryWoods 6
+                               HotCity ) );
+
+    # OLD:
+    $roads->add_capacity_path( qw( ChocolateGulch 3 StrawberryFields 0
+    StrawberryFields ) );
+
+    # NEW:
+    $roads->add_capacity_path( qw( ChocolateGulch 3 StrawberryFields 0
+                               StrawberryFields ) );
+
+    # OLD:
+    my $mon_name = ( qw(January February March April
+                     May June July August
+    September October November December) )[$mon];
+
+    # NEW
+    my $mon_name = ( qw(January February March April
+                     May June July August
+                     September October November December) )[$mon];
+
+ISSUE #2 (case c007): A rare program error could be triggered with -lp -xci
+
+In some very rare circumstances it was possible to trigger a "Program error"
+message.  The program still ran to completion.  The conditions for this to occur
+were that flags -lp -xci were set, and that there was a container of sort/map/grep
+blocks, and there was a side comment on the closing paren.  For example:
+
+    # OLD: perltidy -lp -xci, gave an error message and extra indentation here
+    my %specified_opts = (
+          (
+                          map { /^no-?(.*)$/i ? ($1 => 0) : ($_ => 1) }
+                          map { /^--([\-_\w]+)$/ } @ARGV
+          ),    # this comment caused an error with flags -lp -xci
+    );
+
+    # NEW: perltidy -lp -xci, no error
+    my %specified_opts = (
+          (
+             map { /^no-?(.*)$/i ? ( $1 => 0 ) : ( $_ => 1 ) }
+             map { /^--([\-_\w]+)$/ } @ARGV
+          ),    # this comment caused an error with flags -lp -xci
+    );
+
+
+ISSUE #3 (case c008): In some unusual cases the -lp formatting style was not
+being applied when it should have been.  For example (text is shifted right):
+
+    # NEW: perltidy -lp
+    $result = runperl(
+        switches => [ '-I.', "-w" ],
+        stderr   => 1,
+        prog     => <<'PROG' );
+    SIG
+    PROG
+
+    # NEW: perltidy -lp
+    $result = runperl(
+                       switches => [ '-I.', "-w" ],
+                       stderr   => 1,
+                       prog     => <<'PROG' );
+    SIG
+    PROG
+
+
+25 May 2021.
+
 =item B<Modify welding rules>
 
 This is an update to the patch 19 Apr 2021, eeeaf09. It restricts that patch
