@@ -2,12 +2,25 @@
 
 =over 4
 
+=item B<Added optional o in octal number definitions>
+
+An optional letter 'o' or 'O' in the octal representation of numbers, which was
+added in perl version 5.33.5, is now recogized.  The leading zero is still
+required.
+
+For example:
+
+    $a = 0o100;
+    $a = 0O100;
+
+26 May 2021.
+
 =item B<Fix several problems with -lp formatting>
 
 This update fixes several problems with -lp formatting which are all somewhat
 related.
 
-ISSUE #1 (case c002): A problem involving -lp -wn and certain qw lists
+ISSUE #1 (cases c002 and c004): A problem involving -lp -wn and certain qw lists
 
 The last line of a welded qw list was being outdented even if it contained text
 as well as the closing container token.  This update fixes the problem and
@@ -93,7 +106,7 @@ being applied when it should have been.  For example (text is shifted right):
     PROG
 
 
-25 May 2021.
+25 May 2021, 6947fe9.
 
 =item B<Modify welding rules>
 

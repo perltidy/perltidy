@@ -7755,13 +7755,13 @@ sub scan_number_do {
            |([xX][0-9a-fA-F_]+)        
 
 	   # or octal fraction
-           |([0-7_]+               # string of octal digits 
+           |([oO]?[0-7_]+          # string of octal digits
            (\.([0-7][0-7_]*)?)?    # optional decimal and fraction
            [Pp][+-]?[0-7]          # REQUIRED exponent, no underscore
            [0-7_]*)                # Additional exponent digits with underscores
 
            # or octal integer
-           |([0-7_]+)               # string of octal digits 
+           |([oO]?[0-7_]+)         # string of octal digits
 
            # or a binary float
            |([bB][01_]*            # 'b' with string of binary digits 

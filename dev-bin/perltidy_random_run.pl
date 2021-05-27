@@ -745,7 +745,7 @@ foreach my $line (@lines) {
         || $line =~ /undefined/
         || $line =~ /A fault was/
         || $line =~ /STRANGE/
-        || length($line) > 80 )
+        || length($line) > 90 )
     {
 
         # ignore last few lines
