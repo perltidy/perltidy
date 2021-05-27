@@ -15,6 +15,7 @@
 #12 align35.def
 #13 rt136417.def
 #14 rt136417.rt136417
+#15 numbers.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -205,6 +206,32 @@ $behaviour = {
               dog   => {prowl  => "growl", pool => "drool"},
               mouse => {nibble => "kibble"},
              };
+----------
+
+        'numbers' => <<'----------',
+# valid numbers
+my @vals = (
+
+    12345,
+    12345.67,
+    .23E-10,
+    3.14_15_92,
+    4_294_967_296,
+    0xff,
+    0xdead_beef,
+    0377,
+    0b011011,
+    0x1.999ap-4,
+    1e34,
+    1e+34,
+    1e+034,
+    -1e+034,
+    0.00000000000000000000000000000000000000000000000000000000000000000001,
+    0Xabcdef,
+    0B1101,
+    0o12_345,  # optional 'o' and 'O' added in perl v5.33.5
+    0O12_345,
+);
 ----------
 
         'rt136417' => <<'----------',
@@ -775,6 +802,36 @@ function(
     c => d,
 );
 #14...........
+        },
+
+        'numbers.def' => {
+            source => "numbers",
+            params => "def",
+            expect => <<'#15...........',
+# valid numbers
+my @vals = (
+
+    12345,
+    12345.67,
+    .23E-10,
+    3.14_15_92,
+    4_294_967_296,
+    0xff,
+    0xdead_beef,
+    0377,
+    0b011011,
+    0x1.999ap-4,
+    1e34,
+    1e+34,
+    1e+034,
+    -1e+034,
+    0.00000000000000000000000000000000000000000000000000000000000000000001,
+    0Xabcdef,
+    0B1101,
+    0o12_345,    # optional 'o' and 'O' added in perl v5.33.5
+    0O12_345,
+);
+#15...........
         },
     };
 
