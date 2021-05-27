@@ -5658,7 +5658,6 @@ sub respace_tokens {
                     || $rOpts_delete_old_whitespace )
                 {
 
-                    # FIXME: maybe switch to using _new
                     my $Kp = $self->K_previous_nonblank($KK);
                     next unless defined($Kp);
                     my $token_p = $rLL->[$Kp]->[_TOKEN_];
@@ -13258,6 +13257,8 @@ sub break_equals {
         return;
     }
 
+    use constant DEBUG_RECOMBINE => 0;
+
     sub recombine_breakpoints {
 
         # sub set_continuation_breaks is very liberal in setting line breaks
@@ -13381,7 +13382,7 @@ sub break_equals {
                 #my $depth_increase=( $nesting_depth_to_go[$ibeg_2] -
                 #        $nesting_depth_to_go[$ibeg_1] );
 
-                0 && do {
+                DEBUG_RECOMBINE && do {
                     print STDERR
 "RECOMBINE: n=$n imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
                 };
@@ -13416,23 +13417,12 @@ sub break_equals {
                 my ($itok) = @{ $joint[$n] };
                 if ($itok) {
 
-                    # FIXME: Patch - may not be necessary
-                    my $iend_1 =
-                        $type_iend_1 eq 'b'
-                      ? $iend_1 - 1
-                      : $iend_1;
-
-                    my $iend_2 =
-                        $type_iend_2 eq 'b'
-                      ? $iend_2 - 1
-                      : $iend_2;
-                    ## END PATCH
-
                     my $type = $types_to_go[$itok];
 
                     if ( $type eq ':' ) {
 
-                   # do not join at a colon unless it disobeys the break request
+                        # do not join at a colon unless it disobeys the break
+                        # request
                         if ( $itok eq $iend_1 ) {
                             next unless $want_break_before{$type};
                         }
@@ -17462,8 +17452,6 @@ sub find_token_starting_list {
             #---------------------------------------------------------------
 
             # use old breakpoints if this is a 'big' list
-            # FIXME: See if this is still necessary. sub sweep_left_to_right
-            # now fixes a lot of problems.
             if ( $packed_lines > 2 && $item_count > 10 ) {
                 write_logfile_entry("List sparse: using old breakpoints\n");
                 $self->copy_old_breakpoints( $i_first_comma, $i_last_comma );
