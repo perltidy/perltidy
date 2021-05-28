@@ -2844,13 +2844,13 @@ EOM
 
         '&&' => sub {
             error_if_expecting_TERM()
-              if ( $expecting == TERM );
-        },
+              if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
+          },
 
         '||' => sub {
             error_if_expecting_TERM()
-              if ( $expecting == TERM );
-        },
+              if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
+          },
 
         '//' => sub {
             error_if_expecting_TERM()

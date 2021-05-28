@@ -2,6 +2,26 @@
 
 =over 4
 
+=item B<Fix parsing error at operator following a comma>
+
+The following lines are syntactically correct but some were producing a
+syntax error
+
+    print "hello1\n", || print "hi1\n";
+    print "hello2\n", && print "bye2\n";
+    print "hello3\n", or print "bye3\n";
+    print "hello4\n", and print "bye4\n";
+
+For example, the first line produced this message
+
+    1: print "hello1\n", || print "hi1\n";
+                       - ^
+    found || where term expected (previous token underlined)
+
+This has been fixed. This fixes case c015.
+
+27 May 2021.
+
 =item B<Added optional o in octal number definitions>
 
 An optional letter 'o' or 'O' in the octal representation of numbers, which was
@@ -13,7 +33,7 @@ For example:
     $a = 0o100;
     $a = 0O100;
 
-26 May 2021.
+26 May 2021, 544df8c.
 
 =item B<Fix several problems with -lp formatting>
 
