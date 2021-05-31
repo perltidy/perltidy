@@ -1760,9 +1760,11 @@ EOM
 
         #---------------------------------------------------------------
         # Do syntax check if requested and possible
+        # This is permanently deactivated but the code remains for referrence
         #---------------------------------------------------------------
         my $infile_syntax_ok = 0;    # -1 no  0=don't know   1 yes
-        if (   $logger_object
+        if (   0
+            && $logger_object
             && $rOpts->{'check-syntax'}
             && $ifname
             && $ofname )
@@ -2785,8 +2787,8 @@ sub generate_options {
         'conv'       => [qw(it=4)],
         'nconv'      => [qw(it=1)],
 
-        # FIXME: possible future shortcut.  This will remain deactivated until
-        # the -lpxl flag is no longer experimental.
+        # NOTE: This is a possible future shortcut.  But it will remain
+        # deactivated until the -lpxl flag is no longer experimental.
         # 'line-up-function-parentheses' => [ qw(lp), q#lpxl=[ { F(2# ],
         # 'lfp'                          => [qw(line-up-function-parentheses)],
 
@@ -2801,7 +2803,6 @@ sub generate_options {
 
         'mangle' => [
             qw(
-              check-syntax
               keep-old-blank-lines=0
               delete-old-newlines
               delete-old-whitespace
@@ -2827,10 +2828,6 @@ sub generate_options {
         # An interesting use for 'extrude' is to do this:
         #    perltidy -extrude myfile.pl -st | perltidy -o myfile.pl.new
         # which will break up all one-line blocks.
-        #
-        # Removed 'check-syntax' option, which is unsafe because it may execute
-        # code in BEGIN blocks.  Example 'Moose/debugger-duck_type.t'.
-
         'extrude' => [
             qw(
               ci=0
@@ -3214,48 +3211,10 @@ sub check_options {
         $rOpts->{'closing-paren-indentation'}          = $cti;
     }
 
-    # In quiet mode, there is no log file and hence no way to report
-    # results of syntax check, so don't do it.
-    if ( $rOpts->{'quiet'} ) {
-        $rOpts->{'check-syntax'} = 0;
-    }
-
-    # can't check syntax if no output
-    if ( $rOpts->{'format'} ne 'tidy' ) {
-        $rOpts->{'check-syntax'} = 0;
-    }
-
-    # Never let Windows 9x/Me systems run syntax check -- this will prevent a
-    # wide variety of nasty problems on these systems, because they cannot
-    # reliably run backticks.  Don't even think about changing this!
-    if (   $rOpts->{'check-syntax'}
-        && $is_Windows
-        && ( !$Windows_type || $Windows_type =~ /^(9|Me)/ ) )
-    {
-        $rOpts->{'check-syntax'} = 0;
-    }
-
-    ###########################################################################
-    # Added Dec 2017: Deactivating check-syntax for all systems for safety
-    # because unexpected results can occur when code in BEGIN blocks is
-    # executed.  This flag was included to help check for perltidy mistakes,
-    # and may still be useful for debugging.  To activate for testing comment
-    # out the next three lines.  Also fix sub 'do_check_syntax' in this file.
-    ###########################################################################
-    else {
-        $rOpts->{'check-syntax'} = 0;
-    }
-
-    # It's really a bad idea to check syntax as root unless you wrote
-    # the script yourself.  FIXME: not sure if this works with VMS
-    unless ($is_Windows) {
-
-        if ( $< == 0 && $rOpts->{'check-syntax'} ) {
-            $rOpts->{'check-syntax'} = 0;
-            ${$rpending_complaint} .=
-"Syntax check deactivated for safety; you shouldn't run this as root\n";
-        }
-    }
+    # Syntax checking is no longer supported due to concerns about executing
+    # code in BEGIN blocks.  The flag is still accepted for backwards
+    # compatability but is ignored if set.
+    $rOpts->{'check-syntax'} = 0;
 
     # check iteration count and quietly fix if necessary:
     # - iterations option only applies to code beautification mode
