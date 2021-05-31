@@ -14140,7 +14140,11 @@ sub break_equals {
                     # handle leading "if" and "unless"
                     elsif ( $is_if_unless{ $tokens_to_go[$ibeg_2] } ) {
 
-                      # FIXME: This is still experimental..may not be too useful
+                        # Combine something like:
+                        #    next
+                        #      if ( $lang !~ /${l}$/i );
+                        # into:
+                        #    next if ( $lang !~ /${l}$/i );
                         next
                           unless (
                             $this_line_is_semicolon_terminated
