@@ -2,6 +2,38 @@
 
 =over 4
 
+=item B<improved treatment of lexical subs>
+
+This update improves the treatment of lexical subs.  Previously they were formatted
+correctly but an error would have been produced if the same name was used for lexical
+subs defined in different blocks.
+
+For example, running the previous version of perltidy on the following:
+
+    use feature qw(lexical_subs);
+    use warnings; no warnings "experimental::lexical_subs";
+    {
+        my sub hello { print "Hello from hello1\n" }
+        {
+            my sub hello { print "Hello from hello2\n" }
+            hello();
+        }
+        hello();
+    }
+    {
+        my sub hello { print "Hello from hello3\n" }
+        hello();
+    }
+
+gave the (incorrect) error message:
+
+    6: already saw definition of 'sub hello' in package 'main' at line 4
+    12: already saw definition of 'sub hello' in package 'main' at line 6
+
+This update fixes that.
+
+1 Jun 2021.
+
 =item B<add v-string underscores; warn of leading commas>
 
 This update cleans up a couple of open issues in the tokenizer.

@@ -7219,10 +7219,30 @@ sub scan_identifier_do {
             $match   = 1;
             $subname = $2;
 
-            $package = ( defined($1) && $1 ) ? $1 : $current_package;
-            $package =~ s/\'/::/g;
-            if ( $package =~ /^\:/ ) { $package = 'main' . $package }
-            $package =~ s/::$//;
+            my $is_lexical_sub =
+              $last_nonblank_type eq 'k' && $last_nonblank_token eq 'my';
+            if ( $is_lexical_sub && $1 ) {
+                warning(
+                    "'my' sub $subname cannot be in package '$1'\n"
+                );
+                $is_lexical_sub = 0;
+            }
+
+            if ($is_lexical_sub) {
+
+                # lexical subs use the block sequence number as a package name
+                my $seqno =
+                  $current_sequence_number[BRACE][ $current_depth[BRACE] ];
+                $seqno   = 1 unless ( defined($seqno) );
+                $package = $seqno;
+            }
+            else {
+                $package = ( defined($1) && $1 ) ? $1 : $current_package;
+                $package =~ s/\'/::/g;
+                if ( $package =~ /^\:/ ) { $package = 'main' . $package }
+                $package =~ s/::$//;
+            }
+
             my $pos  = pos($input_line);
             my $numc = $pos - $pos_beg;
             $tok  = 'sub ' . substr( $input_line, $pos_beg, $numc );
@@ -7353,9 +7373,17 @@ sub scan_identifier_do {
                         && $subname !~ /^[A-Z]+$/ )
                     {
                         my $lno = $saw_function_definition{$package}{$subname};
-                        warning(
+                        if ( $package =~ /^\d/ ) {
+                            warning(
+"already saw definition of lexical 'sub $subname' at line $lno\n"
+                            );
+
+                        }
+                        else {
+                            warning(
 "already saw definition of 'sub $subname' in package '$package' at line $lno\n"
-                        );
+                            );
+                        }
                     }
                     $saw_function_definition{$package}{$subname} =
                       $tokenizer_self->[_last_line_number_];
