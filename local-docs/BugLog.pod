@@ -2,6 +2,24 @@
 
 =over 4
 
+=item B<add v-string underscores; warn of leading commas>
+
+This update cleans up a couple of open issues in the tokenizer.
+
+A warning message will be produced for a list which begins with a comma:
+
+            my %string = (
+              ,       "saddr",    $stest,  "daddr",
+              $dtest, "source",   $sname,  "dest")
+
+This warning had been temporarily deactivated.
+
+Underscores in v-strings without a leading 'v' are now parsed correctly.
+
+Several comments have been updated.
+
+31 May 2021.
+
 =item B<Fix parsing error at operator following a comma>
 
 The following lines are syntactically correct but some were producing a
@@ -20,7 +38,7 @@ For example, the first line produced this message
 
 This has been fixed. This fixes case c015.
 
-27 May 2021.
+27 May 2021, b537a72.
 
 =item B<Added optional o in octal number definitions>
 

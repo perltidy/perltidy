@@ -2132,12 +2132,16 @@ EOM
                 complain("Repeated ','s \n");
             }
 
+            # Note that we have to check both token and type here because a
+            # comma following a qw list can have last token='(' but type = 'q'
+            elsif ( $last_nonblank_token eq '(' && $last_nonblank_type eq '{' )
+            {
+                warning("Unexpected leading ',' after a '('\n");
+            }
+
             # patch for operator_expected: note if we are in the list (use.t)
             if ( $statement_type eq 'use' ) { $statement_type = '_use' }
-##                FIXME: need to move this elsewhere, perhaps check after a '('
-##                elsif ($last_nonblank_token eq '(') {
-##                    warning("Leading ','s illegal in some versions of perl\n");
-##                }
+
         },
         ';' => sub {
             $context        = UNKNOWN_CONTEXT;
@@ -2241,8 +2245,7 @@ EOM
 
             # ATTRS: for a '{' following an attribute list, reset
             # things to look like we just saw the sub name
-            # FIXME: need to end with \b here??
-            if ( $statement_type =~ /^sub/ ) {
+            if ( $statement_type =~ /^sub\b/ ) {
                 $last_nonblank_token = $statement_type;
                 $last_nonblank_type  = 'i';
                 $statement_type      = "";
@@ -2845,12 +2848,12 @@ EOM
         '&&' => sub {
             error_if_expecting_TERM()
               if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
-          },
+        },
 
         '||' => sub {
             error_if_expecting_TERM()
               if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
-          },
+        },
 
         '//' => sub {
             error_if_expecting_TERM()
@@ -3619,7 +3622,7 @@ EOM
                         }
                     }
 
-                    # FIXME: Patch: mark something like x4 as an integer for now
+                    # NOTE: mark something like x4 as an integer for now
                     # It gets fixed downstream.  This is easier than
                     # splitting the pretoken.
                     else {
@@ -3706,8 +3709,6 @@ EOM
                             }
                         }
 
-                        # FIXME: could check for error in which next token is
-                        # not a word (number, punctuation, ..)
                         else {
                             $is_constant{$current_package}{$next_nonblank_token}
                               = 1;
@@ -5773,8 +5774,6 @@ sub guess_if_pattern_or_conditional {
     #   msg = a warning or diagnostic message
     # USES GLOBAL VARIABLES: $last_nonblank_token
 
-    # FIXME: this needs to be rewritten
-
     my ( $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
     my $is_pattern = 0;
     my $msg        = "guessing that ? after $last_nonblank_token starts a ";
@@ -7722,9 +7721,10 @@ sub scan_number_do {
 
     # handle v-string without leading 'v' character ('Two Dot' rule)
     # (vstring.t)
-    # TODO: v-strings may contain underscores
+    # Here is the format prior to including underscores:
+    ## if ( $input_line =~ /\G((\d+)?\.\d+(\.\d+)+)/g ) {
     pos($input_line) = $pos_beg;
-    if ( $input_line =~ /\G((\d+)?\.\d+(\.\d+)+)/g ) {
+    if ( $input_line =~ /\G((\d[_\d]*)?\.[\d_]+(\.[\d_]+)+)/g ) {
         $pos = pos($input_line);
         my $numc = $pos - $pos_beg;
         $number = substr( $input_line, $pos_beg, $numc );
