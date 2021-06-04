@@ -422,11 +422,9 @@ BEGIN {
         _saw_VERSION_in_this_file_ => $i++,
         _saw_END_or_DATA_          => $i++,
 
-        _rweld_len_left_closing_  => $i++,
-        _rweld_len_right_closing_ => $i++,
-        _rweld_len_left_opening_  => $i++,
-        _rweld_len_right_opening_ => $i++,
-        _ris_welded_seqno_        => $i++,
+        _rK_weld_left_         => $i++,
+        _rK_weld_right_        => $i++,
+        _rweld_len_right_at_K_ => $i++,
 
         _rspecial_side_comment_type_ => $i++,
 
@@ -781,12 +779,11 @@ sub new {
     $self->[_saw_END_or_DATA_]                 = 0;
 
     # Hashes related to container welding...
-    $self->[_radjusted_levels_]        = [];
-    $self->[_rweld_len_left_closing_]  = {};
-    $self->[_rweld_len_right_closing_] = {};
-    $self->[_rweld_len_left_opening_]  = {};
-    $self->[_rweld_len_right_opening_] = {};
-    $self->[_ris_welded_seqno_]        = {};
+    $self->[_radjusted_levels_] = [];
+
+    $self->[_rK_weld_left_]         = {};
+    $self->[_rK_weld_right_]        = {};
+    $self->[_rweld_len_right_at_K_] = {};
 
     $self->[_rseqno_controlling_my_ci_] = {};
     $self->[_ris_seqno_controlling_ci_] = {};
@@ -3910,13 +3907,14 @@ EOM
 
             # Do not allow a break within welds
             if ( $seqno && $total_weld_count ) {
-                if ( $self->weld_len_right( $seqno, $type ) ) {
+                my $KK = $K_to_go[$i];
+                if ( $self->is_welded_right_at_K($KK) ) {
                     $strength = NO_BREAK;
                 }
 
                 # But encourage breaking after opening welded tokens
                 elsif ($is_opening_token{$token}
-                    && $self->weld_len_left( $seqno, $type ) )
+                    && $self->is_welded_left_at_K($KK) )
                 {
                     $strength -= 1;
                 }
@@ -6793,22 +6791,80 @@ sub weld_containers {
 
     $self->weld_cuddled_blocks();
 
-    # After all welding is complete, we make a note of which seqence numbers
-    # have welds for quick checks.
-    my @q;
-    my $ris_welded_seqno = $self->[_ris_welded_seqno_];
-    @q = keys %{ $self->[_rweld_len_left_closing_] };
-    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
-    @q = keys %{ $self->[_rweld_len_right_closing_] };
-    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
-    @q = keys %{ $self->[_rweld_len_left_opening_] };
-    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
-    @q = keys %{ $self->[_rweld_len_right_opening_] };
-    @{$ris_welded_seqno}{@q} = (1) x scalar(@q);
+    ##############################################################
+    # All welding is done. Finish setting up weld data structures.
+    ##############################################################
 
-    # total number of sequenced items involved in a weld, for
-    # quick checks for avoiding calls to weld_len_xxx
-    $total_weld_count = 0 + keys %{$ris_welded_seqno};
+    my $rLL                  = $self->[_rLL_];
+    my $rK_weld_left         = $self->[_rK_weld_left_];
+    my $rK_weld_right        = $self->[_rK_weld_right_];
+    my $rweld_len_right_at_K = $self->[_rweld_len_right_at_K_];
+
+    my @K_multi_weld;
+    my @keys = keys %{$rK_weld_right};
+    $total_weld_count = @keys;
+
+    # Note that this loop is processed in unsorted order for efficiency
+    foreach my $Kstart (@keys) {
+        my $Kend = $rK_weld_right->{$Kstart};
+
+        # An error here would be due to an incorrect initialization introduced
+        # in one of the above weld routines, like sub weld_nested.
+        if ( $Kend <= $Kstart ) {
+            Fault("Bad weld link: Kend=$Kend <= Kstart=$Kstart\n");
+        }
+
+        $rweld_len_right_at_K->{$Kstart} =
+          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+          $rLL->[$Kstart]->[_CUMULATIVE_LENGTH_];
+
+        $rK_weld_left->{$Kend} = $Kstart;    # fix in case of missing left link
+
+        # Remember the start of welds which continue
+        if ( defined( $rK_weld_right->{$Kend} )
+            && !defined( $rK_weld_left->{$Kstart} ) )
+        {
+            push @K_multi_weld, $Kstart;
+        }
+    }
+
+    # Update the end index and lengths of any long welds to extend to the far
+    # end. We only need to do this for the right links, not for the left links.
+    # This has to be processed in sorted order.
+    my $Kend = -1;
+    foreach my $Kstart ( sort { $a <=> $b } @K_multi_weld ) {
+
+        # skip any interior K which was originally missing a left link
+        next if ( $Kstart <= $Kend );
+
+        my @Klist;
+        push @Klist, $Kstart;
+        $Kend = $rK_weld_right->{$Kstart};
+        my $Knext = $rK_weld_right->{$Kend};
+        while ( defined($Knext) ) {
+            push @Klist, $Kend;
+            $Kend  = $Knext;
+            $Knext = $rK_weld_right->{$Kend};
+        }
+        pop @Klist;    #  values for last entry are already correct
+        foreach my $KK (@Klist) {
+
+            # Ending indexes must only be shifted to the right for long welds.
+            # An error here would be due to a programming error introduced in
+            # the code immediately above.
+            my $Kend_old = $rK_weld_right->{$KK};
+            if ( !defined($Kend_old) || $Kend < $Kend_old ) {
+                Fault(
+"Bad weld link at K=$KK, old end is K=$Kend_old, new end is $Kend\n"
+                );
+            }
+
+            $rK_weld_right->{$KK} = $Kend;
+            $rweld_len_right_at_K->{$KK} =
+              $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+              $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+        }
+    }
 
     return;
 }
@@ -6832,7 +6888,8 @@ sub weld_cuddled_blocks {
 
     # Called once per file to handle cuddled formatting
 
-    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
+    my $rK_weld_left  = $self->[_rK_weld_left_];
+    my $rK_weld_right = $self->[_rK_weld_right_];
 
     # This routine implements the -cb flag by finding the appropriate
     # closing and opening block braces and welding them together.
@@ -6952,10 +7009,8 @@ sub weld_cuddled_blocks {
 
                 # ..unless it is a comment
                 if ( defined($Kon) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
-                    my $dlen =
-                      $rLL->[$Kon]->[_CUMULATIVE_LENGTH_] -
-                      $rLL->[ $Ko - 1 ]->[_CUMULATIVE_LENGTH_];
-                    $rweld_len_right_closing->{$closing_seqno} = $dlen;
+                    $rK_weld_right->{$Ko} = $Kon;
+                    $rK_weld_left->{$Kon} = $Ko;
 
                     # Set flag that we want to break the next container
                     # so that the cuddled line is balanced.
@@ -7432,10 +7487,8 @@ sub weld_nested_containers {
 
     # Called once per file for option '--weld-nested-containers'
 
-    my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
-    my $rweld_len_left_opening  = $self->[_rweld_len_left_opening_];
-    my $rweld_len_right_closing = $self->[_rweld_len_right_closing_];
-    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
+    my $rK_weld_left  = $self->[_rK_weld_left_];
+    my $rK_weld_right = $self->[_rK_weld_right_];
 
     # This routine implements the -wn flag by "welding together"
     # the nested closing and opening tokens which were previously
@@ -7883,6 +7936,12 @@ EOM
                 print $Msg;
             }
             push @welds, $item;
+
+            $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
+            $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
+
+            $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
+            $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
         }
 
         # ... or extend current weld
@@ -7893,6 +7952,11 @@ EOM
                 print $Msg;
             }
             unshift @{ $welds[-1] }, $inner_seqno;
+            $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
+            $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
+
+            $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
+            $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
         }
 
         # After welding, reduce the indentation level if all intermediate tokens
@@ -7914,66 +7978,6 @@ EOM
         }
     }
 
-    # Define weld lengths needed later to set line breaks
-    foreach my $item (@welds) {
-
-        # sweep from inner to outer
-
-        my $inner_seqno;
-        my $len_close = 0;
-        my $len_open  = 0;
-        foreach my $outer_seqno ( @{$item} ) {
-            if ($inner_seqno) {
-
-                my $dlen_opening =
-                  $length_to_opening_seqno->($inner_seqno) -
-                  $length_to_opening_seqno->($outer_seqno);
-
-                my $dlen_closing =
-                  $length_to_closing_seqno->($outer_seqno) -
-                  $length_to_closing_seqno->($inner_seqno);
-
-                $len_open  += $dlen_opening;
-                $len_close += $dlen_closing;
-
-            }
-
-            $rweld_len_left_closing->{$outer_seqno}  = $len_close;
-            $rweld_len_right_opening->{$outer_seqno} = $len_open;
-
-            $inner_seqno = $outer_seqno;
-        }
-
-        # sweep from outer to inner
-        foreach my $seqno ( reverse @{$item} ) {
-            $rweld_len_right_closing->{$seqno} =
-              $len_close - $rweld_len_left_closing->{$seqno};
-            $rweld_len_left_opening->{$seqno} =
-              $len_open - $rweld_len_right_opening->{$seqno};
-        }
-    }
-
-    #####################################
-    # OLD DEBUG CODE
-    #####################################
-    if (0) {
-        my $count = 0;
-        local $" = ')(';
-        foreach my $weld (@welds) {
-            print "\nWeld number $count has seq: (@{$weld})\n";
-            foreach my $seq ( @{$weld} ) {
-                print <<EOM;
-	seq=$seq
-        left_opening=$rweld_len_left_opening->{$seq};
-        right_opening=$rweld_len_right_opening->{$seq};
-        left_closing=$rweld_len_left_closing->{$seq};
-        right_closing=$rweld_len_right_closing->{$seq};
-EOM
-            }
-
-            $count++;
-        }
-    }
     return;
 }
 
@@ -7988,8 +7992,8 @@ sub weld_nested_quotes {
     my $rflags = $weld_nested_exclusion_rules{'q'};
     return if ( defined($rflags) && defined( $rflags->[1] ) );
 
-    my $rweld_len_left_closing  = $self->[_rweld_len_left_closing_];
-    my $rweld_len_right_opening = $self->[_rweld_len_right_opening_];
+    my $rK_weld_left  = $self->[_rK_weld_left_];
+    my $rK_weld_right = $self->[_rK_weld_right_];
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
@@ -8117,8 +8121,7 @@ sub weld_nested_quotes {
 
             # Check weld exclusion rules for outer container
             if ( !$do_not_weld ) {
-                my $is_leading =
-                  !$self->[_rweld_len_left_opening_]->{$outer_seqno};
+                my $is_leading = !$self->is_welded_left_at_K($Kouter_opening);
                 if ( $self->is_excluded_weld( $KK, $is_leading ) ) {
                     if (DEBUG_WELD) {
                         $Msg .=
@@ -8138,13 +8141,11 @@ sub weld_nested_quotes {
 
                 # Allow extra space for additional welded closing container(s)
                 # and a space and comma or semicolon.
-                my $len_right_closing =
-                  $self->[_rweld_len_right_closing_]->{$outer_seqno};
-                $len_right_closing = 0 unless ( defined($len_right_closing) );
-                if ( $excess_ic + $len_right_closing + 2 > 0 ) {
+                my $weld_len = $self->weld_len_right_at_K($Kouter_closing);
+                if ( $excess_ic + $weld_len + 2 > 0 ) {
                     if (DEBUG_WELD) {
                         $Msg .=
-"No qw weld due to excess ending line length=$excess_ic + $len_right_closing + 2 > 0\n";
+"No qw weld due to excess ending line length=$excess_ic + $weld_len + 2 > 0\n";
                     }
                     $do_not_weld = 1;
                 }
@@ -8164,9 +8165,11 @@ sub weld_nested_quotes {
                 print $Msg;
             }
 
-            # FIXME: Are these always correct?
-            $rweld_len_left_closing->{$outer_seqno}  = 1;
-            $rweld_len_right_opening->{$outer_seqno} = 2;
+            $rK_weld_right->{$Kouter_opening} = $Kinner_opening;
+            $rK_weld_left->{$Kinner_opening}  = $Kouter_opening;
+
+            $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
+            $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
 
             # Undo one indentation level if an extra level was added to this
             # multiline quote
@@ -8203,78 +8206,44 @@ sub weld_nested_quotes {
     return;
 }
 
-sub weld_len_left {
-
-    my ( $self, $seqno, $type_or_tok ) = @_;
-
-    # Given the sequence number of a token, and the token or its type,
-    # return the length of any weld to its left
-
-    # quick check
-    return 0
-      unless ( $total_weld_count
-        && $seqno
-        && $self->[_ris_welded_seqno_]->{$seqno} );
-
-    my $weld_len;
-    if ( $is_closing_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_left_closing_]->{$seqno};
-    }
-    elsif ( $is_opening_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_left_opening_]->{$seqno};
-    }
-    $weld_len = 0 unless ( defined($weld_len) );
-    return $weld_len;
+sub is_welded_left_at_K {
+    my ( $self, $KK ) = @_;
+    return unless ( $total_weld_count && defined($KK) );
+    return defined( $self->[_rK_weld_left_]->{$KK} );
 }
 
-sub weld_len_right {
-
-    my ( $self, $seqno, $type_or_tok ) = @_;
-
-    # Given the sequence number of a token, and the token or its type,
-    # return the length of any weld to its right
-
-    # quick check
-    return 0
-      unless ( $total_weld_count
-        && $seqno
-        && $self->[_ris_welded_seqno_]->{$seqno} );
-
-    my $weld_len;
-    if ( $is_closing_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
-    }
-    elsif ( $is_opening_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
-    }
-    $weld_len = 0 unless ( defined($weld_len) );
-    return $weld_len;
+sub is_welded_right_at_K {
+    my ( $self, $KK ) = @_;
+    return unless ( $total_weld_count && defined($KK) );
+    return defined( $self->[_rK_weld_right_]->{$KK} );
 }
 
-sub weld_len_right_to_go {
+sub is_welded_right_at_i {
     my ( $self, $i ) = @_;
+    return unless ( $total_weld_count && $i >= 0 );
 
-    # Given the index of a token in the 'to_go' array return the length of any
-    # weld to its right.
-
-    # Back up at a blank.
-    return 0 unless ( $total_weld_count && $i >= 0 );
+    # Back up at a blank.  This routine is sometimes called at blanks.
+    # TODO: this routine can eventually be eliminated by setting the weld flags
+    # for all K indexes between the start and end of a weld, not just at
+    # sequenced items.
     if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
+    return defined( $self->[_rK_weld_right_]->{ $K_to_go[$i] } );
+}
 
-    my $seqno = $type_sequence_to_go[$i];
+sub weld_len_right_at_K {
+    my ( $self, $KK ) = @_;
+    return 0 unless $total_weld_count && defined($KK);
+    my $wr = $self->[_rweld_len_right_at_K_]->{$KK};
+    return defined($wr) ? $wr : 0;
+}
 
-    return 0 unless ( $seqno && $self->[_ris_welded_seqno_]->{$seqno} );
-
-    my $weld_len;
-    my $type_or_tok = $types_to_go[$i];
-    if ( $is_closing_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_right_closing_]->{$seqno};
-    }
-    elsif ( $is_opening_type{$type_or_tok} ) {
-        $weld_len = $self->[_rweld_len_right_opening_]->{$seqno};
-    }
-    $weld_len = 0 unless ( defined($weld_len) );
-    return $weld_len;
+sub is_welded_at_seqno {
+    my ( $self, $seqno ) = @_;
+    return unless defined($seqno);
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_opening           = $K_opening_container->{$seqno};
+    return $self->is_welded_left_at_K($K_opening)
+      || $self->is_welded_right_at_K($K_opening);
 }
 
 sub mark_short_nested_blocks {
@@ -8311,7 +8280,6 @@ sub mark_short_nested_blocks {
     my $K_closing_container = $self->[_K_closing_container_];
     my $rbreak_container    = $self->[_rbreak_container_];
     my $rshort_nested       = $self->[_rshort_nested_];
-    my $ris_welded_seqno    = $self->[_ris_welded_seqno_];
     my $rlines              = $self->[_rlines_];
 
     # Variables needed for estimating line lengths
@@ -8362,7 +8330,7 @@ sub mark_short_nested_blocks {
 
         # Patch: do not mark short blocks with welds.
         # In some cases blinkers can form (case b690).
-        if ( $ris_welded_seqno->{$type_sequence} ) {
+        if ( $self->is_welded_at_seqno($type_sequence) ) {
             next;
         }
 
@@ -10382,7 +10350,7 @@ EOM
         # Exception 1: Do not end line in a weld
         return
           if ( $total_weld_count
-            && $self->weld_len_right_to_go($max_index_to_go) );
+            && $self->is_welded_right_at_i($max_index_to_go) );
 
         # Exception 2: just set a tentative breakpoint if we might be in a
         # one-line block
@@ -10807,7 +10775,7 @@ EOM
                 $want_break ||= $ris_bli_container->{$type_sequence};
 
                 # Do not break if this token is welded to the left
-                if ( $self->weld_len_left( $type_sequence, $token ) ) {
+                if ( $self->is_welded_left_at_K($Ktoken_vars) ) {
                     $want_break = 0;
                 }
 
@@ -11466,7 +11434,7 @@ sub starting_one_line_block {
     my $excess = $pos + 1 + $container_length - $maximum_line_length;
 
     # Add a small tolerance for welded tokens (case b901)
-    if ( $self->[_ris_welded_seqno_]->{$type_sequence} ) {
+    if ( $self->is_welded_at_seqno($type_sequence) ) {
         $excess += 2;
     }
 
@@ -11762,7 +11730,7 @@ sub compare_indentation_levels {
         if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
         # no breaks between welded tokens
-        return if ( $self->weld_len_right_to_go($i) );
+        return if ( $self->is_welded_right_at_i($i) );
 
         my $token = $tokens_to_go[$i];
         my $type  = $types_to_go[$i];
@@ -13582,13 +13550,11 @@ sub break_equals {
                 #----------------------------------------------------------
 
                 if (
-                    $type_sequence_to_go[$iend_1]
-                    && $self->weld_len_right( $type_sequence_to_go[$iend_1],
-                        $type_iend_1 )
+                       $type_sequence_to_go[$iend_1]
+                    && $self->is_welded_right_at_K( $K_to_go[$iend_1] )
 
-                    || $type_sequence_to_go[$ibeg_2] && $self->weld_len_left(
-                        $type_sequence_to_go[$ibeg_2], $type_ibeg_2
-                    )
+                    || $type_sequence_to_go[$ibeg_2]
+                    && $self->is_welded_left_at_K( $K_to_go[$ibeg_2] )
                   )
                 {
                     $n_best = $n;
@@ -14404,7 +14370,7 @@ sub insert_breaks_before_list_opening_containers {
         next unless ( $rbreak_before_container_by_seqno->{$seqno} );
 
         # But never break a weld
-        next if ( $self->weld_len_left( $seqno, $token ) );
+        next if ( $self->is_welded_left_at_K($Kend) );
 
         # Install a break before this opening token.
         my $Kbreak = $self->K_previous_nonblank($Kend);
@@ -17834,13 +17800,12 @@ sub excess_line_length {
       $summed_lengths_to_go[$ibeg];
 
     # Include right weld lengths unless requested not to.
-    if (  !$ignore_right_weld
-        && $type_sequence_to_go[$iend]
-        && $total_weld_count )
+    if (   $total_weld_count
+        && !$ignore_right_weld
+        && $type_sequence_to_go[$iend] )
     {
-        my $wr = $self->weld_len_right( $type_sequence_to_go[$iend],
-            $types_to_go[$iend] );
-        $length += $wr;
+        my $wr = $self->[_rweld_len_right_at_K_]->{ $K_to_go[$iend] };
+        $length += $wr if defined($wr);
     }
 
     # return the excess
@@ -20741,15 +20706,12 @@ sub make_paren_name {
         # have sequence numbers.
         if ($seqno_qw_closing) {
             my $K_next_nonblank = $self->K_next_code($K_beg);
-            if ( defined($K_next_nonblank) ) {
-                my $type_sequence = $rLL->[$K_next_nonblank]->[_TYPE_SEQUENCE_];
-                my $token         = $rLL->[$K_next_nonblank]->[_TOKEN_];
-                my $welded = $self->weld_len_left( $type_sequence, $token );
-                if ($welded) {
-                    my $itest = $ibeg + ( $K_next_nonblank - $K_beg );
-                    if ( $itest <= $max_index_to_go ) {
-                        $ibeg_weld_fix = $itest;
-                    }
+            if ( defined($K_next_nonblank)
+                && $self->is_welded_left_at_K($K_next_nonblank) )
+            {
+                my $itest = $ibeg + ( $K_next_nonblank - $K_beg );
+                if ( $itest <= $max_index_to_go ) {
+                    $ibeg_weld_fix = $itest;
                 }
             }
         }

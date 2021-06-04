@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Revised data structures for welding>
+
+This update replaces the data structures used for the welding option with
+simpler but more general structures.  This cleans up the code and will
+simplify future coding.  No formatting changes should occur with this update.
+
+4 Jun 2021.
+
 =item B<improved treatment of lexical subs>
 
 This update improves the treatment of lexical subs.  Previously they were formatted
@@ -32,7 +40,7 @@ gave the (incorrect) error message:
 
 This update fixes that.
 
-1 Jun 2021.
+1 Jun 2021, 85ecb7a.
 
 =item B<add v-string underscores; warn of leading commas>
 
@@ -50,7 +58,7 @@ Underscores in v-strings without a leading 'v' are now parsed correctly.
 
 Several comments have been updated.
 
-31 May 2021.
+31 May 2021, ef44e70.
 
 =item B<Fix parsing error at operator following a comma>
 
