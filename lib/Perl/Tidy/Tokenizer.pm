@@ -7116,6 +7116,15 @@ sub scan_identifier_do {
 
 {    ## closure for sub do_scan_sub
 
+    my %warn_if_lexical;
+
+    BEGIN {
+
+        # lexical subs with these names can cause parsing errors in this version
+        my @q = qw( m q qq qr qw qx s tr y );
+        @{warn_if_lexical}{@q} = (1) x scalar(@q);
+    }
+
     # saved package and subnames in case prototype is on separate line
     my ( $package_saved, $subname_saved );
 
@@ -7222,9 +7231,7 @@ sub scan_identifier_do {
             my $is_lexical_sub =
               $last_nonblank_type eq 'k' && $last_nonblank_token eq 'my';
             if ( $is_lexical_sub && $1 ) {
-                warning(
-                    "'my' sub $subname cannot be in package '$1'\n"
-                );
+                warning("'my' sub $subname cannot be in package '$1'\n");
                 $is_lexical_sub = 0;
             }
 
@@ -7235,6 +7242,11 @@ sub scan_identifier_do {
                   $current_sequence_number[BRACE][ $current_depth[BRACE] ];
                 $seqno   = 1 unless ( defined($seqno) );
                 $package = $seqno;
+                if ( $warn_if_lexical{$subname} ) {
+                    warning(
+"'my' sub '$subname' matches a builtin name and may not be handled correctly in this perltidy version.\n"
+                    );
+                }
             }
             else {
                 $package = ( defined($1) && $1 ) ? $1 : $current_package;
@@ -7369,10 +7381,10 @@ sub scan_identifier_do {
                     # Check for multiple definitions of a sub, but
                     # it is ok to have multiple sub BEGIN, etc,
                     # so we do not complain if name is all caps
-                    if (   $saw_function_definition{$package}{$subname}
+                    if (   $saw_function_definition{$subname}{$package}
                         && $subname !~ /^[A-Z]+$/ )
                     {
-                        my $lno = $saw_function_definition{$package}{$subname};
+                        my $lno = $saw_function_definition{$subname}{$package};
                         if ( $package =~ /^\d/ ) {
                             warning(
 "already saw definition of lexical 'sub $subname' at line $lno\n"
@@ -7385,7 +7397,7 @@ sub scan_identifier_do {
                             );
                         }
                     }
-                    $saw_function_definition{$package}{$subname} =
+                    $saw_function_definition{$subname}{$package} =
                       $tokenizer_self->[_last_line_number_];
                 }
             }

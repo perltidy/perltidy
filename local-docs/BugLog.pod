@@ -2,6 +2,22 @@
 
 =over 4
 
+=item B<Add warning when lexical sub names match some builtins>
+
+This update adds a warning when lexical subs have names which match some builtin
+names which will almost certainly cause a parsing error in the current version
+of perltidy.  For example, the following program is valid and will run, but
+perltidy will produce an error.
+
+    use feature qw(lexical_subs);
+    use warnings; no warnings "experimental::lexical_subs";
+    {
+      my sub y { print "Hello from y: $_[0]\n"; }
+      y(1);
+    }
+
+6 Jun 2021.
+
 =item B<Minor cleanups>
 
 This update fixes a case of formatting instability recently found with random testing.
@@ -9,8 +25,7 @@ It also does some minor coding cleanups.
 
 This fixes case b1139.
 
-5 Jun 2021.
-
+5 Jun 2021, b8527ab.
 
 =item B<Revised data structures for welding>
 
@@ -18,7 +33,7 @@ This update replaces the data structures used for the welding option with
 simpler but more general structures.  This cleans up the code and will
 simplify future coding.  No formatting changes should occur with this update.
 
-4 Jun 2021.
+4 Jun 2021, 4a886c8.
 
 =item B<improved treatment of lexical subs>
 
