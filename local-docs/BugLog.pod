@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Minor cleanups>
+
+This update fixes a case of formatting instability recently found with random testing.
+It also does some minor coding cleanups.
+
+This fixes case b1139.
+
+5 Jun 2021.
+
+
 =item B<Revised data structures for welding>
 
 This update replaces the data structures used for the welding option with

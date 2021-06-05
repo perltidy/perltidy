@@ -709,21 +709,26 @@ sub new {
     my $self = [];
 
     # Basic data structures...
-    $self->[_rlines_]     = [];       # = ref to array of lines of the file
-    $self->[_rlines_new_] = [];       # = ref to array of output lines
-                                      #   (FOR FUTURE DEVELOPMENT)
-    $self->[_rLL_]        = [];       # = ref to array with all tokens
-                                      # in the file. LL originally meant
-                                      # 'Linked List'. Linked lists were a
-                                      # bad idea but LL is easy to type.
-    $self->[_Klimit_]     = undef;    # = maximum K index for rLL.
-    $self->[_K_opening_container_] = {};    # for quickly traversing structure
-    $self->[_K_closing_container_] = {};    # for quickly traversing structure
-    $self->[_K_opening_ternary_]   = {};    # for quickly traversing structure
-    $self->[_K_closing_ternary_]   = {};    # for quickly traversing structure
+    $self->[_rlines_]     = [];    # = ref to array of lines of the file
+    $self->[_rlines_new_] = [];    # = ref to array of output lines
+                                   #   (FOR FUTURE DEVELOPMENT)
+    # 'rLL' = reference to the liner array of all tokens in the file.
+    # 'LL' stands for 'Linked List'. Using a linked list was a disaster, but
+    # 'LL' stuck because it is easy to type.
+    $self->[_rLL_]    = [];
+    $self->[_Klimit_] = undef;    # = maximum K index for rLL.
+
+    # Arrays for quickly traversing the structures
+    $self->[_K_opening_container_] = {};
+    $self->[_K_closing_container_] = {};
+    $self->[_K_opening_ternary_]   = {};
+    $self->[_K_closing_ternary_]   = {};
     $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
-    $self->[_rK_phantom_semicolons_] =
-      undef;    # for undoing phantom semicolons if iterating
+
+    # Array of phantom semicolons, in case we ever need to undo them
+    $self->[_rK_phantom_semicolons_] = undef;
+
+    # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
     $self->[_ris_function_call_paren_]   = {};
     $self->[_rlec_count_by_seqno_]       = {};
@@ -742,10 +747,11 @@ sub new {
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
-    $self->[_rbreak_container_]          = {};    # prevent one-line blocks
-    $self->[_rshort_nested_]             = {};    # blocks not forced open
-    $self->[_length_function_]           = $length_function;
-    $self->[_is_encoded_data_]           = $is_encoded_data;
+
+    $self->[_rbreak_container_] = {};                 # prevent one-line blocks
+    $self->[_rshort_nested_]    = {};                 # blocks not forced open
+    $self->[_length_function_]  = $length_function;
+    $self->[_is_encoded_data_]  = $is_encoded_data;
 
     # Some objects...
     $self->[_fh_tee_]                  = $fh_tee;
@@ -781,10 +787,12 @@ sub new {
     # Hashes related to container welding...
     $self->[_radjusted_levels_] = [];
 
+    # Weld data structures
     $self->[_rK_weld_left_]         = {};
     $self->[_rK_weld_right_]        = {};
     $self->[_rweld_len_right_at_K_] = {};
 
+    # -xci stuff
     $self->[_rseqno_controlling_my_ci_] = {};
     $self->[_ris_seqno_controlling_ci_] = {};
 
@@ -797,6 +805,7 @@ sub new {
     $self->[_rwant_container_open_]          = {};
     $self->[_converged_]                     = 0;
 
+    # qw stuff
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
     $self->[_rending_multiline_qw_seqno_by_K_]   = {};
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
@@ -1498,7 +1507,10 @@ EOM
         $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
     }
 
-    # very frequently used parameters made global for efficiency
+    #############################################################
+    # Make global vars for frequently used options for efficiency
+    #############################################################
+
     $rOpts_closing_side_comment_maximum_text =
       $rOpts->{'closing-side-comment-maximum-text'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
@@ -1877,7 +1889,7 @@ Only the last will be used.
 EOM
     }
 
-    # Speedup: Turn off -lp if it is not used
+    # Possible speedup: we could turn off -lp if it is not actually used
     my $all_off = 1;
     foreach my $key (qw# ( { [ #) {
         my $rflags = $line_up_parentheses_exclusion_rules{$key};
@@ -1889,9 +1901,9 @@ EOM
     }
     if ($all_off) {
 
-        # FIXME: This works but is currently deactivated because at present
-        # users of -lp could see some discontinuities in formatting,
-        # such as those involving the choice of breaks at '='.  After
+        # FIXME: This speedup works but is currently deactivated because at
+        # present users of -lp could see some discontinuities in formatting,
+        # such as those involving the choice of breaks at '='.  Only if/when
         # these issues have been checked and resolved it should be reactivated
         # as a speedup.
         ## $rOpts->{'line-up-parentheses'} = "";
@@ -3453,6 +3465,9 @@ EOM
 
         my ($self) = @_;
 
+        my $rK_weld_right = $self->[_rK_weld_right_];
+        my $rK_weld_left  = $self->[_rK_weld_left_];
+
         # patch-its always ok to break at end of line
         $nobreak_to_go[$max_index_to_go] = 0;
 
@@ -3629,7 +3644,6 @@ EOM
 
             if ( $next_nonblank_type eq 'k' && $type ne 'CORE::' ) {
 
-                # FIXME: needs more testing
                 if ( $is_keyword_returning_list{$next_nonblank_token} ) {
                     $bond_str = $list_str if ( $bond_str > $list_str );
                 }
@@ -3906,15 +3920,15 @@ EOM
             #---------------------------------------------------------------
 
             # Do not allow a break within welds
-            if ( $seqno && $total_weld_count ) {
+            if ( $total_weld_count && $seqno ) {
                 my $KK = $K_to_go[$i];
-                if ( $self->is_welded_right_at_K($KK) ) {
+                if ( $rK_weld_right->{$KK} ) {
                     $strength = NO_BREAK;
                 }
 
                 # But encourage breaking after opening welded tokens
-                elsif ($is_opening_token{$token}
-                    && $self->is_welded_left_at_K($KK) )
+                elsif ($rK_weld_left->{$KK}
+                    && $is_opening_token{$token} )
                 {
                     $strength -= 1;
                 }
@@ -6875,14 +6889,6 @@ sub cumulative_length_before_K {
     return ( $KK <= 0 ) ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 }
 
-sub cumulative_length_after_K {
-
-    # NOTE: This routine not currently called; could be deleted
-    my ( $self, $KK ) = @_;
-    my $rLL = $self->[_rLL_];
-    return $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
-}
-
 sub weld_cuddled_blocks {
     my ($self) = @_;
 
@@ -7414,6 +7420,7 @@ sub setup_new_weld_measurements {
     # in stress testing.  For this situation we will only weld if we
     # start at a 'good' location.  Added 'if' to fix case b1032.
     # Require blank before certain previous characters to fix b1111.
+    # Add ';' to fix case b1139
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
@@ -7426,9 +7433,9 @@ sub setup_new_weld_measurements {
         my $type_pp     = 'b';
         if ( $Kprev >= 0 ) { $type_pp = $rLL->[ $Kprev - 1 ]->[_TYPE_] }
         unless (
-               $type_prev  =~ /^[\,\.]/
+               $type_prev  =~ /^[\,\.\;]/
             || $type_prev  =~ /^[=\{\[\(\L]/ && $type_pp eq 'b'
-            || $type_first =~ /^[=\,\.\{\[\(\L]/
+            || $type_first =~ /^[=\,\.\;\{\[\(\L]/
             || $type_first eq '||'
             || (   $type_first eq 'k' && $token_first eq 'if'
                 || $token_first eq 'or' )
@@ -13714,8 +13721,9 @@ sub break_equals {
                     # TODO: might be best to make a special flag
                     next if ( $old_breakpoint_to_go[$iend_1] );
 
-                 # an isolated '},' may join with an identifier + ';'
-                 # this is useful for the class of a 'bless' statement (bless.t)
+                    # An isolated '},' may join with an identifier + ';'
+                    # This is useful for the class of a 'bless' statement
+                    # (bless.t)
                     if (   $type_ibeg_1 eq '}'
                         && $type_ibeg_2 eq 'i' )
                     {
@@ -19702,7 +19710,7 @@ sub get_seqno {
 
                             # never indent line 1 of a '.' series because
                             # previous line is most likely at same level.
-                            # TODO: we should also look at the leasing_spaces
+                            # TODO: we should also look at the leading_spaces
                             # of the last output line and skip if it is same
                             # as this line.
                             next if ( $leading_token eq '.' );
