@@ -81,7 +81,6 @@ sub write_debug_entry {
     unless ( $self->{_debug_file_opened} ) { $self->really_open_debug_file() }
     my $fh = $self->{_fh};
 
-    # FIXME: could convert to use of token_array instead
     foreach my $j ( 0 .. @{$rtoken_type} - 1 ) {
 
         # testing patterns

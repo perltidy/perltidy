@@ -2,6 +2,31 @@
 
 =over 4
 
+=item B<Remove incorrect warning at repeated function paren call>
+
+This update removes an incorrect error messagge at the construct ')('.  To illustrate,
+the following is a valid program:
+
+    my @words = qw(To view this email as a web page go here);
+    my @subs;
+    push @subs, sub { my $i=shift; $i %= @words; print "$words[$i] "; return $subs[0]};
+    $subs[0](0)(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)(11);
+    print "\n";
+
+However perltidy was giving an error message at the ')(' combination, which is
+unusual in perl scripts. This update fixes this.
+
+These are function call parens, so logically they should be under control of
+the -sfp or --space-function-parens parameter. I wrote a patch to do this, but
+decided not to implement it.  The reason is that, as noted in the manual,
+subtle errors in perl scripts can occur when spaces are placed before parens.
+So, to avoid possible problems, the -sfp parameter will be restricted to spaces
+between a bareword [assumed to be a function] and a paren.
+
+This update is in Tokenizer.pm and fixes case c017.
+
+6 Jun 2021.
+
 =item B<Add warning when lexical sub names match some builtins>
 
 This update adds a warning when lexical subs have names which match some builtin

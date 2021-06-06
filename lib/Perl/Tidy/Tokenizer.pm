@@ -1998,12 +1998,13 @@ EOM
                 if (
                     $expecting == OPERATOR
 
-                    # be sure this is not a method call of the form
+                    # Be sure this is not a method call of the form
                     # &method(...), $method->(..), &{method}(...),
                     # $ref[2](list) is ok & short for $ref[2]->(list)
                     # NOTE: at present, braces in something like &{ xxx }
-                    # are not marked as a block, we might have a method call
-                    && $last_nonblank_token !~ /^([\]\}\&]|\-\>)/
+                    # are not marked as a block, we might have a method call.
+                    # Added ')' to fix case c017, something like ()()()
+                    && $last_nonblank_token !~ /^([\]\}\)\&]|\-\>)/
 
                   )
                 {
@@ -2025,10 +2026,6 @@ EOM
                         if ( $next_nonblank_token ne ')' ) {
                             my $hint;
 
-                            # FIXME: this gives an error parsing something like
-                            #       $subsubs[0]()(0);
-                            # which is a valid syntax (see subsub.t).  We may
-                            # need to revise this coding.
                             error_if_expecting_OPERATOR('(');
 
                             if ( $last_nonblank_type eq 'C' ) {

@@ -711,7 +711,7 @@ sub new {
     # Basic data structures...
     $self->[_rlines_]     = [];    # = ref to array of lines of the file
     $self->[_rlines_new_] = [];    # = ref to array of output lines
-                                   #   (FOR FUTURE DEVELOPMENT)
+
     # 'rLL' = reference to the liner array of all tokens in the file.
     # 'LL' stands for 'Linked List'. Using a linked list was a disaster, but
     # 'LL' stuck because it is easy to type.
@@ -2034,9 +2034,6 @@ sub initialize_whitespace_hashes {
     $binary_ws_rules{'i'}{'Q'} = WS_YES;
     $binary_ws_rules{'n'}{'('} = WS_YES;    # occurs in 'use package n ()'
 
-    # FIXME: we could to split 'i' into variables and functions
-    # and have no space for functions but space for variables.  For now,
-    # I have a special patch in the special rules below
     $binary_ws_rules{'i'}{'('} = WS_NO;
 
     $binary_ws_rules{'w'}{'('} = WS_NO;
@@ -2360,7 +2357,7 @@ sub set_whitespace_flags {
             #     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
             # At present, the above & block is marked as type L/R so this case
             # won't go through here.
-            if ( $last_type eq '}' ) { $ws = WS_YES }
+            if ( $last_type eq '}' && $last_token ne ')' ) { $ws = WS_YES }
 
             # NOTE: some older versions of Perl had occasional problems if
             # spaces are introduced between keywords or functions and opening
@@ -2389,17 +2386,20 @@ sub set_whitespace_flags {
             # arrow.  The point is, it is best to mark function call parens
             # right here before that happens.
             # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
+            # NOTE: this would be the place to allow spaces between repeated
+            # parens, like () () (), as in case c017, but I decided that would
+            # not be a good idea.
             elsif (( $last_type =~ /^[wCUG]$/ )
-                || ( $last_type =~ /^[wi]$/ && $last_token =~ /^(\&|->)/ ) )
+                || ( $last_type =~ /^[wi]$/ && $last_token =~ /^([\&]|->)/ ) )
             {
-                $ws = WS_NO unless ($rOpts_space_function_paren);
+                $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
                 $set_container_ws_by_keyword->( $last_token, $seqno );
                 $ris_function_call_paren->{$seqno} = 1;
             }
 
             # space between something like $i and ( in <<snippets/space2.in>>
             # for $i ( 0 .. 20 ) {
-            # FIXME: eventually, type 'i' needs to be split into multiple
+            # FIXME: eventually, type 'i' could be split into multiple
             # token types so this can be a hardwired rule.
             elsif ( $last_type eq 'i' && $last_token =~ /^[\$\%\@]/ ) {
                 $ws = WS_YES;
