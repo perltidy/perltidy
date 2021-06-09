@@ -56,7 +56,7 @@ BEGIN {
     $rsources = {
 
         'align35' => <<'----------',
-# differnt module names, do not align commas (fixes rt136416)
+# different module names, do not align commas (fixes rt136416)
 use File::Spec::Functions 'catfile', 'catdir';
 use Mojo::Base 'Mojolicious', '-signatures';
 
@@ -752,7 +752,7 @@ my $fragment = $parser->    #parse_html_string
             source => "align35",
             params => "def",
             expect => <<'#12...........',
-# differnt module names, do not align commas (fixes rt136416)
+# different module names, do not align commas (fixes rt136416)
 use File::Spec::Functions 'catfile', 'catdir';
 use Mojo::Base 'Mojolicious', '-signatures';
 

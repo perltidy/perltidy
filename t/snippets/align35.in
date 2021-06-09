@@ -1,4 +1,4 @@
-# differnt module names, do not align commas (fixes rt136416)
+# different module names, do not align commas (fixes rt136416)
 use File::Spec::Functions 'catfile', 'catdir';
 use Mojo::Base 'Mojolicious', '-signatures';
 
