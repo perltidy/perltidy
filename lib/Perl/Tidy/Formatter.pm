@@ -16180,7 +16180,7 @@ sub set_continuation_breaks {
                         # or user wants to form long blocks with arrows
                         || $rOpts_comma_arrow_breakpoints == 2
 
-                        # if -cab=3 is overriden then use -cab=2 behavior
+                        # if -cab=3 is overridden then use -cab=2 behavior
                         || $rOpts_comma_arrow_breakpoints == 3
                         && $override_cab3[$current_depth]
                     )

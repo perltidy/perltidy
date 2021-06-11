@@ -1760,7 +1760,7 @@ EOM
 
         #---------------------------------------------------------------
         # Do syntax check if requested and possible
-        # This is permanently deactivated but the code remains for referrence
+        # This is permanently deactivated but the code remains for reference
         #---------------------------------------------------------------
         my $infile_syntax_ok = 0;    # -1 no  0=don't know   1 yes
         if (   0
@@ -3213,7 +3213,7 @@ sub check_options {
 
     # Syntax checking is no longer supported due to concerns about executing
     # code in BEGIN blocks.  The flag is still accepted for backwards
-    # compatability but is ignored if set.
+    # compatibility but is ignored if set.
     $rOpts->{'check-syntax'} = 0;
 
     # check iteration count and quietly fix if necessary:
