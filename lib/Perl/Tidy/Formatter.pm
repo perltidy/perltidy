@@ -2897,8 +2897,9 @@ EOM
           # Not really required:
           ## || ( ( $typel eq '?' ) && ( $typer eq 'Q' ) )
 
-          # space stacked labels  (TODO: check if really necessary)
-          || $typel eq 'J' && $typer eq 'J'
+          # Space stacked labels...
+          # Not really required: Perl seems to accept non-spaced labels.
+          ## || $typel eq 'J' && $typer eq 'J'
 
           ;    # the value of this long logic sequence is the result we want
         return $result;

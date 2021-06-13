@@ -2,6 +2,23 @@
 
 =over 4
 
+=item B<Allow stacked labels without spaces>
+
+When labels are stacked in a single line, such as
+
+A:B:C:
+
+the default is to space them:
+
+A: B: C:
+
+This update allows them to be removed if desired:
+
+# perltidy -naws -dws
+A:B:C:
+
+13 Jun 2021
+
 =item B<Fix edge cases of instability involving -wn -lp>
 
 Random testing produced some cases of instability involving -wn -lp and some
