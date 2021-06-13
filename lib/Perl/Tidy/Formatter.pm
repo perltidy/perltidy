@@ -7673,20 +7673,44 @@ EOM
             # FIX1: Changed 'excess_length_to_K' to 'excess_length_of_line'
             # to get exact lengths and fix b604 b605.
             if ( $iline_oo == $iline_oc ) {
+
+                # All the tokens are on one line, now check their length
                 my $excess =
                   $self->excess_line_length_for_Krange( $Kfirst, $Klast );
                 if ( $excess <= 0 ) {
+
+                    # All tokens are on one line and fit. This is a valid
+                    # existing one-line weld except for some edge cases
+                    # involving -lp:
 
                     # FIX2: Patch for b1114: add a tolerance of one level if
                     # this line has an unbalanced start.  This helps prevent
                     # blinkers in unusual cases for lines near the length limit
                     # by making it more likely that RULE 2 will prevent a weld.
                     # FIX3: for b1131: only use level difference in -lp mode.
-                    my $level_diff = $rOpts_line_up_parentheses
-                      && $outer_opening->[_LEVEL_] - $rLL->[$Kfirst]->[_LEVEL_];
-
-                    if ( !$level_diff || $excess + $rOpts_indent_columns <= 0 )
+                    # FIX4: for b1141, b1142: reduce the tolerance for longer
+                    # leading tokens
+                    if (   $rOpts_line_up_parentheses
+                        && $outer_opening->[_LEVEL_] -
+                        $rLL->[$Kfirst]->[_LEVEL_] )
                     {
+
+                        # We only need a tolerance if the leading text before
+                        # the first opening token is shorter than the
+                        # indentation length.  For simplicity we just use the
+                        # length of the first token here.  If necessary, we
+                        # could be more exact in the future and find the
+                        # total length up to the first opening token.
+                        # See cases b1114, b1141, b1142.
+                        my $tolx = max( 0,
+                            $rOpts_indent_columns -
+                              $rLL->[$Kfirst]->[_TOKEN_LENGTH_] );
+
+                        if ( $excess + $tolx <= 0 ) {
+                            $is_one_line_weld = 1;
+                        }
+                    }
+                    else {
                         $is_one_line_weld = 1;
                     }
                 }

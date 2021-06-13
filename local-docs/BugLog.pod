@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Fix edge cases of instability involving -wn -lp>
+
+Random testing produced some cases of instability involving -wn -lp and some
+unusual additional parameters.  These were traced to a test for welding,
+and were fixed by refining a certain tolerance.  This fixes cases b1141, b1142.
+
+12 Jun 2021.
+
 =item B<Remove incorrect warning at repeated function paren call>
 
 This update removes an incorrect error messagge at the construct ')('.  To illustrate,
@@ -25,7 +33,7 @@ between a bareword [assumed to be a function] and a paren.
 
 This update is in Tokenizer.pm and fixes case c017.
 
-6 Jun 2021.
+6 Jun 2021, 6551d65.
 
 =item B<Add warning when lexical sub names match some builtins>
 
@@ -41,7 +49,7 @@ perltidy will produce an error.
       y(1);
     }
 
-6 Jun 2021.
+6 Jun 2021, 32729fb.
 
 =item B<Minor cleanups>
 
