@@ -774,16 +774,28 @@ sub get_line {
         return $line_of_tokens;
     }
 
-    # must print line unchanged if we are in a format section
+    # Print line unchanged if we are in a format section
     elsif ( $tokenizer_self->[_in_format_] ) {
 
         if ( $input_line =~ /^\.[\s#]*$/ ) {
-            write_logfile_entry("Exiting format section\n");
-            $tokenizer_self->[_in_format_] = 0;
-            $line_of_tokens->{_line_type} = 'FORMAT_END';
+
+            # Decrement format depth count at a '.' after a 'format'
+            $tokenizer_self->[_in_format_]--;
+
+            # This is the end when count reaches 0
+            if ( !$tokenizer_self->[_in_format_] ) {
+                write_logfile_entry("Exiting format section\n");
+                $line_of_tokens->{_line_type} = 'FORMAT_END';
+            }
         }
         else {
             $line_of_tokens->{_line_type} = 'FORMAT';
+            if ( $input_line =~ /^\s*format\s+\w+/ ) {
+
+                # Increment format depth count at a 'format' within a 'format'
+                # This is a simple way to handle nested formats (issue c019).
+                $tokenizer_self->[_in_format_]++;
+            }
         }
         return $line_of_tokens;
     }

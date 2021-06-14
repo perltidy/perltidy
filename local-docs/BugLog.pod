@@ -2,6 +2,31 @@
 
 =over 4
 
+=item B<Handle nested print format blocks>
+
+Perltidy was producing an error at nested print format blocks,
+such as
+
+    format NEST =
+    @<<<
+    {
+        my $birds = "birds";
+        local *NEST = *BIRDS{FORMAT};
+        write NEST;
+        format BIRDS =
+    @<<<<<
+    $birds;
+    .
+    "nest"
+      }
+    .
+
+It was ending the first format at the first '.' rather than the second '.' in
+this example.  This update fixes this, issue c019.
+
+13 Jun 2021.
+
+
 =item B<Allow stacked labels without spaces>
 
 When labels are stacked in a single line, such as
@@ -12,12 +37,12 @@ the default is to space them:
 
 A: B: C:
 
-This update allows them to be removed if desired:
+This update allows the spaces to be removed if desired:
 
 # perltidy -naws -dws
 A:B:C:
 
-13 Jun 2021
+13 Jun 2021, c2a63b2
 
 =item B<Fix edge cases of instability involving -wn -lp>
 
@@ -25,7 +50,7 @@ Random testing produced some cases of instability involving -wn -lp and some
 unusual additional parameters.  These were traced to a test for welding,
 and were fixed by refining a certain tolerance.  This fixes cases b1141, b1142.
 
-12 Jun 2021.
+12 Jun 2021, 125494b.
 
 =item B<Remove incorrect warning at repeated function paren call>
 
