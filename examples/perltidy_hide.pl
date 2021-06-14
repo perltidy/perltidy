@@ -13,7 +13,7 @@ anything between '#<<V' and '#>>V' is hidden from perltidy but seen by perl
 
 #>>V
 
-This works by converting #<<V into =pod and $>>V into =cut before
+This works by converting #<<V into =pod and #>>V into =cut before
 processing, and then converting back after processing.
 
 This was created for issue git #65. 
