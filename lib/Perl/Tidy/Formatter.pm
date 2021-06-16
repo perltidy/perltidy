@@ -6780,6 +6780,8 @@ sub weld_containers {
     # flags.
     my ($self) = @_;
 
+    $total_weld_count = 0;
+
     return if ( $rOpts->{'indent-only'} );
     return unless ($rOpts_add_newlines);
 
@@ -8158,7 +8160,7 @@ sub weld_nested_quotes {
 
             # Check weld exclusion rules for outer container
             if ( !$do_not_weld ) {
-                my $is_leading = !$self->is_welded_left_at_K($Kouter_opening);
+                my $is_leading = !defined( $rK_weld_left->{$Kouter_opening} );
                 if ( $self->is_excluded_weld( $KK, $is_leading ) ) {
                     if (DEBUG_WELD) {
                         $Msg .=
