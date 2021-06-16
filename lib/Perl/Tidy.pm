@@ -2310,6 +2310,9 @@ sub generate_options {
     $add_option->( 'closing-side-comment-warnings',     'cscw', '!' );
     $add_option->( 'closing-side-comments',             'csc',  '!' );
     $add_option->( 'closing-side-comments-balanced',    'cscb', '!' );
+    $add_option->( 'code-skipping',                     'cs',   '!' );
+    $add_option->( 'code-skipping-begin',               'csb',  '=s' );
+    $add_option->( 'code-skipping-end',                 'cse',  '=s' );
     $add_option->( 'format-skipping',                   'fs',   '!' );
     $add_option->( 'format-skipping-begin',             'fsb',  '=s' );
     $add_option->( 'format-skipping-end',               'fse',  '=s' );
@@ -2644,6 +2647,7 @@ sub generate_options {
       trim-qw
       format=tidy
       backup-file-extension=bak
+      code-skipping
       format-skipping
       default-tabsize=8
 

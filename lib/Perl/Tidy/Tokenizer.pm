@@ -100,7 +100,18 @@ use vars qw{
   %is_package
   %is_comma_question_colon
   %other_line_endings
+  $code_skipping_pattern_begin
+  $code_skipping_pattern_end
 };
+
+# GLOBAL VARIABLES which are constant after being configured by user-supplied
+# parameters.  They remain constant as a file is being processed.
+my (
+
+    $rOpts_code_skipping,
+    $code_skipping_pattern_begin,
+    $code_skipping_pattern_end,
+);
 
 # possible values of operator_expected()
 use constant TERM     => -1;
@@ -129,6 +140,7 @@ BEGIN {
         _in_format_                          => $i++,
         _in_error_                           => $i++,
         _in_pod_                             => $i++,
+        _in_skipped_                         => $i++,
         _in_attribute_list_                  => $i++,
         _in_quote_                           => $i++,
         _quote_target_                       => $i++,
@@ -211,6 +223,39 @@ EOM
     exit 1;
 }
 
+sub Die {
+    my ($msg) = @_;
+    Perl::Tidy::Die($msg);
+    croak "unexpected return from Perl::Tidy::Die";
+}
+
+sub bad_pattern {
+
+    # See if a pattern will compile. We have to use a string eval here,
+    # but it should be safe because the pattern has been constructed
+    # by this program.
+    my ($pattern) = @_;
+    eval "'##'=~/$pattern/";
+    return $@;
+}
+
+sub make_code_skipping_pattern {
+    my ( $rOpts, $opt_name, $default ) = @_;
+    my $param = $rOpts->{$opt_name};
+    unless ($param) { $param = $default }
+    $param =~ s/^\s*//;    # allow leading spaces to be like format-skipping
+    if ( $param !~ /^#/ ) {
+        Die("ERROR: the $opt_name parameter '$param' must begin with '#'\n");
+    }
+    my $pattern = '^\s*' . $param . '\b';
+    if ( bad_pattern($pattern) ) {
+        Die(
+"ERROR: the $opt_name parameter '$param' causes the invalid regex '$pattern'\n"
+        );
+    }
+    return $pattern;
+}
+
 sub check_options {
 
     # Check Tokenizer parameters
@@ -230,6 +275,12 @@ sub check_options {
             $is_sub{$word} = 1;
         }
     }
+
+    $rOpts_code_skipping = $rOpts->{'code-skipping'};
+    $code_skipping_pattern_begin =
+      make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
+    $code_skipping_pattern_end =
+      make_code_skipping_pattern( $rOpts, 'code-skipping-end', '#>>V' );
     return;
 }
 
@@ -273,6 +324,7 @@ sub new {
     # _line_start_quote_     line where we started looking for a long quote
     # _in_here_doc_          flag indicating if we are in a here-doc
     # _in_pod_               flag set if we are in pod documentation
+    # _in_skipped_           flag set if we are in a skipped section
     # _in_error_             flag set if we saw severe error (binary in script)
     # _in_data_              flag set if we are in __DATA__ section
     # _in_end_               flag set if we are in __END__ section
@@ -296,6 +348,7 @@ sub new {
     $self->[_in_format_]                = 0;
     $self->[_in_error_]                 = 0;
     $self->[_in_pod_]                   = 0;
+    $self->[_in_skipped_]               = 0;
     $self->[_in_attribute_list_]        = 0;
     $self->[_in_quote_]                 = 0;
     $self->[_quote_target_]             = "";
@@ -513,6 +566,10 @@ EOM
         warning("hit EOF while in format description\n");
     }
 
+    if ( $tokenizer_self->[_in_skipped_] ) {
+        warning("hit EOF while in lines skipped with --code-skipping\n");
+    }
+
     if ( $tokenizer_self->[_in_pod_] ) {
 
         # Just write log entry if this is after __END__ or __DATA__
@@ -653,6 +710,11 @@ sub get_line {
 
     my $input_line_number = ++$tokenizer_self->[_last_line_number_];
 
+    my $write_logfile_entry = sub {
+        my ($msg) = @_;
+        write_logfile_entry("Line $input_line_number: $msg");
+    };
+
     # Find and remove what characters terminate this line, including any
     # control r
     my $input_line_separator = "";
@@ -739,7 +801,7 @@ sub get_line {
         if ( $candidate_target eq $here_doc_target ) {
             $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
             $line_of_tokens->{_line_type} = 'HERE_END';
-            write_logfile_entry("Exiting HERE document $here_doc_target\n");
+            $write_logfile_entry->("Exiting HERE document $here_doc_target\n");
 
             my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
             if ( @{$rhere_target_list} ) {  # there can be multiple here targets
@@ -748,7 +810,7 @@ sub get_line {
                 $tokenizer_self->[_here_doc_target_] = $here_doc_target;
                 $tokenizer_self->[_here_quote_character_] =
                   $here_quote_character;
-                write_logfile_entry(
+                $write_logfile_entry->(
                     "Entering HERE document $here_doc_target\n");
                 $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
                 $tokenizer_self->[_started_looking_for_here_target_at_] =
@@ -784,7 +846,7 @@ sub get_line {
 
             # This is the end when count reaches 0
             if ( !$tokenizer_self->[_in_format_] ) {
-                write_logfile_entry("Exiting format section\n");
+                $write_logfile_entry->("Exiting format section\n");
                 $line_of_tokens->{_line_type} = 'FORMAT_END';
             }
         }
@@ -806,7 +868,7 @@ sub get_line {
         $line_of_tokens->{_line_type} = 'POD';
         if ( $input_line =~ /^=cut/ ) {
             $line_of_tokens->{_line_type} = 'POD_END';
-            write_logfile_entry("Exiting POD section\n");
+            $write_logfile_entry->("Exiting POD section\n");
             $tokenizer_self->[_in_pod_] = 0;
         }
         if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->[_in_end_] ) {
@@ -815,6 +877,18 @@ sub get_line {
             );
         }
 
+        return $line_of_tokens;
+    }
+
+    # print line unchanged if in skipped section
+    elsif ( $tokenizer_self->[_in_skipped_] ) {
+
+        # NOTE: marked as the existing type 'FORMAT' to keep html working
+        $line_of_tokens->{_line_type} = 'FORMAT';
+        if ( $input_line =~ /$code_skipping_pattern_end/ ) {
+            $write_logfile_entry->("Exiting code-skipping section\n");
+            $tokenizer_self->[_in_skipped_] = 0;
+        }
         return $line_of_tokens;
     }
 
@@ -836,7 +910,7 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_entry("Entering POD section\n");
+            $write_logfile_entry->("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
@@ -855,7 +929,7 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_entry("Entering POD section\n");
+            $write_logfile_entry->("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
@@ -945,13 +1019,14 @@ sub get_line {
 
     # now we know that it is ok to tokenize the line...
     # the line tokenizer will modify any of these private variables:
-    #        _rhere_target_list
-    #        _in_data
-    #        _in_end
-    #        _in_format
-    #        _in_error
-    #        _in_pod
-    #        _in_quote
+    #        _rhere_target_list_
+    #        _in_data_
+    #        _in_end_
+    #        _in_format_
+    #        _in_error_
+    #        _in_skipped_
+    #        _in_pod_
+    #        _in_quote_
     my $ending_in_quote_last = $tokenizer_self->[_in_quote_];
     tokenize_this_line($line_of_tokens);
 
@@ -986,15 +1061,24 @@ sub get_line {
                 warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
                 );
-                write_logfile_entry("Entering POD section\n");
+                $write_logfile_entry->("Entering POD section\n");
             }
         }
 
         else {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_entry("Entering POD section\n");
+            $write_logfile_entry->("Entering POD section\n");
         }
 
+        return $line_of_tokens;
+    }
+
+    # handle start of skipped section
+    if ( $tokenizer_self->[_in_skipped_] ) {
+
+        # NOTE: marked as the existing type 'FORMAT' to keep html working
+        $line_of_tokens->{_line_type} = 'FORMAT';
+        $write_logfile_entry->("Entering code-skipping section\n");
         return $line_of_tokens;
     }
 
@@ -1017,7 +1101,7 @@ sub get_line {
         $tokenizer_self->[_in_here_doc_]          = 1;
         $tokenizer_self->[_here_doc_target_]      = $here_doc_target;
         $tokenizer_self->[_here_quote_character_] = $here_quote_character;
-        write_logfile_entry("Entering HERE document $here_doc_target\n");
+        $write_logfile_entry->("Entering HERE document $here_doc_target\n");
         $tokenizer_self->[_started_looking_for_here_target_at_] =
           $input_line_number;
     }
@@ -1027,13 +1111,13 @@ sub get_line {
     # which are not tokenized (and cannot be read with <DATA> either!).
     if ( $tokenizer_self->[_in_data_] ) {
         $line_of_tokens->{_line_type} = 'DATA_START';
-        write_logfile_entry("Starting __DATA__ section\n");
+        $write_logfile_entry->("Starting __DATA__ section\n");
         $tokenizer_self->[_saw_data_] = 1;
 
         # keep parsing after __DATA__ if use SelfLoader was seen
         if ( $tokenizer_self->[_saw_selfloader_] ) {
             $tokenizer_self->[_in_data_] = 0;
-            write_logfile_entry(
+            $write_logfile_entry->(
                 "SelfLoader seen, continuing; -nlsl deactivates\n");
         }
 
@@ -1042,13 +1126,13 @@ sub get_line {
 
     elsif ( $tokenizer_self->[_in_end_] ) {
         $line_of_tokens->{_line_type} = 'END_START';
-        write_logfile_entry("Starting __END__ section\n");
+        $write_logfile_entry->("Starting __END__ section\n");
         $tokenizer_self->[_saw_end_] = 1;
 
         # keep parsing after __END__ if use AutoLoader was seen
         if ( $tokenizer_self->[_saw_autoloader_] ) {
             $tokenizer_self->[_in_end_] = 0;
-            write_logfile_entry(
+            $write_logfile_entry->(
                 "AutoLoader seen, continuing; -nlal deactivates\n");
         }
         return $line_of_tokens;
@@ -1073,7 +1157,7 @@ sub get_line {
     # Note: if keyword 'format' occurs in this line code, it is still CODE
     # (keyword 'format' need not start a line)
     if ( $tokenizer_self->[_in_format_] ) {
-        write_logfile_entry("Entering format section\n");
+        $write_logfile_entry->("Entering format section\n");
     }
 
     if ( $tokenizer_self->[_in_quote_]
@@ -1085,7 +1169,7 @@ sub get_line {
             /^\s*$/ )
         {
             $tokenizer_self->[_line_start_quote_] = $input_line_number;
-            write_logfile_entry(
+            $write_logfile_entry->(
                 "Start multi-line quote or pattern ending in $quote_target\n");
         }
     }
@@ -1093,7 +1177,7 @@ sub get_line {
         && !$tokenizer_self->[_in_quote_] )
     {
         $tokenizer_self->[_line_start_quote_] = -1;
-        write_logfile_entry("End of multi-line quote or pattern\n");
+        $write_logfile_entry->("End of multi-line quote or pattern\n");
     }
 
     # we are returning a line of CODE
@@ -3133,9 +3217,17 @@ EOM
         # stage 1 is a very simple pre-tokenization
         my $max_tokens_wanted = 0; # this signals pre_tokenize to get all tokens
 
-        # a little optimization for a full-line comment
+        # optimize for a full-line comment
         if ( !$in_quote && substr( $input_line, 0, 1 ) eq '#' ) {
-            $max_tokens_wanted = 1    # no use tokenizing a comment
+            $max_tokens_wanted = 1;    # no use tokenizing a comment
+
+            # and check for skipped section
+            if (   $rOpts_code_skipping
+                && $input_line =~ /$code_skipping_pattern_begin/ )
+            {
+                $tokenizer_self->[_in_skipped_] = 1;
+                return;
+            }
         }
 
         # start by breaking the line into pre-tokens

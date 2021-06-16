@@ -691,6 +691,8 @@ sub new {
         length_function    => $length_function
     );
 
+    write_logfile_entry("\nStarting tokenization pass...\n");
+
     if ( $rOpts->{'entab-leading-whitespace'} ) {
         write_logfile_entry(
 "Leading whitespace will be entabbed with $rOpts->{'entab-leading-whitespace'} spaces per tab\n"
@@ -4530,7 +4532,7 @@ sub make_closing_side_comment_prefix {
         $line_of_tokens->{_ended_in_blank_token} = undef;
 
         my $line_type     = $line_of_tokens_old->{_line_type};
-        my $input_line_no = $line_of_tokens_old->{_line_number} - 1;
+        my $input_line_no = $line_of_tokens_old->{_line_number};
         my $CODE_type     = "";
         my $tee_output;
 
@@ -4590,7 +4592,7 @@ sub make_closing_side_comment_prefix {
                         $rblock_type->[$j],    $rcontainer_environment->[$j],
                         $rtype_sequence->[$j], $rlevels->[$j],
                         $rlevels->[$j],        $slevel,
-                        $rci_levels->[$j],     $input_line_no,
+                        $rci_levels->[$j],     $input_line_no - 1,
                       );
                     push @{$rLL}, \@tokary;
                 } ## end foreach my $j ( 0 .. $jmax )
@@ -4608,7 +4610,8 @@ sub make_closing_side_comment_prefix {
             } ## end if ( $jmax >= 0 )
 
             $CODE_type =
-              $self->get_CODE_type( $line_of_tokens, $Kfirst, $Klimit );
+              $self->get_CODE_type( $line_of_tokens, $Kfirst, $Klimit,
+                $input_line_no );
 
             $tee_output ||=
                  $rOpts_tee_block_comments
@@ -4697,7 +4700,7 @@ sub make_closing_side_comment_prefix {
     }
 
     sub get_CODE_type {
-        my ( $self, $line_of_tokens, $Kfirst, $Klast ) = @_;
+        my ( $self, $line_of_tokens, $Kfirst, $Klast, $input_line_no ) = @_;
 
         # We are looking at a line of code and setting a flag to
         # describe any special processing that it requires
@@ -4738,7 +4741,8 @@ sub make_closing_side_comment_prefix {
                 /$format_skipping_pattern_end/ )
             {
                 $In_format_skipping_section = 0;
-                write_logfile_entry("Exiting formatting skip section\n");
+                write_logfile_entry(
+                    "Line $input_line_no: Exiting format-skipping section\n");
             }
             $CODE_type = 'FS';
             goto RETURN;
@@ -4766,7 +4770,8 @@ sub make_closing_side_comment_prefix {
             /$format_skipping_pattern_begin/ )
         {
             $In_format_skipping_section = 1;
-            write_logfile_entry("Entering formatting skip section\n");
+            write_logfile_entry(
+                "Line $input_line_no: Entering format-skipping section\n");
             $CODE_type = 'FS';
             goto RETURN;
         }

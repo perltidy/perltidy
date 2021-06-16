@@ -2,6 +2,12 @@
 
 ## 2021 xx xx
 
+    - Added a new option '--code-skipping', requested in git #65, in which code
+      between comment lines '#<<V' and '#>>V' is passed verbatim to the output
+      stream without error checking.  It is simmilar to --format skipping
+      but there is no error checking, and is useful for skipping an extended
+      syntax.
+
     - Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
 
     - Some nested structures formatted with the -lp indentation option may have

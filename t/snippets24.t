@@ -16,6 +16,7 @@
 #13 rt136417.def
 #14 rt136417.rt136417
 #15 numbers.def
+#16 code_skipping.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -74,6 +75,19 @@ use TestCounter 'root';
 use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
 use constant COUNTUP => reverse 1, 2, 3, 4, 5;
 use constant COUNTDOWN => scalar reverse 1, 2, 3, 4, 5;
+----------
+
+        'code_skipping' => <<'----------',
+%Hdr=%U2E=%E2U=%Fallback=();
+$in_charmap=$nerror=$nwarning=0;
+$.=0;
+#<<V  code skipping: perltidy will pass this verbatim without error checking
+
+    }}} {{{
+
+#>>V
+my $self=shift;
+my $cloning=shift;
 ----------
 
         'fpva' => <<'----------',
@@ -832,6 +846,23 @@ my @vals = (
     0O12_345,
 );
 #15...........
+        },
+
+        'code_skipping.def' => {
+            source => "code_skipping",
+            params => "def",
+            expect => <<'#16...........',
+%Hdr        = %U2E    = %E2U      = %Fallback = ();
+$in_charmap = $nerror = $nwarning = 0;
+$.          = 0;
+#<<V  code skipping: perltidy will pass this verbatim without error checking
+
+    }}} {{{
+
+#>>V
+my $self    = shift;
+my $cloning = shift;
+#16...........
         },
     };
 

@@ -207,6 +207,8 @@ sub write_column_headings {
     $self->{_wrote_column_headings} = 1;
     my $routput_array = $self->{_output_array};
     push @{$routput_array}, <<EOM;
+
+Starting formatting pass...
 The nesting depths in the table below are at the start of the lines.
 The indicated output line numbers are not always exact.
 ci = levels of continuation indentation; bk = 1 if in BLOCK, 0 if not.
