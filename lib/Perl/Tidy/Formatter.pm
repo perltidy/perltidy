@@ -7332,7 +7332,7 @@ sub setup_new_weld_measurements {
     #   $Kouter_opening, $Kinner_opening
 
     # Returns these variables:
-    #   $ok_to_weld = true (weld ok) or false (do not weld here)
+    #   $new_weld_ok = true (new weld ok) or false (do not start new weld)
     #   $starting_indent = starting indentation
     #   $starting_lentot = starting cumulative length
     #   $msg = diagnostic message for debugging
@@ -7420,15 +7420,16 @@ sub setup_new_weld_measurements {
         }
     }
 
-    my $ok_to_weld = 1;
+    my $new_weld_ok = 1;
 
-    # FIX2: Avoid problem areas with the -wn -lp combination.
-    # The combination -wn -lp -dws -naws does not work well and can
-    # cause blinkers. See case b1020. It will probably only occur
-    # in stress testing.  For this situation we will only weld if we
-    # start at a 'good' location.  Added 'if' to fix case b1032.
-    # Require blank before certain previous characters to fix b1111.
-    # Add ';' to fix case b1139
+    # FIX2 for b1020: Avoid problem areas with the -wn -lp combination.  The
+    # combination -wn -lp -dws -naws does not work well and can cause blinkers.
+    # It will probably only occur in stress testing.  For this situation we
+    # will only start a new weld if we start at a 'good' location.
+    # - Added 'if' to fix case b1032.
+    # - Require blank before certain previous characters to fix b1111.
+    # - Add ';' to fix case b1139
+    # - Convert from '$ok_to_weld' to '$new_weld_ok' to fix b1162.
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
@@ -7451,11 +7452,11 @@ sub setup_new_weld_measurements {
         {
             $msg =
 "Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev'\n";
-            $ok_to_weld = 0;
+            $new_weld_ok = 0;
         }
     }
 
-    return ( $ok_to_weld, $maximum_text_length, $starting_lentot, $msg );
+    return ( $new_weld_ok, $maximum_text_length, $starting_lentot, $msg );
 }
 
 sub excess_line_length_for_Krange {
@@ -7663,10 +7664,16 @@ EOM
             $iline_outer_opening   = $iline_oo;
             $weld_count_this_start = 0;
 
-            ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg )
+            ( my $new_weld_ok, $maximum_text_length, $starting_lentot, my $msg )
               = $self->setup_new_weld_measurements( $Kouter_opening,
                 $Kinner_opening );
-            if ( !$ok_to_weld ) {
+
+            if (
+                !$new_weld_ok
+                && (   $iline_oo != $iline_io
+                    || $iline_ic != $iline_oc )
+              )
+            {
                 if (DEBUG_WELD) { print $msg}
                 next;
             }

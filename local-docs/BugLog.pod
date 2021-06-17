@@ -2,6 +2,32 @@
 
 =over 4
 
+=item B<Update welding rule to avoid unstable states>
+
+Testing with random input parameters produced a formatting instability
+involving an unusual parameter combination:
+
+    --noadd-whitespace
+    --break-before-paren=3
+    --continuation-indentation=8
+    --delete-old-whitespace
+    --line-up-parentheses
+    --weld-nested-containers
+
+and the following code
+
+        if(defined$hints{family}){
+            @infos=({
+                     family=>$hints{family},
+                     socktype=>$hints{socktype},
+                     protocol=>$hints{protocol},
+            });
+        }
+
+This update fixes the problem, case b1162.
+
+18 Jun 2021.
+
 =item B<Convert some weld sub calls to hash lookups>
 
 This is a minor optimization. These subs are eliminated:
