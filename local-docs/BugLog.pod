@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Convert some weld sub calls to hash lookups>
+
+This is a minor optimization. These subs are eliminated:
+is_welded_right_at_K, is_welded_left_at_K, weld_len_right_at_K.
+
+17 Jun 2021.
+
 =item B<Update LineSink.pm to allow undefined line endings>
 
 This update is necessary to eventually prevent an unwanted

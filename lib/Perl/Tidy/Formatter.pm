@@ -8180,7 +8180,11 @@ sub weld_nested_quotes {
 
                 # Allow extra space for additional welded closing container(s)
                 # and a space and comma or semicolon.
-                my $weld_len = $self->weld_len_right_at_K($Kouter_closing);
+                # NOTE: weld len has not been computed yet. Use 2 spaces
+                # for now, correct for a single weld. This estimate could
+                # be made more accurate if necessary.
+                my $weld_len =
+                  defined( $rK_weld_right->{$Kouter_closing} ) ? 2 : 0;
                 if ( $excess_ic + $weld_len + 2 > 0 ) {
                     if (DEBUG_WELD) {
                         $Msg .=
@@ -8245,18 +8249,6 @@ sub weld_nested_quotes {
     return;
 }
 
-sub is_welded_left_at_K {
-    my ( $self, $KK ) = @_;
-    return unless ( $total_weld_count && defined($KK) );
-    return defined( $self->[_rK_weld_left_]->{$KK} );
-}
-
-sub is_welded_right_at_K {
-    my ( $self, $KK ) = @_;
-    return unless ( $total_weld_count && defined($KK) );
-    return defined( $self->[_rK_weld_right_]->{$KK} );
-}
-
 sub is_welded_right_at_i {
     my ( $self, $i ) = @_;
     return unless ( $total_weld_count && $i >= 0 );
@@ -8269,20 +8261,18 @@ sub is_welded_right_at_i {
     return defined( $self->[_rK_weld_right_]->{ $K_to_go[$i] } );
 }
 
-sub weld_len_right_at_K {
-    my ( $self, $KK ) = @_;
-    return 0 unless $total_weld_count && defined($KK);
-    my $wr = $self->[_rweld_len_right_at_K_]->{$KK};
-    return defined($wr) ? $wr : 0;
-}
-
 sub is_welded_at_seqno {
+
     my ( $self, $seqno ) = @_;
-    return unless defined($seqno);
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_opening           = $K_opening_container->{$seqno};
-    return $self->is_welded_left_at_K($K_opening)
-      || $self->is_welded_right_at_K($K_opening);
+
+    # given a sequence number:
+    #   return true if it is welded either left or right
+    #   return false otherwise
+    return unless ( $total_weld_count && defined($seqno) );
+    my $KK_o = $self->[_K_opening_container_]->{$seqno};
+    return unless defined($KK_o);
+    return defined( $self->[_rK_weld_left_]->{$KK_o} )
+      || defined( $self->[_rK_weld_right_]->{$KK_o} );
 }
 
 sub mark_short_nested_blocks {
@@ -8369,7 +8359,7 @@ sub mark_short_nested_blocks {
 
         # Patch: do not mark short blocks with welds.
         # In some cases blinkers can form (case b690).
-        if ( $self->is_welded_at_seqno($type_sequence) ) {
+        if ( $total_weld_count && $self->is_welded_at_seqno($type_sequence) ) {
             next;
         }
 
@@ -10480,6 +10470,7 @@ EOM
         my $sink_object        = $self->[_sink_object_];
         my $fh_tee             = $self->[_fh_tee_];
         my $ris_bli_container  = $self->[_ris_bli_container_];
+        my $rK_weld_left       = $self->[_rK_weld_left_];
 
         if ( !defined($K_first) ) {
 
@@ -10814,7 +10805,9 @@ EOM
                 $want_break ||= $ris_bli_container->{$type_sequence};
 
                 # Do not break if this token is welded to the left
-                if ( $self->is_welded_left_at_K($Ktoken_vars) ) {
+                if ( $total_weld_count
+                    && defined( $rK_weld_left->{$Ktoken_vars} ) )
+                {
                     $want_break = 0;
                 }
 
@@ -11473,7 +11466,7 @@ sub starting_one_line_block {
     my $excess = $pos + 1 + $container_length - $maximum_line_length;
 
     # Add a small tolerance for welded tokens (case b901)
-    if ( $self->is_welded_at_seqno($type_sequence) ) {
+    if ( $total_weld_count && $self->is_welded_at_seqno($type_sequence) ) {
         $excess += 2;
     }
 
@@ -11769,7 +11762,7 @@ sub compare_indentation_levels {
         if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
         # no breaks between welded tokens
-        return if ( $self->is_welded_right_at_i($i) );
+        return if ( $total_weld_count && $self->is_welded_right_at_i($i) );
 
         my $token = $tokens_to_go[$i];
         my $type  = $types_to_go[$i];
@@ -13279,6 +13272,9 @@ sub break_equals {
         # $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end ) = @_;
 
+        my $rK_weld_right = $self->[_rK_weld_right_];
+        my $rK_weld_left  = $self->[_rK_weld_left_];
+
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
         my @joint;
@@ -13589,11 +13585,11 @@ sub break_equals {
                 #----------------------------------------------------------
 
                 if (
-                       $type_sequence_to_go[$iend_1]
-                    && $self->is_welded_right_at_K( $K_to_go[$iend_1] )
-
-                    || $type_sequence_to_go[$ibeg_2]
-                    && $self->is_welded_left_at_K( $K_to_go[$ibeg_2] )
+                    $total_weld_count
+                    && ( $type_sequence_to_go[$iend_1]
+                        && defined( $rK_weld_right->{ $K_to_go[$iend_1] } )
+                        || $type_sequence_to_go[$ibeg_2]
+                        && defined( $rK_weld_left->{ $K_to_go[$ibeg_2] } ) )
                   )
                 {
                     $n_best = $n;
@@ -14379,6 +14375,7 @@ sub insert_breaks_before_list_opening_containers {
 
     my $rbreak_before_container_by_seqno =
       $self->[_rbreak_before_container_by_seqno_];
+    my $rK_weld_left = $self->[_rK_weld_left_];
 
     # scan the ends of all lines
     my @insert_list;
@@ -14410,7 +14407,7 @@ sub insert_breaks_before_list_opening_containers {
         next unless ( $rbreak_before_container_by_seqno->{$seqno} );
 
         # But never break a weld
-        next if ( $self->is_welded_left_at_K($Kend) );
+        next if ( $total_weld_count && defined( $rK_weld_left->{$Kend} ) );
 
         # Install a break before this opening token.
         my $Kbreak = $self->K_previous_nonblank($Kend);
@@ -20636,6 +20633,7 @@ sub make_paren_name {
         my $ris_bli_container        = $self->[_ris_bli_container_];
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
         my $rwant_reduced_ci         = $self->[_rwant_reduced_ci_];
+        my $rK_weld_left             = $self->[_rK_weld_left_];
 
         # we need to know the last token of this line
         my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
@@ -20744,10 +20742,10 @@ sub make_paren_name {
         # For -lp formatting use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
-        if ($seqno_qw_closing) {
+        if ( $seqno_qw_closing && $total_weld_count ) {
             my $K_next_nonblank = $self->K_next_code($K_beg);
-            if ( defined($K_next_nonblank)
-                && $self->is_welded_left_at_K($K_next_nonblank) )
+            if (   defined($K_next_nonblank)
+                && defined( $rK_weld_left->{$K_next_nonblank} ) )
             {
                 my $itest = $ibeg + ( $K_next_nonblank - $K_beg );
                 if ( $itest <= $max_index_to_go ) {
