@@ -96,9 +96,11 @@ sub write_line {
     my ( $self, $line ) = @_;
     my $fh = $self->{_fh};
 
-    my $output_file_open = $self->{_output_file_open};
-    chomp $line;
-    $line .= $self->{_line_separator};
+    my $line_separator = $self->{_line_separator};
+    if ( defined($line_separator) ) {
+        chomp $line;
+        $line .= $line_separator;
+    }
 
     $fh->print($line) if ( $self->{_output_file_open} );
 
