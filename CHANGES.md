@@ -15,6 +15,14 @@
       prevent formatting instability when line lengths are limited by the maximum line
       length. Most scripts will not be affected.
 
+    - Added flag -atnl, --add-terminal-newline, to help issue git #58.
+      This flag, which is enabled by default, allows perltidy to terminate
+      the last line of the output stream with a newline character, regardless
+      of whether or not the input stream was terminated with a newline
+      character.  If this flag is negated, with -natnl, then perltidy will
+      add a terminal newline to the the output stream only if the input
+      stream is terminated with a newline.
+
     - A more complete list of updates is at
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod

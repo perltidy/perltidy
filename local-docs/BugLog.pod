@@ -2,6 +2,21 @@
 
 =over 4
 
+=item B<Added flag -atnl, --add-terminal-newline, see git #58>
+
+This flag, which is enabled by default, allows perltidy to terminate the last
+line of the output stream with a newline character, regardless of whether or
+not the input stream was terminated with a newline character.  If this flag is
+negated, with B<-natnl>, then perltidy will add a terminal newline to the the
+output stream only if the input stream is terminated with a newline.
+
+Negating this flag may be useful for manipulating one-line scripts intended for
+use on a command line.
+
+This update also removes the description of the obsolete --check-syntax flag from the man pages and help text.
+
+18 Jun 2021.
+
 =item B<Allow --delete-side-comments to work with -nanl>
 
 The -nanl flag (--noadd-newlines) was preventing side comments from being
@@ -46,14 +61,14 @@ This update fixes the problem, case b1162.
 This is a minor optimization. These subs are eliminated:
 is_welded_right_at_K, is_welded_left_at_K, weld_len_right_at_K.
 
-17 Jun 2021.
+17 Jun 2021, 1691013.
 
 =item B<Update LineSink.pm to allow undefined line endings>
 
 This update is necessary to eventually prevent an unwanted
 terminal newline being added to a file.
 
-17 Jun 2021.
+17 Jun 2021, 2600533.
 
 =item B<Fix incorrect sub call>
 

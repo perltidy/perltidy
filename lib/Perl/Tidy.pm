@@ -1012,6 +1012,9 @@ EOM
             $buf .= $line;
         }
 
+        my $remove_terminal_newline =
+          !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
+
         # Decode the input stream if necessary requested
         my $encoding_in              = "";
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
@@ -1275,6 +1278,7 @@ EOM
         my ( $sink_object, $postfilter_buffer );
         my $use_buffer =
              $postfilter
+          || $remove_terminal_newline
           || $rOpts->{'assert-tidy'}
           || $rOpts->{'assert-untidy'};
 
@@ -1614,9 +1618,29 @@ EOM
                 rOpts                    => $rOpts,
                 rpending_logfile_message => $rpending_logfile_message,
             );
-            while ( my $line = $source_object->get_line() ) {
-                $sink_object->write_line($line);
+
+            # Copy the filtered buffer to the final destination
+            if ( !$remove_terminal_newline ) {
+                while ( my $line = $source_object->get_line() ) {
+                    $sink_object->write_line($line);
+                }
             }
+            else {
+
+                # Copy the filtered buffer but remove the newline char from the
+                # final line
+                my $line;
+                while ( my $next_line = $source_object->get_line() ) {
+                    $sink_object->write_line($line) if ($line);
+                    $line = $next_line;
+                }
+                if ($line) {
+                    $sink_object->set_line_separator(undef);
+                    chomp $line;
+                    $sink_object->write_line($line);
+                }
+            }
+
             $source_object->close_input_file();
         }
 
@@ -2222,6 +2246,7 @@ sub generate_options {
     $add_option->( 'standard-output',            'st',    '!' );
     $add_option->( 'use-unicode-gcstring',       'gcs',   '!' );
     $add_option->( 'warning-output',             'w',     '!' );
+    $add_option->( 'add-terminal-newline',       'atnl',  '!' );
 
     # options which are both toggle switches and values moved here
     # to hide from tidyview (which does not show category 0 flags):
@@ -2546,6 +2571,7 @@ sub generate_options {
     #---------------------------------------------------------------
     my @defaults = qw(
       add-newlines
+      add-terminal-newline
       add-semicolons
       add-whitespace
       blanks-before-blocks

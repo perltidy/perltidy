@@ -518,41 +518,6 @@ unstable editing).
 
 =back
 
-=item B<-syn>,   B<--check-syntax>      
-
-This flag is now ignored for safety, but the following documentation
-has been retained for reference.
-
-This flag causes perltidy to run C<perl -c -T> to check syntax of input
-and output.  (To change the flags passed to perl, see the next
-item, B<-pscf>).  The results are written to the F<.LOG> file, which
-will be saved if an error is detected in the output script.  The output
-script is not checked if the input script has a syntax error.  Perltidy
-does its own checking, but this option employs perl to get a "second
-opinion".
-
-If perl reports errors in the input file, they will not be reported in
-the error output unless the B<--warning-output> flag is given. 
-
-The default is B<NOT> to do this type of syntax checking (although
-perltidy will still do as much self-checking as possible).  The reason
-is that it causes all code in BEGIN blocks to be executed, for all
-modules being used, and this opens the door to security issues and
-infinite loops when running perltidy.
-
-=item B<-pscf=s>, B<-perl-syntax-check-flags=s>
-
-When perl is invoked to check syntax, the normal flags are C<-c -T>.  In
-addition, if the B<-x> flag is given to perltidy, then perl will also be
-passed a B<-x> flag.  It should not normally be necessary to change
-these flags, but it can be done with the B<-pscf=s> flag.  For example,
-if the taint flag, C<-T>, is not wanted, the flag could be set to be just
-B<-pscf=-c>.  
-
-Perltidy will pass your string to perl with the exception that it will
-add a B<-c> and B<-x> if appropriate.  The F<.LOG> file will show
-exactly what flags were passed to perl.
-
 =item B<-xs>,   B<--extended-syntax>      
 
 A problem with formatting Perl code is that some modules can introduce new
@@ -574,6 +539,7 @@ This flag is enabled by default but it can be deactivated with B<-nxs>.
 Probably the only reason to deactivate this flag is to generate more diagnostic
 messages when debugging a script.
 
+For another method of handling extended syntax see the section L<Skipping Selected Sections of Code>.
 
 =item B<-io>,   B<--indent-only>       
 
@@ -686,6 +652,17 @@ B<dos>, B<unix>, and B<mac> line endings.  It will only work if perltidy
 input comes from a filename (rather than stdin, for example).  If
 perltidy has trouble determining the input file line ending, it will
 revert to the default behavior of using the line ending of the host system.
+
+=item B<-atnl>,  B<--add-terminal-newline>
+
+This flag, which is enabled by default, allows perltidy to terminate the last
+line of the output stream with a newline character, regardless of whether or
+not the input stream was terminated with a newline character.  If this flag is
+negated, with B<-natnl>, then perltidy will add a terminal newline to the the
+output stream only if the input stream is terminated with a newline.
+
+Negating this flag may be useful for manipulating one-line scripts intended for
+use on a command line.
 
 =item B<-it=n>,   B<--iterations=n>
 
@@ -4216,15 +4193,16 @@ Space before and after the curly braces is optional.
 
 For a specific example, the following line
 
-        oneliner { --maximum-line-length=0 --noadd-newlines }
+        oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}
 
 or equivalently with abbreviations
 
-	oneliner { -l=0 -nanl }
+	oneliner { -l=0 -nanl -natnl }
 
 could be placed in a F<.perltidyrc> file to temporarily override the maximum
-line length with a large value, and to temporarily prevent newlines from being
-added.  All other settings in the F<.perltidyrc> file still apply.  Thus it
+line length with a large value, to temporarily prevent new line breaks from
+being added, and to prevent an extra newline character from being added the
+file.  All other settings in the F<.perltidyrc> file still apply.  Thus it
 provides a way to format a long 'one liner' when perltidy is invoked with
 
 	perltidy --oneliner ...
