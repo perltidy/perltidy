@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Allow --delete-side-comments to work with -nanl>
+
+The -nanl flag (--noadd-newlines) was preventing side comments from being
+deleted, for example:
+
+    # perltidy -dsc -nanl
+    calc()    # side comment
+
+The same issue was happening for --delete-closing-side comments.
+This has been fixed.
+
+18 Jun 2021.
+
 =item B<Update welding rule to avoid unstable states>
 
 Testing with random input parameters produced a formatting instability

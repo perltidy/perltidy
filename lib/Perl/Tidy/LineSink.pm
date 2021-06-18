@@ -91,6 +91,12 @@ EOM
     }, $class;
 }
 
+sub set_line_separator {
+    my ( $self, $val ) = @_;
+    $self->{_line_separator} = $val;
+    return;
+}
+
 sub write_line {
 
     my ( $self, $line ) = @_;

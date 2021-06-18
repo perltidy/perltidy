@@ -4634,14 +4634,21 @@ sub make_closing_side_comment_prefix {
               && defined($Kfirst)
               && $rLL->[$Klimit]->[_TYPE_] eq '#'
               && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' )
-              && ( !$CODE_type || $CODE_type eq 'HSC' || $CODE_type eq 'IO' );
+              && (!$CODE_type
+                || $CODE_type eq 'HSC'
+                || $CODE_type eq 'IO'
+                || $CODE_type eq 'NIN' );
 
-            if (   $rOpts_delete_closing_side_comments
+            if (
+                   $rOpts_delete_closing_side_comments
                 && !$delete_side_comment
                 && defined($Kfirst)
                 && $Klimit > $Kfirst
                 && $rLL->[$Klimit]->[_TYPE_] eq '#'
-                && ( !$CODE_type || $CODE_type eq 'HSC' || $CODE_type eq 'IO' )
+                && (  !$CODE_type
+                    || $CODE_type eq 'HSC'
+                    || $CODE_type eq 'IO'
+                    || $CODE_type eq 'NIN' )
               )
             {
                 my $token  = $rLL->[$Klimit]->[_TOKEN_];
