@@ -2,6 +2,18 @@
 
 =over 4
 
+=item B<Adjust tolerances to fix some unstable edge cases>
+
+Testing with randim input parameters produced a number of edge cases of
+unstable formatting which were traced to the parameter combinations which
+included -bbxi=2 and -cab=2.  A small adjustment to length tolerances was made
+to fix the problem.
+
+This fixes cases b1137 b1149 b1150 b1155 b1158 b1159 b1160 b1161 b1166 b1167
+b1168.
+
+19 Jun 2021.
+
 =item B<Added flag -atnl, --add-terminal-newline, see git #58>
 
 This flag, which is enabled by default, allows perltidy to terminate the last
@@ -15,7 +27,7 @@ use on a command line.
 
 This update also removes the description of the obsolete --check-syntax flag from the man pages and help text.
 
-18 Jun 2021.
+18 Jun 2021, 6f83170.
 
 =item B<Allow --delete-side-comments to work with -nanl>
 
@@ -28,7 +40,7 @@ deleted, for example:
 The same issue was happening for --delete-closing-side comments.
 This has been fixed.
 
-18 Jun 2021.
+18 Jun 2021, dbfd802.
 
 =item B<Update welding rule to avoid unstable states>
 
@@ -54,7 +66,7 @@ and the following code
 
 This update fixes the problem, case b1162.
 
-18 Jun 2021.
+18 Jun 2021, 76873ea.
 
 =item B<Convert some weld sub calls to hash lookups>
 

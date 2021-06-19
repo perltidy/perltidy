@@ -15751,6 +15751,8 @@ sub set_continuation_breaks {
         my $rLL                  = $self->[_rLL_];
         my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
         my $ris_broken_container = $self->[_ris_broken_container_];
+        my $rbreak_before_container_by_seqno =
+          $self->[_rbreak_before_container_by_seqno_];
 
         $starting_depth = $nesting_depth_to_go[0];
 
@@ -16198,6 +16200,18 @@ sub set_continuation_breaks {
                       && $ris_broken_container->{$type_sequence}
                       ? $length_tol + $length_tol_boost
                       : $length_tol;
+
+                    # Patch to avoid blinking with -bbxi=2 and -cab=2
+                    # in which variations in -ci cause unstable formatting
+                    # in edge cases. We just always add one ci level so that
+                    # the formatting is independent of the -BBX results.
+                    # Fixes cases b1137 b1149 b1150 b1155 b1158 b1159 b1160
+                    # b1161 b1166 b1167 b1168
+                    if (  !$ci_levels_to_go[$i_opening]
+                        && $rbreak_before_container_by_seqno->{$type_sequence} )
+                    {
+                        $tol += $rOpts->{'continuation-indentation'};
+                    }
 
                     $is_long_term = $excess + $tol > 0;
 
