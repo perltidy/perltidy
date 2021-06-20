@@ -2,6 +2,10 @@
 package main;
 use Perl::Tidy;
 
+# Note: This program is no longer necessary because this capability is now
+# built into perltidy, but the prograim is a good example of the use of
+# prefilters and postfilters.
+
 =pod
 
 Hide sections of as script from perltidy which are between special comments,

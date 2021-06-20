@@ -86,6 +86,8 @@ foreach my $word ( sort (@short_list, @special) ) {
         $line  = " ";
     }
 }
+
+$line =~ s/\s+$//;
 print "$line\n";
 
 sub get_long_names {
