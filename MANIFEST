@@ -24,6 +24,7 @@ examples/lextest
 examples/perlcomment.pl
 examples/perllinetype.pl
 examples/perlmask.pl
+examples/perltidy_hide.pl
 examples/perltidy_okw.pl
 examples/perltidyrc_dump.pl
 examples/perlxmltok.pl

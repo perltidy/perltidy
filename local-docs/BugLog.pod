@@ -4,7 +4,7 @@
 
 =item B<Adjust tolerances to fix some unstable edge cases>
 
-Testing with randim input parameters produced a number of edge cases of
+Testing with random input parameters produced a number of edge cases of
 unstable formatting which were traced to the parameter combinations which
 included -bbxi=2 and -cab=2.  A small adjustment to length tolerances was made
 to fix the problem.

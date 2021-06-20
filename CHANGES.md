@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 xx xx
+## 2021 04 02.01
 
     - Added a new option '--code-skipping', requested in git #65, in which code
       between comment lines '#<<V' and '#>>V' is passed verbatim to the output
@@ -23,7 +23,7 @@
       add a terminal newline to the the output stream only if the input
       stream is terminated with a newline.
 
-    - A more complete list of updates is at
+    - Numerous minor fixes have been made. A more complete list of updates is at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
