@@ -15468,9 +15468,29 @@ sub set_continuation_breaks {
         # necessary for -lp which has a more variable indentation.  At least 3
         # characters have been found to be required.
         # Fixes cases b1059 b1063 b1117.
-        $length_tol_boost = 0;
-        if ($rOpts_line_up_parentheses) { $length_tol_boost = 3 }
 
+        # Testing shows that we need a total of 3 extra spaces when -lp is set
+        # for non-lists, and at least 2 spaces when -lp and -xci are set.
+        # The following formulation is a minimal set of values which works.
+        # Fixes cases b1063 b1103 b1134 b1135 b1136 b1138 b1140 b1143 b1144
+        # b1145 b1146 b1147 b1148 b1151 b1152 b1153 b1154 b1156 b1157 b1164
+        # b1165
+        $length_tol_boost = 0;
+        if ($rOpts_line_up_parentheses) {
+
+            if ( $rOpts->{'extended-continuation-indentation'} ) {
+                $length_tol += 2;
+                $length_tol_boost = 1;
+            }
+            else {
+                $length_tol_boost = 3;
+            }
+        }
+
+        # The -xci option alone also needs a slightly larger tol for non-lists
+        elsif ( $rOpts->{'extended-continuation-indentation'} ) {
+               $length_tol_boost = 1;
+        }
         return;
     }
 
@@ -16196,8 +16216,8 @@ sub set_continuation_breaks {
                       $self->excess_line_length( $i_opening_minus, $i );
 
                     my $tol =
-                         $length_tol_boost
-                      && $ris_broken_container->{$type_sequence}
+                      $length_tol_boost
+                      && !$ris_list_by_seqno->{$type_sequence}
                       ? $length_tol + $length_tol_boost
                       : $length_tol;
 
