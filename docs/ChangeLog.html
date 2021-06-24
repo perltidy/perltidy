@@ -1,5 +1,38 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2021 06 25</h2>
+
+<pre><code>- This release adds several new requested parameters.  No significant bugs have 
+  been found since the last release, but a number of minor problems have been 
+  corrected.
+
+- Added a new option '--code-skipping', requested in git #65, in which code
+  between comment lines '#&lt;&lt;V' and '#&gt;&gt;V' is passed verbatim to the output
+  stream without error checking.  It is simmilar to --format-skipping
+  but there is no error checking of the skipped code. This can be useful for 
+  skipping past code which employs an extended syntax.
+
+- Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
+
+- Added flag -atnl, --add-terminal-newline, to help issue git #58.
+  This flag tells perltidy to terminate the last line of the output stream 
+  with a newline character, regardless of whether or not the input stream 
+  was terminated with a newline character.  This is the default.
+  If this flag is negated, with -natnl, then perltidy will add a terminal
+  newline character to the the output stream only if the input
+  stream is terminated with a newline.
+
+- Some nested structures formatted with the -lp indentation option may have
+  some changes in indentation.  This is due to updates which were made to
+  prevent formatting instability when line lengths are limited by the maximum line
+  length. Most scripts will not be affected. If this causes unwanted formatting
+  changes, try increasing the --maximum-line-length by a few characters.
+
+- Numerous minor fixes have been made. A complete list is at:
+
+       https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+</code></pre>
+
 <h2>2021 04 02</h2>
 
 <pre><code>- This release fixes several non-critical bugs which have been found since the last

@@ -425,26 +425,6 @@
 </dl>
 
 </dd>
-<dt id="syn---check-syntax"><b>-syn</b>, <b>--check-syntax</b></dt>
-<dd>
-
-<p>This flag is now ignored for safety, but the following documentation has been retained for reference.</p>
-
-<p>This flag causes perltidy to run <code>perl -c -T</code> to check syntax of input and output. (To change the flags passed to perl, see the next item, <b>-pscf</b>). The results are written to the <i>.LOG</i> file, which will be saved if an error is detected in the output script. The output script is not checked if the input script has a syntax error. Perltidy does its own checking, but this option employs perl to get a &quot;second opinion&quot;.</p>
-
-<p>If perl reports errors in the input file, they will not be reported in the error output unless the <b>--warning-output</b> flag is given.</p>
-
-<p>The default is <b>NOT</b> to do this type of syntax checking (although perltidy will still do as much self-checking as possible). The reason is that it causes all code in BEGIN blocks to be executed, for all modules being used, and this opens the door to security issues and infinite loops when running perltidy.</p>
-
-</dd>
-<dt id="pscf-s--perl-syntax-check-flags-s"><b>-pscf=s</b>, <b>-perl-syntax-check-flags=s</b></dt>
-<dd>
-
-<p>When perl is invoked to check syntax, the normal flags are <code>-c -T</code>. In addition, if the <b>-x</b> flag is given to perltidy, then perl will also be passed a <b>-x</b> flag. It should not normally be necessary to change these flags, but it can be done with the <b>-pscf=s</b> flag. For example, if the taint flag, <code>-T</code>, is not wanted, the flag could be set to be just <b>-pscf=-c</b>.</p>
-
-<p>Perltidy will pass your string to perl with the exception that it will add a <b>-c</b> and <b>-x</b> if appropriate. The <i>.LOG</i> file will show exactly what flags were passed to perl.</p>
-
-</dd>
 <dt id="xs---extended-syntax"><b>-xs</b>, <b>--extended-syntax</b></dt>
 <dd>
 
@@ -459,6 +439,8 @@
 <p>For one of the extensions, module Switch::Plain, colons are marked as labels. If you use this module, you may want to also use the <b>--nooutdent-labels</b> flag to prevent lines such as &#39;default:&#39; from being outdented.</p>
 
 <p>This flag is enabled by default but it can be deactivated with <b>-nxs</b>. Probably the only reason to deactivate this flag is to generate more diagnostic messages when debugging a script.</p>
+
+<p>For another method of handling extended syntax see the section <a href="#Skipping-Selected-Sections-of-Code">&quot;Skipping Selected Sections of Code&quot;</a>.</p>
 
 </dd>
 <dt id="io---indent-only"><b>-io</b>, <b>--indent-only</b></dt>
@@ -525,6 +507,14 @@
 <dd>
 
 <p>This flag tells perltidy to write its output files with the same line endings as the input file, if possible. It should work for <b>dos</b>, <b>unix</b>, and <b>mac</b> line endings. It will only work if perltidy input comes from a filename (rather than stdin, for example). If perltidy has trouble determining the input file line ending, it will revert to the default behavior of using the line ending of the host system.</p>
+
+</dd>
+<dt id="atnl---add-terminal-newline"><b>-atnl</b>, <b>--add-terminal-newline</b></dt>
+<dd>
+
+<p>This flag, which is enabled by default, allows perltidy to terminate the last line of the output stream with a newline character, regardless of whether or not the input stream was terminated with a newline character. If this flag is negated, with <b>-natnl</b>, then perltidy will add a terminal newline to the the output stream only if the input stream is terminated with a newline.</p>
+
+<p>Negating this flag may be useful for manipulating one-line scripts intended for use on a command line.</p>
 
 </dd>
 <dt id="it-n---iterations-n"><b>-it=n</b>, <b>--iterations=n</b></dt>
@@ -632,11 +622,13 @@
 
 <p>If the available line length (see <b>-l=n</b> ) does not permit this much space, perltidy will use less. For alternate placement of the closing paren, see the next section.</p>
 
-<p>This option has no effect on code BLOCKS, such as if/then/else blocks, which always use whatever is specified with <b>-i=n</b>. Also, the existence of line breaks and/or block comments between the opening and closing parens may cause perltidy to temporarily revert to its default method.</p>
+<p>This option has no effect on code BLOCKS, such as if/then/else blocks, which always use whatever is specified with <b>-i=n</b>.</p>
 
-<p>Note: The <b>-lp</b> option may not be used together with the <b>-t</b> tabs option. It may, however, be used with the <b>-et=n</b> tab method.</p>
+<p>In situations where perltidy does not have complete freedom to choose line breaks it may temporarily revert to its default indentation method. This can occur for example if there are blank lines, block comments, multi-line quotes, or side comments between the opening and closing parens, braces, or brackets.</p>
 
 <p>In addition, any parameter which significantly restricts the ability of perltidy to choose newlines will conflict with <b>-lp</b> and will cause <b>-lp</b> to be deactivated. These include <b>-io</b>, <b>-fnl</b>, <b>-nanl</b>, and <b>-ndnl</b>. The reason is that the <b>-lp</b> indentation style can require the careful coordination of an arbitrary number of break points in hierarchical lists, and these flags may prevent that.</p>
+
+<p>The <b>-lp</b> option may not be used together with the <b>-t</b> tabs option. It may, however, be used with the <b>-et=n</b> tab method.</p>
 
 </dd>
 <dt id="lpxl-s---line-up-parentheses-exclusion-list"><b>-lpxl=s</b>, <b>--line-up-parentheses-exclusion-list</b></dt>
@@ -1552,16 +1544,13 @@
 
 <h2 id="Skipping-Selected-Sections-of-Code">Skipping Selected Sections of Code</h2>
 
-<p>Selected lines of code may be passed verbatim to the output without any formatting. This feature is enabled by default but can be disabled with the <b>--noformat-skipping</b> or <b>-nfs</b> flag. It should be used sparingly to avoid littering code with markers, but it might be helpful for working around occasional problems. For example it might be useful for keeping the indentation of old commented code unchanged, keeping indentation of long blocks of aligned comments unchanged, keeping certain list formatting unchanged, or working around a glitch in perltidy.</p>
+<p>Selected lines of code may be passed verbatim to the output without any formatting by marking the starting and ending lines with special comments. There are two options for doing this. The first option is called <b>--format-skipping</b> or <b>-fs</b>, and the second option is called <b>--code-skipping</b> or <b>-cs</b>.</p>
 
-<dl>
+<p>In both cases the lines of code will be output without any changes. The difference is that in <b>--format-skipping</b> perltidy will still parse the marked lines of code and check for errors, whereas in <b>--code-skipping</b> perltidy will simply pass the lines to the output without any checking.</p>
 
-<dt id="fs---format-skipping"><b>-fs</b>, <b>--format-skipping</b></dt>
-<dd>
+<p>Both of these features are enabled by default and are invoked with special comment markers. <b>--format-skipping</b> uses starting and ending markers &#39;#&lt;&lt;&lt;&#39; and &#39;#&gt;&gt;&gt;&#39;, like this:</p>
 
-<p>This flag, which is enabled by default, causes any code between special beginning and ending comment markers to be passed to the output without formatting. The default beginning marker is #&lt;&lt;&lt; and the default ending marker is #&gt;&gt;&gt; but they may be changed (see next items below). Additional text may appear on these special comment lines provided that it is separated from the marker by at least one space. For example</p>
-
-<pre><code> #&lt;&lt;&lt;  do not let perltidy touch this
+<pre><code> #&lt;&lt;&lt;  format skipping: do not let perltidy change my nice formatting
     my @list = (1,
                 1, 1,
                 1, 2, 1,
@@ -1569,15 +1558,46 @@
                 1, 4, 6, 4, 1,);
  #&gt;&gt;&gt;</code></pre>
 
-<p>Format skipping begins when a format skipping comment is seen and continues until either a format-skipping end pattern is found or until the end of file.</p>
+<p><b>--code-skipping</b> uses starting and ending markers &#39;#&lt;&lt;V&#39; and &#39;#&gt;&gt;V&#39;, like this:</p>
 
-<p>The comment markers may be placed at any location that a block comment may appear. If they do not appear to be working, use the -log flag and examine the <i>.LOG</i> file. Use <b>-nfs</b> to disable this feature.</p>
+<pre><code> #&lt;&lt;V  code skipping: perltidy will pass this verbatim without error checking
 
-<p>This method works for any code. For the specific case of a comma-separated list of values, as in this example, another possibility is to insert a blank or comment somewhere between the opening and closing parens. See the section <a href="#Controlling-List-Formatting">&quot;Controlling List Formatting&quot;</a>.</p>
+    token ident_digit {
+        [ [ &lt;?word&gt; | _ | &lt;?digit&gt; ] &lt;?ident_digit&gt;
+        |   &lt;&#39;&#39;&gt;
+        ]
+    };
+
+ #&gt;&gt;V</code></pre>
+
+<p>Additional text may appear on the special comment lines provided that it is separated from the marker by at least one space, as in the above examples.</p>
+
+<p>It is recommended to use <b>--code-skipping</b> only if you need to hide a block of an extended syntax which would produce errors if parsed by perltidy, and use <b>--format-skipping</b> otherwise. This is because the <b>--format-skipping</b> option provides the benefits of error checking, and there are essentially no limitations on which lines to which it can be applied. The <b>--code-skipping</b> option, on the other hand, does not do error checking and its use is more restrictive because the code which remains, after skipping the marked lines, must be syntactically correct code with balanced containers.</p>
+
+<p>These features should be used sparingly to avoid littering code with markers, but they can be helpful for working around occasional problems.</p>
+
+<p>Note that it may be possible to avoid the use of <b>--format-skipping</b> for the specific case of a comma-separated list of values, as in the above example, by simply inserting a blank or comment somewhere between the opening and closing parens. See the section <a href="#Controlling-List-Formatting">&quot;Controlling List Formatting&quot;</a>.</p>
+
+<p>The following sections describe the available controls for these options. They should not normally be needed.</p>
+
+<dl>
+
+<dt id="fs---format-skipping"><b>-fs</b>, <b>--format-skipping</b></dt>
+<dd>
+
+<p>As explained above, this flag, which is enabled by default, causes any code between special beginning and ending comment markers to be passed to the output without formatting. The code between the comments is still checked for errors however. The default beginning marker is #&lt;&lt;&lt; and the default ending marker is #&gt;&gt;&gt;.</p>
+
+<p>Format skipping begins when a format skipping beginning comment is seen and continues until a format-skipping ending comment is found.</p>
+
+<p>This feature can be disabled with <b>-nfs</b>. This should not normally be necessary.</p>
 
 </dd>
 <dt id="fsb-string---format-skipping-begin-string"><b>-fsb=string</b>, <b>--format-skipping-begin=string</b></dt>
 <dd>
+
+<p>This and the next parameter allow the special beginning and ending comments to be changed. However, it is recommended that they only be changed if there is a conflict between the default values and some other use. If they are used, it is recommended that they only be entered in a <b>.perltidyrc</b> file, rather than on a command line. This is because properly escaping these parameters on a command line can be difficult.</p>
+
+<p>If changed comment markers do not appear to be working, use the <b>-log</b> flag and examine the <i>.LOG</i> file to see if and where they are being detected.</p>
 
 <p>The <b>-fsb=string</b> parameter may be used to change the beginning marker for format skipping. The default is equivalent to -fsb=&#39;#&lt;&lt;&lt;&#39;. The string that you enter must begin with a # and should be in quotes as necessary to get past the command shell of your system. It is actually the leading text of a pattern that is constructed by appending a &#39;\s&#39;, so you must also include backslashes for characters to be taken literally rather than as patterns.</p>
 
@@ -1594,6 +1614,26 @@
 <p>The <b>-fse=string</b> is the corresponding parameter used to change the ending marker for format skipping. The default is equivalent to -fse=&#39;#&lt;&lt;&lt;&#39;.</p>
 
 <p>The beginning and ending strings may be the same, but it is preferable to make them different for clarity.</p>
+
+</dd>
+<dt id="cs---code-skipping"><b>-cs</b>, <b>--code-skipping</b></dt>
+<dd>
+
+<p>As explained above, this flag, which is enabled by default, causes any code between special beginning and ending comment markers to be directly passed to the output without any error checking or formatting. Essentially, perltidy treats it as if it were a block of arbitrary text. The default beginning marker is #&lt;&lt;V and the default ending marker is #&gt;&gt;V.</p>
+
+<p>This feature can be disabled with <b>-ncs</b>. This should not normally be necessary.</p>
+
+</dd>
+<dt id="csb-string---code-skipping-begin-string"><b>-csb=string</b>, <b>--code-skipping-begin=string</b></dt>
+<dd>
+
+<p>This may be used to change the beginning comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fsb=string</b>. The default is equivalent to -csb=&#39;#&lt;&lt;V&#39;.</p>
+
+</dd>
+<dt id="cse-string---code-skipping-end-string"><b>-cse=string</b>, <b>--code-skipping-end=string</b></dt>
+<dd>
+
+<p>This may be used to change the ending comment for a <b>--code-skipping</b> section, and its use is similar to the <b>-fse=string</b>. The default is equivalent to -cse=&#39;#&gt;&gt;V&#39;.</p>
 
 </dd>
 </dl>
@@ -2105,10 +2145,12 @@
 
 <pre><code>    &#39;^(&#39;   - the weld must not start with a paren
     &#39;.(&#39;   - the second and later tokens may not be parens
+    &#39;.w(&#39;  - the second and later tokens may not keyword or function call parens
     &#39;(&#39;    - no parens in a weld
     &#39;^K(&#39;  - exclude a leading paren preceded by a non-keyword
     &#39;.k(&#39;  - exclude a secondary paren preceded by a keyword
-    &#39;[ {&#39;  - exclude all brackets and braces</code></pre>
+    &#39;[ {&#39;  - exclude all brackets and braces
+    &#39;[ ( ^K{&#39; - exclude everything except nested structures like do {{  ... }}</code></pre>
 
 </dd>
 <dt id="Vertical-tightness-of-non-block-curly-braces-parentheses-and-square-brackets"><b>Vertical tightness</b> of non-block curly braces, parentheses, and square brackets.</dt>
@@ -2135,9 +2177,11 @@
  -vtc=1 do not break before a closing token which is followed 
         by a semicolon or another closing token, and is not in 
         a list environment.
- -vtc=2 never break before a closing token.</code></pre>
+ -vtc=2 never break before a closing token.
+ -vtc=3 Like -vtc=1 except always break before a closing token
+        if the corresponding opening token follows an = or =&gt;.</code></pre>
 
-<p>The rules for <b>-vtc=1</b> are designed to maintain a reasonable balance between tightness and readability in complex lists.</p>
+<p>The rules for <b>-vtc=1</b> and <b>-vtc=3</b> are designed to maintain a reasonable balance between tightness and readability in complex lists.</p>
 
 </li>
 <li><p>Different controls may be applied to different token types, and it is also possible to control block braces; see below.</p>
@@ -2169,7 +2213,24 @@
     %romanNumerals = ( one   =&gt; &#39;I&#39;,
                        two   =&gt; &#39;II&#39;,
                        three =&gt; &#39;III&#39;,
-                       four  =&gt; &#39;IV&#39;, );</code></pre>
+                       four  =&gt; &#39;IV&#39;, );
+
+    # perltidy -vtc=3
+    my_function(
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;, );
+
+    # perltidy -vtc=3
+    %romanNumerals = (
+        one   =&gt; &#39;I&#39;,
+        two   =&gt; &#39;II&#39;,
+        three =&gt; &#39;III&#39;,
+        four  =&gt; &#39;IV&#39;,
+    );</code></pre>
+
+<p>In the last example for <b>-vtc=3</b>, the opening paren is preceded by an equals so the closing paren is placed on a new line.</p>
 
 <p>The difference between <b>-vt=1</b> and <b>-vt=2</b> is shown here:</p>
 
@@ -2198,13 +2259,13 @@
 
 <p>The <b>-vt=n</b> and <b>-vtc=n</b> parameters apply to each type of container token. If desired, vertical tightness controls can be applied independently to each of the closing container token types.</p>
 
-<p>The parameters for controlling parentheses are <b>-pvt=n</b> or <b>--paren-vertical-tightness=n</b>, and <b>-pcvt=n</b> or <b>--paren-vertical-tightness-closing=n</b>.</p>
+<p>The parameters for controlling parentheses are <b>-pvt=n</b> or <b>--paren-vertical-tightness=n</b>, and <b>-pvtc=n</b> or <b>--paren-vertical-tightness-closing=n</b>.</p>
 
-<p>Likewise, the parameters for square brackets are <b>-sbvt=n</b> or <b>--square-bracket-vertical-tightness=n</b>, and <b>-sbcvt=n</b> or <b>--square-bracket-vertical-tightness-closing=n</b>.</p>
+<p>Likewise, the parameters for square brackets are <b>-sbvt=n</b> or <b>--square-bracket-vertical-tightness=n</b>, and <b>-sbvtc=n</b> or <b>--square-bracket-vertical-tightness-closing=n</b>.</p>
 
-<p>Finally, the parameters for controlling non-code block braces are <b>-bvt=n</b> or <b>--brace-vertical-tightness=n</b>, and <b>-bcvt=n</b> or <b>--brace-vertical-tightness-closing=n</b>.</p>
+<p>Finally, the parameters for controlling non-code block braces are <b>-bvt=n</b> or <b>--brace-vertical-tightness=n</b>, and <b>-bvtc=n</b> or <b>--brace-vertical-tightness-closing=n</b>.</p>
 
-<p>In fact, the parameter <b>-vt=n</b> is actually just an abbreviation for <b>-pvt=n -bvt=n sbvt=n</b>, and likewise <b>-vtc=n</b> is an abbreviation for <b>-pvtc=n -bvtc=n sbvtc=n</b>.</p>
+<p>In fact, the parameter <b>-vt=n</b> is actually just an abbreviation for <b>-pvt=n -bvt=n sbvt=n</b>, and likewise <b>-vtc=n</b> is an abbreviation for <b>-pvtc=n -bvtc=n -sbvtc=n</b>.</p>
 
 </dd>
 <dt id="bbvt-n-or---block-brace-vertical-tightness-n"><b>-bbvt=n</b> or <b>--block-brace-vertical-tightness=n</b></dt>
@@ -2554,7 +2615,8 @@
 
 <p>This flag will also look for and keep a &#39;cuddled&#39; style of calls, in which lines begin with a closing paren followed by a call arrow, as in this example:</p>
 
-<pre><code>  my $q = $rs-&gt;related_resultset(
+<pre><code>  # perltidy -bom -wn
+  my $q = $rs-&gt;related_resultset(
       &#39;CDs&#39;
   )-&gt;related_resultset(
       &#39;Tracks&#39;
@@ -2792,7 +2854,7 @@
 
 <pre><code>  perltidy -blao=2 -blbc=2 -blaol=&#39;*&#39; -blbcl=&#39;*&#39; filename</code></pre>
 
-<p>Now suppose the script continues to be developed, but at some later date we decide we don&#39;t want these spaces after all. we might expect that running with the flags <b>-blao=0</b> and <b>-blbc=0</b> will undo them. However, by default perltidy retains single blank lines, so the blank lines remain.</p>
+<p>Now suppose the script continues to be developed, but at some later date we decide we don&#39;t want these spaces after all. We might expect that running with the flags <b>-blao=0</b> and <b>-blbc=0</b> will undo them. However, by default perltidy retains single blank lines, so the blank lines remain.</p>
 
 <p>We can easily fix this by telling perltidy to ignore old blank lines by including the added parameter <b>-kbl=0</b> and rerunning. Then the unwanted blank lines will be gone. However, this will cause all old blank lines to be ignored, perhaps even some that were added by hand to improve formatting. So please be cautious when using these parameters.</p>
 
@@ -3224,15 +3286,21 @@
         -opt2
         }</code></pre>
 
-<p>where <b>newword</b> is the abbreviation, and <b>opt1</b>, etc, are existing parameters <i>or other abbreviations</i>. The main syntax requirement is that the new abbreviation along with its opening curly brace must begin on a new line. Space before and after the curly braces is optional. For a specific example, the following line</p>
+<p>where <b>newword</b> is the abbreviation, and <b>opt1</b>, etc, are existing parameters <i>or other abbreviations</i>. The main syntax requirement is that the new abbreviation along with its opening curly brace must begin on a new line. Space before and after the curly braces is optional.</p>
 
-<pre><code>        airy {-bl -pt=0 -bt=0 -sbt=0}</code></pre>
+<p>For a specific example, the following line</p>
 
-<p>could be placed in a <i>.perltidyrc</i> file, and then invoked at will with</p>
+<pre><code>        oneliner { --maximum-line-length=0 --noadd-newlines --noadd-terminal-newline}</code></pre>
 
-<pre><code>        perltidy -airy somefile.pl</code></pre>
+<p>or equivalently with abbreviations</p>
 
-<p>(Either <code>-airy</code> or <code>--airy</code> may be used).</p>
+<pre><code>        oneliner { -l=0 -nanl -natnl }</code></pre>
+
+<p>could be placed in a <i>.perltidyrc</i> file to temporarily override the maximum line length with a large value, to temporarily prevent new line breaks from being added, and to prevent an extra newline character from being added the file. All other settings in the <i>.perltidyrc</i> file still apply. Thus it provides a way to format a long &#39;one liner&#39; when perltidy is invoked with</p>
+
+<pre><code>        perltidy --oneliner ...</code></pre>
+
+<p>(Either <code>-oneliner</code> or <code>--oneliner</code> may be used).</p>
 
 </dd>
 <dt id="Skipping-leading-non-perl-commands-with--x-or---look-for-hash-bang">Skipping leading non-perl commands with <b>-x</b> or <b>--look-for-hash-bang</b></dt>
@@ -3539,23 +3607,23 @@
 
 <p>The following list shows all short parameter names which allow a prefix &#39;n&#39; to produce the negated form:</p>
 
-<pre><code> D      anl    asbl   asc    ast    asu    aws    b      baa    baao   
- bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc    bok    
- bol    bom    bos    bot    cblx   ce     conv   csc    cscb   cscw   
- dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop    dp     dpro   
- dsc    dsm    dsn    dtt    dwls   dwrs   dws    f      fll    frm    
- fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    
- hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    
- hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik    
- him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    
- hsc    html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   
- kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr   
- okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr    
- ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    
- scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    
- sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp     
- tqw    trp    ts     tsc    tso    vmll   w      wn     x      xci    
- xs     </code></pre>
+<pre><code> D      anl    asbl   asc    ast    asu    atnl   aws    b      baa
+ baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc
+ bok    bol    bom    bos    bot    cblx   ce     conv   cs     csc
+ cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop
+ dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    f
+ fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
+ hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
+ hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
+ hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
+ hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    isbc
+ iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
+ mem    nib    ohbr   okw    ola    olc    oll    olq    opr    opt
+ osbc   osbr   otr    ple    pod    pvl    q      sac    sbc    sbl
+ scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
+ sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
+ tbc    toc    tp     tqw    trp    ts     tsc    tso    vmll   w
+ wn     x      xci    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -3633,7 +3701,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20210402</p>
+<p>This man page documents perltidy version 20210625</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

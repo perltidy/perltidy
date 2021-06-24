@@ -70,6 +70,6 @@ are mainly for older sytems but also tell how to use perltidy without doing an i
 
 ## FEEDBACK / BUG REPORTS
 
-A list of current bugs and issues can be found at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)
+The best place to report bugs and issues is [GitHub](https://github.com/perltidy/perltidy/issues)
 
-To report a new bug or problem, use the link on this page .
+Bugs and issues can also be reported at the CPAN site [https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy)

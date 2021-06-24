@@ -1,29 +1,34 @@
 # Perltidy Change Log
 
-## 2021 04 02.01
+## 2021 06 25
+
+    - This release adds several new requested parameters.  No significant bugs have
+      been found since the last release, but a number of minor problems have been
+      corrected.
 
     - Added a new option '--code-skipping', requested in git #65, in which code
       between comment lines '#<<V' and '#>>V' is passed verbatim to the output
-      stream without error checking.  It is simmilar to --format skipping
-      but there is no error checking, and is useful for skipping an extended
-      syntax.
+      stream without error checking.  It is simmilar to --format-skipping
+      but there is no error checking of the skipped code. This can be useful for
+      skipping past code which employs an extended syntax.
 
     - Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
 
-    - Some nested structures formatted with the -lp indentation option may have
-      some changes in indentation.  This is due to some updates which were made to
-      prevent formatting instability when line lengths are limited by the maximum line
-      length. Most scripts will not be affected.
-
     - Added flag -atnl, --add-terminal-newline, to help issue git #58.
-      This flag, which is enabled by default, allows perltidy to terminate
-      the last line of the output stream with a newline character, regardless
-      of whether or not the input stream was terminated with a newline
-      character.  If this flag is negated, with -natnl, then perltidy will
-      add a terminal newline to the the output stream only if the input
+      This flag tells perltidy to terminate the last line of the output stream
+      with a newline character, regardless of whether or not the input stream
+      was terminated with a newline character.  This is the default.
+      If this flag is negated, with -natnl, then perltidy will add a terminal
+      newline character to the the output stream only if the input
       stream is terminated with a newline.
 
-    - Numerous minor fixes have been made. A more complete list of updates is at:
+    - Some nested structures formatted with the -lp indentation option may have
+      some changes in indentation.  This is due to updates which were made to
+      prevent formatting instability when line lengths are limited by the maximum line
+      length. Most scripts will not be affected. If this causes unwanted formatting
+      changes, try increasing the --maximum-line-length by a few characters.
+
+    - Numerous minor fixes have been made. A complete list is at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 

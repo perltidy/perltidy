@@ -49,7 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20210402.01';
+our $VERSION = '20210625';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -15489,7 +15489,7 @@ sub set_continuation_breaks {
 
         # The -xci option alone also needs a slightly larger tol for non-lists
         elsif ( $rOpts->{'extended-continuation-indentation'} ) {
-               $length_tol_boost = 1;
+            $length_tol_boost = 1;
         }
         return;
     }

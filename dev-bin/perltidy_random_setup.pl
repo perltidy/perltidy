@@ -1118,6 +1118,9 @@ EOM
           delete-pod
           tabs
           entab-leading-whitespace
+          recombine
+          code-skipping-begin
+          code-skipping-end
         );
 
         my %skip;
