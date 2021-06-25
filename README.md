@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/perltidy/perltidy.svg?branch=master)](https://travis-ci.org/perltidy/perltidy)
+[![Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
 
 # Welcome to Perltidy
 
