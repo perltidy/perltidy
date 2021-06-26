@@ -1,6 +1,25 @@
+=head1 Issues fixed after release 20210625
+
+=over 4
+
+=item B<Eliminate token variable _CONTAINER_ENVIRONMENT_>
+
+Testing with NYT_Prof shows that the number of variables per token has a direct
+effect on efficiency.  This update reduces the number of token variables from
+13 to 12, and also simplifies the coding.  It was possible to compute this
+variable from the others, so it was redundant.
+
+26 Jun 2021.
+
+=back
+
 =head1 Issues fixed after release 20210402
 
 =over 4
+
+=item B<Release 20210625>
+
+24 Jun 2021, a4ff53d.
 
 =item B<Adjust tolerances to fix some unstable edge cases>
 
@@ -14,7 +33,7 @@ b1147 b1148 b1151 b1152 b1153 b1154 b1156 b1157 b1163 b1164 b1165
 There are no other known cases of formatting instability at the present time,
 but testing with random input parameters will continue.
 
-21 Jun 2021.
+21 Jun 2021, 1b682fd.
 
 =item B<Adjust tolerances to fix some unstable edge cases>
 

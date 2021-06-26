@@ -305,7 +305,6 @@ my (
     $max_index_to_go,
     @block_type_to_go,
     @type_sequence_to_go,
-    @container_environment_to_go,
     @bond_strength_to_go,
     @forced_breakpoint_to_go,
     @token_lengths_to_go,
@@ -323,6 +322,7 @@ my (
     @types_to_go,
     @inext_to_go,
     @iprev_to_go,
+    @parent_seqno_to_go,
 
 );
 
@@ -333,19 +333,18 @@ BEGIN {
     # Array index names for token variables
     my $i = 0;
     use constant {
-        _BLOCK_TYPE_            => $i++,
-        _CI_LEVEL_              => $i++,
-        _CONTAINER_ENVIRONMENT_ => $i++,
-        _CUMULATIVE_LENGTH_     => $i++,
-        _LINE_INDEX_            => $i++,
-        _KNEXT_SEQ_ITEM_        => $i++,
-        _LEVEL_                 => $i++,
-        _LEVEL_TRUE_            => $i++,
-        _SLEVEL_                => $i++,
-        _TOKEN_                 => $i++,
-        _TOKEN_LENGTH_          => $i++,
-        _TYPE_                  => $i++,
-        _TYPE_SEQUENCE_         => $i++,
+        _BLOCK_TYPE_        => $i++,
+        _CI_LEVEL_          => $i++,
+        _CUMULATIVE_LENGTH_ => $i++,
+        _LINE_INDEX_        => $i++,
+        _KNEXT_SEQ_ITEM_    => $i++,
+        _LEVEL_             => $i++,
+        _LEVEL_TRUE_        => $i++,
+        _SLEVEL_            => $i++,
+        _TOKEN_             => $i++,
+        _TOKEN_LENGTH_      => $i++,
+        _TYPE_              => $i++,
+        _TYPE_SEQUENCE_     => $i++,
 
         # Number of token variables; must be last in list:
         _NVARS => $i++,
@@ -617,7 +616,7 @@ BEGIN {
     @q = qw( = => );
     @is_equal_or_fat_comma{@q} = (1) x scalar(@q);
 
-    @q = qw( => ; h );
+    @q = qw( => ; h f );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
 
@@ -4581,18 +4580,16 @@ sub make_closing_side_comment_prefix {
 
                     my @tokary;
                     @tokary[
-                      _TOKEN_,         _TYPE_,
-                      _BLOCK_TYPE_,    _CONTAINER_ENVIRONMENT_,
-                      _TYPE_SEQUENCE_, _LEVEL_,
-                      _LEVEL_TRUE_,    _SLEVEL_,
-                      _CI_LEVEL_,      _LINE_INDEX_,
+                      _TOKEN_,         _TYPE_,     _BLOCK_TYPE_,
+                      _TYPE_SEQUENCE_, _LEVEL_,    _LEVEL_TRUE_,
+                      _SLEVEL_,        _CI_LEVEL_, _LINE_INDEX_,
                       ]
                       = (
-                        $rtokens->[$j],        $rtoken_type->[$j],
-                        $rblock_type->[$j],    $rcontainer_environment->[$j],
-                        $rtype_sequence->[$j], $rlevels->[$j],
-                        $rlevels->[$j],        $slevel,
-                        $rci_levels->[$j],     $input_line_no - 1,
+                        $rtokens->[$j],     $rtoken_type->[$j],
+                        $rblock_type->[$j], $rtype_sequence->[$j],
+                        $rlevels->[$j],     $rlevels->[$j],
+                        $slevel,            $rci_levels->[$j],
+                        $input_line_no - 1,
                       );
                     push @{$rLL}, \@tokary;
                 } ## end foreach my $j ( 0 .. $jmax )
@@ -5000,6 +4997,8 @@ sub dump_verbatim {
 
 my %wU;
 my %wiq;
+my %is_nonlist_keyword;
+my %is_nonlist_type;
 
 BEGIN {
 
@@ -5009,6 +5008,17 @@ BEGIN {
 
     @q = qw(w i q Q G C Z);
     @{wiq}{@q} = (1) x scalar(@q);
+
+    # Parens following these keywords will not be marked as lists. Note that
+    # 'for' is not included and is handled separately, by including 'f' in the
+    # hash %is_counted_type, since it may or may not be a c-style for loop.
+    @q = qw( if elsif unless and or );
+    @is_nonlist_keyword{@q} = (1) x scalar(@q);
+
+    # Parens following these types will not be marked as lists
+    @q = qw( && || );
+    @is_nonlist_type{@q} = (1) x scalar(@q);
+
 }
 
 sub respace_tokens {
@@ -6108,13 +6118,32 @@ sub respace_tokens {
         if ($rtype_count) {
             my $comma_count     = $rtype_count->{','};
             my $fat_comma_count = $rtype_count->{'=>'};
-            my $semicolon_count = $rtype_count->{';'};
+            my $semicolon_count = $rtype_count->{';'} || $rtype_count->{'f'};
 
             # We will define a list to be a container with one or more commas
-            # and no semicolons.
-            $is_list =
-              ( $comma_count || $fat_comma_count ) && !$semicolon_count;
+            # and no semicolons. Note that we have included the semicolons
+            # in a 'for' container in the simicolon count to keep c-style for
+            # statements from being formatted as lists.
+            if ( ( $comma_count || $fat_comma_count ) && !$semicolon_count ) {
+                $is_list = 1;
 
+                # We need to do one more check for a perenthesized list:
+                # At an opening paren following certain tokens, such as 'if',
+                # we do not want to format the contents as a list.
+                if ( $rLL_new->[$K_opening]->[_TOKEN_] eq '(' ) {
+                    my $Kp = $self->K_previous_code( $K_opening, $rLL_new );
+                    if ( defined($Kp) ) {
+                        my $type_p = $rLL_new->[$Kp]->[_TYPE_];
+                        if ( $type_p eq 'k' ) {
+                            my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
+                            $is_list = 0 if ( $is_nonlist_keyword{$token_p} );
+                        }
+                        else {
+                            $is_list = 0 if ( $is_nonlist_type{$type_p} );
+                        }
+                    }
+                }
+            }
         }
 
         # Look for a block brace marked as uncertain.  If the tokenizer thinks
@@ -6296,11 +6325,10 @@ sub copy_token_as_type {
     }
 
     my @rnew_token = @{$rold_token};
-    $rnew_token[_TYPE_]                  = $type;
-    $rnew_token[_TOKEN_]                 = $token;
-    $rnew_token[_BLOCK_TYPE_]            = '';
-    $rnew_token[_CONTAINER_ENVIRONMENT_] = '';
-    $rnew_token[_TYPE_SEQUENCE_]         = '';
+    $rnew_token[_TYPE_]          = $type;
+    $rnew_token[_TOKEN_]         = $token;
+    $rnew_token[_BLOCK_TYPE_]    = '';
+    $rnew_token[_TYPE_SEQUENCE_] = '';
     return \@rnew_token;
 }
 
@@ -6499,7 +6527,11 @@ sub parent_seqno_by_K {
     #        [ 2, 2, 0 ],  0                       # 5
     #      ];                                      # -
 
-    my $parent_seqno;
+    # NOTE: The ending parent will be SEQ_ROOT for a balanced file.  For
+    # unbalanced files, last sequence number will either be undefined or it may
+    # be at a deeper level.  In either case we will just return SEQ_ROOT to
+    # have a defined value and allow formatting to proceed.
+    my $parent_seqno = SEQ_ROOT;
     while ( defined($KNEXT) ) {
         my $Kt = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
@@ -6527,7 +6559,38 @@ sub parent_seqno_by_K {
         # not a container - must be ternary - keep going
     }
 
+    $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
     return $parent_seqno;
+}
+
+sub is_in_block_by_i {
+    my ( $self, $i ) = @_;
+
+    # returns true if
+    #     token at i is contained in a BLOCK
+    #     or is at root level
+    #     or there is some kind of error (i.e. unbalanced file)
+    # returns false otherwise
+    my $seqno = $parent_seqno_to_go[$i];
+    return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
+    my $Kopening = $self->[_K_opening_container_]->{$seqno};
+    return 1 unless defined($Kopening);
+    my $rLL = $self->[_rLL_];
+    return 1 if $rLL->[$Kopening]->[_BLOCK_TYPE_];
+    return;
+}
+
+sub is_in_list_by_i {
+    my ( $self, $i ) = @_;
+
+    # returns true if token at i is contained in a LIST
+    # returns false otherwise
+    my $seqno = $parent_seqno_to_go[$i];
+    return unless ( $seqno && $seqno ne SEQ_ROOT );
+    if ( $self->[_ris_list_by_seqno_]->{$seqno} ) {
+        return 1;
+    }
+    return;
 }
 
 sub is_list_by_K {
@@ -10159,24 +10222,24 @@ EOM
 
         # So 'long story short': this is a waste of time
         0 && do { #<<<
-        @block_type_to_go            = ();
-        @type_sequence_to_go         = ();
-        @container_environment_to_go = ();
-        @bond_strength_to_go         = ();
-        @forced_breakpoint_to_go     = ();
-        @token_lengths_to_go         = ();
-        @levels_to_go                = ();
-        @mate_index_to_go            = ();
-        @ci_levels_to_go             = ();
-        @nobreak_to_go               = ();
-        @old_breakpoint_to_go        = ();
-        @tokens_to_go                = ();
-        @K_to_go                     = ();
-        @types_to_go                 = ();
-        @leading_spaces_to_go        = ();
-        @reduced_spaces_to_go        = ();
-        @inext_to_go                 = ();
-        @iprev_to_go                 = ();
+        @block_type_to_go        = ();
+        @type_sequence_to_go     = ();
+        @bond_strength_to_go     = ();
+        @forced_breakpoint_to_go = ();
+        @token_lengths_to_go     = ();
+        @levels_to_go            = ();
+        @mate_index_to_go        = ();
+        @ci_levels_to_go         = ();
+        @nobreak_to_go           = ();
+        @old_breakpoint_to_go    = ();
+        @tokens_to_go            = ();
+        @K_to_go                 = ();
+        @types_to_go             = ();
+        @leading_spaces_to_go    = ();
+        @reduced_spaces_to_go    = ();
+        @inext_to_go             = ();
+        @iprev_to_go             = ();
+        @parent_seqno_to_go      = ();
         };
 
         $rbrace_follower = undef;
@@ -10282,8 +10345,6 @@ EOM
 
         $nesting_depth_to_go[$max_index_to_go] = $rtoken_vars->[_SLEVEL_];
         $block_type_to_go[$max_index_to_go]    = $rtoken_vars->[_BLOCK_TYPE_];
-        $container_environment_to_go[$max_index_to_go] =
-          $rtoken_vars->[_CONTAINER_ENVIRONMENT_];
         $type_sequence_to_go[$max_index_to_go] =
           $rtoken_vars->[_TYPE_SEQUENCE_];
 
@@ -12493,19 +12554,26 @@ EOM
         # This has to be done after all tokens are stored because unstoring
         # of tokens would otherwise cause trouble.
 
-        my ($self) = @_;
+        my ($self)               = @_;
         my $rwant_container_open = $self->[_rwant_container_open_];
+        my $rparent_of_seqno     = $self->[_rparent_of_seqno_];
 
         @unmatched_opening_indexes_in_this_batch = ();
         @unmatched_closing_indexes_in_this_batch = ();
         %comma_arrow_count                       = ();
         my $comma_arrow_count_contained = 0;
+        my $parent_seqno = $self->parent_seqno_by_K( $K_to_go[0] );
 
         foreach my $i ( 0 .. $max_index_to_go ) {
+            $parent_seqno_to_go[$i] = $parent_seqno;
+
             my $seqno = $type_sequence_to_go[$i];
             if ($seqno) {
                 my $token = $tokens_to_go[$i];
                 if ( $is_opening_sequence_token{$token} ) {
+                    if ( $is_opening_token{$token} ) {
+                        $parent_seqno = $seqno;
+                    }
 
                     if ( $rwant_container_open->{$seqno} ) {
                         $self->set_forced_breakpoint($i);
@@ -12514,6 +12582,12 @@ EOM
                     push @unmatched_opening_indexes_in_this_batch, $i;
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
+
+                    if ( $is_closing_token{$token} ) {
+                        $parent_seqno = $rparent_of_seqno->{$seqno};
+                        $parent_seqno = SEQ_ROOT unless defined($parent_seqno);
+                        $parent_seqno_to_go[$i] = $parent_seqno;
+                    }
 
                     if ( $rwant_container_open->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
@@ -12551,6 +12625,7 @@ EOM
                 }
             }
         }
+
         return $comma_arrow_count_contained;
     }
 
@@ -13711,7 +13786,7 @@ sub break_equals {
                         && !$rOpts->{'indent-closing-brace'}
                         && $tokens_to_go[$iend_2] eq '{'
                         && (
-                            ( $type_ibeg_2 =~ /^(|\&\&|\|\|)$/ )
+                            ( $type_ibeg_2 =~ /^(\&\&|\|\|)$/ )
                             || (   $type_ibeg_2 eq 'k'
                                 && $is_and_or{ $tokens_to_go[$ibeg_2] } )
                             || $is_if_unless{ $tokens_to_go[$ibeg_2] }
@@ -16430,9 +16505,7 @@ sub set_continuation_breaks {
 
                         # - this is a long block contained in another breakable
                         #   container
-                        || (   $is_long_term
-                            && $container_environment_to_go[$i_opening] ne
-                            'BLOCK' )
+                        || $is_long_term && !$self->is_in_block_by_i($i_opening)
                     )
                   )
                 {
@@ -16616,11 +16689,8 @@ sub set_continuation_breaks {
             # not a list.  Note that '=' could be in any of the = operators
             # (lextest.t). We can't just use the reported environment
             # because it can be incorrect in some cases.
-
-            # QUESTION: can this logic be simplfied by using the newer
-            # _ris_list_by_seqno_ flag?
             elsif ( ( $type =~ /^[\;\<\>\~]$/ || $is_assignment{$type} )
-                && $container_environment_to_go[$i] ne 'LIST' )
+                && !$self->is_in_list_by_i($i) )
             {
                 $dont_align[$depth]         = 1;
                 $want_comma_break[$depth]   = 0;
@@ -16709,9 +16779,8 @@ sub set_continuation_breaks {
 
                 #            open INFILE_COPY, ">$input_file_copy"
                 #              or die ("very long message");
-
                 if ( ( $opening_structure_index_stack[$depth] < 0 )
-                    && $container_environment_to_go[$i] eq 'BLOCK' )
+                    && $self->is_in_block_by_i($i) )
                 {
                     $dont_align[$depth] = 1;
                 }
@@ -17032,9 +17101,8 @@ sub find_token_starting_list {
         # Looks like a list of items.  We have to look at it and size it up.
         #---------------------------------------------------------------
 
-        my $opening_token = $tokens_to_go[$i_opening_paren];
-        my $opening_environment =
-          $container_environment_to_go[$i_opening_paren];
+        my $opening_token       = $tokens_to_go[$i_opening_paren];
+        my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
 
         #-------------------------------------------------------------------
         # Return if this will fit on one line
@@ -17382,10 +17450,10 @@ sub find_token_starting_list {
         # as a table for relatively small parenthesized lists.  These
         # are usually easier to read if not formatted as tables.
         if (
-            $packed_lines <= 2                    # probably can fit in 2 lines
-            && $item_count < 9                    # doesn't have too many items
-            && $opening_environment eq 'BLOCK'    # not a sub-container
-            && $opening_token eq '('              # is paren list
+            $packed_lines <= 2          # probably can fit in 2 lines
+            && $item_count < 9          # doesn't have too many items
+            && $opening_is_in_block     # not a sub-container
+            && $opening_token eq '('    # is paren list
           )
         {
 
@@ -20689,6 +20757,8 @@ sub make_paren_name {
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
 
+        my $terminal_is_in_list = $self->is_in_list_by_i($i_terminal);
+
         my $type_beg      = $types_to_go[$ibeg];
         my $token_beg     = $tokens_to_go[$ibeg];
         my $K_beg         = $K_to_go[$ibeg];
@@ -20878,7 +20948,7 @@ sub make_paren_name {
 
                 # require LIST environment; otherwise, we may outdent too much -
                 # this can happen in calls without parentheses (overload.t);
-                && $container_environment_to_go[$i_terminal] eq 'LIST'
+                && $terminal_is_in_list
               )
             {
                 $adjust_indentation = 1;
@@ -20911,7 +20981,7 @@ sub make_paren_name {
                 # we see if we are in a list, and this works well.
                 # See test files 'sub*.t' for good test cases.
                 if (   $block_type_to_go[$ibeg] =~ /$ASUB_PATTERN/
-                    && $container_environment_to_go[$i_terminal] eq 'LIST'
+                    && $terminal_is_in_list
                     && !$rOpts->{'indent-closing-brace'} )
                 {
                     (
@@ -21537,7 +21607,7 @@ sub set_vertical_tightness_flags {
                 && (
                     $cvt == 2
                     || (
-                        $container_environment_to_go[$ibeg_next] ne 'LIST'
+                        !$self->is_in_list_by_i($ibeg_next)
                         && (
                             $cvt == 1
 
