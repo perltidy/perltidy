@@ -13042,6 +13042,11 @@ sub in_same_container_i {
     # same container, and not separated by a comma, ? or :
     # This is an interface between the _to_go arrays to the rLL array
     my ( $self, $i1, $i2 ) = @_;
+
+    # quick check
+    return if ( $parent_seqno_to_go[$i1] ne $parent_seqno_to_go[$i2] );
+
+    # full check
     return $self->in_same_container_K( $K_to_go[$i1], $K_to_go[$i2] );
 }
 

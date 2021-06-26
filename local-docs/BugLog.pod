@@ -2,6 +2,12 @@
 
 =over 4
 
+=item B<Minor optimization>
+
+Added a quick check to bypass a needless sub call.
+
+26 Jan 2021.
+
 =item B<Eliminate token variable _LEVEL_TRUE_>
 
 It was possible to eliminate this token variable by changing the order
