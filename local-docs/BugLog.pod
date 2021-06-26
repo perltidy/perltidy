@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Eliminate token variable _LEVEL_TRUE_>
+
+It was possible to eliminate this token variable by changing the order
+of welding operations. This reduces the number of variables per token
+from 12 to 11.
+
+26 Jun 2021.
+
 =item B<Eliminate token variable _CONTAINER_ENVIRONMENT_>
 
 Testing with NYT_Prof shows that the number of variables per token has a direct

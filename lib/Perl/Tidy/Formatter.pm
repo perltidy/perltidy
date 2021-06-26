@@ -339,7 +339,6 @@ BEGIN {
         _LINE_INDEX_        => $i++,
         _KNEXT_SEQ_ITEM_    => $i++,
         _LEVEL_             => $i++,
-        _LEVEL_TRUE_        => $i++,
         _SLEVEL_            => $i++,
         _TOKEN_             => $i++,
         _TOKEN_LENGTH_      => $i++,
@@ -4580,16 +4579,15 @@ sub make_closing_side_comment_prefix {
 
                     my @tokary;
                     @tokary[
-                      _TOKEN_,         _TYPE_,     _BLOCK_TYPE_,
-                      _TYPE_SEQUENCE_, _LEVEL_,    _LEVEL_TRUE_,
-                      _SLEVEL_,        _CI_LEVEL_, _LINE_INDEX_,
+                      _TOKEN_,         _TYPE_,  _BLOCK_TYPE_,
+                      _TYPE_SEQUENCE_, _LEVEL_, _SLEVEL_,
+                      _CI_LEVEL_,      _LINE_INDEX_,
                       ]
                       = (
                         $rtokens->[$j],     $rtoken_type->[$j],
                         $rblock_type->[$j], $rtype_sequence->[$j],
-                        $rlevels->[$j],     $rlevels->[$j],
-                        $slevel,            $rci_levels->[$j],
-                        $input_line_no - 1,
+                        $rlevels->[$j],     $slevel,
+                        $rci_levels->[$j],  $input_line_no - 1,
                       );
                     push @{$rLL}, \@tokary;
                 } ## end foreach my $j ( 0 .. $jmax )
@@ -6850,23 +6848,16 @@ sub weld_containers {
     # flags.
     my ($self) = @_;
 
+    # This count is used to eliminate needless calls for weld checks elsewere
     $total_weld_count = 0;
 
     return if ( $rOpts->{'indent-only'} );
     return unless ($rOpts_add_newlines);
 
-    if ( $rOpts->{'weld-nested-containers'} ) {
-
-        # if called, weld_nested_containers must be called before other weld
-        # operations.  This is because weld_nested_containers could overwrite
-        # hash values written by weld_cuddled_blocks and weld_nested_quotes.
-        $self->weld_nested_containers();
-
-        $self->weld_nested_quotes();
-    }
-
-    # Note that weld_nested_containers() changes the _LEVEL_ values, so
-    # weld_cuddled_blocks must use the _TRUE_LEVEL_ values instead.
+    # Important: sub 'weld_cuddled_blocks' must be called before
+    # sub 'weld_nested_containers'. This is because the cuddled option needs to
+    # use the original _LEVEL_ values of containers, but the weld nested
+    # containers changes _LEVEL_ of welded containers.
 
     # Here is a good test case to be sure that both cuddling and welding
     # are working and not interfering with each other: <<snippets/ce_wn1.in>>
@@ -6881,7 +6872,14 @@ sub weld_containers {
    #     $after
    # ) }
 
-    $self->weld_cuddled_blocks();
+    $self->weld_cuddled_blocks() if ( %{$rcuddled_block_types} );
+
+    if ( $rOpts->{'weld-nested-containers'} ) {
+
+        $self->weld_nested_containers();
+
+        $self->weld_nested_quotes();
+    }
 
     ##############################################################
     # All welding is done. Finish setting up weld data structures.
@@ -6912,7 +6910,7 @@ sub weld_containers {
 
         $rK_weld_left->{$Kend} = $Kstart;    # fix in case of missing left link
 
-        # Remember the start of welds which continue
+        # Remember the leftmost index of welds which continue to the right
         if ( defined( $rK_weld_right->{$Kend} )
             && !defined( $rK_weld_left->{$Kstart} ) )
         {
@@ -7038,11 +7036,11 @@ sub weld_cuddled_blocks {
             Fault("sequence = $type_sequence not defined at K=$KK");
         }
 
-        # We use the original levels because they get changed by sub
-        # 'weld_nested_containers'. So if this were to be called before that
-        # routine, the levels would be wrong and things would go bad.
+        # NOTE: we must use the original levels here. They can get changed
+        # by sub 'weld_nested_containers', so this routine must be called
+        # before sub 'weld_nested_containers'.
         my $last_level = $level;
-        $level = $rtoken_vars->[_LEVEL_TRUE_];
+        $level = $rtoken_vars->[_LEVEL_];
 
         if    ( $level < $last_level ) { $in_chain{$last_level} = undef }
         elsif ( $level > $last_level ) { $in_chain{$level}      = undef }
@@ -7093,6 +7091,8 @@ sub weld_cuddled_blocks {
 
                 # ..unless it is a comment
                 if ( defined($Kon) && $rLL->[$Kon]->[_TYPE_] ne '#' ) {
+
+                    # OK to weld these two tokens...
                     $rK_weld_right->{$Ko} = $Kon;
                     $rK_weld_left->{$Kon} = $Ko;
 
