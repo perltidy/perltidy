@@ -187,8 +187,11 @@ sub filter_files {
     # only work on regular files with non-zero length
     @{$rlist} = grep { -f $_ && !-z $_ } @{$rlist};
 
-    # Ignore .tdy {$rlist}
+    # Ignore .tdy and related files
     @{$rlist} = grep { $_ !~ /\.tdy$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.ERR$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.LOG$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.DEBUG$/ } @{$rlist};
 
     # exclude pro{$rlist}
     @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};
