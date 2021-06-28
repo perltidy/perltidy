@@ -27,11 +27,11 @@ environment:
       AUTHOR_TESTING: 1
       RELEASE_TESTING: 1
     - Perl_VERSION: "5.28"
-    - Perl_VERSION: "5.26"
-    - Perl_VERSION: "5.24"
-    - Perl_VERSION: "5.22"
-    - Perl_VERSION: "5.20"
-    - Perl_VERSION: "5.16"
+#    - Perl_VERSION: "5.26"
+#    - Perl_VERSION: "5.24"
+#    - Perl_VERSION: "5.22"
+#   - Perl_VERSION: "5.20"
+#    - Perl_VERSION: "5.16"
     - Perl_VERSION: "5.14"
 #    - Perl_VERSION: "5.12"  ## Strawberry Perl config error started 18 July 2020
 #    - Perl_VERSION: "5.10"
