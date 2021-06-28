@@ -637,24 +637,6 @@ sub valign_input {
         $self->[_zero_count_] = 0;
     }
 
-    # programming check: (shouldn't happen)
-    # The number of tokens which separate the fields must always be
-    # one less than the number of fields. If this is not true then
-    # an error has been made by the Formatter in defining these
-    # quantities.  See Formatter.pm/sub make_alignment_patterns.
-    if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
-        my $nt  = @{$rtokens};
-        my $nf  = @{$rfields};
-        my $msg = <<EOM;
-"Program bug in Perl::Tidy::VerticalAligner - number of tokens = $nt should be one less than number of fields: $nf)\n"
-EOM
-        $self->warning($msg);
-        $self->report_definite_bug();
-
-        # TODO: this has never happened, but we should probably call Die here.
-        # Needs some testing
-        # Perl::Tidy::Die($msg);
-    }
     my $maximum_line_length_for_level =
       $self->maximum_line_length_for_level($level);
 

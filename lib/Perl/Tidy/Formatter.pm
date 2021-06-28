@@ -19013,6 +19013,19 @@ sub send_lines_to_vertical_aligner {
             $rfield_lengths->[-1] += 2;
         }
 
+        # Programming check: (shouldn't happen)
+        # The number of tokens which separate the fields must always be
+        # one less than the number of fields. If this is not true then
+        # an error has been introduced in sub make_alignment_patterns.
+        if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
+            my $nt  = @{$rtokens};
+            my $nf  = @{$rfields};
+            my $msg = <<EOM;
+"Program bug in Perl::Tidy::Formatter - number of tokens = $nt should be one less than number of fields: $nf)\n"
+EOM
+            Fault($msg);
+        }
+
         # Set flag which tells if this line is contained in a multi-line list
         my $list_seqno = $self->is_list_by_K($Kbeg);
 
