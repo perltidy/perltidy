@@ -1104,21 +1104,6 @@ sub check_options {
         Exit(0);
     }
 
-    # Do not let the value of -ci exceed the value of -i if -xci is set.  This
-    # can lead to blinking states.  Silently reduce the -ci value to -i if this
-    # occurs.  Fixes b707 b770 b912 b920 b930 b933 b939 b940 b941 b942 b978
-    if (   $rOpts->{'continuation-indentation'} > $rOpts->{'indent-columns'}
-        && $rOpts->{'extended-continuation-indentation'} )
-    {
-        $rOpts->{'continuation-indentation'} = $rOpts->{'indent-columns'};
-        Warn(<<EOM);
------------------------------------------------------------------------
-Reducing the value of --continuation-indentation to the value of --indent-columns.
-This is required when -xci is used to avoid possible formatting instability.
------------------------------------------------------------------------
-EOM
-    }
-
     if ( $rOpts->{'line-up-parentheses'} ) {
 
         if (   $rOpts->{'indent-only'}

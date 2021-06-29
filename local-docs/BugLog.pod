@@ -2,11 +2,19 @@
 
 =over 4
 
+=item B<Remove limit on the value of -ci=n when -xci is set>
+
+This update undoes the update c16c5ee of 20 Feb 2021, in which the value
+of -ci=n was limited to the value of -i=n when -xci was set.  Recent
+improvements in stability tolerances allow this limit to be removed.
+
+28 Jun 2021.
+
 =item B<Minor optimization>
 
 Added a quick check to bypass a needless sub call.
 
-26 Jan 2021.
+26 Jan 2021, e7822df.
 
 =item B<Eliminate token variable _LEVEL_TRUE_>
 
@@ -14,7 +22,7 @@ It was possible to eliminate this token variable by changing the order
 of welding operations. This reduces the number of variables per token
 from 12 to 11.
 
-26 Jun 2021.
+26 Jun 2021, 1f4f78c.
 
 =item B<Eliminate token variable _CONTAINER_ENVIRONMENT_>
 
@@ -23,7 +31,7 @@ effect on efficiency.  This update reduces the number of token variables from
 13 to 12, and also simplifies the coding.  It was possible to compute this
 variable from the others, so it was redundant.
 
-26 Jun 2021.
+26 Jun 2021, 300ca1e.
 
 =back
 
