@@ -15515,7 +15515,11 @@ sub set_continuation_breaks {
         @has_broken_sublist = ();
         @want_comma_break   = ();
 
-        # Define a tolerance to use a tolerance when checking if closed
+        ####################################################
+        # Set tolerances to prevent formatting instabilities
+        ####################################################
+
+        # Define tolerances to use when checking if closed
         # containers will fit on one line.  This is necessary to avoid
         # formatting instability. The basic tolerance is based on the
         # following:
@@ -15528,33 +15532,42 @@ sub set_continuation_breaks {
         $length_tol =
           1 + max( 0, $rOpts_continuation_indentation - $rOpts_indent_columns );
 
-        # In addition, use a few characters of extra tolerance for broken lines
-        # when -lp is used to help prevent instability. This is currently only
-        # necessary for -lp which has a more variable indentation.  At least 3
-        # characters have been found to be required.
-        # Fixes cases b1059 b1063 b1117.
+        # In addition, it may be necessary to use a few extra tolerance spaces
+        # when -lp is used and/or when -xci is used.  The history of this
+        # so far is as follows:
 
-        # Testing shows that we need a total of 3 extra spaces when -lp is set
-        # for non-lists, and at least 2 spaces when -lp and -xci are set.
-        # The following formulation is a minimal set of values which works.
+        # FIX1: At least 3 characters were been found to be required for -lp
+        # to fixes cases b1059 b1063 b1117.
+
+        # FIX2: Further testing showed that we need a total of 3 extra spaces
+        # when -lp is set for non-lists, and at least 2 spaces when -lp and
+        # -xci are set.
         # Fixes cases b1063 b1103 b1134 b1135 b1136 b1138 b1140 b1143 b1144
         # b1145 b1146 b1147 b1148 b1151 b1152 b1153 b1154 b1156 b1157 b1164
         # b1165
+
+        # FIX3: To fix cases b1169 b1170 b1171, an update was made in sub
+        # 'find_token_starting_list' to go back before an initial blank space.
+        # This fixed these three cases, and allowed the tolerances to be
+        # reduced to continue to fix all other known cases of instability.
+        # This gives the current tolerance formulation (note that
+        # variable $length_tol_boost is always 0 now):
+
         $length_tol_boost = 0;
         if ($rOpts_line_up_parentheses) {
 
             if ( $rOpts->{'extended-continuation-indentation'} ) {
                 $length_tol += 2;
-                $length_tol_boost = 1;
+                $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
             }
             else {
-                $length_tol_boost = 3;
+                $length_tol_boost = 0;    # was 3 for FIX2, 0 for FIX3
             }
         }
 
         # The -xci option alone also needs a slightly larger tol for non-lists
         elsif ( $rOpts->{'extended-continuation-indentation'} ) {
-            $length_tol_boost = 1;
+            $length_tol_boost = 0;        # was 1 for FIX2, 0 for FIX3
         }
         return;
     }
@@ -16865,8 +16878,12 @@ sub find_token_starting_list {
     elsif ( $tokens_to_go[$i_opening_paren] eq '(' ) {
         $i_opening_minus = $im1;
 
-        # walk back to improve length estimate
-        for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
+        # Walk back to improve length estimate...
+        # FIX for cases b1169 b1170 b1171: start walking back
+        # at the previous nonblank. This makes the result insensitive
+        # to the flag --space-function-paren, and similar.
+        # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
+        for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
             last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
             $i_opening_minus = $j;
         }
@@ -19006,7 +19023,8 @@ sub send_lines_to_vertical_aligner {
             my $nt  = @{$rtokens};
             my $nf  = @{$rfields};
             my $msg = <<EOM;
-"Program bug in Perl::Tidy::Formatter - number of tokens = $nt should be one less than number of fields: $nf)\n"
+Program bug in Perl::Tidy::Formatter, probably in sub 'make_alignment_patterns':
+The number of tokens = $nt should be one less than number of fields: $nf
 EOM
             Fault($msg);
         }

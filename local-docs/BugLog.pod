@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<Minor adjustments to improve formatting stability>
+
+Testing with random input parameters produced several new cases of formatting
+instability involving unusual parameter combinations.  This update fixes these
+cases, b1169 b1170 b1171, and all previously discovered cases remain
+stable with the update.
+
+28 Jun 2021.
+
 =item B<Remove limit on the value of -ci=n when -xci is set>
 
 This update undoes the update c16c5ee of 20 Feb 2021, in which the value
