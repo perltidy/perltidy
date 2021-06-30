@@ -2,6 +2,35 @@
 
 =over 4
 
+=item B<Fix token type of colon introducing anonomyous sub attribute list>
+
+In the following example
+
+    print "not " unless ref +(
+        map {
+            sub : lvalue { "a" }
+        } 1
+    )[0] eq "CODE";
+
+the colon after 'sub' was being marked as part of a label rather than the start
+of an attribute list. This does not cause an error, but the space before the
+':' is lost.  This is fixed in this update.
+
+Note that something like 'sub :' can also be a label, so the tokenizer has to
+look ahead to decide what to do.  For example, this 'sub :' is a label:
+
+    my $xx = 0;
+    sub : {
+        $xx++;
+        print "looping with label sub:, a=$xx\n";
+        if ( $xx < 10 ) { goto "sub" }
+    }
+
+In this case, the goto statement needs quotes around "sub" because it is a
+keyword.
+
+29 Jun 2021.
+
 =item B<Minor adjustments to improve formatting stability>
 
 Testing with random input parameters produced several new cases of formatting
@@ -11,7 +40,7 @@ stable with the update.
 
 28 Jun 2021.
 
-=item B<Remove limit on the value of -ci=n when -xci is set>
+=item B<Remove limit on -ci=n when -xci is set, see rt #136415>
 
 This update undoes the update c16c5ee of 20 Feb 2021, in which the value
 of -ci=n was limited to the value of -i=n when -xci was set.  Recent

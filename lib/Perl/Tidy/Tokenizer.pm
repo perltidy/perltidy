@@ -3706,6 +3706,23 @@ EOM
                     $tok_kw .= '::';
                 }
 
+                # Decide if 'sub :' can be the start of a sub attribute list.
+                # We will decide based on if the colon is followed by a
+                # bareword which is not a keyword.
+                my $sub_attribute_ok_here;
+                if (   $is_sub{$tok_kw}
+                    && $expecting != OPERATOR
+                    && $next_nonblank_token eq ':' )
+                {
+                    my ( $nn_nonblank_token, $i_nn ) =
+                      find_next_nonblank_token( $i_next + 1,
+                        $rtokens, $max_token_index );
+                    $sub_attribute_ok_here =
+                         $nn_nonblank_token =~ /^\w/
+                      && $nn_nonblank_token !~ /^\d/
+                      && !$is_keyword{$nn_nonblank_token};
+                }
+
                 # handle operator x (now we know it isn't $x=)
                 if (   $expecting == OPERATOR
                     && substr( $tok, 0, 1 ) eq 'x'
@@ -3867,7 +3884,8 @@ EOM
                 elsif (
                        ( $next_nonblank_token eq ':' )
                     && ( $rtokens->[ $i_next + 1 ] ne ':' )
-                    && ( $i_next <= $max_token_index )    # colon on same line
+                    && ( $i_next <= $max_token_index )   # colon on same line
+                    && !$sub_attribute_ok_here           # like 'sub : lvalue' ?
                     && label_ok()
                   )
                 {
