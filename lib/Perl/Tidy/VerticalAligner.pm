@@ -1,7 +1,7 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
-our $VERSION = '20210625';
+our $VERSION = '20210625.01';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;

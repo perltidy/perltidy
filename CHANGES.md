@@ -1,6 +1,12 @@
 # Perltidy Change Log
 
-## 2021 xx xx
+## 2021 06 25.01
+
+    - Removed the limit on -ci=n when -xci is set, reference: rt #136415.
+      This update removes a limit in the previous two versions in which the
+      value of -ci=n was limited to the value of -i=n when -xci was set.
+      This limit had been placed to avoid some formatting instabilities,
+      but recent coding improvements allow the limit to be removed.
 
 ## 2021 06 25
 
