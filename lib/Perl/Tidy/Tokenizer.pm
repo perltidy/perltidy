@@ -7584,10 +7584,13 @@ sub find_next_nonblank_token {
               peek_ahead_for_nonblank_token( $rtokens, $max_token_index );
         }
     }
+
     my $next_nonblank_token = $rtokens->[ ++$i ];
+    return ( " ", $i ) unless defined($next_nonblank_token);
 
     if ( $next_nonblank_token =~ /^\s*$/ ) {
         $next_nonblank_token = $rtokens->[ ++$i ];
+        return ( " ", $i ) unless defined($next_nonblank_token);
     }
     return ( $next_nonblank_token, $i );
 }

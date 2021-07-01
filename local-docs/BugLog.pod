@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fixed use of uninitialized value>
+
+The previous Tokenizer update caused the use of an unitialized value when run on case b1053:
+
+ Use of uninitialized value $next_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7589.
+ Use of uninitialized value $nn_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 3723.
+ b1053 converged on iteration 2
+
+This update fixes this.
+
 =item B<Fix token type of colon introducing anonomyous sub attribute list>
 
 In the following example
