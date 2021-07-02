@@ -2,6 +2,23 @@
 
 =over 4
 
+=item B<Fix problem with -comma-arrow-breakpoint=n flag>
+
+Testing revealed a formatting irregularity which was caused when the flag
+-cab=2 got applied to a container which was not a list.  This is fixed with
+update, which fixes case b939a.
+
+1 Jul 2021.
+
+=item B<Fix a formatting instability>
+
+Testing showed that a previously fixed case of instability, b1144, which was
+fixed 21 Jun 2021, 1b682fd, was unstable again.  This update is a small change
+which fixes this.  There are no other known unstable cases at this time
+but automated testing runs continue to search for instabilities.
+
+1 Jul 2021.
+
 =item B<Fixed use of uninitialized value>
 
 The previous Tokenizer update caused the use of an unitialized value when run on case b1053:
@@ -11,6 +28,8 @@ The previous Tokenizer update caused the use of an unitialized value when run on
  b1053 converged on iteration 2
 
 This update fixes this.
+
+1 Jul 2021.
 
 =item B<Fix token type of colon introducing anonomyous sub attribute list>
 
@@ -39,7 +58,7 @@ look ahead to decide what to do.  For example, this 'sub :' is a label:
 In this case, the goto statement needs quotes around "sub" because it is a
 keyword.
 
-29 Jun 2021.
+29 Jun 2021, d5fb3d5.
 
 =item B<Minor adjustments to improve formatting stability>
 
@@ -48,7 +67,7 @@ instability involving unusual parameter combinations.  This update fixes these
 cases, b1169 b1170 b1171, and all previously discovered cases remain
 stable with the update.
 
-28 Jun 2021.
+28 Jun 2021, e1f22e0.
 
 =item B<Remove limit on -ci=n when -xci is set, see rt #136415>
 
@@ -56,7 +75,7 @@ This update undoes the update c16c5ee of 20 Feb 2021, in which the value
 of -ci=n was limited to the value of -i=n when -xci was set.  Recent
 improvements in stability tolerances allow this limit to be removed.
 
-28 Jun 2021.
+28 Jun 2021, 1b3c5e9.
 
 =item B<Minor optimization>
 

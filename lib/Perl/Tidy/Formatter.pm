@@ -7425,13 +7425,17 @@ sub setup_new_weld_measurements {
             if ( substr( $type_prev, 0, 1 ) eq '=' ) {
                 $Kref = $Kprev;
 
-                # Backup to the start of the previous line if it ends in =>
-                # Fixes case b1112.
+                # Fix for b1144 and b1112: backup to the first nonblank
+                # character before the =>, or to the start of its line.
                 if ( $type_prev eq '=>' ) {
                     my $iline_prev = $rLL->[$Kprev]->[_LINE_INDEX_];
                     my $rK_range   = $rlines->[$iline_prev]->{_rK_range};
                     my ( $Kfirst, $Klast ) = @{$rK_range};
-                    $Kref = $Kfirst;
+                    for ( my $KK = $Kref - 1 ; $KK >= $Kfirst ; $KK-- ) {
+                        next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
+                        $Kref = $KK;
+                        last;
+                    }
                 }
             }
         }
@@ -16269,6 +16273,16 @@ sub set_continuation_breaks {
                 #    3 - ignore =>
                 #    4 - always open up if vt=0
                 #    5 - stable: even for one line blocks if vt=0
+
+                # PATCH: Modify the -cab flag if we are not processing a list:
+                # We only want the -cab flag to apply to list containers, so
+                # for non-lists we use the default and stable -cab=5 value.
+                # Fixes case b939a.
+                my $cab_flag = $rOpts_comma_arrow_breakpoints;
+                if ( $type_sequence && !$ris_list_by_seqno->{$type_sequence} ) {
+                    $cab_flag = 5;
+                }
+
                 if (  !$is_long_term
                     && $saw_opening_structure
                     && $is_opening_token{ $tokens_to_go[$i_opening] }
@@ -16276,11 +16290,10 @@ sub set_continuation_breaks {
                     && !$opening_vertical_tightness{ $tokens_to_go[$i_opening] }
                   )
                 {
-                    $is_long_term = $rOpts_comma_arrow_breakpoints == 4
-                      || ( $rOpts_comma_arrow_breakpoints == 0
-                        && $last_nonblank_token eq ',' )
-                      || ( $rOpts_comma_arrow_breakpoints == 5
-                        && $old_breakpoint_to_go[$i_opening] );
+                    $is_long_term =
+                         $cab_flag == 4
+                      || $cab_flag == 0 && $last_nonblank_token eq ','
+                      || $cab_flag == 5 && $old_breakpoint_to_go[$i_opening];
                 } ## end if ( !$is_long_term &&...)
 
                 # mark term as long if the length between opening and closing
@@ -16318,11 +16331,11 @@ sub set_continuation_breaks {
                 # We've set breaks after all comma-arrows.  Now we have to
                 # undo them if this can be a one-line block
                 # (the only breakpoints set will be due to comma-arrows)
+
                 if (
 
                     # user doesn't require breaking after all comma-arrows
-                    ( $rOpts_comma_arrow_breakpoints != 0 )
-                    && ( $rOpts_comma_arrow_breakpoints != 4 )
+                    ( $cab_flag != 0 ) && ( $cab_flag != 4 )
 
                     # and if the opening structure is in this batch
                     && $saw_opening_structure
@@ -16333,11 +16346,10 @@ sub set_continuation_breaks {
                         $last_old_breakpoint_count
 
                         # or user wants to form long blocks with arrows
-                        || $rOpts_comma_arrow_breakpoints == 2
+                        || $cab_flag == 2
 
                         # if -cab=3 is overridden then use -cab=2 behavior
-                        || $rOpts_comma_arrow_breakpoints == 3
-                        && $override_cab3[$current_depth]
+                        || $cab_flag == 3 && $override_cab3[$current_depth]
                     )
 
                     # and we made breakpoints between the opening and closing
@@ -21767,9 +21779,9 @@ sub set_vertical_tightness_flags {
             {
                 my $valid_flag = 1;
                 my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-                @{$rvertical_tightness_flags} =
-                  ( 2, $spaces, $type_sequence_to_go[$ibeg_next],
-                    $valid_flag, );
+                @{$rvertical_tightness_flags} = (
+                    2, $spaces, $type_sequence_to_go[$ibeg_next], $valid_flag,
+                );
             }
         }
     }
