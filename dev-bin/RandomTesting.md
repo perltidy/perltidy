@@ -165,6 +165,20 @@ Also run
 
 which will help scan the ```nohup.my``` file for certain keywords.  
 
+## Utility for running convergence tests
+
+Most of the problems discovered with random testing are cases where perltidy did not converge under unusual parameter settings.  In most cases the issues involved can be boiled down to a very short script with just a few parameters.  All of these issues have been fixed, but perltidy should be re-tested on these after every coding change.  A script to do this is
+
+ -  run_convergence_tests.pl
+
+The usage is simply
+
+```
+./run_convergence_tests.pl
+```
+
+It reads its database, ```run_convergence_tests.pl.data```, and runs the latest version of perltidy on each case.  This takes a little time because there are hundreds of cases in the database.  The last line of the output will show "OK" if there are no problems.
+
 ## Additional scripts
 
 The files of parameters which are automatically are long and contain

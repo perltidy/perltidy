@@ -8,7 +8,7 @@ Testing revealed a formatting irregularity which was caused when the flag
 -cab=2 got applied to a container which was not a list.  This is fixed with
 update, which fixes case b939a.
 
-1 Jul 2021.
+1 Jul 2021, 021b938.
 
 =item B<Fix a formatting instability>
 
@@ -17,7 +17,7 @@ fixed 21 Jun 2021, 1b682fd, was unstable again.  This update is a small change
 which fixes this.  There are no other known unstable cases at this time
 but automated testing runs continue to search for instabilities.
 
-1 Jul 2021.
+1 Jul 2021, 021b938.
 
 =item B<Fixed use of uninitialized value>
 
@@ -29,7 +29,7 @@ The previous Tokenizer update caused the use of an unitialized value when run on
 
 This update fixes this.
 
-1 Jul 2021.
+1 Jul 2021, ea139bd.
 
 =item B<Fix token type of colon introducing anonomyous sub attribute list>
 

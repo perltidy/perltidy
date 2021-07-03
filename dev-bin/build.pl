@@ -43,7 +43,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK V PC TIDY T CL DOCS MANIFEST DIST)];
+my $rsteps = [qw( CHK CONV V PC TIDY T CL DOCS MANIFEST DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -58,6 +58,7 @@ my $rcode = {
     'V'        => \&update_version_number,
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
+    'CONV'     => \&run_convergence_tests,
     'MANIFEST' => \&make_manifest,
     'T'        => \&make_tests,
     'DOCS'     => \&make_docs,
@@ -83,6 +84,7 @@ chk      - view release CHecKlist          status: $rstatus->{'CHK'}
 v        - check/update Version Number     status: $rstatus->{'V'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
+conv     - run convergence tests           status: $rstatus->{'CONV'}
 manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 t        - make Tests			   status: $rstatus->{'T'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
@@ -162,6 +164,33 @@ sub run_tidyall {
         $rstatus->{'TIDY'} = 'OK';
         $rstatus->{'PC'}   = 'TBD';
         hitcr("Source OK.");
+        return;
+    }
+    openurl("$fout");
+    return;
+}
+
+sub run_convergence_tests {
+    my $fout = "tmp/run_convergence_tests.out";
+    $rstatus->{'CONV'} = 'TBD';
+
+    # running with any .perltidyrc file
+    my $cmd = "./dev-bin/run_convergence_tests.pl >$fout 2>>$fout";
+    system_echo($cmd);
+
+    my $fh;
+    if ( !open( $fh, '<', $fout ) ) {
+        hitcr("Strange: cannot open '$fout': $!.");
+        return;
+    }
+    my @lines = <$fh>;
+    foreach my $line (@lines) { $fh_log->print($line) }
+    my $error = $lines[-1] !~ /OK/;
+
+    $fh->close();
+    if ( !$error ) {
+        $rstatus->{'CONV'} = 'OK';
+        hitcr("Convergence check OK.");
         return;
     }
     openurl("$fout");
@@ -334,8 +363,11 @@ sub update_version_number {
     my $reported_VERSION = $Perl::Tidy::VERSION;
     my $lib_path         = "lib/Perl/";
     my $bin_path         = "bin/";
-    my @sources          = ( $lib_path . "Tidy.pm", $lib_path . "Tidy.pod",
-        $bin_path . "perltidy", );
+    my @sources          = (
+        $lib_path . "Tidy.pm",
+        $lib_path . "Tidy.pod",
+        $bin_path . "perltidy",
+    );
     push @sources, "CHANGES.md";
     my @more = qw(
       Tidy/Debugger.pm
