@@ -4724,6 +4724,30 @@ sub generate_manifest_poD{
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1103.in <==
+# Note that this has a -norecombine in the .par file
+
+# S1
+   $data =
+            { map { split ( '=', $_ ) }
+              split ( ' ', $2 ) };
+# S2
+   $data = {
+    map {
+     split ( '=', $_ )
+    } split ( ' ', $2 )
+   };
+
+==> b1103.par <==
+--continuation-indentation=9
+--ignore-old-breakpoints
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=38
+--opening-hash-brace-right
+--norecombine
+--space-keyword-paren
+
 ==> b1104.in <==
 foreach $port ( sort
 ( @ARGV[ 1 .. $#ARGV ] ) )
@@ -6346,6 +6370,27 @@ my $xx =
 --continuation-indentation=3
 --indent-columns=0
 
+==> b1169.in <==
+         is (
+                 causes_fail (
+                           {errors => [ {fail => 1} ]}
+                 ),
+                         1,
+                         "Fatal errors cause failure"
+         );
+
+==> b1169.par <==
+--brace-tightness=2
+--continuation-indentation=7
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=9
+--line-up-parentheses
+--maximum-line-length=54
+--opening-square-bracket-right
+--paren-tightness=2
+--space-function-paren
+
 ==> b117.in <==
 # Same as Bug96
 # State 1
@@ -6366,6 +6411,65 @@ my $xx =
 ==> b117.par <==
 --line-up-parentheses
 --space-terminal-semicolon
+
+==> b1170.in <==
+# S1
+         my $hsh : shared =
+                shared_clone (
+                               {
+                                 'foo' => [
+                                       qw/foo bar baz/
+                                 ]
+                               }
+                );
+
+# S2
+
+         my $hsh : shared =
+                shared_clone (
+                          {'foo' =>
+                                 [ qw/foo bar baz/ ]}
+                );
+
+==> b1170.par <==
+--brace-tightness=2
+--continuation-indentation=7
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=9
+--line-up-parentheses
+--maximum-line-length=54
+--space-function-paren
+--square-bracket-tightness=0
+
+==> b1171.in <==
+# S1
+         my $parser =
+                TAP::Parser->new (
+                           {
+                                  source => [
+                                       split /$/, $tap
+                                  ]
+                           }
+                );
+# S2
+         my $parser =
+                TAP::Parser->new (
+                         {source =>
+                                  [ split /$/, $tap ]}
+                );
+
+==> b1171.par <==
+--brace-tightness=2
+--continuation-indentation=7
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=9
+--line-up-parentheses
+--maximum-line-length=54
+--opening-square-bracket-right
+--paren-tightness=2
+--space-function-paren
 
 ==> b120.in <==
 # Same as bug96
