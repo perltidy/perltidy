@@ -5036,7 +5036,6 @@ sub respace_tokens {
     my $is_encoded_data = $self->[_is_encoded_data_];
 
     my $rLL_new = [];    # This is the new array
-    my $KK      = 0;
     my $rtoken_vars;
     my $Ktoken_vars;                   # the old K value of $rtoken_vars
     my ( $Kfirst_old, $Klast_old );    # Range of old line
@@ -5053,10 +5052,9 @@ sub respace_tokens {
     my $cumulative_length = 0;
 
     my %seqno_stack;
-    my %KK_stack;                   # Note: old K index
-    my %K_opening_by_seqno = ();    # Note: old K index
-    my $depth_next         = 0;
-    my $depth_next_max     = 0;
+    my %K_old_opening_by_seqno = ();    # Note: old K index
+    my $depth_next             = 0;
+    my $depth_next_max         = 0;
 
     my $K_closing_container       = $self->[_K_closing_container_];
     my $K_closing_ternary         = $self->[_K_closing_ternary_];
@@ -5129,14 +5127,59 @@ sub respace_tokens {
                 {
                     $rlec_count_by_seqno->{$type_sequence}++;
                 }
+
+                if (   $last_nonblank_type eq '='
+                    || $last_nonblank_type eq '=>' )
+                {
+                    $ris_assigned_structure->{$type_sequence} =
+                      $last_nonblank_type;
+                }
+
+                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
+                $rparent_of_seqno->{$type_sequence}        = $seqno_parent;
+                $seqno_stack{$depth_next}                  = $type_sequence;
+                $K_old_opening_by_seqno{$type_sequence}    = $Ktoken_vars;
+                $depth_next++;
+
+                if ( $depth_next > $depth_next_max ) {
+                    $depth_next_max = $depth_next;
+                }
             }
             elsif ( $is_closing_token{$token} ) {
 
                 $K_closing_container->{$type_sequence} = $KK_new;
-            }
 
-            # These are not yet used but could be useful
+                # Do not include terminal commas in counts
+                if (   $last_nonblank_type eq ','
+                    || $last_nonblank_type eq '=>' )
+                {
+                    my $seqno = $seqno_stack{ $depth_next - 1 };
+                    if ($seqno) {
+                        $rtype_count_by_seqno->{$seqno}->{$last_nonblank_type}
+                          --;
+
+                        if (   $Ktoken_vars == $Kfirst_old
+                            && $last_nonblank_type eq ','
+                            && $rlec_count_by_seqno->{$seqno} )
+                        {
+                            $rlec_count_by_seqno->{$seqno}--;
+                        }
+                    }
+                }
+
+                # Update the stack...
+                $depth_next--;
+            }
             else {
+
+                # For ternary, note parent but do not include as child
+                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+
+                # These are not yet used but could be useful
                 if ( $token eq '?' ) {
                     $K_opening_ternary->{$type_sequence} = $KK_new;
                 }
@@ -5349,7 +5392,7 @@ sub respace_tokens {
 
             # Go back and see if the corresponding two OPENING tokens are also
             # together.  Note that we are using the OLD K indexing here:
-            my $K_outer_opening = $K_opening_by_seqno{$type_sequence};
+            my $K_outer_opening = $K_old_opening_by_seqno{$type_sequence};
             if ( defined($K_outer_opening) ) {
                 my $K_nxt = $self->K_next_nonblank($K_outer_opening);
                 if ( defined($K_nxt) ) {
@@ -5469,7 +5512,9 @@ sub respace_tokens {
         }
     };
 
-    # Main loop over all lines of the file
+    ############################################
+    # Main loop to respace all lines of the file
+    ############################################
     my $last_K_out;
 
     # Testing option to break qw.  Do not use; it can make a mess.
@@ -5488,6 +5533,9 @@ sub respace_tokens {
         next unless defined($Kfirst);
         ( $Kfirst_old, $Klast_old ) = ( $Kfirst, $Klast );
         $Klast_old_code = $Klast_old;
+
+        # Be sure an old K value is defined for sub $store_token
+        $Ktoken_vars = $Kfirst;
 
         # Check for correct sequence of token indexes...
         # An error here means that sub write_line() did not correctly
@@ -5574,6 +5622,7 @@ sub respace_tokens {
 
             # Copy tokens unchanged
             foreach my $KK ( $Kfirst .. $Klast ) {
+                $Ktoken_vars = $KK;
                 $store_token->( $rLL->[$KK] );
             }
             next;
@@ -5646,7 +5695,9 @@ sub respace_tokens {
             }
         }
 
-        # loop to copy all tokens on this line, with any changes
+        ########################################################
+        # Loop to copy all tokens on this line, with any changes
+        ########################################################
         my $type_sequence;
         for ( my $KK = $Kfirst ; $KK <= $Klast ; $KK++ ) {
             $Ktoken_vars = $KK;
@@ -5713,30 +5764,7 @@ sub respace_tokens {
 
             if ($type_sequence) {
 
-                if ( $is_opening_token{$token} ) {
-
-                    if (   $last_nonblank_type eq '='
-                        || $last_nonblank_type eq '=>' )
-                    {
-                        $ris_assigned_structure->{$type_sequence} =
-                          $last_nonblank_type;
-                    }
-
-                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-                    push @{ $rchildren_of_seqno->{$seqno_parent} },
-                      $type_sequence;
-                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
-                    $seqno_stack{$depth_next}           = $type_sequence;
-                    $KK_stack{$depth_next}              = $KK;
-                    $K_opening_by_seqno{$type_sequence} = $KK;
-                    $depth_next++;
-
-                    if ( $depth_next > $depth_next_max ) {
-                        $depth_next_max = $depth_next;
-                    }
-                }
-                elsif ( $is_closing_token{$token} ) {
+                if ( $is_closing_token{$token} ) {
 
                     # Insert a tentative missing semicolon if the next token is
                     # a closing block brace
@@ -5757,36 +5785,6 @@ sub respace_tokens {
                     {
                         $add_phantom_semicolon->($KK);
                     }
-
-                    # Do not include terminal commas in counts
-                    if (   $last_nonblank_type eq ','
-                        || $last_nonblank_type eq '=>' )
-                    {
-                        my $seqno = $seqno_stack{ $depth_next - 1 };
-                        if ($seqno) {
-                            $rtype_count_by_seqno->{$seqno}
-                              ->{$last_nonblank_type}--;
-
-                            if (   $KK == $Kfirst
-                                && $last_nonblank_type eq ','
-                                && $rlec_count_by_seqno->{$seqno} )
-                            {
-                                $rlec_count_by_seqno->{$seqno}--;
-                            }
-                        }
-                    }
-
-                    # Update the stack...  Note that we do this after adding
-                    # any phantom semicolons so that they will be counted in
-                    # the correct container.
-                    $depth_next--;
-                }
-
-                # For ternary, note parent but do not include as child
-                else {
-                    my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                    $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-                    $rparent_of_seqno->{$type_sequence} = $seqno_parent;
                 }
             }
 
