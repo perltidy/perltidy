@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Check for side comment within package statement>
+
+Testing with randomly placed side comments caused perltidy to produce an incorrect
+warning when a side comment is placed before the end of a package statement:
+
+    package double # side comment
+    ;
+
+This update fixes this.
+3 Jul 2021.
+
 =item B<Fix problem with -comma-arrow-breakpoint=n flag>
 
 Testing revealed a formatting irregularity which was caused when the flag

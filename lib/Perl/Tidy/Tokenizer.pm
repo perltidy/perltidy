@@ -6601,7 +6601,8 @@ sub do_scan_package {
         # knows that the number is in a package statement.
         # Examples of valid primitive tokens that might follow are:
         #  1235  . ; { } v3  v
-        if ( $next_nonblank_token =~ /^([v\.\d;\{\}])|v\d|\d+$/ ) {
+        # FIX: added a '#' since a side comment may also follow
+        if ( $next_nonblank_token =~ /^([v\.\d;\{\}\#])|v\d|\d+$/ ) {
             $statement_type = $tok;
         }
         else {
