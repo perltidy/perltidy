@@ -2,6 +2,25 @@
 
 =over 4
 
+=item B<Fix some incorrect error messages due to side comments>
+
+Testing with large numbers of side comments caused perltidy to produce some
+incorrect error messages.  Two issues are fixed with this update. First, a side
+comment between a pointer '->' and the next identifier caused a message.
+Second, in some cases a comment after an opening paren could cause a message.
+The following snippet is an example.
+
+    $Msg#sc#
+    ->#sc#
+    $field#sc#
+    (#sc#
+    )#sc#
+    ;#sc#
+
+This update fixes cases c029 and c030.
+
+4 Jul 2021.
+
 =item B<Fix undefined var ref involving --format-skipping>
 
 Testing produced a situation in which version 20200625 could cause an undefined
@@ -25,7 +44,7 @@ access does influence the formatted output.
 
 This update fixes this problem.
 
-4 Jul 2021.
+4 Jul 2021, 82916fe.
 
 =item B<Check for side comment within package statement>
 
@@ -36,7 +55,7 @@ warning when a side comment is placed before the end of a package statement:
     ;
 
 This update fixes this.
-3 Jul 2021.
+3 Jul 2021, c00059a.
 
 =item B<Fix problem with -comma-arrow-breakpoint=n flag>
 

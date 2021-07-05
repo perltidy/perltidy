@@ -2119,7 +2119,12 @@ EOM
                         my ( $next_nonblank_token, $i_next ) =
                           find_next_nonblank_token( $i, $rtokens,
                             $max_token_index );
-                        if ( $next_nonblank_token ne ')' ) {
+
+                        # Patch for c029: give up error check if
+                        # a side comment follows
+                        if (   $next_nonblank_token ne ')'
+                            && $next_nonblank_token ne '#' )
+                        {
                             my $hint;
 
                             error_if_expecting_OPERATOR('(');
@@ -2904,6 +2909,15 @@ EOM
 
             # if -> points to a bare word, we must scan for an identifier,
             # otherwise something like ->y would look like the y operator
+
+            # NOTE: this will currently allow things like
+            #     '->@array'    '->*VAR'  '->%hash'
+            # to get parsed as identifiers, even though these are not currently
+            # allowed syntax.  To catch syntax errors like this we could first
+            # check that the next character and skip this call if it is one of
+            # ' @ % * '.  A disadvantage with doing this is that this would
+            # have to be fixed if the perltidy syntax is ever extended to make
+            # any of these valid.  So for now this check is not done.
             scan_identifier_fast();
         },
 
@@ -3410,6 +3424,21 @@ EOM
                 $last_nonblank_container_type = $container_type;
                 $last_nonblank_type_sequence  = $type_sequence;
                 $last_nonblank_i              = $i_tok;
+
+                # Patch for c030: Fix things in case a '->' got separated from
+                # the subsequent identifier by a side comment.  We need the
+                # last_nonblank_token to have a leading -> to avoid triggering
+                # an operator expected error message at the next '('. See also
+                # fix for git #63.
+                if ( $last_last_nonblank_token eq '->' ) {
+                    if (   $last_nonblank_type eq 'w'
+                        || $last_nonblank_type eq 'i'
+                        && substr( $last_nonblank_token, 0, 1 ) eq '$' )
+                    {
+                        $last_nonblank_token = '->' . $last_nonblank_token;
+                        $last_nonblank_type  = 'i';
+                    }
+                }
             }
 
             # store previous token type
@@ -4893,14 +4922,16 @@ BEGIN {
     @{op_expected_table}{@q} = (TERM) x scalar(@q);
 
     # Always UNKNOWN following these types:
-    @q = qw( w );
+    # Fix for c030: added '->' to this list
+    @q = qw( w -> );
     @{op_expected_table}{@q} = (UNKNOWN) x scalar(@q);
 
     # Always expecting OPERATOR ...
     # 'n' and 'v' are currently excluded because they might be VERSION numbers
     # 'i' is currently excluded because it might be a package
     # 'q' is currently excluded because it might be a prototype
-    @q = qw( -- C -> h R ++ ] Q <> );    ## n v q i );
+    # Fix for c030: removed '->' from this list:
+    @q = qw( -- C h R ++ ] Q <> );    ## n v q i );
     push @q, ')';
     @{op_expected_table}{@q} = (OPERATOR) x scalar(@q);
 
@@ -4963,6 +4994,8 @@ sub operator_expected {
 
     my ($rarg) = @_;
 
+    my $msg = "";
+
     ##############
     # Table lookup
     ##############
@@ -4970,7 +5003,10 @@ sub operator_expected {
     # Many types are can be obtained by a table lookup given the previous type.
     # This typically handles half or more of the calls.
     my $op_expected = $op_expected_table{$last_nonblank_type};
-    goto RETURN if ( defined($op_expected) );
+    if ( defined($op_expected) ) {
+        $msg = "Table lookup";
+        goto RETURN;
+    }
 
     ######################
     # Handle special cases
@@ -5181,7 +5217,7 @@ sub operator_expected {
 
     DEBUG_OPERATOR_EXPECTED && do {
         print STDOUT
-"OPERATOR_EXPECTED: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
+"OPERATOR_EXPECTED: $msg: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
     };
 
     return $op_expected;
