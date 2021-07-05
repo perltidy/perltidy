@@ -179,6 +179,14 @@ The usage is simply
 
 It reads its database, ```run_convergence_tests.pl.data```, and runs the latest version of perltidy on each case.  This takes a little time because there are hundreds of cases in the database.  The last line of the output will show "OK" if there are no problems.
 
+## Utility for stress testing with side comments
+
+Another type of test which has been useful is a side comment test.  A script to do this type of test is
+
+ - side_comment_test.pl
+
+It works by taking an arbitrary perl script and first 'extruding' it into as many lines as possible. Then it adds side comments to each line (except where it does not make sense, such as here-doc targets and __END__ lines).  If this introduces a new error message from perltidy then something may be wrong and needs to be investigated.  Instructions for use are in the comments.  This utility has helped locate several problems in the Tokenizer module.
+
 ## Additional scripts
 
 The files of parameters which are automatically are long and contain
