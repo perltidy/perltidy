@@ -75,7 +75,7 @@ sub add_side_comments {
         next if ( $line eq '.' );
 
         # Optional: Avoid problems involving guessing if / starts a pattern
-        # next if ( $line eq '/' );
+        next if ( $line eq '/' );
 
         # Try to skip here targets; see note above
         next if ( $line =~ /^\s*[A-Z_0-9=\.\-]+\s*$/ );

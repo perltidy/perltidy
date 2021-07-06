@@ -2,6 +2,26 @@
 
 =over 4
 
+=item B<Fix error parsing format statement>
+
+The following test script caused an error when perltidy took 'format' to
+start a format statement.
+
+    my$ascii#sc#
+    =#sc#
+    $formatter#sc#
+    ->#sc#
+    format#sc#
+    (#sc#
+    $html#sc#
+    )#sc#
+    ;#sc#
+
+This was fixed by requiring a format statement to begin where a new statement
+can occur. This fixes issue c035.
+
+5 Jan 2021.
+
 =item B<Fix some incorrect error messages due to side comments>
 
 Testing with large numbers of side comments caused perltidy to produce some
@@ -19,7 +39,7 @@ The following snippet is an example.
 
 This update fixes cases c029 and c030.
 
-4 Jul 2021.
+4 Jul 2021, caffc2c.
 
 =item B<Fix undefined var ref involving --format-skipping>
 

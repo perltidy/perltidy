@@ -3017,8 +3017,8 @@ EOM
     @is_use_require{@_} = (1) x scalar(@_);
 
     # This hash holds the array index in $tokenizer_self for these keywords:
-    my %is_format_END_DATA = (
-        'format'   => _in_format_,
+    # Fix for issue c035: removed 'format' from this hash
+    my %is_END_DATA = (
         '__END__'  => _in_end_,
         '__DATA__' => _in_data_,
     );
@@ -3943,15 +3943,23 @@ EOM
                     scan_id();
                 }
 
+                # Fix for c035: split 'format' from 'is_format_END_DATA' to be
+                # more restrictive. Require a new statement to be ok here.
+                elsif ( $tok_kw eq 'format' && new_statement_ok() ) {
+                    $type = ';';    # make tokenizer look for TERM next
+                    $tokenizer_self->[_in_format_] = 1;
+                    last;
+                }
+
                 # Note on token types for format, __DATA__, __END__:
                 # It simplifies things to give these type ';', so that when we
                 # start rescanning we will be expecting a token of type TERM.
                 # We will switch to type 'k' before outputting the tokens.
-                elsif ( $is_format_END_DATA{$tok_kw} ) {
+                elsif ( $is_END_DATA{$tok_kw} ) {
                     $type = ';';    # make tokenizer look for TERM next
 
                     # Remember that we are in one of these three sections
-                    $tokenizer_self->[ $is_format_END_DATA{$tok_kw} ] = 1;
+                    $tokenizer_self->[ $is_END_DATA{$tok_kw} ] = 1;
                     last;
                 }
 
