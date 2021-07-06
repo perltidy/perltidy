@@ -2,6 +2,23 @@
 
 =over 4
 
+=item B<Fix error parsing '&#'>
+
+The following test script caused an error when perltidy did not correctly parse
+the tight side comment after the '&' (it parsed correctly if there was a space
+before the '#').
+
+    print$my_bag
+    &#sc#
+    $your_bag
+    ,
+    "\n"
+    ;
+
+This update fixes this issue, c033.
+
+5 Jul 2021.
+
 =item B<Fix error parsing format statement>
 
 The following test script caused an error when perltidy took 'format' to

@@ -7177,7 +7177,9 @@ sub scan_identifier_do {
                 #   Prima::PodView::COLOR_CODE_FOREGROUND
                 #   & ~tb::COLOR_INDEX ] =
                 #   $sec->{ColorCode}
-                if ( $identifier eq '&' && $expecting ) {
+
+                # Fix for case c033: a '#' here starts a side comment
+                if ( $identifier eq '&' && $expecting && $tok ne '#' ) {
                     $identifier .= $tok;
                 }
                 else {
