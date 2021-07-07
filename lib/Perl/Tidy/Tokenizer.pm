@@ -3729,6 +3729,13 @@ EOM
                     next;
                 }
 
+                # A bare word preceded by -> is an identifier; mark as 'w'.
+                # Fixes c037.
+                if ( $last_nonblank_token eq '->' ) {
+                    $type = 'w';
+                    next;
+                }
+
                 # a bare word immediately followed by :: is not a keyword;
                 # use $tok_kw when testing for keywords to avoid a mistake
                 my $tok_kw = $tok;

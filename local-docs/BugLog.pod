@@ -2,6 +2,33 @@
 
 =over 4
 
+=item B<Fix problem caused by side comment after pointer>
+
+The following test script
+
+    is(
+    $one
+    ->#sc#
+    package
+    ,
+    "bar"
+    ,
+    "Got package"
+    )
+    ;
+
+Caused the following error message:
+
+  4: package
+     ^
+  found package where operator expected
+
+The problem was caused by a side comment between the pointer '->' and
+the word 'package'.  This caused package to be misparsed as a keyword,
+causing the error.
+
+This is fixed in this update, case c037.
+
 =item B<Fix error parsing '%#' and similar combinations>
 
 Perltidy was correctly distinguishing between '$#' and '$ #' but not between
