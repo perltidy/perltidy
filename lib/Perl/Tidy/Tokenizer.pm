@@ -2580,7 +2580,10 @@ EOM
         '*' => sub {    # typeglob, or multiply?
 
             if ( $expecting == UNKNOWN && $last_nonblank_type eq 'Z' ) {
-                if ( $next_type ne 'b' && $next_type ne '(' ) {
+                if (   $next_type ne 'b'
+                    && $next_type ne '('
+                    && $next_type ne '#' )    # Fix c036
+                {
                     $expecting = TERM;
                 }
             }
@@ -6818,30 +6821,39 @@ sub scan_identifier_do {
                 #  howdy::123::bubba();
                 #
             }
+            elsif ( $tok eq '#' ) {
 
-            # $# and POSTDEFREF ->$#
-            elsif (
-                   ( $tok eq '#' )
-                && ( $identifier =~ /\$$/ )
+                # side comment or identifier?
+                if (
 
-                # a # inside a prototype or signature can only start a comment
-                && !$in_prototype_or_signature
-              )
-            {
-                # A '#' starts a comment if it follows a space. For example,
-                # the following is equivalent to $ans=40.
-                #   my $ #
-                #     ans = 40;
-                if ($last_tok_is_blank) {
-                    $type = 'i';
-                    if ( $id_scan_state eq '$' ) { $type = 't' }
+                    # A '#' starts a comment if it follows a space. For example,
+                    # the following is equivalent to $ans=40.
+                    #   my $ #
+                    #     ans = 40;
+                    !$last_tok_is_blank
+
+                    # a # inside a prototype or signature can only start a
+                    # comment
+                    && !$in_prototype_or_signature
+
+                    # these are valid punctuation vars: *# %# @# $#
+                    # May also be '$#array' or POSTDEFREF ->$#
+                    && ( $identifier =~ /^[\%\@\$\*]$/ || $identifier =~ /\$$/ )
+
+                  )
+                {
+                    $identifier .= $tok;    # keep same state, a $ could follow
+                }
+                else {
+
+                    # otherwise it is a side comment
+                    if    ( $identifier eq '->' )   { }
+                    elsif ( $id_scan_state eq '$' ) { $type = 't' }
+                    else                            { $type = 'i' }
                     $i             = $i_save;
                     $id_scan_state = '';
                     last;
                 }
-
-                # May be '$#' or '$#array'
-                $identifier .= $tok;    # keep same state, a $ could follow
             }
 
             elsif ( $tok eq '{' ) {

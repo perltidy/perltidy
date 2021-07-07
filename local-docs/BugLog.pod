@@ -2,6 +2,35 @@
 
 =over 4
 
+=item B<Fix error parsing '%#' and similar combinations>
+
+Perltidy was correctly distinguishing between '$#' and '$ #' but not between
+'@#' and '@ #' and '%#' and '% #'.  The coding for parsing these types of
+expressions has been corrected. Some simple examples:
+
+    # this is a valid program, '%#' is a punctuation variable
+    %# = ( foo => 'bar', baz => 'buz' );
+    print keys(%#), "\n";
+
+    # but this is a syntax error (space before # makes a side comment)
+    # (perltidy was ignoring the space and forming '%#' here)
+    % # = ( foo => 'bar', baz => 'buz' );
+    print keys(%#), "\n";
+
+    # this is a valid program, '@#' is a punctuation variable
+    @# = ( foo , 'bar', baz , 'buz' );
+    print @#, "\n";
+
+    # this is a valid program, the space makes the '#' a side comment
+    # perltidy formed %# here, causing an error
+    % #
+    var = ( foo => 'bar', baz => 'buz' );
+    print keys(%var), "\n";
+
+This fixes case c036.
+
+6 Jul 2021.
+
 =item B<Fix error parsing '&#'>
 
 The following test script caused an error when perltidy did not correctly parse
