@@ -2,6 +2,26 @@
 
 =over 4
 
+=item B<Fix problem caused by side comment after pointer, part 2>
+
+This is related to the previous issue, c037.  The following snippet was misparsed
+at the old style ' package separater due to the side comment following the
+pointer.
+
+    @ret
+    =
+    $o
+    ->#
+    SUPER'method
+    (
+    'whatever'
+    )
+    ;
+
+This is fixed in this update, case c041.
+
+7 Jul 2021.
+
 =item B<Fix problem caused by side comment after pointer>
 
 The following test script
@@ -27,7 +47,7 @@ The problem was caused by a side comment between the pointer '->' and
 the word 'package'.  This caused package to be misparsed as a keyword,
 causing the error.
 
-This is fixed in this update, case c037.
+This is fixed in this update, case c037, 96f2ebb.
 
 =item B<Fix error parsing '%#' and similar combinations>
 
@@ -56,7 +76,7 @@ expressions has been corrected. Some simple examples:
 
 This fixes case c036.
 
-6 Jul 2021.
+6 Jul 2021, e233d41.
 
 =item B<Fix error parsing '&#'>
 
@@ -73,7 +93,7 @@ before the '#').
 
 This update fixes this issue, c033.
 
-5 Jul 2021.
+5 Jul 2021, 0d784e0.
 
 =item B<Fix error parsing format statement>
 
@@ -93,7 +113,7 @@ start a format statement.
 This was fixed by requiring a format statement to begin where a new statement
 can occur. This fixes issue c035.
 
-5 Jan 2021.
+5 Jan 2021, 2ef16fb.
 
 =item B<Fix some incorrect error messages due to side comments>
 

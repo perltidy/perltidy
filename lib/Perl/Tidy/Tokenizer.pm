@@ -3729,10 +3729,10 @@ EOM
                     next;
                 }
 
-                # A bare word preceded by -> is an identifier; mark as 'w'.
-                # Fixes c037.
+                # Scan a bare word following a -> as an identifir; it could
+                # have a long package name.  Fixes c037, c041.
                 if ( $last_nonblank_token eq '->' ) {
-                    $type = 'w';
+                    scan_bare_identifier();
                     next;
                 }
 
