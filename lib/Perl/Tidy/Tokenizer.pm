@@ -2324,11 +2324,11 @@ EOM
                     $type = $tok;
                 }
 
-              #DEBUG - collecting info on what tokens follow a divide
-              # for development of guessing algorithm
-              #if ( numerator_expected( $i, $rtokens, $max_token_index ) < 0 ) {
-              #    #write_diagnostics( "DIVIDE? $input_line\n" );
-              #}
+           #DEBUG - collecting info on what tokens follow a divide
+           # for development of guessing algorithm
+           #if ( is_possible_numerator( $i, $rtokens, $max_token_index ) < 0 ) {
+           #    #write_diagnostics( "DIVIDE? $input_line\n" );
+           #}
             }
         },
         '{' => sub {
@@ -6061,8 +6061,15 @@ sub guess_if_pattern_or_division {
     }
     else {
         my $ibeg = $i;
-        my $divide_expected =
-          numerator_expected( $i, $rtokens, $max_token_index );
+        my $divide_possible =
+          is_possible_numerator( $i, $rtokens, $max_token_index );
+
+        if ( $divide_possible < 0 ) {
+            $msg        = "pattern (division not possible here)\n";
+            $is_pattern = 1;
+            goto RETURN;
+        }
+
         $i = $ibeg + 1;
         my $next_token = $rtokens->[$i];    # first token after slash
 
@@ -6097,7 +6104,7 @@ sub guess_if_pattern_or_division {
 
             # we didn't find an ending / on this line, so we bias towards
             # division
-            if ( $divide_expected >= 0 ) {
+            if ( $divide_possible >= 0 ) {
                 $is_pattern = 0;
                 $msg .= "division (no ending / on this line)\n";
             }
@@ -6121,12 +6128,12 @@ sub guess_if_pattern_or_division {
             if ( $pattern_expected >= 0 ) {
 
                 # pattern looks possible...
-                if ( $divide_expected >= 0 ) {
+                if ( $divide_possible >= 0 ) {
 
                     # Both pattern and divide can work here...
 
                     # Increase weight of divide if a pure number follows
-                    $divide_expected += $next_token =~ /^\d+$/;
+                    $divide_possible += $next_token =~ /^\d+$/;
 
                     # Check for known constants in the numerator, like 'pi'
                     if ( $is_known_constant{$last_nonblank_token} ) {
@@ -6143,7 +6150,7 @@ sub guess_if_pattern_or_division {
                     }
 
                     # If one rule is more definite, use it
-                    elsif ( $divide_expected > $pattern_expected ) {
+                    elsif ( $divide_possible > $pattern_expected ) {
                         $msg .=
                           "division (more likely based on following tokens)\n";
                         $is_pattern = 0;
@@ -6162,7 +6169,7 @@ sub guess_if_pattern_or_division {
                     }
                 }
 
-                # divide_expected < 0 means divide can not work here
+                # divide_possible < 0 means divide can not work here
                 else {
                     $is_pattern = 1;
                     $msg .= "pattern (division not possible)\n";
@@ -6172,7 +6179,7 @@ sub guess_if_pattern_or_division {
             # pattern does not look possible...
             else {
 
-                if ( $divide_expected >= 0 ) {
+                if ( $divide_possible >= 0 ) {
                     $is_pattern = 0;
                     $msg .= "division (pattern not possible)\n";
                 }
@@ -6191,6 +6198,8 @@ sub guess_if_pattern_or_division {
             }
         }
     }
+
+  RETURN:
     return ( $is_pattern, $msg );
 }
 
@@ -7681,37 +7690,39 @@ sub find_next_nonblank_token {
     return ( $next_nonblank_token, $i );
 }
 
-sub numerator_expected {
+sub is_possible_numerator {
 
-    # this is a filter for a possible numerator, in support of guessing
-    # for the / pattern delimiter token.
-    # returns -
+    # Look at the next non-comment character and decide if it could be a
+    # numerator.  Return
     #   1 - yes
     #   0 - can't tell
     #  -1 - no
-    # Note: I am using the convention that variables ending in
-    # _expected have these 3 possible values.
+
     my ( $i, $rtokens, $max_token_index ) = @_;
-    my $numerator_expected = 0;
+    my $is_possible_numerator = 0;
 
     my $next_token = $rtokens->[ $i + 1 ];
     if ( $next_token eq '=' ) { $i++; }    # handle /=
     my ( $next_nonblank_token, $i_next ) =
       find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
+    if ( $next_nonblank_token eq '#' ) {
+        ( $next_nonblank_token, $i_next ) =
+          find_next_nonblank_token( $max_token_index, $rtokens,
+            $max_token_index );
+    }
+
     if ( $next_nonblank_token =~ /(\(|\$|\w|\.|\@)/ ) {
-        $numerator_expected = 1;
+        $is_possible_numerator = 1;
+    }
+    elsif ( $next_nonblank_token =~ /^\s*$/ ) {
+        $is_possible_numerator = 0;
     }
     else {
-
-        if ( $next_nonblank_token =~ /^\s*$/ ) {
-            $numerator_expected = 0;
-        }
-        else {
-            $numerator_expected = -1;
-        }
+        $is_possible_numerator = -1;
     }
-    return $numerator_expected;
+
+    return $is_possible_numerator;
 }
 
 {    ## closure for sub pattern_expected

@@ -2,6 +2,31 @@
 
 =over 4
 
+=item B<Improve logic for distinguishing a pattern vs a division>
+
+Testing with side comments produced the following snippet which caused a error
+due to the side comment on the '/'
+
+    $bond_str
+    =
+    VERY_WEAK #sc#
+    / #sc#
+    1.05
+    ;
+
+Several related examples were found in which side comments triggered errors.
+For example
+
+    ok
+    /[^\s]+/#sc#
+    ,
+    'm/[^\s]/ utf8'
+    ;
+
+This update fixes these problems, case c040.
+
+9 Jul 2021.
+
 =item B<Fix problem caused by side comment after ++>
 
 Testing with side comments produced an incorrect error message for this
