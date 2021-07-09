@@ -2928,8 +2928,17 @@ EOM
         '++' => sub {
             if    ( $expecting == TERM ) { $type = 'pp' }
             elsif ( $expecting == UNKNOWN ) {
+
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
+
+                # Fix for c042: look past a side comment
+                if ( $next_nonblank_token eq '#' ) {
+                    ( $next_nonblank_token, $i_next ) =
+                      find_next_nonblank_token( $max_token_index,
+                        $rtokens, $max_token_index );
+                }
+
                 if ( $next_nonblank_token eq '$' ) { $type = 'pp' }
             }
         },
@@ -2951,6 +2960,14 @@ EOM
             elsif ( $expecting == UNKNOWN ) {
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
+
+                # Fix for c042: look past a side comment
+                if ( $next_nonblank_token eq '#' ) {
+                    ( $next_nonblank_token, $i_next ) =
+                      find_next_nonblank_token( $max_token_index,
+                        $rtokens, $max_token_index );
+                }
+
                 if ( $next_nonblank_token eq '$' ) { $type = 'mm' }
             }
         },
@@ -5929,7 +5946,7 @@ sub peek_ahead_for_nonblank_token {
         }
         last;
     }
-    return $rtokens;
+    return;
 }
 
 #########i#############################################################
@@ -7643,11 +7660,14 @@ sub scan_identifier_do {
 sub find_next_nonblank_token {
     my ( $i, $rtokens, $max_token_index ) = @_;
 
+    # Returns the next nonblank token after the token at index $i
+    # To skip past a side comment, and any subsequent block comments
+    # and blank lines, call with i=$max_token_index
+
     if ( $i >= $max_token_index ) {
         if ( !peeked_ahead() ) {
             peeked_ahead(1);
-            $rtokens =
-              peek_ahead_for_nonblank_token( $rtokens, $max_token_index );
+            peek_ahead_for_nonblank_token( $rtokens, $max_token_index );
         }
     }
 

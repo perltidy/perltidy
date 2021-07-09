@@ -2,6 +2,23 @@
 
 =over 4
 
+=item B<Fix problem caused by side comment after ++>
+
+Testing with side comments produced an incorrect error message for this
+snippet:
+
+    xxx 
+    ++#
+    $test, 
+    Internals::SvREADONLY( %$copy) , 
+    "cloned hash restricted?" ;
+
+The problem was caused by the side comment between the '++' and '$test'.
+The same problem occurs for '--' instead of '++'.  This is fixed with this
+update, case c042.
+
+8 Jul 2021.
+
 =item B<Fix problem caused by side comment after pointer, part 2>
 
 This is related to the previous issue, c037.  The following snippet was misparsed
