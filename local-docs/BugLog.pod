@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Removed warning message if ending in code skipping section>
+
+In the previous version, a warning was produced if a 'code-skipping' opening comment
+'#<<V' was not followed by a closing comment '#>>V'.  But the related 'format-skipping'
+commands do not give a warning if a '#<<<' comment is not ended with a '#>>>' closing
+comment.  In order to be able to smoothly change between these options, it seems best
+to remove the warning about a missing '#>>V'.  There is still a message in the log file
+about this, so if there is any uncertainty about it, a log file can be saved and consulted.
+
+10 Jul 2021.
+
 =item B<Improve logic for distinguishing a pattern vs a division>
 
 Testing with side comments produced the following snippet which caused a error
@@ -25,7 +36,7 @@ For example
 
 This update fixes these problems, case c040.
 
-9 Jul 2021.
+9 Jul 2021, ffe4351.
 
 =item B<Fix problem caused by side comment after ++>
 
@@ -42,7 +53,7 @@ The problem was caused by the side comment between the '++' and '$test'.
 The same problem occurs for '--' instead of '++'.  This is fixed with this
 update, case c042.
 
-8 Jul 2021.
+8 Jul 2021, 20cc9a0.
 
 =item B<Fix problem caused by side comment after pointer, part 2>
 
@@ -62,7 +73,7 @@ pointer.
 
 This is fixed in this update, case c041.
 
-7 Jul 2021.
+7 Jul 2021, 1806772.
 
 =item B<Fix problem caused by side comment after pointer>
 

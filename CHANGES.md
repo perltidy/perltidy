@@ -2,6 +2,15 @@
 
 ## 2021 06 25.02
 
+    - Fixed an undefined variable message, see git #67. When a format skipping
+      comment '#<<' is placed before the first line of code in a script, a
+      message 'Use of uninitialized value $Ktoken_vars in numeric ...' can
+      occur.
+
+    - A warning will no longer be given if a script has a code-skipping begin
+      comment '#<<V' which is not terminated with a closing comment '#>>V'. This
+      makes it behave like the related format-skipping option.
+
     - Removed the limit on -ci=n when -xci is set, reference: rt #136415.
       This update removes a limit in the previous two versions in which the
       value of -ci=n was limited to the value of -i=n when -xci was set.

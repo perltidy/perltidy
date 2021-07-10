@@ -3727,8 +3727,10 @@ EOM
                         && $want_left_space{$next_type} == WS_NO
                     )
 
-                    # or we might be followed by the start of a quote
-                    || $next_nonblank_type =~ /^[\/\?]$/
+                    # or we might be followed by the start of a quote,
+                    # fixes c039.
+                    || substr( $next_nonblank_token, 0, 1 ) eq '/'
+
                   )
                 {
                     $bond_str = NO_BREAK;
@@ -3753,6 +3755,12 @@ EOM
             elsif ( $next_nonblank_type eq '.' ) {
                 $bond_str = NO_BREAK
                   if ( $types_to_go[ $i_next_nonblank + 1 ] eq 'n' );
+            }
+
+            # Fix for c039
+            elsif ( $type eq 'w' ) {
+                $bond_str = NO_BREAK
+                  if ( substr( $next_nonblank_token, 0, 1 ) eq '/' );
             }
 
             my $bond_str_2 = $bond_str;
@@ -5138,9 +5146,9 @@ sub respace_tokens {
                 my $seqno_parent = $seqno_stack{ $depth_next - 1 };
                 $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
                 push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
-                $rparent_of_seqno->{$type_sequence}        = $seqno_parent;
-                $seqno_stack{$depth_next}                  = $type_sequence;
-                $K_old_opening_by_seqno{$type_sequence}    = $Ktoken_vars;
+                $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
+                $seqno_stack{$depth_next}               = $type_sequence;
+                $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
                 $depth_next++;
 
                 if ( $depth_next > $depth_next_max ) {

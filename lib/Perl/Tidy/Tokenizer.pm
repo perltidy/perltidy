@@ -567,7 +567,8 @@ EOM
     }
 
     if ( $tokenizer_self->[_in_skipped_] ) {
-        warning("hit EOF while in lines skipped with --code-skipping\n");
+        write_logfile_entry(
+            "hit EOF while in lines skipped with --code-skipping\n");
     }
 
     if ( $tokenizer_self->[_in_pod_] ) {
