@@ -2,6 +2,22 @@
 
 =over 4
 
+=item B<Fix case b1172, a failure to converge>
+
+Random testing produced case b1172, a failure to converge with unusual parametrs.
+This update fixes this case. There are no other known cases of instability
+at the present time but testing continues.
+
+10 Jul 2021.
+
+=item B<Avoid line breaks before a slash in certain cases>
+
+This update prevents a line break before a '/' character which follows a bareword or possible indirect object.  The purpose is reduce the chance of introducing a syntax error in cases where perl is using spaces to distinguish between a division and the start of a pattern.
+
+This fixes case c039.
+
+10 Jul 2021
+
 =item B<Removed warning message if ending in code skipping section>
 
 In the previous version, a warning was produced if a 'code-skipping' opening comment

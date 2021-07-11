@@ -6471,6 +6471,42 @@ my $xx =
 --paren-tightness=2
 --space-function-paren
 
+==> b1172.in <==
+# S1
+
+ok(
+    '[{"1":[5]}]' eq
+             encode_json[
+                         {
+                      1=>[
+                               5
+                      ]
+                         }
+             ]
+);
+
+# S2
+
+ok('[{"1":[5]}]' eq
+             encode_json[
+                       {1=>
+                               [
+                               5
+                               ]
+                       }
+             ]);
+
+
+
+==> b1172.par <==
+--noadd-whitespace
+--continuation-indentation=9
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=9
+--line-up-parentheses
+--maximum-line-length=27
+
 ==> b120.in <==
 # Same as bug96
 # State 1

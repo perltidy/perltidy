@@ -291,7 +291,9 @@ my ( $a, $b, $c ) = @_;    # test -nsak="my for"
             expect => <<'#1...........',
                     # do not weld paren to opening one-line non-paren container
                     $Self->_Add(
-                        $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
+                        $SortOrderDisplay{
+                            $Field->GenerateFieldForSelectSQL()
+                        }
                     );
 
                     # this will not get welded with -wn

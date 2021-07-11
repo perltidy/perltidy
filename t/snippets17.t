@@ -1033,7 +1033,9 @@ sub plugh () : Ugly('\(") : Bad;
             expect => <<'#19...........',
                     # do not weld paren to opening one-line non-paren container
                     $Self->_Add(
-                        $SortOrderDisplay{ $Field->GenerateFieldForSelectSQL() }
+                        $SortOrderDisplay{
+                            $Field->GenerateFieldForSelectSQL()
+                        }
                     );
 
                     # this will not get welded with -wn

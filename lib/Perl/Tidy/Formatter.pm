@@ -16868,6 +16868,15 @@ sub set_continuation_breaks {
     } ## end sub scan_list
 } ## end closure scan_list
 
+my %is_kwiZ;
+
+BEGIN {
+
+    # Added 'w' to fix b1172
+    my @q = qw(k w i Z);
+    @is_kwiZ{@q} = (1) x scalar(@q);
+}
+
 sub find_token_starting_list {
 
     # When testing to see if a block will fit on one line, some
@@ -16879,7 +16888,7 @@ sub find_token_starting_list {
     # This will be the return index
     my $i_opening_minus = $i_opening_paren;
 
-    return $i_opening_minus if ( $i_opening_minus <= 0 );
+    goto RETURN if ( $i_opening_minus <= 0 );
 
     my $im1 = $i_opening_paren - 1;
     my ( $iprev_nb, $type_prev_nb ) = ( $im1, $types_to_go[$im1] );
@@ -16907,7 +16916,12 @@ sub find_token_starting_list {
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
     }
-    elsif ( $type_prev_nb eq 'k' ) { $i_opening_minus = $iprev_nb }
+
+    # Handle non-parens
+    elsif ( $is_kwiZ{$type_prev_nb} ) { $i_opening_minus = $iprev_nb }
+
+  RETURN:
+
     return $i_opening_minus;
 }
 

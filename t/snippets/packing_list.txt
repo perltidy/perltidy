@@ -323,6 +323,7 @@
 ../snippets24.t	rt136417.def
 ../snippets24.t	rt136417.rt136417
 ../snippets24.t	numbers.def
+../snippets24.t	code_skipping.def
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -463,4 +464,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets24.t	code_skipping.def
