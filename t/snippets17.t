@@ -90,6 +90,9 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
         'comments' => <<'----------',
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
 sub length { return length($_[0]) }    # side comment
                              # hanging side comment
                              # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
@@ -341,6 +344,9 @@ ok IsWindow($c_sub_khwnd), 'IsWindow works on the client';
             expect => <<'#4...........',
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
 sub length { return length( $_[0] ) }  # side comment
 
 # hanging side comment
@@ -431,6 +437,9 @@ Some pod after __END__ to delete with -dp and trim with -trp
             params => "comments2",
             expect => <<'#5...........',
 #!/usr/bin/perl -w
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
 sub length { return length( $_[0] ) }          # side comment
                                                # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
@@ -497,6 +506,10 @@ __END__
             expect => <<'#6...........',
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+
+#>>>
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
@@ -590,6 +603,9 @@ Some pod after __END__ to delete with -dp and trim with -trp
             expect => <<'#7...........',
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
@@ -692,6 +708,9 @@ Some pod after __END__ to delete with -dp and trim with -trp
             expect => <<'#8...........',
 #!/usr/bin/perl -w
 # an initial hash bang line cannot be deleted with -dp
+#<<< format skipping of first code can cause an error message in perltidy v20210625
+my $rvar = [ [ 1, 2, 3 ], [ 4, 5, 6 ] ];
+#>>>
 sub length { return length( $_[0] ) }    # side comment
                                          # hanging side comment
  # very longgggggggggggggggggggggggggggggggggggggggggggggggggggg hanging side comment
