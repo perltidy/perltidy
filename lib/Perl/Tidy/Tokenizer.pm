@@ -2293,9 +2293,11 @@ EOM
 
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '?'.
-            if ( $last_nonblank_type eq 'k'
+            if (
+                $last_nonblank_type eq 'k'
                 && $is_keyword_rejecting_slash_as_pattern_delimiter{
-                    $last_nonblank_token} )
+                    $last_nonblank_token}
+              )
             {
                 $is_pattern = 0;
             }
@@ -2534,9 +2536,11 @@ EOM
             # Patch for rt #126965
             # a pattern cannot follow certain keywords which take optional
             # arguments, like 'shift' and 'pop'. See also '/'.
-            if ( $last_nonblank_type eq 'k'
+            if (
+                $last_nonblank_type eq 'k'
                 && $is_keyword_rejecting_question_as_pattern_delimiter{
-                    $last_nonblank_token} )
+                    $last_nonblank_token}
+              )
             {
                 $is_pattern = 0;
             }
@@ -3603,8 +3607,11 @@ EOM
                 print STDOUT "TOKENIZE:(@debug_list)\n";
             };
 
-            # turn off attribute list on first non-blank, non-bareword
-            if ( $pre_type ne 'w' ) { $in_attribute_list = 0 }
+            # Turn off attribute list on first non-blank, non-bareword.
+            # Added '#' to fix c038.
+            if ( $pre_type ne 'w' && $pre_type ne '#' ) {
+                $in_attribute_list = 0;
+            }
 
             ###############################################################
             # We have the next token, $tok.
@@ -4713,7 +4720,9 @@ EOM
 # /^(\}|\{|BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|;|if|elsif|else|unless|while|until|for|foreach)$/
                         elsif (
                             $is_zero_continuation_block_type{
-                                $routput_block_type->[$i] } )
+                                $routput_block_type->[$i]
+                            }
+                          )
                         {
                             $in_statement_continuation = 0;
                         }
@@ -4722,7 +4731,9 @@ EOM
                         #     /^(sort|grep|map|do|eval)$/ )
                         elsif (
                             $is_not_zero_continuation_block_type{
-                                $routput_block_type->[$i] } )
+                                $routput_block_type->[$i]
+                            }
+                          )
                         {
                         }
 
@@ -5082,10 +5093,12 @@ sub operator_expected {
 
             # // may follow perl functions which may be unary operators
             # see test file dor.t (defined or);
-            if (   $tok eq '/'
+            if (
+                   $tok eq '/'
                 && $next_type eq '/'
                 && $is_keyword_rejecting_slash_as_pattern_delimiter{
-                    $last_nonblank_token} )
+                    $last_nonblank_token}
+              )
             {
                 $op_expected = OPERATOR;
             }

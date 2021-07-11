@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix error parsing sub attributes with side comment>
+
+Testing with side comments produced an error in the following snippet:
+
+    sub plugh () :#
+      Ugly('\(") : Bad;
+
+This is fixed in this update, case c038.
+
+11 Jul 2021.
+
 =item B<Fix case b1172, a failure to converge>
 
 Random testing produced case b1172, a failure to converge with unusual parametrs.
