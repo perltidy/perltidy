@@ -3728,8 +3728,9 @@ EOM
                     )
 
                     # or we might be followed by the start of a quote,
-                    # fixes c039.
-                    || substr( $next_nonblank_token, 0, 1 ) eq '/'
+                    # and this is not an existing breakpoint; fixes c039.
+                    || !$old_breakpoint_to_go[$i]
+                    && substr( $next_nonblank_token, 0, 1 ) eq '/'
 
                   )
                 {
@@ -3760,7 +3761,8 @@ EOM
             # Fix for c039
             elsif ( $type eq 'w' ) {
                 $bond_str = NO_BREAK
-                  if ( substr( $next_nonblank_token, 0, 1 ) eq '/' );
+                  if ( !$old_breakpoint_to_go[$i]
+                    && substr( $next_nonblank_token, 0, 1 ) eq '/' );
             }
 
             my $bond_str_2 = $bond_str;
@@ -5914,7 +5916,8 @@ sub respace_tokens {
                                 $is_block_without_semicolon{
                                     $last_nonblank_block_type}
                                 || $last_nonblank_block_type =~ /$SUB_PATTERN/
-                                || $last_nonblank_block_type =~ /^\w+:$/ )
+                                || $last_nonblank_block_type =~ /^\w+:$/
+                            )
                         )
                         || $last_nonblank_type eq ';'
                     )
@@ -21410,9 +21413,12 @@ sub make_paren_name {
         # an isolated brace
         #############################################################
         my $is_isolated_block_brace = $block_type_to_go[$ibeg]
-          && ( $i_terminal == $ibeg
+          && (
+            $i_terminal == $ibeg
             || $is_if_elsif_else_unless_while_until_for_foreach{
-                $block_type_to_go[$ibeg] } );
+                $block_type_to_go[$ibeg]
+            }
+          );
 
         # only do this for a ':; which is aligned with its leading '?'
         my $is_unaligned_colon = $types_to_go[$ibeg] eq ':' && !$is_leading;

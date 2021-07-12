@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Avoid line breaks before a slash in certain cases>
+
+This is a modification to the previous update for case c039 which prevents a line break before a '/' character which follows a bareword or possible indirect object.  This rule
+will be only be used to prevent creating new line breaks. Existing line breaks can remain.
+
+11 Jul 2021
+
 =item B<Fix error parsing sub attributes with side comment>
 
 Testing with side comments produced an error in the following snippet:
