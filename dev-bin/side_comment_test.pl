@@ -122,6 +122,9 @@ sub add_side_comments {
 sub write_file {
     my ( $fname, $string, $msg ) = @_;
     open my $fh, '>', $fname or die "cannot open $fname: $!\n";
+    if ( utf8::is_utf8($string) ) {
+        binmode $fh, ":raw:encoding(UTF-8)";
+    }
     $fh->print($string);
     $fh->close();
     print STDERR "Wrote $fname\n" if ($msg);
