@@ -2,6 +2,26 @@
 
 =over 4
 
+=item B<Fix problem with side comment after pattern>
+
+Testing with randomly placed side comments produced an error illustrated
+with the following snippet:
+
+    testit
+    /A (*THEN) X | B (*THEN) C/x#sc#
+    ,
+    "Simple (*THEN) test"
+    ;
+
+If 'testit' is an unknown bareword then perltidy has to guess
+if the '/' is a division or can start a pattern.  In this case the side
+comment caused a bad guess.  This is case c044 and is fixed with this update.
+There are no other known issues with side comments at the present time
+but testing continues.
+
+13 Jul 2021.
+
+
 =item B<Fix problem with side comment after pointer, part 3>
 
 This update fixes some incorrect tokenization produced by a side comment

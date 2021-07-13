@@ -3767,9 +3767,9 @@ EOM
                 if ( $last_nonblank_token eq '->' ) {
                     scan_bare_identifier();
 
-                    # Patch for c043, part 4; use type 'w' after a '->'
-                    # This is just a safety check on sub scan_bare_identifier, which
-                    # should get this case correct.
+                    # Patch for c043, part 4; use type 'w' after a '->'.
+                    # This is just a safety check on sub scan_bare_identifier,
+                    # which should get this case correct.
                     $type = 'w';
                     next;
                 }
@@ -7792,7 +7792,10 @@ sub is_possible_numerator {
         }
         else {
 
-            if ( $next_nonblank_token =~ /^\s*$/ ) {
+            # Added '#' to fix issue c044
+            if (   $next_nonblank_token =~ /^\s*$/
+                || $next_nonblank_token eq '#' )
+            {
                 $is_pattern = 0;
             }
             else {
