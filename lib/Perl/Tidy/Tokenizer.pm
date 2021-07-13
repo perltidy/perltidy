@@ -3624,6 +3624,14 @@ EOM
             if ( $pre_type eq 'w' ) {
                 $expecting =
                   operator_expected( [ $prev_type, $tok, $next_type ] );
+
+                # Patch for c043, part 3: A bareword after '->' expects a TERM
+                # FIXME: It would be cleaner to give method calls a new type 'M'
+                # and update sub operator_expected to handle this.
+                if ( $last_nonblank_type eq '->' ) {
+                    $expecting = TERM;
+                }
+
                 my ( $next_nonblank_token, $i_next ) =
                   find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -3758,6 +3766,11 @@ EOM
                 # have a long package name.  Fixes c037, c041.
                 if ( $last_nonblank_token eq '->' ) {
                     scan_bare_identifier();
+
+                    # Patch for c043, part 4; use type 'w' after a '->'
+                    # This is just a safety check on sub scan_bare_identifier, which
+                    # should get this case correct.
+                    $type = 'w';
                     next;
                 }
 
@@ -6331,13 +6344,14 @@ sub scan_bare_identifier_do {
         else {
             $package = $current_package;
 
-            if ( $is_keyword{$tok} ) {
+            # patched for c043, part 1: keyword does not follow '->'
+            if ( $is_keyword{$tok} && $last_nonblank_type ne '->' ) {
                 $type = 'k';
             }
         }
 
-        # if it is a bareword..
-        if ( $type eq 'w' ) {
+        # if it is a bareword..  patched for c043, part 2: not following '->'
+        if ( $type eq 'w' && $last_nonblank_type ne '->' ) {
 
             # check for v-string with leading 'v' type character
             # (This seems to have precedence over filehandle, type 'Y')
