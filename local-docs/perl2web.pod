@@ -117,7 +117,7 @@ To cause perltidy to write a style sheet to standard output and exit,
 use the B<-ss>, or B<--stylesheet>, flag.  This is useful if the style
 sheet could not be written for some reason, such as if the B<-pre> flag
 was used.  Thus, for example,
-  
+
   perltidy -html -ss >mystyle.css
 
 will write a style sheet with the default properties to file

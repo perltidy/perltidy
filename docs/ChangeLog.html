@@ -1,22 +1,56 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2021 07 17</h2>
+
+<pre><code>- This release is being made mainly because of the next item, in which an
+  error message about an uninitialized value error message could be produced 
+  in certain cases when format-skipping is used.  The error message was 
+  annoying but harmless to formatting.  This version may produce occasional 
+  differences in formatting compared to previous versions, mainly for lines 
+  which are near the specified line length limit.  This is due to ongoing 
+  efforts to eliminate edge cases of formatting instability.
+
+- Fixed an undefined variable message, see git #67. When a format skipping
+  comment '#&lt;&lt;' is placed before the first line of code in a script, a
+  message 'Use of uninitialized value $Ktoken_vars in numeric ...' can
+  occur.
+
+- A warning will no longer be given if a script has an opening code-skipping
+  comment '#&lt;&lt;V' which is not terminated with a closing comment '#&gt;&gt;V'. This
+  makes code-skipping and format-skipping behave in a similar way: a
+  '#&gt;&gt;V' or '#&gt;&gt;&gt;' comment without a corresponding closing comment will cause 
+  the rest of a file to be skipped.  If there is a question about which lines 
+  are skipped, a .LOG file can be produced with the -g flag and it will have 
+  this information.
+
+- Removed the limit on -ci=n when -xci is set, reference: rt #136415.
+  This update removes a limit in the previous two versions in which the
+  value of -ci=n was limited to the value of -i=n when -xci was set.
+  This limit had been placed to avoid some formatting instabilities,
+  but recent coding improvements allow the limit to be removed.
+
+- Numerous minor fixes have been made. A complete list is at:
+
+       https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+</code></pre>
+
 <h2>2021 06 25</h2>
 
-<pre><code>- This release adds several new requested parameters.  No significant bugs have 
-  been found since the last release, but a number of minor problems have been 
+<pre><code>- This release adds several new requested parameters.  No significant bugs have
+  been found since the last release, but a number of minor problems have been
   corrected.
 
 - Added a new option '--code-skipping', requested in git #65, in which code
   between comment lines '#&lt;&lt;V' and '#&gt;&gt;V' is passed verbatim to the output
   stream without error checking.  It is simmilar to --format-skipping
-  but there is no error checking of the skipped code. This can be useful for 
+  but there is no error checking of the skipped code. This can be useful for
   skipping past code which employs an extended syntax.
 
 - Added a new option for closing paren placement, -vtc=3, requested in rt #136417.
 
 - Added flag -atnl, --add-terminal-newline, to help issue git #58.
-  This flag tells perltidy to terminate the last line of the output stream 
-  with a newline character, regardless of whether or not the input stream 
+  This flag tells perltidy to terminate the last line of the output stream
+  with a newline character, regardless of whether or not the input stream
   was terminated with a newline character.  This is the default.
   If this flag is negated, with -natnl, then perltidy will add a terminal
   newline character to the the output stream only if the input

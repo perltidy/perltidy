@@ -19,8 +19,7 @@ comment caused a bad guess.  This is case c044 and is fixed with this update.
 There are no other known issues with side comments at the present time
 but testing continues.
 
-13 Jul 2021.
-
+13 Jul 2021, 8b36de8.
 
 =item B<Fix problem with side comment after pointer, part 3>
 
@@ -48,14 +47,14 @@ If a sub declaration for the bareword has been seen, the following '/' was
 being rejected as an operator. This update fixes this case, which is issue
 c043.
 
-13 Jul 2021.
+13 Jul 2021, cab7ed3.
 
 =item B<Avoid line breaks before a slash in certain cases>
 
 This is a modification to the previous update for case c039 which prevents a line break before a '/' character which follows a bareword or possible indirect object.  This rule
 will be only be used to prevent creating new line breaks. Existing line breaks can remain.
 
-11 Jul 2021
+11 Jul 2021, 7afee47.
 
 =item B<Fix error parsing sub attributes with side comment>
 
@@ -66,7 +65,7 @@ Testing with side comments produced an error in the following snippet:
 
 This is fixed in this update, case c038.
 
-11 Jul 2021.
+11 Jul 2021, 80f2a3a.
 
 =item B<Fix case b1172, a failure to converge>
 
@@ -74,7 +73,7 @@ Random testing produced case b1172, a failure to converge with unusual parametrs
 This update fixes this case. There are no other known cases of instability
 at the present time but testing continues.
 
-10 Jul 2021.
+10 Jul 2021, 47e7f9b.
 
 =item B<Avoid line breaks before a slash in certain cases>
 
@@ -82,7 +81,7 @@ This update prevents a line break before a '/' character which follows a barewor
 
 This fixes case c039.
 
-10 Jul 2021
+10 Jul 2021, 461199c.
 
 =item B<Removed warning message if ending in code skipping section>
 
@@ -93,7 +92,7 @@ comment.  In order to be able to smoothly change between these options, it seems
 to remove the warning about a missing '#>>V'.  There is still a message in the log file
 about this, so if there is any uncertainty about it, a log file can be saved and consulted.
 
-10 Jul 2021.
+10 Jul 2021, 461199c.
 
 =item B<Improve logic for distinguishing a pattern vs a division>
 
@@ -3516,7 +3515,7 @@ get made later in the iteration. Update made 9 Dec 2020, ca0ddf4.
 
 In the unlikely event that  a user enters a filename more than once on the
 command line to perltidy, as for 'file1.pl' here
-   
+
   perltidy file1.pl file1.pl 
 
 then that file will be processed more than once. This looks harmless, but if
@@ -4052,7 +4051,7 @@ to avoid disturbing existing formatting.
 =item B<terminal braces not indenting correctly with -bli formatting, issue git #40>
 
 This problem is illustrated with the following snippet when run with -bli -blil='*'
- 
+
     #-bli -bli list='*'
     try
       {
@@ -4188,7 +4187,7 @@ This was fixed 14 Sep 2020, included in 'Allow line-ending '=>' to align vertica
 =item B<Do not create a zero size file by deleting semicolons>
 
 A rule was added to prevent a file consisting of a single semicolon
-  
+
  ;
 
 from becoming a zero length file.  This could cause problems with other

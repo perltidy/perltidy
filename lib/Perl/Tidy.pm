@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20210625.02';
+    $VERSION = '20210717';
 }
 
 sub DESTROY {
@@ -3696,7 +3696,8 @@ sub find_config_file {
     # look for a .perltidyrc configuration file
     # For Windows also look for a file named perltidy.ini
     my ( $is_Windows, $Windows_type, $rconfig_file_chatter,
-        $rpending_complaint ) = @_;
+        $rpending_complaint )
+      = @_;
 
     ${$rconfig_file_chatter} .= "# Config file search...system reported as:";
     if ($is_Windows) {

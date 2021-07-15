@@ -22,7 +22,6 @@
 - Review code, especially any ## commented out sections and "FIXME's"
 - run perlver on all modules to check minimum version; should be 5.8.0
   - The first line in Tidy.pm has the required version of Perl
-  - travis-CI is setup to test on version 5.8 so we should catch this type of error automatically
   - use perlbrew to do local checks and debugging on earlier versions of perl if desired
 - Run tidyall -a to be sure code is tidied
   - note that I have tidyall set to also run perlcritic right now

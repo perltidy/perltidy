@@ -12,6 +12,7 @@
 
 
 <ul id="index">
+  <li><a href="#Issues-fixed-after-release-20210625">Issues fixed after release 20210625</a></li>
   <li><a href="#Issues-fixed-after-release-20210402">Issues fixed after release 20210402</a></li>
   <li><a href="#Issues-fixed-after-release-20210111">Issues fixed after release 20210111</a></li>
   <li><a href="#Issues-fixed-after-release-20201207">Issues fixed after release 20201207</a></li>
@@ -21,10 +22,415 @@
   <li><a href="#Open-Issues">Open Issues</a></li>
 </ul>
 
+<h1 id="Issues-fixed-after-release-20210625">Issues fixed after release 20210625</h1>
+
+<dl>
+
+<dt id="Fix-problem-with-side-comment-after-pattern"><b>Fix problem with side comment after pattern</b></dt>
+<dd>
+
+<p>Testing with randomly placed side comments produced an error illustrated with the following snippet:</p>
+
+<pre><code>    testit
+    /A (*THEN) X | B (*THEN) C/x#sc#
+    ,
+    &quot;Simple (*THEN) test&quot;
+    ;</code></pre>
+
+<p>If &#39;testit&#39; is an unknown bareword then perltidy has to guess if the &#39;/&#39; is a division or can start a pattern. In this case the side comment caused a bad guess. This is case c044 and is fixed with this update. There are no other known issues with side comments at the present time but testing continues.</p>
+
+<p>13 Jul 2021, 8b36de8.</p>
+
+</dd>
+<dt id="Fix-problem-with-side-comment-after-pointer-part-3"><b>Fix problem with side comment after pointer, part 3</b></dt>
+<dd>
+
+<p>This update fixes some incorrect tokenization produced by a side comment placed between a pointer and a bareword as in this snippet:</p>
+
+<pre><code>    sub tzoffset {};
+
+    ...
+
+    my $J
+    +=
+    (
+    $self
+    -&gt;#sc
+    tzoffset
+    / (
+    24
+    *
+    3600
+    )
+    );</code></pre>
+
+<p>If a sub declaration for the bareword has been seen, the following &#39;/&#39; was being rejected as an operator. This update fixes this case, which is issue c043.</p>
+
+<p>13 Jul 2021, cab7ed3.</p>
+
+</dd>
+<dt id="Avoid-line-breaks-before-a-slash-in-certain-cases"><b>Avoid line breaks before a slash in certain cases</b></dt>
+<dd>
+
+<p>This is a modification to the previous update for case c039 which prevents a line break before a &#39;/&#39; character which follows a bareword or possible indirect object. This rule will be only be used to prevent creating new line breaks. Existing line breaks can remain.</p>
+
+<p>11 Jul 2021, 7afee47.</p>
+
+</dd>
+<dt id="Fix-error-parsing-sub-attributes-with-side-comment"><b>Fix error parsing sub attributes with side comment</b></dt>
+<dd>
+
+<p>Testing with side comments produced an error in the following snippet:</p>
+
+<pre><code>    sub plugh () :#
+      Ugly(&#39;\(&quot;) : Bad;</code></pre>
+
+<p>This is fixed in this update, case c038.</p>
+
+<p>11 Jul 2021, 80f2a3a.</p>
+
+</dd>
+<dt id="Fix-case-b1172-a-failure-to-converge"><b>Fix case b1172, a failure to converge</b></dt>
+<dd>
+
+<p>Random testing produced case b1172, a failure to converge with unusual parametrs. This update fixes this case. There are no other known cases of instability at the present time but testing continues.</p>
+
+<p>10 Jul 2021, 47e7f9b.</p>
+
+</dd>
+<dt id="Avoid-line-breaks-before-a-slash-in-certain-cases1"><b>Avoid line breaks before a slash in certain cases</b></dt>
+<dd>
+
+<p>This update prevents a line break before a &#39;/&#39; character which follows a bareword or possible indirect object. The purpose is reduce the chance of introducing a syntax error in cases where perl is using spaces to distinguish between a division and the start of a pattern.</p>
+
+<p>This fixes case c039.</p>
+
+<p>10 Jul 2021, 461199c.</p>
+
+</dd>
+<dt id="Removed-warning-message-if-ending-in-code-skipping-section"><b>Removed warning message if ending in code skipping section</b></dt>
+<dd>
+
+<p>In the previous version, a warning was produced if a &#39;code-skipping&#39; opening comment &#39;#&lt;&lt;V&#39; was not followed by a closing comment &#39;#&gt;&gt;V&#39;. But the related &#39;format-skipping&#39; commands do not give a warning if a &#39;#&lt;&lt;&lt;&#39; comment is not ended with a &#39;#&gt;&gt;&gt;&#39; closing comment. In order to be able to smoothly change between these options, it seems best to remove the warning about a missing &#39;#&gt;&gt;V&#39;. There is still a message in the log file about this, so if there is any uncertainty about it, a log file can be saved and consulted.</p>
+
+<p>10 Jul 2021, 461199c.</p>
+
+</dd>
+<dt id="Improve-logic-for-distinguishing-a-pattern-vs-a-division"><b>Improve logic for distinguishing a pattern vs a division</b></dt>
+<dd>
+
+<p>Testing with side comments produced the following snippet which caused a error due to the side comment on the &#39;/&#39;</p>
+
+<pre><code>    $bond_str
+    =
+    VERY_WEAK #sc#
+    / #sc#
+    1.05
+    ;</code></pre>
+
+<p>Several related examples were found in which side comments triggered errors. For example</p>
+
+<pre><code>    ok
+    /[^\s]+/#sc#
+    ,
+    &#39;m/[^\s]/ utf8&#39;
+    ;</code></pre>
+
+<p>This update fixes these problems, case c040.</p>
+
+<p>9 Jul 2021, ffe4351.</p>
+
+</dd>
+<dt id="Fix-problem-caused-by-side-comment-after"><b>Fix problem caused by side comment after ++</b></dt>
+<dd>
+
+<p>Testing with side comments produced an incorrect error message for this snippet:</p>
+
+<pre><code>    xxx 
+    ++#
+    $test, 
+    Internals::SvREADONLY( %$copy) , 
+    &quot;cloned hash restricted?&quot; ;</code></pre>
+
+<p>The problem was caused by the side comment between the &#39;++&#39; and &#39;$test&#39;. The same problem occurs for &#39;--&#39; instead of &#39;++&#39;. This is fixed with this update, case c042.</p>
+
+<p>8 Jul 2021, 20cc9a0.</p>
+
+</dd>
+<dt id="Fix-problem-caused-by-side-comment-after-pointer-part-2"><b>Fix problem caused by side comment after pointer, part 2</b></dt>
+<dd>
+
+<p>This is related to the previous issue, c037. The following snippet was misparsed at the old style &#39; package separater due to the side comment following the pointer.</p>
+
+<pre><code>    @ret
+    =
+    $o
+    -&gt;#
+    SUPER&#39;method
+    (
+    &#39;whatever&#39;
+    )
+    ;</code></pre>
+
+<p>This is fixed in this update, case c041.</p>
+
+<p>7 Jul 2021, 1806772.</p>
+
+</dd>
+<dt id="Fix-problem-caused-by-side-comment-after-pointer"><b>Fix problem caused by side comment after pointer</b></dt>
+<dd>
+
+<p>The following test script</p>
+
+<pre><code>    is(
+    $one
+    -&gt;#sc#
+    package
+    ,
+    &quot;bar&quot;
+    ,
+    &quot;Got package&quot;
+    )
+    ;</code></pre>
+
+<p>Caused the following error message:</p>
+
+<pre><code>  4: package
+     ^
+  found package where operator expected</code></pre>
+
+<p>The problem was caused by a side comment between the pointer &#39;-&gt;&#39; and the word &#39;package&#39;. This caused package to be misparsed as a keyword, causing the error.</p>
+
+<p>This is fixed in this update, case c037, 96f2ebb.</p>
+
+</dd>
+<dt id="Fix-error-parsing-and-similar-combinations"><b>Fix error parsing &#39;%#&#39; and similar combinations</b></dt>
+<dd>
+
+<p>Perltidy was correctly distinguishing between &#39;$#&#39; and &#39;$ #&#39; but not between &#39;@#&#39; and &#39;@ #&#39; and &#39;%#&#39; and &#39;% #&#39;. The coding for parsing these types of expressions has been corrected. Some simple examples:</p>
+
+<pre><code>    # this is a valid program, &#39;%#&#39; is a punctuation variable
+    %# = ( foo =&gt; &#39;bar&#39;, baz =&gt; &#39;buz&#39; );
+    print keys(%#), &quot;\n&quot;;
+
+    # but this is a syntax error (space before # makes a side comment)
+    # (perltidy was ignoring the space and forming &#39;%#&#39; here)
+    % # = ( foo =&gt; &#39;bar&#39;, baz =&gt; &#39;buz&#39; );
+    print keys(%#), &quot;\n&quot;;
+
+    # this is a valid program, &#39;@#&#39; is a punctuation variable
+    @# = ( foo , &#39;bar&#39;, baz , &#39;buz&#39; );
+    print @#, &quot;\n&quot;;
+
+    # this is a valid program, the space makes the &#39;#&#39; a side comment
+    # perltidy formed %# here, causing an error
+    % #
+    var = ( foo =&gt; &#39;bar&#39;, baz =&gt; &#39;buz&#39; );
+    print keys(%var), &quot;\n&quot;;</code></pre>
+
+<p>This fixes case c036.</p>
+
+<p>6 Jul 2021, e233d41.</p>
+
+</dd>
+<dt id="Fix-error-parsing"><b>Fix error parsing &#39;&amp;#&#39;</b></dt>
+<dd>
+
+<p>The following test script caused an error when perltidy did not correctly parse the tight side comment after the &#39;&amp;&#39; (it parsed correctly if there was a space before the &#39;#&#39;).</p>
+
+<pre><code>    print$my_bag
+    &amp;#sc#
+    $your_bag
+    ,
+    &quot;\n&quot;
+    ;</code></pre>
+
+<p>This update fixes this issue, c033.</p>
+
+<p>5 Jul 2021, 0d784e0.</p>
+
+</dd>
+<dt id="Fix-error-parsing-format-statement"><b>Fix error parsing format statement</b></dt>
+<dd>
+
+<p>The following test script caused an error when perltidy took &#39;format&#39; to start a format statement.</p>
+
+<pre><code>    my$ascii#sc#
+    =#sc#
+    $formatter#sc#
+    -&gt;#sc#
+    format#sc#
+    (#sc#
+    $html#sc#
+    )#sc#
+    ;#sc#</code></pre>
+
+<p>This was fixed by requiring a format statement to begin where a new statement can occur. This fixes issue c035.</p>
+
+<p>5 Jan 2021, 2ef16fb.</p>
+
+</dd>
+<dt id="Fix-some-incorrect-error-messages-due-to-side-comments"><b>Fix some incorrect error messages due to side comments</b></dt>
+<dd>
+
+<p>Testing with large numbers of side comments caused perltidy to produce some incorrect error messages. Two issues are fixed with this update. First, a side comment between a pointer &#39;-&gt;&#39; and the next identifier caused a message. Second, in some cases a comment after an opening paren could cause a message. The following snippet is an example.</p>
+
+<pre><code>    $Msg#sc#
+    -&gt;#sc#
+    $field#sc#
+    (#sc#
+    )#sc#
+    ;#sc#</code></pre>
+
+<p>This update fixes cases c029 and c030.</p>
+
+<p>4 Jul 2021, caffc2c.</p>
+
+</dd>
+<dt id="Fix-undefined-var-ref-involving---format-skipping"><b>Fix undefined var ref involving --format-skipping</b></dt>
+<dd>
+
+<p>Testing produced a situation in which version 20200625 could cause an undefined variable to be accessed (the variable &#39;Ktoken_vars&#39;) as in this snippet:</p>
+
+<pre><code>    #!/usr/bin/perl
+    #&lt;&lt;&lt;
+        my $ra= (
+            [ &#39;Shine&#39;, 40 ], [ &#39;Specular&#39;, [ 1, 1, 0.3, 0 ] ] );
+    #&lt;&lt;&lt;
+    ...</code></pre>
+
+<p>The conditions for this to happen are:</p>
+
+<pre><code>  (1) format skipping (#&lt;&lt;&lt;) begins before the first line of code, and
+  (2) the format skipping section contains the two successive characters &#39;, [&#39;.</code></pre>
+
+<p>The undefined variable was &#39;Ktoken_vars&#39;. This problem was introduced by commit 21ef53b, an update which fixed case b1100. This undefined variable access does influence the formatted output.</p>
+
+<p>This update fixes this problem.</p>
+
+<p>4 Jul 2021, 82916fe.</p>
+
+</dd>
+<dt id="Check-for-side-comment-within-package-statement"><b>Check for side comment within package statement</b></dt>
+<dd>
+
+<p>Testing with randomly placed side comments caused perltidy to produce an incorrect warning when a side comment is placed before the end of a package statement:</p>
+
+<pre><code>    package double # side comment
+    ;</code></pre>
+
+<p>This update fixes this. 3 Jul 2021, c00059a.</p>
+
+</dd>
+<dt id="Fix-problem-with--comma-arrow-breakpoint-n-flag"><b>Fix problem with -comma-arrow-breakpoint=n flag</b></dt>
+<dd>
+
+<p>Testing revealed a formatting irregularity which was caused when the flag -cab=2 got applied to a container which was not a list. This is fixed with update, which fixes case b939a.</p>
+
+<p>1 Jul 2021, 021b938.</p>
+
+</dd>
+<dt id="Fix-a-formatting-instability"><b>Fix a formatting instability</b></dt>
+<dd>
+
+<p>Testing showed that a previously fixed case of instability, b1144, which was fixed 21 Jun 2021, 1b682fd, was unstable again. This update is a small change which fixes this. There are no other known unstable cases at this time but automated testing runs continue to search for instabilities.</p>
+
+<p>1 Jul 2021, 021b938.</p>
+
+</dd>
+<dt id="Fixed-use-of-uninitialized-value"><b>Fixed use of uninitialized value</b></dt>
+<dd>
+
+<p>The previous Tokenizer update caused the use of an unitialized value when run on case b1053:</p>
+
+<pre><code> Use of uninitialized value $next_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 7589.
+ Use of uninitialized value $nn_nonblank_token in pattern match (m//) at /home/steve/bin/Perl/Tidy/Tokenizer.pm line 3723.
+ b1053 converged on iteration 2</code></pre>
+
+<p>This update fixes this.</p>
+
+<p>1 Jul 2021, ea139bd.</p>
+
+</dd>
+<dt id="Fix-token-type-of-colon-introducing-anonomyous-sub-attribute-list"><b>Fix token type of colon introducing anonomyous sub attribute list</b></dt>
+<dd>
+
+<p>In the following example</p>
+
+<pre><code>    print &quot;not &quot; unless ref +(
+        map {
+            sub : lvalue { &quot;a&quot; }
+        } 1
+    )[0] eq &quot;CODE&quot;;</code></pre>
+
+<p>the colon after &#39;sub&#39; was being marked as part of a label rather than the start of an attribute list. This does not cause an error, but the space before the &#39;:&#39; is lost. This is fixed in this update.</p>
+
+<p>Note that something like &#39;sub :&#39; can also be a label, so the tokenizer has to look ahead to decide what to do. For example, this &#39;sub :&#39; is a label:</p>
+
+<pre><code>    my $xx = 0;
+    sub : {
+        $xx++;
+        print &quot;looping with label sub:, a=$xx\n&quot;;
+        if ( $xx &lt; 10 ) { goto &quot;sub&quot; }
+    }</code></pre>
+
+<p>In this case, the goto statement needs quotes around &quot;sub&quot; because it is a keyword.</p>
+
+<p>29 Jun 2021, d5fb3d5.</p>
+
+</dd>
+<dt id="Minor-adjustments-to-improve-formatting-stability"><b>Minor adjustments to improve formatting stability</b></dt>
+<dd>
+
+<p>Testing with random input parameters produced several new cases of formatting instability involving unusual parameter combinations. This update fixes these cases, b1169 b1170 b1171, and all previously discovered cases remain stable with the update.</p>
+
+<p>28 Jun 2021, e1f22e0.</p>
+
+</dd>
+<dt id="Remove-limit-on--ci-n-when--xci-is-set-see-rt-136415"><b>Remove limit on -ci=n when -xci is set, see rt #136415</b></dt>
+<dd>
+
+<p>This update undoes the update c16c5ee of 20 Feb 2021, in which the value of -ci=n was limited to the value of -i=n when -xci was set. Recent improvements in stability tolerances allow this limit to be removed.</p>
+
+<p>28 Jun 2021, 1b3c5e9.</p>
+
+</dd>
+<dt id="Minor-optimization"><b>Minor optimization</b></dt>
+<dd>
+
+<p>Added a quick check to bypass a needless sub call.</p>
+
+<p>26 Jan 2021, e7822df.</p>
+
+</dd>
+<dt id="Eliminate-token-variable-_LEVEL_TRUE_"><b>Eliminate token variable _LEVEL_TRUE_</b></dt>
+<dd>
+
+<p>It was possible to eliminate this token variable by changing the order of welding operations. This reduces the number of variables per token from 12 to 11.</p>
+
+<p>26 Jun 2021, 1f4f78c.</p>
+
+</dd>
+<dt id="Eliminate-token-variable-_CONTAINER_ENVIRONMENT_"><b>Eliminate token variable _CONTAINER_ENVIRONMENT_</b></dt>
+<dd>
+
+<p>Testing with NYT_Prof shows that the number of variables per token has a direct effect on efficiency. This update reduces the number of token variables from 13 to 12, and also simplifies the coding. It was possible to compute this variable from the others, so it was redundant.</p>
+
+<p>26 Jun 2021, 300ca1e.</p>
+
+</dd>
+</dl>
+
 <h1 id="Issues-fixed-after-release-20210402">Issues fixed after release 20210402</h1>
 
 <dl>
 
+<dt id="Release-20210625"><b>Release 20210625</b></dt>
+<dd>
+
+<p>24 Jun 2021, a4ff53d.</p>
+
+</dd>
 <dt id="Adjust-tolerances-to-fix-some-unstable-edge-cases"><b>Adjust tolerances to fix some unstable edge cases</b></dt>
 <dd>
 
@@ -34,7 +440,7 @@
 
 <p>There are no other known cases of formatting instability at the present time, but testing with random input parameters will continue.</p>
 
-<p>21 Jun 2021.</p>
+<p>21 Jun 2021, 1b682fd.</p>
 
 </dd>
 <dt id="Adjust-tolerances-to-fix-some-unstable-edge-cases1"><b>Adjust tolerances to fix some unstable edge cases</b></dt>
@@ -745,7 +1151,7 @@
 
 <p>This fixes cases b1125 b1126 b1127.</p>
 
-<p>2 May 2021i, dac97cb.</p>
+<p>2 May 2021, dac97cb.</p>
 
 </dd>
 <dt id="Avoid-instability-of-combination--bbx-2--lp-and--xci"><b>Avoid instability of combination -bbx=2 -lp and -xci</b></dt>

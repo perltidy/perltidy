@@ -1,21 +1,37 @@
 # Perltidy Change Log
 
-## 2021 06 25.02
+## 2021 07 17
+
+    - This release is being made mainly because of the next item, in which an
+      error message about an uninitialized value error message could be produced 
+      in certain cases when format-skipping is used.  The error message was 
+      annoying but harmless to formatting.  This version may produce occasional 
+      differences in formatting compared to previous versions, mainly for lines 
+      which are near the specified line length limit.  This is due to ongoing 
+      efforts to eliminate edge cases of formatting instability.
 
     - Fixed an undefined variable message, see git #67. When a format skipping
       comment '#<<' is placed before the first line of code in a script, a
       message 'Use of uninitialized value $Ktoken_vars in numeric ...' can
       occur.
 
-    - A warning will no longer be given if a script has a code-skipping begin
+    - A warning will no longer be given if a script has an opening code-skipping
       comment '#<<V' which is not terminated with a closing comment '#>>V'. This
-      makes it behave like the related format-skipping option.
+      makes code-skipping and format-skipping behave in a similar way: a
+      '#>>V' or '#>>>' comment without a corresponding closing comment will cause 
+      the rest of a file to be skipped.  If there is a question about which lines 
+      are skipped, a .LOG file can be produced with the -g flag and it will have 
+      this information.
 
     - Removed the limit on -ci=n when -xci is set, reference: rt #136415.
       This update removes a limit in the previous two versions in which the
       value of -ci=n was limited to the value of -i=n when -xci was set.
       This limit had been placed to avoid some formatting instabilities,
       but recent coding improvements allow the limit to be removed.
+
+    - Numerous minor fixes have been made. A complete list is at:
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
 ## 2021 06 25
 

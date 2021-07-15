@@ -390,7 +390,7 @@ The default is generally a good choice, but it's not a bad idea to check
 programs with B<-w> occasionally, especially if your are looking for a
 bug.  For example, it will ask if you really want '=' instead of '=~' in
 this line:
-  
+
     $line = s/^\s*//;
 
 This kind of error can otherwise be hard to find.

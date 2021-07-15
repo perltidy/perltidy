@@ -221,7 +221,7 @@ The path should end in a valid path separator character, but perltidy will try
 to add one if it is missing.
 
 For example
- 
+
  perltidy somefile.pl -opath=/tmp/
 
 will produce F</tmp/somefile.pl.tdy>.  Otherwise, F<somefile.pl.tdy> will
@@ -608,7 +608,7 @@ or
    perltidy -guess file.pl
 
 To process a file in B<euc-jp> you could use
-   
+
    perltidy -enc=euc-jp file.pl
 
 A perltidy output file is unencoded if the input file is unencoded, and
@@ -898,7 +898,7 @@ a C<)>, C<]>, or a non-block C<}>.  Such a line receives:
 
 The flags B<-cti=1> and B<-cti=2> work well with the B<-lp> flag (previous
 section).
-    
+
     # perltidy -lp -cti=1
     @month_of_year = (
                        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -993,7 +993,7 @@ a'\s', so you must also include backslashes for characters to be taken
 literally rather than as patterns.
 
 For example, to match the side comment '#++', the parameter would be
-  
+
   -nibp='#\+\+'
 
 
@@ -1246,7 +1246,7 @@ The various parameters controlling whitespace within a program are requests whic
    }
 
 Suppose the user requests that / signs have a space to the left but not to the right. Perltidy will refuse to do this, but if this were done the result would be
-   
+
    sub print_div {
        my ($x,$y)=@_;
        print $x /$y;
@@ -2178,7 +2178,7 @@ this parameter.  This parameter is a character string, giving a list of
 block types separated by commas or spaces.  For example, to cuddle code blocks
 of type sort, map and grep, in addition to the default types, the string could
 be set to
-  
+
   -cbl="sort map grep"
 
 or equivalently
@@ -3224,7 +3224,7 @@ treated specially.  In this case, an item such as "01" => 31 is
 treated as a single item in a table.  The number of fields in this table
 will be determined by the same rules that are used for any other table.
 Here is an example.
-    
+
     # perltidy -cab=3
     my %last_day = (
         "01" => 31, "02" => 29, "03" => 31, "04" => 30,
@@ -3352,7 +3352,7 @@ form longer lines, use B<-nbot>.
 By default, if an attribute list is broken at a C<:> in the source file, then
 it will remain broken.  For example, given the following code, the line breaks
 at the ':'s will be retained:
-       
+
                     my @field
                       : field
                       : Default(1)
@@ -4308,7 +4308,7 @@ large data file. Most perl scripts are less than about 2 MB in size. The
 integer B<n> has a default value of 10, so perltidy will skip formatting files
 which have a size greater than 10 MB.  The command to increase the limit to 20
 MB for example would be
-   
+
   perltidy -maxfs=20
 
 This only applies to files specified by filename on the command line. 
@@ -4499,7 +4499,7 @@ To cause perltidy to write a style sheet to standard output and exit,
 use the B<-ss>, or B<--stylesheet>, flag.  This is useful if the style
 sheet could not be written for some reason, such as if the B<-pre> flag
 was used.  Thus, for example,
-  
+
   perltidy -html -ss >mystyle.css
 
 will write a style sheet with the default properties to file
@@ -4776,7 +4776,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20210625.02
+This man page documents perltidy version 20210717
 
 =head1 BUG REPORTS
 
