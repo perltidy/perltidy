@@ -9,7 +9,7 @@ my $usage = <<EOM;
 This utility runs perltidy on a database of stability test cases. 
 It can:
 
-  - run perttidy on the stability test cases
+  - run perltidy on the stability test cases
   - do maintenance of the database of test cases
 
 There are four options: run [DEFAULT], pack, merge, unpack ( -r -p -m -u )

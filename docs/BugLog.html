@@ -26,6 +26,62 @@
 
 <dl>
 
+<dt id="Fix-to-make--wn-and--bbxx-n-flags-work-together"><b>Fix to make -wn and -bbxx=n flags work together</b></dt>
+<dd>
+
+<p>Testing with random parameters produced some cases where the combination of -wn and various -bbxx=n flags were not working together. To illustrate, consider the following script (-sil=1 just means start at 1 indentation level)</p>
+
+<pre><code>    # perltidy -sil=1
+    $$d{&quot;day_name&quot;} = [
+        [
+            &quot;lundi&quot;,    &quot;mardi&quot;,  &quot;mercredi&quot;, &quot;jeudi&quot;,
+            &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
+        ]
+    ];</code></pre>
+
+<p>With welding we get:</p>
+
+<pre><code>    # -sil=1 -wn
+    $$d{&quot;day_name&quot;} = [ [
+        &quot;lundi&quot;,    &quot;mardi&quot;,  &quot;mercredi&quot;, &quot;jeudi&quot;,
+        &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
+    ] ];</code></pre>
+
+<p>With -bbsb=3 (--break-before-square-brackets) we get:</p>
+
+<pre><code>    # -sil=1 -bbsb=3
+    $$d{&quot;day_name&quot;} =
+      [
+        [
+            &quot;lundi&quot;,    &quot;mardi&quot;,  &quot;mercredi&quot;, &quot;jeudi&quot;,
+            &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
+        ]
+      ];</code></pre>
+
+<p>So far, so good. But for the combination -bbsb=3 -wn we get</p>
+
+<pre><code>    # OLD: ERROR
+    # -sil=1 -bbsb=3 -wn
+    $$d{&quot;day_name&quot;} = [ [
+        &quot;lundi&quot;,    &quot;mardi&quot;,  &quot;mercredi&quot;, &quot;jeudi&quot;,
+        &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
+    ] ];</code></pre>
+
+<p>which is incorrect because it ignors the -bbsb flag. The corrected result is</p>
+
+<pre><code>    # NEW: OK
+    # -sil=1 -bbsb=3 -wn
+    $$d{&quot;day_name&quot;} =
+      [ [
+        &quot;lundi&quot;,    &quot;mardi&quot;,  &quot;mercredi&quot;, &quot;jeudi&quot;,
+        &quot;vendredi&quot;, &quot;samedi&quot;, &quot;dimanche&quot;
+      ] ];</code></pre>
+
+<p>This update fixes case b1173. It works for any number of welded containers, and the -bbxxi=n flags also work correctly.</p>
+
+<p>16 Jul 2021.</p>
+
+</dd>
 <dt id="Fix-problem-with-side-comment-after-pattern"><b>Fix problem with side comment after pattern</b></dt>
 <dd>
 

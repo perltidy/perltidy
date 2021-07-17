@@ -17,8 +17,8 @@
 
     - A warning will no longer be given if a script has an opening code-skipping
       comment '#<<V' which is not terminated with a closing comment '#>>V'. This
-      makes code-skipping and format-skipping behave in a similar way: a
-      '#>>V' or '#>>>' comment without a corresponding closing comment will cause 
+      makes code-skipping and format-skipping behave in a similar way: an
+      opening comment without a corresponding closing comment will cause
       the rest of a file to be skipped.  If there is a question about which lines 
       are skipped, a .LOG file can be produced with the -g flag and it will have 
       this information.
@@ -28,6 +28,9 @@
       value of -ci=n was limited to the value of -i=n when -xci was set.
       This limit had been placed to avoid some formatting instabilities,
       but recent coding improvements allow the limit to be removed.
+
+    - The -wn and -bbxx=n flags were not working together correctly. This has
+      been fixed.
 
     - Numerous minor fixes have been made. A complete list is at:
 

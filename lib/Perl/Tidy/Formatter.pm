@@ -6913,8 +6913,8 @@ sub weld_containers {
     }
 
     # Update the end index and lengths of any long welds to extend to the far
-    # end. We only need to do this for the right links, not for the left links.
-    # This has to be processed in sorted order.
+    # end.  This has to be processed in sorted order.
+    # Left links added for b1173.
     my $Kend = -1;
     foreach my $Kstart ( sort { $a <=> $b } @K_multi_weld ) {
 
@@ -6924,11 +6924,13 @@ sub weld_containers {
         my @Klist;
         push @Klist, $Kstart;
         $Kend = $rK_weld_right->{$Kstart};
+        $rK_weld_left->{$Kend} = $Kstart;
         my $Knext = $rK_weld_right->{$Kend};
         while ( defined($Knext) ) {
             push @Klist, $Kend;
-            $Kend  = $Knext;
-            $Knext = $rK_weld_right->{$Kend};
+            $Kend                  = $Knext;
+            $rK_weld_left->{$Kend} = $Kstart;
+            $Knext                 = $rK_weld_right->{$Kend};
         }
         pop @Klist;    #  values for last entry are already correct
         foreach my $KK (@Klist) {
@@ -8714,6 +8716,7 @@ sub break_before_list_opening_containers {
     my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     my $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
     my $rno_xci_by_seqno          = $self->[_rno_xci_by_seqno_];
+    my $rK_weld_right             = $self->[_rK_weld_right_];
 
     my $length_tol =
       max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
@@ -8738,6 +8741,19 @@ sub break_before_list_opening_containers {
         #  a depth of just 1
         my $is_list  = $self->is_list_by_seqno($seqno);
         my $has_list = $rhas_list->{$seqno};
+
+        # Fix for b1173: if welded opening container, use flag of innermost
+        # seqno.  Otherwise, the restriction $has_list==1 prevents triple and
+        # higher welds from following the -BBX parameters.
+        if ($total_weld_count) {
+            my $KK_test = $rK_weld_right->{$KK};
+            if ( defined($KK_test) ) {
+                my $seqno_inner = $rLL->[$KK_test]->[_TYPE_SEQUENCE_];
+                $is_list ||= $self->is_list_by_seqno($seqno_inner);
+                $has_list = $rhas_list->{$seqno_inner};
+            }
+        }
+
         next unless ( $is_list || $has_list && $has_list == 1 );
 
         my $has_broken_list   = $rhas_broken_list->{$seqno};
@@ -14478,7 +14494,6 @@ sub insert_breaks_before_list_opening_containers {
         my $Kl       = $K_to_go[$il];
         my $Kr       = $K_to_go[$ir];
         my $Kend     = $Kr;
-        my $iend     = $ir;
         my $type_end = $rLL->[$Kr]->[_TYPE_];
 
         # Backup before any side comment
@@ -14486,8 +14501,21 @@ sub insert_breaks_before_list_opening_containers {
             $Kend = $self->K_previous_nonblank($Kr);
             next unless defined($Kend);
             $type_end = $rLL->[$Kend]->[_TYPE_];
-            $iend     = $ir + ( $Kend - $Kr );
         }
+
+        # Backup to the start of any weld; fix for b1173.
+        if ($total_weld_count) {
+            my $Kend_test = $rK_weld_left->{$Kend};
+            if ( defined($Kend_test) && $Kend_test > $Kl ) {
+                $Kend      = $Kend_test;
+                $Kend_test = $rK_weld_left->{$Kend};
+            }
+
+            # Do not break if we did not back up to the start of a weld
+            # (shouldn't happen)
+            next if ( defined($Kend_test) );
+        }
+
         my $token = $rLL->[$Kend]->[_TOKEN_];
         next unless ( $is_opening_token{$token} );
         next unless ( $Kl < $Kend - 1 );
@@ -14497,9 +14525,6 @@ sub insert_breaks_before_list_opening_containers {
 
         # Use the flag which was previously set
         next unless ( $rbreak_before_container_by_seqno->{$seqno} );
-
-        # But never break a weld
-        next if ( $total_weld_count && defined( $rK_weld_left->{$Kend} ) );
 
         # Install a break before this opening token.
         my $Kbreak = $self->K_previous_nonblank($Kend);
@@ -20883,17 +20908,19 @@ sub make_paren_name {
         # Honor any flag to reduce -ci set by the -bbxi=n option
         if ( $seqno_beg && $rwant_reduced_ci->{$seqno_beg} ) {
 
-            # if this is an opening, it must be alone on the line
-            if ( $is_closing_type{$type_beg} || $ibeg == $iend ) {
+            # if this is an opening, it must be alone on the line ...
+            if ( $is_closing_type{$type_beg} || $ibeg == $i_terminal ) {
                 $adjust_indentation = 1;
             }
-            elsif ( $iend <= $ibeg + 2 ) {
-                my $inext = $inext_to_go[$ibeg];
-                if ( $inext
-                    && ( $inext > $iend || $types_to_go[$inext] eq '#' ) )
-                {
-                    $adjust_indentation = 1;
+
+            # ... or a single welded unit (fix for b1173)
+            elsif ($total_weld_count) {
+                my $Kterm      = $K_to_go[$i_terminal];
+                my $Kterm_test = $rK_weld_left->{$Kterm};
+                if ( defined($Kterm_test) && $Kterm_test >= $K_beg ) {
+                    $Kterm = $Kterm_test;
                 }
+                if ( $Kterm == $K_beg ) { $adjust_indentation = 1 }
             }
         }
 

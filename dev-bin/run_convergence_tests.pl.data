@@ -6507,6 +6507,47 @@ ok('[{"1":[5]}]' eq
 --line-up-parentheses
 --maximum-line-length=27
 
+==> b1173.in <==
+# problem caused by -wn and -bbhbi not working together
+
+# S1
+   my $two =
+        $CLASS
+        ->new(
+      facet_data =>
+      {  hubs => [ {
+            details =>
+"DO NOT SHOW"
+         } ],
+      }
+        );
+
+# S2
+
+   my $two =
+        $CLASS
+        ->new(
+      facet_data =>
+      {  hubs =>
+              [
+            {  details =>
+"DO NOT SHOW"
+            }
+              ],
+      }
+        );
+
+==> b1173.par <==
+--break-before-hash-brace-and-indent=1
+--break-before-hash-brace=2
+--break-before-square-bracket=2
+--continuation-indentation=5
+--indent-columns=3
+--maximum-line-length=16
+--variable-maximum-line-length
+--vertical-tightness=2
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1
