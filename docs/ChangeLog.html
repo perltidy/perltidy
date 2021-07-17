@@ -3,12 +3,9 @@
 <h2>2021 07 17</h2>
 
 <pre><code>- This release is being made mainly because of the next item, in which an
-  error message about an uninitialized value error message could be produced 
-  in certain cases when format-skipping is used.  The error message was 
-  annoying but harmless to formatting.  This version may produce occasional 
-  differences in formatting compared to previous versions, mainly for lines 
-  which are near the specified line length limit.  This is due to ongoing 
-  efforts to eliminate edge cases of formatting instability.
+  error message about an uninitialized value error message could be produced
+  in certain cases when format-skipping is used.  The error message was
+  annoying but harmless to formatting.
 
 - Fixed an undefined variable message, see git #67. When a format skipping
   comment '#&lt;&lt;' is placed before the first line of code in a script, a
@@ -31,6 +28,11 @@
 
 - The -wn and -bbxx=n flags were not working together correctly. This has
   been fixed.
+
+- This version may produce occasional differences in formatting compared to
+  previous versions, mainly for lines which are near the specified line
+  length limit.  This is due to ongoing efforts to eliminate edge cases of
+  formatting instability.
 
 - Numerous minor fixes have been made. A complete list is at:
 
