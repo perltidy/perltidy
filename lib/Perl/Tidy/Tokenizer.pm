@@ -2073,7 +2073,12 @@ EOM
                     || $last_nonblank_type eq 'U' )    # possible object
               )
             {
-                $type = 'Z';
+
+                # An identifier followed by '->' is not indirect object;
+                # fixes b1175, b1176
+                my ( $next_nonblank_type, $i_next ) =
+                  find_next_noncomment_type( $i, $rtokens, $max_token_index );
+                $type = 'Z' if ( $next_nonblank_type ne '->' );
             }
         },
         '(' => sub {
@@ -5963,8 +5968,9 @@ sub peek_ahead_for_nonblank_token {
         $line =~ s/^\s*//;                 # trim leading blanks
         next if ( length($line) <= 0 );    # skip blank
         next if ( $line =~ /^#/ );         # skip comment
-        my ( $rtok, $rmap, $rtype ) =
-          pre_tokenize( $line, 2 );        # only need 2 pre-tokens
+
+        # Updated from 2 to 3 to get trigraphs, added for case b1175
+        my ( $rtok, $rmap, $rtype ) = pre_tokenize( $line, 3 );
         my $j = $max_token_index + 1;
 
         foreach my $tok ( @{$rtok} ) {
@@ -7716,6 +7722,42 @@ sub find_next_nonblank_token {
         return ( " ", $i ) unless defined($next_nonblank_token);
     }
     return ( $next_nonblank_token, $i );
+}
+
+sub find_next_noncomment_type {
+    my ( $i, $rtokens, $max_token_index ) = @_;
+
+    # Given the current character position, look ahead past any comments
+    # and blank lines and return the next token, including digraphs and
+    # trigraphs.
+
+    my ( $next_nonblank_token, $i_next ) =
+      find_next_nonblank_token( $i, $rtokens, $max_token_index );
+
+    # skip past any side comment
+    if ( $next_nonblank_token eq '#' ) {
+        ( $next_nonblank_token, $i_next ) =
+          find_next_nonblank_token( $i_next, $rtokens, $max_token_index );
+    }
+
+    goto RETURN if ( !$next_nonblank_token || $next_nonblank_token eq " " );
+
+    # check for possible a digraph
+    goto RETURN if ( !defined( $rtokens->[ $i_next + 1 ] ) );
+    my $test2 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
+    goto RETURN if ( !$is_digraph{$test2} );
+    $next_nonblank_token = $test2;
+    $i_next              = $i_next + 1;
+
+    # check for possible a trigraph
+    goto RETURN if ( !defined( $rtokens->[ $i_next + 1 ] ) );
+    my $test3 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
+    goto RETURN if ( !$is_trigraph{$test3} );
+    $next_nonblank_token = $test3;
+    $i_next              = $i_next + 1;
+
+  RETURN:
+    return ( $next_nonblank_token, $i_next );
 }
 
 sub is_possible_numerator {

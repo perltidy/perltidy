@@ -2,6 +2,26 @@
 
 =over 4
 
+=item B<Fix mis-tokenization before pointer>
+
+Random testing produced the following case in which formatting was unstable because
+the variable '$t' was being mis-tokenized as a possible indirect object.
+
+    --break-before-all-operators
+    --ignore-old-breakpoints
+    --maximum-line-length=22
+    -sil=0
+
+    my $json_response
+      = decode_json $t
+      ->tx->res->content
+      ->get_body_chunk;
+
+
+This update fixes cases b1175, b1176.
+
+17 Jul 2021.
+
 =item B<Fix to make -wn and -bbxx=n flags work together>
 
 Testing with random parameters produced some cases where the combination of -wn
@@ -57,7 +77,7 @@ which is incorrect because it ignors the -bbsb flag.  The corrected result is
 This update fixes case b1173.  It works for any number of welded containers,
 and the -bbxxi=n flags also work correctly.
 
-16 Jul 2021.
+16 Jul 2021, c71f882.
 
 =item B<Fix problem with side comment after pattern>
 

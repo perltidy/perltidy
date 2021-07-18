@@ -6548,6 +6548,54 @@ ok('[{"1":[5]}]' eq
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1175.in <==
+# S1
+
+my $json_response
+  = decode_json $t->tx
+  ->res->content
+  ->get_body_chunk;
+
+# S2
+
+my $json_response
+  = decode_json $t->
+  tx->res->content
+  ->get_body_chunk;
+
+==> b1175.par <==
+--break-before-all-operators
+--ignore-old-breakpoints
+--maximum-line-length=22
+
+==> b1176.in <==
+# S1
+                if ( $enter->flags &
+                        OPf_STACKED
+                        and not
+                        null $ary->first
+                        ->sibling
+                        ->sibling )
+                {
+                        ...;
+                }
+
+# S2
+                if ( $enter->flags &
+                        OPf_STACKED
+                        and
+                        not null $ary->
+                        first->sibling
+                        ->sibling )
+                {
+                        ...;
+                }
+
+==> b1176.par <==
+--ignore-old-breakpoints
+--indent-columns=8
+--maximum-line-length=40
+
 ==> b120.in <==
 # Same as bug96
 # State 1
