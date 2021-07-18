@@ -7433,7 +7433,17 @@ sub setup_new_weld_measurements {
         if (   $rOpts_line_up_parentheses
             || $want_break_before{$type_prev} )
         {
-            if ( substr( $type_prev, 0, 1 ) eq '=' ) {
+
+            # If there are other sequence items between the start of this line
+            # and the opening token in question, then do not include tokens on
+            # the previous line in length calculations.  This check added to
+            # fix case b1174 which had a '?' on the line
+            my $no_previous_seq_item = $Kref == $Kouter_opening
+              || $rLL->[$Kref]->[_KNEXT_SEQ_ITEM_] == $Kouter_opening;
+
+            if ( $no_previous_seq_item
+                && substr( $type_prev, 0, 1 ) eq '=' )
+            {
                 $Kref = $Kprev;
 
                 # Fix for b1144 and b1112: backup to the first nonblank

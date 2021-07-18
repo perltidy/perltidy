@@ -6548,6 +6548,47 @@ ok('[{"1":[5]}]' eq
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1174.in <==
+# S1
+
+if ( $op and $op eq 'do_search' ) {
+    @{$invoices} =
+      GetInvoices(
+          shipmentdatefrom =>
+          $shipmentdatefrom ? output_pref( {
+                         str => $shipmentdatefrom,
+                         dateformat => 'iso'
+          } )
+          : undef,
+          publicationyear => $publicationyear,
+      );
+}
+
+# S2
+
+if ( $op and $op eq 'do_search' ) {
+    @{$invoices} =
+      GetInvoices(
+          shipmentdatefrom =>
+          $shipmentdatefrom
+          ? output_pref(
+                      {
+                        str => $shipmentdatefrom,
+                        dateformat => 'iso'
+                      }
+          )
+          : undef,
+          publicationyear => $publicationyear,
+      );
+}
+
+==> b1174.par <==
+--extended-continuation-indentation
+--line-up-parentheses
+--maximum-line-length=38
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b1175.in <==
 # S1
 

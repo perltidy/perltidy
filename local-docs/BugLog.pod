@@ -2,6 +2,36 @@
 
 =over 4
 
+=item B<Fix possible welding instability in ternary after fat comma>
+
+Random testing produced a case of formatting instability involving welding
+within a ternary expression following a fat comma:
+
+    if ( $op and $op eq 'do_search' ) {
+        @{$invoices} =
+          GetInvoices(
+              shipmentdatefrom =>
+              $shipmentdatefrom ? output_pref( {
+                             str => $shipmentdatefrom,
+                             dateformat => 'iso'
+              } )
+              : undef,
+              publicationyear => $publicationyear,
+          );
+    }
+
+when the following specific parameters were used
+
+    --extended-continuation-indentation
+    --line-up-parentheses
+    --maximum-line-length=38
+    --variable-maximum-line-length
+    --weld-nested-containers
+
+This update fixes this issue, case b1174.
+
+18 Jul 2021.
+
 =item B<Fix mis-tokenization before pointer>
 
 Random testing produced the following case in which formatting was unstable because
