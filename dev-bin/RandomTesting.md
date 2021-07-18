@@ -179,6 +179,20 @@ The usage is simply
 
 It reads its database, ```run_convergence_tests.pl.data```, and runs the latest version of perltidy on each case.  This takes a little time because there are hundreds of cases in the database.  The last line of the output will show "OK" if there are no problems.
 
+## Utility for running tokenizer tests
+
+A similar script for running tests which test the tokenizer is
+
+ -  run_tokenizer_tests.pl
+
+The usage is 
+
+```
+./run_tokenizer_tests.pl
+```
+
+It reads its database, ```run_tokenizer_tests.pl.data```, and runs the latest version of perltidy on each case.  The last line of the output will show "OK" if there are no problems.
+
 ## Utility for stress testing with side comments
 
 Another type of test which has been useful is a side comment test.  A script to do this type of test is

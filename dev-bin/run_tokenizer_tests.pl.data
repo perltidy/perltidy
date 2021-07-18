@@ -1,0 +1,124 @@
+==> c015.in <==
+# These are syntactically correct; set expecting unknown at a comma
+print "hello1\n", || print "hi1\n";
+print "hello2\n", && print "bye2\n";
+print "hello3\n", or print "bye3\n";
+print "hello4\n", and print "bye4\n";
+
+==> c017.in <==
+my @words = qw(To view this email as a web page go here);
+my @subs;
+push @subs, sub { my $i=shift; $i %= @words; print "$words[$i] "; return $subs[0]};
+$subs[0](0)(1)(2)(3)(4)(5)(6)(7)(8)(9)(10)(11);
+print "\n";
+
+==> c029.in <==
+$Msg#sc#
+->#sc#
+$field#sc#
+(#sc#
+)#sc#
+;#sc#
+
+
+==> c033.in <==
+print$my_bag
+&#sc#
+$your_bag
+,
+"\n"
+;
+
+
+==> c035.in <==
+my$ascii#sc#
+=#sc#
+$formatter#sc#
+->#sc#
+format#sc#
+(#sc#
+$html#sc#
+)#sc#
+;#sc#
+
+
+==> c036.in <==
+# this is a valid program, '%#' is a punctuation variable
+%# = ( foo => 'bar', baz => 'buz' );
+print keys(%#), "\n";
+
+#<<V
+# but this is a syntax error (space before # makes a side comment)
+# (perltidy was ignoring the space and forming '%#' here)
+% # = ( foo => 'bar', baz => 'buz' );
+print keys(%#), "\n";
+#>>V
+
+# this is a valid program, '@#' is a punctuation variable
+@# = ( foo , 'bar', baz , 'buz' );
+print @#, "\n";
+
+# this is a valid program, the space makes the '#' a side comment
+# perltidy formed %# here, causing an error
+% #
+var = ( foo => 'bar', baz => 'buz' );
+print keys(%var), "\n";
+
+==> c037.in <==
+is(
+$one
+->#sc#
+package
+,
+"bar"
+,
+"Got package"
+)
+;
+
+
+==> c038.in <==
+sub plugh () :#
+Ugly('\(") : Bad;
+
+==> c040.in <==
+$bond_str
+=
+VERY_WEAK #sc#
+/ #sc#
+1.05
+;
+
+ok
+/[^\s]+/#sc#
+,
+'m/[^\s]/ utf8'
+;
+
+
+==> c041.in <==
+@ret
+=
+$o
+->#
+SUPER'method
+(
+'whatever'
+)
+;
+
+
+==> c043.in <==
+# FIXED ; index not type 'k'
+{#sc#
+print$fh#sc#
+"class='u'"
+,#sc#
+$self#sc#
+->#sc#
+index?#sc#
+" href='#___top' title='click to go to top of document'\n"
+:#sc#
+"\n"
+;#sc#
+}#sc#

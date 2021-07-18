@@ -43,7 +43,7 @@ my $fh_log;
 # These are the main steps, in approximate order, for making a new version
 # Note: Since perl critic is in the .tidyallrc, a separate 'PC' step is not
 # needed
-my $rsteps = [qw( CHK CONV V PC TIDY T CL DOCS MANIFEST DIST)];
+my $rsteps = [qw( CHK CONV TOK V PC TIDY T CL DOCS MANIFEST DIST)];
 
 my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
@@ -59,6 +59,7 @@ my $rcode = {
     'PC'       => \&run_perl_critic,
     'TIDY'     => \&run_tidyall,
     'CONV'     => \&run_convergence_tests,
+    'TOK'      => \&run_tokenizer_tests,
     'MANIFEST' => \&make_manifest,
     'T'        => \&make_tests,
     'DOCS'     => \&make_docs,
@@ -85,6 +86,7 @@ v        - check/update Version Number     status: $rstatus->{'V'}
 tidy     - run tidyall (tidy & critic)     status: $rstatus->{'TIDY'}
 pc       - run PerlCritic (critic only)    status: $rstatus->{'PC'}
 conv     - run convergence tests           status: $rstatus->{'CONV'}
+tok      - run tokenizer tests             status: $rstatus->{'TOK'}
 manifest - make MANIFEST                   status: $rstatus->{'MANIFEST'}
 t        - make Tests			   status: $rstatus->{'T'}
 cl       - review/edit CHANGES.md          status: $rstatus->{'CL'}
@@ -191,6 +193,33 @@ sub run_convergence_tests {
     if ( !$error ) {
         $rstatus->{'CONV'} = 'OK';
         hitcr("Convergence check OK.");
+        return;
+    }
+    openurl("$fout");
+    return;
+}
+
+sub run_tokenizer_tests {
+    my $fout = "tmp/run_tokenizer_tests.out";
+    $rstatus->{'TOK'} = 'TBD';
+
+    # running with any .perltidyrc file
+    my $cmd = "./dev-bin/run_tokenizer_tests.pl >$fout 2>>$fout";
+    system_echo($cmd);
+
+    my $fh;
+    if ( !open( $fh, '<', $fout ) ) {
+        hitcr("Strange: cannot open '$fout': $!.");
+        return;
+    }
+    my @lines = <$fh>;
+    foreach my $line (@lines) { $fh_log->print($line) }
+    my $error = $lines[-1] !~ /OK/;
+
+    $fh->close();
+    if ( !$error ) {
+        $rstatus->{'TOK'} = 'OK';
+        hitcr("Tokenizer check OK.");
         return;
     }
     openurl("$fout");
