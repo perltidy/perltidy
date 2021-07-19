@@ -1,5 +1,15 @@
 # Perltidy Change Log
 
+## 2021 07 17.01
+
+    - Fixed problem where a blank line following a closing code-skipping
+      comment, '#>>V', can be lost.  A workaround for the previous version
+      is to include the parameter '-mbl=2'.
+
+    - Numerous minor fixes have been made. A complete list is at:
+
+           https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+
 ## 2021 07 17
 
     - This release is being made mainly because of the next item, in which an

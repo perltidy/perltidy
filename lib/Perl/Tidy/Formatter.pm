@@ -9654,6 +9654,14 @@ sub process_all_lines {
                 $self->[_saw_END_or_DATA_] = 1;
             }
 
+            # Patch to avoid losing blank lines after a code-skipping block;
+            # fixes case c047.  Note that the code for code-skipping is
+            # currently 'FORMAT'.  If it changes, the next line would need to
+            # be changed.
+            elsif ( $line_type eq 'FORMAT' ) {
+                $file_writer_object->reset_consecutive_blank_lines();
+            }
+
             # write unindented non-code line
             if ( !$skip_line ) {
                 $self->write_unindented_line($input_line);

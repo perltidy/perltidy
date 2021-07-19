@@ -2,6 +2,49 @@
 
 =over 4
 
+=item B<Fix to keep from losing blank lines after a code-skipping section>
+
+A problem in the current version of perltidy is that a blank line
+after the closing code-skipping comment can be lost if there was a blank
+line before the start of the code skipping section.  For example, given
+the following code:
+
+    $x = 1;
+
+    #<<V
+    % # = ( foo => 'bar', baz => 'buz' );
+    print keys(%#), "\n";
+    #>>V
+
+    @# = ( foo, 'bar', baz, 'buz' );
+    print @#, "\n";
+
+running perltidy gives:
+
+    $x = 1;
+
+    #<<V
+    % # = ( foo => 'bar', baz => 'buz' );
+    print keys(%#), "\n";
+    #>>V
+    @# = ( foo, 'bar', baz, 'buz' );
+    print @#, "\n";
+
+Notice that the blank line after the closing comment #>>V is missing. What
+happened is that the formatter is counting blank lines and did not 'see' the
+code skipping section.  So the blank after the closing comment looked like the
+second blank in a row, so it got removed since the default is
+--maximum-consecutive-blank-lines=1.
+
+This update fixes this by resetting the counter.  This fixes case c047.
+A simple workaround until the next release is to include the parameter
+
+--maximum-consecutive-blank-lines=2, or -mbl=2.
+
+It can be removed after the next release.
+
+18 Jul 2021.
+
 =item B<Fix possible welding instability in ternary after fat comma>
 
 Random testing produced a case of formatting instability involving welding
