@@ -3711,20 +3711,25 @@ space separated list of keywords.  The default set is B<s="use require local
 our my">, but any list of keywords may be used. Comment lines may also be included in a keyword group, even though they are not keywords.  To include ordinary block comments, include the symbol B<BC>. To include static block comments (which normally begin with '##'), include the symbol B<SBC>.
 
 B<-kgbs=s> or B<--keyword-group-blanks-size=s>, where B<s> is a string
-describing the number of consecutive keyword statements forming a group.  If
-B<s> is an integer then it is the minimum number required for a group.  A
-maximum value may also be given with the format B<s=min.max>, where B<min> is
-the minimum number and B<max> is the maximum number, and the min and max values
-are separated by one or more dots.  No groups will be found if the maximum is
-less than the minimum.  The maximum is unlimited if not given.  The default is
-B<s=5>.  Some examples:
+describing the number of consecutive keyword statements forming a group (Note:
+statements separated by blank lines in the input file are considered
+consecutive for purposes of this count).  If B<s> is an integer then it is the
+minimum number required for a group.  A maximum value may also be given with
+the format B<s=min.max>, where B<min> is the minimum number and B<max> is the
+maximum number, and the min and max values are separated by one or more dots.
+No groups will be found if the maximum is less than the minimum.  The maximum
+is unlimited if not given.  The default is B<s=5>.  Some examples:
 
     s      min   max         number for group
     3      3     unlimited   3 or more
     1.1    1     1           1
     1..3   1     3           1 to 3
     1.0    1     0           (no match)
-    
+
+There is no really good default value for this parameter.  If it is set too
+small, then an excessive number of blank lines may be generated.  However, some
+users may prefer reducing the value somewhat below the default, perhaps to
+B<s=3>.
 
 B<-kgbb=n> or B<--keyword-group-blanks-before=n> specifies whether
 a blank should appear before the first line of the group, as follows:
