@@ -9753,6 +9753,8 @@ EOM
     my $rlines              = $self->[_rlines_];
     my $rLL                 = $self->[_rLL_];
     my $K_closing_container = $self->[_K_closing_container_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $rK_weld_right       = $self->[_rK_weld_right_];
 
     # variables for the current group and subgroups:
     my ( $ibeg, $iend, $count, $level_beg, $K_closing, @iblanks, @group,
@@ -9949,25 +9951,42 @@ EOM
 
     my $find_container_end = sub {
 
-        # If the keyword lines ends with an open token, find the closing token
-        # '$K_closing' so that we can easily skip past the contents of the
-        # container.
-        return if ( $K_last <= $K_first );
-        my $KK        = $K_last;
-        my $type_last = $rLL->[$KK]->[_TYPE_];
-        my $tok_last  = $rLL->[$KK]->[_TOKEN_];
-        if ( $type_last eq '#' ) {
-            $KK       = $self->K_previous_nonblank($KK);
-            $tok_last = $rLL->[$KK]->[_TOKEN_];
-        }
-        if ( $KK > $K_first && $tok_last =~ /^[\(\{\[]$/ ) {
+        # If the keyword line is continued onto subsequent lines, find the
+        # closing token '$K_closing' so that we can easily skip past the
+        # contents of the container.
 
-            my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-            my $lev           = $rLL->[$KK]->[_LEVEL_];
-            if ( $lev == $level_beg ) {
-                $K_closing = $K_closing_container->{$type_sequence};
-            }
-        }
+        # We only set this value if we find a simple list, meaning
+        # -contents only one level deep
+        # -not welded
+
+        # First check: skip if next line is not one deeper
+        my $Knext_nonblank = $self->K_next_nonblank($K_last);
+        goto RETURN if ( !defined($Knext_nonblank) );
+        my $level_next = $rLL->[$Knext_nonblank]->[_LEVEL_];
+        goto RETURN if ( $level_next != $level_beg + 1 );
+
+        # Find the parent container of the first token on the next line
+        my $parent_seqno = $self->parent_seqno_by_K($Knext_nonblank);
+        goto RETURN unless defined($parent_seqno);
+
+        # Must not be a weld (can be unstable)
+        goto RETURN
+          if ( $total_weld_count && $self->is_welded_at_seqno($parent_seqno) );
+
+        # Opening container must exist and be on this line
+        my $Ko = $K_opening_container->{$parent_seqno};
+        goto RETURN unless ( defined($Ko) && $Ko > $K_first && $Ko <= $K_last );
+
+        # Verify that the closing container exists and is on a later line
+        my $Kc = $K_closing_container->{$parent_seqno};
+        goto RETURN unless ( defined($Kc) && $Kc > $K_last );
+
+        # That's it
+        $K_closing = $Kc;
+        goto RETURN;
+
+      RETURN:
+        return;
     };
 
     my $add_to_group = sub {
@@ -10060,14 +10079,35 @@ EOM
             return $rhash_of_desires;
         }
 
-        # This is not for keywords in lists ( keyword 'my' can occur in lists,
-        # see case b760)
-        next if ( $self->is_list_by_K($K_first) );
-
         my $level    = $rLL->[$K_first]->[_LEVEL_];
         my $type     = $rLL->[$K_first]->[_TYPE_];
         my $token    = $rLL->[$K_first]->[_TOKEN_];
         my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+        # End a group 'badly' at an unexpected level.  This will prevent
+        # blank lines being incorrectly placed after the end of the group.
+        # We are looking for any deviation from two acceptable patterns:
+        #   PATTERN 1: a simple list; secondary lines are at level+1
+        #   PATTERN 2: a long statement; all secondary lines same level
+        # This was added as a fix for case b1177, in which a complex structure
+        # got incorrectly inserted blank lines.
+        if ( $ibeg >= 0 ) {
+
+            # Check for deviation from PATTERN 1, simple list:
+            if ( defined($K_closing) && $K_first < $K_closing ) {
+                $end_group->(1) if ( $level != $level_beg + 1 );
+            }
+
+            # Check for deviation from PATTERN 2, single statement:
+            elsif ( $level != $level_beg ) { $end_group->(1) }
+        }
+
+        # Do not look for keywords in lists ( keyword 'my' can occur in lists,
+        # see case b760); fixed for c048.
+        if ( $self->is_list_by_K($K_first) ) {
+            if ( $ibeg >= 0 ) { $iend = $i }
+            next;
+        }
 
         # see if this is a code type we seek (i.e. comment)
         if (   $CODE_type
@@ -10087,7 +10127,7 @@ EOM
 
                 # first end old group if any; we might be starting new
                 # keywords at different level
-                if ( $ibeg > 0 ) { $end_group->(); }
+                if ( $ibeg >= 0 ) { $end_group->(); }
                 $add_to_group->( $i, $tok, $level );
             }
             next;
@@ -10110,7 +10150,7 @@ EOM
 
                 # first end old group if any; we might be starting new
                 # keywords at different level
-                if ( $ibeg > 0 ) { $end_group->(); }
+                if ( $ibeg >= 0 ) { $end_group->(); }
                 $add_to_group->( $i, $token, $level );
             }
             next;
@@ -10123,7 +10163,7 @@ EOM
             # - bail out on a large level change; we may have walked into a
             #   data structure or anoymous sub code.
             if ( $level > $level_beg + 1 || $level < $level_beg ) {
-                $end_group->();
+                $end_group->(1);
                 next;
             }
 

@@ -2,6 +2,74 @@
 
 =over 4
 
+=item B<Fix problems with -kgb in complex structures>
+
+This update fixes two problems involving the -kgb option.
+
+The first problem is that testing with random parameters produced some examples
+of formatting instabilities involving applying --keyword-group-blanks to
+complex structures, particularly welded structures.  The -kgb parameters work
+well on simple statements or simple lists, so a check was added to prevent them
+from working on lists which are more than one level deep.  This fixes issues
+b1177 and b1178 without significantly changing the -kgb functionality.
+
+The second problem is that a terminal blank line could be misplaced if
+the last statement was a structure.  This is illustrated with the following
+snippet:
+
+    sub new {
+      my $class = shift;
+      my $number = shift || croak "What?? No number??\n";
+      my $classToGenerate = shift || croak "Need a class to generate, man!\n";
+      my $hash = shift; #No carp here, some operators do not need specific stuff
+      my $self = { _number => $number,
+                   _class => $classToGenerate,
+                   _hash => $hash };
+      bless $self, $class; # And bless it
+      return $self;
+    }
+
+    # OLD: perltidy -kgb -sil=0 gave
+    sub new {
+
+        my $class           = shift;
+        my $number          = shift || croak "What?? No number??\n";
+        my $classToGenerate = shift || croak "Need a class to generate, man!\n";
+        my $hash = shift;   #No carp here, some operators do not need specific stuff
+        my $self = {
+            _number => $number,
+
+            _class => $classToGenerate,
+            _hash  => $hash
+        };
+        bless $self, $class;    # And bless it
+        return $self;
+    }
+
+The blank line which has appeared after the line '_number =>' was intended
+to go after the closing brace but a line count was off. This has been fixed:
+
+    # NEW: perltidy -kgb -sil=0 gives
+    sub new {
+
+        my $class           = shift;
+        my $number          = shift || croak "What?? No number??\n";
+        my $classToGenerate = shift || croak "Need a class to generate, man!\n";
+        my $hash = shift;   #No carp here, some operators do not need specific stuff
+        my $self = {
+            _number => $number,
+            _class  => $classToGenerate,
+            _hash   => $hash
+        };
+
+        bless $self, $class;    # And bless it
+        return $self;
+    }
+
+This fixes issue c048.
+
+19 Jul 2021.
+
 =item B<Fix to keep from losing blank lines after a code-skipping section>
 
 A problem in the current version of perltidy is that a blank line
@@ -43,7 +111,7 @@ A simple workaround until the next release is to include the parameter
 
 It can be removed after the next release.
 
-18 Jul 2021.
+18 Jul 2021, 9648e16.
 
 =item B<Fix possible welding instability in ternary after fat comma>
 
@@ -73,7 +141,7 @@ when the following specific parameters were used
 
 This update fixes this issue, case b1174.
 
-18 Jul 2021.
+18 Jul 2021, 12ae46b.
 
 =item B<Fix mis-tokenization before pointer>
 
@@ -93,7 +161,7 @@ the variable '$t' was being mis-tokenized as a possible indirect object.
 
 This update fixes cases b1175, b1176.
 
-17 Jul 2021.
+17 Jul 2021, 4aa1318.
 
 =item B<Fix to make -wn and -bbxx=n flags work together>
 
