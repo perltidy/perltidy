@@ -55,6 +55,7 @@ use vars qw{
   @current_depth
   @total_depth
   $total_depth
+  $next_sequence_number
   @nesting_sequence_number
   @current_sequence_number
   @paren_type
@@ -1344,6 +1345,7 @@ sub prepare_for_a_new_file {
     @total_depth             = ();
     @nesting_sequence_number = ( 0 .. @closing_brace_names - 1 );
     @current_sequence_number = ();
+    $next_sequence_number    = 2;    # The value 1 is reserved for SEQ_ROOT
 
     @paren_type                     = ();
     @paren_semicolon_count          = ();
@@ -1646,7 +1648,7 @@ sub prepare_for_a_new_file {
             @brace_package,                  @square_bracket_type,
             @square_bracket_structural_type, @depth_array,
             @starting_line_of_current_depth, @nested_ternary_flag,
-            @nested_statement_type,
+            @nested_statement_type,          $next_sequence_number,
         );
 
         # save all lexical variables
@@ -5751,8 +5753,18 @@ sub increase_nesting_depth {
     # Sequence numbers increment by number of items.  This keeps
     # a unique set of numbers but still allows the relative location
     # of any type to be determined.
-    $nesting_sequence_number[$aa] += scalar(@closing_brace_names);
-    my $seqno = $nesting_sequence_number[$aa];
+
+    ########################################################################
+    # OLD SEQNO METHOD for incrementing sequence numbers.
+    # Keep this coding awhile for possible testing.
+    ## $nesting_sequence_number[$aa] += scalar(@closing_brace_names);
+    ## my $seqno = $nesting_sequence_number[$aa];
+
+    # NEW SEQNO METHOD, continuous sequence numbers. This allows sequence
+    # numbers to be used as array indexes, and allows them to be compared.
+    my $seqno = $next_sequence_number++;
+    ########################################################################
+
     $current_sequence_number[$aa][ $current_depth[$aa] ] = $seqno;
 
     $starting_line_of_current_depth[$aa][ $current_depth[$aa] ] =

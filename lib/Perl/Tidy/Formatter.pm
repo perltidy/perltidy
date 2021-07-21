@@ -4471,13 +4471,119 @@ sub make_closing_side_comment_prefix {
     my $In_format_skipping_section;
     my $Saw_VERSION_in_this_file;
 
+    # Variables used by sub check_sequence_numbers:
+    my $last_seqno;
+    my %saw_opening_seqno;
+    my %saw_closing_seqno;
+    my $initial_seqno;
+
     sub initialize_write_line {
 
         $Last_line_had_side_comment = 0;
         $In_format_skipping_section = 0;
         $Saw_VERSION_in_this_file   = 0;
 
+        $last_seqno        = SEQ_ROOT;
+        %saw_opening_seqno = ();
+        %saw_closing_seqno = ();
+
         return;
+    }
+
+    sub check_sequence_numbers {
+
+        # Routine for checking sequence numbers.  This only needs to be
+        # done occasionally in DEVEL_MODE to be sure everything is working
+        # correctly.
+        my ( $rtokens, $rtoken_type, $rtype_sequence, $input_line_no ) = @_;
+        my $jmax = @{$rtokens} - 1;
+        return unless ( $jmax >= 0 );
+        foreach my $j ( 0 .. $jmax ) {
+            my $seqno = $rtype_sequence->[$j];
+            my $token = $rtokens->[$j];
+            my $type  = $rtoken_type->[$j];
+            my $err_msg =
+"Error at j=$j, line number $input_line_no, seqno='$seqno', type='$type', tok='$token':\n";
+
+            if ( !$seqno ) {
+
+           # Sequence numbers are generated for opening tokens, so every opening
+           # token should be sequenced.  Closing tokens will be unsequenced
+           # if they do not have a matching opening toke.
+                if (   $is_opening_sequence_token{$token}
+                    && $type ne 'q'
+                    && $type ne 'Q' )
+                {
+                    Fault(
+                        <<EOM
+$err_msg Unexpected opening token without sequence number
+EOM
+                    );
+                }
+            }
+            else {
+
+                # Save starting seqno to identify sequence method:
+                # New method starts with 2 and has continuous numbering
+                # Old method starts with >2 and may have gaps
+                if ( !defined($initial_seqno) ) { $initial_seqno = $seqno }
+
+                if ( $is_opening_sequence_token{$token} ) {
+
+                    # New method should have continuous numbering
+                    if ( $initial_seqno == 2 && $seqno != $last_seqno + 1 ) {
+                        Fault(
+                            <<EOM
+$err_msg Unexpected opening sequence number: previous seqno=$last_seqno, but seqno= $seqno
+EOM
+                        );
+                    }
+                    $last_seqno = $seqno;
+
+                    # Numbers must be unique
+                    if ( $saw_opening_seqno{$seqno} ) {
+                        my $lno = $saw_opening_seqno{$seqno};
+                        Fault(
+                            <<EOM
+$err_msg Already saw an opening tokens at line $lno with this sequence number
+EOM
+                        );
+                    }
+                    $saw_opening_seqno{$seqno} = $input_line_no;
+                }
+
+                # only one closing item per seqno
+                elsif ( $is_closing_sequence_token{$token} ) {
+                    if ( $saw_closing_seqno{$seqno} ) {
+                        my $lno = $saw_closing_seqno{$seqno};
+                        Fault(
+                            <<EOM
+$err_msg Already saw a closing token with this seqno  at line $lno
+EOM
+                        );
+                    }
+                    $saw_closing_seqno{$seqno} = $input_line_no;
+
+                    # Every closing seqno must have an opening seqno
+                    if ( !$saw_opening_seqno{$seqno} ) {
+                        Fault(
+                            <<EOM
+$err_msg Saw a closing token but no opening token with this seqno
+EOM
+                        );
+                    }
+                }
+
+                # Sequenced items must be opening or closing
+                else {
+                    Fault(
+                        <<EOM
+$err_msg Unexpected token type with a sequence number
+EOM
+                    );
+                }
+            }
+        }
     }
 
     sub write_line {
@@ -4554,6 +4660,11 @@ sub make_closing_side_comment_prefix {
             my $jmax = @{$rtokens} - 1;
             if ( $jmax >= 0 ) {
                 $Kfirst = defined($Klimit) ? $Klimit + 1 : 0;
+
+                DEVEL_MODE
+                  && check_sequence_numbers( $rtokens, $rtoken_type,
+                    $rtype_sequence, $input_line_no );
+
                 foreach my $j ( 0 .. $jmax ) {
 
                  # Clip negative nesting depths to zero to avoid problems.
