@@ -748,6 +748,8 @@ sub get_line {
     #   HERE_END       - last line of here-doc (target word)
     #   FORMAT         - format section
     #   FORMAT_END     - last line of format section, '.'
+    #   SKIP           - code skipping section
+    #   SKIP_END       - last line of code skipping section, '#>>V'
     #   DATA_START     - __DATA__ line
     #   DATA           - unidentified text following __DATA__
     #   END_START      - __END__ line
@@ -885,9 +887,9 @@ sub get_line {
     # print line unchanged if in skipped section
     elsif ( $tokenizer_self->[_in_skipped_] ) {
 
-        # NOTE: marked as the existing type 'FORMAT' to keep html working
-        $line_of_tokens->{_line_type} = 'FORMAT';
+        $line_of_tokens->{_line_type} = 'SKIP';
         if ( $input_line =~ /$code_skipping_pattern_end/ ) {
+            $line_of_tokens->{_line_type} = 'SKIP_END';
             $write_logfile_entry->("Exiting code-skipping section\n");
             $tokenizer_self->[_in_skipped_] = 0;
         }
@@ -1078,8 +1080,7 @@ sub get_line {
     # handle start of skipped section
     if ( $tokenizer_self->[_in_skipped_] ) {
 
-        # NOTE: marked as the existing type 'FORMAT' to keep html working
-        $line_of_tokens->{_line_type} = 'FORMAT';
+        $line_of_tokens->{_line_type} = 'SKIP';
         $write_logfile_entry->("Entering code-skipping section\n");
         return $line_of_tokens;
     }
@@ -8786,6 +8787,8 @@ The following additional token types are defined:
     HERE_END       - last line of here-doc (target word)
     FORMAT         - format section
     FORMAT_END     - last line of format section, '.'
+    SKIP           - code skipping section
+    SKIP_END       - last line of code skipping section, '#>>V'
     DATA_START     - __DATA__ line
     DATA           - unidentified text following __DATA__
     END_START      - __END__ line

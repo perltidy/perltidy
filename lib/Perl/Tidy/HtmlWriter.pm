@@ -1429,6 +1429,8 @@ sub write_line {
         elsif ( $line_type eq 'HERE_END' )   { $line_character = 'h' }
         elsif ( $line_type eq 'FORMAT' )     { $line_character = 'H' }
         elsif ( $line_type eq 'FORMAT_END' ) { $line_character = 'h' }
+        elsif ( $line_type eq 'SKIP' )       { $line_character = 'H' }
+        elsif ( $line_type eq 'SKIP_END' )   { $line_character = 'h' }
         elsif ( $line_type eq 'SYSTEM' )     { $line_character = 'c' }
         elsif ( $line_type eq 'END_START' ) {
             $line_character = 'k';

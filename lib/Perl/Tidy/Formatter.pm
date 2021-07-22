@@ -4509,7 +4509,7 @@ sub make_closing_side_comment_prefix {
 
            # Sequence numbers are generated for opening tokens, so every opening
            # token should be sequenced.  Closing tokens will be unsequenced
-           # if they do not have a matching opening toke.
+           # if they do not have a matching opening token.
                 if (   $is_opening_sequence_token{$token}
                     && $type ne 'q'
                     && $type ne 'Q' )
@@ -9661,6 +9661,8 @@ sub process_all_lines {
         #   HERE_END       - last line of here-doc (target word)
         #   FORMAT         - format section
         #   FORMAT_END     - last line of format section, '.'
+        #   SKIP           - code skipping section
+        #   SKIP_END       - last line of code skipping section, '#>>V'
         #   DATA_START     - __DATA__ line
         #   DATA           - unidentified text following __DATA__
         #   END_START      - __END__ line
@@ -9766,10 +9768,8 @@ sub process_all_lines {
             }
 
             # Patch to avoid losing blank lines after a code-skipping block;
-            # fixes case c047.  Note that the code for code-skipping is
-            # currently 'FORMAT'.  If it changes, the next line would need to
-            # be changed.
-            elsif ( $line_type eq 'FORMAT' ) {
+            # fixes case c047.
+            elsif ( $line_type eq 'SKIP_END' ) {
                 $file_writer_object->reset_consecutive_blank_lines();
             }
 
@@ -10078,7 +10078,7 @@ EOM
 
         # Find the parent container of the first token on the next line
         my $parent_seqno = $self->parent_seqno_by_K($Knext_nonblank);
-        goto RETURN unless defined($parent_seqno);
+        goto RETURN unless ( defined($parent_seqno) );
 
         # Must not be a weld (can be unstable)
         goto RETURN
@@ -12013,10 +12013,20 @@ sub compare_indentation_levels {
     sub set_forced_breakpoint {
         my ( $self, $i ) = @_;
 
+        # Set a breakpoint AFTER the token at index $i in the _to_go arrays.
+
+        # Exceptions:
+        # - If the token at index $i is a blank, backup to $i-1 to
+        #   get to the previous nonblank token.
+        # - For certain tokens, the break may be placed BEFORE the token
+        #   at index $i, depending on user break preference settings.
+        # - If a break is made after an opening token, then a break will
+        #   also be made before the corresponding closing token.
+
         return unless defined $i && $i >= 0;
 
-        # Back up at a blank in case we need an = break.
-        # This is a backup fix for cases like b932.
+        # Back up at a blank so we have a token to examine.
+        # This was added to fix for cases like b932 involving an '=' break.
         if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
         # no breaks between welded tokens
