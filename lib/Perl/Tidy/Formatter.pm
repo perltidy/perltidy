@@ -21768,6 +21768,8 @@ sub set_vertical_tightness_flags {
     # See case b499 for an example.
     return $rvertical_tightness_flags if ($rOpts_freeze_whitespace);
 
+    my $rwant_container_open = $self->[_rwant_container_open_];
+
     # Uses these parameters:
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
@@ -21967,9 +21969,12 @@ sub set_vertical_tightness_flags {
         if (   $is_closing_token{$token_end}
             && $is_closing_token{$token_beg_next} )
         {
+
+            # avoid instability of combo -bom and -sct; b1179
+            my $seq_next = $type_sequence_to_go[$ibeg_next];
             $stackable = $stack_closing_token{$token_beg_next}
-              unless ( $block_type_to_go[$ibeg_next] )
-              ;    # shouldn't happen; just checking
+              unless ( $block_type_to_go[$ibeg_next]
+                || $seq_next && $rwant_container_open->{$seq_next} );
         }
         elsif ($is_opening_token{$token_end}
             && $is_opening_token{$token_beg_next} )

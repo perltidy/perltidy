@@ -2,6 +2,37 @@
 
 =over 4
 
+=item B<Fix conflict of -bom and -scp parameters>
+
+Automated testing with random parameters produced a case of instability caused
+by a conflict of parameters -bom and -scp. In the following script the -bom
+command says to keep the tokens ')->' on a new line, whereas the -scp command
+says to stack the closing paren on the previous line.
+
+        $resource = {
+                id => $package->new_from_mana(
+                        $result->{data}
+                )->id
+        };
+
+The parameters are:
+
+    --break-at-old-method-breakpoints
+    --indent-columns=8
+    --maximum-line-length=60
+    --stack-closing-paren
+
+This caused an instability which was fixed by giving priority to the -bom flag.
+The stable state is then
+
+        $resource = { id => $package->new_from_mana(
+                        $result->{data}
+        )->id };
+
+This fixes case b1179.
+
+21 Jul 2021.
+
 =item B<Fix problems with -kgb in complex structures>
 
 This update fixes two problems involving the -kgb option.
@@ -68,7 +99,7 @@ to go after the closing brace but a line count was off. This has been fixed:
 
 This fixes issue c048.
 
-19 Jul 2021.
+19 Jul 2021, 071a3f6.
 
 =item B<Fix to keep from losing blank lines after a code-skipping section>
 

@@ -6667,6 +6667,30 @@ my $plugin = Koha::FrameworkPlugin->new( {
 --maximum-line-length=55
 --weld-nested-containers
 
+==> b1179.in <==
+# -bom and -scp were interfering
+# S1
+        $resource = {
+                id => $package->new_from_mana(
+                        $result->{data}
+                )->id
+        };
+
+# S2
+        $resource = { id => $package->new_from_mana(
+                        $result->{data} )->id };
+
+# Stable
+        $resource = { id => $package->new_from_mana(
+                        $result->{data}
+        )->id };
+
+==> b1179.par <==
+--break-at-old-method-breakpoints
+--indent-columns=8
+--maximum-line-length=60
+--stack-closing-paren
+
 ==> b120.in <==
 # Same as bug96
 # State 1
