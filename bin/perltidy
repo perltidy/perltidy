@@ -1994,6 +1994,13 @@ this:
 Additional text may appear on the special comment lines provided that it
 is separated from the marker by at least one space, as in the above examples.
 
+Any number of code-skipping or format-skipping sections may appear in a file.
+If an opening code-skipping or format-skipping comment is not followed by a
+corresponding closing comment, then skipping continues to the end of the file.
+If a closing code-skipping or format-skipping comment appears in a file but
+does not follow a corresponding opening comment, then it is treated as an
+ordinary comment without any special meaning.
+
 It is recommended to use B<--code-skipping> only if you need to hide a block of
 an extended syntax which would produce errors if parsed by perltidy, and use
 B<--format-skipping> otherwise.  This is because the B<--format-skipping>
