@@ -19094,11 +19094,11 @@ sub send_lines_to_vertical_aligner {
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
-        # We use two slightly different definitions of level jump at the end
-        # of line:
-        #  $ljump is the level jump needed by 'sub set_adjusted_indentation'
-        #  $level_jump is the level jump needed by the vertical aligner.
-        my $ljump = 0;    # level jump at end of line
+        # We need two slightly different definitions of level jump:
+        #  $level_jump is the 'slevel' jump across line starts for valign
+        #  $ljump is a level jump needed by 'sub set_adjusted_indentation'
+        my $level_jump = 0;
+        my $ljump      = 0;
 
         # Get some vars on line [n+1], if any:
         if ( $n < $n_last_line ) {
@@ -19108,6 +19108,8 @@ sub send_lines_to_vertical_aligner {
             $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
             $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+            $level_jump =
+              $rLL->[$Kbeg_next]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
         }
         else {
 
@@ -19117,14 +19119,10 @@ sub send_lines_to_vertical_aligner {
             if ( defined($Kbeg_next) ) {
                 $ljump =
                   $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+                $level_jump =
+                  $rLL->[$Kbeg_next]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
             }
         }
-
-        # level jump at end of line for the vertical aligner:
-        my $level_jump =
-          $Kend >= $Klimit
-          ? 0
-          : $rLL->[ $Kend + 1 ]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
 
         $self->delete_needless_alignments( $ibeg, $iend,
             $ralignment_type_to_go );

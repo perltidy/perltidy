@@ -399,7 +399,7 @@ EOM
     else {
         print <<EOM;
 
-OK: all cases run converged
+OK: all cases converged
 EOM
     }
     if (@skipped_cases) {
