@@ -494,10 +494,6 @@ BEGIN {
     # Maximum number of little messages; probably need not be changed.
     use constant MAX_NAG_MESSAGES => 6;
 
-    # increment between sequence numbers for each type
-    # For example, ?: pairs might have numbers 7,11,15,...
-    use constant TYPE_SEQUENCE_INCREMENT => 4;
-
     # Initialize constant hashes ...
     my @q;
 
@@ -15696,16 +15692,16 @@ sub set_continuation_breaks {
     # places to break long lists.
 
     my (
-        $block_type,               $current_depth,
-        $depth,                    $i,
-        $i_last_nonblank_token,    $last_colon_sequence_number,
-        $last_nonblank_token,      $last_nonblank_type,
-        $last_nonblank_block_type, $last_old_breakpoint_count,
-        $minimum_depth,            $next_nonblank_block_type,
-        $next_nonblank_token,      $next_nonblank_type,
-        $old_breakpoint_count,     $starting_breakpoint_count,
-        $starting_depth,           $token,
-        $type,                     $type_sequence,
+        $block_type,                $current_depth,
+        $depth,                     $i,
+        $i_last_nonblank_token,     $last_nonblank_token,
+        $last_nonblank_type,        $last_nonblank_block_type,
+        $last_old_breakpoint_count, $minimum_depth,
+        $next_nonblank_block_type,  $next_nonblank_token,
+        $next_nonblank_type,        $old_breakpoint_count,
+        $starting_breakpoint_count, $starting_depth,
+        $token,                     $type,
+        $type_sequence,
     );
 
     my (
@@ -16071,14 +16067,13 @@ sub set_continuation_breaks {
 
         $starting_depth = $nesting_depth_to_go[0];
 
-        $block_type                 = ' ';
-        $current_depth              = $starting_depth;
-        $i                          = -1;
-        $last_colon_sequence_number = -1;
-        $last_nonblank_token        = ';';
-        $last_nonblank_type         = ';';
-        $last_nonblank_block_type   = ' ';
-        $last_old_breakpoint_count  = 0;
+        $block_type                = ' ';
+        $current_depth             = $starting_depth;
+        $i                         = -1;
+        $last_nonblank_token       = ';';
+        $last_nonblank_type        = ';';
+        $last_nonblank_block_type  = ' ';
+        $last_old_breakpoint_count = 0;
         $minimum_depth = $current_depth + 1;    # forces update in check below
         $old_breakpoint_count      = 0;
         $starting_breakpoint_count = get_forced_breakpoint_count();
@@ -16097,6 +16092,7 @@ sub set_continuation_breaks {
         my $saw_good_breakpoint;
         my $i_line_end   = -1;
         my $i_line_start = -1;
+        my $i_last_colon = -1;
 
         # loop over all tokens in this batch
         while ( ++$i <= $max_index_to_go ) {
@@ -16295,7 +16291,7 @@ sub set_continuation_breaks {
                 # handle any postponed closing breakpoints
                 if ( $is_closing_sequence_token{$token} ) {
                     if ( $type eq ':' ) {
-                        $last_colon_sequence_number = $type_sequence;
+                        $i_last_colon = $i;
 
                         # retain break at a ':' line break
                         if ( ( $i == $i_line_start || $i == $i_line_end )
@@ -16331,19 +16327,22 @@ sub set_continuation_breaks {
                       )
                     {
 
+                        # don't break if # this has a side comment, and
                         # don't break at a '?' if preceded by ':' on
                         # this line of previous ?/: pair on this line.
                         # This is an attempt to preserve a chain of ?/:
-                        # expressions (elsif2.t).  And don't break if
-                        # this has a side comment.
-                        $self->set_forced_breakpoint($i)
-                          unless (
-                            $type_sequence == (
-                                $last_colon_sequence_number +
-                                  TYPE_SEQUENCE_INCREMENT
+                        # expressions (elsif2.t).
+                        if (
+                            (
+                                   $i_last_colon < 0
+                                || $parent_seqno_to_go[$i_last_colon] !=
+                                $parent_seqno_to_go[$i]
                             )
-                            || $tokens_to_go[$max_index_to_go] eq '#'
-                          );
+                            && $tokens_to_go[$max_index_to_go] ne '#'
+                          )
+                        {
+                            $self->set_forced_breakpoint($i);
+                        }
                         $self->set_closing_breakpoint($i);
                     } ## end if ( $i_colon <= 0  ||...)
                 } ## end elsif ( $token eq '?' )

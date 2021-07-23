@@ -2,6 +2,60 @@
 
 =over 4
 
+=item B<Fix rare problem with formatting nested ternary statements>
+
+This update fixes an extremely rare problem in formatting nested ternary
+statements, illustrated in the following snippet:
+
+  # OLD: There should be a break before the '?' in line 11 here:
+  WriteMakefile(
+      (
+          $PERL_CORE ? ()
+          : (
+              (
+                  eval { ExtUtils::MakeMaker->VERSION(6.48) }
+                  ? ( MIN_PERL_VERSION => '5.006' )
+                  : ()
+              ),
+              (
+                  eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (
+                      META_MERGE => {
+                          #
+                      }
+                    )
+                  : ()
+              ),
+          )
+      ),
+  );
+
+  # NEW: Line 12 correctly begins with a '?'
+  WriteMakefile(
+      (
+          $PERL_CORE ? ()
+          : (
+              (
+                  eval { ExtUtils::MakeMaker->VERSION(6.48) }
+                  ? ( MIN_PERL_VERSION => '5.006' )
+                  : ()
+              ),
+              (
+                  eval { ExtUtils::MakeMaker->VERSION(6.46) }
+                  ? (
+                      META_MERGE => {
+                          #
+                      }
+                    )
+                  : ()
+              ),
+          )
+      ),
+  );
+
+This fixes issue c050.
+
+22 Jul 2021.
+
 =item B<Fix conflict of -bom and -scp parameters>
 
 Automated testing with random parameters produced a case of instability caused
