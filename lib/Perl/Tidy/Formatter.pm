@@ -6995,7 +6995,8 @@ sub weld_containers {
     my @keys = keys %{$rK_weld_right};
     $total_weld_count = @keys;
 
-    # Note that this loop is processed in unsorted order for efficiency
+    # First pass to process binary welds.
+    # This loop is processed in unsorted order for efficiency.
     foreach my $Kstart (@keys) {
         my $Kend = $rK_weld_right->{$Kstart};
 
@@ -7005,11 +7006,16 @@ sub weld_containers {
             Fault("Bad weld link: Kend=$Kend <= Kstart=$Kstart\n");
         }
 
-        $rweld_len_right_at_K->{$Kstart} =
-          $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
-          $rLL->[$Kstart]->[_CUMULATIVE_LENGTH_];
-
-        $rK_weld_left->{$Kend} = $Kstart;    # fix in case of missing left link
+        # Set weld values for all tokens this welded pair
+        foreach ( $Kstart + 1 .. $Kend ) {
+            $rK_weld_left->{$_} = $Kstart;
+        }
+        foreach my $Kx ( $Kstart .. $Kend - 1 ) {
+            $rK_weld_right->{$Kx} = $Kend;
+            $rweld_len_right_at_K->{$Kx} =
+              $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+              $rLL->[$Kx]->[_CUMULATIVE_LENGTH_];
+        }
 
         # Remember the leftmost index of welds which continue to the right
         if ( defined( $rK_weld_right->{$Kend} )
@@ -7019,43 +7025,33 @@ sub weld_containers {
         }
     }
 
-    # Update the end index and lengths of any long welds to extend to the far
-    # end.  This has to be processed in sorted order.
-    # Left links added for b1173.
-    my $Kend = -1;
-    foreach my $Kstart ( sort { $a <=> $b } @K_multi_weld ) {
+    # Second pass to process chains of welds (these are rare).
+    # This has to be processed in sorted order.
+    if (@K_multi_weld) {
+        my $Kend = -1;
+        foreach my $Kstart ( sort { $a <=> $b } @K_multi_weld ) {
 
-        # skip any interior K which was originally missing a left link
-        next if ( $Kstart <= $Kend );
+            # Skip any interior K which was originally missing a left link
+            next if ( $Kstart <= $Kend );
 
-        my @Klist;
-        push @Klist, $Kstart;
-        $Kend = $rK_weld_right->{$Kstart};
-        $rK_weld_left->{$Kend} = $Kstart;
-        my $Knext = $rK_weld_right->{$Kend};
-        while ( defined($Knext) ) {
-            push @Klist, $Kend;
-            $Kend                  = $Knext;
-            $rK_weld_left->{$Kend} = $Kstart;
-            $Knext                 = $rK_weld_right->{$Kend};
-        }
-        pop @Klist;    #  values for last entry are already correct
-        foreach my $KK (@Klist) {
-
-            # Ending indexes must only be shifted to the right for long welds.
-            # An error here would be due to a programming error introduced in
-            # the code immediately above.
-            my $Kend_old = $rK_weld_right->{$KK};
-            if ( !defined($Kend_old) || $Kend < $Kend_old ) {
-                Fault(
-"Bad weld link at K=$KK, old end is K=$Kend_old, new end is $Kend\n"
-                );
+            # Find the end of this chain
+            $Kend = $rK_weld_right->{$Kstart};
+            my $Knext = $rK_weld_right->{$Kend};
+            while ( defined($Knext) ) {
+                $Kend  = $Knext;
+                $Knext = $rK_weld_right->{$Kend};
             }
 
-            $rK_weld_right->{$KK} = $Kend;
-            $rweld_len_right_at_K->{$KK} =
-              $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
-              $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+            # Set weld values this chain
+            foreach ( $Kstart + 1 .. $Kend ) {
+                $rK_weld_left->{$_} = $Kstart;
+            }
+            foreach my $Kx ( $Kstart .. $Kend - 1 ) {
+                $rK_weld_right->{$Kx} = $Kend;
+                $rweld_len_right_at_K->{$Kx} =
+                  $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+                  $rLL->[$Kx]->[_CUMULATIVE_LENGTH_];
+            }
         }
     }
 
@@ -8441,18 +8437,6 @@ sub weld_nested_quotes {
         }
     }
     return;
-}
-
-sub is_welded_right_at_i {
-    my ( $self, $i ) = @_;
-    return unless ( $total_weld_count && $i >= 0 );
-
-    # Back up at a blank.  This routine is sometimes called at blanks.
-    # TODO: this routine can eventually be eliminated by setting the weld flags
-    # for all K indexes between the start and end of a weld, not just at
-    # sequenced items.
-    if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
-    return defined( $self->[_rK_weld_right_]->{ $K_to_go[$i] } );
 }
 
 sub is_welded_at_seqno {
@@ -10630,10 +10614,12 @@ EOM
         # end the current batch, EXCEPT for a few special cases
         my ($self) = @_;
 
+        return unless ( $max_index_to_go >= 0 );
+
         # Exception 1: Do not end line in a weld
         return
           if ( $total_weld_count
-            && $self->is_welded_right_at_i($max_index_to_go) );
+            && $self->[_rK_weld_right_]->{ $K_to_go[$max_index_to_go] } );
 
         # Exception 2: just set a tentative breakpoint if we might be in a
         # one-line block
@@ -12026,7 +12012,9 @@ sub compare_indentation_levels {
         if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
         # no breaks between welded tokens
-        return if ( $total_weld_count && $self->is_welded_right_at_i($i) );
+        return
+          if ( $total_weld_count
+            && $self->[_rK_weld_right_]->{ $K_to_go[$i] } );
 
         my $token = $tokens_to_go[$i];
         my $type  = $types_to_go[$i];
