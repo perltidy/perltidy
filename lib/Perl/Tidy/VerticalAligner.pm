@@ -336,6 +336,13 @@ sub push_group_line {
 use constant DEBUG_VALIGN      => 0;
 use constant SC_LONG_LINE_DIFF => 12;
 
+my %is_closing_token;
+
+BEGIN {
+    my @q = qw< } ) ] >;
+    @is_closing_token{@q} = (1) x scalar(@q);
+}
+
 sub valign_input {
 
     # Place one line in the current vertical group.
@@ -414,6 +421,9 @@ sub valign_input {
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
 
+    # NOTE: the coding has been revised to avoid use of '$level_jump'.
+    # Eventually it can be eliminated as a call parameter.
+
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
     my $jmax = @{$rfields} - 1;
@@ -459,12 +469,14 @@ sub valign_input {
         $self->forget_side_comment();
     }
 
+    my $is_balanced_line = $level_end == $level;
+
     my $group_level = $self->[_group_level_];
 
     DEBUG_VALIGN && do {
         my $nlines = $self->group_line_count();
         print STDOUT
-"Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count, level_jump=$level_jump, level=$level, group_level=$group_level, level_jump=$level_jump\n";
+"Entering valign_input: lines=$nlines new #fields= $jmax, leading_count=$leading_space_count, level=$level, group_level=$group_level, level_end=$level_end\n";
     };
 
     # Validate cached line if necessary: If we can produce a container
@@ -491,7 +503,7 @@ sub valign_input {
         if (   $cached_line_type == 3
             && !$self->group_line_count()
             && $cached_line_flag < 2
-            && $level_jump != 0 )
+            && !$is_balanced_line )    ##&& $level_jump != 0 )
         {
             set_cached_line_valid(0);
         }
@@ -569,7 +581,7 @@ sub valign_input {
     # alignment of the '{'.
     if (   $rfields->[0] eq 'else '
         && @{$rgroup_lines}
-        && $level_jump == 0 )
+        && $is_balanced_line )    ##&& $level_jump == 0 )
     {
 
         $j_terminal_match =
@@ -694,9 +706,17 @@ sub valign_input {
     }
 
     # Force break after jump to lower level
-    if ( $level_jump < 0 ) {
-        $self->_flush_group_lines($level_jump);
+    elsif ($level_end < $level
+        || $is_closing_token{ substr( $rfields->[0], 0, 1 ) } )
+    {
+        $self->_flush_group_lines(-1);
     }
+
+    ## OLD CODING:
+    ## Force break after jump to lower level
+    ## if ( $level_jump < 0 ) {
+    ##    $self->_flush_group_lines($level_jump);
+    ## }
 
     # --------------------------------------------------------------------
     # Some old debugging stuff
