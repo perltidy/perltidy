@@ -6691,6 +6691,66 @@ my $plugin = Koha::FrameworkPlugin->new( {
 --maximum-line-length=60
 --stack-closing-paren
 
+==> b1180.in <==
+# S1
+$orders
+         = SearchOrders( {
+            ordernumber =>
+            $ordernumber
+            } ) ;
+
+# S2
+$orders= SearchOrders( {
+      ordernumber =>
+               $ordernumber
+               } );
+
+
+==> b1180.par <==
+--indent-columns=3
+--maximum-line-length=24
+--continuation-indentation=9
+--weld-nested-containers
+--want-break-before='='
+--nowant-left-space='='
+--closing-token-indentation=3
+--stack-opening-hash-brace
+--vertical-tightness-closing=2
+
+==> b1181.in <==
+# S1
+   $marc
+            = GetISBDView( {
+               'record'
+               => $marc,
+'template'
+               => 'opac',
+'framework'
+               => $framework,
+               } ) ;
+
+# S2
+   $marc= GetISBDView( {
+         'record' =>
+                  $marc,
+         'template' =>
+'opac',
+         'framework' =>
+                  $framework,
+                  } ) ;
+
+
+==> b1181.par <==
+--continuation-indentation=9
+--extended-continuation-indentation
+--indent-columns=3
+--maximum-line-length=24
+--nowant-left-space='+ <<= /= = != > -= %= -= & <<= >= * >= <<= x !~'
+--paren-vertical-tightness-closing=2
+--stack-opening-hash-brace
+--want-break-before='**= <<= -= * ^= &= =~ .= = * ||= > / = &= *= &='
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1

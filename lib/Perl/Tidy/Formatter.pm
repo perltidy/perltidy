@@ -7719,8 +7719,12 @@ sub weld_nested_containers {
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
-    my $multiline_tol =
-      1 + max( $rOpts_indent_columns, $rOpts_continuation_indentation );
+    # $single_line_tol added to fix cases b1180 b1181
+    my $single_line_tol =
+      $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
+
+    my $multiline_tol = $single_line_tol + 1 +
+      max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
@@ -8043,8 +8047,8 @@ EOM
             # We can use zero tolerance if it looks like we are working on an
             # existing weld.
             my $tol =
-              $is_one_line_weld || $is_multiline_weld
-              ? 0
+                $is_one_line_weld || $is_multiline_weld
+              ? $single_line_tol
               : $multiline_tol;
 
             # By how many characters does this exceed the text window?

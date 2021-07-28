@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix edge case of formatting instability>.
+
+Random testing with random input parameters produced cases of formatting
+instability involving welding with unusual parameter settings. This update
+makes a small tolarance adjustment to fix it.
+
+This fixes cases b1180 b1181.
+
+28 Jul 2021.
+
 =item B<Fix rare problem with formatting nested ternary statements>
 
 This update fixes an extremely rare problem in formatting nested ternary
@@ -52,7 +62,7 @@ statements, illustrated in the following snippet:
       ),
   );
 
-This fixes issue c050.
+This fixes issue c050, 63784d8.
 
 22 Jul 2021.
 
@@ -85,7 +95,7 @@ The stable state is then
 
 This fixes case b1179.
 
-21 Jul 2021.
+21 Jul 2021, 4ecc078.
 
 =item B<Fix problems with -kgb in complex structures>
 
