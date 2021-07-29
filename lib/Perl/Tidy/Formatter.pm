@@ -11014,7 +11014,7 @@ EOM
                 if (
                        $max_index_to_go >= 0
                     && $last_nonblank_type eq ')'
-                    && ( ( $rtoken_vars->[_SLEVEL_] < $nesting_depth_to_go[0] )
+                    && ( ( $rtoken_vars->[_LEVEL_] < $levels_to_go[0] )
                         || $too_long )
                   )
                 {
@@ -13217,21 +13217,7 @@ sub insert_additional_breaks {
     return;
 }
 
-sub in_same_container_i {
-
-    # check to see if tokens at i1 and i2 are in the
-    # same container, and not separated by a comma, ? or :
-    # This is an interface between the _to_go arrays to the rLL array
-    my ( $self, $i1, $i2 ) = @_;
-
-    # quick check
-    return if ( $parent_seqno_to_go[$i1] ne $parent_seqno_to_go[$i2] );
-
-    # full check
-    return $self->in_same_container_K( $K_to_go[$i1], $K_to_go[$i2] );
-}
-
-{    ## begin closure in_same_container_K
+{    ## begin closure in_same_container_i
     my $ris_break_token;
     my $ris_comma_token;
 
@@ -13249,21 +13235,30 @@ sub in_same_container_i {
         @{$ris_break_token}{@q} = (1) x scalar(@q);
     }
 
-    sub in_same_container_K {
+    sub in_same_container_i {
 
-        # Check to see if tokens at K1 and K2 are in the same container,
-        # and not separated by certain characters: => , ? : || or
-        # This version uses the newer $rLL data structure.
+        # check to see if tokens at i1 and i2 are in the same container, and not
+        # separated by certain characters: => , ? : || or This is an interface
+        # between the _to_go arrays to the rLL array
+        my ( $self, $i1, $i2 ) = @_;
 
-        my ( $self, $K1, $K2 ) = @_;
-        if ( $K2 < $K1 ) { ( $K1, $K2 ) = ( $K2, $K1 ) }
-        my $rLL     = $self->[_rLL_];
-        my $depth_1 = $rLL->[$K1]->[_SLEVEL_];
+        # quick check
+        my $parent_seqno_1 = $parent_seqno_to_go[$i1];
+        return if ( $parent_seqno_to_go[$i2] ne $parent_seqno_1 );
+
+        if ( $i2 < $i1 ) { ( $i1, $i2 ) = ( $i2, $i1 ) }
+        my $K1  = $K_to_go[$i1];
+        my $K2  = $K_to_go[$i2];
+        my $rLL = $self->[_rLL_];
+
+        my $depth_1 = $nesting_depth_to_go[$i1];
         return if ( $depth_1 < 0 );
-        return unless ( $rLL->[$K2]->[_SLEVEL_] == $depth_1 );
+
+        # Shouldn't happen since i1 and i2 have same parent:
+        return unless ( $nesting_depth_to_go[$i2] == $depth_1 );
 
         # Select character set to scan for
-        my $type_1 = $rLL->[$K1]->[_TYPE_];
+        my $type_1 = $types_to_go[$i1];
         my $rbreak = ( $type_1 ne ':' ) ? $ris_break_token : $ris_comma_token;
 
         # Fast preliminary loop to verify that tokens are in the same container
@@ -13272,12 +13267,13 @@ sub in_same_container_i {
             $KK = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
             last if !defined($KK);
             last if ( $KK >= $K2 );
-            my $depth_K = $rLL->[$KK]->[_SLEVEL_];
-            return if ( $depth_K < $depth_1 );
-            next   if ( $depth_K > $depth_1 );
+            my $ii      = $i1 + $KK - $K1;
+            my $depth_i = $nesting_depth_to_go[$ii];
+            return if ( $depth_i < $depth_1 );
+            next   if ( $depth_i > $depth_1 );
             if ( $type_1 ne ':' ) {
-                my $tok_K = $rLL->[$KK]->[_TOKEN_];
-                return if ( $tok_K eq '?' || $tok_K eq ':' );
+                my $tok_i = $tokens_to_go[$ii];
+                return if ( $tok_i eq '?' || $tok_i eq ':' );
             }
         }
 
@@ -13288,19 +13284,19 @@ sub in_same_container_i {
         # For safety just give up for large differences.
         # See test file 'infinite_loop.txt'
         ###########################################################
-        return if ( $K2 - $K1 > 200 );
+        return if ( $i2 - $i1 > 200 );
 
-        foreach my $K ( $K1 + 1 .. $K2 - 1 ) {
+        foreach my $ii ( $i1 + 1 .. $i2 - 1 ) {
 
-            my $depth_K = $rLL->[$K]->[_SLEVEL_];
-            next   if ( $depth_K > $depth_1 );
-            return if ( $depth_K < $depth_1 );    # redundant, checked above
-            my $tok = $rLL->[$K]->[_TOKEN_];
-            return if ( $rbreak->{$tok} );
+            my $depth_i = $nesting_depth_to_go[$ii];
+            next   if ( $depth_i > $depth_1 );
+            return if ( $depth_i < $depth_1 );
+            my $tok_i = $tokens_to_go[$ii];
+            return if ( $rbreak->{$tok_i} );
         }
         return 1;
     }
-} ## end closure in_same_container_K
+} ## end closure in_same_container_i
 
 sub break_equals {
 
