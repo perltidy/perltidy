@@ -7482,10 +7482,15 @@ sub is_excluded_weld {
 # types needed for welding RULE 6
 my %type_ok_after_bareword;
 
+my %is_ternary;
+
 BEGIN {
 
     my @q = qw# => -> { ( [ #;
     @type_ok_after_bareword{@q} = (1) x scalar(@q);
+
+    @q = qw( ? : );
+    @is_ternary{@q} = (1) x scalar(@q);
 }
 
 use constant DEBUG_WELD => 0;
@@ -7519,8 +7524,17 @@ sub setup_new_weld_measurements {
     my $rK_range = $rlines->[$iline_oo]->{_rK_range};
     my ( $Kfirst, $Klast ) = @{$rK_range};
 
-    # Define a reference index from which to start measuring
-    my $Kref  = $Kfirst;
+    ##########################################################################
+    # We now define a reference index, '$Kref', from which to start measuring
+    # This choice turns out to be critical for keeping welds stable during
+    # iterations, so we go through a number of STEPS...
+    ##########################################################################
+
+    # STEP 1: Our starting guess is to use measure from the first token of the
+    # current line.  This is usually a good guess.
+    my $Kref = $Kfirst;
+
+    # STEP 2: See if we should go back a little farther
     my $Kprev = $self->K_previous_nonblank($Kfirst);
     if ( defined($Kprev) ) {
 
@@ -7565,6 +7579,22 @@ sub setup_new_weld_measurements {
         }
     }
 
+    # STEP 3: Now look ahead for a ternary and, if found, use it.
+    # This fixes case b1182.
+    if ( $Kref < $Kouter_opening ) {
+        my $Knext    = $rLL->[$Kref]->[_KNEXT_SEQ_ITEM_];
+        my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
+        while ( $Knext < $Kouter_opening ) {
+            if (   $is_ternary{ $rLL->[$Knext]->[_TYPE_] }
+                && $rLL->[$Kref]->[_LEVEL_] == $level_oo )
+            {
+                $Kref = $Knext;
+                last;
+            }
+            $Knext = $rLL->[$Knext]->[_KNEXT_SEQ_ITEM_];
+        }
+    }
+
     # Define the starting measurements we will need
     $starting_lentot =
       $Kref <= 0 ? 0 : $rLL->[ $Kref - 1 ]->[_CUMULATIVE_LENGTH_];
@@ -7574,9 +7604,7 @@ sub setup_new_weld_measurements {
     $maximum_text_length = $maximum_text_length_at_level[$starting_level] -
       $starting_ci * $rOpts_continuation_indentation;
 
-    # Now fix these if necessary to avoid known problems...
-
-    # FIX1: Switch to using the outer opening token as the reference
+    # STEP 4: Switch to using the outer opening token as the reference
     # point if a line break before it would make a longer line.
     # Fixes case b1055 and is also an alternate fix for b1065.
     my $starting_level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
@@ -7605,7 +7633,7 @@ sub setup_new_weld_measurements {
 
     my $new_weld_ok = 1;
 
-    # FIX2 for b1020: Avoid problem areas with the -wn -lp combination.  The
+    # STEP 5, fix b1020: Avoid problem areas with the -wn -lp combination.  The
     # combination -wn -lp -dws -naws does not work well and can cause blinkers.
     # It will probably only occur in stress testing.  For this situation we
     # will only start a new weld if we start at a 'good' location.

@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix edge case of formatting instability, b1182>.
+
+Testing with random parameters produced a case of welding instability involving
+unusual parameters and welding long ternary expressions.  This update fixes the
+problem.
+
+This fixes case b1182.
+
+28 Jul 2021.
+
 =item B<Fix edge case of formatting instability>.
 
 Random testing with random input parameters produced cases of formatting

@@ -6751,6 +6751,110 @@ $orders= SearchOrders( {
 --want-break-before='**= <<= -= * ^= &= =~ .= = * ||= > / = &= *= &='
 --weld-nested-containers
 
+==> b1182.in <==
+#S1
+          my $hold =
+            {
+               reservedate_formatted =>
+                 $h->reservedate()
+               ? output_pref(
+                          {
+                            dt =>
+                              dt_from_string(
+                                       $h->reservedate(
+                                       )
+                              ),
+                            dateonly => 1
+                          }
+                 )
+               : q{},
+               suspend_until_formatted =>
+                 $h->suspend_until()
+               ? output_pref(
+                         {
+                            dt =>
+                              dt_from_string(
+                                      $h->suspend_until
+                                        (
+                                        )
+                              ),
+                            dateonly => 1
+                         }
+                 )
+               : q{},
+               expirationdate_formatted =>
+                 $h->expirationdate()
+               ? output_pref(
+                         {
+                            dt =>
+                              dt_from_string(
+                                      $h
+                                        ->expirationdate
+                                        (
+                                        )
+                              ),
+                            dateonly => 1
+                         }
+                 )
+               : q{},
+            };
+
+#S2
+          my $hold =
+            {
+               reservedate_formatted =>
+                 $h->reservedate()
+               ? output_pref(
+                          {
+                            dt =>
+                              dt_from_string(
+                                       $h->reservedate(
+                                       )
+                              ),
+                            dateonly => 1
+                          }
+                 )
+               : q{},
+               suspend_until_formatted =>
+                 $h->suspend_until()
+               ? output_pref(
+                         {
+                            dt =>
+                              dt_from_string(
+                                      $h->suspend_until
+                                        (
+                                        )
+                              ),
+                            dateonly => 1
+                         }
+                 )
+               : q{},
+               expirationdate_formatted =>
+                 $h->expirationdate()
+               ? output_pref(
+                         {
+                            dt =>
+                              dt_from_string(
+                                      $h
+                                        ->expirationdate
+                                        (
+                                        )
+                              ),
+                            dateonly => 1
+                         }
+                 )
+               : q{},
+            };
+
+
+==> b1182.par <==
+--break-before-hash-brace=2
+--ignore-old-breakpoints
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=55
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1
