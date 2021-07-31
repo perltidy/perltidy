@@ -6855,6 +6855,31 @@ $orders= SearchOrders( {
 --maximum-line-length=55
 --weld-nested-containers
 
+==> b1184.in <==
+# S1
+ok(  (  Win32::GetFullPathName( substr
+        (   $cwd, 2 ) )
+     )[0],
+     "$dir\\"
+);
+
+# S2
+ok(  (  Win32::GetFullPathName(
+                   substr(
+                       $cwd, 2
+                   )
+        )
+     )[0],
+     "$dir\\"
+);
+
+==> b1184.par <==
+--extended-continuation-indentation
+--line-up-parentheses
+--maximum-line-length=30
+--weld-nested-containers
+--vertical-tightness=2
+
 ==> b120.in <==
 # Same as bug96
 # State 1

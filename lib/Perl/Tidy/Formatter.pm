@@ -7479,18 +7479,23 @@ sub is_excluded_weld {
     return $match;
 }
 
-# types needed for welding RULE 6
+# hashes to simplify welding logic
 my %type_ok_after_bareword;
-
 my %is_ternary;
+my %has_tight_paren;
 
 BEGIN {
 
+    # types needed for welding RULE 6
     my @q = qw# => -> { ( [ #;
     @type_ok_after_bareword{@q} = (1) x scalar(@q);
 
     @q = qw( ? : );
     @is_ternary{@q} = (1) x scalar(@q);
+
+    # these types do not 'like' to be separated from a following paren
+    @q = qw(w i q Q G C Z U);
+    @{has_tight_paren}{@q} = (1) x scalar(@q);
 }
 
 use constant DEBUG_WELD => 0;
@@ -8163,13 +8168,19 @@ EOM
         if ($do_not_weld_rule) {
 
             # After neglecting a pair, we start measuring from start of point io
-            my $starting_level    = $inner_opening->[_LEVEL_];
-            my $starting_ci_level = $inner_opening->[_CI_LEVEL_];
-            $starting_lentot =
-              $self->cumulative_length_before_K($Kinner_opening);
-            $maximum_text_length =
-              $maximum_text_length_at_level[$starting_level] -
-              $starting_ci_level * $rOpts_continuation_indentation;
+            # ... but not if previous type does not like to be separated from
+            # its container (fixes case b1184)
+            my $Kprev     = $self->K_previous_nonblank($Kinner_opening);
+            my $type_prev = defined($Kprev) ? $rLL->[$Kprev]->[_TYPE_] : 'w';
+            if ( !$has_tight_paren{$type_prev} ) {
+                my $starting_level    = $inner_opening->[_LEVEL_];
+                my $starting_ci_level = $inner_opening->[_CI_LEVEL_];
+                $starting_lentot =
+                  $self->cumulative_length_before_K($Kinner_opening);
+                $maximum_text_length =
+                  $maximum_text_length_at_level[$starting_level] -
+                  $starting_ci_level * $rOpts_continuation_indentation;
+            }
 
             if (DEBUG_WELD) {
                 $Msg .= "Not welding due to RULE $do_not_weld_rule\n";
