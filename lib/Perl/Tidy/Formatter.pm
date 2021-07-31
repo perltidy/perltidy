@@ -5060,6 +5060,8 @@ EOM
     # remains fixed for the rest of this iteration.
     $self->respace_tokens();
 
+    $self->set_excluded_lp_containers();
+
     $self->find_multiline_qw();
 
     $self->keep_old_line_breaks();
@@ -5071,8 +5073,6 @@ EOM
     $self->mark_short_nested_blocks();
 
     $self->adjust_indentation_levels();
-
-    $self->set_excluded_lp_containers();
 
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
@@ -7733,6 +7733,8 @@ sub weld_nested_containers {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
+    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
 
@@ -7904,6 +7906,7 @@ EOM
             # An existing one-line weld is a line in which
             # (1) the containers are all on one line, and
             # (2) the line does not exceed the allowable length, and
+            # (3) is not created with -lp -vt=n instead of welding
             # This flag is used to avoid creating blinkers.
             # FIX1: Changed 'excess_length_to_K' to 'excess_length_of_line'
             # to get exact lengths and fix b604 b605.
@@ -7947,6 +7950,17 @@ EOM
                     }
                     else {
                         $is_one_line_weld = 1;
+                    }
+
+                    # If an apparent one-line weld might have been created by
+                    # -vt and -lp, then do not mark as a one-line weld.
+                    # This condition added to fix b1183.
+                    if (   $is_one_line_weld
+                        && $rOpts_line_up_parentheses
+                        && $opening_vertical_tightness{$token_oo}
+                        && !$ris_excluded_lp_container->{$outer_seqno} )
+                    {
+                        $is_one_line_weld = 0;
                     }
                 }
             }
@@ -8036,7 +8050,6 @@ EOM
         # The effect of this change on typical code is very minimal.  Sometimes
         # it may take a second iteration to converge, but this gives protection
         # against blinking.
-
         if (   !$do_not_weld_rule
             && !$is_one_line_weld
             && $iline_ic == $iline_io )
@@ -8167,9 +8180,9 @@ EOM
 
         if ($do_not_weld_rule) {
 
-            # After neglecting a pair, we start measuring from start of point io
-            # ... but not if previous type does not like to be separated from
-            # its container (fixes case b1184)
+            # After neglecting a pair, we start measuring from start of point
+            # io ... but not if previous type does not like to be separated
+            # from its container (fixes case b1184)
             my $Kprev     = $self->K_previous_nonblank($Kinner_opening);
             my $type_prev = defined($Kprev) ? $rLL->[$Kprev]->[_TYPE_] : 'w';
             if ( !$has_tight_paren{$type_prev} ) {

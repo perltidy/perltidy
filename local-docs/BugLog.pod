@@ -2,14 +2,23 @@
 
 =over 4
 
-=item B<Fix edge case of formatting instability, b1184>.
+=item B<Fix edge case of formatting instability, b1183>.
 
 Testing with random parameters produced a case of welding instability involving
 parameters -wn, -vt=n, -lp. This update fixes the problem.
 
+This fixes case b1183.
+
+30 Jul 2021.
+
+=item B<Fix edge case of formatting instability, b1184>.
+
+Testing with random parameters produced a case of welding instability involving
+a tripple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.
+
 This fixes case b1184.
 
-28 Jul 2021.
+29 Jul 2021.
 
 =item B<Fix edge case of formatting instability, b1182>.
 
@@ -29,7 +38,7 @@ makes a small tolarance adjustment to fix it.
 
 This fixes cases b1180 b1181.
 
-28 Jul 2021.
+28 Jul 2021, b38ccfc.
 
 =item B<Fix rare problem with formatting nested ternary statements>
 

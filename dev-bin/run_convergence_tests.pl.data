@@ -6855,6 +6855,30 @@ $orders= SearchOrders( {
 --maximum-line-length=55
 --weld-nested-containers
 
+==> b1183.in <==
+# S1
+is (
+          ref(
+               Koha::Patron::Discharge::request ( { borrowernumber => $patron->{borrowernumber} } )
+          ),
+          'Koha::Schema::Result::Discharge',
+          'Discharge request sent' );
+
+# S2
+is (
+          ref( Koha::Patron::Discharge::request ( { borrowernumber => $patron->{borrowernumber} } )
+          ),
+          'Koha::Schema::Result::Discharge',
+          'Discharge request sent' );
+
+==> b1183.par <==
+--continuation-indentation=8
+--extended-continuation-indentation
+--line-up-parentheses
+--maximum-line-length=99
+--vertical-tightness=1
+--weld-nested-containers
+
 ==> b1184.in <==
 # S1
 ok(  (  Win32::GetFullPathName( substr
