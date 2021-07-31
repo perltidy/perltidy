@@ -7987,7 +7987,6 @@ EOM
 
             # $top_label->set_text( gettext(
             #    "Unable to create personal directory - check permissions.") );
-
             if (   $iline_oc == $iline_oo + 1
                 && $iline_io == $iline_ic
                 && $token_oo eq '(' )
@@ -10388,16 +10387,16 @@ EOM
     # range of K of tokens for the current line
     my ( $K_first, $K_last );
 
-    my ( $rLL, $radjusted_levels );
+    my ( $rLL, $radjusted_levels, $rparent_of_seqno );
 
     # past stored nonblank tokens
     my (
-        $last_last_nonblank_token,  $last_last_nonblank_type,
-        $last_nonblank_token,       $last_nonblank_type,
-        $last_nonblank_block_type,  $K_last_nonblank_code,
-        $K_last_last_nonblank_code, $looking_for_else,
-        $is_static_block_comment,   $batch_CODE_type,
-        $last_line_had_side_comment,
+        $last_last_nonblank_token,   $last_last_nonblank_type,
+        $last_nonblank_token,        $last_nonblank_type,
+        $last_nonblank_block_type,   $K_last_nonblank_code,
+        $K_last_last_nonblank_code,  $looking_for_else,
+        $is_static_block_comment,    $batch_CODE_type,
+        $last_line_had_side_comment, $next_parent_seqno
     );
 
     # Called once at the start of a new file
@@ -10413,6 +10412,7 @@ EOM
         $is_static_block_comment    = 0;
         $batch_CODE_type            = "";
         $last_line_had_side_comment = 0;
+        $next_parent_seqno          = SEQ_ROOT;
         return;
     }
 
@@ -10562,10 +10562,32 @@ EOM
         if ( $level < 0 ) { $level = 0 }
         $levels_to_go[$max_index_to_go] = $level;
 
+        my $seqno = $type_sequence_to_go[$max_index_to_go] =
+          $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        if ( $max_index_to_go == 0 ) {
+            $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+        }
+
+        my $parent_seqno = $next_parent_seqno;
+        if ($seqno) {
+            if ( $is_opening_token{$token} ) {
+                $next_parent_seqno = $seqno;
+            }
+            elsif ( $is_closing_token{$token} ) {
+                $parent_seqno      = $rparent_of_seqno->{$seqno};
+                $parent_seqno      = SEQ_ROOT unless defined($parent_seqno);
+                $next_parent_seqno = $parent_seqno;
+            }
+        }
+
+        $parent_seqno_to_go[$max_index_to_go]  = $parent_seqno;
         $nesting_depth_to_go[$max_index_to_go] = $rtoken_vars->[_SLEVEL_];
         $block_type_to_go[$max_index_to_go]    = $rtoken_vars->[_BLOCK_TYPE_];
-        $type_sequence_to_go[$max_index_to_go] =
-          $rtoken_vars->[_TYPE_SEQUENCE_];
+
+## Possible future alternate coding:
+## $nesting_depth_to_go[$max_index_to_go] = $rSLEVEL_of_opening_seqno->[$parent_seqno] + 1;
+## $block_type_to_go[$max_index_to_go]    = $seqno ? $rBLOCK_TYPE_of_seqno->[$seqno] : "";
 
         $nobreak_to_go[$max_index_to_go] =
           $side_comment_follows ? 2 : $no_internal_newlines;
@@ -10759,6 +10781,7 @@ EOM
 
         $rLL              = $self->[_rLL_];
         $radjusted_levels = $self->[_radjusted_levels_];
+        $rparent_of_seqno = $self->[_rparent_of_seqno_];
 
         my $file_writer_object = $self->[_file_writer_object_];
         my $rbreak_container   = $self->[_rbreak_container_];
@@ -12787,26 +12810,20 @@ EOM
         # This has to be done after all tokens are stored because unstoring
         # of tokens would otherwise cause trouble.
 
-        my ($self)               = @_;
+        my ($self) = @_;
         my $rwant_container_open = $self->[_rwant_container_open_];
-        my $rparent_of_seqno     = $self->[_rparent_of_seqno_];
 
         @unmatched_opening_indexes_in_this_batch = ();
         @unmatched_closing_indexes_in_this_batch = ();
         %comma_arrow_count                       = ();
         my $comma_arrow_count_contained = 0;
-        my $parent_seqno = $self->parent_seqno_by_K( $K_to_go[0] );
 
         foreach my $i ( 0 .. $max_index_to_go ) {
-            $parent_seqno_to_go[$i] = $parent_seqno;
 
             my $seqno = $type_sequence_to_go[$i];
             if ($seqno) {
                 my $token = $tokens_to_go[$i];
                 if ( $is_opening_sequence_token{$token} ) {
-                    if ( $is_opening_token{$token} ) {
-                        $parent_seqno = $seqno;
-                    }
 
                     if ( $rwant_container_open->{$seqno} ) {
                         $self->set_forced_breakpoint($i);
@@ -12815,12 +12832,6 @@ EOM
                     push @unmatched_opening_indexes_in_this_batch, $i;
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
-
-                    if ( $is_closing_token{$token} ) {
-                        $parent_seqno = $rparent_of_seqno->{$seqno};
-                        $parent_seqno = SEQ_ROOT unless defined($parent_seqno);
-                        $parent_seqno_to_go[$i] = $parent_seqno;
-                    }
 
                     if ( $rwant_container_open->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
