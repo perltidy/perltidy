@@ -6904,6 +6904,33 @@ ok(  (  Win32::GetFullPathName(
 --weld-nested-containers
 --vertical-tightness=2
 
+==> b1185.in <==
+# S1
+          my $visible_items = {
+               map { $_->itemnumber => $_ }
+                 $biblio->items
+                 ->filter_by_visible_in_opac
+                 ( { patron => $patron } )
+                 ->as_list
+          };
+#S2
+          my $visible_items = {
+               map { $_->itemnumber => $_ }
+                 $biblio->items
+                 ->filter_by_visible_in_opac
+                 (       {  patron =>
+                              $patron
+                         }
+               )->as_list
+          };
+
+==> b1185.par <==
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=44
+--vertical-tightness=2
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1

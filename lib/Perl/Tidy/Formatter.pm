@@ -7548,11 +7548,21 @@ sub setup_new_weld_measurements {
         # breaks.
         $self->[_ris_essential_old_breakpoint_]->{$Kprev} = 1;
 
+        # Avoid measuring from between an opening paren and a previous token
+        # which should stay close to it ... fixes b1185
+        my $token_oo  = $rLL->[$Kouter_opening]->[_TOKEN_];
+        my $type_prev = $rLL->[$Kprev]->[_TYPE_];
+        if (   $Kouter_opening == $Kfirst
+            && $token_oo eq '('
+            && $has_tight_paren{$type_prev} )
+        {
+            $Kref = $Kprev;
+        }
+
         # Back up and count length from a token like '=' or '=>' if -lp
         # is used (this fixes b520)
         # ...or if a break is wanted before there
-        my $type_prev = $rLL->[$Kprev]->[_TYPE_];
-        if (   $rOpts_line_up_parentheses
+        elsif ($rOpts_line_up_parentheses
             || $want_break_before{$type_prev} )
         {
 
@@ -13300,9 +13310,9 @@ sub insert_additional_breaks {
 
     sub in_same_container_i {
 
-        # check to see if tokens at i1 and i2 are in the same container, and not
-        # separated by certain characters: => , ? : || or This is an interface
-        # between the _to_go arrays to the rLL array
+        # Check to see if tokens at i1 and i2 are in the same container, and
+        # not separated by certain characters: => , ? : || or
+        # This is an interface between the _to_go arrays to the rLL array
         my ( $self, $i1, $i2 ) = @_;
 
         # quick check
