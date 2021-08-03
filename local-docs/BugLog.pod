@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<Fix edge case of formatting instability, b1186>.
+
+Testing with random parameters produced a case of instability involving
+parameter -lp -pvt=n and a short maximum line length.
+
+This fixes case b1186.
+
+2 Aug 2021.
+
 =item B<Fix edge case of formatting instability, b1185>.
 
 Testing with random parameters produced a case of welding instability involving

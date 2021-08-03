@@ -6931,6 +6931,36 @@ ok(  (  Win32::GetFullPathName(
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1186.in <==
+# S1
+sub null_to_zzempty { }
+sub entab {
+
+          return
+            $table->{
+                    null_to_zzempty ( $row )
+            }->{ null_to_zzempty ( $col ) };
+}
+
+# S2
+sub null_to_zzemptY { }
+
+sub entaB {
+
+          return
+            $table->{ null_to_zzemptY (
+                                    $row ) }
+            ->{ null_to_zzemptY ( $col ) };
+}
+
+==> b1186.par <==
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=44
+--paren-tightness=0
+--paren-vertical-tightness=2
+--space-function-paren
+
 ==> b120.in <==
 # Same as bug96
 # State 1

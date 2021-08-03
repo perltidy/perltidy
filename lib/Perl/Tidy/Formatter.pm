@@ -17140,9 +17140,11 @@ my %is_kwiZ;
 BEGIN {
 
     # Added 'w' to fix b1172
-    my @q = qw(k w i Z);
+    my @q = qw(k w i Z ->);
     @is_kwiZ{@q} = (1) x scalar(@q);
 }
+
+use constant DEBUG_FIND_START => 0;
 
 sub find_token_starting_list {
 
@@ -17169,7 +17171,14 @@ sub find_token_starting_list {
         # a previous comma is a good break point
         # $i_opening_minus = $i_opening_paren;
     }
-    elsif ( $tokens_to_go[$i_opening_paren] eq '(' ) {
+
+    elsif (
+        $tokens_to_go[$i_opening_paren] eq '('
+
+        # non-parens added here to fix case b1186
+        || $is_kwiZ{$type_prev_nb}
+      )
+    {
         $i_opening_minus = $im1;
 
         # Walk back to improve length estimate...
@@ -17184,10 +17193,11 @@ sub find_token_starting_list {
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
     }
 
-    # Handle non-parens
-    elsif ( $is_kwiZ{$type_prev_nb} ) { $i_opening_minus = $iprev_nb }
-
   RETURN:
+
+    DEBUG_FIND_START && print <<EOM;
+FIND_START: i=$i_opening_paren tok=$tokens_to_go[$i_opening_paren] => im=$i_opening_minus tok=$tokens_to_go[$i_opening_minus]
+EOM
 
     return $i_opening_minus;
 }
