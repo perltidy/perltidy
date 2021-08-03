@@ -406,7 +406,6 @@ sub valign_input {
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
     my $rvertical_tightness_flags = $rline_hash->{rvertical_tightness_flags};
-    my $level_jump                = $rline_hash->{level_jump};
     my $rfields                   = $rline_hash->{rfields};
     my $rtokens                   = $rline_hash->{rtokens};
     my $rpatterns                 = $rline_hash->{rpatterns};
@@ -420,9 +419,6 @@ sub valign_input {
 
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
-
-    # NOTE: the coding has been revised to avoid use of '$level_jump'.
-    # Eventually it can be eliminated as a call parameter.
 
     # number of fields is $jmax
     # number of tokens between fields is $jmax-1
@@ -503,7 +499,7 @@ sub valign_input {
         if (   $cached_line_type == 3
             && !$self->group_line_count()
             && $cached_line_flag < 2
-            && !$is_balanced_line )    ##&& $level_jump != 0 )
+            && !$is_balanced_line )
         {
             set_cached_line_valid(0);
         }
@@ -581,7 +577,7 @@ sub valign_input {
     # alignment of the '{'.
     if (   $rfields->[0] eq 'else '
         && @{$rgroup_lines}
-        && $is_balanced_line )    ##&& $level_jump == 0 )
+        && $is_balanced_line )
     {
 
         $j_terminal_match =
@@ -711,12 +707,6 @@ sub valign_input {
     {
         $self->_flush_group_lines(-1);
     }
-
-    ## OLD CODING:
-    ## Force break after jump to lower level
-    ## if ( $level_jump < 0 ) {
-    ##    $self->_flush_group_lines($level_jump);
-    ## }
 
     # --------------------------------------------------------------------
     # Some old debugging stuff
@@ -1386,6 +1376,7 @@ sub _flush_group_lines {
 
     # $level_jump = $next_level-$group_level, if known
     #             = undef if not known
+    # Note: only the sign of the jump is needed
 
     my $rgroup_lines = $self->[_rgroup_lines_];
     return unless ( @{$rgroup_lines} );

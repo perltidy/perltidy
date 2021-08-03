@@ -19165,10 +19165,7 @@ sub send_lines_to_vertical_aligner {
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
-        # We need two slightly different definitions of level jump:
-        #  $level_jump is the 'slevel' jump across line starts for valign
         #  $ljump is a level jump needed by 'sub set_adjusted_indentation'
-        my $level_jump = 0;
         my $ljump      = 0;
 
         # Get some vars on line [n+1], if any:
@@ -19179,8 +19176,6 @@ sub send_lines_to_vertical_aligner {
             $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
             $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
-            $level_jump =
-              $rLL->[$Kbeg_next]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
         }
         else {
 
@@ -19190,8 +19185,6 @@ sub send_lines_to_vertical_aligner {
             if ( defined($Kbeg_next) ) {
                 $ljump =
                   $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
-                $level_jump =
-                  $rLL->[$Kbeg_next]->[_SLEVEL_] - $rLL->[$Kbeg]->[_SLEVEL_];
             }
         }
 
@@ -19349,7 +19342,6 @@ EOM
         $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
         $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
         $rvalign_hash->{rvertical_tightness_flags} = $rvertical_tightness_flags;
-        $rvalign_hash->{level_jump}                = $level_jump;
         $rvalign_hash->{rfields}                   = $rfields;
         $rvalign_hash->{rpatterns}                 = $rpatterns;
         $rvalign_hash->{rtokens}                   = $rtokens;
