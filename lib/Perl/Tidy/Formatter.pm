@@ -339,7 +339,6 @@ BEGIN {
         _LINE_INDEX_        => $i++,
         _KNEXT_SEQ_ITEM_    => $i++,
         _LEVEL_             => $i++,
-        _SLEVEL_            => $i++,
         _TOKEN_             => $i++,
         _TOKEN_LENGTH_      => $i++,
         _TYPE_              => $i++,
@@ -356,6 +355,8 @@ BEGIN {
         _rlines_new_                => $i++,
         _rLL_                       => $i++,
         _Klimit_                    => $i++,
+        _rdepth_of_opening_seqno_   => $i++,
+        _rBLOCK_TYPE_of_seqno_      => $i++,
         _K_opening_container_       => $i++,
         _K_closing_container_       => $i++,
         _K_opening_ternary_         => $i++,
@@ -713,6 +714,9 @@ sub new {
     # 'LL' stuck because it is easy to type.
     $self->[_rLL_]    = [];
     $self->[_Klimit_] = undef;    # = maximum K index for rLL.
+
+    $self->[_rdepth_of_opening_seqno_] = [];
+    $self->[_rBLOCK_TYPE_of_seqno_]    = [];
 
     # Arrays for quickly traversing the structures
     $self->[_K_opening_container_] = {};
@@ -4466,6 +4470,7 @@ sub make_closing_side_comment_prefix {
     my $Last_line_had_side_comment;
     my $In_format_skipping_section;
     my $Saw_VERSION_in_this_file;
+    my $nesting_depth;
 
     # Variables used by sub check_sequence_numbers:
     my $last_seqno;
@@ -4478,6 +4483,7 @@ sub make_closing_side_comment_prefix {
         $Last_line_had_side_comment = 0;
         $In_format_skipping_section = 0;
         $Saw_VERSION_in_this_file   = 0;
+        $nesting_depth              = undef;
 
         $last_seqno        = SEQ_ROOT;
         %saw_opening_seqno = ();
@@ -4597,6 +4603,9 @@ EOM
         my $rlines_new    = $self->[_rlines_];
         my $maximum_level = $self->[_maximum_level_];
 
+        my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
+        my $rBLOCK_TYPE_of_seqno    = $self->[_rBLOCK_TYPE_of_seqno_];
+
         my $Kfirst;
         my $line_of_tokens = {};
         foreach my $key (
@@ -4661,35 +4670,57 @@ EOM
                   && check_sequence_numbers( $rtokens, $rtoken_type,
                     $rtype_sequence, $input_line_no );
 
-                foreach my $j ( 0 .. $jmax ) {
+                # Find the starting nesting depth ...
+                # it is the value of variable 'slevel' of the first token.
+                if ( !defined($nesting_depth) ) {
+                    $nesting_depth = $rslevels->[0];
+                    $nesting_depth = 0 if ( $nesting_depth < 0 );
+                    $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
+                }
 
-                 # Clip negative nesting depths to zero to avoid problems.
-                 # Negative values can occur in files with unbalanced containers
-                    my $slevel = $rslevels->[$j];
-                    if ( $slevel < 0 ) { $slevel = 0 }
+                foreach my $j ( 0 .. $jmax ) {
 
                     if ( $rlevels->[$j] > $maximum_level ) {
                         $maximum_level = $rlevels->[$j];
                     }
 
-                    # But do not clip the 'level' variable yet. We will do this
+                    # Do not clip the 'level' variable yet. We will do this
                     # later, in sub 'store_token_to_go'. The reason is that in
                     # files with level errors, the logic in 'weld_cuddled_else'
                     # uses a stack logic that will give bad welds if we clip
                     # levels here.
                     ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
 
+                    # Special handling of tokens with sequence numbers:
+                    my $seqno = $rtype_sequence->[$j];
+                    if ($seqno) {
+                        if ( $is_opening_token{ $rtokens->[$j] } ) {
+                            $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
+                            $nesting_depth++;
+                            $rBLOCK_TYPE_of_seqno->[$seqno] =
+                              $rblock_type->[$j];
+                        }
+                        elsif ( $is_closing_token{ $rtokens->[$j] } ) {
+
+                            # block type has already been set at opening token
+                            $nesting_depth--;
+                        }
+                        else {
+                            $rBLOCK_TYPE_of_seqno->[$seqno] = "";
+                        }
+                    }
+
                     my @tokary;
                     @tokary[
                       _TOKEN_,         _TYPE_,  _BLOCK_TYPE_,
-                      _TYPE_SEQUENCE_, _LEVEL_, _SLEVEL_,
-                      _CI_LEVEL_,      _LINE_INDEX_,
+                      _TYPE_SEQUENCE_, _LEVEL_, _CI_LEVEL_,
+                      _LINE_INDEX_,
                       ]
                       = (
                         $rtokens->[$j],     $rtoken_type->[$j],
-                        $rblock_type->[$j], $rtype_sequence->[$j],
-                        $rlevels->[$j],     $slevel,
-                        $rci_levels->[$j],  $input_line_no - 1,
+                        $rblock_type->[$j], $seqno,
+                        $rlevels->[$j],     $rci_levels->[$j],
+                        $input_line_no - 1,
                       );
                     push @{$rLL}, \@tokary;
                 } ## end foreach my $j ( 0 .. $jmax )
@@ -4752,7 +4783,10 @@ EOM
                 my $K_m    = $Klimit - 1;
                 my $type_m = $rLL->[$K_m]->[_TYPE_];
                 if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
-                my $last_nonblank_block_type = $rLL->[$K_m]->[_BLOCK_TYPE_];
+                my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+                ##my $last_nonblank_block_type = $rLL->[$K_m]->[_BLOCK_TYPE_];
+                my $last_nonblank_block_type =
+                  $seqno_m ? $rBLOCK_TYPE_of_seqno->[$seqno_m] : "";
                 if (   $token =~ /$closing_side_comment_prefix_pattern/
                     && $last_nonblank_block_type =~
                     /$closing_side_comment_list_pattern/ )
@@ -5194,6 +5228,7 @@ sub respace_tokens {
     my $roverride_cab3            = $self->[_roverride_cab3_];
     my $rparent_of_seqno          = $self->[_rparent_of_seqno_];
     my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
+    my $rBLOCK_TYPE_of_seqno      = $self->[_rBLOCK_TYPE_of_seqno_];
 
     my $last_nonblank_type       = ';';
     my $last_nonblank_token      = ';';
@@ -5359,10 +5394,14 @@ sub respace_tokens {
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
         if ( !$is_blank && !$is_comment ) {
-            $last_nonblank_type       = $type;
-            $last_nonblank_token      = $item->[_TOKEN_];
-            $last_nonblank_block_type = $item->[_BLOCK_TYPE_];
-            $last_nonblank_token_lx   = $item->[_LINE_INDEX_];
+            $last_nonblank_type  = $type;
+            $last_nonblank_token = $item->[_TOKEN_];
+            ##$last_nonblank_block_type = $item->[_BLOCK_TYPE_];
+            $last_nonblank_block_type =
+                $type_sequence
+              ? $rBLOCK_TYPE_of_seqno->[$type_sequence]
+              : "";
+            $last_nonblank_token_lx = $item->[_LINE_INDEX_];
             $nonblank_token_count++;
 
             # count selected types
@@ -5456,34 +5495,44 @@ sub respace_tokens {
         return unless ( defined($Kp) );
 
         # we are only adding semicolons for certain block types
-        my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        ##my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        my $block_type =
+            $type_sequence
+          ? $rBLOCK_TYPE_of_seqno->[$type_sequence]
+          : "";
         return
           unless ( $ok_to_add_semicolon_for_block_type{$block_type}
             || $block_type =~ /^(sub|package)/
             || $block_type =~ /^\w+\:$/ );
 
-        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-
-        my $previous_nonblank_type  = $rLL_new->[$Kp]->[_TYPE_];
-        my $previous_nonblank_token = $rLL_new->[$Kp]->[_TOKEN_];
+        my $type_p          = $rLL_new->[$Kp]->[_TYPE_];
+        my $token_p         = $rLL_new->[$Kp]->[_TOKEN_];
+        my $type_sequence_p = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
+        ##my $block_type = $rLL->[$KK]->[_BLOCK_TYPE_];
+        my $block_type_p =
+            $type_sequence_p
+          ? $rBLOCK_TYPE_of_seqno->[$type_sequence_p]
+          : "";
 
         # Do not add a semicolon if...
         return
           if (
 
             # it would follow a comment (and be isolated)
-            $previous_nonblank_type eq '#'
+            $type_p eq '#'
 
             # it follows a code block ( because they are not always wanted
             # there and may add clutter)
-            || $rLL_new->[$Kp]->[_BLOCK_TYPE_]
+            ##|| $rLL_new->[$Kp]->[_BLOCK_TYPE_]
+            || $block_type_p
 
             # it would follow a label
-            || $previous_nonblank_type eq 'J'
+            || $type_p eq 'J'
 
             # it would be inside a 'format' statement (and cause syntax error)
-            || (   $previous_nonblank_type eq 'k'
-                && $previous_nonblank_token =~ /format/ )
+            || (   $type_p eq 'k'
+                && $token_p =~ /format/ )
 
           );
 
@@ -5499,7 +5548,7 @@ sub respace_tokens {
         # If it is also a CLOSING token we have to look closer...
         if (
                $seqno_inner
-            && $is_closing_token{$previous_nonblank_token}
+            && $is_closing_token{$token_p}
 
             # we only need to look if there is just one inner container..
             && defined( $rchildren_of_seqno->{$type_sequence} )
@@ -5551,8 +5600,6 @@ sub respace_tokens {
             $rLL_new->[$Ktop]->[_TOKEN_]        = $tok;
             $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
             $rLL_new->[$Ktop]->[_TYPE_]         = ';';
-            $rLL_new->[$Ktop]->[_SLEVEL_] =
-              $rLL->[$KK]->[_SLEVEL_];
 
             # Save list of new K indexes of phantom semicolons.
             # This will be needed if we want to undo them for iterations in
@@ -5566,7 +5613,6 @@ sub respace_tokens {
 
             # insert a new token
             my $rcopy = copy_token_as_type( $rLL_new->[$Kp], ';', '' );
-            $rcopy->[_SLEVEL_] = $rLL->[$KK]->[_SLEVEL_];
             $store_token->($rcopy);
             push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
         }
@@ -6251,7 +6297,8 @@ sub respace_tokens {
         # type here now that we have had a better look at the contents of the
         # container. This fixes case b1085. To find the corresponding code in
         # Tokenizer.pm search for 'b1085' with an editor.
-        my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
+        #my $block_type = $rLL_new->[$K_opening]->[_BLOCK_TYPE_];
+        my $block_type = $rBLOCK_TYPE_of_seqno->[$seqno];
         if ( $block_type && substr( $block_type, -1, 1 ) eq ' ' ) {
 
             # Always remove the trailing space
@@ -6281,6 +6328,7 @@ sub respace_tokens {
 
             $rLL_new->[$K_opening]->[_BLOCK_TYPE_] = $block_type;
             $rLL_new->[$K_closing]->[_BLOCK_TYPE_] = $block_type;
+            $rBLOCK_TYPE_of_seqno->[$seqno]        = $block_type;
         }
 
         # Handle a list container
@@ -10397,7 +10445,8 @@ EOM
     # range of K of tokens for the current line
     my ( $K_first, $K_last );
 
-    my ( $rLL, $radjusted_levels, $rparent_of_seqno );
+    my ( $rLL, $radjusted_levels, $rparent_of_seqno, $rdepth_of_opening_seqno,
+        $rBLOCK_TYPE_of_seqno );
 
     # past stored nonblank tokens
     my (
@@ -10406,7 +10455,8 @@ EOM
         $last_nonblank_block_type,   $K_last_nonblank_code,
         $K_last_last_nonblank_code,  $looking_for_else,
         $is_static_block_comment,    $batch_CODE_type,
-        $last_line_had_side_comment, $next_parent_seqno
+        $last_line_had_side_comment, $next_parent_seqno,
+        $next_slevel,
     );
 
     # Called once at the start of a new file
@@ -10423,6 +10473,7 @@ EOM
         $batch_CODE_type            = "";
         $last_line_had_side_comment = 0;
         $next_parent_seqno          = SEQ_ROOT;
+        $next_slevel                = undef;
         return;
     }
 
@@ -10577,27 +10628,39 @@ EOM
 
         if ( $max_index_to_go == 0 ) {
             $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+            $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
 
+        # Initialize some sequence-dependent variables to their normal values
         my $parent_seqno = $next_parent_seqno;
+        my $slevel       = $next_slevel;
+        my $block_type   = "";
+
+        # Then fix them at container tokens:
         if ($seqno) {
             if ( $is_opening_token{$token} ) {
                 $next_parent_seqno = $seqno;
+                $slevel            = $rdepth_of_opening_seqno->[$seqno];
+                $next_slevel       = $slevel + 1;
+                $block_type        = $rBLOCK_TYPE_of_seqno->[$seqno];
             }
             elsif ( $is_closing_token{$token} ) {
+                $next_slevel       = $rdepth_of_opening_seqno->[$seqno];
+                $slevel            = $next_slevel + 1;
+                $block_type        = $rBLOCK_TYPE_of_seqno->[$seqno];
                 $parent_seqno      = $rparent_of_seqno->{$seqno};
                 $parent_seqno      = SEQ_ROOT unless defined($parent_seqno);
                 $next_parent_seqno = $parent_seqno;
             }
+            else {
+                # ternary token: nothing to do
+            }
         }
 
         $parent_seqno_to_go[$max_index_to_go]  = $parent_seqno;
-        $nesting_depth_to_go[$max_index_to_go] = $rtoken_vars->[_SLEVEL_];
-        $block_type_to_go[$max_index_to_go]    = $rtoken_vars->[_BLOCK_TYPE_];
-
-## Possible future alternate coding:
-## $nesting_depth_to_go[$max_index_to_go] = $rSLEVEL_of_opening_seqno->[$parent_seqno] + 1;
-## $block_type_to_go[$max_index_to_go]    = $seqno ? $rBLOCK_TYPE_of_seqno->[$seqno] : "";
+        $nesting_depth_to_go[$max_index_to_go] = $slevel;
+        ## $block_type_to_go[$max_index_to_go] = $block_type;  ## FUTURE
+        $block_type_to_go[$max_index_to_go] = $rtoken_vars->[_BLOCK_TYPE_];
 
         $nobreak_to_go[$max_index_to_go] =
           $side_comment_follows ? 2 : $no_internal_newlines;
@@ -10789,9 +10852,11 @@ EOM
         # remember original starting index in case it changes
         my $K_first_true = $K_first;
 
-        $rLL              = $self->[_rLL_];
-        $radjusted_levels = $self->[_radjusted_levels_];
-        $rparent_of_seqno = $self->[_rparent_of_seqno_];
+        $rLL                     = $self->[_rLL_];
+        $radjusted_levels        = $self->[_radjusted_levels_];
+        $rparent_of_seqno        = $self->[_rparent_of_seqno_];
+        $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
+        $rBLOCK_TYPE_of_seqno    = $self->[_rBLOCK_TYPE_of_seqno_];
 
         my $file_writer_object = $self->[_file_writer_object_];
         my $rbreak_container   = $self->[_rbreak_container_];
@@ -13090,10 +13155,9 @@ sub pad_array_to_go {
     if ( $is_closing_type{ $types_to_go[$max_index_to_go] } ) {
         if ( $nesting_depth_to_go[$max_index_to_go] <= 0 ) {
 
-            # Nesting depths are equivalent to the _SLEVEL_ variable which is
-            # clipped to be >=0 in sub write_line, so it should not be possible
-            # to get here unless the code has a bracing error which leaves a
-            # closing brace with zero nesting depth.
+            # Nesting depths are set to be >=0 in sub write_line, so it should
+            # not be possible to get here unless the code has a bracing error
+            # which leaves a closing brace with zero nesting depth.
             unless ( get_saw_brace_error() ) {
                 warning(
 "Program bug in pad_array_to_go: hit nesting error which should have been caught\n"
@@ -19166,7 +19230,7 @@ sub send_lines_to_vertical_aligner {
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
         #  $ljump is a level jump needed by 'sub set_adjusted_indentation'
-        my $ljump      = 0;
+        my $ljump = 0;
 
         # Get some vars on line [n+1], if any:
         if ( $n < $n_last_line ) {
