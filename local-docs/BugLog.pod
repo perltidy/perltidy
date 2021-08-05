@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix edge cases of formatting instability, b1187 b1188>.
+
+Testing with random parameters produced some cases of instability
+involving -wn -lp and several other parameters.  The mechanism
+involved an interaction between the formatter and vertical aligner.
+
+This fixes cases b1187 and b1188.
+
+3 Aug 2021.
+
 =item B<Fix edge case of formatting instability, b1186>.
 
 Testing with random parameters produced a case of instability involving

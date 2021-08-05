@@ -485,12 +485,25 @@ sub valign_input {
         if ($rvertical_tightness_flags) {
             my $cached_seqno = get_cached_seqno();
             if (   $cached_seqno
-                && $self->group_line_count() <= 1
                 && $rvertical_tightness_flags->[2]
                 && $rvertical_tightness_flags->[2] == $cached_seqno )
             {
-                $rvertical_tightness_flags->[3] ||= 1;
-                set_cached_line_valid(1);
+
+                # Fix for b1187 and b1188: Normally this step is only done
+                # if the number of existing lines is 0 or 1.  But to prevent
+                # blinking, this range can be controlled by the caller.
+                # If zero values are given we fall back on the range 0 to 1.
+                my $line_count = $self->group_line_count();
+                my $min_lines  = $rvertical_tightness_flags->[6];
+                my $max_lines  = $rvertical_tightness_flags->[7];
+                $min_lines = 0 unless ($min_lines);
+                $max_lines = 1 unless ($max_lines);
+                if (   ( $line_count >= $min_lines )
+                    && ( $line_count <= $max_lines ) )
+                {
+                    $rvertical_tightness_flags->[3] ||= 1;
+                    set_cached_line_valid(1);
+                }
             }
         }
 

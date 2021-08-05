@@ -21891,11 +21891,17 @@ sub set_vertical_tightness_flags {
     #   [3] valid flag: do not append if this flag is false. Will be
     #       true if appropriate -vt flag is set.  Otherwise, Will be
     #       made true only for 2 line container in parens with -lp
+    #   [4] seqno_beg = sequence number of first token of line
+    #   [5] seqno_end = sequence number of last token of line
+    #   [6] min number of lines for joining opening cache, 0=no constraint
+    #   [7] max number of lines for joining opening cache, 0=no constraint
     #
     # These flags are used by sub set_leading_whitespace in
     # the vertical aligner
 
-    my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0 ];
+    # FIXME: It would be nice to switch to a hash instead of an array
+    # to clarify the coding.
+    my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0, 0, 0 ];
 
     # The vertical tightness mechanism can add whitespace, so whitespace can
     # continually increase if we allowed it when the -fws flag is set.
@@ -22025,10 +22031,36 @@ sub set_vertical_tightness_flags {
 
                 if ($ok) {
                     my $valid_flag = $cvt;
+                    my $min_lines  = 0;
+                    my $max_lines  = 0;
+
+                    # Fix for b1187 and b1188: Blinking can occur if we allow
+                    # welded tokens to re-form into one-line blocks during
+                    # vertical alignment when -lp used.  So for this case we
+                    # set the minimum number of lines to be 1 instead of 0.
+                    # The maximum should be 1 if -vtc is not used.  If -vtc is
+                    # used, we turn the valid
+                    # flag off and set the maximum to 0. This is equivalent to
+                    # using a large number.
+                    my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
+                    if (   $rOpts_line_up_parentheses
+                        && $total_weld_count
+                        && $self->is_welded_at_seqno($seqno_ibeg_next) )
+                    {
+                        $min_lines  = 1;
+                        $max_lines  = $cvt ? 0 : 1;
+                        $valid_flag = 0;
+                    }
+
                     @{$rvertical_tightness_flags} = (
                         2,
                         $tightness{$token_next} == 2 ? 0 : 1,
-                        $type_sequence_to_go[$ibeg_next], $valid_flag,
+                        $type_sequence_to_go[$ibeg_next],
+                        $valid_flag,
+                        0,
+                        0,
+                        $min_lines,
+                        $max_lines
                     );
                 }
             }
@@ -22193,6 +22225,10 @@ sub set_vertical_tightness_flags {
     }
     $rvertical_tightness_flags->[4] = $seqno_beg;
     $rvertical_tightness_flags->[5] = $seqno_end;
+    if ( !defined( $rvertical_tightness_flags->[6] ) ) {
+        $rvertical_tightness_flags->[6] = 0;
+        $rvertical_tightness_flags->[7] = 0;
+    }
     return $rvertical_tightness_flags;
 }
 

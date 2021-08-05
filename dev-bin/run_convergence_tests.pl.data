@@ -6961,6 +6961,74 @@ sub entaB {
 --paren-vertical-tightness=2
 --space-function-paren
 
+==> b1187.in <==
+# S1
+find(
+      sub {
+                while(
+                       defined( my $line = <$fh>
+                       )
+                  )
+                {
+                          ...;
+                }
+      },
+      @argv
+);
+
+# S2
+find(
+      sub {
+                while(defined(my $line = <$fh>))
+                {
+                          ...;
+                }
+      },
+      @argv
+);
+
+==> b1187.par <==
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=48
+--nospace-after-keyword='while'
+--paren-tightness=2
+--weld-nested-containers
+
+==> b1188.in <==
+# S1
+find(
+      sub {
+                while(defined(my $line = <$fh>))
+                {
+                          ...;
+                }
+      },
+      @argv);
+
+# S2
+find(
+      sub {
+                while(
+                       defined( my $line = <$fh>
+                       ))
+                {
+                          ...;
+                }
+      },
+      @argv);
+
+==> b1188.par <==
+# added -vertical-tightness flags to b1187
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=48
+--nospace-after-keyword='while'
+--paren-tightness=2
+--paren-vertical-tightness-closing=1
+--paren-vertical-tightness=1
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1
