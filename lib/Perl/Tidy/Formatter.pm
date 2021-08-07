@@ -355,7 +355,7 @@ BEGIN {
         _rLL_                       => $i++,
         _Klimit_                    => $i++,
         _rdepth_of_opening_seqno_   => $i++,
-        _rsigned_sequence_list_     => $i++,
+        _rSS_                       => $i++,
         _Iss_opening_               => $i++,
         _Iss_closing_               => $i++,
         _rblock_type_of_seqno_      => $i++,
@@ -711,19 +711,15 @@ sub new {
     $self->[_rlines_]     = [];    # = ref to array of lines of the file
     $self->[_rlines_new_] = [];    # = ref to array of output lines
 
-    # 'rLL' = reference to the liner array of all tokens in the file.
+    # 'rLL' = reference to the continuous liner array of all tokens in a file.
     # 'LL' stands for 'Linked List'. Using a linked list was a disaster, but
-    # 'LL' stuck because it is easy to type.
+    # 'LL' stuck because it is easy to type.  The 'rLL' array is updated
+    # by sub 'respace_tokens' during reformatting.  The indexes in 'rLL' begin
+    # with '$K' by convention.
     $self->[_rLL_]    = [];
     $self->[_Klimit_] = undef;    # = maximum K index for rLL.
 
-    # Arrays for quickly traversing the structures
-    $self->[_rdepth_of_opening_seqno_] = [];
-    $self->[_rblock_type_of_seqno_]    = {};
-    $self->[_rsigned_sequence_list_]   = [];
-    $self->[_Iss_opening_]             = [];
-    $self->[_Iss_closing_]             = [];
-
+    # Indexes into the rLL list
     $self->[_K_opening_container_] = {};
     $self->[_K_closing_container_] = {};
     $self->[_K_opening_ternary_]   = {};
@@ -732,6 +728,20 @@ sub new {
 
     # Array of phantom semicolons, in case we ever need to undo them
     $self->[_rK_phantom_semicolons_] = undef;
+
+    # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
+    # numbers with + or - indicating opening or closing. This list represents
+    # the entire container tree and is invariant under reformatting.  It can be
+    # used to quickly travel through the tree.  Indexes in the rSS array begin
+    # with '$I' by convention.  The 'Iss' arrays give the indexes in this list
+    # of opening and closing sequence numbers.
+    $self->[_rSS_]         = [];
+    $self->[_Iss_opening_] = [];
+    $self->[_Iss_closing_] = [];
+
+    # Arrays to help traverse the tree
+    $self->[_rdepth_of_opening_seqno_] = [];
+    $self->[_rblock_type_of_seqno_]    = {};
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -4613,7 +4623,7 @@ EOM
 
         my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
         my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
-        my $rsigned_sequence_list   = $self->[_rsigned_sequence_list_];
+        my $rSS                     = $self->[_rSS_];
         my $Iss_opening             = $self->[_Iss_opening_];
         my $Iss_closing             = $self->[_Iss_closing_];
 
@@ -4710,6 +4720,7 @@ EOM
                     my $seqno = $rtype_sequence->[$j];
                     my $token = $rtokens->[$j];
                     if ($seqno) {
+                        my $sign = 1;
                         if ( $is_opening_token{$token} ) {
                             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
                             $nesting_depth++;
@@ -4719,22 +4730,15 @@ EOM
                             # unbalanced code but will be ignored here.
                             $rblock_type_of_seqno->{$seqno} = $rblock_type->[$j]
                               if ( $rblock_type->[$j] );
-
-                            push @{$rsigned_sequence_list}, $seqno;
-                            $Iss_opening->[$seqno] = @{$rsigned_sequence_list};
                         }
                         elsif ( $is_closing_token{$token} ) {
                             $nesting_depth--;
-                            push @{$rsigned_sequence_list}, -$seqno;
-                            $Iss_closing->[$seqno] = @{$rsigned_sequence_list};
+                            $sign = -1;
                         }
                         elsif ( $token eq '?' ) {
-                            push @{$rsigned_sequence_list}, $seqno;
-                            $Iss_opening->[$seqno] = @{$rsigned_sequence_list};
                         }
                         elsif ( $token eq ':' ) {
-                            push @{$rsigned_sequence_list}, -$seqno;
-                            $Iss_closing->[$seqno] = @{$rsigned_sequence_list};
+                            $sign = -1;
                         }
 
                         # The only sequenced types output by the tokenizer are
@@ -4749,6 +4753,11 @@ Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqn
 Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
 EOM
                         }
+
+                        if   ( $sign > 0 ) { $Iss_opening->[$seqno] = @{$rSS} }
+                        else               { $Iss_closing->[$seqno] = @{$rSS} }
+                        push @{$rSS}, $sign * $seqno;
+
                     }
 
                     my @tokary;
