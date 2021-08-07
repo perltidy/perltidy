@@ -8476,6 +8476,19 @@ sub weld_nested_quotes {
             my $is_old_weld =
               ( $iline_oo == $iline_io && $iline_ic == $iline_oc );
 
+            # Fix for case b1189. If quote is marked as type 'Q' then only weld
+            # if the two closing tokens are on the same input line.  Otherwise,
+            # the closing line will be output earlier in the pipeline than
+            # other CODE lines and welding will not actually occur. This will
+            # leave a half-welded structure with potential formatting
+            # instability.  This might be fixed by adding a check for a weld on
+            # a closing Q token and sending it down the normal channel, but it
+            # would complicate the code and is potentially risky.
+            next
+              if (!$is_old_weld
+                && $next_type eq 'Q'
+                && $iline_ic != $iline_oc );
+
             # If welded, the line must not exceed allowed line length
             ( my $ok_to_weld, $maximum_text_length, $starting_lentot, my $msg )
               = $self->setup_new_weld_measurements( $Kouter_opening,

@@ -7029,6 +7029,37 @@ find(
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1189.in <==
+#S1
+if ($ON_EBCDIC)
+{
+    delete @Encode::ExtModule{ qw(euc-cn gb2312 gb12345 gbk cp936 iso-ir-165 MacChineseSimp
+     euc-jp iso-2022-jp 7bit-jis shiftjis MacJapanese cp932
+     euc-kr ksc5601 cp949 MacKorean
+     big5	big5-hkscs cp950 MacChineseTrad
+     gb18030 big5plus euc-tw)
+    };
+}
+
+#S2
+if ($ON_EBCDIC)
+{   delete @Encode::ExtModule{
+        qw(euc-cn gb2312 gb12345 gbk cp936 iso-ir-165 MacChineseSimp
+     euc-jp iso-2022-jp 7bit-jis shiftjis MacJapanese cp932
+     euc-kr ksc5601 cp949 MacKorean
+     big5	big5-hkscs cp950 MacChineseTrad
+     gb18030 big5plus euc-tw)
+    };
+}
+
+==> b1189.par <==
+--block-brace-vertical-tightness=1
+--continuation-indentation=7
+--nodelete-old-newlines
+--maximum-line-length=99
+--notrim-qw
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1

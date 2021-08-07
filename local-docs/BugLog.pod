@@ -2,6 +2,65 @@
 
 =over 4
 
+=item B<Fix edge case of formatting instability, b1189>.
+
+Testing with random parameters produced a case of unstable formatting involving
+welding with parameter -notrim-qw.  The problem was that the -notrim-qw flag
+converts a qw quote into a quote with fixed leading whitespace.
+The lines of these types of quotes which have no other code are are output early
+in the formatting process, since they have a fixed format, so welding does not work.
+In particular, the closing tokens cannot be welded if they are on a separate line.
+This also holds for all types of non-qw quotes.  So welding can only be done
+if the first and last lines of a non-qw quote contain other code.   A check for
+this was added.
+
+For example, in the following snippet the terminal '}' is alone on a line:
+
+    is eval(q{
+        $[ = 3;
+        BEGIN { my $x = "foo\x{666}"; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+    ), "a";
+
+# In the previous version this was half-welded:
+# OLD: perltidy -wn -sil=0
+
+    is eval( q{
+        $[ = 3;
+        BEGIN { my $x = "foo\x{666}"; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+      ),
+      "a";
+
+The new check avoids welding in this case, giving
+
+    # NEW: perltidy -wn -sil=0
+    is eval(
+        q{
+        $[ = 3;
+        BEGIN { my $x = "foo\x{666}"; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+      ),
+      "a";
+
+Welding can still be done if the opening and closing container tokens
+have other code.  For example, welding can be done for the following snippet:
+
+    is eval(q{
+        $[ = 3;
+        BEGIN { my $x = "foo\x{666}"; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }), "a";
+
+And welding can still be done on all qw quotes unless the -notrim-qw flag is set.
+
+This fixes case b1189.
+
+7 Aug 2021.
+
 =item B<Fix edge cases of formatting instability, b1187 b1188>.
 
 Testing with random parameters produced some cases of instability
@@ -10,7 +69,7 @@ involved an interaction between the formatter and vertical aligner.
 
 This fixes cases b1187 and b1188.
 
-3 Aug 2021.
+3 Aug 2021, 5be949b.
 
 =item B<Fix edge case of formatting instability, b1186>.
 
@@ -19,7 +78,7 @@ parameter -lp -pvt=n and a short maximum line length.
 
 This fixes case b1186.
 
-2 Aug 2021.
+2 Aug 2021, f3dbee1.
 
 =item B<Fix edge case of formatting instability, b1185>.
 
@@ -28,7 +87,7 @@ parameters -wn, -vt=2, -lp and a short maximum line length.
 
 This fixes case b1185.
 
-1 Aug 2021.
+1 Aug 2021, d2ab2b7.
 
 =item B<Fix edge case of formatting instability, b1183>.
 
@@ -37,7 +96,7 @@ parameters -wn, -vt=n, -lp. This update fixes the problem.
 
 This fixes case b1183.
 
-30 Jul 2021.
+30 Jul 2021, 055650b.
 
 =item B<Fix edge case of formatting instability, b1184>.
 
@@ -46,7 +105,7 @@ a tripple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.
 
 This fixes case b1184.
 
-29 Jul 2021.
+29 Jul 2021, 6dd53fb.
 
 =item B<Fix edge case of formatting instability, b1182>.
 
@@ -56,7 +115,7 @@ problem.
 
 This fixes case b1182.
 
-28 Jul 2021.
+28 Jul 2021, 01d6c40.
 
 =item B<Fix edge case of formatting instability>.
 
