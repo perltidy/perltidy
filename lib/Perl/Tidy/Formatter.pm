@@ -4682,9 +4682,13 @@ EOM
                     $rtype_sequence, $input_line_no );
 
                 # Find the starting nesting depth ...
-                # it is the value of variable 'slevel' of the first token.
+                # It must be the value of variable 'level' of the first token
+                # because the nesting depth is used as a token tag in the
+                # vertical aligner and is compared to actual levels.
+                # So vertical alignment problems will occur with any other
+                # starting value.
                 if ( !defined($nesting_depth) ) {
-                    $nesting_depth = $rslevels->[0];
+                    $nesting_depth = $rlevels->[0];
                     $nesting_depth = 0 if ( $nesting_depth < 0 );
                     $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
                 }
