@@ -8052,9 +8052,11 @@ EOM
                     # If an apparent one-line weld might have been created by
                     # -vt and -lp, then do not mark as a one-line weld.
                     # This condition added to fix b1183.
+                    # Added block type test to fix b1191
                     if (   $is_one_line_weld
                         && $rOpts_line_up_parentheses
                         && $opening_vertical_tightness{$token_oo}
+                        && !$rblock_type_of_seqno->{$inner_seqno}
                         && !$ris_excluded_lp_container->{$outer_seqno} )
                     {
                         $is_one_line_weld = 0;

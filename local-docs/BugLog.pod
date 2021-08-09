@@ -2,6 +2,20 @@
 
 =over 4
 
+=item B<Fix formatting instability, b1191>
+
+Random testing produced an instability involving an unusual parameter
+combination and the following input code:
+
+    $_[0]eq$_[1]
+      or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
+      and($1 eq '!')
+      ^(eval{($_[2]."::".$_[0])=~/$2$3/;});
+
+This update fixes case b1191.
+
+9 Aug 2021.
+
 =item B<Fix error parsing sub attributes without spaces, b1190>
 
 Testing with random parameters produced an instability which was caused

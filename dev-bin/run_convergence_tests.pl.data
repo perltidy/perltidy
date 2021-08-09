@@ -7096,6 +7096,31 @@ print
 --opening-anonymous-sub-brace-on-new-line
 --variable-maximum-line-length
 
+==> b1191.in <==
+# S1
+    $_[0]eq$_[1]
+      or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
+      and($1 eq '!')
+      ^(eval{($_[2]."::".$_[0])=~/$2$3/;});
+
+# S2
+
+    $_[0]eq$_[1]
+      or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
+      and($1 eq '!')^(
+        eval{
+            ($_[2]."::".$_[0])=~/$2$3/;
+        }
+      );
+
+
+==> b1191.par <==
+--noadd-whitespace
+--line-up-parentheses
+--maximum-line-length=48
+--paren-vertical-tightness=1
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1
