@@ -3794,13 +3794,14 @@ EOM
                 # Decide if 'sub :' can be the start of a sub attribute list.
                 # We will decide based on if the colon is followed by a
                 # bareword which is not a keyword.
+                # Changed inext+1 to inext to fixed case b1190.
                 my $sub_attribute_ok_here;
                 if (   $is_sub{$tok_kw}
                     && $expecting != OPERATOR
                     && $next_nonblank_token eq ':' )
                 {
                     my ( $nn_nonblank_token, $i_nn ) =
-                      find_next_nonblank_token( $i_next + 1,
+                      find_next_nonblank_token( $i_next,
                         $rtokens, $max_token_index );
                     $sub_attribute_ok_here =
                          $nn_nonblank_token =~ /^\w/

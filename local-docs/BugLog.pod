@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix error parsing sub attributes without spaces, b1190>
+
+Testing with random parameters produced an instability which was caused
+by incorrect parsing of a sub attribute list without spaces, as in
+
+        sub:lvalue{"a"}
+
+This update fixes case b1190.
+
+9 Aug 2021.
+
 =item B<Fix rare loss of vertical alignment in welded containers, c053>
 
 This update corrects a rare loss of vertical alignment in welded containers.
@@ -105,7 +116,7 @@ And welding can still be done on all qw quotes unless the -notrim-qw flag is set
 
 This fixes case b1189.
 
-7 Aug 2021.
+7 Aug 2021, e9c25f2.
 
 =item B<Fix edge cases of formatting instability, b1187 b1188>.
 

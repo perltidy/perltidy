@@ -7060,6 +7060,42 @@ if ($ON_EBCDIC)
 --notrim-qw
 --weld-nested-containers
 
+==> b1190.in <==
+# S1
+print
+  "not "
+  unless
+  ref+(
+    map{
+      sub:
+        lvalue{
+            "a";
+        }
+    }1
+  )[0]eq
+  "CODE";
+
+# S2
+print
+  "not "
+  unless
+  ref+(
+    map{
+        sub:lvalue
+        {
+            "a";
+        }
+    }1
+  )[0]eq
+  "CODE";
+
+
+==> b1190.par <==
+--noadd-whitespace
+--maximum-line-length=10
+--opening-anonymous-sub-brace-on-new-line
+--variable-maximum-line-length
+
 ==> b120.in <==
 # Same as bug96
 # State 1
