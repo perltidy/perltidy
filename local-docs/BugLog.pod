@@ -2,6 +2,52 @@
 
 =over 4
 
+=item B<Fix rare loss of vertical alignment in welded containers, c053>
+
+This update corrects a rare loss of vertical alignment in welded containers.
+
+To illustrate the issue, the normal formatting of the following snippet is
+
+    # perltidy -sil=1 
+    ( $msg, $defstyle ) = do {
+            $i == 1 ? ( "First", "Color" )
+          : $i == 2 ? ( "Then", "Rarity" )
+          :           ( "Then", "Name" );
+    };
+
+If it appears within a welded container, the alignment of the last line
+was being lost:
+
+    # OLD: perltidy -wn -sil=1
+    { {
+
+        ( $msg, $defstyle ) = do {
+                $i == 1 ? ( "First", "Color" )
+              : $i == 2 ? ( "Then",  "Rarity" )
+              : ( "Then", "Name" );
+        };
+    } }
+
+The corrected result is
+
+    # NEW: perltidy -wn -sil=1
+    { {
+
+        ( $msg, $defstyle ) = do {
+                $i == 1 ? ( "First", "Color" )
+              : $i == 2 ? ( "Then", "Rarity" )
+              :           ( "Then", "Name" );
+        };
+    } }
+
+Several other minor vertical alignment issues are fixed with this updated.  The
+problem was that two slightly different measures of the depth of indentation
+were being compared in the vertical aligner.
+
+This fixes case c053.
+
+8 Aug 2021.
+
 =item B<Fix edge case of formatting instability, b1189>.
 
 Testing with random parameters produced a case of unstable formatting involving

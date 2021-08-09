@@ -19471,10 +19471,45 @@ EOM
         # Set flag which tells if this line is contained in a multi-line list
         my $list_seqno = $self->is_list_by_K($Kbeg);
 
+        # The alignment tokens have been marked with nesting_depths, so we need
+        # to pass nesting depths to the vertical aligner. They remain invariant
+        # under welding.  Previously, level values were sent to the aligner.
+        # But they have been altered in welding, and this can lead to
+        # alignement errors.
+        my $nesting_depth_beg = $nesting_depth_to_go[$ibeg];
+        my $nesting_depth_end = $nesting_depth_to_go[$iend];
+        if ( $is_closing_type{ $types_to_go[$ibeg] } ) { $nesting_depth_beg-- }
+        if ( $is_closing_type{ $types_to_go[$iend] } ) { $nesting_depth_end-- }
+
+        # Adjust nesting depths to keep -lp indentation for qw lists.  This is
+        # required because qw lists contained in brackets do not get nesting
+        # depths, but the vertical aligner is watching nesting depth changes to
+        # decide if a -lp block is intact.  Without this patch, qw lists
+        # bracked with angle bracket will not get the correct -lp indentation.
+
+        # Looking for line with isolated qw ...
+        if (   $rOpts_line_up_parentheses
+            && $type_beg eq 'q'
+            && $ibeg == $iend )
+        {
+
+            # ... which is part of a multiline qw
+            my $Km = $self->K_previous_nonblank($Kbeg);
+            my $Kp = $self->K_next_nonblank($Kbeg);
+            if (   defined($Km) && $rLL->[$Km]->[_TYPE_] eq 'q'
+                || defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 'q' )
+            {
+                $nesting_depth_beg++;
+                $nesting_depth_end++;
+            }
+        }
+
         # send this new line down the pipe
         my $rvalign_hash = {};
-        $rvalign_hash->{level}                     = $lev;
-        $rvalign_hash->{level_end}                 = $level_end;
+        ## $rvalign_hash->{level}                     = $lev;
+        ## $rvalign_hash->{level_end}                 = $level_end;
+        $rvalign_hash->{level}                     = $nesting_depth_beg;
+        $rvalign_hash->{level_end}                 = $nesting_depth_end;
         $rvalign_hash->{level_adj}                 = $level_adj;
         $rvalign_hash->{indentation}               = $indentation;
         $rvalign_hash->{list_seqno}                = $list_seqno;
