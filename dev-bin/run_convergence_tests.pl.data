@@ -7121,6 +7121,24 @@ print
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1192.in <==
+# S1
+          @EXPORT =
+              ( @{$EXPORT_TAGS{standard}}, );
+
+# S2
+          @EXPORT = (
+                      @{$EXPORT_TAGS{standard}},
+          );
+
+==> b1192.par <==
+--brace-tightness=2
+--continuation-indentation=4
+--ignore-old-breakpoints
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=48
+
 ==> b120.in <==
 # Same as bug96
 # State 1

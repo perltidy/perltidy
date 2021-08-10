@@ -2,6 +2,28 @@
 
 =over 4
 
+=item B<Fix formatting instability, b1192>
+
+Testing with random parameters produced unstable formatting with the
+following snippet when run with some unusual parameters:
+
+          @EXPORT =
+              ( @{$EXPORT_TAGS{standard}}, );
+
+It was also be formatted as
+
+          @EXPORT = (
+                      @{$EXPORT_TAGS{standard}},
+          );
+
+The problem was that a list formatting style was turning on and off due to the
+the needless terminal comma within the parens.  A patch was made to ignore
+commas like this when deciding if list formatting should be used.
+
+This fixes case b1192.
+
+10 Aug 2021.
+
 =item B<Fix formatting instability, b1191>
 
 Random testing produced an instability involving an unusual parameter

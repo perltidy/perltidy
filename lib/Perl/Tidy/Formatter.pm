@@ -16029,6 +16029,13 @@ sub set_continuation_breaks {
         my $bp_count           = 0;
         my $do_not_break_apart = 0;
 
+        # Do not break a list unless there are some non-line-ending commas.
+        # This avoids getting different results with only non-essential commas,
+        # and fixes b1192.
+        my $seqno = $type_sequence_stack[$dd];
+        my $real_comma_count =
+          $seqno ? $self->[_rtype_count_by_seqno_]->{$seqno}->{','} : 1;
+
         # anything to do?
         if ( $item_count_stack[$dd] ) {
 
@@ -16038,7 +16045,7 @@ sub set_continuation_breaks {
             }
 
             # handle commas within containers...
-            else {
+            elsif ($real_comma_count) {
                 my $fbc = get_forced_breakpoint_count();
 
                 # always open comma lists not preceded by keywords,
@@ -16289,7 +16296,9 @@ sub set_continuation_breaks {
         my $i_line_start = -1;
         my $i_last_colon = -1;
 
-        # loop over all tokens in this batch
+        #########################################
+        # Main loop over all tokens in this batch
+        #########################################
         while ( ++$i <= $max_index_to_go ) {
             if ( $type ne 'b' ) {
                 $i_last_nonblank_token    = $i - 1;
