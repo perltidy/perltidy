@@ -4732,7 +4732,21 @@ EOM
                               if ( $rblock_type->[$j] );
                         }
                         elsif ( $is_closing_token{$token} ) {
-                            $nesting_depth--;
+
+                            # The opening depth should always be defined, and
+                            # it should equal $nesting_depth-1.  To protect
+                            # against unforseen error conditions, however, we
+                            # will check this and fix things if necessary.  For
+                            # a test case see issue c055.
+                            my $opening_depth =
+                              $rdepth_of_opening_seqno->[$seqno];
+                            if ( !defined($opening_depth) ) {
+                                $opening_depth = $nesting_depth--;
+                                $opening_depth = 0 if ( $opening_depth < 0 );
+                                $rdepth_of_opening_seqno->[$seqno] =
+                                  $opening_depth;
+                            }
+                            $nesting_depth = $opening_depth;
                             $sign = -1;
                         }
                         elsif ( $token eq '?' ) {

@@ -2,6 +2,20 @@
 
 =over 4
 
+=item B<Fix undefined variable reference in development version>
+
+In testing, the following unbalanced snippet caused a reference to an undefined
+value in the current development version (but not in the current released
+version).
+
+        if($CPAN::Config->{term_is_latin}){
+                $swhat=~s{([\xC0-\xDF])([\x80-\xBF])}{chr(ord($1)<<6&0xC0|ord($2)&0x3F)}eg;}if($self->colorize_output){if($CPAN::DEBUG&&$swhat=~/^Debug\(/){
+                        $ornament=$CPAN::Config->{colorize_debug}||"black on_cyan";}
+
+A check has been added to fix this.
+
+10 Aug 2021.
+
 =item B<Fix formatting instability, b1192>
 
 Testing with random parameters produced unstable formatting with the
