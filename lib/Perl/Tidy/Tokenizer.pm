@@ -1552,7 +1552,7 @@ sub prepare_for_a_new_file {
         (
             $routput_token_list,    $routput_token_type,
             $routput_block_type,    $routput_container_type,
-            $routput_type_sequence, $routput_type_sequence,
+            $routput_type_sequence, $routput_indent_flag,
         ) = @{$rTV2};
 
         (

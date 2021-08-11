@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Fix error in tokenizer, issue c055>
+
+The ultimate cause of the undefined variable reference in the previous issue was
+found to be a typo in the tokenizer.  This update finishes fixing issue c055.
+
+10 Aug 2021
+
 =item B<Fix undefined variable reference in development version>
 
 In testing, the following unbalanced snippet caused a reference to an undefined
