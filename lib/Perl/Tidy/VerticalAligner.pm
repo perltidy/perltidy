@@ -481,12 +481,12 @@ sub valign_input {
     # cached flags as valid.
     my $cached_line_type = get_cached_line_type();
     if ($cached_line_type) {
-        my $cached_line_flag = get_cached_line_flag();
+        my $cached_line_opening_flag = get_cached_line_opening_flag();
         if ($rvertical_tightness_flags) {
             my $cached_seqno = get_cached_seqno();
             if (   $cached_seqno
-                && $rvertical_tightness_flags->[2]
-                && $rvertical_tightness_flags->[2] == $cached_seqno )
+                && $rvertical_tightness_flags->{_vt_seqno}
+                && $rvertical_tightness_flags->{_vt_seqno} == $cached_seqno )
             {
 
                 # Fix for b1187 and b1188: Normally this step is only done
@@ -494,14 +494,14 @@ sub valign_input {
                 # blinking, this range can be controlled by the caller.
                 # If zero values are given we fall back on the range 0 to 1.
                 my $line_count = $self->group_line_count();
-                my $min_lines  = $rvertical_tightness_flags->[6];
-                my $max_lines  = $rvertical_tightness_flags->[7];
+                my $min_lines  = $rvertical_tightness_flags->{_vt_min_lines};
+                my $max_lines  = $rvertical_tightness_flags->{_vt_max_lines};
                 $min_lines = 0 unless ($min_lines);
                 $max_lines = 1 unless ($max_lines);
                 if (   ( $line_count >= $min_lines )
                     && ( $line_count <= $max_lines ) )
                 {
-                    $rvertical_tightness_flags->[3] ||= 1;
+                    $rvertical_tightness_flags->{_vt_valid_flag} ||= 1;
                     set_cached_line_valid(1);
                 }
             }
@@ -511,7 +511,7 @@ sub valign_input {
         # unless requested with a flag value of 2
         if (   $cached_line_type == 3
             && !$self->group_line_count()
-            && $cached_line_flag < 2
+            && $cached_line_opening_flag < 2
             && !$is_balanced_line )
         {
             set_cached_line_valid(0);
@@ -1365,7 +1365,7 @@ sub _flush_comment_lines {
                 line_length               => $str_len,
                 side_comment_length       => 0,
                 outdent_long_lines        => $outdent_long_lines,
-                rvertical_tightness_flags => "",
+                rvertical_tightness_flags => undef,
                 level                     => $group_level,
                 level_end                 => $group_level,
                 Kend                      => $Kend,
@@ -4694,7 +4694,8 @@ sub get_output_line_number {
     my $cached_line_text;
     my $cached_line_text_length;
     my $cached_line_type;
-    my $cached_line_flag;
+    my $cached_line_opening_flag;
+    my $cached_line_closing_flag;
     my $cached_seqno;
     my $cached_line_valid;
     my $cached_line_leading_space_count;
@@ -4717,8 +4718,8 @@ sub get_output_line_number {
         return;
     }
 
-    sub get_cached_line_flag {
-        return $cached_line_flag;
+    sub get_cached_line_opening_flag {
+        return $cached_line_opening_flag;
     }
 
     sub get_cached_line_type {
@@ -4741,7 +4742,8 @@ sub get_output_line_number {
         $cached_line_text                = "";
         $cached_line_text_length         = 0;
         $cached_line_type                = 0;
-        $cached_line_flag                = 0;
+        $cached_line_opening_flag        = 0;
+        $cached_line_closing_flag        = 0;
         $cached_seqno                    = 0;
         $cached_line_valid               = 0;
         $cached_line_leading_space_count = 0;
@@ -4834,22 +4836,38 @@ sub get_output_line_number {
         my $leading_string_length = length($leading_string);
 
         # Unpack any recombination data; it was packed by
-        # sub send_lines_to_vertical_aligner. Contents:
+        # sub 'Formatter::set_vertical_tightness_flags'
+
+        # old   hash              Meaning
+        # index key
         #
-        #   [0] type: 1=opening non-block    2=closing non-block
-        #             3=opening block brace  4=closing block brace
-        #   [1] flag: if opening: 1=no multiple steps, 2=multiple steps ok
-        #             if closing: spaces of padding to use
-        #   [2] sequence number of container
-        #   [3] valid flag: do not append if this flag is false
+        # 0   _vt_type:           1=opening non-block    2=closing non-block
+        #                         3=opening block brace  4=closing block brace
         #
-        my ( $open_or_close, $tightness_flag, $seqno, $valid, $seqno_beg,
-            $seqno_end );
+        # 1a  _vt_opening_flag:  1=no multiple steps, 2=multiple steps ok
+        # 1b  _vt_closing_flag:    spaces of padding to use if closing
+        # 2   _vt_seqno:          sequence number of container
+        # 3   _vt_valid flag:     do not append if this flag is false. Will be
+        #           true if appropriate -vt flag is set.  Otherwise, Will be
+        #           made true only for 2 line container in parens with -lp
+        # 4   _vt_seqno_beg:      sequence number of first token of line
+        # 5   _vt_seqno_end:      sequence number of last token of line
+        # 6   _vt_min_lines:      min number of lines for joining opening cache,
+        #                           0=no constraint
+        # 7   _vt_max_lines:      max number of lines for joining opening cache,
+        #                           0=no constraint
+
+        my ( $open_or_close, $opening_flag, $closing_flag, $seqno, $valid,
+            $seqno_beg, $seqno_end );
         if ($rvertical_tightness_flags) {
-            (
-                $open_or_close, $tightness_flag, $seqno, $valid, $seqno_beg,
-                $seqno_end
-            ) = @{$rvertical_tightness_flags};
+
+            $open_or_close = $rvertical_tightness_flags->{_vt_type};
+            $opening_flag  = $rvertical_tightness_flags->{_vt_opening_flag};
+            $closing_flag  = $rvertical_tightness_flags->{_vt_closing_flag};
+            $seqno         = $rvertical_tightness_flags->{_vt_seqno};
+            $valid         = $rvertical_tightness_flags->{_vt_valid_flag};
+            $seqno_beg     = $rvertical_tightness_flags->{_vt_seqno_beg};
+            $seqno_end     = $rvertical_tightness_flags->{_vt_seqno_end};
         }
 
         $seqno_string = $seqno_end;
@@ -4876,7 +4894,7 @@ sub get_output_line_number {
                 my $gap = $leading_space_count - $cached_line_text_length;
 
                 # handle option of just one tight opening per line:
-                if ( $cached_line_flag == 1 ) {
+                if ( $cached_line_opening_flag == 1 ) {
                     if ( defined($open_or_close) && $open_or_close == 1 ) {
                         $gap = -1;
                     }
@@ -4927,9 +4945,11 @@ sub get_output_line_number {
             # Handle cached line ending in CLOSING tokens
             else {
                 my $test_line =
-                  $cached_line_text . ' ' x $cached_line_flag . $str;
+                  $cached_line_text . ' ' x $cached_line_closing_flag . $str;
                 my $test_line_length =
-                  $cached_line_text_length + $cached_line_flag + $str_length;
+                  $cached_line_text_length +
+                  $cached_line_closing_flag +
+                  $str_length;
                 if (
 
                     # The new line must start with container
@@ -5102,7 +5122,8 @@ sub get_output_line_number {
             $cached_line_text                = $line;
             $cached_line_text_length         = $line_length;
             $cached_line_type                = $open_or_close;
-            $cached_line_flag                = $tightness_flag;
+            $cached_line_opening_flag        = $opening_flag;
+            $cached_line_closing_flag        = $closing_flag;
             $cached_seqno                    = $seqno;
             $cached_line_valid               = $valid;
             $cached_line_leading_space_count = $leading_space_count;

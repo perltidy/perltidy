@@ -4747,7 +4747,7 @@ EOM
                                   $opening_depth;
                             }
                             $nesting_depth = $opening_depth;
-                            $sign = -1;
+                            $sign          = -1;
                         }
                         elsif ( $token eq '?' ) {
                         }
@@ -19210,6 +19210,9 @@ sub send_lines_to_vertical_aligner {
     # - do logical padding: insert extra blank spaces to help display certain
     #   logical constructions
 
+    # NOTE: a possible future optimization would be to check for block
+    # comments and send them down a simpler route.
+
     my $this_batch = $self->[_this_batch_];
     my $rlines_K   = $this_batch->[_rlines_K_];
     if ( !@{$rlines_K} ) {
@@ -22017,39 +22020,57 @@ sub set_vertical_tightness_flags {
       = @_;
 
     # Define vertical tightness controls for the nth line of a batch.
-    # We create an array of parameters which tell the vertical aligner
-    # if we should combine this line with the next line to achieve the
-    # desired vertical tightness.  The array of parameters contains:
-    #
-    #   [0] type: 1=opening non-block    2=closing non-block
-    #             3=opening block brace  4=closing block brace
-    #
-    #   [1] flag: if opening: 1=no multiple steps, 2=multiple steps ok
-    #             if closing: spaces of padding to use
-    #   [2] sequence number of container
-    #   [3] valid flag: do not append if this flag is false. Will be
-    #       true if appropriate -vt flag is set.  Otherwise, Will be
-    #       made true only for 2 line container in parens with -lp
-    #   [4] seqno_beg = sequence number of first token of line
-    #   [5] seqno_end = sequence number of last token of line
-    #   [6] min number of lines for joining opening cache, 0=no constraint
-    #   [7] max number of lines for joining opening cache, 0=no constraint
-    #
-    # These flags are used by sub set_leading_whitespace in
-    # the vertical aligner
 
-    # FIXME: It would be nice to switch to a hash instead of an array
-    # to clarify the coding.
-    my $rvertical_tightness_flags = [ 0, 0, 0, 0, 0, 0, 0, 0 ];
+    # These parameters are passed to the vertical aligner to indicated
+    # if we should combine this line with the next line to achieve the
+    # desired vertical tightness.  This was previously an array but
+    # has been converted to a hash:
+
+    # old   hash              Meaning
+    # index key
+    #
+    # 0   _vt_type:           1=opening non-block    2=closing non-block
+    #                         3=opening block brace  4=closing block brace
+    #
+    # 1a  _vt_opening_flag:   1=no multiple steps, 2=multiple steps ok
+    # 1b  _vt_closing_flag:   spaces of padding to use if closing
+    # 2   _vt_seqno:          sequence number of container
+    # 3   _vt_valid flag:     do not append if this flag is false. Will be
+    #           true if appropriate -vt flag is set.  Otherwise, Will be
+    #           made true only for 2 line container in parens with -lp
+    # 4   _vt_seqno_beg:      sequence number of first token of line
+    # 5   _vt_seqno_end:      sequence number of last token of line
+    # 6   _vt_min_lines:      min number of lines for joining opening cache,
+    #                           0=no constraint
+    # 7   _vt_max_lines:      max number of lines for joining opening cache,
+    #                           0=no constraint
 
     # The vertical tightness mechanism can add whitespace, so whitespace can
     # continually increase if we allowed it when the -fws flag is set.
     # See case b499 for an example.
-    return $rvertical_tightness_flags if ($rOpts_freeze_whitespace);
+
+    # Speedup: just return for a comment
+    if ( $max_index_to_go == 0 && $types_to_go[0] eq '#' ) {
+        return;
+    }
+
+    # Define these values...
+    my $vt_type         = 0;
+    my $vt_opening_flag = 0;
+    my $vt_closing_flag = 0;
+    my $vt_seqno        = 0;
+    my $vt_valid_flag   = 0;
+    my $vt_seqno_beg    = 0;
+    my $vt_seqno_end    = 0;
+    my $vt_min_lines    = 0;
+    my $vt_max_lines    = 0;
+
+    goto RETURN
+      if ($rOpts_freeze_whitespace);
 
     my $rwant_container_open = $self->[_rwant_container_open_];
 
-    # Uses these parameters:
+    # Uses these global parameters:
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
     #   $rOpts_stack_closing_block_brace
@@ -22105,8 +22126,11 @@ sub set_vertical_tightness_flags {
                 # and aligner will validate it if it sees the closing paren
                 # within 2 lines.
                 my $valid_flag = $ovt;
-                @{$rvertical_tightness_flags} =
-                  ( 1, $ovt, $type_sequence_to_go[$iend], $valid_flag );
+
+                $vt_type         = 1;
+                $vt_opening_flag = $ovt;
+                $vt_seqno        = $type_sequence_to_go[$iend];
+                $vt_valid_flag   = $valid_flag;
             }
         }
 
@@ -22191,16 +22215,12 @@ sub set_vertical_tightness_flags {
                         $valid_flag = 0;
                     }
 
-                    @{$rvertical_tightness_flags} = (
-                        2,
-                        $tightness{$token_next} == 2 ? 0 : 1,
-                        $type_sequence_to_go[$ibeg_next],
-                        $valid_flag,
-                        0,
-                        0,
-                        $min_lines,
-                        $max_lines
-                    );
+                    $vt_type         = 2;
+                    $vt_closing_flag = $tightness{$token_next} == 2 ? 0 : 1;
+                    $vt_seqno        = $type_sequence_to_go[$ibeg_next];
+                    $vt_valid_flag   = $valid_flag;
+                    $vt_min_lines    = $min_lines;
+                    $vt_max_lines    = $max_lines;
                 }
             }
         }
@@ -22250,10 +22270,12 @@ sub set_vertical_tightness_flags {
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
           )
         {
-            my $valid_flag = 1;
-            my $spaces     = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-            @{$rvertical_tightness_flags} =
-              ( 2, $spaces, $type_sequence_to_go[$ibeg_next], $valid_flag, );
+            my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
+
+            $vt_type         = 2;
+            $vt_closing_flag = $spaces;
+            $vt_seqno        = $type_sequence_to_go[$ibeg_next];
+            $vt_valid_flag   = 1;
         }
 
         #--------------------------------------------------------------
@@ -22309,11 +22331,13 @@ sub set_vertical_tightness_flags {
                     && $types_to_go[$iend_next] eq '#' )
               )
             {
-                my $valid_flag = 1;
                 my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;
-                @{$rvertical_tightness_flags} = (
-                    2, $spaces, $type_sequence_to_go[$ibeg_next], $valid_flag,
-                );
+
+                $vt_type         = 2;
+                $vt_closing_flag = $spaces;
+                $vt_seqno        = $type_sequence_to_go[$ibeg_next];
+                $vt_valid_flag   = 1;
+
             }
         }
     }
@@ -22329,8 +22353,10 @@ sub set_vertical_tightness_flags {
         && $block_type_to_go[$iend] =~
         /$block_brace_vertical_tightness_pattern/ )
     {
-        @{$rvertical_tightness_flags} =
-          ( 3, $rOpts_block_brace_vertical_tightness, 0, 1 );
+        $vt_type         = 3;
+        $vt_opening_flag = $rOpts_block_brace_vertical_tightness;
+        $vt_seqno        = 0;
+        $vt_valid_flag   = 1;
     }
 
     #--------------------------------------------------------------
@@ -22349,26 +22375,40 @@ sub set_vertical_tightness_flags {
         && ( !$closing_side_comment || $n < $n_last_line ) )
     {
         my $spaces = $rOpts_block_brace_tightness == 2 ? 0 : 1;
-        @{$rvertical_tightness_flags} =
-          ( 4, $spaces, $type_sequence_to_go[$iend], 1 );
+
+        $vt_type         = 4;
+        $vt_closing_flag = $spaces;
+        $vt_seqno        = $type_sequence_to_go[$iend];
+        $vt_valid_flag   = 1;
+
     }
 
-    # pack in the sequence numbers of the ends of this line
-    my $seqno_beg = $type_sequence_to_go[$ibeg];
-    if ( !$seqno_beg && $types_to_go[$ibeg] eq 'q' ) {
-        $seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
+    # get the sequence numbers of the ends of this line
+    $vt_seqno_beg = $type_sequence_to_go[$ibeg];
+    if ( !$vt_seqno_beg && $types_to_go[$ibeg] eq 'q' ) {
+        $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
     }
-    my $seqno_end = $type_sequence_to_go[$iend];
-    if ( !$seqno_end && $types_to_go[$iend] eq 'q' ) {
-        $seqno_end = $self->get_seqno( $iend, $ending_in_quote );
+
+    $vt_seqno_end = $type_sequence_to_go[$iend];
+    if ( !$vt_seqno_end && $types_to_go[$iend] eq 'q' ) {
+        $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
     }
-    $rvertical_tightness_flags->[4] = $seqno_beg;
-    $rvertical_tightness_flags->[5] = $seqno_end;
-    if ( !defined( $rvertical_tightness_flags->[6] ) ) {
-        $rvertical_tightness_flags->[6] = 0;
-        $rvertical_tightness_flags->[7] = 0;
-    }
-    return $rvertical_tightness_flags;
+
+  RETURN:
+
+    my $rvertical_tightness_flags = {
+        _vt_type         => $vt_type,
+        _vt_opening_flag => $vt_opening_flag,
+        _vt_closing_flag => $vt_closing_flag,
+        _vt_seqno        => $vt_seqno,
+        _vt_valid_flag   => $vt_valid_flag,
+        _vt_seqno_beg    => $vt_seqno_beg,
+        _vt_seqno_end    => $vt_seqno_end,
+        _vt_min_lines    => $vt_min_lines,
+        _vt_max_lines    => $vt_max_lines,
+    };
+
+    return ($rvertical_tightness_flags);
 }
 
 ##########################################################
