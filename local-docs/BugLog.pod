@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Fix formatting instability, b1193>
+
+Testing with random parameters produced unstable formatting
+involving parameters which included -lp -sbvtc=1. This update
+fixes this problem, case b1193.
+
+13 Aug 2021.
+
 =item B<Fix error in tokenizer, issue c055>
 
 The ultimate cause of the undefined variable reference in the previous issue was

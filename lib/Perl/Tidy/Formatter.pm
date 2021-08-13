@@ -15991,13 +15991,18 @@ sub set_continuation_breaks {
                 $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
             }
             else {
-                $length_tol_boost = 0;    # was 3 for FIX2, 0 for FIX3
+                foreach ( keys %closing_vertical_tightness ) {
+                    next
+                      unless ( $closing_vertical_tightness{$_} );
+                    $length_tol_boost = 1;    # Fixes B1193;
+                    last;
+                }
             }
         }
 
         # The -xci option alone also needs a slightly larger tol for non-lists
         elsif ( $rOpts->{'extended-continuation-indentation'} ) {
-            $length_tol_boost = 0;        # was 1 for FIX2, 0 for FIX3
+            $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
         }
         return;
     }

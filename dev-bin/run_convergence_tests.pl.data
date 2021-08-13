@@ -7139,6 +7139,28 @@ print
 --line-up-parentheses
 --maximum-line-length=48
 
+==> b1193.in <==
+# S1
+                              $config->{$key}
+                               =[
+                                  $config->{
+                                        $key} ];
+# S2
+                              $config->{$key}
+                               =[
+                                  $config->{$key}
+                               ];
+
+==> b1193.par <==
+--noadd-whitespace
+--break-before-all-operators
+--continuation-indentation=1
+--delete-old-whitespace
+--indent-columns=6
+--line-up-parentheses
+--maximum-line-length=49
+--square-bracket-vertical-tightness-closing=1
+
 ==> b120.in <==
 # Same as bug96
 # State 1
