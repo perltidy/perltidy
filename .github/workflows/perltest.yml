@@ -1,0 +1,58 @@
+# This starting github Actions workflows file is copied from: 
+#   https://github.com/davorg/array-compare/blob/master/.github/workflows/perltest.yml
+# and 
+#  https://perlmaven.com/github-actions-running-on-3-operating-systems
+name: CI
+ 
+# This workflow will be triggered...
+#    on push to master branch
+#    when a pull request arrives to the master branch. (The source branch does not matter)
+#    workflow_dispatch to trigger manually or via API call
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+ 
+# There is a single job here called "build" (The word "build" is NOT a keyword, you can use anything there)
+jobs:
+  build:
+    # This creates two dimensions:
+    #   One will be called "os"  with the list of the names of the 3 runners of GitHub Actions
+    #   The other indicates version numbers of perl
+    # The words "os" and "perl" are free text here, they are like variable names.
+    # GitHub Action will run the job on 3x2 = 6 different setups
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        perl: [ '5.30', 'latest' ]
+ 
+    # Using the value from the matrix above we select the platform (operating system) to run on
+    runs-on: ${{ matrix.os }}
+ 
+    # Just a free-text name to be descriptive
+    name: Perl ${{ matrix.perl }} on ${{ matrix.os }}
+ 
+    # we will have several steps
+    steps:
+      # check out the current repository to the runner
+      # This setp did not get a nice "name"
+      - uses: actions/checkout@v2
+ 
+      # Using the action from this repository: https://github.com/shogo82148/actions-setup-perl/
+      # Will set up the desired version of perl on the current OS.
+      - name: Set up perl
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+ 
+      # display the version of perl - just for possible manual verification
+      - run: perl -V
+
+      # Instal the dependencies declared by the module ...
+      # There are no deps for perltidy, but this would be the command:
+      # - run: cpanm --installdeps .
+
+      # Run prove to execute the tests
+      - run: prove -lv t
