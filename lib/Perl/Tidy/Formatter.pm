@@ -4741,10 +4741,18 @@ EOM
                             my $opening_depth =
                               $rdepth_of_opening_seqno->[$seqno];
                             if ( !defined($opening_depth) ) {
-                                $opening_depth = $nesting_depth--;
+                                $opening_depth = $nesting_depth - 1;
                                 $opening_depth = 0 if ( $opening_depth < 0 );
                                 $rdepth_of_opening_seqno->[$seqno] =
                                   $opening_depth;
+
+                                # This is not fatal but should not happen. There
+                                # may be a problem in the tokenizer.
+                                if (DEVEL_MODE) {
+                                    Fault(<<EOM);
+No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
+EOM
+                                }
                             }
                             $nesting_depth = $opening_depth;
                             $sign          = -1;
