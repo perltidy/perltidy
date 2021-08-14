@@ -1,4 +1,7 @@
-[![Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
+# BUILD STATUS
+
+* [![Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
+* [CPAN Testers](https://www.cpantesters.org/distro/P/Perl-Tidy.html)
 
 # Welcome to Perltidy
 
