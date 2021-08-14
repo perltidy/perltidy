@@ -19257,6 +19257,8 @@ sub send_lines_to_vertical_aligner {
     my $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
     my $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
 
+    my $is_block_comment = $max_index_to_go == 0 && $types_to_go[0] eq '#';
+
     # Construct indexes to the global_to_go arrays so that called routines can
     # still access those arrays. This might eventually be removed
     # when all called routines have been converted to access token values
@@ -19297,7 +19299,7 @@ sub send_lines_to_vertical_aligner {
 
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
-      if ( $rOpts->{'logical-padding'} );
+      if ( !$is_block_comment && $rOpts->{'logical-padding'} );
 
     # Resum lengths. We need accurate lengths for making alignment patterns,
     # and we may have unmasked a semicolon which was not included at the start.
@@ -19365,7 +19367,8 @@ sub send_lines_to_vertical_aligner {
         }
 
         $self->delete_needless_alignments( $ibeg, $iend,
-            $ralignment_type_to_go );
+            $ralignment_type_to_go )
+          if ( !$is_block_comment );
 
         my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
           $self->make_alignment_patterns( $ibeg, $iend,
@@ -19422,9 +19425,11 @@ sub send_lines_to_vertical_aligner {
                 && $block_type_m ne 'else' );
         }
 
-        my $rvertical_tightness_flags =
+        my $rvertical_tightness_flags;
+        $rvertical_tightness_flags =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
-            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
+            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
+          if ( !$is_block_comment );
 
         # Set a flag at the final ':' of a ternary chain to request
         # vertical alignment of the final term.  Here is a
@@ -19510,7 +19515,9 @@ EOM
         }
 
         # Set flag which tells if this line is contained in a multi-line list
-        my $list_seqno = $self->is_list_by_K($Kbeg);
+        my $list_seqno;
+        $list_seqno = $self->is_list_by_K($Kbeg)
+          if ( !$is_block_comment );
 
         # The alignment tokens have been marked with nesting_depths, so we need
         # to pass nesting depths to the vertical aligner. They remain invariant
@@ -19606,7 +19613,8 @@ EOM
 
     # remember indentation of lines containing opening containers for
     # later use by sub set_adjusted_indentation
-    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list );
+    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list )
+      if ( !$is_block_comment );
 
     # output any new -cscw block comment
     if ($cscw_block_comment) {
