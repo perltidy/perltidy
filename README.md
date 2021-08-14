@@ -1,4 +1,4 @@
-# BUILD STATUS
+# Build Status
 
 * [![Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
 * [CPAN Testers](https://www.cpantesters.org/distro/P/Perl-Tidy.html)

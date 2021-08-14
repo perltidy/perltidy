@@ -7472,6 +7472,7 @@ sub find_nested_pairs {
         #       @array) )
         my $Kn_first = $K_outer_opening;
         my $Kn_last_nonblank;
+        my $saw_comment;
         for (
             my $Kn = $K_outer_opening + 1 ;
             $Kn <= $K_inner_opening ;
@@ -7486,13 +7487,17 @@ sub find_nested_pairs {
             # skip chain of identifier tokens
             my $last_type    = $type;
             my $last_is_name = $is_name;
-            $type    = $rLL->[$Kn]->[_TYPE_];
+            $type = $rLL->[$Kn]->[_TYPE_];
+            if ( $type eq '#' ) { $saw_comment = 1; last }
             $is_name = $is_name_type->{$type};
             next if ( $is_name && $last_is_name );
 
             $nonblank_count++;
             last if ( $nonblank_count > 2 );
         }
+
+        # Do not weld across a comment .. fix for c058.
+        next if ($saw_comment);
 
         # Patch for b1104: do not weld to a paren preceded by sort/map/grep
         # because the special line break rules may cause a blinking state
@@ -10851,16 +10856,20 @@ EOM
 
         return unless ( $max_index_to_go >= 0 );
 
-        # Exception 1: Do not end line in a weld
-        return
-          if ( $total_weld_count
-            && $self->[_rK_weld_right_]->{ $K_to_go[$max_index_to_go] } );
+        # Exceptions when a line does not end with a comment... (fixes c058)
+        if ( $types_to_go[$max_index_to_go] ne '#' ) {
 
-        # Exception 2: just set a tentative breakpoint if we might be in a
-        # one-line block
-        if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
-            $self->set_forced_breakpoint($max_index_to_go);
-            return;
+            # Exception 1: Do not end line in a weld
+            return
+              if ( $total_weld_count
+                && $self->[_rK_weld_right_]->{ $K_to_go[$max_index_to_go] } );
+
+            # Exception 2: just set a tentative breakpoint if we might be in a
+            # one-line block
+            if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
+                $self->set_forced_breakpoint($max_index_to_go);
+                return;
+            }
         }
 
         $self->flush_batch_of_CODE();

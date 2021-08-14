@@ -2,6 +2,15 @@
 
 =over 4
 
+=item B<Fix error check caused by -wn -iscl, case c058>
+
+Testing with random parameters triggered an an internal error check.  This was
+caused by a recent coding change which allowed a weld across a side comment.
+The problem was in the development version, not in the latest released version,
+and is fixed with this update.  This closes issue c058.
+
+14 Aug 2021.
+
 =item B<Fix formatting instability, b1193>
 
 Testing with random parameters produced unstable formatting
