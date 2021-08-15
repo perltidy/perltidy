@@ -2,6 +2,29 @@
 
 =over 4
 
+=item B<Improved line break, case c060>
+
+The default formatting produced an undesirable line break at the last '&&' term
+in the following:
+
+    my $static = grep {
+             $class       =~ /^$_$/
+          || $fullname    =~ /^$_$/
+          || $method_name =~ /^$_$/
+          && ( $class eq 'main' )
+    } grep { !m![/\\.]! } $self->dispatch_to;    # filter PATH
+
+This update corrects this to give
+
+    my $static = grep {
+             $class       =~ /^$_$/
+          || $fullname    =~ /^$_$/
+          || $method_name =~ /^$_$/ && ( $class eq 'main' )
+    } grep { !m![/\\.]! } $self->dispatch_to;    # filter PATH
+
+15 Aug 2021.
+
+
 =item B<Fix error check caused by -wn -iscl, case c058>
 
 Testing with random parameters triggered an an internal error check.  This was
@@ -17,14 +40,14 @@ Testing with random parameters produced unstable formatting
 involving parameters which included -lp -sbvtc=1. This update
 fixes this problem, case b1193.
 
-13 Aug 2021.
+13 Aug 2021, d4c3425.
 
 =item B<Fix error in tokenizer, issue c055>
 
 The ultimate cause of the undefined variable reference in the previous issue was
 found to be a typo in the tokenizer.  This update finishes fixing issue c055.
 
-10 Aug 2021
+10 Aug 2021, 2963db3
 
 =item B<Fix undefined variable reference in development version>
 

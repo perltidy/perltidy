@@ -14507,6 +14507,15 @@ sub break_equals {
                         && $nesting_depth_to_go[$ibeg_3] ==
                         $nesting_depth_to_go[$ibeg_2] );
 
+                    # Combine a trailing && term with an || term: fix for c060
+                    # This is rare but can happen.
+                    $ok ||= 1
+                      if ( $ibeg_3 < 0
+                        && $type_ibeg_2 eq '&&'
+                        && $type_ibeg_1 eq '||'
+                        && $nesting_depth_to_go[$ibeg_2] ==
+                        $nesting_depth_to_go[$ibeg_1] );
+
                     next if !$ok && $want_break_before{$type_ibeg_2};
                     $forced_breakpoint_to_go[$iend_1] = 0;
 
