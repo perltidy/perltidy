@@ -22,7 +22,7 @@ This update corrects this to give
           || $method_name =~ /^$_$/ && ( $class eq 'main' )
     } grep { !m![/\\.]! } $self->dispatch_to;    # filter PATH
 
-15 Aug 2021.
+15 Aug 2021, 9d1c8a9.
 
 
 =item B<Fix error check caused by -wn -iscl, case c058>
@@ -32,7 +32,7 @@ caused by a recent coding change which allowed a weld across a side comment.
 The problem was in the development version, not in the latest released version,
 and is fixed with this update.  This closes issue c058.
 
-14 Aug 2021.
+14 Aug 2021, 5a13886.
 
 =item B<Fix formatting instability, b1193>
 

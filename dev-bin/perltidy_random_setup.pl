@@ -65,8 +65,7 @@ if ( -e $FILES_file ) {
 }
 
 if ( !@{$rfiles} ) {
-    define_files();
-    $rfiles = filter_files($rfiles);
+    $rfiles = define_new_files();
 }
 
 if ( -e $PROFILES_file ) {
@@ -90,7 +89,7 @@ Enter 'N' unless you very familiar with the test scripts.
 Y/N:
 EOM
 
-my $file_info    = get_file_info();
+my $file_info    = get_file_info($rfiles);
 my $profile_info = get_profile_info();
 my $nprofiles    = @{$rprofiles};
 while (1) {
@@ -104,8 +103,10 @@ while (1) {
     print <<EOM;
 ===Main Menu===
 R   - Read a config file
-F   - Files:    $files
+      Files:    $files
 $file_info
+FR  - Replace Files: replace with all new files
+FA  - Add Files: add to or modify current set of files
 P   - Profiles: 
 $profile_info
 C   - Chain mode               : $chain_mode
@@ -125,10 +126,14 @@ EOM
     elsif ( $ans eq 'E' ) {
         edit_config();
     }
-    elsif ( $ans eq 'F' ) {
-        define_files();
+    elsif ( $ans eq 'FR' ) {
+        $rfiles    = define_new_files();
         $rfiles    = filter_files($rfiles);
-        $file_info = get_file_info();
+        $file_info = get_file_info($rfiles);
+    }
+    elsif ( $ans eq 'FA' ) {
+        $rfiles    = add_files($rfiles);
+        $file_info = get_file_info($rfiles);
     }
     elsif ( $ans eq 'P' ) {
         make_profiles();
@@ -230,57 +235,131 @@ sub uniq {
     return \@uniqu;
 }
 
-sub define_files {
+sub define_new_files {
 
-    $file_info = get_file_info();
-
-    # TODO: add option to generate random files now
-    # TODO: add option to shorten a list
     print <<EOM;
 ====== Define some files to process =================================
-$file_info
-
 Note that you can generate random files with 'random_file_generator.pl'
 If you want to do that, you should exit now, generate them, then come
 back.
 EOM
-    my $nfiles_old = @{$rfiles};
-    if ($nfiles_old) {
-        if ( ifyes("Use these files as is? [Y/N]") ) {
-            return;
-        }
-    }
 
-    my $glob = '../*';
-    my $ans  = query("File glob of files to process, <cr>='$glob'");
+    my $rnew_files = [];
+    my $glob       = '../*';
+
+  REDO:
+    my $ans = query("File glob to get some NEW files to process, <cr>='$glob'");
     $glob = $ans if ($ans);
-    return unless ($glob);
+    return $rnew_files unless ($glob);
     my @files = glob($glob);
-    @files = grep { -f $_ && !-z $_ } @files;
-    @files = grep { $_ !~ /\.tdy$/ } @files;
-    @files = grep { $_ !~ /profile\.[0-9]*/ } @files;
-    my $nfiles_new = @files;
-    print "Found $nfiles_new files\n";
-    return unless @files;
+    @files      = grep { -f $_ && !-z $_ } @files;
+    @files      = grep { $_ !~ /\.tdy$/ } @files;
+    @files      = grep { $_ !~ /profile\.[0-9]*/ } @files;
+    $rnew_files = uniq( \@files );
+    $rnew_files = filter_files($rnew_files);
 
-    if ( $nfiles_old > 0 ) {
-        print "There are already $nfiles_old existing files";
-        while (1) {
-            my $ans = queryu(<<EOM);
-A   Add new files to existing files
-R   Replace existing files with new files
-X   eXit, keeping existing files as is
+    while (1) {
+        my $nfiles_new    = @{$rnew_files};
+        my $total_size_mb = file_size_sum_mb($rnew_files);
+        my $ans           = queryu(<<EOM);
+
+   Number of files = $nfiles_new ; Total size $total_size_mb;
+R  Redo with a different glob
+F  Reduce total size by a fraction
+Y  Yes .. use these files
 EOM
-            if    ( $ans eq 'X' ) { return }
-            elsif ( $ans eq 'A' ) { last }
-            elsif ( $ans eq 'R' ) { @{$rfiles} = []; last }
-
+        if ( $ans eq 'R' ) { goto REDO }
+        if ( $ans eq 'Y' ) { last }
+        if ( $ans eq 'F' ) {
+            my $fraction =
+              get_num( "Enter a fraction of current size (0-1):", 1 );
+            if ( $fraction > 0 && $fraction < 1 ) {
+                $rnew_files = reduce_total_file_size( $rnew_files, $fraction );
+            }
         }
     }
-    push @{$rfiles}, @files;
-    $rfiles = uniq($rfiles);
-    $rfiles = [ sort @{$rfiles} ];
-    return;
+    $rnew_files = [ sort @{$rnew_files} ];
+    return $rnew_files;
+}
+
+sub add_files {
+
+    my ($rold_files) = @_;
+    if ( !@{$rold_files} ) { return define_new_files() }
+
+    my $rnew_files = [ @{$rold_files} ];
+
+    while (1) {
+        my $file_info = get_file_info($rnew_files);
+        print <<EOM;
+$file_info
+G   use Glob to find new files
+F   Reduce total size to a fraction
+Y   Yes ... use these
+Q   Quit: revert to the old set and exit
+EOM
+        my $ans = queryu(':');
+        if ( $ans eq 'G' ) {
+            my $glob = '../*';
+            my $ans =
+              query("File glob to get some NEW files to process, <cr>='$glob'");
+            $glob = $ans if ($ans);
+            next unless ($glob);
+            my @files = glob($glob);
+            @files = grep { -f $_ && !-z $_ } @files;
+            my $rf = filter_files( \@files );
+            my $nf = @{$rf};
+            if ( !$nf ) { query("no useful files found; hit <cr>"); next }
+
+            if ( ifyes("Found $nf files with glob; merge them in ? [Y/N]") ) {
+                push @{$rnew_files}, @{$rf};
+                $rnew_files = uniq($rnew_files);
+            }
+        }
+        elsif ( $ans eq 'F' ) {
+            my $fraction =
+              get_num( "Enter a fraction of current size (0-1):", 1 );
+            if ( $fraction > 0 && $fraction < 1 ) {
+                $rnew_files = reduce_total_file_size( $rnew_files, $fraction );
+            }
+        }
+        elsif ( $ans eq 'Y' ) { $rnew_files = $rold_files; last }
+        elsif ( $ans eq 'Q' ) { last }
+    }
+    $rnew_files = [ sort @{$rnew_files} ];
+    return $rnew_files;
+}
+
+sub file_size_sum_mb {
+    my ($rfiles) = @_;
+    my $sum_mb = 0;
+    foreach ( @{$rfiles} ) {
+        my $size_in_mb = ( -s $_ ) / ( 1024 * 1024 );
+        $sum_mb += $size_in_mb;
+    }
+    return $sum_mb;
+}
+
+sub reduce_total_file_size {
+    my ( $rfiles, $fraction ) = @_;
+    my @files =
+      map  { $_->[0] }
+      sort { $a->[1] <=> $b->[1] }
+      map  { [ $_, -e $_ ? -s $_ : 0 ] } @{$rfiles};
+    my $sum = 0;
+    my @partial_sum;
+    foreach (@files) {
+        $sum += -s $_;
+        push @partial_sum, [ $_, $sum ];
+    }
+    my $want = $sum * $fraction;
+    my @new_files;
+    foreach (@partial_sum) {
+        my ( $fname, $sum ) = @{$_};
+        last if ( $sum > $want );
+        push @new_files, $fname;
+    }
+    return \@new_files;
 }
 
 sub get_profile_info {
@@ -301,16 +380,19 @@ EOM
 }
 
 sub get_file_info {
+    my ($rf) = @_;
 
-    my $nfiles = @{$rfiles};
+    my $nfiles = @{$rf};
     my $file0  = "(none)";
     my $fileN  = "(none)";
     if ($nfiles) {
-        $file0 = $rfiles->[0];
-        $fileN = $rfiles->[-1];
+        $file0 = $rf->[0];
+        $fileN = $rf->[-1];
     }
-    my $file_info = <<EOM;
+    my $total_size_mb = file_size_sum_mb($rf);
+    my $file_info     = <<EOM;
     Number of Files: $nfiles
+    Total Size, Mb : $total_size_mb
     First file     : $file0
     Last file      : $fileN
 EOM
@@ -537,7 +619,7 @@ sub get_num {
         open( IN, "<", $tmpnam ) || die "cannot open $tmpnam: $!\n";
         while ( my $line = <IN> ) {
             next if $line =~ /#/;
-            chomp $line; 
+            chomp $line;
             push @parameters, $line;
         }
         close IN;
