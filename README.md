@@ -1,6 +1,7 @@
 # Build Status
 
-* [![Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
++ [![Github Actions Build Status](https://github.com/perltidy/perltidy/actions/workflows/perltest.yml/badge.svg)](https://github.com/perltidy/perltidy/actions)
+* [![Travis-CI Build Status](https://travis-ci.com/perltidy/perltidy.svg?branch=master)](https://travis-ci.com/perltidy/perltidy)
 * [CPAN Testers](https://www.cpantesters.org/distro/P/Perl-Tidy.html)
 
 # Welcome to Perltidy
