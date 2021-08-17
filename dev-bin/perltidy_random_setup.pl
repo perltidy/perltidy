@@ -261,9 +261,9 @@ EOM
     while (1) {
         my $nfiles_new    = @{$rnew_files};
         my $total_size_mb = file_size_sum_mb($rnew_files);
+        my $file_info     = get_file_info($rnew_files);
         my $ans           = queryu(<<EOM);
-
-   Number of files = $nfiles_new ; Total size $total_size_mb;
+$file_info
 R  Redo with a different glob
 F  Reduce total size by a fraction
 Y  Yes .. use these files
