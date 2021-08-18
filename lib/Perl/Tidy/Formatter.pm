@@ -5256,6 +5256,8 @@ sub respace_tokens {
     my $length_function = $self->[_length_function_];
     my $is_encoded_data = $self->[_is_encoded_data_];
 
+    my $rOpts_sub_alias_list = $rOpts->{'sub-alias-list'};
+
     my $rLL_new = [];    # This is the new array
     my $rtoken_vars;
     my $Ktoken_vars;                   # the old K value of $rtoken_vars
@@ -6078,38 +6080,49 @@ sub respace_tokens {
                     next;
                 }
 
-                if ( $token =~ /$ANYSUB_PATTERN/ ) {
+                # Trim certain spaces in identifiers
+                if ( $type eq 'i' ) {
 
-                    # -spp = 0 : no space before opening prototype paren
-                    # -spp = 1 : stable (follow input spacing)
-                    # -spp = 2 : always space before opening prototype paren
-                    my $spp = $rOpts->{'space-prototype-paren'};
-                    if ( defined($spp) ) {
-                        if    ( $spp == 0 ) { $token =~ s/\s+\(/\(/; }
-                        elsif ( $spp == 2 ) { $token =~ s/\(/ (/; }
+                    if (
+                        (
+                            substr( $token, 0, 3 ) eq 'sub'
+                            || $rOpts_sub_alias_list
+                        )
+                        && $token =~ /$ANYSUB_PATTERN/
+                      )
+                    {
+
+                        # -spp = 0 : no space before opening prototype paren
+                        # -spp = 1 : stable (follow input spacing)
+                        # -spp = 2 : always space before opening prototype paren
+                        my $spp = $rOpts->{'space-prototype-paren'};
+                        if ( defined($spp) ) {
+                            if    ( $spp == 0 ) { $token =~ s/\s+\(/\(/; }
+                            elsif ( $spp == 2 ) { $token =~ s/\(/ (/; }
+                        }
+
+                        # one space max, and no tabs
+                        $token =~ s/\s+/ /g;
+                        $rtoken_vars->[_TOKEN_] = $token;
                     }
 
-                    # one space max, and no tabs
-                    $token =~ s/\s+/ /g;
-                    $rtoken_vars->[_TOKEN_] = $token;
-                }
+                    # clean up spaces in package identifiers, like
+                    #   "package        Bob::Dog;"
+                    elsif ( substr( $token, 0, 7 ) eq 'package'
+                        && $token =~ /^package\s/ )
+                    {
+                        $token =~ s/\s+/ /g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
 
-                # clean up spaces in package identifiers, like
-                #   "package        Bob::Dog;"
-                if ( $token =~ /^package\s/ ) {
-                    $token =~ s/\s+/ /g;
-                    $rtoken_vars->[_TOKEN_] = $token;
-                }
-
-                # trim identifiers of trailing blanks which can occur
-                # under some unusual circumstances, such as if the
-                # identifier 'witch' has trailing blanks on input here:
-                #
-                # sub
-                # witch
-                # ()   # prototype may be on new line ...
-                # ...
-                if ( $type eq 'i' ) {
+                    # trim identifiers of trailing blanks which can occur
+                    # under some unusual circumstances, such as if the
+                    # identifier 'witch' has trailing blanks on input here:
+                    #
+                    # sub
+                    # witch
+                    # ()   # prototype may be on new line ...
+                    # ...
                     $token =~ s/\s+$//g;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
