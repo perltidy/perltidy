@@ -19372,7 +19372,7 @@ sub send_lines_to_vertical_aligner {
             $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
-        else {
+        elsif ( !$is_block_comment ) {
 
             # Patch for git #51, a bare closing qw paren was not outdented
             # if the flag '-nodelete-old-newlines is set
