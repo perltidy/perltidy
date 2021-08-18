@@ -2765,8 +2765,7 @@ EOM
           # example: pom.caputo:
           # $vt100_compatible ? "\e[0;0H" : ('-' x 78 . "\n");
           || $typel eq 'n' && $tokenr eq '.'
-          || $typer eq 'n'
-          && $tokenl eq '.'
+          || $typer eq 'n' && $tokenl eq '.'
 
           # cases of a space before a bareword...
           || (
@@ -2876,9 +2875,8 @@ EOM
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          || $typer  =~ /^(pp|mm)$/ && $tokenl !~ /^[\;\{\(\[]/
-          || $typel  =~ /^(\+\+|\-\-)$/
-          && $tokenr !~ /^[\;\}\)\]]/
+          || $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
+          || $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -4604,6 +4602,7 @@ EOM
                 }
             }
         }
+        return;
     }
 
     sub write_line {
@@ -19302,7 +19301,7 @@ sub send_lines_to_vertical_aligner {
     # define the array @{$ralignment_type_to_go} for the output tokens
     # which will be non-blank for each special token (such as =>)
     # for which alignment is required.
-    my $ralignment_type_to_go =
+    my ( $ralignment_type_to_go, $alignment_count ) =
       $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
     # flush before a long if statement to avoid unwanted alignment
@@ -19386,7 +19385,7 @@ sub send_lines_to_vertical_aligner {
 
         $self->delete_needless_alignments( $ibeg, $iend,
             $ralignment_type_to_go )
-          if ( !$is_block_comment );
+          if ($alignment_count);
 
         my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
           $self->make_alignment_patterns( $ibeg, $iend,
@@ -19693,6 +19692,7 @@ EOM
         my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
 
         my $ralignment_type_to_go;
+        my $alignment_count = 0;
 
         # Initialize the alignment array. Note that closing side comments can
         # insert up to 2 additional tokens beyond the original
@@ -19707,7 +19707,7 @@ EOM
             for my $i ( 0 .. $iend ) {
                 $ralignment_type_to_go->[$i] = '';
             }
-            return $ralignment_type_to_go;
+            return ( $ralignment_type_to_go, $alignment_count );
         }
 
         # remember the index of last nonblank token before any sidecomment
@@ -19952,6 +19952,8 @@ EOM
                 # then store the value
                 #--------------------------------------------------------
                 $ralignment_type_to_go->[$i] = $alignment_type;
+                if ($alignment_type) { $alignment_count++; }
+
                 if ( $type ne 'b' ) {
                     $vert_last_nonblank_type       = $type;
                     $vert_last_nonblank_token      = $token;
@@ -19959,7 +19961,7 @@ EOM
                 }
             }
         }
-        return $ralignment_type_to_go;
+        return ( $ralignment_type_to_go, $alignment_count );
     }
 } ## end closure set_vertical_alignment_markers
 
