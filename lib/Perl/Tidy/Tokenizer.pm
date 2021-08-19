@@ -6150,7 +6150,7 @@ sub guess_if_pattern_or_division {
         # usually indicates a pattern.  We can use this to break ties.
 
         my $is_pattern_by_spacing =
-          ( $i > 1 && $next_token ne ' ' && $rtokens->[ $i - 2 ] eq ' ' );
+          ( $i > 1 && $next_token !~ m/^\s/ && $rtokens->[ $i - 2 ] =~ m/^\s/ );
 
         # look for a possible ending / on this line..
         my $in_quote        = 1;
@@ -7620,15 +7620,16 @@ sub scan_identifier_do {
                     $max_token_index );
                 if ($error) { warning("Possibly invalid sub\n") }
 
-            # Patch part #2 to fixes cases b994 and b1053:
-            # Do not let spaces be part of the token of an anonymous sub keyword
-            # which we marked as type 'k' above...i.e. for something like:
-            #    'sub : lvalue { ...'
-            # Back up and let it be parsed as a blank
+                # Patch part #2 to fixes cases b994 and b1053:
+                # Do not let spaces be part of the token of an anonymous sub
+                # keyword which we marked as type 'k' above...i.e. for
+                # something like:
+                #    'sub : lvalue { ...'
+                # Back up and let it be parsed as a blank
                 if (   $type eq 'k'
                     && $attrs
                     && $i > $i_entry
-                    && substr( $rtokens->[$i], 0, 1 ) eq ' ' )
+                    && substr( $rtokens->[$i], 0, 1 ) =~ m/\s/ )
                 {
                     $i--;
                 }

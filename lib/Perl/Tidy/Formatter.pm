@@ -9614,7 +9614,8 @@ EOM
             my $token_beg = $rLL->[$Kbeg]->[_TOKEN_];
 
             # allow space(s) after the qw
-            if ( length($token_beg) > 3 && substr( $token_beg, 2, 1 ) eq ' ' ) {
+            if ( length($token_beg) > 3 && substr( $token_beg, 2, 1 ) =~ m/\s/ )
+            {
                 $token_beg =~ s/\s+//;
             }
 

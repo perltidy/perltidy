@@ -2,6 +2,43 @@
 
 =over 4
 
+=item B<Fix some problems involving tabs characters, case c062>
+
+This update fixes some problems found in random testing with tab characters.
+For example, In the following snippet there is a tab character after 'sub'
+
+    do sub	: lvalue {
+        return;
+      }
+
+Running perltidy on this repeatedly keep increasing the space between
+'sub' and ':'
+
+    # OLD: perltidy
+    do sub	 : lvalue {
+        return;
+      }
+
+    # OLD: perltidy
+    do sub	  : lvalue {
+        return;
+      }
+
+etc.
+
+    # NEW: perltidy
+    do sub : lvalue {
+        return;
+      }
+
+Problems like this can occur if string comparisons use ' ' instead of
+the regex \s when working on spaces. Several instances of this were located
+and corrected.
+
+This fixes issue c062.
+
+18 Aug 2021.
+
 =item B<Correct parsing error, case c061>
 
 Testing with random input produced an error condition involving a
