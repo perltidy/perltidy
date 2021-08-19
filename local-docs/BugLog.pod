@@ -5,7 +5,7 @@
 =item B<Fix some problems involving tabs characters, case c062>
 
 This update fixes some problems found in random testing with tab characters.
-For example, In the following snippet there is a tab character after 'sub'
+For example, in the following snippet there is a tab character after 'sub'
 
     do sub	: lvalue {
         return;
@@ -37,7 +37,7 @@ and corrected.
 
 This fixes issue c062.
 
-18 Aug 2021.
+18 Aug 2021, d86787f.
 
 =item B<Correct parsing error, case c061>
 
@@ -68,7 +68,7 @@ This update corrects the problem:
 
 This fixes case c061;
 
-18 Aug 2021.
+18 Aug 2021, 3bb2b2c.
 
 =item B<Improved line break, case c060>
 
