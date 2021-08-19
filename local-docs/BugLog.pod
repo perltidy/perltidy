@@ -2,6 +2,37 @@
 
 =over 4
 
+=item B<Correct parsing error, case c061>
+
+Testing with random input produced an error condition involving a
+side comment placed between a sub name and prototype, as in the
+following snippet:
+
+    sub
+    witch   # sc
+    ()   # prototype may be on new line ...
+    { print "which?\n" }
+    witch();
+
+The current version of perltidy makes an error:
+
+    # OLD: perltidy
+    sub witch   # sc ()    # prototype may be on new line ...
+    { print "which?\n" }
+    witch();
+
+This update corrects the problem:
+
+    # NEW: perltidy
+    sub witch    # sc
+      ()         # prototype may be on new line ...
+    { print "which?\n" }
+    witch();
+
+This fixes case c061;
+
+18 Aug 2021.
+
 =item B<Improved line break, case c060>
 
 The default formatting produced an undesirable line break at the last '&&' term

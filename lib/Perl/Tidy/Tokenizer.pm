@@ -3507,7 +3507,25 @@ EOM
                     scan_identifier();
                 }
 
-                last if ($id_scan_state);
+                if ($id_scan_state) {
+
+                    # Still scanning ...
+                    # Check for side comment between sub and prototype (c061)
+
+                    # done if nothing left to scan on this line
+                    last if ( $i > $max_token_index );
+
+                    my ( $next_nonblank_token, $i_next ) =
+                      find_next_nonblank_token_on_this_line( $i, $rtokens,
+                        $max_token_index );
+
+                    # done if it was just some trailing space
+                    last if ( $i_next > $max_token_index );
+
+                    # something remains on the line ... must be a side comment
+                    next;
+                }
+
                 next if ( ( $i > 0 ) || $type );
 
                 # didn't find any token; start over
