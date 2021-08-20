@@ -6705,15 +6705,10 @@ sub parent_seqno_by_K {
     # Return the sequence number of the parent container of token K, if any.
 
     my ( $self, $KK ) = @_;
-    return unless defined($KK);
+    my $rLL = $self->[_rLL_];
 
-    # Note: This routine is relatively slow. I tried replacing it with a hash
-    # which is easily created in sub respace_tokens. But the total time with a
-    # hash was greater because this routine is called once per line whereas a
-    # hash must be created token-by-token.
-
-    my $rLL   = $self->[_rLL_];
-    my $KNEXT = $KK;
+    # The task is to jump forward to the next container token
+    # and use the sequence number of either it or its parent.
 
     # For example, consider the following with seqno=5 of the '[' and ']'
     # being called with index K of the first token of each line:
@@ -6731,16 +6726,15 @@ sub parent_seqno_by_K {
     # be at a deeper level.  In either case we will just return SEQ_ROOT to
     # have a defined value and allow formatting to proceed.
     my $parent_seqno = SEQ_ROOT;
-    while ( defined($KNEXT) ) {
-        my $Kt = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
-        my $rtoken_vars   = $rLL->[$Kt];
-        my $type          = $rtoken_vars->[_TYPE_];
-        my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+    my $Ktest = $KK;
+    while ( defined($Ktest) ) {
+        my $type = $rLL->[$Ktest]->[_TYPE_];
 
         # if next container token is closing, it is the parent seqno
         if ( $is_closing_type{$type} ) {
-            if ( $Kt > $KK ) {
+            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
+            if ( $Ktest > $KK ) {
                 $parent_seqno = $type_sequence;
             }
             else {
@@ -6751,11 +6745,13 @@ sub parent_seqno_by_K {
 
         # if next container token is opening, we want its parent container
         elsif ( $is_opening_type{$type} ) {
+            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
             $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
             last;
         }
 
         # not a container - must be ternary - keep going
+        $Ktest = $rLL->[$Ktest]->[_KNEXT_SEQ_ITEM_];
     }
 
     $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
