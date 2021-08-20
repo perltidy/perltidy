@@ -6700,25 +6700,6 @@ sub K_previous_nonblank {
     return;
 }
 
-sub get_old_line_index {
-
-    # return index of the original line that token K was on
-    my ( $self, $K ) = @_;
-    my $rLL = $self->[_rLL_];
-    return 0 unless defined($K);
-    return $rLL->[$K]->[_LINE_INDEX_];
-}
-
-sub get_old_line_count {
-
-    # return number of input lines separating two tokens
-    my ( $self, $Kbeg, $Kend ) = @_;
-    my $rLL = $self->[_rLL_];
-    return 0 unless defined($Kbeg);
-    return 0 unless defined($Kend);
-    return $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_] + 1;
-}
-
 sub parent_seqno_by_K {
 
     # Return the sequence number of the parent container of token K, if any.
@@ -12759,11 +12740,13 @@ EOM
             my $is_long_line = $max_index_to_go > 0
               && $self->excess_line_length( $imin, $max_index_to_go ) > 0;
 
-            my $old_line_count_in_batch =
-              $max_index_to_go == 0
-              ? 1
-              : $self->get_old_line_count( $K_to_go[0],
-                $K_to_go[$max_index_to_go] );
+            my $old_line_count_in_batch = 1;
+            if ( $max_index_to_go > 0 ) {
+                my $Kbeg = $K_to_go[0];
+                my $Kend = $K_to_go[$max_index_to_go];
+                $old_line_count_in_batch +=
+                  $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
+            }
 
             if (
                    $is_long_line
@@ -12878,7 +12861,7 @@ EOM
                 my $KK = $K_to_go[$i];
                 $rLL->[$KK]->[_TOKEN_]        = $tok;
                 $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
-                my $line_number = 1 + $self->get_old_line_index($KK);
+                my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
                 $self->note_added_semicolon($line_number);
             }
 
