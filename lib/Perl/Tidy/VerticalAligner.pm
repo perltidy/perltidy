@@ -291,15 +291,6 @@ sub get_cached_line_count {
     return $self->group_line_count() + ( get_cached_line_type() ? 1 : 0 );
 }
 
-sub get_spaces {
-
-    # return the number of leading spaces associated with an indentation
-    # variable $indentation is either a constant number of spaces or an
-    # object with a get_spaces method.
-    my $indentation = shift;
-    return ref($indentation) ? $indentation->get_spaces() : $indentation;
-}
-
 sub get_recoverable_spaces {
 
     # return the number of spaces (+ means shift right, - means shift left)
@@ -424,7 +415,8 @@ sub valign_input {
     # number of tokens between fields is $jmax-1
     my $jmax = @{$rfields} - 1;
 
-    my $leading_space_count = get_spaces($indentation);
+    my $leading_space_count =
+      ref($indentation) ? $indentation->get_spaces() : $indentation;
 
     # set outdented flag to be sure we either align within statements or
     # across statement boundaries, but not both.
@@ -530,11 +522,10 @@ sub valign_input {
         $group_level = $level;
         $self->[_group_level_] = $group_level;
 
-        # wait until after the above flush to get the leading space
-        # count because it may have been changed if the -icp flag is in
-        # effect
-        $leading_space_count = get_spaces($indentation);
-
+        # Update leading spaces after the above flush because the leading space
+        # count may have been changed if the -icp flag is in effect
+        $leading_space_count =
+          ref($indentation) ? $indentation->get_spaces() : $indentation;
     }
 
     # --------------------------------------------------------------------
