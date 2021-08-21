@@ -7161,6 +7161,29 @@ print
 --maximum-line-length=49
 --square-bracket-vertical-tightness-closing=1
 
+==> b1194.in <==
+# S1
+          is(0+keys%mani,0+@files,"no duplicate files in MANIFEST")
+          or diag(
+                   join("\n  ","Duplicates:",grep$mani{$_}>1,
+                         keys%mani)
+          );
+# S2
+          is(0+keys%mani,0+@files,"no duplicate files in MANIFEST")
+          or
+          diag(join("\n  ","Duplicates:",grep$mani{$_}>1,keys%mani));
+
+
+==> b1194.par <==
+--noadd-whitespace
+--continuation-indentation=0
+--ignore-old-breakpoints
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=70
+--paren-vertical-tightness=2
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1

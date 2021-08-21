@@ -2,6 +2,16 @@
 
 =over 4
 
+=item B<Fix formatting instability issue b1194>
+
+Testing with random parameters produced a case of unstable formatting
+which is fixed with this update.
+
+This fixes case b1194, and at the same time it simplifies the logic
+which handles issues b1183 and b1191.
+
+21 Aug 2021.
+
 =item B<Fix some problems involving tabs characters, case c062>
 
 This update fixes some problems found in random testing with tab characters.

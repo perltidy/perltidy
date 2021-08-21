@@ -6731,8 +6731,15 @@ sub parent_seqno_by_K {
     while ( defined($Ktest) ) {
         my $type = $rLL->[$Ktest]->[_TYPE_];
 
+        # if next container token is opening, we want its parent container
+        if ( $is_opening_type{$type} ) {
+            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
+            $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+            last;
+        }
+
         # if next container token is closing, it is the parent seqno
-        if ( $is_closing_type{$type} ) {
+        elsif ( $is_closing_type{$type} ) {
             my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
             if ( $Ktest > $KK ) {
                 $parent_seqno = $type_sequence;
@@ -6740,13 +6747,6 @@ sub parent_seqno_by_K {
             else {
                 $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
             }
-            last;
-        }
-
-        # if next container token is opening, we want its parent container
-        elsif ( $is_opening_type{$type} ) {
-            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
-            $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
             last;
         }
 
@@ -8063,19 +8063,6 @@ EOM
                     }
                     else {
                         $is_one_line_weld = 1;
-                    }
-
-                    # If an apparent one-line weld might have been created by
-                    # -vt and -lp, then do not mark as a one-line weld.
-                    # This condition added to fix b1183.
-                    # Added block type test to fix b1191
-                    if (   $is_one_line_weld
-                        && $rOpts_line_up_parentheses
-                        && $opening_vertical_tightness{$token_oo}
-                        && !$rblock_type_of_seqno->{$inner_seqno}
-                        && !$ris_excluded_lp_container->{$outer_seqno} )
-                    {
-                        $is_one_line_weld = 0;
                     }
                 }
             }
@@ -22103,6 +22090,7 @@ sub set_vertical_tightness_flags {
       if ($rOpts_freeze_whitespace);
 
     my $rwant_container_open = $self->[_rwant_container_open_];
+    my $rK_weld_left         = $self->[_rK_weld_left_];
 
     # Uses these global parameters:
     #   $rOpts_block_brace_tightness
@@ -22149,6 +22137,14 @@ sub set_vertical_tightness_flags {
             # requested
             my $ovt       = $opening_vertical_tightness{$token_end};
             my $iend_next = $ri_last->[ $n + 1 ];
+
+            # Turn off the -vt flag if the next line ends in a weld.
+            # This avoids an instability with one-line welds (fixes b1183).
+            my $type_end_next = $types_to_go[$iend_next];
+            $ovt = 0
+              if ( $rK_weld_left->{ $K_to_go[$iend_next] }
+                && $is_closing_type{$type_end_next} );
+
             unless (
                 $ovt < 2
                 && ( $nesting_depth_to_go[ $iend_next + 1 ] !=
