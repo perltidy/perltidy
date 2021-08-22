@@ -36,36 +36,40 @@ my $total_error_count = 0;
 foreach my $file (@files) {
 
     unless ( -e $file && -f $file && -s $file ) {
-        print STDERR "skipping $file\n";
+        print "skipping $file: not a regular file\n";
         next;
     }
 
     # Best to skip files written by perltidy
     if ( $file =~ /\.(tdy|ERR|LOG|DEBUG)$/ ) {
-        print STDERR "skipping $file\n";
+        print "skipping $file: wrong extension\n";
         next;
     }
-
-    # Skip a file which produces an error
-    my $tmp = "tmp.out";
-    my $cmd = "perltidy $file -o $tmp";
-    system($cmd);
-    my $efile = "$file.ERR";
-    if ( -e $efile ) {
-        unlink $efile;
-        unlink $tmp;
-        next;
-        print "Skipping $file: produces error\n";
-    }
-
-    my $tab_count_0 = file_tab_count($file);
 
     my $basename = $file;
     if ( $basename =~ /^(.*)\/([^\/]+)$/ ) { $basename = $2 }
+    my $file0 = "$basename.0";
     my $file1 = "$basename.1";
     my $file2 = "$basename.2";
 
-    add_tabs( $file, $file1 );
+    # Skip a file which produces an error
+    my $efile = "$file0.ERR";
+    my $cmd   = "perltidy $file -o $file0 -se 2>$efile";
+    system($cmd);
+    if ( -e $efile ) {
+        if ( -z $efile ) {
+            unlink $efile;
+        }
+        else {
+            unlink $efile;
+            unlink $file0;
+            print "Skipping $file: produces error\n";
+            next;
+        }
+    }
+
+    my $tab_count_0 = file_tab_count($file0);
+    add_tabs( $file0, $file1 );
     my $tab_count_1 = file_tab_count($file1);
 
     $cmd = "perltidy $file1 -o $file2";
@@ -86,6 +90,7 @@ foreach my $file (@files) {
 
     # Clean up files if no error, otherwise leave them
     if ( $status eq "OK" && !-e $file2 . ".ERR" ) {
+        unlink $file0;
         unlink $file1;
         unlink $file2;
     }
@@ -134,6 +139,7 @@ sub write_file {
 }
 
 use Perl::Tidy;
+
 sub add_tabs {
     my ( $ifile, $ofile ) = @_;
 
@@ -141,7 +147,7 @@ sub add_tabs {
     # convert code spaces to tabs and write result to $ofile
 
     # create a mask for use in avoiding placing tabs in unsafe places
-    my ( @lines );
+    my (@lines);
 
     my %args = (
         _source         => $ifile,

@@ -10,7 +10,7 @@ which is fixed with this update.
 This fixes case b1194, and at the same time it simplifies the logic
 which handles issues b1183 and b1191.
 
-21 Aug 2021.
+21 Aug 2021, 62e5b01.
 
 =item B<Fix some problems involving tabs characters, case c062>
 
