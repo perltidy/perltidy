@@ -20153,11 +20153,20 @@ sub get_seqno {
 
         my $rLL                  = $self->[_rLL_];
         my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-        my $K0                   = $K_to_go[0];
-        my $Kprev                = $self->K_previous_code($K0);
+
         my $is_short_block;
-        if ( defined($Kprev) ) {
-            my $seqno = $rLL->[$Kprev]->[_TYPE_SEQUENCE_];
+        if ( $K_to_go[0] > 0 ) {
+            my $Kp = $K_to_go[0] - 1;
+            if ( $Kp > 0 && $rLL->[$Kp]->[_TYPE_] eq 'b' ) {
+                $Kp -= 1;
+            }
+            if ( $Kp > 0 && $rLL->[$Kp]->[_TYPE_] eq '#' ) {
+                $Kp -= 1;
+                if ( $Kp > 0 && $rLL->[$Kp]->[_TYPE_] eq 'b' ) {
+                    $Kp -= 1;
+                }
+            }
+            my $seqno = $rLL->[$Kp]->[_TYPE_SEQUENCE_];
             if ($seqno) {
                 my $block_type = $rblock_type_of_seqno->{$seqno};
                 if ($block_type) {
