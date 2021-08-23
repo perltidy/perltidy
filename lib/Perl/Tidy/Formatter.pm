@@ -5541,23 +5541,6 @@ sub respace_tokens {
         $store_token->($item);
     };
 
-    my $K_end_q = sub {
-        my ($KK) = @_;
-        my $K_end = $KK;
-
-        my $Kn = $KK + 1;
-        if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
-
-        while ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'q' ) {
-            $K_end = $Kn;
-
-            $Kn += 1;
-            if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
-        }
-
-        return $K_end;
-    };
-
     my $add_phantom_semicolon = sub {
 
         my ($KK) = @_;
@@ -5743,9 +5726,6 @@ sub respace_tokens {
     ############################################
     my $last_K_out;
 
-    # Testing option to break qw.  Do not use; it can make a mess.
-    my $ALLOW_BREAK_MULTILINE_QW = 0;
-    my $in_multiline_qw;
     foreach my $line_of_tokens ( @{$rlines} ) {
 
         my $input_line_number = $line_of_tokens->{_line_number};
@@ -6211,82 +6191,10 @@ sub respace_tokens {
                 $rtoken_vars->[_TOKEN_] = $token;
                 $self->note_embedded_tab($input_line_number)
                   if ( $token =~ "\t" );
-
-                if ($in_multiline_qw) {
-
-                    # If we are at the end of a multiline qw ..
-                    if ( $in_multiline_qw == $KK ) {
-
-                 # Split off the closing delimiter character
-                 # so that the formatter can put a line break there if necessary
-                        my $part1 = $token;
-                        my $part2 = substr( $part1, -1, 1, "" );
-
-                        if ($part1) {
-                            my $rcopy =
-                              copy_token_as_type( $rtoken_vars, 'q', $part1 );
-                            $store_token->($rcopy);
-                            $token = $part2;
-                            $rtoken_vars->[_TOKEN_] = $token;
-
-                        }
-                        $in_multiline_qw = undef;
-
-                        # store without preceding blank
-                        $store_token->($rtoken_vars);
-                        next;
-                    }
-                    else {
-                        # continuing a multiline qw
-                        $store_token->($rtoken_vars);
-                        next;
-                    }
-                }
-
-                else {
-
-                    # we are encountered new qw token...see if multiline
-                    if ($ALLOW_BREAK_MULTILINE_QW) {
-                        my $K_end = $K_end_q->($KK);
-                        if ( $K_end != $KK ) {
-
-                            # Starting multiline qw...
-                            # set flag equal to the ending K
-                            $in_multiline_qw = $K_end;
-
-                          # Split off the leading part so that the formatter can
-                          # put a line break there if necessary
-                            if ( $token =~ /^(qw\s*.)(.*)$/ ) {
-                                my $part1 = $1;
-                                my $part2 = $2;
-                                if ($part2) {
-                                    my $rcopy =
-                                      copy_token_as_type( $rtoken_vars, 'q',
-                                        $part1 );
-                                    $store_token_and_space->(
-                                        $rcopy,
-                                        $rwhitespace_flags->[$KK] == WS_YES
-                                    );
-                                    $token = $part2;
-                                    $rtoken_vars->[_TOKEN_] = $token;
-
-                                   # Second part goes without intermediate blank
-                                    $store_token->($rtoken_vars);
-                                    next;
-                                }
-                            }
-                        }
-                    }
-                    else {
-
-                        # this is a new single token qw -
-                        # store with possible preceding blank
-                        $store_token_and_space->(
-                            $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
-                        );
-                        next;
-                    }
-                }
+                $store_token_and_space->(
+                    $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
+                );
+                next;
             } ## end if ( $type eq 'q' )
 
             # change 'LABEL   :'   to 'LABEL:'
