@@ -1,0 +1,7 @@
+Type::Libraries->setup_class(
+	__PACKAGE__,
+	qw(
+		Types::Standard
+		Types::Common::Numeric
+		), # <--- brace here
+);

@@ -1,0 +1,18 @@
+--maximum-line-length=120
+--converge
+--tabs
+--entab-leading-whitespace=4
+--continuation-indentation=4
+--extended-continuation-indentation
+--no-delete-old-newlines
+--no-outdent-long-lines
+--no-outdent-labels
+--novalign
+--no-logical-padding
+--opening-sub-brace-on-new-line
+--square-bracket-tightness=2
+--paren-tightness=2
+--brace-tightness=2
+--opening-token-right
+
+-sal='first any sum sum0 reduce'

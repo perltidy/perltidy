@@ -17,6 +17,8 @@
 #14 rt136417.rt136417
 #15 numbers.def
 #16 code_skipping.def
+#17 git51.def
+#18 git51.git51
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -37,6 +39,26 @@ BEGIN {
         'def'   => "",
         'fpva1' => "-sfp",
         'fpva2' => "-sfp -nfpva",
+        'git51' => <<'----------',
+--maximum-line-length=120
+--converge
+--tabs
+--entab-leading-whitespace=4
+--continuation-indentation=4
+--extended-continuation-indentation
+--no-delete-old-newlines
+--no-outdent-long-lines
+--no-outdent-labels
+--novalign
+--no-logical-padding
+--opening-sub-brace-on-new-line
+--square-bracket-tightness=2
+--paren-tightness=2
+--brace-tightness=2
+--opening-token-right
+
+-sal='first any sum sum0 reduce'
+----------
         'git54' => "-bbp=3 -bbpi=2 -ci=4 -lp",
         'lpxl1' => "-lp",
         'lpxl3' => <<'----------',
@@ -96,6 +118,16 @@ Coro::AnyEvent::sleep( 3, 4 );
 use Carp ();
 use File::Spec ();
 use File::Path ();
+----------
+
+        'git51' => <<'----------',
+Type::Libraries->setup_class(
+	__PACKAGE__,
+	qw(
+		Types::Standard
+		Types::Common::Numeric
+		), # <--- brace here
+);
 ----------
 
         'git54' => <<'----------',
@@ -863,6 +895,34 @@ $.          = 0;
 my $self    = shift;
 my $cloning = shift;
 #16...........
+        },
+
+        'git51.def' => {
+            source => "git51",
+            params => "def",
+            expect => <<'#17...........',
+Type::Libraries->setup_class(
+    __PACKAGE__,
+    qw(
+      Types::Standard
+      Types::Common::Numeric
+    ),    # <--- brace here
+);
+#17...........
+        },
+
+        'git51.git51' => {
+            source => "git51",
+            params => "git51",
+            expect => <<'#18...........',
+Type::Libraries->setup_class(
+	__PACKAGE__,
+	qw(
+		Types::Standard
+		Types::Common::Numeric
+	),    # <--- brace here
+);
+#18...........
         },
     };
 
