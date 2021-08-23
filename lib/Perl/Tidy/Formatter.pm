@@ -19260,15 +19260,22 @@ sub send_lines_to_vertical_aligner {
             $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
-        elsif ( !$is_block_comment ) {
+        elsif ( !$is_block_comment && $Kend < $Klimit ) {
 
             # Patch for git #51, a bare closing qw paren was not outdented
-            # if the flag '-nodelete-old-newlines is set
-            my $Kbeg_next = $self->K_next_code($Kend);
-            if ( defined($Kbeg_next) ) {
-                $ljump =
-                  $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+            # if the flag '-nodelete-old-newlines is set.
+            # Note that we are just looking ahead for the next nonblank
+            # character. We could scan past an arbitrary number of block
+            # comments or hanging side comments by calling K_next_code, but it
+            # could add significant run time with very little to be gained.
+            my $Kbeg_next = $Kend + 1;
+            if (   $Kbeg_next < $Klimit
+                && $rLL->[$Kbeg_next]->[_TYPE_] eq 'b' )
+            {
+                $Kbeg_next += 1;
             }
+            $ljump =
+              $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
 
         $self->delete_needless_alignments( $ibeg, $iend,
@@ -19309,11 +19316,25 @@ sub send_lines_to_vertical_aligner {
         # or (2) terminal block_type which is not an 'if'.  This prevents
         # unwanted alignment between the lines.
         if ( $type_beg eq 'k' && $token_beg eq 'if' ) {
-            my $Km     = $self->K_previous_code($Kbeg);
             my $type_m = 'b';
             my $block_type_m;
-            if ( defined($Km) ) {
+
+            if ( $Kbeg > 0 ) {
+                my $Km = $Kbeg - 1;
                 $type_m = $rLL->[$Km]->[_TYPE_];
+                if ( $type_m eq 'b' && $Km > 0 ) {
+                    $Km -= 1;
+                    $type_m = $rLL->[$Km]->[_TYPE_];
+                }
+                if ( $type_m eq '#' && $Km > 0 ) {
+                    $Km -= 1;
+                    $type_m = $rLL->[$Km]->[_TYPE_];
+                    if ( $type_m eq 'b' && $Km > 0 ) {
+                        $Km -= 1;
+                        $type_m = $rLL->[$Km]->[_TYPE_];
+                    }
+                }
+
                 my $seqno_m = $rLL->[$Km]->[_TYPE_SEQUENCE_];
                 if ($seqno_m) {
                     $block_type_m = $rblock_type_of_seqno->{$seqno_m};
