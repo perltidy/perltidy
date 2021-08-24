@@ -20904,7 +20904,7 @@ sub pad_token {
             my $token      = $tokens_to_go[$i];
             my $depth_last = $depth;
             if ( $type_sequence_to_go[$i] ) {
-                if ( $is_opening_type{$token} ) {
+                if ( $is_opening_token{$token} ) {
 
                     # if container is balanced on this line...
                     my $i_mate = $mate_index_to_go[$i];
@@ -21268,8 +21268,17 @@ sub make_paren_name {
         my $rwant_reduced_ci         = $self->[_rwant_reduced_ci_];
         my $rK_weld_left             = $self->[_rK_weld_left_];
 
-        # we need to know the last token of this line
-        my ( $terminal_type, $i_terminal ) = terminal_type_i( $ibeg, $iend );
+        # Find the last code token of this line
+        my $i_terminal    = $iend;
+        my $terminal_type = $types_to_go[$iend];
+        if ( $terminal_type eq '#' && $i_terminal > $ibeg ) {
+            $i_terminal -= 1;
+            $terminal_type = $types_to_go[$i_terminal];
+            if ( $terminal_type eq 'b' && $i_terminal > $ibeg ) {
+                $i_terminal -= 1;
+                $terminal_type = $types_to_go[$i_terminal];
+            }
+        }
 
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
