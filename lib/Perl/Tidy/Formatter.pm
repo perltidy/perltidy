@@ -19156,6 +19156,7 @@ sub send_lines_to_vertical_aligner {
     my $rLL                  = $self->[_rLL_];
     my $Klimit               = $self->[_Klimit_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
 
     my ( $Kbeg_next, $Kend_next ) = @{ $rlines_K->[0] };
     my $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
@@ -19263,7 +19264,7 @@ sub send_lines_to_vertical_aligner {
         elsif ( !$is_block_comment && $Kend < $Klimit ) {
 
             # Patch for git #51, a bare closing qw paren was not outdented
-            # if the flag '-nodelete-old-newlines is set.
+            # if the flag '-nodelete-old-newlines is set
             # Note that we are just looking ahead for the next nonblank
             # character. We could scan past an arbitrary number of block
             # comments or hanging side comments by calling K_next_code, but it
@@ -19442,8 +19443,10 @@ EOM
 
         # Set flag which tells if this line is contained in a multi-line list
         my $list_seqno;
-        $list_seqno = $self->is_list_by_K($Kbeg)
-          if ( !$is_block_comment );
+        if ( !$is_block_comment ) {
+            my $parent_seqno = $parent_seqno_to_go[$ibeg];
+            $list_seqno = $ris_list_by_seqno->{$parent_seqno};
+        }
 
         # The alignment tokens have been marked with nesting_depths, so we need
         # to pass nesting depths to the vertical aligner. They remain invariant
