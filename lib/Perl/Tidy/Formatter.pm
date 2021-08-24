@@ -6445,10 +6445,10 @@ sub copy_token_as_type {
     }
     else {
 
-        # This sub assumes it will be called with just two types, 'b' or 'q'
-        Fault(
-"Programming error: copy_token_as has type $type but should be 'b' or 'q'"
-        );
+        # This sub is only programmed to handle certain token types
+        Fault(<<EOM);
+sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
+EOM
     }
 
     my @rnew_token = @{$rold_token};
@@ -6633,35 +6633,28 @@ sub parent_seqno_by_K {
     # unbalanced files, last sequence number will either be undefined or it may
     # be at a deeper level.  In either case we will just return SEQ_ROOT to
     # have a defined value and allow formatting to proceed.
-    my $parent_seqno = SEQ_ROOT;
+    my $parent_seqno  = SEQ_ROOT;
+    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    if ($type_sequence) {
+        $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
+    }
+    else {
+        my $Kt = $rLL->[$KK]->[_KNEXT_SEQ_ITEM_];
+        if ( defined($Kt) ) {
+            $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
+            my $type = $rLL->[$Kt]->[_TYPE_];
 
-    my $Ktest = $KK;
-    while ( defined($Ktest) ) {
-        my $type = $rLL->[$Ktest]->[_TYPE_];
-
-        # if next container token is opening, we want its parent container
-        if ( $is_opening_type{$type} ) {
-            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
-            $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
-            last;
-        }
-
-        # if next container token is closing, it is the parent seqno
-        elsif ( $is_closing_type{$type} ) {
-            my $type_sequence = $rLL->[$Ktest]->[_TYPE_SEQUENCE_];
-            if ( $Ktest > $KK ) {
+            # if next container token is closing, it is the parent seqno
+            if ( $is_closing_type{$type} ) {
                 $parent_seqno = $type_sequence;
             }
+
+            # otherwise we want its parent container
             else {
                 $parent_seqno = $self->[_rparent_of_seqno_]->{$type_sequence};
             }
-            last;
         }
-
-        # not a container - must be ternary - keep going
-        $Ktest = $rLL->[$Ktest]->[_KNEXT_SEQ_ITEM_];
     }
-
     $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
     return $parent_seqno;
 }
@@ -10601,7 +10594,43 @@ EOM
           $rtoken_vars->[_TYPE_SEQUENCE_];
 
         if ( $max_index_to_go == 0 ) {
-            $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+
+            # Update the next parent sequence number for each new batch.
+
+            ###########################################
+            # Begin coding from sub parent_seqno_from_K
+            ###########################################
+
+            ## $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+            $next_parent_seqno = SEQ_ROOT;
+            if ($seqno) {
+                $next_parent_seqno = $rparent_of_seqno->{$seqno};
+            }
+            else {
+                my $Kt = $rLL->[$Ktoken_vars]->[_KNEXT_SEQ_ITEM_];
+                if ( defined($Kt) ) {
+                    my $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
+                    my $type          = $rLL->[$Kt]->[_TYPE_];
+
+                    # if next container token is closing, it is the parent seqno
+                    if ( $is_closing_type{$type} ) {
+                        $next_parent_seqno = $type_sequence;
+                    }
+
+                    # otherwise we want its parent container
+                    else {
+                        $next_parent_seqno =
+                          $rparent_of_seqno->{$type_sequence};
+                    }
+                }
+            }
+            $next_parent_seqno = SEQ_ROOT
+              unless ( defined($next_parent_seqno) );
+
+            #########################################
+            # End coding from sub parent_seqno_from_K
+            #########################################
+
             $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
 
