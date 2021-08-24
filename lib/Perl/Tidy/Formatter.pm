@@ -21245,8 +21245,6 @@ sub make_paren_name {
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
 
-        my $terminal_is_in_list = $self->is_in_list_by_i($i_terminal);
-
         my $type_beg      = $types_to_go[$ibeg];
         my $token_beg     = $tokens_to_go[$ibeg];
         my $K_beg         = $K_to_go[$ibeg];
@@ -21373,6 +21371,8 @@ sub make_paren_name {
               )
               = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
                 $ri_last, $rindentation_list, $seqno_qw_closing );
+
+            my $terminal_is_in_list = $self->is_in_list_by_i($i_terminal);
 
             # First set the default behavior:
             if (
