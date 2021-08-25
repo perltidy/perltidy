@@ -5303,10 +5303,7 @@ sub respace_tokens {
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
     my $last_nonblank_type       = ';';
-    my $last_nonblank_token      = ';';
     my $last_nonblank_block_type = '';
-    my $nonblank_token_count     = 0;
-    my $last_nonblank_token_lx   = 0;
 
     my %K_first_here_doc_by_seqno;
 
@@ -5470,10 +5467,7 @@ sub respace_tokens {
 
         if ( !$is_blank && !$is_comment ) {
             $last_nonblank_type       = $type;
-            $last_nonblank_token      = $item->[_TOKEN_];
             $last_nonblank_block_type = $block_type;
-            $last_nonblank_token_lx   = $item->[_LINE_INDEX_];
-            $nonblank_token_count++;
 
             # count selected types
             if ( $is_counted_type{$type} ) {
@@ -5714,9 +5708,10 @@ sub respace_tokens {
             && !( $type_0 eq 'k' && $token_0 =~ /^(my|our|local)$/ )
           )
         {
-            my $guess = substr( $last_nonblank_token, 0, 1 ) . '~';
+            my $lno   = 1 + $rLL_new->[$Kp]->[_LINE_INDEX_];
+            my $guess = substr( $previous_nonblank_token, 0, 1 ) . '~';
             complain(
-"Note: be sure you want '$previous_nonblank_token' instead of '$guess' here\n"
+"Line $lno: Note: be sure you want '$previous_nonblank_token' instead of '$guess' here\n"
             );
         }
     };
@@ -6158,8 +6153,9 @@ sub respace_tokens {
 
                     # do not delete only nonblank token in a file
                     else {
+                        my $Kp = $self->K_previous_code( undef, $rLL_new );
                         my $Kn = $self->K_next_nonblank($KK);
-                        $ok_to_delete = defined($Kn) || $nonblank_token_count;
+                        $ok_to_delete = defined($Kn) || defined($Kp);
                     }
 
                     if ($ok_to_delete) {
