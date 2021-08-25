@@ -463,7 +463,6 @@ BEGIN {
         _ibeg0_                    => $i++,
         _peak_batch_size_          => $i++,
         _max_index_to_go_          => $i++,
-        _rK_to_go_                 => $i++,
         _batch_count_              => $i++,
         _rix_seqno_controlling_ci_ => $i++,
         _batch_CODE_type_          => $i++,
@@ -10731,7 +10730,6 @@ EOM
         $this_batch->[_starting_in_quote_] = $starting_in_quote;
         $this_batch->[_ending_in_quote_]   = $ending_in_quote;
         $this_batch->[_max_index_to_go_]   = $max_index_to_go;
-        $this_batch->[_rK_to_go_]          = \@K_to_go;
         $this_batch->[_batch_CODE_type_]   = $batch_CODE_type;
 
         # The flag $is_static_block_comment applies to the line which just
@@ -12404,7 +12402,6 @@ sub compare_indentation_levels {
         my $starting_in_quote        = $this_batch->[_starting_in_quote_];
         my $ending_in_quote          = $this_batch->[_ending_in_quote_];
         my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
-        my $rK_to_go                 = $this_batch->[_rK_to_go_];
         my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
 
         my $rLL = $self->[_rLL_];
@@ -19174,7 +19171,6 @@ sub send_lines_to_vertical_aligner {
     my $ending_in_quote          = $this_batch->[_ending_in_quote_];
     my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
     my $ibeg0                    = $this_batch->[_ibeg0_];
-    my $rK_to_go                 = $this_batch->[_rK_to_go_];
     my $batch_count              = $this_batch->[_batch_count_];
     my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
 
@@ -19910,11 +19906,9 @@ sub get_seqno {
     # tokens by the vertical aligner.
     my ( $self, $ii, $ending_in_quote ) = @_;
 
-    my $rLL        = $self->[_rLL_];
-    my $this_batch = $self->[_this_batch_];
-    my $rK_to_go   = $this_batch->[_rK_to_go_];
+    my $rLL = $self->[_rLL_];
 
-    my $KK    = $rK_to_go->[$ii];
+    my $KK    = $K_to_go[$ii];
     my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
     if ( $rLL->[$KK]->[_TYPE_] eq 'q' ) {
