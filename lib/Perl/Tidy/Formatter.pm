@@ -8728,35 +8728,30 @@ sub non_indenting_braces {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
-    my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
+    my $Klimit                     = $self->[_Klimit_];
     my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
+    my $K_opening_container        = $self->[_K_opening_container_];
+    my $K_closing_container        = $self->[_K_closing_container_];
+    my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
+    my $radjusted_levels           = $self->[_radjusted_levels_];
 
-    my $radjusted_levels = $self->[_radjusted_levels_];
-    my $Kmax             = @{$rLL} - 1;
-    my @seqno_stack;
-
-    my $is_non_indenting_brace = sub {
-        my ( $KK, $seqno ) = @_;
-
-        # looking for an opening block brace
-        return unless ( $seqno && $rblock_type_of_seqno->{$seqno} );
-
-        # verify that it is an opening block brace
-        my $token = $rLL->[$KK]->[_TOKEN_];
-        return unless ( $token eq '{' );
+    # First locate all of the marked blocks
+    my @K_stack;
+    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+        my $KK = $K_opening_container->{$seqno};
 
         # followed by a comment
         my $K_sc = $KK + 1;
         $K_sc += 1
-          if ( $K_sc <= $Kmax && $rLL->[$K_sc]->[_TYPE_] eq 'b' );
-        return unless ( $K_sc <= $Kmax );
+          if ( $K_sc <= $Klimit && $rLL->[$K_sc]->[_TYPE_] eq 'b' );
+        next unless ( $K_sc <= $Klimit );
         my $type_sc = $rLL->[$K_sc]->[_TYPE_];
-        return unless ( $type_sc eq '#' );
+        next unless ( $type_sc eq '#' );
 
         # on the same line
         my $line_index    = $rLL->[$KK]->[_LINE_INDEX_];
         my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
-        return unless ( $line_index_sc == $line_index );
+        next unless ( $line_index_sc == $line_index );
 
         # get the side comment text
         my $token_sc = $rLL->[$K_sc]->[_TOKEN_];
@@ -8765,26 +8760,33 @@ sub non_indenting_braces {
         # we added it back for the match. That way we require an exact
         # match to the special string and also allow additional text.
         $token_sc .= "\n";
-        my $is_nib = ( $token_sc =~ /$non_indenting_brace_pattern/ );
-        if ($is_nib) { $rspecial_side_comment_type->{$K_sc} = 'NIB' }
-        return $is_nib;
-    };
+        next unless ( $token_sc =~ /$non_indenting_brace_pattern/ );
+        $rspecial_side_comment_type->{$K_sc} = 'NIB';
+        push @K_stack, [ $KK, 1 ];
+        my $Kc = $K_closing_container->{$seqno};
+        push @K_stack, [ $Kc, -1 ] if ( defined($Kc) );
+    }
+    return unless (@K_stack);
+    @K_stack = sort { $a->[0] <=> $b->[0] } @K_stack;
 
-    foreach my $KK ( 0 .. $Kmax ) {
-        my $num   = @seqno_stack;
-        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        if ($seqno) {
-            my $token = $rLL->[$KK]->[_TOKEN_];
-            if ( $token eq '{' && $is_non_indenting_brace->( $KK, $seqno ) ) {
-                push @seqno_stack, $seqno;
+    # Then loop to remove indentation within marked blocks
+    my $KK_last = 0;
+    my $ndeep   = 0;
+    foreach my $item (@K_stack) {
+        my ( $KK, $inc ) = @{$item};
+        if ( $ndeep > 0 ) {
+
+            foreach ( $KK_last + 1 .. $KK ) {
+                $radjusted_levels->[$_] -= $ndeep;
             }
-            if ( $token eq '}' && @seqno_stack && $seqno_stack[-1] == $seqno ) {
-                pop @seqno_stack;
-                $num -= 1;
-            }
+
+            # We just subtracted the old $ndeep value, which only applies to a
+            # '{'.  The new $ndeep applies to a '}', so we undo the error.
+            if ( $inc < 0 ) { $radjusted_levels->[$KK] += 1 }
         }
-        next unless $num;
-        $radjusted_levels->[$KK] -= $num;
+
+        $ndeep += $inc;
+        $KK_last = $KK;
     }
     return;
 }
