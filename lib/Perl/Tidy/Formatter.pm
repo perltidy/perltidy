@@ -139,51 +139,50 @@ my (
 
     # user parameters and shortcuts
     $rOpts,
-    $rOpts_closing_side_comment_maximum_text,
-    $rOpts_continuation_indentation,
-    $rOpts_indent_columns,
-    $rOpts_line_up_parentheses,
-    $rOpts_maximum_line_length,
-    $rOpts_variable_maximum_line_length,
+    $rOpts_add_newlines,
+    $rOpts_add_whitespace,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
-    $rOpts_stack_closing_block_brace,
-    $rOpts_maximum_consecutive_blank_lines,
-
-    $rOpts_recombine,
-    $rOpts_add_newlines,
-    $rOpts_break_at_old_comma_breakpoints,
-    $rOpts_ignore_old_breakpoints,
-
-    $rOpts_keep_interior_semicolons,
-    $rOpts_comma_arrow_breakpoints,
-    $rOpts_maximum_fields_per_table,
-    $rOpts_one_line_block_semicolons,
-    $rOpts_break_at_old_semicolon_breakpoints,
-
-    $rOpts_tee_side_comments,
-    $rOpts_tee_block_comments,
-    $rOpts_tee_pod,
-    $rOpts_delete_side_comments,
-    $rOpts_delete_closing_side_comments,
-    $rOpts_format_skipping,
-    $rOpts_indent_only,
-    $rOpts_static_block_comments,
-
-    $rOpts_add_whitespace,
-    $rOpts_delete_old_whitespace,
-    $rOpts_freeze_whitespace,
-    $rOpts_function_paren_vertical_alignment,
-    $rOpts_whitespace_cycle,
-    $rOpts_ignore_side_comment_lengths,
-
     $rOpts_break_at_old_attribute_breakpoints,
+    $rOpts_break_at_old_comma_breakpoints,
     $rOpts_break_at_old_keyword_breakpoints,
     $rOpts_break_at_old_logical_breakpoints,
+    $rOpts_break_at_old_semicolon_breakpoints,
     $rOpts_break_at_old_ternary_breakpoints,
-    $rOpts_short_concatenation_item_length,
     $rOpts_closing_side_comment_else_flag,
+    $rOpts_closing_side_comment_maximum_text,
+    $rOpts_comma_arrow_breakpoints,
+    $rOpts_continuation_indentation,
+    $rOpts_delete_closing_side_comments,
+    $rOpts_delete_old_whitespace,
+    $rOpts_delete_side_comments,
+    $rOpts_format_skipping,
+    $rOpts_freeze_whitespace,
+    $rOpts_function_paren_vertical_alignment,
     $rOpts_fuzzy_line_length,
+    $rOpts_ignore_old_breakpoints,
+    $rOpts_ignore_side_comment_lengths,
+    $rOpts_indent_closing_brace,
+    $rOpts_indent_columns,
+    $rOpts_indent_only,
+    $rOpts_keep_interior_semicolons,
+    $rOpts_line_up_parentheses,
+    $rOpts_maximum_consecutive_blank_lines,
+    $rOpts_maximum_fields_per_table,
+    $rOpts_maximum_line_length,
+    $rOpts_one_line_block_semicolons,
+    $rOpts_outdent_keywords,
+    $rOpts_outdent_labels,
+    $rOpts_outdent_static_block_comments,
+    $rOpts_recombine,
+    $rOpts_short_concatenation_item_length,
+    $rOpts_stack_closing_block_brace,
+    $rOpts_static_block_comments,
+    $rOpts_tee_block_comments,
+    $rOpts_tee_pod,
+    $rOpts_tee_side_comments,
+    $rOpts_variable_maximum_line_length,
+    $rOpts_whitespace_cycle,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1510,64 +1509,65 @@ EOM
     # Make global vars for frequently used options for efficiency
     #############################################################
 
-    $rOpts_closing_side_comment_maximum_text =
-      $rOpts->{'closing-side-comment-maximum-text'};
-    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
-    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
-    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
-    $rOpts_maximum_line_length      = $rOpts->{'maximum-line-length'};
-    $rOpts_variable_maximum_line_length =
-      $rOpts->{'variable-maximum-line-length'};
+    $rOpts_add_newlines          = $rOpts->{'add-newlines'};
+    $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
     $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
-    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
-    $rOpts_maximum_consecutive_blank_lines =
-      $rOpts->{'maximum-consecutive-blank-lines'};
-    $rOpts_recombine    = $rOpts->{'recombine'};
-    $rOpts_add_newlines = $rOpts->{'add-newlines'};
-    $rOpts_break_at_old_comma_breakpoints =
-      $rOpts->{'break-at-old-comma-breakpoints'};
-    $rOpts_ignore_old_breakpoints    = $rOpts->{'ignore-old-breakpoints'};
-    $rOpts_keep_interior_semicolons  = $rOpts->{'keep-interior-semicolons'};
-    $rOpts_comma_arrow_breakpoints   = $rOpts->{'comma-arrow-breakpoints'};
-    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
-    $rOpts_break_at_old_semicolon_breakpoints =
-      $rOpts->{'break-at-old-semicolon-breakpoints'};
-
-    $rOpts_tee_side_comments    = $rOpts->{'tee-side-comments'};
-    $rOpts_tee_block_comments   = $rOpts->{'tee-block-comments'};
-    $rOpts_tee_pod              = $rOpts->{'tee-pod'};
-    $rOpts_delete_side_comments = $rOpts->{'delete-side-comments'};
-    $rOpts_delete_closing_side_comments =
-      $rOpts->{'delete-closing-side-comments'};
-    $rOpts_format_skipping       = $rOpts->{'format-skipping'};
-    $rOpts_indent_only           = $rOpts->{'indent-only'};
-    $rOpts_static_block_comments = $rOpts->{'static-block-comments'};
-
-    $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
-    $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
-    $rOpts_freeze_whitespace     = $rOpts->{'freeze-whitespace'};
-
-    $rOpts_function_paren_vertical_alignment =
-      $rOpts->{'function-paren-vertical-alignment'};
-    $rOpts_ignore_side_comment_lengths =
-      $rOpts->{'ignore-side-comment-lengths'};
-
     $rOpts_break_at_old_attribute_breakpoints =
       $rOpts->{'break-at-old-attribute-breakpoints'};
+    $rOpts_break_at_old_comma_breakpoints =
+      $rOpts->{'break-at-old-comma-breakpoints'};
     $rOpts_break_at_old_keyword_breakpoints =
       $rOpts->{'break-at-old-keyword-breakpoints'};
     $rOpts_break_at_old_logical_breakpoints =
       $rOpts->{'break-at-old-logical-breakpoints'};
+    $rOpts_break_at_old_semicolon_breakpoints =
+      $rOpts->{'break-at-old-semicolon-breakpoints'};
     $rOpts_break_at_old_ternary_breakpoints =
       $rOpts->{'break-at-old-ternary-breakpoints'};
-    $rOpts_short_concatenation_item_length =
-      $rOpts->{'short-concatenation-item-length'};
     $rOpts_closing_side_comment_else_flag =
       $rOpts->{'closing-side-comment-else-flag'};
-    $rOpts_fuzzy_line_length = $rOpts->{'fuzzy-line-length'};
+    $rOpts_closing_side_comment_maximum_text =
+      $rOpts->{'closing-side-comment-maximum-text'};
+    $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
+    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
+    $rOpts_delete_closing_side_comments =
+      $rOpts->{'delete-closing-side-comments'};
+    $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
+    $rOpts_delete_side_comments  = $rOpts->{'delete-side-comments'};
+    $rOpts_format_skipping       = $rOpts->{'format-skipping'};
+    $rOpts_freeze_whitespace     = $rOpts->{'freeze-whitespace'};
+    $rOpts_function_paren_vertical_alignment =
+      $rOpts->{'function-paren-vertical-alignment'};
+    $rOpts_fuzzy_line_length      = $rOpts->{'fuzzy-line-length'};
+    $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
+    $rOpts_ignore_side_comment_lengths =
+      $rOpts->{'ignore-side-comment-lengths'};
+    $rOpts_indent_closing_brace     = $rOpts->{'indent-closing-brace'};
+    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
+    $rOpts_indent_only              = $rOpts->{'indent-only'};
+    $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
+    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
+    $rOpts_maximum_consecutive_blank_lines =
+      $rOpts->{'maximum-consecutive-blank-lines'};
+    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
+    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
+    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
+    $rOpts_outdent_keywords          = $rOpts->{'outdent-keywords'};
+    $rOpts_outdent_labels            = $rOpts->{'outdent-labels'};
+    $rOpts_outdent_static_block_comments =
+      $rOpts->{'outdent-static-block-comments'};
+    $rOpts_recombine = $rOpts->{'recombine'};
+    $rOpts_short_concatenation_item_length =
+      $rOpts->{'short-concatenation-item-length'};
+    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
+    $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
+    $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
+    $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
+    $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
+    $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
 
     # Note that both opening and closing tokens can access the opening
     # and closing flags of their container types.
@@ -14111,8 +14111,8 @@ sub break_equals {
                     # This doesn't work well with -icb through
                     if (
                            $block_type_to_go[$iend_1] eq 'eval'
-                        && !$rOpts->{'line-up-parentheses'}
-                        && !$rOpts->{'indent-closing-brace'}
+                        && !$rOpts_line_up_parentheses
+                        && !$rOpts_indent_closing_brace
                         && $tokens_to_go[$iend_2] eq '{'
                         && (
                             ( $type_ibeg_2 =~ /^(\&\&|\|\|)$/ )
@@ -21273,12 +21273,16 @@ sub make_paren_name {
         my $terminal_block_type = $block_type_to_go[$i_terminal];
         my $is_outdented_line   = 0;
 
-        my $type_beg      = $types_to_go[$ibeg];
-        my $token_beg     = $tokens_to_go[$ibeg];
-        my $K_beg         = $K_to_go[$ibeg];
-        my $ibeg_weld_fix = $ibeg;
-        my $seqno_beg     = $type_sequence_to_go[$ibeg];
-        my $is_bli_beg    = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
+        my $type_beg            = $types_to_go[$ibeg];
+        my $token_beg           = $tokens_to_go[$ibeg];
+        my $block_type_beg      = $block_type_to_go[$ibeg];
+        my $level_beg           = $levels_to_go[$ibeg];
+        my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
+        my $K_beg               = $K_to_go[$ibeg];
+        my $seqno_beg           = $type_sequence_to_go[$ibeg];
+        my $ibeg_weld_fix       = $ibeg;
+        my $is_closing_type_beg = $is_closing_type{$type_beg};
+        my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
         # QW INDENTATION PATCH 3:
         my $seqno_qw_closing;
@@ -21308,8 +21312,8 @@ sub make_paren_name {
 
         # MOJO: Set a flag if this lines begins with ')->'
         my $leading_paren_arrow = (
-                 $types_to_go[$ibeg] eq '}'
-              && $tokens_to_go[$ibeg] eq ')'
+                 $is_closing_type_beg
+              && $token_beg eq ')'
               && (
                 ( $ibeg < $i_terminal && $types_to_go[ $ibeg + 1 ] eq '->' )
                 || (   $ibeg < $i_terminal - 1
@@ -21389,7 +21393,7 @@ sub make_paren_name {
         }
 
         # if we are at a closing token of some type..
-        if ( $is_closing_type{$type_beg} || $seqno_qw_closing ) {
+        if ( $is_closing_type_beg || $seqno_qw_closing ) {
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -21427,7 +21431,7 @@ sub make_paren_name {
                     $type_beg eq '}'
 
                     && (   $types_to_go[$iend] eq '{'
-                        || $levels_to_go[$iend] < $levels_to_go[$ibeg] )
+                        || $levels_to_go[$iend] < $level_beg )
                 )
 
                 # and when the next line is at a lower indentation level...
@@ -21476,14 +21480,14 @@ sub make_paren_name {
             # it is the last token before a level decrease.  This will allow
             # a closing token to line up with its opening counterpart, and
             # avoids an indentation jump larger than 1 level.
-            if (   $types_to_go[$i_terminal] =~ /^[\}\]\)R]$/
-                && $i_terminal == $ibeg
+            if (   $i_terminal == $ibeg
+                && $is_closing_type_beg
                 && defined($K_beg) )
             {
                 my $K_next_nonblank = $self->K_next_code($K_beg);
 
                 if ( !$is_bli_beg && defined($K_next_nonblank) ) {
-                    my $lev        = $rLL->[$K_beg]->[_LEVEL_];
+                    my $lev        = $level_beg;
                     my $level_next = $rLL->[$K_next_nonblank]->[_LEVEL_];
 
                     # and do not undo ci if it was set by the -xci option
@@ -21498,9 +21502,10 @@ sub make_paren_name {
                 # but right now we do not have that information.  For now
                 # we see if we are in a list, and this works well.
                 # See test files 'sub*.t' for good test cases.
-                if (   $block_type_to_go[$ibeg] =~ /$ASUB_PATTERN/
-                    && $terminal_is_in_list
-                    && !$rOpts->{'indent-closing-brace'} )
+                if (   $terminal_is_in_list
+                    && !$rOpts_indent_closing_brace
+                    && $block_type_beg
+                    && $block_type_beg =~ /$ASUB_PATTERN/ )
                 {
                     (
                         $opening_indentation, $opening_offset,
@@ -21508,7 +21513,7 @@ sub make_paren_name {
                       )
                       = $self->get_opening_indentation( $ibeg, $ri_first,
                         $ri_last, $rindentation_list );
-                    my $indentation = $leading_spaces_to_go[$ibeg];
+                    my $indentation = $leading_spaces_beg;
                     if ( defined($opening_indentation)
                         && get_spaces($indentation) >
                         get_spaces($opening_indentation) )
@@ -21522,9 +21527,9 @@ sub make_paren_name {
             # Undo ci of line with leading closing eval brace,
             # but not beyond the indention of the line with
             # the opening brace.
-            if (   $block_type_to_go[$ibeg] eq 'eval'
-                && !$rOpts->{'line-up-parentheses'}
-                && !$rOpts->{'indent-closing-brace'} )
+            if (   $block_type_beg eq 'eval'
+                && !$rOpts_line_up_parentheses
+                && !$rOpts_indent_closing_brace )
             {
                 (
                     $opening_indentation, $opening_offset,
@@ -21532,7 +21537,7 @@ sub make_paren_name {
                   )
                   = $self->get_opening_indentation( $ibeg, $ri_first, $ri_last,
                     $rindentation_list );
-                my $indentation = $leading_spaces_to_go[$ibeg];
+                my $indentation = $leading_spaces_beg;
                 if ( defined($opening_indentation)
                     && get_spaces($indentation) >
                     get_spaces($opening_indentation) )
@@ -21549,11 +21554,11 @@ sub make_paren_name {
             # Now modify default behavior according to user request:
             # handle option to indent non-blocks of the form );  };  ];
             # But don't do special indentation to something like ')->pack('
-            if ( !$block_type_to_go[$ibeg] ) {
+            if ( !$block_type_beg ) {
 
                 # Note that logical padding has already been applied, so we may
                 # need to remove some spaces to get a valid hash key.
-                my $tok = $tokens_to_go[$ibeg];
+                my $tok = $token_beg;
                 my $cti = $closing_token_indentation{$tok};
 
                 # Fix the value of 'cti' for an isloated non-welded closing qw
@@ -21628,7 +21633,7 @@ sub make_paren_name {
             # handle option to indent blocks
             else {
                 if (
-                    $rOpts->{'indent-closing-brace'}
+                    $rOpts_indent_closing_brace
                     && (
                         $i_terminal == $ibeg    #  isolated terminal '}'
                         || $is_semicolon_terminated
@@ -21654,7 +21659,7 @@ sub make_paren_name {
 
         # if line begins with a ':', align it with any
         # previous line leading with corresponding ?
-        elsif ( $types_to_go[$ibeg] eq ':' ) {
+        elsif ( $type_beg eq ':' ) {
             (
                 $opening_indentation, $opening_offset,
                 $is_leading,          $opening_exists
@@ -21678,8 +21683,8 @@ sub make_paren_name {
         my $level_end = $levels_to_go[$iend];
 
         if ( $adjust_indentation == 0 ) {
-            $indentation = $leading_spaces_to_go[$ibeg];
-            $lev         = $levels_to_go[$ibeg];
+            $indentation = $leading_spaces_beg;
+            $lev         = $level_beg;
         }
         elsif ( $adjust_indentation == 1 ) {
 
@@ -21714,7 +21719,7 @@ sub make_paren_name {
         elsif ( $adjust_indentation == 2 ) {
 
             # handle option to align closing token with opening token
-            $lev = $levels_to_go[$ibeg];
+            $lev = $level_beg;
 
             # calculate spaces needed to align with opening token
             my $space_count =
@@ -21742,10 +21747,10 @@ sub make_paren_name {
 
             # reset the indentation to the new space count if it works
             # only options are all or none: nothing in-between looks good
-            $lev = $levels_to_go[$ibeg];
+            $lev = $level_beg;
             if ( $space_count < $last_spaces ) {
                 if ($rOpts_line_up_parentheses) {
-                    my $lev = $levels_to_go[$ibeg];
+                    my $lev = $level_beg;
                     $indentation =
                       new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
                 }
@@ -21758,7 +21763,7 @@ sub make_paren_name {
             else {
                 $space_count = leading_spaces_to_go($ibeg);
                 if ( $default_adjust_indentation == 0 ) {
-                    $indentation = $leading_spaces_to_go[$ibeg];
+                    $indentation = $leading_spaces_beg;
                 }
                 elsif ( $default_adjust_indentation == 1 ) {
                     $indentation = $reduced_spaces_to_go[$i_terminal];
@@ -21791,7 +21796,7 @@ sub make_paren_name {
             #                 } @files;
             #         }
             #
-            if (   $block_type_to_go[$ibeg]
+            if (   $block_type_beg
                 && $ci_levels_to_go[$i_terminal] == 0 )
             {
                 my $spaces = get_spaces( $leading_spaces_to_go[$i_terminal] );
@@ -21824,15 +21829,15 @@ sub make_paren_name {
 
             # use previous indentation but use own level
             # to cause list to be flushed properly
-            $lev = $levels_to_go[$ibeg];
+            $lev = $level_beg;
         }
 
         # remember indentation except for multi-line quotes, which get
         # no indentation
         unless ( $ibeg == 0 && $starting_in_quote ) {
             $last_indentation_written    = $indentation;
-            $last_unadjusted_indentation = $leading_spaces_to_go[$ibeg];
-            $last_leading_token          = $tokens_to_go[$ibeg];
+            $last_unadjusted_indentation = $leading_spaces_beg;
+            $last_leading_token          = $token_beg;
 
             # Patch to make a line which is the end of a qw quote work with the
             # -lp option.  Make $token_beg look like a closing token as some
@@ -21857,7 +21862,6 @@ sub make_paren_name {
             #      $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
             #      2981014)])
             #  ));
-            ## if ($seqno_qw_closing) { $last_leading_token = ')' }
             if ( $seqno_qw_closing
                 && ( length($token_beg) > 1 || $token_beg eq '>' ) )
             {
@@ -21874,16 +21878,13 @@ sub make_paren_name {
         # we must treat something like '} else {' as if it were
         # an isolated brace
         #############################################################
-        my $is_isolated_block_brace = $block_type_to_go[$ibeg]
-          && (
-            $i_terminal == $ibeg
-            || $is_if_elsif_else_unless_while_until_for_foreach{
-                $block_type_to_go[$ibeg]
-            }
+        my $is_isolated_block_brace = $block_type_beg
+          && ( $i_terminal == $ibeg
+            || $is_if_elsif_else_unless_while_until_for_foreach{$block_type_beg}
           );
 
         # only do this for a ':; which is aligned with its leading '?'
-        my $is_unaligned_colon = $types_to_go[$ibeg] eq ':' && !$is_leading;
+        my $is_unaligned_colon = $type_beg eq ':' && !$is_leading;
 
         if (
             defined($opening_indentation)
@@ -21910,22 +21911,18 @@ sub make_paren_name {
             && (
 
                 # certain leading keywords if requested
-                (
-                       $rOpts->{'outdent-keywords'}
-                    && $types_to_go[$ibeg] eq 'k'
-                    && $outdent_keyword{ $tokens_to_go[$ibeg] }
-                )
+                $rOpts_outdent_keywords
+                && $type_beg eq 'k'
+                && $outdent_keyword{$token_beg}
 
                 # or labels if requested
-                || ( $rOpts->{'outdent-labels'} && $types_to_go[$ibeg] eq 'J' )
+                || $rOpts_outdent_labels && $type_beg eq 'J'
 
                 # or static block comments if requested
-                || (   $types_to_go[$ibeg] eq '#'
-                    && $rOpts->{'outdent-static-block-comments'}
-                    && $is_static_block_comment )
+                || $is_static_block_comment
+                && $rOpts_outdent_static_block_comments
             )
           )
-
         {
             my $space_count = leading_spaces_to_go($ibeg);
             if ( $space_count > 0 ) {
@@ -21936,7 +21933,7 @@ sub make_paren_name {
                 # do not promote a spaced static block comment to non-spaced;
                 # this is not normally necessary but could be for some
                 # unusual user inputs (such as -ci = -i)
-                if ( $types_to_go[$ibeg] eq '#' && $space_count == 0 ) {
+                if ( $type_beg eq '#' && $space_count == 0 ) {
                     $space_count = 1;
                 }
 
