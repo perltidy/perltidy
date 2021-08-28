@@ -7542,11 +7542,6 @@ sub setup_new_weld_measurements {
     my $Kprev = $self->K_previous_nonblank($Kfirst);
     if ( defined($Kprev) ) {
 
-        # The -iob and -wn flags do not work well together. To avoid
-        # blinking states we have to override -iob at certain key line
-        # breaks.
-        $self->[_ris_essential_old_breakpoint_]->{$Kprev} = 1;
-
         # Avoid measuring from between an opening paren and a previous token
         # which should stay close to it ... fixes b1185
         my $token_oo  = $rLL->[$Kouter_opening]->[_TOKEN_];

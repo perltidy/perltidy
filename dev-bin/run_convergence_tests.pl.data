@@ -7184,6 +7184,26 @@ print
 --paren-vertical-tightness=2
 --weld-nested-containers
 
+==> b1196.in <==
+# S1
+ok(
+        $strX eq
+                 NFC( join( '', @strX ) )
+);
+# S2
+ok(
+        $strX eq NFC( join( '',
+                @strX ) )
+);
+
+==> b1196.par <==
+--continuation-indentation=9
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=8
+--maximum-line-length=42
+--weld-nested-containers
+
 ==> b120.in <==
 # Same as bug96
 # State 1

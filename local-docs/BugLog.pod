@@ -2,6 +2,13 @@
 
 =over 4
 
+=item B<Fix formatting instability issues b1195, b1196>
+
+Testing with random parameters produced two similar cases of unstable
+formatting which are fixed with this update.
+
+28 Aug 2021.
+
 =item B<Fix formatting instability issue b1194>
 
 Testing with random parameters produced a case of unstable formatting
