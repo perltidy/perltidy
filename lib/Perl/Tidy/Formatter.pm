@@ -846,6 +846,87 @@ sub new {
 # CODE SECTION 2: Some Basic Utilities
 ######################################
 
+sub check_keys {
+    my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
+
+    # Check the keys of a hash:
+    # $rtest   = ref to hash to test
+    # $rvalid  = ref to hash with valid keys
+
+    # $msg = a message to write in case of error
+    # $exact_match defines the type of check:
+    #     = false: test hash must not have unknown key
+    #     = true:  test hash must have exactly same keys as known hash
+    my @unknown_keys =
+      grep { !exists $rvalid->{$_} } keys %{$rtest};
+    my @missing_keys =
+      grep { !exists $rtest->{$_} } keys %{$rvalid};
+    my $error = @unknown_keys;
+    if ($exact_match) { $error ||= @missing_keys }
+    if ($error) {
+        local $" = ')(';
+        my @expected_keys = sort keys %{$rvalid};
+        @unknown_keys = sort @unknown_keys;
+        Fault(<<EOM);
+------------------------------------------------------------------------
+Program error detected checking hash keys
+Message is: '$msg'
+Expected keys: (@expected_keys)
+Unknown key(s): (@unknown_keys)
+Missing key(s): (@missing_keys)
+------------------------------------------------------------------------
+EOM
+    }
+    return;
+}
+
+{    ## begin closure check_line_hashes
+
+    # This code checks that no autovivification occurs in the 'line' hash
+
+    my %valid_line_hash;
+
+    BEGIN {
+
+        # These keys are defined for each line in the formatter
+        # Each line must have exactly these quantities
+        my @valid_line_keys = qw(
+          _curly_brace_depth
+          _ending_in_quote
+          _guessed_indentation_level
+          _line_number
+          _line_text
+          _line_type
+          _paren_depth
+          _quote_character
+          _rK_range
+          _square_bracket_depth
+          _starting_in_quote
+          _ended_in_blank_token
+          _code_type
+
+          _ci_level_0
+          _level_0
+          _nesting_blocks_0
+          _nesting_tokens_0
+        );
+
+        @valid_line_hash{@valid_line_keys} = (1) x scalar(@valid_line_keys);
+    }
+
+    sub check_line_hashes {
+        my $self   = shift;
+        my $rlines = $self->[_rlines_];
+        foreach my $rline ( @{$rlines} ) {
+            my $iline     = $rline->{_line_number};
+            my $line_type = $rline->{_line_type};
+            check_keys( $rline, \%valid_line_hash,
+                "Checkpoint: line number =$iline,  line_type=$line_type", 1 );
+        }
+        return;
+    }
+} ## end closure check_line_hashes
+
 {    ## begin closure for logger routines
     my $logger_object;
 
@@ -4482,9 +4563,6 @@ sub make_closing_side_comment_prefix {
 
 {    ## begin closure write_line
 
-    my $Last_line_had_side_comment;
-    my $In_format_skipping_section;
-    my $Saw_VERSION_in_this_file;
     my $nesting_depth;
 
     # Variables used by sub check_sequence_numbers:
@@ -4495,10 +4573,7 @@ sub make_closing_side_comment_prefix {
 
     sub initialize_write_line {
 
-        $Last_line_had_side_comment = 0;
-        $In_format_skipping_section = 0;
-        $Saw_VERSION_in_this_file   = 0;
-        $nesting_depth              = undef;
+        $nesting_depth = undef;
 
         $last_seqno        = SEQ_ROOT;
         %saw_opening_seqno = ();
@@ -4619,6 +4694,8 @@ EOM
         my $rlines_new    = $self->[_rlines_];
         my $maximum_level = $self->[_maximum_level_];
 
+        my $K_opening_container     = $self->[_K_opening_container_];
+        my $K_closing_container     = $self->[_K_closing_container_];
         my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
         my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
         my $rSS                     = $self->[_rSS_];
@@ -4728,6 +4805,7 @@ EOM
                             # unbalanced code but will be ignored here.
                             $rblock_type_of_seqno->{$seqno} = $rblock_type->[$j]
                               if ( $rblock_type->[$j] );
+                            $K_opening_container->{$seqno} = @{$rLL};
                         }
                         elsif ( $is_closing_token{$token} ) {
 
@@ -4752,8 +4830,9 @@ No opening token seen for closing token = '$token' at seq=$seqno at depth=$openi
 EOM
                                 }
                             }
-                            $nesting_depth = $opening_depth;
-                            $sign          = -1;
+                            $K_closing_container->{$seqno} = @{$rLL};
+                            $nesting_depth                 = $opening_depth;
+                            $sign                          = -1;
                         }
                         elsif ( $token eq '?' ) {
                         }
@@ -4805,10 +4884,6 @@ EOM
                 $line_of_tokens->{_nesting_tokens_0} = $rnesting_tokens->[0];
             } ## end if ( $jmax >= 0 )
 
-            $CODE_type =
-              $self->get_CODE_type( $line_of_tokens, $Kfirst, $Klimit,
-                $input_line_no );
-
             $tee_output ||=
                  $rOpts_tee_block_comments
               && $jmax == 0
@@ -4819,74 +4894,6 @@ EOM
               && defined($Kfirst)
               && $Klimit > $Kfirst
               && $rLL->[$Klimit]->[_TYPE_] eq '#';
-
-            # Handle any requested side comment deletions. It is easier to get
-            # this done here rather than farther down the pipeline because IO
-            # lines take a different route, and because lines with deleted HSC
-            # become BL lines.  An since we are deleting now, we have to also
-            # handle any tee- requests before the side comments vanish.
-            my $delete_side_comment =
-                 $rOpts_delete_side_comments
-              && defined($Kfirst)
-              && $rLL->[$Klimit]->[_TYPE_] eq '#'
-              && ( $Klimit > $Kfirst || $CODE_type eq 'HSC' )
-              && (!$CODE_type
-                || $CODE_type eq 'HSC'
-                || $CODE_type eq 'IO'
-                || $CODE_type eq 'NIN' );
-
-            if (
-                   $rOpts_delete_closing_side_comments
-                && !$delete_side_comment
-                && defined($Kfirst)
-                && $Klimit > $Kfirst
-                && $rLL->[$Klimit]->[_TYPE_] eq '#'
-                && (  !$CODE_type
-                    || $CODE_type eq 'HSC'
-                    || $CODE_type eq 'IO'
-                    || $CODE_type eq 'NIN' )
-              )
-            {
-                my $token  = $rLL->[$Klimit]->[_TOKEN_];
-                my $K_m    = $Klimit - 1;
-                my $type_m = $rLL->[$K_m]->[_TYPE_];
-                if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
-                my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
-                if ($seqno_m) {
-                    my $block_type_m = $rblock_type_of_seqno->{$seqno_m};
-                    if (   $block_type_m
-                        && $token =~ /$closing_side_comment_prefix_pattern/
-                        && $block_type_m =~
-                        /$closing_side_comment_list_pattern/ )
-                    {
-                        $delete_side_comment = 1;
-                    }
-                }
-            } ## end if ( $rOpts_delete_closing_side_comments...)
-
-            if ($delete_side_comment) {
-                pop @{$rLL};
-                $Klimit -= 1;
-                if (   $Klimit > $Kfirst
-                    && $rLL->[$Klimit]->[_TYPE_] eq 'b' )
-                {
-                    pop @{$rLL};
-                    $Klimit -= 1;
-                }
-
-                # The -io option outputs the line text, so we have to update
-                # the line text so that the comment does not reappear.
-                if ( $CODE_type eq 'IO' ) {
-                    my $line = "";
-                    foreach my $KK ( $Kfirst .. $Klimit ) {
-                        $line .= $rLL->[$KK]->[_TOKEN_];
-                    }
-                    $line_of_tokens->{_line_text} = $line . "\n";
-                }
-
-                # If we delete a hanging side comment the line becomes blank.
-                if ( $CODE_type eq 'HSC' ) { $CODE_type = 'BL' }
-            }
 
         } ## end if ( $line_type eq 'CODE')
 
@@ -4905,219 +4912,6 @@ EOM
         push @{$rlines_new}, $line_of_tokens;
         return;
     }
-
-    sub get_CODE_type {
-        my ( $self, $line_of_tokens, $Kfirst, $Klast, $input_line_no ) = @_;
-
-        # We are looking at a line of code and setting a flag to
-        # describe any special processing that it requires
-
-        # Possible CODE_types
-        # 'VB'  = Verbatim - line goes out verbatim (a quote)
-        # 'FS'  = Format Skipping - line goes out verbatim
-        # 'BL'  = Blank Line
-        # 'HSC' = Hanging Side Comment - fix this hanging side comment
-        # 'SBCX'= Static Block Comment Without Leading Space
-        # 'SBC' = Static Block Comment
-        # 'BC'  = Block Comment - an ordinary full line comment
-        # 'IO'  = Indent Only - line goes out unchanged except for indentation
-        # 'NIN' = No Internal Newlines - line does not get broken
-        # 'VER' = VERSION statement
-        # ''    = ordinary line of code with no restructions
-
-        my $rLL = $self->[_rLL_];
-
-        my $CODE_type  = "";
-        my $input_line = $line_of_tokens->{_line_text};
-        my $jmax       = defined($Kfirst) ? $Klast - $Kfirst : -1;
-
-        my $is_block_comment = 0;
-        my $has_side_comment = 0;
-
-        if ( $jmax >= 0 && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
-            if   ( $jmax == 0 ) { $is_block_comment = 1; }
-            else                { $has_side_comment = 1 }
-        }
-
-        # Write line verbatim if we are in a formatting skip section
-        if ($In_format_skipping_section) {
-
-            # Note: extra space appended to comment simplifies pattern matching
-            if ( $is_block_comment
-                && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
-                /$format_skipping_pattern_end/ )
-            {
-                $In_format_skipping_section = 0;
-                write_logfile_entry(
-                    "Line $input_line_no: Exiting format-skipping section\n");
-            }
-            $CODE_type = 'FS';
-            goto RETURN;
-        }
-
-        # Check for a continued quote..
-        if ( $line_of_tokens->{_starting_in_quote} ) {
-
-            # A line which is entirely a quote or pattern must go out
-            # verbatim.  Note: the \n is contained in $input_line.
-            if ( $jmax <= 0 ) {
-                if ( ( $input_line =~ "\t" ) ) {
-                    my $input_line_number = $line_of_tokens->{_line_number};
-                    $self->note_embedded_tab($input_line_number);
-                }
-                $CODE_type = 'VB';
-                goto RETURN;
-            }
-        }
-
-        # See if we are entering a formatting skip section
-        if (   $rOpts_format_skipping
-            && $is_block_comment
-            && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
-            /$format_skipping_pattern_begin/ )
-        {
-            $In_format_skipping_section = 1;
-            write_logfile_entry(
-                "Line $input_line_no: Entering format-skipping section\n");
-            $CODE_type = 'FS';
-            goto RETURN;
-        }
-
-        # ignore trailing blank tokens (they will get deleted later)
-        if ( $jmax > 0 && $rLL->[$Klast]->[_TYPE_] eq 'b' ) {
-            $jmax--;
-        }
-
-        # blank line..
-        if ( $jmax < 0 ) {
-            $CODE_type = 'BL';
-            goto RETURN;
-        }
-
-        # see if this is a static block comment (starts with ## by default)
-        my $is_static_block_comment                       = 0;
-        my $is_static_block_comment_without_leading_space = 0;
-        if (   $is_block_comment
-            && $rOpts->{'static-block-comments'}
-            && $input_line =~ /$static_block_comment_pattern/ )
-        {
-            $is_static_block_comment = 1;
-            $is_static_block_comment_without_leading_space =
-              substr( $input_line, 0, 1 ) eq '#';
-        }
-
-        # Check for comments which are line directives
-        # Treat exactly as static block comments without leading space
-        # reference: perlsyn, near end, section Plain Old Comments (Not!)
-        # example: '# line 42 "new_filename.plx"'
-        if (
-               $is_block_comment
-            && $input_line =~ /^\#   \s*
-                               line \s+ (\d+)   \s*
-                               (?:\s("?)([^"]+)\2)? \s*
-                               $/x
-          )
-        {
-            $is_static_block_comment                       = 1;
-            $is_static_block_comment_without_leading_space = 1;
-        }
-
-        # look for hanging side comment
-        if (
-               $is_block_comment
-            && $Last_line_had_side_comment  # last line had side comment
-            && $input_line =~ /^\s/         # there is some leading space
-            && !$is_static_block_comment    # do not make static comment hanging
-            && $rOpts->{'hanging-side-comments'}    # user is allowing
-                                                    # hanging side comments
-                                                    # like this
-          )
-        {
-            $has_side_comment = 1;
-            $CODE_type        = 'HSC';
-            goto RETURN;
-        }
-
-        # Handle a block (full-line) comment..
-        if ($is_block_comment) {
-
-            if ($is_static_block_comment_without_leading_space) {
-                $CODE_type = 'SBCX';
-                goto RETURN;
-            }
-            elsif ($is_static_block_comment) {
-                $CODE_type = 'SBC';
-                goto RETURN;
-            }
-            elsif ($Last_line_had_side_comment
-                && !$rOpts_maximum_consecutive_blank_lines
-                && $rLL->[$Kfirst]->[_LEVEL_] > 0 )
-            {
-                # Emergency fix to keep a block comment from becoming a hanging
-                # side comment.  This fix is for the case that blank lines
-                # cannot be inserted.  There is related code in sub
-                # 'process_line_of_CODE'
-                $CODE_type = 'SBCX';
-                goto RETURN;
-            }
-            else {
-                $CODE_type = 'BC';
-                goto RETURN;
-            }
-        }
-
-        # End of comments. Handle a line of normal code:
-
-        if ($rOpts_indent_only) {
-            $CODE_type = 'IO';
-            goto RETURN;
-        }
-
-        if ( !$rOpts_add_newlines ) {
-            $CODE_type = 'NIN';
-            goto RETURN;
-        }
-
-        #   Patch needed for MakeMaker.  Do not break a statement
-        #   in which $VERSION may be calculated.  See MakeMaker.pm;
-        #   this is based on the coding in it.
-        #   The first line of a file that matches this will be eval'd:
-        #       /([\$*])(([\w\:\']*)\bVERSION)\b.*\=/
-        #   Examples:
-        #     *VERSION = \'1.01';
-        #     ( $VERSION ) = '$Revision: 1.74 $ ' =~ /\$Revision:\s+([^\s]+)/;
-        #   We will pass such a line straight through without breaking
-        #   it unless -npvl is used.
-
-        #   Patch for problem reported in RT #81866, where files
-        #   had been flattened into a single line and couldn't be
-        #   tidied without -npvl.  There are two parts to this patch:
-        #   First, it is not done for a really long line (80 tokens for now).
-        #   Second, we will only allow up to one semicolon
-        #   before the VERSION.  We need to allow at least one semicolon
-        #   for statements like this:
-        #      require Exporter;  our $VERSION = $Exporter::VERSION;
-        #   where both statements must be on a single line for MakeMaker
-
-        my $is_VERSION_statement = 0;
-        if (  !$Saw_VERSION_in_this_file
-            && $jmax < 80
-            && $input_line =~
-            /^[^;]*;?[^;]*([\$*])(([\w\:\']*)\bVERSION)\b.*\=/ )
-        {
-            $Saw_VERSION_in_this_file = 1;
-            write_logfile_entry("passing VERSION line; -npvl deactivates\n");
-
-            # This code type has lower priority than others
-            $CODE_type = 'VER';
-            goto RETURN;
-        }
-
-      RETURN:
-        $Last_line_had_side_comment = $has_side_comment;
-        return $CODE_type;
-    }
-
 } ## end closure write_line
 
 #############################################
@@ -5157,6 +4951,11 @@ EOM
         $self->[_save_logfile_] = $logger_object->get_save_logfile();
     }
 
+    $self->set_CODE_type();
+
+    # Verify that the line hash does not have any unknown keys.
+    $self->check_line_hashes() if (DEVEL_MODE);
+
     # Make a pass through all tokens, adding or deleting any whitespace as
     # required.  Also make any other changes, such as adding semicolons.
     # All token changes must be made here so that the token data structure
@@ -5185,6 +4984,370 @@ EOM
 
     # A final routine to tie up any loose ends
     $self->wrapup();
+    return;
+}
+
+sub set_CODE_type {
+    my ($self) = @_;
+
+    # This routine performs two tasks:
+
+    # TASK 1: Examine each line of code and set a flag '$CODE_type' to describe
+    # any special processing that it requires.
+
+    # TASK 2: Delete side comments if requested.
+
+    my $rLL                  = $self->[_rLL_];
+    my $Klimit               = $self->[_Klimit_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    my $rOpts_format_skipping_begin = $rOpts->{'format-skipping-begin'};
+    my $rOpts_format_skipping_end   = $rOpts->{'format-skipping-end'};
+    my $rOpts_static_block_comment_prefix =
+      $rOpts->{'static-block-comment-prefix'};
+
+    # Remember indexes of lines with side comments
+    my @ix_side_comments;
+
+    my $In_format_skipping_section = 0;
+    my $Saw_VERSION_in_this_file   = 0;
+    my $has_side_comment           = 0;
+
+    ###############################
+    # TASK 1: Loop to set CODE_type
+    ###############################
+
+    # Possible CODE_types
+    # 'VB'  = Verbatim - line goes out verbatim (a quote)
+    # 'FS'  = Format Skipping - line goes out verbatim
+    # 'BL'  = Blank Line
+    # 'HSC' = Hanging Side Comment - fix this hanging side comment
+    # 'SBCX'= Static Block Comment Without Leading Space
+    # 'SBC' = Static Block Comment
+    # 'BC'  = Block Comment - an ordinary full line comment
+    # 'IO'  = Indent Only - line goes out unchanged except for indentation
+    # 'NIN' = No Internal Newlines - line does not get broken
+    # 'VER' = VERSION statement
+    # ''    = ordinary line of code with no restructions
+
+    my $ix_line = -1;
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $ix_line++;
+        my $input_line_no = $line_of_tokens->{_line_number};
+        my $line_type     = $line_of_tokens->{_line_type};
+
+        my $Last_line_had_side_comment = $has_side_comment;
+        if ($has_side_comment) {
+            push @ix_side_comments, $ix_line - 1;
+        }
+        $has_side_comment = 0;
+
+        next unless ( $line_type eq 'CODE' );
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+
+        my $CODE_type = "";
+
+        my $input_line = $line_of_tokens->{_line_text};
+        my $jmax       = defined($Kfirst) ? $Klast - $Kfirst : -1;
+
+        my $is_block_comment = 0;
+        if ( $jmax >= 0 && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+            if   ( $jmax == 0 ) { $is_block_comment = 1; }
+            else                { $has_side_comment = 1 }
+        }
+
+        # Write line verbatim if we are in a formatting skip section
+        if ($In_format_skipping_section) {
+
+            # Note: extra space appended to comment simplifies pattern matching
+            if (
+                $is_block_comment
+
+                # optional fast pre-check
+                && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#>>>'
+                    || $rOpts_format_skipping_end )
+
+                && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
+                /$format_skipping_pattern_end/
+              )
+            {
+                $In_format_skipping_section = 0;
+                write_logfile_entry(
+                    "Line $input_line_no: Exiting format-skipping section\n");
+            }
+            $CODE_type = 'FS';
+            goto NEXT;
+        }
+
+        # Check for a continued quote..
+        if ( $line_of_tokens->{_starting_in_quote} ) {
+
+            # A line which is entirely a quote or pattern must go out
+            # verbatim.  Note: the \n is contained in $input_line.
+            if ( $jmax <= 0 ) {
+                if ( ( $input_line =~ "\t" ) ) {
+                    my $input_line_number = $line_of_tokens->{_line_number};
+                    $self->note_embedded_tab($input_line_number);
+                }
+                $CODE_type = 'VB';
+                goto NEXT;
+            }
+        }
+
+        # See if we are entering a formatting skip section
+        if (
+            $is_block_comment
+
+            # optional fast pre-check
+            && ( substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 4 ) eq '#<<<'
+                || $rOpts_format_skipping_begin )
+
+            && $rOpts_format_skipping
+            && ( $rLL->[$Kfirst]->[_TOKEN_] . " " ) =~
+            /$format_skipping_pattern_begin/
+          )
+        {
+            $In_format_skipping_section = 1;
+            write_logfile_entry(
+                "Line $input_line_no: Entering format-skipping section\n");
+            $CODE_type = 'FS';
+            goto NEXT;
+        }
+
+        # ignore trailing blank tokens (they will get deleted later)
+        if ( $jmax > 0 && $rLL->[$Klast]->[_TYPE_] eq 'b' ) {
+            $jmax--;
+        }
+
+        # blank line..
+        if ( $jmax < 0 ) {
+            $CODE_type = 'BL';
+            goto NEXT;
+        }
+
+        # Handle comments
+        if ($is_block_comment) {
+
+            # see if this is a static block comment (starts with ## by default)
+            my $is_static_block_comment = 0;
+            my $no_leading_space        = substr( $input_line, 0, 1 ) eq '#';
+            if (
+
+                # optional fast pre-check
+                (
+                    substr( $rLL->[$Kfirst]->[_TOKEN_], 0, 2 ) eq '##'
+                    || $rOpts_static_block_comment_prefix
+                )
+
+                && $rOpts_static_block_comments
+                && $input_line =~ /$static_block_comment_pattern/
+              )
+            {
+                $is_static_block_comment = 1;
+            }
+
+            # Check for comments which are line directives
+            # Treat exactly as static block comments without leading space
+            # reference: perlsyn, near end, section Plain Old Comments (Not!)
+            # example: '# line 42 "new_filename.plx"'
+            if (
+                   $no_leading_space
+                && $input_line =~ /^\#   \s*
+                           line \s+ (\d+)   \s*
+                           (?:\s("?)([^"]+)\2)? \s*
+                           $/x
+              )
+            {
+                $is_static_block_comment = 1;
+            }
+
+            # look for hanging side comment
+            if (
+                $Last_line_had_side_comment    # last line had side comment
+                && !$no_leading_space          # there is some leading space
+                && !
+                $is_static_block_comment    # do not make static comment hanging
+                && $rOpts->{'hanging-side-comments'}    # user is allowing
+                                                        # hanging side comments
+                                                        # like this
+              )
+            {
+                $has_side_comment = 1;
+                $CODE_type        = 'HSC';
+                goto NEXT;
+            }
+
+            if ($is_static_block_comment) {
+                $CODE_type = $no_leading_space ? 'SBCX' : 'SBC';
+                goto NEXT;
+            }
+            elsif ($Last_line_had_side_comment
+                && !$rOpts_maximum_consecutive_blank_lines
+                && $rLL->[$Kfirst]->[_LEVEL_] > 0 )
+            {
+                # Emergency fix to keep a block comment from becoming a hanging
+                # side comment.  This fix is for the case that blank lines
+                # cannot be inserted.  There is related code in sub
+                # 'process_line_of_CODE'
+                $CODE_type = 'SBCX';
+                goto NEXT;
+            }
+            else {
+                $CODE_type = 'BC';
+                goto NEXT;
+            }
+        }
+
+        # End of comments. Handle a line of normal code:
+
+        if ($rOpts_indent_only) {
+            $CODE_type = 'IO';
+            goto NEXT;
+        }
+
+        if ( !$rOpts_add_newlines ) {
+            $CODE_type = 'NIN';
+            goto NEXT;
+        }
+
+        #   Patch needed for MakeMaker.  Do not break a statement
+        #   in which $VERSION may be calculated.  See MakeMaker.pm;
+        #   this is based on the coding in it.
+        #   The first line of a file that matches this will be eval'd:
+        #       /([\$*])(([\w\:\']*)\bVERSION)\b.*\=/
+        #   Examples:
+        #     *VERSION = \'1.01';
+        #     ( $VERSION ) = '$Revision: 1.74 $ ' =~ /\$Revision:\s+([^\s]+)/;
+        #   We will pass such a line straight through without breaking
+        #   it unless -npvl is used.
+
+        #   Patch for problem reported in RT #81866, where files
+        #   had been flattened into a single line and couldn't be
+        #   tidied without -npvl.  There are two parts to this patch:
+        #   First, it is not done for a really long line (80 tokens for now).
+        #   Second, we will only allow up to one semicolon
+        #   before the VERSION.  We need to allow at least one semicolon
+        #   for statements like this:
+        #      require Exporter;  our $VERSION = $Exporter::VERSION;
+        #   where both statements must be on a single line for MakeMaker
+
+        my $is_VERSION_statement = 0;
+        if (  !$Saw_VERSION_in_this_file
+            && $jmax < 80
+            && $input_line =~
+            /^[^;]*;?[^;]*([\$*])(([\w\:\']*)\bVERSION)\b.*\=/ )
+        {
+            $Saw_VERSION_in_this_file = 1;
+            write_logfile_entry("passing VERSION line; -npvl deactivates\n");
+
+            # This code type has lower priority than others
+            $CODE_type = 'VER';
+            goto NEXT;
+        }
+
+      NEXT:
+        $line_of_tokens->{_code_type} = $CODE_type;
+    }
+
+    if ($has_side_comment) {
+        push @ix_side_comments, $ix_line;
+    }
+
+    return
+      if ( !$rOpts_delete_side_comments
+        && !$rOpts_delete_closing_side_comments );
+
+    ######################################
+    # TASK 2: Loop to delete side comments
+    ######################################
+
+    # Handle any requested side comment deletions. It is easier to get
+    # this done here rather than farther down the pipeline because IO
+    # lines take a different route, and because lines with deleted HSC
+    # become BL lines.  We have already handled any tee requests in sub
+    # getline, so it is safe to delete side comments now.
+
+    # Also, we can get this done efficiently here.
+
+    foreach my $ix (@ix_side_comments) {
+        my $line_of_tokens = $rlines->[$ix];
+        my $line_type      = $line_of_tokens->{_line_type};
+
+        # This fault shouldn't happen because we only saved CODE lines with
+        # side comments in the TASK 1 loop above.
+        if ( $line_type ne 'CODE' ) {
+            Fault(<<EOM);
+Hit unexpected line_type = '$line_type' while deleting side comments, should be 'CODE'
+EOM
+        }
+
+        my $CODE_type = $line_of_tokens->{_code_type};
+        my $rK_range  = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        my $delete_side_comment =
+             $rOpts_delete_side_comments
+          && defined($Kfirst)
+          && $rLL->[$Klast]->[_TYPE_] eq '#'
+          && ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
+          && (!$CODE_type
+            || $CODE_type eq 'HSC'
+            || $CODE_type eq 'IO'
+            || $CODE_type eq 'NIN' );
+
+        if (
+               $rOpts_delete_closing_side_comments
+            && !$delete_side_comment
+            && defined($Kfirst)
+            && $Klast > $Kfirst
+            && $rLL->[$Klast]->[_TYPE_] eq '#'
+            && (  !$CODE_type
+                || $CODE_type eq 'HSC'
+                || $CODE_type eq 'IO'
+                || $CODE_type eq 'NIN' )
+          )
+        {
+            my $token  = $rLL->[$Klast]->[_TOKEN_];
+            my $K_m    = $Klast - 1;
+            my $type_m = $rLL->[$K_m]->[_TYPE_];
+            if ( $type_m eq 'b' && $K_m > $Kfirst ) { $K_m-- }
+            my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+            if ($seqno_m) {
+                my $block_type_m = $rblock_type_of_seqno->{$seqno_m};
+                if (   $block_type_m
+                    && $token        =~ /$closing_side_comment_prefix_pattern/
+                    && $block_type_m =~ /$closing_side_comment_list_pattern/ )
+                {
+                    $delete_side_comment = 1;
+                }
+            }
+        } ## end if ( $rOpts_delete_closing_side_comments...)
+
+        if ($delete_side_comment) {
+
+            # We are actually just changing the side comment to a blank.
+            # This may produce multiple blanks in a row, but sub respace_tokens
+            # will check for this and fix it.
+            $rLL->[$Klast]->[_TYPE_]  = 'b';
+            $rLL->[$Klast]->[_TOKEN_] = ' ';
+
+            # The -io option outputs the line text, so we have to update
+            # the line text so that the comment does not reappear.
+            if ( $CODE_type eq 'IO' ) {
+                my $line = "";
+                foreach my $KK ( $Kfirst .. $Klast - 1 ) {
+                    $line .= $rLL->[$KK]->[_TOKEN_];
+                }
+                $line =~ s/\s+$//;
+                $line_of_tokens->{_line_text} = $line . "\n";
+            }
+
+            # If we delete a hanging side comment the line becomes blank.
+            if ( $CODE_type eq 'HSC' ) { $line_of_tokens->{_code_type} = 'BL' }
+        }
+    }
+
     return;
 }
 
@@ -5278,9 +5441,15 @@ sub respace_tokens {
     my $depth_next             = 0;
     my $depth_next_max         = 0;
 
-    my $K_closing_container       = $self->[_K_closing_container_];
+    # Note that $K_opening_container and $K_closing_container have values
+    # defined in sub get_line() for the previous K indexes.  They were needed
+    # in case option 'indent-only' was set, and we didn't get here. We no longer
+    # need those and will eliminate them now to avoid any possible mixing of
+    # old and new values.
+    my $K_opening_container = $self->[_K_opening_container_] = {};
+    my $K_closing_container = $self->[_K_closing_container_] = {};
+
     my $K_closing_ternary         = $self->[_K_closing_ternary_];
-    my $K_opening_container       = $self->[_K_opening_container_];
     my $K_opening_ternary         = $self->[_K_opening_ternary_];
     my $rK_phantom_semicolons     = $self->[_rK_phantom_semicolons_];
     my $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
@@ -5324,8 +5493,9 @@ sub respace_tokens {
         my $is_blank   = $type eq 'b';
         my $block_type = "";
 
-        # Do not output consecutive blanks. This should not happen, but
-        # is worth checking because later routines make this assumption.
+        # Do not output consecutive blanks. This situation should have been
+        # prevented earlier, but it is worth checking because later routines
+        # make this assumption.
         if ( $is_blank && $KK_new && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
             return;
         }
@@ -5513,7 +5683,11 @@ sub respace_tokens {
             && $rLL_new->[-1]->[_TYPE_] ne 'b'
             && $rOpts_add_whitespace )
         {
-            my $rcopy = copy_token_as_type( $item, 'b', ' ' );
+            my $rcopy = [ @{$item} ];
+            $rcopy->[_TYPE_]          = 'b';
+            $rcopy->[_TOKEN_]         = ' ';
+            $rcopy->[_TYPE_SEQUENCE_] = '';
+
             $rcopy->[_LINE_INDEX_] =
               $rLL_new->[-1]->[_LINE_INDEX_];
 
@@ -5951,6 +6125,7 @@ sub respace_tokens {
                         $type_p,   $token_next, $type_next,
                     );
 
+                    # Note that repeated blanks will get filtered out here
                     next unless ($do_not_delete);
                 }
 
