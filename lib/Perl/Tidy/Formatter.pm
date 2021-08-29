@@ -4681,18 +4681,15 @@ EOM
 
     sub write_line {
 
-      # This routine originally received lines of code and immediately processed
-      # them.  That was efficient when memory was limited, but now it just saves
-      # the lines it receives.  They get processed all together after the last
-      # line is received.
+        # This routine receives lines one-by-one from the tokenizer and stores
+        # them in a format suitable for further processing.  After the last
+        # line has been sent, the tokenizer will call sub 'finish_formatting'
+        # to do the actual formatting.
 
-       # As tokenized lines are received they are converted to the format needed
-       # for the final formatting.
         my ( $self, $line_of_tokens_old ) = @_;
-        my $rLL           = $self->[_rLL_];
-        my $Klimit        = $self->[_Klimit_];
-        my $rlines_new    = $self->[_rlines_];
-        my $maximum_level = $self->[_maximum_level_];
+        my $rLL        = $self->[_rLL_];
+        my $Klimit     = $self->[_Klimit_];
+        my $rlines_new = $self->[_rlines_];
 
         my $K_opening_container     = $self->[_K_opening_container_];
         my $K_closing_container     = $self->[_K_closing_container_];
@@ -4704,7 +4701,7 @@ EOM
 
         my $Kfirst;
         my $line_of_tokens = {};
-        foreach my $key (
+        foreach (
             qw(
             _curly_brace_depth
             _ending_in_quote
@@ -4719,7 +4716,7 @@ EOM
             )
           )
         {
-            $line_of_tokens->{$key} = $line_of_tokens_old->{$key};
+            $line_of_tokens->{$_} = $line_of_tokens_old->{$_};
         }
 
         # Data needed by Logger
@@ -4731,9 +4728,9 @@ EOM
         # Needed to avoid trimming quotes
         $line_of_tokens->{_ended_in_blank_token} = undef;
 
-        my $line_type     = $line_of_tokens_old->{_line_type};
-        my $input_line_no = $line_of_tokens_old->{_line_number};
-        my $CODE_type     = "";
+        my $line_type   = $line_of_tokens_old->{_line_type};
+        my $line_number = $line_of_tokens_old->{_line_number};
+        my $CODE_type   = "";
         my $tee_output;
 
         # Handle line of non-code
@@ -4764,7 +4761,7 @@ EOM
 
                 DEVEL_MODE
                   && check_sequence_numbers( $rtokens, $rtoken_type,
-                    $rtype_sequence, $input_line_no );
+                    $rtype_sequence, $line_number );
 
                 # Find the starting nesting depth ...
                 # It must be the value of variable 'level' of the first token
@@ -4780,10 +4777,6 @@ EOM
 
                 foreach my $j ( 0 .. $jmax ) {
 
-                    if ( $rlevels->[$j] > $maximum_level ) {
-                        $maximum_level = $rlevels->[$j];
-                    }
-
                     # Do not clip the 'level' variable yet. We will do this
                     # later, in sub 'store_token_to_go'. The reason is that in
                     # files with level errors, the logic in 'weld_cuddled_else'
@@ -4793,9 +4786,9 @@ EOM
 
                     # Handle tokens with sequence numbers ...
                     my $seqno = $rtype_sequence->[$j];
-                    my $token = $rtokens->[$j];
                     if ($seqno) {
-                        my $sign = 1;
+                        my $token = $rtokens->[$j];
+                        my $sign  = 1;
                         if ( $is_opening_token{$token} ) {
                             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
                             $nesting_depth++;
@@ -4822,8 +4815,11 @@ EOM
                                 $rdepth_of_opening_seqno->[$seqno] =
                                   $opening_depth;
 
-                                # This is not fatal but should not happen. There
-                                # may be a problem in the tokenizer.
+                                # This is not fatal but should not happen.  The
+                                # tokenizer generates sequence numbers
+                                # incrementally upon encountering each new
+                                # opening token, so every positive sequence
+                                # number should correspond to an opening token.
                                 if (DEVEL_MODE) {
                                     Fault(<<EOM);
 No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
@@ -4853,8 +4849,19 @@ Expecting only opening or closing container tokens or ternary tokens with sequen
 EOM
                         }
 
-                        if   ( $sign > 0 ) { $Iss_opening->[$seqno] = @{$rSS} }
-                        else               { $Iss_closing->[$seqno] = @{$rSS} }
+                        if ( $sign > 0 ) {
+                            $Iss_opening->[$seqno] = @{$rSS};
+
+                            # For efficiency, we find the maximum level of
+                            # opening tokens of any type.  The actual maximum
+                            # level will be that of their contents which is 1
+                            # greater.
+                            my $level = $rlevels->[$j];
+                            if ( $level > $self->[_maximum_level_] ) {
+                                $self->[_maximum_level_] = $level;
+                            }
+                        }
+                        else { $Iss_closing->[$seqno] = @{$rSS} }
                         push @{$rSS}, $sign * $seqno;
 
                     }
@@ -4867,7 +4874,7 @@ EOM
                       = (
                         $rtokens->[$j],    $rtoken_type->[$j],
                         $seqno,            $rlevels->[$j],
-                        $rci_levels->[$j], $input_line_no - 1,
+                        $rci_levels->[$j], $line_number - 1,
                       );
                     push @{$rLL}, \@tokary;
                 } ## end foreach my $j ( 0 .. $jmax )
@@ -4907,7 +4914,6 @@ EOM
         $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
         $line_of_tokens->{_code_type} = $CODE_type;
         $self->[_Klimit_]             = $Klimit;
-        $self->[_maximum_level_]      = $maximum_level;
 
         push @{$rlines_new}, $line_of_tokens;
         return;
@@ -4926,14 +4932,15 @@ sub finish_formatting {
     # All of the relevant data is stored in $self, ready to go.
 
     # Check the maximum level. If it is extremely large we will
-    # give up and output the file verbatim.
+    # give up and output the file verbatim.  Note that the actual
+    # maximum level is 1 greater than the saved value.
     my $maximum_level       = $self->[_maximum_level_];
     my $maximum_table_index = $#maximum_line_length_at_level;
-    if ( !$severe_error && $maximum_level > $maximum_table_index ) {
+    if ( !$severe_error && $maximum_level >= $maximum_table_index ) {
         $severe_error ||= 1;
         Warn(<<EOM);
 The maximum indentation level, $maximum_level, exceeds the builtin limit of $maximum_table_index.
-Something may be wrong; formatting will be skipped. 
+Something may be wrong; formatting will be skipped.
 EOM
     }
 
@@ -19674,28 +19681,27 @@ EOM
             }
         }
 
-        # send this new line down the pipe
-        my $rvalign_hash = {};
-        ## $rvalign_hash->{level}                     = $lev;
-        ## $rvalign_hash->{level_end}                 = $level_end;
-        $rvalign_hash->{level}                     = $nesting_depth_beg;
-        $rvalign_hash->{level_end}                 = $nesting_depth_end;
-        $rvalign_hash->{level_adj}                 = $level_adj;
-        $rvalign_hash->{indentation}               = $indentation;
-        $rvalign_hash->{list_seqno}                = $list_seqno;
-        $rvalign_hash->{outdent_long_lines}        = $outdent_long_lines;
-        $rvalign_hash->{is_terminal_ternary}       = $is_terminal_ternary;
-        $rvalign_hash->{rvertical_tightness_flags} = $rvertical_tightness_flags;
-        $rvalign_hash->{rfields}                   = $rfields;
-        $rvalign_hash->{rpatterns}                 = $rpatterns;
-        $rvalign_hash->{rtokens}                   = $rtokens;
-        $rvalign_hash->{rfield_lengths}            = $rfield_lengths;
-        $rvalign_hash->{terminal_block_type}       = $terminal_block_type;
-        $rvalign_hash->{batch_count}               = $batch_count;
-        $rvalign_hash->{break_alignment_before}    = $break_alignment_before;
-        $rvalign_hash->{break_alignment_after}     = $break_alignment_after;
-        $rvalign_hash->{Kend}                      = $Kend_code;
-        $rvalign_hash->{ci_level}                  = $ci_levels_to_go[$ibeg];
+        # send this line to the vertical aligner
+        my $rvalign_hash = {
+            Kend                      => $Kend_code,
+            batch_count               => $batch_count,
+            break_alignment_after     => $break_alignment_after,
+            break_alignment_before    => $break_alignment_before,
+            ci_level                  => $ci_levels_to_go[$ibeg],
+            indentation               => $indentation,
+            is_terminal_ternary       => $is_terminal_ternary,
+            level                     => $nesting_depth_beg,
+            level_adj                 => $level_adj,
+            level_end                 => $nesting_depth_end,
+            list_seqno                => $list_seqno,
+            outdent_long_lines        => $outdent_long_lines,
+            rfield_lengths            => $rfield_lengths,
+            rfields                   => $rfields,
+            rpatterns                 => $rpatterns,
+            rtokens                   => $rtokens,
+            rvertical_tightness_flags => $rvertical_tightness_flags,
+            terminal_block_type       => $terminal_block_type,
+        };
 
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
@@ -21040,16 +21046,17 @@ sub pad_token {
         my @field_lengths = ();
         my $i_start       = $ibeg;
 
+        my $depth          = 0;
+        my %container_name = ( 0 => "" );
+
         # For a 'use' statement, use the module name as container name.
         # Fixes issue rt136416.
-        my $cname = "";
         if ( $types_to_go[$ibeg] eq 'k' && $tokens_to_go[$ibeg] eq 'use' ) {
             my $inext = $inext_to_go[$ibeg];
-            if ( $inext <= $iend ) { $cname = $tokens_to_go[$inext] }
+            if ( $inext <= $iend ) {
+                $container_name{'0'} = $tokens_to_go[$inext];
+            }
         }
-
-        my $depth          = 0;
-        my %container_name = ( 0 => "$cname" );
 
         my $j = 0;    # field index
 
@@ -21096,31 +21103,31 @@ sub pad_token {
                         }
                         $container_name{$depth} = "+" . $name;
 
-                       # Make the container name even more unique if necessary.
-                       # If we are not vertically aligning this opening paren,
-                       # append a character count to avoid bad alignment because
-                       # it usually looks bad to align commas within containers
-                       # for which the opening parens do not align.  Here
-                       # is an example very BAD alignment of commas (because
-                       # the atan2 functions are not all aligned):
-                       #    $XY =
-                       #      $X * $RTYSQP1 * atan2( $X, $RTYSQP1 ) +
-                       #      $Y * $RTXSQP1 * atan2( $Y, $RTXSQP1 ) -
-                       #      $X * atan2( $X,            1 ) -
-                       #      $Y * atan2( $Y,            1 );
-                       #
-                       # On the other hand, it is usually okay to align commas
-                       # if opening parens align, such as:
-                       #    glVertex3d( $cx + $s * $xs, $cy,            $z );
-                       #    glVertex3d( $cx,            $cy + $s * $ys, $z );
-                       #    glVertex3d( $cx - $s * $xs, $cy,            $z );
-                       #    glVertex3d( $cx,            $cy - $s * $ys, $z );
-                       #
-                       # To distinguish between these situations, we will append
-                       # the length of the line from the previous matching
-                       # token, or beginning of line, to the function name.
-                       # This will allow the vertical aligner to reject
-                       # undesirable matches.
+                        # Make the container name even more unique if necessary.
+                        # If we are not vertically aligning this opening paren,
+                        # append a character count to avoid bad alignment since
+                        # it usually looks bad to align commas within containers
+                        # for which the opening parens do not align.  Here
+                        # is an example very BAD alignment of commas (because
+                        # the atan2 functions are not all aligned):
+                        #    $XY =
+                        #      $X * $RTYSQP1 * atan2( $X, $RTYSQP1 ) +
+                        #      $Y * $RTXSQP1 * atan2( $Y, $RTXSQP1 ) -
+                        #      $X * atan2( $X,            1 ) -
+                        #      $Y * atan2( $Y,            1 );
+                        #
+                        # On the other hand, it is usually okay to align commas
+                        # if opening parens align, such as:
+                        #    glVertex3d( $cx + $s * $xs, $cy,            $z );
+                        #    glVertex3d( $cx,            $cy + $s * $ys, $z );
+                        #    glVertex3d( $cx - $s * $xs, $cy,            $z );
+                        #    glVertex3d( $cx,            $cy - $s * $ys, $z );
+                        #
+                        # To distinguish between these situations, we append
+                        # the length of the line from the previous matching
+                        # token, or beginning of line, to the function name.
+                        # This will allow the vertical aligner to reject
+                        # undesirable matches.
 
                         # if we are not aligning on this paren...
                         if ( !$ralignment_type_to_go->[$i] ) {
@@ -21141,9 +21148,10 @@ sub pad_token {
 
                             if ( $i_start == $ibeg ) {
 
-                              # For first token, use distance from start of line
-                              # but subtract off the indentation due to level.
-                              # Otherwise, results could vary with indentation.
+                                # For first token, use distance from start of
+                                # line but subtract off the indentation due to
+                                # level.  Otherwise, results could vary with
+                                # indentation.
                                 $len +=
                                   leading_spaces_to_go($ibeg) -
                                   $levels_to_go[$i_start] *
@@ -21154,13 +21162,14 @@ sub pad_token {
                             # tack this length onto the container name to try
                             # to make a unique token name
                             $container_name{$depth} .= "-" . $len;
-                        }
-                    }
-                }
+                        } ## end if ( !$ralignment_type_to_go...)
+                    } ## end if ( $i_mate > $i && $i_mate...)
+                } ## end if ( $is_opening_token...)
+
                 elsif ( $is_closing_type{$token} ) {
                     $depth-- if $depth > 0;
                 }
-            }
+            } ## end if ( $type_sequence_to_go...)
 
             # if we find a new synchronization token, we are done with
             # a field
@@ -21264,7 +21273,7 @@ sub pad_token {
                 $i_start = $i;
                 $j++;
                 $patterns[$j] = "";
-            }
+            } ## end if ( new synchronization token
 
             # continue accumulating tokens
 
@@ -21284,15 +21293,15 @@ sub pad_token {
                 $patterns[$j] .= $type;
             }
 
-            # handle non-keywords..
-            else {
+            # Mark most things before arrows as a quote to
+            # get them to line up. Testfile: mixed.pl.
+
+            # handle $type =~ /^[wnC]$/
+            elsif ( $is_w_n_C{$type} ) {
 
                 my $type_fix = $type;
 
-                # Mark most things before arrows as a quote to
-                # get them to line up. Testfile: mixed.pl.
-                #                      $type =~ /^[wnC]$/
-                if ( $i < $iend - 1 && $is_w_n_C{$type} ) {
+                if ( $i < $iend - 1 ) {
                     my $next_type = $types_to_go[ $i + 1 ];
                     my $i_next_nonblank =
                       ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
@@ -21309,8 +21318,9 @@ sub pad_token {
                     }
                 }
 
-                # Convert a bareword within braces into a quote for matching.
-                # This will allow alignment of expressions like this:
+                # Convert a bareword within braces into a quote for
+                # matching.  This will allow alignment of expressions like
+                # this:
                 #    local ( $SIG{'INT'} ) = IGNORE;
                 #    local ( $SIG{ALRM} )  = 'POSTMAN';
                 if (   $type eq 'w'
@@ -21325,18 +21335,22 @@ sub pad_token {
                 # patch to make numbers and quotes align
                 if ( $type eq 'n' ) { $type_fix = 'Q' }
 
-                # patch to ignore any ! in patterns
-                if ( $type eq '!' ) { $type_fix = '' }
-
                 $patterns[$j] .= $type_fix;
+            } ## end elsif ( $is_w_n_C{$type} )
 
-                # remove any zero-level name at first fat comma
-                if ( $depth == 0 && $type eq '=>' ) {
-                    $container_name{$depth} = "";
-                }
+            # ignore any ! in patterns
+            elsif ( $type eq '!' ) { }
 
+            # everything else
+            else {
+                $patterns[$j] .= $type;
             }
-        }
+
+            # remove any zero-level name at first fat comma
+            if ( $depth == 0 && $type eq '=>' ) {
+                $container_name{$depth} = "";
+            }
+        } ## end for my $i ( $ibeg .. $iend)
 
         # done with this line .. join text of tokens to make the last field
         push( @fields, join( '', @tokens_to_go[ $i_start .. $iend ] ) );
@@ -21344,7 +21358,7 @@ sub pad_token {
           $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$i_start];
 
         return ( \@tokens, \@fields, \@patterns, \@field_lengths );
-    }
+    } ## end sub make_alignment_patterns
 
 } ## end closure make_alignment_patterns
 
