@@ -702,7 +702,12 @@ sub write_GO {
 
     my ( $nf, $np ) = @_;
     my $runme = "GO.sh";
-    unlink $runme if ( -e $runme );
+    #unlink $runme if ( -e $runme );
+    if ( -e $runme ) {
+        my $bak = "$runme.bak";
+        if ( -e $bak ) { unlink $bak }
+        system ("mv $runme $bak");
+    }
     my $fh;
     open( $fh, '>', $runme ) || die "cannot open $runme: $!\n";
     $fh->print(<<EOM);

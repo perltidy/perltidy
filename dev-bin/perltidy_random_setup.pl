@@ -415,6 +415,13 @@ sub default_config {
 sub write_GO {
 
     my $runme = "GO.sh";
+
+    if ( -e $runme ) {
+        my $bak = "$runme.bak";
+        if ( -e $bak ) { unlink $bak }
+        system ("mv $runme $bak");
+    }
+
     my $fh;
     open( $fh, '>', $runme ) || die "cannot open $runme: $!\n";
     $fh->print(<<'EOM');
