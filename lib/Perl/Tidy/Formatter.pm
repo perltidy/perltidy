@@ -6899,54 +6899,82 @@ sub resync_lines_and_tokens {
 
     # This is the next token and its line index:
     my $Knext = 0;
-    my $inext;
     if ( defined($rLL) && @{$rLL} ) {
-        $Kmax  = @{$rLL} - 1;
-        $inext = $rLL->[$Knext]->[_LINE_INDEX_];
+        $Kmax = @{$rLL} - 1;
     }
 
-    # Remember the most recently output token index
-    my $Klast_out;
+    if ( DEVEL_MODE && $Kmax ) {
+        my $iline = $rLL->[0]->[_LINE_INDEX_];
+        for ( my $KK = 1 ; $KK <= $Kmax ; $KK++ ) {
+            my $iline_last = $iline;
+            $iline = $rLL->[$KK]->[_LINE_INDEX_];
+            if ( $iline < $iline_last ) {
+                my $token_m = $rLL->[ $KK - 1 ]->[_TOKEN_];
+                my $token   = $rLL->[$KK]->[_TOKEN_];
+                Fault(<<EOM);
+Line indexes out of order at index K=$KK:
+at KK-1: line=$iline_last, token=$token_m
+at KK  : line=$iline, token=$token
+EOM
+            }
+        }
+    }
 
     my $iline = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $iline++;
         my $line_type = $line_of_tokens->{_line_type};
-        my $CODE_type = $line_of_tokens->{_code_type};
         if ( $line_type eq 'CODE' ) {
 
-            my @K_array;
-            my $rK_range;
-            if ( $Knext <= $Kmax ) {
-                $inext = $rLL->[$Knext]->[_LINE_INDEX_];
-                while ( $inext <= $iline ) {
-                    push @K_array, $Knext;
-                    $Knext += 1;
-                    if ( $Knext > $Kmax ) {
-                        $inext = undef;
-                        last;
-                    }
-                    $inext = $rLL->[$Knext]->[_LINE_INDEX_];
-                }
+            # Get the old number of tokens on this line
+            my $rK_range_old = $line_of_tokens->{_rK_range};
+            my ( $Kfirst_old, $Klast_old ) = @{$rK_range_old};
+            my $Kdiff_old = 0;
+            if ( defined($Kfirst_old) ) {
+                $Kdiff_old = $Klast_old - $Kfirst_old;
             }
 
-            # Delete any terminal blank token
-            if (@K_array) {
-                if ( $rLL->[ $K_array[-1] ]->[_TYPE_] eq 'b' ) {
-                    pop @K_array;
-                }
-            }
-
-            # Define the range of K indexes for the line:
+            # Find the range of NEW K indexes for the line:
             # $Kfirst = index of first token on line
-            # $Klast_out = index of last token on line
+            # $Klast  = index of last token on line
             my ( $Kfirst, $Klast );
-            if (@K_array) {
-                $Kfirst    = $K_array[0];
-                $Klast     = $K_array[-1];
-                $Klast_out = $Klast;
 
-                if ( defined($Kfirst) ) {
+            my $Knext_beg = $Knext;    # this will be $Kfirst if we find tokens
+
+            # Optimization: Although the actual K indexes may be completely
+            # changed after respacing, the number of tokens on any given line
+            # will often be nearly unchanged.  So we will see if we can start
+            # our search by guessing that the new line has the same number
+            # of tokens as the old line.
+            my $Knext_guess = $Knext + $Kdiff_old;
+            if (   $Knext_guess > $Knext
+                && $Knext_guess < $Kmax
+                && $rLL->[$Knext_guess]->[_LINE_INDEX_] <= $iline )
+            {
+
+                # the guess is good, so we can start our search here
+                $Knext = $Knext_guess + 1;
+            }
+
+            while ($Knext <= $Kmax
+                && $rLL->[$Knext]->[_LINE_INDEX_] <= $iline )
+            {
+                $Knext++;
+            }
+
+            if ( $Knext > $Knext_beg ) {
+
+                $Klast = $Knext - 1;
+
+                # Delete any terminal blank token
+                if ( $rLL->[$Klast]->[_TYPE_] eq 'b' ) { $Klast -= 1 }
+
+                if ( $Klast < $Knext_beg ) {
+                    $Klast = undef;
+                }
+                else {
+
+                    $Kfirst = $Knext_beg;
 
                     # Save ranges of non-comment code. This will be used by
                     # sub keep_old_line_breaks.
@@ -6957,6 +6985,7 @@ sub resync_lines_and_tokens {
                     # Only save ending K indexes of code types which are blank
                     # or 'VER'.  These will be used for a convergence check.
                     # See related code in sub 'send_lines_to_vertical_aligner'.
+                    my $CODE_type = $line_of_tokens->{_code_type};
                     if (  !$CODE_type
                         || $CODE_type eq 'VER' )
                     {
@@ -6976,8 +7005,8 @@ sub resync_lines_and_tokens {
             # Deleting semicolons can create new empty code lines
             # which should be marked as blank
             if ( !defined($Kfirst) ) {
-                my $code_type = $line_of_tokens->{_code_type};
-                if ( !$code_type ) {
+                my $CODE_type = $line_of_tokens->{_code_type};
+                if ( !$CODE_type ) {
                     $line_of_tokens->{_code_type} = 'BL';
                 }
             }
@@ -6987,7 +7016,7 @@ sub resync_lines_and_tokens {
     # There shouldn't be any nodes beyond the last one.  This routine is
     # relinking lines and tokens after the tokens have been respaced.  A fault
     # here indicates some kind of bug has been introduced into the above loops.
-    if ( defined($inext) ) {
+    if ( $Knext <= $Kmax ) {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
     }
@@ -19812,12 +19841,13 @@ EOM
         my $iend     = $ri_last->[$max_line];
         if ( $iend < $max_index_to_go ) { $iend = $max_index_to_go }
 
+        foreach ( 0 .. $iend ) {
+            $ralignment_type_to_go->[$_] = '';
+        }
+
         # nothing to do if we aren't allowed to change whitespace
         # or there is only 1 token
         if ( $iend == 0 || !$rOpts_add_whitespace ) {
-            for my $i ( 0 .. $iend ) {
-                $ralignment_type_to_go->[$i] = '';
-            }
             return ( $ralignment_type_to_go, $alignment_count );
         }
 
@@ -19830,33 +19860,38 @@ EOM
         }
 
         # look at each line of this batch..
-        my $last_vertical_alignment_before_index;
+        my $last_vertical_alignment_BEFORE_index;
         my $vert_last_nonblank_type;
         my $vert_last_nonblank_token;
         my $vert_last_nonblank_block_type;
 
         foreach my $line ( 0 .. $max_line ) {
+
             my $ibeg = $ri_first->[$line];
             my $iend = $ri_last->[$line];
-            $last_vertical_alignment_before_index = -1;
-            $vert_last_nonblank_type              = '';
-            $vert_last_nonblank_token             = '';
-            $vert_last_nonblank_block_type        = '';
+
+            my $level_beg = $levels_to_go[$ibeg];
+            my $token_beg = $tokens_to_go[$ibeg];
+            my $type_beg  = $types_to_go[$ibeg];
+            my $type_beg_special_char =
+              ( $type_beg eq '.' || $type_beg eq ':' || $type_beg eq '?' );
+
+            $last_vertical_alignment_BEFORE_index = -1;
+            $vert_last_nonblank_type              = $type_beg;
+            $vert_last_nonblank_token             = $token_beg;
 
             # look at each token in this output line..
-            my $level_beg = $levels_to_go[$ibeg];
-            foreach my $i ( $ibeg .. $iend ) {
-                my $alignment_type = '';
-                my $type           = $types_to_go[$i];
-                my $block_type     = $block_type_to_go[$i];
+            foreach my $i ( $ibeg + 1 .. $iend ) {
+                my $type = $types_to_go[$i];
+                if ( $type eq 'b' ) {
+                    next;
+                }
                 my $token          = $tokens_to_go[$i];
+                my $alignment_type = '';
 
                 # do not align tokens at lower level then start of line
                 # except for side comments
-                if (   $levels_to_go[$i] < $levels_to_go[$ibeg]
-                    && $type ne '#' )
-                {
-                    $ralignment_type_to_go->[$i] = '';
+                if ( $levels_to_go[$i] < $level_beg && $type ne '#' ) {
                     next;
                 }
 
@@ -19890,7 +19925,8 @@ EOM
                             && $token =~ /$static_side_comment_pattern/ )
 
                         # or a closing side comment
-                        || (   $vert_last_nonblank_block_type
+                        || (   $vert_last_nonblank_type eq '}'
+                            && $vert_last_nonblank_token eq '}'
                             && $token =~
                             /$closing_side_comment_prefix_pattern/ )
                       )
@@ -19901,7 +19937,7 @@ EOM
 
                 # otherwise, do not align two in a row to create a
                 # blank field
-                elsif ( $last_vertical_alignment_before_index == $i - 2 ) { }
+                elsif ( $last_vertical_alignment_BEFORE_index == $i - 2 ) { }
 
                 # align before one of these keywords
                 # (within a line, since $i>1)
@@ -19914,7 +19950,6 @@ EOM
                 }
 
                 # align before one of these types..
-                # Note: add '.' after new vertical aligner is operational
                 elsif ( $is_vertical_alignment_type{$type}
                     && !$is_not_vertical_alignment_token{$token} )
                 {
@@ -19950,13 +19985,9 @@ EOM
                     #     $PDL::IO::Pic::biggrays
                     #     ? ( m/GIF/          ? 0 : 1 )
                     #     : ( m/GIF|RAST|IFF/ ? 0 : 1 );
-                    if (
-                           $i == $ibeg + 2
-                        && $types_to_go[ $i - 1 ] eq 'b'
-                        && (   $types_to_go[$ibeg] eq '.'
-                            || $types_to_go[$ibeg] eq ':'
-                            || $types_to_go[$ibeg] eq '?' )
-                      )
+                    if (   $type_beg_special_char
+                        && $i == $ibeg + 2
+                        && $types_to_go[ $i - 1 ] eq 'b' )
                     {
                         $alignment_type = "";
                     }
@@ -20011,7 +20042,7 @@ EOM
                 #{ $alignment_type = $type; }
 
                 if ($alignment_type) {
-                    $last_vertical_alignment_before_index = $i;
+                    $last_vertical_alignment_BEFORE_index = $i;
                 }
 
                 #--------------------------------------------------------
@@ -20021,25 +20052,26 @@ EOM
                 # We want to line up ',' and interior ';' tokens, with the added
                 # space AFTER these tokens.  (Note: interior ';' is included
                 # because it may occur in short blocks).
-                if (
+                elsif (
 
                     # we haven't already set it
-                    !$alignment_type
+                    ##!$alignment_type
+
+                    # previous token IS one of these:
+                    (
+                           $vert_last_nonblank_type eq ','
+                        || $vert_last_nonblank_type eq ';'
+                    )
 
                     # and its not the first token of the line
-                    && ( $i > $ibeg )
+                    ## && $i > $ibeg
 
                     # and it follows a blank
                     && $types_to_go[ $i - 1 ] eq 'b'
 
-                    # and previous token IS one of these:
-                    && (   $vert_last_nonblank_type eq ','
-                        || $vert_last_nonblank_type eq ';' )
-
                     # and it's NOT one of these
-                    && (   $type ne 'b'
-                        && $type ne '#'
-                        && !$is_closing_token{$type} )
+                    && $type ne '#'
+                    && !$is_closing_token{$type}
 
                     # then go ahead and align
                   )
@@ -20048,28 +20080,25 @@ EOM
                     $alignment_type = $vert_last_nonblank_type;
                 }
 
-                #--------------------------------------------------------
-                # Undo alignment in special cases
-                #--------------------------------------------------------
+                #-----------------------
+                # Set the alignment type
+                #-----------------------
                 if ($alignment_type) {
 
-                    # do not align the opening brace of an anonymous sub
-                    if ( $token eq '{' && $block_type =~ /$ASUB_PATTERN/ ) {
-                        $alignment_type = "";
+                    # but do not align the opening brace of an anonymous sub
+                    if (   $token eq '{'
+                        && $block_type_to_go[$i] =~ /$ASUB_PATTERN/ )
+                    {
+
+                    }
+                    else {
+                        $ralignment_type_to_go->[$i] = $alignment_type;
+                        $alignment_count++;
                     }
                 }
 
-                #--------------------------------------------------------
-                # then store the value
-                #--------------------------------------------------------
-                $ralignment_type_to_go->[$i] = $alignment_type;
-                if ($alignment_type) { $alignment_count++; }
-
-                if ( $type ne 'b' ) {
-                    $vert_last_nonblank_type       = $type;
-                    $vert_last_nonblank_token      = $token;
-                    $vert_last_nonblank_block_type = $block_type;
-                }
+                $vert_last_nonblank_type  = $type;
+                $vert_last_nonblank_token = $token;
             }
         }
         return ( $ralignment_type_to_go, $alignment_count );
