@@ -1,4 +1,4 @@
-#####################################################################
+####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
@@ -5477,8 +5477,11 @@ sub respace_tokens {
     my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
-    my $last_nonblank_type       = ';';
-    my $last_nonblank_block_type = '';
+    my $last_nonblank_code_type       = ';';
+    my $last_nonblank_code_token      = ';';
+    my $last_nonblank_block_type      = '';
+    my $last_last_nonblank_code_type  = ';';
+    my $last_last_nonblank_code_token = ';';
 
     my %K_first_here_doc_by_seqno;
 
@@ -5509,9 +5512,9 @@ sub respace_tokens {
 
         # check for a sequenced item (i.e., container or ?/:)
         my $type_sequence = $item->[_TYPE_SEQUENCE_];
+        my $token         = $item->[_TOKEN_];
         if ($type_sequence) {
 
-            my $token = $item->[_TOKEN_];
             if ( $is_opening_token{$token} ) {
 
                 $K_opening_container->{$type_sequence} = $KK_new;
@@ -5520,18 +5523,18 @@ sub respace_tokens {
                 # Fix for case b1100: Count a line ending in ', [' as having
                 # a line-ending comma.  Otherwise, these commas can be hidden
                 # with something like --opening-square-bracket-right
-                if (   $last_nonblank_type eq ','
+                if (   $last_nonblank_code_type eq ','
                     && $Ktoken_vars == $Klast_old_code
                     && $Ktoken_vars > $Kfirst_old )
                 {
                     $rlec_count_by_seqno->{$type_sequence}++;
                 }
 
-                if (   $last_nonblank_type eq '='
-                    || $last_nonblank_type eq '=>' )
+                if (   $last_nonblank_code_type eq '='
+                    || $last_nonblank_code_type eq '=>' )
                 {
                     $ris_assigned_structure->{$type_sequence} =
-                      $last_nonblank_type;
+                      $last_nonblank_code_type;
                 }
 
                 my $seqno_parent = $seqno_stack{ $depth_next - 1 };
@@ -5552,16 +5555,16 @@ sub respace_tokens {
                 $block_type = $rblock_type_of_seqno->{$type_sequence};
 
                 # Do not include terminal commas in counts
-                if (   $last_nonblank_type eq ','
-                    || $last_nonblank_type eq '=>' )
+                if (   $last_nonblank_code_type eq ','
+                    || $last_nonblank_code_type eq '=>' )
                 {
                     my $seqno = $seqno_stack{ $depth_next - 1 };
                     if ($seqno) {
-                        $rtype_count_by_seqno->{$seqno}->{$last_nonblank_type}
-                          --;
+                        $rtype_count_by_seqno->{$seqno}
+                          ->{$last_nonblank_code_type}--;
 
                         if (   $Ktoken_vars == $Kfirst_old
-                            && $last_nonblank_type eq ','
+                            && $last_nonblank_code_type eq ','
                             && $rlec_count_by_seqno->{$seqno} )
                         {
                             $rlec_count_by_seqno->{$seqno}--;
@@ -5606,16 +5609,17 @@ sub respace_tokens {
         # or ignoring side comment lengths.
         my $token_length =
             $is_encoded_data
-          ? $length_function->( $item->[_TOKEN_] )
-          : length( $item->[_TOKEN_] );
+          ? $length_function->($token)
+          : length($token);
 
         # handle comments
         my $is_comment = $type eq '#';
         if ($is_comment) {
 
             # trim comments if necessary
-            if ( $item->[_TOKEN_] =~ s/\s+$// ) {
-                $token_length = $length_function->( $item->[_TOKEN_] );
+            if ( $token =~ s/\s+$// ) {
+                $token_length = $length_function->($token);
+                $item->[_TOKEN_] = $token;
             }
 
             # Mark length of side comments as just 1 if sc lengths are ignored
@@ -5642,7 +5646,17 @@ sub respace_tokens {
         $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
         if ( !$is_blank && !$is_comment ) {
-            $last_nonblank_type       = $type;
+
+            # Remember the most recent two non-blank, non-comment tokens.
+            # NOTE: the phantom semicolon code may change the output stack
+            # without updating these values.  Phantom semicolons are considered
+            # the same as blanks for now, but future needs might change that.
+            # See the related note in sub '$add_phantom_semicolon'.
+            $last_last_nonblank_code_type  = $last_nonblank_code_type;
+            $last_last_nonblank_code_token = $last_nonblank_code_token;
+
+            $last_nonblank_code_type  = $type;
+            $last_nonblank_code_token = $token;
             $last_nonblank_block_type = $block_type;
 
             # count selected types
@@ -5820,6 +5834,11 @@ sub respace_tokens {
             $rLL_new->[$Ktop]->[_TOKEN_]        = $tok;
             $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
             $rLL_new->[$Ktop]->[_TYPE_]         = ';';
+
+            # NOTE: we are changing the output stack without updating variables
+            # $last_nonblank_code_type, etc. Future needs might require that
+            # those variables be updated here.  For now, it seems ok to skip
+            # this.
 
             # Save list of new K indexes of phantom semicolons.
             # This will be needed if we want to undo them for iterations in
@@ -6028,32 +6047,17 @@ sub respace_tokens {
         # if last line was normal CODE.
         # Patch for rt #125012: use K_previous_code rather than '_nonblank'
         # because comments may disappear.
-        my $type_next  = $rLL->[$Kfirst]->[_TYPE_];
-        my $token_next = $rLL->[$Kfirst]->[_TOKEN_];
-        my $Kp         = $self->K_previous_code( undef, $rLL_new );
-        if (   $last_line_type eq 'CODE'
-            && $type_next ne 'b'
-            && defined($Kp) )
-        {
-            my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
-            my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
-
-            my ( $token_pp, $type_pp );
-            my $Kpp = $self->K_previous_code( $Kp, $rLL_new );
-            if ( defined($Kpp) ) {
-                $token_pp = $rLL_new->[$Kpp]->[_TOKEN_];
-                $type_pp  = $rLL_new->[$Kpp]->[_TYPE_];
-            }
-            else {
-                $token_pp = ";";
-                $type_pp  = ';';
-            }
-
+        if ( $last_line_type eq 'CODE' ) {
+            my $type_next  = $rLL->[$Kfirst]->[_TYPE_];
+            my $token_next = $rLL->[$Kfirst]->[_TOKEN_];
             if (
-
                 is_essential_whitespace(
-                    $token_pp, $type_pp,    $token_p,
-                    $type_p,   $token_next, $type_next,
+                    $last_last_nonblank_code_token,
+                    $last_last_nonblank_code_type,
+                    $last_nonblank_code_token,
+                    $last_nonblank_code_type,
+                    $token_next,
+                    $type_next,
                 )
               )
             {
@@ -6155,7 +6159,7 @@ sub respace_tokens {
                         && $token eq '}'
 
                         # not preceded by a ';'
-                        && $last_nonblank_type ne ';'
+                        && $last_nonblank_code_type ne ';'
 
                         # and this is not a VERSION stmt (is all one line, we
                         # are not inserting semicolons on one-line blocks)
@@ -6295,7 +6299,7 @@ sub respace_tokens {
                     && (
                         (
                                $last_nonblank_block_type
-                            && $last_nonblank_type eq '}'
+                            && $last_nonblank_code_type eq '}'
                             && (
                                 $is_block_without_semicolon{
                                     $last_nonblank_block_type}
@@ -6303,7 +6307,7 @@ sub respace_tokens {
                                 || $last_nonblank_block_type =~ /^\w+:$/
                             )
                         )
-                        || $last_nonblank_type eq ';'
+                        || $last_nonblank_code_type eq ';'
                     )
                   )
                 {
