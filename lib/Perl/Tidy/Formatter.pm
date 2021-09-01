@@ -1,4 +1,4 @@
-####################################################################
+#####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
@@ -845,6 +845,28 @@ sub new {
 ######################################
 # CODE SECTION 2: Some Basic Utilities
 ######################################
+
+sub check_rLL {
+
+    # Verify that the rLL array has not been auto-vivified
+    my ( $self, $msg ) = @_;
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    my $num    = @{$rLL};
+    if ( $num > 0 && !defined($Klimit) || $Klimit != $num - 1 ) {
+
+        # This fault can occur if the array has been accessed for an index
+        # greater than $Klimit, which is the last token index.  Just accessing
+        # the array above index $Klimit, not setting a value, can cause @rLL to
+        # increase beyond $Klimit.  If this occurs, the problem can be located
+        # by making calls to this routine at different locations in
+        # sub 'finish_formatting'.
+        $Klimit = '' if ( !defined($Klimit) );
+        $msg    = "" unless $msg;
+        Fault("$msg ERROR: rLL has num=$num but Klimit='$Klimit'\n");
+    }
+    return;
+}
 
 sub check_keys {
     my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
@@ -4983,6 +5005,11 @@ EOM
 
     $self->adjust_indentation_levels();
 
+    # Verify that the main token array looks OK.  If this ever causes a fault
+    # then place similar checks before the sub calls above to localize the
+    # problem.
+    $self->check_rLL("Before 'process_all_lines'") if (DEVEL_MODE);
+
     # Finishes formatting and write the result to the line sink.
     # Eventually this call should just change the 'rlines' data according to the
     # new line breaks and then return so that we can do an internal iteration
@@ -5370,8 +5397,11 @@ sub dump_verbatim {
 
 my %wU;
 my %wiq;
+my %is_wit;
+my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
+my %is_special_check_type;
 
 BEGIN {
 
@@ -5381,6 +5411,12 @@ BEGIN {
 
     @q = qw(w i q Q G C Z);
     @{wiq}{@q} = (1) x scalar(@q);
+
+    @q = qw(w i t);
+    @{is_wit}{@q} = (1) x scalar(@q);
+
+    @q = qw($ & % * @);
+    @{is_sigil}{@q} = (1) x scalar(@q);
 
     # Parens following these keywords will not be marked as lists. Note that
     # 'for' is not included and is handled separately, by including 'f' in the
@@ -6150,54 +6186,58 @@ sub respace_tokens {
 
             if ($type_sequence) {
 
-                if ( $is_closing_token{$token} ) {
+                # Insert a tentative missing semicolon if the next token is
+                # a closing block brace
+                if (
+                       $type eq '}'
+                    && $token eq '}'
 
-                    # Insert a tentative missing semicolon if the next token is
-                    # a closing block brace
-                    if (
-                           $type eq '}'
-                        && $token eq '}'
+                    # not preceded by a ';'
+                    && $last_nonblank_code_type ne ';'
 
-                        # not preceded by a ';'
-                        && $last_nonblank_code_type ne ';'
+                    # and this is not a VERSION stmt (is all one line, we
+                    # are not inserting semicolons on one-line blocks)
+                    && $CODE_type ne 'VER'
 
-                        # and this is not a VERSION stmt (is all one line, we
-                        # are not inserting semicolons on one-line blocks)
-                        && $CODE_type ne 'VER'
-
-                        # and we are allowed to add semicolons
-                        && $rOpts->{'add-semicolons'}
-                      )
-                    {
-                        $add_phantom_semicolon->($KK);
-                    }
+                    # and we are allowed to add semicolons
+                    && $rOpts->{'add-semicolons'}
+                  )
+                {
+                    $add_phantom_semicolon->($KK);
                 }
             }
 
             # Modify certain tokens here for whitespace
             # The following is not yet done, but could be:
             #   sub (x x x)
-            elsif ( $type =~ /^[wit]$/ ) {
+            #     ( $type =~ /^[wit]$/ )
+            elsif ( $is_wit{$type} ) {
 
-                # Examples: <<snippets/space1.in>>
-                # change '$  var'  to '$var' etc
-                # change '@    '   to '@'
-                my ( $sigil, $word ) = split /\s+/, $token, 2;
-                if ( length($sigil) == 1
-                    && $sigil =~ /^[\$\&\%\*\@]$/ )
-                {
-                    $token = $sigil;
-                    $token .= $word if ($word);
-                    $rtoken_vars->[_TOKEN_] = $token;
+                my $leading_char = substr( $token, 0, 1 );
+
+                # $sigil =~ /^[\$\&\%\*\@]$/ )
+                if ( $is_sigil{$leading_char} ) {
+
+                    # change '$  var'  to '$var' etc
+                    # change '@    '   to '@'
+                    # Examples: <<snippets/space1.in>>
+                    my ( $sigil, $word ) = split /\s+/, $token, 2;
+                    if ( length($sigil) == 1 ) {
+                        {
+                            $token = $sigil;
+                            $token .= $word if ($word);
+                            $rtoken_vars->[_TOKEN_] = $token;
+                        }
+                    }
                 }
 
-                # Split identifiers with leading arrows, inserting blanks if
-                # necessary.  It is easier and safer here than in the
-                # tokenizer.  For example '->new' becomes two tokens, '->' and
-                # 'new' with a possible blank between.
+                # Split identifiers with leading arrows, inserting blanks
+                # if necessary.  It is easier and safer here than in the
+                # tokenizer.  For example '->new' becomes two tokens, '->'
+                # and 'new' with a possible blank between.
                 #
                 # Note: there is a related patch in sub set_whitespace_flags
-                if (   substr( $token, 0, 1 ) eq '-'
+                elsif ($leading_char eq '-'
                     && $token =~ /^\-\>(.*)$/
                     && $1 )
                 {
@@ -6899,17 +6939,16 @@ sub resync_lines_and_tokens {
     # since they have probably changed due to inserting and deleting blanks
     # and a few other tokens.
 
-    my $Kmax = -1;
-
     # This is the next token and its line index:
     my $Knext = 0;
-    if ( defined($rLL) && @{$rLL} ) {
-        $Kmax = @{$rLL} - 1;
-    }
+    my $Kmax  = defined($Klimit) ? $Klimit : -1;
 
-    if ( DEVEL_MODE && $Kmax ) {
+    # Verify that old line indexes are in still order.  If this error occurs,
+    # check locations where sub 'respace_tokens' creates new tokens (like
+    # blank spaces).  It must have set a bad old line index.
+    if ( DEVEL_MODE && defined($Klimit) ) {
         my $iline = $rLL->[0]->[_LINE_INDEX_];
-        for ( my $KK = 1 ; $KK <= $Kmax ; $KK++ ) {
+        for ( my $KK = 1 ; $KK <= $Klimit ; $KK++ ) {
             my $iline_last = $iline;
             $iline = $rLL->[$KK]->[_LINE_INDEX_];
             if ( $iline < $iline_last ) {
@@ -7061,7 +7100,6 @@ EOM
             $ris_essential_old_breakpoint->{$Klast_prev} = 1;
         }
     }
-
     return;
 }
 
@@ -8890,9 +8928,13 @@ sub adjust_indentation_levels {
     # levels.  It would be much nicer to have the weld routines also use this
     # adjustment, but that gets complicated when we combine -gnu -wn and have
     # some welded quotes.
-    my $radjusted_levels = $self->[_radjusted_levels_];
+    my $Klimit           = $self->[_Klimit_];
     my $rLL              = $self->[_rLL_];
-    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
+    my $radjusted_levels = $self->[_radjusted_levels_];
+
+    return unless ( defined($Klimit) );
+
+    foreach my $KK ( 0 .. $Klimit ) {
         $radjusted_levels->[$KK] = $rLL->[$KK]->[_LEVEL_];
     }
 
@@ -11255,38 +11297,38 @@ EOM
         }
 
         # This is a good place to kill incomplete one-line blocks
-        if (
-            (
-                   ( $semicolons_before_block_self_destruct == 0 )
-                && ( $max_index_to_go >= 0 )
-                && ( $last_old_nonblank_type eq ';' )
-                && ( $first_new_nonblank_token ne '}' )
-            )
+        if ( $max_index_to_go >= 0 ) {
+            if (
+                (
+                       ( $semicolons_before_block_self_destruct == 0 )
+                    && ( $last_old_nonblank_type eq ';' )
+                    && ( $first_new_nonblank_token ne '}' )
+                )
 
-            # Patch for RT #98902. Honor request to break at old commas.
-            || (   $rOpts_break_at_old_comma_breakpoints
-                && $max_index_to_go >= 0
-                && $last_old_nonblank_type eq ',' )
-          )
-        {
-            $forced_breakpoint_to_go[$max_index_to_go] = 1
-              if ($rOpts_break_at_old_comma_breakpoints);
-            destroy_one_line_block();
-            $self->end_batch();
-        }
-
-        # Keep any requested breaks before this line.  Note that we have to
-        # use the original K_first because it may have been reduced above
-        # to add a blank.  The value of the flag is as follows:
-        #   1 => hard break, flush the batch
-        #   2 => soft break, set breakpoint and continue building the batch
-        if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
-            destroy_one_line_block();
-            if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} == 2 ) {
-                $self->set_forced_breakpoint($max_index_to_go);
-            }
-            else {
+                # Patch for RT #98902. Honor request to break at old commas.
+                || (   $rOpts_break_at_old_comma_breakpoints
+                    && $last_old_nonblank_type eq ',' )
+              )
+            {
+                $forced_breakpoint_to_go[$max_index_to_go] = 1
+                  if ($rOpts_break_at_old_comma_breakpoints);
+                destroy_one_line_block();
                 $self->end_batch();
+            }
+
+            # Keep any requested breaks before this line.  Note that we have to
+            # use the original K_first because it may have been reduced above
+            # to add a blank.  The value of the flag is as follows:
+            #   1 => hard break, flush the batch
+            #   2 => soft break, set breakpoint and continue building the batch
+            if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
+                destroy_one_line_block();
+                if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} == 2 ) {
+                    $self->set_forced_breakpoint($max_index_to_go);
+                }
+                else {
+                    $self->end_batch();
+                }
             }
         }
 
@@ -12380,13 +12422,77 @@ sub compare_indentation_levels {
         # - If a break is made after an opening token, then a break will
         #   also be made before the corresponding closing token.
 
-        return unless defined $i && $i >= 0;
+        if ( !defined($i) || $i < 0 ) {
+
+            # Calls with bad index $i are harmless but waste time and should
+            # be caught and eliminated during code development.
+            if (DEVEL_MODE) {
+                my ( $a, $b, $c ) = caller();
+                Fault(
+"Bad call to forced breakpoint from $a $b $c ; called with i=$i\n"
+                );
+            }
+            return;
+        }
+
+        # Break after token $i
+        my ($i_nonblank) = $self->set_forced_breakpoint_AFTER($i);
+
+        # If we break at an opening container..break at the closing
+        my $set_closing;
+        if ( defined($i_nonblank)
+            && $is_opening_sequence_token{ $tokens_to_go[$i_nonblank] } )
+        {
+            $set_closing = 1;
+            $self->set_closing_breakpoint($i_nonblank);
+        }
+
+        DEBUG_FORCE && do {
+            my ( $a, $b, $c ) = caller();
+            my $msg =
+"FORCE $forced_breakpoint_count after call from $a $c with i=$i max=$max_index_to_go";
+            if ( !defined($i_nonblank) ) {
+                $i = "" unless defined($i);
+                $msg .= " but could not set break after i='$i'\n";
+            }
+            else {
+                $msg .= <<EOM;
+set break after $i_nonblank: tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]
+EOM
+                if ( defined($set_closing) ) {
+                    $msg .=
+" Also set closing breakpoint corresponding to this token\n";
+                }
+            }
+            print STDOUT $msg;
+        };
+    }
+
+    sub set_forced_breakpoint_AFTER {
+        my ( $self, $i ) = @_;
+
+        # This routine is only called by sub set_forced_breakpoint and
+        # sub set_closing_breakpoint.
+
+        # Set a breakpoint AFTER the token at index $i in the _to_go arrays.
+
+        # Exceptions:
+        # - If the token at index $i is a blank, backup to $i-1 to
+        #   get to the previous nonblank token.
+        # - For certain tokens, the break may be placed BEFORE the token
+        #   at index $i, depending on user break preference settings.
+
+        # Returns:
+        #   - the index of the token after which the break was set, or
+        #   - undef if no break was set
+
+        return unless ( defined($i) && $i >= 0 );
 
         # Back up at a blank so we have a token to examine.
         # This was added to fix for cases like b932 involving an '=' break.
         if ( $i > 0 && $types_to_go[$i] eq 'b' ) { $i-- }
 
-        # no breaks between welded tokens
+        # Never break between welded tokens
         return
           if ( $total_weld_count
             && $self->[_rK_weld_right_]->{ $K_to_go[$i] } );
@@ -12408,21 +12514,6 @@ sub compare_indentation_levels {
         if ( $i >= 0 && $i <= $max_index_to_go ) {
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
 
-            DEBUG_FORCE && do {
-                my ( $a, $b, $c ) = caller();
-                print STDOUT
-"FORCE $forced_breakpoint_count from $a $c with i=$i_nonblank max=$max_index_to_go tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]\n";
-            };
-
-            ######################################################################
-            # NOTE: if we call set_closing_breakpoint below it will then call
-            # this routing back. So there is the possibility of an infinite
-            # loop if a programming error is made. As a precaution, I have
-            # added a check on the forced_breakpoint flag, so that we won't
-            # keep trying to set it.  That will give additional protection
-            # against a loop.
-            ######################################################################
-
             if (   $i_nonblank >= 0
                 && $nobreak_to_go[$i_nonblank] == 0
                 && !$forced_breakpoint_to_go[$i_nonblank] )
@@ -12436,11 +12527,8 @@ sub compare_indentation_levels {
                 $forced_breakpoint_undo_stack[ $forced_breakpoint_undo_count++ ]
                   = $i_nonblank;
 
-                # if we break at an opening container..break at the closing
-                if ( $is_opening_sequence_token{ $tokens_to_go[$i_nonblank] } )
-                {
-                    $self->set_closing_breakpoint($i_nonblank);
-                }
+                # success
+                return $i_nonblank;
             }
         }
         return;
@@ -12524,17 +12612,14 @@ sub compare_indentation_levels {
 
         if ( $mate_index_to_go[$i_break] >= 0 ) {
 
-            # CAUTION: infinite recursion possible here:
-            #   set_closing_breakpoint calls set_forced_breakpoint, and
-            #   set_forced_breakpoint call set_closing_breakpoint
-            #   ( test files attrib.t, BasicLyx.pm.html).
-            # Don't reduce the '2' in the statement below
+            # Don't reduce the '2' in the statement below.
+            # Test files: attrib.t, BasicLyx.pm.html
             if ( $mate_index_to_go[$i_break] > $i_break + 2 ) {
 
              # break before } ] and ), but sub set_forced_breakpoint will decide
              # to break before or after a ? and :
                 my $inc = ( $tokens_to_go[$i_break] eq '?' ) ? 0 : 1;
-                $self->set_forced_breakpoint(
+                $self->set_forced_breakpoint_AFTER(
                     $mate_index_to_go[$i_break] - $inc );
             }
         }
@@ -13130,7 +13215,7 @@ EOM
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
 
-                    if ( $rwant_container_open->{$seqno} ) {
+                    if ( $i > 0 && $rwant_container_open->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
                     }
 
@@ -16680,7 +16765,9 @@ sub set_continuation_breaks {
                     } ## end if ( $type eq ':' )
                     if ( has_postponed_breakpoint($type_sequence) ) {
                         my $inc = ( $type eq ':' ) ? 0 : 1;
-                        $self->set_forced_breakpoint( $i - $inc );
+                        if ( $i >= $inc ) {
+                            $self->set_forced_breakpoint( $i - $inc );
+                        }
                     }
                 } ## end if ( $is_closing_sequence_token{$token} )
 
@@ -17149,8 +17236,9 @@ sub set_continuation_breaks {
                                     {
                                         $ibr--;
                                     }
-
-                                    $self->set_forced_breakpoint($ibr);
+                                    if ( $ibr >= 0 ) {
+                                        $self->set_forced_breakpoint($ibr);
+                                    }
 
                                 }
                             } ## end if ( defined($i_start_2...))
@@ -17161,9 +17249,11 @@ sub set_continuation_breaks {
                     # note: break before closing structure will be automatic
                     if ( $minimum_depth <= $current_depth ) {
 
-                        $self->set_forced_breakpoint($i_opening)
-                          unless ( $do_not_break_apart
-                            || is_unbreakable_container($current_depth) );
+                        if ( $i_opening >= 0 ) {
+                            $self->set_forced_breakpoint($i_opening)
+                              unless ( $do_not_break_apart
+                                || is_unbreakable_container($current_depth) );
+                        }
 
                         # break at ',' of lower depth level before opening token
                         if ( $last_comma_index[$depth] ) {
@@ -17406,16 +17496,18 @@ sub set_continuation_breaks {
 
             # break open container...
             my $i_opening = $opening_structure_index_stack[$dd];
-            $self->set_forced_breakpoint($i_opening)
-              unless (
-                is_unbreakable_container($dd)
+            if ( defined($i_opening) && $i_opening >= 0 ) {
+                $self->set_forced_breakpoint($i_opening)
+                  unless (
+                    is_unbreakable_container($dd)
 
-                # Avoid a break which would place an isolated ' or "
-                # on a line
-                || (   $type eq 'Q'
-                    && $i_opening >= $max_index_to_go - 2
-                    && ( $token eq "'" || $token eq '"' ) )
-              );
+                    # Avoid a break which would place an isolated ' or "
+                    # on a line
+                    || (   $type eq 'Q'
+                        && $i_opening >= $max_index_to_go - 2
+                        && ( $token eq "'" || $token eq '"' ) )
+                  );
+            }
         } ## end for ( my $dd = $current_depth...)
 
         # Return a flag indicating if the input file had some good breakpoints.
