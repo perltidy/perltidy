@@ -495,6 +495,11 @@ BEGIN {
     # Maximum number of little messages; probably need not be changed.
     use constant MAX_NAG_MESSAGES => 6;
 
+    # This is the decimal range of printable characters in ASCII.  It is used to
+    # make quick preliminary checks before resorting to using a regex.
+    use constant ORD_PRINTABLE_MIN => 33;
+    use constant ORD_PRINTABLE_MAX => 126;
+
     # Initialize constant hashes ...
     my @q;
 
@@ -853,7 +858,9 @@ sub check_rLL {
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     my $num    = @{$rLL};
-    if ( $num > 0 && !defined($Klimit) || $Klimit != $num - 1 ) {
+    if (   ( defined($Klimit) && $Klimit != $num - 1 )
+        || ( !defined($Klimit) && $num > 0 ) )
+    {
 
         # This fault can occur if the array has been accessed for an index
         # greater than $Klimit, which is the last token index.  Just accessing
@@ -861,7 +868,7 @@ sub check_rLL {
         # increase beyond $Klimit.  If this occurs, the problem can be located
         # by making calls to this routine at different locations in
         # sub 'finish_formatting'.
-        $Klimit = '' if ( !defined($Klimit) );
+        $Klimit = 'undef' if ( !defined($Klimit) );
         $msg    = "" unless $msg;
         Fault("$msg ERROR: rLL has num=$num but Klimit='$Klimit'\n");
     }
@@ -898,6 +905,44 @@ Unknown key(s): (@unknown_keys)
 Missing key(s): (@missing_keys)
 ------------------------------------------------------------------------
 EOM
+    }
+    return;
+}
+
+sub check_token_array {
+    my $self = shift;
+
+    # Check for errors in the array of tokens. This is only called
+    # when the DEVEL_MODE flag is set, so this Fault will only occur
+    # during code development.
+    my $rLL = $self->[_rLL_];
+    for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
+        my $nvars = @{ $rLL->[$KK] };
+        if ( $nvars != _NVARS ) {
+            my $NVARS = _NVARS;
+            my $type  = $rLL->[$KK]->[_TYPE_];
+            $type = '*' unless defined($type);
+
+            # The number of variables per token node is _NVARS and was set when
+            # the array indexes were generated. So if the number of variables
+            # is different we have done something wrong, like not store all of
+            # them in sub 'write_line' when they were received from the
+            # tokenizer.
+            Fault(
+"number of vars for node $KK, type '$type', is $nvars but should be $NVARS"
+            );
+        }
+        foreach my $var ( _TOKEN_, _TYPE_ ) {
+            if ( !defined( $rLL->[$KK]->[$var] ) ) {
+                my $iline = $rLL->[$KK]->[_LINE_INDEX_];
+
+                # This is a simple check that each token has some basic
+                # variables.  In other words, that there are no holes in the
+                # array of tokens.  Sub 'write_line' pushes tokens into the
+                # $rLL array, so this should guarantee no gaps.
+                Fault("Undefined variable $var for K=$KK, line=$iline\n");
+            }
+        }
     }
     return;
 }
@@ -1048,44 +1093,6 @@ sub get_output_line_number {
     my ($self) = @_;
     my $vao = $self->[_vertical_aligner_object_];
     return $vao->get_output_line_number();
-}
-
-sub check_token_array {
-    my $self = shift;
-
-    # Check for errors in the array of tokens. This is only called now
-    # when the DEVEL_MODE flag is set, so this Fault will only occur
-    # during code development.
-    my $rLL = $self->[_rLL_];
-    for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
-        my $nvars = @{ $rLL->[$KK] };
-        if ( $nvars != _NVARS ) {
-            my $NVARS = _NVARS;
-            my $type  = $rLL->[$KK]->[_TYPE_];
-            $type = '*' unless defined($type);
-
-            # The number of variables per token node is _NVARS and was set when
-            # the array indexes were generated. So if the number of variables
-            # is different we have done something wrong, like not store all of
-            # them in sub 'write_line' when they were received from the
-            # tokenizer.
-            Fault(
-"number of vars for node $KK, type '$type', is $nvars but should be $NVARS"
-            );
-        }
-        foreach my $var ( _TOKEN_, _TYPE_ ) {
-            if ( !defined( $rLL->[$KK]->[$var] ) ) {
-                my $iline = $rLL->[$KK]->[_LINE_INDEX_];
-
-                # This is a simple check that each token has some basic
-                # variables.  In other words, that there are no holes in the
-                # array of tokens.  Sub 'write_line' pushes tokens into the
-                # $rLL array, so this should guarantee no gaps.
-                Fault("Undefined variable $var for K=$KK, line=$iline\n");
-            }
-        }
-    }
-    return;
 }
 
 sub want_blank_line {
@@ -2805,8 +2812,8 @@ EOM
 
         # Note2: The -mangle option causes large numbers of calls to this
         # routine and therefore is a good test. So if a change is made, be sure
-        # to run a large number of files with the -mangle option and check for
-        # differences.
+        # to use nytprof to profile with both old and reviesed coding using the
+        # -mangle option and check differences.
 
         my ( $tokenll, $typell, $tokenl, $typel, $tokenr, $typer ) = @_;
 
@@ -2900,11 +2907,14 @@ EOM
 
                 # keep a space between a token ending in '$' and any word;
                 # this caused trouble:  "die @$ if $@"
-                || $typel eq 'i' && $tokenl =~ /\$$/
+                ##|| $typel eq 'i' && $tokenl =~ /\$$/
+                || $typel eq 'i' && substr( $tokenl, -1, 1 ) eq '$'
 
                 # don't combine $$ or $# with any alphanumeric
                 # (testfile mangle.t with --mangle)
-                || $tokenl =~ /^\$[\$\#]$/
+                ##|| $tokenl =~ /^\$[\$\#]$/
+                || $tokenl eq '$$'
+                || $tokenl eq '$#'
 
             )
           )    ## end $tokenr_is_bareword
@@ -2928,7 +2938,8 @@ EOM
           || $typel eq 'w' && ( $tokenr eq '-' || $typer eq 'Q' )
 
           # perl is very fussy about spaces before <<
-          || $tokenr =~ /^\<\</
+          || substr( $tokenr, 0, 2 ) eq '<<'
+          ##|| $tokenr =~ /^\<\</
 
           # avoid combining tokens to create new meanings. Example:
           #     $a+ +$b must not become $a++$b
@@ -2977,8 +2988,11 @@ EOM
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          || $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
-          || $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
+          ##|| $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
+          || ( $typer eq 'pp' || $typer eq 'mm' ) && $tokenl !~ /^[\;\{\(\[]/
+          || ( $typel eq '++' || $typel eq '--' )
+          && $tokenr !~ /^[\;\}\)\]]/
+          ##|| $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -2986,9 +3000,11 @@ EOM
           || (
             $tokenl eq 'my'
 
+            && substr( $tokenr, 0, 1 ) eq '$'
+            ##&& $tokenr =~ /^\$/
+
             #  /^(for|foreach)$/
             && $is_for_foreach{$tokenll}
-            && $tokenr =~ /^\$/
           )
 
           # We must be sure that a space between a ? and a quoted string
@@ -5402,6 +5418,8 @@ my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
 my %is_special_check_type;
+my %is_s_y_m_slash;
+my %is_unexpected_equals;
 
 BEGIN {
 
@@ -5427,6 +5445,12 @@ BEGIN {
     # Parens following these types will not be marked as lists
     @q = qw( && || );
     @is_nonlist_type{@q} = (1) x scalar(@q);
+
+    @q = qw( s y m / );
+    @is_s_y_m_slash{@q} = (1) x scalar(@q);
+
+    @q = qw( = == != );
+    @is_unexpected_equals{@q} = (1) x scalar(@q);
 
 }
 
@@ -5653,7 +5677,14 @@ sub respace_tokens {
         if ($is_comment) {
 
             # trim comments if necessary
-            if ( $token =~ s/\s+$// ) {
+            my $ord = ord( substr( $token, -1, 1 ) );
+            if (
+                $ord > 0
+                && (   $ord < ORD_PRINTABLE_MIN
+                    || $ord > ORD_PRINTABLE_MAX )
+                && $token =~ s/\s+$//
+              )
+            {
                 $token_length = $length_function->($token);
                 $item->[_TOKEN_] = $token;
             }
@@ -5670,7 +5701,6 @@ sub respace_tokens {
             {
                 $set_permanently_broken->($seqno);
             }
-
         }
 
         $item->[_TOKEN_LENGTH_] = $token_length;
@@ -5902,9 +5932,20 @@ sub respace_tokens {
         my $token = $rLL->[$KK]->[_TOKEN_];
         $self->note_embedded_tab($line_number) if ( $token =~ "\t" );
 
+        # The remainder of this routine looks for something like
+        #        '$var = s/xxx/yyy/;'
+        # in case it should have been '$var =~ s/xxx/yyy/;'
+
+        # Start by looking for a token begining with one of: s y m / tr
+        return
+          unless ( $is_s_y_m_slash{ substr( $token, 0, 1 ) }
+            || substr( $token, 0, 2 ) eq 'tr' );
+
+        # ... and preceded by one of: = == !=
         my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
         return unless ( defined($Kp) );
-        my $previous_nonblank_type  = $rLL_new->[$Kp]->[_TYPE_];
+        my $previous_nonblank_type = $rLL_new->[$Kp]->[_TYPE_];
+        return unless ( $is_unexpected_equals{$previous_nonblank_type} );
         my $previous_nonblank_token = $rLL_new->[$Kp]->[_TOKEN_];
 
         my $previous_nonblank_type_2  = 'b';
@@ -5925,11 +5966,10 @@ sub respace_tokens {
         my $token_0 = $rLL->[$Kfirst]->[_TOKEN_];
         my $type_0  = $rLL->[$Kfirst]->[_TYPE_];
 
-        # make note of something like '$var = s/xxx/yyy/;'
-        # in case it should have been '$var =~ s/xxx/yyy/;'
         if (
-               $token =~ /^(s|tr|y|m|\/)/
-            && $previous_nonblank_token =~ /^(=|==|!=)$/
+            ##$token =~ /^(s|tr|y|m|\/)/
+            ##&& $previous_nonblank_token =~ /^(=|==|!=)$/
+            1
 
             # preceded by simple scalar
             && $previous_nonblank_type_2 eq 'i'
@@ -6213,21 +6253,24 @@ sub respace_tokens {
             #     ( $type =~ /^[wit]$/ )
             elsif ( $is_wit{$type} ) {
 
-                my $leading_char = substr( $token, 0, 1 );
+                # change '$  var'  to '$var' etc
+                # change '@    '   to '@'
+                # Examples: <<snippets/space1.in>>
+                my $ord = ord( substr( $token, 1, 1 ) );
+                if (
 
-                # $sigil =~ /^[\$\&\%\*\@]$/ )
-                if ( $is_sigil{$leading_char} ) {
-
-                    # change '$  var'  to '$var' etc
-                    # change '@    '   to '@'
-                    # Examples: <<snippets/space1.in>>
+                    # quick test for possible blank at second char
+                    $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                        || $ord > ORD_PRINTABLE_MAX )
+                  )
+                {
                     my ( $sigil, $word ) = split /\s+/, $token, 2;
-                    if ( length($sigil) == 1 ) {
-                        {
-                            $token = $sigil;
-                            $token .= $word if ($word);
-                            $rtoken_vars->[_TOKEN_] = $token;
-                        }
+
+                    # $sigil =~ /^[\$\&\%\*\@]$/ )
+                    if ( $is_sigil{$sigil} ) {
+                        $token = $sigil;
+                        $token .= $word if ($word);
+                        $rtoken_vars->[_TOKEN_] = $token;
                     }
                 }
 
@@ -6237,7 +6280,8 @@ sub respace_tokens {
                 # and 'new' with a possible blank between.
                 #
                 # Note: there is a related patch in sub set_whitespace_flags
-                elsif ($leading_char eq '-'
+                elsif (length($token) > 2
+                    && substr( $token, 0, 2 ) eq '->'
                     && $token =~ /^\-\>(.*)$/
                     && $1 )
                 {
@@ -6323,8 +6367,17 @@ sub respace_tokens {
                     # witch
                     # ()   # prototype may be on new line ...
                     # ...
-                    $token =~ s/\s+$//g;
-                    $rtoken_vars->[_TOKEN_] = $token;
+                    my $ord = ord( substr( $token, -1, 1 ) );
+                    if (
+
+                        # quick check for possible ending space
+                        $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                            || $ord > ORD_PRINTABLE_MAX )
+                      )
+                    {
+                        $token =~ s/\s+$//g;
+                        $rtoken_vars->[_TOKEN_] = $token;
+                    }
                 }
             }
 
@@ -6396,7 +6449,7 @@ sub respace_tokens {
             # patch to add space to something like "x10"
             # This avoids having to split this token in the pre-tokenizer
             elsif ( $type eq 'n' ) {
-                if ( $token =~ /^x\d+/ ) {
+                if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
                     $token =~ s/x/x /;
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
@@ -6637,8 +6690,7 @@ sub respace_tokens {
     if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
     $self->[_Klimit_] = $Klimit;
 
-    # DEBUG OPTION: make sure the new array looks okay.
-    # This is no longer needed but should be retained for future development.
+    # During development, verify that the new array still looks okay.
     DEVEL_MODE && $self->check_token_array();
 
     # reset the token limits of each line
@@ -11016,7 +11068,14 @@ EOM
         # end the current batch, EXCEPT for a few special cases
         my ($self) = @_;
 
-        return unless ( $max_index_to_go >= 0 );
+        if ( $max_index_to_go < 0 ) {
+
+            # This is harmless but should be elimintated in development
+            if (DEVEL_MODE) {
+                Fault("End batch called with nothing to do; please fix\n");
+            }
+            return;
+        }
 
         # Exceptions when a line does not end with a comment... (fixes c058)
         if ( $types_to_go[$max_index_to_go] ne '#' ) {
@@ -11057,7 +11116,9 @@ EOM
         # Exception: if we are flushing within the code stream only to insert
         # blank line(s), then we can keep the batch intact at a weld. This
         # improves formatting of -ce.  See test 'ce1.ce'
-        if ( $CODE_type && $CODE_type eq 'BL' ) { $self->end_batch() }
+        if ( $CODE_type && $CODE_type eq 'BL' ) {
+            $self->end_batch() if ( $max_index_to_go >= 0 );
+        }
 
         # otherwise, we have to shut things down completely.
         else { $self->flush_batch_of_CODE() }
@@ -11181,7 +11242,7 @@ EOM
             }
 
             destroy_one_line_block();
-            $self->end_batch();
+            $self->end_batch() if ( $max_index_to_go >= 0 );
 
             # output a blank line before block comments
             if (
@@ -11354,7 +11415,7 @@ EOM
             if ( $rbrace_follower && $type ne 'b' ) {
 
                 unless ( $rbrace_follower->{$token} ) {
-                    $self->end_batch();
+                    $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
                 $rbrace_follower = undef;
             }
@@ -11485,7 +11546,7 @@ EOM
                         $self->unstore_token_to_go();
 
                         # then output the line
-                        $self->end_batch();
+                        $self->end_batch() if ( $max_index_to_go >= 0 );
 
                         # and now store this token at the start of a new line
                         $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -11497,7 +11558,7 @@ EOM
 
                 # now output this line
                 unless ($no_internal_newlines) {
-                    $self->end_batch();
+                    $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
             }
 
@@ -11530,7 +11591,7 @@ EOM
                 {
 
                     # write out everything before this closing curly brace
-                    $self->end_batch();
+                    $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
 
                 # Now update for side comment
@@ -11669,14 +11730,16 @@ EOM
 
                     unless ( $rbrace_follower->{$next_nonblank_token} ) {
                         $self->end_batch()
-                          unless ($no_internal_newlines);
+                          unless ( $no_internal_newlines
+                            || $max_index_to_go < 0 );
                     }
                     $rbrace_follower = undef;
                 }
 
                 else {
                     $self->end_batch()
-                      unless ($no_internal_newlines);
+                      unless ( $no_internal_newlines
+                        || $max_index_to_go < 0 );
                 }
 
             }    # end treatment of closing block token
@@ -11697,7 +11760,8 @@ EOM
                   )
                 {
                     destroy_one_line_block();
-                    $self->end_batch() if ($break_before_semicolon);
+                    $self->end_batch()
+                      if ( $break_before_semicolon && $max_index_to_go >= 0 );
                 }
 
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -11788,7 +11852,7 @@ EOM
           )
         {
             destroy_one_line_block();
-            $self->end_batch();
+            $self->end_batch() if ( $max_index_to_go >= 0 );
         }
 
         # Check for a soft break request
