@@ -12017,6 +12017,13 @@ sub tight_paren_follows {
     return 1;
 }
 
+my %is_brace_semicolon_colon;
+
+BEGIN {
+    my @q = qw( { } ; : );
+    @is_brace_semicolon_colon{@q} = (1) x scalar(@q);
+}
+
 sub starting_one_line_block {
 
     # after seeing an opening curly brace, look for the closing brace and see
@@ -12075,9 +12082,12 @@ sub starting_one_line_block {
     }
 
     # find the starting keyword for this block (such as 'if', 'else', ...)
-    if (   $max_index_to_go == 0
-        || $block_type =~ /^[\{\}\;\:]$/
-        || $block_type =~ /^package/ )
+    if (
+        $max_index_to_go == 0
+        ##|| $block_type =~ /^[\{\}\;\:]$/
+        || $is_brace_semicolon_colon{$block_type}
+        || substr( $block_type, 0, 7 ) eq 'package'
+      )
     {
         $i_start = $max_index_to_go;
     }
@@ -17601,12 +17611,17 @@ sub set_continuation_breaks {
 } ## end closure scan_list
 
 my %is_kwiZ;
+my %is_key_type;
 
 BEGIN {
 
     # Added 'w' to fix b1172
     my @q = qw(k w i Z ->);
     @is_kwiZ{@q} = (1) x scalar(@q);
+
+    @q = qw<( [ { L R } ] ) b>;
+    push @q, ',';
+    @is_key_type{@q} = (1) x scalar(@q);
 }
 
 use constant DEBUG_FIND_START => 0;
@@ -17652,7 +17667,8 @@ sub find_token_starting_list {
         # to the flag --space-function-paren, and similar.
         # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
         for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
-            last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
+            ##last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
+            last if ( $is_key_type{ $types_to_go[$j] } );
             $i_opening_minus = $j;
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
@@ -21628,6 +21644,7 @@ sub make_paren_name {
         ) = @_;
 
         my $rLL                      = $self->[_rLL_];
+        my $Klimit                   = $self->[_Klimit_];
         my $ris_bli_container        = $self->[_ris_bli_container_];
         my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
         my $rwant_reduced_ci         = $self->[_rwant_reduced_ci_];
@@ -21756,13 +21773,11 @@ sub make_paren_name {
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
         if ( $seqno_qw_closing && $total_weld_count ) {
-            my $K_next_nonblank = $self->K_next_code($K_beg);
-            if (   defined($K_next_nonblank)
-                && defined( $rK_weld_left->{$K_next_nonblank} ) )
-            {
-                my $itest = $ibeg + ( $K_next_nonblank - $K_beg );
-                if ( $itest <= $max_index_to_go ) {
-                    $ibeg_weld_fix = $itest;
+            my $i_plus = $inext_to_go[$ibeg];
+            if ( $i_plus <= $max_index_to_go ) {
+                my $K_plus = $K_to_go[$i_plus];
+                if ( defined( $rK_weld_left->{$K_plus} ) ) {
+                    $ibeg_weld_fix = $i_plus;
                 }
             }
         }
@@ -21857,13 +21872,37 @@ sub make_paren_name {
             # avoids an indentation jump larger than 1 level.
             if (   $i_terminal == $ibeg
                 && $is_closing_type_beg
-                && defined($K_beg) )
+                && defined($K_beg)
+                && $K_beg < $Klimit )
             {
-                my $K_next_nonblank = $self->K_next_code($K_beg);
+                my $K_plus    = $K_beg + 1;
+                my $type_plus = $rLL->[$K_plus]->[_TYPE_];
 
-                if ( !$is_bli_beg && defined($K_next_nonblank) ) {
+                if ( $type_plus eq 'b' && $K_plus < $Klimit ) {
+                    $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
+                }
+
+                if ( $type_plus eq '#' && $K_plus < $Klimit ) {
+                    $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
+                    if ( $type_plus eq 'b' && $K_plus < $Klimit ) {
+                        $type_plus = $rLL->[ ++$K_plus ]->[_TYPE_];
+                    }
+
+                    # Note: we have skipped past just one comment (perhaps a
+                    # side comment).  There could be more, and we could easily
+                    # skip past all the rest with the following code, or with a
+                    # while loop.  It would be rare to have to do this, and
+                    # those block comments would still be indented, so it would
+                    # to leave them indented.  So it seems best to just stop at
+                    # a maximum of one comment.
+                    ##if ($type_plus eq '#') {
+                    ##   $K_plus = $self->K_next_code($K_plus);
+                    ##}
+                }
+
+                if ( !$is_bli_beg && defined($K_plus) ) {
                     my $lev        = $level_beg;
-                    my $level_next = $rLL->[$K_next_nonblank]->[_LEVEL_];
+                    my $level_next = $rLL->[$K_plus]->[_LEVEL_];
 
                     # and do not undo ci if it was set by the -xci option
                     $adjust_indentation = 1
@@ -22021,8 +22060,12 @@ sub make_paren_name {
         }
 
         # if at ');', '};', '>;', and '];' of a terminal qw quote
-        elsif ($rpatterns->[0] =~ /^qb*;$/
-            && $rfields->[0] =~ /^([\)\}\]\>]);$/ )
+        elsif (
+               substr( $rpatterns->[0], 0, 2 ) eq 'qb'
+            && substr( $rfields->[0], -1, 1 ) eq ';'
+            ##&& $rpatterns->[0] =~ /^qb*;$/
+            && $rfields->[0] =~ /^([\)\}\]\>]);$/
+          )
         {
             if ( $closing_token_indentation{$1} == 0 ) {
                 $adjust_indentation = 1;
