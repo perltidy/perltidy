@@ -656,8 +656,13 @@ sub valign_input {
     # It simplifies things to create a zero length side comment
     # if none exists.
     # --------------------------------------------------------------------
-    $self->make_side_comment( $rtokens, $rfields, $rpatterns, $rfield_lengths );
-    $jmax = @{$rfields} - 1;
+    if ( ( $jmax == 0 ) || ( $rtokens->[ $jmax - 1 ] ne '#' ) ) {
+        $jmax += 1;
+        $rtokens->[ $jmax - 1 ]  = '#';
+        $rfields->[$jmax]        = '';
+        $rfield_lengths->[$jmax] = 0;
+        $rpatterns->[$jmax]      = '#';
+    }
 
     # --------------------------------------------------------------------
     # create an object to hold this line
@@ -770,25 +775,6 @@ sub join_hanging_comment {
         $rpatterns->[ $j - 1 ] = "";
     }
     return 1;
-}
-
-sub make_side_comment {
-
-    # create an empty side comment if none exists
-
-    my ( $self, $rtokens, $rfields, $rpatterns, $rfield_lengths ) = @_;
-
-    my $jmax = @{$rfields} - 1;
-
-    # if line does not have a side comment...
-    if ( ( $jmax == 0 ) || ( $rtokens->[ $jmax - 1 ] ne '#' ) ) {
-        $jmax += 1;
-        $rtokens->[ $jmax - 1 ]  = '#';
-        $rfields->[$jmax]        = '';
-        $rfield_lengths->[$jmax] = 0;
-        $rpatterns->[$jmax]      = '#';
-    }
-    return;
 }
 
 {    ## closure for sub decide_if_list
