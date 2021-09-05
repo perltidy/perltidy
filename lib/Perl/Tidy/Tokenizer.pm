@@ -23,6 +23,9 @@ use strict;
 use warnings;
 our $VERSION = '20210717.01';
 
+# this can be turned on for extra checking during development
+use constant DEVEL_MODE => 0;
+
 use Perl::Tidy::LineBuffer;
 use Carp;
 
@@ -1585,6 +1588,42 @@ sub prepare_for_a_new_file {
         return;
     }
 
+    sub split_current_pretoken {
+
+        # Split the current pretoken at index $i into two parts.
+        #   $numc = number of characters in the first part; must be fewer than
+        #           the number of characters in the pretoken.
+        #           i.e., numc=1 to split off just the first character.
+        #
+        # The part we split will become the current token; the remainder will
+        # be appear as the subsequent token.
+
+        # returns undef if error
+        # returns new initial token if successful
+
+        my ($numc) = @_;
+
+        # Do not try to split more characters than we have
+        if ( !$tok || $numc >= length($tok) ) {
+            my $len = length($tok);
+            if (DEVEL_MODE) {
+                Die(<<EOM);
+Code bug: bad call to 'split_current_pretoken': numc=$numc >= len=$len at token='$tok'
+EOM
+            }
+            return;
+        }
+        my $tok_new = substr( $tok, 0, $numc );
+        my $new_pos = $rtoken_map->[$i] + $numc;
+        splice @{$rtoken_map},  $i + 1, 0, $new_pos;
+        splice @{$rtokens},     $i + 1, 0, substr( $tok, $numc );
+        splice @{$rtoken_type}, $i + 1, 0, 'd';
+        $tok = $tok_new;
+        $rtokens->[$i] = $tok_new;
+        $max_token_index++;
+        return $tok_new;
+    }
+
     sub get_indentation_level {
 
         # patch to avoid reporting error if indented if is not terminated
@@ -1712,6 +1751,23 @@ sub prepare_for_a_new_file {
         ( $i, $tok, $type, $id_scan_state, $identifier ) =
           scan_identifier_do( $i, $id_scan_state, $identifier, $rtokens,
             $max_token_index, $expecting, $paren_type[$paren_depth] );
+
+        # Check for something like a keyword joined to a special variable, like
+        # '$^One$0'. This is very rare and tricky to program around, so
+        # we issue a warning message and let the user fix it by hand.
+        if ( $tok && length($tok) > 3 && substr( $tok, 1, 1 ) eq '^' ) {
+            my $sigil = substr( $tok, 0, 1 );
+            if ( $sigil =~ /^[\$\&\%\*\@]$/ ) {
+                my $var    = substr( $tok, 0, 3 );
+                my $excess = substr( $tok, 3 );
+                interrupt_logfile();
+                warning(<<EOM);
+$input_line_number: Unexpected characters '$excess' after special variable '$var'.
+This version of perltidy does not allow letters or digits immediately after a special variable
+EOM
+                resume_logfile();
+            }
+        }
         return;
     }
 
@@ -3757,6 +3813,9 @@ EOM
                            # is a syntax error.
                             if ( $expecting == OPERATOR && $tok =~ /^x\d+$/ ) {
                                 $type = 'n';
+                                if ( split_current_pretoken(1) ) {
+                                    $type = 'x';
+                                }
                             }
                             else {
 
@@ -3843,12 +3902,23 @@ EOM
                             $type = 'x';
                         }
                     }
-
-                    # NOTE: mark something like x4 as an integer for now
-                    # It gets fixed downstream.  This is easier than
-                    # splitting the pretoken.
                     else {
+
+                        # Split a pretoken like 'x10' into 'x' and '10'.
+                        # Note: In previous versions of perltidy it was marked
+                        # as a number, $type = 'n', and fixed downstream by the
+                        # Formatter. Note that there can still be trouble if
+                        # the remaining token is not all digits; for example
+                        # $snake_says = 'hi' . 's' x2if (1); which gives a
+                        # pretoken 'x2if'.  This will cause an
+                        # error message and require that the user insert
+                        # blanks.  One way to fix this would be to make a
+                        # leading 'x' followed by a digit a separate pretoken,
+                        # but it does not seem worth the effort.
                         $type = 'n';
+                        if ( split_current_pretoken(1) ) {
+                            $type = 'x';
+                        }
                     }
                 }
                 elsif ( $tok_kw eq 'CORE::' ) {

@@ -2,6 +2,47 @@
 
 =over 4
 
+=item B<Handle unusual parsing problem issue c066>
+
+This issue is illustrated with the following line (rt80058):
+
+   $^One$0
+
+Running perltidy generates a warning message which is caused by the lack of
+space before the 'ne'. This update gives a better warning message.
+
+4 Sep 2021.
+
+=item B<Fix unusual parsing problem issue c065>
+
+Testing produced an unusual parsing problem in perltidy which can be illustrated
+with the following simple script:
+
+    my $str = 'a'x2.2;
+    print $str,"\n";
+
+Normally an integer would follow the 'x' operator, but Perl seems to accept
+any valid number and truncates it to an integer.  So in this case the number
+2.2 is truncated to 2 and the output is 'aa'.
+
+But perltidy, with default parameters, formats this as
+
+    my $str = 'a' x 2 . 2;
+    print $str,"\n";
+
+which prints the result "aa2".  The problem is fixed with this update.
+With the update, the result is
+
+    my $str = 'a' x 2.2;
+    print $str, "\n";
+
+which is equivalent to the original script.
+
+This fixes issue c065.
+
+4 Sep 2021.
+
+
 =item B<Fix formatting instability issues b1195, b1196>
 
 Testing with random parameters produced two similar cases of unstable

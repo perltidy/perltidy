@@ -2661,12 +2661,6 @@ sub set_whitespace_flags {
             $ws = ( ( $wl == $wr ) || ( $wl == -1 ) || !$wr ) ? $wl : $wr;
         }
 
-        if ( !defined($ws) ) {
-            $ws = 0;
-            write_diagnostics(
-                "WS flag is undefined for tokens $last_token $token\n");
-        }
-
         # Treat newline as a whitespace. Otherwise, we might combine
         # 'Send' and '-recipients' here according to the above rules:
         # <<snippets/space3.in>>
@@ -6446,12 +6440,18 @@ sub respace_tokens {
                 }
             }
 
-            # patch to add space to something like "x10"
-            # This avoids having to split this token in the pre-tokenizer
+            # Old patch to add space to something like "x10".
+            # Note: This is now done in the Tokenizer, but this code remains
+            # for reference.
             elsif ( $type eq 'n' ) {
                 if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
                     $token =~ s/x/x /;
                     $rtoken_vars->[_TOKEN_] = $token;
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+Near line $input_line_number, Unexpected need to split a token '$token' - this should now be done by the Tokenizer
+EOM
+                    }
                 }
             }
 

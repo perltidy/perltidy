@@ -29,15 +29,6 @@ it part of the standard Perl distribution.  But for example the following line
 
 which uses double brackets to contain single brackets does not render correctly.
 
-## Two iterations are sometimes needed
-
-Usually the code produced by perltidy on the first pass does not change if it
-is run again, but sometimes a second pass will produce some small additional
-change.  This mainly happens if a major style change is made, particularly when
-perltidy is untangling complex ternary statements. Use the iteration parameter
-**-it=2** if it is important that the results be unchanged on subsequent passes,
-but note that this doubles the run time.
-
 ## Perltidy does not look for here-document targets inside of quoted strings
 
 For example, consider the following script
