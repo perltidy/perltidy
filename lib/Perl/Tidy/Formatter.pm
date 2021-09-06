@@ -1119,15 +1119,6 @@ sub consecutive_nonblank_lines {
       $vao->get_cached_line_count();
 }
 
-sub trim {
-
-    # trim leading and trailing whitespace from a string
-    my $str = shift;
-    $str =~ s/\s+$//;
-    $str =~ s/^\s+//;
-    return $str;
-}
-
 sub max {
     my (@vals) = @_;
     my $max = shift @vals;
@@ -2290,25 +2281,7 @@ sub set_whitespace_flags {
         }
     };
 
-    my $ws_opening_container_override = sub {
-        my ( $ws, $sequence_number ) = @_;
-        return $ws unless (%opening_container_inside_ws);
-        if ($sequence_number) {
-            my $ws_override = $opening_container_inside_ws{$sequence_number};
-            if ($ws_override) { $ws = $ws_override }
-        }
-        return $ws;
-    };
-
-    my $ws_closing_container_override = sub {
-        my ( $ws, $sequence_number ) = @_;
-        return $ws unless (%closing_container_inside_ws);
-        if ($sequence_number) {
-            my $ws_override = $closing_container_inside_ws{$sequence_number};
-            if ($ws_override) { $ws = $ws_override }
-        }
-        return $ws;
-    };
+    my ( $ws_1, $ws_2, $ws_3, $ws_4 );
 
     # main loop over all tokens to define the whitespace flags
     for ( my $j = 0 ; $j <= $jmax ; $j++ ) {
@@ -2400,10 +2373,12 @@ sub set_whitespace_flags {
             }
 
             # check for special cases which override the above rules
-            $ws = $ws_opening_container_override->( $ws, $last_seqno );
+            if ( %opening_container_inside_ws && $last_seqno ) {
+                my $ws_override = $opening_container_inside_ws{$last_seqno};
+                if ($ws_override) { $ws = $ws_override }
+            }
 
         }    # end setting space flag inside opening tokens
-        my $ws_1;
         $ws_1 = $ws
           if DEBUG_WHITE;
 
@@ -2435,11 +2410,13 @@ sub set_whitespace_flags {
             }
 
             # check for special cases which override the above rules
-            $ws = $ws_closing_container_override->( $ws, $seqno );
+            if ( %closing_container_inside_ws && $seqno ) {
+                my $ws_override = $closing_container_inside_ws{$seqno};
+                if ($ws_override) { $ws = $ws_override }
+            }
 
         }    # end setting space flag inside closing tokens
 
-        my $ws_2;
         $ws_2 = $ws
           if DEBUG_WHITE;
 
@@ -2450,7 +2427,6 @@ sub set_whitespace_flags {
         if ( !defined($ws) ) {
             $ws = $binary_ws_rules{$last_type}{$type};
         }
-        my $ws_3;
         $ws_3 = $ws
           if DEBUG_WHITE;
 
@@ -2626,7 +2602,6 @@ sub set_whitespace_flags {
             }
         }
 
-        my $ws_4;
         $ws_4 = $ws
           if DEBUG_WHITE;
 
@@ -2671,7 +2646,7 @@ sub set_whitespace_flags {
 
         $rwhitespace_flags->[$j] = $ws;
 
-        DEBUG_WHITE && do {
+        if (DEBUG_WHITE) {
             my $str = substr( $last_token, 0, 15 );
             $str .= ' ' x ( 16 - length($str) );
             if ( !defined($ws_1) ) { $ws_1 = "*" }
@@ -2680,7 +2655,10 @@ sub set_whitespace_flags {
             if ( !defined($ws_4) ) { $ws_4 = "*" }
             print STDOUT
 "NEW WHITE:  i=$j $str $last_type $type $ws_1 : $ws_2 : $ws_3 : $ws_4 : $ws \n";
-        };
+
+            # reset for next pass
+            $ws_1 = $ws_2 = $ws_3 = $ws_4 = undef;
+        }
     } ## end main loop
 
     if ( $rOpts->{'tight-secret-operators'} ) {
@@ -6182,28 +6160,16 @@ sub respace_tokens {
                     || $rOpts_delete_old_whitespace )
                 {
 
-                    my $Kp = $self->K_previous_nonblank($KK);
-                    next unless defined($Kp);
-                    my $token_p = $rLL->[$Kp]->[_TOKEN_];
-                    my $type_p  = $rLL->[$Kp]->[_TYPE_];
-
-                    my ( $token_pp, $type_pp );
-
-                    my $Kpp = $self->K_previous_nonblank($Kp);
-                    if ( defined($Kpp) ) {
-                        $token_pp = $rLL->[$Kpp]->[_TOKEN_];
-                        $type_pp  = $rLL->[$Kpp]->[_TYPE_];
-                    }
-                    else {
-                        $token_pp = ";";
-                        $type_pp  = ';';
-                    }
                     my $token_next = $rLL->[$Knext]->[_TOKEN_];
                     my $type_next  = $rLL->[$Knext]->[_TYPE_];
 
                     my $do_not_delete = is_essential_whitespace(
-                        $token_pp, $type_pp,    $token_p,
-                        $type_p,   $token_next, $type_next,
+                        $last_last_nonblank_code_token,
+                        $last_last_nonblank_code_type,
+                        $last_nonblank_code_token,
+                        $last_nonblank_code_type,
+                        $token_next,
+                        $type_next,
                     );
 
                     # Note that repeated blanks will get filtered out here
@@ -6400,8 +6366,8 @@ sub respace_tokens {
                 {
 
                     # This looks like a deletable semicolon, but even if a
-                    # semicolon can be deleted it is necessarily best to do so.
-                    # We apply these additional rules for deletion:
+                    # semicolon can be deleted it is not necessarily best to do
+                    # so.  We apply these additional rules for deletion:
                     # - Always ok to delete a ';' at the end of a line
                     # - Never delete a ';' before a '#' because it would
                     #   promote it to a block comment.
@@ -11388,7 +11354,7 @@ EOM
                     $self->set_forced_breakpoint($max_index_to_go);
                 }
                 else {
-                    $self->end_batch();
+                    $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
             }
         }
@@ -12503,7 +12469,7 @@ sub compare_indentation_levels {
             if (DEVEL_MODE) {
                 my ( $a, $b, $c ) = caller();
                 Fault(
-"Bad call to forced breakpoint from $a $b $c ; called with i=$i\n"
+"Bad call to forced breakpoint from $a $b $c ; called with i=$i; please fix\n"
                 );
             }
             return;
@@ -12540,6 +12506,8 @@ EOM
             }
             print STDOUT $msg;
         };
+
+        return;
     }
 
     sub set_forced_breakpoint_AFTER {

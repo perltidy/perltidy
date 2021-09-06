@@ -1588,40 +1588,70 @@ sub prepare_for_a_new_file {
         return;
     }
 
-    sub split_current_pretoken {
+    sub split_x_pretoken {
 
-        # Split the current pretoken at index $i into two parts.
-        #   $numc = number of characters in the first part; must be fewer than
-        #           the number of characters in the pretoken.
-        #           i.e., numc=1 to split off just the first character.
-        #
-        # The part we split will become the current token; the remainder will
-        # be appear as the subsequent token.
+        # Given a token which has been parsed as a word with leading 'x'
+        # followed by one or more digits, split off the 'x' (which is now known
+        # to be an operator) and insert the remainder back into the pretoken
+        # stream with appropriate settings.
 
-        # returns undef if error
-        # returns new initial token if successful
+        # Examples:
+        #   $tok    => $tok_0 $tok_1 $tok_2
+        #   'x10'   => 'x'    '10'
+        #   'x10if' => 'x'    '10'   'if'
 
-        my ($numc) = @_;
+        # return 1 if successful
+        # return undef if error (shouldn't happen)
 
-        # Do not try to split more characters than we have
-        if ( !$tok || $numc >= length($tok) ) {
-            my $len = length($tok);
+        if ( $tok && $tok =~ /^x(\d+)(.*)$/ ) {
+
+            # Split $tok into up to 3 tokens:
+            my $tok_0 = 'x';
+            my $tok_1 = $1;
+            my $tok_2 = $2 ? $2 : "";
+
+            my $len_0 = length($tok_0);
+            my $len_1 = length($tok_1);
+            my $len_2 = length($tok_2);
+
+            my $pre_type_0 = 'w';
+            my $pre_type_1 = 'd';
+            my $pre_type_2 = 'w';
+
+            my $pos_0 = $rtoken_map->[$i];
+            my $pos_1 = $pos_0 + $len_0;
+            my $pos_2 = $pos_1 + $len_1;
+
+            # Splice in the digits
+            splice @{$rtoken_map},  $i + 1, 0, $pos_1;
+            splice @{$rtokens},     $i + 1, 0, $tok_1;
+            splice @{$rtoken_type}, $i + 1, 0, $pre_type_1;
+            $max_token_index++;
+
+            # Splice in any trailing word
+            if ($len_2) {
+                splice @{$rtoken_map},  $i + 2, 0, $pos_2;
+                splice @{$rtokens},     $i + 2, 0, $tok_2;
+                splice @{$rtoken_type}, $i + 2, 0, $pre_type_2;
+                $max_token_index++;
+            }
+
+            # The first token, 'x', becomes the current token
+            $tok           = $tok_0;
+            $rtokens->[$i] = $tok;
+            $type          = 'x';
+            return 1;
+        }
+        else {
+
+            # Shouldn't get here
             if (DEVEL_MODE) {
                 Die(<<EOM);
-Code bug: bad call to 'split_current_pretoken': numc=$numc >= len=$len at token='$tok'
+Bad arg '$tok' passed to sub split_x_pretoken(); please fix
 EOM
             }
-            return;
         }
-        my $tok_new = substr( $tok, 0, $numc );
-        my $new_pos = $rtoken_map->[$i] + $numc;
-        splice @{$rtoken_map},  $i + 1, 0, $new_pos;
-        splice @{$rtokens},     $i + 1, 0, substr( $tok, $numc );
-        splice @{$rtoken_type}, $i + 1, 0, 'd';
-        $tok = $tok_new;
-        $rtokens->[$i] = $tok_new;
-        $max_token_index++;
-        return $tok_new;
+        return;
     }
 
     sub get_indentation_level {
@@ -3811,9 +3841,15 @@ EOM
                            # a key with 18 a's.  But something like
                            #    push @array, a x18;
                            # is a syntax error.
-                            if ( $expecting == OPERATOR && $tok =~ /^x\d+$/ ) {
+                            if (
+                                   $expecting == OPERATOR
+                                && substr( $tok, 0, 1 ) eq 'x'
+                                && ( length($tok) == 1
+                                    || substr( $tok, 1, 1 ) =~ /^\d/ )
+                              )
+                            {
                                 $type = 'n';
-                                if ( split_current_pretoken(1) ) {
+                                if ( split_x_pretoken() ) {
                                     $type = 'x';
                                 }
                             }
@@ -3887,12 +3923,15 @@ EOM
                 }
 
                 # handle operator x (now we know it isn't $x=)
-                if (   $expecting == OPERATOR
+                if (
+                       $expecting == OPERATOR
                     && substr( $tok, 0, 1 ) eq 'x'
-                    && $tok =~ /^x\d*$/ )
+                    && ( length($tok) == 1
+                        || substr( $tok, 1, 1 ) =~ /^\d/ )
+                  )
                 {
-                    if ( $tok eq 'x' ) {
 
+                    if ( $tok eq 'x' ) {
                         if ( $rtokens->[ $i + 1 ] eq '=' ) {    # x=
                             $tok  = 'x=';
                             $type = $tok;
@@ -3907,16 +3946,9 @@ EOM
                         # Split a pretoken like 'x10' into 'x' and '10'.
                         # Note: In previous versions of perltidy it was marked
                         # as a number, $type = 'n', and fixed downstream by the
-                        # Formatter. Note that there can still be trouble if
-                        # the remaining token is not all digits; for example
-                        # $snake_says = 'hi' . 's' x2if (1); which gives a
-                        # pretoken 'x2if'.  This will cause an
-                        # error message and require that the user insert
-                        # blanks.  One way to fix this would be to make a
-                        # leading 'x' followed by a digit a separate pretoken,
-                        # but it does not seem worth the effort.
+                        # Formatter.
                         $type = 'n';
-                        if ( split_current_pretoken(1) ) {
+                        if ( split_x_pretoken() ) {
                             $type = 'x';
                         }
                     }
