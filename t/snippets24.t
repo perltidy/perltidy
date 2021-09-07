@@ -19,6 +19,7 @@
 #16 code_skipping.def
 #17 git51.def
 #18 git51.git51
+#19 pretok.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -278,6 +279,20 @@ my @vals = (
     0o12_345,  # optional 'o' and 'O' added in perl v5.33.5
     0O12_345,
 );
+----------
+
+        'pretok' => <<'----------',
+# test sub split_pretoken
+my $bb=$^??"defined":"not defined";
+my $aa=$^if($bb);
+my $yes=$^Oeq"linux";
+my $no=$  ^One"linux";
+my $val=% ^O;
+$str0='hi'.'s'x10if(1);
+$str1='merci'x0.1e4.$str0;
+$str2='hi'.'s'x10.2.'you';
+$str2='hi'.'s'x0.1e1;
+$str3='tak'x0if('bad');
 ----------
 
         'rt136417' => <<'----------',
@@ -923,6 +938,24 @@ Type::Libraries->setup_class(
 	),    # <--- brace here
 );
 #18...........
+        },
+
+        'pretok.def' => {
+            source => "pretok",
+            params => "def",
+            expect => <<'#19...........',
+# test sub split_pretoken
+my $bb  = $^? ? "defined" : "not defined";
+my $aa  = $^ if ($bb);
+my $yes = $^O eq "linux";
+my $no  = $^O ne "linux";
+my $val = %^O;
+$str0 = 'hi' . 's' x 10 if (1);
+$str1 = 'merci' x 0.1e4 . $str0;
+$str2 = 'hi' . 's' x 10.2 . 'you';
+$str2 = 'hi' . 's' x 0.1e1;
+$str3 = 'tak' x 0 if ('bad');
+#19...........
         },
     };
 
