@@ -2,7 +2,29 @@
 
 =over 4
 
-=item B<Handle parsing problem issue c066>
+=item B<Fix parsing issue c068>
+
+This issue is illustrated with the following line:
+
+   my $aa = $^ ? "defined" : "not defined";
+
+If we tell perltidy to remove the space before the '?', then the output
+will no longer be a valid script:
+
+   # perltidy -nwls='?':
+   my $aa = $^? "defined" : "not defined";
+
+The problem is that Perl considers '$^?' to be a special variable. So Rerunning
+perltidy on this gives an error, and perl also gives an error.  This update
+fixes the problem by preventing a space after anything like '$^' from being
+removed a new special variable would be created.
+
+This fixes issue c068.
+
+7 Sep 2021.
+
+
+=item B<Fix parsing problem issue c066>
 
 This issue is illustrated with the following line (rt80058):
 

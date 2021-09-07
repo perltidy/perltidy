@@ -2714,6 +2714,7 @@ EOM
     my %essential_whitespace_filter_l2;
     my %essential_whitespace_filter_r2;
     my %is_type_with_space_before_bareword;
+    my %is_special_variable_char;
 
     BEGIN {
 
@@ -2767,6 +2768,12 @@ EOM
         #      $opts{rdonly} = (($opts{mode} & O_ACCMODE) == O_RDONLY);
         @q = qw( Q & );
         @is_type_with_space_before_bareword{@q} = (1) x scalar(@q);
+
+        # These are the only characters which can (currently) form special
+        # variables, like $^W: (issue c066, c068).
+        @q =
+          qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+        @{is_special_variable_char}{@q} = (1) x scalar(@q);
 
     }
 
@@ -2978,6 +2985,14 @@ EOM
             #  /^(for|foreach)$/
             && $is_for_foreach{$tokenll}
           )
+
+          # Keep space after like $^ if needed to avoid forming a different
+          # special variable (issue c068). For example:
+          #       my $aa = $^ ? "none" : "ok";
+          || ( $typel eq 'i'
+            && length($tokenl) == 2
+            && substr( $tokenl, 1, 1 ) eq '^'
+            && $is_special_variable_char{ substr( $tokenr, 0, 1 ) } )
 
           # We must be sure that a space between a ? and a quoted string
           # remains if the space before the ? remains.  [Loca.pm, lockarea]
