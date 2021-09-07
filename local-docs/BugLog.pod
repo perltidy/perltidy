@@ -2,14 +2,14 @@
 
 =over 4
 
-=item B<Handle unusual parsing problem issue c066>
+=item B<Handle parsing problem issue c066>
 
 This issue is illustrated with the following line (rt80058):
 
-   $^One$0
+   my $ok=$^Oeq"linux";
 
-Running perltidy generates a warning message which is caused by the lack of
-space before the 'ne'. This update gives a better warning message.
+Running perltidy generated a warning message which is caused by the lack of
+space before the 'eq'. This update fixes the problem.
 
 4 Sep 2021.
 

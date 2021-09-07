@@ -1588,27 +1588,43 @@ sub prepare_for_a_new_file {
         return;
     }
 
-    sub split_x_pretoken {
+    sub split_pretoken {
 
-        # Given a token which has been parsed as a word with leading 'x'
-        # followed by one or more digits, split off the 'x' (which is now known
-        # to be an operator) and insert the remainder back into the pretoken
-        # stream with appropriate settings.
+        my ($numc) = @_;
 
-        # Examples:
+     # Split the leading $numc characters from the current token (at index=$i)
+     # which is pre-type 'w' and insert the remainder back into the pretoken
+     # stream with appropriate settings.  Since we are splitting a pre-type 'w',
+     # there are three cases, depending on if the remainder starts with a digit:
+     # Case 1: remainder is type 'd', all digits
+     # Case 2: remainder is type 'd' and type 'w': digits and other characters
+     # Case 3: remainder is type 'w'
+
+        # Examples, for $numc=1:
         #   $tok    => $tok_0 $tok_1 $tok_2
-        #   'x10'   => 'x'    '10'
-        #   'x10if' => 'x'    '10'   'if'
+        #   'x10'   => 'x'    '10'                # case 1
+        #   'x10if' => 'x'    '10'   'if'         # case 2
+        #   '0ne    => 'O'            'ne'        # case 3
+
+        # where:
+        #   $tok_1 is a possible string of digits (pre-type 'd')
+        #   $tok_2 is a possible word (pre-type 'w')
 
         # return 1 if successful
         # return undef if error (shouldn't happen)
 
-        if ( $tok && $tok =~ /^x(\d+)(.*)$/ ) {
+        # Calling routine should update '$type' and '$tok' if successful.
+
+        my $pretoken = $rtokens->[$i];
+        if (   $pretoken
+            && length($pretoken) > $numc
+            && substr( $pretoken, $numc ) =~ /^(\d*)(.*)$/ )
+        {
 
             # Split $tok into up to 3 tokens:
-            my $tok_0 = 'x';
-            my $tok_1 = $1;
-            my $tok_2 = $2 ? $2 : "";
+            my $tok_0 = substr( $pretoken, 0, $numc );
+            my $tok_1 = defined($1) ? $1 : "";
+            my $tok_2 = defined($2) ? $2 : "";
 
             my $len_0 = length($tok_0);
             my $len_1 = length($tok_1);
@@ -1622,24 +1638,26 @@ sub prepare_for_a_new_file {
             my $pos_1 = $pos_0 + $len_0;
             my $pos_2 = $pos_1 + $len_1;
 
-            # Splice in the digits
-            splice @{$rtoken_map},  $i + 1, 0, $pos_1;
-            splice @{$rtokens},     $i + 1, 0, $tok_1;
-            splice @{$rtoken_type}, $i + 1, 0, $pre_type_1;
-            $max_token_index++;
+            my $isplice = $i + 1;
+
+            # Splice in any digits
+            if ($len_1) {
+                splice @{$rtoken_map},  $isplice, 0, $pos_1;
+                splice @{$rtokens},     $isplice, 0, $tok_1;
+                splice @{$rtoken_type}, $isplice, 0, $pre_type_1;
+                $max_token_index++;
+                $isplice++;
+            }
 
             # Splice in any trailing word
             if ($len_2) {
-                splice @{$rtoken_map},  $i + 2, 0, $pos_2;
-                splice @{$rtokens},     $i + 2, 0, $tok_2;
-                splice @{$rtoken_type}, $i + 2, 0, $pre_type_2;
+                splice @{$rtoken_map},  $isplice, 0, $pos_2;
+                splice @{$rtokens},     $isplice, 0, $tok_2;
+                splice @{$rtoken_type}, $isplice, 0, $pre_type_2;
                 $max_token_index++;
             }
 
-            # The first token, 'x', becomes the current token
-            $tok           = $tok_0;
-            $rtokens->[$i] = $tok;
-            $type          = 'x';
+            $rtokens->[$i] = $tok_0;
             return 1;
         }
         else {
@@ -1647,7 +1665,7 @@ sub prepare_for_a_new_file {
             # Shouldn't get here
             if (DEVEL_MODE) {
                 Die(<<EOM);
-Bad arg '$tok' passed to sub split_x_pretoken(); please fix
+Bad arg '$tok' passed to sub split_pretoken(); please fix
 EOM
             }
         }
@@ -1782,21 +1800,31 @@ EOM
           scan_identifier_do( $i, $id_scan_state, $identifier, $rtokens,
             $max_token_index, $expecting, $paren_type[$paren_depth] );
 
-        # Check for something like a keyword joined to a special variable, like
-        # '$^One$0'. This is very rare and tricky to program around, so
-        # we issue a warning message and let the user fix it by hand.
-        if ( $tok && length($tok) > 3 && substr( $tok, 1, 1 ) eq '^' ) {
-            my $sigil = substr( $tok, 0, 1 );
-            if ( $sigil =~ /^[\$\&\%\*\@]$/ ) {
+        # Check for signal to fix a special variable adjacent to a keyword,
+        # such as '$^One$0'.
+        if ( $id_scan_state eq '^' ) {
+
+            # Try to fix it by splitting the pretoken
+            if (   $i > 0
+                && $rtokens->[ $i - 1 ] eq '^'
+                && split_pretoken(1) )
+            {
+                $identifier = substr( $identifier, 0, 3 );
+                $tok        = $identifier;
+            }
+            else {
+
+                # This shouldn't happen ...
                 my $var    = substr( $tok, 0, 3 );
                 my $excess = substr( $tok, 3 );
                 interrupt_logfile();
                 warning(<<EOM);
-$input_line_number: Unexpected characters '$excess' after special variable '$var'.
-This version of perltidy does not allow letters or digits immediately after a special variable
+$input_line_number: Trouble parsing at characters '$excess' after special variable '$var'.
+A space may be needed after '$var'. 
 EOM
                 resume_logfile();
             }
+            $id_scan_state = "";
         }
         return;
     }
@@ -3849,8 +3877,9 @@ EOM
                               )
                             {
                                 $type = 'n';
-                                if ( split_x_pretoken() ) {
+                                if ( split_pretoken(1) ) {
                                     $type = 'x';
+                                    $tok  = 'x';
                                 }
                             }
                             else {
@@ -3948,8 +3977,9 @@ EOM
                         # as a number, $type = 'n', and fixed downstream by the
                         # Formatter.
                         $type = 'n';
-                        if ( split_x_pretoken() ) {
+                        if ( split_pretoken(1) ) {
                             $type = 'x';
+                            $tok  = 'x';
                         }
                     }
                 }
@@ -6869,6 +6899,17 @@ sub do_scan_package {
     return ( $i, $tok, $type );
 }
 
+my %is_special_variable_char;
+
+BEGIN {
+
+    # These are the only characters which can (currently) form special
+    # variables, like $^W: (issue c066).
+    my @q =
+      qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
+    @{is_special_variable_char}{@q} = (1) x scalar(@q);
+}
+
 sub scan_identifier_do {
 
     # This routine assembles tokens into identifiers.  It maintains a
@@ -7124,17 +7165,29 @@ sub scan_identifier_do {
             }
             elsif ( $tok eq '^' ) {
 
-                # check for some special variables like $^W
+                # check for some special variables like $^ $^W
                 if ( $identifier =~ /^[\$\*\@\%]$/ ) {
                     $identifier .= $tok;
-                    $id_scan_state = 'A';
 
-                    # Perl accepts '$^]' or '@^]', but
-                    # there must not be a space before the ']'.
+                    # There may be one more character, not a space, after the ^
                     my $next1 = $rtokens->[ $i + 1 ];
-                    if ( $next1 eq ']' ) {
+                    my $chr   = substr( $next1, 0, 1 );
+                    if ( $is_special_variable_char{$chr} ) {
+
+                        # It is something like $^W
+                        # Test case (c066) : $^Oeq'linux'
                         $i++;
                         $identifier .= $next1;
+
+                        # If pretoken $next1 is more than one character long,
+                        # set a flag indicating that it needs to be split.
+                        $id_scan_state = ( length($next1) > 1 ) ? '^' : "";
+                        last;
+                    }
+                    else {
+
+                        # it is just $^
+                        # Simple test case (c065): '$aa=$^if($bb)';
                         $id_scan_state = "";
                         last;
                     }
@@ -7373,6 +7426,39 @@ sub scan_identifier_do {
                 if ( $identifier eq '&' || $i == 0 ) { $identifier = ''; }
                 $i             = $i_save;
                 $id_scan_state = '';
+                last;
+            }
+            elsif ( $tok eq '^' ) {
+                if ( $identifier eq '&' ) {
+
+                    # Special variable (c066)
+                    $identifier .= $tok;
+                    $type          = '&';
+
+                    # There may be one more character, not a space, after the ^
+                    my $next1 = $rtokens->[ $i + 1 ];
+                    my $chr   = substr( $next1, 0, 1 );
+                    if ( $is_special_variable_char{$chr} ) {
+
+                        # It is something like &^O
+                        $i++;
+                        $identifier .= $next1;
+
+                        # If pretoken $next1 is more than one character long,
+                        # set a flag indicating that it needs to be split.
+                        $id_scan_state = ( length($next1) > 1 ) ? '^' : "";
+                    }
+                    else {
+
+                        # it is &^
+                        $id_scan_state = "";
+                    }
+                    last;
+                }
+                else {
+                    $identifier = '';
+                    $i          = $i_save;
+                }
                 last;
             }
             else {
