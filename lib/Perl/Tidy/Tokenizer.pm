@@ -7168,6 +7168,7 @@ sub scan_identifier_do {
                 # check for some special variables like $^ $^W
                 if ( $identifier =~ /^[\$\*\@\%]$/ ) {
                     $identifier .= $tok;
+                    $type = 'i';
 
                     # There may be one more character, not a space, after the ^
                     my $next1 = $rtokens->[ $i + 1 ];
