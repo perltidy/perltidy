@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 07 17.01
+## 2021 07 17.02
 
     - Fixed problem where a blank line following a closing code-skipping
       comment, '#>>V', can be lost.  A workaround for the previous version

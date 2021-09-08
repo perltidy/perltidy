@@ -1,3 +1,4 @@
+.github/workflows/perltest.yml
 .pre-commit-hooks.yaml
 bin/perltidy
 BUGS.md
