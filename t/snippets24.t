@@ -283,16 +283,16 @@ my @vals = (
 
         'pretok' => <<'----------',
 # test sub split_pretoken
-my $bb=$^??"defined":"not defined";
-my $aa=$^if($bb);
-my $yes=$^Oeq"linux";
-my $no=$  ^One"linux";
-my $val=% ^O;
-$str0='hi'.'s'x10if(1);
-$str1='merci'x0.1e4.$str0;
-$str2='hi'.'s'x10.2.'you';
-$str2='hi'.'s'x0.1e1;
-$str3='tak'x0if('bad');
+my$s1=$^??"def":"not def";
+my$s2=$^ ?"def":"not def";
+my$s3=$^if($s2);
+my$s4=$^Oeq"linux";
+my$s5=$  ^One"linux";
+my$s6=$
+  ^One"linux";
+my$s7=%^O;
+my$s8='hi'.'s'x10if(1);
+my$s9='merci'x0.1e4.$s8;
 ----------
 
         'rt136417' => <<'----------',
@@ -945,16 +945,15 @@ Type::Libraries->setup_class(
             params => "def",
             expect => <<'#19...........',
 # test sub split_pretoken
-my $bb  = $^? ? "defined" : "not defined";
-my $aa  = $^ if ($bb);
-my $yes = $^O eq "linux";
-my $no  = $^O ne "linux";
-my $val = %^O;
-$str0 = 'hi' . 's' x 10 if (1);
-$str1 = 'merci' x 0.1e4 . $str0;
-$str2 = 'hi' . 's' x 10.2 . 'you';
-$str2 = 'hi' . 's' x 0.1e1;
-$str3 = 'tak' x 0 if ('bad');
+my $s1 = $^? ? "def" : "not def";
+my $s2 = $^  ? "def" : "not def";
+my $s3 = $^ if ($s2);
+my $s4 = $^O eq "linux";
+my $s5 = $^O ne "linux";
+my $s6 = $^O ne "linux";
+my $s7 = %^O;
+my $s8 = 'hi' . 's' x 10 if (1);
+my $s9 = 'merci' x 0.1e4 . $s8;
 #19...........
         },
     };
