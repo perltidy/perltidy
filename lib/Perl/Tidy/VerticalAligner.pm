@@ -4280,7 +4280,7 @@ sub is_good_side_comment_column {
     my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
 
     goto FORGET
-      if ( $line_diff > $short_diff );
+      if ( $line_diff > $short_diff ) || !$self->[_rOpts_valign_];
 
     # RULE3: Forget a side comment if this line is at lower level and
     # ends a block
