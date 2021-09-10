@@ -7434,7 +7434,7 @@ sub scan_identifier_do {
 
                     # Special variable (c066)
                     $identifier .= $tok;
-                    $type          = '&';
+                    $type = '&';
 
                     # There may be one more character, not a space, after the ^
                     my $next1 = $rtokens->[ $i + 1 ];

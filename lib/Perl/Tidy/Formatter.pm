@@ -2142,6 +2142,18 @@ sub initialize_whitespace_hashes {
 
 } ## end initialize_whitespace_hashes
 
+# The following hash is used to skip over needless if tests.
+# Be sure to update it when adding new checks in its block.
+my %is_special_ws_type;
+
+BEGIN {
+    my @q = qw(k w i C m - Q);
+    push @q, '#';
+    @is_special_ws_type{@q} = (1) x scalar(@q);
+}
+
+use constant DEBUG_WHITE => 0;
+
 sub set_whitespace_flags {
 
     # This routine is called once per file to set whitespace flags for that
@@ -2160,8 +2172,7 @@ sub set_whitespace_flags {
 
     my $rLL                  = $self->[_rLL_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-
-    use constant DEBUG_WHITE => 0;
+    my $jmax                 = @{$rLL} - 1;
 
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
@@ -2170,28 +2181,23 @@ sub set_whitespace_flags {
     my $rwhitespace_flags       = [];
     my $ris_function_call_paren = {};
 
+    return $rwhitespace_flags if ( $jmax < 0 );
+
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
-    my ( $token, $type, $block_type, $seqno, $input_line_no );
-    my (
-        $last_token, $last_type, $last_block_type,
-        $last_seqno, $last_input_line_no
-    );
+    my ( $rtokh,      $token,      $type );
+    my ( $rtokh_last, $last_token, $last_type );
 
     my $j_tight_closing_paren = -1;
 
-    $token              = ' ';
-    $type               = 'b';
-    $block_type         = '';
-    $seqno              = '';
-    $input_line_no      = 0;
-    $last_token         = ' ';
-    $last_type          = 'b';
-    $last_block_type    = '';
-    $last_seqno         = '';
-    $last_input_line_no = 0;
+    $rtokh = [ @{ $rLL->[0] } ];
+    $token = ' ';
+    $type  = 'b';
 
-    my $jmax = @{$rLL} - 1;
+    $rtokh->[_TOKEN_]         = $token;
+    $rtokh->[_TYPE_]          = $type;
+    $rtokh->[_TYPE_SEQUENCE_] = '';
+    $rtokh->[_LINE_INDEX_]    = 0;
 
     my ($ws);
 
@@ -2286,27 +2292,20 @@ sub set_whitespace_flags {
     # main loop over all tokens to define the whitespace flags
     for ( my $j = 0 ; $j <= $jmax ; $j++ ) {
 
-        my $rtokh = $rLL->[$j];
-
-        # Set a default
-        $rwhitespace_flags->[$j] = WS_OPTIONAL;
-
-        if ( $rtokh->[_TYPE_] eq 'b' ) {
+        if ( $rLL->[$j]->[_TYPE_] eq 'b' ) {
+            $rwhitespace_flags->[$j] = WS_OPTIONAL;
             next;
         }
 
-        # set a default value, to be changed as needed
-        $ws                 = undef;
-        $last_token         = $token;
-        $last_type          = $type;
-        $last_block_type    = $block_type;
-        $last_seqno         = $seqno;
-        $last_input_line_no = $input_line_no;
-        $token              = $rtokh->[_TOKEN_];
-        $type               = $rtokh->[_TYPE_];
-        $seqno              = $rtokh->[_TYPE_SEQUENCE_];
-        $input_line_no      = $rtokh->[_LINE_INDEX_];
-        $block_type         = $rblock_type_of_seqno->{$seqno};
+        $rtokh_last = $rtokh;
+        $last_token = $token;
+        $last_type  = $type;
+
+        $rtokh = $rLL->[$j];
+        $token = $rtokh->[_TOKEN_];
+        $type  = $rtokh->[_TYPE_];
+
+        $ws = undef;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 1:
@@ -2315,6 +2314,11 @@ sub set_whitespace_flags {
 
         #    /^[L\{\(\[]$/
         if ( $is_opening_type{$last_type} ) {
+
+            my $seqno           = $rtokh->[_TYPE_SEQUENCE_];
+            my $block_type      = $rblock_type_of_seqno->{$seqno};
+            my $last_seqno      = $rtokh_last->[_TYPE_SEQUENCE_];
+            my $last_block_type = $rblock_type_of_seqno->{$last_seqno};
 
             $j_tight_closing_paren = -1;
 
@@ -2378,9 +2382,10 @@ sub set_whitespace_flags {
                 if ($ws_override) { $ws = $ws_override }
             }
 
+            $ws_4 = $ws_3 = $ws_2 = $ws_1 = $ws
+              if DEBUG_WHITE;
+
         }    # end setting space flag inside opening tokens
-        $ws_1 = $ws
-          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 2:
@@ -2390,6 +2395,7 @@ sub set_whitespace_flags {
         #   /[\}\)\]R]/
         if ( $is_closing_type{$type} ) {
 
+            my $seqno = $rtokh->[_TYPE_SEQUENCE_];
             if ( $j == $j_tight_closing_paren ) {
 
                 $j_tight_closing_paren = -1;
@@ -2400,6 +2406,7 @@ sub set_whitespace_flags {
                 if ( !defined($ws) ) {
 
                     my $tightness;
+                    my $block_type = $rblock_type_of_seqno->{$seqno};
                     if ( $type eq '}' && $token eq '}' && $block_type ) {
                         $tightness = $rOpts_block_brace_tightness;
                     }
@@ -2415,141 +2422,187 @@ sub set_whitespace_flags {
                 if ($ws_override) { $ws = $ws_override }
             }
 
+            $ws_4 = $ws_3 = $ws_2 = $ws
+              if DEBUG_WHITE;
         }    # end setting space flag inside closing tokens
-
-        $ws_2 = $ws
-          if DEBUG_WHITE;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 3:
-        # Use the binary rule table.
-        #---------------------------------------------------------------
-        if ( !defined($ws) ) {
-            $ws = $binary_ws_rules{$last_type}{$type};
-        }
-        $ws_3 = $ws
-          if DEBUG_WHITE;
-
-        #---------------------------------------------------------------
-        # Whitespace Rules Section 4:
         # Handle some special cases.
         #---------------------------------------------------------------
-        if ( $token eq '(' ) {
 
-            # This will have to be tweaked as tokenization changes.
-            # We usually want a space at '} (', for example:
-            # <<snippets/space1.in>>
-            #     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
-            #
-            # But not others:
-            #     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
-            # At present, the above & block is marked as type L/R so this case
-            # won't go through here.
-            if ( $last_type eq '}' && $last_token ne ')' ) { $ws = WS_YES }
+        #    /^[L\{\(\[]$/
+        elsif ( $is_opening_type{$type} ) {
 
-            # NOTE: some older versions of Perl had occasional problems if
-            # spaces are introduced between keywords or functions and opening
-            # parens.  So the default is not to do this except is certain
-            # cases.  The current Perl seems to tolerate spaces.
+            if ( $token eq '(' ) {
 
-            # Space between keyword and '('
-            elsif ( $last_type eq 'k' ) {
-                $ws = WS_NO
-                  unless ( $rOpts_space_keyword_paren
-                    || $space_after_keyword{$last_token} );
+                my $seqno = $rtokh->[_TYPE_SEQUENCE_];
 
-                # Set inside space flag if requested
-                $set_container_ws_by_keyword->( $last_token, $seqno );
+              # This will have to be tweaked as tokenization changes.
+              # We usually want a space at '} (', for example:
+              # <<snippets/space1.in>>
+              #     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
+              #
+              # But not others:
+              #     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
+              # At present, the above & block is marked as type L/R so this case
+              # won't go through here.
+                if ( $last_type eq '}' && $last_token ne ')' ) { $ws = WS_YES }
+
+               # NOTE: some older versions of Perl had occasional problems if
+               # spaces are introduced between keywords or functions and opening
+               # parens.  So the default is not to do this except is certain
+               # cases.  The current Perl seems to tolerate spaces.
+
+                # Space between keyword and '('
+                elsif ( $last_type eq 'k' ) {
+                    $ws = WS_NO
+                      unless ( $rOpts_space_keyword_paren
+                        || $space_after_keyword{$last_token} );
+
+                    # Set inside space flag if requested
+                    $set_container_ws_by_keyword->( $last_token, $seqno );
+                }
+
+                # Space between function and '('
+                # -----------------------------------------------------
+                # 'w' and 'i' checks for something like:
+                #   myfun(    &myfun(   ->myfun(
+                # -----------------------------------------------------
+
+              # Note that at this point an identifier may still have a leading
+              # arrow, but the arrow will be split off during token respacing.
+              # After that, the token may become a bare word without leading
+              # arrow.  The point is, it is best to mark function call parens
+              # right here before that happens.
+              # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
+              # NOTE: this would be the place to allow spaces between repeated
+              # parens, like () () (), as in case c017, but I decided that would
+              # not be a good idea.
+                elsif (
+                       ( $last_type =~ /^[wCUG]$/ )
+                    || ( $last_type =~ /^[wi]$/ && $last_token =~ /^([\&]|->)/ )
+                  )
+                {
+                    $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
+                    $set_container_ws_by_keyword->( $last_token, $seqno );
+                    $ris_function_call_paren->{$seqno} = 1;
+                }
+
+               # space between something like $i and ( in <<snippets/space2.in>>
+               # for $i ( 0 .. 20 ) {
+               # FIXME: eventually, type 'i' could be split into multiple
+               # token types so this can be a hardwired rule.
+                elsif ( $last_type eq 'i' && $last_token =~ /^[\$\%\@]/ ) {
+                    $ws = WS_YES;
+                }
+
+                # allow constant function followed by '()' to retain no space
+                elsif ($last_type eq 'C'
+                    && $rLL->[ $j + 1 ]->[_TOKEN_] eq ')' )
+                {
+                    $ws = WS_NO;
+                }
             }
 
-            # Space between function and '('
-            # -----------------------------------------------------
-            # 'w' and 'i' checks for something like:
-            #   myfun(    &myfun(   ->myfun(
-            # -----------------------------------------------------
+            # patch for SWITCH/CASE: make space at ']{' optional
+            # since the '{' might begin a case or when block
+            elsif ( ( $token eq '{' && $type ne 'L' ) && $last_token eq ']' ) {
+                $ws = WS_OPTIONAL;
+            }
 
-            # Note that at this point an identifier may still have a leading
-            # arrow, but the arrow will be split off during token respacing.
-            # After that, the token may become a bare word without leading
-            # arrow.  The point is, it is best to mark function call parens
-            # right here before that happens.
-            # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
-            # NOTE: this would be the place to allow spaces between repeated
-            # parens, like () () (), as in case c017, but I decided that would
-            # not be a good idea.
-            elsif (( $last_type =~ /^[wCUG]$/ )
-                || ( $last_type =~ /^[wi]$/ && $last_token =~ /^([\&]|->)/ ) )
+            # keep space between 'sub' and '{' for anonymous sub definition
+            if ( $type eq '{' ) {
+                if ( $last_token eq 'sub' ) {
+                    $ws = WS_YES;
+                }
+
+                # this is needed to avoid no space in '){'
+                if ( $last_token eq ')' && $token eq '{' ) { $ws = WS_YES }
+
+                # avoid any space before the brace or bracket in something like
+                #  @opts{'a','b',...}
+                if ( $last_type eq 'i' && $last_token =~ /^\@/ ) {
+                    $ws = WS_NO;
+                }
+            }
+        } ## end if ( $is_opening_type{$type} ) {
+
+        # Special checks for certain other types ...
+        # the hash '%is_special_ws_type' significantly speeds up this routine,
+        # but be sure to update it if a new check is added.
+        # Currently has types: qw(k w i C m - Q #)
+        elsif ( $is_special_ws_type{$type} ) {
+            if ( $type eq 'i' ) {
+
+                # never a space before ->
+                if ( substr( $token, 0, 2 ) eq '->' ) {
+                    $ws = WS_NO;
+                }
+            }
+
+            elsif ( $type eq 'k' ) {
+
+              # Keywords 'for', 'foreach' are special cases for -kpit since the
+              # opening paren does not always immediately follow the keyword. So
+              # we have to search forward for the paren in this case.  I have
+              # limited the search to 10 tokens ahead, just in case somebody
+              # has a big file and no opening paren.  This should be enough for
+              # all normal code.
+                if (   $is_for_foreach{$token}
+                    && %keyword_paren_inner_tightness
+                    && defined( $keyword_paren_inner_tightness{$token} )
+                    && $j < $jmax )
+                {
+                    my $jp = $j;
+                    for ( my $inc = 1 ; $inc < 10 ; $inc++ ) {
+                        $jp++;
+                        last if ( $jp > $jmax );
+                        next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
+                        my $seqno_p = $rLL->[$jp]->[_TYPE_SEQUENCE_];
+                        $set_container_ws_by_keyword->( $token, $seqno_p );
+                        last;
+                    }
+                }
+            }
+
+            # retain any space between '-' and bare word
+            elsif ( $type eq 'w' || $type eq 'C' ) {
+                $ws = WS_OPTIONAL if $last_type eq '-';
+
+                # never a space before ->
+                if ( substr( $token, 0, 2 ) eq '->' ) {
+                    $ws = WS_NO;
+                }
+            }
+
+            # retain any space between '-' and bare word; for example
+            # avoid space between 'USER' and '-' here: <<snippets/space2.in>>
+            #   $myhash{USER-NAME}='steve';
+            elsif ( $type eq 'm' || $type eq '-' ) {
+                $ws = WS_OPTIONAL if ( $last_type eq 'w' );
+            }
+
+            # always space before side comment
+            elsif ( $type eq '#' ) { $ws = WS_YES if $j > 0 }
+
+            # space_backslash_quote; RT #123774  <<snippets/rt123774.in>>
+            # allow a space between a backslash and single or double quote
+            # to avoid fooling html formatters
+            elsif ( $last_type eq '\\' && $type eq 'Q' && $token =~ /^[\"\']/ )
             {
-                $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
-                $set_container_ws_by_keyword->( $last_token, $seqno );
-                $ris_function_call_paren->{$seqno} = 1;
+                if ($rOpts_space_backslash_quote) {
+                    if ( $rOpts_space_backslash_quote == 1 ) {
+                        $ws = WS_OPTIONAL;
+                    }
+                    elsif ( $rOpts_space_backslash_quote == 2 ) { $ws = WS_YES }
+                    else { }    # shouldnt happen
+                }
+                else {
+                    $ws = WS_NO;
+                }
             }
-
-            # space between something like $i and ( in <<snippets/space2.in>>
-            # for $i ( 0 .. 20 ) {
-            # FIXME: eventually, type 'i' could be split into multiple
-            # token types so this can be a hardwired rule.
-            elsif ( $last_type eq 'i' && $last_token =~ /^[\$\%\@]/ ) {
-                $ws = WS_YES;
-            }
-
-            # allow constant function followed by '()' to retain no space
-            elsif ($last_type eq 'C'
-                && $rLL->[ $j + 1 ]->[_TOKEN_] eq ')' )
-            {
-                $ws = WS_NO;
-            }
-        }
-
-        # patch for SWITCH/CASE: make space at ']{' optional
-        # since the '{' might begin a case or when block
-        elsif ( ( $token eq '{' && $type ne 'L' ) && $last_token eq ']' ) {
-            $ws = WS_OPTIONAL;
-        }
-
-        # keep space between 'sub' and '{' for anonymous sub definition
-        if ( $type eq '{' ) {
-            if ( $last_token eq 'sub' ) {
-                $ws = WS_YES;
-            }
-
-            # this is needed to avoid no space in '){'
-            if ( $last_token eq ')' && $token eq '{' ) { $ws = WS_YES }
-
-            # avoid any space before the brace or bracket in something like
-            #  @opts{'a','b',...}
-            if ( $last_type eq 'i' && $last_token =~ /^\@/ ) {
-                $ws = WS_NO;
-            }
-        }
-
-        elsif ( $type eq 'i' ) {
-
-            # never a space before ->
-            if ( substr( $token, 0, 2 ) eq '->' ) {
-                $ws = WS_NO;
-            }
-        }
-
-        # retain any space between '-' and bare word
-        elsif ( $type eq 'w' || $type eq 'C' ) {
-            $ws = WS_OPTIONAL if $last_type eq '-';
-
-            # never a space before ->
-            if ( substr( $token, 0, 2 ) eq '->' ) {
-                $ws = WS_NO;
-            }
-        }
-
-        # retain any space between '-' and bare word; for example
-        # avoid space between 'USER' and '-' here: <<snippets/space2.in>>
-        #   $myhash{USER-NAME}='steve';
-        elsif ( $type eq 'm' || $type eq '-' ) {
-            $ws = WS_OPTIONAL if ( $last_type eq 'w' );
-        }
-
-        # always space before side comment
-        elsif ( $type eq '#' ) { $ws = WS_YES if $j > 0 }
+        } ## end elsif ( $is_special_ws_type{$type} ...
 
         # always preserver whatever space was used after a possible
         # filehandle (except _) or here doc operator
@@ -2562,78 +2615,55 @@ sub set_whitespace_flags {
             $ws = WS_OPTIONAL;
         }
 
-        # space_backslash_quote; RT #123774  <<snippets/rt123774.in>>
-        # allow a space between a backslash and single or double quote
-        # to avoid fooling html formatters
-        elsif ( $last_type eq '\\' && $type eq 'Q' && $token =~ /^[\"\']/ ) {
-            if ($rOpts_space_backslash_quote) {
-                if ( $rOpts_space_backslash_quote == 1 ) {
-                    $ws = WS_OPTIONAL;
-                }
-                elsif ( $rOpts_space_backslash_quote == 2 ) { $ws = WS_YES }
-                else { }    # shouldnt happen
-            }
-            else {
-                $ws = WS_NO;
-            }
-        }
-        elsif ( $type eq 'k' ) {
-
-            # Keywords 'for', 'foreach' are special cases for -kpit since the
-            # opening paren does not always immediately follow the keyword. So
-            # we have to search forward for the paren in this case.  I have
-            # limited the search to 10 tokens ahead, just in case somebody
-            # has a big file and no opening paren.  This should be enough for
-            # all normal code.
-            if (   $is_for_foreach{$token}
-                && %keyword_paren_inner_tightness
-                && defined( $keyword_paren_inner_tightness{$token} )
-                && $j < $jmax )
-            {
-                my $jp = $j;
-                for ( my $inc = 1 ; $inc < 10 ; $inc++ ) {
-                    $jp++;
-                    last if ( $jp > $jmax );
-                    next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
-                    my $seqno = $rLL->[$jp]->[_TYPE_SEQUENCE_];
-                    $set_container_ws_by_keyword->( $token, $seqno );
-                    last;
-                }
-            }
-        }
-
-        $ws_4 = $ws
+        $ws_4 = $ws_3 = $ws
           if DEBUG_WHITE;
 
-        #---------------------------------------------------------------
-        # Whitespace Rules Section 5:
-        # Apply default rules not covered above.
-        #---------------------------------------------------------------
-
-        # If we fall through to here, look at the pre-defined hash tables for
-        # the two tokens, and:
-        #  if (they are equal) use the common value
-        #  if (either is zero or undef) use the other
-        #  if (either is -1) use it
-        # That is,
-        # left  vs right
-        #  1    vs    1     -->  1
-        #  0    vs    0     -->  0
-        # -1    vs   -1     --> -1
-        #
-        #  0    vs   -1     --> -1
-        #  0    vs    1     -->  1
-        #  1    vs    0     -->  1
-        # -1    vs    0     --> -1
-        #
-        # -1    vs    1     --> -1
-        #  1    vs   -1     --> -1
         if ( !defined($ws) ) {
-            my $wl = $want_left_space{$type};
-            my $wr = $want_right_space{$last_type};
-            if ( !defined($wl) ) { $wl = 0 }
-            if ( !defined($wr) ) { $wr = 0 }
-            $ws = ( ( $wl == $wr ) || ( $wl == -1 ) || !$wr ) ? $wl : $wr;
+
+            #---------------------------------------------------------------
+            # Whitespace Rules Section 4:
+            # Use the binary rule table.
+            #---------------------------------------------------------------
+            $ws   = $binary_ws_rules{$last_type}{$type};
+            $ws_4 = $ws if DEBUG_WHITE;
+
+            #---------------------------------------------------------------
+            # Whitespace Rules Section 5:
+            # Apply default rules not covered above.
+            #---------------------------------------------------------------
+
+           # If we fall through to here, look at the pre-defined hash tables for
+           # the two tokens, and:
+           #  if (they are equal) use the common value
+           #  if (either is zero or undef) use the other
+           #  if (either is -1) use it
+           # That is,
+           # left  vs right
+           #  1    vs    1     -->  1
+           #  0    vs    0     -->  0
+           # -1    vs   -1     --> -1
+           #
+           #  0    vs   -1     --> -1
+           #  0    vs    1     -->  1
+           #  1    vs    0     -->  1
+           # -1    vs    0     --> -1
+           #
+           # -1    vs    1     --> -1
+           #  1    vs   -1     --> -1
+            if ( !defined($ws) ) {
+                my $wl = $want_left_space{$type};
+                my $wr = $want_right_space{$last_type};
+                if ( !defined($wl) ) {
+                    $ws = defined($wr) ? $wr : 0;
+                }
+                elsif ( !defined($wr) ) {
+                    $ws = $wl;
+                }
+                else {
+                    $ws =
+                      ( ( $wl == $wr ) || ( $wl == -1 ) || !$wr ) ? $wl : $wr;
+                }
+            }
         }
 
         # Treat newline as a whitespace. Otherwise, we might combine
@@ -2642,7 +2672,11 @@ sub set_whitespace_flags {
         #    my $msg = new Fax::Send
         #      -recipients => $to,
         #      -data => $data;
-        if ( $ws == 0 && $input_line_no != $last_input_line_no ) { $ws = 1 }
+        if (   $ws == 0
+            && $rtokh->[_LINE_INDEX_] != $rtokh_last->[_LINE_INDEX_] )
+        {
+            $ws = 1;
+        }
 
         $rwhitespace_flags->[$j] = $ws;
 
@@ -3591,6 +3625,8 @@ EOM
         my $last_nonblank_token = $token;
         my $list_str            = $left_bond_strength{'?'};
 
+        my ( $bond_str_1, $bond_str_2, $bond_str_3, $bond_str_4 );
+
         my ( $block_type, $i_next, $i_next_nonblank, $next_nonblank_token,
             $next_nonblank_type, $next_token, $next_type,
             $total_nesting_depth, );
@@ -3674,8 +3710,8 @@ EOM
             # section.
             if ( !defined($bsr) ) { $bsr = VERY_STRONG }
             if ( !defined($bsl) ) { $bsl = VERY_STRONG }
-            my $bond_str   = ( $bsr < $bsl ) ? $bsr : $bsl;
-            my $bond_str_1 = $bond_str;
+            my $bond_str = ( $bsr < $bsl ) ? $bsr : $bsl;
+            $bond_str_1 = $bond_str if (DEBUG_BOND);
 
             #---------------------------------------------------------------
             # Bond Strength Section 2:
@@ -3886,7 +3922,7 @@ EOM
                     && substr( $next_nonblank_token, 0, 1 ) eq '/' );
             }
 
-            my $bond_str_2 = $bond_str;
+            $bond_str_2 = $bond_str if (DEBUG_BOND);
 
             #---------------------------------------------------------------
             # End of hardwired rules
@@ -3927,7 +3963,8 @@ EOM
                 $bond_str           = NO_BREAK;
                 $tabulated_bond_str = $bond_str;
             }
-            my $bond_str_3 = $bond_str;
+
+            $bond_str_3 = $bond_str if (DEBUG_BOND);
 
             # If the hardwired rules conflict with the tabulated bond
             # strength then there is an inconsistency that should be fixed
@@ -4003,7 +4040,8 @@ EOM
                     $bond_str += $bias{$right_key};
                 }
             }
-            my $bond_str_4 = $bond_str;
+
+            $bond_str_4 = $bond_str if (DEBUG_BOND);
 
             #---------------------------------------------------------------
             # Bond Strength Section 5:
@@ -4068,7 +4106,11 @@ EOM
                 $str .= ' ' x ( 16 - length($str) );
                 print STDOUT
 "BOND:  i=$i $str $type $next_nonblank_type depth=$total_nesting_depth strength=$bond_str_1 -> $bond_str_2 -> $bond_str_3 -> $bond_str_4 $bond_str -> $strength \n";
+
+                # reset for next pass
+                $bond_str_1 = $bond_str_2 = $bond_str_3 = $bond_str_4 = undef;
             };
+
         } ## end main loop
         return;
     } ## end sub set_bond_strengths
