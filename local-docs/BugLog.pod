@@ -2,6 +2,44 @@
 
 =over 4
 
+=item B<Fix unusual hanging side comment issue, c070>
+
+This issues can be illustrated with the following input script:
+
+    {
+        if ($xxx) {
+          ...
+        } ## end if ($xxx ...
+        # b <filename>:<line> [<condition>]
+    }
+
+
+    # OLD: perltidy -fpsc=21
+    {
+        if ($xxx) {
+            ...;
+        } ## end if ($xxx ...
+                        # b <filename>:<line> [<condition>]
+    }
+
+The comment '# b ..' moved over to the column 21 to the right as if it were
+a side comment.  The reason is that it accidentally got marked as a hanging
+side comment.  It should not have been because the previous side comment was
+a closing side comment.  This update fixes this:
+
+    # NEW: perltidy -fpsc=21
+    {
+        if ($xxx) {
+            ...;
+        } ## end if ($xxx ...
+
+        # b <filename>:<line> [<condition>]
+    }
+
+This fixes issue c070.
+
+10 Sep 2021.
+
 =item B<Fix parsing issue c068>
 
 This issue is illustrated with the following line:

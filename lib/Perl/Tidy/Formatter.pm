@@ -5092,6 +5092,8 @@ sub set_CODE_type {
     my $In_format_skipping_section = 0;
     my $Saw_VERSION_in_this_file   = 0;
     my $has_side_comment           = 0;
+    my ( $Kfirst, $Klast );
+    my $CODE_type;
 
     ###############################
     # TASK 1: Loop to set CODE_type
@@ -5123,10 +5125,14 @@ sub set_CODE_type {
         $has_side_comment = 0;
 
         next unless ( $line_type eq 'CODE' );
-        my $rK_range = $line_of_tokens->{_rK_range};
-        my ( $Kfirst, $Klast ) = @{$rK_range};
 
-        my $CODE_type = "";
+        my $Klast_prev = $Klast;
+
+        my $rK_range = $line_of_tokens->{_rK_range};
+        ( $Kfirst, $Klast ) = @{$rK_range};
+
+        my $last_CODE_type = $CODE_type;
+        $CODE_type = "";
 
         my $input_line = $line_of_tokens->{_line_text};
         my $jmax       = defined($Kfirst) ? $Klast - $Kfirst : -1;
@@ -5242,20 +5248,56 @@ sub set_CODE_type {
                 $is_static_block_comment = 1;
             }
 
-            # look for hanging side comment
+            # look for hanging side comment ...
             if (
                 $Last_line_had_side_comment    # last line had side comment
                 && !$no_leading_space          # there is some leading space
                 && !
                 $is_static_block_comment    # do not make static comment hanging
-                && $rOpts->{'hanging-side-comments'}    # user is allowing
-                                                        # hanging side comments
-                                                        # like this
               )
             {
-                $has_side_comment = 1;
-                $CODE_type        = 'HSC';
-                goto NEXT;
+
+                #  continuing an existing HSC chain?
+                if ( $last_CODE_type eq 'HSC' ) {
+                    $has_side_comment = 1;
+                    $CODE_type        = 'HSC';
+                    goto NEXT;
+                }
+
+                #  starting a new HSC chain?
+                elsif (
+
+                    $rOpts->{'hanging-side-comments'}    # user is allowing
+                                                         # hanging side comments
+                                                         # like this
+
+                    && ( defined($Klast_prev) && $Klast_prev > 1 )
+
+                    # and the previous side comment was not static (issue c070)
+                    && !(
+                           $rOpts->{'static-side-comments'}
+                        && $rLL->[$Klast_prev]->[_TOKEN_] =~
+                        /$static_side_comment_pattern/
+                    )
+
+                  )
+                {
+
+                    # and it is not a closing side comment (issue c070).
+                    my $K_penult = $Klast_prev - 1;
+                    $K_penult -= 1 if ( $rLL->[$K_penult]->[_TYPE_] eq 'b' );
+                    my $follows_csc =
+                      (      $rLL->[$K_penult]->[_TOKEN_] eq '}'
+                          && $rLL->[$K_penult]->[_TYPE_] eq '}'
+                          && $rLL->[$Klast_prev]->[_TOKEN_] =~
+                          /$closing_side_comment_prefix_pattern/ );
+
+                    if ( !$follows_csc ) {
+                        $has_side_comment = 1;
+                        $CODE_type        = 'HSC';
+                        goto NEXT;
+                    }
+                }
             }
 
             if ($is_static_block_comment) {
