@@ -605,9 +605,10 @@ EOM
             );
         }
         else {
-            warning(
-"hit EOF in here document starting at line $started_looking_for_here_target_at with empty target string\n"
-            );
+            warning(<<EOM);
+Hit EOF in here document starting at line $started_looking_for_here_target_at with empty target string.
+  (Perl will match to the end of file but this may not be intended).
+EOM
         }
         my $nearly_matched_here_target_at =
           $tokenizer_self->[_nearly_matched_here_target_at_];
