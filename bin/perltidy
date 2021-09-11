@@ -3130,20 +3130,22 @@ will flatten this down to one line:
     # perltidy (default)
     my @list = ( 1, 1, 1, 1, 2, 1, 1, 3, 3, 1, 1, 4, 6, 4, 1, );
 
-This formatting loses important information.  If we place a side comment on one
-of the lines, for example, we get the following result with with default formatting 
-parameters:
+This formatting loses the nice structure.  If we place a side comment anywhere
+between the opening and closing parens, the original line break points are
+retained.  For example,
 
     my @list = (
-        1,    # a side comment, comment, or blank keeps list intact
+        1,    # a side comment forces the original line breakpoints to be kept
         1, 1,
         1, 2, 1,
         1, 3, 3, 1,
         1, 4, 6, 4, 1,
     );
 
+The side comment can be a single hash symbol without any text.
 We could achieve the same result with a blank line or full comment
-anywhere between the opening and closing parens.
+anywhere between the opening and closing parens.  Vertical alignment
+of the list items will still occur if possible.
 
 For another possibility see
 the -fs flag in L<Skipping Selected Sections of Code>.
@@ -3163,9 +3165,8 @@ the original style, yields
                 1, 3, 3, 1,
                 1, 4, 6, 4, 1,);
 
-A disadvantage of this flag is that all tables in the file
-must already be nicely formatted.  
-
+A disadvantage of this flag compared to the methods discussed above is that all
+tables in the file must already be nicely formatted.
 
 =item B<-mft=n>,  B<--maximum-fields-per-table=n>
 
@@ -4018,8 +4019,8 @@ aligned in the following statement:
             Proto    => 'tcp'
         );
 
-Vertical alignment can be completely turned off using B<-novalign>, a flag
-mainly intended for debugging.  However, vertical alignment can be forced to
+Vertical alignment can be completely turned off using the B<-novalign> flag
+mentioned below.  However, vertical alignment can be forced to
 stop and restart by selectively introducing blank lines.  For example, a blank
 has been inserted in the following code to keep somewhat similar things
 aligned.
@@ -4049,6 +4050,15 @@ For example,
             PeerPort=> $port[4] * 256 + $port[5],
             Proto=> 'tcp'
         );
+
+=over 4
+
+=item B<Completely turning off vertical alignment with -novalign>
+
+The default is to use vertical alignment, but bertical alignment can be
+completely turned of with the B<-novalign> flag.
+
+=back
 
 =head2 Other Controls
 
