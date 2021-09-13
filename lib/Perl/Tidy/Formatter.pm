@@ -291,6 +291,7 @@ my (
     # from level.
     @maximum_line_length_at_level,
     @maximum_text_length_at_level,
+    $stress_level,
 
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
@@ -1770,6 +1771,26 @@ EOM
             $maximum_line_length_at_level[$level] =
               $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
         }
+    }
+
+    # Find a '$stress_level' = an estimated indentation level at which
+    # indentation starts to be under stress.
+    my $denom = max( 1, $rOpts_indent_columns );
+
+    # Define a fixed number of spaces for a typical variable.
+    # Cases b1197-b1204 work ok with const=12 but not with const=8
+    my $const = 16;
+    $stress_level = 0;
+    foreach my $level ( 0 .. $level_max ) {
+        my $remaining_cycles = max(
+            0,
+            (
+                $maximum_text_length_at_level[$level] -
+                  $rOpts_continuation_indentation - $const
+            ) / $denom
+        );
+        last if ( $remaining_cycles <= 3 );    # 2 does not work
+        $stress_level = $level;
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
@@ -9700,6 +9721,15 @@ sub extended_ci {
           $maximum_text_length_at_level[$level] -
           $ci_level * $rOpts_continuation_indentation;
 
+        # Fix for b1197 b1198 b1199 b1200 b1201 b1202
+        # Do not apply -xci if we are running out of space
+        if ( $level >= $stress_level ) {
+            DEBUG_XCI
+              && print
+"XCI: Skipping seqno=$seqno, level=$level exceeds stress level=$stress_level\n";
+            next;
+        }
+
         # remember how much space is available for patch b1031 above
         my $space =
           $maximum_text_length - $len_tol - $rOpts_continuation_indentation;
@@ -17091,6 +17121,12 @@ sub set_continuation_breaks {
                 my $cab_flag = $rOpts_comma_arrow_breakpoints;
                 if ( $type_sequence && !$ris_list_by_seqno->{$type_sequence} ) {
                     $cab_flag = 5;
+                }
+
+                # Ignore old breakpoints when under stress.
+                # Fixes b1203 b1204 as well as b1197-b1200.
+                if ( $levels_to_go[$i_opening] >= $stress_level ) {
+                    $cab_flag = 2;
                 }
 
                 if (  !$is_long_term

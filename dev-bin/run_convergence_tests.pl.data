@@ -7204,6 +7204,57 @@ ok(
 --maximum-line-length=42
 --weld-nested-containers
 
+==> b1197.in <==
+# S1
+if (
+         compare ( "$file.new",
+                  $file ) )
+
+# S2
+if (
+         compare ("$file.new", $file ) )
+
+==> b1197.par <==
+--continuation-indentation=10
+--extended-continuation-indentation
+--indent-columns=9
+--maximum-line-length=48
+--paren-vertical-tightness-closing=1
+--paren-vertical-tightness=1
+--space-function-paren
+
+==> b1198.in <==
+if (
+         open( SH, '<', "${outdir}config_h.SH" ) )
+
+if (
+         open( SH, '<',
+                  "${outdir}config_h.SH" ) )
+
+==> b1198.par <==
+--continuation-indentation=10
+--extended-continuation-indentation
+--indent-columns=9
+--maximum-line-length=48
+--paren-vertical-tightness-closing=1
+--variable-maximum-line-length
+
+==> b1199.in <==
+                  if (
+                           open( CONFIG_H_SH, '<',
+                                    'config_h.SH' ) )
+
+                  if (
+                           open( CONFIG_H_SH, '<', 'config_h.SH' ) )
+
+==> b1199.par <==
+--continuation-indentation=10
+--extended-continuation-indentation
+--indent-columns=9
+--maximum-line-length=48
+--paren-vertical-tightness-closing=1
+--variable-maximum-line-length
+
 ==> b120.in <==
 # Same as bug96
 # State 1
@@ -7224,6 +7275,59 @@ ok(
 ==> b120.par <==
 --line-up-parentheses
 --space-terminal-semicolon
+
+==> b1202.in <==
+      $_res = (
+                  $severity_host_count{
+                        $b}
+                  <=> $severity_host_count{
+                        $a}
+      );
+
+      $_res =
+               ( $severity_host_count{$b}
+                 <=> $severity_host_count{$a}
+               );
+
+==> b1202.par <==
+--continuation-indentation=9
+--extended-continuation-indentation
+--indent-columns=6
+--line-up-parentheses
+--maximum-line-length=47
+
+==> b1203.in <==
+                              if(
+                                     !$found
+                                    &&$word
+                                    &&(($ref_info=
+                                          $references{$word})) )
+
+                              if(
+                                     !$found
+                                    &&$word
+                                    &&((
+                                          $ref_info=$references{
+                                                $word} )) )
+
+==> b1203.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--indent-columns=6
+--maximum-line-length=69
+--paren-vertical-tightness-closing=1
+--weld-nested-containers
+
+==> b1205.in <==
+# S1 (x was being misparsed as a function call)
+        print $" x( 27 - @| ) . $. . $" x 5;
+
+# S2
+        print $" x ( 27 - @| ) . $. . $" x 5;
+
+==> b1205.par <==
+--nowant-right-space='x'
+--space-function-paren
 
 ==> b131.in <==
         unless

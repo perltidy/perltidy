@@ -2,6 +2,28 @@
 
 =over 4
 
+=item B<Use stress_level to fix cases b1197-b1204>
+
+Testing with random input parameters produced a number of cases of unstable
+formatting. All of these involved some combination of a short maximum line
+length, a large -ci and -i, and often one or more of -xci -lp and -wn.  These
+parameters can force lines to break at poor locations.  All of these cases were
+fixed by introducing a quantity called the 'stress_level', which is the
+approximate indentation level at which the line break logic comes under high
+stress and become unstable.  For default parameters the stress level is about
+12, but unusual parameter combinations can make it much less, even as low as
+zero.  For code which is at an indentation level greater than this depth, some
+defensive actions are taken to avoid instability, such as temporarily turning
+off the -xci flag when the indentation depth exceeds the stress level.  Most
+actual working code will not be influenced by this logic.  Actual code which
+has a very deep indentation level can avoid problems by using a long line
+length, a short number of indentation spaces, or even the whitespace-cycle
+parameter.
+
+This update fixes issues b1197 b1198 b1199 b1200 b1201 b1202 b1203 b1204
+
+12 Sep 2021.
+
 =item B<Fix unusual hanging side comment issue, c070>
 
 This issues can be illustrated with the following input script:
@@ -38,7 +60,7 @@ a closing side comment.  This update fixes this:
 
 This fixes issue c070.
 
-10 Sep 2021.
+10 Sep 2021, ec6ccf9.
 
 =item B<Fix parsing issue c068>
 
@@ -59,7 +81,7 @@ removed a new special variable would be created.
 
 This fixes issue c068.
 
-7 Sep 2021.
+7 Sep 2021, 9bc23d1.
 
 
 =item B<Fix parsing problem issue c066>
@@ -71,7 +93,7 @@ This issue is illustrated with the following line (rt80058):
 Running perltidy generated a warning message which is caused by the lack of
 space before the 'eq'. This update fixes the problem.
 
-4 Sep 2021.
+4 Sep 2021, df79a20.
 
 =item B<Fix unusual parsing problem issue c065>
 
@@ -100,7 +122,7 @@ which is equivalent to the original script.
 
 This fixes issue c065.
 
-4 Sep 2021.
+4 Sep 2021, f242f78.
 
 
 =item B<Fix formatting instability issues b1195, b1196>
@@ -108,7 +130,7 @@ This fixes issue c065.
 Testing with random parameters produced two similar cases of unstable
 formatting which are fixed with this update.
 
-28 Aug 2021.
+28 Aug 2021, ab9ad39.
 
 =item B<Fix formatting instability issue b1194>
 
