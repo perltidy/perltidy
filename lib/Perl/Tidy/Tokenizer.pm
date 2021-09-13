@@ -5391,6 +5391,13 @@ sub operator_expected {
             $op_expected = UNKNOWN;
         }
 
+        # Exception to weird parsing rules for 'x(' ... see case b1205:
+        # In something like 'print $vv x(...' the x is an operator;
+        # otherwise x follows the weird parsing rules.
+        elsif ( $tok eq 'x' && $next_type eq '(' ) {
+            $op_expected = OPERATOR;
+        }
+
         # The 'weird parsing rules' of next section do not work for '<' and '?'
         # It is best to mark them as unknown.  Test case:
         #  print $fh <DATA>;

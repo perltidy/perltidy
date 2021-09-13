@@ -2,6 +2,28 @@
 
 =over 4
 
+=item B<Fix unusual parsing error b1205>
+
+Testing with random parameters produced an instability caused by misparsing
+an 'x' operator after a possible file handle.  Testing with Perl showed that
+an 'x' followed by a '(' in this location is always the 'times' operator and
+never a call to a function 'x'. If x is immediately followed by a number it
+is subject to the usual weird parsing rules at such a location.
+
+To illustrate, consider what these statements do:
+
+    open( my $zz, ">", "junk.txt" );
+    sub x { return $_[0] }  # never called
+    print $zz x(2);    # prints a glob 2 times; not a function call
+    print $zz x 2;     # prints a glob 2 times
+    print $zz x2;      # syntax error
+    print $zz x;       # syntax error
+    print $zz z;       # prints 'z' in file 'junk.txt'
+
+This update fixes case b1205.
+
+13 Sep 2021.
+
 =item B<Use stress_level to fix cases b1197-b1204>
 
 Testing with random input parameters produced a number of cases of unstable
