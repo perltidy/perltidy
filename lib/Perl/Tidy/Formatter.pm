@@ -21366,6 +21366,36 @@ sub pad_token {
             }
         }
 
+        # Lines with just 1 token do not have alignments
+        # so we can process them immediately.
+        if ( $iend == $ibeg ) {
+            @tokens        = ();
+            @fields        = ( $tokens_to_go[$ibeg] );
+            @patterns      = ( $types_to_go[$ibeg] );
+            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
+                  $summed_lengths_to_go[$ibeg] );
+            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
+        }
+
+        # Look for lines with no alignments
+        my $has_alignment;
+        for my $ii ( $ibeg + 1 .. $iend ) {
+            if ( $ralignment_type_to_go->[$ii] ) {
+                $has_alignment = 1;
+                last;
+            }
+        }
+
+        # Optimization: process lines without alignments immediately
+        if ( !$has_alignment ) {
+            @tokens        = ();
+            @fields        = ( join( '', @tokens_to_go[ $ibeg .. $iend ] ) );
+            @patterns      = ( join( '', @types_to_go[ $ibeg .. $iend ] ) );
+            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
+                  $summed_lengths_to_go[$ibeg] );
+            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
+        }
+
         my $j = 0;    # field index
 
         $patterns[0] = "";
