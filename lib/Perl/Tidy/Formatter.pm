@@ -182,6 +182,7 @@ my (
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
     $rOpts_variable_maximum_line_length,
+    $rOpts_valign,
     $rOpts_whitespace_cycle,
 
     # Static hashes initialized in a BEGIN block
@@ -1668,6 +1669,7 @@ EOM
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
+    $rOpts_valign                    = $rOpts->{'valign'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
 
@@ -20113,32 +20115,62 @@ EOM
         my $ralignment_type_to_go;
         my $alignment_count = 0;
 
-        # Initialize the alignment array. Note that closing side comments can
+        # Initialize the alignment array. NOTE: closing side comments can
         # insert up to 2 additional tokens beyond the original
         # $max_index_to_go, so we need to check ri_last for the last index.
         my $max_line = @{$ri_first} - 1;
-        my $iend     = $ri_last->[$max_line];
-        if ( $iend < $max_index_to_go ) { $iend = $max_index_to_go }
+        my $max_i    = $ri_last->[$max_line];
+        if ( $max_i < $max_index_to_go ) { $max_i = $max_index_to_go }
 
-        foreach ( 0 .. $iend ) {
+        foreach ( 0 .. $max_i ) {
             $ralignment_type_to_go->[$_] = '';
         }
 
-        # nothing to do if we aren't allowed to change whitespace
-        # or there is only 1 token
-        if ( $iend == 0 || !$rOpts_add_whitespace ) {
+        # The first token is never an alignment, so there is nothing to do if
+        # there is only 1 token.
+        # And there is nothing to do if we aren't allowed to change whitespace.
+        if ( $max_i == 0 || !$rOpts_add_whitespace ) {
             return ( $ralignment_type_to_go, $alignment_count );
         }
 
-        # remember the index of last nonblank token before any sidecomment
-        my $i_terminal = $max_index_to_go;
-        if ( $types_to_go[$i_terminal] eq '#' ) {
-            if ( $i_terminal > 0 && $types_to_go[ --$i_terminal ] eq 'b' ) {
-                if ( $i_terminal > 0 ) { --$i_terminal }
+        # Take care of any side comment first.
+        my $i_terminal = $max_i;
+        if ( $max_i > 0 && $types_to_go[$max_i] eq '#' ) {
+
+            $i_terminal -= 1;
+            if ( $i_terminal > 0 && $types_to_go[$i_terminal] eq 'b' ) {
+                $i_terminal -= 1;
+            }
+
+            my $token = $tokens_to_go[$max_i];
+            my $KK    = $K_to_go[$max_i];
+
+            unless (
+
+                # it is any specially marked side comment
+                ( defined($KK) && $rspecial_side_comment_type->{$KK} )
+
+                # or it is a static side comment
+                || (   $rOpts->{'static-side-comments'}
+                    && $token =~ /$static_side_comment_pattern/ )
+
+                # or a closing side comment
+                || (   $types_to_go[$i_terminal] eq '}'
+                    && $tokens_to_go[$i_terminal] eq '}'
+                    && $token =~ /$closing_side_comment_prefix_pattern/ )
+              )
+            {
+                $ralignment_type_to_go->[$max_i] = '#';
+                $alignment_count++;
             }
         }
 
-        # look at each line of this batch..
+        # Nothing more to do if -novalign is set
+        if ( !$rOpts_valign ) {
+            return ( $ralignment_type_to_go, $alignment_count );
+        }
+
+        # Look at each line of this batch..
         my $last_vertical_alignment_BEFORE_index;
         my $vert_last_nonblank_type;
         my $vert_last_nonblank_token;
@@ -20148,6 +20180,9 @@ EOM
 
             my $ibeg = $ri_first->[$line];
             my $iend = $ri_last->[$line];
+
+            # back up before did any side comment
+            if ( $iend > $i_terminal ) { $iend = $i_terminal }
 
             my $level_beg = $levels_to_go[$ibeg];
             my $token_beg = $tokens_to_go[$ibeg];
@@ -20170,7 +20205,7 @@ EOM
 
                 # do not align tokens at lower level then start of line
                 # except for side comments
-                if ( $levels_to_go[$i] < $level_beg && $type ne '#' ) {
+                if ( $levels_to_go[$i] < $level_beg ) {
                     next;
                 }
 
@@ -20187,32 +20222,6 @@ EOM
 
                 # must follow a blank token
                 elsif ( $types_to_go[ $i - 1 ] ne 'b' ) { }
-
-                # align a side comment --
-                elsif ( $type eq '#' ) {
-
-                    my $KK      = $K_to_go[$i];
-                    my $sc_type = $rspecial_side_comment_type->{$KK};
-
-                    unless (
-
-                        # it is any specially marked side comment
-                        $sc_type
-
-                        # or it is a static side comment
-                        || (   $rOpts->{'static-side-comments'}
-                            && $token =~ /$static_side_comment_pattern/ )
-
-                        # or a closing side comment
-                        || (   $vert_last_nonblank_type eq '}'
-                            && $vert_last_nonblank_token eq '}'
-                            && $token =~
-                            /$closing_side_comment_prefix_pattern/ )
-                      )
-                    {
-                        $alignment_type = $type;
-                    }    ## Example of a static side comment
-                }
 
                 # otherwise, do not align two in a row to create a
                 # blank field
@@ -20242,7 +20251,7 @@ EOM
                     # nothing follows it, and
                     # (2) doing so may prevent other good alignments.
                     # Current exceptions are && and || and =>
-                    if ( $i == $iend || $i >= $i_terminal ) {
+                    if ( $i == $iend ) {
                         $alignment_type = ""
                           unless ( $is_terminal_alignment_type{$type} );
                     }
@@ -20349,7 +20358,6 @@ EOM
                     && $types_to_go[ $i - 1 ] eq 'b'
 
                     # and it's NOT one of these
-                    && $type ne '#'
                     && !$is_closing_token{$type}
 
                     # then go ahead and align
