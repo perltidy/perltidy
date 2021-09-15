@@ -2,6 +2,14 @@
 
 =over 4
 
+=item B<Fix formatting instability b1206>
+
+Testing with random parameters produced an instability due welding with
+a very short line length and large value of -ci.  This is similar to issues
+b1197-b1204 and fixed with a similar method.
+
+14 Sep 2021.
+
 =item B<Fix unusual parsing error b1205>
 
 Testing with random parameters produced an instability caused by misparsing
