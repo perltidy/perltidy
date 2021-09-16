@@ -1,9 +1,13 @@
+{
 # simple vertical alignment of '=' and '#'
-my $lines     = 0;    # checksum: #lines
-my $bytes     = 0;    # checksum: #bytes
-my $sum       = 0;    # checksum: system V sum
-my $patchdata = 0;    # saw patch data
-my $pos       = 0;    # start of patch data
-my $endkit    = 0;    # saw end of kit
-my $fail      = 0;    # failed
+# A long line to test -nvbc ... normally this will cause the previous line to move left
+    my $lines     = 0;    # checksum: #lines
+    my $bytes     = 0;    # checksum: #bytes
+    my $sum       = 0;    # checksum: system V sum
+    my $patchdata = 0;    # saw patch data
+    my $pos       = 0;    # start of patch data
+                          # a hanging side comment
+    my $endkit    = 0;    # saw end of kit
+    my $fail      = 0;    # failed
+}
 

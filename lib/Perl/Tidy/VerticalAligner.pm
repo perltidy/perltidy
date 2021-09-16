@@ -100,7 +100,9 @@ BEGIN {
         _rOpts_minimum_space_to_comment_     => $i++,
         _rOpts_maximum_line_length_          => $i++,
         _rOpts_variable_maximum_line_length_ => $i++,
-        _rOpts_valign_                       => $i++,
+        _rOpts_valign_code_                  => $i++,
+        _rOpts_valign_block_comments_        => $i++,
+        _rOpts_valign_side_comments_         => $i++,
 
         _last_level_written_            => $i++,
         _last_side_comment_column_      => $i++,
@@ -181,7 +183,9 @@ sub new {
     $self->[_rOpts_maximum_line_length_] = $rOpts->{'maximum-line-length'};
     $self->[_rOpts_variable_maximum_line_length_] =
       $rOpts->{'variable-maximum-line-length'};
-    $self->[_rOpts_valign_] = $rOpts->{'valign'};
+    $self->[_rOpts_valign_code_]           = $rOpts->{'valign-code'};
+    $self->[_rOpts_valign_block_comments_] = $rOpts->{'valign-block-comments'};
+    $self->[_rOpts_valign_side_comments_]  = $rOpts->{'valign-side-comments'};
 
     # Batch of lines being collected
     $self->[_rgroup_lines_]                = [];
@@ -514,8 +518,16 @@ sub valign_input {
     if ( $level < 0 ) { $level = 0 }
 
     # do not align code across indentation level changes
-    # or if vertical alignment is turned off for debugging
-    if ( $level != $group_level || $is_outdented || !$self->[_rOpts_valign_] ) {
+    # or if vertical alignment is turned off
+    if (
+           $level != $group_level
+        || $is_outdented
+        || ( $is_block_comment && !$self->[_rOpts_valign_block_comments_] )
+        || (   !$is_block_comment
+            && !$self->[_rOpts_valign_side_comments_]
+            && !$self->[_rOpts_valign_code_] )
+      )
+    {
 
         $self->_flush_group_lines( $level - $group_level );
 
@@ -4280,7 +4292,8 @@ sub is_good_side_comment_column {
     my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
 
     goto FORGET
-      if ( $line_diff > $short_diff ) || !$self->[_rOpts_valign_];
+      if ( $line_diff > $short_diff
+        || !$self->[_rOpts_valign_side_comments_] );
 
     # RULE3: Forget a side comment if this line is at lower level and
     # ends a block

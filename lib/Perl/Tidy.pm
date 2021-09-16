@@ -1,3 +1,4 @@
+#!/usr/bin/perl
 #
 ###########################################################
 #
@@ -2125,7 +2126,6 @@ sub generate_options {
     #                                       which is mainly for debugging
     # scl --> short-concatenation-item-length   # helps break at '.'
     # recombine                           # for debugging line breaks
-    # valign                              # for debugging vertical alignment
     # I   --> DIAGNOSTICS                 # for debugging [**DEACTIVATED**]
     ######################################################################
 
@@ -2181,7 +2181,6 @@ sub generate_options {
       no-profile
       npro
       recombine!
-      valign!
       notidy
     );
 
@@ -2323,6 +2322,9 @@ sub generate_options {
     $add_option->( 'want-left-space',                           'wls',   '=s' );
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
     $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
+    $add_option->( 'valign-code',                               'vc',    '!' );
+    $add_option->( 'valign-block-comments',                     'vbc',   '!' );
+    $add_option->( 'valign-side-comments',                      'vsc',   '!' );
 
     ########################################
     $category = 4;    # Comment controls
@@ -2660,7 +2662,9 @@ sub generate_options {
       noweld-nested-containers
       recombine
       nouse-unicode-gcstring
-      valign
+      valign-code
+      valign-block-comments
+      valign-side-comments
       short-concatenation-item-length=8
       space-for-semicolon
       space-backslash-quote=1
@@ -2816,6 +2820,9 @@ sub generate_options {
         'noconverge' => [qw(it=1)],
         'conv'       => [qw(it=4)],
         'nconv'      => [qw(it=1)],
+
+        'valign'   => [qw(vc vsc vbc)],
+        'novalign' => [qw(nvc nvsc nvbc)],
 
         # NOTE: This is a possible future shortcut.  But it will remain
         # deactivated until the -lpxl flag is no longer experimental.

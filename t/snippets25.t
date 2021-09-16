@@ -2,7 +2,9 @@
 
 # Contents:
 #1 novalign.def
-#2 novalign.novalign
+#2 novalign.novalign1
+#3 novalign.novalign2
+#4 novalign.novalign3
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,8 +22,10 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'      => "",
-        'novalign' => "-novalign",
+        'def'       => "",
+        'novalign1' => "-novalign",
+        'novalign2' => "-nvsc -nvbc -msc=2",
+        'novalign3' => "-nvc",
     };
 
     ############################
@@ -30,14 +34,18 @@ BEGIN {
     $rsources = {
 
         'novalign' => <<'----------',
+{
 # simple vertical alignment of '=' and '#'
+# A long line to test -nvbc ... normally this will cause the previous line to move left
 my $lines = 0;    # checksum: #lines
 my $bytes = 0;    # checksum: #bytes
 my $sum = 0;    # checksum: system V sum
 my $patchdata = 0;    # saw patch data
 my $pos = 0;    # start of patch data
+                                         # a hanging side comment
 my $endkit = 0;    # saw end of kit
 my $fail = 0;    # failed
+}
 
 ----------
     };
@@ -51,32 +59,80 @@ my $fail = 0;    # failed
             source => "novalign",
             params => "def",
             expect => <<'#1...........',
+{
 # simple vertical alignment of '=' and '#'
-my $lines     = 0;    # checksum: #lines
-my $bytes     = 0;    # checksum: #bytes
-my $sum       = 0;    # checksum: system V sum
-my $patchdata = 0;    # saw patch data
-my $pos       = 0;    # start of patch data
-my $endkit    = 0;    # saw end of kit
-my $fail      = 0;    # failed
+# A long line to test -nvbc ... normally this will cause the previous line to move left
+    my $lines     = 0;    # checksum: #lines
+    my $bytes     = 0;    # checksum: #bytes
+    my $sum       = 0;    # checksum: system V sum
+    my $patchdata = 0;    # saw patch data
+    my $pos       = 0;    # start of patch data
+                          # a hanging side comment
+    my $endkit    = 0;    # saw end of kit
+    my $fail      = 0;    # failed
+}
 
 #1...........
         },
 
-        'novalign.novalign' => {
+        'novalign.novalign1' => {
             source => "novalign",
-            params => "novalign",
+            params => "novalign1",
             expect => <<'#2...........',
-# simple vertical alignment of '=' and '#'
-my $lines = 0;    # checksum: #lines
-my $bytes = 0;    # checksum: #bytes
-my $sum = 0;    # checksum: system V sum
-my $patchdata = 0;    # saw patch data
-my $pos = 0;    # start of patch data
-my $endkit = 0;    # saw end of kit
-my $fail = 0;    # failed
+{
+    # simple vertical alignment of '=' and '#'
+# A long line to test -nvbc ... normally this will cause the previous line to move left
+    my $lines = 0;    # checksum: #lines
+    my $bytes = 0;    # checksum: #bytes
+    my $sum = 0;    # checksum: system V sum
+    my $patchdata = 0;    # saw patch data
+    my $pos = 0;    # start of patch data
+                    # a hanging side comment
+    my $endkit = 0;    # saw end of kit
+    my $fail = 0;    # failed
+}
 
 #2...........
+        },
+
+        'novalign.novalign2' => {
+            source => "novalign",
+            params => "novalign2",
+            expect => <<'#3...........',
+{
+    # simple vertical alignment of '=' and '#'
+# A long line to test -nvbc ... normally this will cause the previous line to move left
+    my $lines     = 0;  # checksum: #lines
+    my $bytes     = 0;  # checksum: #bytes
+    my $sum       = 0;  # checksum: system V sum
+    my $patchdata = 0;  # saw patch data
+    my $pos       = 0;  # start of patch data
+      # a hanging side comment
+    my $endkit = 0;  # saw end of kit
+    my $fail = 0;  # failed
+}
+
+#3...........
+        },
+
+        'novalign.novalign3' => {
+            source => "novalign",
+            params => "novalign3",
+            expect => <<'#4...........',
+{
+# simple vertical alignment of '=' and '#'
+# A long line to test -nvbc ... normally this will cause the previous line to move left
+    my $lines = 0;        # checksum: #lines
+    my $bytes = 0;        # checksum: #bytes
+    my $sum = 0;          # checksum: system V sum
+    my $patchdata = 0;    # saw patch data
+    my $pos = 0;          # start of patch data
+                          # a hanging side comment
+    my $endkit = 0;       # saw end of kit
+    my $fail = 0;         # failed
+}
+
+#4...........
         },
     };
 

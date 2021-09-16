@@ -183,6 +183,8 @@ my (
     $rOpts_tee_side_comments,
     $rOpts_variable_maximum_line_length,
     $rOpts_valign,
+    $rOpts_valign_code,
+    $rOpts_valign_side_comments,
     $rOpts_whitespace_cycle,
 
     # Static hashes initialized in a BEGIN block
@@ -1670,6 +1672,8 @@ EOM
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
     $rOpts_valign                    = $rOpts->{'valign'};
+    $rOpts_valign_code               = $rOpts->{'valign-code'};
+    $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_variable_maximum_line_length =
       $rOpts->{'variable-maximum-line-length'};
 
@@ -20127,6 +20131,7 @@ EOM
 
         my ( $self, $ri_first, $ri_last ) = @_;
         my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
+        my $rLL                        = $self->[_rLL_];
 
         my $ralignment_type_to_go;
         my $alignment_count = 0;
@@ -20161,28 +20166,52 @@ EOM
             my $token = $tokens_to_go[$max_i];
             my $KK    = $K_to_go[$max_i];
 
-            unless (
+            # Do not align various special side comments
+            my $do_not_align = (
 
                 # it is any specially marked side comment
                 ( defined($KK) && $rspecial_side_comment_type->{$KK} )
 
                 # or it is a static side comment
-                || (   $rOpts->{'static-side-comments'}
+                  || ( $rOpts->{'static-side-comments'}
                     && $token =~ /$static_side_comment_pattern/ )
 
-                # or a closing side comment
-                || (   $types_to_go[$i_terminal] eq '}'
+                  # or a closing side comment
+                  || ( $types_to_go[$i_terminal] eq '}'
                     && $tokens_to_go[$i_terminal] eq '}'
                     && $token =~ /$closing_side_comment_prefix_pattern/ )
-              )
+            );
+
+            # - For the particular combination -vc -nvsc, we put all side comments
+            #   at fixed locations. Note that we will lose hanging side comment
+            #   alignments. Otherwise, hsc's can move to strange locations.
+            # - For -nvc -nvsc we will make all side comments vertical alignments
+            #   because the vertical aligner will check for -nvsc and be able
+            #   to reduce the final padding to the side comments for long lines.
+            #   and keep hanging side comments aligned.
+            if (   !$do_not_align
+                && !$rOpts_valign_side_comments
+                && $rOpts_valign_code )
             {
+
+                $do_not_align = 1;
+                my $ipad = $max_i - 1;
+                if ( $types_to_go[$ipad] eq 'b' ) {
+                    my $pad_spaces =
+                      $rOpts->{'minimum-space-to-comment'} -
+                      $token_lengths_to_go[$ipad];
+                    $self->pad_token( $ipad, $pad_spaces );
+                }
+            }
+
+            if ( !$do_not_align ) {
                 $ralignment_type_to_go->[$max_i] = '#';
                 $alignment_count++;
             }
         }
 
-        # Nothing more to do if -novalign is set
-        if ( !$rOpts_valign ) {
+        # Nothing more to do on this line if -nvc is set
+        if ( !$rOpts_valign_code ) {
             return ( $ralignment_type_to_go, $alignment_count );
         }
 
@@ -20197,7 +20226,7 @@ EOM
             my $ibeg = $ri_first->[$line];
             my $iend = $ri_last->[$line];
 
-            # back up before did any side comment
+            # back up before any side comment
             if ( $iend > $i_terminal ) { $iend = $i_terminal }
 
             my $level_beg = $levels_to_go[$ibeg];

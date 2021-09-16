@@ -4058,6 +4058,32 @@ For example,
 The default is to use vertical alignment, but bertical alignment can be
 completely turned of with the B<-novalign> flag.
 
+A lower level of control of vertical alignment is possible with three parameters
+B<-vc>, B<-vsc>, and B<-vbc>. These independently control alignment
+of code, side comments and block comments.  They are described in the
+next section.
+
+The parameter B<-valign> is in fact an alias for B<-vc -vsc -vbc>, and its
+negative B<-novalign> is an alias for B<-nvc -nvsc -nvbc>.
+
+=item B<Controlling code alignment with --valign-code or -vc>
+
+The B<-vc> flag enables alignment of code symbols such as B<=>.  The default is B<-vc>.
+
+=item B<Controlling side comment alignment with --valign-side-comments or -vsc>
+
+The B<-vsc> flag enables alignment of side comments and is enabled by default.  If side
+comment aligment is disabled with B<-nvsc> they will appear at a fixed space from the
+preceding code token.  The default is B<-vsc>
+
+=item B<Controlling block comment alignment with --valign-block-comments or -vbc>
+
+When B<-vbc> is enabled, block comments can become aligned for example if one
+comment of a consecutive sequence of comments becomes outdented due a length in
+excess of the maximum line length.  If this occurs, the entire group of
+comments will remain aligned and be outdented by the same amount.  This coordinated
+alignment will not occur if B<-nvbc> is set.  The default is B<-vbc>.
+
 =back
 
 =head2 Other Controls

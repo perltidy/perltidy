@@ -327,6 +327,8 @@
 ../snippets24.t	git51.def
 ../snippets24.t	git51.git51
 ../snippets24.t	pretok.def
+../snippets25.t	novalign.def
+../snippets25.t	novalign.novalign
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -467,5 +469,6 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets25.t	novalign.def
-../snippets25.t	novalign.novalign
+../snippets25.t	novalign.novalign1
+../snippets25.t	novalign.novalign2
+../snippets25.t	novalign.novalign3
