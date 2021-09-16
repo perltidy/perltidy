@@ -2,13 +2,37 @@
 
 =over 4
 
+=item B<Fix unusual parsing error b1207>
+
+Testing with random parameters produced another instability caused by misparsing
+an 'x' operator after a possible file handle.  This is very similar to b1205, but
+involves a sigil immediately following a times operator.
+
+To illustrate some cases, consider:
+
+    sub x {print "arg is $_[0]\n"}
+    my $num = 3;
+    my @list=(1,2,3);
+    my %hash=(1,2,3,4);
+    open (my $fh, ">", "junk.txt");
+    print $fh x$num;   # prints a GLOB $num times to STDOUT
+    print $fh x9;      # prints 'x9' to file 'junk.txt'
+    print $fh x@list;  # prints a GLOB 3 times to STDOUT
+    print $fh x%hash;  # prints a GLOB 2 times to STDOUT
+
+Note in particular the different treatment of the first two print statements.
+
+This update fixes case b1207.
+
+15 Sep 2021.
+
 =item B<Fix formatting instability b1206>
 
 Testing with random parameters produced an instability due welding with
 a very short line length and large value of -ci.  This is similar to issues
 b1197-b1204 and fixed with a similar method.
 
-14 Sep 2021.
+14 Sep 2021, 9704cd7.
 
 =item B<Fix unusual parsing error b1205>
 
@@ -30,7 +54,7 @@ To illustrate, consider what these statements do:
 
 This update fixes case b1205.
 
-13 Sep 2021.
+13 Sep 2021, cfa2515.
 
 =item B<Use stress_level to fix cases b1197-b1204>
 
@@ -52,7 +76,7 @@ parameter.
 
 This update fixes issues b1197 b1198 b1199 b1200 b1201 b1202 b1203 b1204
 
-12 Sep 2021.
+12 Sep 2021, 0ac771e.
 
 =item B<Fix unusual hanging side comment issue, c070>
 

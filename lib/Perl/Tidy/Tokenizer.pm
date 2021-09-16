@@ -5393,8 +5393,9 @@ sub operator_expected {
 
         # Exception to weird parsing rules for 'x(' ... see case b1205:
         # In something like 'print $vv x(...' the x is an operator;
+        # Likewise in 'print $vv x$ww' the x is an operatory (case b1207)
         # otherwise x follows the weird parsing rules.
-        elsif ( $tok eq 'x' && $next_type eq '(' ) {
+        elsif ( $tok eq 'x' && $next_type =~ /^[\(\$\@\%]$/ ) {
             $op_expected = OPERATOR;
         }
 

@@ -7372,6 +7372,17 @@ if (
 --stack-opening-hash-brace
 --weld-nested-containers
 
+==> b1207.in <==
+#OK:                kkkkkbZZZZZZZZbxbiiiiiiii;
+                    print $comment x $verbose;
+
+#ERR:               kkkkkbZZZZZZZZbwZZZZZZZZ;
+                    print $comment x$verbose;
+
+
+==> b1207.par <==
+--nowant-right-space='x'
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
