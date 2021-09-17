@@ -1,4 +1,3 @@
-#!/usr/bin/perl
 #
 ###########################################################
 #
@@ -2219,6 +2218,7 @@ sub generate_options {
                 $expansion{$nshort_name} = [$nolong_name];
             }
         }
+        return;
     };
 
     # Install long option names which have a simple abbreviation.
@@ -3280,6 +3280,7 @@ sub check_options {
                 $rOpts->{$key} = 100;
             }
         }
+        return;
     };
 
     # check for reasonable number of blank lines and fix to avoid problems

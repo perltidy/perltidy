@@ -2,6 +2,11 @@
 
 ## 2021 07 17.02
 
+    - Update the man pages to clarify the flags -valign and -novalign
+      for turning vertical alignment on and off (issue git #72).
+      Added parameters -vc -vsc -vbc for separately turning off vertical
+      alignment of code, side comments and block comments.
+
     - Fixed problem where a blank line following a closing code-skipping
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.

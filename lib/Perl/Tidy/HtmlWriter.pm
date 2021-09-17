@@ -226,6 +226,7 @@ sub add_toc_item {
             $html_toc_fh->print("</ul>\n</li>\n");
             ${$rin_toc_package} = "";
         }
+        return;
     };
 
     my $start_package_list = sub {
@@ -236,6 +237,7 @@ sub add_toc_item {
 <ul>
 EOM
         ${$rin_toc_package} = $package;
+        return;
     };
 
     # start the table of contents on the first item
@@ -763,6 +765,7 @@ sub pod_to_html {
             $html_fh->print($_) unless ($no_print);
             if ($in_toc) { push @toc, $_ }
         }
+        return;
     };
 
     # loop over lines of html output from pod2html and merge in
@@ -1505,4 +1508,3 @@ EOM
     return;
 }
 1;
-

@@ -342,11 +342,12 @@ sub valign_input {
 
     # Place one line in the current vertical group.
     #
-    # The input parameters are:
-    #     $level = indentation level of this line
-    #     $rfields = reference to array of fields
-    #     $rpatterns = reference to array of patterns, one per field
-    #     $rtokens   = reference to array of tokens starting fields 1,2,..
+    # The key input parameters describing each line are:
+    #     $level          = indentation level of this line
+    #     $rfields        = ref to array of fields
+    #     $rpatterns      = ref to array of patterns, one per field
+    #     $rtokens        = ref to array of tokens starting fields 1,2,..
+    #     $rfield_lengths = ref to array of field display widths
     #
     # Here is an example of what this package does.  In this example,
     # we are trying to line up both the '=>' and the '#'.
@@ -2044,6 +2045,7 @@ sub sweep_left_to_right {
                     # spot to take special action on failure to move
                 }
             }
+            return;
         };
 
         foreach my $task ( @{$rtodo} ) {
@@ -2924,6 +2926,7 @@ sub delete_null_alignments {
             my $length_match = $rfield_lengths_match->[$i];
             if ( $length ne $length_match ) { $rneed_pad->[$i] = 1 }
         }
+        return;
     };
 
     my $end_match = sub {
@@ -2972,6 +2975,7 @@ sub delete_null_alignments {
                 delete_selected_tokens( $rnew_lines->[$j], \@idel );
             }
         }
+        return;
     };
 
     foreach my $item ( @{$rsubgroups} ) {

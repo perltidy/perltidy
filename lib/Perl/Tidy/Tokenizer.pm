@@ -719,6 +719,7 @@ sub get_line {
     my $write_logfile_entry = sub {
         my ($msg) = @_;
         write_logfile_entry("Line $input_line_number: $msg");
+        return;
     };
 
     # Find and remove what characters terminate this line, including any

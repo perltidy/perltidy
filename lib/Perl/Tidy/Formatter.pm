@@ -1382,6 +1382,7 @@ EOM
                   ( $lbs, $rbs );
             }
         }
+        return;
     };
 
     my $break_before = sub {
@@ -1394,6 +1395,7 @@ EOM
                   ( $lbs, $rbs );
             }
         }
+        return;
     };
 
     $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
@@ -2312,6 +2314,7 @@ sub set_whitespace_flags {
                 $closing_container_inside_ws{$sequence_number} = $ws_flag;
             }
         }
+        return;
     };
 
     my ( $ws_1, $ws_2, $ws_3, $ws_4 );
@@ -5855,6 +5858,7 @@ sub respace_tokens {
 
         # and finally, add this item to the new array
         push @{$rLL_new}, $item;
+        return;
     };
 
     my $store_token_and_space = sub {
@@ -5891,6 +5895,7 @@ sub respace_tokens {
 
         # then the token
         $store_token->($item);
+        return;
     };
 
     my $add_phantom_semicolon = sub {
@@ -6019,6 +6024,7 @@ sub respace_tokens {
             $store_token->($rcopy);
             push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
         }
+        return;
     };
 
     my $check_Q = sub {
@@ -6087,6 +6093,7 @@ sub respace_tokens {
 "Line $lno: Note: be sure you want '$previous_nonblank_token' instead of '$guess' here\n"
             );
         }
+        return;
     };
 
     ############################################
@@ -10428,6 +10435,7 @@ EOM
                 }
             }
         }
+        return;
     };
 
     my $delete_if_blank = sub {
@@ -10456,6 +10464,7 @@ EOM
 
         while ( my $ibl = pop(@iblanks) ) { $rhash_of_desires->{$ibl} = 2 }
 
+        return;
     };
 
     my $end_group = sub {
@@ -10536,6 +10545,8 @@ EOM
         @group     = ();
         @subgroup  = ();
         @iblanks   = ();
+
+        return;
     };
 
     my $find_container_end = sub {
@@ -20182,10 +20193,10 @@ EOM
                     && $token =~ /$closing_side_comment_prefix_pattern/ )
             );
 
-            # - For the particular combination -vc -nvsc, we put all side comments
+            # - For the specific combination -vc -nvsc, we put all side comments
             #   at fixed locations. Note that we will lose hanging side comment
             #   alignments. Otherwise, hsc's can move to strange locations.
-            # - For -nvc -nvsc we will make all side comments vertical alignments
+            # - For -nvc -nvsc we make all side comments vertical alignments
             #   because the vertical aligner will check for -nvsc and be able
             #   to reduce the final padding to the side comments for long lines.
             #   and keep hanging side comments aligned.
@@ -21382,12 +21393,12 @@ sub pad_token {
     sub make_alignment_patterns {
 
         # Here we do some important preliminary work for the
-        # vertical aligner.  We create three arrays for one
+        # vertical aligner.  We create four arrays for one
         # output line. These arrays contain strings that can
         # be tested by the vertical aligner to see if
         # consecutive lines can be aligned vertically.
         #
-        # The three arrays are indexed on the vertical
+        # The four arrays are indexed on the vertical
         # alignment fields and are:
         # @tokens - a list of any vertical alignment tokens for this line.
         #   These are tokens, such as '=' '&&' '#' etc which
@@ -21400,6 +21411,8 @@ sub pad_token {
         # @patterns - a modified list of token types, one for each alignment
         #   field.  These should normally each match before alignment is
         #   allowed, even when the alignment tokens match.
+        # @field_lengths - the display width of each field
+
         my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
         my @tokens        = ();
         my @fields        = ();
