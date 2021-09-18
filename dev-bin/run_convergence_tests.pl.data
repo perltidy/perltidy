@@ -7383,6 +7383,36 @@ if (
 ==> b1207.par <==
 --nowant-right-space='x'
 
+==> b1208.in <==
+# S1
+
+    my $home = (
+          $^O =~ /mswin32/i
+        ? $ENV{HOME}
+        : (
+            eval { ( getpwuid($>) )[7]; } ## end eval
+                     || $ENV{HOME}
+        )
+    );
+
+# S2
+
+    my $home = (
+          $^O =~ /mswin32/i
+        ? $ENV{HOME}
+        : (
+            eval {
+                ( getpwuid($>) )[7];
+            } ## end eval
+                     || $ENV{HOME}
+        )
+    );
+
+==> b1208.par <==
+--continuation-indentation=9
+--extended-continuation-indentation
+--maximum-line-length=54
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

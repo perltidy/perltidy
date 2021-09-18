@@ -1,4 +1,4 @@
-#####################################################################
+####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
@@ -11551,8 +11551,9 @@ EOM
             # Get next nonblank on this line
             my $next_nonblank_token      = '';
             my $next_nonblank_token_type = 'b';
+            my $Knnb;
             if ( $Ktoken_vars < $K_last ) {
-                my $Knnb = $Ktoken_vars + 1;
+                $Knnb = $Ktoken_vars + 1;
                 if (   $rLL->[$Knnb]->[_TYPE_] eq 'b'
                     && $Knnb < $K_last )
                 {
@@ -11695,6 +11696,14 @@ EOM
                 # If there is a pending one-line block ..
                 if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
 
+                    # Fix for b1208: if a side comment follows this closing
+                    # brace then we must include its length in the length test.
+                    # Assume a minimum of 1 blank space to the comment.
+                    my $added_length =
+                      $side_comment_follows
+                      ? 1 + $rLL->[$Knnb]->[_TOKEN_LENGTH_]
+                      : 0;
+
                     # we have to terminate it if..
                     if (
 
@@ -11702,7 +11711,7 @@ EOM
                         # initial estimate). note: must allow 1 space for this
                         # token
                         $self->excess_line_length( $index_start_one_line_block,
-                            $max_index_to_go ) >= 0
+                            $max_index_to_go ) + $added_length >= 0
 
                         # or if it has too many semicolons
                         || (   $semicolons_before_block_self_destruct == 0

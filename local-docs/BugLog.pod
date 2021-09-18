@@ -2,6 +2,34 @@
 
 =over 4
 
+=item B<Fix issue b1208>
+
+Test with random parameters produced a formatting instability which could be
+triggered when there is a short line length limit and there is a long side
+comment on the closing brace of a sort/map/grep/eval block.  The problem was
+due to not correctly including the length of the side comment when testing to
+see if the block could fit on one line.  This update fixes issue b1208.
+
+18 Sep 2021.
+
+=item B<Fix issue git #73>
+
+The -nfpva parameter was not working correctly for functions called with
+pointers.  For example
+
+    # OLD: perltidy -sfp -nfpva
+    $self->method                ( 'parameter_0', 'parameter_1' );
+    $self->method_with_long_name ( 'parameter_0', 'parameter_1' );
+
+    # FIXED: perltidy -sfp -nfpva
+    $self->method ( 'parameter_0', 'parameter_1' );
+    $self->method_with_long_name ( 'parameter_0', 'parameter_1' );
+
+The problem had to do with how the pointer tokens '->' are represented internally
+and has been fixed.
+
+17 Sep 2021.
+
 =item B<Fix unusual parsing error b1207>
 
 Testing with random parameters produced another instability caused by misparsing
@@ -24,7 +52,7 @@ Note in particular the different treatment of the first two print statements.
 
 This update fixes case b1207.
 
-15 Sep 2021.
+15 Sep 2021, 107586f.
 
 =item B<Fix formatting instability b1206>
 

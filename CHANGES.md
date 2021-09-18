@@ -2,6 +2,10 @@
 
 ## 2021 07 17.02
 
+    - Fix issue git #73, the -nfpva flag was not working correctly.
+      Some unwanted vertical alignments of spaced function perens
+      were being made.
+
     - Update the man pages to clarify the flags -valign and -novalign
       for turning vertical alignment on and off (issue git #72).
       Added parameters -vc -vsc -vbc for separately turning off vertical
