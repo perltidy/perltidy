@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 07 17.02
+## 2021 07 17.03
 
     - Fix issue git #73, the -nfpva flag was not working correctly.
       Some unwanted vertical alignments of spaced function perens
