@@ -20142,6 +20142,7 @@ EOM
 
         my ( $self, $ri_first, $ri_last ) = @_;
         my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
+        my $ris_function_call_paren    = $self->[_ris_function_call_paren_];
         my $rLL                        = $self->[_rLL_];
 
         my $ralignment_type_to_go;
@@ -20356,20 +20357,10 @@ EOM
                         }
 
                         # Do not align a spaced-function-paren if requested.
-                        # Issue git #53.  Note that $i-1 is a blank token if we
-                        # get here.
-                        if (  !$rOpts_function_paren_vertical_alignment
-                            && $i > $ibeg + 1 )
-                        {
-                            my $type_m  = $types_to_go[ $i - 2 ];
-                            my $token_m = $tokens_to_go[ $i - 2 ];
-
-                            # this is the same test as 'space-function-paren'
-                            if (   $type_m =~ /^[wUG]$/
-                                || $type_m eq '->'
-                                || $type_m  =~ /^[wi]$/
-                                && $token_m =~ /^(\&|->)/ )
-                            {
+                        # Issue git #53, #73.
+                        if ( !$rOpts_function_paren_vertical_alignment ) {
+                            my $seqno = $type_sequence_to_go[$i];
+                            if ( $ris_function_call_paren->{$seqno} ) {
                                 $alignment_type = "";
                             }
                         }
