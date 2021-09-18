@@ -1,1 +1,1 @@
--sfp -nfpva
+-sfp -wls='->' -wrs='->' -nfpva

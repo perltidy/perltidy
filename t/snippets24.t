@@ -39,7 +39,9 @@ BEGIN {
     $rparams = {
         'def'   => "",
         'fpva1' => "-sfp",
-        'fpva2' => "-sfp -nfpva",
+        'fpva2' => <<'----------',
+-sfp -wls='->' -wrs='->' -nfpva
+----------
         'git51' => <<'----------',
 --maximum-line-length=120
 --converge
@@ -119,6 +121,8 @@ Coro::AnyEvent::sleep( 3, 4 );
 use Carp ();
 use File::Spec ();
 use File::Path ();
+$self -> method ( 'parameter_0', 'parameter_1' );
+$self -> method_with_long_name ( 'parameter_0', 'parameter_1' );
 ----------
 
         'git51' => <<'----------',
@@ -435,6 +439,8 @@ Coro::AnyEvent::sleep( 3, 4 );
 use Carp       ();
 use File::Spec ();
 use File::Path ();
+$self->method( 'parameter_0', 'parameter_1' );
+$self->method_with_long_name( 'parameter_0', 'parameter_1' );
 #3...........
         },
 
@@ -447,6 +453,8 @@ Coro::AnyEvent::sleep            ( 3, 4 );
 use Carp       ();
 use File::Spec ();
 use File::Path ();
+$self->method                ( 'parameter_0', 'parameter_1' );
+$self->method_with_long_name ( 'parameter_0', 'parameter_1' );
 #4...........
         },
 
@@ -459,6 +467,8 @@ Coro::AnyEvent::sleep ( 3, 4 );
 use Carp ();
 use File::Spec ();
 use File::Path ();
+$self -> method ( 'parameter_0', 'parameter_1' );
+$self -> method_with_long_name ( 'parameter_0', 'parameter_1' );
 #5...........
         },
 

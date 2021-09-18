@@ -3,3 +3,5 @@ Coro::AnyEvent::sleep            ( 3, 4 );
 use Carp       ();
 use File::Spec ();
 use File::Path ();
+$self->method                ( 'parameter_0', 'parameter_1' );
+$self->method_with_long_name ( 'parameter_0', 'parameter_1' );
