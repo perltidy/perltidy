@@ -11534,8 +11534,6 @@ EOM
             my $token         = $rtoken_vars->[_TOKEN_];
             my $type          = $rtoken_vars->[_TYPE_];
             my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-            my $block_type =
-              $type_sequence ? $rblock_type_of_seqno->{$type_sequence} : undef;
 
             # If we are continuing after seeing a right curly brace, flush
             # buffer unless we see what we are looking for, as in
@@ -11546,6 +11544,26 @@ EOM
                     $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
                 $rbrace_follower = undef;
+            }
+
+            my ( $block_type, $is_opening_BLOCK, $is_closing_BLOCK );
+            if ($type_sequence) {
+
+                $block_type = $rblock_type_of_seqno->{$type_sequence};
+
+                if (   $block_type
+                    && $token eq $type
+                    && $block_type ne 't'
+                    && !$rshort_nested->{$type_sequence} )
+                {
+
+                    if ( $type eq '{' ) {
+                        $is_opening_BLOCK = 1;
+                    }
+                    elsif ( $type eq '}' ) {
+                        $is_closing_BLOCK = 1;
+                    }
+                }
             }
 
             # Get next nonblank on this line
@@ -11568,18 +11586,6 @@ EOM
             # or closing BLOCK, followed by a side comment, those sections
             # of code will handle this flag separately.
             $side_comment_follows = ( $next_nonblank_token_type eq '#' );
-            my $is_opening_BLOCK =
-              (      $type eq '{'
-                  && $token eq '{'
-                  && $block_type
-                  && !$rshort_nested->{$type_sequence}
-                  && $block_type ne 't' );
-            my $is_closing_BLOCK =
-              (      $type eq '}'
-                  && $token eq '}'
-                  && $block_type
-                  && !$rshort_nested->{$type_sequence}
-                  && $block_type ne 't' );
 
             if (   $side_comment_follows
                 && !$is_opening_BLOCK
@@ -21432,8 +21438,9 @@ sub pad_token {
             }
         }
 
-        # Lines with just 1 token do not have alignments
-        # so we can process them immediately.
+        # ----------------------------------------------------------
+        # Shortcut 1: Lines with just 1 token do not have alignments
+        # ----------------------------------------------------------
         if ( $iend == $ibeg ) {
             @tokens        = ();
             @fields        = ( $tokens_to_go[$ibeg] );
@@ -21452,7 +21459,9 @@ sub pad_token {
             }
         }
 
-        # Optimization: process lines without alignments immediately
+        # -------------------------------------------
+        # Shortcut 2: handle lines without alignments
+        # -------------------------------------------
         if ( !$has_alignment ) {
             @tokens        = ();
             @fields        = ( join( '', @tokens_to_go[ $ibeg .. $iend ] ) );
@@ -21462,6 +21471,9 @@ sub pad_token {
             return ( \@tokens, \@fields, \@patterns, \@field_lengths );
         }
 
+        # --------------------
+        # Loop over all tokens
+        # --------------------
         my $j = 0;    # field index
 
         $patterns[0] = "";

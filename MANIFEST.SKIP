@@ -84,7 +84,9 @@
 -[\d\.\_]+\.tar
 -[\d\.\_]+\.tar\.gz
 
+
 # Github files
+\.github
 \.travis\.yml
 
 # Jekyl file

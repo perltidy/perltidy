@@ -81,6 +81,7 @@ foreach my $word ( sort (@short_list, @special) ) {
     $line .= $word;
     $count++;
     if ( $count == $WORDS_PER_LINE ) {
+        $line =~ s/\s+$//;
         print "$line\n";
         $count = 0;
         $line  = " ";

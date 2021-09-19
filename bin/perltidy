@@ -4724,8 +4724,8 @@ The following list shows all short parameter names which allow a prefix
  osbc   osbr   otr    ple    pod    pvl    q      sac    sbc    sbl
  scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
  sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
- tbc    toc    tp     tqw    trp    ts     tsc    tso    vmll   w
- wn     x      xci    xs
+ tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc    vc
+ vmll   vsc    w      wn     x      xci    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.
