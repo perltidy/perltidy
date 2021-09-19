@@ -1,4 +1,4 @@
-####################################################################
+#####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
@@ -112,7 +112,7 @@ A fault was detected at line $line0 of sub '$subroutine1'
 in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
-This is probably an error introduced by a recent programming change. 
+This is probably an error introduced by a recent programming change.
 Perl::Tidy::Formatter.pm reports VERSION='$VERSION'.
 ==============================================================================
 EOM

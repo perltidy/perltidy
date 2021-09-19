@@ -233,6 +233,35 @@ sub Die {
     croak "unexpected return from Perl::Tidy::Die";
 }
 
+sub Fault {
+    my ($msg) = @_;
+
+    # This routine is called for errors that really should not occur
+    # except if there has been a bug introduced by a recent program change.
+    # Please add comments at calls to Fault to explain why the call
+    # should not occur, and where to look to fix it.
+    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
+    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
+    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my $input_stream_name = get_input_stream_name();
+
+    Die(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+Perl::Tidy::Tokenizer.pm reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+    # We shouldn't get here, but this return is to keep Perl-Critic from
+    # complaining.
+    return;
+}
+
 sub bad_pattern {
 
     # See if a pattern will compile. We have to use a string eval here,
@@ -424,6 +453,15 @@ sub warning {
         $logger_object->warning($msg);
     }
     return;
+}
+
+sub get_input_stream_name {
+    my $input_stream_name = "";
+    my $logger_object     = $tokenizer_self->[_logger_object_];
+    if ($logger_object) {
+        $input_stream_name = $logger_object->get_input_stream_name();
+    }
+    return $input_stream_name;
 }
 
 sub complain {
@@ -1666,8 +1704,8 @@ sub prepare_for_a_new_file {
 
             # Shouldn't get here
             if (DEVEL_MODE) {
-                Die(<<EOM);
-Bad arg '$tok' passed to sub split_pretoken(); please fix
+                Fault(<<EOM);
+While working near line number $input_line_number, bad arg '$tok' passed to sub split_pretoken()
 EOM
             }
         }
