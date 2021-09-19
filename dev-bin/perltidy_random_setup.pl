@@ -197,6 +197,14 @@ sub filter_files {
     @{$rlist} = grep { $_ !~ /\.ERR$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.LOG$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.DEBUG$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.gz$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.tgz$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.zip$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.tar$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.Z$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.png$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.jpg$/i } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.jpeg$/i } @{$rlist};
 
     # exclude pro{$rlist}
     @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};
