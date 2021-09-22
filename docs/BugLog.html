@@ -26,6 +26,822 @@
 
 <dl>
 
+<dt id="Partial-fix-for-issue-git-74-on--lp-at-anonymous-subs"><b>Partial fix for issue git #74 on -lp at anonymous subs</b></dt>
+<dd>
+
+<p>In the following snippet, the final one-line anonymous sub is not followed by a comma. This caused the -lp mode to revert to standard indentation mode because a forced line break was being made after the closing sub brace:</p>
+
+<pre><code>    # OLD, perltidy -lp
+    $got = timethese(
+        $iterations,
+        {
+          Foo =&gt; sub { ++$foo },
+          Bar =&gt; &#39;++$bar&#39;,
+          Baz =&gt; sub { ++$baz }
+        }
+    );</code></pre>
+
+<p>An update was made to check for and fix this.</p>
+
+<pre><code>    # NEW, perltidy -lp
+    $got = timethese(
+                      $iterations,
+                      {
+                         Foo =&gt; sub { ++$foo },
+                         Bar =&gt; &#39;++$bar&#39;,
+                         Baz =&gt; sub { ++$baz }
+                      }
+    );</code></pre>
+
+<p>But note that this only applies to one-line anonymous subs. If an anonymous sub is broken into several lines due to its length or complexity, then these forced line breaks cause indentation to revert to the standard indentation scheme.</p>
+
+<p>22 Sep 2021.</p>
+
+</dd>
+<dt id="Fix-issues-b1209-related-to--vmll"><b>Fix issues b1209 related to -vmll</b></dt>
+<dd>
+
+<p>Testing with random parameters produced a formatting instability related to the -vmll flag. The problem was due to a subtle difference in the definition of nesting depth and indentation level. The vertical aligner was using nesting depth instead of indentation level to compute the maximum line length when -vmll is set. In some rare cases there is a difference. The problem was fixed by passing the maximum line length to the vertical aligner so that the calculation is only done in the formatter. This fixes b1209.</p>
+
+<p>20 Sep 2021.</p>
+
+</dd>
+<dt id="Fix-issue-b1208"><b>Fix issue b1208</b></dt>
+<dd>
+
+<p>Testing with random parameters produced a formatting instability which could be triggered when there is a short line length limit and there is a long side comment on the closing brace of a sort/map/grep/eval block. The problem was due to not correctly including the length of the side comment when testing to see if the block could fit on one line. This update fixes issue b1208.</p>
+
+<p>18 Sep 2021, 0af1321.</p>
+
+</dd>
+<dt id="Fix-issue-git-73"><b>Fix issue git #73</b></dt>
+<dd>
+
+<p>The -nfpva parameter was not working correctly for functions called with pointers. For example</p>
+
+<pre><code>    # OLD: perltidy -sfp -nfpva
+    $self-&gt;method                ( &#39;parameter_0&#39;, &#39;parameter_1&#39; );
+    $self-&gt;method_with_long_name ( &#39;parameter_0&#39;, &#39;parameter_1&#39; );
+
+    # FIXED: perltidy -sfp -nfpva
+    $self-&gt;method ( &#39;parameter_0&#39;, &#39;parameter_1&#39; );
+    $self-&gt;method_with_long_name ( &#39;parameter_0&#39;, &#39;parameter_1&#39; );</code></pre>
+
+<p>The problem had to do with how the pointer tokens &#39;-&gt;&#39; are represented internally and has been fixed.</p>
+
+<p>17 Sep 2021,e3b4a6f.</p>
+
+</dd>
+<dt id="Fix-unusual-parsing-error-b1207"><b>Fix unusual parsing error b1207</b></dt>
+<dd>
+
+<p>Testing with random parameters produced another instability caused by misparsing an &#39;x&#39; operator after a possible file handle. This is very similar to b1205, but involves a sigil immediately following a times operator.</p>
+
+<p>To illustrate some cases, consider:</p>
+
+<pre><code>    sub x {print &quot;arg is $_[0]\n&quot;}
+    my $num = 3;
+    my @list=(1,2,3);
+    my %hash=(1,2,3,4);
+    open (my $fh, &quot;&gt;&quot;, &quot;junk.txt&quot;);
+    print $fh x$num;   # prints a GLOB $num times to STDOUT
+    print $fh x9;      # prints &#39;x9&#39; to file &#39;junk.txt&#39;
+    print $fh x@list;  # prints a GLOB 3 times to STDOUT
+    print $fh x%hash;  # prints a GLOB 2 times to STDOUT</code></pre>
+
+<p>Note in particular the different treatment of the first two print statements.</p>
+
+<p>This update fixes case b1207.</p>
+
+<p>15 Sep 2021, 107586f.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-b1206"><b>Fix formatting instability b1206</b></dt>
+<dd>
+
+<p>Testing with random parameters produced an instability due welding with a very short line length and large value of -ci. This is similar to issues b1197-b1204 and fixed with a similar method.</p>
+
+<p>14 Sep 2021, 9704cd7.</p>
+
+</dd>
+<dt id="Fix-unusual-parsing-error-b1205"><b>Fix unusual parsing error b1205</b></dt>
+<dd>
+
+<p>Testing with random parameters produced an instability caused by misparsing an &#39;x&#39; operator after a possible file handle. Testing with Perl showed that an &#39;x&#39; followed by a &#39;(&#39; in this location is always the &#39;times&#39; operator and never a call to a function &#39;x&#39;. If x is immediately followed by a number it is subject to the usual weird parsing rules at such a location.</p>
+
+<p>To illustrate, consider what these statements do:</p>
+
+<pre><code>    open( my $zz, &quot;&gt;&quot;, &quot;junk.txt&quot; );
+    sub x { return $_[0] }  # never called
+    print $zz x(2);    # prints a glob 2 times; not a function call
+    print $zz x 2;     # prints a glob 2 times
+    print $zz x2;      # syntax error
+    print $zz x;       # syntax error
+    print $zz z;       # prints &#39;z&#39; in file &#39;junk.txt&#39;</code></pre>
+
+<p>This update fixes case b1205.</p>
+
+<p>13 Sep 2021, cfa2515.</p>
+
+</dd>
+<dt id="Use-stress_level-to-fix-cases-b1197-b1204"><b>Use stress_level to fix cases b1197-b1204</b></dt>
+<dd>
+
+<p>Testing with random input parameters produced a number of cases of unstable formatting. All of these involved some combination of a short maximum line length, a large -ci and -i, and often one or more of -xci -lp and -wn. These parameters can force lines to break at poor locations. All of these cases were fixed by introducing a quantity called the &#39;stress_level&#39;, which is the approximate indentation level at which the line break logic comes under high stress and become unstable. For default parameters the stress level is about 12, but unusual parameter combinations can make it much less, even as low as zero. For code which is at an indentation level greater than this depth, some defensive actions are taken to avoid instability, such as temporarily turning off the -xci flag when the indentation depth exceeds the stress level. Most actual working code will not be influenced by this logic. Actual code which has a very deep indentation level can avoid problems by using a long line length, a short number of indentation spaces, or even the whitespace-cycle parameter.</p>
+
+<p>This update fixes issues b1197 b1198 b1199 b1200 b1201 b1202 b1203 b1204</p>
+
+<p>12 Sep 2021, 0ac771e.</p>
+
+</dd>
+<dt id="Fix-unusual-hanging-side-comment-issue-c070"><b>Fix unusual hanging side comment issue, c070</b></dt>
+<dd>
+
+<p>This issues can be illustrated with the following input script:</p>
+
+<pre><code>    {
+        if ($xxx) {
+          ...
+        } ## end if ($xxx ...
+        # b &lt;filename&gt;:&lt;line&gt; [&lt;condition&gt;]
+    }
+
+
+    # OLD: perltidy -fpsc=21
+    {
+        if ($xxx) {
+            ...;
+        } ## end if ($xxx ...
+                        # b &lt;filename&gt;:&lt;line&gt; [&lt;condition&gt;]
+    }</code></pre>
+
+<p>The comment &#39;# b ..&#39; moved over to the column 21 to the right as if it were a side comment. The reason is that it accidentally got marked as a hanging side comment. It should not have been because the previous side comment was a closing side comment. This update fixes this:</p>
+
+<pre><code>    # NEW: perltidy -fpsc=21
+    {
+        if ($xxx) {
+            ...;
+        } ## end if ($xxx ...
+
+        # b &lt;filename&gt;:&lt;line&gt; [&lt;condition&gt;]
+    }</code></pre>
+
+<p>This fixes issue c070.</p>
+
+<p>10 Sep 2021, ec6ccf9.</p>
+
+</dd>
+<dt id="Fix-parsing-issue-c068"><b>Fix parsing issue c068</b></dt>
+<dd>
+
+<p>This issue is illustrated with the following line:</p>
+
+<pre><code>   my $aa = $^ ? &quot;defined&quot; : &quot;not defined&quot;;</code></pre>
+
+<p>If we tell perltidy to remove the space before the &#39;?&#39;, then the output will no longer be a valid script:</p>
+
+<pre><code>   # perltidy -nwls=&#39;?&#39;:
+   my $aa = $^? &quot;defined&quot; : &quot;not defined&quot;;</code></pre>
+
+<p>The problem is that Perl considers &#39;$^?&#39; to be a special variable. So Rerunning perltidy on this gives an error, and perl also gives an error. This update fixes the problem by preventing a space after anything like &#39;$^&#39; from being removed a new special variable would be created.</p>
+
+<p>This fixes issue c068.</p>
+
+<p>7 Sep 2021, 9bc23d1.</p>
+
+</dd>
+<dt id="Fix-parsing-problem-issue-c066"><b>Fix parsing problem issue c066</b></dt>
+<dd>
+
+<p>This issue is illustrated with the following line (rt80058):</p>
+
+<pre><code>   my $ok=$^Oeq&quot;linux&quot;;</code></pre>
+
+<p>Running perltidy generated a warning message which is caused by the lack of space before the &#39;eq&#39;. This update fixes the problem.</p>
+
+<p>4 Sep 2021, df79a20.</p>
+
+</dd>
+<dt id="Fix-unusual-parsing-problem-issue-c065"><b>Fix unusual parsing problem issue c065</b></dt>
+<dd>
+
+<p>Testing produced an unusual parsing problem in perltidy which can be illustrated with the following simple script:</p>
+
+<pre><code>    my $str = &#39;a&#39;x2.2;
+    print $str,&quot;\n&quot;;</code></pre>
+
+<p>Normally an integer would follow the &#39;x&#39; operator, but Perl seems to accept any valid number and truncates it to an integer. So in this case the number 2.2 is truncated to 2 and the output is &#39;aa&#39;.</p>
+
+<p>But perltidy, with default parameters, formats this as</p>
+
+<pre><code>    my $str = &#39;a&#39; x 2 . 2;
+    print $str,&quot;\n&quot;;</code></pre>
+
+<p>which prints the result &quot;aa2&quot;. The problem is fixed with this update. With the update, the result is</p>
+
+<pre><code>    my $str = &#39;a&#39; x 2.2;
+    print $str, &quot;\n&quot;;</code></pre>
+
+<p>which is equivalent to the original script.</p>
+
+<p>This fixes issue c065.</p>
+
+<p>4 Sep 2021, f242f78.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-issues-b1195-b1196"><b>Fix formatting instability issues b1195, b1196</b></dt>
+<dd>
+
+<p>Testing with random parameters produced two similar cases of unstable formatting which are fixed with this update.</p>
+
+<p>28 Aug 2021, ab9ad39.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-issue-b1194"><b>Fix formatting instability issue b1194</b></dt>
+<dd>
+
+<p>Testing with random parameters produced a case of unstable formatting which is fixed with this update.</p>
+
+<p>This fixes case b1194, and at the same time it simplifies the logic which handles issues b1183 and b1191.</p>
+
+<p>21 Aug 2021, 62e5b01.</p>
+
+</dd>
+<dt id="Fix-some-problems-involving-tabs-characters-case-c062"><b>Fix some problems involving tabs characters, case c062</b></dt>
+<dd>
+
+<p>This update fixes some problems found in random testing with tab characters. For example, in the following snippet there is a tab character after &#39;sub&#39;</p>
+
+<pre><code>    do sub      : lvalue {
+        return;
+      }</code></pre>
+
+<p>Running perltidy on this repeatedly keep increasing the space between &#39;sub&#39; and &#39;:&#39;</p>
+
+<pre><code>    # OLD: perltidy
+    do sub       : lvalue {
+        return;
+      }
+
+    # OLD: perltidy
+    do sub        : lvalue {
+        return;
+      }</code></pre>
+
+<p>etc.</p>
+
+<pre><code>    # NEW: perltidy
+    do sub : lvalue {
+        return;
+      }</code></pre>
+
+<p>Problems like this can occur if string comparisons use &#39; &#39; instead of the regex \s when working on spaces. Several instances of this were located and corrected.</p>
+
+<p>This fixes issue c062.</p>
+
+<p>18 Aug 2021, d86787f.</p>
+
+</dd>
+<dt id="Correct-parsing-error-case-c061"><b>Correct parsing error, case c061</b></dt>
+<dd>
+
+<p>Testing with random input produced an error condition involving a side comment placed between a sub name and prototype, as in the following snippet:</p>
+
+<pre><code>    sub
+    witch   # sc
+    ()   # prototype may be on new line ...
+    { print &quot;which?\n&quot; }
+    witch();</code></pre>
+
+<p>The current version of perltidy makes an error:</p>
+
+<pre><code>    # OLD: perltidy
+    sub witch   # sc ()    # prototype may be on new line ...
+    { print &quot;which?\n&quot; }
+    witch();</code></pre>
+
+<p>This update corrects the problem:</p>
+
+<pre><code>    # NEW: perltidy
+    sub witch    # sc
+      ()         # prototype may be on new line ...
+    { print &quot;which?\n&quot; }
+    witch();</code></pre>
+
+<p>This fixes case c061;</p>
+
+<p>18 Aug 2021, 3bb2b2c.</p>
+
+</dd>
+<dt id="Improved-line-break-case-c060"><b>Improved line break, case c060</b></dt>
+<dd>
+
+<p>The default formatting produced an undesirable line break at the last &#39;&amp;&amp;&#39; term in the following:</p>
+
+<pre><code>    my $static = grep {
+             $class       =~ /^$_$/
+          || $fullname    =~ /^$_$/
+          || $method_name =~ /^$_$/
+          &amp;&amp; ( $class eq &#39;main&#39; )
+    } grep { !m![/\\.]! } $self-&gt;dispatch_to;    # filter PATH</code></pre>
+
+<p>This update corrects this to give</p>
+
+<pre><code>    my $static = grep {
+             $class       =~ /^$_$/
+          || $fullname    =~ /^$_$/
+          || $method_name =~ /^$_$/ &amp;&amp; ( $class eq &#39;main&#39; )
+    } grep { !m![/\\.]! } $self-&gt;dispatch_to;    # filter PATH</code></pre>
+
+<p>15 Aug 2021, 9d1c8a9.</p>
+
+</dd>
+<dt id="Fix-error-check-caused-by--wn--iscl-case-c058"><b>Fix error check caused by -wn -iscl, case c058</b></dt>
+<dd>
+
+<p>Testing with random parameters triggered an an internal error check. This was caused by a recent coding change which allowed a weld across a side comment. The problem was in the development version, not in the latest released version, and is fixed with this update. This closes issue c058.</p>
+
+<p>14 Aug 2021, 5a13886.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-b1193"><b>Fix formatting instability, b1193</b></dt>
+<dd>
+
+<p>Testing with random parameters produced unstable formatting involving parameters which included -lp -sbvtc=1. This update fixes this problem, case b1193.</p>
+
+<p>13 Aug 2021, d4c3425.</p>
+
+</dd>
+<dt id="Fix-error-in-tokenizer-issue-c055"><b>Fix error in tokenizer, issue c055</b></dt>
+<dd>
+
+<p>The ultimate cause of the undefined variable reference in the previous issue was found to be a typo in the tokenizer. This update finishes fixing issue c055.</p>
+
+<p>10 Aug 2021, 2963db3</p>
+
+</dd>
+<dt id="Fix-undefined-variable-reference-in-development-version"><b>Fix undefined variable reference in development version</b></dt>
+<dd>
+
+<p>In testing, the following unbalanced snippet caused a reference to an undefined value in the current development version (but not in the current released version).</p>
+
+<pre><code>        if($CPAN::Config-&gt;{term_is_latin}){
+                $swhat=~s{([\xC0-\xDF])([\x80-\xBF])}{chr(ord($1)&lt;&lt;6&amp;0xC0|ord($2)&amp;0x3F)}eg;}if($self-&gt;colorize_output){if($CPAN::DEBUG&amp;&amp;$swhat=~/^Debug\(/){
+                        $ornament=$CPAN::Config-&gt;{colorize_debug}||&quot;black on_cyan&quot;;}</code></pre>
+
+<p>A check has been added to fix this.</p>
+
+<p>10 Aug 2021, a3f9774.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-b1192"><b>Fix formatting instability, b1192</b></dt>
+<dd>
+
+<p>Testing with random parameters produced unstable formatting with the following snippet when run with some unusual parameters:</p>
+
+<pre><code>          @EXPORT =
+              ( @{$EXPORT_TAGS{standard}}, );</code></pre>
+
+<p>It was also be formatted as</p>
+
+<pre><code>          @EXPORT = (
+                      @{$EXPORT_TAGS{standard}},
+          );</code></pre>
+
+<p>The problem was that a list formatting style was turning on and off due to the the needless terminal comma within the parens. A patch was made to ignore commas like this when deciding if list formatting should be used.</p>
+
+<p>This fixes case b1192.</p>
+
+<p>10 Aug 2021, b949215.</p>
+
+</dd>
+<dt id="Fix-formatting-instability-b1191"><b>Fix formatting instability, b1191</b></dt>
+<dd>
+
+<p>Random testing produced an instability involving an unusual parameter combination and the following input code:</p>
+
+<pre><code>    $_[0]eq$_[1]
+      or($_[1]=~/^([!~])(.)([\x00-\xff]*)/)
+      and($1 eq &#39;!&#39;)
+      ^(eval{($_[2].&quot;::&quot;.$_[0])=~/$2$3/;});</code></pre>
+
+<p>This update fixes case b1191.</p>
+
+<p>9 Aug 2021, 16b4575.</p>
+
+</dd>
+<dt id="Fix-error-parsing-sub-attributes-without-spaces-b1190"><b>Fix error parsing sub attributes without spaces, b1190</b></dt>
+<dd>
+
+<p>Testing with random parameters produced an instability which was caused by incorrect parsing of a sub attribute list without spaces, as in</p>
+
+<pre><code>        sub:lvalue{&quot;a&quot;}</code></pre>
+
+<p>This update fixes case b1190.</p>
+
+<p>9 Aug 2021, 7008bcc.</p>
+
+</dd>
+<dt id="Fix-rare-loss-of-vertical-alignment-in-welded-containers-c053"><b>Fix rare loss of vertical alignment in welded containers, c053</b></dt>
+<dd>
+
+<p>This update corrects a rare loss of vertical alignment in welded containers.</p>
+
+<p>To illustrate the issue, the normal formatting of the following snippet is</p>
+
+<pre><code>    # perltidy -sil=1 
+    ( $msg, $defstyle ) = do {
+            $i == 1 ? ( &quot;First&quot;, &quot;Color&quot; )
+          : $i == 2 ? ( &quot;Then&quot;, &quot;Rarity&quot; )
+          :           ( &quot;Then&quot;, &quot;Name&quot; );
+    };</code></pre>
+
+<p>If it appears within a welded container, the alignment of the last line was being lost:</p>
+
+<pre><code>    # OLD: perltidy -wn -sil=1
+    { {
+
+        ( $msg, $defstyle ) = do {
+                $i == 1 ? ( &quot;First&quot;, &quot;Color&quot; )
+              : $i == 2 ? ( &quot;Then&quot;,  &quot;Rarity&quot; )
+              : ( &quot;Then&quot;, &quot;Name&quot; );
+        };
+    } }</code></pre>
+
+<p>The corrected result is</p>
+
+<pre><code>    # NEW: perltidy -wn -sil=1
+    { {
+
+        ( $msg, $defstyle ) = do {
+                $i == 1 ? ( &quot;First&quot;, &quot;Color&quot; )
+              : $i == 2 ? ( &quot;Then&quot;, &quot;Rarity&quot; )
+              :           ( &quot;Then&quot;, &quot;Name&quot; );
+        };
+    } }</code></pre>
+
+<p>Several other minor vertical alignment issues are fixed with this updated. The problem was that two slightly different measures of the depth of indentation were being compared in the vertical aligner.</p>
+
+<p>This fixes case c053.</p>
+
+<p>8 Aug 2021, 97f02ee.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1189"><b>Fix edge case of formatting instability, b1189</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of unstable formatting involving welding with parameter -notrim-qw. The problem was that the -notrim-qw flag converts a qw quote into a quote with fixed leading whitespace. The lines of these types of quotes which have no other code are are output early in the formatting process, since they have a fixed format, so welding does not work. In particular, the closing tokens cannot be welded if they are on a separate line. This also holds for all types of non-qw quotes. So welding can only be done if the first and last lines of a non-qw quote contain other code. A check for this was added.</p>
+
+<p>For example, in the following snippet the terminal &#39;}&#39; is alone on a line:</p>
+
+<pre><code>    is eval(q{
+        $[ = 3;
+        BEGIN { my $x = &quot;foo\x{666}&quot;; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+    ), &quot;a&quot;;</code></pre>
+
+<p># In the previous version this was half-welded: # OLD: perltidy -wn -sil=0</p>
+
+<pre><code>    is eval( q{
+        $[ = 3;
+        BEGIN { my $x = &quot;foo\x{666}&quot;; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+      ),
+      &quot;a&quot;;</code></pre>
+
+<p>The new check avoids welding in this case, giving</p>
+
+<pre><code>    # NEW: perltidy -wn -sil=0
+    is eval(
+        q{
+        $[ = 3;
+        BEGIN { my $x = &quot;foo\x{666}&quot;; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }
+      ),
+      &quot;a&quot;;</code></pre>
+
+<p>Welding can still be done if the opening and closing container tokens have other code. For example, welding can be done for the following snippet:</p>
+
+<pre><code>    is eval(q{
+        $[ = 3;
+        BEGIN { my $x = &quot;foo\x{666}&quot;; $x =~ /foo\p{Alnum}/; }
+        $t[3];
+    }), &quot;a&quot;;</code></pre>
+
+<p>And welding can still be done on all qw quotes unless the -notrim-qw flag is set.</p>
+
+<p>This fixes case b1189.</p>
+
+<p>7 Aug 2021, e9c25f2.</p>
+
+</dd>
+<dt id="Fix-edge-cases-of-formatting-instability-b1187-b1188"><b>Fix edge cases of formatting instability, b1187 b1188</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced some cases of instability involving -wn -lp and several other parameters. The mechanism involved an interaction between the formatter and vertical aligner.</p>
+
+<p>This fixes cases b1187 and b1188.</p>
+
+<p>3 Aug 2021, 5be949b.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1186"><b>Fix edge case of formatting instability, b1186</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of instability involving parameter -lp -pvt=n and a short maximum line length.</p>
+
+<p>This fixes case b1186.</p>
+
+<p>2 Aug 2021, f3dbee1.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1185"><b>Fix edge case of formatting instability, b1185</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of welding instability involving parameters -wn, -vt=2, -lp and a short maximum line length.</p>
+
+<p>This fixes case b1185.</p>
+
+<p>1 Aug 2021, d2ab2b7.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1183"><b>Fix edge case of formatting instability, b1183</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of welding instability involving parameters -wn, -vt=n, -lp. This update fixes the problem.</p>
+
+<p>This fixes case b1183.</p>
+
+<p>30 Jul 2021, 055650b.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1184"><b>Fix edge case of formatting instability, b1184</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of welding instability involving a tripple weld with parameters -wn, -vt=n, -lp. This update fixes the problem.</p>
+
+<p>This fixes case b1184.</p>
+
+<p>29 Jul 2021, 6dd53fb.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability-b1182"><b>Fix edge case of formatting instability, b1182</b>.</dt>
+<dd>
+
+<p>Testing with random parameters produced a case of welding instability involving unusual parameters and welding long ternary expressions. This update fixes the problem.</p>
+
+<p>This fixes case b1182.</p>
+
+<p>28 Jul 2021, 01d6c40.</p>
+
+</dd>
+<dt id="Fix-edge-case-of-formatting-instability"><b>Fix edge case of formatting instability</b>.</dt>
+<dd>
+
+<p>Random testing with random input parameters produced cases of formatting instability involving welding with unusual parameter settings. This update makes a small tolarance adjustment to fix it.</p>
+
+<p>This fixes cases b1180 b1181.</p>
+
+<p>28 Jul 2021, b38ccfc.</p>
+
+</dd>
+<dt id="Fix-rare-problem-with-formatting-nested-ternary-statements"><b>Fix rare problem with formatting nested ternary statements</b></dt>
+<dd>
+
+<p>This update fixes an extremely rare problem in formatting nested ternary statements, illustrated in the following snippet:</p>
+
+<pre><code>  # OLD: There should be a break before the &#39;?&#39; in line 11 here:
+  WriteMakefile(
+      (
+          $PERL_CORE ? ()
+          : (
+              (
+                  eval { ExtUtils::MakeMaker-&gt;VERSION(6.48) }
+                  ? ( MIN_PERL_VERSION =&gt; &#39;5.006&#39; )
+                  : ()
+              ),
+              (
+                  eval { ExtUtils::MakeMaker-&gt;VERSION(6.46) } ? (
+                      META_MERGE =&gt; {
+                          #
+                      }
+                    )
+                  : ()
+              ),
+          )
+      ),
+  );
+
+  # NEW: Line 12 correctly begins with a &#39;?&#39;
+  WriteMakefile(
+      (
+          $PERL_CORE ? ()
+          : (
+              (
+                  eval { ExtUtils::MakeMaker-&gt;VERSION(6.48) }
+                  ? ( MIN_PERL_VERSION =&gt; &#39;5.006&#39; )
+                  : ()
+              ),
+              (
+                  eval { ExtUtils::MakeMaker-&gt;VERSION(6.46) }
+                  ? (
+                      META_MERGE =&gt; {
+                          #
+                      }
+                    )
+                  : ()
+              ),
+          )
+      ),
+  );</code></pre>
+
+<p>This fixes issue c050, 63784d8.</p>
+
+<p>22 Jul 2021.</p>
+
+</dd>
+<dt id="Fix-conflict-of--bom-and--scp-parameters"><b>Fix conflict of -bom and -scp parameters</b></dt>
+<dd>
+
+<p>Automated testing with random parameters produced a case of instability caused by a conflict of parameters -bom and -scp. In the following script the -bom command says to keep the tokens &#39;)-&gt;&#39; on a new line, whereas the -scp command says to stack the closing paren on the previous line.</p>
+
+<pre><code>        $resource = {
+                id =&gt; $package-&gt;new_from_mana(
+                        $result-&gt;{data}
+                )-&gt;id
+        };</code></pre>
+
+<p>The parameters are:</p>
+
+<pre><code>    --break-at-old-method-breakpoints
+    --indent-columns=8
+    --maximum-line-length=60
+    --stack-closing-paren</code></pre>
+
+<p>This caused an instability which was fixed by giving priority to the -bom flag. The stable state is then</p>
+
+<pre><code>        $resource = { id =&gt; $package-&gt;new_from_mana(
+                        $result-&gt;{data}
+        )-&gt;id };</code></pre>
+
+<p>This fixes case b1179.</p>
+
+<p>21 Jul 2021, 4ecc078.</p>
+
+</dd>
+<dt id="Fix-problems-with--kgb-in-complex-structures"><b>Fix problems with -kgb in complex structures</b></dt>
+<dd>
+
+<p>This update fixes two problems involving the -kgb option.</p>
+
+<p>The first problem is that testing with random parameters produced some examples of formatting instabilities involving applying --keyword-group-blanks to complex structures, particularly welded structures. The -kgb parameters work well on simple statements or simple lists, so a check was added to prevent them from working on lists which are more than one level deep. This fixes issues b1177 and b1178 without significantly changing the -kgb functionality.</p>
+
+<p>The second problem is that a terminal blank line could be misplaced if the last statement was a structure. This is illustrated with the following snippet:</p>
+
+<pre><code>    sub new {
+      my $class = shift;
+      my $number = shift || croak &quot;What?? No number??\n&quot;;
+      my $classToGenerate = shift || croak &quot;Need a class to generate, man!\n&quot;;
+      my $hash = shift; #No carp here, some operators do not need specific stuff
+      my $self = { _number =&gt; $number,
+                   _class =&gt; $classToGenerate,
+                   _hash =&gt; $hash };
+      bless $self, $class; # And bless it
+      return $self;
+    }
+
+    # OLD: perltidy -kgb -sil=0 gave
+    sub new {
+
+        my $class           = shift;
+        my $number          = shift || croak &quot;What?? No number??\n&quot;;
+        my $classToGenerate = shift || croak &quot;Need a class to generate, man!\n&quot;;
+        my $hash = shift;   #No carp here, some operators do not need specific stuff
+        my $self = {
+            _number =&gt; $number,
+
+            _class =&gt; $classToGenerate,
+            _hash  =&gt; $hash
+        };
+        bless $self, $class;    # And bless it
+        return $self;
+    }</code></pre>
+
+<p>The blank line which has appeared after the line &#39;_number =&gt;&#39; was intended to go after the closing brace but a line count was off. This has been fixed:</p>
+
+<pre><code>    # NEW: perltidy -kgb -sil=0 gives
+    sub new {
+
+        my $class           = shift;
+        my $number          = shift || croak &quot;What?? No number??\n&quot;;
+        my $classToGenerate = shift || croak &quot;Need a class to generate, man!\n&quot;;
+        my $hash = shift;   #No carp here, some operators do not need specific stuff
+        my $self = {
+            _number =&gt; $number,
+            _class  =&gt; $classToGenerate,
+            _hash   =&gt; $hash
+        };
+
+        bless $self, $class;    # And bless it
+        return $self;
+    }</code></pre>
+
+<p>This fixes issue c048.</p>
+
+<p>19 Jul 2021, 071a3f6.</p>
+
+</dd>
+<dt id="Fix-to-keep-from-losing-blank-lines-after-a-code-skipping-section"><b>Fix to keep from losing blank lines after a code-skipping section</b></dt>
+<dd>
+
+<p>A problem in the current version of perltidy is that a blank line after the closing code-skipping comment can be lost if there was a blank line before the start of the code skipping section. For example, given the following code:</p>
+
+<pre><code>    $x = 1;
+
+    #&lt;&lt;V
+    % # = ( foo =&gt; &#39;bar&#39;, baz =&gt; &#39;buz&#39; );
+    print keys(%#), &quot;\n&quot;;
+    #&gt;&gt;V
+
+    @# = ( foo, &#39;bar&#39;, baz, &#39;buz&#39; );
+    print @#, &quot;\n&quot;;</code></pre>
+
+<p>running perltidy gives:</p>
+
+<pre><code>    $x = 1;
+
+    #&lt;&lt;V
+    % # = ( foo =&gt; &#39;bar&#39;, baz =&gt; &#39;buz&#39; );
+    print keys(%#), &quot;\n&quot;;
+    #&gt;&gt;V
+    @# = ( foo, &#39;bar&#39;, baz, &#39;buz&#39; );
+    print @#, &quot;\n&quot;;</code></pre>
+
+<p>Notice that the blank line after the closing comment #&gt;&gt;V is missing. What happened is that the formatter is counting blank lines and did not &#39;see&#39; the code skipping section. So the blank after the closing comment looked like the second blank in a row, so it got removed since the default is --maximum-consecutive-blank-lines=1.</p>
+
+<p>This update fixes this by resetting the counter. This fixes case c047. A simple workaround until the next release is to include the parameter</p>
+
+<p>--maximum-consecutive-blank-lines=2, or -mbl=2.</p>
+
+<p>It can be removed after the next release.</p>
+
+<p>18 Jul 2021, 9648e16.</p>
+
+</dd>
+<dt id="Fix-possible-welding-instability-in-ternary-after-fat-comma"><b>Fix possible welding instability in ternary after fat comma</b></dt>
+<dd>
+
+<p>Random testing produced a case of formatting instability involving welding within a ternary expression following a fat comma:</p>
+
+<pre><code>    if ( $op and $op eq &#39;do_search&#39; ) {
+        @{$invoices} =
+          GetInvoices(
+              shipmentdatefrom =&gt;
+              $shipmentdatefrom ? output_pref( {
+                             str =&gt; $shipmentdatefrom,
+                             dateformat =&gt; &#39;iso&#39;
+              } )
+              : undef,
+              publicationyear =&gt; $publicationyear,
+          );
+    }</code></pre>
+
+<p>when the following specific parameters were used</p>
+
+<pre><code>    --extended-continuation-indentation
+    --line-up-parentheses
+    --maximum-line-length=38
+    --variable-maximum-line-length
+    --weld-nested-containers</code></pre>
+
+<p>This update fixes this issue, case b1174.</p>
+
+<p>18 Jul 2021, 12ae46b.</p>
+
+</dd>
+<dt id="Fix-mis-tokenization-before-pointer"><b>Fix mis-tokenization before pointer</b></dt>
+<dd>
+
+<p>Random testing produced the following case in which formatting was unstable because the variable &#39;$t&#39; was being mis-tokenized as a possible indirect object.</p>
+
+<pre><code>    --break-before-all-operators
+    --ignore-old-breakpoints
+    --maximum-line-length=22
+    -sil=0
+
+    my $json_response
+      = decode_json $t
+      -&gt;tx-&gt;res-&gt;content
+      -&gt;get_body_chunk;</code></pre>
+
+<p>This update fixes cases b1175, b1176.</p>
+
+<p>17 Jul 2021, 4aa1318.</p>
+
+</dd>
 <dt id="Fix-to-make--wn-and--bbxx-n-flags-work-together"><b>Fix to make -wn and -bbxx=n flags work together</b></dt>
 <dd>
 
@@ -79,7 +895,7 @@
 
 <p>This update fixes case b1173. It works for any number of welded containers, and the -bbxxi=n flags also work correctly.</p>
 
-<p>16 Jul 2021.</p>
+<p>16 Jul 2021, c71f882.</p>
 
 </dd>
 <dt id="Fix-problem-with-side-comment-after-pattern"><b>Fix problem with side comment after pattern</b></dt>

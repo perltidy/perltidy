@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2021 07 17.03
+## 2021 07 17.04
+
+    - Partial fix issue for git #74, the -lp formatting style was
+      being lost when a one-line anonymous sub was followed by a closing brace.
 
     - Fix issue git #73, the -nfpva flag was not working correctly.
       Some unwanted vertical alignments of spaced function perens

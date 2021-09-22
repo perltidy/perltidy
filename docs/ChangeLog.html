@@ -1,5 +1,28 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2021 07 17.04</h2>
+
+<pre><code>- Partial fix issue for git #74, the -lp formatting style was
+  being lost when a one-line anonymous sub was followed by a closing brace.
+
+- Fix issue git #73, the -nfpva flag was not working correctly.
+  Some unwanted vertical alignments of spaced function perens
+  were being made.
+
+- Update the man pages to clarify the flags -valign and -novalign
+  for turning vertical alignment on and off (issue git #72).
+  Added parameters -vc -vsc -vbc for separately turning off vertical
+  alignment of code, side comments and block comments.
+
+- Fixed problem where a blank line following a closing code-skipping
+  comment, '#&gt;&gt;V', can be lost.  A workaround for the previous version
+  is to include the parameter '-mbl=2'.
+
+- Numerous minor fixes have been made. A complete list is at:
+
+       https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
+</code></pre>
+
 <h2>2021 07 17</h2>
 
 <pre><code>- This release is being made mainly because of the next item, in which an
