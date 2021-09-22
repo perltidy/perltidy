@@ -11302,6 +11302,9 @@ EOM
         $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
         $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
 
+        my $K_closing_container = $self->[_K_closing_container_];
+        my $K_opening_container = $self->[_K_opening_container_];
+
         my $file_writer_object = $self->[_file_writer_object_];
         my $rbreak_container   = $self->[_rbreak_container_];
         my $rshort_nested      = $self->[_rshort_nested_];
@@ -11821,7 +11824,36 @@ EOM
                 elsif ( $block_type =~ /$ASUB_PATTERN/ ) {
 
                     if ($is_one_line_block) {
+
                         $rbrace_follower = \%is_anon_sub_1_brace_follower;
+
+                        # Exceptions to help keep -lp intact, see git #74 ...
+                        # Exception 1: followed by '}' on this line
+                        if (   $Ktoken_vars < $K_last
+                            && $next_nonblank_token eq '}' )
+                        {
+                            $rbrace_follower = undef;
+                            $keep_going      = 1;
+                        }
+
+                        # Exception 2: followed by '}' on next line
+                        elsif ( $Ktoken_vars == $K_last ) {
+
+                            my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
+                            my $Kc      = $K_closing_container->{$p_seqno};
+                            if (   defined($Kc)
+                                && $rLL->[$Kc]->[_TOKEN_] eq '}'
+                                && $Kc - $Ktoken_vars <= 2 )
+                            {
+                                $rbrace_follower = undef;
+                                $keep_going      = 1;
+
+                                # Keep the break if container is fully broken
+                                my $Ko = $K_opening_container->{$p_seqno};
+                                $self->set_forced_breakpoint($max_index_to_go)
+                                  if ( $Ko < $K_first );
+                            }
+                        }
                     }
                     else {
                         $rbrace_follower = \%is_anon_sub_brace_follower;

@@ -2,6 +2,42 @@
 
 =over 4
 
+=item B<Partial fix for issue git #74 on -lp at anonymous subs>
+
+In the following snippet, the final one-line anonymous sub is not followed by a
+comma.  This caused the -lp mode to revert to standard indentation mode because
+a forced line break was being made after the closing sub brace:
+
+    # OLD, perltidy -lp
+    $got = timethese(
+        $iterations,
+        {
+          Foo => sub { ++$foo },
+          Bar => '++$bar',
+          Baz => sub { ++$baz }
+        }
+    );
+
+An update was made to check for and fix this.
+
+    # NEW, perltidy -lp
+    $got = timethese(
+                      $iterations,
+                      {
+                         Foo => sub { ++$foo },
+                         Bar => '++$bar',
+                         Baz => sub { ++$baz }
+                      }
+    );
+
+But note that this only applies to one-line anonymous subs.  If an anonymous
+sub is broken into several lines due to its length or complexity, then
+these forced line breaks cause indentation to revert to the standard
+indentation scheme.
+
+22 Sep 2021.
+
+
 =item B<Fix issues b1209 related to -vmll>
 
 Testing with random parameters produced a formatting instability related to

@@ -810,6 +810,9 @@ In situations where perltidy does not have complete freedom to choose line
 breaks it may temporarily revert to its default indentation method.  This can
 occur for example if there are blank lines, block comments, multi-line quotes,
 or side comments between the opening and closing parens, braces, or brackets.
+It will also occur if a multi-line anonymous sub occurs within a container
+since that will impose specific line breaks (such as line breaks
+after statements).
 
 In addition, any parameter which significantly restricts the ability of
 perltidy to choose newlines will conflict with B<-lp> and will cause
