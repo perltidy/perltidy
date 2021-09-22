@@ -28,6 +28,12 @@ my $rprofiles     = [];
 # if file 'perltidy.pl' is found here then make that the default
 if ( -e './perltidy.pl' ) { $perltidy = './perltidy.pl' }
 
+# always require a separate version of perltidy
+# TODO: go get a copy if there is none
+else { die "Please move a copy of perltidy.pl here first\n" }
+
+# TODO: see if DEVEL_MODE is set, turn it on if not
+
 query(<<EOM);
 
 IMPORTANT: You should start this program in an empty directory that you create
@@ -205,7 +211,7 @@ sub filter_files {
     @{$rlist} = grep { $_ !~ /\.png$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.jpg$/i } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.jpeg$/i } @{$rlist};
-    @{$rlist} = grep { $_ ne 'DIAGNOSTICS' } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\bDIAGNOSTICS$/ } @{$rlist};
 
     # exclude pro{$rlist}
     @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};

@@ -5,6 +5,8 @@
 #2 novalign.novalign1
 #3 novalign.novalign2
 #4 novalign.novalign3
+#5 lp2.def
+#6 lp2.lp
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -23,6 +25,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'def'       => "",
+        'lp'        => "-lp",
         'novalign1' => "-novalign",
         'novalign2' => "-nvsc -nvbc -msc=2",
         'novalign3' => "-nvc",
@@ -32,6 +35,17 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'lp2' => <<'----------',
+# test issue git #74, lost -lp when final anon sub brace followed by '}'
+Util::Parser->new(
+    Handlers => {
+        Init  => sub { $self->init(@_) },
+        Mid =>  { sub { shift; $self->mid(@_) } },
+        Final => sub { shift; $self->final(@_) }
+    }
+)->parse( $_[0] );
+----------
 
         'novalign' => <<'----------',
 {
@@ -133,6 +147,36 @@ my $fail = 0;    # failed
 }
 
 #4...........
+        },
+
+        'lp2.def' => {
+            source => "lp2",
+            params => "def",
+            expect => <<'#5...........',
+# test issue git #74, lost -lp when final anon sub brace followed by '}'
+Util::Parser->new(
+    Handlers => {
+        Init  => sub { $self->init(@_) },
+        Mid   => { sub { shift; $self->mid(@_) } },
+        Final => sub { shift; $self->final(@_) }
+    }
+)->parse( $_[0] );
+#5...........
+        },
+
+        'lp2.lp' => {
+            source => "lp2",
+            params => "lp",
+            expect => <<'#6...........',
+# test issue git #74, lost -lp when final anon sub brace followed by '}'
+Util::Parser->new(
+                   Handlers => {
+                                 Init  => sub { $self->init(@_) },
+                                 Mid   => { sub { shift; $self->mid(@_) } },
+                                 Final => sub { shift; $self->final(@_) }
+                   }
+)->parse( $_[0] );
+#6...........
         },
     };
 
