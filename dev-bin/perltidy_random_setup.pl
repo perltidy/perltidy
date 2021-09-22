@@ -205,6 +205,7 @@ sub filter_files {
     @{$rlist} = grep { $_ !~ /\.png$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.jpg$/i } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.jpeg$/i } @{$rlist};
+    @{$rlist} = grep { $_ ne 'DIAGNOSTICS' } @{$rlist};
 
     # exclude pro{$rlist}
     @{$rlist} = grep { $_ !~ /profile\.[0-9]*/ } @{$rlist};

@@ -1,0 +1,8 @@
+# S1
+$bc[
+  ord ( substr ( $P, $i, 1 ) )
+] = $j--;
+
+# S2
+$bc[
+  ord ( substr ( $P, $i, 1 ) ) ] = $j--;

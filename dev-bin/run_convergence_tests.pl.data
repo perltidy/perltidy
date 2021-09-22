@@ -7413,6 +7413,26 @@ if (
 --extended-continuation-indentation
 --maximum-line-length=54
 
+==> b1209.in <==
+# S1
+$bc[
+  ord ( substr ( $P, $i, 1 ) )
+] = $j--;
+
+# S2
+$bc[
+  ord ( substr ( $P, $i, 1 ) ) ] = $j--;
+
+==> b1209.par <==
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=31
+--space-keyword-paren
+--square-bracket-vertical-tightness-closing=2
+--variable-maximum-line-length
+--vertical-tightness=1
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

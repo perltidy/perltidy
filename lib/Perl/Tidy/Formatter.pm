@@ -20037,6 +20037,9 @@ EOM
             }
         }
 
+        my $maximum_line_length =
+          $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
+
         # send this line to the vertical aligner
         my $rvalign_hash = {
             Kend                      => $Kend_code,
@@ -20057,6 +20060,7 @@ EOM
             rtokens                   => $rtokens,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             terminal_block_type       => $terminal_block_type,
+            maximum_line_length       => $maximum_line_length,
         };
 
         my $vao = $self->[_vertical_aligner_object_];

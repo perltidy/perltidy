@@ -1,10 +1,13 @@
 package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
+use Carp;
 our $VERSION = '20210717.03';
 
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
+
+use constant DEVEL_MODE => 0;
 
 # The Perl::Tidy::VerticalAligner package collects output lines and
 # attempts to line up certain common tokens, such as => and #, which are
@@ -80,6 +83,41 @@ sub DESTROY {
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 
+sub Die {
+    my ($msg) = @_;
+    Perl::Tidy::Die($msg);
+    croak "unexpected return from Perl::Tidy::Die";
+}
+
+sub Fault {
+    my ($msg) = @_;
+
+    # This routine is called for errors that really should not occur
+    # except if there has been a bug introduced by a recent program change.
+    # Please add comments at calls to Fault to explain why the call
+    # should not occur, and where to look to fix it.
+    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
+    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
+    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my $input_stream_name = get_input_stream_name();
+
+    Die(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+Perl::Tidy::VerticalAligner.pm reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+    # We shouldn't get here, but this return is to keep Perl-Critic from
+    # complaining.
+    return;
+}
+
 BEGIN {
 
     # Define the fixed indexes for variables in $self, which is an array
@@ -92,17 +130,15 @@ BEGIN {
         _diagnostics_object_ => $i++,
         _length_function_    => $i++,
 
-        _rOpts_                              => $i++,
-        _rOpts_indent_columns_               => $i++,
-        _rOpts_tabs_                         => $i++,
-        _rOpts_entab_leading_whitespace_     => $i++,
-        _rOpts_fixed_position_side_comment_  => $i++,
-        _rOpts_minimum_space_to_comment_     => $i++,
-        _rOpts_maximum_line_length_          => $i++,
-        _rOpts_variable_maximum_line_length_ => $i++,
-        _rOpts_valign_code_                  => $i++,
-        _rOpts_valign_block_comments_        => $i++,
-        _rOpts_valign_side_comments_         => $i++,
+        _rOpts_                             => $i++,
+        _rOpts_indent_columns_              => $i++,
+        _rOpts_tabs_                        => $i++,
+        _rOpts_entab_leading_whitespace_    => $i++,
+        _rOpts_fixed_position_side_comment_ => $i++,
+        _rOpts_minimum_space_to_comment_    => $i++,
+        _rOpts_valign_code_                 => $i++,
+        _rOpts_valign_block_comments_       => $i++,
+        _rOpts_valign_side_comments_        => $i++,
 
         _last_level_written_            => $i++,
         _last_side_comment_column_      => $i++,
@@ -117,6 +153,7 @@ BEGIN {
         _rgroup_lines_                => $i++,
         _group_level_                 => $i++,
         _group_type_                  => $i++,
+        _group_maximum_line_length_   => $i++,
         _zero_count_                  => $i++,
         _last_leading_space_count_    => $i++,
         _comment_leading_space_count_ => $i++,
@@ -156,6 +193,7 @@ sub new {
     initialize_valign_buffer();
     initialize_leading_string_cache();
     initialize_decode();
+    set_logger_object( $args{logger_object} );
 
     # Initialize all variables in $self.
     # To add an item to $self, first define a new constant index in the BEGIN
@@ -180,9 +218,6 @@ sub new {
       $rOpts->{'fixed-position-side-comment'};
     $self->[_rOpts_minimum_space_to_comment_] =
       $rOpts->{'minimum-space-to-comment'};
-    $self->[_rOpts_maximum_line_length_] = $rOpts->{'maximum-line-length'};
-    $self->[_rOpts_variable_maximum_line_length_] =
-      $rOpts->{'variable-maximum-line-length'};
     $self->[_rOpts_valign_code_]           = $rOpts->{'valign-code'};
     $self->[_rOpts_valign_block_comments_] = $rOpts->{'valign-block-comments'};
     $self->[_rOpts_valign_side_comments_]  = $rOpts->{'valign-side-comments'};
@@ -191,6 +226,7 @@ sub new {
     $self->[_rgroup_lines_]                = [];
     $self->[_group_level_]                 = 0;
     $self->[_group_type_]                  = "";
+    $self->[_group_maximum_line_length_]   = undef;
     $self->[_zero_count_]                  = 0;
     $self->[_comment_leading_space_count_] = 0;
     $self->[_last_leading_space_count_]    = 0;
@@ -241,6 +277,7 @@ sub initialize_for_new_group {
     $self->[_zero_count_]                  = 0;
     $self->[_comment_leading_space_count_] = 0;
     $self->[_last_leading_space_count_]    = 0;
+    $self->[_group_maximum_line_length_]   = undef;
 
     # Note that the value for _group_level_ is
     # handled separately in sub valign_input
@@ -262,32 +299,42 @@ sub write_diagnostics {
     return;
 }
 
-# interface to Perl::Tidy::Logger routines
-sub warning {
-    my ( $self, $msg ) = @_;
-    my $logger_object = $self->[_logger_object_];
-    if ($logger_object) {
-        $logger_object->warning($msg);
-    }
-    return;
-}
+{    ## begin closure for logger routines
+    my $logger_object;
 
-sub write_logfile_entry {
-    my ( $self, $msg ) = @_;
-    my $logger_object = $self->[_logger_object_];
-    if ($logger_object) {
-        $logger_object->write_logfile_entry($msg);
+    # Called once per file to initialize the logger object
+    sub set_logger_object {
+        $logger_object = shift;
+        return;
     }
-    return;
-}
 
-sub report_definite_bug {
-    my ( $self, $msg ) = @_;
-    my $logger_object = $self->[_logger_object_];
-    if ($logger_object) {
-        $logger_object->report_definite_bug();
+    sub get_logger_object {
+        return $logger_object;
     }
-    return;
+
+    sub get_input_stream_name {
+        my $input_stream_name = "";
+        if ($logger_object) {
+            $input_stream_name = $logger_object->get_input_stream_name();
+        }
+        return $input_stream_name;
+    }
+
+    sub warning {
+        my ($msg) = @_;
+        if ($logger_object) {
+            $logger_object->warning($msg);
+        }
+        return;
+    }
+
+    sub write_logfile_entry {
+        my ($msg) = @_;
+        if ($logger_object) {
+            $logger_object->write_logfile_entry($msg);
+        }
+        return;
+    }
 }
 
 sub get_cached_line_count {
@@ -302,18 +349,6 @@ sub get_recoverable_spaces {
     # to get them to line up with their opening parens
     my $indentation = shift;
     return ref($indentation) ? $indentation->get_recoverable_spaces() : 0;
-}
-
-sub maximum_line_length_for_level {
-
-    # return maximum line length for line starting with a given level
-    my ( $self, $level ) = @_;
-    my $maximum_line_length = $self->[_rOpts_maximum_line_length_];
-    if ( $self->[_rOpts_variable_maximum_line_length_] ) {
-        if ( $level < 0 ) { $level = 0 }
-        $maximum_line_length += $level * $self->[_rOpts_indent_columns_];
-    }
-    return $maximum_line_length;
 }
 
 ######################################################
@@ -412,6 +447,7 @@ sub valign_input {
     my $break_alignment_after     = $rline_hash->{break_alignment_after};
     my $Kend                      = $rline_hash->{Kend};
     my $ci_level                  = $rline_hash->{ci_level};
+    my $maximum_line_length       = $rline_hash->{maximum_line_length};
 
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
@@ -464,7 +500,8 @@ sub valign_input {
 
     my $is_balanced_line = $level_end == $level;
 
-    my $group_level = $self->[_group_level_];
+    my $group_level               = $self->[_group_level_];
+    my $group_maximum_line_length = $self->[_group_maximum_line_length_];
 
     DEBUG_VALIGN && do {
         my $nlines = $self->group_line_count();
@@ -519,9 +556,12 @@ sub valign_input {
     if ( $level < 0 ) { $level = 0 }
 
     # do not align code across indentation level changes
+    # or changes in the maximum line length
     # or if vertical alignment is turned off
     if (
-           $level != $group_level
+        $level != $group_level
+        || (   $group_maximum_line_length
+            && $maximum_line_length != $group_maximum_line_length )
         || $is_outdented
         || ( $is_block_comment && !$self->[_rOpts_valign_block_comments_] )
         || (   !$is_block_comment
@@ -532,8 +572,9 @@ sub valign_input {
 
         $self->_flush_group_lines( $level - $group_level );
 
-        $group_level = $level;
-        $self->[_group_level_] = $group_level;
+        $group_level                         = $level;
+        $self->[_group_level_]               = $group_level;
+        $self->[_group_maximum_line_length_] = $maximum_line_length;
 
         # Update leading spaces after the above flush because the leading space
         # count may have been changed if the -icp flag is in effect
@@ -630,6 +671,7 @@ sub valign_input {
         {
             $self->[_group_type_]                  = 'COMMENT';
             $self->[_comment_leading_space_count_] = $leading_space_count;
+            $self->[_group_maximum_line_length_]   = $maximum_line_length;
             $self->push_group_line(
                 [ $rfields->[0], $rfield_lengths->[0], $Kend ] );
             return;
@@ -652,18 +694,15 @@ sub valign_input {
                     level                     => $level,
                     level_end                 => $level_end,
                     Kend                      => $Kend,
+                    maximum_line_length       => $maximum_line_length,
                 }
             );
-
             return;
         }
     }
     else {
         $self->[_zero_count_] = 0;
     }
-
-    my $maximum_line_length_for_level =
-      $self->maximum_line_length_for_level($level);
 
     # --------------------------------------------------------------------
     # It simplifies things to create a zero length side comment
@@ -693,7 +732,6 @@ sub valign_input {
             list_seqno                => $list_seqno,
             list_type                 => "",
             is_hanging_side_comment   => $is_hanging_side_comment,
-            maximum_line_length       => $maximum_line_length_for_level,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             is_terminal_ternary       => $is_terminal_ternary,
             j_terminal_match          => $j_terminal_match,
@@ -703,6 +741,7 @@ sub valign_input {
             level                     => $level,
             level_end                 => $level_end,
             imax_pair                 => -1,
+            maximum_line_length       => $maximum_line_length,
         }
     );
 
@@ -717,6 +756,7 @@ sub valign_input {
     # --------------------------------------------------------------------
 
     $self->push_group_line($new_line);
+    $self->[_group_maximum_line_length_] = $maximum_line_length;
 
     # output this group if it ends in a terminal else or ternary line
     if ( defined($j_terminal_match) ) {
@@ -1194,7 +1234,7 @@ sub check_fit {
     # identical numbers of alignment tokens.
     if ( $jmax_old ne $jmax ) {
 
-        $self->warning(<<EOM);
+        warning(<<EOM);
 Program bug detected in Perl::Tidy::VerticalAligner sub check_fit 
 unexpected difference in array lengths: $jmax != $jmax_old
 EOM
@@ -1308,8 +1348,9 @@ sub _flush_comment_lines {
     my ($self) = @_;
     my $rgroup_lines = $self->[_rgroup_lines_];
     return unless ( @{$rgroup_lines} );
-    my $group_level         = $self->[_group_level_];
-    my $leading_space_count = $self->[_comment_leading_space_count_];
+    my $group_level               = $self->[_group_level_];
+    my $group_maximum_line_length = $self->[_group_maximum_line_length_];
+    my $leading_space_count       = $self->[_comment_leading_space_count_];
     my $leading_string =
       $self->get_leading_string( $leading_space_count, $group_level );
 
@@ -1318,9 +1359,7 @@ sub _flush_comment_lines {
     foreach my $item ( @{$rgroup_lines} ) {
         my ( $str, $str_len ) = @{$item};
         my $excess =
-          $str_len +
-          $leading_space_count -
-          $self->maximum_line_length_for_level($group_level);
+          $str_len + $leading_space_count - $group_maximum_line_length;
         if ( $excess > $max_excess ) {
             $max_excess = $excess;
         }
@@ -1359,6 +1398,7 @@ sub _flush_comment_lines {
                 level                     => $group_level,
                 level_end                 => $group_level,
                 Kend                      => $Kend,
+                maximum_line_length       => $group_maximum_line_length,
             }
         );
     }
@@ -1455,8 +1495,11 @@ sub _flush_group_lines {
       : 0;
 
     # STEP 6: Output the lines.
-    # All lines in this batch have the same basic leading spacing:
+    # All lines in this group have the same leading spacing and maximum line
+    # length
     my $group_leader_length = $rgroup_lines->[0]->get_leading_space_count();
+    my $group_maximum_line_length =
+      $rgroup_lines->[0]->get_maximum_line_length();
 
     foreach my $line ( @{$rgroup_lines} ) {
         $self->valign_output_step_A(
@@ -1467,6 +1510,7 @@ sub _flush_group_lines {
                 group_leader_length  => $group_leader_length,
                 extra_leading_spaces => $extra_leading_spaces,
                 level                => $group_level,
+                maximum_line_length  => $group_maximum_line_length,
             }
         );
     }
@@ -1604,7 +1648,7 @@ sub _flush_group_lines {
             if ( !defined($jbeg) ) {
 
                 # safety check, shouldn't happen
-                $self->warning(<<EOM);
+                warning(<<EOM);
 Program bug detected in Perl::Tidy::VerticalAligner sub sweep_top_down 
 undefined index for group line count $group_line_count
 EOM
@@ -4542,6 +4586,7 @@ sub valign_output_step_A {
     my $group_leader_length  = $rinput_hash->{group_leader_length};
     my $extra_leading_spaces = $rinput_hash->{extra_leading_spaces};
     my $level                = $rinput_hash->{level};
+    my $maximum_line_length  = $rinput_hash->{maximum_line_length};
 
     my $rfields                   = $line->get_rfields();
     my $rfield_lengths            = $line->get_rfield_lengths();
@@ -4625,6 +4670,7 @@ sub valign_output_step_A {
             level                     => $level,
             level_end                 => $level_end,
             Kend                      => $Kend,
+            maximum_line_length       => $maximum_line_length,
         }
     );
     return;
@@ -4695,6 +4741,7 @@ sub get_output_line_number {
     my $cached_line_leading_space_count;
     my $cached_seqno_string;
     my $cached_line_Kend;
+    my $cached_line_maximum_length;
     my $seqno_string;
     my $last_nonblank_seqno_string;
 
@@ -4743,6 +4790,7 @@ sub get_output_line_number {
         $cached_line_leading_space_count = 0;
         $cached_seqno_string             = "";
         $cached_line_Kend                = undef;
+        $cached_line_maximum_length      = undef;
 
         # These vars hold a string of sequence numbers joined together used by
         # the cache
@@ -4761,11 +4809,12 @@ sub get_output_line_number {
                 $self->[_last_level_written_],
                 $cached_line_Kend,
             );
-            $cached_line_type        = 0;
-            $cached_line_text        = "";
-            $cached_line_text_length = 0;
-            $cached_seqno_string     = "";
-            $cached_line_Kend        = undef;
+            $cached_line_type           = 0;
+            $cached_line_text           = "";
+            $cached_line_text_length    = 0;
+            $cached_seqno_string        = "";
+            $cached_line_Kend           = undef;
+            $cached_line_maximum_length = undef;
         }
         return;
     }
@@ -4790,6 +4839,7 @@ sub get_output_line_number {
         my $level                     = $rinput->{level};
         my $level_end                 = $rinput->{level_end};
         my $Kend                      = $rinput->{Kend};
+        my $maximum_line_length       = $rinput->{maximum_line_length};
 
         my $last_level_written = $self->[_last_level_written_];
 
@@ -4803,7 +4853,7 @@ sub get_output_line_number {
               $str_length -
               $side_comment_length +
               $leading_space_count -
-              $self->maximum_line_length_for_level($level);
+              $maximum_line_length;
             if ( $excess > 0 ) {
                 $leading_space_count = 0;
                 my $file_writer_object = $self->[_file_writer_object_];
@@ -4901,22 +4951,18 @@ sub get_output_line_number {
                 # and breaks, causing -xci to alternately turn on and off (case
                 # b765).
                 # Patched to fix cases b656 b862 b971 b972: always do the check
-                # if -vmll is set.  The reason is that the -vmll option can
-                # cause changes in the maximum line length, leading to blinkers
-                # if not checked.
+                # if the maximum line length changes (due to -vmll).
                 if (
                     $gap >= 0
-                    && ( $self->[_rOpts_variable_maximum_line_length_]
+                    && ( $maximum_line_length != $cached_line_maximum_length
                         || ( defined($level_end) && $level > $level_end ) )
                   )
                 {
                     my $test_line_length =
                       $cached_line_text_length + $gap + $str_length;
-                    my $maximum_line_length =
-                      $self->maximum_line_length_for_level($last_level_written);
 
                     # Add a small tolerance in the length test (fixes case b862)
-                    if ( $test_line_length > $maximum_line_length - 2 ) {
+                    if ( $test_line_length > $cached_line_maximum_length - 2 ) {
                         $gap = -1;
                     }
                 }
@@ -4964,11 +5010,7 @@ sub get_output_line_number {
                     )
 
                     # The combined line must fit
-                    && (
-                        $test_line_length <=
-                        $self->maximum_line_length_for_level(
-                            $last_level_written)
-                    )
+                    && ( $test_line_length <= $cached_line_maximum_length )
                   )
                 {
 
@@ -5069,12 +5111,14 @@ sub get_output_line_number {
                         }
                     }
 
+                    # Change the args to look like we received the combined line
                     $str                   = $test_line;
                     $str_length            = $test_line_length;
                     $leading_string        = "";
                     $leading_string_length = 0;
                     $leading_space_count   = $cached_line_leading_space_count;
                     $level                 = $last_level_written;
+                    $maximum_line_length   = $cached_line_maximum_length;
                 }
                 else {
                     $self->valign_output_step_C(
@@ -5084,10 +5128,11 @@ sub get_output_line_number {
                 }
             }
         }
-        $cached_line_type        = 0;
-        $cached_line_text        = "";
-        $cached_line_text_length = 0;
-        $cached_line_Kend        = undef;
+        $cached_line_type           = 0;
+        $cached_line_text           = "";
+        $cached_line_text_length    = 0;
+        $cached_line_Kend           = undef;
+        $cached_line_maximum_length = undef;
 
         # make the line to be written
         my $line        = $leading_string . $str;
@@ -5123,6 +5168,7 @@ sub get_output_line_number {
             $cached_line_leading_space_count = $leading_space_count;
             $cached_seqno_string             = $seqno_string;
             $cached_line_Kend                = $Kend;
+            $cached_line_maximum_length      = $maximum_line_length;
         }
 
         $self->[_last_level_written_]       = $level;
@@ -5313,7 +5359,7 @@ sub valign_output_step_D {
                 # shouldn't happen - program error counting whitespace
                 # - skip entabbing
                 DEBUG_TABS
-                  && $self->warning(
+                  && warning(
 "Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
                   );
             }
@@ -5331,7 +5377,7 @@ sub valign_output_step_D {
                 # But it could be an outdented comment
                 if ( $line !~ /^\s*#/ ) {
                     DEBUG_TABS
-                      && $self->warning(
+                      && warning(
 "Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
                       );
                 }
@@ -5348,7 +5394,7 @@ sub valign_output_step_D {
                 # shouldn't happen - program error counting whitespace
                 # we'll skip entabbing
                 DEBUG_TABS
-                  && $self->warning(
+                  && warning(
 "Error entabbing in valign_output_step_D: expected count=$leading_space_count\n"
                   );
             }
@@ -5418,7 +5464,7 @@ sub valign_output_step_D {
             # shouldn't happen:
             if ( $space_count < 0 ) {
                 DEBUG_TABS
-                  && $self->warning(
+                  && warning(
 "Error in get_leading_string: for level=$group_level count=$leading_whitespace_count\n"
                   );
 
@@ -5443,21 +5489,21 @@ sub report_anything_unusual {
 
     my $outdented_line_count = $self->[_outdented_line_count_];
     if ( $outdented_line_count > 0 ) {
-        $self->write_logfile_entry(
+        write_logfile_entry(
             "$outdented_line_count long lines were outdented:\n");
         my $first_outdented_line_at = $self->[_first_outdented_line_at_];
-        $self->write_logfile_entry(
+        write_logfile_entry(
             "  First at output line $first_outdented_line_at\n");
 
         if ( $outdented_line_count > 1 ) {
             my $last_outdented_line_at = $self->[_last_outdented_line_at_];
-            $self->write_logfile_entry(
+            write_logfile_entry(
                 "   Last at output line $last_outdented_line_at\n");
         }
-        $self->write_logfile_entry(
+        write_logfile_entry(
             "  use -noll to prevent outdenting, -l=n to increase line length\n"
         );
-        $self->write_logfile_entry("\n");
+        write_logfile_entry("\n");
     }
     return;
 }

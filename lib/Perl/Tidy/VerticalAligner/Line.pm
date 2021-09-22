@@ -143,6 +143,10 @@ EOM
         return $_[0]->[_is_hanging_side_comment_];
     }
 
+    sub get_maximum_line_length {
+        return $_[0]->[_maximum_line_length_];
+    }
+
     sub get_rvertical_tightness_flags {
         return $_[0]->[_rvertical_tightness_flags_];
     }

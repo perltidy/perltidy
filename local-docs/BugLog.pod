@@ -2,15 +2,27 @@
 
 =over 4
 
+=item B<Fix issues b1209 related to -vmll>
+
+Testing with random parameters produced a formatting instability related to
+the -vmll flag.  The problem was due to a subtle difference in the definition
+of nesting depth and indentation level.  The vertical aligner was using nesting
+depth instead of indentation level to compute the maximum line length when -vmll
+is set.  In some rare cases there is a difference.  The problem was fixed by
+passing the maximum line length to the vertical aligner so that the calculation
+is only done in the formatter.  This fixes b1209.
+
+20 Sep 2021.
+
 =item B<Fix issue b1208>
 
-Test with random parameters produced a formatting instability which could be
+Testing with random parameters produced a formatting instability which could be
 triggered when there is a short line length limit and there is a long side
 comment on the closing brace of a sort/map/grep/eval block.  The problem was
 due to not correctly including the length of the side comment when testing to
 see if the block could fit on one line.  This update fixes issue b1208.
 
-18 Sep 2021.
+18 Sep 2021, 0af1321.
 
 =item B<Fix issue git #73>
 
@@ -28,7 +40,7 @@ pointers.  For example
 The problem had to do with how the pointer tokens '->' are represented internally
 and has been fixed.
 
-17 Sep 2021.
+17 Sep 2021,e3b4a6f.
 
 =item B<Fix unusual parsing error b1207>
 
