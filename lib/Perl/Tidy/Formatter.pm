@@ -10844,24 +10844,16 @@ EOM
     my ( $rLL, $radjusted_levels, $rparent_of_seqno, $rdepth_of_opening_seqno,
         $rblock_type_of_seqno );
 
-    # past stored nonblank tokens
+    # past stored nonblank tokens and flags
     my (
-        $last_last_nonblank_token,   $last_last_nonblank_type,
-        $last_nonblank_token,        $last_nonblank_type,
-        $last_nonblank_block_type,   $K_last_nonblank_code,
-        $K_last_last_nonblank_code,  $looking_for_else,
-        $is_static_block_comment,    $batch_CODE_type,
-        $last_line_had_side_comment, $next_parent_seqno,
-        $next_slevel,
+        $K_last_nonblank_code, $K_last_last_nonblank_code,
+        $looking_for_else,     $is_static_block_comment,
+        $batch_CODE_type,      $last_line_had_side_comment,
+        $next_parent_seqno,    $next_slevel,
     );
 
     # Called once at the start of a new file
     sub initialize_process_line_of_CODE {
-        $last_nonblank_token        = ';';
-        $last_nonblank_type         = ';';
-        $last_last_nonblank_token   = ';';
-        $last_last_nonblank_type    = ';';
-        $last_nonblank_block_type   = "";
         $K_last_nonblank_code       = undef;
         $K_last_last_nonblank_code  = undef;
         $looking_for_else           = 0;
@@ -11533,16 +11525,14 @@ EOM
 
         foreach my $Ktoken_vars ( $K_first .. $K_last ) {
 
-            my $rtoken_vars   = $rLL->[$Ktoken_vars];
-            my $token         = $rtoken_vars->[_TOKEN_];
-            my $type          = $rtoken_vars->[_TYPE_];
-            my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+            my $rtoken_vars = $rLL->[$Ktoken_vars];
+            my $type        = $rtoken_vars->[_TYPE_];
 
             # If we are continuing after seeing a right curly brace, flush
             # buffer unless we see what we are looking for, as in
             #   } else ...
             if ( $rbrace_follower && $type ne 'b' ) {
-
+                my $token = $rtoken_vars->[_TOKEN_];
                 unless ( $rbrace_follower->{$token} ) {
                     $self->end_batch() if ( $max_index_to_go >= 0 );
                 }
@@ -11550,7 +11540,10 @@ EOM
             }
 
             my ( $block_type, $is_opening_BLOCK, $is_closing_BLOCK );
-            if ($type_sequence) {
+            if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
+
+                my $token         = $rtoken_vars->[_TOKEN_];
+                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
 
                 $block_type = $rblock_type_of_seqno->{$type_sequence};
 
@@ -11597,10 +11590,57 @@ EOM
                 $no_internal_newlines = 1;
             }
 
-            # We're only going to handle breaking for code BLOCKS at this
+            # We're mainly going to handle breaking for code BLOCKS at this
             # (top) level.  Other indentation breaks will be handled by
             # sub scan_list, which is better suited to dealing with them.
-            if ($is_opening_BLOCK) {
+
+            # --------------------------
+            # handle blanks and comments
+            # --------------------------
+            if ( $type eq 'b' || $type eq '#' ) {
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
+                next;
+            }
+
+            # ----------------
+            # handle semicolon
+            # ----------------
+            if ( $type eq ';' ) {
+
+                my $break_before_semicolon = ( $Ktoken_vars == $K_first )
+                  && $rOpts_break_at_old_semicolon_breakpoints;
+
+                # kill one-line blocks with too many semicolons
+                $semicolons_before_block_self_destruct--;
+                if (
+                       $break_before_semicolon
+                    || ( $semicolons_before_block_self_destruct < 0 )
+                    || (   $semicolons_before_block_self_destruct == 0
+                        && $next_nonblank_token_type !~ /^[b\}]$/ )
+                  )
+                {
+                    destroy_one_line_block();
+                    $self->end_batch()
+                      if ( $break_before_semicolon
+                        && $max_index_to_go >= 0 );
+                }
+
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
+
+                $self->end_batch()
+                  unless (
+                    $no_internal_newlines
+                    || (   $rOpts_keep_interior_semicolons
+                        && $Ktoken_vars < $K_last )
+                    || ( $next_nonblank_token eq '}' )
+                  );
+
+            }
+
+            # ----------
+            # handle '{'
+            # ----------
+            elsif ($is_opening_BLOCK) {
 
                 # Tentatively output this token.  This is required before
                 # calling starting_one_line_block.  We may have to unstore
@@ -11618,7 +11658,8 @@ EOM
                 my $keyword_on_same_line = 1;
                 if (
                        $max_index_to_go >= 0
-                    && $last_nonblank_type eq ')'
+                    && defined($K_last_nonblank_code)
+                    && $rLL->[$K_last_nonblank_code]->[_TYPE_] eq ')'
                     && ( ( $rtoken_vars->[_LEVEL_] < $levels_to_go[0] )
                         || $too_long )
                   )
@@ -11651,6 +11692,7 @@ EOM
                   : $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
                 # Break if requested with -bli flag
+                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
                 $want_break ||= $ris_bli_container->{$type_sequence};
 
                 # Do not break if this token is welded to the left
@@ -11700,6 +11742,9 @@ EOM
                 }
             }
 
+            # ----------
+            # handle '}'
+            # ----------
             elsif ($is_closing_BLOCK) {
 
                 # If there is a pending one-line block ..
@@ -11724,7 +11769,8 @@ EOM
 
                         # or if it has too many semicolons
                         || (   $semicolons_before_block_self_destruct == 0
-                            && $last_nonblank_type ne ';' )
+                            && defined($K_last_nonblank_code)
+                            && $rLL->[$K_last_nonblank_code]->[_TYPE_] ne ';' )
                       )
                     {
                         destroy_one_line_block();
@@ -11799,7 +11845,8 @@ EOM
                 # tokens
                 if ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
-                    if ( $self->tight_paren_follows( $K_to_go[0], $Ktoken_vars )
+                    if (
+                        $self->tight_paren_follows( $K_to_go[0], $Ktoken_vars )
                       )
                     {
                         $rbrace_follower = { ')' => 1 };
@@ -11919,39 +11966,9 @@ EOM
 
             }    # end treatment of closing block token
 
-            # handle semicolon
-            elsif ( $type eq ';' ) {
-
-                my $break_before_semicolon = ( $Ktoken_vars == $K_first )
-                  && $rOpts_break_at_old_semicolon_breakpoints;
-
-                # kill one-line blocks with too many semicolons
-                $semicolons_before_block_self_destruct--;
-                if (
-                       $break_before_semicolon
-                    || ( $semicolons_before_block_self_destruct < 0 )
-                    || (   $semicolons_before_block_self_destruct == 0
-                        && $next_nonblank_token_type !~ /^[b\}]$/ )
-                  )
-                {
-                    destroy_one_line_block();
-                    $self->end_batch()
-                      if ( $break_before_semicolon && $max_index_to_go >= 0 );
-                }
-
-                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
-
-                $self->end_batch()
-                  unless (
-                    $no_internal_newlines
-                    || (   $rOpts_keep_interior_semicolons
-                        && $Ktoken_vars < $K_last )
-                    || ( $next_nonblank_token eq '}' )
-                  );
-
-            }
-
+            # -----------------------------
             # handle here_doc target string
+            # -----------------------------
             elsif ( $type eq 'h' ) {
 
                 # no newlines after seeing here-target
@@ -11960,22 +11977,17 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
+            # ----------------------------
             # handle all other token types
+            # ----------------------------
             else {
 
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
             # remember two previous nonblank OUTPUT tokens
-            if ( $type ne '#' && $type ne 'b' ) {
-                $last_last_nonblank_token  = $last_nonblank_token;
-                $last_last_nonblank_type   = $last_nonblank_type;
-                $last_nonblank_token       = $token;
-                $last_nonblank_type        = $type;
-                $last_nonblank_block_type  = $block_type;
-                $K_last_last_nonblank_code = $K_last_nonblank_code;
-                $K_last_nonblank_code      = $Ktoken_vars;
-            }
+            $K_last_last_nonblank_code = $K_last_nonblank_code;
+            $K_last_nonblank_code      = $Ktoken_vars;
 
         }    # end of loop over all tokens in this 'line_of_tokens'
 
