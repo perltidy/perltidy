@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 use strict;
+use Getopt::Long;
 
 # This script will recombine the perltidy binary script and all of its modules
 # into a single, monolithic script.  I use it for making a temporary "sandbox"
@@ -8,12 +9,38 @@ use strict;
 # This is also useful for making a copy of previous versions for parallel
 # debugging sessions.
 
-# usage:
-#   perl pm2pl
+my $usage = <<EOM;
 
-# Run this from the perltidy main installation directory.  It reads
-# bin/perltidy and lib/*.pm and writes a file 'perltidy-VERSION.pl' in the
-# current directory.
+This script will recombine the perltidy binary script and all of its modules
+into a single, monolithic script.
+
+Run this from the perltidy main installation directory.  It reads
+bin/perltidy and lib/*.pm and by default writes a file 'perltidy-VERSION.pl' in the
+current directory.
+
+usage:
+  perl pm2pl [-h -o ofile ]
+
+  -h prints this help
+  -o set output file      [ default is 'perltidy-VERSION.pl' ]
+  -D set DEVEL_MODE => 1  [ for extra testing when debugging ]
+EOM
+
+my @option_string = qw(
+  h
+  o:s
+  D
+);
+
+my %Opts = ();
+if ( !GetOptions( \%Opts, @option_string ) ) {
+    die "Programming Bug: error in setting default options";
+}
+
+if ( $Opts{h} ) {
+    print $usage;
+    exit 1;
+}
 
 # This should work for a system with File::Spec,
 # and for older Windows/Unix systems without File::Spec.
@@ -51,44 +78,59 @@ unless ($missing_file_spec) {
 
 my $VERSION = get_version("lib/Perl/Tidy.pm");
 my $outfile = "perltidy-$VERSION.pl";
-open OUTFILE, "> $outfile" or die "can't open file '$outfile' : $!\n";
-print "Creating standalone formatter script '$outfile' ....\n ";
+if ( $Opts{o} ) { $outfile = $Opts{o} }
+my $fh_out;
+open( $fh_out,, ">", $outfile ) or die "can't open file '$outfile' : $!\n";
+print "Creating standalone perltidy script '$outfile' ....";
 
 # first, open the script and copy the first (hash-bang) line
 # (Note: forward slashes in file names here will work in Windows)
-open SCRIPT, "< $script" or die "can't open script file '$script' : $!\n";
-my $hash_bang = <SCRIPT>;
-print OUTFILE $hash_bang;
+my $fh_in;
+open( $fh_in, "<", $script ) or die "can't open script file '$script' : $!\n";
+my $hash_bang = <$fh_in>;
+$fh_out->print($hash_bang);
 
 # then copy all modules
+my $changed_count;
 foreach my $module (@modules) {
-    open PM, "< $module" or die "can't open my module file '$module' : $!\n";
-    while (<PM>) {
+    my $fh_module;
+    open( $fh_module, '<', $module )
+      or die "can't open my module file '$module' : $!\n";
+    while (<$fh_module>) {
         last if /^\s*__END__\s*$/;
-        print OUTFILE unless $_ =~ /^use Perl::Tidy/;
+        my $line = $_;
+        if (   $Opts{'D'}
+            && $line =~
+            /^(\s*use\s+constant\s+(?:DEVEL)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/ )
+        {
+            if ( $2 != '1' ) {
+                $changed_count++;
+                $line = <<EOM;
+$1=> 1;$3
+EOM
+            }
+        }
+
+        $fh_out->print($line) unless $line =~ /^use Perl::Tidy/;
     }
-    close PM;
+    $fh_module->close();
 }
 
 # then, copy the rest of the script except for the 'use PerlTidy' statement
-while (<SCRIPT>) {
+while (<$fh_in>) {
     last if /^\s*__END__\s*$/;
-    print OUTFILE unless $_ =~ /^use Perl::Tidy/;
+    $fh_out->print($_) unless $_ =~ /^use Perl::Tidy/;
 }
-close SCRIPT;
-close OUTFILE;
+$fh_in->close();
+$fh_out->close();
 chmod 0755, $outfile;
 
-my $testfile = "somefile.pl";
-print <<EOM;
-
-You can now run $outfile to reformat perl scripts.  
-For example, the following command:
-
-    perl $outfile $testfile
-
-will produce the output file $testfile.tdy
+print " OK\n";
+if ($changed_count) {
+    print <<EOM;
+$changed_count lines changed to DEVEL_MODE => 1
 EOM
+}
 
 sub get_version {
     my ($file) = @_;
