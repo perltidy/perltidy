@@ -19790,7 +19790,7 @@ sub send_lines_to_vertical_aligner {
     # define the array @{$ralignment_type_to_go} for the output tokens
     # which will be non-blank for each special token (such as =>)
     # for which alignment is required.
-    my ( $ralignment_type_to_go, $alignment_count ) =
+    my ( $ralignment_type_to_go, $ralignment_counts ) =
       $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
     # flush before a long if statement to avoid unwanted alignment
@@ -19879,13 +19879,9 @@ sub send_lines_to_vertical_aligner {
               $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
 
-        $self->delete_needless_alignments( $ibeg, $iend,
-            $ralignment_type_to_go )
-          if ($alignment_count);
-
         my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
           $self->make_alignment_patterns( $ibeg, $iend,
-            $ralignment_type_to_go );
+            $ralignment_type_to_go, $ralignment_counts->[$n] );
 
         my ( $indentation, $lev, $level_end, $terminal_type,
             $terminal_block_type, $is_semicolon_terminated, $is_outdented_line )
@@ -20204,35 +20200,37 @@ EOM
         # accept vertical alignment.
 
         my ( $self, $ri_first, $ri_last ) = @_;
-        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
-        my $ris_function_call_paren    = $self->[_ris_function_call_paren_];
-        my $rLL                        = $self->[_rLL_];
 
         my $ralignment_type_to_go;
-        my $alignment_count = 0;
+        my $ralignment_counts = [];
 
-        # Initialize the alignment array. NOTE: closing side comments can
-        # insert up to 2 additional tokens beyond the original
-        # $max_index_to_go, so we need to check ri_last for the last index.
+        # NOTE: closing side comments can insert up to 2 additional tokens
+        # beyond the original $max_index_to_go, so we need to check ri_last for
+        # the last index.
         my $max_line = @{$ri_first} - 1;
         my $max_i    = $ri_last->[$max_line];
         if ( $max_i < $max_index_to_go ) { $max_i = $max_index_to_go }
 
-        foreach ( 0 .. $max_i ) {
-            $ralignment_type_to_go->[$_] = '';
+        # -----------------------------------------------------------------
+        # Shortcut:
+        #    - no alignments if there is only 1 token.
+        #    - and nothing to do if we aren't allowed to change whitespace.
+        # -----------------------------------------------------------------
+        if ( $max_i <= 0 || !$rOpts_add_whitespace ) {
+            return ( $ralignment_type_to_go, $ralignment_counts );
         }
 
-        # The first token is never an alignment, so there is nothing to do if
-        # there is only 1 token.
-        # And there is nothing to do if we aren't allowed to change whitespace.
-        if ( $max_i == 0 || !$rOpts_add_whitespace ) {
-            return ( $ralignment_type_to_go, $alignment_count );
-        }
+        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
+        my $ris_function_call_paren    = $self->[_ris_function_call_paren_];
+        my $rLL                        = $self->[_rLL_];
 
-        # Take care of any side comment first.
+        # -------------------------------
+        # First handle any side comment.
+        # -------------------------------
         my $i_terminal = $max_i;
-        if ( $max_i > 0 && $types_to_go[$max_i] eq '#' ) {
+        if ( $types_to_go[$max_i] eq '#' ) {
 
+            # We know $max_i > 0 if we get here.
             $i_terminal -= 1;
             if ( $i_terminal > 0 && $types_to_go[$i_terminal] eq 'b' ) {
                 $i_terminal -= 1;
@@ -20281,16 +20279,20 @@ EOM
 
             if ( !$do_not_align ) {
                 $ralignment_type_to_go->[$max_i] = '#';
-                $alignment_count++;
+                $ralignment_counts->[$max_line]++;
             }
         }
 
+        # ----------------------------------------------
         # Nothing more to do on this line if -nvc is set
+        # ----------------------------------------------
         if ( !$rOpts_valign_code ) {
-            return ( $ralignment_type_to_go, $alignment_count );
+            return ( $ralignment_type_to_go, $ralignment_counts );
         }
 
-        # Look at each line of this batch..
+        # -------------------------------------
+        # Loop over each line of this batch ...
+        # -------------------------------------
         my $last_vertical_alignment_BEFORE_index;
         my $vert_last_nonblank_type;
         my $vert_last_nonblank_token;
@@ -20300,6 +20302,8 @@ EOM
 
             my $ibeg = $ri_first->[$line];
             my $iend = $ri_last->[$line];
+
+            next if ( $iend <= $ibeg );
 
             # back up before any side comment
             if ( $iend > $i_terminal ) { $iend = $i_terminal }
@@ -20314,16 +20318,93 @@ EOM
             $vert_last_nonblank_type              = $type_beg;
             $vert_last_nonblank_token             = $token_beg;
 
-            # look at each token in this output line..
-            foreach my $i ( $ibeg + 1 .. $iend ) {
-                my $type = $types_to_go[$i];
-                if ( $type eq 'b' ) {
-                    next;
+            # ----------------------------------------------------------------
+            # Initialization code merged from 'sub delete_needless_alignments'
+            # ----------------------------------------------------------------
+            my $i_good_paren  = -1;
+            my $i_elsif_close = $ibeg - 1;
+            my $i_elsif_open  = $iend + 1;
+            my @imatch_list;
+            if ( $type_beg eq 'k' ) {
+
+                # Initialization for paren patch: mark a location of a paren we
+                # should keep, such as one following something like a leading
+                # 'if', 'elsif',
+                $i_good_paren = $ibeg + 1;
+                if ( $types_to_go[$i_good_paren] eq 'b' ) {
+                    $i_good_paren++;
                 }
+
+                # Initializtion for 'elsif' patch: remember the paren range of
+                # an elsif, and do not make alignments within them because this
+                # can cause loss of padding and overall brace alignment in the
+                # vertical aligner.
+                if (   $token_beg eq 'elsif'
+                    && $i_good_paren < $iend
+                    && $tokens_to_go[$i_good_paren] eq '(' )
+                {
+                    $i_elsif_open  = $i_good_paren;
+                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
+                }
+            } ## end if ( $type_beg eq 'k' )
+
+            # --------------------------------------------
+            # Loop over each token in this output line ...
+            # --------------------------------------------
+            foreach my $i ( $ibeg + 1 .. $iend ) {
+
+                next if ( $types_to_go[$i] eq 'b' );
+
+                my $type           = $types_to_go[$i];
                 my $token          = $tokens_to_go[$i];
                 my $alignment_type = '';
 
-                # do not align tokens at lower level then start of line
+                # ----------------------------------------------
+                # Check for 'paren patch' : Remove excess parens
+                # ----------------------------------------------
+
+                # Excess alignment of parens can prevent other good alignments.
+                # For example, note the parens in the first two rows of the
+                # following snippet.  They would normally get marked for
+                # alignment and aligned as follows:
+
+                #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
+                #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
+                #    my $img = new Gimp::Image( $w, $h, RGB );
+
+                # This causes unnecessary paren alignment and prevents the
+                # third equals from aligning. If we remove the unwanted
+                # alignments we get:
+
+                #    my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
+                #    my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
+                #    my $img = new Gimp::Image( $w, $h, RGB );
+
+                # A rule for doing this which works well is to remove alignment
+                # of parens whose containers do not contain other aligning
+                # tokens, with the exception that we always keep alignment of
+                # the first opening paren on a line (for things like 'if' and
+                # 'elsif' statements).
+                if ( $token eq ')' && @imatch_list ) {
+
+                    # undo the corresponding opening paren if:
+                    # - it is at the top of the stack
+                    # - and not the first overall opening paren
+                    # - does not follow a leading keyword on this line
+                    my $imate = $mate_index_to_go[$i];
+                    if (   $imatch_list[-1] eq $imate
+                        && ( $ibeg > 1 || @imatch_list > 1 )
+                        && $imate > $i_good_paren )
+                    {
+                        if ( $ralignment_type_to_go->[$imate] ) {
+                            $ralignment_type_to_go->[$imate] = '';
+                            $ralignment_counts->[$line]--;
+                        }
+                        pop @imatch_list;
+                    }
+                }
+
+                # do not align tokens at lower level than start of line
                 # except for side comments
                 if ( $levels_to_go[$i] < $level_beg ) {
                     next;
@@ -20488,9 +20569,15 @@ EOM
                     {
 
                     }
+
+                    # and do not make alignments within 'elsif' parens
+                    elsif ( $i > $i_elsif_open && $i < $i_elsif_close ) {
+
+                    }
                     else {
                         $ralignment_type_to_go->[$i] = $alignment_type;
-                        $alignment_count++;
+                        $ralignment_counts->[$line]++;
+                        push @imatch_list, $i;
                     }
                 }
 
@@ -20498,7 +20585,7 @@ EOM
                 $vert_last_nonblank_token = $token;
             }
         }
-        return ( $ralignment_type_to_go, $alignment_count );
+        return ( $ralignment_type_to_go, $ralignment_counts );
     }
 } ## end closure set_vertical_alignment_markers
 
@@ -21350,100 +21437,6 @@ sub pad_token {
         );
     }
 
-    sub delete_needless_alignments {
-        my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
-
-        # Remove unwanted alignments.  This routine is a place to remove
-        # alignments which might cause problems at later stages.  There are
-        # currently two types of fixes:
-
-        # 1. Remove excess parens
-        # 2. Remove alignments within 'elsif' conditions
-
-        # Patch #1: Excess alignment of parens can prevent other good
-        # alignments.  For example, note the parens in the first two rows of
-        # the following snippet.  They would normally get marked for alignment
-        # and aligned as follows:
-
-        #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
-        #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
-        #    my $img = new Gimp::Image( $w, $h, RGB );
-
-        # This causes unnecessary paren alignment and prevents the third equals
-        # from aligning. If we remove the unwanted alignments we get:
-
-        #    my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
-        #    my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
-        #    my $img = new Gimp::Image( $w, $h, RGB );
-
-        # A rule for doing this which works well is to remove alignment of
-        # parens whose containers do not contain other aligning tokens, with
-        # the exception that we always keep alignment of the first opening
-        # paren on a line (for things like 'if' and 'elsif' statements).
-
-        # Setup needed constants
-        my $i_good_paren  = -1;
-        my $imin_match    = $iend + 1;
-        my $i_elsif_close = $ibeg - 1;
-        my $i_elsif_open  = $iend + 1;
-        if ( $iend > $ibeg ) {
-            if ( $types_to_go[$ibeg] eq 'k' ) {
-
-                # Paren patch: mark a location of a paren we should keep, such
-                # as one following something like a leading 'if', 'elsif',..
-                $i_good_paren = $ibeg + 1;
-                if ( $types_to_go[$i_good_paren] eq 'b' ) {
-                    $i_good_paren++;
-                }
-
-                # 'elsif' patch: remember the range of the parens of an elsif,
-                # and do not make alignments within them because this can cause
-                # loss of padding and overall brace alignment in the vertical
-                # aligner.
-                if (   $tokens_to_go[$ibeg] eq 'elsif'
-                    && $i_good_paren < $iend
-                    && $tokens_to_go[$i_good_paren] eq '(' )
-                {
-                    $i_elsif_open  = $i_good_paren;
-                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
-                }
-            }
-        }
-
-        # Loop to make the fixes on this line
-        my @imatch_list;
-        for my $i ( $ibeg .. $iend ) {
-
-            if ( $ralignment_type_to_go->[$i] ) {
-
-                # Patch #2: undo alignment within elsif parens
-                if ( $i > $i_elsif_open && $i < $i_elsif_close ) {
-                    $ralignment_type_to_go->[$i] = '';
-                    next;
-                }
-                push @imatch_list, $i;
-
-            }
-            if ( $tokens_to_go[$i] eq ')' ) {
-
-                # Patch #1: undo the corresponding opening paren if:
-                # - it is at the top of the stack
-                # - and not the first overall opening paren
-                # - does not follow a leading keyword on this line
-                my $imate = $mate_index_to_go[$i];
-                if (   @imatch_list
-                    && $imatch_list[-1] eq $imate
-                    && ( $ibeg > 1 || @imatch_list > 1 )
-                    && $imate > $i_good_paren )
-                {
-                    $ralignment_type_to_go->[$imate] = '';
-                    pop @imatch_list;
-                }
-            }
-        }
-        return;
-    }
-
     sub make_alignment_patterns {
 
         # Here we do some important preliminary work for the
@@ -21467,13 +21460,31 @@ sub pad_token {
         #   allowed, even when the alignment tokens match.
         # @field_lengths - the display width of each field
 
-        my ( $self, $ibeg, $iend, $ralignment_type_to_go ) = @_;
+        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count ) =
+          @_;
         my @tokens        = ();
         my @fields        = ();
         my @patterns      = ();
         my @field_lengths = ();
-        my $i_start       = $ibeg;
 
+        # -------------------------------------
+        # Shortcut for lines without alignments
+        # -------------------------------------
+        if ( !$alignment_count ) {
+            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
+                  $summed_lengths_to_go[$ibeg] );
+            if ( $ibeg == $iend ) {
+                @fields   = ( $tokens_to_go[$ibeg] );
+                @patterns = ( $types_to_go[$ibeg] );
+            }
+            else {
+                @fields   = ( join( '', @tokens_to_go[ $ibeg .. $iend ] ) );
+                @patterns = ( join( '', @types_to_go[ $ibeg .. $iend ] ) );
+            }
+            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
+        }
+
+        my $i_start        = $ibeg;
         my $depth          = 0;
         my %container_name = ( 0 => "" );
 
@@ -21484,39 +21495,6 @@ sub pad_token {
             if ( $inext <= $iend ) {
                 $container_name{'0'} = $tokens_to_go[$inext];
             }
-        }
-
-        # ----------------------------------------------------------
-        # Shortcut 1: Lines with just 1 token do not have alignments
-        # ----------------------------------------------------------
-        if ( $iend == $ibeg ) {
-            @tokens        = ();
-            @fields        = ( $tokens_to_go[$ibeg] );
-            @patterns      = ( $types_to_go[$ibeg] );
-            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
-                  $summed_lengths_to_go[$ibeg] );
-            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
-        }
-
-        # Look for lines with no alignments
-        my $has_alignment;
-        for my $ii ( $ibeg + 1 .. $iend ) {
-            if ( $ralignment_type_to_go->[$ii] ) {
-                $has_alignment = 1;
-                last;
-            }
-        }
-
-        # -------------------------------------------
-        # Shortcut 2: handle lines without alignments
-        # -------------------------------------------
-        if ( !$has_alignment ) {
-            @tokens        = ();
-            @fields        = ( join( '', @tokens_to_go[ $ibeg .. $iend ] ) );
-            @patterns      = ( join( '', @types_to_go[ $ibeg .. $iend ] ) );
-            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
-                  $summed_lengths_to_go[$ibeg] );
-            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
         }
 
         # --------------------
