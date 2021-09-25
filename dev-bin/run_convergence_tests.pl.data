@@ -7433,6 +7433,29 @@ $bc[
 --vertical-tightness=1
 --weld-nested-containers
 
+==> b1210.in <==
+# S1
+@mo = ( Jan, Feb, Mar, Apr,
+        May, Jun, Jul, Aug,
+        Sep, Oct, Nov, Dec
+);
+
+# S2
+@mo =
+         ( Jan, Feb, Mar, Apr,
+        May, Jun,
+        Jul, Aug, Sep, Oct, Nov, Dec
+         );
+
+
+==> b1210.par <==
+--break-before-paren=1
+--continuation-indentation=9
+--indent-columns=7
+--line-up-parentheses
+--maximum-line-length=34
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

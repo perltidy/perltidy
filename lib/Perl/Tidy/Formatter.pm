@@ -18213,6 +18213,25 @@ EOM
         # Number of free columns across the page width for laying out tables
         my $columns = table_columns_available($i_first_comma);
 
+        # Patch for b1210 when -vmll is set.  If we are unable to break after
+        # an opening paren, then the maximum line length for the first line
+        # will be less than the later lines.  So we use the minimum possible.
+        if (   $rOpts_variable_maximum_line_length
+            && $tokens_to_go[$i_opening_paren] eq '('
+            && @i_term_begin
+            && !$old_breakpoint_to_go[$i_opening_paren] )
+        {
+            my $ib   = $i_term_begin[0];
+            my $type = $types_to_go[$ib];
+
+            # So far, the only known instance of this problem is when
+            # a bareword follows an opening paren with -vmll
+            if ( $type eq 'w' ) {
+                my $columns2 = table_columns_available($i_opening_paren);
+                $columns = min( $columns, $columns2 );
+            }
+        }
+
         # Estimated maximum number of fields which fit this space
         # This will be our first guess
         my $number_of_fields_max =
