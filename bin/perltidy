@@ -3909,6 +3909,7 @@ to include it separately.
 There are a few points to note regarding one-line blocks.  A one-line
 block is something like this,
 
+    if ( -e $file ) { print "'$file' exists\n" }
 
 where the contents within the curly braces is short enough to fit
 on a single line.

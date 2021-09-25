@@ -167,6 +167,7 @@ my (
     $rOpts_indent_only,
     $rOpts_keep_interior_semicolons,
     $rOpts_line_up_parentheses,
+    $rOpts_logical_padding,
     $rOpts_maximum_consecutive_blank_lines,
     $rOpts_maximum_fields_per_table,
     $rOpts_maximum_line_length,
@@ -1656,6 +1657,7 @@ EOM
     $rOpts_indent_only              = $rOpts->{'indent-only'};
     $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
     $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
+    $rOpts_logical_padding          = $rOpts->{'logical-padding'};
     $rOpts_maximum_consecutive_blank_lines =
       $rOpts->{'maximum-consecutive-blank-lines'};
     $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
@@ -19805,7 +19807,7 @@ sub send_lines_to_vertical_aligner {
 
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
-      if ( !$is_block_comment && $rOpts->{'logical-padding'} );
+      if ( $n_last_line > 0 && $rOpts_logical_padding );
 
     # Resum lengths. We need accurate lengths for making alignment patterns,
     # and we may have unmasked a semicolon which was not included at the start.
