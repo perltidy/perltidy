@@ -149,6 +149,7 @@ my (
     $rOpts_break_at_old_logical_breakpoints,
     $rOpts_break_at_old_semicolon_breakpoints,
     $rOpts_break_at_old_ternary_breakpoints,
+    $rOpts_closing_side_comments,
     $rOpts_closing_side_comment_else_flag,
     $rOpts_closing_side_comment_maximum_text,
     $rOpts_comma_arrow_breakpoints,
@@ -174,6 +175,8 @@ my (
     $rOpts_one_line_block_semicolons,
     $rOpts_outdent_keywords,
     $rOpts_outdent_labels,
+    $rOpts_outdent_long_comments,
+    $rOpts_outdent_long_quotes,
     $rOpts_outdent_static_block_comments,
     $rOpts_recombine,
     $rOpts_short_concatenation_item_length,
@@ -1634,6 +1637,7 @@ EOM
       $rOpts->{'break-at-old-semicolon-breakpoints'};
     $rOpts_break_at_old_ternary_breakpoints =
       $rOpts->{'break-at-old-ternary-breakpoints'};
+    $rOpts_closing_side_comments = $rOpts->{'closing-side-comments'};
     $rOpts_closing_side_comment_else_flag =
       $rOpts->{'closing-side-comment-else-flag'};
     $rOpts_closing_side_comment_maximum_text =
@@ -1665,6 +1669,8 @@ EOM
     $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
     $rOpts_outdent_keywords          = $rOpts->{'outdent-keywords'};
     $rOpts_outdent_labels            = $rOpts->{'outdent-labels'};
+    $rOpts_outdent_long_comments     = $rOpts->{'outdent-long-comments'};
+    $rOpts_outdent_long_quotes       = $rOpts->{'outdent-long-quotes'};
     $rOpts_outdent_static_block_comments =
       $rOpts->{'outdent-static-block-comments'};
     $rOpts_recombine = $rOpts->{'recombine'};
@@ -19750,9 +19756,6 @@ sub send_lines_to_vertical_aligner {
     # - do logical padding: insert extra blank spaces to help display certain
     #   logical constructions
 
-    # NOTE: a possible future optimization would be to check for block
-    # comments and send them down a simpler route.
-
     my $this_batch = $self->[_this_batch_];
     my $rlines_K   = $this_batch->[_rlines_K_];
     if ( !@{$rlines_K} ) {
@@ -19771,7 +19774,6 @@ sub send_lines_to_vertical_aligner {
     my $ending_in_quote          = $this_batch->[_ending_in_quote_];
     my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
     my $ibeg0                    = $this_batch->[_ibeg0_];
-    my $batch_count              = $this_batch->[_batch_count_];
     my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
 
     my $rLL                  = $self->[_rLL_];
@@ -19800,19 +19802,21 @@ sub send_lines_to_vertical_aligner {
         push @{$ri_last},  $iend;
     }
 
+    my $rindentation_list = [0];    # ref to indentations for each line
     my ( $cscw_block_comment, $closing_side_comment );
-    if ( $rOpts->{'closing-side-comments'} ) {
+    if ( $rOpts_closing_side_comments ) {
         ( $closing_side_comment, $cscw_block_comment ) =
           $self->add_closing_side_comment();
     }
 
-    my $rindentation_list = [0];    # ref to indentations for each line
-
     # define the array @{$ralignment_type_to_go} for the output tokens
     # which will be non-blank for each special token (such as =>)
     # for which alignment is required.
-    my ( $ralignment_type_to_go, $ralignment_counts ) =
-      $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+    my $ralignment_type_to_go = [];
+    my $ralignment_counts     = [];
+    ( $ralignment_type_to_go, $ralignment_counts ) =
+      $self->set_vertical_alignment_markers( $ri_first, $ri_last )
+      if ( $max_index_to_go > 0 );
 
     # flush before a long if statement to avoid unwanted alignment
     if (   $n_last_line > 0
@@ -19828,17 +19832,27 @@ sub send_lines_to_vertical_aligner {
         $starting_in_quote )
       if ( $n_last_line > 0 && $rOpts_logical_padding );
 
-    # Resum lengths. We need accurate lengths for making alignment patterns,
-    # and we may have unmasked a semicolon which was not included at the start.
-    for ( 0 .. $max_index_to_go ) {
-        $summed_lengths_to_go[ $_ + 1 ] =
-          $summed_lengths_to_go[$_] + $token_lengths_to_go[$_];
+    # Resum lengths. We need accurate lengths for making alignment
+    # patterns, and we may have unmasked a semicolon which was not included
+    # at the start.
+    if ( !$is_block_comment ) {
+        for ( 0 .. $max_index_to_go ) {
+            $summed_lengths_to_go[ $_ + 1 ] =
+              $summed_lengths_to_go[$_] + $token_lengths_to_go[$_];
+        }
     }
 
-    # loop to prepare each line for shipment
+    # ----------------------------------------------
+    # loop to send each line to the vertical aligner
+    # ----------------------------------------------
     my ( $Kbeg, $type_beg, $token_beg );
     my ( $Kend, $type_end );
     for my $n ( 0 .. $n_last_line ) {
+
+        # -------------------------------------------------
+        # Hash with args sent to valign_input for this line
+        # -------------------------------------------------
+        my $rvalign_hash = {};
 
         my $ibeg              = $ri_first->[$n];
         my $iend              = $ri_last->[$n];
@@ -19900,10 +19914,16 @@ sub send_lines_to_vertical_aligner {
               $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
 
+        # --------------------
+        # get the field values
+        # --------------------
         my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
           $self->make_alignment_patterns( $ibeg, $iend,
             $ralignment_type_to_go, $ralignment_counts->[$n] );
 
+        # -------------------------
+        # get the final indentation
+        # -------------------------
         my ( $indentation, $lev, $level_end, $terminal_type,
             $terminal_block_type, $is_semicolon_terminated, $is_outdented_line )
           = $self->set_adjusted_indentation( $ibeg, $iend, $rfields,
@@ -19911,29 +19931,42 @@ sub send_lines_to_vertical_aligner {
             $rindentation_list, $ljump,    $starting_in_quote,
             $is_static_block_comment, );
 
-        # we will allow outdenting of long lines..
-        my $outdent_long_lines = (
-
+        # --------------------------------
+        # define flag 'outdent_long_lines'
+        # --------------------------------
+        if (
+            # we will allow outdenting of long lines..
             # which are long quotes, if allowed
-            ( $type_beg eq 'Q' && $rOpts->{'outdent-long-quotes'} )
+            ( $type_beg eq 'Q' && $rOpts_outdent_long_quotes )
 
             # which are long block comments, if allowed
-              || (
+            || (
                    $type_beg eq '#'
-                && $rOpts->{'outdent-long-comments'}
+                && $rOpts_outdent_long_comments
 
                 # but not if this is a static block comment
                 && !$is_static_block_comment
-              )
-        );
+            )
+          )
+        {
+            $rvalign_hash->{outdent_long_lines} = 1;
+        }
 
-        my $break_alignment_before = $is_outdented_line || $do_not_pad;
-        my $break_alignment_after  = $is_outdented_line;
+        # --------------------------------------------------
+        # define flags 'break_alignment_before' and '_after'
+        # --------------------------------------------------
+        if ($is_outdented_line) {
+            $rvalign_hash->{break_alignment_before} = 1;
+            $rvalign_hash->{break_alignment_after}  = 1;
+        }
+        elsif ($do_not_pad) {
+            $rvalign_hash->{break_alignment_before} = 1;
+        }
 
         # flush at an 'if' which follows a line with (1) terminal semicolon
         # or (2) terminal block_type which is not an 'if'.  This prevents
         # unwanted alignment between the lines.
-        if ( $type_beg eq 'k' && $token_beg eq 'if' ) {
+        elsif ( $type_beg eq 'k' && $token_beg eq 'if' ) {
             my $type_m = 'b';
             my $block_type_m;
 
@@ -19960,21 +19993,35 @@ sub send_lines_to_vertical_aligner {
             }
 
             # break after anything that is not if-like
-            $break_alignment_before ||= $type_m eq ';'
-              || ( $type_m eq '}'
-                && $block_type_m
-                && $block_type_m ne 'if'
-                && $block_type_m ne 'unless'
-                && $block_type_m ne 'elsif'
-                && $block_type_m ne 'else' );
+            if (
+                $type_m eq ';'
+                || (   $type_m eq '}'
+                    && $block_type_m
+                    && $block_type_m ne 'if'
+                    && $block_type_m ne 'unless'
+                    && $block_type_m ne 'elsif'
+                    && $block_type_m ne 'else' )
+              )
+            {
+                $rvalign_hash->{break_alignment_before} = 1;
+            }
         }
 
-        my $rvertical_tightness_flags;
-        $rvertical_tightness_flags =
-          $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
-            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
-          if ( !$is_block_comment );
+        # ----------------------------------
+        # define 'rvertical_tightness_flags'
+        # ----------------------------------
+        if ( !$is_block_comment ) {
+            my $rvertical_tightness_flags =
+              $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg,
+                $iend,
+                $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
+            $rvalign_hash->{rvertical_tightness_flags} =
+              $rvertical_tightness_flags;
+        }
 
+        # ----------------------------------
+        # define 'is_terminal_ternary'  flag
+        # ----------------------------------
         # Set a flag at the final ':' of a ternary chain to request
         # vertical alignment of the final term.  Here is a
         # slightly complex example:
@@ -19990,10 +20037,9 @@ sub send_lines_to_vertical_aligner {
         #   : ' elsewhere in this document'
         # );
         #
-        my $is_terminal_ternary = 0;
-
         if ( $type_beg eq ':' || $n > 0 && $type_end_last eq ':' ) {
-            my $last_leading_type = $n > 0 ? $type_beg_last : ':';
+            my $is_terminal_ternary = 0;
+            my $last_leading_type   = $n > 0 ? $type_beg_last : ':';
             if (   $terminal_type ne ';'
                 && $n_last_line > $n
                 && $level_end == $lev )
@@ -20026,16 +20072,12 @@ sub send_lines_to_vertical_aligner {
                     $KP = $rLL->[$KP]->[_KNEXT_SEQ_ITEM_];
                 }
             }
+            $rvalign_hash->{is_terminal_ternary} = $is_terminal_ternary;
         }
 
-        my $level_adj        = $lev;
-        my $radjusted_levels = $self->[_radjusted_levels_];
-        if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
-            $level_adj = $radjusted_levels->[$Kbeg];
-            if ( $level_adj < 0 ) { $level_adj = 0 }
-        }
-
+        # -------------------------------------------------
         # add any new closing side comment to the last line
+        # -------------------------------------------------
         if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
             $rfields->[-1] .= " $closing_side_comment";
 
@@ -20058,11 +20100,13 @@ EOM
             Fault($msg);
         }
 
+        # ------------------------
+        # define flag 'list_seqno'
+        # ------------------------
         # Set flag which tells if this line is contained in a multi-line list
-        my $list_seqno;
         if ( !$is_block_comment ) {
             my $parent_seqno = $parent_seqno_to_go[$ibeg];
-            $list_seqno = $ris_list_by_seqno->{$parent_seqno};
+            $rvalign_hash->{list_seqno} = $ris_list_by_seqno->{$parent_seqno};
         }
 
         # The alignment tokens have been marked with nesting_depths, so we need
@@ -20098,32 +20142,45 @@ EOM
             }
         }
 
-        my $maximum_line_length =
+        # ---------------------------------
+        # define flag 'forget_side_comment'
+        # ---------------------------------
+
+        # Reset side comment location if we are entering a new block from level
+        # 0.  This is intended to keep them from drifting too far to the right.
+        if (   $terminal_block_type
+            && $nesting_depth_end > $nesting_depth_beg )
+        {
+            my $level_adj        = $lev;
+            my $radjusted_levels = $self->[_radjusted_levels_];
+            if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} )
+            {
+                $level_adj = $radjusted_levels->[$Kbeg];
+                if ( $level_adj < 0 ) { $level_adj = 0 }
+            }
+            if ( $level_adj == 0 ) {
+                $rvalign_hash->{forget_side_comment} = 1;
+            }
+        }
+
+        # -----------------------------------
+        # Store the remaining non-flag values
+        # -----------------------------------
+        $rvalign_hash->{Kend}           = $Kend_code;
+        $rvalign_hash->{ci_level}       = $ci_levels_to_go[$ibeg];
+        $rvalign_hash->{indentation}    = $indentation;
+        $rvalign_hash->{level_end}      = $nesting_depth_end;
+        $rvalign_hash->{level}          = $nesting_depth_beg;
+        $rvalign_hash->{rfield_lengths} = $rfield_lengths;
+        $rvalign_hash->{rfields}        = $rfields;
+        $rvalign_hash->{rpatterns}      = $rpatterns;
+        $rvalign_hash->{rtokens}        = $rtokens;
+        $rvalign_hash->{maximum_line_length} =
           $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 
+        # --------------------------------------
         # send this line to the vertical aligner
-        my $rvalign_hash = {
-            Kend                      => $Kend_code,
-            batch_count               => $batch_count,
-            break_alignment_after     => $break_alignment_after,
-            break_alignment_before    => $break_alignment_before,
-            ci_level                  => $ci_levels_to_go[$ibeg],
-            indentation               => $indentation,
-            is_terminal_ternary       => $is_terminal_ternary,
-            level                     => $nesting_depth_beg,
-            level_adj                 => $level_adj,
-            level_end                 => $nesting_depth_end,
-            list_seqno                => $list_seqno,
-            outdent_long_lines        => $outdent_long_lines,
-            rfield_lengths            => $rfield_lengths,
-            rfields                   => $rfields,
-            rpatterns                 => $rpatterns,
-            rtokens                   => $rtokens,
-            rvertical_tightness_flags => $rvertical_tightness_flags,
-            terminal_block_type       => $terminal_block_type,
-            maximum_line_length       => $maximum_line_length,
-        };
-
+        # --------------------------------------
         my $vao = $self->[_vertical_aligner_object_];
         $vao->valign_input($rvalign_hash);
 

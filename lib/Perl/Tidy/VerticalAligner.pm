@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use Carp;
 our $VERSION = '20210717.04';
-
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
 
@@ -431,7 +430,6 @@ sub valign_input {
 
     my $level                     = $rline_hash->{level};
     my $level_end                 = $rline_hash->{level_end};
-    my $level_adj                 = $rline_hash->{level_adj};
     my $indentation               = $rline_hash->{indentation};
     my $list_seqno                = $rline_hash->{list_seqno};
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
@@ -441,13 +439,12 @@ sub valign_input {
     my $rtokens                   = $rline_hash->{rtokens};
     my $rpatterns                 = $rline_hash->{rpatterns};
     my $rfield_lengths            = $rline_hash->{rfield_lengths};
-    my $terminal_block_type       = $rline_hash->{terminal_block_type};
-    my $batch_count               = $rline_hash->{batch_count};
     my $break_alignment_before    = $rline_hash->{break_alignment_before};
     my $break_alignment_after     = $rline_hash->{break_alignment_after};
     my $Kend                      = $rline_hash->{Kend};
     my $ci_level                  = $rline_hash->{ci_level};
     my $maximum_line_length       = $rline_hash->{maximum_line_length};
+    my $forget_side_comment       = $rline_hash->{forget_side_comment};
 
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
@@ -494,7 +491,7 @@ sub valign_input {
 
     # Reset side comment location if we are entering a new block from level 0.
     # This is intended to keep them from drifting too far to the right.
-    if ( $terminal_block_type && $level_adj == 0 && $level_end > $level ) {
+    if ($forget_side_comment) {
         $self->forget_side_comment();
     }
 
