@@ -6027,7 +6027,24 @@ sub respace_tokens {
         }
         else {
 
-            # insert a new token
+            # Patch for issue c078: keep line indexes in order.  If the top
+            # token is a space that we are keeping (due to '-wls=';') then
+            # we have to check that old line indexes stay in order.
+            # In very rare
+            # instances in which side comments have been deleted and converted
+            # into blanks, we may have filtered down multiple blanks into just
+            # one. In that case the top blank may have a higher line number
+            # than the previous nonblank token. Although the line indexes of
+            # blanks are not really significant, we need to keep them in order
+            # in order to pass error checks.
+            if ( $rLL_new->[$Ktop]->[_TYPE_] eq 'b' ) {
+                my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
+                my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
+                if ( $new_top_ix < $old_top_ix ) {
+                    $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
+                }
+            }
+
             my $rcopy = copy_token_as_type( $rLL_new->[$Kp], ';', '' );
             $store_token->($rcopy);
             push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
@@ -7111,12 +7128,15 @@ sub resync_lines_and_tokens {
             my $iline_last = $iline;
             $iline = $rLL->[$KK]->[_LINE_INDEX_];
             if ( $iline < $iline_last ) {
-                my $token_m = $rLL->[ $KK - 1 ]->[_TOKEN_];
+                my $KK_m    = $KK - 1;
+                my $token_m = $rLL->[$KK_m]->[_TOKEN_];
                 my $token   = $rLL->[$KK]->[_TOKEN_];
+                my $type_m  = $rLL->[$KK_m]->[_TYPE_];
+                my $type    = $rLL->[$KK]->[_TYPE_];
                 Fault(<<EOM);
 Line indexes out of order at index K=$KK:
-at KK-1: line=$iline_last, token=$token_m
-at KK  : line=$iline, token=$token
+at KK-1 =$KK_m: old line=$iline_last, type='$type_m', token='$token_m'
+at KK   =$KK: old line=$iline, type='$type', token='$token',
 EOM
             }
         }
@@ -19804,7 +19824,7 @@ sub send_lines_to_vertical_aligner {
 
     my $rindentation_list = [0];    # ref to indentations for each line
     my ( $cscw_block_comment, $closing_side_comment );
-    if ( $rOpts_closing_side_comments ) {
+    if ($rOpts_closing_side_comments) {
         ( $closing_side_comment, $cscw_block_comment ) =
           $self->add_closing_side_comment();
     }
