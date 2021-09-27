@@ -18239,13 +18239,15 @@ EOM
         # Number of free columns across the page width for laying out tables
         my $columns = table_columns_available($i_first_comma);
 
-        # Patch for b1210 when -vmll is set.  If we are unable to break after
-        # an opening paren, then the maximum line length for the first line
-        # will be less than the later lines.  So we use the minimum possible.
+        # Patch for b1210 and b1216-b1218 when -vmll is set.  If we are unable
+        # to break after an opening paren, then the maximum line length for the
+        # first line could be less than the later lines.  So we need to reduce
+        # the line length.  Normally, we will get a break after an opening
+        # paren, but in some cases we might not.
         if (   $rOpts_variable_maximum_line_length
             && $tokens_to_go[$i_opening_paren] eq '('
-            && @i_term_begin
-            && !$old_breakpoint_to_go[$i_opening_paren] )
+            && @i_term_begin )
+          ##&& !$old_breakpoint_to_go[$i_opening_paren] )  ## in b1210 patch
         {
             my $ib   = $i_term_begin[0];
             my $type = $types_to_go[$ib];
@@ -18253,8 +18255,18 @@ EOM
             # So far, the only known instance of this problem is when
             # a bareword follows an opening paren with -vmll
             if ( $type eq 'w' ) {
-                my $columns2 = table_columns_available($i_opening_paren);
-                $columns = min( $columns, $columns2 );
+
+                # If a line starts with paren+space+terms, then its max length
+                # could be up to ci+2-i spaces less than if the term went out
+                # on a line after the paren.  So..
+                my $tol = max( 0,
+                    2 + $rOpts_continuation_indentation -
+                      $rOpts_indent_columns );
+                $columns = max( 0, $columns - $tol );
+
+                ## Here is the original b1210 fix, but it failed on b1216-b1218
+                ##my $columns2 = table_columns_available($i_opening_paren);
+                ##$columns = min( $columns, $columns2 );
             }
         }
 

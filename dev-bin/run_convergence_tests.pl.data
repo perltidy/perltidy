@@ -7456,6 +7456,27 @@ $bc[
 --maximum-line-length=34
 --variable-maximum-line-length
 
+==> b1218.in <==
+# S1
+is(
+     Koha::Acquisition::Funds->search->count,
+     $nb_of_funds + 1,
+     'The fund should have been added'
+);
+
+# S2
+is( Koha::Acquisition::Funds->search->count,
+     $nb_of_funds + 1,
+     'The fund should have been added' );
+
+
+==> b1218.par <==
+--continuation-indentation=7
+--indent-columns=6
+--line-up-parentheses
+--maximum-line-length=50
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
