@@ -157,6 +157,7 @@ my (
     $rOpts_delete_closing_side_comments,
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
+    $rOpts_extended_continuation_indentation,
     $rOpts_format_skipping,
     $rOpts_freeze_whitespace,
     $rOpts_function_paren_vertical_alignment,
@@ -1647,9 +1648,11 @@ EOM
     $rOpts_delete_closing_side_comments =
       $rOpts->{'delete-closing-side-comments'};
     $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
-    $rOpts_delete_side_comments  = $rOpts->{'delete-side-comments'};
-    $rOpts_format_skipping       = $rOpts->{'format-skipping'};
-    $rOpts_freeze_whitespace     = $rOpts->{'freeze-whitespace'};
+    $rOpts_extended_continuation_indentation =
+      $rOpts->{'extended-continuation-indentation'};
+    $rOpts_delete_side_comments = $rOpts->{'delete-side-comments'};
+    $rOpts_format_skipping      = $rOpts->{'format-skipping'};
+    $rOpts_freeze_whitespace    = $rOpts->{'freeze-whitespace'};
     $rOpts_function_paren_vertical_alignment =
       $rOpts->{'function-paren-vertical-alignment'};
     $rOpts_fuzzy_line_length      = $rOpts->{'fuzzy-line-length'};
@@ -9146,7 +9149,7 @@ sub adjust_indentation_levels {
     $self->bli_adjustment();
 
     $self->extended_ci()
-      if ( $rOpts->{'extended-continuation-indentation'} );
+      if ($rOpts_extended_continuation_indentation);
 
     # Now clip any adjusted levels to be non-negative
     $self->clip_adjusted_levels();
@@ -9916,7 +9919,7 @@ EOM
     # Give multiline qw lists extra indentation instead of CI.  This option
     # works well but is currently only activated when the -xci flag is set.
     # The reason is to avoid unexpected changes in formatting.
-    if ( $rOpts->{'extended-continuation-indentation'} ) {
+    if ($rOpts_extended_continuation_indentation) {
         while ( my ( $qw_seqno, $rKrange ) =
             each %{$rKrange_multiline_qw_by_seqno} )
         {
@@ -11382,9 +11385,9 @@ EOM
         my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
 
-        ######################################
+        # ------------------------------------
         # Handle a block (full-line) comment..
-        ######################################
+        # ------------------------------------
         if ($is_comment) {
 
             if ( $rOpts->{'delete-block-comments'} ) {
@@ -11462,9 +11465,9 @@ EOM
             || $guessed_indentation_level == 0
             && $rtok_first->[_TYPE_] eq 'Q' );
 
-        ##########################
+        # -----------------------
         # Handle indentation-only
-        ##########################
+        # -----------------------
 
         # NOTE: In previous versions we sent all qw lines out immediately here.
         # No longer doing this: also write a line which is entirely a 'qw' list
@@ -11494,9 +11497,9 @@ EOM
             return;
         }
 
-        ############################
+        # --------------------------
         # Handle all other lines ...
-        ############################
+        # --------------------------
 
         # If we just saw the end of an elsif block, write nag message
         # if we do not see another elseif or an else.
@@ -11544,7 +11547,9 @@ EOM
             }
         }
 
+        # -------------------------------------
         # loop to process the tokens one-by-one
+        # -------------------------------------
 
         # We do not want a leading blank if the previous batch just got output
         if ( $max_index_to_go < 0 && $rLL->[$K_first]->[_TYPE_] eq 'b' ) {
@@ -11590,42 +11595,53 @@ EOM
                 }
             }
 
-            # Get next nonblank on this line
-            my $next_nonblank_token      = '';
-            my $next_nonblank_token_type = 'b';
+            # Find next nonblank token on this line and look for a side comment
             my $Knnb;
+
+            # if before last token ...
             if ( $Ktoken_vars < $K_last ) {
                 $Knnb = $Ktoken_vars + 1;
-                if (   $rLL->[$Knnb]->[_TYPE_] eq 'b'
-                    && $Knnb < $K_last )
+                if (   $Knnb < $K_last
+                    && $rLL->[$Knnb]->[_TYPE_] eq 'b' )
                 {
                     $Knnb++;
                 }
-                $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
-                $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
+
+                if ( $rLL->[$Knnb]->[_TYPE_] eq '#' ) {
+                    $side_comment_follows = 1;
+
+                    # Do not allow breaks which would promote a side comment to
+                    # a block comment.  In order to allow a break before an
+                    # opening or closing BLOCK, followed by a side comment,
+                    # those sections of code will handle this flag separately.
+                    if (   !$is_opening_BLOCK
+                        && !$is_closing_BLOCK )
+                    {
+                        $no_internal_newlines = 1;
+                    }
+                }
+                else {
+                    $side_comment_follows = undef;
+                }
             }
 
-            # Do not allow breaks which would promote a side comment to a
-            # block comment.  In order to allow a break before an opening
-            # or closing BLOCK, followed by a side comment, those sections
-            # of code will handle this flag separately.
-            $side_comment_follows = ( $next_nonblank_token_type eq '#' );
+            # if at last token ...
+            else {
+                $side_comment_follows = undef;
 
-            if (   $side_comment_follows
-                && !$is_opening_BLOCK
-                && !$is_closing_BLOCK )
-            {
-                $no_internal_newlines = 1;
+                # --------------------
+                # handle side comments
+                # --------------------
+                if ( $type eq '#' ) {
+                    $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
+                    next;
+                }
             }
 
-            # We're mainly going to handle breaking for code BLOCKS at this
-            # (top) level.  Other indentation breaks will be handled by
-            # sub scan_list, which is better suited to dealing with them.
-
-            # --------------------------
-            # handle blanks and comments
-            # --------------------------
-            if ( $type eq 'b' || $type eq '#' ) {
+            # -------------
+            # handle blanks
+            # -------------
+            if ( $type eq 'b' ) {
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                 next;
             }
@@ -11634,6 +11650,13 @@ EOM
             # handle semicolon
             # ----------------
             if ( $type eq ';' ) {
+
+                my $next_nonblank_token_type = 'b';
+                my $next_nonblank_token      = '';
+                if ( defined($Knnb) ) {
+                    $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
+                    $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
+                }
 
                 my $break_before_semicolon = ( $Ktoken_vars == $K_first )
                   && $rOpts_break_at_old_semicolon_breakpoints;
@@ -11774,6 +11797,13 @@ EOM
             # handle '}'
             # ----------
             elsif ($is_closing_BLOCK) {
+
+                my $next_nonblank_token_type = 'b';
+                my $next_nonblank_token      = '';
+                if ( defined($Knnb) ) {
+                    $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
+                    $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
+                }
 
                 # If there is a pending one-line block ..
                 if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
@@ -12013,11 +12043,11 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
-            # remember two previous nonblank OUTPUT tokens
+            # remember two previous nonblank, non-comment OUTPUT tokens
             $K_last_last_nonblank_code = $K_last_nonblank_code;
             $K_last_nonblank_code      = $Ktoken_vars;
 
-        }    # end of loop over all tokens in this 'line_of_tokens'
+        } ## end of loop over all tokens in this line
 
         my $type       = $rLL->[$K_last]->[_TYPE_];
         my $break_flag = $self->[_rbreak_after_Klast_]->{$K_last};
@@ -16501,7 +16531,7 @@ sub set_continuation_breaks {
         $length_tol_boost = 0;
         if ($rOpts_line_up_parentheses) {
 
-            if ( $rOpts->{'extended-continuation-indentation'} ) {
+            if ($rOpts_extended_continuation_indentation) {
                 $length_tol += 2;
                 $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
             }
@@ -16516,7 +16546,7 @@ sub set_continuation_breaks {
         }
 
         # The -xci option alone also needs a slightly larger tol for non-lists
-        elsif ( $rOpts->{'extended-continuation-indentation'} ) {
+        elsif ($rOpts_extended_continuation_indentation) {
             $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
         }
         return;
@@ -19858,7 +19888,8 @@ sub send_lines_to_vertical_aligner {
         $self->flush_vertical_aligner();
     }
 
-    $self->undo_ci( $ri_first, $ri_last, $rix_seqno_controlling_ci );
+    $self->undo_ci( $ri_first, $ri_last, $rix_seqno_controlling_ci )
+      if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation );
 
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
@@ -20770,7 +20801,7 @@ sub get_seqno {
         # Workaround for problem c007, in which the combination -lp -xci
         # can produce a "Program bug" message in unusual circumstances.
         my $skip_SECTION_1 = $rOpts_line_up_parentheses
-          && $rOpts->{'extended-continuation-indentation'};
+          && $rOpts_extended_continuation_indentation;
 
         foreach my $line ( 0 .. $max_line ) {
 
