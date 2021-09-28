@@ -13394,6 +13394,10 @@ EOM
                 $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
                 my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
                 $self->note_added_semicolon($line_number);
+
+                foreach ( $imax .. $max_index_to_go ) {
+                    $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
+                }
             }
 
             if ( $rOpts_one_line_block_semicolons == 0 ) {
@@ -14285,10 +14289,14 @@ sub break_equals {
             next if ($semicolon_count);
 
             # ...ok, then make the semicolon invisible
+            my $len = $token_lengths_to_go[$i_semicolon];
             $tokens_to_go[$i_semicolon]            = "";
             $token_lengths_to_go[$i_semicolon]     = 0;
             $rLL->[$K_semicolon]->[_TOKEN_]        = "";
             $rLL->[$K_semicolon]->[_TOKEN_LENGTH_] = 0;
+            foreach ( $i_semicolon .. $max_index_to_go ) {
+                $summed_lengths_to_go[ $_ + 1 ] -= $len;
+            }
         }
         return;
     }
@@ -19871,15 +19879,6 @@ sub send_lines_to_vertical_aligner {
           $self->add_closing_side_comment();
     }
 
-    # define the array @{$ralignment_type_to_go} for the output tokens
-    # which will be non-blank for each special token (such as =>)
-    # for which alignment is required.
-    my $ralignment_type_to_go = [];
-    my $ralignment_counts     = [];
-    ( $ralignment_type_to_go, $ralignment_counts ) =
-      $self->set_vertical_alignment_markers( $ri_first, $ri_last )
-      if ( $max_index_to_go > 0 );
-
     # flush before a long if statement to avoid unwanted alignment
     if (   $n_last_line > 0
         && $type_beg_next eq 'k'
@@ -19895,15 +19894,13 @@ sub send_lines_to_vertical_aligner {
         $starting_in_quote )
       if ( $n_last_line > 0 && $rOpts_logical_padding );
 
-    # Resum lengths. We need accurate lengths for making alignment
-    # patterns, and we may have unmasked a semicolon which was not included
-    # at the start.
-    if ( !$is_block_comment ) {
-        for ( 0 .. $max_index_to_go ) {
-            $summed_lengths_to_go[ $_ + 1 ] =
-              $summed_lengths_to_go[$_] + $token_lengths_to_go[$_];
-        }
-    }
+    if (DEVEL_MODE) { $self->check_batch_summed_lengths() }
+
+    # ----------------------------------------------------------
+    # define the vertical alignments for all lines of this batch
+    # ----------------------------------------------------------
+    my $rline_alignments =
+      $self->make_vertical_alignments( $ri_first, $ri_last );
 
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
@@ -19912,9 +19909,11 @@ sub send_lines_to_vertical_aligner {
     my ( $Kend, $type_end );
     for my $n ( 0 .. $n_last_line ) {
 
-        # -------------------------------------------------
-        # Hash with args sent to valign_input for this line
-        # -------------------------------------------------
+        # ----------------------------------------------------------------
+        # This hash will hold the args for vertical alignment of this line
+        # ----------------------------------------------------------------
+
+        # We will populate it as we go.
         my $rvalign_hash = {};
 
         my $ibeg              = $ri_first->[$n];
@@ -19938,11 +19937,17 @@ sub send_lines_to_vertical_aligner {
         $Kend      = $Kend_next;
         $type_end  = $type_end_next;
 
-        # Only forward ending K values of non-comments down the pipeline.
-        # This is equivalent to checking that the last CODE_type is blank or
-        # equal to 'VER'. See also sub resync_lines_and_tokens for related
-        # coding.  Note that '$batch_CODE_type' is the code type of the line
-        # to which the ending token belongs.
+        # ---------------------------------------------------
+        # Define the check value 'Kend' to send for this line
+        # ---------------------------------------------------
+        # The 'Kend' value is an integer for checking that lines come out of
+        # the far end of the pipeline in the right order.  It increases
+        # linearly along the token stream.  But we only send ending K values of
+        # non-comments down the pipeline.  This is equivalent to checking that
+        # the last CODE_type is blank or equal to 'VER'. See also sub
+        # resync_lines_and_tokens for related coding.  Note that
+        # '$batch_CODE_type' is the code type of the line to which the ending
+        # token belongs.
         my $batch_CODE_type = $this_batch->[_batch_CODE_type_];
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
@@ -19977,16 +19982,20 @@ sub send_lines_to_vertical_aligner {
               $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
 
-        # --------------------
-        # get the field values
-        # --------------------
-        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
-          $self->make_alignment_patterns( $ibeg, $iend,
-            $ralignment_type_to_go, $ralignment_counts->[$n] );
+        # ---------------------------------------------
+        # get the vertical alignment info for this line
+        # ---------------------------------------------
 
-        # -------------------------
-        # get the final indentation
-        # -------------------------
+        # The lines are broken into fields which can be spaced by the vertical
+        # to achieve vertical alignment.  These fields are the actual text
+        # which will be output, so from here on no more changes can be made to
+        # the text.
+        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+          @{ $rline_alignments->[$n] };
+
+        # --------------------------------------
+        # get the final indentation of this line
+        # --------------------------------------
         my ( $indentation, $lev, $level_end, $terminal_type,
             $terminal_block_type, $is_semicolon_terminated, $is_outdented_line )
           = $self->set_adjusted_indentation( $ibeg, $iend, $rfields,
@@ -20018,6 +20027,9 @@ sub send_lines_to_vertical_aligner {
         # --------------------------------------------------
         # define flags 'break_alignment_before' and '_after'
         # --------------------------------------------------
+
+        # These flags tell the vertical aligner to stop alignment before or
+        # after this line.
         if ($is_outdented_line) {
             $rvalign_hash->{break_alignment_before} = 1;
             $rvalign_hash->{break_alignment_after}  = 1;
@@ -20073,6 +20085,9 @@ sub send_lines_to_vertical_aligner {
         # ----------------------------------
         # define 'rvertical_tightness_flags'
         # ----------------------------------
+
+        # These flags tell the vertical aligner if/when to combine consecutive
+        # lines, based on the user input parameters.
         if ( !$is_block_comment ) {
             my $rvertical_tightness_flags =
               $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg,
@@ -20085,9 +20100,10 @@ sub send_lines_to_vertical_aligner {
         # ----------------------------------
         # define 'is_terminal_ternary'  flag
         # ----------------------------------
-        # Set a flag at the final ':' of a ternary chain to request
-        # vertical alignment of the final term.  Here is a
-        # slightly complex example:
+
+        # This flag is set at the final ':' of a ternary chain to request
+        # vertical alignment of the final term.  Here is a slightly complex
+        # example:
         #
         # $self->{_text} = (
         #    !$section        ? ''
@@ -20166,7 +20182,8 @@ EOM
         # ------------------------
         # define flag 'list_seqno'
         # ------------------------
-        # Set flag which tells if this line is contained in a multi-line list
+
+        # This flag indicates if this line is contained in a multi-line list
         if ( !$is_block_comment ) {
             my $parent_seqno = $parent_seqno_to_go[$ibeg];
             $rvalign_hash->{list_seqno} = $ris_list_by_seqno->{$parent_seqno};
@@ -20174,11 +20191,15 @@ EOM
 
         # The alignment tokens have been marked with nesting_depths, so we need
         # to pass nesting depths to the vertical aligner. They remain invariant
-        # under welding.  Previously, level values were sent to the aligner.
-        # But they have been altered in welding, and this can lead to
-        # alignement errors.
+        # under all formatting operations.  Previously, level values were sent
+        # to the aligner.  But they can be altered in welding and other
+        # opeartions, and this can lead to alignement errors.
         my $nesting_depth_beg = $nesting_depth_to_go[$ibeg];
         my $nesting_depth_end = $nesting_depth_to_go[$iend];
+
+        # A quirk in the definition of nesting depths is that the closing token
+        # has the same depth as internal tokens.  The vertical aligner is
+        # programmed to expect them to have the lower depth, so we fix this.
         if ( $is_closing_type{ $types_to_go[$ibeg] } ) { $nesting_depth_beg-- }
         if ( $is_closing_type{ $types_to_go[$iend] } ) { $nesting_depth_end-- }
 
@@ -20186,7 +20207,7 @@ EOM
         # required because qw lists contained in brackets do not get nesting
         # depths, but the vertical aligner is watching nesting depth changes to
         # decide if a -lp block is intact.  Without this patch, qw lists
-        # bracked with angle bracket will not get the correct -lp indentation.
+        # enclosed in angle brackets will not get the correct -lp indentation.
 
         # Looking for line with isolated qw ...
         if (   $rOpts_line_up_parentheses
@@ -20209,8 +20230,9 @@ EOM
         # define flag 'forget_side_comment'
         # ---------------------------------
 
-        # Reset side comment location if we are entering a new block from level
-        # 0.  This is intended to keep them from drifting too far to the right.
+        # This flag tells the vertical aligner to reset the side comment
+        # location if we are entering a new block from level 0.  This is
+        # intended to keep side comments from drifting too far to the right.
         if (   $terminal_block_type
             && $nesting_depth_end > $nesting_depth_beg )
         {
@@ -20290,6 +20312,42 @@ EOM
         $self->flush_vertical_aligner();
         my $file_writer_object = $self->[_file_writer_object_];
         $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
+    }
+    return;
+}
+
+sub check_batch_summed_lengths {
+
+    my ( $self, $msg ) = @_;
+    $msg = "" unless defined($msg);
+    my $rLL = $self->[_rLL_];
+
+    # Verify that the summed lengths are correct. We want to be sure that
+    # errors have not been introduced by programming changes.  Summed lengths
+    # are defined in sub $store_token.  Operations like padding and unmasking
+    # semicolons can change token lengths, but those operations are expected to
+    # update the summed lengths when they make changes.  So the summed lengths
+    # should always be correct.
+    foreach my $i ( 0 .. $max_index_to_go ) {
+        my $len_by_sum =
+          $summed_lengths_to_go[ $i + 1 ] - $summed_lengths_to_go[$i];
+        my $len_tok_i = $token_lengths_to_go[$i];
+        my $KK        = $K_to_go[$i];
+        my $len_tok_K;
+        if ( defined($KK) ) { $len_tok_K = $rLL->[$KK]->[_TOKEN_LENGTH_] }
+        if ( $len_by_sum != $len_tok_i
+            || defined($len_tok_K) && $len_by_sum != $len_tok_K )
+        {
+            my $lno = defined($KK) ? $rLL->[$KK]->[_LINE_INDEX_] + 1 : "undef";
+            $KK = 'undef' unless defined($KK);
+            my $tok  = $tokens_to_go[$i];
+            my $type = $types_to_go[$i];
+            Fault(<<EOM);
+Summed lengths are appear to be incorrect.  $msg
+lengths disagree: token length by sum=$len_by_sum but token_length_to_go[$i] = $len_tok_i and rLL->[$KK]->[_TOKEN_LENGTH_]=$len_tok_K
+near line $lno starting with '$tokens_to_go[0]..' at token i=$i K=$KK token_type='$type' token='$tok'
+EOM
+        }
     }
     return;
 }
@@ -20727,8 +20785,34 @@ EOM
             }
         }
         return ( $ralignment_type_to_go, $ralignment_counts );
-    }
+    } ## end sub set_vertical_alignment_markers
 } ## end closure set_vertical_alignment_markers
+
+sub make_vertical_alignments {
+    my ( $self, $ri_first, $ri_last ) = @_;
+
+    # Step 1: Define the alignment tokens for the entire batch
+    my $ralignment_type_to_go = [];
+    my $ralignment_counts     = [];
+    ( $ralignment_type_to_go, $ralignment_counts ) =
+      $self->set_vertical_alignment_markers( $ri_first, $ri_last )
+      if ( $max_index_to_go > 0 );
+
+    # Step 2: Break each line into alignment fields
+    my $rline_alignments = [];
+    my $max_line         = @{$ri_first} - 1;
+    foreach my $line ( 0 .. $max_line ) {
+
+        my $ibeg = $ri_first->[$line];
+        my $iend = $ri_last->[$line];
+        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+          $self->make_alignment_patterns( $ibeg, $iend,
+            $ralignment_type_to_go, $ralignment_counts->[$line] );
+        push @{$rline_alignments},
+          [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
+    }
+    return $rline_alignments;
+} ## end sub make_vertical_alignments
 
 sub get_seqno {
 
@@ -23825,11 +23909,17 @@ sub add_closing_side_comment {
 
             # switch to the new csc (unless we deleted it!)
             if ($token) {
-                $tokens_to_go[$max_index_to_go] = $token;
+
+                my $len_tok = length($token); # NOTE: length no longer important
+                my $added_len =
+                  $len_tok - $token_lengths_to_go[$max_index_to_go];
+
+                $tokens_to_go[$max_index_to_go]        = $token;
+                $token_lengths_to_go[$max_index_to_go] = $len_tok;
                 my $K = $K_to_go[$max_index_to_go];
-                $rLL->[$K]->[_TOKEN_] = $token;
-                $rLL->[$K]->[_TOKEN_LENGTH_] =
-                  length($token);    # NOTE: length no longer important
+                $rLL->[$K]->[_TOKEN_]        = $token;
+                $rLL->[$K]->[_TOKEN_LENGTH_] = $len_tok;
+                $summed_lengths_to_go[ $max_index_to_go + 1 ] += $added_len;
             }
         }
 
