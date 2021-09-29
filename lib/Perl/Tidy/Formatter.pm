@@ -131,11 +131,11 @@ sub Exit {
 # Global variables ...
 my (
 
-    ##################################################################
+    #-----------------------------------------------------------------
     # Section 1: Global variables which are either always constant or
     # are constant after being configured by user-supplied
     # parameters.  They remain constant as a file is being processed.
-    ##################################################################
+    #-----------------------------------------------------------------
 
     # user parameters and shortcuts
     $rOpts,
@@ -183,6 +183,7 @@ my (
     $rOpts_short_concatenation_item_length,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
+    $rOpts_sub_alias_list,
     $rOpts_tee_block_comments,
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
@@ -304,9 +305,9 @@ my (
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
 
-    #########################################################
+    #--------------------------------------------------------
     # Section 2: Work arrays for the current batch of tokens.
-    #########################################################
+    #--------------------------------------------------------
 
     # These are re-initialized for each batch of code
     # in sub initialize_batch_variables.
@@ -1617,9 +1618,9 @@ EOM
         $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
     }
 
-    #############################################################
+    #------------------------------------------------------------
     # Make global vars for frequently used options for efficiency
-    #############################################################
+    #------------------------------------------------------------
 
     $rOpts_add_newlines          = $rOpts->{'add-newlines'};
     $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
@@ -1681,6 +1682,7 @@ EOM
       $rOpts->{'short-concatenation-item-length'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
+    $rOpts_sub_alias_list            = $rOpts->{'sub-alias-list'};
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
@@ -5136,9 +5138,9 @@ sub set_CODE_type {
     my ( $Kfirst, $Klast );
     my $CODE_type;
 
-    ###############################
+    #------------------------------
     # TASK 1: Loop to set CODE_type
-    ###############################
+    #------------------------------
 
     # Possible CODE_types
     # 'VB'  = Verbatim - line goes out verbatim (a quote)
@@ -5421,9 +5423,9 @@ sub set_CODE_type {
       if ( !$rOpts_delete_side_comments
         && !$rOpts_delete_closing_side_comments );
 
-    ######################################
+    #-------------------------------------
     # TASK 2: Loop to delete side comments
-    ######################################
+    #-------------------------------------
 
     # Handle any requested side comment deletions. It is easier to get
     # this done here rather than farther down the pipeline because IO
@@ -6124,9 +6126,9 @@ sub respace_tokens {
         return;
     };
 
-    ############################################
+    #-------------------------------------------
     # Main loop to respace all lines of the file
-    ############################################
+    #-------------------------------------------
     my $last_K_out;
 
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -6289,9 +6291,9 @@ sub respace_tokens {
             }
         }
 
-        ########################################################
+        #-------------------------------------------------------
         # Loop to copy all tokens on this line, with any changes
-        ########################################################
+        #-------------------------------------------------------
         my $type_sequence;
         for ( my $KK = $Kfirst ; $KK <= $Klast ; $KK++ ) {
             $Ktoken_vars = $KK;
@@ -7406,9 +7408,9 @@ sub weld_containers {
         $self->weld_nested_quotes();
     }
 
-    ##############################################################
+    #-------------------------------------------------------------
     # All welding is done. Finish setting up weld data structures.
-    ##############################################################
+    #-------------------------------------------------------------
 
     my $rLL                  = $self->[_rLL_];
     my $rK_weld_left         = $self->[_rK_weld_left_];
@@ -7963,11 +7965,11 @@ sub setup_new_weld_measurements {
     my $rK_range = $rlines->[$iline_oo]->{_rK_range};
     my ( $Kfirst, $Klast ) = @{$rK_range};
 
-    ##########################################################################
+    #-------------------------------------------------------------------------
     # We now define a reference index, '$Kref', from which to start measuring
     # This choice turns out to be critical for keeping welds stable during
     # iterations, so we go through a number of STEPS...
-    ##########################################################################
+    #-------------------------------------------------------------------------
 
     # STEP 1: Our starting guess is to use measure from the first token of the
     # current line.  This is usually a good guess.
@@ -9351,9 +9353,9 @@ sub break_before_list_opening_containers {
     my $rwant_reduced_ci                 = {};
     foreach my $seqno ( keys %{$K_opening_container} ) {
 
-        #################################################################
+        #----------------------------------------------------------------
         # Part 1: Examine any -bbx=n flags
-        #################################################################
+        #----------------------------------------------------------------
 
         next if ( $rblock_type_of_seqno->{$seqno} );
         my $KK = $K_opening_container->{$seqno};
@@ -9494,9 +9496,9 @@ sub break_before_list_opening_containers {
 
         # -bbxi=2 ...
 
-        #################################################################
+        #----------------------------------------------------------------
         # Part 2: Perform tests before committing to changing ci and level
-        #################################################################
+        #----------------------------------------------------------------
 
         # Before changing the ci level of the opening container, we need
         # to be sure that the container will be broken in the later stages of
@@ -10404,9 +10406,9 @@ EOM
 
     my $number_of_groups_seen = 0;
 
-    ####################
+    #-------------------
     # helper subroutines
-    ####################
+    #-------------------
 
     my $insert_blank_after = sub {
         my ($i) = @_;
@@ -10650,9 +10652,9 @@ EOM
         return;
     };
 
-    ###################################
+    #----------------------------------
     # loop over all lines of the source
-    ###################################
+    #----------------------------------
     $end_group->();
     my $i = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -11049,9 +11051,9 @@ EOM
 
             # Update the next parent sequence number for each new batch.
 
-            ###########################################
+            #------------------------------------------
             # Begin coding from sub parent_seqno_from_K
-            ###########################################
+            #------------------------------------------
 
             ## $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
             $next_parent_seqno = SEQ_ROOT;
@@ -11079,9 +11081,9 @@ EOM
             $next_parent_seqno = SEQ_ROOT
               unless ( defined($next_parent_seqno) );
 
-            #########################################
+            #----------------------------------------
             # End coding from sub parent_seqno_from_K
-            #########################################
+            #----------------------------------------
 
             $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
@@ -11753,7 +11755,7 @@ EOM
                     $want_break = 0;
                 }
 
-                # Break before an opening '{' ...
+                # Break BEFORE an opening '{' ...
                 if (
 
                     # if requested
@@ -13168,7 +13170,18 @@ EOM
 
                 # blank lines before subs except declarations and one-liners
                 if ( $leading_type eq 'i' ) {
-                    if ( $leading_token =~ /$SUB_PATTERN/ ) {
+                    if (
+
+                        # quick check
+                        (
+                            substr( $leading_token, 0, 3 ) eq 'sub'
+                            || $rOpts_sub_alias_list
+                        )
+
+                        # slow check
+                        && $leading_token =~ /$SUB_PATTERN/
+                      )
+                    {
                         $want_blank = $rOpts->{'blank-lines-before-subs'}
                           if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
                     }
@@ -13357,10 +13370,9 @@ EOM
 
                 # now we do a correction step to clean this up a bit
                 # (The only time we would not do this is for debugging)
-                if ($rOpts_recombine) {
-                    ( $ri_first, $ri_last ) =
-                      $self->recombine_breakpoints( $ri_first, $ri_last );
-                }
+                ( $ri_first, $ri_last ) =
+                  $self->recombine_breakpoints( $ri_first, $ri_last )
+                  if ( $rOpts_recombine && @{$ri_first} > 1 );
 
                 $self->insert_final_ternary_breaks( $ri_first, $ri_last )
                   if (@colon_list);
@@ -14048,11 +14060,11 @@ sub insert_additional_breaks {
 
         # Slow loop checking for certain characters
 
-        ###########################################################
+        #-----------------------------------------------------
         # This is potentially a slow routine and not critical.
         # For safety just give up for large differences.
         # See test file 'infinite_loop.txt'
-        ###########################################################
+        #-----------------------------------------------------
         return if ( $i2 - $i1 > 200 );
 
         foreach my $ii ( $i1 + 1 .. $i2 - 1 ) {
@@ -15951,9 +15963,9 @@ sub set_continuation_breaks {
             # with lower level than the start of the line,
             # unless we've already seen a better break.
             #
-            ##############################################
+            #------------------------------------
             # Note on an issue with a preceding ?
-            ##############################################
+            #------------------------------------
             # We don't include a ? in the above list, but there may
             # be a break at a previous ? if the line is long.
             # Because of this we do not want to force a break if
@@ -16498,9 +16510,9 @@ sub set_continuation_breaks {
         @has_broken_sublist = ();
         @want_comma_break   = ();
 
-        ####################################################
+        #---------------------------------------------------
         # Set tolerances to prevent formatting instabilities
-        ####################################################
+        #---------------------------------------------------
 
         # Define tolerances to use when checking if closed
         # containers will fit on one line.  This is necessary to avoid
@@ -16876,9 +16888,9 @@ sub set_continuation_breaks {
         my $i_line_start = -1;
         my $i_last_colon = -1;
 
-        #########################################
+        #----------------------------------------
         # Main loop over all tokens in this batch
-        #########################################
+        #----------------------------------------
         while ( ++$i <= $max_index_to_go ) {
             if ( $type ne 'b' ) {
                 $i_last_nonblank_token    = $i - 1;
@@ -19845,6 +19857,7 @@ sub send_lines_to_vertical_aligner {
     my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
     my $ibeg0                    = $this_batch->[_ibeg0_];
     my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
+    my $batch_CODE_type          = $this_batch->[_batch_CODE_type_];
 
     my $rLL                  = $self->[_rLL_];
     my $Klimit               = $self->[_Klimit_];
@@ -19859,9 +19872,7 @@ sub send_lines_to_vertical_aligner {
     my $is_block_comment = $max_index_to_go == 0 && $types_to_go[0] eq '#';
 
     # Construct indexes to the global_to_go arrays so that called routines can
-    # still access those arrays. This might eventually be removed
-    # when all called routines have been converted to access token values
-    # in the rLL array instead.
+    # access those arrays.
     my $Kbeg0 = $Kbeg_next;
     my ( $ri_first, $ri_last );
     foreach my $rline ( @{$rlines_K} ) {
@@ -19911,31 +19922,32 @@ sub send_lines_to_vertical_aligner {
 
         # ----------------------------------------------------------------
         # This hash will hold the args for vertical alignment of this line
-        # ----------------------------------------------------------------
-
         # We will populate it as we go.
+        # ----------------------------------------------------------------
         my $rvalign_hash = {};
 
-        my $ibeg              = $ri_first->[$n];
-        my $iend              = $ri_last->[$n];
-        my $rline             = $rlines_K->[$n];
-        my $forced_breakpoint = $rline->[2];
+        my $ibeg = $ri_first->[$n];
+        my $iend = $ri_last->[$n];
+
+        ## FIXME: this flag is no longer used; why? will it be needed again?
+        ## If not, then we can avoid packing it in the calling routine.
+        ## my $rline = $rlines_K->[$n];
+        ## my $forced_breakpoint = $rline->[2];
 
         # we may need to look at variables on three consecutive lines ...
 
         # Some vars on line [n-1], if any:
-        my $Kbeg_last      = $Kbeg;
-        my $type_beg_last  = $type_beg;
-        my $token_beg_last = $token_beg;
-        my $Kend_last      = $Kend;
-        my $type_end_last  = $type_end;
+        my $Kbeg_last     = $Kbeg;
+        my $Kend_last     = $Kend;
+        my $type_beg_last = $type_beg;    # Only used for ternary flag
+        my $type_end_last = $type_end;
 
         # Some vars on line [n]:
         $Kbeg      = $Kbeg_next;
-        $type_beg  = $type_beg_next;
-        $token_beg = $token_beg_next;
         $Kend      = $Kend_next;
+        $type_beg  = $type_beg_next;
         $type_end  = $type_end_next;
+        $token_beg = $token_beg_next;
 
         # ---------------------------------------------------
         # Define the check value 'Kend' to send for this line
@@ -19948,7 +19960,6 @@ sub send_lines_to_vertical_aligner {
         # resync_lines_and_tokens for related coding.  Note that
         # '$batch_CODE_type' is the code type of the line to which the ending
         # token belongs.
-        my $batch_CODE_type = $this_batch->[_batch_CODE_type_];
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
@@ -20893,9 +20904,9 @@ sub get_seqno {
             my $iend = $ri_last->[$line];
             my $lev  = $levels_to_go[$ibeg];
 
-            ####################################
+            #-----------------------------------
             # SECTION 1: Undo needless common CI
-            ####################################
+            #-----------------------------------
 
             # We are looking at leading tokens and looking for a sequence all
             # at the same level and all at a higher level than enclosing lines.
@@ -20988,9 +20999,9 @@ sub get_seqno {
                 }
             }
 
-            ######################################
+            #-------------------------------------
             # SECTION 2: Undo ci at cuddled blocks
-            ######################################
+            #-------------------------------------
 
             # Note that sub set_adjusted_indentation will be called later to
             # actually do this, but for now we will tentatively mark cuddled
@@ -21015,9 +21026,9 @@ sub get_seqno {
                 }
             }
 
-            #########################################################
+            #--------------------------------------------------------
             # SECTION 3: Undo ci set by sub extended_ci if not needed
-            #########################################################
+            #--------------------------------------------------------
 
             # Undo the ci of the leading token if its controlling token
             # went out on a previous line without ci
@@ -22176,7 +22187,7 @@ sub make_paren_name {
               )
         );
 
-        ##########################################################
+        #---------------------------------------------------------
         # Section 1: set a flag and a default indentation
         #
         # Most lines are indented according to the initial token.
@@ -22187,7 +22198,7 @@ sub make_paren_name {
         #       1 - outdent
         #       2 - vertically align with opening token
         #       3 - indent
-        ##########################################################
+        #---------------------------------------------------------
         my $adjust_indentation         = 0;
         my $default_adjust_indentation = $adjust_indentation;
 
@@ -22549,7 +22560,7 @@ sub make_paren_name {
             if ($is_leading) { $adjust_indentation = 2; }
         }
 
-        ##########################################################
+        #---------------------------------------------------------
         # Section 2: set indentation according to flag set above
         #
         # Select the indentation object to define leading
@@ -22557,7 +22568,7 @@ sub make_paren_name {
         # then we want to use one level below the last token
         # ($i_terminal) in order to get it to fully outdent through
         # all levels.
-        ##########################################################
+        #---------------------------------------------------------
         my $indentation;
         my $lev;
         my $level_end = $levels_to_go[$iend];
@@ -22752,12 +22763,12 @@ sub make_paren_name {
         # be sure lines with leading closing tokens are not outdented more
         # than the line which contained the corresponding opening token.
 
-        #############################################################
+        #--------------------------------------------------------
         # updated per bug report in alex_bug.pl: we must not
         # mess with the indentation of closing logical braces so
         # we must treat something like '} else {' as if it were
         # an isolated brace
-        #############################################################
+        #--------------------------------------------------------
         my $is_isolated_block_brace = $block_type_beg
           && ( $i_terminal == $ibeg
             || $is_if_elsif_else_unless_while_until_for_foreach{$block_type_beg}

@@ -1107,7 +1107,7 @@ sub get_line {
                 $line_of_tokens->{_line_type} = 'POD_START';
                 warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
-                );
+                ) unless (DEVEL_MODE);
                 $write_logfile_entry->("Entering POD section\n");
             }
         }
@@ -7909,7 +7909,7 @@ sub scan_identifier_do {
                         else {
                             warning(
 "already saw definition of 'sub $subname' in package '$package' at line $lno\n"
-                            );
+                            ) unless (DEVEL_MODE);
                         }
                     }
                     $saw_function_definition{$subname}{$package} =
