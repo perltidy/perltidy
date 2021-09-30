@@ -1558,7 +1558,7 @@ EOM
                     last;
                 }
             } ## end if ( $iter < $max_iterations)
-        }    # end loop over iterations for one source file
+        } ## end loop over iterations for one source file
 
         # restore objects which have been temporarily undefined
         # for second and higher iterations
@@ -1830,7 +1830,7 @@ EOM
 
         $logger_object->finish( $infile_syntax_ok, $formatter )
           if $logger_object;
-    }    # end of main loop to process all files
+    } ## end of main loop to process all files
 
     # Fix for RT #130297: return a true value if anything was written to the
     # standard error output, even non-fatal warning messages, otherwise return
@@ -2912,7 +2912,7 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
         \%option_category, \%option_range
     );
 
-}    # end of generate_options
+} ## end of generate_options
 
 # Memoize process_command_line. Given same @ARGV passed in, return same
 # values and same @ARGV back.
@@ -3211,7 +3211,7 @@ EOM
 
     return ( \%Opts, $config_file, \@raw_options, $roption_string,
         $rexpansion, $roption_category, $roption_range );
-}    # end of _process_command_line
+} ## end of _process_command_line
 
 sub check_options {
 
@@ -3520,7 +3520,7 @@ sub expand_command_abbreviations {
             else {
                 push( @new_argv, $word );
             }
-        }    # end of this pass
+        } ## end of this pass
 
         # update parameter list @ARGV to the new one
         @ARGV = @new_argv;
@@ -3559,8 +3559,8 @@ Program bug - circular-references in the %expansion hash, probably due to
 a recent program change.
 DIE
             }
-        }    # end of check for circular references
-    }    # end of loop over all passes
+        } ## end of check for circular references
+    } ## end of loop over all passes
     return;
 }
 

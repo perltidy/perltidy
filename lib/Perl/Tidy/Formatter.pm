@@ -438,10 +438,13 @@ BEGIN {
 
         _rspecial_side_comment_type_ => $i++,
 
-        _rseqno_controlling_my_ci_ => $i++,
-        _ris_seqno_controlling_ci_ => $i++,
-        _save_logfile_             => $i++,
-        _maximum_level_            => $i++,
+        _rseqno_controlling_my_ci_    => $i++,
+        _ris_seqno_controlling_ci_    => $i++,
+        _save_logfile_                => $i++,
+        _maximum_level_               => $i++,
+        _maximum_level_at_line_       => $i++,
+        _maximum_BLOCK_level_         => $i++,
+        _maximum_BLOCK_level_at_line_ => $i++,
 
         _rKrange_code_without_comments_ => $i++,
         _rbreak_before_Kfirst_          => $i++,
@@ -824,8 +827,11 @@ sub new {
     $self->[_rseqno_controlling_my_ci_] = {};
     $self->[_ris_seqno_controlling_ci_] = {};
 
-    $self->[_rspecial_side_comment_type_] = {};
-    $self->[_maximum_level_]              = 0;
+    $self->[_rspecial_side_comment_type_]  = {};
+    $self->[_maximum_level_]               = 0;
+    $self->[_maximum_level_at_line_]       = 0;
+    $self->[_maximum_BLOCK_level_]         = 0;
+    $self->[_maximum_BLOCK_level_at_line_] = 0;
 
     $self->[_rKrange_code_without_comments_] = [];
     $self->[_rbreak_before_Kfirst_]          = {};
@@ -2428,7 +2434,7 @@ sub set_whitespace_flags {
             $ws_4 = $ws_3 = $ws_2 = $ws_1 = $ws
               if DEBUG_WHITE;
 
-        }    # end setting space flag inside opening tokens
+        } ## end setting space flag inside opening tokens
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 2:
@@ -2467,7 +2473,7 @@ sub set_whitespace_flags {
 
             $ws_4 = $ws_3 = $ws_2 = $ws
               if DEBUG_WHITE;
-        }    # end setting space flag inside closing tokens
+        } ## end setting space flag inside closing tokens
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 3:
@@ -4965,10 +4971,12 @@ EOM
                             # For efficiency, we find the maximum level of
                             # opening tokens of any type.  The actual maximum
                             # level will be that of their contents which is 1
-                            # greater.
+                            # greater.  That will be fixed in sub
+                            # 'finish_formatting'.
                             my $level = $rlevels->[$j];
                             if ( $level > $self->[_maximum_level_] ) {
-                                $self->[_maximum_level_] = $level;
+                                $self->[_maximum_level_]         = $level;
+                                $self->[_maximum_level_at_line_] = $line_number;
                             }
                         }
                         else { $Iss_closing->[$seqno] = @{$rSS} }
@@ -5041,9 +5049,10 @@ sub finish_formatting {
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
 
-    # Check the maximum level. If it is extremely large we will
-    # give up and output the file verbatim.  Note that the actual
-    # maximum level is 1 greater than the saved value.
+    # Check the maximum level. If it is extremely large we will give up and
+    # output the file verbatim.  Note that the actual maximum level is 1
+    # greater than the saved value, so we fix that here.
+    $self->[_maximum_level_] += 1;
     my $maximum_level       = $self->[_maximum_level_];
     my $maximum_table_index = $#maximum_line_length_at_level;
     if ( !$severe_error && $maximum_level >= $maximum_table_index ) {
@@ -5598,8 +5607,6 @@ sub respace_tokens {
     my $rlines          = $self->[_rlines_];
     my $length_function = $self->[_length_function_];
     my $is_encoded_data = $self->[_is_encoded_data_];
-
-    my $rOpts_sub_alias_list = $rOpts->{'sub-alias-list'};
 
     my $rLL_new = [];    # This is the new array
     my $rtoken_vars;
@@ -8466,7 +8473,7 @@ EOM
         # as here:
 
         #    $_[0]->code_handler
-        #     	( sub { $more .= $_[1] . ":" . $_[0] . "\n" } );
+        #      ( sub { $more .= $_[1] . ":" . $_[0] . "\n" } );
 
         # Here is another example where we do not want to weld:
         #  $wrapped->add_around_modifier(
@@ -9251,9 +9258,12 @@ sub whitespace_cycle_adjustment {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $radjusted_levels = $self->[_radjusted_levels_];
+    my $maximum_level    = $self->[_maximum_level_];
 
-    my $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
-    if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle > 0 ) {
+    if (   $rOpts_whitespace_cycle
+        && $rOpts_whitespace_cycle > 0
+        && $rOpts_whitespace_cycle < $maximum_level )
+    {
 
         my $Kmax = @{$rLL} - 1;
 
@@ -10868,7 +10878,6 @@ EOM
     # flags needed by the store routine
     my $line_of_tokens;
     my $no_internal_newlines;
-    my $side_comment_follows;
     my $CODE_type;
 
     # range of K of tokens for the current line
@@ -10982,16 +10991,9 @@ EOM
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
 
         # Add one token to the next batch.
-        # $Ktoken_vars = the index K in the global token array
-        # $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
-        #                unless they are temporarily being overridden
-
-        # NOTE: This routine needs to be coded efficiently because it is called
-        # once per token.  I have gotten it down from the second slowest to the
-        # eighth slowest, but that still seems rather slow for what it does.
-
-        # This closure variable has already been defined, for efficiency:
-        #     my $radjusted_levels = $self->[_radjusted_levels_];
+        #   $Ktoken_vars = the index K in the global token array
+        #   $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
+        #                  unless they are temporarily being overridden
 
         my $type = $rtoken_vars->[_TYPE_];
 
@@ -11015,6 +11017,14 @@ EOM
             # happen, but it is worth checking.  Later code can then make the
             # simplifying assumption that blank tokens are not consecutive.
             elsif ( $type eq 'b' && $types_to_go[$max_index_to_go] eq 'b' ) {
+
+                if (DEVEL_MODE) {
+
+                    # if this happens, it is may be that consecutive blanks
+                    # were inserted into the token stream in 'respace_tokens'
+                    my $lno = $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
+                    Fault("consecutive blanks near line $lno; please fix");
+                }
                 return;
             }
         }
@@ -11118,9 +11128,7 @@ EOM
         $parent_seqno_to_go[$max_index_to_go]  = $parent_seqno;
         $nesting_depth_to_go[$max_index_to_go] = $slevel;
         $block_type_to_go[$max_index_to_go]    = $block_type;
-
-        $nobreak_to_go[$max_index_to_go] =
-          $side_comment_follows ? 2 : $no_internal_newlines;
+        $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
 
         my $length = $rtoken_vars->[_TOKEN_LENGTH_];
 
@@ -11345,12 +11353,13 @@ EOM
             return;
         }
 
+        # This flag will become nobreak_to_go and should be set to 2 to prevent
+        # a line break AFTER the current token.
         $no_internal_newlines = 0;
         if ( !$rOpts_add_newlines || $CODE_type eq 'NIN' ) {
             $no_internal_newlines = 2;
         }
 
-        $side_comment_follows = 0;
         my $is_comment =
           ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq '#' );
         my $is_static_block_comment_without_leading_space =
@@ -11574,7 +11583,10 @@ EOM
                 $rbrace_follower = undef;
             }
 
-            my ( $block_type, $is_opening_BLOCK, $is_closing_BLOCK );
+            my (
+                $block_type,       $is_opening_BLOCK,
+                $is_closing_BLOCK, $nobreak_BEFORE_BLOCK
+            );
             if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
 
                 my $token         = $rtoken_vars->[_TOKEN_];
@@ -11589,16 +11601,18 @@ EOM
                 {
 
                     if ( $type eq '{' ) {
-                        $is_opening_BLOCK = 1;
+                        $is_opening_BLOCK     = 1;
+                        $nobreak_BEFORE_BLOCK = $no_internal_newlines;
                     }
                     elsif ( $type eq '}' ) {
-                        $is_closing_BLOCK = 1;
+                        $is_closing_BLOCK     = 1;
+                        $nobreak_BEFORE_BLOCK = $no_internal_newlines;
                     }
                 }
             }
 
             # Find next nonblank token on this line and look for a side comment
-            my $Knnb;
+            my ( $Knnb, $side_comment_follows );
 
             # if before last token ...
             if ( $Ktoken_vars < $K_last ) {
@@ -11613,23 +11627,13 @@ EOM
                     $side_comment_follows = 1;
 
                     # Do not allow breaks which would promote a side comment to
-                    # a block comment.  In order to allow a break before an
-                    # opening or closing BLOCK, followed by a side comment,
-                    # those sections of code will handle this flag separately.
-                    if (   !$is_opening_BLOCK
-                        && !$is_closing_BLOCK )
-                    {
-                        $no_internal_newlines = 1;
-                    }
-                }
-                else {
-                    $side_comment_follows = undef;
+                    # a block comment.
+                    $no_internal_newlines = 2;
                 }
             }
 
             # if at last token ...
             else {
-                $side_comment_follows = undef;
 
                 # --------------------
                 # handle side comments
@@ -11647,6 +11651,8 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                 next;
             }
+
+            # Process non-blank and non-comment tokens ...
 
             # ----------------
             # handle semicolon
@@ -11773,7 +11779,7 @@ EOM
                 {
 
                     # but only if allowed
-                    unless ($no_internal_newlines) {
+                    unless ($nobreak_BEFORE_BLOCK) {
 
                         # since we already stored this token, we must unstore it
                         $self->unstore_token_to_go();
@@ -11786,13 +11792,9 @@ EOM
                     }
                 }
 
-                # Now update for side comment
-                if ($side_comment_follows) { $no_internal_newlines = 1 }
-
                 # now output this line
-                unless ($no_internal_newlines) {
-                    $self->end_batch() if ( $max_index_to_go >= 0 );
-                }
+                $self->end_batch()
+                  if ( $max_index_to_go >= 0 && !$no_internal_newlines );
             }
 
             # ----------
@@ -11838,16 +11840,10 @@ EOM
                 }
 
                 # put a break before this closing curly brace if appropriate
-                unless ( $no_internal_newlines
-                    || $index_start_one_line_block != UNDEFINED_INDEX )
-                {
-
-                    # write out everything before this closing curly brace
-                    $self->end_batch() if ( $max_index_to_go >= 0 );
-                }
-
-                # Now update for side comment
-                if ($side_comment_follows) { $no_internal_newlines = 1 }
+                $self->end_batch()
+                  if ( $max_index_to_go >= 0
+                    && !$nobreak_BEFORE_BLOCK
+                    && $index_start_one_line_block == UNDEFINED_INDEX );
 
                 # store the closing curly brace
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -12024,7 +12020,7 @@ EOM
                         || $max_index_to_go < 0 );
                 }
 
-            }    # end treatment of closing block token
+            } ## end treatment of closing block token
 
             # -----------------------------
             # handle here_doc target string
@@ -12616,6 +12612,12 @@ sub compare_indentation_levels {
         $structural_indentation_level = $radjusted_levels->[$K_first];
     }
 
+    # record max structural depth for log file
+    if ( $structural_indentation_level > $self->[_maximum_BLOCK_level_] ) {
+        $self->[_maximum_BLOCK_level_]         = $structural_indentation_level;
+        $self->[_maximum_BLOCK_level_at_line_] = $line_number;
+    }
+
     my $type_sequence = $rLL->[$K_first]->[_TYPE_SEQUENCE_];
     my $is_closing_block =
          $type_sequence
@@ -12633,7 +12635,6 @@ sub compare_indentation_levels {
             if ( !$self->[_first_brace_tabbing_disagreement_] ) {
                 $self->[_first_brace_tabbing_disagreement_] = $line_number;
             }
-
         }
 
         if ( !$self->[_in_tabbing_disagreement_] ) {
@@ -13430,8 +13431,7 @@ EOM
                 if ( $iend - $ibeg != $Kend - $Kbeg ) {
                     $index_error = $n unless defined($index_error);
                 }
-                push @{$rlines_K},
-                  [ $Kbeg, $Kend, $forced_breakpoint_to_go[$iend] ];
+                push @{$rlines_K}, [ $Kbeg, $Kend ];
             }
 
             # Check correctness of the mapping between the i and K token
@@ -17673,7 +17673,7 @@ sub set_continuation_breaks {
                             $self->set_forced_breakpoint($icomma);
                         }
                     }
-                }    # end logic to open up a container
+                } ## end logic to open up a container
 
                 # Break open a logical container open if it was already open
                 elsif ($is_simple_logical_expression
@@ -18604,7 +18604,7 @@ EOM
                 return;
             }
 
-        }    # end shortcut methods
+        } ## end shortcut methods
 
         # debug stuff
         DEBUG_SPARSE && do {
@@ -20311,7 +20311,7 @@ EOM
           # and limit total to 10 character widths
           && token_sequence_length( $ibeg, $iend ) <= 10;
 
-    }    # end of loop to output each line
+    } ## end of loop to output each line
 
     # remember indentation of lines containing opening containers for
     # later use by sub set_adjusted_indentation
@@ -21581,7 +21581,7 @@ sub get_seqno {
             $iendm          = $iend;
             $ibegm          = $ibeg;
             $has_leading_op = $has_leading_op_next;
-        }    # end of loop over lines
+        } ## end of loop over lines
         return;
     }
 } ## end closure set_logical_padding
@@ -21766,7 +21766,7 @@ sub pad_token {
                      # Containers beginning with { and [ are given those names
                      # for uniqueness. That way commas in different containers
                      # will not match. Here is an example of what this prevents:
-                     #	a => [ 1,       2, 3 ],
+                     #   a => [ 1,       2, 3 ],
                      #   b => { b1 => 4, b2 => 5 },
                      # Here is another example of what we avoid by labeling the
                      # commas properly:
@@ -22287,7 +22287,7 @@ sub make_paren_name {
                 )
 
                 # remove continuation indentation for any line like
-                # 	} ... {
+                #       } ... {
                 # or without ending '{' and unbalanced, such as
                 #       such as '}->{$operator}'
                 || (
@@ -23962,6 +23962,13 @@ sub wrapup {
     $file_writer_object->decrement_output_line_number()
       ;    # fix up line number since it was incremented
     we_are_at_the_last_line();
+
+    my $max_depth = $self->[_maximum_BLOCK_level_];
+    my $at_line   = $self->[_maximum_BLOCK_level_at_line_];
+    write_logfile_entry(
+"Maximum leading structural depth is $max_depth in input at line $at_line\n"
+    );
+
     my $added_semicolon_count    = $self->[_added_semicolon_count_];
     my $first_added_semicolon_at = $self->[_first_added_semicolon_at_];
     my $last_added_semicolon_at  = $self->[_last_added_semicolon_at_];

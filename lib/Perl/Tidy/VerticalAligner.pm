@@ -2759,8 +2759,8 @@ EOM
                     # will now be incorrect. For example, this will prevent
                     # aligning commas as follows after deleting the second '=>'
                     #    $w->insert(
-                    #	ListBox => origin => [ 270, 160 ],
-                    #	size    => [ 200,           55 ],
+                    #         ListBox => origin => [ 270, 160 ],
+                    #         size    => [ 200,           55 ],
                     #    );
                     if ( defined($delete_above_level) ) {
                         if ( $lev > $delete_above_level ) {
@@ -5275,7 +5275,7 @@ sub get_output_line_number {
                 # Here is a complex example:
 
                 # Foo($Bar[0], {  # (side comment)
-                # 	baz => 1,
+                #     baz => 1,
                 # });
 
                 # The first line has sequence 6::4.  It does not begin with
@@ -5475,7 +5475,7 @@ sub valign_output_step_D {
         $leading_string_cache[$leading_whitespace_count] = $leading_string;
         return $leading_string;
     }
-}    # end get_leading_string
+} ## end get_leading_string
 
 ##########################
 # CODE SECTION 10: Summary

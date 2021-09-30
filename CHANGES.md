@@ -18,6 +18,9 @@
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.
 
+    - This version runs about 10 percent faster on large files than the previous
+      release due to optimizations made with the help of NYTProf.
+
     - Numerous minor fixes have been made. A complete list is at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod

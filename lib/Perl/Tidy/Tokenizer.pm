@@ -5154,7 +5154,7 @@ EOM
 
         return;
     }
-}    # end tokenize_this_line
+} ## end tokenize_this_line
 
 #########i#############################################################
 # Tokenizer routines which assist in identifying token types
@@ -8353,10 +8353,10 @@ sub scan_number_do {
            [Pp][+-]?[0-9a-fA-F]          # REQUIRED exponent with digit
            [0-9a-fA-F_]*)                # optional Additional exponent digits
 
-	   # or hex integer
+           # or hex integer
            |([xX][0-9a-fA-F_]+)        
 
-	   # or octal fraction
+           # or octal fraction
            |([oO]?[0-7_]+          # string of octal digits
            (\.([0-7][0-7_]*)?)?    # optional decimal and fraction
            [Pp][+-]?[0-7]          # REQUIRED exponent, no underscore
@@ -8371,7 +8371,7 @@ sub scan_number_do {
            [Pp][+-]?[01]           # Required exponent indicator, no underscore
            [01_]*)                 # additional exponent bits
 
-	   # or binary integer
+           # or binary integer
            |([bB][01_]+)           # 'b' with string of binary digits 
 
            )/gx
