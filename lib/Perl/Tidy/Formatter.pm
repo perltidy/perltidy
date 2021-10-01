@@ -16709,7 +16709,10 @@ sub set_continuation_breaks {
         # (3) NEW: there are one or more old comma breaks (see return example)
         # (4) the first comma is at the starting level ...
         #     ... fixes cases b064 b065 b068 b210 b747
-        #
+        # (5) the batch does not start with a ci>0 [ignore a ci change by -xci]
+        #     ... fixes b1220.  If ci>0 we are in the middle of a snippet,
+        #     maybe because -boc has been forcing out previous lines.
+
         # For example, we will follow the user and break after
         # 'print' in this snippet:
         #    print
@@ -16737,7 +16740,15 @@ sub set_continuation_breaks {
         #
         my $i_first_comma = $comma_index[$dd]->[0];
         my $level_comma   = $levels_to_go[$i_first_comma];
-        if (   $old_breakpoint_to_go[$i_first_comma]
+        my $ci_start      = $ci_levels_to_go[0];
+
+        # Here we want to use the value of ci before any -xci adjustment
+        if ( $ci_start && $rOpts_extended_continuation_indentation ) {
+            my $K0 = $K_to_go[0];
+            if ( $self->[_rseqno_controlling_my_ci_]->{$K0} ) { $ci_start = 0 }
+        }
+        if (  !$ci_start
+            && $old_breakpoint_to_go[$i_first_comma]
             && $level_comma == $levels_to_go[0] )
         {
             my $ibreak    = -1;
@@ -16770,7 +16781,6 @@ sub set_continuation_breaks {
                     # Be sure to test any changes to these rules against runs
                     # with -l=0 such as the 'bbvt' test (perltidyrc_colin)
                     # series.
-
                     my $typem = $types_to_go[$ibreakm];
                     if ( !$is_uncontained_comma_break_excluded_type{$typem} ) {
                         $self->set_forced_breakpoint($ibreak);

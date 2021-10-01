@@ -7477,6 +7477,29 @@ is( Koha::Acquisition::Funds->search->count,
 --maximum-line-length=50
 --variable-maximum-line-length
 
+==> b1220.in <==
+# S1
+print$msg,
+ "\n",
+ '-' x
+ length$msg,
+ "\n";
+
+# S2
+print$msg,
+ "\n",
+ '-'
+ x length
+ $msg,
+ "\n";
+
+==> b1220.par <==
+--noadd-whitespace
+--break-at-old-comma-breakpoints
+--break-before-all-operators
+--continuation-indentation=1
+--maximum-line-length=12
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
