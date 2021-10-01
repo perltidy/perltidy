@@ -20812,25 +20812,51 @@ EOM
 sub make_vertical_alignments {
     my ( $self, $ri_first, $ri_last ) = @_;
 
+    #----------------------------
+    # Shortcut for a single token
+    #----------------------------
+    if ( $max_index_to_go == 0 ) {
+        if ( @{$ri_first} == 1 && $ri_last->[0] == 0 ) {
+            my $rtokens   = [];
+            my $rfields   = [ $tokens_to_go[0] ];
+            my $rpatterns = [ $types_to_go[0] ];
+            my $rfield_lengths =
+              [ $summed_lengths_to_go[1] - $summed_lengths_to_go[0] ];
+            return [ [ $rtokens, $rfields, $rpatterns, $rfield_lengths ] ];
+        }
+
+        # Strange line packing, not fatal but should not happen
+        elsif (DEVEL_MODE) {
+            my $max_line = @{$ri_first} - 1;
+            my $ibeg     = $ri_first->[0];
+            my $iend     = $ri_last->[0];
+            Fault(
+"Strange..max_index=0 but nlines=$max_line ibeg=$ibeg iend=iend; please check\n"
+            );
+        }
+    }
+
+    #---------------------------------------------------------
     # Step 1: Define the alignment tokens for the entire batch
+    #---------------------------------------------------------
     my $ralignment_type_to_go = [];
     my $ralignment_counts     = [];
     ( $ralignment_type_to_go, $ralignment_counts ) =
-      $self->set_vertical_alignment_markers( $ri_first, $ri_last )
-      if ( $max_index_to_go > 0 );
+      $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
+    #----------------------------------------------
     # Step 2: Break each line into alignment fields
+    #----------------------------------------------
     my $rline_alignments = [];
     my $max_line         = @{$ri_first} - 1;
     foreach my $line ( 0 .. $max_line ) {
 
         my $ibeg = $ri_first->[$line];
         my $iend = $ri_last->[$line];
-        my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+        my $rtok_fld_pat_len =
           $self->make_alignment_patterns( $ibeg, $iend,
             $ralignment_type_to_go, $ralignment_counts->[$line] );
-        push @{$rline_alignments},
-          [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
+        push @{$rline_alignments}, $rtok_fld_pat_len;
     }
     return $rline_alignments;
 } ## end sub make_vertical_alignments
@@ -21708,31 +21734,35 @@ sub pad_token {
 
         my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count ) =
           @_;
-        my @tokens        = ();
-        my @fields        = ();
-        my @patterns      = ();
-        my @field_lengths = ();
 
         # -------------------------------------
         # Shortcut for lines without alignments
         # -------------------------------------
         if ( !$alignment_count ) {
-            @field_lengths = ( $summed_lengths_to_go[ $iend + 1 ] -
-                  $summed_lengths_to_go[$ibeg] );
+            my $rtokens        = [];
+            my $rfield_lengths = [ $summed_lengths_to_go[ $iend + 1 ] -
+                  $summed_lengths_to_go[$ibeg] ];
+            my $rpatterns;
+            my $rfields;
             if ( $ibeg == $iend ) {
-                @fields   = ( $tokens_to_go[$ibeg] );
-                @patterns = ( $types_to_go[$ibeg] );
+                $rfields   = [ $tokens_to_go[$ibeg] ];
+                $rpatterns = [ $types_to_go[$ibeg] ];
             }
             else {
-                @fields   = ( join( '', @tokens_to_go[ $ibeg .. $iend ] ) );
-                @patterns = ( join( '', @types_to_go[ $ibeg .. $iend ] ) );
+                $rfields   = [ join( '', @tokens_to_go[ $ibeg .. $iend ] ) ];
+                $rpatterns = [ join( '', @types_to_go[ $ibeg .. $iend ] ) ];
             }
-            return ( \@tokens, \@fields, \@patterns, \@field_lengths );
+            return [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
         }
 
         my $i_start        = $ibeg;
         my $depth          = 0;
         my %container_name = ( 0 => "" );
+
+        my @tokens        = ();
+        my @fields        = ();
+        my @patterns      = ();
+        my @field_lengths = ();
 
         # For a 'use' statement, use the module name as container name.
         # Fixes issue rt136416.
@@ -22045,7 +22075,7 @@ sub pad_token {
         push @field_lengths,
           $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$i_start];
 
-        return ( \@tokens, \@fields, \@patterns, \@field_lengths );
+        return [ \@tokens, \@fields, \@patterns, \@field_lengths ];
     } ## end sub make_alignment_patterns
 
 } ## end closure make_alignment_patterns
