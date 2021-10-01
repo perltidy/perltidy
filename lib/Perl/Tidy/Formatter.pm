@@ -11317,41 +11317,28 @@ EOM
         # appropriate for lists and logical structures, and to keep line
         # lengths below the requested maximum line length.
 
+        #-----------------------------------
+        # begin initialize closure variables
+        #-----------------------------------
         $line_of_tokens = $my_line_of_tokens;
         $CODE_type      = $line_of_tokens->{_code_type};
-        my $input_line_number = $line_of_tokens->{_line_number};
-        my $input_line        = $line_of_tokens->{_line_text};
-
-        # initialize closure variables
         my $rK_range = $line_of_tokens->{_rK_range};
         ( $K_first, $K_last ) = @{$rK_range};
-
-        # remember original starting index in case it changes
-        my $K_first_true = $K_first;
-
-        $rLL                     = $self->[_rLL_];
-        $radjusted_levels        = $self->[_radjusted_levels_];
-        $rparent_of_seqno        = $self->[_rparent_of_seqno_];
-        $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
-        $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
-
-        my $K_closing_container = $self->[_K_closing_container_];
-        my $K_opening_container = $self->[_K_opening_container_];
-
-        my $file_writer_object = $self->[_file_writer_object_];
-        my $rbreak_container   = $self->[_rbreak_container_];
-        my $rshort_nested      = $self->[_rshort_nested_];
-        my $sink_object        = $self->[_sink_object_];
-        my $fh_tee             = $self->[_fh_tee_];
-        my $ris_bli_container  = $self->[_ris_bli_container_];
-        my $rK_weld_left       = $self->[_rK_weld_left_];
-
         if ( !defined($K_first) ) {
 
             # Empty line: This can happen if tokens are deleted, for example
             # with the -mangle parameter
             return;
         }
+        $rLL                     = $self->[_rLL_];
+        $radjusted_levels        = $self->[_radjusted_levels_];
+        $rparent_of_seqno        = $self->[_rparent_of_seqno_];
+        $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
+        $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
+
+        #---------------------------------
+        # end initialize closure variables
+        #---------------------------------
 
         # This flag will become nobreak_to_go and should be set to 2 to prevent
         # a line break AFTER the current token.
@@ -11359,6 +11346,8 @@ EOM
         if ( !$rOpts_add_newlines || $CODE_type eq 'NIN' ) {
             $no_internal_newlines = 2;
         }
+
+        my $input_line = $line_of_tokens->{_line_text};
 
         my $is_comment =
           ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq '#' );
@@ -11377,6 +11366,7 @@ EOM
         # Add interline blank if any
         my $last_old_nonblank_type   = "b";
         my $first_new_nonblank_token = "";
+        my $K_first_true             = $K_first;
         if ( $max_index_to_go >= 0 ) {
             $last_old_nonblank_type   = $types_to_go[$max_index_to_go];
             $first_new_nonblank_token = $rLL->[$K_first]->[_TOKEN_];
@@ -11393,8 +11383,6 @@ EOM
 
         my $in_quote = $line_of_tokens->{_ending_in_quote};
         $ending_in_quote = $in_quote;
-        my $guessed_indentation_level =
-          $line_of_tokens->{_guessed_indentation_level};
 
         # ------------------------------------
         # Handle a block (full-line) comment..
@@ -11437,6 +11425,7 @@ EOM
               )
             {
                 $self->flush();    # switching to new output stream
+                my $file_writer_object = $self->[_file_writer_object_];
                 $file_writer_object->write_blank_code_line();
                 $self->[_last_line_leading_type_] = 'b';
             }
@@ -11459,6 +11448,7 @@ EOM
                 $self->flush();
 
                 # Note that last arg in call here is 'undef' for comments
+                my $file_writer_object = $self->[_file_writer_object_];
                 $file_writer_object->write_code_line(
                     $rtok_first->[_TOKEN_] . "\n", undef );
                 $self->[_last_line_leading_type_] = '#';
@@ -11469,12 +11459,16 @@ EOM
         # compare input/output indentation except for continuation lines
         # (because they have an unknown amount of initial blank space)
         # and lines which are quotes (because they may have been outdented)
-        $self->compare_indentation_levels( $K_first, $guessed_indentation_level,
-            $input_line_number )
-          unless ( $is_hanging_side_comment
+        my $guessed_indentation_level =
+          $line_of_tokens->{_guessed_indentation_level};
+        unless ( $is_hanging_side_comment
             || $rtok_first->[_CI_LEVEL_] > 0
-            || $guessed_indentation_level == 0
-            && $rtok_first->[_TYPE_] eq 'Q' );
+            || $guessed_indentation_level == 0 && $rtok_first->[_TYPE_] eq 'Q' )
+        {
+            my $input_line_number = $line_of_tokens->{_line_number};
+            $self->compare_indentation_levels( $K_first,
+                $guessed_indentation_level, $input_line_number );
+        }
 
         # -----------------------
         # Handle indentation-only
@@ -11597,7 +11591,7 @@ EOM
                 if (   $block_type
                     && $token eq $type
                     && $block_type ne 't'
-                    && !$rshort_nested->{$type_sequence} )
+                    && !$self->[_rshort_nested_]->{$type_sequence} )
                 {
 
                     if ( $type eq '{' ) {
@@ -11749,6 +11743,9 @@ EOM
 
                   # use -asbl flag for an anonymous sub block
                   : $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
+
+                my $ris_bli_container = $self->[_ris_bli_container_];
+                my $rK_weld_left      = $self->[_rK_weld_left_];
 
                 # Break if requested with -bli flag
                 my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
@@ -11942,6 +11939,10 @@ EOM
                         # Exception 2: followed by '}' on next line
                         elsif ( $Ktoken_vars == $K_last ) {
 
+                            my $K_closing_container =
+                              $self->[_K_closing_container_];
+                            my $K_opening_container =
+                              $self->[_K_opening_container_];
                             my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
                             my $Kc      = $K_closing_container->{$p_seqno};
                             if (   defined($Kc)
@@ -13320,8 +13321,6 @@ EOM
                 $self->pad_array_to_go();
                 $called_pad_array_to_go = 1;
 
-                ## This caused problems in one version of perl for unknown reasons:
-                ## $saw_good_break ||= scan_list();
                 my $sgb = $self->scan_list($is_long_line);
                 $saw_good_break ||= $sgb;
             }
@@ -19934,15 +19933,10 @@ sub send_lines_to_vertical_aligner {
         # This hash will hold the args for vertical alignment of this line
         # We will populate it as we go.
         # ----------------------------------------------------------------
-        my $rvalign_hash = {};
+        my $rvao_args = {};
 
         my $ibeg = $ri_first->[$n];
         my $iend = $ri_last->[$n];
-
-        ## FIXME: this flag is no longer used; why? will it be needed again?
-        ## If not, then we can avoid packing it in the calling routine.
-        ## my $rline = $rlines_K->[$n];
-        ## my $forced_breakpoint = $rline->[2];
 
         # we may need to look at variables on three consecutive lines ...
 
@@ -20011,8 +20005,25 @@ sub send_lines_to_vertical_aligner {
         # to achieve vertical alignment.  These fields are the actual text
         # which will be output, so from here on no more changes can be made to
         # the text.
+        my $rline_alignment = $rline_alignments->[$n];
         my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
-          @{ $rline_alignments->[$n] };
+          @{$rline_alignment};
+
+        # Programming check: (shouldn't happen)
+        # The number of tokens which separate the fields must always be
+        # one less than the number of fields. If this is not true then
+        # an error has been introduced in sub make_alignment_patterns.
+        if (DEVEL_MODE) {
+            if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
+                my $nt  = @{$rtokens};
+                my $nf  = @{$rfields};
+                my $msg = <<EOM;
+Program bug in Perl::Tidy::Formatter, probably in sub 'make_alignment_patterns':
+The number of tokens = $nt should be one less than number of fields: $nf
+EOM
+                Fault($msg);
+            }
+        }
 
         # --------------------------------------
         # get the final indentation of this line
@@ -20042,7 +20053,7 @@ sub send_lines_to_vertical_aligner {
             )
           )
         {
-            $rvalign_hash->{outdent_long_lines} = 1;
+            $rvao_args->{outdent_long_lines} = 1;
         }
 
         # --------------------------------------------------
@@ -20052,11 +20063,11 @@ sub send_lines_to_vertical_aligner {
         # These flags tell the vertical aligner to stop alignment before or
         # after this line.
         if ($is_outdented_line) {
-            $rvalign_hash->{break_alignment_before} = 1;
-            $rvalign_hash->{break_alignment_after}  = 1;
+            $rvao_args->{break_alignment_before} = 1;
+            $rvao_args->{break_alignment_after}  = 1;
         }
         elsif ($do_not_pad) {
-            $rvalign_hash->{break_alignment_before} = 1;
+            $rvao_args->{break_alignment_before} = 1;
         }
 
         # flush at an 'if' which follows a line with (1) terminal semicolon
@@ -20099,24 +20110,19 @@ sub send_lines_to_vertical_aligner {
                     && $block_type_m ne 'else' )
               )
             {
-                $rvalign_hash->{break_alignment_before} = 1;
+                $rvao_args->{break_alignment_before} = 1;
             }
         }
 
         # ----------------------------------
         # define 'rvertical_tightness_flags'
         # ----------------------------------
-
         # These flags tell the vertical aligner if/when to combine consecutive
         # lines, based on the user input parameters.
-        if ( !$is_block_comment ) {
-            my $rvertical_tightness_flags =
-              $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg,
-                $iend,
-                $ri_first, $ri_last, $ending_in_quote, $closing_side_comment );
-            $rvalign_hash->{rvertical_tightness_flags} =
-              $rvertical_tightness_flags;
-        }
+        $rvao_args->{rvertical_tightness_flags} =
+          $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
+            $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
+          if ( !$is_block_comment );
 
         # ----------------------------------
         # define 'is_terminal_ternary'  flag
@@ -20172,32 +20178,23 @@ sub send_lines_to_vertical_aligner {
                     $KP = $rLL->[$KP]->[_KNEXT_SEQ_ITEM_];
                 }
             }
-            $rvalign_hash->{is_terminal_ternary} = $is_terminal_ternary;
+            $rvao_args->{is_terminal_ternary} = $is_terminal_ternary;
         }
 
         # -------------------------------------------------
         # add any new closing side comment to the last line
         # -------------------------------------------------
         if ( $closing_side_comment && $n == $n_last_line && @{$rfields} ) {
+
             $rfields->[-1] .= " $closing_side_comment";
 
             # NOTE: Patch for csc. We can just use 1 for the length of the csc
             # because its length should not be a limiting factor from here on.
             $rfield_lengths->[-1] += 2;
-        }
 
-        # Programming check: (shouldn't happen)
-        # The number of tokens which separate the fields must always be
-        # one less than the number of fields. If this is not true then
-        # an error has been introduced in sub make_alignment_patterns.
-        if ( @{$rfields} && ( @{$rtokens} != ( @{$rfields} - 1 ) ) ) {
-            my $nt  = @{$rtokens};
-            my $nf  = @{$rfields};
-            my $msg = <<EOM;
-Program bug in Perl::Tidy::Formatter, probably in sub 'make_alignment_patterns':
-The number of tokens = $nt should be one less than number of fields: $nf
-EOM
-            Fault($msg);
+            # repack
+            $rline_alignment =
+              [ $rtokens, $rfields, $rpatterns, $rfield_lengths ];
         }
 
         # ------------------------
@@ -20207,7 +20204,7 @@ EOM
         # This flag indicates if this line is contained in a multi-line list
         if ( !$is_block_comment ) {
             my $parent_seqno = $parent_seqno_to_go[$ibeg];
-            $rvalign_hash->{list_seqno} = $ris_list_by_seqno->{$parent_seqno};
+            $rvao_args->{list_seqno} = $ris_list_by_seqno->{$parent_seqno};
         }
 
         # The alignment tokens have been marked with nesting_depths, so we need
@@ -20265,30 +20262,27 @@ EOM
                 if ( $level_adj < 0 ) { $level_adj = 0 }
             }
             if ( $level_adj == 0 ) {
-                $rvalign_hash->{forget_side_comment} = 1;
+                $rvao_args->{forget_side_comment} = 1;
             }
         }
 
         # -----------------------------------
         # Store the remaining non-flag values
         # -----------------------------------
-        $rvalign_hash->{Kend}           = $Kend_code;
-        $rvalign_hash->{ci_level}       = $ci_levels_to_go[$ibeg];
-        $rvalign_hash->{indentation}    = $indentation;
-        $rvalign_hash->{level_end}      = $nesting_depth_end;
-        $rvalign_hash->{level}          = $nesting_depth_beg;
-        $rvalign_hash->{rfield_lengths} = $rfield_lengths;
-        $rvalign_hash->{rfields}        = $rfields;
-        $rvalign_hash->{rpatterns}      = $rpatterns;
-        $rvalign_hash->{rtokens}        = $rtokens;
-        $rvalign_hash->{maximum_line_length} =
+        $rvao_args->{Kend}            = $Kend_code;
+        $rvao_args->{ci_level}        = $ci_levels_to_go[$ibeg];
+        $rvao_args->{indentation}     = $indentation;
+        $rvao_args->{level_end}       = $nesting_depth_end;
+        $rvao_args->{level}           = $nesting_depth_beg;
+        $rvao_args->{rline_alignment} = $rline_alignment;
+        $rvao_args->{maximum_line_length} =
           $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 
         # --------------------------------------
         # send this line to the vertical aligner
         # --------------------------------------
         my $vao = $self->[_vertical_aligner_object_];
-        $vao->valign_input($rvalign_hash);
+        $vao->valign_input($rvao_args);
 
         $do_not_pad = 0;
 
@@ -20830,8 +20824,12 @@ sub make_vertical_alignments {
             my $max_line = @{$ri_first} - 1;
             my $ibeg     = $ri_first->[0];
             my $iend     = $ri_last->[0];
+            my $tok_b    = $tokens_to_go[$ibeg];
+            my $tok_e    = $tokens_to_go[$iend];
+            my $type_b   = $types_to_go[$ibeg];
+            my $type_e   = $types_to_go[$iend];
             Fault(
-"Strange..max_index=0 but nlines=$max_line ibeg=$ibeg iend=iend; please check\n"
+"Strange..max_index=0 but nlines=$max_line ibeg=$ibeg tok=$tok_b type=$type_b iend=$iend tok=$tok_e type=$type_e; please check\n"
             );
         }
     }
@@ -23950,10 +23948,13 @@ sub add_closing_side_comment {
                         $rOpts->{'closing-side-comment-interval'} )
                     {
                         $token = undef;
-                        $self->unstore_token_to_go()
-                          if ( $types_to_go[$max_index_to_go] eq '#' );
-                        $self->unstore_token_to_go()
-                          if ( $types_to_go[$max_index_to_go] eq 'b' );
+## FIXME: issue c081. This has not been working for some time.  To make it work,
+## we also have to reduce the value if $iend in the last packed line range.
+## Otherwise, the old closing side comment will remain in the output stream.
+##                        $self->unstore_token_to_go()
+##                          if ( $types_to_go[$max_index_to_go] eq '#' );
+##                        $self->unstore_token_to_go()
+##                          if ( $types_to_go[$max_index_to_go] eq 'b' );
                     }
                 }
             }

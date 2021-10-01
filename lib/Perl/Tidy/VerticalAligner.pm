@@ -435,16 +435,16 @@ sub valign_input {
     my $outdent_long_lines        = $rline_hash->{outdent_long_lines};
     my $is_terminal_ternary       = $rline_hash->{is_terminal_ternary};
     my $rvertical_tightness_flags = $rline_hash->{rvertical_tightness_flags};
-    my $rfields                   = $rline_hash->{rfields};
-    my $rtokens                   = $rline_hash->{rtokens};
-    my $rpatterns                 = $rline_hash->{rpatterns};
-    my $rfield_lengths            = $rline_hash->{rfield_lengths};
     my $break_alignment_before    = $rline_hash->{break_alignment_before};
     my $break_alignment_after     = $rline_hash->{break_alignment_after};
     my $Kend                      = $rline_hash->{Kend};
     my $ci_level                  = $rline_hash->{ci_level};
     my $maximum_line_length       = $rline_hash->{maximum_line_length};
     my $forget_side_comment       = $rline_hash->{forget_side_comment};
+    my $rline_alignment           = $rline_hash->{rline_alignment};
+
+    my ( $rtokens, $rfields, $rpatterns, $rfield_lengths ) =
+      @{$rline_alignment};
 
     # The index '$Kend' is a value which passed along with the line text to sub
     # 'write_code_line' for a convergence check.
