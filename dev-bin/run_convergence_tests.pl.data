@@ -7500,6 +7500,34 @@ print$msg,
 --continuation-indentation=1
 --maximum-line-length=12
 
+==> b1224.in <==
+# S1
+  return ( $self->_testStrand ( $other, $so )
+             and not(
+                  (    $self->start () > $other->end ()
+                    or $self->end () < $other->start ()
+                  )
+             )
+  ) ;
+
+#S2
+  return ($self->_testStrand ( $other, $so ) and not( (
+                       $self->start () > $other->end ()
+                    or $self->end () < $other->start ()
+          ) )
+  ) ;
+
+==> b1224.par <==
+--indent-columns=2
+--line-up-parentheses
+--maximum-line-length=55
+--nostack-closing-paren
+--nostack-opening-paren
+--vertical-tightness-closing=0
+--vertical-tightness=2
+--weld-nested-containers
+--space-function-paren
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

@@ -8034,15 +8034,19 @@ sub setup_new_weld_measurements {
 
     # STEP 3: Now look ahead for a ternary and, if found, use it.
     # This fixes case b1182.
+    # Also look for a ')' at the same level and, if found, use it.
+    # This fixes case b1224.
     if ( $Kref < $Kouter_opening ) {
         my $Knext    = $rLL->[$Kref]->[_KNEXT_SEQ_ITEM_];
         my $level_oo = $rLL->[$Kouter_opening]->[_LEVEL_];
         while ( $Knext < $Kouter_opening ) {
-            if (   $is_ternary{ $rLL->[$Knext]->[_TYPE_] }
-                && $rLL->[$Kref]->[_LEVEL_] == $level_oo )
-            {
-                $Kref = $Knext;
-                last;
+            if ( $rLL->[$Knext]->[_LEVEL_] == $level_oo ) {
+                if (   $is_ternary{ $rLL->[$Knext]->[_TYPE_] }
+                    || $rLL->[$Knext]->[_TOKEN_] eq ')' )
+                {
+                    $Kref = $Knext;
+                    last;
+                }
             }
             $Knext = $rLL->[$Knext]->[_KNEXT_SEQ_ITEM_];
         }
