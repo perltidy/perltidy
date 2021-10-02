@@ -2,6 +2,47 @@
 
 =over 4
 
+=item B<Fix issue c082, -cscw preventing deletion of closing side comments>
+
+Random testing revealed a problem in which an old closing side comment was not
+being deleted when it fell below the interval specified on -csci=n
+and the -cscw flag was also set.
+
+For example, the following snippet has been formatted with -csc -csci=1. The
+interval -csci=1 insures that all blocks get side comments:
+
+    if ($x3) {
+        $zz;
+        if ($x2) {
+            if ($x1) {
+                ..;
+            } ## end if ($x1)
+            $a;
+            $b;
+            $c;
+        } ## end if ($x2)
+    } ## end if ($x3)
+
+If we then run with -csc -csci=6, the comment ## end if ($x1) will fall below
+the threshold and be removed (correctly):
+
+    if ($x3) {
+        $zz;
+        if ($x2) {
+            if ($x1) {
+                ..;
+            }
+            $a;
+            $b;
+            $c;
+        } ## end if ($x2)
+    } ## end if ($x3)
+
+But if we also add the -cscw flag (warnings) then it was not being removed.  This
+update fixes this problem (issue c081).
+
+2 Oct 2021
+
 =item B<Partial fix for issue git #74 on -lp at anonymous subs>
 
 In the following snippet, the final one-line anonymous sub is not followed by a
@@ -35,7 +76,7 @@ sub is broken into several lines due to its length or complexity, then
 these forced line breaks cause indentation to revert to the standard
 indentation scheme.
 
-22 Sep 2021.
+22 Sep 2021, 4fd58f7.
 
 
 =item B<Fix issues b1209 related to -vmll>
@@ -48,7 +89,7 @@ is set.  In some rare cases there is a difference.  The problem was fixed by
 passing the maximum line length to the vertical aligner so that the calculation
 is only done in the formatter.  This fixes b1209.
 
-20 Sep 2021.
+20 Sep 2021, acf1d2d.
 
 =item B<Fix issue b1208>
 

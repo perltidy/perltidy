@@ -19900,7 +19900,7 @@ sub send_lines_to_vertical_aligner {
     my ( $cscw_block_comment, $closing_side_comment );
     if ($rOpts_closing_side_comments) {
         ( $closing_side_comment, $cscw_block_comment ) =
-          $self->add_closing_side_comment();
+          $self->add_closing_side_comment( $ri_first, $ri_last );
     }
 
     # flush before a long if statement to avoid unwanted alignment
@@ -23791,8 +23791,8 @@ sub set_vertical_tightness_flags {
 
 sub add_closing_side_comment {
 
-    my $self = shift;
-    my $rLL  = $self->[_rLL_];
+    my ( $self, $ri_first, $ri_last ) = @_;
+    my $rLL = $self->[_rLL_];
 
     # add closing side comments after closing block braces if -csc used
     my ( $closing_side_comment, $cscw_block_comment );
@@ -23951,14 +23951,28 @@ sub add_closing_side_comment {
                     if ( $block_line_count <
                         $rOpts->{'closing-side-comment-interval'} )
                     {
+                        # Since the line breaks have already been set, we have
+                        # to remove the token from the _to_go array and also
+                        # from the line range (this fixes issue c081).
+                        # Note that we can only get here if -cscw has been set
+                        # because otherwise the old comment is already deleted.
                         $token = undef;
-## FIXME: issue c081. This has not been working for some time.  To make it work,
-## we also have to reduce the value if $iend in the last packed line range.
-## Otherwise, the old closing side comment will remain in the output stream.
-##                        $self->unstore_token_to_go()
-##                          if ( $types_to_go[$max_index_to_go] eq '#' );
-##                        $self->unstore_token_to_go()
-##                          if ( $types_to_go[$max_index_to_go] eq 'b' );
+                        my $ibeg = $ri_first->[-1];
+                        my $iend = $ri_last->[-1];
+                        if (   $iend > $ibeg
+                            && $iend == $max_index_to_go
+                            && $types_to_go[$max_index_to_go] eq '#' )
+                        {
+                            $iend--;
+                            $max_index_to_go--;
+                            if (   $iend > $ibeg
+                                && $types_to_go[$max_index_to_go] eq 'b' )
+                            {
+                                $iend--;
+                                $max_index_to_go--;
+                            }
+                            $ri_last->[-1] = $iend;
+                        }
                     }
                 }
             }
