@@ -13020,17 +13020,9 @@ EOM
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
-        my $file_writer_object = $self->[_file_writer_object_];
 
         my $this_batch = $self->[_this_batch_];
         $batch_count++;
-
-        my $starting_in_quote        = $this_batch->[_starting_in_quote_];
-        my $ending_in_quote          = $this_batch->[_ending_in_quote_];
-        my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
-        my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
-
-        my $rLL = $self->[_rLL_];
 
         # This routine is only called from sub flush_batch_of_code, so that
         # routine is a better spot for debugging.
@@ -13055,6 +13047,46 @@ EOM
 "sub grind incorrectly called with max_index_to_go=$max_index_to_go"
             );
         }
+
+        #----------------------------
+        # Shortcut for block comments
+        #----------------------------
+        if (
+               $max_index_to_go == 0
+            && $types_to_go[0] eq '#'
+
+            # this shortcut does not work for -lp yet
+            && !$rOpts_line_up_parentheses
+          )
+        {
+            my $ibeg = 0;
+            my $Kbeg = my $Kend = $K_to_go[$ibeg];
+            $this_batch->[_rlines_K_]                 = [ [ $Kbeg, $Kend ] ];
+            $this_batch->[_ibeg0_]                    = $ibeg;
+            $this_batch->[_peak_batch_size_]          = $peak_batch_size;
+            $this_batch->[_do_not_pad_]               = 0;
+            $this_batch->[_batch_count_]              = $batch_count;
+            $this_batch->[_rix_seqno_controlling_ci_] = [];
+            $self->send_lines_to_vertical_aligner();
+            my $level = $levels_to_go[$ibeg];
+            $self->[_last_last_line_leading_level_] =
+              $self->[_last_line_leading_level_];
+            $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
+            $self->[_last_line_leading_level_] = $level;
+            $nonblank_lines_at_depth[$level]   = 1;
+            return;
+        }
+
+        #-------------
+        # Normal route
+        #-------------
+
+        my $rLL                      = $self->[_rLL_];
+        my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
+
+        my $starting_in_quote       = $this_batch->[_starting_in_quote_];
+        my $ending_in_quote         = $this_batch->[_ending_in_quote_];
+        my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
 
         # Initialize some batch variables
         my $comma_count_in_batch = 0;
@@ -13252,6 +13284,7 @@ EOM
 
                    # future: send blank line down normal path to VerticalAligner
                     $self->flush_vertical_aligner();
+                    my $file_writer_object = $self->[_file_writer_object_];
                     $file_writer_object->require_blank_code_lines($want_blank);
                 }
             }
@@ -13492,6 +13525,7 @@ EOM
                 {
                     my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
                     $self->flush_vertical_aligner();
+                    my $file_writer_object = $self->[_file_writer_object_];
                     $file_writer_object->require_blank_code_lines($nblanks);
                 }
             }
