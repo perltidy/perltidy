@@ -7500,6 +7500,29 @@ print$msg,
 --continuation-indentation=1
 --maximum-line-length=12
 
+==> b1221.in <==
+# S1
+ ok(
+             defined(
+                $pdf->{'ROOT'}->{'Resources'}->{'Font'}->{$fk}
+             ));
+
+# S2
+ ok(defined($pdf->{'ROOT'}->{'Resources'}->{'Font'}->{$fk}));
+
+==> b1221.par <==
+--noadd-whitespace
+--continuation-indentation=10
+--delete-old-whitespace
+--extended-continuation-indentation
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=59
+--stack-closing-paren
+--variable-maximum-line-length
+--vertical-tightness=1
+--weld-nested-containers
+
 ==> b1224.in <==
 # S1
   return ( $self->_testStrand ( $other, $so )

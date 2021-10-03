@@ -4965,6 +4965,7 @@ sub get_output_line_number {
                 }
 
                 if ( $gap >= 0 && defined($seqno_beg) ) {
+                    $maximum_line_length   = $cached_line_maximum_length;
                     $leading_string        = $cached_line_text . ' ' x $gap;
                     $leading_string_length = $cached_line_text_length + $gap;
                     $leading_space_count   = $cached_line_leading_space_count;
