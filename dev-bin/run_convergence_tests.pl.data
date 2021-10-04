@@ -7480,6 +7480,35 @@ $bc[
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1215.in <==
+# S1
+  my $dists
+      =sqrt (
+      (
+        $vecs**2
+      )->sumover
+      )
+      +0.0001;
+
+# S2
+  my $dists
+      =sqrt (
+    ( $vecs**2
+  )->sumover )
+      +0.0001;
+
+==> b1215.par <==
+--break-at-old-method-breakpoints
+--continuation-indentation=4
+--indent-columns=2
+--line-up-parentheses
+--maximum-line-length=12
+--nowant-right-space='+ ='
+--paren-vertical-tightness=1
+--space-keyword-paren
+--variable-maximum-line-length
+--want-break-before='= +'
+
 ==> b1218.in <==
 # S1
 is(

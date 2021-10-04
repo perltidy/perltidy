@@ -7345,13 +7345,16 @@ sub keep_old_line_breaks {
 
                 # Patch to avoid blinkers: but do not do this unless the
                 # container holds a list, or the opening and closing parens are
-                # separated by more than one line.
+                # separated by more than one* line.
                 # Fixes case b977.
+                # *To fix b1215: use min line count = 2 if -vt=n to avoid
+                # oscillations with function of opening vertical tightness.
+                my $lc_min = $opening_vertical_tightness{$token} ? 2 : 1;
                 next
                   if (
                     !$ris_list_by_seqno->{$seqno}
                     && (  !$ris_broken_container->{$seqno}
-                        || $ris_broken_container->{$seqno} <= 1 )
+                        || $ris_broken_container->{$seqno} <= $lc_min )
                   );
                 $rwant_container_open->{$seqno} = 1;
             }
