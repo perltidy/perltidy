@@ -29,8 +29,16 @@ my $rprofiles     = [];
 if ( -e './perltidy.pl' ) { $perltidy = './perltidy.pl' }
 
 # always require a separate version of perltidy
-# TODO: go get a copy if there is none
-else { die "Please move a copy of perltidy.pl here first\n" }
+# go get a copy if there is none:
+# On my system I have a utility 'get_perltidy.pl' which gets the latest
+# perltidy.pl with DEVEL_MODE => 1 everywhere
+else {
+    print STDERR "Attempting to get perltidy.pl in DEVEL_MODE...\n";
+    my $fail = system("get_perltidy.pl");
+    if ($fail) {
+        die "..Failed. Please move a copy of perltidy.pl here first\n";
+    }
+}
 
 # TODO: see if DEVEL_MODE is set, turn it on if not
 
@@ -198,19 +206,13 @@ sub filter_files {
     # only work on regular files with non-zero length
     @{$rlist} = grep { -f $_ && !-z $_ } @{$rlist};
 
+    # and text files
+    @{$rlist} = grep { -T $_  } @{$rlist};
+
     # Ignore .tdy and related files
-    @{$rlist} = grep { $_ !~ /\.tdy$/ } @{$rlist};
+    @{$rlist} = grep { $_ !~ /\.DEBUG$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.ERR$/ } @{$rlist};
     @{$rlist} = grep { $_ !~ /\.LOG$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.DEBUG$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.gz$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.tgz$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.zip$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.tar$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.Z$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.png$/ } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.jpg$/i } @{$rlist};
-    @{$rlist} = grep { $_ !~ /\.jpeg$/i } @{$rlist};
     @{$rlist} = grep { $_ !~ /\bDIAGNOSTICS$/ } @{$rlist};
 
     # exclude pro{$rlist}

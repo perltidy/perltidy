@@ -407,7 +407,12 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
             # 1 = always chain unless error
             # 2 = random chaining
 
-            if ( $chain_mode == 1 || int( rand(1) + 0.5 ) ) {
+            # reduce this value to increase the fraction of chaining;
+            # 0.5 gives equal probability of chain/nochain
+            my $frac_no_chain = 0.4;
+
+            #if ( $chain_mode == 1 || int( rand(1) + 0.5 ) ) {
+            if ( $chain_mode == 1 || rand(1) > $frac_no_chain ) {
                 { $ifile = $ofile }
             }
         }
@@ -702,11 +707,12 @@ sub write_GO {
 
     my ( $nf, $np ) = @_;
     my $runme = "GO.sh";
+
     #unlink $runme if ( -e $runme );
     if ( -e $runme ) {
         my $bak = "$runme.bak";
         if ( -e $bak ) { unlink $bak }
-        system ("mv $runme $bak");
+        system("mv $runme $bak");
     }
     my $fh;
     open( $fh, '>', $runme ) || die "cannot open $runme: $!\n";
