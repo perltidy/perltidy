@@ -564,7 +564,9 @@ sub finish {
             $self->warning("To save a full .LOG file rerun with -g\n");
         }
     }
-    $self->ask_user_for_bug_report( $infile_syntax_ok, $formatter );
+
+    # deactivated - prefer Fault reports in DEVEL_MODE during random testing
+    ##$self->ask_user_for_bug_report( $infile_syntax_ok, $formatter );
 
     if ($save_logfile) {
         my $log_file        = $self->{_log_file};

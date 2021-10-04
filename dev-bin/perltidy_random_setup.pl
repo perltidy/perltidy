@@ -21,7 +21,7 @@ our $rsetup;    # the setup hash
 my $config_file   = "config.txt";
 my $FILES_file    = "FILES.txt";
 my $PROFILES_file = "PROFILES.txt";
-my $perltidy      = "";
+my $perltidy      = "./perltidy.pl";
 my $rfiles        = [];
 my $rprofiles     = [];
 

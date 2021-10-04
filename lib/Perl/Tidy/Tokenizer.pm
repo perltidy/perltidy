@@ -3022,7 +3022,13 @@ EOM
                 elsif ( $expecting == TERM ) {
                     unless ($saw_error) {
 
-                        # shouldn't happen..
+                        # shouldn't happen..arriving here implies an error in
+                        # the logic in sub 'find_here_doc'
+                        if (DEVEL_MODE) {
+                            Fault(<<EOM);
+Program bug; didn't find here doc target
+EOM
+                        }
                         warning("Program bug; didn't find here doc target\n");
                         report_definite_bug();
                     }
@@ -3066,7 +3072,13 @@ EOM
                 elsif ( $expecting == TERM ) {
                     unless ($saw_error) {
 
-                        # shouldn't happen..
+                        # shouldn't happen..arriving here implies an error in
+                        # the logic in sub 'find_here_doc'
+                        if (DEVEL_MODE) {
+                            Fault(<<EOM);
+Program bug; didn't find here doc target
+EOM
+                        }
                         warning("Program bug; didn't find here doc target\n");
                         report_definite_bug();
                     }
@@ -4442,6 +4454,11 @@ EOM
                 if ( !defined($number) ) {
 
                     # shouldn't happen - we should always get a number
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+non-number beginning with digit--program bug
+EOM
+                    }
                     warning("non-number beginning with digit--program bug\n");
                     report_definite_bug();
                 }
@@ -6815,6 +6832,11 @@ sub scan_id_do {
     if ( $id_scan_state && ( !defined($type) || !$type ) ) {
 
         # shouldn't happen:
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
+Program bug in scan_id: undefined type but scan_state=$id_scan_state
+EOM
+        }
         warning(
 "Program bug in scan_id: undefined type but scan_state=$id_scan_state\n"
         );
@@ -7034,11 +7056,10 @@ sub scan_identifier_do {
         }
         else {
 
-            # shouldn't happen
-            my ( $a, $b, $c ) = caller;
-            warning("Program Bug: scan_identifier given bad token = $tok \n");
-            warning("   called from sub $a  line: $c\n");
-            report_definite_bug();
+            # shouldn't happen: bad call parameter
+            Fault(<<EOM);
+Program Bug: scan_identifier received bad starting token = '$tok' 
+EOM
         }
         $saw_type = !$saw_alpha;
     }
@@ -8316,8 +8337,11 @@ sub scan_number_do {
 
     # Look for bad starting characters; Shouldn't happen..
     if ( $first_char !~ /[\d\.\+\-Ee]/ ) {
-        warning("Program bug - scan_number given character $first_char\n");
-        report_definite_bug();
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
+Program bug - scan_number given bad first character = '$first_char'
+EOM
+        }
         return ( $i, $type, $number );
     }
 

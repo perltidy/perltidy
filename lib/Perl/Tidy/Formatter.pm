@@ -4654,12 +4654,16 @@ sub make_closing_side_comment_prefix {
         if ( bad_pattern($test_csc_prefix_pattern) ) {
 
             # shouldn't happen..must have screwed up escaping, above
-            report_definite_bug();
-            Warn(
-"Program Error: the -cscp prefix '$csc_prefix' caused the invalid regex '$csc_prefix_pattern'\n"
-            );
+            if (DEVEL_MODE) {
+                Fault(<<EOM);
+Program Error: the -cscp prefix '$csc_prefix' caused the invalid regex '$csc_prefix_pattern'
+EOM
+            }
 
             # just warn and keep going with defaults
+            Warn(
+"Error: the -cscp prefix '$csc_prefix' caused the invalid regex '$csc_prefix_pattern'\n"
+            );
             Warn("Please consider using a simpler -cscp prefix\n");
             Warn("Using default -cscp instead; please check output\n");
         }
@@ -13755,12 +13759,11 @@ Program bug in call to lookup_opening_indentation - index out of range
  called with index i_opening=$i_opening  > $i_last_line = max index of last line
 This batch has max index = $max_index_to_go,
 EOM
-        report_definite_bug();    # old coding, will not get here
         $nline = $#{$ri_last};
     }
 
     $rindentation_list->[0] =
-      $nline;                     # save line number to start looking next call
+      $nline;    # save line number to start looking next call
     my $ibeg       = $ri_start->[$nline];
     my $offset     = token_sequence_length( $ibeg, $i_opening ) - 1;
     my $is_leading = ( $ibeg == $i_opening );
@@ -13849,10 +13852,11 @@ sub pad_array_to_go {
             # not be possible to get here unless the code has a bracing error
             # which leaves a closing brace with zero nesting depth.
             unless ( get_saw_brace_error() ) {
-                warning(
-"Program bug in pad_array_to_go: hit nesting error which should have been caught\n"
-                );
-                report_definite_bug();
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+Program bug in pad_array_to_go: hit nesting error which should have been caught
+EOM
+                }
             }
         }
         else {
@@ -14018,10 +14022,11 @@ sub insert_additional_breaks {
 
             # shouldn't happen unless caller passes bad indexes
             if ( $line_number >= @{$ri_last} ) {
-                warning(
-"Non-fatal program bug: couldn't set break at $i_break_left\n"
-                );
-                report_definite_bug();
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+Non-fatal program bug: couldn't set break at $i_break_left
+EOM
+                }
                 return;
             }
             $i_f = $ri_first->[$line_number];
@@ -17041,10 +17046,11 @@ sub set_continuation_breaks {
             # formatting.
             if ( $type eq '#' ) {
                 if ( $i != $max_index_to_go ) {
-                    warning(
-"Non-fatal program bug: backup logic required to break after a comment\n"
-                    );
-                    report_definite_bug();
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+Non-fatal program bug: backup logic required to break after a comment
+EOM
+                    }
                     $nobreak_to_go[$i] = 0;
                     $self->set_forced_breakpoint($i);
                 } ## end if ( $i != $max_index_to_go)
@@ -19441,12 +19447,16 @@ sub get_available_spaces_to_go {
                             if (   $gnu_sequence_number != $seqno
                                 || $i > $max_gnu_item_index )
                             {
+                                if (DEVEL_MODE) {
+                                    Fault(<<EOM);
+Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
+EOM
+                                }
                                 warning(
 "Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index\n"
                                 );
                                 report_definite_bug();
                             }
-
                             else {
                                 if ( $arrow_count == 0 ) {
                                     $gnu_item_list[$i]
@@ -19486,6 +19496,12 @@ sub get_available_spaces_to_go {
                 # only negative levels can get here, and $level was forced
                 # to be positive above.
                 else {
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
+EOM
+                    }
+
                     warning(
 "program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp\n"
                     );
@@ -19793,6 +19809,12 @@ sub get_available_spaces_to_go {
                     my $ci_level     = $gnu_item_list[$i_debug]->get_ci_level();
                     my $old_level    = $gnu_item_list[$i]->get_level();
                     my $old_ci_level = $gnu_item_list[$i]->get_ci_level();
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_spaces deleted: lev=$level ci=$ci_level  deleted: level=$old_level ci=$ci_level
+EOM
+                    }
+
                     warning(
 "program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_spaces deleted: lev=$level ci=$ci_level  deleted: level=$old_level ci=$ci_level\n"
                     );
