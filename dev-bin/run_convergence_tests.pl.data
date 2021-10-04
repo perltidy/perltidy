@@ -7575,6 +7575,36 @@ print$msg,
 --weld-nested-containers
 --space-function-paren
 
+==> b1227.in <==
+# S1
+foreach$n(qw( msm ali ))
+{
+    foreach$e(qw(
+              uc16
+    ));
+}
+
+# S2
+foreach$n(qw( msm ali ))
+{   foreach$e(qw(
+              uc16
+              ) );
+}
+
+==> b1227.par <==
+
+
+
+--noadd-whitespace
+--block-brace-vertical-tightness=1
+--continuation-indentation=10
+--delete-old-whitespace
+--line-up-parentheses
+--opening-brace-on-new-line
+--paren-vertical-tightness-closing=1
+--stack-opening-paren
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

@@ -2,7 +2,7 @@
 
 =over 4
 
-=item B<Fix issue c082, -cscw preventing deletion of closing side comments>
+=item B<Fix issue c081, -cscw preventing deletion of closing side comments>
 
 Random testing revealed a problem in which an old closing side comment was not
 being deleted when it fell below the interval specified on -csci=n
@@ -41,7 +41,7 @@ the threshold and be removed (correctly):
 But if we also add the -cscw flag (warnings) then it was not being removed.  This
 update fixes this problem (issue c081).
 
-2 Oct 2021
+2 Oct 2021, 25ef8e8
 
 =item B<Partial fix for issue git #74 on -lp at anonymous subs>
 

@@ -8098,6 +8098,7 @@ sub setup_new_weld_measurements {
     # - Require blank before certain previous characters to fix b1111.
     # - Add ';' to fix case b1139
     # - Convert from '$ok_to_weld' to '$new_weld_ok' to fix b1162.
+    # - relaxed constraints for b1227
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
@@ -8110,16 +8111,20 @@ sub setup_new_weld_measurements {
         my $type_pp     = 'b';
         if ( $Kprev >= 0 ) { $type_pp = $rLL->[ $Kprev - 1 ]->[_TYPE_] }
         unless (
-               $type_prev  =~ /^[\,\.\;]/
-            || $type_prev  =~ /^[=\{\[\(\L]/ && $type_pp eq 'b'
+               $type_prev =~ /^[\,\.\;]/
+            || $type_prev =~ /^[=\{\[\(\L]/
+            && ( $type_pp eq 'b' || $type_pp eq '}' || $type_first eq 'k' )
             || $type_first =~ /^[=\,\.\;\{\[\(\L]/
             || $type_first eq '||'
-            || (   $type_first eq 'k' && $token_first eq 'if'
-                || $token_first eq 'or' )
+            || (
+                $type_first eq 'k'
+                && (   $token_first eq 'if'
+                    || $token_first eq 'or' )
+            )
           )
         {
             $msg =
-"Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev'\n";
+"Skipping weld: poor break with -lp and ci at type_first='$type_first' type_prev='$type_prev' type_pp=$type_pp\n";
             $new_weld_ok = 0;
         }
     }
