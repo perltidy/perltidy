@@ -7456,6 +7456,30 @@ $bc[
 --maximum-line-length=34
 --variable-maximum-line-length
 
+==> b1212.in <==
+# S1
+  my $line_count
+      = scalar
+      @{ [lines ()]
+      };
+
+# S2
+  my $line_count
+      = scalar @{ [
+    lines ()
+      ] };
+
+==> b1212.par <==
+--break-before-all-operators
+--continuation-indentation=4
+--ignore-old-breakpoints
+--indent-columns=2
+--maximum-line-length=17
+--space-function-paren
+--square-bracket-tightness=2
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b1218.in <==
 # S1
 is(

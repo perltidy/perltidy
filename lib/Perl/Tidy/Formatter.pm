@@ -8206,9 +8206,10 @@ sub weld_nested_containers {
     my $iline_outer_opening   = -1;
     my $weld_count_this_start = 0;
 
-    # $single_line_tol added to fix cases b1180 b1181
-    my $single_line_tol =
-      $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
+    # OLD: $single_line_tol added to fix cases b1180 b1181
+    #       = $rOpts_continuation_indentation > $rOpts_indent_columns ? 1 : 0;
+    # NEW: $single_line_tol=0;  fixes b1212 and b1180-1181 work now
+    my $single_line_tol = 0;
 
     my $multiline_tol = $single_line_tol + 1 +
       max( $rOpts_indent_columns, $rOpts_continuation_indentation );
