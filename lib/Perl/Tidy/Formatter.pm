@@ -16684,11 +16684,17 @@ sub set_continuation_breaks {
     }
 
     # These types are excluded at breakpoints to prevent blinking
-    my %is_uncontained_comma_break_excluded_type;
+    # Switched from excluded to included as part of fix for b1214
+    ##my %is_uncontained_comma_break_excluded_type;
+    my %is_uncontained_comma_break_included_type;
 
     BEGIN {
-        my @q = qw< L { ( [ ? : + - >;
-        @is_uncontained_comma_break_excluded_type{@q} = (1) x scalar(@q);
+        ##my @q = qw< L { ( [ ? : + - =~ >;
+        ##@is_uncontained_comma_break_excluded_type{@q} = (1) x scalar(@q);
+
+        my @q = qw< k R } ) ] Y Z U w i q Q .
+          = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=>;
+        @is_uncontained_comma_break_included_type{@q} = (1) x scalar(@q);
     }
 
     sub do_uncontained_comma_breaks {
@@ -16780,24 +16786,33 @@ sub set_continuation_breaks {
             # Changed rule from multiple old commas to just one here:
             if ( $ibreak >= 0 && $obp_count == 1 && $old_comma_break_count > 0 )
             {
-                my $ibreakm = $ibreak;
-                $ibreakm-- if ( $types_to_go[$ibreakm] eq 'b' );
-                if ( $ibreakm >= 0 ) {
+                my $ibreak_m = $ibreak;
+                $ibreak_m-- if ( $types_to_go[$ibreak_m] eq 'b' );
+                if ( $ibreak_m >= 0 ) {
 
                     # In order to avoid blinkers we have to be fairly
                     # restrictive:
 
-                    # Rule 1: Do not to break before an opening token
-                    # Rule 2: avoid breaking at ternary operators
-                    # (see b931, which is similar to the above print example)
-                    # Rule 3: Do not break at chain operators to fix case b1119
-                    #  - The previous test was '$typem !~ /^[\(\{\[L\?\:]$/'
+                    # OLD Rules:
+                    #  Rule 1: Do not to break before an opening token
+                    #  Rule 2: avoid breaking at ternary operators
+                    #  (see b931, which is similar to the above print example)
+                    #  Rule 3: Do not break at chain operators to fix case b1119
+                    #   - The previous test was '$typem !~ /^[\(\{\[L\?\:]$/'
+
+                    # NEW Rule, replaced above rules after case b1214:
+                    #  only break at one of the included types
 
                     # Be sure to test any changes to these rules against runs
                     # with -l=0 such as the 'bbvt' test (perltidyrc_colin)
                     # series.
-                    my $typem = $types_to_go[$ibreakm];
-                    if ( !$is_uncontained_comma_break_excluded_type{$typem} ) {
+                    my $type_m = $types_to_go[$ibreak_m];
+
+                    # Switched from excluded to included for b1214. If necessary
+                    # the token could also be checked if type_m eq 'k'
+                    ##if ( !$is_uncontained_comma_break_excluded_type{$type_m} ) {
+                    ##my $token_m = $tokens_to_go[$ibreak_m];
+                    if ( $is_uncontained_comma_break_included_type{$type_m} ) {
                         $self->set_forced_breakpoint($ibreak);
                     }
                 }

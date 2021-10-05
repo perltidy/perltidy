@@ -7480,6 +7480,29 @@ $bc[
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1214.in <==
+# S1
+            eval {
+                'foo'=~
+/$pattern/,
+                         1;
+            }
+
+# S2
+            eval {
+                'foo'
+                         =~
+/$pattern/,
+                         1;
+            }
+
+==> b1214.par <==
+--continuation-indentation=9
+--maximum-line-length=11
+--nowant-left-space='=~'
+--variable-maximum-line-length
+--want-break-before='=~'
+
 ==> b1215.in <==
 # S1
   my $dists
