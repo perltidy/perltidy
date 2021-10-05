@@ -40,7 +40,10 @@ else {
     }
 }
 
-# TODO: see if DEVEL_MODE is set, turn it on if not
+# see if DEVEL_MODE is set, turn it on if not
+if ($perltidy eq "./perltidy.pl") {
+   check_DEVEL_MODE($perltidy);
+}
 
 query(<<EOM);
 
@@ -1312,5 +1315,40 @@ EOM
             }
         }
         return \@random_parameters;
+    }
+}
+
+sub check_DEVEL_MODE {
+    my ($fname) = @_;
+    my $fh;
+    my $changed_count;
+    my @output;
+    open( $fh, '<', $fname )
+      or die "can't open '$fname' : $!\n";
+    while (<$fh>) {
+        my $line = $_;
+        if ( $line =~
+            /^(\s*use\s+constant\s+(?:DEVEL)_[A-Z]+\s*)=>\s*(-?\d*);(.*)$/ )
+        {
+            if ( $2 != '1' ) {
+                $changed_count++;
+                $line = <<EOM;
+$1=> 1;$3
+EOM
+            }
+        }
+        push @output, $line;
+    }
+    $fh->close();
+
+    if ( $changed_count && @output ) {
+        my $fh_out;
+        open( $fh_out, '>', $fname )
+          or die "can't open '$fname' : $!\n";
+        foreach (@output) {
+            $fh_out->print($_);
+        }
+        $fh_out->close();
+        print STDERR "Changed to DEVEL_MODE => 1\n";
     }
 }
