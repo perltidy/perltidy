@@ -7058,7 +7058,7 @@ sub scan_identifier_do {
 
             # shouldn't happen: bad call parameter
             Fault(<<EOM);
-Program Bug: scan_identifier received bad starting token = '$tok' 
+Program Bug: scan_identifier received bad starting token = '$tok'
 EOM
         }
         $saw_type = !$saw_alpha;

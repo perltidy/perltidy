@@ -7530,6 +7530,32 @@ is( Koha::Acquisition::Funds->search->count,
 --maximum-line-length=50
 --variable-maximum-line-length
 
+==> b1219.in <==
+# S1
+subtest 'check_password hook tests'=>sub{
+             ok( $patron->set_password({password=>'explosion',skip_validation=>1} ),
+                 'Patron password updated via skip validation' );
+};
+
+#S2
+subtest 'check_password hook tests'=>sub{
+             ok(
+                 $patron->set_password({password=>'explosion',skip_validation=>1} ),
+                 'Patron password updated via skip validation' );
+};
+
+==> b1219.par <==
+--noadd-whitespace
+--continuation-indentation=4
+--delete-old-whitespace
+--extended-continuation-indentation
+--indent-columns=9
+--line-up-parentheses
+--maximum-line-length=84
+--vertical-tightness-closing=2
+--vertical-tightness=1
+--weld-nested-containers
+
 ==> b1220.in <==
 # S1
 print$msg,
