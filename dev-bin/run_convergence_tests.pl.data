@@ -7480,6 +7480,25 @@ $bc[
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1213.in <==
+# S1
+     @NNVN_w1 = ( Perl,
+                  Practical,
+                  Precocious
+     );
+# S2
+     @NNVN_w1 =
+             ( Perl, Practical,
+               Precocious
+             );
+
+==> b1213.par <==
+--continuation-indentation=8
+--ignore-old-breakpoints
+--indent-columns=5
+--line-up-parentheses
+--maximum-line-length=35
+
 ==> b1214.in <==
 # S1
             eval {

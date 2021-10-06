@@ -3873,46 +3873,28 @@ EOM
                 $bond_str = NO_BREAK;
             }
 
-            # in older version of perl, use strict can cause problems with
-            # breaks before bare words following opening parens.  For example,
-            # this will fail under older versions if a break is made between
-            # '(' and 'MAIL': use strict; open( MAIL, "a long filename or
-            # command"); close MAIL;
+            # OLD COMMENT: In older version of perl, use strict can cause
+            # problems with breaks before bare words following opening parens.
+            # For example, this will fail under older versions if a break is
+            # made between '(' and 'MAIL':
+
+            # use strict; open( MAIL, "a long filename or command"); close MAIL;
+
+            # NEW COMMENT: Third fix for b1213:
+            # This option does not seem to be needed any longer, and it can
+            # cause instabilities.  It can be turned off, but to minimize
+            # changes to existing formatting it is retained only in the case
+            # where the previous token was 'open' and there was no line break.
+            # Even this could eventually be removed if it causes instability.
             if ( $type eq '{' ) {
 
-                if ( $token eq '(' && $next_nonblank_type eq 'w' ) {
-
-                    # but it's fine to break if the word is followed by a '=>'
-                    # or if it is obviously a sub call
-                    my $i_next_next_nonblank = $i_next_nonblank + 1;
-                    my $next_next_type = $types_to_go[$i_next_next_nonblank];
-                    if (   $next_next_type eq 'b'
-                        && $i_next_nonblank < $max_index_to_go )
-                    {
-                        $i_next_next_nonblank++;
-                        $next_next_type = $types_to_go[$i_next_next_nonblank];
-                    }
-
-                    # We'll check for an old breakpoint and keep a leading
-                    # bareword if it was that way in the input file.
-                    # Presumably it was ok that way.  For example, the
-                    # following would remain unchanged:
-                    #
-                    # @months = (
-                    #   January,   February, March,    April,
-                    #   May,       June,     July,     August,
-                    #   September, October,  November, December,
-                    # );
-                    #
-                    # This should be sufficient:
-                    if (
-                        !$old_breakpoint_to_go[$i]
-                        && (   $next_next_type eq ','
-                            || $next_next_type eq '}' )
-                      )
-                    {
-                        $bond_str = NO_BREAK;
-                    }
+                if (   $token eq '('
+                    && $next_nonblank_type eq 'w'
+                    && $last_nonblank_type eq 'k'
+                    && $last_nonblank_token eq 'open'
+                    && !$old_breakpoint_to_go[$i] )
+                {
+                    $bond_str = NO_BREAK;
                 }
             }
 
