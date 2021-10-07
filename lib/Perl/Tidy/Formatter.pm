@@ -13095,12 +13095,12 @@ EOM
             }
         }
 
-        my $comma_arrow_count_contained =
+        my ( $comma_arrow_count_contained, $is_unbalanced_batch ) =
           $self->match_opening_and_closing_tokens();
 
         # tell the -lp option we are outputting a batch so it can close
         # any unfinished items in its stack
-        finish_lp_batch();
+        finish_lp_batch() if ($rOpts_line_up_parentheses);
 
         # If this line ends in a code block brace, set breaks at any
         # previous closing code block braces to breakup a chain of code
@@ -13296,7 +13296,7 @@ EOM
 
                 # must always call scan_list() with unbalanced batches because
                 # it is maintaining some stacks
-                || is_unbalanced_batch()
+                || $is_unbalanced_batch
 
                 # call scan_list if we might want to break at commas
                 || (
@@ -13503,20 +13503,12 @@ EOM
 {    ## begin closure match_opening_and_closing_tokens
 
     # closure to keep track of unbalanced containers.
-    # arrays shared by the routines in this block:
     my %saved_opening_indentation;
     my @unmatched_opening_indexes_in_this_batch;
-    my @unmatched_closing_indexes_in_this_batch;
-    my %comma_arrow_count;
 
     sub initialize_saved_opening_indentation {
         %saved_opening_indentation = ();
         return;
-    }
-
-    sub is_unbalanced_batch {
-        return @unmatched_opening_indexes_in_this_batch +
-          @unmatched_closing_indexes_in_this_batch;
     }
 
     sub match_opening_and_closing_tokens {
@@ -13529,8 +13521,8 @@ EOM
         my $rwant_container_open = $self->[_rwant_container_open_];
 
         @unmatched_opening_indexes_in_this_batch = ();
-        @unmatched_closing_indexes_in_this_batch = ();
-        %comma_arrow_count                       = ();
+        my @unmatched_closing_indexes_in_this_batch;
+        my %comma_arrow_count           = ();
         my $comma_arrow_count_contained = 0;
 
         foreach my $i ( 0 .. $max_index_to_go ) {
@@ -13585,7 +13577,10 @@ EOM
             }
         }
 
-        return $comma_arrow_count_contained;
+        my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
+          @unmatched_closing_indexes_in_this_batch;
+
+        return ( $comma_arrow_count_contained, $is_unbalanced_batch );
     }
 
     sub save_opening_indentation {
