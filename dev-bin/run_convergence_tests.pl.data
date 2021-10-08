@@ -7456,6 +7456,33 @@ $bc[
 --maximum-line-length=34
 --variable-maximum-line-length
 
+==> b1211.in <==
+# S1
+ my$d=
+   \substr(
+           (state$tb=
+            $thunderbirds[$x]),
+           $x,1
+   );
+
+# S2
+ my$d=
+   \substr(
+           (
+            state$tb=$thunderbirds[
+              $x]
+           ),
+           $x,1
+   );
+
+
+==> b1211.par <==
+--noadd-whitespace
+--ignore-old-breakpoints
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=37
+
 ==> b1212.in <==
 # S1
   my $line_count

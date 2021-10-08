@@ -17910,7 +17910,8 @@ BEGIN {
     my @q = qw(k w i Z ->);
     @is_kwiZ{@q} = (1) x scalar(@q);
 
-    @q = qw<( [ { L R } ] ) b>;
+    # added = for b1211
+    @q = qw<( [ { L R } ] ) = b>;
     push @q, ',';
     @is_key_type{@q} = (1) x scalar(@q);
 }
@@ -17959,7 +17960,12 @@ sub find_token_starting_list {
         # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
         for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
             ##last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
-            last if ( $is_key_type{ $types_to_go[$j] } );
+            if ( $is_key_type{ $types_to_go[$j] } ) {
+
+                # fix for b1211
+                if ( $types_to_go[$j] eq '=' ) { $i_opening_minus = $j }
+                last;
+            }
             $i_opening_minus = $j;
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
@@ -19403,15 +19409,12 @@ sub get_available_spaces_to_go {
                             if (   $gnu_sequence_number != $seqno
                                 || $i > $max_gnu_item_index )
                             {
+                                # non-fatal, keep going except in DEVEL_MODE
                                 if (DEVEL_MODE) {
                                     Fault(<<EOM);
 Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
 EOM
                                 }
-                                warning(
-"Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index\n"
-                                );
-                                report_definite_bug();
                             }
                             else {
                                 if ( $arrow_count == 0 ) {
@@ -19452,16 +19455,13 @@ EOM
                 # only negative levels can get here, and $level was forced
                 # to be positive above.
                 else {
+
+                    # non-fatal, keep going except in DEVEL_MODE
                     if (DEVEL_MODE) {
                         Fault(<<EOM);
 program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
 EOM
                     }
-
-                    warning(
-"program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp\n"
-                    );
-                    report_definite_bug();
                     last;
                 }
             }
@@ -19761,20 +19761,16 @@ EOM
 
                 # shouldn't happen except for code bug:
                 else {
-                    my $level        = $gnu_item_list[$i_debug]->get_level();
-                    my $ci_level     = $gnu_item_list[$i_debug]->get_ci_level();
-                    my $old_level    = $gnu_item_list[$i]->get_level();
-                    my $old_ci_level = $gnu_item_list[$i]->get_ci_level();
+                    # non-fatal, keep going except in DEVEL_MODE
                     if (DEVEL_MODE) {
+                        my $level    = $gnu_item_list[$i_debug]->get_level();
+                        my $ci_level = $gnu_item_list[$i_debug]->get_ci_level();
+                        my $old_level    = $gnu_item_list[$i]->get_level();
+                        my $old_ci_level = $gnu_item_list[$i]->get_ci_level();
                         Fault(<<EOM);
 program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_spaces deleted: lev=$level ci=$ci_level  deleted: level=$old_level ci=$ci_level
 EOM
                     }
-
-                    warning(
-"program bug with -lp: want to delete $deleted_spaces from item $i, but old=$old_spaces deleted: lev=$level ci=$ci_level  deleted: level=$old_level ci=$ci_level\n"
-                    );
-                    report_definite_bug();
                 }
             }
             $gnu_position_predictor -= $deleted_spaces;

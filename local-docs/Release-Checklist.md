@@ -3,13 +3,12 @@
 - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy) 
 - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
 - compare formatting with the new version with previous version on all files in test area
-- run a blinker test (activate option -I and look for 'Blinker' in DIAGNOSTICS)
-- run a timing test: compare run time with previous version
 - profile with Devel::NYTProf with different parameters and compare with previous version: For example
   perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
   nytprofhtml --open
-- run random testing on final version for a significant time before releasing (several days)
-- rerun all resolved blinker test cases to verify that all still run correctly
+- compare run time with previous version
+- release candidate should show no irregularities in at least 24 cpu hours of random testing
+- run 'devbin/run__convergence_tests.pl' to insure convergence
 - run 'author tests' on a much larger body of code than is covered by the .t
   files.
     - compare results of the current version with previous version
