@@ -470,9 +470,9 @@ BEGIN {
         _starting_in_quote_        => $i++,
         _ending_in_quote_          => $i++,
         _is_static_block_comment_  => $i++,
-        _rlines_K_                 => $i++,
+        _ri_first_                 => $i++,
+        _ri_last_                  => $i++,
         _do_not_pad_               => $i++,
-        _ibeg0_                    => $i++,
         _peak_batch_size_          => $i++,
         _max_index_to_go_          => $i++,
         _batch_count_              => $i++,
@@ -685,7 +685,6 @@ sub new {
     initialize_gnu_vars();
     initialize_csc_vars();
     initialize_scan_list();
-    initialize_saved_opening_indentation();
     initialize_undo_ci();
     initialize_process_line_of_CODE();
     initialize_grind_batch_of_CODE();
@@ -12937,10 +12936,15 @@ EOM
     my $peak_batch_size;
     my $batch_count;
 
+    # variables to keep track of unbalanced containers.
+    my %saved_opening_indentation;
+    my @unmatched_opening_indexes_in_this_batch;
+
     sub initialize_grind_batch_of_CODE {
-        @nonblank_lines_at_depth = ();
-        $peak_batch_size         = 0;
-        $batch_count             = 0;
+        @nonblank_lines_at_depth   = ();
+        $peak_batch_size           = 0;
+        $batch_count               = 0;
+        %saved_opening_indentation = ();
         return;
     }
 
@@ -13017,9 +13021,8 @@ EOM
           )
         {
             my $ibeg = 0;
-            my $Kbeg = my $Kend = $K_to_go[$ibeg];
-            $this_batch->[_rlines_K_]                 = [ [ $Kbeg, $Kend ] ];
-            $this_batch->[_ibeg0_]                    = $ibeg;
+            $this_batch->[_ri_first_]                 = [$ibeg];
+            $this_batch->[_ri_last_]                  = [$ibeg];
             $this_batch->[_peak_batch_size_]          = $peak_batch_size;
             $this_batch->[_do_not_pad_]               = 0;
             $this_batch->[_batch_count_]              = $batch_count;
@@ -13042,16 +13045,25 @@ EOM
 
         my $rLL                      = $self->[_rLL_];
         my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
+        my $rwant_container_open     = $self->[_rwant_container_open_];
 
         my $starting_in_quote       = $this_batch->[_starting_in_quote_];
         my $ending_in_quote         = $this_batch->[_ending_in_quote_];
         my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
 
-        # Initialize some batch variables
+        #-------------------------------------------------------
+        # Loop over the batch to initialize some batch variables
+        #-------------------------------------------------------
         my $comma_count_in_batch = 0;
         my $ilast_nonblank       = -1;
         my @colon_list;
         my @ix_seqno_controlling_ci;
+        my %comma_arrow_count           = ();
+        my $comma_arrow_count_contained = 0;
+        my @unmatched_closing_indexes_in_this_batch;
+
+        @unmatched_opening_indexes_in_this_batch = ();
+
         for ( my $i = 0 ; $i <= $max_index_to_go ; $i++ ) {
             $bond_strength_to_go[$i] = 0;
             $iprev_to_go[$i]         = $ilast_nonblank;
@@ -13073,11 +13085,10 @@ EOM
                 # This is a good spot to efficiently collect information needed
                 # for breaking lines...
 
-                if ( $type eq ',' ) { $comma_count_in_batch++; }
-
                 # gather info needed by sub set_continuation_breaks
-                my $seqno = $type_sequence_to_go[$i];
-                if ($seqno) {
+                if ( $type_sequence_to_go[$i] ) {
+                    my $seqno = $type_sequence_to_go[$i];
+                    my $token = $tokens_to_go[$i];
 
                     # remember indexes of any tokens controlling xci
                     # in this batch. This list is needed by sub undo_ci.
@@ -13085,23 +13096,74 @@ EOM
                         push @ix_seqno_controlling_ci, $i;
                     }
 
-                    if ( $type eq '?' ) {
-                        push @colon_list, $type;
+                    if ( $is_opening_sequence_token{$token} ) {
+                        if ( $rwant_container_open->{$seqno} ) {
+                            $self->set_forced_breakpoint($i);
+                        }
+                        push @unmatched_opening_indexes_in_this_batch, $i;
+                        if ( $type eq '?' ) {
+                            push @colon_list, $type;
+                        }
                     }
-                    elsif ( $type eq ':' ) {
-                        push @colon_list, $type;
+                    elsif ( $is_closing_sequence_token{$token} ) {
+
+                        if ( $i > 0 && $rwant_container_open->{$seqno} ) {
+                            $self->set_forced_breakpoint( $i - 1 );
+                        }
+
+                        my $i_mate =
+                          pop @unmatched_opening_indexes_in_this_batch;
+                        if ( defined($i_mate) && $i_mate >= 0 ) {
+                            if ( $type_sequence_to_go[$i_mate] ==
+                                $type_sequence_to_go[$i] )
+                            {
+                                $mate_index_to_go[$i]      = $i_mate;
+                                $mate_index_to_go[$i_mate] = $i;
+                                my $seqno = $type_sequence_to_go[$i];
+                                if ( $comma_arrow_count{$seqno} ) {
+                                    $comma_arrow_count_contained +=
+                                      $comma_arrow_count{$seqno};
+                                }
+                            }
+                            else {
+                                push @unmatched_opening_indexes_in_this_batch,
+                                  $i_mate;
+                                push @unmatched_closing_indexes_in_this_batch,
+                                  $i;
+                            }
+                        }
+                        else {
+                            push @unmatched_closing_indexes_in_this_batch, $i;
+                        }
+                        if ( $type eq ':' ) {
+                            push @colon_list, $type;
+                        }
+                    } ## end elsif ( $is_closing_sequence_token...)
+
+                } ## end if ($seqno)
+
+                elsif ( $type eq ',' ) { $comma_count_in_batch++; }
+                elsif ( $tokens_to_go[$i] eq '=>' ) {
+                    if (@unmatched_opening_indexes_in_this_batch) {
+                        my $j = $unmatched_opening_indexes_in_this_batch[-1];
+                        my $seqno = $type_sequence_to_go[$j];
+                        $comma_arrow_count{$seqno}++;
                     }
                 }
-            }
-        }
+            } ## end if ( $type ne 'b' )
+        } ## end for ( my $i = 0 ; $i <=...)
 
-        my ( $comma_arrow_count_contained, $is_unbalanced_batch ) =
-          $self->match_opening_and_closing_tokens();
+        my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
+          @unmatched_closing_indexes_in_this_batch;
 
-        # tell the -lp option we are outputting a batch so it can close
-        # any unfinished items in its stack
+        #--------------------------------------------------------
+        # For -lp option, close any unfinished items in its stack
+        #--------------------------------------------------------
         finish_lp_batch() if ($rOpts_line_up_parentheses);
 
+        #------------------------
+        # Set special breakpoints
+        #------------------------
         # If this line ends in a code block brace, set breaks at any
         # previous closing code block braces to breakup a chain of code
         # blocks on one line.  This is very rare but can happen for
@@ -13144,6 +13206,10 @@ EOM
             }
         }
 
+        #-----------------------------------------------
+        # insertion of any blank lines before this batch
+        #-----------------------------------------------
+
         my $imin = 0;
         my $imax = $max_index_to_go;
 
@@ -13151,342 +13217,313 @@ EOM
         if ( $types_to_go[$imin] eq 'b' ) { $imin++ }
         if ( $types_to_go[$imax] eq 'b' ) { $imax-- }
 
-        # anything left to write?
-        if ( $imin <= $imax ) {
-
-            my $last_line_leading_type  = $self->[_last_line_leading_type_];
-            my $last_line_leading_level = $self->[_last_line_leading_level_];
-            my $last_last_line_leading_level =
-              $self->[_last_last_line_leading_level_];
-
-            # add a blank line before certain key types but not after a comment
-            if ( $last_line_leading_type ne '#' ) {
-                my $want_blank    = 0;
-                my $leading_token = $tokens_to_go[$imin];
-                my $leading_type  = $types_to_go[$imin];
-
-                # blank lines before subs except declarations and one-liners
-                if ( $leading_type eq 'i' ) {
-                    if (
-
-                        # quick check
-                        (
-                            substr( $leading_token, 0, 3 ) eq 'sub'
-                            || $rOpts_sub_alias_list
-                        )
-
-                        # slow check
-                        && $leading_token =~ /$SUB_PATTERN/
-                      )
-                    {
-                        $want_blank = $rOpts->{'blank-lines-before-subs'}
-                          if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
-                    }
-
-                    # break before all package declarations
-                    elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
-                        $want_blank = $rOpts->{'blank-lines-before-packages'};
-                    }
-                }
-
-                # break before certain key blocks except one-liners
-                if ( $leading_type eq 'k' ) {
-                    if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' )
-                    {
-                        $want_blank = $rOpts->{'blank-lines-before-subs'}
-                          if ( terminal_type_i( $imin, $imax ) ne '}' );
-                    }
-
-                    # Break before certain block types if we haven't had a
-                    # break at this level for a while.  This is the
-                    # difficult decision..
-                    elsif ($last_line_leading_type ne 'b'
-                        && $leading_token =~
-                        /^(unless|if|while|until|for|foreach)$/ )
-                    {
-                        my $lc =
-                          $nonblank_lines_at_depth[$last_line_leading_level];
-                        if ( !defined($lc) ) { $lc = 0 }
-
-                       # patch for RT #128216: no blank line inserted at a level
-                       # change
-                        if ( $levels_to_go[$imin] != $last_line_leading_level )
-                        {
-                            $lc = 0;
-                        }
-
-                        $want_blank =
-                             $rOpts->{'blanks-before-blocks'}
-                          && $lc >= $rOpts->{'long-block-line-count'}
-                          && $self->consecutive_nonblank_lines() >=
-                          $rOpts->{'long-block-line-count'}
-                          && terminal_type_i( $imin, $imax ) ne '}';
-                    }
-                }
-
-                # Check for blank lines wanted before a closing brace
-                if ( $leading_token eq '}' ) {
-                    if (   $rOpts->{'blank-lines-before-closing-block'}
-                        && $block_type_to_go[$imin]
-                        && $block_type_to_go[$imin] =~
-                        /$blank_lines_before_closing_block_pattern/ )
-                    {
-                        my $nblanks =
-                          $rOpts->{'blank-lines-before-closing-block'};
-                        if ( $nblanks > $want_blank ) {
-                            $want_blank = $nblanks;
-                        }
-                    }
-                }
-
-                if ($want_blank) {
-
-                   # future: send blank line down normal path to VerticalAligner
-                    $self->flush_vertical_aligner();
-                    my $file_writer_object = $self->[_file_writer_object_];
-                    $file_writer_object->require_blank_code_lines($want_blank);
-                }
-            }
-
-            # update blank line variables and count number of consecutive
-            # non-blank, non-comment lines at this level
-            $last_last_line_leading_level = $last_line_leading_level;
-            $last_line_leading_level      = $levels_to_go[$imin];
-            if ( $last_line_leading_level < 0 ) { $last_line_leading_level = 0 }
-            $last_line_leading_type = $types_to_go[$imin];
-            if (   $last_line_leading_level == $last_last_line_leading_level
-                && $last_line_leading_type ne 'b'
-                && $last_line_leading_type ne '#'
-                && defined( $nonblank_lines_at_depth[$last_line_leading_level] )
-              )
-            {
-                $nonblank_lines_at_depth[$last_line_leading_level]++;
-            }
-            else {
-                $nonblank_lines_at_depth[$last_line_leading_level] = 1;
-            }
-
-            $self->[_last_line_leading_type_]  = $last_line_leading_type;
-            $self->[_last_line_leading_level_] = $last_line_leading_level;
-            $self->[_last_last_line_leading_level_] =
-              $last_last_line_leading_level;
-
-            # Flag to remember if we called sub 'pad_array_to_go'.
-            # Some routines (scan_list(), set_continuation_breaks() ) need some
-            # extra tokens added at the end of the batch.  Most batches do not
-            # use these routines, so we will avoid calling 'pad_array_to_go'
-            # unless it is needed.
-            my $called_pad_array_to_go;
-
-            # set all forced breakpoints for good list formatting
-            my $is_long_line = $max_index_to_go > 0
-              && $self->excess_line_length( $imin, $max_index_to_go ) > 0;
-
-            my $old_line_count_in_batch = 1;
-            if ( $max_index_to_go > 0 ) {
-                my $Kbeg = $K_to_go[0];
-                my $Kend = $K_to_go[$max_index_to_go];
-                $old_line_count_in_batch +=
-                  $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
-            }
-
-            if (
-                   $is_long_line
-                || $old_line_count_in_batch > 1
-
-                # must always call scan_list() with unbalanced batches because
-                # it is maintaining some stacks
-                || $is_unbalanced_batch
-
-                # call scan_list if we might want to break at commas
-                || (
-                    $comma_count_in_batch
-                    && (   $rOpts_maximum_fields_per_table > 0
-                        && $rOpts_maximum_fields_per_table <=
-                        $comma_count_in_batch
-                        || $rOpts_comma_arrow_breakpoints == 0 )
-                )
-
-                # call scan_list if user may want to break open some one-line
-                # hash references
-                || (   $comma_arrow_count_contained
-                    && $rOpts_comma_arrow_breakpoints != 3 )
-              )
-            {
-                # add a couple of extra terminal blank tokens
-                $self->pad_array_to_go();
-                $called_pad_array_to_go = 1;
-
-                my $sgb = $self->scan_list($is_long_line);
-                $saw_good_break ||= $sgb;
-            }
-
-            # let $ri_first and $ri_last be references to lists of
-            # first and last tokens of line fragments to output..
-            my ( $ri_first, $ri_last );
-
-            # write a single line if..
-            if (
-
-                # we aren't allowed to add any newlines
-                !$rOpts_add_newlines
-
-                # or,
-                || (
-
-                    # this line is 'short'
-                    !$is_long_line
-
-                    # and we didn't see a good breakpoint
-                    && !$saw_good_break
-
-                    # and we don't already have an interior breakpoint
-                    && !get_forced_breakpoint_count()
-                )
-              )
-            {
-                @{$ri_first} = ($imin);
-                @{$ri_last}  = ($imax);
-            }
-
-            # otherwise use multiple lines
-            else {
-
-                # add a couple of extra terminal blank tokens if we haven't
-                # already done so
-                $self->pad_array_to_go() unless ($called_pad_array_to_go);
-
-                ( $ri_first, $ri_last ) =
-                  $self->set_continuation_breaks( $saw_good_break,
-                    \@colon_list );
-
-                $self->break_all_chain_tokens( $ri_first, $ri_last );
-
-                $self->break_equals( $ri_first, $ri_last );
-
-                # now we do a correction step to clean this up a bit
-                # (The only time we would not do this is for debugging)
-                ( $ri_first, $ri_last ) =
-                  $self->recombine_breakpoints( $ri_first, $ri_last )
-                  if ( $rOpts_recombine && @{$ri_first} > 1 );
-
-                $self->insert_final_ternary_breaks( $ri_first, $ri_last )
-                  if (@colon_list);
-            }
-
-            $self->insert_breaks_before_list_opening_containers( $ri_first,
-                $ri_last )
-              if ( %break_before_container_types && $max_index_to_go > 0 );
-
-            # do corrector step if -lp option is used
-            my $do_not_pad = 0;
-            if ($rOpts_line_up_parentheses) {
-                $do_not_pad =
-                  $self->correct_lp_indentation( $ri_first, $ri_last );
-            }
-
-            # unmask any invisible line-ending semicolon.  They were placed by
-            # sub respace_tokens but we only now know if we actually need them.
-            if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-                my $i       = $imax;
-                my $tok     = ';';
-                my $tok_len = 1;
-                if ( $want_left_space{';'} != WS_NO ) {
-                    $tok     = ' ;';
-                    $tok_len = 2;
-                }
-                $tokens_to_go[$i]        = $tok;
-                $token_lengths_to_go[$i] = $tok_len;
-                my $KK = $K_to_go[$i];
-                $rLL->[$KK]->[_TOKEN_]        = $tok;
-                $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
-                my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-                $self->note_added_semicolon($line_number);
-
-                foreach ( $imax .. $max_index_to_go ) {
-                    $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
-                }
-            }
-
-            if ( $rOpts_one_line_block_semicolons == 0 ) {
-                $self->delete_one_line_semicolons( $ri_first, $ri_last );
-            }
-
-            # The line breaks for this batch of code have been finalized. Now we
-            # can to package the results for further processing.  We will switch
-            # from the local '_to_go' buffer arrays (i-index) back to the global
-            # token arrays (K-index) at this point.
-            my $rlines_K;
-            my $index_error;
-            for ( my $n = 0 ; $n < @{$ri_first} ; $n++ ) {
-                my $ibeg = $ri_first->[$n];
-                my $Kbeg = $K_to_go[$ibeg];
-                my $iend = $ri_last->[$n];
-                my $Kend = $K_to_go[$iend];
-                if ( $iend - $ibeg != $Kend - $Kbeg ) {
-                    $index_error = $n unless defined($index_error);
-                }
-                push @{$rlines_K}, [ $Kbeg, $Kend ];
-            }
-
-            # Check correctness of the mapping between the i and K token
-            # indexes.  (The K index is the global index, the i index is the
-            # batch index).  It is important to do this check because an error
-            # would be disastrous.  The reason that we should never see an
-            # index error here is that sub 'store_token_to_go' has a check to
-            # make sure that the indexes in batches remain continuous.  Since
-            # sub 'store_token_to_go' controls feeding tokens into batches,
-            # no index discrepancies should occur unless a recent programming
-            # change has introduced a bug.
-            if ( defined($index_error) ) {
-
-                # Temporary debug code - should never get here
-                for ( my $n = 0 ; $n < @{$ri_first} ; $n++ ) {
-                    my $ibeg  = $ri_first->[$n];
-                    my $Kbeg  = $K_to_go[$ibeg];
-                    my $iend  = $ri_last->[$n];
-                    my $Kend  = $K_to_go[$iend];
-                    my $idiff = $iend - $ibeg;
-                    my $Kdiff = $Kend - $Kbeg;
-                    print STDERR <<EOM;
-line $n, irange $ibeg-$iend = $idiff, Krange $Kbeg-$Kend = $Kdiff;
+        if ( $imin > $imax ) {
+            if (DEVEL_MODE) {
+                my $K0  = $K_to_go[0];
+                my $lno = "";
+                if ( defined($K0) ) { $lno = $rLL->[$K0]->[_LINE_INDEX_] + 1 }
+                Fault(<<EOM);
+Strange: received batch containing only blanks near input line $lno: after trimming imin=$imin, imax=$imax
 EOM
-                }
-                Fault(
-                    "Index error at line $index_error; i and K ranges differ");
             }
+            return;
+        }
 
-            $this_batch->[_rlines_K_]        = $rlines_K;
-            $this_batch->[_ibeg0_]           = $ri_first->[0];
-            $this_batch->[_peak_batch_size_] = $peak_batch_size;
-            $this_batch->[_do_not_pad_]      = $do_not_pad;
-            $this_batch->[_batch_count_]     = $batch_count;
-            $this_batch->[_rix_seqno_controlling_ci_] =
-              \@ix_seqno_controlling_ci;
+        my $last_line_leading_type  = $self->[_last_line_leading_type_];
+        my $last_line_leading_level = $self->[_last_line_leading_level_];
+        my $last_last_line_leading_level =
+          $self->[_last_last_line_leading_level_];
 
-            $self->send_lines_to_vertical_aligner();
+        # add a blank line before certain key types but not after a comment
+        if ( $last_line_leading_type ne '#' ) {
+            my $want_blank    = 0;
+            my $leading_token = $tokens_to_go[$imin];
+            my $leading_type  = $types_to_go[$imin];
 
-            # Insert any requested blank lines after an opening brace.  We have
-            # to skip back before any side comment to find the terminal token
-            my $iterm;
-            for ( $iterm = $imax ; $iterm >= $imin ; $iterm-- ) {
-                next if $types_to_go[$iterm] eq '#';
-                next if $types_to_go[$iterm] eq 'b';
-                last;
-            }
+            # blank lines before subs except declarations and one-liners
+            if ( $leading_type eq 'i' ) {
+                if (
 
-            # write requested number of blank lines after an opening block brace
-            if ( $iterm >= $imin && $types_to_go[$iterm] eq '{' ) {
-                if (   $rOpts->{'blank-lines-after-opening-block'}
-                    && $block_type_to_go[$iterm]
-                    && $block_type_to_go[$iterm] =~
-                    /$blank_lines_after_opening_block_pattern/ )
+                    # quick check
+                    (
+                        substr( $leading_token, 0, 3 ) eq 'sub'
+                        || $rOpts_sub_alias_list
+                    )
+
+                    # slow check
+                    && $leading_token =~ /$SUB_PATTERN/
+                  )
                 {
-                    my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
-                    $self->flush_vertical_aligner();
-                    my $file_writer_object = $self->[_file_writer_object_];
-                    $file_writer_object->require_blank_code_lines($nblanks);
+                    $want_blank = $rOpts->{'blank-lines-before-subs'}
+                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
                 }
+
+                # break before all package declarations
+                elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
+                    $want_blank = $rOpts->{'blank-lines-before-packages'};
+                }
+            }
+
+            # break before certain key blocks except one-liners
+            if ( $leading_type eq 'k' ) {
+                if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' ) {
+                    $want_blank = $rOpts->{'blank-lines-before-subs'}
+                      if ( terminal_type_i( $imin, $imax ) ne '}' );
+                }
+
+                # Break before certain block types if we haven't had a
+                # break at this level for a while.  This is the
+                # difficult decision..
+                elsif ($last_line_leading_type ne 'b'
+                    && $leading_token =~
+                    /^(unless|if|while|until|for|foreach)$/ )
+                {
+                    my $lc = $nonblank_lines_at_depth[$last_line_leading_level];
+                    if ( !defined($lc) ) { $lc = 0 }
+
+                    # patch for RT #128216: no blank line inserted at a level
+                    # change
+                    if ( $levels_to_go[$imin] != $last_line_leading_level ) {
+                        $lc = 0;
+                    }
+
+                    $want_blank =
+                         $rOpts->{'blanks-before-blocks'}
+                      && $lc >= $rOpts->{'long-block-line-count'}
+                      && $self->consecutive_nonblank_lines() >=
+                      $rOpts->{'long-block-line-count'}
+                      && terminal_type_i( $imin, $imax ) ne '}';
+                }
+            }
+
+            # Check for blank lines wanted before a closing brace
+            if ( $leading_token eq '}' ) {
+                if (   $rOpts->{'blank-lines-before-closing-block'}
+                    && $block_type_to_go[$imin]
+                    && $block_type_to_go[$imin] =~
+                    /$blank_lines_before_closing_block_pattern/ )
+                {
+                    my $nblanks = $rOpts->{'blank-lines-before-closing-block'};
+                    if ( $nblanks > $want_blank ) {
+                        $want_blank = $nblanks;
+                    }
+                }
+            }
+
+            if ($want_blank) {
+
+                # future: send blank line down normal path to VerticalAligner
+                $self->flush_vertical_aligner();
+                my $file_writer_object = $self->[_file_writer_object_];
+                $file_writer_object->require_blank_code_lines($want_blank);
+            }
+        }
+
+        # update blank line variables and count number of consecutive
+        # non-blank, non-comment lines at this level
+        $last_last_line_leading_level = $last_line_leading_level;
+        $last_line_leading_level      = $levels_to_go[$imin];
+        if ( $last_line_leading_level < 0 ) { $last_line_leading_level = 0 }
+        $last_line_leading_type = $types_to_go[$imin];
+        if (   $last_line_leading_level == $last_last_line_leading_level
+            && $last_line_leading_type ne 'b'
+            && $last_line_leading_type ne '#'
+            && defined( $nonblank_lines_at_depth[$last_line_leading_level] ) )
+        {
+            $nonblank_lines_at_depth[$last_line_leading_level]++;
+        }
+        else {
+            $nonblank_lines_at_depth[$last_line_leading_level] = 1;
+        }
+
+        $self->[_last_line_leading_type_]       = $last_line_leading_type;
+        $self->[_last_line_leading_level_]      = $last_line_leading_level;
+        $self->[_last_last_line_leading_level_] = $last_last_line_leading_level;
+
+        #--------------------------
+        # scan lists and long lines
+        #--------------------------
+
+        # Flag to remember if we called sub 'pad_array_to_go'.
+        # Some routines (scan_list(), set_continuation_breaks() ) need some
+        # extra tokens added at the end of the batch.  Most batches do not
+        # use these routines, so we will avoid calling 'pad_array_to_go'
+        # unless it is needed.
+        my $called_pad_array_to_go;
+
+        # set all forced breakpoints for good list formatting
+        my $is_long_line = $max_index_to_go > 0
+          && $self->excess_line_length( $imin, $max_index_to_go ) > 0;
+
+        my $old_line_count_in_batch = 1;
+        if ( $max_index_to_go > 0 ) {
+            my $Kbeg = $K_to_go[0];
+            my $Kend = $K_to_go[$max_index_to_go];
+            $old_line_count_in_batch +=
+              $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
+        }
+
+        if (
+               $is_long_line
+            || $old_line_count_in_batch > 1
+
+            # must always call scan_list() with unbalanced batches because
+            # it is maintaining some stacks
+            || $is_unbalanced_batch
+
+            # call scan_list if we might want to break at commas
+            || (
+                $comma_count_in_batch
+                && (   $rOpts_maximum_fields_per_table > 0
+                    && $rOpts_maximum_fields_per_table <= $comma_count_in_batch
+                    || $rOpts_comma_arrow_breakpoints == 0 )
+            )
+
+            # call scan_list if user may want to break open some one-line
+            # hash references
+            || (   $comma_arrow_count_contained
+                && $rOpts_comma_arrow_breakpoints != 3 )
+          )
+        {
+            # add a couple of extra terminal blank tokens
+            $self->pad_array_to_go();
+            $called_pad_array_to_go = 1;
+
+            my $sgb = $self->scan_list($is_long_line);
+            $saw_good_break ||= $sgb;
+        }
+
+        # let $ri_first and $ri_last be references to lists of
+        # first and last tokens of line fragments to output..
+        my ( $ri_first, $ri_last );
+
+        #-------------------------
+        # write a single line if..
+        #-------------------------
+        if (
+
+            # we aren't allowed to add any newlines
+            !$rOpts_add_newlines
+
+            # or,
+            || (
+
+                # this line is 'short'
+                !$is_long_line
+
+                # and we didn't see a good breakpoint
+                && !$saw_good_break
+
+                # and we don't already have an interior breakpoint
+                && !get_forced_breakpoint_count()
+            )
+          )
+        {
+            @{$ri_first} = ($imin);
+            @{$ri_last}  = ($imax);
+        }
+
+        #-----------------------------
+        # otherwise use multiple lines
+        #-----------------------------
+        else {
+
+            # add a couple of extra terminal blank tokens if we haven't
+            # already done so
+            $self->pad_array_to_go() unless ($called_pad_array_to_go);
+
+            ( $ri_first, $ri_last ) =
+              $self->set_continuation_breaks( $saw_good_break, \@colon_list );
+
+            $self->break_all_chain_tokens( $ri_first, $ri_last );
+
+            $self->break_equals( $ri_first, $ri_last );
+
+            # now we do a correction step to clean this up a bit
+            # (The only time we would not do this is for debugging)
+            ( $ri_first, $ri_last ) =
+              $self->recombine_breakpoints( $ri_first, $ri_last )
+              if ( $rOpts_recombine && @{$ri_first} > 1 );
+
+            $self->insert_final_ternary_breaks( $ri_first, $ri_last )
+              if (@colon_list);
+        }
+
+        $self->insert_breaks_before_list_opening_containers( $ri_first,
+            $ri_last )
+          if ( %break_before_container_types && $max_index_to_go > 0 );
+
+        #-------------------
+        # -lp corrector step
+        #-------------------
+        my $do_not_pad = 0;
+        if ($rOpts_line_up_parentheses) {
+            $do_not_pad = $self->correct_lp_indentation( $ri_first, $ri_last );
+        }
+
+        #--------------------------
+        # unmask phantom semicolons
+        #--------------------------
+        if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
+            my $i       = $imax;
+            my $tok     = ';';
+            my $tok_len = 1;
+            if ( $want_left_space{';'} != WS_NO ) {
+                $tok     = ' ;';
+                $tok_len = 2;
+            }
+            $tokens_to_go[$i]        = $tok;
+            $token_lengths_to_go[$i] = $tok_len;
+            my $KK = $K_to_go[$i];
+            $rLL->[$KK]->[_TOKEN_]        = $tok;
+            $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
+            my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
+            $self->note_added_semicolon($line_number);
+
+            foreach ( $imax .. $max_index_to_go ) {
+                $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
+            }
+        }
+
+        if ( $rOpts_one_line_block_semicolons == 0 ) {
+            $self->delete_one_line_semicolons( $ri_first, $ri_last );
+        }
+
+        #--------------------
+        # ship this batch out
+        #--------------------
+        $this_batch->[_ri_first_]                 = $ri_first;
+        $this_batch->[_ri_last_]                  = $ri_last;
+        $this_batch->[_peak_batch_size_]          = $peak_batch_size;
+        $this_batch->[_do_not_pad_]               = $do_not_pad;
+        $this_batch->[_batch_count_]              = $batch_count;
+        $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
+
+        $self->send_lines_to_vertical_aligner();
+
+        #----------------------------------------------
+        # insertion of any blank lines after this batch
+        #----------------------------------------------
+        # Insert any requested blank lines after an opening brace.  We have
+        # to skip back before any side comment to find the terminal token
+        my $iterm;
+        for ( $iterm = $imax ; $iterm >= $imin ; $iterm-- ) {
+            next if $types_to_go[$iterm] eq '#';
+            next if $types_to_go[$iterm] eq 'b';
+            last;
+        }
+
+        # write requested number of blank lines after an opening block brace
+        if ( $iterm >= $imin && $types_to_go[$iterm] eq '{' ) {
+            if (   $rOpts->{'blank-lines-after-opening-block'}
+                && $block_type_to_go[$iterm]
+                && $block_type_to_go[$iterm] =~
+                /$blank_lines_after_opening_block_pattern/ )
+            {
+                my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
+                $self->flush_vertical_aligner();
+                my $file_writer_object = $self->[_file_writer_object_];
+                $file_writer_object->require_blank_code_lines($nblanks);
             }
         }
 
@@ -13497,90 +13534,6 @@ EOM
         }
 
         return;
-    }
-} ## end closure grind_batch_of_CODE
-
-{    ## begin closure match_opening_and_closing_tokens
-
-    # closure to keep track of unbalanced containers.
-    my %saved_opening_indentation;
-    my @unmatched_opening_indexes_in_this_batch;
-
-    sub initialize_saved_opening_indentation {
-        %saved_opening_indentation = ();
-        return;
-    }
-
-    sub match_opening_and_closing_tokens {
-
-        # Match up indexes of opening and closing braces, etc, in this batch.
-        # This has to be done after all tokens are stored because unstoring
-        # of tokens would otherwise cause trouble.
-
-        my ($self) = @_;
-        my $rwant_container_open = $self->[_rwant_container_open_];
-
-        @unmatched_opening_indexes_in_this_batch = ();
-        my @unmatched_closing_indexes_in_this_batch;
-        my %comma_arrow_count           = ();
-        my $comma_arrow_count_contained = 0;
-
-        foreach my $i ( 0 .. $max_index_to_go ) {
-
-            my $seqno = $type_sequence_to_go[$i];
-            if ($seqno) {
-                my $token = $tokens_to_go[$i];
-                if ( $is_opening_sequence_token{$token} ) {
-
-                    if ( $rwant_container_open->{$seqno} ) {
-                        $self->set_forced_breakpoint($i);
-                    }
-
-                    push @unmatched_opening_indexes_in_this_batch, $i;
-                }
-                elsif ( $is_closing_sequence_token{$token} ) {
-
-                    if ( $i > 0 && $rwant_container_open->{$seqno} ) {
-                        $self->set_forced_breakpoint( $i - 1 );
-                    }
-
-                    my $i_mate = pop @unmatched_opening_indexes_in_this_batch;
-                    if ( defined($i_mate) && $i_mate >= 0 ) {
-                        if ( $type_sequence_to_go[$i_mate] ==
-                            $type_sequence_to_go[$i] )
-                        {
-                            $mate_index_to_go[$i]      = $i_mate;
-                            $mate_index_to_go[$i_mate] = $i;
-                            my $seqno = $type_sequence_to_go[$i];
-                            if ( $comma_arrow_count{$seqno} ) {
-                                $comma_arrow_count_contained +=
-                                  $comma_arrow_count{$seqno};
-                            }
-                        }
-                        else {
-                            push @unmatched_opening_indexes_in_this_batch,
-                              $i_mate;
-                            push @unmatched_closing_indexes_in_this_batch, $i;
-                        }
-                    }
-                    else {
-                        push @unmatched_closing_indexes_in_this_batch, $i;
-                    }
-                }
-            }
-            elsif ( $tokens_to_go[$i] eq '=>' ) {
-                if (@unmatched_opening_indexes_in_this_batch) {
-                    my $j     = $unmatched_opening_indexes_in_this_batch[-1];
-                    my $seqno = $type_sequence_to_go[$j];
-                    $comma_arrow_count{$seqno}++;
-                }
-            }
-        }
-
-        my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
-          @unmatched_closing_indexes_in_this_batch;
-
-        return ( $comma_arrow_count_contained, $is_unbalanced_batch );
     }
 
     sub save_opening_indentation {
@@ -13647,7 +13600,7 @@ EOM
 
         return ( $indent, $offset, $is_leading, $exists );
     }
-} ## end closure match_opening_and_closing_tokens
+} ## end closure grind_batch_of_CODE
 
 sub lookup_opening_indentation {
 
@@ -17960,6 +17913,7 @@ sub find_token_starting_list {
         # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
         for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
             ##last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
+            ##last if ( $is_key_type{ $types_to_go[$j] } );
             if ( $is_key_type{ $types_to_go[$j] } ) {
 
                 # fix for b1211
@@ -19869,8 +19823,9 @@ sub send_lines_to_vertical_aligner {
     #   logical constructions
 
     my $this_batch = $self->[_this_batch_];
-    my $rlines_K   = $this_batch->[_rlines_K_];
-    if ( !@{$rlines_K} ) {
+    my $ri_first   = $this_batch->[_ri_first_];
+    my $ri_last    = $this_batch->[_ri_last_];
+    if ( !@{$ri_first} ) {
 
         # This can't happen because sub grind_batch_of_CODE always receives
         # tokens which it turns into one or more lines. If we get here it means
@@ -19878,14 +19833,13 @@ sub send_lines_to_vertical_aligner {
         Fault("Unexpected call with no lines");
         return;
     }
-    my $n_last_line = @{$rlines_K} - 1;
+    my $n_last_line = @{$ri_first} - 1;
 
     my $do_not_pad               = $this_batch->[_do_not_pad_];
     my $peak_batch_size          = $this_batch->[_peak_batch_size_];
     my $starting_in_quote        = $this_batch->[_starting_in_quote_];
     my $ending_in_quote          = $this_batch->[_ending_in_quote_];
     my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
-    my $ibeg0                    = $this_batch->[_ibeg0_];
     my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
     my $batch_CODE_type          = $this_batch->[_batch_CODE_type_];
 
@@ -19894,24 +19848,14 @@ sub send_lines_to_vertical_aligner {
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
 
-    my ( $Kbeg_next, $Kend_next ) = @{ $rlines_K->[0] };
-    my $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
-    my $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
-    my $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
+    my $ibeg_next = $ri_first->[0];
+    my $iend_next = $ri_last->[0];
+
+    my $type_beg_next  = $types_to_go[$ibeg_next];
+    my $type_end_next  = $types_to_go[$iend_next];
+    my $token_beg_next = $tokens_to_go[$ibeg_next];
 
     my $is_block_comment = $max_index_to_go == 0 && $types_to_go[0] eq '#';
-
-    # Construct indexes to the global_to_go arrays so that called routines can
-    # access those arrays.
-    my $Kbeg0 = $Kbeg_next;
-    my ( $ri_first, $ri_last );
-    foreach my $rline ( @{$rlines_K} ) {
-        my ( $Kbeg, $Kend ) = @{$rline};
-        my $ibeg = $ibeg0 + $Kbeg - $Kbeg0;
-        my $iend = $ibeg0 + $Kend - $Kbeg0;
-        push @{$ri_first}, $ibeg;
-        push @{$ri_last},  $iend;
-    }
 
     my $rindentation_list = [0];    # ref to indentations for each line
     my ( $cscw_block_comment, $closing_side_comment );
@@ -19946,8 +19890,9 @@ sub send_lines_to_vertical_aligner {
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
     # ----------------------------------------------
-    my ( $Kbeg, $type_beg, $token_beg );
-    my ( $Kend, $type_end );
+    my ( $type_beg, $token_beg );
+    my ($type_end);
+    my ( $ibeg, $iend );
     for my $n ( 0 .. $n_last_line ) {
 
         # ----------------------------------------------------------------
@@ -19956,20 +19901,14 @@ sub send_lines_to_vertical_aligner {
         # ----------------------------------------------------------------
         my $rvao_args = {};
 
-        my $ibeg = $ri_first->[$n];
-        my $iend = $ri_last->[$n];
-
-        # we may need to look at variables on three consecutive lines ...
-
-        # Some vars on line [n-1], if any:
-        my $Kbeg_last     = $Kbeg;
-        my $Kend_last     = $Kend;
-        my $type_beg_last = $type_beg;    # Only used for ternary flag
+        my $type_beg_last = $type_beg;
         my $type_end_last = $type_end;
 
-        # Some vars on line [n]:
-        $Kbeg      = $Kbeg_next;
-        $Kend      = $Kend_next;
+        my $ibeg = $ibeg_next;
+        my $iend = $iend_next;
+        my $Kbeg = $K_to_go[$ibeg];
+        my $Kend = $K_to_go[$iend];
+
         $type_beg  = $type_beg_next;
         $type_end  = $type_end_next;
         $token_beg = $token_beg_next;
@@ -19993,11 +19932,14 @@ sub send_lines_to_vertical_aligner {
 
         # Get some vars on line [n+1], if any:
         if ( $n < $n_last_line ) {
-            ( $Kbeg_next, $Kend_next ) =
-              @{ $rlines_K->[ $n + 1 ] };
-            $type_beg_next  = $rLL->[$Kbeg_next]->[_TYPE_];
-            $token_beg_next = $rLL->[$Kbeg_next]->[_TOKEN_];
-            $type_end_next  = $rLL->[$Kend_next]->[_TYPE_];
+            $ibeg_next = $ri_first->[ $n + 1 ];
+            $iend_next = $ri_last->[ $n + 1 ];
+
+            $type_beg_next  = $types_to_go[$ibeg_next];
+            $type_end_next  = $types_to_go[$iend_next];
+            $token_beg_next = $tokens_to_go[$ibeg_next];
+
+            my $Kbeg_next = $K_to_go[$ibeg_next];
             $ljump = $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
         }
         elsif ( !$is_block_comment && $Kend < $Klimit ) {
@@ -20165,12 +20107,14 @@ EOM
         # );
         #
         if ( $type_beg eq ':' || $n > 0 && $type_end_last eq ':' ) {
+
             my $is_terminal_ternary = 0;
             my $last_leading_type   = $n > 0 ? $type_beg_last : ':';
             if (   $terminal_type ne ';'
                 && $n_last_line > $n
                 && $level_end == $lev )
             {
+                my $Kbeg_next = $K_to_go[$ibeg_next];
                 $level_end     = $rLL->[$Kbeg_next]->[_LEVEL_];
                 $terminal_type = $rLL->[$Kbeg_next]->[_TYPE_];
             }
