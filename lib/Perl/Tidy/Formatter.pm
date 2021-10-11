@@ -141,6 +141,7 @@ my (
     $rOpts,
     $rOpts_add_newlines,
     $rOpts_add_whitespace,
+    $rOpts_blank_lines_after_opening_block,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
     $rOpts_break_at_old_attribute_breakpoints,
@@ -1053,13 +1054,6 @@ sub check_token_array {
         return;
     }
 
-    sub report_definite_bug {
-        if ($logger_object) {
-            $logger_object->report_definite_bug();
-        }
-        return;
-    }
-
     sub get_saw_brace_error {
         if ($logger_object) {
             return $logger_object->get_saw_brace_error();
@@ -1627,8 +1621,10 @@ EOM
     # Make global vars for frequently used options for efficiency
     #------------------------------------------------------------
 
-    $rOpts_add_newlines          = $rOpts->{'add-newlines'};
-    $rOpts_add_whitespace        = $rOpts->{'add-whitespace'};
+    $rOpts_add_newlines   = $rOpts->{'add-newlines'};
+    $rOpts_add_whitespace = $rOpts->{'add-whitespace'};
+    $rOpts_blank_lines_after_opening_block =
+      $rOpts->{'blank-lines-after-opening-block'};
     $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
@@ -13530,26 +13526,24 @@ EOM
 
         $self->send_lines_to_vertical_aligner();
 
-        #----------------------------------------------
-        # insertion of any blank lines after this batch
-        #----------------------------------------------
-        # Insert any requested blank lines after an opening brace.  We have
-        # to skip back before any side comment to find the terminal token
-        my $iterm;
-        for ( $iterm = $imax ; $iterm >= $imin ; $iterm-- ) {
-            next if $types_to_go[$iterm] eq '#';
-            next if $types_to_go[$iterm] eq 'b';
-            last;
-        }
+        #-------------------------------------------------------------------
+        # Write requested number of blank lines after an opening block brace
+        #-------------------------------------------------------------------
+        if ($rOpts_blank_lines_after_opening_block) {
+            my $iterm = $imax;
+            if ( $types_to_go[$iterm] eq '#' && $iterm > $imin ) {
+                $iterm -= 1;
+                if ( $types_to_go[$iterm] eq 'b' && $iterm > $imin ) {
+                    $iterm -= 1;
+                }
+            }
 
-        # write requested number of blank lines after an opening block brace
-        if ( $iterm >= $imin && $types_to_go[$iterm] eq '{' ) {
-            if (   $rOpts->{'blank-lines-after-opening-block'}
+            if (   $types_to_go[$iterm] eq '{'
                 && $block_type_to_go[$iterm]
                 && $block_type_to_go[$iterm] =~
                 /$blank_lines_after_opening_block_pattern/ )
             {
-                my $nblanks = $rOpts->{'blank-lines-after-opening-block'};
+                my $nblanks = $rOpts_blank_lines_after_opening_block;
                 $self->flush_vertical_aligner();
                 my $file_writer_object = $self->[_file_writer_object_];
                 $file_writer_object->require_blank_code_lines($nblanks);
@@ -19852,8 +19846,8 @@ Undefined line ranges ri_first and/r ri_last
 EOM
     }
 
-    my $nmax = @{$ri_first} - 1;
-    my $nmax_check  = @{$ri_last} - 1;
+    my $nmax       = @{$ri_first} - 1;
+    my $nmax_check = @{$ri_last} - 1;
     if ( $nmax < 0 || $nmax_check < 0 || $nmax != $nmax_check ) {
         Fault(<<EOM);
 Line range index error: nmax=$nmax but nmax_check=$nmax_check
