@@ -12978,12 +12978,53 @@ EOM
 
     use constant DEBUG_GRIND => 0;
 
+    sub check_grind_input {
+
+        # Check for valid input to sub grind_batch_of_CODE.  An error here
+        # would most likely be due to an error in 'sub store_token_to_go'.
+        my ($self) = @_;
+
+        # Be sure there are tokens in the batch
+        if ( $max_index_to_go < 0 ) {
+            Fault(<<EOM);
+sub grind incorrectly called with max_index_to_go=$max_index_to_go
+EOM
+        }
+        my $Klimit = $self->[_Klimit_];
+
+        # The local batch tokens must be a continous part of the global token
+        # array.
+        my $KK;
+        foreach my $ii ( 0 .. $max_index_to_go ) {
+
+            my $Km = $KK;
+
+            $KK = $K_to_go[$ii];
+            if ( !defined($KK) || $KK < 0 || $KK > $Klimit ) {
+                $KK = '(undef)' unless defined($KK);
+                Fault(<<EOM);
+at batch index at i=$ii, the value of K_to_go[$ii] = '$KK' is out of the valid range (0 - $Klimit)
+EOM
+            }
+
+            if ( $ii > 0 && $KK != $Km + 1 ) {
+                my $im = $ii - 1;
+                Fault(<<EOM);
+Non-sequential K indexes: i=$im has Km=$Km; but i=$ii has K=$KK;  expecting K = Km+1
+EOM
+            }
+        }
+        return;
+    }
+
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
 
         my $this_batch = $self->[_this_batch_];
         $batch_count++;
+
+        $self->check_grind_input() if (DEVEL_MODE);
 
         # This routine is only called from sub flush_batch_of_code, so that
         # routine is a better spot for debugging.
@@ -13000,14 +13041,7 @@ $output_str
 EOM
         };
 
-        # Safety check - shouldn't happen. The calling routine must not call
-        # here unless there are tokens in the batch to be processed.  This
-        # fault can only be triggered by a recent programming change.
-        if ( $max_index_to_go < 0 ) {
-            Fault(
-"sub grind incorrectly called with max_index_to_go=$max_index_to_go"
-            );
-        }
+        return if ( $max_index_to_go < 0 );
 
         #----------------------------
         # Shortcut for block comments
@@ -19810,6 +19844,49 @@ sub reduce_lp_indentation {
 # CODE SECTION 13: Preparing batches for vertical alignment
 ###########################################################
 
+sub check_send_lines_input {
+
+    # Check for valid input to sub send_lines_to_vertical_aligner.  An
+    # error here would most likely be due to an error in the calling
+    # routine 'sub grind_batch_of_CODE'.
+    my ( $self, $ri_first, $ri_last ) = @_;
+
+    if ( !defined($ri_first) || !defined($ri_last) ) {
+        Fault(<<EOM);
+Undefined line ranges ri_first and/r ri_last
+EOM
+    }
+
+    my $nmax = @{$ri_first} - 1;
+    my $nmax_check  = @{$ri_last} - 1;
+    if ( $nmax < 0 || $nmax_check < 0 || $nmax != $nmax_check ) {
+        Fault(<<EOM);
+Line range index error: nmax=$nmax but nmax_check=$nmax_check
+These should be equal and >=0
+EOM
+    }
+    my ( $ibeg, $iend );
+    foreach my $n ( 0 .. $nmax ) {
+        my $ibeg_m = $ibeg;
+        my $iend_m = $iend;
+        $ibeg = $ri_first->[$n];
+        $iend = $ri_last->[$n];
+        if ( $ibeg < 0 || $iend < $ibeg || $iend > $max_index_to_go ) {
+            Fault(<<EOM);
+Bad line range at line index $n of $nmax: ibeg=$ibeg, iend=$iend
+These should have iend >= ibeg and be in the range (0..$max_index_to_go)
+EOM
+        }
+        next if ( $n == 0 );
+        if ( $ibeg <= $iend_m ) {
+            Fault(<<EOM);
+Line ranges overlap: iend=$iend_m at line $n-1 but ibeg=$ibeg for line $n
+EOM
+        }
+    }
+    return;
+}
+
 sub send_lines_to_vertical_aligner {
 
     my ($self) = @_;
@@ -19825,14 +19902,18 @@ sub send_lines_to_vertical_aligner {
     my $this_batch = $self->[_this_batch_];
     my $ri_first   = $this_batch->[_ri_first_];
     my $ri_last    = $this_batch->[_ri_last_];
-    if ( !@{$ri_first} ) {
 
-        # This can't happen because sub grind_batch_of_CODE always receives
-        # tokens which it turns into one or more lines. If we get here it means
-        # that a programming error has caused those lines to be lost.
+    $self->check_send_lines_input( $ri_first, $ri_last ) if (DEVEL_MODE);
+
+    if ( !defined($ri_first) || !@{$ri_first} ) {
+
+        # This should never happen because sub grind_batch_of_CODE always
+        # receives tokens which it turns into one or more lines. If we get here
+        # it means that a programming error in sub grind_batch_of_CODE has
+        # caused those lines to be lost.  Turn on DEVEL_MODE to find the error.
         Fault("Unexpected call with no lines");
-        return;
     }
+
     my $n_last_line = @{$ri_first} - 1;
 
     my $do_not_pad               = $this_batch->[_do_not_pad_];
