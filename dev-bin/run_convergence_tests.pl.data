@@ -7729,6 +7729,23 @@ foreach$n(qw( msm ali ))
 --stack-opening-paren
 --weld-nested-containers
 
+==> b1228.in <==
+# S1
+$obj
+     = {
+    foo => sub { "bar" ; }
+     } ;
+
+# S2
+$obj= {foo => sub { "bar" ; }
+} ;
+
+==> b1228.par <==
+--noadd-whitespace
+--continuation-indentation=5
+--maximum-line-length=29
+--want-break-before='='
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

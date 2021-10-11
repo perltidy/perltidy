@@ -11911,11 +11911,6 @@ EOM
                             {
                                 $rbrace_follower = undef;
                                 $keep_going      = 1;
-
-                                # Keep the break if container is fully broken
-                                my $Ko = $K_opening_container->{$p_seqno};
-                                $self->set_forced_breakpoint($max_index_to_go)
-                                  if ( $Ko < $K_first );
                             }
                         }
                     }
