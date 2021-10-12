@@ -3029,7 +3029,9 @@ EOM
 Program bug; didn't find here doc target
 EOM
                         }
-                        warning("Program bug; didn't find here doc target\n");
+                        warning(
+"Possible program error: didn't find here doc target\n"
+                        );
                         report_definite_bug();
                     }
                 }
@@ -3079,7 +3081,9 @@ EOM
 Program bug; didn't find here doc target
 EOM
                         }
-                        warning("Program bug; didn't find here doc target\n");
+                        warning(
+"Possible program error: didn't find here doc target\n"
+                        );
                         report_definite_bug();
                     }
                 }
@@ -4459,7 +4463,9 @@ EOM
 non-number beginning with digit--program bug
 EOM
                     }
-                    warning("non-number beginning with digit--program bug\n");
+                    warning(
+"Unexpected error condition: non-number beginning with digit\n"
+                    );
                     report_definite_bug();
                 }
             }
@@ -6838,7 +6844,7 @@ Program bug in scan_id: undefined type but scan_state=$id_scan_state
 EOM
         }
         warning(
-"Program bug in scan_id: undefined type but scan_state=$id_scan_state\n"
+"Possible program bug in sub scan_id: undefined type but scan_state=$id_scan_state\n"
         );
         report_definite_bug();
     }
@@ -8240,9 +8246,13 @@ sub find_angle_operator_termination {
             # It may be possible that a quote ends midway in a pretoken.
             # If this happens, it may be necessary to split the pretoken.
             if ($error) {
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+unexpected error condition returned by inverse_pretoken_map
+EOM
+                }
                 warning(
                     "Possible tokinization error..please check this line\n");
-                report_possible_bug();
             }
 
             # count blanks on inside of brackets

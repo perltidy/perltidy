@@ -1644,7 +1644,7 @@ EOM
             $source_object->close_input_file();
         }
 
-        # Save names of the input and output files for syntax check
+        # Save names of the input and output files
         my $ifname = $input_file;
         my $ofname = $output_file;
 
@@ -1783,21 +1783,6 @@ EOM
         }
 
         #---------------------------------------------------------------
-        # Do syntax check if requested and possible
-        # This is permanently deactivated but the code remains for reference
-        #---------------------------------------------------------------
-        my $infile_syntax_ok = 0;    # -1 no  0=don't know   1 yes
-        if (   0
-            && $logger_object
-            && $rOpts->{'check-syntax'}
-            && $ifname
-            && $ofname )
-        {
-            $infile_syntax_ok =
-              check_syntax( $ifname, $ofname, $logger_object, $rOpts );
-        }
-
-        #---------------------------------------------------------------
         # remove the original file for in-place modify as follows:
         #   $delete_backup=0 never
         #   $delete_backup=1 only if no errors
@@ -1828,7 +1813,7 @@ EOM
             }
         }
 
-        $logger_object->finish( $infile_syntax_ok, $formatter )
+        $logger_object->finish($formatter)
           if $logger_object;
     } ## end of main loop to process all files
 
@@ -2007,8 +1992,8 @@ sub get_stream_as_named_file {
     #  $fname = name of file if possible, or undef
     #  $if_tmpfile = true if temp file, undef if not temp file
     #
-    # This routine is needed for passing actual files to Perl for
-    # a syntax check.
+    # NOTE: This routine was previously needed for passing actual files to Perl
+    # for a syntax check. It is not currently used.
     my ($stream) = @_;
     my $is_tmpfile;
     my $fname;
@@ -4251,7 +4236,6 @@ I/O control
  -bext=s change default backup extension from 'bak' to s
  -q      deactivate error messages (for running under editor)
  -w      include non-critical warning messages in the .ERR error output
- -syn    run perl -c to check syntax (default under unix systems)
  -log    save .LOG file, which has useful diagnostics
  -f      force perltidy to read a binary file
  -g      like -log but writes more detailed .LOG file, for debugging scripts
@@ -4445,110 +4429,4 @@ sub process_this_file {
 
     return;
 }
-
-sub check_syntax {
-
-    # Use 'perl -c' to make sure that we did not create bad syntax
-    # This is a very good independent check for programming errors
-    #
-    # Given names of the input and output files, ($istream, $ostream),
-    # we do the following:
-    # - check syntax of the input file
-    # - if bad, all done (could be an incomplete code snippet)
-    # - if infile syntax ok, then check syntax of the output file;
-    #   - if outfile syntax bad, issue warning; this implies a code bug!
-    # - set and return flag "infile_syntax_ok" : =-1 bad 0 unknown 1 good
-
-    my ( $istream, $ostream, $logger_object, $rOpts ) = @_;
-    my $infile_syntax_ok = 0;
-    my $line_of_dashes   = '-' x 42 . "\n";
-
-    my $flags = $rOpts->{'perl-syntax-check-flags'};
-
-    # be sure we invoke perl with -c
-    # note: perl will accept repeated flags like '-c -c'.  It is safest
-    # to append another -c than try to find an interior bundled c, as
-    # in -Tc, because such a 'c' might be in a quoted string, for example.
-    if ( $flags !~ /(^-c|\s+-c)/ ) { $flags .= " -c" }
-
-    # be sure we invoke perl with -x if requested
-    # same comments about repeated parameters applies
-    if ( $rOpts->{'look-for-hash-bang'} ) {
-        if ( $flags !~ /(^-x|\s+-x)/ ) { $flags .= " -x" }
-    }
-
-    # this shouldn't happen unless a temporary file couldn't be made
-    if ( $istream eq '-' ) {
-        $logger_object->write_logfile_entry(
-            "Cannot run perl -c on STDIN and STDOUT\n");
-        return $infile_syntax_ok;
-    }
-
-    $logger_object->write_logfile_entry(
-        "checking input file syntax with perl $flags\n");
-
-    # Not all operating systems/shells support redirection of the standard
-    # error output.
-    my $error_redirection = ( $^O eq 'VMS' ) ? "" : '2>&1';
-
-    my ( $istream_filename, $perl_output ) =
-      do_syntax_check( $istream, $flags, $error_redirection );
-    $logger_object->write_logfile_entry(
-        "Input stream passed to Perl as file $istream_filename\n");
-    $logger_object->write_logfile_entry($line_of_dashes);
-    $logger_object->write_logfile_entry("$perl_output\n");
-
-    if ( $perl_output =~ /syntax\s*OK/ ) {
-        $infile_syntax_ok = 1;
-        $logger_object->write_logfile_entry($line_of_dashes);
-        $logger_object->write_logfile_entry(
-            "checking output file syntax with perl $flags ...\n");
-        my ( $ostream_filename, $perl_output ) =
-          do_syntax_check( $ostream, $flags, $error_redirection );
-        $logger_object->write_logfile_entry(
-            "Output stream passed to Perl as file $ostream_filename\n");
-        $logger_object->write_logfile_entry($line_of_dashes);
-        $logger_object->write_logfile_entry("$perl_output\n");
-
-        unless ( $perl_output =~ /syntax\s*OK/ ) {
-            $logger_object->write_logfile_entry($line_of_dashes);
-            $logger_object->warning(
-"The output file has a syntax error when tested with perl $flags $ostream !\n"
-            );
-            $logger_object->warning(
-                "This implies an error in perltidy; the file $ostream is bad\n"
-            );
-            $logger_object->report_definite_bug();
-
-            # the perl version number will be helpful for diagnosing the problem
-            $logger_object->write_logfile_entry( $^V . "\n" );
-        }
-    }
-    else {
-
-        # Only warn of perl -c syntax errors.  Other messages,
-        # such as missing modules, are too common.  They can be
-        # seen by running with perltidy -w
-        $logger_object->complain("A syntax check using perl $flags\n");
-        $logger_object->complain(
-            "for the output in file $istream_filename gives:\n");
-        $logger_object->complain($line_of_dashes);
-        $logger_object->complain("$perl_output\n");
-        $logger_object->complain($line_of_dashes);
-        $infile_syntax_ok = -1;
-        $logger_object->write_logfile_entry($line_of_dashes);
-        $logger_object->write_logfile_entry(
-"The output file will not be checked because of input file problems\n"
-        );
-    }
-    return $infile_syntax_ok;
-}
-
-sub do_syntax_check {
-
-    # This should not be called; the syntax check is deactivated
-    Die("Unexpected call for syntax check-shouldn't happen\n");
-    return;
-}
-
 1;

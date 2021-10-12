@@ -435,113 +435,32 @@ sub warning {
     return;
 }
 
-# programming bug codes:
-#   -1 = no bug
-#    0 = maybe, not sure.
-#    1 = definitely
-sub report_possible_bug {
-    my $self         = shift;
-    my $saw_code_bug = $self->{_saw_code_bug};
-    $self->{_saw_code_bug} = ( $saw_code_bug < 0 ) ? 0 : $saw_code_bug;
-    return;
-}
-
 sub report_definite_bug {
     my $self = shift;
     $self->{_saw_code_bug} = 1;
     return;
 }
 
-sub ask_user_for_bug_report {
-
-    my ( $self, $infile_syntax_ok, $formatter ) = @_;
-    my $saw_code_bug = $self->{_saw_code_bug};
-    if ( ( $saw_code_bug == 0 ) && ( $infile_syntax_ok == 1 ) ) {
-        $self->warning(<<EOM);
-
-You may have encountered a code bug in perltidy.  If you think so, and
-the problem is not listed in the BUGS file at
-http://perltidy.sourceforge.net, please report it so that it can be
-corrected.  Include the smallest possible script which has the problem,
-along with the .LOG file. See the manual pages for contact information.
-Thank you!
-EOM
-
-    }
-    elsif ( $saw_code_bug == 1 ) {
-        if ( $self->{_saw_extrude} ) {
-            $self->warning(<<EOM);
-
-You may have encountered a bug in perltidy.  However, since you are using the
--extrude option, the problem may be with perl or one of its modules, which have
-occasional problems with this type of file.  If you believe that the
-problem is with perltidy, and the problem is not listed in the BUGS file at
-http://perltidy.sourceforge.net, please report it so that it can be corrected.
-Include the smallest possible script which has the problem, along with the .LOG
-file. See the manual pages for contact information.
-Thank you!
-EOM
-        }
-        else {
-            $self->warning(<<EOM);
-
-Oops, you seem to have encountered a bug in perltidy.  Please check the
-BUGS file at http://perltidy.sourceforge.net.  If the problem is not
-listed there, please report it so that it can be corrected.  Include the
-smallest possible script which produces this message, along with the
-.LOG file if appropriate.  See the manual pages for contact information.
-Your efforts are appreciated.  
-Thank you!
-EOM
-            my $added_semicolon_count = 0;
-            eval {
-                $added_semicolon_count =
-                  $formatter->get_added_semicolon_count();
-            };
-            if ( $added_semicolon_count > 0 ) {
-                $self->warning(<<EOM);
-
-The log file shows that perltidy added $added_semicolon_count semicolons.
-Please rerun with -nasc to see if that is the cause of the syntax error.  Even
-if that is the problem, please report it so that it can be fixed.
-EOM
-
-            }
-        }
-    }
-    return;
-}
-
 sub get_save_logfile {
 
     # To be called after tokenizer has finished to make formatting more
-    # efficient.  This is not precisely the same as the check used below
-    # because we don't yet have the syntax check result, but since syntax
-    # checking is off by default it will be the same except in debug runs with
-    # syntax checking activated.  In that case it will tell the formatter to
-    # save the logfile even if it may actually be deleted based on the syntax
-    # check.
+    # efficient.
     my $self         = shift;
     my $saw_code_bug = $self->{_saw_code_bug};
     my $rOpts        = $self->{_rOpts};
-    return
-         $saw_code_bug == 1
-      || $rOpts->{'logfile'}
-      || $rOpts->{'check-syntax'};
+    return $saw_code_bug == 1 || $rOpts->{'logfile'};
 }
 
 sub finish {
 
     # called after all formatting to summarize errors
-    my ( $self, $infile_syntax_ok, $formatter ) = @_;
+    my ( $self, $formatter ) = @_;
 
     my $rOpts         = $self->{_rOpts};
     my $warning_count = $self->{_warning_count};
     my $saw_code_bug  = $self->{_saw_code_bug};
 
-    my $save_logfile =
-         ( $saw_code_bug == 0 && $infile_syntax_ok == 1 )
-      || $saw_code_bug == 1
+    my $save_logfile = $saw_code_bug == 1
       || $rOpts->{'logfile'};
     my $log_file = $self->{_log_file};
     if ($warning_count) {
@@ -564,9 +483,6 @@ sub finish {
             $self->warning("To save a full .LOG file rerun with -g\n");
         }
     }
-
-    # deactivated - prefer Fault reports in DEVEL_MODE during random testing
-    ##$self->ask_user_for_bug_report( $infile_syntax_ok, $formatter );
 
     if ($save_logfile) {
         my $log_file        = $self->{_log_file};
