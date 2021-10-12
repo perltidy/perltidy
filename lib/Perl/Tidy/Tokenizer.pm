@@ -2953,9 +2953,6 @@ EOM
             # check for special variables like ${^WARNING_BITS}
             if ( $expecting == TERM ) {
 
-                # FIXME: this should work but will not catch errors
-                # because we also have to be sure that previous token is
-                # a type character ($,@,%).
                 if (   $last_nonblank_token eq '{'
                     && ( $next_tok !~ /^\d/ )
                     && ( $next_tok =~ /^\w/ ) )
@@ -2967,6 +2964,24 @@ EOM
                     $tok  = $tok . $next_tok;
                     $i    = $i + 1;
                     $type = 'w';
+
+                    # Optional coding to try to catch syntax errors. This can
+                    # be removed if it ever causes incorrect warning messages.
+                    # The '{^' should be preceded by either by a type or '$#'
+                    # Examples:
+                    #   $#{^CAPTURE}       ok
+                    #   *${^LAST_FH}{NAME} ok
+                    #   @{^HOWDY}          ok
+                    #   $hash{^HOWDY}      error
+
+                    # Note that a type sigil '$' may be tokenized as 'Z'
+                    # after something like 'print', so allow type 'Z'
+                    if (   $last_last_nonblank_type ne 't'
+                        && $last_last_nonblank_type ne 'Z'
+                        && $last_last_nonblank_token ne '$#' )
+                    {
+                        warning("Possible syntax error near '{^'\n");
+                    }
                 }
 
                 else {
