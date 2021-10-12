@@ -70,6 +70,39 @@ BEGIN {
     };
 }
 
+sub Die {
+    my ($msg) = @_;
+    Perl::Tidy::Die($msg);
+    return;
+}
+
+sub Fault {
+    my ($msg) = @_;
+
+    # This routine is called for errors that really should not occur
+    # except if there has been a bug introduced by a recent program change.
+    # Please add comments at calls to Fault to explain why the call
+    # should not occur, and where to look to fix it.
+    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
+    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
+    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+
+    Die(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+Perl::Tidy::FileWriter.pm reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+    # This return is to keep Perl-Critic from complaining.
+    return;
+}
+
 sub warning {
     my ( $self, $msg ) = @_;
     my $logger_object = $self->[_logger_object_];
@@ -268,15 +301,13 @@ $str
 This is probably due to a recent programming change and needs to be fixed.
 EOM
 
-                # FIXME: it would be best to set a 'severe_error' flag here and
-                # tell caller to output the original file
+                if (DEVEL_MODE) { Fault($msg) }
+
                 $self->warning($msg);
 
                 # Only issue this warning once
                 $self->[_K_sequence_error_msg_] = $msg;
 
-                # stop here in DEVEL mode so this issue doesn't get missed
-                DEVEL_MODE && Perl::Tidy::Die($msg);
             }
         }
         $self->[_K_last_arrival_] = $K;
