@@ -199,7 +199,7 @@ my (
     %is_keyword_returning_list,
     %is_if_unless_and_or_last_next_redo_return,
     %is_if_elsif_else_unless_while_until_for_foreach,
-    %is_if_unless_while_until_for,
+    %is_if_unless_while_until_for_foreach,
     %is_last_next_redo_return,
     %is_sort_map_grep,
     %is_sort_map_grep_eval,
@@ -546,8 +546,8 @@ BEGIN {
     @is_if_elsif_else_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
-    @q = qw(if unless while until for);
-    @is_if_unless_while_until_for{@q} =
+    @q = qw(if unless while until for foreach);
+    @is_if_unless_while_until_for_foreach{@q} =
       (1) x scalar(@q);
 
     @q = qw(last next redo return);
@@ -13300,8 +13300,7 @@ EOM
                 # break at this level for a while.  This is the
                 # difficult decision..
                 elsif ($last_line_leading_type ne 'b'
-                    && $leading_token =~
-                    /^(unless|if|while|until|for|foreach)$/ )
+                    && $is_if_unless_while_until_for_foreach{$leading_token} )
                 {
                     my $lc = $nonblank_lines_at_depth[$last_line_leading_level];
                     if ( !defined($lc) ) { $lc = 0 }
@@ -16998,8 +16997,7 @@ EOM
                 && $i > 0
 
                 # if one of these keywords:
-                #   /^(if|unless|while|until|for)$/
-                && $is_if_unless_while_until_for{$token}
+                && $is_if_unless_while_until_for_foreach{$token}
 
                 # but do not break at something like '1 while'
                 && ( $last_nonblank_type ne 'n' || $i > 2 )
