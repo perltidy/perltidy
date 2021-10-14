@@ -5922,8 +5922,10 @@ sub is_non_structural_brace {
     # otherwise, it is non-structural if it is decorated
     # by type information.
     # For example, the '{' here is non-structural:   ${xxx}
+    # Removed '::' to fix c074
+    ## $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->|::)/
     return (
-        $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->|::)/
+        $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->)/
 
           # or if we follow a hash or array closing curly brace or bracket
           # For example, the second '{' in this is non-structural: $a{'x'}{'y'}

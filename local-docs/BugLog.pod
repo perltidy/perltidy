@@ -2,6 +2,33 @@
 
 =over 4
 
+=item B<Improve formatting of some Moose structures>
+
+In some structures used in Moose coding, some asymmetrical container breaks
+were being caused by the braces being tokenized as hash braces rather than
+block braces.  This was also causing some unwanted warning messages.
+
+    # OLD
+    ::is(
+        ::exception { has '+bar' => ( default => sub { 100 } );
+        },
+        undef,
+        '... extended the attribute successfully'
+    );
+
+    # NEW
+    ::is(
+        ::exception {
+            has '+bar' => ( default => sub { 100 } );
+        },
+        undef,
+        '... extended the attribute successfully'
+    );
+
+This fixes issue c074.
+
+12 Oct 2021.
+
 =item B<Fix issue c081, -cscw preventing deletion of closing side comments>
 
 Random testing revealed a problem in which an old closing side comment was not
