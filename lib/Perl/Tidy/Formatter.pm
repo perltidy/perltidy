@@ -175,6 +175,7 @@ my (
     $rOpts_maximum_fields_per_table,
     $rOpts_maximum_line_length,
     $rOpts_one_line_block_semicolons,
+    $rOpts_opening_brace_always_on_right,
     $rOpts_outdent_keywords,
     $rOpts_outdent_labels,
     $rOpts_outdent_long_comments,
@@ -369,6 +370,8 @@ BEGIN {
         _Iss_opening_               => $i++,
         _Iss_closing_               => $i++,
         _rblock_type_of_seqno_      => $i++,
+        _ris_asub_block_            => $i++,
+        _ris_sub_block_             => $i++,
         _K_opening_container_       => $i++,
         _K_closing_container_       => $i++,
         _K_opening_ternary_         => $i++,
@@ -389,6 +392,7 @@ BEGIN {
         _ris_excluded_lp_container_ => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
+        _rbrace_left_               => $i++,
         _ris_bli_container_         => $i++,
         _rparent_of_seqno_          => $i++,
         _rchildren_of_seqno_        => $i++,
@@ -758,6 +762,8 @@ sub new {
     # Arrays to help traverse the tree
     $self->[_rdepth_of_opening_seqno_] = [];
     $self->[_rblock_type_of_seqno_]    = {};
+    $self->[_ris_asub_block_]          = {};
+    $self->[_ris_sub_block_]           = {};
 
     # Mostly list characteristics and processing flags
     $self->[_rtype_count_by_seqno_]      = {};
@@ -774,6 +780,7 @@ sub new {
     $self->[_ris_excluded_lp_container_] = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
+    $self->[_rbrace_left_]               = {};
     $self->[_ris_bli_container_]         = {};
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
@@ -1672,10 +1679,12 @@ EOM
     $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
     $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
     $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
-    $rOpts_outdent_keywords          = $rOpts->{'outdent-keywords'};
-    $rOpts_outdent_labels            = $rOpts->{'outdent-labels'};
-    $rOpts_outdent_long_comments     = $rOpts->{'outdent-long-comments'};
-    $rOpts_outdent_long_quotes       = $rOpts->{'outdent-long-quotes'};
+    $rOpts_opening_brace_always_on_right =
+      $rOpts->{'opening-brace-always-on-right'};
+    $rOpts_outdent_keywords      = $rOpts->{'outdent-keywords'};
+    $rOpts_outdent_labels        = $rOpts->{'outdent-labels'};
+    $rOpts_outdent_long_comments = $rOpts->{'outdent-long-comments'};
+    $rOpts_outdent_long_quotes   = $rOpts->{'outdent-long-quotes'};
     $rOpts_outdent_static_block_comments =
       $rOpts->{'outdent-static-block-comments'};
     $rOpts_recombine = $rOpts->{'recombine'};
@@ -4887,15 +4896,27 @@ EOM
                         my $token = $rtokens->[$j];
                         my $sign  = 1;
                         if ( $is_opening_token{$token} ) {
+                            $K_opening_container->{$seqno} = @{$rLL};
                             $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
                             $nesting_depth++;
 
                             # Save a sequenced block type at its opening token.
                             # Note that unsequenced block types can occur in
-                            # unbalanced code but will be ignored here.
-                            $rblock_type_of_seqno->{$seqno} = $rblock_type->[$j]
-                              if ( $rblock_type->[$j] );
-                            $K_opening_container->{$seqno} = @{$rLL};
+                            # unbalanced code with errors but are ignored here.
+                            if ( $rblock_type->[$j] ) {
+                                my $block_type = $rblock_type->[$j];
+                                $rblock_type_of_seqno->{$seqno} = $block_type;
+                                if ( substr( $block_type, 0, 3 ) eq 'sub'
+                                    || $rOpts_sub_alias_list )
+                                {
+                                    if ( $block_type =~ /$ASUB_PATTERN/ ) {
+                                        $self->[_ris_asub_block_]->{$seqno} = 1;
+                                    }
+                                    elsif ( $block_type =~ /$SUB_PATTERN/ ) {
+                                        $self->[_ris_sub_block_]->{$seqno} = 1;
+                                    }
+                                }
+                            }
                         }
                         elsif ( $is_closing_token{$token} ) {
 
@@ -9110,6 +9131,8 @@ sub adjust_indentation_levels {
     # Set adjusted levels for the whitespace cycle option.
     $self->whitespace_cycle_adjustment();
 
+    $self->braces_left_setup();
+
     # Adjust continuation indentation if -bli is set
     $self->bli_adjustment();
 
@@ -9777,6 +9800,63 @@ sub extended_ci {
     return;
 }
 
+# FIXME: Example future hash for controlling -bl
+my %is_bl_block;
+
+BEGIN {
+    my @q = qw(if else elsif unless while for foreach do);
+    @is_bl_block{@q} = (1) x scalar(@q);
+}
+
+sub braces_left_setup {
+
+    # Called once per file to mark all -bl, -sbl, and -asbl containers
+    my $self = shift;
+
+    my $rOpts_bl   = $rOpts->{'opening-brace-on-new-line'};
+    my $rOpts_sbl  = $rOpts->{'opening-sub-brace-on-new-line'};
+    my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
+    return unless ( $rOpts_bl || $rOpts_sbl || $rOpts_asbl );
+
+    my $rLL = $self->[_rLL_];
+    return unless ( defined($rLL) && @{$rLL} );
+
+    # We will turn on this hash for braces controlled by these flags
+    my $rbrace_left = $self->[_rbrace_left_];
+
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_asub_block       = $self->[_ris_asub_block_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
+    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+
+        # use -asbl flag for an anonymous sub block
+        if ( $ris_asub_block->{$seqno} ) {
+            if ($rOpts_asbl) {
+                $rbrace_left->{$seqno} = 1;
+            }
+        }
+
+        # use -sbl flag for a named sub
+        elsif ( $ris_sub_block->{$seqno} ) {
+            if ($rOpts_sbl) {
+                $rbrace_left->{$seqno} = 1;
+            }
+        }
+
+        # use -bl flag if not a sub block of any type
+        else {
+
+            ##FIXME: if ( $block_type && $is_bl_block{$block_type} )
+            if ( $rOpts_bl && !$is_braces_left_exclude_block{$block_type} ) {
+                $rbrace_left->{$seqno} = 1;
+            }
+        }
+    }
+    return;
+}
+
 sub bli_adjustment {
 
     # Called once per file to implement the --brace-left-and-indent option.
@@ -9785,27 +9865,22 @@ sub bli_adjustment {
     return unless ( $rOpts->{'brace-left-and-indent'} );
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
-    my $ris_bli_container    = $self->[_ris_bli_container_];
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $KNEXT                = $self->[_K_first_seq_item_];
 
-    while ( defined($KNEXT) ) {
-        my $KK = $KNEXT;
-        $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
-        my $seqno      = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $ris_bli_container    = $self->[_ris_bli_container_];
+    my $rbrace_left          = $self->[_rbrace_left_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+
+    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
         my $block_type = $rblock_type_of_seqno->{$seqno};
         if ( $block_type && $block_type =~ /$bli_pattern/ ) {
-            my $K_opening = $K_opening_container->{$seqno};
-            if ( defined($K_opening) ) {
-                if ( $KK eq $K_opening ) {
-                    $rLL->[$KK]->[_CI_LEVEL_]++;
-                    $ris_bli_container->{$seqno} = 1;
-                }
-                else {
-                    $rLL->[$KK]->[_CI_LEVEL_] =
-                      $rLL->[$K_opening]->[_CI_LEVEL_];
-                }
+            $ris_bli_container->{$seqno} = 1;
+            $rbrace_left->{$seqno}       = 1;
+            my $Ko = $K_opening_container->{$seqno};
+            my $Kc = $K_closing_container->{$seqno};
+            if ( defined($Ko) && defined($Kc) ) {
+                $rLL->[$Kc]->[_CI_LEVEL_] = ++$rLL->[$Ko]->[_CI_LEVEL_];
             }
         }
     }
@@ -11534,15 +11609,15 @@ EOM
             }
 
             my (
-                $block_type,       $is_opening_BLOCK,
-                $is_closing_BLOCK, $nobreak_BEFORE_BLOCK
+                $block_type,       $type_sequence,
+                $is_opening_BLOCK, $is_closing_BLOCK,
+                $nobreak_BEFORE_BLOCK
             );
             if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
 
-                my $token         = $rtoken_vars->[_TOKEN_];
-                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-
-                $block_type = $rblock_type_of_seqno->{$type_sequence};
+                my $token = $rtoken_vars->[_TOKEN_];
+                $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+                $block_type    = $rblock_type_of_seqno->{$type_sequence};
 
                 if (   $block_type
                     && $token eq $type
@@ -11677,37 +11752,13 @@ EOM
                 }
 
                 # decide if user requested break before '{'
-                my $want_break =
+                my $rbrace_left  = $self->[_rbrace_left_];
+                my $rK_weld_left = $self->[_rK_weld_left_];
 
-                  # This test was added to minimize changes in -bl formatting
-                  # caused by other changes to fix cases b562 .. b983
-                  # Previously, the -bl flag was being applied almost randomly
-                  # to sort/map/grep/eval blocks, depending on if they were
-                  # flagged as possible one-line blocks.  usually time they
-                  # were not given -bl formatting.  The following flag was
-                  # added to minimize changes to existing formatting.
-                  $is_braces_left_exclude_block{$block_type}
-                  ? 0
+                # Break if requested with -bl or -bli flag
+                my $want_break = $rbrace_left->{$type_sequence};
 
-                  # use -bl flag if not a sub block of any type
-                  : $block_type !~ /$ANYSUB_PATTERN/
-                  ? $rOpts->{'opening-brace-on-new-line'}
-
-                  # use -sbl flag for a named sub block
-                  : $block_type !~ /$ASUB_PATTERN/
-                  ? $rOpts->{'opening-sub-brace-on-new-line'}
-
-                  # use -asbl flag for an anonymous sub block
-                  : $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
-
-                my $ris_bli_container = $self->[_ris_bli_container_];
-                my $rK_weld_left      = $self->[_rK_weld_left_];
-
-                # Break if requested with -bli flag
-                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
-                $want_break ||= $ris_bli_container->{$type_sequence};
-
-                # Do not break if this token is welded to the left
+                # But do not break if this token is welded to the left
                 if ( $total_weld_count
                     && defined( $rK_weld_left->{$Ktoken_vars} ) )
                 {
@@ -11727,7 +11778,7 @@ EOM
                     # it will be outdented (eval.t, overload.t), and the user
                     # has not insisted on keeping it on the right
                     || (   !$keyword_on_same_line
-                        && !$rOpts->{'opening-brace-always-on-right'} )
+                        && !$rOpts_opening_brace_always_on_right )
                   )
                 {
 
@@ -11877,8 +11928,7 @@ EOM
                 }
 
                 # anonymous sub
-                elsif ( $block_type =~ /$ASUB_PATTERN/ ) {
-
+                elsif ( $self->[_ris_asub_block_]->{$type_sequence} ) {
                     if ($is_one_line_block) {
 
                         $rbrace_follower = \%is_anon_sub_1_brace_follower;
@@ -12290,9 +12340,12 @@ sub starting_one_line_block {
     # the previous nonblank token should start these block types
     elsif (
         $i_last_nonblank >= 0
-        && (   $previous_nonblank_token eq $block_type
-            || $block_type =~ /$ANYSUB_PATTERN/
-            || $block_type =~ /\(\)/ )
+        && (
+            $previous_nonblank_token eq $block_type
+            || $self->[_ris_asub_block_]->{$type_sequence}
+            || $self->[_ris_sub_block_]->{$type_sequence}
+            || substr( $block_type, -2, 2 ) eq '()'
+        )
       )
     {
         $i_start = $i_last_nonblank;
@@ -15997,7 +16050,7 @@ sub set_continuation_breaks {
                             $nesting_depth_to_go[$i_next_nonblank] )
                     )
 
-                    && !$rOpts->{'opening-brace-always-on-right'}
+                    && !$rOpts_opening_brace_always_on_right
                 )
 
                 # There is an implied forced break at a terminal opening brace
@@ -17217,7 +17270,7 @@ EOM
                     && $mate_index_to_go[$i_last_nonblank_token] < 0
 
                     # and user wants brace to left
-                    && !$rOpts->{'opening-brace-always-on-right'}
+                    && !$rOpts_opening_brace_always_on_right
 
                     && ( $type eq '{' )     # should be true
                     && ( $token eq '{' )    # should be true
@@ -17249,7 +17302,7 @@ EOM
                     && $next_nonblank_block_type
                     && $interrupted_list[$current_depth]
                     && $next_nonblank_type eq '{'
-                    && !$rOpts->{'opening-brace-always-on-right'} )
+                    && !$rOpts_opening_brace_always_on_right )
                 {
                     $self->set_forced_breakpoint($i);
                 } ## end if ( $token eq ')' && ...
