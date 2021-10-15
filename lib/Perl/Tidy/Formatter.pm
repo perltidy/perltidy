@@ -338,9 +338,7 @@ my (
 
 BEGIN {
 
-    # Initialize constants...
-
-    # Array index names for token variables
+    # Index names for token variables.  Do not combine with other BEGIN blocks.
     my $i = 0;
     use constant {
         _CI_LEVEL_          => $i++,
@@ -356,9 +354,12 @@ BEGIN {
         # Number of token variables; must be last in list:
         _NVARS => $i++,
     };
+}
 
-    # Array index names for $self (which is an array ref)
-    $i = 0;
+BEGIN {
+
+    # Index names for $self variables.  Do not combine with other BEGIN blocks.
+    my $i = 0;
     use constant {
         _rlines_                    => $i++,
         _rlines_new_                => $i++,
@@ -464,12 +465,16 @@ BEGIN {
         _ris_essential_old_breakpoint_      => $i++,
         _roverride_cab3_                    => $i++,
         _ris_assigned_structure_            => $i++,
-    };
 
-    # Array index names for _this_batch_ (in above list)
-    # So _this_batch_ is a sub-array of $self for
-    # holding the batches of tokens being processed.
-    $i = 0;
+        _LAST_SELF_INDEX_ => $i - 1,
+    };
+}
+
+BEGIN {
+
+    # Index names for batch variables.  Do not combine with other BEGIN blocks.
+    # These are stored in _this_batch_, which is a sub-array of $self.
+    my $i = 0;
     use constant {
         _starting_in_quote_        => $i++,
         _ending_in_quote_          => $i++,
@@ -483,6 +488,9 @@ BEGIN {
         _rix_seqno_controlling_ci_ => $i++,
         _batch_CODE_type_          => $i++,
     };
+}
+
+BEGIN {
 
     # Sequence number assigned to the root of sequence tree.
     # The minimum of the actual sequences numbers is 4, so we can use 1
@@ -820,6 +828,8 @@ sub new {
     $self->[_in_tabbing_disagreement_]         = 0;
     $self->[_saw_VERSION_in_this_file_]        = !$rOpts->{'pass-version-line'};
     $self->[_saw_END_or_DATA_]                 = 0;
+    $self->[_first_brace_tabbing_disagreement_] = undef;
+    $self->[_in_brace_tabbing_disagreement_]    = undef;
 
     # Hashes related to container welding...
     $self->[_radjusted_levels_] = [];
@@ -858,6 +868,21 @@ sub new {
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
+
+    # Be sure all variables in $self have been initialized above.  To find the
+    # correspondence of index numbers and array names, copy a list to a file
+    # and use the unix 'nl' command to number lines 1..
+    if (DEVEL_MODE) {
+        my @non_existant;
+        foreach ( 0 .. _LAST_SELF_INDEX_ ) {
+            if ( !exists( $self->[$_] ) ) {
+                push @non_existant, $_;
+            }
+        }
+        if (@non_existant) {
+            Fault("These indexes in self not initialized: (@non_existant)\n");
+        }
+    }
 
     bless $self, $class;
 
