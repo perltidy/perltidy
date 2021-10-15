@@ -2390,6 +2390,8 @@ sub generate_options {
     $add_option->( 'break-before-square-bracket-and-indent',  'bbsbi', '=i' );
     $add_option->( 'break-before-paren',                      'bbp',   '=i' );
     $add_option->( 'break-before-paren-and-indent',           'bbpi',  '=i' );
+    $add_option->( 'brace-left-list',                         'bll',   '=s' );
+    $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -2552,7 +2554,7 @@ sub generate_options {
     # $option_range{'continuation-indentation'} = [ undef, undef ];
 
     #---------------------------------------------------------------
-    # Assign default values to the above options here, except
+    # DEFAULTS: Assign default values to the above options here, except
     # for 'outfile' and 'help'.
     # These settings should approximate the perlstyle(1) suggestions.
     #---------------------------------------------------------------
@@ -2710,6 +2712,8 @@ sub generate_options {
         'html'  => [qw(format=html)],
         'nhtml' => [qw(format=tidy)],
         'tidy'  => [qw(format=tidy)],
+
+        'brace-left' => [qw(opening-brace-on-new-line)],
 
         # -cb is now a synonym for -ce
         'cb'             => [qw(cuddled-else)],
@@ -3314,20 +3318,18 @@ EOM
         }
     }
 
+    ##########################################################
+    # FIXME: Old coding retained for testing but to be deleted
+    # before next release to make -bli and -bl independent.
     # -bli flag implies -bl
     if ( $rOpts->{'brace-left-and-indent'} ) {
         $rOpts->{'opening-brace-on-new-line'} = 1;
     }
+    ##########################################################
 
     # it simplifies things if -bl is 0 rather than undefined
     if ( !defined( $rOpts->{'opening-brace-on-new-line'} ) ) {
         $rOpts->{'opening-brace-on-new-line'} = 0;
-    }
-
-    # -sbl defaults to -bl if not defined
-    if ( !defined( $rOpts->{'opening-sub-brace-on-new-line'} ) ) {
-        $rOpts->{'opening-sub-brace-on-new-line'} =
-          $rOpts->{'opening-brace-on-new-line'};
     }
 
     if ( $rOpts->{'entab-leading-whitespace'} ) {

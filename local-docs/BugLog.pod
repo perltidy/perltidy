@@ -27,7 +27,7 @@ block braces.  This was also causing some unwanted warning messages.
 
 This fixes issue c074.
 
-12 Oct 2021.
+12 Oct 2021, 7e873fa.
 
 =item B<Fix issue c081, -cscw preventing deletion of closing side comments>
 

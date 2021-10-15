@@ -247,7 +247,6 @@ my (
 
     # Initialized in check_options, modified by prepare_cuddled_block_types:
     %want_one_line_block,
-    %is_braces_left_exclude_block,
 
     # Initialized in sub prepare_cuddled_block_types
     $rcuddled_block_types,
@@ -288,6 +287,8 @@ my (
     $format_skipping_pattern_begin,
     $format_skipping_pattern_end,
     $non_indenting_brace_pattern,
+    $bl_exclusion_pattern,
+    $bl_pattern,
     $bli_pattern,
     $block_brace_vertical_tightness_pattern,
     $blank_lines_after_opening_block_pattern,
@@ -1240,6 +1241,7 @@ sub check_options {
     }
 
     make_bli_pattern();
+    make_bl_pattern();
     make_block_brace_vertical_tightness_pattern();
     make_blank_line_pattern();
     make_keyword_group_list_pattern();
@@ -1247,10 +1249,6 @@ sub check_options {
     # Make initial list of desired one line block types
     # They will be modified by 'prepare_cuddled_block_types'
     %want_one_line_block = %is_sort_map_grep_eval;
-
-    # Default is to exclude one-line block types from -bl formatting
-    # FIXME: Eventually a flag should be added to modify this.
-    %is_braces_left_exclude_block = %is_sort_map_grep_eval;
 
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
@@ -4475,6 +4473,54 @@ sub make_sub_matching_pattern {
     return;
 }
 
+sub make_bl_pattern {
+
+    # Defaults block lists which match old formatting:
+    my $bl_list_string           = '*';
+    my $bl_exclusion_list_string = 'sort map grep eval';
+
+    # Possible future default:
+    ##my $bl_list_string = 'if else elsif unless while for foreach do : sub';
+
+    if ( defined( $rOpts->{'brace-left-list'} )
+        && $rOpts->{'brace-left-list'} )
+    {
+        $bl_list_string = $rOpts->{'brace-left-list'};
+    }
+    if ( $bl_list_string =~ /\bsub\b/ ) {
+        $rOpts->{'opening-sub-brace-on-new-line'} ||=
+          $rOpts->{'opening-brace-on-new-line'};
+    }
+    if ( $bl_list_string =~ /\basub\b/ ) {
+        $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ||=
+          $rOpts->{'opening-brace-on-new-line'};
+    }
+
+    $bl_pattern = make_block_pattern( '-bll', $bl_list_string );
+
+    # for -bl, a list with '*' turns on -sbl but not -asbl
+    if ( $bl_pattern =~ /\.\*/ ) {
+        $rOpts->{'opening-sub-brace-on-new-line'} ||=
+          $rOpts->{'opening-brace-on-new-line'};
+    }
+
+    if ( defined( $rOpts->{'brace-left-exclusion-list'} )
+        && $rOpts->{'brace-left-exclusion-list'} )
+    {
+        $bl_exclusion_list_string = $rOpts->{'brace-left-exclusion-list'};
+        if ( $bl_exclusion_list_string =~ /\bsub\b/ ) {
+            $rOpts->{'opening-sub-brace-on-new-line'} = 0;
+        }
+        if ( $bl_exclusion_list_string =~ /\basub\b/ ) {
+            $rOpts->{'opening-anonymous-sub-brace-on-new-line'} = 0;
+        }
+    }
+
+    $bl_exclusion_pattern =
+      make_block_pattern( '-blxl', $bl_exclusion_list_string );
+    return;
+}
+
 sub make_bli_pattern {
 
     # default list of block types for which -bli would apply
@@ -7596,7 +7642,9 @@ sub weld_cuddled_blocks {
             # the bottom of sub 'respace_tokens' which set the values of
             # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
             # loop control lines above.
-            Fault("sequence = $type_sequence not defined at K=$KK");
+            Fault("sequence = $type_sequence not defined at K=$KK")
+              if (DEVEL_MODE);
+            next;
         }
 
         # NOTE: we must use the original levels here. They can get changed
@@ -9056,7 +9104,9 @@ sub mark_short_nested_blocks {
             # the bottom of sub 'respace_tokens' which set the values of
             # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
             # loop control lines above.
-            Fault("sequence = $type_sequence not defined at K=$KK");
+            Fault("sequence = $type_sequence not defined at K=$KK")
+              if (DEVEL_MODE);
+            next;
         }
 
         # Patch: do not mark short blocks with welds.
@@ -9825,14 +9875,6 @@ sub extended_ci {
     return;
 }
 
-# FIXME: Example future hash for controlling -bl
-my %is_bl_block;
-
-BEGIN {
-    my @q = qw(if else elsif unless while for foreach do);
-    @is_bl_block{@q} = (1) x scalar(@q);
-}
-
 sub braces_left_setup {
 
     # Called once per file to mark all -bl, -sbl, and -asbl containers
@@ -9846,7 +9888,7 @@ sub braces_left_setup {
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
 
-    # We will turn on this hash for braces controlled by these flags
+    # We will turn on this hash for braces controlled by these flags:
     my $rbrace_left = $self->[_rbrace_left_];
 
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
@@ -9872,9 +9914,10 @@ sub braces_left_setup {
 
         # use -bl flag if not a sub block of any type
         else {
-
-            ##FIXME: if ( $block_type && $is_bl_block{$block_type} )
-            if ( $rOpts_bl && !$is_braces_left_exclude_block{$block_type} ) {
+            if (   $rOpts_bl
+                && $block_type =~ /$bl_pattern/
+                && $block_type !~ /$bl_exclusion_pattern/ )
+            {
                 $rbrace_left->{$seqno} = 1;
             }
         }
@@ -11776,16 +11819,12 @@ EOM
                     $keyword_on_same_line = 0;
                 }
 
-                # decide if user requested break before '{'
-                my $rbrace_left  = $self->[_rbrace_left_];
-                my $rK_weld_left = $self->[_rK_weld_left_];
-
-                # Break if requested with -bl or -bli flag
-                my $want_break = $rbrace_left->{$type_sequence};
+                # Break before '{' if requested with -bl or -bli flag
+                my $want_break = $self->[_rbrace_left_]->{$type_sequence};
 
                 # But do not break if this token is welded to the left
                 if ( $total_weld_count
-                    && defined( $rK_weld_left->{$Ktoken_vars} ) )
+                    && defined( $self->[_rK_weld_left_]->{$Ktoken_vars} ) )
                 {
                     $want_break = 0;
                 }
