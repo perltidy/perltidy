@@ -283,7 +283,6 @@ my (
     # Most can be configured by user parameters.
     $SUB_PATTERN,
     $ASUB_PATTERN,
-    $ANYSUB_PATTERN,
     $static_block_comment_pattern,
     $static_side_comment_pattern,
     $format_skipping_pattern_begin,
@@ -649,14 +648,14 @@ BEGIN {
 
 }
 
-{    ## begin closure to count instanes
+{    ## begin closure to count instances
 
     # methods to count instances
     my $_count = 0;
     sub get_count        { return $_count; }
     sub _increment_count { return ++$_count }
     sub _decrement_count { return --$_count }
-} ## end closure to count instanes
+} ## end closure to count instances
 
 sub new {
 
@@ -4427,10 +4426,12 @@ sub make_sub_matching_pattern {
     #  'sub ::m' is a named sub
     #  'sub' is an anonymous sub
     #  'sub:' is a label, not a sub
+    #  'sub :' is a label, not a sub   ( block type will be <sub:> )
+    #   sub'_ is a named sub           ( block type will be <sub '_> )
     #  'substr' is a keyword
-    $SUB_PATTERN    = '^sub\s+(::|\w)';    # match normal sub
-    $ASUB_PATTERN   = '^sub$';             # match anonymous sub
-    $ANYSUB_PATTERN = '^sub\b';            # match either type of sub
+    # So note that named subs always have a space after 'sub'
+    $SUB_PATTERN  = '^sub\s';    # match normal sub
+    $ASUB_PATTERN = '^sub$';     # match anonymous sub
 
     # Note (see also RT #133130): These patterns are used by
     # sub make_block_pattern, which is used for making most patterns.
@@ -4445,7 +4446,6 @@ sub make_sub_matching_pattern {
         $sub_alias_list =~ s/\s+/\|/g;
         $SUB_PATTERN    =~ s/sub/\($sub_alias_list\)/;
         $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
-        $ANYSUB_PATTERN =~ s/sub/\($sub_alias_list\)/;
     }
     return;
 }
@@ -6464,7 +6464,7 @@ sub respace_tokens {
                             substr( $token, 0, 3 ) eq 'sub'
                             || $rOpts_sub_alias_list
                         )
-                        && $token =~ /$ANYSUB_PATTERN/
+                        && $token =~ /$SUB_PATTERN/
                       )
                     {
 
@@ -12187,9 +12187,8 @@ sub tight_paren_follows {
     if ( defined($K_test) && $rLL->[$K_test]->[_TYPE_] eq '{' ) {
         my $seqno_test = $rLL->[$K_test]->[_TYPE_SEQUENCE_];
         if ($seqno_test) {
-            my $block_type = $self->[_rblock_type_of_seqno_]->{$seqno_test};
-            if (   $block_type
-                && $block_type =~ /$ANYSUB_PATTERN/ )
+            if (   $self->[_ris_asub_block_]->{$seqno_test}
+                || $self->[_ris_sub_block_]->{$seqno_test} )
             {
                 return 1;
             }
@@ -12340,12 +12339,10 @@ sub starting_one_line_block {
     # the previous nonblank token should start these block types
     elsif (
         $i_last_nonblank >= 0
-        && (
-            $previous_nonblank_token eq $block_type
+        && (   $previous_nonblank_token eq $block_type
             || $self->[_ris_asub_block_]->{$type_sequence}
             || $self->[_ris_sub_block_]->{$type_sequence}
-            || substr( $block_type, -2, 2 ) eq '()'
-        )
+            || substr( $block_type, -2, 2 ) eq '()' )
       )
     {
         $i_start = $i_last_nonblank;
@@ -12397,8 +12394,9 @@ sub starting_one_line_block {
         #    create( TypeFoo $e) {$bubba}
         # the blocktype would be marked as create()
         my $stripped_block_type = $block_type;
-        $stripped_block_type =~ s/\(\)$//;
-
+        if ( substr( $block_type, -2, 2 ) eq '()' ) {
+            $stripped_block_type = substr( $block_type, 0, -2 );
+        }
         unless ( $tokens_to_go[$i_start] eq $stripped_block_type ) {
             return 0;
         }
@@ -13333,7 +13331,7 @@ EOM
                   )
                 {
                     $want_blank = $rOpts->{'blank-lines-before-subs'}
-                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}]$/ );
+                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
                 }
 
                 # break before all package declarations
@@ -16045,7 +16043,11 @@ sub set_continuation_breaks {
                     # sub block breaks handled at higher level, unless
                     # it looks like the preceding list is long and broken
                     && !(
-                        $next_nonblank_block_type =~ /$ANYSUB_PATTERN/
+
+                        (
+                               $next_nonblank_block_type =~ /$SUB_PATTERN/
+                            || $next_nonblank_block_type =~ /$ASUB_PATTERN/
+                        )
                         && ( $nesting_depth_to_go[$i_begin] ==
                             $nesting_depth_to_go[$i_next_nonblank] )
                     )
