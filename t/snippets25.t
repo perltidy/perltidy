@@ -7,6 +7,7 @@
 #4 novalign.novalign3
 #5 lp2.def
 #6 lp2.lp
+#7 braces.braces8
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -24,6 +25,9 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'braces8' => <<'----------',
+-bl -bbvt=1 -blxl=' ' -bll='sub do asub'
+----------
         'def'       => "",
         'lp'        => "-lp",
         'novalign1' => "-novalign",
@@ -35,6 +39,57 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'braces' => <<'----------',
+sub message {
+    if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    }
+    else {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub {
+    print("Hello, World\n");
+};
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do {
+    $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub {
+        $ua->get(
+            '/' => sub {
+                push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do {
+    sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try {
+    die;
+}
+catch {
+    die;
+};
+----------
 
         'lp2' => <<'----------',
 # test issue git #74, lost -lp when final anon sub brace followed by '}'
@@ -177,6 +232,61 @@ Util::Parser->new(
                    }
 )->parse( $_[0] );
 #6...........
+        },
+
+        'braces.braces8' => {
+            source => "braces",
+            params => "braces8",
+            expect => <<'#7...........',
+sub message
+{   if ( !defined( $_[0] ) ) {
+        print("Hello, World\n");
+    }
+    else {
+        print( $_[0], "\n" );
+    }
+}
+
+$myfun = sub
+{   print("Hello, World\n");
+};
+
+eval {
+    my $app = App::perlbrew->new( "install-patchperl", "-q" );
+    $app->run();
+} or do
+{   $error          = $@;
+    $produced_error = 1;
+};
+
+Mojo::IOLoop->next_tick(
+    sub
+    {   $ua->get(
+            '/' => sub
+            {   push @kept_alive, pop->kept_alive;
+                Mojo::IOLoop->next_tick( sub { Mojo::IOLoop->stop } );
+            }
+        );
+    }
+);
+
+$r = do
+{   sswitch( $words[ rand @words ] ) {
+        case $words[0]:
+        case $words[1]:
+        case $words[2]:
+        case $words[3]: { 'ok' }
+      default: { 'wtf' }
+    }
+};
+
+try {
+    die;
+}
+catch {
+    die;
+};
+#7...........
         },
     };
 

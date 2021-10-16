@@ -3318,15 +3318,6 @@ EOM
         }
     }
 
-    ##########################################################
-    # FIXME: Old coding retained for testing but to be deleted
-    # before next release to make -bli and -bl independent.
-    # -bli flag implies -bl
-    if ( $rOpts->{'brace-left-and-indent'} ) {
-        $rOpts->{'opening-brace-on-new-line'} = 1;
-    }
-    ##########################################################
-
     # it simplifies things if -bl is 0 rather than undefined
     if ( !defined( $rOpts->{'opening-brace-on-new-line'} ) ) {
         $rOpts->{'opening-brace-on-new-line'} = 0;

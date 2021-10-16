@@ -4475,12 +4475,9 @@ sub make_sub_matching_pattern {
 
 sub make_bl_pattern {
 
-    # Defaults block lists which match old formatting:
+    # Set defaults lists to retain historical default behavior for -bl:
     my $bl_list_string           = '*';
-    my $bl_exclusion_list_string = 'sort map grep eval';
-
-    # Possible future default:
-    ##my $bl_list_string = 'if else elsif unless while for foreach do : sub';
+    my $bl_exclusion_list_string = 'sort map grep eval asub';
 
     if ( defined( $rOpts->{'brace-left-list'} )
         && $rOpts->{'brace-left-list'} )
@@ -4498,10 +4495,12 @@ sub make_bl_pattern {
 
     $bl_pattern = make_block_pattern( '-bll', $bl_list_string );
 
-    # for -bl, a list with '*' turns on -sbl but not -asbl
+    # for -bl, a list with '*' turns on -sbl and -asbl
     if ( $bl_pattern =~ /\.\*/ ) {
         $rOpts->{'opening-sub-brace-on-new-line'} ||=
           $rOpts->{'opening-brace-on-new-line'};
+        $rOpts->{'opening-anonymous-sub-brace-on-new-line'} ||=
+          $rOpts->{'opening-anonymous-brace-on-new-line'};
     }
 
     if ( defined( $rOpts->{'brace-left-exclusion-list'} )

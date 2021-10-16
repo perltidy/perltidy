@@ -2,6 +2,21 @@
 
 ## 2021 07 17.04
 
+    - Added two new parameters to control the block types to which the
+      -bl (--opening-brace-on-new-line) flag applies.  The new parameters are
+      -block-left-list=s, or -bll=s, and --block-left-exclusion-list=s,
+      or -blxl=s.  Previously the -bl flag was 'hardwired' to apply to
+      nearly all blocks, and the default values of the new parameters
+      retain the the old default behavior but allow it to be changed.
+
+    - The default behavior of the -bli (-brace-left-and-indent) flag has changed
+      slightly.  Previously, if you set -bli then the -bl flag would also
+      automatically be set.  Consequently, block types which were not included
+      in the default list for -bli would get -bl formatting.  This is no longer done,
+      and these two styles are now controlled independently.  The manual describes
+      the controls.  If you want to recover the previous default behavior exactly,
+      replace '-bli' with the pair '-bli -bl'.
+
     - Partial fix issue for git #74, the -lp formatting style was
       being lost when a one-line anonymous sub was followed by a closing brace.
 
@@ -18,8 +33,11 @@
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.
 
-    - This version runs about 10 percent faster on large files than the previous
-      release due to optimizations made with the help of NYTProf.
+    - This version runs about 10 to 15 percent faster on large files than the
+      previous release due to optimizations made with the help of NYTProf.
+
+    - This version was subjected to over 100 cpu hours of testing with random input
+      parameters with no instabilities or other irregularities seen.
 
     - Numerous minor fixes have been made. A complete list is at:
 

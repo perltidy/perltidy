@@ -609,8 +609,7 @@ Mojo::IOLoop->next_tick(
 );
 
 $r = do
-  { sswitch( $words[ rand @words ] )
-    {
+  { sswitch( $words[ rand @words ] ) {
         case $words[0]:
         case $words[1]:
         case $words[2]:
@@ -619,12 +618,10 @@ $r = do
     }
   };
 
-try
-{
+try {
     die;
 }
-catch
-{
+catch {
     die;
 };
 #7...........
