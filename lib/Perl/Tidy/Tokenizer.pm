@@ -5204,6 +5204,10 @@ my %op_expected_table;
 # exceptions to perl's weird parsing rules after type 'Z'
 my %is_weird_parsing_rule_exception;
 
+my %is_paren_dollar;
+
+my %is_n_v;
+
 BEGIN {
 
     # Always expecting TERM following these types:
@@ -5234,7 +5238,13 @@ BEGIN {
 
     # Fix for git #62: added '*' and '%'
     @q = qw( < ? * % );
-    @{is_weird_parsing_rule_exception}{@q} = (OPERATOR) x scalar(@q);
+    @{is_weird_parsing_rule_exception}{@q} = (1) x scalar(@q);
+
+    @q = qw<) $>;
+    @{is_paren_dollar}{@q} = (1) x scalar(@q);
+
+    @q = qw( n v );
+    @{is_n_v}{@q} = (1) x scalar(@q);
 
 }
 
@@ -5324,7 +5334,8 @@ sub operator_expected {
         # FIXME: it would be cleaner to make this a special type
         # expecting VERSION or {} after package NAMESPACE
         # TODO: maybe mark these words as type 'Y'?
-        if (   $statement_type =~ /^package\b/
+        if (   substr( $last_nonblank_token, 0, 7 ) eq 'package'
+            && $statement_type      =~ /^package\b/
             && $last_nonblank_token =~ /^package\b/ )
         {
             $op_expected = TERM;
@@ -5387,10 +5398,12 @@ sub operator_expected {
             $op_expected = OPERATOR;    # block mode following }
         }
 
-        elsif ( $last_nonblank_token =~ /^(\)|\$|\-\>)/ ) {
+        ##elsif ( $last_nonblank_token =~ /^(\)|\$|\-\>)/ ) {
+        elsif ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
+            || substr( $last_nonblank_token, 0, 2 ) eq '->' )
+        {
             $op_expected = OPERATOR;
             if ( $last_nonblank_token eq '$' ) { $op_expected = UNKNOWN }
-
         }
 
         # Check for smartmatch operator before preceding brace or square
@@ -5439,7 +5452,8 @@ sub operator_expected {
     #     use Module VERSION LIST
     # We could avoid this exception by writing a special sub to parse 'use'
     # statements and perhaps mark these numbers with a new type V (for VERSION)
-    elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
+    ##elsif ( $last_nonblank_type =~ /^[nv]$/ ) {
+    elsif ( $is_n_v{$last_nonblank_type} ) {
         $op_expected = OPERATOR;
         if ( $statement_type eq 'use' ) {
             $op_expected = UNKNOWN;
