@@ -5910,6 +5910,18 @@ sub report_unexpected {
     return;
 }
 
+my %is_sigil_or_paren;
+my %is_R_closing_sb;
+
+BEGIN {
+
+    my @q = qw< $ & % * @ ) >;
+    @{is_sigil_or_paren}{@q} = (1) x scalar(@q);
+
+    @q = qw(R ]);
+    @{is_R_closing_sb}{@q} = (1) x scalar(@q);
+}
+
 sub is_non_structural_brace {
 
     # Decide if a brace or bracket is structural or non-structural
@@ -5939,12 +5951,15 @@ sub is_non_structural_brace {
     # Removed '::' to fix c074
     ## $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->|::)/
     return (
-        $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->)/
+        ## $last_nonblank_token =~ /^([\$\@\*\&\%\)]|->)/
+        $is_sigil_or_paren{ substr( $last_nonblank_token, 0, 1 ) }
+          || substr( $last_nonblank_token, 0, 2 ) eq '->'
 
           # or if we follow a hash or array closing curly brace or bracket
           # For example, the second '{' in this is non-structural: $a{'x'}{'y'}
           # because the first '}' would have been given type 'R'
-          || $last_nonblank_type =~ /^([R\]])$/
+          ##|| $last_nonblank_type =~ /^([R\]])$/
+          || $is_R_closing_sb{$last_nonblank_type}
     );
 }
 
