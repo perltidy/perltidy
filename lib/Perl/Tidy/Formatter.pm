@@ -5042,10 +5042,12 @@ EOM
                         # numbers, or if an error has been introduced in a
                         # hash such as %is_opening_container
                         else {
-                            Fault(<<EOM);
+                            if (DEVEL_MODE) {
+                                Fault(<<EOM);
 Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
 Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
 EOM
+                            }
                         }
 
                         if ( $sign > 0 ) {
@@ -5534,9 +5536,12 @@ sub set_CODE_type {
         # This fault shouldn't happen because we only saved CODE lines with
         # side comments in the TASK 1 loop above.
         if ( $line_type ne 'CODE' ) {
-            Fault(<<EOM);
+            if (DEVEL_MODE) {
+                Fault(<<EOM);
 Hit unexpected line_type = '$line_type' while deleting side comments, should be 'CODE'
 EOM
+            }
+            next;
         }
 
         my $CODE_type = $line_of_tokens->{_code_type};
@@ -5861,10 +5866,12 @@ sub respace_tokens {
                     # of those was checked above. So we would only get here
                     # if the tokenizer has been changed to mark some other
                     # tokens with sequence numbers.
-                    my $type = $item->[_TYPE_];
-                    Fault(
+                    if (DEVEL_MODE) {
+                        my $type = $item->[_TYPE_];
+                        Fault(
 "Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
-                    );
+                        );
+                    }
                 }
             }
         }
@@ -6243,7 +6250,7 @@ sub respace_tokens {
         # package the tokenized lines as it received them.  If we
         # get a fault here it has not output a continuous sequence
         # of K values.  Or a line of CODE may have been mismarked as
-        # something else.
+        # something else.  We better stop on an error here.
         if ( defined($last_K_out) ) {
             if ( $Kfirst != $last_K_out + 1 ) {
                 Fault(
@@ -6304,10 +6311,14 @@ sub respace_tokens {
                 }
                 else {
 
-                    # This line was mis-marked by sub scan_comment
+                    # This line was mis-marked by sub scan_comment.  Catch in
+                    # DEVEL_MODE, otherwise try to repair and keep going.
                     Fault(
                         "Program bug. A hanging side comment has been mismarked"
-                    );
+                    ) if (DEVEL_MODE);
+
+                    $CODE_type = "";
+                    $line_of_tokens->{_code_type} = $CODE_type;
                 }
             }
 
@@ -6937,7 +6948,8 @@ sub copy_token_as_type {
     }
     else {
 
-        # This sub is only programmed to handle certain token types
+        # This sub is only programmed to handle certain token types.
+        # We better stop on this error.
         Fault(<<EOM);
 sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
 EOM
@@ -6984,7 +6996,8 @@ sub K_next_code {
             # We seem to have encountered a gap in our array.
             # This shouldn't happen because sub write_line() pushed
             # items into the $rLL array.
-            Fault("Undefined entry for k=$Knnb");
+            Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
+            return;
         }
         if (   $rLL->[$Knnb]->[_TYPE_] ne 'b'
             && $rLL->[$Knnb]->[_TYPE_] ne '#' )
@@ -7026,7 +7039,8 @@ sub K_next_nonblank {
         # $store_token() within sub respace_tokens.  Tokens are pushed on
         # so there shouldn't be any gaps.
         if ( !defined( $rLL->[$Knnb] ) ) {
-            Fault("Undefined entry for k=$Knnb");
+            Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
+            return;
         }
         if ( $rLL->[$Knnb]->[_TYPE_] ne 'b' ) { return $Knnb }
         $Knnb++;
@@ -7051,7 +7065,8 @@ sub K_previous_code {
         # avoid this error.
         Fault(
 "Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
-        );
+        ) if (DEVEL_MODE);
+        return;
     }
     my $Kpnb = $KK - 1;
     while ( $Kpnb >= 0 ) {
@@ -7082,7 +7097,8 @@ sub K_previous_nonblank {
         # avoid this error.
         Fault(
 "Program Bug: K_previous_nonblank_new called with K=$KK which exceeds $Num"
-        );
+        ) if (DEVEL_MODE);
+        return;
     }
     my $Kpnb = $KK - 1;
     return unless ( $Kpnb >= 0 );
@@ -7333,6 +7349,7 @@ EOM
     # There shouldn't be any nodes beyond the last one.  This routine is
     # relinking lines and tokens after the tokens have been respaced.  A fault
     # here indicates some kind of bug has been introduced into the above loops.
+    # We better stop here.
     if ( $Knext <= $Kmax ) {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
@@ -7522,7 +7539,9 @@ sub weld_containers {
         # An error here would be due to an incorrect initialization introduced
         # in one of the above weld routines, like sub weld_nested.
         if ( $Kend <= $Kstart ) {
-            Fault("Bad weld link: Kend=$Kend <= Kstart=$Kstart\n");
+            Fault("Bad weld link: Kend=$Kend <= Kstart=$Kstart\n")
+              if (DEVEL_MODE);
+            next;
         }
 
         # Set weld values for all tokens this welded pair
@@ -8831,7 +8850,9 @@ sub weld_nested_quotes {
             # the bottom of sub 'respace_tokens' which set the values of
             # _KNEXT_SEQ_ITEM_.  Or an error has been introduced in the
             # loop control lines above.
-            Fault("sequence = $outer_seqno not defined at K=$KK");
+            Fault("sequence = $outer_seqno not defined at K=$KK")
+              if (DEVEL_MODE);
+            next;
         }
 
         my $token = $rtoken_vars->[_TOKEN_];
@@ -12377,7 +12398,9 @@ sub starting_one_line_block {
     # indicates that a programming change may have caused a flush operation to
     # clean out the previously stored tokens.
     if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
-        Fault("program bug: store_token_to_go called incorrectly\n");
+        Fault("program bug: store_token_to_go called incorrectly\n")
+          if (DEVEL_MODE);
+        return 0;
     }
 
     # Return if block should be broken
@@ -12962,10 +12985,10 @@ EOM
             my ( $a, $b, $c ) = caller();
 
             # Bad call, can only be due to a recent programming change.
-            # Better stop here.
             Fault(
 "Program Bug: undo_forced_breakpoint_stack from $a $c has bad i=$i_start "
-            );
+            ) if (DEVEL_MODE);
+            return;
         }
 
         while ( $forced_breakpoint_undo_count > $i_start ) {
@@ -14467,7 +14490,7 @@ sub break_equals {
 
                 # Shouldn't happen because splice below decreases nmax on each
                 # iteration.  An error can only be due to a recent programming
-                # change.
+                # change.  We better stop here.
                 Fault("Program bug-infinite loop in recombine breakpoints\n");
             }
             $nmax_last  = $nmax;
@@ -20030,6 +20053,7 @@ sub send_lines_to_vertical_aligner {
         # receives tokens which it turns into one or more lines. If we get here
         # it means that a programming error in sub grind_batch_of_CODE has
         # caused those lines to be lost.  Turn on DEVEL_MODE to find the error.
+        # We better stop here.
         Fault("Unexpected call with no lines");
     }
 
