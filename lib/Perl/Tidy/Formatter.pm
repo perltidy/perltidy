@@ -289,6 +289,7 @@ my (
     $non_indenting_brace_pattern,
     $bl_exclusion_pattern,
     $bl_pattern,
+    $bli_exclusion_pattern,
     $bli_pattern,
     $block_brace_vertical_tightness_pattern,
     $blank_lines_after_opening_block_pattern,
@@ -4524,6 +4525,7 @@ sub make_bli_pattern {
 
     # default list of block types for which -bli would apply
     my $bli_list_string = 'if else elsif unless while for foreach do : sub';
+    my $bli_exclusion_list_string = ' ';
 
     if ( defined( $rOpts->{'brace-left-and-indent-list'} )
         && $rOpts->{'brace-left-and-indent-list'} )
@@ -4532,6 +4534,15 @@ sub make_bli_pattern {
     }
 
     $bli_pattern = make_block_pattern( '-blil', $bli_list_string );
+
+    if ( defined( $rOpts->{'brace-left-and-indent-exclusion-list'} )
+        && $rOpts->{'brace-left-and-indent-exclusion-list'} )
+    {
+        $bli_exclusion_list_string =
+          $rOpts->{'brace-left-and-indent-exclusion-list'};
+    }
+    $bli_exclusion_pattern =
+      make_block_pattern( '-blixl', $bli_exclusion_list_string );
     return;
 }
 
@@ -9941,7 +9952,10 @@ sub bli_adjustment {
 
     foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
         my $block_type = $rblock_type_of_seqno->{$seqno};
-        if ( $block_type && $block_type =~ /$bli_pattern/ ) {
+        if (   $block_type
+            && $block_type =~ /$bli_pattern/
+            && $block_type !~ /$bli_exclusion_pattern/ )
+        {
             $ris_bli_container->{$seqno} = 1;
             $rbrace_left->{$seqno}       = 1;
             my $Ko = $K_opening_container->{$seqno};

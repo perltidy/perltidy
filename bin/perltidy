@@ -2340,7 +2340,7 @@ For example, perltidy -bli gives
             important_function();
           }
 
-By default, this extra indentation occurs for blocks of type:
+By default, this extra indentation occurs for block types:
 B<if>, B<elsif>, B<else>, B<unless>, B<while>, B<for>, B<foreach>, B<do>, and
 also B<named subs> and blocks preceded by a B<label>.  The next item shows how to
 change this.
@@ -2359,8 +2359,16 @@ B<-bli> flag applies; see L<Specifying Block Types>.
 
 The default is B<-blil='if else elsif unless while for foreach do : sub'>.
 
-Note that this parameter controls the behavior of the B<-bli> flag but has no
-effect unless the B<-bli> flag is set.
+=item B<-blixl=s>, B<--brace-left-and-indent-exclusion-list=s>
+
+Use this parameter to exclude types of block braces for which the B<-bli> flag
+applies; see L<Specifying Block Types>.
+
+This might be useful in conjunction with selecting all blocks B<-blil='*'>.
+The default setting is B<-blixl=' '>, which does not exclude any blocks.
+
+Note that the two parameters B<-blil> and B<-blixl> control the behavior of
+the B<-bli> flag but have no effect unless the B<-bli> flag is set.
 
 =item B<-bar>,    B<--opening-brace-always-on-right>
 

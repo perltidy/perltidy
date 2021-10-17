@@ -2260,21 +2260,22 @@ sub generate_options {
     ########################################
     $category = 2;    # Code indentation control
     ########################################
-    $add_option->( 'continuation-indentation',           'ci',   '=i' );
-    $add_option->( 'extended-continuation-indentation',  'xci',  '!' );
-    $add_option->( 'line-up-parentheses',                'lp',   '!' );
-    $add_option->( 'line-up-parentheses-exclusion-list', 'lpxl', '=s' );
-    $add_option->( 'outdent-keyword-list',               'okwl', '=s' );
-    $add_option->( 'outdent-keywords',                   'okw',  '!' );
-    $add_option->( 'outdent-labels',                     'ola',  '!' );
-    $add_option->( 'outdent-long-quotes',                'olq',  '!' );
-    $add_option->( 'indent-closing-brace',               'icb',  '!' );
-    $add_option->( 'closing-token-indentation',          'cti',  '=i' );
-    $add_option->( 'closing-paren-indentation',          'cpi',  '=i' );
-    $add_option->( 'closing-brace-indentation',          'cbi',  '=i' );
-    $add_option->( 'closing-square-bracket-indentation', 'csbi', '=i' );
-    $add_option->( 'brace-left-and-indent',              'bli',  '!' );
-    $add_option->( 'brace-left-and-indent-list',         'blil', '=s' );
+    $add_option->( 'continuation-indentation',             'ci',    '=i' );
+    $add_option->( 'extended-continuation-indentation',    'xci',   '!' );
+    $add_option->( 'line-up-parentheses',                  'lp',    '!' );
+    $add_option->( 'line-up-parentheses-exclusion-list',   'lpxl',  '=s' );
+    $add_option->( 'outdent-keyword-list',                 'okwl',  '=s' );
+    $add_option->( 'outdent-keywords',                     'okw',   '!' );
+    $add_option->( 'outdent-labels',                       'ola',   '!' );
+    $add_option->( 'outdent-long-quotes',                  'olq',   '!' );
+    $add_option->( 'indent-closing-brace',                 'icb',   '!' );
+    $add_option->( 'closing-token-indentation',            'cti',   '=i' );
+    $add_option->( 'closing-paren-indentation',            'cpi',   '=i' );
+    $add_option->( 'closing-brace-indentation',            'cbi',   '=i' );
+    $add_option->( 'closing-square-bracket-indentation',   'csbi',  '=i' );
+    $add_option->( 'brace-left-and-indent',                'bli',   '!' );
+    $add_option->( 'brace-left-and-indent-list',           'blil',  '=s' );
+    $add_option->( 'brace-left-and-indent-exclusion-list', 'blixl', '=s' );
 
     ########################################
     $category = 3;    # Whitespace control

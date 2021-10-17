@@ -46,7 +46,7 @@ BEGIN {
 -nboa
 ----------
         'braces7' => <<'----------',
--bli -blil='*'
+-bli -blil='*' -blixl='eval'
 ----------
         'def'       => "",
         'extrude'   => "--extrude",
@@ -369,11 +369,10 @@ $myfun = sub
     print("Hello, World\n");
   };
 
-eval
-  {
+eval {
     my $app = App::perlbrew->new( "install-patchperl", "-q" );
     $app->run();
-  } or do
+} or do
   {
     $error          = $@;
     $produced_error = 1;
