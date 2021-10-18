@@ -12040,9 +12040,13 @@ EOM
                             $keep_going      = 1;
                         }
 
-                        # Exception 2: followed by '}' on next line
-                        elsif ( $Ktoken_vars == $K_last ) {
-
+                        # Exception 2: followed by '}' on next line if -lp set.
+                        # The -lp requirement allows the formatting to follow
+                        # old breaks when -lp is not used, minimizing changes.
+                        # Fixes issue c087.
+                        elsif ($Ktoken_vars == $K_last
+                            && $rOpts_line_up_parentheses )
+                        {
                             my $K_closing_container =
                               $self->[_K_closing_container_];
                             my $K_opening_container =
