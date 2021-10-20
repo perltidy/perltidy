@@ -26,6 +26,153 @@
 
 <dl>
 
+<dt id="Issue-c089-improve-vertical-alignment-for-lists-without-parens"><b>Issue c089, improve vertical alignment for lists without parens</b></dt>
+<dd>
+
+<p>An update was made to improve vertical alignment in situations where parens are omitted around lists. The goal is to make lists without parens align as they would if they were contained in parens. Some examples:</p>
+
+<pre><code>    # OLD, no parens, no alignment:
+    glVertex3d $cx + $s * $xs, $cy, $z;
+    glVertex3d $cx, $cy + $s * $ys, $z;
+    glVertex3d $cx - $s * $xs, $cy, $z;
+    glVertex3d $cx, $cy - $s * $ys, $z;
+
+    # OLD, with parens and aligned:
+    glVertex3d( $cx + $s * $xs, $cy,            $z );
+    glVertex3d( $cx,            $cy + $s * $ys, $z );
+    glVertex3d( $cx - $s * $xs, $cy,            $z );
+    glVertex3d( $cx,            $cy - $s * $ys, $z );
+
+    # NEW, no parens but aligned
+    glVertex3d $cx + $s * $xs, $cy,            $z;
+    glVertex3d $cx,            $cy + $s * $ys, $z;
+    glVertex3d $cx - $s * $xs, $cy,            $z;
+    glVertex3d $cx,            $cy - $s * $ys, $z;
+
+    # OLD
+    mkTextConfig $c, $x, $y, -anchor =&gt; &#39;se&#39;, $color;
+    mkTextConfig $c, $x + 30, $y, -anchor =&gt; &#39;s&#39;,  $color;
+    mkTextConfig $c, $x + 60, $y, -anchor =&gt; &#39;sw&#39;, $color;
+    mkTextConfig $c, $x, $y + 30, -anchor =&gt; &#39;e&#39;, $color;
+
+    # NEW
+    mkTextConfig $c, $x,      $y,      -anchor =&gt; &#39;se&#39;, $color;
+    mkTextConfig $c, $x + 30, $y,      -anchor =&gt; &#39;s&#39;,  $color;
+    mkTextConfig $c, $x + 60, $y,      -anchor =&gt; &#39;sw&#39;, $color;
+    mkTextConfig $c, $x,      $y + 30, -anchor =&gt; &#39;e&#39;,  $color;
+
+    # OLD
+    permute_test [ &#39;a&#39;, &#39;b&#39;, &#39;c&#39; ],   &#39;/&#39;, &#39;/&#39;, [ &#39;a&#39;, &#39;b&#39;, &#39;c&#39; ];
+    permute_test [ &#39;a,&#39;, &#39;b&#39;, &#39;c,&#39; ], &#39;/&#39;, &#39;/&#39;, [ &#39;a,&#39;, &#39;b&#39;, &#39;c,&#39; ];
+    permute_test [ &#39;a&#39;, &#39;,&#39;, &#39;#&#39;, &#39;c&#39; ], &#39;/&#39;, &#39;/&#39;, [ &#39;a&#39;, &#39;,&#39;, &#39;#&#39;, &#39;c&#39; ];
+    permute_test [ &#39;f_oo&#39;, &#39;b_ar&#39; ], &#39;/&#39;, &#39;/&#39;, [ &#39;f_oo&#39;, &#39;b_ar&#39; ];
+
+    # NEW
+    permute_test [ &#39;a&#39;, &#39;b&#39;, &#39;c&#39; ],      &#39;/&#39;, &#39;/&#39;, [ &#39;a&#39;, &#39;b&#39;, &#39;c&#39; ];
+    permute_test [ &#39;a,&#39;, &#39;b&#39;, &#39;c,&#39; ],    &#39;/&#39;, &#39;/&#39;, [ &#39;a,&#39;, &#39;b&#39;, &#39;c,&#39; ];
+    permute_test [ &#39;a&#39;, &#39;,&#39;, &#39;#&#39;, &#39;c&#39; ], &#39;/&#39;, &#39;/&#39;, [ &#39;a&#39;, &#39;,&#39;, &#39;#&#39;, &#39;c&#39; ];
+    permute_test [ &#39;f_oo&#39;, &#39;b_ar&#39; ],     &#39;/&#39;, &#39;/&#39;, [ &#39;f_oo&#39;, &#39;b_ar&#39; ];
+
+    # OLD:
+    is $thingy, &quot;fee&quot;,           &quot;source filters apply to evalbytten strings&quot;;
+    is &quot;foo&quot;,   $unfiltered_foo, &#39;filters leak not out of byte evals&#39;;
+    is $av-&gt;[2], &quot;NAME:my_xop&quot;,          &quot;OP_NAME returns registered name&quot;;
+    is $av-&gt;[3], &quot;DESC:XOP for testing&quot;, &quot;OP_DESC returns registered desc&quot;;
+    is $av-&gt;[4], &quot;CLASS:$OA_UNOP&quot;,       &quot;OP_CLASS returns registered class&quot;;
+    is scalar @$av, 7, &quot;registered peep called&quot;;
+    is $av-&gt;[5], &quot;peep:$unop&quot;, &quot;...with correct &#39;o&#39; param&quot;;
+    is $av-&gt;[6], &quot;oldop:$kid&quot;, &quot;...and correct &#39;oldop&#39; param&quot;;
+
+    # NEW
+    is $av-&gt;[2],    &quot;NAME:my_xop&quot;,          &quot;OP_NAME returns registered name&quot;;
+    is $av-&gt;[3],    &quot;DESC:XOP for testing&quot;, &quot;OP_DESC returns registered desc&quot;;
+    is $av-&gt;[4],    &quot;CLASS:$OA_UNOP&quot;,       &quot;OP_CLASS returns registered class&quot;;
+    is scalar @$av, 7,                      &quot;registered peep called&quot;;
+    is $av-&gt;[5],    &quot;peep:$unop&quot;,           &quot;...with correct &#39;o&#39; param&quot;;
+    is $av-&gt;[6],    &quot;oldop:$kid&quot;,           &quot;...and correct &#39;oldop&#39; param&quot;;</code></pre>
+
+<p>17 Oct 2021.</p>
+
+</dd>
+<dt id="Issue-c087-breaking-after-anonymous-sub"><b>Issue c087, breaking after anonymous sub</b></dt>
+<dd>
+
+<p>This update keeps both of these configurations stable for all cases except when the -lp option is used. For the -lp option, both become one-line blocks (the second case) to prevents the -lp indentation style from being lost. This update was made to minimize changes to existing formatting.</p>
+
+<pre><code>    $obj = {
+        foo =&gt; sub { &quot;bar&quot; }
+    };
+
+    $obj = { foo =&gt; sub { &quot;bar&quot; } };</code></pre>
+
+<p>17 Oct 2021, f05e6b5.</p>
+
+</dd>
+<dt id="Improve-formatting-of-some-Moose-structures"><b>Improve formatting of some Moose structures</b></dt>
+<dd>
+
+<p>In some structures used in Moose coding, some asymmetrical container breaks were being caused by the braces being tokenized as hash braces rather than block braces. This was also causing some unwanted warning messages.</p>
+
+<pre><code>    # OLD
+    ::is(
+        ::exception { has &#39;+bar&#39; =&gt; ( default =&gt; sub { 100 } );
+        },
+        undef,
+        &#39;... extended the attribute successfully&#39;
+    );
+
+    # NEW
+    ::is(
+        ::exception {
+            has &#39;+bar&#39; =&gt; ( default =&gt; sub { 100 } );
+        },
+        undef,
+        &#39;... extended the attribute successfully&#39;
+    );</code></pre>
+
+<p>This fixes issue c074.</p>
+
+<p>12 Oct 2021, 7e873fa.</p>
+
+</dd>
+<dt id="Fix-issue-c081--cscw-preventing-deletion-of-closing-side-comments"><b>Fix issue c081, -cscw preventing deletion of closing side comments</b></dt>
+<dd>
+
+<p>Random testing revealed a problem in which an old closing side comment was not being deleted when it fell below the interval specified on -csci=n and the -cscw flag was also set.</p>
+
+<p>For example, the following snippet has been formatted with -csc -csci=1. The interval -csci=1 insures that all blocks get side comments:</p>
+
+<pre><code>    if ($x3) {
+        $zz;
+        if ($x2) {
+            if ($x1) {
+                ..;
+            } ## end if ($x1)
+            $a;
+            $b;
+            $c;
+        } ## end if ($x2)
+    } ## end if ($x3)</code></pre>
+
+<p>If we then run with -csc -csci=6, the comment ## end if ($x1) will fall below the threshold and be removed (correctly):</p>
+
+<pre><code>    if ($x3) {
+        $zz;
+        if ($x2) {
+            if ($x1) {
+                ..;
+            }
+            $a;
+            $b;
+            $c;
+        } ## end if ($x2)
+    } ## end if ($x3)</code></pre>
+
+<p>But if we also add the -cscw flag (warnings) then it was not being removed. This update fixes this problem (issue c081).</p>
+
+<p>2 Oct 2021, 25ef8e8</p>
+
+</dd>
 <dt id="Partial-fix-for-issue-git-74-on--lp-at-anonymous-subs"><b>Partial fix for issue git #74 on -lp at anonymous subs</b></dt>
 <dd>
 
@@ -55,7 +202,7 @@
 
 <p>But note that this only applies to one-line anonymous subs. If an anonymous sub is broken into several lines due to its length or complexity, then these forced line breaks cause indentation to revert to the standard indentation scheme.</p>
 
-<p>22 Sep 2021.</p>
+<p>22 Sep 2021, 4fd58f7.</p>
 
 </dd>
 <dt id="Fix-issues-b1209-related-to--vmll"><b>Fix issues b1209 related to -vmll</b></dt>
@@ -63,7 +210,7 @@
 
 <p>Testing with random parameters produced a formatting instability related to the -vmll flag. The problem was due to a subtle difference in the definition of nesting depth and indentation level. The vertical aligner was using nesting depth instead of indentation level to compute the maximum line length when -vmll is set. In some rare cases there is a difference. The problem was fixed by passing the maximum line length to the vertical aligner so that the calculation is only done in the formatter. This fixes b1209.</p>
 
-<p>20 Sep 2021.</p>
+<p>20 Sep 2021, acf1d2d.</p>
 
 </dd>
 <dt id="Fix-issue-b1208"><b>Fix issue b1208</b></dt>

@@ -326,7 +326,7 @@
 
 <p>For example,</p>
 
-<pre><code>        perltidy -sal=&#39;method fun _sub M4&#39; </code></pre>
+<pre><code>        perltidy -sal=&#39;method fun _sub M4&#39;</code></pre>
 
 <p>will cause the perltidy to treate the words &#39;method&#39;, &#39;fun&#39;, &#39;_sub&#39; and &#39;M4&#39; to be treated the same as if they were &#39;sub&#39;. Note that if the alias words are separated by spaces then the string of words should be placed in quotes.</p>
 
@@ -542,12 +542,12 @@
 
 <p>Continuation indentation is extra indentation spaces applied when a long line is broken. The default is n=2, illustrated here:</p>
 
-<pre><code> my $level =   # -ci=2      
+<pre><code> my $level =   # -ci=2
    ( $max_index_to_go &gt;= 0 ) ? $levels_to_go[0] : $last_output_level;</code></pre>
 
 <p>The same example, with n=0, is a little harder to read:</p>
 
-<pre><code> my $level =   # -ci=0    
+<pre><code> my $level =   # -ci=0
  ( $max_index_to_go &gt;= 0 ) ? $levels_to_go[0] : $last_output_level;</code></pre>
 
 <p>The value given to <b>-ci</b> is also used by some commands when a small space is required. Examples are commands for outdenting labels, <b>-ola</b>, and control keywords, <b>-okw</b>.</p>
@@ -851,7 +851,7 @@
 
 <pre><code> $width = $col[ $j + $k ] - $col[ $j ];  # -sbt=0
  $width = $col[ $j + $k ] - $col[$j];    # -sbt=1 (default)
- $width = $col[$j + $k] - $col[$j];      # -sbt=2 </code></pre>
+ $width = $col[$j + $k] - $col[$j];      # -sbt=2</code></pre>
 
 <p>Curly braces which do not contain code blocks are controlled by the parameter <b>-bt=n</b> or <b>--brace-tightness=n</b>.</p>
 
@@ -873,7 +873,7 @@
 
 <p>The flag <b>-tso</b> causes certain perl token sequences (secret operators) which might be considered to be a single operator to be formatted &quot;tightly&quot; (without spaces). The operators currently modified by this flag are:</p>
 
-<pre><code>     0+  +0  ()x!! ~~&lt;&gt;  ,=&gt;   =( )=  </code></pre>
+<pre><code>     0+  +0  ()x!! ~~&lt;&gt;  ,=&gt;   =( )=</code></pre>
 
 <p>For example the sequence <b>0 +</b>, which converts a string to a number, would be formatted without a space: <b>0+</b> when the <b>-tso</b> flag is set. This flag is off by default.</p>
 
@@ -1025,7 +1025,7 @@
 
 <p>When an opening paren follows a Perl keyword, no space is introduced after the keyword, unless it is (by default) one of these:</p>
 
-<pre><code>   my local our and or xor eq ne if else elsif until unless 
+<pre><code>   my local our and or xor eq ne if else elsif until unless
    while for foreach return switch case given when</code></pre>
 
 <p>These defaults can be modified with two commands:</p>
@@ -1063,7 +1063,7 @@
 
 <p><b>-sfp</b> or <b>--space-function-paren</b></p>
 
-<pre><code>  myfunc( $a, $b, $c );    # default 
+<pre><code>  myfunc( $a, $b, $c );    # default
   myfunc ( $a, $b, $c );   # -sfp</code></pre>
 
 <p>You will probably also want to use the flag <b>-skp</b> (previous item) too.</p>
@@ -1149,7 +1149,7 @@
 
 <p>In the following example some extra space has been inserted on the second line between the two open parens. This extra space is called &quot;logical padding&quot; and is intended to help align similar things vertically in some logical or ternary expressions.</p>
 
-<pre><code>    # perltidy [default formatting] 
+<pre><code>    # perltidy [default formatting]
     $same =
       (      ( $aP eq $bP )
           &amp;&amp; ( $aS eq $bS )
@@ -1161,7 +1161,7 @@
 
 <p>Here is an example involving a ternary operator:</p>
 
-<pre><code>    # perltidy [default formatting] 
+<pre><code>    # perltidy [default formatting]
     $bits =
         $top &gt; 0xffff ? 32
       : $top &gt; 0xff   ? 16
@@ -1281,8 +1281,7 @@
 
 <pre><code>     perltidy -l=80
         $vmsfile =~ s/;[\d\-]*$//
-          ;    # Clip off version number; we can use a newer version as well
-   </code></pre>
+          ;    # Clip off version number; we can use a newer version as well</code></pre>
 
 </dd>
 <dt id="hsc---hanging-side-comments"><b>-hsc</b>, <b>--hanging-side-comments</b></dt>
@@ -1483,7 +1482,7 @@
 
 <pre><code>    @month_of_year = (   # -nsbc
         &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;, &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;,
-  
+
         ##  &#39;Dec&#39;, &#39;Nov&#39;
         &#39;Nov&#39;, &#39;Dec&#39;
     );</code></pre>
@@ -1500,7 +1499,7 @@
 
 <p>A pattern which can be useful is:</p>
 
-<pre><code>    -sbcp=^#{2,}[^\s#] </code></pre>
+<pre><code>    -sbcp=^#{2,}[^\s#]</code></pre>
 
 <p>This pattern requires a static block comment to have at least one character which is neither a # nor a space. It allows a line containing only &#39;#&#39; characters to be rejected as a static block comment. Such lines are often used at the start and end of header information in subroutines and should not be separated from the intervening comments, which typically begin with just a single &#39;#&#39;.</p>
 
@@ -1607,7 +1606,7 @@
 
 <pre><code> -fsb=&#39;#\{\{\{&#39; becomes /^#\{\{\{\s/  which matches  #{{{ but not #{{{{
  -fsb=&#39;#\*\*&#39;   becomes /^#\*\*\s/    which matches  #** but not #***
- -fsb=&#39;#\*{2,}&#39; becomes /^#\*{2,}\s/  which matches  #** and #***** </code></pre>
+ -fsb=&#39;#\*{2,}&#39; becomes /^#\*{2,}\s/  which matches  #** and #*****</code></pre>
 
 </dd>
 <dt id="fse-string---format-skipping-end-string"><b>-fse=string</b>, <b>--format-skipping-end=string</b></dt>
@@ -1662,7 +1661,7 @@
 <pre><code>  # -ce
   if ($task) {
       yyy();
-  } else {    
+  } else {
       zzz();
   }
 
@@ -1670,7 +1669,7 @@
   if ($task) {
         yyy();
   }
-  else {    
+  else {
         zzz();
   }</code></pre>
 
@@ -1707,7 +1706,7 @@
 
 <p>or equivalently</p>
 
-<pre><code>  -cbl=sort,map,grep </code></pre>
+<pre><code>  -cbl=sort,map,grep</code></pre>
 
 <p>Note however that these particular block types are typically short so there might not be much opportunity for the cuddled format style.</p>
 
@@ -1732,7 +1731,7 @@
 <p>Cuddled formatting is only possible between a pair of code blocks if the closing brace of the first block starts a new line. If a block is encountered which is entirely on a single line, and cuddled formatting is selected, it is necessary to make a decision as to whether or not to &quot;break&quot; the block, meaning to cause it to span multiple lines. This parameter controls that decision. The options are:</p>
 
 <pre><code>   cbo=0  Never force a short block to break.
-   cbo=1  If the first of a pair of blocks is broken in the input file, 
+   cbo=1  If the first of a pair of blocks is broken in the input file,
           then break the second [DEFAULT].
    cbo=2  Break open all blocks for maximal cuddled formatting.</code></pre>
 
@@ -1743,27 +1742,48 @@
 <p>The option <b>cbo=2</b> produces maximal cuddling but will not allow any short blocks.</p>
 
 </dd>
-<dt id="bl---opening-brace-on-new-line"><b>-bl</b>, <b>--opening-brace-on-new-line</b></dt>
+<dt id="bl---opening-brace-on-new-line-or---brace-left"><b>-bl</b>, <b>--opening-brace-on-new-line</b>, or <b>--brace-left</b></dt>
 <dd>
 
-<p>Use the flag <b>-bl</b> to place the opening brace on a new line:</p>
+<p>Use the flag <b>-bl</b> to place an opening block brace on a new line:</p>
 
-<pre><code>  if ( $input_file eq &#39;-&#39; )    # -bl 
-  {                          
-      important_function();
+<pre><code>  if ( $input_file eq &#39;-&#39; )
+  {
+      ...
   }</code></pre>
 
-<p>This flag applies to all structural blocks, including named sub&#39;s (unless the <b>-sbl</b> flag is set -- see next item).</p>
+<p>By default it applies to all structural blocks except <b>sort map grep eval</b> and anonymous subs.</p>
 
-<p>The default style, <b>-nbl</b>, places an opening brace on the same line as the keyword introducing it. For example,</p>
+<p>The default is <b>-nbl</b> which places an opening brace on the same line as the keyword introducing it if possible. For example,</p>
 
-<pre><code>  if ( $input_file eq &#39;-&#39; ) {   # -nbl (default)</code></pre>
+<pre><code>  # default
+  if ( $input_file eq &#39;-&#39; ) {
+     ...
+  }</code></pre>
+
+<p>When <b>-bl</b> is set, the blocks to which this applies can be controlled with the parameters <b>--brace-left-list</b> and <b>-brace-left-exclusion-list</b> described in the next sections.</p>
+
+</dd>
+<dt id="bll-s---brace-left-list-s"><b>-bll=s</b>, <b>--brace-left-list=s</b></dt>
+<dd>
+
+<p>Use this parameter to change the types of block braces for which the <b>-bl</b> flag applies; see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>. For example, <b>-bll=&#39;if elsif else sub&#39;</b> would apply it to only <code>if/elsif/else</code> and named sub blocks. The default is all blocks, <b>-bll=&#39;*&#39;</b>.</p>
+
+</dd>
+<dt id="blxl-s---brace-left-exclusion-list-s"><b>-blxl=s</b>, <b>--brace-left-exclusion-list=s</b></dt>
+<dd>
+
+<p>Use this parameter to exclude types of block braces for which the <b>-bl</b> flag applies; see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>. For example, the default settings <b>-bll=&#39;*&#39;</b> and <b>-blxl=&#39;sort map grep eval asub&#39;</b> mean all blocks except <b>sort map grep eval</b> and anonymous sub blocks.</p>
+
+<p>Note that the lists <b>-bll=s</b> and <b>-blxl=s</b> control the behavior of the <b>-bl</b> flag but have no effect unless the <b>-bl</b> flag is set.</p>
 
 </dd>
 <dt id="sbl---opening-sub-brace-on-new-line"><b>-sbl</b>, <b>--opening-sub-brace-on-new-line</b></dt>
 <dd>
 
-<p>The flag <b>-sbl</b> can be used to override the value of <b>-bl</b> for the opening braces of named sub&#39;s. For example,</p>
+<p>The flag <b>-sbl</b> provides a shortcut way to turn on <b>-bl</b> just for named subs. The same effect can be achieved by turning on <b>-bl</b> with the block list set as <b>-bll=&#39;sub&#39;</b>.</p>
+
+<p>For example,</p>
 
 <pre><code> perltidy -sbl</code></pre>
 
@@ -1779,7 +1799,7 @@
     }
  }</code></pre>
 
-<p>This flag is negated with <b>-nsbl</b>. If <b>-sbl</b> is not specified, the value of <b>-bl</b> is used.</p>
+<p>This flag is negated with <b>-nsbl</b>, which is the default.</p>
 
 </dd>
 <dt id="asbl---opening-anonymous-sub-brace-on-new-line"><b>-asbl</b>, <b>--opening-anonymous-sub-brace-on-new-line</b></dt>
@@ -1807,22 +1827,36 @@
 <dt id="bli---brace-left-and-indent"><b>-bli</b>, <b>--brace-left-and-indent</b></dt>
 <dd>
 
-<p>The flag <b>-bli</b> is the same as <b>-bl</b> but in addition it causes one unit of continuation indentation ( see <b>-ci</b> ) to be placed before an opening and closing block braces.</p>
+<p>The flag <b>-bli</b> is similar to the <b>-bl</b> flag but in addition it causes one unit of continuation indentation ( see <b>-ci</b> ) to be placed before an opening and closing block braces.</p>
 
-<p>For example,</p>
+<p>For example, perltidy -bli gives</p>
 
-<pre><code>        if ( $input_file eq &#39;-&#39; )    # -bli
+<pre><code>        if ( $input_file eq &#39;-&#39; )
           {
             important_function();
           }</code></pre>
 
-<p>By default, this extra indentation occurs for blocks of type: <b>if</b>, <b>elsif</b>, <b>else</b>, <b>unless</b>, <b>for</b>, <b>foreach</b>, <b>sub</b>, <b>while</b>, <b>until</b>, and also with a preceding label. The next item shows how to change this.</p>
+<p>By default, this extra indentation occurs for block types: <b>if</b>, <b>elsif</b>, <b>else</b>, <b>unless</b>, <b>while</b>, <b>for</b>, <b>foreach</b>, <b>do</b>, and also <b>named subs</b> and blocks preceded by a <b>label</b>. The next item shows how to change this.</p>
+
+<p><b>Note</b>: The <b>-bli</b> flag is similar to the <b>-bl</b> flag, with the difference being that braces get indented. But these two flags are implemented independently, and have different default settings for historical reasons. If desired, a mixture of effects can be achieved if desired by turning them both on with different <b>-list</b> settings. In the event that both settings are selected for a certain block type, the <b>-bli</b> style has priority.</p>
 
 </dd>
 <dt id="blil-s---brace-left-and-indent-list-s"><b>-blil=s</b>, <b>--brace-left-and-indent-list=s</b></dt>
 <dd>
 
-<p>Use this parameter to change the types of block braces for which the <b>-bli</b> flag applies; see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>. For example, <b>-blil=&#39;if elsif else&#39;</b> would apply it to only <code>if/elsif/else</code> blocks.</p>
+<p>Use this parameter to change the types of block braces for which the <b>-bli</b> flag applies; see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>.</p>
+
+<p>The default is <b>-blil=&#39;if else elsif unless while for foreach do : sub&#39;</b>.</p>
+
+</dd>
+<dt id="blixl-s---brace-left-and-indent-exclusion-list-s"><b>-blixl=s</b>, <b>--brace-left-and-indent-exclusion-list=s</b></dt>
+<dd>
+
+<p>Use this parameter to exclude types of block braces for which the <b>-bli</b> flag applies; see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>.</p>
+
+<p>This might be useful in conjunction with selecting all blocks <b>-blil=&#39;*&#39;</b>. The default setting is <b>-blixl=&#39; &#39;</b>, which does not exclude any blocks.</p>
+
+<p>Note that the two parameters <b>-blil</b> and <b>-blixl</b> control the behavior of the <b>-bli</b> flag but have no effect unless the <b>-bli</b> flag is set.</p>
 
 </dd>
 <dt id="bar---opening-brace-always-on-right"><b>-bar</b>, <b>--opening-brace-always-on-right</b></dt>
@@ -2010,7 +2044,7 @@
 <pre><code>        # default formatting
         do {
             {
-                next if $x == $y;    
+                next if $x == $y;
             }
         } until $x++ &gt; $z;
 
@@ -2128,7 +2162,7 @@
 
 <p>For example, compare</p>
 
-<pre><code>        # perltidy -wn 
+<pre><code>        # perltidy -wn
         if ( defined( $_Cgi_Query{
             $Config{&#39;methods&#39;}{&#39;authentication&#39;}{&#39;remote&#39;}{&#39;cgi&#39;}{&#39;username&#39;}
         } ) )</code></pre>
@@ -2164,8 +2198,8 @@
 
 <li><p>Opening tokens (except for block braces) are controlled by <b>-vt=n</b>, or <b>--vertical-tightness=n</b>, where</p>
 
-<pre><code> -vt=0 always break a line after opening token (default). 
- -vt=1 do not break unless this would produce more than one 
+<pre><code> -vt=0 always break a line after opening token (default).
+ -vt=1 do not break unless this would produce more than one
          step in indentation in a line.
  -vt=2 never break a line after opening token</code></pre>
 
@@ -2175,9 +2209,9 @@
 </li>
 <li><p>Closing tokens (except for block braces) are controlled by <b>-vtc=n</b>, or <b>--vertical-tightness-closing=n</b>, where</p>
 
-<pre><code> -vtc=0 always break a line before a closing token (default), 
- -vtc=1 do not break before a closing token which is followed 
-        by a semicolon or another closing token, and is not in 
+<pre><code> -vtc=0 always break a line before a closing token (default),
+ -vtc=1 do not break before a closing token which is followed
+        by a semicolon or another closing token, and is not in
         a list environment.
  -vtc=2 never break before a closing token.
  -vtc=3 Like -vtc=1 except always break before a closing token
@@ -2236,14 +2270,14 @@
 
 <p>The difference between <b>-vt=1</b> and <b>-vt=2</b> is shown here:</p>
 
-<pre><code>    # perltidy -lp -vt=1 
+<pre><code>    # perltidy -lp -vt=1
     $init-&gt;add(
                 mysprintf( &quot;(void)find_threadsv(%s);&quot;,
                            cstring( $threadsv_names[ $op-&gt;targ ] )
                 )
     );
 
-    # perltidy -lp -vt=2 
+    # perltidy -lp -vt=2
     $init-&gt;add( mysprintf( &quot;(void)find_threadsv(%s);&quot;,
                            cstring( $threadsv_names[ $op-&gt;targ ] )
                 )
@@ -2275,8 +2309,8 @@
 
 <p>The <b>-bbvt=n</b> flag is just like the <b>-vt=n</b> flag but applies to opening code block braces.</p>
 
-<pre><code> -bbvt=0 break after opening block brace (default). 
- -bbvt=1 do not break unless this would produce more than one 
+<pre><code> -bbvt=0 break after opening block brace (default).
+ -bbvt=1 do not break unless this would produce more than one
          step in indentation in a line.
  -bbvt=2 do not break after opening block brace.</code></pre>
 
@@ -2451,7 +2485,7 @@
 
 <p>The -baao sets the default to be to break after all of the following operators:</p>
 
-<pre><code>    % + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; 
+<pre><code>    % + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp;
     = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
     . : ? &amp;&amp; || and or err xor</code></pre>
 
@@ -2514,7 +2548,7 @@
 <p>If the computed number of fields for any table exceeds <b>n</b>, then it will be reduced to <b>n</b>. The default value for <b>n</b> is a large number, 40. While this value should probably be left unchanged as a general rule, it might be used on a small section of code to force a list to have a particular number of fields per line, and then either the <b>-boc</b> flag could be used to retain this formatting, or a single comment could be introduced somewhere to freeze the formatting in future applications of perltidy.</p>
 
 <pre><code>    # perltidy -mft=2
-    @month_of_year = (    
+    @month_of_year = (
         &#39;Jan&#39;, &#39;Feb&#39;,
         &#39;Mar&#39;, &#39;Apr&#39;,
         &#39;May&#39;, &#39;Jun&#39;,
@@ -2529,12 +2563,12 @@
 
 <p>A comma which follows a comma arrow, &#39;=&gt;&#39;, is given special consideration. In a long list, it is common to break at all such commas. This parameter can be used to control how perltidy breaks at these commas. (However, it will have no effect if old comma breaks are being forced because <b>-boc</b> is used). The possible values of <b>n</b> are:</p>
 
-<pre><code> n=0 break at all commas after =&gt;  
+<pre><code> n=0 break at all commas after =&gt;
  n=1 stable: break at all commas after =&gt; if container is open,
      EXCEPT FOR one-line containers
  n=2 break at all commas after =&gt;, BUT try to form the maximum
      one-line container lengths
- n=3 do not treat commas after =&gt; specially at all 
+ n=3 do not treat commas after =&gt; specially at all
  n=4 break everything: like n=0 but ALSO break a short container with
      a =&gt; not followed by a comma when -vt=0 is used
  n=5 stable: like n=1 but ALSO break at open one-line containers when
@@ -2583,7 +2617,7 @@
 
 <p>For example, given this snippet:</p>
 
-<pre><code>    return unless $cmd = $cmd || ($dot 
+<pre><code>    return unless $cmd = $cmd || ($dot
         &amp;&amp; $Last_Shell) || &amp;prompt(&#39;|&#39;);
 
     # perltidy -bol [default]
@@ -3037,7 +3071,7 @@
 <p><b>-pbp</b> is an abbreviation for the parameters in the book <b>Perl Best Practices</b> by Damian Conway:</p>
 
 <pre><code>    -l=78 -i=4 -ci=4 -st -se -vt=2 -cti=0 -pt=1 -bt=1 -sbt=1 -bbt=1 -nsfs -nolq
-    -wbb=&quot;% + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; = 
+    -wbb=&quot;% + - * / x != == &gt;= &lt;= =~ !~ &lt; &gt; | &amp; =
           **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=&quot;</code></pre>
 
 <p>Please note that this parameter set includes -st and -se flags, which make perltidy act as a filter on one file only. These can be overridden by placing <b>-nst</b> and/or <b>-nse</b> after the -pbp parameter.</p>
@@ -3086,6 +3120,8 @@
 <dd>
 
 <p>There are a few points to note regarding one-line blocks. A one-line block is something like this,</p>
+
+<pre><code>    if ( -e $file ) { print &quot;&#39;$file&#39; exists\n&quot; }</code></pre>
 
 <p>where the contents within the curly braces is short enough to fit on a single line.</p>
 
@@ -3165,7 +3201,7 @@
 <p>Vertical alignment refers to lining up certain symbols in a list of consecutive similar lines to improve readability. For example, the &quot;fat commas&quot; are aligned in the following statement:</p>
 
 <pre><code>        $data = $pkg-&gt;new(
-            PeerAddr =&gt; join( &quot;.&quot;, @port[ 0 .. 3 ] ),   
+            PeerAddr =&gt; join( &quot;.&quot;, @port[ 0 .. 3 ] ),
             PeerPort =&gt; $port[4] * 256 + $port[5],
             Proto    =&gt; &#39;tcp&#39;
         );</code></pre>
@@ -3478,13 +3514,13 @@
 
 <p>Most of the flags accepted by pod2html may be included in the perltidy command line, and they will be passed to pod2html. In some cases, the flags have a prefix <code>pod</code> to emphasize that they are for the pod2html, and this prefix will be removed before they are passed to pod2html. The flags which have the additional <code>pod</code> prefix are:</p>
 
-<pre><code>   --[no]podheader --[no]podindex --[no]podrecurse --[no]podquiet 
+<pre><code>   --[no]podheader --[no]podindex --[no]podrecurse --[no]podquiet
    --[no]podverbose --podflush</code></pre>
 
 <p>The flags which are unchanged from their use in pod2html are:</p>
 
 <pre><code>   --backlink=s --cachedir=s --htmlroot=s --libpods=s --title=s
-   --podpath=s --podroot=s </code></pre>
+   --podpath=s --podroot=s</code></pre>
 
 <p>where &#39;s&#39; is an appropriate character string. Not all of these flags are available in older versions of Pod::Html. See your Pod::Html documentation for more information.</p>
 
@@ -3544,7 +3580,7 @@
 
 <p>Syntax colors may be changed from their default values by flags of the either the long form, <b>-html-color-xxxxxx=n</b>, or more conveniently the short form, <b>-hcx=n</b>, where <b>xxxxxx</b> is one of the following words, and <b>x</b> is the corresponding abbreviation:</p>
 
-<pre><code>      Token Type             xxxxxx           x 
+<pre><code>      Token Type             xxxxxx           x
       ----------             --------         --
       comment                comment          c
       number                 numeric          n

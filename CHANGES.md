@@ -6,16 +6,16 @@
       -bl (--opening-brace-on-new-line) flag applies.  The new parameters are
       -block-left-list=s, or -bll=s, and --block-left-exclusion-list=s,
       or -blxl=s.  Previously the -bl flag was 'hardwired' to apply to
-      nearly all blocks, and the default values of the new parameters
+      nearly all blocks. The default values of the new parameters
       retain the the old default behavior but allow it to be changed.
 
     - The default behavior of the -bli (-brace-left-and-indent) flag has changed
-      slightly.  Previously, if you set -bli then the -bl flag would also
+      slightly.  Previously, if you set -bli, then the -bl flag would also
       automatically be set.  Consequently, block types which were not included
       in the default list for -bli would get -bl formatting.  This is no longer done,
       and these two styles are now controlled independently.  The manual describes
-      the controls.  If you want to recover the previous default behavior exactly,
-      replace '-bli' with the pair '-bli -bl'.
+      the controls.  If you want to recover the exact previous default behavior of
+      the -bli then add the -bl flag.
 
     - Partial fix issue for git #74, the -lp formatting style was
       being lost when a one-line anonymous sub was followed by a closing brace.
@@ -24,7 +24,7 @@
       Some unwanted vertical alignments of spaced function perens
       were being made.
 
-    - Update the man pages to clarify the flags -valign and -novalign
+    - Updated the man pages to clarify the flags -valign and -novalign
       for turning vertical alignment on and off (issue git #72).
       Added parameters -vc -vsc -vbc for separately turning off vertical
       alignment of code, side comments and block comments.
@@ -33,13 +33,30 @@
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.
 
-    - This version runs about 10 to 15 percent faster on large files than the
+    - Vertical alignment of function calls without parens has been improved
+      and is now closer to alignment results with parens.  For example
+
+        # OLD
+        mkTextConfig $c, $x, $y, -anchor => 'se', $color;
+        mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
+        mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
+        mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;
+
+        # NEW
+        mkTextConfig $c, $x,      $y,      -anchor => 'se', $color;
+        mkTextConfig $c, $x + 30, $y,      -anchor => 's',  $color;
+        mkTextConfig $c, $x + 60, $y,      -anchor => 'sw', $color;
+        mkTextConfig $c, $x,      $y + 30, -anchor => 'e',  $color;
+
+    - This version runs 10 to 15 percent faster on large files than the
       previous release due to optimizations made with the help of NYTProf.
 
-    - This version was subjected to over 100 cpu hours of testing with random input
-      parameters with no instabilities or other irregularities seen.
+    - This version was subjected to over 200 cpu hours of testing with random input
+      parameters with no instabilities (metastable states) or other irregularities
+      seen.
 
-    - Numerous minor fixes have been made. A complete list is at:
+    - Numerous minor fixes have been made, mostly very rare formatting instabilities
+      found in random testing. A complete list is at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 

@@ -2,6 +2,90 @@
 
 =over 4
 
+=item B<Issue c089, improve vertical alignment for lists without parens>
+
+An update was made to improve vertical alignment in situations where parens
+are omitted around lists.  The goal is to make lists without parens align
+as they would if they were contained in parens.  Some examples:
+
+    # OLD, no parens, no alignment:
+    glVertex3d $cx + $s * $xs, $cy, $z;
+    glVertex3d $cx, $cy + $s * $ys, $z;
+    glVertex3d $cx - $s * $xs, $cy, $z;
+    glVertex3d $cx, $cy - $s * $ys, $z;
+
+    # OLD, with parens and aligned:
+    glVertex3d( $cx + $s * $xs, $cy,            $z );
+    glVertex3d( $cx,            $cy + $s * $ys, $z );
+    glVertex3d( $cx - $s * $xs, $cy,            $z );
+    glVertex3d( $cx,            $cy - $s * $ys, $z );
+
+    # NEW, no parens but aligned
+    glVertex3d $cx + $s * $xs, $cy,            $z;
+    glVertex3d $cx,            $cy + $s * $ys, $z;
+    glVertex3d $cx - $s * $xs, $cy,            $z;
+    glVertex3d $cx,            $cy - $s * $ys, $z;
+
+    # OLD
+    mkTextConfig $c, $x, $y, -anchor => 'se', $color;
+    mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
+    mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
+    mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;
+
+    # NEW
+    mkTextConfig $c, $x,      $y,      -anchor => 'se', $color;
+    mkTextConfig $c, $x + 30, $y,      -anchor => 's',  $color;
+    mkTextConfig $c, $x + 60, $y,      -anchor => 'sw', $color;
+    mkTextConfig $c, $x,      $y + 30, -anchor => 'e',  $color;
+
+    # OLD
+    permute_test [ 'a', 'b', 'c' ],   '/', '/', [ 'a', 'b', 'c' ];
+    permute_test [ 'a,', 'b', 'c,' ], '/', '/', [ 'a,', 'b', 'c,' ];
+    permute_test [ 'a', ',', '#', 'c' ], '/', '/', [ 'a', ',', '#', 'c' ];
+    permute_test [ 'f_oo', 'b_ar' ], '/', '/', [ 'f_oo', 'b_ar' ];
+
+    # NEW
+    permute_test [ 'a', 'b', 'c' ],      '/', '/', [ 'a', 'b', 'c' ];
+    permute_test [ 'a,', 'b', 'c,' ],    '/', '/', [ 'a,', 'b', 'c,' ];
+    permute_test [ 'a', ',', '#', 'c' ], '/', '/', [ 'a', ',', '#', 'c' ];
+    permute_test [ 'f_oo', 'b_ar' ],     '/', '/', [ 'f_oo', 'b_ar' ];
+
+    # OLD:
+    is $thingy, "fee",           "source filters apply to evalbytten strings";
+    is "foo",   $unfiltered_foo, 'filters leak not out of byte evals';
+    is $av->[2], "NAME:my_xop",          "OP_NAME returns registered name";
+    is $av->[3], "DESC:XOP for testing", "OP_DESC returns registered desc";
+    is $av->[4], "CLASS:$OA_UNOP",       "OP_CLASS returns registered class";
+    is scalar @$av, 7, "registered peep called";
+    is $av->[5], "peep:$unop", "...with correct 'o' param";
+    is $av->[6], "oldop:$kid", "...and correct 'oldop' param";
+
+    # NEW
+    is $av->[2],    "NAME:my_xop",          "OP_NAME returns registered name";
+    is $av->[3],    "DESC:XOP for testing", "OP_DESC returns registered desc";
+    is $av->[4],    "CLASS:$OA_UNOP",       "OP_CLASS returns registered class";
+    is scalar @$av, 7,                      "registered peep called";
+    is $av->[5],    "peep:$unop",           "...with correct 'o' param";
+    is $av->[6],    "oldop:$kid",           "...and correct 'oldop' param";
+
+17 Oct 2021.
+
+=item B<Issue c087, breaking after anonymous sub>
+
+This update keeps both of these configurations stable for all cases
+except when the -lp option is used.  For the -lp option, both become
+one-line blocks (the second case) to prevents the -lp indentation
+style from being lost.  This update was made to minimize changes
+to existing formatting.
+
+    $obj = {
+        foo => sub { "bar" }
+    };
+
+    $obj = { foo => sub { "bar" } };
+
+17 Oct 2021, f05e6b5.
+
 =item B<Improve formatting of some Moose structures>
 
 In some structures used in Moose coding, some asymmetrical container breaks

@@ -15464,9 +15464,9 @@ sub break_equals {
 
             # recombine the pair with the greatest bond strength
             if ($n_best) {
-                splice @{$ri_beg}, $n_best, 1;
+                splice @{$ri_beg}, $n_best,     1;
                 splice @{$ri_end}, $n_best - 1, 1;
-                splice @joint, $n_best, 1;
+                splice @joint,     $n_best,     1;
 
                 # keep going if we are still making progress
                 $more_to_do++;
@@ -20609,7 +20609,8 @@ EOM
         my ( $self, $ri_first, $ri_last ) = @_;
 
         my $ralignment_type_to_go;
-        my $ralignment_counts = [];
+        my $ralignment_counts       = [];
+        my $ralignment_hash_by_line = [];
 
         # NOTE: closing side comments can insert up to 2 additional tokens
         # beyond the original $max_index_to_go, so we need to check ri_last for
@@ -20624,7 +20625,8 @@ EOM
         #    - and nothing to do if we aren't allowed to change whitespace.
         # -----------------------------------------------------------------
         if ( $max_i <= 0 || !$rOpts_add_whitespace ) {
-            return ( $ralignment_type_to_go, $ralignment_counts );
+            return ( $ralignment_type_to_go, $ralignment_counts,
+                $ralignment_hash_by_line );
         }
 
         my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
@@ -20686,6 +20688,7 @@ EOM
 
             if ( !$do_not_align ) {
                 $ralignment_type_to_go->[$max_i] = '#';
+                $ralignment_hash_by_line->[$max_line]->{$max_i} = '#';
                 $ralignment_counts->[$max_line]++;
             }
         }
@@ -20694,7 +20697,8 @@ EOM
         # Nothing more to do on this line if -nvc is set
         # ----------------------------------------------
         if ( !$rOpts_valign_code ) {
-            return ( $ralignment_type_to_go, $ralignment_counts );
+            return ( $ralignment_type_to_go, $ralignment_counts,
+                $ralignment_hash_by_line );
         }
 
         # -------------------------------------
@@ -20806,6 +20810,7 @@ EOM
                         if ( $ralignment_type_to_go->[$imate] ) {
                             $ralignment_type_to_go->[$imate] = '';
                             $ralignment_counts->[$line]--;
+                            delete $ralignment_hash_by_line->[$line]->{$imate};
                         }
                         pop @imatch_list;
                     }
@@ -20983,6 +20988,8 @@ EOM
                     }
                     else {
                         $ralignment_type_to_go->[$i] = $alignment_type;
+                        $ralignment_hash_by_line->[$line]->{$i} =
+                          $alignment_type;
                         $ralignment_counts->[$line]++;
                         push @imatch_list, $i;
                     }
@@ -20992,7 +20999,9 @@ EOM
                 $vert_last_nonblank_token = $token;
             }
         }
-        return ( $ralignment_type_to_go, $ralignment_counts );
+
+        return ( $ralignment_type_to_go, $ralignment_counts,
+            $ralignment_hash_by_line );
     } ## end sub set_vertical_alignment_markers
 } ## end closure set_vertical_alignment_markers
 
@@ -21030,10 +21039,8 @@ sub make_vertical_alignments {
     #---------------------------------------------------------
     # Step 1: Define the alignment tokens for the entire batch
     #---------------------------------------------------------
-    my $ralignment_type_to_go = [];
-    my $ralignment_counts     = [];
-    ( $ralignment_type_to_go, $ralignment_counts ) =
-      $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+    my ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line )
+      = $self->set_vertical_alignment_markers( $ri_first, $ri_last );
 
     #----------------------------------------------
     # Step 2: Break each line into alignment fields
@@ -21044,9 +21051,12 @@ sub make_vertical_alignments {
 
         my $ibeg = $ri_first->[$line];
         my $iend = $ri_last->[$line];
-        my $rtok_fld_pat_len =
-          $self->make_alignment_patterns( $ibeg, $iend,
-            $ralignment_type_to_go, $ralignment_counts->[$line] );
+
+        my $rtok_fld_pat_len = $self->make_alignment_patterns(
+            $ibeg, $iend, $ralignment_type_to_go,
+            $ralignment_counts->[$line],
+            $ralignment_hash_by_line->[$line]
+        );
         push @{$rline_alignments}, $rtok_fld_pat_len;
     }
     return $rline_alignments;
@@ -21854,6 +21864,12 @@ sub pad_token {
     my %keyword_map;
     my %operator_map;
     my %is_w_n_C;
+    my %is_my_local_our;
+    my %is_kwU;
+    my %is_use_like;
+    my %is_binary_type;
+    my %is_binary_keyword;
+    my %name_map;
 
     BEGIN {
 
@@ -21898,6 +21914,42 @@ sub pad_token {
             'n' => 1,
             'C' => 1,
         );
+
+        # leading keywords which to skip for efficiency when making parenless
+        # container names
+        my @q = qw( my local our return );
+        @{is_my_local_our}{@q} = (1) x scalar(@q);
+
+        # leading keywords where we should just join one token to form
+        # parenless name
+        @q = qw( use );
+        @{is_use_like}{@q} = (1) x scalar(@q);
+
+        # leading token types which may be used to make a container name
+        @q = qw( k w U );
+        @{is_kwU}{@q} = (1) x scalar(@q);
+
+        # token types which prevent using leading word as a container name
+        @q = qw(
+          x / : % . | ^ < = > || >= != *= => !~ == && |= .= -= =~ += <= %= ^= x= ~~ ** << /=
+          &= // >> ~. &. |. ^.
+          **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
+        );
+        push @q, ',';
+        @{is_binary_type}{@q} = (1) x scalar(@q);
+
+        # token keywords which prevent using leading word as a container name
+        @_ = qw(and or err eq ne cmp);
+        @is_binary_keyword{@_} = (1) x scalar(@_);
+
+        # Some common function calls whose args can be aligned.  These do not
+        # give good alignments if the lengths differ significantly.
+        %name_map = (
+            'unlike' => 'like',
+            'isnt'   => 'is',
+            ##'is_deeply' => 'is',   # poor; names lengths too different
+        );
+
     }
 
     sub make_alignment_patterns {
@@ -21923,8 +21975,29 @@ sub pad_token {
         #   allowed, even when the alignment tokens match.
         # @field_lengths - the display width of each field
 
-        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count ) =
-          @_;
+        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count,
+            $ralignment_hash )
+          = @_;
+
+        # The var $ralignment_hash contains all of the alignments for this
+        # line.  It is not yet used but is available for future coding in case
+        # there is a need to do a preliminary scan of the alignment tokens.
+        if (DEVEL_MODE) {
+            my $new_count = 0;
+            if ( defined($ralignment_hash) ) {
+                $new_count = keys %{$ralignment_hash};
+            }
+            my $old_count = $alignment_count;
+            $old_count = 0 unless ($old_count);
+            if ( $new_count != $old_count ) {
+                my $K   = $K_to_go[$ibeg];
+                my $rLL = $self->[_rLL_];
+                my $lnl = $rLL->[$K]->[_LINE_INDEX_];
+                Fault(
+"alignment hash token count gives count=$new_count but old count is $old_count near line=$lnl\n"
+                );
+            }
+        }
 
         # -------------------------------------
         # Shortcut for lines without alignments
@@ -21955,12 +22028,86 @@ sub pad_token {
         my @patterns      = ();
         my @field_lengths = ();
 
-        # For a 'use' statement, use the module name as container name.
-        # Fixes issue rt136416.
-        if ( $types_to_go[$ibeg] eq 'k' && $tokens_to_go[$ibeg] eq 'use' ) {
-            my $inext = $inext_to_go[$ibeg];
-            if ( $inext <= $iend ) {
-                $container_name{'0'} = $tokens_to_go[$inext];
+        #-------------------------------------------------------------
+        # Make a container name for any uncontained commas, issue c089
+        #-------------------------------------------------------------
+        # This is a generalization of the fix for rt136416 which was a
+        # specialized patch just for 'use Module' statements.
+        # We restrict this to semicolon-terminated statements; that way
+        # we know that the top level commas are not in a list container.
+        if ( $ibeg == 0 && $iend == $max_index_to_go ) {
+            my $iterm = $max_index_to_go;
+            if ( $types_to_go[$iterm] eq '#' ) {
+                $iterm = $iprev_to_go[$iterm];
+            }
+            if (   $iterm > $ibeg
+                && $types_to_go[$iterm] eq ';'
+                && !$is_my_local_our{ $tokens_to_go[$ibeg] }
+                && $levels_to_go[$ibeg] eq $levels_to_go[$iterm] )
+            {
+
+                # Make a container name by combining all leading barewords,
+                # keywords and functions.
+                my $name  = "";
+                my $count = 0;
+                my $count_max;
+                my $iname_end;
+                my $ilast_blank;
+                for ( $ibeg .. $iterm ) {
+                    my $type = $types_to_go[$_];
+
+                    if ( $type eq 'b' ) {
+                        $ilast_blank = $_;
+                        next;
+                    }
+
+                    my $token = $tokens_to_go[$_];
+
+                    # Give up if we find an opening paren, binary operator or
+                    # comma within or after the proposed container name.
+                    if (   $token eq '('
+                        || $is_binary_type{$type}
+                        || $type eq 'k' && $is_binary_keyword{$token} )
+                    {
+                        $name = "";
+                        last;
+                    }
+
+                    # The container name is only built of certain types:
+                    last if ( !$is_kwU{$type} );
+
+                    # Normally it is made of one word, but two words for 'use'
+                    if ( $count == 0 ) {
+                        if (   $type eq 'k'
+                            && $is_use_like{ $tokens_to_go[$_] } )
+                        {
+                            $count_max = 2;
+                        }
+                        else {
+                            $count_max = 1;
+                        }
+                    }
+                    elsif ( defined($count_max) && $count >= $count_max ) {
+                        last;
+                    }
+
+                    if ( defined( $name_map{$token} ) ) {
+                        $token = $name_map{$token};
+                    }
+
+                    $name .= ' ' . $token;
+                    $iname_end = $_;
+                    $count++;
+                }
+
+                # Require a space after the container name token(s)
+                if (   $name
+                    && defined($ilast_blank)
+                    && $ilast_blank > $iname_end )
+                {
+                    $name = substr( $name, 1 );
+                    $container_name{'0'} = $name;
+                }
             }
         }
 
