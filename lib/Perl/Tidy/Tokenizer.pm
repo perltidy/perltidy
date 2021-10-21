@@ -3628,20 +3628,23 @@ EOM
                     }
                 }
 
-                $last_last_nonblank_token      = $last_nonblank_token;
-                $last_last_nonblank_type       = $last_nonblank_type;
-                $last_last_nonblank_block_type = $last_nonblank_block_type;
-                $last_last_nonblank_container_type =
-                  $last_nonblank_container_type;
-                $last_last_nonblank_type_sequence =
-                  $last_nonblank_type_sequence;
-                $last_nonblank_token          = $tok;
-                $last_nonblank_type           = $type;
-                $last_nonblank_prototype      = $prototype;
-                $last_nonblank_block_type     = $block_type;
-                $last_nonblank_container_type = $container_type;
-                $last_nonblank_type_sequence  = $type_sequence;
-                $last_nonblank_i              = $i_tok;
+                # fix c090, only rotate vars if a new token will be stored
+                if ( $i_tok >= 0 ) {
+                    $last_last_nonblank_token      = $last_nonblank_token;
+                    $last_last_nonblank_type       = $last_nonblank_type;
+                    $last_last_nonblank_block_type = $last_nonblank_block_type;
+                    $last_last_nonblank_container_type =
+                      $last_nonblank_container_type;
+                    $last_last_nonblank_type_sequence =
+                      $last_nonblank_type_sequence;
+                    $last_nonblank_token          = $tok;
+                    $last_nonblank_type           = $type;
+                    $last_nonblank_prototype      = $prototype;
+                    $last_nonblank_block_type     = $block_type;
+                    $last_nonblank_container_type = $container_type;
+                    $last_nonblank_type_sequence  = $type_sequence;
+                    $last_nonblank_i              = $i_tok;
+                }
 
                 # Patch for c030: Fix things in case a '->' got separated from
                 # the subsequent identifier by a side comment.  We need the
