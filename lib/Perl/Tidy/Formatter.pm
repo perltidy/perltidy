@@ -4653,6 +4653,11 @@ sub make_block_pattern {
             Warn("unrecognized block type $i after $abbrev, ignoring\n");
         }
     }
+
+    # Fix 2 for c091, prevent the pattern from matching an empty string
+    # '1 ' is an impossible block name.
+    if ( !@words ) { push @words, "1 " }
+
     my $pattern      = '(' . join( '|', @words ) . ')$';
     my $sub_patterns = "";
     if ( $seen{'sub'} ) {
@@ -24151,6 +24156,9 @@ sub add_closing_side_comment {
     # if this line might end in a block closure..
     if (
         $terminal_type eq '}'
+
+        # Fix 1 for c091, this is only for blocks
+        && $block_type_to_go[$i_terminal]
 
         # ..and either
         && (

@@ -2,6 +2,19 @@
 
 =over 4
 
+=item B<Fix c091, incorrect closing side comment>
+
+An error was discovered and corrected in the behavior of the --closing-side-comment
+(-csc) flag when only subs were being marked with the setting -cscl='sub'.  The problem
+was that in rare cases a closing paren could be marked with '## end'.  The cause of
+the problem is that the pattern matching regex which was generated for this case
+happens to match an empty string, and it could happen that certain parens
+had empty strings as block names.  This was fixed in two ways.  First, the
+regex was fixed so that it cannot match an empty string.  Second, a test for
+an empty string was added.
+
+20 Oct 2021.
+
 =item B<Issue c089, improve vertical alignment for lists without parens>
 
 An update was made to improve vertical alignment in situations where parens
@@ -68,7 +81,7 @@ as they would if they were contained in parens.  Some examples:
     is $av->[5],    "peep:$unop",           "...with correct 'o' param";
     is $av->[6],    "oldop:$kid",           "...and correct 'oldop' param";
 
-17 Oct 2021.
+20 Oct 2021, 1dffec5.
 
 =item B<Issue c087, breaking after anonymous sub>
 
