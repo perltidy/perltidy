@@ -7746,6 +7746,27 @@ $obj= {foo => sub { "bar" ; }
 --maximum-line-length=29
 --want-break-before='='
 
+==> b1229.in <==
+# S1
+              $n
+                     += ( $b
+                        = sysread( $data, ${*$data}, $blksize, $l )
+                     );
+
+# S2
+              $n += (
+                        $b
+                        = sysread( $data, ${*$data}, $blksize, $l )
+              );
+
+==> b1229.par <==
+--break-before-all-operators
+--continuation-indentation=7
+--extended-continuation-indentation
+--indent-columns=7
+--line-up-parentheses
+--maximum-line-length=67
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

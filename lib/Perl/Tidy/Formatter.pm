@@ -19441,7 +19441,12 @@ sub get_available_spaces_to_go {
 
                 # find the position if we break at the '='
                 my $i_test = $last_equals;
-                if ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
+
+                # Fix for issue b1229, check for break before
+                if ( $want_break_before{ $types_to_go[$i_test] } ) {
+                    if ( $i_test > 0 ) { $i_test-- }
+                }
+                elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
 
                 # TESTING
                 ##my $too_close = ($i_test==$max_index_to_go-1);
