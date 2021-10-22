@@ -8494,9 +8494,14 @@ EOM
             # (2) the line does not exceed the allowable length
             if ( $iline_oo == $iline_oc ) {
 
-                # All the tokens are on one line, now check their length
+                # All the tokens are on one line, now check their length:
+                # - measure entire line if balanced
+                # - measure to the closing container if unbalanced (fixes b1230)
+                my $is_balanced =
+                  $rLL->[$Kfirst]->[_LEVEL_] == $rLL->[$Klast]->[_LEVEL_];
+                my $Kstop = $is_balanced ? $Klast : $Kouter_closing;
                 my $excess =
-                  $self->excess_line_length_for_Krange( $Kfirst, $Klast );
+                  $self->excess_line_length_for_Krange( $Kfirst, $Kstop );
 
                 # Note: coding simplified here for case b1219
                 $is_one_line_weld = $excess <= 0;

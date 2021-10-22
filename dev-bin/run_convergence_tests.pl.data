@@ -7767,6 +7767,38 @@ $obj= {foo => sub { "bar" ; }
 --line-up-parentheses
 --maximum-line-length=67
 
+==> b1230.in <==
+# S1
+    join(
+        '',
+        map {
+            $_ eq "\e"           ? '\M-'
+                  : ord($_) < 32 ? '\C-'
+                  . lc( chr(
+                             ord($_) + 64 ) )
+                  : $_
+        } ( split( '', $_[0] ) ) );
+# S2
+    join(
+        '',
+        map {
+            $_ eq "\e"           ? '\M-'
+                  : ord($_) < 32 ? '\C-'
+                  . lc( chr(
+                             ord($_) + 64 ) )
+                  : $_
+        } (       split( '', $_[0] ) )
+    );
+
+==> b1230.par <==
+--continuation-indentation=6
+--line-up-parentheses
+--maximum-line-length=31
+--paren-vertical-tightness-closing=2
+--variable-maximum-line-length
+--vertical-tightness=2
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
