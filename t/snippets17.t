@@ -91,6 +91,12 @@ permute_test [ 'a', 'b', 'c' ],   '/', '/', [ 'a', 'b', 'c' ];
 permute_test [ 'a,', 'b', 'c,' ], '/', '/', [ 'a,', 'b', 'c,' ];
 permute_test [ 'a', ',', '#', 'c' ], '/', '/', [ 'a', ',', '#', 'c' ];
 permute_test [ 'f_oo', 'b_ar' ], '/', '/', [ 'f_oo', 'b_ar' ];
+
+# issue c093 - broken sub, but align fat commas
+use constant UNDEF_ONLY => sub { not defined $_[0] };
+use constant EMPTY_OR_UNDEF => sub {
+    !@_ or @_ == 1 && !defined $_[0];
+};
 ----------
 
         'bos' => <<'----------',
@@ -340,6 +346,12 @@ permute_test [ 'a', 'b', 'c' ],      '/', '/', [ 'a', 'b', 'c' ];
 permute_test [ 'a,', 'b', 'c,' ],    '/', '/', [ 'a,', 'b', 'c,' ];
 permute_test [ 'a', ',', '#', 'c' ], '/', '/', [ 'a', ',', '#', 'c' ];
 permute_test [ 'f_oo', 'b_ar' ],     '/', '/', [ 'f_oo', 'b_ar' ];
+
+# issue c093 - broken sub, but align fat commas
+use constant UNDEF_ONLY     => sub { not defined $_[0] };
+use constant EMPTY_OR_UNDEF => sub {
+    !@_ or @_ == 1 && !defined $_[0];
+};
 #1...........
         },
 

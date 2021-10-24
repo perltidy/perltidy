@@ -22066,8 +22066,14 @@ sub pad_token {
             if ( $types_to_go[$iterm] eq '#' ) {
                 $iterm = $iprev_to_go[$iterm];
             }
+
+            # Alignment lines ending like '=> sub {';  fixes issue c093
+            my $term_type_ok = $types_to_go[$iterm] eq ';';
+            $term_type_ok ||=
+              $tokens_to_go[$iterm] eq '{' && $block_type_to_go[$iterm];
+
             if (   $iterm > $ibeg
-                && $types_to_go[$iterm] eq ';'
+                && $term_type_ok
                 && !$is_my_local_our{ $tokens_to_go[$ibeg] }
                 && $levels_to_go[$ibeg] eq $levels_to_go[$iterm] )
             {

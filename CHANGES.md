@@ -2,6 +2,44 @@
 
 ## 2021 07 17.04
 
+    - No significant bugs have been found since the last release, but several
+      minor issues have been fixed.  Vertical alignment has been improved for
+      lists of call args which are not contained within parens (next item).
+
+    - Vertical alignment of function calls without parens has been improved with
+      the goal of making vertical alignment the essentially the same with or
+      without parens around the call args.  Some examples:
+
+        # OLD
+        mkTextConfig $c, $x, $y, -anchor => 'se', $color;
+        mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
+        mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
+        mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;
+
+        # NEW
+        mkTextConfig $c, $x,      $y,      -anchor => 'se', $color;
+        mkTextConfig $c, $x + 30, $y,      -anchor => 's',  $color;
+        mkTextConfig $c, $x + 60, $y,      -anchor => 'sw', $color;
+        mkTextConfig $c, $x,      $y + 30, -anchor => 'e',  $color;
+
+        # OLD
+        is id_2obj($id), undef, "unregistered object not retrieved";
+        is scalar keys %$ob_reg, 0, "object registry empty";
+        is register($obj), $obj, "object returned by register";
+        is scalar keys %$ob_reg, 1, "object registry nonempty";
+        is id_2obj($id), $obj, "registered object retrieved";
+
+        # NEW
+        is id_2obj($id),         undef, "unregistered object not retrieved";
+        is scalar keys %$ob_reg, 0,     "object registry empty";
+        is register($obj),       $obj,  "object returned by register";
+        is scalar keys %$ob_reg, 1,     "object registry nonempty";
+        is id_2obj($id),         $obj,  "registered object retrieved";
+
+      This will cause some changes in alignment, hopefully for the better,
+      particularly in test code which often uses numerous parenless function
+      calls with functions like 'ok', 'is', 'is_deeply', ....
+
     - Two new parameters were added to control the block types to which the
       -bl (--opening-brace-on-new-line) flag applies.  The new parameters are
       -block-left-list=s, or -bll=s, and --block-left-exclusion-list=s,
@@ -33,28 +71,13 @@
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.
 
-    - Vertical alignment of function calls without parens has been improved and
-      in many cases is closer to what alignment would be if parens had been used.
-
-        # OLD
-        mkTextConfig $c, $x, $y, -anchor => 'se', $color;
-        mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
-        mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
-        mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;
-
-        # NEW
-        mkTextConfig $c, $x,      $y,      -anchor => 'se', $color;
-        mkTextConfig $c, $x + 30, $y,      -anchor => 's',  $color;
-        mkTextConfig $c, $x + 60, $y,      -anchor => 'sw', $color;
-        mkTextConfig $c, $x,      $y + 30, -anchor => 'e',  $color;
-
     - This version runs 10 to 15 percent faster on large files than the
       previous release due to optimizations made with the help of NYTProf.
 
     - Numerous minor fixes have been made, mostly very rare formatting instabilities
       found in random testing. An effort has been made to minimize changes to
-      existing formatting, but some changes will invariably occur. Many of these
-      updates are listed at:
+      existing formatting that these fixes produce, but occasional changes
+      may occur. Many of these updates are listed at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
