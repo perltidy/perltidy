@@ -7799,6 +7799,38 @@ $obj= {foo => sub { "bar" ; }
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1231.in <==
+# S1
+@data =
+         (
+          [
+           "1st", "2nd", "3rd", "4th",
+           "5th", "6th", "7th", "8th",
+           "9th"
+          ],
+          [
+           1, 2, 5, 6, 3, 1.5, 1, 3, 4
+          ],
+         );
+# S2
+@data =
+ (
+ [
+  "1st", "2nd", "3rd", "4th", "5th", "6th",
+  "7th", "8th", "9th"
+ ],
+ [ 1, 2, 5, 6, 3, 1.5, 1, 3, 4 ],
+ );
+
+==> b1231.par <==
+--break-before-paren-and-indent=2
+--break-before-paren=3
+--continuation-indentation=9
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=1
+--maximum-line-length=47
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

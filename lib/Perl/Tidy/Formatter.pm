@@ -9451,7 +9451,10 @@ sub break_before_list_opening_containers {
     my $length_tol =
       max( 1, $rOpts_continuation_indentation, $rOpts_indent_columns );
     if ($rOpts_ignore_old_breakpoints) {
-        $length_tol += $rOpts_maximum_line_length;
+
+        # Patch suggested by b1231; the old tol was excessive.
+        ## $length_tol += $rOpts_maximum_line_length;
+        $length_tol *= 2;
     }
 
     my $rbreak_before_container_by_seqno = {};
@@ -9506,6 +9509,14 @@ sub break_before_list_opening_containers {
         next unless ( $is_equal_or_fat_comma{$prev_type} );
 
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
+
+        # Fix for b1231: the has_list_with_lec does not cover all cases.
+        # A broken container containing a list and with line-ending commas
+        # will stay broken, so can be treated as if it had a list with lec.
+        $has_list_with_lec ||=
+             $has_list
+          && $ris_broken_container->{$seqno}
+          && $rlec_count_by_seqno->{$seqno};
 
         DEBUG_BBX
           && print STDOUT

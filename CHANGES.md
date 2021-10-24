@@ -2,7 +2,7 @@
 
 ## 2021 07 17.04
 
-    - Added two new parameters to control the block types to which the
+    - Two new parameters were added to control the block types to which the
       -bl (--opening-brace-on-new-line) flag applies.  The new parameters are
       -block-left-list=s, or -bll=s, and --block-left-exclusion-list=s,
       or -blxl=s.  Previously the -bl flag was 'hardwired' to apply to
@@ -17,10 +17,10 @@
       the controls.  If you want to recover the exact previous default behavior of
       the -bli then add the -bl flag.
 
-    - Partial fix issue for git #74, the -lp formatting style was
+    - A partial fix was made for issue for git #74. The -lp formatting style was
       being lost when a one-line anonymous sub was followed by a closing brace.
 
-    - Fix issue git #73, the -nfpva flag was not working correctly.
+    - Fixed issue git #73, in which the -nfpva flag was not working correctly.
       Some unwanted vertical alignments of spaced function perens
       were being made.
 
@@ -33,8 +33,8 @@
       comment, '#>>V', can be lost.  A workaround for the previous version
       is to include the parameter '-mbl=2'.
 
-    - Vertical alignment of function calls without parens has been improved
-      and is now closer to alignment results with parens.  For example
+    - Vertical alignment of function calls without parens has been improved and
+      in many cases is closer to what alignment would be if parens had been used.
 
         # OLD
         mkTextConfig $c, $x, $y, -anchor => 'se', $color;
@@ -51,12 +51,10 @@
     - This version runs 10 to 15 percent faster on large files than the
       previous release due to optimizations made with the help of NYTProf.
 
-    - This version was subjected to over 200 cpu hours of testing with random input
-      parameters with no instabilities (metastable states) or other irregularities
-      seen.
-
     - Numerous minor fixes have been made, mostly very rare formatting instabilities
-      found in random testing. A complete list is at:
+      found in random testing. An effort has been made to minimize changes to
+      existing formatting, but some changes will invariably occur. Many of these
+      updates are listed at:
 
            https://github.com/perltidy/perltidy/blob/master/local-docs/BugLog.pod
 
