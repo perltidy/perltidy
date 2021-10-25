@@ -7,7 +7,7 @@
       lists of call args which are not contained within parens (next item).
 
     - Vertical alignment of function calls without parens has been improved with
-      the goal of making vertical alignment the essentially the same with or
+      the goal of making vertical alignment essentially the same with or
       without parens around the call args.  Some examples:
 
         # OLD
@@ -73,6 +73,11 @@
 
     - This version runs 10 to 15 percent faster on large files than the
       previous release due to optimizations made with the help of NYTProf.
+
+    - Robustness of perltidy is high. This version was subjected to many
+      cpu hours of testing with random input parameters. No instabilities,
+      internal fault checks, undefined variable references or other
+      irregularities were seen.
 
     - Numerous minor fixes have been made, mostly very rare formatting instabilities
       found in random testing. An effort has been made to minimize changes to

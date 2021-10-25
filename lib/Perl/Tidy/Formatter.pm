@@ -8494,14 +8494,69 @@ EOM
             # (2) the line does not exceed the allowable length
             if ( $iline_oo == $iline_oc ) {
 
-                # All the tokens are on one line, now check their length:
-                # - measure entire line if balanced
+                # All the tokens are on one line, now check their length.
+                # Start with the full line index range. We will reduce this
+                # in the coding below in some cases.
+                my $Kstart = $Kfirst;
+                my $Kstop  = $Klast;
+
+                # Note that the following minimal choice for measuring will
+                # work and will not cause any instabilities because it is
+                # invariant:
+
+                ##  my $Kstart = $Kouter_opening;
+                ##  my $Kstop  = $Kouter_closing;
+
+                # But that can lead to some undesirable welds.  So a little
+                # more complicated method has been developed.
+
+                # We are trying to avoid creating bad two-line welds when we are
+                # working on long, previously unwelded input text, such as
+
+                # INPUT (example of a long input line weld candidate):
+                ## $mutation->transpos( $self->RNA->position($mutation->label, $atg_label));
+
+                #  GOOD two-line break: (not welded; result marked too long):
+                ## $mutation->transpos(
+                ##                 $self->RNA->position($mutation->label, $atg_label));
+
+                #  BAD two-line break: (welded; result if we weld):
+                ## $mutation->transpos($self->RNA->position(
+                ##                                      $mutation->label, $atg_label));
+
+                # We can only get an approximate estimate of the final length,
+                # since the line breaks may change, and for -lp mode because
+                # even the indentation is not yet known.
+
+                my $level_first = $rLL->[$Kfirst]->[_LEVEL_];
+                my $level_last  = $rLL->[$Klast]->[_LEVEL_];
+                my $level_oo    = $rLL->[$Kouter_opening]->[_LEVEL_];
+                my $level_oc    = $rLL->[$Kouter_closing]->[_LEVEL_];
+
+                # - measure to the end of the original line if balanced
                 # - measure to the closing container if unbalanced (fixes b1230)
-                my $is_balanced =
-                  $rLL->[$Kfirst]->[_LEVEL_] == $rLL->[$Klast]->[_LEVEL_];
-                my $Kstop = $is_balanced ? $Klast : $Kouter_closing;
+                #if ( $level_first != $level_last ) { $Kstop = $Kouter_closing }
+                if ( $level_oc > $level_last ) { $Kstop = $Kouter_closing }
+
+                # - measure from the start of the original line if balanced
+                # - measure from the most previous token with same level
+                #   if unbalanced (b1232)
+                if ( $Kouter_opening > $Kfirst && $level_oo > $level_first ) {
+                    $Kstart = $Kouter_opening;
+                    for (
+                        my $KK = $Kouter_opening - 1 ;
+                        $KK > $Kfirst ;
+                        $KK -= 1
+                      )
+                    {
+                        next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
+                        last if ( $rLL->[$KK]->[_LEVEL_] < $level_oo );
+                        $Kstart = $KK;
+                    }
+                }
+
                 my $excess =
-                  $self->excess_line_length_for_Krange( $Kfirst, $Kstop );
+                  $self->excess_line_length_for_Krange( $Kstart, $Kstop );
 
                 # Note: coding simplified here for case b1219
                 $is_one_line_weld = $excess <= 0;

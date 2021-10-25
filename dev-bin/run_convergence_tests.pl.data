@@ -7831,6 +7831,28 @@ $obj= {foo => sub { "bar" ; }
 --indent-columns=1
 --maximum-line-length=47
 
+==> b1232.in <==
+# S1
+        $method.="AdminMode"
+          if(
+              (defined($context->{args}->{admin_mode}))
+              &&($context->{args}->{admin_mode}eq"yes")
+          );
+# S2
+        $method.="AdminMode"
+          if( (defined($context->{args}->{admin_mode}))
+              &&($context->{args}->{admin_mode}eq"yes")
+          );
+
+==> b1232.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--indent-columns=8
+--line-up-parentheses
+--maximum-line-length=55
+--paren-vertical-tightness=1
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

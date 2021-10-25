@@ -2550,8 +2550,8 @@ EOM
                 $i++;
             }
             push @{$rline_hashes}, $rhash;
-            push @equals_info, [ $i_eq, $tok_eq, $pat_eq ];
-            push @line_info, [ $lev_min, $lev_max ];
+            push @equals_info,     [ $i_eq,    $tok_eq, $pat_eq ];
+            push @line_info,       [ $lev_min, $lev_max ];
             if ( defined($lev_min) ) {
                 my $lev_diff = $lev_max - $lev_min;
                 if ( $lev_diff > $max_lev_diff ) { $max_lev_diff = $lev_diff }

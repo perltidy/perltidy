@@ -3,6 +3,7 @@
 - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy) 
 - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
 - compare formatting with the new version with previous version on all files in test area
+- compare formatting with the new version on selected projects and perltidy itself
 - profile with Devel::NYTProf with different parameters and compare with previous version: For example
   perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
   nytprofhtml --open
