@@ -3465,8 +3465,34 @@ For example, given the script:
 Use this flag to tell perltidy to ignore existing line breaks to the
 maximum extent possible.  This will tend to produce the longest possible
 containers, regardless of type, which do not exceed the line length
-limit. But please note that this parameter has priority over all
+limit.  But please note that this parameter has priority over all
 other parameters requesting that certain old breakpoints be kept.
+
+To illustrate, consider the following input text:
+
+    has subcmds => (
+        is => 'ro',
+        default => sub { [] },
+    );
+
+The default formatting will keep the container broken, giving
+
+    # perltidy [default]
+    has subcmds => (
+        is      => 'ro',
+        default => sub { [] },
+    );
+
+If old breakpoints are ignored, the list will be flattened:
+
+    # perltidy -iob
+    has subcmds => ( is => 'ro', default => sub { [] }, );
+
+Besides flattening lists, this parameter also applies to lines broken
+at certain logical breakpoints such as 'if' and 'or'.
+
+The length of the lines produced in this way are only limited by the
+value of the parameter B<--maximum-line-length>.
 
 =item B<-kis>,  B<--keep-interior-semicolons>
 
