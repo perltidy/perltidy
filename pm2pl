@@ -2,13 +2,6 @@
 use strict;
 use Getopt::Long;
 
-# This script will recombine the perltidy binary script and all of its modules
-# into a single, monolithic script.  I use it for making a temporary "sandbox"
-# for debugging.
-
-# This is also useful for making a copy of previous versions for parallel
-# debugging sessions.
-
 my $usage = <<EOM;
 
 This script will recombine the perltidy binary script and all of its modules

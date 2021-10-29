@@ -2752,6 +2752,30 @@
 
 <p>Use this flag to tell perltidy to ignore existing line breaks to the maximum extent possible. This will tend to produce the longest possible containers, regardless of type, which do not exceed the line length limit. But please note that this parameter has priority over all other parameters requesting that certain old breakpoints be kept.</p>
 
+<p>To illustrate, consider the following input text:</p>
+
+<pre><code>    has subcmds =&gt; (
+        is =&gt; &#39;ro&#39;,
+        default =&gt; sub { [] },
+    );</code></pre>
+
+<p>The default formatting will keep the container broken, giving</p>
+
+<pre><code>    # perltidy [default]
+    has subcmds =&gt; (
+        is      =&gt; &#39;ro&#39;,
+        default =&gt; sub { [] },
+    );</code></pre>
+
+<p>If old breakpoints are ignored, the list will be flattened:</p>
+
+<pre><code>    # perltidy -iob
+    has subcmds =&gt; ( is =&gt; &#39;ro&#39;, default =&gt; sub { [] }, );</code></pre>
+
+<p>Besides flattening lists, this parameter also applies to lines broken at certain logical breakpoints such as &#39;if&#39; and &#39;or&#39;.</p>
+
+<p>Even if this is parameter is not used globally, it provides a convenient way to flatten selected lists from within an editor.</p>
+
 </dd>
 <dt id="kis---keep-interior-semicolons"><b>-kis</b>, <b>--keep-interior-semicolons</b></dt>
 <dd>
@@ -3772,7 +3796,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20210717.04</p>
+<p>This man page documents perltidy version 20211029</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

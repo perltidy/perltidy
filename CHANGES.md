@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 07 17.04
+## 2021 10 29
 
     - No significant bugs have been found since the last release, but several
       minor issues have been fixed.  Vertical alignment has been improved for
@@ -67,17 +67,15 @@
       Added parameters -vc -vsc -vbc for separately turning off vertical
       alignment of code, side comments and block comments.
 
-    - Fixed problem where a blank line following a closing code-skipping
-      comment, '#>>V', can be lost.  A workaround for the previous version
-      is to include the parameter '-mbl=2'.
+    - Fixed issue git #68, where a blank line following a closing code-skipping
+      comment, '#>>V', could be lost.
 
     - This version runs 10 to 15 percent faster on large files than the
       previous release due to optimizations made with the help of NYTProf.
 
-    - Robustness of perltidy is high. This version was subjected to many
-      cpu hours of testing with random input parameters. No instabilities,
-      internal fault checks, undefined variable references or other
-      irregularities were seen.
+    - This version of perltidy was stress-tested for many cpu hours with
+      random input parameters. No instabilities,  internal fault checks,
+      undefined variable references or other irregularities were seen.
 
     - Numerous minor fixes have been made, mostly very rare formatting instabilities
       found in random testing. An effort has been made to minimize changes to

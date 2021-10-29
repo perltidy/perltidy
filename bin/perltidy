@@ -3491,8 +3491,8 @@ If old breakpoints are ignored, the list will be flattened:
 Besides flattening lists, this parameter also applies to lines broken
 at certain logical breakpoints such as 'if' and 'or'.
 
-The length of the lines produced in this way are only limited by the
-value of the parameter B<--maximum-line-length>.
+Even if this is parameter is not used globally, it provides a convenient way to
+flatten selected lists from within an editor.
 
 =item B<-kis>,  B<--keep-interior-semicolons>
 
@@ -4898,7 +4898,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20210717.04
+This man page documents perltidy version 20211029
 
 =head1 BUG REPORTS
 

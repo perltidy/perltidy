@@ -8,7 +8,7 @@
 package Perl::Tidy::VerticalAligner::Line;
 use strict;
 use warnings;
-our $VERSION = '20210717.04';
+our $VERSION = '20211029';
 
 BEGIN {
     my $i = 0;

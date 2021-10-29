@@ -1,5 +1,17 @@
-# Checklist of some things to when preparing a new version and/or release
+# Checklist for preparing a new version and/or release
 
+- basic quality control:
+  - 'make test' successful for all commit canditates
+  - run 'devbin/run__convergence_tests.pl' for all commit candidates
+  - Run perlcritic
+  - run NYTProf and check the activity and performance of all changed code
+  - suggested random testing minimum test duration without irregularities:
+    - 3 cpu hours for a commit candidate
+    - 8 cpu hours for a +0.01 version bump candidate
+    - 24 cpu hours for a new release candidate
+  - run 'author tests' on a much larger body of code than is covered by the .t
+    files.
+      - compare results of the current version with previous version
 - review tickets at [rt.cpan.org](https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy) 
 - review the issues at [github](https://github.com/perltidy/perltidy/issues/)
 - compare formatting with the new version with previous version on all files in test area
@@ -8,11 +20,6 @@
   perl -d:NYTProf perltidy.pl -pbp -nst -nse -wn -xci perltidy.pl
   nytprofhtml --open
 - compare run time with previous version
-- release candidate should show no irregularities in at least 24 cpu hours of random testing
-- run 'devbin/run__convergence_tests.pl' to insure convergence
-- run 'author tests' on a much larger body of code than is covered by the .t
-  files.
-    - compare results of the current version with previous version
 - review tickets at sourceforge (hardly used now, but possible)
 - review/update the CHANGES.md file
 - be sure RPerl still works:
@@ -25,7 +32,6 @@
   - use perlbrew to do local checks and debugging on earlier versions of perl if desired
 - Run tidyall -a to be sure code is tidied
   - note that I have tidyall set to also run perlcritic right now
-- Run perlcritic (if not done by tidyall)
 - run podchecker on all .pod files
 - run ispell on all .pod files
 - Be sure builds at Travis.CI and Appveyor are clean for all version of perl

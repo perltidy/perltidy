@@ -26,6 +26,24 @@
 
 <dl>
 
+<dt id="Fix-c090-inconsistent-warning-messages-for-deprecated-syntax"><b>Fix c090, inconsistent warning messages for deprecated syntax</b></dt>
+<dd>
+
+<p>For something like the following snippet, a warning about deprecated syntax was either going into the error file or the log file, depending on formatting. This has been fixed.</p>
+
+<pre><code>   do $roff ( &amp;verify($tpage) );</code></pre>
+
+<p>20 Oct 2021.</p>
+
+</dd>
+<dt id="Fix-c091-incorrect-closing-side-comment"><b>Fix c091, incorrect closing side comment</b></dt>
+<dd>
+
+<p>An error was discovered and corrected in the behavior of the --closing-side-comment (-csc) flag when only subs were being marked with the setting -cscl=&#39;sub&#39;. The problem was that in rare cases a closing paren could be marked with &#39;## end&#39;. The cause of the problem is that the pattern matching regex which was generated for this case happens to match an empty string, and it could happen that certain parens had empty strings as block names. This was fixed in two ways. First, the regex was fixed so that it cannot match an empty string. Second, a test for an empty string was added.</p>
+
+<p>20 Oct 2021.</p>
+
+</dd>
 <dt id="Issue-c089-improve-vertical-alignment-for-lists-without-parens"><b>Issue c089, improve vertical alignment for lists without parens</b></dt>
 <dd>
 
@@ -91,7 +109,7 @@
     is $av-&gt;[5],    &quot;peep:$unop&quot;,           &quot;...with correct &#39;o&#39; param&quot;;
     is $av-&gt;[6],    &quot;oldop:$kid&quot;,           &quot;...and correct &#39;oldop&#39; param&quot;;</code></pre>
 
-<p>17 Oct 2021.</p>
+<p>20 Oct 2021, 1dffec5.</p>
 
 </dd>
 <dt id="Issue-c087-breaking-after-anonymous-sub"><b>Issue c087, breaking after anonymous sub</b></dt>
