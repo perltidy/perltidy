@@ -1,3 +1,31 @@
+=head1 Issues fixed after release 20211029
+
+=over 4
+
+=item B<Some blocks with side comments exceed line length>
+
+In some rare cases, one-line blocks with side comments were exceeding the line
+length limit.  These usually had a semicolon between the closing block brace
+and the side comment.  For example:
+
+        my $size
+            = do { local $^W; -f $local && -s _ }; # no ALLO if sending data from a pipe
+
+This update breaks the one-line block in an attempt to keep the total length below
+the line length limit.  The result on the above is:
+
+        my $size = do {
+            local $^W;
+            -f $local && -s _;
+        };    # no ALLO if sending data from a pipe
+
+Note that this break can be prevented by including the flag
+--ignore-side-comment-lengths or -iscl.
+
+3 Nov 2021.
+
+=back
+
 =head1 Issues fixed after release 20210625
 
 =over 4

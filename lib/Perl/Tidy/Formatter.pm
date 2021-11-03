@@ -7183,7 +7183,7 @@ sub is_in_block_by_i {
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
     # returns false otherwise
-    return 1 if ( $i < 0 );  # shouldn't happen, bad call
+    return 1 if ( $i < 0 );    # shouldn't happen, bad call
     my $seqno = $parent_seqno_to_go[$i];
     return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
     return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
@@ -12717,25 +12717,44 @@ sub starting_one_line_block {
             # It would be possible to fix this by changing bond strengths,
             # but they are high to prevent errors in older versions of perl.
 
+            # TODO: See if the sort/map/grep check is still needed, and note
+            # that according to the above we should use $is_sort_map_grep_eval.
             if (   $Ki < $K_last
-                && $rLL->[$Ki_nonblank]->[_TYPE_] eq '#'
-                && !$is_sort_map_grep{$block_type} )
+                && $rLL->[$K_last]->[_TYPE_] eq '#'
+                && $rLL->[$K_last]->[_LEVEL_] == $rLL->[$Ki]->[_LEVEL_]
+                && !$rOpts_ignore_side_comment_lengths
+                && !$is_sort_map_grep{$block_type}
+                && $K_last - $Ki_nonblank <= 2 )
             {
+                # Only include the side comment for if/else/elsif/unless if it
+                # immediately follows (because the current '$rbrace_follower'
+                # logic for these will give an immediate brake after these
+                # closing braces).  So for example a line like this
+                #     if (...) { ... } ; # very long comment......
+                # will already break like this:
+                #     if (...) { ... }
+                #     ; # very long comment......
+                # so we do not need to include the length of the comment, which
+                # would break the block. Project 'bioperl' has coding like this.
+                if (   $block_type !~ /^(if|else|elsif|unless)$/
+                    || $K_last == $Ki_nonblank )
+                {
+                    $Ki_nonblank = $K_last;
+                    $pos += $rLL->[$Ki_nonblank]->[_TOKEN_LENGTH_];
 
-                $pos += $rLL->[$Ki_nonblank]->[_TOKEN_LENGTH_];
+                    if ( $Ki_nonblank > $Ki + 1 ) {
 
-                if ( $Ki_nonblank > $Ki + 1 ) {
-
-                    # source whitespace could be anything, assume
-                    # at least one space before the hash on output
-                    if ( $rLL->[ $Ki + 1 ]->[_TYPE_] eq 'b' ) {
-                        $pos += 1;
+                        # source whitespace could be anything, assume
+                        # at least one space before the hash on output
+                        if ( $rLL->[ $Ki + 1 ]->[_TYPE_] eq 'b' ) {
+                            $pos += 1;
+                        }
+                        else { $pos += $rLL->[ $Ki + 1 ]->[_TOKEN_LENGTH_] }
                     }
-                    else { $pos += $rLL->[ $Ki + 1 ]->[_TOKEN_LENGTH_] }
-                }
 
-                if ( $pos >= $maximum_line_length ) {
-                    return 0;
+                    if ( $pos >= $maximum_line_length ) {
+                        return 0;
+                    }
                 }
             }
 
