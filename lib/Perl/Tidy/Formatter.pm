@@ -7183,6 +7183,7 @@ sub is_in_block_by_i {
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
     # returns false otherwise
+    return 1 if ( $i < 0 );  # shouldn't happen, bad call
     my $seqno = $parent_seqno_to_go[$i];
     return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
     return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
@@ -17525,8 +17526,13 @@ EOM
 
                 # Ignore old breakpoints when under stress.
                 # Fixes b1203 b1204 as well as b1197-b1200.
-                if ( $levels_to_go[$i_opening] >= $stress_level ) {
+                if (   $saw_opening_structure
+                    && $levels_to_go[$i_opening] >= $stress_level )
+                {
                     $cab_flag = 2;
+
+                    # Do not break hash braces under stress (fixes b1238)
+                    $do_not_break_apart ||= $types_to_go[$i_opening] eq 'L';
                 }
 
                 if (  !$is_long_term

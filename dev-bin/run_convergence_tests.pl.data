@@ -7883,6 +7883,28 @@ $obj= {foo => sub { "bar" ; }
 --space-keyword-paren
 --variable-maximum-line-length
 
+==> b1238.in <==
+# S1
+  local $Other::{ ${ \
+            "f4" } } =
+          sub { "h1" };
+
+# S2
+  local $Other::{
+   ${
+    \ "f4"
+   }
+  } = sub { "h1" };
+
+==> b1238.par <==
+--continuation-indentation=8
+--delete-old-whitespace
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=26
+--paren-vertical-tightness-closing=1
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
