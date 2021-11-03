@@ -7853,6 +7853,36 @@ $obj= {foo => sub { "bar" ; }
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1236.in <==
+# Added level test when applying kpit
+# S1
+        delete $ENV{$_}
+                for
+                map {$_, uc ($_)}
+                qw/http_proxy https_proxy all_proxy/;
+
+# S2
+        delete $ENV{$_}
+                for map {
+            $_,
+                    uc ( $_ )
+                } qw/http_proxy https_proxy all_proxy/;
+
+# S3
+        delete $ENV{$_} for map {
+            $_, uc ( $_ )
+        } qw/http_proxy https_proxy all_proxy/;
+
+
+==> b1236.par <==
+--block-brace-tightness=2
+--continuation-indentation=8
+--ignore-old-breakpoints
+--keyword-paren-inner-tightness=0
+--maximum-line-length=26
+--space-keyword-paren
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

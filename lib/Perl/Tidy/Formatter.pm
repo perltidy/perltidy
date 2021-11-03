@@ -2619,21 +2619,24 @@ sub set_whitespace_flags {
 
             elsif ( $type eq 'k' ) {
 
-              # Keywords 'for', 'foreach' are special cases for -kpit since the
-              # opening paren does not always immediately follow the keyword. So
-              # we have to search forward for the paren in this case.  I have
-              # limited the search to 10 tokens ahead, just in case somebody
-              # has a big file and no opening paren.  This should be enough for
-              # all normal code.
+                # Keywords 'for', 'foreach' are special cases for -kpit since
+                # the opening paren does not always immediately follow the
+                # keyword. So we have to search forward for the paren in this
+                # case.  I have limited the search to 10 tokens ahead, just in
+                # case somebody has a big file and no opening paren.  This
+                # should be enough for all normal code. Added the level check
+                # to fix b1236.
                 if (   $is_for_foreach{$token}
                     && %keyword_paren_inner_tightness
                     && defined( $keyword_paren_inner_tightness{$token} )
                     && $j < $jmax )
                 {
-                    my $jp = $j;
+                    my $level = $rLL->[$j]->[_LEVEL_];
+                    my $jp    = $j;
                     for ( my $inc = 1 ; $inc < 10 ; $inc++ ) {
                         $jp++;
                         last if ( $jp > $jmax );
+                        last if ( $rLL->[$jp]->[_LEVEL_] != $level );    # b1236
                         next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
                         my $seqno_p = $rLL->[$jp]->[_TYPE_SEQUENCE_];
                         $set_container_ws_by_keyword->( $token, $seqno_p );
