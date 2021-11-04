@@ -7649,7 +7649,14 @@ EOM
         if ($saw_type) {
 
             if ($saw_alpha) {
-                if ( $identifier =~ /^->/ && $last_nonblank_type eq 'w' ) {
+
+                # The type without the -> should be the same as with the -> so
+                # that if they get separated we get the same bond strengths,
+                # etc.  See b1234
+                if (   $identifier =~ /^->/
+                    && $last_nonblank_type eq 'w'
+                    && substr( $identifier, 2, 1 ) =~ /^\w/ )
+                {
                     $type = 'w';
                 }
                 else { $type = 'i' }

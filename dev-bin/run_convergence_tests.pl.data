@@ -7853,6 +7853,33 @@ $obj= {foo => sub { "bar" ; }
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1234.in <==
+# S1
+is(
+    Pack->
+              $mname(
+        "a", "b",
+        "c"
+              ),
+"method,a,b,c"
+);
+
+# S2
+is(
+    Pack->$mname
+              (
+        "a", "b",
+        "c"
+              ),
+"method,a,b,c"
+);
+
+==> b1234.par <==
+--continuation-indentation=10
+--ignore-old-breakpoints
+--maximum-line-length=12
+--variable-maximum-line-length
+
 ==> b1236.in <==
 # Added level test when applying kpit
 # S1
