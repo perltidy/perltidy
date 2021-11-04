@@ -221,6 +221,11 @@ sub get_level {
     return $_[0]->[_level_];
 }
 
+sub get_spaces_level_ci {
+    my $self = shift;
+    return [ $self->[_spaces_], $self->[_level_], $self->[_ci_level_] ];
+}
+
 sub get_sequence_number {
     return $_[0]->[_sequence_number_];
 }
