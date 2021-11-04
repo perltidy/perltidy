@@ -478,17 +478,18 @@ BEGIN {
     # These are stored in _this_batch_, which is a sub-array of $self.
     my $i = 0;
     use constant {
-        _starting_in_quote_        => $i++,
-        _ending_in_quote_          => $i++,
-        _is_static_block_comment_  => $i++,
-        _ri_first_                 => $i++,
-        _ri_last_                  => $i++,
-        _do_not_pad_               => $i++,
-        _peak_batch_size_          => $i++,
-        _max_index_to_go_          => $i++,
-        _batch_count_              => $i++,
-        _rix_seqno_controlling_ci_ => $i++,
-        _batch_CODE_type_          => $i++,
+        _starting_in_quote_          => $i++,
+        _ending_in_quote_            => $i++,
+        _is_static_block_comment_    => $i++,
+        _ri_first_                   => $i++,
+        _ri_last_                    => $i++,
+        _do_not_pad_                 => $i++,
+        _peak_batch_size_            => $i++,
+        _max_index_to_go_            => $i++,
+        _batch_count_                => $i++,
+        _rix_seqno_controlling_ci_   => $i++,
+        _batch_CODE_type_            => $i++,
+        _ri_starting_one_line_block_ => $i++,
     };
 }
 
@@ -11097,7 +11098,7 @@ EOM
     my ( $K_first, $K_last );
 
     my ( $rLL, $radjusted_levels, $rparent_of_seqno, $rdepth_of_opening_seqno,
-        $rblock_type_of_seqno );
+        $rblock_type_of_seqno, $ri_starting_one_line_block );
 
     # past stored nonblank tokens and flags
     my (
@@ -11130,8 +11131,9 @@ EOM
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
-        $max_index_to_go      = UNDEFINED_INDEX;
-        @summed_lengths_to_go = @nesting_depth_to_go = (0);
+        $max_index_to_go            = UNDEFINED_INDEX;
+        @summed_lengths_to_go       = @nesting_depth_to_go = (0);
+        $ri_starting_one_line_block = [];
 
         # The initialization code for the remaining batch arrays is as follows
         # and can be activated for testing.  But profiling shows that it is
@@ -11418,6 +11420,9 @@ EOM
              defined($K_first)
           && $max_index_to_go == 0
           && $K_to_go[0] == $K_first ? $is_static_block_comment : 0;
+
+        $this_batch->[_ri_starting_one_line_block_] =
+          $ri_starting_one_line_block;
 
         $self->[_this_batch_] = $this_batch;
 
@@ -12048,8 +12053,27 @@ EOM
                     # we have to actually make it by removing tentative
                     # breaks that were set within it
                     $self->undo_forced_breakpoint_stack(0);
+
+                    # For -lp, extend the nobreak to include a trailing
+                    # terminal ','.  This is because the -lp indentation was
+                    # not known when making one-line blocks, so we may be able
+                    # to move the line back to fit.  Otherwise we may create a
+                    # needlessly stranded comma on the next line.
+                    my $iend_nobreak = $max_index_to_go - 1;
+                    if (   $rOpts_line_up_parentheses
+                        && $next_nonblank_token_type eq ','
+                        && $Knnb eq $K_last )
+                    {
+                        $iend_nobreak = $max_index_to_go;
+                    }
+
                     $self->set_nobreaks( $index_start_one_line_block,
-                        $max_index_to_go - 1 );
+                        $iend_nobreak );
+
+                    # save starting block indexes so that sub correct_lp can
+                    # check and adjust -lp indentation (c098)
+                    push @{$ri_starting_one_line_block},
+                      $index_start_one_line_block;
 
                     # then re-initialize for the next one-line block
                     destroy_one_line_block();
@@ -12716,14 +12740,13 @@ sub starting_one_line_block {
             # for grep/map/eval/sort blocks, so the first version gets output.
             # It would be possible to fix this by changing bond strengths,
             # but they are high to prevent errors in older versions of perl.
+            # See c100 for eval test.
 
-            # TODO: See if the sort/map/grep check is still needed, and note
-            # that according to the above we should use $is_sort_map_grep_eval.
             if (   $Ki < $K_last
                 && $rLL->[$K_last]->[_TYPE_] eq '#'
                 && $rLL->[$K_last]->[_LEVEL_] == $rLL->[$Ki]->[_LEVEL_]
                 && !$rOpts_ignore_side_comment_lengths
-                && !$is_sort_map_grep{$block_type}
+                && !$is_sort_map_grep_eval{$block_type}
                 && $K_last - $Ki_nonblank <= 2 )
             {
                 # Only include the side comment for if/else/elsif/unless if it
@@ -15784,9 +15807,61 @@ sub correct_lp_indentation {
     #  We leave it to the aligner to decide how to do this.
 
     # first remove continuation indentation if appropriate
+    my $rLL      = $self->[_rLL_];
     my $max_line = @{$ri_first} - 1;
 
-    # looking at each line of this batch..
+    #---------------------------------------------------------------------------
+    # PASS 1: reduce indentation if necessary at any long one-line blocks (c098)
+    #---------------------------------------------------------------------------
+
+    # The point is that sub 'starting_one_line_block' made one-line blocks based
+    # on default indentation, not -lp indentation. So some of the one-line
+    # blocks may be too long when given -lp indentation.  We will fix that now
+    # if possible, using the list of these closing block indexes.
+    my $ri_starting_one_line_block =
+      $self->[_this_batch_]->[_ri_starting_one_line_block_];
+    if ( @{$ri_starting_one_line_block} ) {
+        my @ilist = @{$ri_starting_one_line_block};
+        my $inext = shift(@ilist);
+
+        # loop over lines, checking length of each with a one-line block
+        my ( $ibeg, $iend );
+        foreach my $line ( 0 .. $max_line ) {
+            $iend = $ri_last->[$line];
+            next if ( $inext > $iend );
+            $ibeg = $ri_first->[$line];
+
+            # This is just for lines with indentation objects (c098)
+            my $excess =
+              ref( $leading_spaces_to_go[$ibeg] )
+              ? $self->excess_line_length( $ibeg, $iend )
+              : 0;
+
+            if ( $excess > 0 ) {
+                my $available_spaces = $self->get_available_spaces_to_go($ibeg);
+
+                if ( $available_spaces > 0 ) {
+                    my $delete_want = min( $available_spaces, $excess );
+                    my $deleted_spaces =
+                      $self->reduce_lp_indentation( $ibeg, $delete_want );
+                    $available_spaces =
+                      $self->get_available_spaces_to_go($ibeg);
+                }
+            }
+
+            # skip forward to next one-line block to check
+            while (@ilist) {
+                $inext = shift @ilist;
+                next if ( $inext <= $iend );
+                last if ( $inext > $iend );
+            }
+            last if ( $inext <= $iend );
+        }
+    }
+
+    #-------------------------------------------------------------------
+    # PASS 2: look for and fix other problems in each line of this batch
+    #-------------------------------------------------------------------
     my ( $ibeg, $iend );
     foreach my $line ( 0 .. $max_line ) {
         $ibeg = $ri_first->[$line];
@@ -15801,6 +15876,10 @@ sub correct_lp_indentation {
 
             # looking for next unvisited indentation item
             my $indentation = $leading_spaces_to_go[$i];
+
+            # This is just for indentation objects (c098)
+            next unless ( ref($indentation) );
+
             if ( !$indentation->get_marked() ) {
                 $indentation->set_marked(1);
 
@@ -17808,7 +17887,7 @@ EOM
                         {
                             $item = $leading_spaces_to_go[ $i_opening + 2 ];
                         }
-                        if ( defined($item) ) {
+                        if ( defined($item) && ref($item) ) {   # c098 added ref
                             my $i_start_2;
                             my $K_start_2 = $item->get_starting_index_K();
                             if ( defined($K_start_2) ) {

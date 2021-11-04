@@ -14548,3 +14548,23 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
 ==> b999.par <==
 --maximum-line-length=75
 --paren-vertical-tightness-closing=1
+
+==> c100.in <==
+                # Starting
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; } # need to check for sort_map_grep_eval in starting_one_line_block
+
+                # Stable
+                eval {
+                    substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra;
+                } # need to check for sort_map_grep_eval in starting_one_line_block
+
+                # Starting (note ';' before '#' )
+                eval {
+                    substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra;
+                };    # need to check for sort_map_grep_eval in starting_one_line_block
+
+                # Stable (note ';' before '#' )
+                eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
+
+==> c100.par <==
+# default settings
