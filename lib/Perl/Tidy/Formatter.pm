@@ -46,6 +46,9 @@ use warnings;
 # this can be turned on for extra checking during development
 use constant DEVEL_MODE => 0;
 
+# This is being used to test sub set_lp_indentation
+use constant TEST_NEW_LP => 1;
+
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
@@ -340,7 +343,8 @@ my (
 
 BEGIN {
 
-    # Index names for token variables.  Do not combine with other BEGIN blocks.
+    # Index names for token variables.
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _CI_LEVEL_          => $i++,
@@ -360,7 +364,8 @@ BEGIN {
 
 BEGIN {
 
-    # Index names for $self variables.  Do not combine with other BEGIN blocks.
+    # Index names for $self variables.
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _rlines_                    => $i++,
@@ -474,7 +479,8 @@ BEGIN {
 
 BEGIN {
 
-    # Index names for batch variables.  Do not combine with other BEGIN blocks.
+    # Index names for batch variables.
+    # Do not combine with other BEGIN blocks (c101).
     # These are stored in _this_batch_, which is a sub-array of $self.
     my $i = 0;
     use constant {
@@ -11385,7 +11391,7 @@ EOM
         }
 
         # Correct these values if -lp is used
-        if ($rOpts_line_up_parentheses) {
+        if ( !TEST_NEW_LP && $rOpts_line_up_parentheses ) {
             $self->set_leading_whitespace( $Ktoken_vars, $K_last_nonblank_code,
                 $K_last_last_nonblank_code, $level, $ci_level,
                 $in_continued_quote );
@@ -12741,7 +12747,6 @@ sub starting_one_line_block {
             # It would be possible to fix this by changing bond strengths,
             # but they are high to prevent errors in older versions of perl.
             # See c100 for eval test.
-
             if (   $Ki < $K_last
                 && $rLL->[$K_last]->[_TYPE_] eq '#'
                 && $rLL->[$K_last]->[_LEVEL_] == $rLL->[$Ki]->[_LEVEL_]
@@ -13310,6 +13315,9 @@ EOM
         };
 
         return if ( $max_index_to_go < 0 );
+
+        $self->set_lp_indentation()
+          if ( TEST_NEW_LP && $rOpts_line_up_parentheses );
 
         #----------------------------
         # Shortcut for block comments
@@ -19515,6 +19523,596 @@ sub get_available_spaces_to_go {
         }
 
         return $item;
+    }
+
+    my %hash_test1;
+    my %hash_test2;
+    my %hash_test3;
+
+    BEGIN {
+        my @q = qw< } ) ] >;
+        @hash_test1{@q} = (1) x scalar(@q);
+        @q = qw(: ? f);
+        push @q, ',';
+        @hash_test2{@q} = (1) x scalar(@q);
+        @q              = qw( . || && );
+        @hash_test3{@q} = (1) x scalar(@q);
+    }
+
+    sub set_lp_indentation {
+
+        #---------------------------------------------
+        # This will replace sub set_leading_whitespace
+        #---------------------------------------------
+
+        # This routine defines leading whitespace for the case of -lp formatting
+        # given: the level and continuation_level of a token,
+        # define: space count of leading string which would apply if it
+        # were the first token of a new line.
+
+        my ($self) = @_;
+
+        return unless ($rOpts_line_up_parentheses);
+        return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
+
+        ## FIXME:
+        #my $K_last_nonblank      = undef;
+        my $K_last_nonblank = $self->K_previous_nonblank( $K_to_go[0] );
+
+        my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
+
+        my $rbreak_container          = $self->[_rbreak_container_];
+        my $rshort_nested             = $self->[_rshort_nested_];
+        my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+        my $rLL                       = $self->[_rLL_];
+        my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
+        my $rbreak_before_container_by_seqno =
+          $self->[_rbreak_before_container_by_seqno_];
+        my $radjusted_levels = $self->[_radjusted_levels_];
+        my $Klimit           = $self->[_Klimit_];
+        my $nws              = @{$radjusted_levels};
+        my $imin             = 0;
+        my $imax             = $max_index_to_go;
+
+        # The 'starting_in_quote' flag means that the first token is the first
+        # token of a line and it is also the continuation of some kind of
+        # multi-line quote or pattern.  It requires special treatment because
+        # it must have no added leading whitespace. So we create a special
+        # indentation item which is not in the stack.
+        if ($starting_in_quote) {
+            my $space_count     = 0;
+            my $available_space = 0;
+            my $level           = $levels_to_go[$imin];
+            my $ci_level        = $ci_levels_to_go[$imin];
+            $level = -1;    # flag to prevent storing in item_list
+            $leading_spaces_to_go[$imin] = $reduced_spaces_to_go[$imin] =
+              new_lp_indentation_item( $space_count, $level, $ci_level,
+                $available_space, 0 );
+            $imin += 1;
+        }
+
+        # FIXME: try to combine these '$last_...' vars if possible.  You can
+        # always check if K_last_noblank >= $K_to_go[0] to see if in batch
+        my $last_nonblank_token_in_batch     = '';
+        my $last_nonblank_type_in_batch      = '';
+        my $last_last_nonblank_type_in_batch = '';
+
+        my $last_nonblank_token = '';
+        my $last_nonblank_type  = '';
+
+        if ( defined($K_last_nonblank) ) {
+            $last_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
+            $last_nonblank_type  = $rLL->[$K_last_nonblank]->[_TYPE_];
+        }
+
+        my ( $space_count, $current_level, $current_ci_level );
+        my $stack_changed = 1;
+
+        foreach my $ii ( $imin .. $imax ) {
+
+            my $KK          = $K_to_go[$ii];
+            my $type        = $types_to_go[$ii];
+            my $token       = $tokens_to_go[$ii];
+            my $level       = $levels_to_go[$ii];
+            my $ci_level    = $ci_levels_to_go[$ii];
+            my $total_depth = $nesting_depth_to_go[$ii];
+
+            #--------------------------------------------------
+            # Adjust levels if necessary to recycle whitespace:
+            #--------------------------------------------------
+            if ( defined($radjusted_levels) && @{$radjusted_levels} == $Klimit )
+            {
+                $level = $radjusted_levels->[$KK];
+                if ( $level < 0 ) { $level = 0 }  # note: this should not happen
+            }
+
+            # get the top state from the stack if it has changed
+            if ($stack_changed) {
+                ( $space_count, $current_level, $current_ci_level ) =
+                  @{ $gnu_stack[$max_gnu_stack_index]->get_spaces_level_ci() };
+                $stack_changed = 0;
+            }
+
+            #------------------------------
+            # update the position predictor
+            #------------------------------
+            if ( $type eq '{' || $type eq '(' ) {
+
+                ##$stack_changed = 1;
+
+                $gnu_comma_count{ $total_depth + 1 } = 0;
+                $gnu_arrow_count{ $total_depth + 1 } = 0;
+
+                # If we come to an opening token after an '=' token of some
+                # type, see if it would be helpful to 'break' after the '=' to
+                # save space
+                my $last_equals = $last_gnu_equals{$total_depth};
+                if ( $last_equals && $last_equals > $line_start_index_to_go ) {
+
+                    my $seqno = $type_sequence_to_go[$ii];
+
+                    # find the position if we break at the '='
+                    my $i_test = $last_equals;
+
+                    # Fix for issue b1229, check for break before
+                    if ( $want_break_before{ $types_to_go[$i_test] } ) {
+                        if ( $i_test > 0 ) { $i_test-- }
+                    }
+                    elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
+
+                    # TESTING
+                    ##my $too_close = ($i_test==$ii-1);
+
+                    my $test_position = total_line_length( $i_test, $ii );
+                    my $mll =
+                      $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
+
+                    my $bbc_flag = $break_before_container_types{$token};
+
+                    if (
+
+                        # the equals is not just before an open paren (testing)
+                        ##!$too_close &&
+
+                        # if we are beyond the midpoint
+                        $gnu_position_predictor >
+                        $mll - $rOpts_maximum_line_length / 2
+
+                        # if a -bbx flag WANTS a break before this opening token
+                        || (   $seqno
+                            && $rbreak_before_container_by_seqno->{$seqno} )
+
+                       # or if we MIGHT want a break (fixes case b826 b909 b989)
+                        || ( $bbc_flag && $bbc_flag >= 2 )
+
+                        # or we are beyond the 1/4 point and there was an old
+                        # break at an assignment (not '=>') [fix for b1035]
+                        || (
+                            $gnu_position_predictor >
+                            $mll - $rOpts_maximum_line_length * 3 / 4
+                            && $types_to_go[$last_equals] ne '=>'
+                            && (
+                                $old_breakpoint_to_go[$last_equals]
+                                || (   $last_equals > 0
+                                    && $old_breakpoint_to_go[ $last_equals - 1 ]
+                                )
+                                || (   $last_equals > 1
+                                    && $types_to_go[ $last_equals - 1 ] eq 'b'
+                                    && $old_breakpoint_to_go[ $last_equals - 2 ]
+                                )
+                            )
+                        )
+                      )
+                    {
+
+                       # then make the switch -- note that we do not set a real
+                       # breakpoint here because we may not really need one; sub
+                       # scan_list will do that if necessary
+                        $line_start_index_to_go = $i_test + 1;
+                        $gnu_position_predictor = $test_position;
+                    }
+                }
+            }
+
+            #------------------------
+            # Handle decreasing depth
+            #------------------------
+            # Note that one token may have both decreasing and then increasing
+            # depth. For example, (level, ci) can go from (1,1) to (2,0).  So,
+            # in this example we would first go back to (1,0) then up to (2,0)
+            # in a single call.
+            if ( $level < $current_level || $ci_level < $current_ci_level ) {
+
+                # loop to find the first entry at or completely below this level
+                my ( $lev, $ci_lev );
+                while (1) {
+                    if ($max_gnu_stack_index) {
+
+                        # save index of token which closes this level
+                        $gnu_stack[$max_gnu_stack_index]->set_closed($ii);
+
+                        # Undo any extra indentation if we saw no commas
+                        my $available_spaces =
+                          $gnu_stack[$max_gnu_stack_index]
+                          ->get_available_spaces();
+
+                        my $comma_count = 0;
+                        my $arrow_count = 0;
+                        if ( $type eq '}' || $type eq ')' ) {
+                            $comma_count = $gnu_comma_count{$total_depth};
+                            $arrow_count = $gnu_arrow_count{$total_depth};
+                            $comma_count = 0 unless $comma_count;
+                            $arrow_count = 0 unless $arrow_count;
+                        }
+                        $gnu_stack[$max_gnu_stack_index]
+                          ->set_comma_count($comma_count);
+                        $gnu_stack[$max_gnu_stack_index]
+                          ->set_arrow_count($arrow_count);
+
+                        if ( $available_spaces > 0 ) {
+
+                            if ( $comma_count <= 0 || $arrow_count > 0 ) {
+
+                                my $i =
+                                  $gnu_stack[$max_gnu_stack_index]->get_index();
+                                my $seqno =
+                                  $gnu_stack[$max_gnu_stack_index]
+                                  ->get_sequence_number();
+
+                                # Be sure this item was created in this batch.
+                                # This should be true because we delete any
+                                # available space from open items at the end of
+                                # each batch.
+                                if (   $gnu_sequence_number != $seqno
+                                    || $i > $max_gnu_item_index )
+                                {
+                                    # non-fatal, keep going except in DEVEL_MODE
+                                    if (DEVEL_MODE) {
+                                        Fault(<<EOM);
+Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
+EOM
+                                    }
+                                }
+                                else {
+                                    if ( $arrow_count == 0 ) {
+                                        $gnu_item_list[$i]
+                                          ->permanently_decrease_available_spaces
+                                          ($available_spaces);
+                                    }
+                                    else {
+                                        $gnu_item_list[$i]
+                                          ->tentatively_decrease_available_spaces
+                                          ($available_spaces);
+                                    }
+                                    foreach
+                                      my $j ( $i + 1 .. $max_gnu_item_index )
+                                    {
+                                        $gnu_item_list[$j]
+                                          ->decrease_SPACES($available_spaces);
+                                    }
+                                }
+                            }
+                        }
+
+                        # go down one level
+                        --$max_gnu_stack_index;
+
+                        my ( $spaces, $lev, $ci_lev ) =
+                          @{ $gnu_stack[$max_gnu_stack_index]
+                              ->get_spaces_level_ci() };
+
+                        # stop when we reach a level at or below the current
+                        # level
+                        if ( $lev <= $level && $ci_lev <= $ci_level ) {
+                            $space_count      = $spaces;
+                            $current_level    = $lev;
+                            $current_ci_level = $ci_lev;
+                            last;
+                        }
+                    }
+
+                    # reached bottom of stack .. should never happen because
+                    # only negative levels can get here, and $level was forced
+                    # to be positive above.
+                    else {
+
+                        # non-fatal, keep going except in DEVEL_MODE
+                        if (DEVEL_MODE) {
+                            Fault(<<EOM);
+program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
+EOM
+                        }
+                        last;
+                    }
+                }
+            }
+
+            #------------------------
+            # handle increasing depth
+            #------------------------
+            if ( $level > $current_level || $ci_level > $current_ci_level ) {
+
+                $stack_changed = 1;
+
+                # Compute the standard incremental whitespace.  This will be
+                # the minimum incremental whitespace that will be used.  This
+                # choice results in a smooth transition between the gnu-style
+                # and the standard style.
+                my $standard_increment =
+                  ( $level - $current_level ) *
+                  $rOpts_indent_columns +
+                  ( $ci_level - $current_ci_level ) *
+                  $rOpts_continuation_indentation;
+
+                # Now we have to define how much extra incremental space
+                # ("$available_space") we want.  This extra space will be
+                # reduced as necessary when long lines are encountered or when
+                # it becomes clear that we do not have a good list.
+                my $available_space = 0;
+                my $align_paren     = 0;
+                my $excess          = 0;
+
+                my $last_nonblank_seqno;
+                my $last_nonblank_block_type;
+                if ( defined($K_last_nonblank) ) {
+                    $last_nonblank_seqno =
+                      $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
+                    $last_nonblank_block_type =
+                        $last_nonblank_seqno
+                      ? $rblock_type_of_seqno->{$last_nonblank_seqno}
+                      : undef;
+                }
+
+                # initialization on empty stack..
+                if ( $max_gnu_stack_index == 0 ) {
+                    $space_count = $level * $rOpts_indent_columns;
+                }
+
+                # if this is a BLOCK, add the standard increment
+                elsif ($last_nonblank_block_type) {
+                    $space_count += $standard_increment;
+                }
+
+                #------------------------------------------------------------
+                # if this is not a sequenced item, add the standard increment
+                #------------------------------------------------------------
+                elsif ( !$last_nonblank_seqno ) {
+                    $space_count += $standard_increment;
+                }
+
+                # add the standard increment for containers excluded by user
+                # rules or which contain here-docs or multiline qw text
+                elsif ( defined($last_nonblank_seqno)
+                    && $ris_excluded_lp_container->{$last_nonblank_seqno} )
+                {
+                    $space_count += $standard_increment;
+                }
+
+                # if last nonblank token was not structural indentation,
+                # just use standard increment
+                elsif ( $last_nonblank_type ne '{' ) {
+                    $space_count += $standard_increment;
+                }
+
+                # otherwise use the space to the first non-blank level change
+                else {
+
+                    $space_count = $gnu_position_predictor;
+
+                    my $min_gnu_indentation =
+                      $gnu_stack[$max_gnu_stack_index]->get_spaces();
+
+                    $available_space = $space_count - $min_gnu_indentation;
+                    if ( $available_space >= $standard_increment ) {
+                        $min_gnu_indentation += $standard_increment;
+                    }
+                    elsif ( $available_space > 1 ) {
+                        $min_gnu_indentation += $available_space + 1;
+                    }
+                    elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
+                        if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
+                            $min_gnu_indentation += 2;
+                        }
+                        else {
+                            $min_gnu_indentation += 1;
+                        }
+                    }
+                    else {
+                        $min_gnu_indentation += $standard_increment;
+                    }
+                    $available_space = $space_count - $min_gnu_indentation;
+
+                    if ( $available_space < 0 ) {
+                        $space_count     = $min_gnu_indentation;
+                        $available_space = 0;
+                    }
+                    $align_paren = 1;
+                }
+
+                # update state, but not on a blank token
+                if ( $type ne 'b' ) {
+
+                    $gnu_stack[$max_gnu_stack_index]->set_have_child(1);
+
+                    #-------------------------
+                    # FIXME: This is very slow
+                    #-------------------------
+                    ++$max_gnu_stack_index;
+                    $gnu_stack[$max_gnu_stack_index] =
+                      new_lp_indentation_item( $space_count, $level, $ci_level,
+                        $available_space, $align_paren );
+
+                    # If the opening paren is beyond the half-line length, then
+                    # we will use the minimum (standard) indentation.  This will
+                    # help avoid problems associated with running out of space
+                    # near the end of a line.  As a result, in deeply nested
+                    # lists, there will be some indentations which are limited
+                    # to this minimum standard indentation. But the most deeply
+                    # nested container will still probably be able to shift its
+                    # parameters to the right for proper alignment, so in most
+                    # cases this will not be noticeable.
+                    if ( $available_space > 0 ) {
+                        my $halfway =
+                          $maximum_line_length_at_level[$level] -
+                          $rOpts_maximum_line_length / 2;
+                        $gnu_stack[$max_gnu_stack_index]
+                          ->tentatively_decrease_available_spaces(
+                            $available_space)
+                          if ( $space_count > $halfway );
+                    }
+                }
+            }
+
+            #------------------
+            # Handle all tokens
+            #------------------
+
+            if ( $type ne 'b' ) {
+
+                # Count commas and look for non-list characters.  Once we see a
+                # non-list character, we give up and don't look for any more
+                # commas.
+                if ( $type eq '=>' ) {
+                    $gnu_arrow_count{$total_depth}++;
+
+                    # remember '=>' like '=' for estimating breaks (but see
+                    # above note for b1035)
+                    $last_gnu_equals{$total_depth} = $ii;
+                }
+
+                elsif ( $type eq ',' ) {
+                    $gnu_comma_count{$total_depth}++;
+                }
+
+                elsif ( $is_assignment{$type} ) {
+                    $last_gnu_equals{$total_depth} = $ii;
+                }
+
+                # this token might start a new line if ..
+                if (
+
+                    # this is the first nonblank token of the line
+                    $ii == 1 && $types_to_go[0] eq 'b'
+
+                    # or previous character was one of these:
+                    ##|| $last_nonblank_type_in_batch =~ /^([\:\?\,f])$/
+                    || $hash_test2{$last_nonblank_type_in_batch}
+
+                    # or previous character was opening and this is not closing
+                    || ( $last_nonblank_type_in_batch eq '{' && $type ne '}' )
+                    || ( $last_nonblank_type_in_batch eq '(' and $type ne ')' )
+
+                    # or this token is one of these:
+                    ##|| $type =~ /^([\.]|\|\||\&\&)$/
+                    || $hash_test3{$type}
+
+                    # or this is a closing structure
+                    || (   $last_nonblank_type_in_batch eq '}'
+                        && $last_nonblank_token_in_batch eq
+                        $last_nonblank_type_in_batch )
+
+                    # or previous token was keyword 'return'
+                    || (
+                        $last_nonblank_type_in_batch eq 'k'
+                        && (   $last_nonblank_token_in_batch eq 'return'
+                            && $type ne '{' )
+                    )
+
+                    # or starting a new line at certain keywords is fine
+                    || (   $type eq 'k'
+                        && $is_if_unless_and_or_last_next_redo_return{$token} )
+
+                    # or this is after an assignment after a closing structure
+                    || (
+                        $is_assignment{$last_nonblank_type_in_batch}
+                        && (
+                            ##$last_last_nonblank_type_in_batch =~ /^[\}\)\]]$/
+                            $hash_test1{$last_last_nonblank_type_in_batch}
+
+                            # and it is significantly to the right
+                            || $gnu_position_predictor > (
+                                $maximum_line_length_at_level[$level] -
+                                  $rOpts_maximum_line_length / 2
+                            )
+                        )
+                    )
+                  )
+                {
+                    check_for_long_gnu_style_lines($ii);
+                    $line_start_index_to_go = $ii;
+
+                    # back up 1 token if we want to break before that type
+                    # otherwise, we may strand tokens like '?' or ':' on a line
+                    if ( $line_start_index_to_go > 0 ) {
+                        if ( $last_nonblank_type_in_batch eq 'k' ) {
+
+                            if (
+                                $want_break_before{
+                                    $last_nonblank_token_in_batch}
+                              )
+                            {
+                                $line_start_index_to_go--;
+                            }
+                        }
+                        elsif (
+                            $want_break_before{$last_nonblank_type_in_batch} )
+                        {
+                            $line_start_index_to_go--;
+                        }
+                    }
+                } ## end if ( $ii == 1 && $types_to_go...)
+
+                $K_last_nonblank = $KK;
+
+                # FIXME: Do we need separate versions of these pervious vars?
+                $last_last_nonblank_type_in_batch =
+                  $last_nonblank_type_in_batch;
+                $last_nonblank_type_in_batch  = $type;
+                $last_nonblank_token_in_batch = $token;
+
+                $last_nonblank_type  = $type;
+                $last_nonblank_token = $token;
+
+            } ## end if ( $type ne 'b' )
+
+            # remember the predicted position of this token on the output line
+            if ( $ii > $line_start_index_to_go ) {
+
+                ## Critical loop - expanding this call is about 2x faster
+                ## $gnu_position_predictor =
+                ##    total_line_length( $line_start_index_to_go, $ii );
+
+                my $indentation =
+                  $leading_spaces_to_go[$line_start_index_to_go];
+                if ( ref($indentation) ) {
+                    $indentation = $indentation->get_spaces();
+                }
+                $gnu_position_predictor =
+                  $indentation +
+                  $summed_lengths_to_go[ $ii + 1 ] -
+                  $summed_lengths_to_go[$line_start_index_to_go];
+
+            }
+            else {
+                $gnu_position_predictor =
+                  $space_count + $token_lengths_to_go[$ii];
+            }
+
+            # Store the indentation object for this token.
+            # This allows us to manipulate the leading whitespace
+            # (in case we have to reduce indentation to fit a line) without
+            # having to change any token values.
+
+            #-------------------------------------------------
+            # TODO: only store indentation objects when needed
+            #-------------------------------------------------
+            $leading_spaces_to_go[$ii] = $gnu_stack[$max_gnu_stack_index];
+            $reduced_spaces_to_go[$ii] =
+              ( $max_gnu_stack_index > 0 && $ci_level )
+              ? $gnu_stack[ $max_gnu_stack_index - 1 ]
+              : $gnu_stack[$max_gnu_stack_index];
+        }
+        return;
     }
 
     sub set_leading_whitespace {
