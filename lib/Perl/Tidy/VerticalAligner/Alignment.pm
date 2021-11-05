@@ -12,13 +12,18 @@ use warnings;
 
 our $VERSION = '20211029';
 
-#    _column_          # the current column number
-#    _saved_column_    # a place for temporary storage
-my $i = 0;
-use constant {
-    _column_       => $i++,
-    _saved_column_ => $i++,
-};
+BEGIN {
+
+    # Indexes for variables in $self.
+    # Do not combine with other BEGIN blocks (c101).
+    #    _column_          # the current column number
+    #    _saved_column_    # a place for temporary storage
+    my $i = 0;
+    use constant {
+        _column_       => $i++,
+        _saved_column_ => $i++,
+    };
+}
 
 sub new {
     my ( $class, $rarg ) = @_;

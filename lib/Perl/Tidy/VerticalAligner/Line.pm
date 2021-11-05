@@ -11,6 +11,9 @@ use warnings;
 our $VERSION = '20211029';
 
 BEGIN {
+
+    # Indexes for variables in $self.
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _jmax_                      => $i++,

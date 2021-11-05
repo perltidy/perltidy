@@ -132,7 +132,8 @@ use constant MAX_NAG_MESSAGES => 6;
 
 BEGIN {
 
-    # Array index names for $self
+    # Array index names for $self.
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _rhere_target_list_                  => $i++,

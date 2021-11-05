@@ -122,6 +122,7 @@ BEGIN {
     # Define the fixed indexes for variables in $self, which is an array
     # reference.  Note the convention of leading and trailing underscores to
     # keep them unique.
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _file_writer_object_ => $i++,

@@ -13,6 +13,7 @@ our $VERSION = '20211029';
 BEGIN {
 
     # Array index names
+    # Do not combine with other BEGIN blocks (c101).
     my $i = 0;
     use constant {
         _spaces_             => $i++,
