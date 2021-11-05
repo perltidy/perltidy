@@ -7880,6 +7880,42 @@ is(
 --maximum-line-length=12
 --variable-maximum-line-length
 
+==> b1235.in <==
+# S1
+  my $oldage
+          = (
+        sort { $a <=> $b }
+                map { -M }
+                @files )[-1];
+  my $depage
+          = (
+   sort { $a <=> $b }
+   map  { -M } @deps )
+          [0];
+
+# S2
+  my $oldage = (
+   sort {
+    $a <=> $b
+   } map { -M }
+           @files
+  )[-1];
+  my $depage = (
+   sort {
+    $a <=> $b
+   } map { -M }
+           @deps
+  )[0];
+
+==> b1235.par <==
+--break-before-all-operators
+--continuation-indentation=8
+--ignore-old-breakpoints
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=26
+--variable-maximum-line-length
+
 ==> b1236.in <==
 # Added level test when applying kpit
 # S1
@@ -7908,6 +7944,29 @@ is(
 --keyword-paren-inner-tightness=0
 --maximum-line-length=26
 --space-keyword-paren
+--variable-maximum-line-length
+
+==> b1237.in <==
+# S1
+ my $h = {
+  map {
+   $_ => uc $_
+  } 'a' .. 'z'
+ };
+
+# S2
+ my $h
+         = {
+       map {$_ => uc $_}
+               'a' .. 'z' };
+
+==> b1237.par <==
+--block-brace-tightness=2
+--break-before-all-operators
+--continuation-indentation=8
+--indent-columns=1
+--line-up-parentheses
+--maximum-line-length=26
 --variable-maximum-line-length
 
 ==> b1238.in <==
