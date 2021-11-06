@@ -17491,7 +17491,9 @@ EOM
             # prepare for a new list when depth increases
             # token $i is a '(','{', or '['
             #------------------------------------------------------------
-            if ( $depth > $current_depth ) {
+            # hardened against bad input syntax: depth jump must be 1 and type
+            # must be opening..fixes c102
+            if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
 
                 $type_sequence_stack[$depth] = $type_sequence;
                 $override_cab3[$depth] =
@@ -17578,7 +17580,9 @@ EOM
             # finish off any old list when depth decreases
             # token $i is a ')','}', or ']'
             #------------------------------------------------------------
-            elsif ( $depth < $current_depth ) {
+            # hardened against bad input syntax: depth jump must be 1 and type
+            # must be closing .. fixes c102
+            elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
 
                 check_for_new_minimum_depth($depth);
 

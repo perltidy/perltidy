@@ -2,6 +2,32 @@
 
 =over 4
 
+=item B<Fix undefined variable reference, c102>
+
+Random testing produced an undefined variable reference for the following input
+
+    make_sorter ( sort_sha => sub {sha512 ( $_} );
+    make_sorter ( sort_ids => sub {/^ID:(\d+)/} );
+
+when formatted with the following input parameters:
+
+    --space-function-paren
+    --maximum-line-length=26
+    --noadd-newlines
+
+Notice that the input script has a peculiar syntax error - the last two closing
+tokens of the first line are transposed.  (Ironically, this snippet is taken
+from code which accompanied the book Perl Best Practices).  The perltidy
+tokenizer caught the syntax error, but the formatter touched an undefined
+variable while attempting to do the formatting.  It would be possible to just
+skip formatting for errors like this, but it can sometimes help finding bugs to
+see an attempted formatting.  So the formatter coding has been corrected to
+avoid the undefined variable reference.
+
+This fixes issue c102.
+
+5 Nov 2021.
+
 =item B<Some blocks with side comments exceed line length>
 
 In some rare cases, one-line blocks with side comments were exceeding the line
