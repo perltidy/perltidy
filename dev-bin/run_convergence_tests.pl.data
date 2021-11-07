@@ -7991,6 +7991,26 @@ is(
 --paren-vertical-tightness-closing=1
 --variable-maximum-line-length
 
+==> b1239.in <==
+# S1
+(
+  sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) )
+)[0];
+
+# S2
+( sockaddr_in( getsockname ( $_[0]->[_SOCKET] ) )
+)[0];
+
+==> b1239.par <==
+--continuation-indentation=10
+--indent-columns=0
+--line-up-parentheses
+--maximum-line-length=54
+--paren-vertical-tightness-closing=2
+--paren-vertical-tightness=1
+--space-keyword-paren
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

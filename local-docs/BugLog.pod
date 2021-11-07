@@ -64,7 +64,7 @@ This has been fixed.
 
    do $roff ( &verify($tpage) );
 
-20 Oct 2021.
+20 Oct 2021, 72e4bb1.
 
 =item B<Fix c091, incorrect closing side comment>
 
@@ -77,7 +77,7 @@ had empty strings as block names.  This was fixed in two ways.  First, the
 regex was fixed so that it cannot match an empty string.  Second, a test for
 an empty string was added.
 
-20 Oct 2021.
+20 Oct 2021, aa1a019.
 
 =item B<Issue c089, improve vertical alignment for lists without parens>
 

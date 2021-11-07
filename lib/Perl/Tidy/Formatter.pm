@@ -8618,6 +8618,12 @@ EOM
             }
         } ## end starting new weld sequence
 
+        else {
+
+            # set the 1-line flag if continuing a weld sequence; fixes b1239
+            $is_one_line_weld = ( $iline_oo == $iline_oc );
+        }
+
         # DO-NOT-WELD RULE 2:
         # Do not weld an opening paren to an inner one line brace block
         # We will just use old line numbers for this test and require
