@@ -122,3 +122,27 @@ index?#sc#
 "\n"
 ;#sc#
 }#sc#
+
+==> c103.in <==
+print $l<3? $_ : $l & 4 ? --$_ ? $_ : "No more" : $l & 3 ? $_ > 1 ? "if one of those" : "if that" : "e", " cop", $_ ^ 1 ? "ies " : "y ", $l ^ 3 ? $l & 2 ? "w" : $l & 4 ? "z" : "y" : "x";
+print STDERR < BLABLA>;    # ok prints the word 'BLABLA'
+print STDERR <DATA>;       # ok prints lines after __DATA__
+print STDERR < DATA>;      # ok prints the word 'DATA'
+print BLABLA <DATA>;       # ok; does nothing unless BLABLA is defined
+print STDOUT <>;           # ok
+print STDOUT < >;          # ok
+print STDOUT < 6>;         # ok; prints '6'
+print STDOUT < DATA>;      # ok
+print STDOUT <DATA>;       # ok
+print STDOUT <BUBBA>;      # ok
+print STDOUT < BUBBA>;     # ok
+print STDOUT <$BUBBA>;     # ok
+print $fh <DATA>;          # ok
+print $fh <BUBBA>;         # ok
+__END__
+print $fh < DATA>;     # syntax error
+print $fh < BUBBA>;    # syntax error
+print $fh <>;          # syntax error
+print $fh < >;         # syntax error
+print $fh < 6>;        # error
+print $fh <6>;         # error
