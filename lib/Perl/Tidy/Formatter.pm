@@ -6508,7 +6508,7 @@ sub respace_tokens {
                     # $sigil =~ /^[\$\&\%\*\@]$/ )
                     if ( $is_sigil{$sigil} ) {
                         $token = $sigil;
-                        $token .= $word if ($word);
+                        $token .= $word if ( defined($word) );  # fix c104
                         $rtoken_vars->[_TOKEN_] = $token;
                     }
                 }

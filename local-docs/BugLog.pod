@@ -2,6 +2,33 @@
 
 =over 4
 
+=item B<Fix coding error, issue c104>
+
+Automated random testing produced an error with something like the following
+input line taken from an obfuscated perl script:
+
+    open(IN, $ 0);
+
+The '0' was missing in the output:
+
+    open( IN, $ );
+
+The tokenization was correct, but a line of code in the formatter which
+removes the space between the '$' and the '0' should have used a 'defined'
+when doing a check:
+
+    $token .= $word if ($word);             # OLD: error
+
+This if test fails on '0'. The corrected line is
+
+    $token .= $word if ( defined($word) );  # NEW: fixes c104
+
+This fixes the problem and gives the correct formatted result
+
+    open( IN, $0 );
+
+8 Nov 2021.
+
 =item B<Fix undefined variable reference, c102>
 
 Random testing produced an undefined variable reference for the following input
