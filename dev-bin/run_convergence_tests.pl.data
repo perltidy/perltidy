@@ -8011,6 +8011,26 @@ is(
 --space-keyword-paren
 --weld-nested-containers
 
+==> b1240.in <==
+# S1
+     printf(
+"Inode Last Change at: %s\n",
+          scalar
+             localtime($ctime) );
+# S2
+     printf(
+"Inode Last Change at: %s\n",
+          scalar localtime(
+                           $ctime)
+     );
+
+==> b1240.par <==
+--continuation-indentation=3
+--extended-continuation-indentation
+--indent-columns=5
+--line-up-parentheses
+--maximum-line-length=34
+
 ==> b1241.in <==
 # created from b901
 # Started blinking with new -lp logic

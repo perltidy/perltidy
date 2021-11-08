@@ -17660,6 +17660,16 @@ EOM
 
                     # Do not break hash braces under stress (fixes b1238)
                     $do_not_break_apart ||= $types_to_go[$i_opening] eq 'L';
+
+                    # This option fixes b1235, b1237, b1240 with old and new -lp,
+                    # but formatting is nicer with next option.
+                    ## $is_long_term ||=
+                    ##  $levels_to_go[$i_opening] > $stress_level + 1;
+
+                    # This option fixes b1240 but not b1235, b1237 with new -lp,
+                    # but this gives better formatting than the previous option.
+                    $do_not_break_apart ||=
+                      $levels_to_go[$i_opening] > $stress_level;
                 }
 
                 if (  !$is_long_term
