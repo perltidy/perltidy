@@ -8011,6 +8011,34 @@ is(
 --space-keyword-paren
 --weld-nested-containers
 
+==> b1241.in <==
+# created from b901
+# Started blinking with new -lp logic
+# S1
+    my @tagged_texts = walk_html(
+                          $tree,
+                          sub
+                          { [ 'MAYBE', $_[ 0 ] ] },
+                          \&promote_if_h1tag
+    );
+
+# S2
+    my @tagged_texts =
+             walk_html(
+                        $tree,
+                        sub { [
+                              'MAYBE', $_[ 0 ] ] },
+                        \&promote_if_h1tag
+             );
+
+==> b1241.par <==
+--continuation-indentation=9
+--line-up-parentheses
+--maximum-line-length=51
+--opening-anonymous-sub-brace-on-new-line
+--square-bracket-tightness=0
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

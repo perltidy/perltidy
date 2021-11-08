@@ -8307,13 +8307,13 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                  = $self->[_rLL_];
-    my $rlines               = $self->[_rlines_];
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-
+    my $rLL                       = $self->[_rLL_];
+    my $rlines                    = $self->[_rlines_];
+    my $K_opening_container       = $self->[_K_opening_container_];
+    my $K_closing_container       = $self->[_K_closing_container_];
+    my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+    my $ris_asub_block            = $self->[_ris_asub_block_];
 
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
@@ -8669,6 +8669,17 @@ EOM
         {
             $do_not_weld_rule = 2
               if ( $token_oo eq '(' || $iline_oo != $iline_io );
+        }
+
+        # DO-NOT-WELD RULE 2A:
+        # Do not weld an opening asub brace in -lp mode to avoid interfering
+        # with one-line block formation.  Fixes b1241.
+        if (  !$do_not_weld_rule
+            && $is_one_line_weld
+            && $rOpts_line_up_parentheses
+            && $ris_asub_block->{$outer_seqno} )
+        {
+            $do_not_weld_rule = '2A';
         }
 
         # DO-NOT-WELD RULE 3:
