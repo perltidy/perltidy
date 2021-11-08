@@ -8242,7 +8242,14 @@ sub find_angle_operator_termination {
     elsif ( $expecting == UNKNOWN ) { $filter = '[\>\;\=\#\|\<]' }
 
     # shouldn't happen - we shouldn't be here if operator is expected
-    else { warning("Program Bug in find_angle_operator_termination\n") }
+    else {
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
+Bad call to find_angle_operator_termination
+EOM
+        }
+        return ( $i, $type );
+    }
 
     # To illustrate what we might be looking at, in case we are
     # guessing, here are some examples of valid angle operators
@@ -8281,6 +8288,22 @@ sub find_angle_operator_termination {
 
             my $pos_beg = $rtoken_map->[$i];
             my $str     = substr( $input_line, $pos_beg, ( $pos - $pos_beg ) );
+
+            # Test for '<' after possible filehandle, issue c103
+            # print $fh <>;          # syntax error
+            # print $fh <DATA>;      # ok
+            # print $fh < DATA>;     # syntax error at '>'
+            # print STDERR < DATA>;  # ok, prints word 'DATA'
+            # print BLABLA <DATA>;   # ok; does nothing unless BLABLA is defined
+            if ( $last_nonblank_type eq 'Z' ) {
+
+                # $str includes brackets; something like '<DATA>'
+                if (   substr( $last_nonblank_token, 0, 1 ) !~ /[A-Za-z_]/
+                    && substr( $str, 1, 1 ) !~ /[A-Za-z_]/ )
+                {
+                    return ( $i, $type );
+                }
+            }
 
             # Reject if the closing '>' follows a '-' as in:
             # if ( VERSION < 5.009 && $op-> name eq 'assign' ) { }
