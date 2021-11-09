@@ -146,3 +146,6 @@ print $fh <>;          # syntax error
 print $fh < >;         # syntax error
 print $fh < 6>;        # error
 print $fh <6>;         # error
+
+==> c106.in <==
+my$seed=$$^$^T;

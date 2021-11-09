@@ -7320,9 +7320,11 @@ EOM
                 }
                 else {
                     $id_scan_state = '';
+                    $i             = $i_save;
+                    last;    # c106
                 }
             }
-            else {    # something else
+            else {           # something else
 
                 if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
 

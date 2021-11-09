@@ -2,6 +2,17 @@
 
 =over 4
 
+=item B<Fix tokenization of $$^, issue c106>
+
+Automated random testing produced an error tokenizing the following fragment:
+
+   my$seed=$$^$^T;
+
+The first ^ should have been tokenized as the bitwise xor operator but was not.
+This is fixed with this update.
+
+8 Nov 2021
+
 =item B<Fix coding error, issue c104>
 
 Automated random testing produced an error with something like the following
