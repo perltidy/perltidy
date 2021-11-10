@@ -43,10 +43,14 @@ package Perl::Tidy::Formatter;
 use strict;
 use warnings;
 
-# this can be turned on for extra checking during development
+# This flag gets switched on during automated testing for extra checking
 use constant DEVEL_MODE => 0;
 
-# This is being used to test sub set_lp_indentation
+# This temporary flag is being used to test new coding for -lp:
+# 0 = old version, process by token   [ limited, slow, to be deleted ]
+# 1 = new version, process in batches [ like 0 but more one-line blocks ]
+# 2 = new version w/minimal objects   [ like 1 but faster and improves -xci ]
+# 3 = new version plus skip finish_lp [ like 2 plus -lp works past line breaks ]
 use constant TEST_NEW_LP => 1;
 
 { #<<< A non-indenting brace to contain all lexical variables
@@ -6508,7 +6512,7 @@ sub respace_tokens {
                     # $sigil =~ /^[\$\&\%\*\@]$/ )
                     if ( $is_sigil{$sigil} ) {
                         $token = $sigil;
-                        $token .= $word if ( defined($word) );  # fix c104
+                        $token .= $word if ( defined($word) );    # fix c104
                         $rtoken_vars->[_TOKEN_] = $token;
                     }
                 }
@@ -13333,8 +13337,16 @@ EOM
 
         return if ( $max_index_to_go < 0 );
 
-        $self->set_lp_indentation()
-          if ( TEST_NEW_LP && $rOpts_line_up_parentheses );
+        if ($rOpts_line_up_parentheses) {
+
+            if (TEST_NEW_LP) {
+                $self->set_lp_indentation();
+            }
+
+            if ( TEST_NEW_LP < 3 ) {
+                finish_lp_batch();
+            }
+        }
 
         #----------------------------
         # Shortcut for block comments
@@ -13482,11 +13494,6 @@ EOM
 
         my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
           @unmatched_closing_indexes_in_this_batch;
-
-        #--------------------------------------------------------
-        # For -lp option, close any unfinished items in its stack
-        #--------------------------------------------------------
-        finish_lp_batch() if ($rOpts_line_up_parentheses);
 
         #------------------------
         # Set special breakpoints
@@ -17661,8 +17668,8 @@ EOM
                     # Do not break hash braces under stress (fixes b1238)
                     $do_not_break_apart ||= $types_to_go[$i_opening] eq 'L';
 
-                    # This option fixes b1235, b1237, b1240 with old and new -lp,
-                    # but formatting is nicer with next option.
+                   # This option fixes b1235, b1237, b1240 with old and new -lp,
+                   # but formatting is nicer with next option.
                     ## $is_long_term ||=
                     ##  $levels_to_go[$i_opening] > $stress_level + 1;
 
@@ -19490,6 +19497,23 @@ sub get_available_spaces_to_go {
     my %last_gnu_equals;
     my @gnu_item_list;
     my @gnu_stack;
+    my $rGS;
+
+    BEGIN {
+
+        # Index names for the -lp stack variables.
+        # Do not combine with other BEGIN blocks (c101).
+
+        my $i = 0;
+        use constant {
+            _gs_ci_level_     => $i++,
+            _gs_in_lp_        => $i++,
+            _gs_level_        => $i++,
+            _gs_object_       => $i++,
+            _gs_parent_seqno_ => $i++,
+            _gs_space_count_  => $i++,
+        };
+    }
 
     sub initialize_gnu_vars {
 
@@ -19502,8 +19526,23 @@ sub get_available_spaces_to_go {
           0;    # where the current token is predicted to be
         $max_gnu_stack_index = 0;
         $max_gnu_item_index  = -1;
-        $gnu_stack[0]        = new_lp_indentation_item( 0, -1, -1, 0, 0 );
-        @gnu_item_list       = ();
+
+        my $gs_object;
+        if ( TEST_NEW_LP < 2 && $rOpts_line_up_parentheses ) {
+            $gs_object = new_lp_indentation_item( 0, -1, -1, 0, 0 );
+            $gnu_stack[0] = $gs_object;
+        }
+
+        $rGS = [];
+
+        $rGS->[$max_gnu_stack_index]->[_gs_ci_level_]     = -1;
+        $rGS->[$max_gnu_stack_index]->[_gs_in_lp_]        = defined($gs_object);
+        $rGS->[$max_gnu_stack_index]->[_gs_level_]        = -1;
+        $rGS->[$max_gnu_stack_index]->[_gs_object_]       = $gs_object;
+        $rGS->[$max_gnu_stack_index]->[_gs_parent_seqno_] = SEQ_ROOT;
+        $rGS->[$max_gnu_stack_index]->[_gs_space_count_]  = 0;
+
+        @gnu_item_list = ();
         return;
     }
 
@@ -19572,9 +19611,9 @@ sub get_available_spaces_to_go {
 
     sub set_lp_indentation {
 
-        #---------------------------------------------
-        # This will replace sub set_leading_whitespace
-        #---------------------------------------------
+        #-------------------------------------------------------
+        # This is a replacement for sub 'set_leading_whitespace'
+        #-------------------------------------------------------
 
         # This routine defines leading whitespace for the case of -lp formatting
         # given: the level and continuation_level of a token,
@@ -19585,10 +19624,6 @@ sub get_available_spaces_to_go {
 
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
-
-        ## FIXME:
-        #my $K_last_nonblank      = undef;
-        my $K_last_nonblank = $self->K_previous_nonblank( $K_to_go[0] );
 
         my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
 
@@ -19622,6 +19657,15 @@ sub get_available_spaces_to_go {
             $imin += 1;
         }
 
+        my $K_last_nonblank;
+        my $Kpnb = $K_to_go[0] - 1;
+        if ( $Kpnb > 0 && $rLL->[$Kpnb]->[_TYPE_] eq 'b' ) {
+            $Kpnb -= 1;
+        }
+        if ( $Kpnb >= 0 && $rLL->[$Kpnb]->[_TYPE_] ne 'b' ) {
+            $K_last_nonblank = $Kpnb;
+        }
+
         # FIXME: try to combine these '$last_...' vars if possible.  You can
         # always check if K_last_noblank >= $K_to_go[0] to see if in batch
         my $last_nonblank_token_in_batch     = '';
@@ -19636,9 +19680,12 @@ sub get_available_spaces_to_go {
             $last_nonblank_type  = $rLL->[$K_last_nonblank]->[_TYPE_];
         }
 
-        my ( $space_count, $current_level, $current_ci_level );
+        my ( $space_count, $current_level, $current_ci_level, $in_lp_mode );
         my $stack_changed = 1;
 
+        #-----------------------------------
+        # Loop over all tokens in this batch
+        #-----------------------------------
         foreach my $ii ( $imin .. $imax ) {
 
             my $KK          = $K_to_go[$ii];
@@ -19659,8 +19706,18 @@ sub get_available_spaces_to_go {
 
             # get the top state from the stack if it has changed
             if ($stack_changed) {
-                ( $space_count, $current_level, $current_ci_level ) =
-                  @{ $gnu_stack[$max_gnu_stack_index]->get_spaces_level_ci() };
+                my $rGS_top = $rGS->[$max_gnu_stack_index];
+                $in_lp_mode = $rGS_top->[_gs_in_lp_];
+                if ($in_lp_mode) {
+                    my $gs_object = $rGS_top->[_gs_object_];
+                    ( $space_count, $current_level, $current_ci_level ) =
+                      @{ $gs_object->get_spaces_level_ci() };
+                }
+                else {
+                    $current_ci_level = $rGS_top->[_gs_ci_level_];
+                    $current_level    = $rGS_top->[_gs_level_];
+                    $space_count      = $rGS_top->[_gs_space_count_];
+                }
                 $stack_changed = 0;
             }
 
@@ -19668,8 +19725,6 @@ sub get_available_spaces_to_go {
             # update the position predictor
             #------------------------------
             if ( $type eq '{' || $type eq '(' ) {
-
-                ##$stack_changed = 1;
 
                 $gnu_comma_count{ $total_depth + 1 } = 0;
                 $gnu_arrow_count{ $total_depth + 1 } = 0;
@@ -19743,7 +19798,7 @@ sub get_available_spaces_to_go {
                         $gnu_position_predictor = $test_position;
                     }
                 }
-            }
+            } ## end update position predictor
 
             #------------------------
             # Handle decreasing depth
@@ -19760,66 +19815,66 @@ sub get_available_spaces_to_go {
                     if ($max_gnu_stack_index) {
 
                         # save index of token which closes this level
-                        $gnu_stack[$max_gnu_stack_index]->set_closed($ii);
+                        my $gs_object =
+                          $rGS->[$max_gnu_stack_index]->[_gs_object_];
+                        if ( $gs_object && ref($gs_object) ) {
+                            $gs_object->set_closed($ii);
 
-                        # Undo any extra indentation if we saw no commas
-                        my $available_spaces =
-                          $gnu_stack[$max_gnu_stack_index]
-                          ->get_available_spaces();
+                            # Undo any extra indentation if we saw no commas
+                            my $available_spaces =
+                              $gs_object->get_available_spaces();
 
-                        my $comma_count = 0;
-                        my $arrow_count = 0;
-                        if ( $type eq '}' || $type eq ')' ) {
-                            $comma_count = $gnu_comma_count{$total_depth};
-                            $arrow_count = $gnu_arrow_count{$total_depth};
-                            $comma_count = 0 unless $comma_count;
-                            $arrow_count = 0 unless $arrow_count;
-                        }
-                        $gnu_stack[$max_gnu_stack_index]
-                          ->set_comma_count($comma_count);
-                        $gnu_stack[$max_gnu_stack_index]
-                          ->set_arrow_count($arrow_count);
+                            my $comma_count = 0;
+                            my $arrow_count = 0;
+                            if ( $type eq '}' || $type eq ')' ) {
+                                $comma_count = $gnu_comma_count{$total_depth};
+                                $arrow_count = $gnu_arrow_count{$total_depth};
+                                $comma_count = 0 unless $comma_count;
+                                $arrow_count = 0 unless $arrow_count;
+                            }
+                            $gs_object->set_comma_count($comma_count);
+                            $gs_object->set_arrow_count($arrow_count);
 
-                        if ( $available_spaces > 0 ) {
+                            if ( $available_spaces > 0 ) {
 
-                            if ( $comma_count <= 0 || $arrow_count > 0 ) {
+                                if ( $comma_count <= 0 || $arrow_count > 0 ) {
 
-                                my $i =
-                                  $gnu_stack[$max_gnu_stack_index]->get_index();
-                                my $seqno =
-                                  $gnu_stack[$max_gnu_stack_index]
-                                  ->get_sequence_number();
+                                    my $i = $gs_object->get_index();
+                                    my $seqno =
+                                      $gs_object->get_sequence_number();
 
-                                # Be sure this item was created in this batch.
-                                # This should be true because we delete any
-                                # available space from open items at the end of
-                                # each batch.
-                                if (   $gnu_sequence_number != $seqno
-                                    || $i > $max_gnu_item_index )
-                                {
+                                 # Be sure this item was created in this batch.
+                                 # This should be true because we delete any
+                                 # available space from open items at the end of
+                                 # each batch.
+                                    if (   $gnu_sequence_number != $seqno
+                                        || $i > $max_gnu_item_index )
+                                    {
                                     # non-fatal, keep going except in DEVEL_MODE
-                                    if (DEVEL_MODE) {
-                                        Fault(<<EOM);
+                                        if (DEVEL_MODE) {
+                                            Fault(<<EOM);
 Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
 EOM
-                                    }
-                                }
-                                else {
-                                    if ( $arrow_count == 0 ) {
-                                        $gnu_item_list[$i]
-                                          ->permanently_decrease_available_spaces
-                                          ($available_spaces);
+                                        }
                                     }
                                     else {
-                                        $gnu_item_list[$i]
-                                          ->tentatively_decrease_available_spaces
-                                          ($available_spaces);
-                                    }
-                                    foreach
-                                      my $j ( $i + 1 .. $max_gnu_item_index )
-                                    {
-                                        $gnu_item_list[$j]
-                                          ->decrease_SPACES($available_spaces);
+                                        if ( $arrow_count == 0 ) {
+                                            $gnu_item_list[$i]
+                                              ->permanently_decrease_available_spaces
+                                              ($available_spaces);
+                                        }
+                                        else {
+                                            $gnu_item_list[$i]
+                                              ->tentatively_decrease_available_spaces
+                                              ($available_spaces);
+                                        }
+                                        foreach my $j (
+                                            $i + 1 .. $max_gnu_item_index )
+                                        {
+                                            $gnu_item_list[$j]
+                                              ->decrease_SPACES(
+                                                $available_spaces);
+                                        }
                                     }
                                 }
                             }
@@ -19828,9 +19883,15 @@ EOM
                         # go down one level
                         --$max_gnu_stack_index;
 
-                        my ( $spaces, $lev, $ci_lev ) =
-                          @{ $gnu_stack[$max_gnu_stack_index]
-                              ->get_spaces_level_ci() };
+                        my $rGS_top = $rGS->[$max_gnu_stack_index];
+                        my $ci_lev  = $rGS_top->[_gs_ci_level_];
+                        my $lev     = $rGS_top->[_gs_level_];
+                        my $spaces  = $rGS_top->[_gs_space_count_];
+                        if ( $rGS_top->[_gs_in_lp_] ) {
+                            my $gs_obj = $rGS_top->[_gs_object_];
+                            ( $spaces, $lev, $ci_lev ) =
+                              @{ $gs_obj->get_spaces_level_ci() };
+                        }
 
                         # stop when we reach a level at or below the current
                         # level
@@ -19856,7 +19917,7 @@ EOM
                         last;
                     }
                 }
-            }
+            } ## end decreasing depth
 
             #------------------------
             # handle increasing depth
@@ -19895,6 +19956,7 @@ EOM
                 }
 
                 # initialization on empty stack..
+                $in_lp_mode = $rGS->[$max_gnu_stack_index]->[_gs_in_lp_];
                 if ( $max_gnu_stack_index == 0 ) {
                     $space_count = $level * $rOpts_indent_columns;
                 }
@@ -19904,9 +19966,7 @@ EOM
                     $space_count += $standard_increment;
                 }
 
-                #------------------------------------------------------------
                 # if this is not a sequenced item, add the standard increment
-                #------------------------------------------------------------
                 elsif ( !$last_nonblank_seqno ) {
                     $space_count += $standard_increment;
                 }
@@ -19928,10 +19988,15 @@ EOM
                 # otherwise use the space to the first non-blank level change
                 else {
 
+                    $in_lp_mode  = 1;
                     $space_count = $gnu_position_predictor;
 
-                    my $min_gnu_indentation =
-                      $gnu_stack[$max_gnu_stack_index]->get_spaces();
+                    my $rGS_top             = $rGS->[$max_gnu_stack_index];
+                    my $min_gnu_indentation = $rGS_top->[_gs_space_count_];
+                    if ( $rGS_top->[_gs_in_lp_] ) {
+                        $min_gnu_indentation =
+                          $rGS_top->[_gs_object_]->get_spaces();
+                    }
 
                     $available_space = $space_count - $min_gnu_indentation;
                     if ( $available_space >= $standard_increment ) {
@@ -19963,15 +20028,29 @@ EOM
                 # update state, but not on a blank token
                 if ( $type ne 'b' ) {
 
-                    $gnu_stack[$max_gnu_stack_index]->set_have_child(1);
+                    if ( $rGS->[$max_gnu_stack_index]->[_gs_in_lp_] ) {
+                        $rGS->[$max_gnu_stack_index]->[_gs_object_]
+                          ->set_have_child(1);
+                        $in_lp_mode = 1;
+                    }
 
-                    #-------------------------
-                    # FIXME: This is very slow
-                    #-------------------------
+                    # Create indentation object if in lp-mode
                     ++$max_gnu_stack_index;
-                    $gnu_stack[$max_gnu_stack_index] =
-                      new_lp_indentation_item( $space_count, $level, $ci_level,
-                        $available_space, $align_paren );
+                    my $gs_object;
+                    if ($in_lp_mode) {
+                        $gs_object =
+                          new_lp_indentation_item( $space_count,
+                            $level, $ci_level, $available_space, $align_paren );
+                    }
+
+                    $rGS->[$max_gnu_stack_index]->[_gs_ci_level_] = $ci_level;
+                    $rGS->[$max_gnu_stack_index]->[_gs_in_lp_]    = $in_lp_mode;
+                    $rGS->[$max_gnu_stack_index]->[_gs_level_]    = $level;
+                    $rGS->[$max_gnu_stack_index]->[_gs_object_]   = $gs_object;
+                    $rGS->[$max_gnu_stack_index]->[_gs_parent_seqno_] =
+                      $last_nonblank_seqno;
+                    $rGS->[$max_gnu_stack_index]->[_gs_space_count_] =
+                      $space_count;
 
                     # If the opening paren is beyond the half-line length, then
                     # we will use the minimum (standard) indentation.  This will
@@ -19986,13 +20065,12 @@ EOM
                         my $halfway =
                           $maximum_line_length_at_level[$level] -
                           $rOpts_maximum_line_length / 2;
-                        $gnu_stack[$max_gnu_stack_index]
-                          ->tentatively_decrease_available_spaces(
+                        $gs_object->tentatively_decrease_available_spaces(
                             $available_space)
                           if ( $space_count > $halfway );
                     }
                 }
-            }
+            } ## end increasing depth
 
             #------------------
             # Handle all tokens
@@ -20026,7 +20104,7 @@ EOM
                     $ii == 1 && $types_to_go[0] eq 'b'
 
                     # or previous character was one of these:
-                    ##|| $last_nonblank_type_in_batch =~ /^([\:\?\,f])$/
+                    #  /^([\:\?\,f])$/
                     || $hash_test2{$last_nonblank_type_in_batch}
 
                     # or previous character was opening and this is not closing
@@ -20034,7 +20112,7 @@ EOM
                     || ( $last_nonblank_type_in_batch eq '(' and $type ne ')' )
 
                     # or this token is one of these:
-                    ##|| $type =~ /^([\.]|\|\||\&\&)$/
+                    #  /^([\.]|\|\||\&\&)$/
                     || $hash_test3{$type}
 
                     # or this is a closing structure
@@ -20057,7 +20135,7 @@ EOM
                     || (
                         $is_assignment{$last_nonblank_type_in_batch}
                         && (
-                            ##$last_last_nonblank_type_in_batch =~ /^[\}\)\]]$/
+                            # /^[\}\)\]]$/
                             $hash_test1{$last_last_nonblank_type_in_batch}
 
                             # and it is significantly to the right
@@ -20134,19 +20212,35 @@ EOM
             # (in case we have to reduce indentation to fit a line) without
             # having to change any token values.
 
-            #-------------------------------------------------
-            # TODO: only store indentation objects when needed
-            #-------------------------------------------------
-            $leading_spaces_to_go[$ii] = $gnu_stack[$max_gnu_stack_index];
-            $reduced_spaces_to_go[$ii] =
-              ( $max_gnu_stack_index > 0 && $ci_level )
-              ? $gnu_stack[ $max_gnu_stack_index - 1 ]
-              : $gnu_stack[$max_gnu_stack_index];
-        }
+            #---------------------------------------------------------------
+            # replace leading whitespace with indentation objects where used
+            #---------------------------------------------------------------
+            if ( $rGS->[$max_gnu_stack_index]->[_gs_in_lp_] ) {
+                my $item = $rGS->[$max_gnu_stack_index]->[_gs_object_];
+                if ( defined($item) && ref($item) ) {
+                    $leading_spaces_to_go[$ii] = $item;
+                    $reduced_spaces_to_go[$ii] = $item;
+                    if (   $max_gnu_stack_index > 0
+                        && $ci_level
+                        && $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_in_lp_] )
+                    {
+                        my $item_m =
+                          $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_object_];
+                        if ( defined($item_m) ) {
+                            $reduced_spaces_to_go[$ii] = $item_m;
+                        }
+                    }
+                }
+            }
+        } ## end loop over all tokens in this batch
         return;
     }
 
     sub set_leading_whitespace {
+
+        #-----------------------------------------------------
+        # This is being replaced with sub 'set_lp_indentation'
+        #-----------------------------------------------------
 
         # This routine defines leading whitespace for the case of -lp formatting
         # given: the level and continuation_level of a token,
