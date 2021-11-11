@@ -640,8 +640,7 @@ $m->command(
     -command => sub { print "DOS\n"; save_dialog($win); } );
 
 # function call, ternary in list
-return
-  OptArgs2::Result->usage(
+return OptArgs2::Result->usage(
     $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
     'usage: ' . $usage . "\n" );
 
@@ -775,8 +774,7 @@ $m->command(
     -command => sub { print "DOS\n"; save_dialog($win); } );
 
 # function call, ternary in list
-return
-  OptArgs2::Result->usage(
+return OptArgs2::Result->usage(
     $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
     'usage: ' . $usage . "\n" );
 

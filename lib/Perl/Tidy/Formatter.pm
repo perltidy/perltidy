@@ -51,7 +51,7 @@ use constant DEVEL_MODE => 0;
 # 1 = new version, process in batches [ like 0 but more one-line blocks ]
 # 2 = new version w/minimal objects   [ like 1 but faster and improves -xci ]
 # 3 = new version plus skip finish_lp [ like 2 plus -lp works past line breaks ]
-use constant TEST_NEW_LP => 1;
+use constant TEST_NEW_LP => 2;
 
 { #<<< A non-indenting brace to contain all lexical variables
 
@@ -19507,7 +19507,6 @@ sub get_available_spaces_to_go {
         my $i = 0;
         use constant {
             _gs_ci_level_     => $i++,
-            _gs_in_lp_        => $i++,
             _gs_level_        => $i++,
             _gs_object_       => $i++,
             _gs_parent_seqno_ => $i++,
@@ -19536,7 +19535,6 @@ sub get_available_spaces_to_go {
         $rGS = [];
 
         $rGS->[$max_gnu_stack_index]->[_gs_ci_level_]     = -1;
-        $rGS->[$max_gnu_stack_index]->[_gs_in_lp_]        = defined($gs_object);
         $rGS->[$max_gnu_stack_index]->[_gs_level_]        = -1;
         $rGS->[$max_gnu_stack_index]->[_gs_object_]       = $gs_object;
         $rGS->[$max_gnu_stack_index]->[_gs_parent_seqno_] = SEQ_ROOT;
@@ -19595,6 +19593,7 @@ sub get_available_spaces_to_go {
         return $item;
     }
 
+    # hashes for efficient testing
     my %hash_test1;
     my %hash_test2;
     my %hash_test3;
@@ -19616,9 +19615,7 @@ sub get_available_spaces_to_go {
         #-------------------------------------------------------
 
         # This routine defines leading whitespace for the case of -lp formatting
-        # given: the level and continuation_level of a token,
-        # define: space count of leading string which would apply if it
-        # were the first token of a new line.
+        # for all tokens in one batch.
 
         my ($self) = @_;
 
@@ -19636,24 +19633,16 @@ sub get_available_spaces_to_go {
           $self->[_rbreak_before_container_by_seqno_];
         my $radjusted_levels = $self->[_radjusted_levels_];
         my $Klimit           = $self->[_Klimit_];
-        my $nws              = @{$radjusted_levels};
-        my $imin             = 0;
-        my $imax             = $max_index_to_go;
+
+        my $nws  = @{$radjusted_levels};
+        my $imin = 0;
+        my $imax = $max_index_to_go;
 
         # The 'starting_in_quote' flag means that the first token is the first
         # token of a line and it is also the continuation of some kind of
-        # multi-line quote or pattern.  It requires special treatment because
-        # it must have no added leading whitespace. So we create a special
-        # indentation item which is not in the stack.
+        # multi-line quote or pattern.  It must have no added leading
+        # whitespace, so we can skip it.
         if ($starting_in_quote) {
-            my $space_count     = 0;
-            my $available_space = 0;
-            my $level           = $levels_to_go[$imin];
-            my $ci_level        = $ci_levels_to_go[$imin];
-            $level = -1;    # flag to prevent storing in item_list
-            $leading_spaces_to_go[$imin] = $reduced_spaces_to_go[$imin] =
-              new_lp_indentation_item( $space_count, $level, $ci_level,
-                $available_space, 0 );
             $imin += 1;
         }
 
@@ -19666,14 +19655,9 @@ sub get_available_spaces_to_go {
             $K_last_nonblank = $Kpnb;
         }
 
-        # FIXME: try to combine these '$last_...' vars if possible.  You can
-        # always check if K_last_noblank >= $K_to_go[0] to see if in batch
-        my $last_nonblank_token_in_batch     = '';
-        my $last_nonblank_type_in_batch      = '';
-        my $last_last_nonblank_type_in_batch = '';
-
-        my $last_nonblank_token = '';
-        my $last_nonblank_type  = '';
+        my $last_nonblank_token     = '';
+        my $last_nonblank_type      = '';
+        my $last_last_nonblank_type = '';
 
         if ( defined($K_last_nonblank) ) {
             $last_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
@@ -19706,10 +19690,9 @@ sub get_available_spaces_to_go {
 
             # get the top state from the stack if it has changed
             if ($stack_changed) {
-                my $rGS_top = $rGS->[$max_gnu_stack_index];
-                $in_lp_mode = $rGS_top->[_gs_in_lp_];
-                if ($in_lp_mode) {
-                    my $gs_object = $rGS_top->[_gs_object_];
+                my $rGS_top   = $rGS->[$max_gnu_stack_index];
+                my $gs_object = $rGS_top->[_gs_object_];
+                if ($gs_object) {
                     ( $space_count, $current_level, $current_ci_level ) =
                       @{ $gs_object->get_spaces_level_ci() };
                 }
@@ -19791,9 +19774,9 @@ sub get_available_spaces_to_go {
                       )
                     {
 
-                       # then make the switch -- note that we do not set a real
-                       # breakpoint here because we may not really need one; sub
-                       # scan_list will do that if necessary
+                        # then make the switch -- note that we do not set a
+                        # real breakpoint here because we may not really need
+                        # one; sub scan_list will do that if necessary.
                         $line_start_index_to_go = $i_test + 1;
                         $gnu_position_predictor = $test_position;
                     }
@@ -19815,14 +19798,11 @@ sub get_available_spaces_to_go {
                     if ($max_gnu_stack_index) {
 
                         # save index of token which closes this level
-                        my $gs_object =
-                          $rGS->[$max_gnu_stack_index]->[_gs_object_];
-                        if ( $gs_object && ref($gs_object) ) {
-                            $gs_object->set_closed($ii);
+                        if ( $rGS->[$max_gnu_stack_index]->[_gs_object_] ) {
+                            my $gs_object =
+                              $rGS->[$max_gnu_stack_index]->[_gs_object_];
 
-                            # Undo any extra indentation if we saw no commas
-                            my $available_spaces =
-                              $gs_object->get_available_spaces();
+                            $gs_object->set_closed($ii);
 
                             my $comma_count = 0;
                             my $arrow_count = 0;
@@ -19832,49 +19812,51 @@ sub get_available_spaces_to_go {
                                 $comma_count = 0 unless $comma_count;
                                 $arrow_count = 0 unless $arrow_count;
                             }
+
                             $gs_object->set_comma_count($comma_count);
                             $gs_object->set_arrow_count($arrow_count);
 
-                            if ( $available_spaces > 0 ) {
+                            # Undo any extra indentation if we saw no commas
+                            my $available_spaces =
+                              $gs_object->get_available_spaces();
 
-                                if ( $comma_count <= 0 || $arrow_count > 0 ) {
+                            if ( $available_spaces > 0
+                                && ( $comma_count <= 0 || $arrow_count > 0 ) )
+                            {
 
-                                    my $i = $gs_object->get_index();
-                                    my $seqno =
-                                      $gs_object->get_sequence_number();
+                                my $i     = $gs_object->get_index();
+                                my $seqno = $gs_object->get_sequence_number();
 
-                                 # Be sure this item was created in this batch.
-                                 # This should be true because we delete any
-                                 # available space from open items at the end of
-                                 # each batch.
-                                    if (   $gnu_sequence_number != $seqno
-                                        || $i > $max_gnu_item_index )
-                                    {
+                                # Be sure this item was created in this batch.
+                                # This should be true because we delete any
+                                # available space from open items at the end of
+                                # each batch.
+                                if (   $gnu_sequence_number != $seqno
+                                    || $i > $max_gnu_item_index )
+                                {
                                     # non-fatal, keep going except in DEVEL_MODE
-                                        if (DEVEL_MODE) {
-                                            Fault(<<EOM);
+                                    if (DEVEL_MODE) {
+                                        Fault(<<EOM);
 Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
 EOM
-                                        }
+                                    }
+                                }
+                                else {
+                                    if ( $arrow_count == 0 ) {
+                                        $gnu_item_list[$i]
+                                          ->permanently_decrease_available_spaces
+                                          ($available_spaces);
                                     }
                                     else {
-                                        if ( $arrow_count == 0 ) {
-                                            $gnu_item_list[$i]
-                                              ->permanently_decrease_available_spaces
-                                              ($available_spaces);
-                                        }
-                                        else {
-                                            $gnu_item_list[$i]
-                                              ->tentatively_decrease_available_spaces
-                                              ($available_spaces);
-                                        }
-                                        foreach my $j (
-                                            $i + 1 .. $max_gnu_item_index )
-                                        {
-                                            $gnu_item_list[$j]
-                                              ->decrease_SPACES(
-                                                $available_spaces);
-                                        }
+                                        $gnu_item_list[$i]
+                                          ->tentatively_decrease_available_spaces
+                                          ($available_spaces);
+                                    }
+                                    foreach
+                                      my $j ( $i + 1 .. $max_gnu_item_index )
+                                    {
+                                        $gnu_item_list[$j]
+                                          ->decrease_SPACES($available_spaces);
                                     }
                                 }
                             }
@@ -19887,7 +19869,7 @@ EOM
                         my $ci_lev  = $rGS_top->[_gs_ci_level_];
                         my $lev     = $rGS_top->[_gs_level_];
                         my $spaces  = $rGS_top->[_gs_space_count_];
-                        if ( $rGS_top->[_gs_in_lp_] ) {
+                        if ( $rGS_top->[_gs_object_] ) {
                             my $gs_obj = $rGS_top->[_gs_object_];
                             ( $spaces, $lev, $ci_lev ) =
                               @{ $gs_obj->get_spaces_level_ci() };
@@ -19956,7 +19938,7 @@ EOM
                 }
 
                 # initialization on empty stack..
-                $in_lp_mode = $rGS->[$max_gnu_stack_index]->[_gs_in_lp_];
+                $in_lp_mode = $rGS->[$max_gnu_stack_index]->[_gs_object_];
                 if ( $max_gnu_stack_index == 0 ) {
                     $space_count = $level * $rOpts_indent_columns;
                 }
@@ -19993,7 +19975,7 @@ EOM
 
                     my $rGS_top             = $rGS->[$max_gnu_stack_index];
                     my $min_gnu_indentation = $rGS_top->[_gs_space_count_];
-                    if ( $rGS_top->[_gs_in_lp_] ) {
+                    if ( $rGS_top->[_gs_object_] ) {
                         $min_gnu_indentation =
                           $rGS_top->[_gs_object_]->get_spaces();
                     }
@@ -20028,7 +20010,7 @@ EOM
                 # update state, but not on a blank token
                 if ( $type ne 'b' ) {
 
-                    if ( $rGS->[$max_gnu_stack_index]->[_gs_in_lp_] ) {
+                    if ( $rGS->[$max_gnu_stack_index]->[_gs_object_] ) {
                         $rGS->[$max_gnu_stack_index]->[_gs_object_]
                           ->set_have_child(1);
                         $in_lp_mode = 1;
@@ -20044,7 +20026,6 @@ EOM
                     }
 
                     $rGS->[$max_gnu_stack_index]->[_gs_ci_level_] = $ci_level;
-                    $rGS->[$max_gnu_stack_index]->[_gs_in_lp_]    = $in_lp_mode;
                     $rGS->[$max_gnu_stack_index]->[_gs_level_]    = $level;
                     $rGS->[$max_gnu_stack_index]->[_gs_object_]   = $gs_object;
                     $rGS->[$max_gnu_stack_index]->[_gs_parent_seqno_] =
@@ -20105,25 +20086,24 @@ EOM
 
                     # or previous character was one of these:
                     #  /^([\:\?\,f])$/
-                    || $hash_test2{$last_nonblank_type_in_batch}
+                    || $hash_test2{$last_nonblank_type}
 
                     # or previous character was opening and this is not closing
-                    || ( $last_nonblank_type_in_batch eq '{' && $type ne '}' )
-                    || ( $last_nonblank_type_in_batch eq '(' and $type ne ')' )
+                    || ( $last_nonblank_type eq '{' && $type ne '}' )
+                    || ( $last_nonblank_type eq '(' and $type ne ')' )
 
                     # or this token is one of these:
                     #  /^([\.]|\|\||\&\&)$/
                     || $hash_test3{$type}
 
                     # or this is a closing structure
-                    || (   $last_nonblank_type_in_batch eq '}'
-                        && $last_nonblank_token_in_batch eq
-                        $last_nonblank_type_in_batch )
+                    || (   $last_nonblank_type eq '}'
+                        && $last_nonblank_token eq $last_nonblank_type )
 
                     # or previous token was keyword 'return'
                     || (
-                        $last_nonblank_type_in_batch eq 'k'
-                        && (   $last_nonblank_token_in_batch eq 'return'
+                        $last_nonblank_type eq 'k'
+                        && (   $last_nonblank_token eq 'return'
                             && $type ne '{' )
                     )
 
@@ -20133,10 +20113,10 @@ EOM
 
                     # or this is after an assignment after a closing structure
                     || (
-                        $is_assignment{$last_nonblank_type_in_batch}
+                        $is_assignment{$last_nonblank_type}
                         && (
                             # /^[\}\)\]]$/
-                            $hash_test1{$last_last_nonblank_type_in_batch}
+                            $hash_test1{$last_last_nonblank_type}
 
                             # and it is significantly to the right
                             || $gnu_position_predictor > (
@@ -20153,19 +20133,13 @@ EOM
                     # back up 1 token if we want to break before that type
                     # otherwise, we may strand tokens like '?' or ':' on a line
                     if ( $line_start_index_to_go > 0 ) {
-                        if ( $last_nonblank_type_in_batch eq 'k' ) {
+                        if ( $last_nonblank_type eq 'k' ) {
 
-                            if (
-                                $want_break_before{
-                                    $last_nonblank_token_in_batch}
-                              )
-                            {
+                            if ( $want_break_before{$last_nonblank_token} ) {
                                 $line_start_index_to_go--;
                             }
                         }
-                        elsif (
-                            $want_break_before{$last_nonblank_type_in_batch} )
-                        {
+                        elsif ( $want_break_before{$last_nonblank_type} ) {
                             $line_start_index_to_go--;
                         }
                     }
@@ -20173,21 +20147,16 @@ EOM
 
                 $K_last_nonblank = $KK;
 
-                # FIXME: Do we need separate versions of these pervious vars?
-                $last_last_nonblank_type_in_batch =
-                  $last_nonblank_type_in_batch;
-                $last_nonblank_type_in_batch  = $type;
-                $last_nonblank_token_in_batch = $token;
-
-                $last_nonblank_type  = $type;
-                $last_nonblank_token = $token;
+                $last_last_nonblank_type = $last_nonblank_type;
+                $last_nonblank_type      = $type;
+                $last_nonblank_token     = $token;
 
             } ## end if ( $type ne 'b' )
 
             # remember the predicted position of this token on the output line
             if ( $ii > $line_start_index_to_go ) {
 
-                ## Critical loop - expanding this call is about 2x faster
+                ## Critical loop - expanded this call for about 2x speedup
                 ## $gnu_position_predictor =
                 ##    total_line_length( $line_start_index_to_go, $ii );
 
@@ -20200,7 +20169,6 @@ EOM
                   $indentation +
                   $summed_lengths_to_go[ $ii + 1 ] -
                   $summed_lengths_to_go[$line_start_index_to_go];
-
             }
             else {
                 $gnu_position_predictor =
@@ -20215,21 +20183,18 @@ EOM
             #---------------------------------------------------------------
             # replace leading whitespace with indentation objects where used
             #---------------------------------------------------------------
-            if ( $rGS->[$max_gnu_stack_index]->[_gs_in_lp_] ) {
-                my $item = $rGS->[$max_gnu_stack_index]->[_gs_object_];
-                if ( defined($item) && ref($item) ) {
-                    $leading_spaces_to_go[$ii] = $item;
-                    $reduced_spaces_to_go[$ii] = $item;
-                    if (   $max_gnu_stack_index > 0
-                        && $ci_level
-                        && $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_in_lp_] )
-                    {
-                        my $item_m =
-                          $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_object_];
-                        if ( defined($item_m) ) {
-                            $reduced_spaces_to_go[$ii] = $item_m;
-                        }
-                    }
+            if ( $rGS->[$max_gnu_stack_index]->[_gs_object_] ) {
+                my $gs_object = $rGS->[$max_gnu_stack_index]->[_gs_object_];
+                $leading_spaces_to_go[$ii] = $gs_object;
+                if (   $max_gnu_stack_index > 0
+                    && $ci_level
+                    && $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_object_] )
+                {
+                    $reduced_spaces_to_go[$ii] =
+                      $rGS->[ $max_gnu_stack_index - 1 ]->[_gs_object_];
+                }
+                else {
+                    $reduced_spaces_to_go[$ii] = $gs_object;
                 }
             }
         } ## end loop over all tokens in this batch
