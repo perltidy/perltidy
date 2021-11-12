@@ -8346,6 +8346,27 @@ sub weld_nested_containers {
     my $multiline_tol = $single_line_tol + 1 +
       max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
+    # Define a welding cutoff level: do not start a weld if the inside
+    # container level equals or exceeds this level.  We use the minimum of two
+    # criteria, either of which may be more restrictive.
+    # Start with a value based on the global stress (cases b1206, b1243):
+    # Note that this has a minimum cutoff level of 3.
+    my $weld_cutoff_level = $stress_level + 3;
+
+    # But use an alternative criterion if more restrictive (cases b1206, b1252)
+    # This allows the cutoff level to go down to 0 in extreme cases.
+    foreach my $level_test ( 0 .. $weld_cutoff_level ) {
+        my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
+        my $excess_inside_space =
+          $max_len -
+          $rOpts_continuation_indentation -
+          $rOpts_indent_columns - 8;
+        if ( $excess_inside_space <= 0 ) {
+            $weld_cutoff_level = $level_test;
+            last;
+        }
+    }
+
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
         my $KK      = $K_opening_container->{$seqno};
@@ -8428,7 +8449,7 @@ sub weld_nested_containers {
         # welds can still be made.  This rule will seldom be a limiting factor
         # in actual working code. Fixes b1206, b1243.
         my $inner_level = $inner_opening->[_LEVEL_];
-        if ( $inner_level > $stress_level + 2 ) { next }
+        if ( $inner_level >= $weld_cutoff_level ) { next }
 
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );

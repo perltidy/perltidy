@@ -8154,6 +8154,44 @@ WriteMakefile(
 --line-up-parentheses
 --maximum-line-length=35
 
+==> b1252.in <==
+# S1
+@pack=
+        ([
+"ufunc.pd",
+    Ufunc,
+    PDL::Ufunc
+        ]);
+# S2
+@pack=([
+"ufunc.pd",
+        Ufunc,
+        PDL::Ufunc
+    ]);
+
+==> b1252.par <==
+--noadd-whitespace
+--break-before-all-operators
+--break-before-paren=3
+--continuation-indentation=8
+--delete-old-whitespace
+--maximum-line-length=10
+--opening-paren-right
+--stack-closing-block-brace
+--stack-closing-hash-brace
+--stack-closing-paren
+--stack-closing-square-bracket
+--stack-opening-hash-brace
+--stack-opening-paren
+--stack-opening-square-bracket
+--tight-secret-operators
+--trim-pod
+--novalign-code
+--variable-maximum-line-length
+--vertical-tightness-closing=1
+--vertical-tightness=0
+--weld-nested-containers
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
