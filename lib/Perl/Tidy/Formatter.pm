@@ -22641,13 +22641,14 @@ sub get_seqno {
 
                 # make sure this won't change if -lp is used
                 my $indentation_1 = $leading_spaces_to_go[$ibeg];
-                if ( ref($indentation_1) ) {
-                    if ( $indentation_1->get_recoverable_spaces() == 0 ) {
-                        my $indentation_2 = $leading_spaces_to_go[$ibeg_next];
-                        unless ( $indentation_2->get_recoverable_spaces() == 0 )
-                        {
-                            $pad_spaces = 0;
-                        }
+                if ( ref($indentation_1)
+                    && $indentation_1->get_recoverable_spaces() == 0 )
+                {
+                    my $indentation_2 = $leading_spaces_to_go[$ibeg_next];
+                    if ( ref($indentation_2)
+                        && $indentation_2->get_recoverable_spaces() != 0 )
+                    {
+                        $pad_spaces = 0;
                     }
                 }
 
