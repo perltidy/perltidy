@@ -8426,17 +8426,9 @@ sub weld_nested_containers {
         # little space* within a welded container to avoid instability.  Note
         # that after each weld the level values are reduced, so long multiple
         # welds can still be made.  This rule will seldom be a limiting factor
-        # in actual working code. Fixes b1206.
-
-        # *the current rule is that we require a space of 'ci' + 'i' + 8,
-        # where 'ci' is the value of n in -ci=n and 'i' is the value in -i=n.
+        # in actual working code. Fixes b1206, b1243.
         my $inner_level = $inner_opening->[_LEVEL_];
-        my $max_len     = $maximum_text_length_at_level[ $inner_level + 1 ];
-        my $excess_inside_space =
-          $max_len -
-          $rOpts_continuation_indentation -
-          $rOpts_indent_columns - 8;
-        if ( $excess_inside_space <= 0 ) { next }
+        if ( $inner_level > $stress_level + 2 ) { next }
 
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
