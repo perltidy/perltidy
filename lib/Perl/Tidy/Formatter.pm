@@ -19959,6 +19959,11 @@ EOM
                     $space_count += $standard_increment;
                 }
 
+                # do not start -lp under stress .. fixes b1244
+                elsif ( !$in_lp_mode && $level > $stress_level + 1 ) {
+                    $space_count += $standard_increment;
+                }
+
                 # otherwise use the space to the first non-blank level change
                 else {
 

@@ -8097,6 +8097,63 @@ WriteMakefile(
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1244.in <==
+# S1
+     @NVNN_w2 =
+             ( Lampoons, Launders,
+               Leapfrogs, Leaps,
+               Learns, Legitimizes,
+               Levels, Levitates,
+               Liberates, Lightens,
+               Likes,   Liquidates,
+               Loathes, Loosens,
+               Loves,   Lubricates,
+             );
+
+     @NNVN_w3 =
+             ( Unclutters,
+               Unfetters,
+               Unifies,  Unites,
+               Unseats,  Upgrades,
+               Upstages, Uses,
+               Usurps, );
+# S2
+     @NVNN_w2 = ( Lampoons,
+                  Launders,
+                  Leapfrogs,
+                  Leaps,
+                  Learns,
+                  Legitimizes,
+                  Levels,
+                  Levitates,
+                  Liberates,
+                  Lightens,
+                  Likes,
+                  Liquidates,
+                  Loathes,
+                  Loosens,
+                  Loves,
+                  Lubricates,
+     );
+
+     @NNVN_w3 = ( Unclutters,
+                  Unfetters,
+                  Unifies,
+                  Unites,
+                  Unseats,
+                  Upgrades,
+                  Upstages,
+                  Uses,
+                  Usurps,
+     );
+
+==> b1244.par <==
+--continuation-indentation=8
+--ignore-old-breakpoints
+--indent-columns=5
+--line-up-parentheses
+--maximum-line-length=35
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
