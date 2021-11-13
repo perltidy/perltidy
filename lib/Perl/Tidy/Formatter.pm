@@ -1846,7 +1846,12 @@ EOM
     # Cases b1197-b1204 work ok with const=12 but not with const=8
     my $const = 16;
     $stress_level = 0;
-    foreach my $level ( 0 .. $level_max ) {
+
+    # Put a reasonable limit on stress level (say 100) in case the
+    # whitespace-cycle variable is used.
+    my $stress_level_limit = min( 100, $level_max );
+
+    foreach my $level ( 0 .. $stress_level_limit ) {
         my $remaining_cycles = max(
             0,
             (
