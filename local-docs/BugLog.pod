@@ -2,6 +2,23 @@
 
 =over 4
 
+=item B<Fix tokenization issue c109>
+
+Automated random testing produced an error tokenizing the following code
+fragment:
+
+    s s(..)(.)sss
+    ;
+
+This is equivalent to 's/(..)(.)//s' with 's' as the delimiter instead of '/'.
+It was tokenized correctly except when the final 's' was followed by a newline,
+as in the example.  When the delimiter is a letter rather than a punctuation
+character, perltidy exercises some seldom-used code which had an off-by-one
+loop limit.  This has been fixed.
+
+12 Nov 2021.
+
+
 =item B<Fix tokenization of $$^, issue c106>
 
 Automated random testing produced an error tokenizing the following fragment:

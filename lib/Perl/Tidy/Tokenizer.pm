@@ -8821,7 +8821,8 @@ sub follow_quoted_string {
                 "Note: alphanumeric quote delimiter ($beginning_tok) \n");
         }
 
-        while ( $i < $max_token_index ) {
+        # Note: changed < to <= here to fix c109. Relying on extra end blanks.
+        while ( $i <= $max_token_index ) {
 
             if ( $quote_pos == 0 || ( $i < 0 ) ) {
                 $tok = $rtokens->[ ++$i ];
@@ -8848,6 +8849,11 @@ sub follow_quoted_string {
 
                 $quoted_string .=
                   substr( $tok, $old_pos, $quote_pos - $old_pos - 1 );
+
+                # NOTE: any quote modifiers will be at the end of '$tok'. If we
+                # wanted to check them, this is the place to get them.  But
+                # this quote form is rarely used in practice, so it isn't
+                # worthwhile.
 
                 $quote_depth--;
 
