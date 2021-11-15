@@ -19532,6 +19532,7 @@ sub get_available_spaces_to_go {
     my @gnu_item_list;
     my @gnu_stack;
     my $rGS;
+    my $lp_cutoff_level;
 
     BEGIN {
 
@@ -19575,6 +19576,22 @@ sub get_available_spaces_to_go {
         $rGS->[$max_gnu_stack_index]->[_gs_space_count_]  = 0;
 
         @gnu_item_list = ();
+
+        $lp_cutoff_level = $stress_level + 2;
+
+        # use an alternative criterion if more restrictive (case b1255)
+        # This allows the cutoff level to go down to 0 in extreme cases.
+        foreach my $level_test ( 0 .. $lp_cutoff_level ) {
+            my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
+            my $excess_inside_space =
+              $max_len -
+              $rOpts_continuation_indentation -
+              $rOpts_indent_columns - 8;
+            if ( $excess_inside_space <= 0 ) {
+                $lp_cutoff_level = $level_test;
+                last;
+            }
+        }
         return;
     }
 
@@ -20002,7 +20019,7 @@ EOM
                 }
 
                 # do not start -lp under stress .. fixes b1244
-                elsif ( !$in_lp_mode && $level > $stress_level + 1 ) {
+                elsif ( !$in_lp_mode && $level >= $lp_cutoff_level ) {
                     $space_count += $standard_increment;
                 }
 
