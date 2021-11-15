@@ -8154,6 +8154,46 @@ WriteMakefile(
 --line-up-parentheses
 --maximum-line-length=35
 
+==> b1250.in <==
+# S1
+  @dependents=
+  (
+           split(
+             $delim,$dependent{$ctr} )
+  );
+# S2
+  @dependents=
+  (split(  $delim,$dependent{$ctr} ));
+
+==> b1250.par <==
+--noadd-whitespace
+--break-before-paren-and-indent=1
+--break-before-paren=1
+--continuation-indentation=7
+--delete-old-whitespace
+--extended-continuation-indentation
+--indent-columns=2
+--maximum-line-length=39
+--paren-vertical-tightness-closing=2
+--paren-vertical-tightness=1
+--weld-nested-containers
+
+==> b1251.in <==
+# S1
+              if (
+                     !( $line =~
+                            /\\(nonumber|(no)?tag)/ ) )
+# S2
+              if ( !($line =~ /\\(nonumber|(no)?tag)/ ) )
+
+==> b1251.par <==
+--indent-columns=7
+--maximum-line-length=57
+--paren-vertical-tightness-closing=1
+--paren-vertical-tightness=1
+--space-keyword-paren
+--weld-nested-containers
+
 ==> b1252.in <==
 # S1
 @pack=
@@ -8190,6 +8230,48 @@ WriteMakefile(
 --variable-maximum-line-length
 --vertical-tightness-closing=1
 --vertical-tightness=0
+--weld-nested-containers
+
+==> b1255.in <==
+printf
+  (
+"%-20s %-50s\n",
+    "-"
+      x 20,
+    "-"
+      x 50
+  );
+
+printf
+  (
+"%-20s %-50s\n",
+    "-" x
+         20,
+    "-"
+      x 50
+  );
+
+
+==> b1255.par <==
+--noadd-whitespace
+--ignore-old-breakpoints
+--line-up-parentheses
+--maximum-line-length=6
+--variable-maximum-line-length
+--want-break-before='x = //= > * == <= + & &= !~ x &&= !~ *= + &&='
+
+==> b1256.in <==
+# S1
+        &$out( assemble_insn(
+            $insn, $arg ) );
+# S2
+        &$out(
+            assemble_insn(
+                $insn, $arg ) );
+
+==> b1256.par <==
+--nodelete-old-newlines
+--paren-vertical-tightness-closing=2
 --weld-nested-containers
 
 ==> b131.in <==

@@ -28,8 +28,8 @@
 # CODE SECTION 11: Code to break long lists
 #                  sub scan_list
 # CODE SECTION 12: Code for setting indentation
-# CODE SECTION 13: Preparing batches for vertical alignment
-#                  sub send_lines_to_vertical_aligner
+# CODE SECTION 13: Preparing batch of lines for vertical alignment
+#                  sub convey_batch_to_vertical_aligner
 # CODE SECTION 14: Code for creating closing side comments
 #                  sub add_closing_side_comment
 # CODE SECTION 15: Summarize
@@ -7342,7 +7342,7 @@ EOM
 
                     # Only save ending K indexes of code types which are blank
                     # or 'VER'.  These will be used for a convergence check.
-                    # See related code in sub 'send_lines_to_vertical_aligner'.
+                    # See related code in sub 'convey_batch_to_vertical_aligner'
                     my $CODE_type = $line_of_tokens->{_code_type};
                     if (  !$CODE_type
                         || $CODE_type eq 'VER' )
@@ -8474,6 +8474,7 @@ sub weld_nested_containers {
         my $iline_ic = $inner_closing->[_LINE_INDEX_];
         my $iline_oc = $outer_closing->[_LINE_INDEX_];
         my $token_oo = $outer_opening->[_TOKEN_];
+        my $token_io = $inner_opening->[_TOKEN_];
 
         my $is_multiline_weld =
              $iline_oo == $iline_io
@@ -8481,14 +8482,29 @@ sub weld_nested_containers {
           && $iline_io != $iline_ic;
 
         if (DEBUG_WELD) {
-            my $token_io = $rLL->[$Kinner_opening]->[_TOKEN_];
-            my $len_oo   = $rLL->[$Kouter_opening]->[_CUMULATIVE_LENGTH_];
-            my $len_io   = $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_];
+            my $len_oo = $rLL->[$Kouter_opening]->[_CUMULATIVE_LENGTH_];
+            my $len_io = $rLL->[$Kinner_opening]->[_CUMULATIVE_LENGTH_];
             $Msg .= <<EOM;
 Pair seqo=$outer_seqno seqi=$inner_seqno  lines: loo=$iline_oo lio=$iline_io lic=$iline_ic loc=$iline_oc
 Koo=$Kouter_opening Kio=$Kinner_opening Kic=$Kinner_closing Koc=$Kouter_closing lenoo=$len_oo lenio=$len_io
 tokens '$token_oo' .. '$token_io'
 EOM
+        }
+
+        # DO-NOT-WELD RULE 0:
+        # Avoid a new paren-paren weld if inner parens are 'sheared' (separated
+        # by one line).  This can produce instabilities (fixes b1250 b1251
+        # 1256).
+        if (  !$is_multiline_weld
+            && $iline_ic == $iline_io + 1
+            && $token_oo eq '('
+            && $token_io eq '(' )
+        {
+            if (DEBUG_WELD) {
+                $Msg .= "RULE 0: Not welding due to sheared inner parens\n";
+                print $Msg;
+            }
+            next;
         }
 
         # If this pair is not adjacent to the previous pair (skipped or not),
@@ -8591,7 +8607,7 @@ EOM
                 my $excess =
                   $self->excess_line_length_for_Krange( $Kstart, $Kstop );
 
-                # Note: coding simplified here for case b1219
+                # Coding simplified here for case b1219.
                 $is_one_line_weld = $excess <= 0;
             }
 
@@ -13385,7 +13401,7 @@ EOM
             $this_batch->[_batch_count_]              = $batch_count;
             $this_batch->[_rix_seqno_controlling_ci_] = [];
 
-            $self->send_lines_to_vertical_aligner();
+            $self->convey_batch_to_vertical_aligner();
 
             my $level = $levels_to_go[$ibeg];
             $self->[_last_last_line_leading_level_] =
@@ -13850,7 +13866,7 @@ EOM
         $this_batch->[_batch_count_]              = $batch_count;
         $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
 
-        $self->send_lines_to_vertical_aligner();
+        $self->convey_batch_to_vertical_aligner();
 
         #-------------------------------------------------------------------
         # Write requested number of blank lines after an opening block brace
@@ -20889,9 +20905,9 @@ sub reduce_lp_indentation {
 # CODE SECTION 13: Preparing batches for vertical alignment
 ###########################################################
 
-sub check_send_lines_input {
+sub check_convey_batch_input {
 
-    # Check for valid input to sub send_lines_to_vertical_aligner.  An
+    # Check for valid input to sub convey_batch_to_vertical_aligner.  An
     # error here would most likely be due to an error in the calling
     # routine 'sub grind_batch_of_CODE'.
     my ( $self, $ri_first, $ri_last ) = @_;
@@ -20932,7 +20948,7 @@ EOM
     return;
 }
 
-sub send_lines_to_vertical_aligner {
+sub convey_batch_to_vertical_aligner {
 
     my ($self) = @_;
 
@@ -20948,7 +20964,7 @@ sub send_lines_to_vertical_aligner {
     my $ri_first   = $this_batch->[_ri_first_];
     my $ri_last    = $this_batch->[_ri_last_];
 
-    $self->check_send_lines_input( $ri_first, $ri_last ) if (DEVEL_MODE);
+    $self->check_convey_batch_input( $ri_first, $ri_last ) if (DEVEL_MODE);
 
     if ( !defined($ri_first) || !@{$ri_first} ) {
 
