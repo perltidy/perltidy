@@ -24,9 +24,9 @@
 # CODE SECTION 9: Process batches of code
 #                 sub grind_batch_of_CODE
 # CODE SECTION 10: Code to break long statments
-#                  sub set_continuation_breaks
+#                  sub break_long_lines
 # CODE SECTION 11: Code to break long lists
-#                  sub scan_list
+#                  sub break_lists
 # CODE SECTION 12: Code for setting indentation
 # CODE SECTION 13: Preparing batch of lines for vertical alignment
 #                  sub convey_batch_to_vertical_aligner
@@ -47,7 +47,7 @@ use warnings;
 use constant DEVEL_MODE => 0;
 
 # This temporary flag is being used to test new coding for -lp:
-# 0 = old version, process by token   [ limited, slow, to be deleted ]
+# 0 = old version, process by token   [ no longer available ]
 # 1 = new version, process in batches [ like 0 but more one-line blocks ]
 # 2 = new version w/minimal objects   [ like 1 but faster and improves -xci ]
 # 3 = new version plus skip finish_lp [ like 2 plus -lp works past line breaks ]
@@ -645,7 +645,7 @@ BEGIN {
     @q = qw< } ) ] : >;
     @is_closing_sequence_token{@q} = (1) x scalar(@q);
 
-    # a hash needed by sub scan_list for labeling containers
+    # a hash needed by sub break_lists for labeling containers
     @q = qw( k => && || ? : . );
     @is_container_label_type{@q} = (1) x scalar(@q);
 
@@ -708,8 +708,9 @@ sub new {
     set_logger_object($logger_object);
     set_diagnostics_object($diagnostics_object);
     initialize_gnu_vars();
+    initialize_gnu_batch_vars();
     initialize_csc_vars();
-    initialize_scan_list();
+    initialize_break_lists();
     initialize_undo_ci();
     initialize_process_line_of_CODE();
     initialize_grind_batch_of_CODE();
@@ -717,7 +718,6 @@ sub new {
     initialize_postponed_breakpoint();
     initialize_batch_variables();
     initialize_forced_breakpoint_vars();
-    initialize_gnu_batch_vars();
     initialize_write_line();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
@@ -4081,7 +4081,7 @@ EOM
 
             if ( $type eq ',' ) {
 
-                # add any bias set by sub scan_list at old comma break points
+                # add any bias set by sub break_lists at old comma break points
                 $bond_str += $bond_strength_to_go[$i];
 
             }
@@ -6016,9 +6016,8 @@ sub respace_tokens {
 
             # Patch 23-Jan-2021 to fix -lp blinkers:
             # The level and ci_level of newly created spaces should be the same
-            # as the previous token.  Otherwise the coding for the -lp option,
-            # in sub set_leading_whitespace, can create a blinking state in
-            # some rare cases.
+            # as the previous token.  Otherwise the coding for the -lp option
+            # can create a blinking state in some rare cases.
             $rcopy->[_LEVEL_] =
               $rLL_new->[-1]->[_LEVEL_];
             $rcopy->[_CI_LEVEL_] =
@@ -7443,7 +7442,7 @@ sub keep_old_line_breaks {
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
 
-    # This code moved here from sub scan_list to fix b1120
+    # This code moved here from sub break_lists to fix b1120
     if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
         foreach my $item ( @{$rKrange_code_without_comments} ) {
             my ( $Kfirst, $Klast ) = @{$item};
@@ -11237,7 +11236,7 @@ EOM
     sub leading_spaces_to_go {
 
         # return the number of indentation spaces for a token in the output
-        # stream; these were previously stored by 'set_leading_whitespace'.
+        # stream
 
         my ($ii) = @_;
         return 0 if ( $ii < 0 );
@@ -11443,13 +11442,6 @@ EOM
               $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
             $leading_spaces_to_go[$max_index_to_go] =
               $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
-        }
-
-        # Correct these values if -lp is used
-        if ( !TEST_NEW_LP && $rOpts_line_up_parentheses ) {
-            $self->set_leading_whitespace( $Ktoken_vars, $K_last_nonblank_code,
-                $K_last_last_nonblank_code, $level, $ci_level,
-                $in_continued_quote );
         }
 
         DEBUG_STORE && do {
@@ -12796,7 +12788,7 @@ sub starting_one_line_block {
             # line break logic in sub process_line_of_CODE.
             # When the second line is input it gets recombined by
             # process_line_of_CODE and passed to the output routines.  The
-            # output routines (set_continuation_breaks) do not break it apart
+            # output routines (break_long_lines) do not break it apart
             # because the bond strengths are set to the highest possible value
             # for grep/map/eval/sort blocks, so the first version gets output.
             # It would be possible to fix this by changing bond strengths,
@@ -13372,14 +13364,10 @@ EOM
         return if ( $max_index_to_go < 0 );
 
         if ($rOpts_line_up_parentheses) {
+            $self->set_lp_indentation();
 
-            if (TEST_NEW_LP) {
-                $self->set_lp_indentation();
-            }
-
-            if ( TEST_NEW_LP < 3 ) {
-                finish_lp_batch();
-            }
+            # This call will eventually be removed
+            finish_lp_batch() if ( TEST_NEW_LP < 3 );
         }
 
         #----------------------------
@@ -13458,7 +13446,7 @@ EOM
                 # This is a good spot to efficiently collect information needed
                 # for breaking lines...
 
-                # gather info needed by sub set_continuation_breaks
+                # gather info needed by sub break_long_lines
                 if ( $type_sequence_to_go[$i] ) {
                     my $seqno = $type_sequence_to_go[$i];
                     my $token = $tokens_to_go[$i];
@@ -13712,7 +13700,7 @@ EOM
         #--------------------------
 
         # Flag to remember if we called sub 'pad_array_to_go'.
-        # Some routines (scan_list(), set_continuation_breaks() ) need some
+        # Some routines (break_lists(), break_long_lines() ) need some
         # extra tokens added at the end of the batch.  Most batches do not
         # use these routines, so we will avoid calling 'pad_array_to_go'
         # unless it is needed.
@@ -13734,11 +13722,11 @@ EOM
                $is_long_line
             || $old_line_count_in_batch > 1
 
-            # must always call scan_list() with unbalanced batches because
+            # must always call break_lists() with unbalanced batches because
             # it is maintaining some stacks
             || $is_unbalanced_batch
 
-            # call scan_list if we might want to break at commas
+            # call break_lists if we might want to break at commas
             || (
                 $comma_count_in_batch
                 && (   $rOpts_maximum_fields_per_table > 0
@@ -13746,7 +13734,7 @@ EOM
                     || $rOpts_comma_arrow_breakpoints == 0 )
             )
 
-            # call scan_list if user may want to break open some one-line
+            # call break_lists if user may want to break open some one-line
             # hash references
             || (   $comma_arrow_count_contained
                 && $rOpts_comma_arrow_breakpoints != 3 )
@@ -13756,7 +13744,7 @@ EOM
             $self->pad_array_to_go();
             $called_pad_array_to_go = 1;
 
-            my $sgb = $self->scan_list($is_long_line);
+            my $sgb = $self->break_lists($is_long_line);
             $saw_good_break ||= $sgb;
         }
 
@@ -13800,7 +13788,7 @@ EOM
             $self->pad_array_to_go() unless ($called_pad_array_to_go);
 
             ( $ri_first, $ri_last ) =
-              $self->set_continuation_breaks( $saw_good_break, \@colon_list );
+              $self->break_long_lines( $saw_good_break, \@colon_list );
 
             $self->break_all_chain_tokens( $ri_first, $ri_last );
 
@@ -14088,7 +14076,7 @@ EOM
 
 sub pad_array_to_go {
 
-    # To simplify coding in scan_list and set_bond_strengths, it helps to
+    # To simplify coding in break_lists and set_bond_strengths, it helps to
     # create some extra blank tokens at the end of the arrays.  We also add
     # some undef's to help guard against using invalid data.
     my ($self) = @_;
@@ -14264,7 +14252,7 @@ sub break_all_chain_tokens {
 sub insert_additional_breaks {
 
     # this routine will add line breaks at requested locations after
-    # sub set_continuation_breaks has made preliminary breaks.
+    # sub break_long_lines has made preliminary breaks.
 
     my ( $self, $ri_break_list, $ri_first, $ri_last ) = @_;
     my $i_f;
@@ -14627,7 +14615,7 @@ sub break_equals {
 
     sub recombine_breakpoints {
 
-        # sub set_continuation_breaks is very liberal in setting line breaks
+        # sub break_long_lines is very liberal in setting line breaks
         # for long lines, always setting breaks at good breakpoints, even
         # when that creates small lines.  Sometimes small line fragments
         # are produced which would look better if they were combined.
@@ -16078,7 +16066,7 @@ sub correct_lp_indentation {
                 # and there are 2 or more commas in the first line,
                 # and there are no '=>'s,
                 # then we are probably vertically aligned.  We could set
-                # an exact flag in sub scan_list, but this is good
+                # an exact flag in sub break_lists, but this is good
                 # enough.
                 my $indentation_count = keys %saw_indentation;
                 my $is_vertically_aligned =
@@ -16174,9 +16162,12 @@ sub undo_lp_ci {
 # CODE SECTION 10: Code to break long statments
 ###############################################
 
-sub set_continuation_breaks {
+sub break_long_lines {
 
-    # Called once per batch to set breaks in long lines.
+    #-----------------------------------------------------------
+    # Break a batch of tokens into lines which do not exceed the
+    # maximum line length.
+    #-----------------------------------------------------------
 
     # Define an array of indexes for inserting newline characters to
     # keep the line lengths below the maximum desired length.  There is
@@ -16186,7 +16177,7 @@ sub set_continuation_breaks {
     # This routine is part of series of routines which adjust line
     # lengths.  It is only called if a statement is longer than the
     # maximum line length, or if a preliminary scanning located
-    # desirable break points.   Sub scan_list has already looked at
+    # desirable break points.   Sub break_lists has already looked at
     # these tokens and set breakpoints (in array
     # $forced_breakpoint_to_go[$i]) where it wants breaks (for example
     # after commas, after opening parens, and before closing parens).
@@ -16211,7 +16202,7 @@ sub set_continuation_breaks {
     # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
     # order.
 
-    use constant DEBUG_BREAKPOINTS => 0;
+    use constant DEBUG_BREAK_LINES => 0;
 
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
@@ -16306,7 +16297,7 @@ sub set_continuation_breaks {
               )
             {
                 $strength -= $tiny_bias;
-                DEBUG_BREAKPOINTS && do { $Msg .= " :-bias at i=$i_test" };
+                DEBUG_BREAK_LINES && do { $Msg .= " :-bias at i=$i_test" };
             }
 
             # otherwise increase strength a bit if this token would be at the
@@ -16319,7 +16310,7 @@ sub set_continuation_breaks {
                   $starting_sum;
                 if ( $len >= $maximum_line_length ) {
                     $strength += $tiny_bias;
-                    DEBUG_BREAKPOINTS && do { $Msg .= " :+bias at i=$i_test" };
+                    DEBUG_BREAK_LINES && do { $Msg .= " :+bias at i=$i_test" };
                 }
             }
 
@@ -16358,18 +16349,18 @@ sub set_continuation_breaks {
               )
             {
                 $self->set_forced_breakpoint($i_next_nonblank);
-                DEBUG_BREAKPOINTS
+                DEBUG_BREAK_LINES
                   && do { $Msg .= " :Forced break at i=$i_next_nonblank" };
             }
 
             if (
 
-                # Try to put a break where requested by scan_list
+                # Try to put a break where requested by break_lists
                 $forced_breakpoint_to_go[$i_test]
 
                 # break between ) { in a continued line so that the '{' can
                 # be outdented
-                # See similar logic in scan_list which catches instances
+                # See similar logic in break_lists which catches instances
                 # where a line is just something like ') {'.  We have to
                 # be careful because the corresponding block keyword might
                 # not be on the first line, such as 'for' here:
@@ -16414,7 +16405,7 @@ sub set_continuation_breaks {
                 if ( $strength < NO_BREAK - 1 ) {
                     $strength   = $lowest_strength - $tiny_bias;
                     $must_break = 1;
-                    DEBUG_BREAKPOINTS
+                    DEBUG_BREAK_LINES
                       && do { $Msg .= " :set must_break at i=$i_next_nonblank" };
                 }
             }
@@ -16434,7 +16425,7 @@ sub set_continuation_breaks {
               )
             {
                 if ( $i_lowest >= 0 ) {
-                    DEBUG_BREAKPOINTS && do {
+                    DEBUG_BREAK_LINES && do {
                         $Msg .= " :quit at good terminal='$next_nonblank_type'";
                     };
                     last;
@@ -16461,7 +16452,7 @@ sub set_continuation_breaks {
               )
             {
                 $i_test = min( $imax, $inext_to_go[$i_test] );
-                DEBUG_BREAKPOINTS && do {
+                DEBUG_BREAK_LINES && do {
                     $Msg .= " :redo at i=$i_test";
                 };
                 redo;
@@ -16474,7 +16465,7 @@ sub set_continuation_breaks {
                 # a leading alignment of certain common tokens, and it
                 # is different from the latest candidate break
                 if ($leading_alignment_type) {
-                    DEBUG_BREAKPOINTS && do {
+                    DEBUG_BREAK_LINES && do {
                         $Msg .=
 " :last at leading_alignment='$leading_alignment_type'";
                     };
@@ -16500,7 +16491,7 @@ sub set_continuation_breaks {
                   )
                 {
 
-                    DEBUG_BREAKPOINTS && do {
+                    DEBUG_BREAK_LINES && do {
                         $Msg .= " :last at good old break\n";
                     };
                     last;
@@ -16535,7 +16526,7 @@ sub set_continuation_breaks {
                     if (   $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
                         || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ )
                     {
-                        DEBUG_BREAKPOINTS && do {
+                        DEBUG_BREAK_LINES && do {
                             $Msg .= " :last-noskip_short";
                         };
                         last;
@@ -16549,7 +16540,7 @@ sub set_continuation_breaks {
                 $lowest_next_type       = $next_nonblank_type;
                 $i_lowest_next_nonblank = $i_next_nonblank;
                 if ($must_break) {
-                    DEBUG_BREAKPOINTS && do {
+                    DEBUG_BREAK_LINES && do {
                         $Msg .= " :last-must_break";
                     };
                     last;
@@ -16619,13 +16610,13 @@ sub set_continuation_breaks {
                     && !$is_closing_type{$next_nonblank_type} )
                 {
                     $too_long = $next_length >= $maximum_line_length;
-                    DEBUG_BREAKPOINTS && do {
+                    DEBUG_BREAK_LINES && do {
                         $Msg .= " :too_long=$too_long" if ($too_long);
                     }
                 }
             }
 
-            DEBUG_BREAKPOINTS && do {
+            DEBUG_BREAK_LINES && do {
                 my $ltok     = $token;
                 my $rtok     = $next_nonblank_token ? $next_nonblank_token : "";
                 my $i_testp2 = $i_test + 2;
@@ -16648,7 +16639,7 @@ sub set_continuation_breaks {
               )
             {
                 $too_long = 0;
-                DEBUG_BREAKPOINTS && do {
+                DEBUG_BREAK_LINES && do {
                     $Msg .= " :do_not_strand next='$next_nonblank_type'";
                 };
             }
@@ -16663,7 +16654,7 @@ sub set_continuation_breaks {
                 || $i_test == $imax
               )
             {
-                DEBUG_BREAKPOINTS && do {
+                DEBUG_BREAK_LINES && do {
                     $Msg .=
 " :Done-too_long=$too_long or i_lowest=$i_lowest or $i_test==imax";
                 };
@@ -16719,7 +16710,7 @@ sub set_continuation_breaks {
         $next_nonblank_type  = $types_to_go[$i_next_nonblank];
         $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
 
-        DEBUG_BREAKPOINTS
+        DEBUG_BREAK_LINES
           && print STDOUT
 "BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
         $Msg = "";
@@ -16727,7 +16718,7 @@ sub set_continuation_breaks {
         #-------------------------------------------------------
         # ?/: rule 2 : if we break at a '?', then break at its ':'
         #
-        # Note: this rule is also in sub scan_list to handle a break
+        # Note: this rule is also in sub break_lists to handle a break
         # at the start and end of a line (in case breaks are dictated
         # by side comments).
         #-------------------------------------------------------
@@ -16790,7 +16781,7 @@ sub set_continuation_breaks {
         # update indentation size
         if ( $i_begin <= $imax ) {
             $leading_spaces = leading_spaces_to_go($i_begin);
-            DEBUG_BREAKPOINTS
+            DEBUG_BREAK_LINES
               && print STDOUT
               "updating leading spaces to be $leading_spaces at i=$i_begin\n";
         }
@@ -16838,10 +16829,12 @@ sub set_continuation_breaks {
 # CODE SECTION 11: Code to break long lists
 ###########################################
 
-{    ## begin closure scan_list
+{    ## begin closure break_lists
 
     # These routines and variables are involved in finding good
     # places to break long lists.
+
+    use constant DEBUG_BREAK_LISTS => 0;
 
     my (
         $block_type,                $current_depth,
@@ -16875,7 +16868,7 @@ sub set_continuation_breaks {
     my $length_tol;
     my $length_tol_boost;
 
-    sub initialize_scan_list {
+    sub initialize_break_lists {
         @dont_align         = ();
         @has_broken_sublist = ();
         @want_comma_break   = ();
@@ -17237,17 +17230,18 @@ sub set_continuation_breaks {
         return $is_sort_map_grep{ $container_type[$dd] };
     }
 
-    sub scan_list {
+    sub break_lists {
 
         my ( $self, $is_long_line ) = @_;
 
-        # This routine is responsible for setting line breaks for all lists,
-        # so that hierarchical structure can be displayed and so that list
-        # items can be vertically aligned.  The output of this routine is
-        # stored in the array @forced_breakpoint_to_go, which is used to set
-        # final breakpoints.
+        #----------------------------------------------------------------------
+        # This routine is called once per batch, if the batch is a list, to set
+        # line breaks so that hierarchical structure can be displayed and so
+        # that list items can be vertically aligned.  The output of this
+        # routine is stored in the array @forced_breakpoint_to_go, which is
+        # used by sub 'break_long_lines' to set final breakpoints.
+        #----------------------------------------------------------------------
 
-        # It is called once per batch if the batch is a list.
         my $rLL                  = $self->[_rLL_];
         my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
         my $ris_broken_container = $self->[_ris_broken_container_];
@@ -17613,7 +17607,7 @@ EOM
                 # statements (like this one).  See similar coding in
                 # set_continuation breaks.  We have also catch it here for
                 # short line fragments which otherwise will not go through
-                # set_continuation_breaks.
+                # break_long_lines.
                 if (
                     $block_type
 
@@ -17650,7 +17644,7 @@ EOM
                   $has_old_logical_breakpoints[$current_depth];
 
                 # Patch to break between ') {' if the paren list is broken.
-                # There is similar logic in set_continuation_breaks for
+                # There is similar logic in break_long_lines for
                 # non-broken lists.
                 if (   $token eq ')'
                     && $next_nonblank_block_type
@@ -18294,8 +18288,8 @@ EOM
         } ## end elsif ( $i_old_assignment_break...)
 
         return $saw_good_breakpoint;
-    } ## end sub scan_list
-} ## end closure scan_list
+    } ## end sub break_lists
+} ## end closure break_lists
 
 my %is_kwiZ;
 my %is_key_type;
@@ -19516,7 +19510,7 @@ sub get_available_spaces_to_go {
     return ref($item) ? $item->get_available_spaces() : 0;
 }
 
-{    ## begin closure set_leading_whitespace (for -lp indentation)
+{    ## begin closure set_lp_indentation
 
     # These routines are called batch-by-batch to handle the -lp indentation
     # option.  The coding is rather complex, but is only for -lp.
@@ -19530,7 +19524,6 @@ sub get_available_spaces_to_go {
     my %gnu_comma_count;
     my %last_gnu_equals;
     my @gnu_item_list;
-    my @gnu_stack;
     my $rGS;
     my $lp_cutoff_level;
 
@@ -19564,7 +19557,6 @@ sub get_available_spaces_to_go {
         my $gs_object;
         if ( TEST_NEW_LP < 2 && $rOpts_line_up_parentheses ) {
             $gs_object = new_lp_indentation_item( 0, -1, -1, 0, 0 );
-            $gnu_stack[0] = $gs_object;
         }
 
         $rGS = [];
@@ -19661,12 +19653,10 @@ sub get_available_spaces_to_go {
 
     sub set_lp_indentation {
 
-        #-------------------------------------------------------
-        # This is a replacement for sub 'set_leading_whitespace'
-        #-------------------------------------------------------
-
-        # This routine defines leading whitespace for the case of -lp formatting
-        # for all tokens in one batch.
+        #------------------------------------------------------------------
+        # Define the leading whitespace for all tokens in the current batch
+        # when the -lp formatting is selected.
+        #------------------------------------------------------------------
 
         my ($self) = @_;
 
@@ -19827,7 +19817,7 @@ sub get_available_spaces_to_go {
 
                         # then make the switch -- note that we do not set a
                         # real breakpoint here because we may not really need
-                        # one; sub scan_list will do that if necessary.
+                        # one; sub break_lists will do that if necessary.
                         $line_start_index_to_go = $i_test + 1;
                         $gnu_position_predictor = $test_position;
                     }
@@ -20112,7 +20102,6 @@ EOM
             #------------------
             # Handle all tokens
             #------------------
-
             if ( $type ne 'b' ) {
 
                 # Count commas and look for non-list characters.  Once we see a
@@ -20212,7 +20201,8 @@ EOM
             # remember the predicted position of this token on the output line
             if ( $ii > $line_start_index_to_go ) {
 
-                ## Critical loop - expanded this call for about 2x speedup
+                ## NOTE: this is a critical loop - the following call has been
+                ## expanded for about 2x speedup:
                 ## $gnu_position_predictor =
                 ##    total_line_length( $line_start_index_to_go, $ii );
 
@@ -20254,503 +20244,6 @@ EOM
                 }
             }
         } ## end loop over all tokens in this batch
-        return;
-    }
-
-    sub set_leading_whitespace {
-
-        #-----------------------------------------------------
-        # This is being replaced with sub 'set_lp_indentation'
-        #-----------------------------------------------------
-
-        # This routine defines leading whitespace for the case of -lp formatting
-        # given: the level and continuation_level of a token,
-        # define: space count of leading string which would apply if it
-        # were the first token of a new line.
-
-        my ( $self, $Kj, $K_last_nonblank, $K_last_last_nonblank,
-            $level_abs, $ci_level, $in_continued_quote )
-          = @_;
-
-        return unless ($rOpts_line_up_parentheses);
-        return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
-
-        my $rbreak_container          = $self->[_rbreak_container_];
-        my $rshort_nested             = $self->[_rshort_nested_];
-        my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
-        my $rLL                       = $self->[_rLL_];
-        my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-        my $rbreak_before_container_by_seqno =
-          $self->[_rbreak_before_container_by_seqno_];
-
-        # find needed previous nonblank tokens
-        my $last_nonblank_token      = '';
-        my $last_nonblank_type       = '';
-        my $last_nonblank_block_type = '';
-
-        # and previous nonblank tokens, just in this batch:
-        my $last_nonblank_token_in_batch     = '';
-        my $last_nonblank_type_in_batch      = '';
-        my $last_last_nonblank_type_in_batch = '';
-
-        if ( defined($K_last_nonblank) ) {
-            $last_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
-            $last_nonblank_type  = $rLL->[$K_last_nonblank]->[_TYPE_];
-            my $seqno = $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
-            $last_nonblank_block_type =
-              $seqno ? $rblock_type_of_seqno->{$seqno} : undef;
-
-            if ( $K_last_nonblank >= $K_to_go[0] ) {
-                $last_nonblank_token_in_batch = $last_nonblank_token;
-                $last_nonblank_type_in_batch  = $last_nonblank_type;
-                if ( defined($K_last_last_nonblank)
-                    && $K_last_last_nonblank > $K_to_go[0] )
-                {
-                    $last_last_nonblank_type_in_batch =
-                      $rLL->[$K_last_last_nonblank]->[_TYPE_];
-                }
-            }
-        }
-
-        ################################################################
-
-        # Adjust levels if necessary to recycle whitespace:
-        my $level            = $level_abs;
-        my $radjusted_levels = $self->[_radjusted_levels_];
-        my $nK               = @{$rLL};
-        my $nws              = @{$radjusted_levels};
-        if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
-            $level = $radjusted_levels->[$Kj];
-            if ( $level < 0 ) { $level = 0 }    # note: this should not happen
-        }
-
-        # The continued_quote flag means that this is the first token of a
-        # line, and it is the continuation of some kind of multi-line quote
-        # or pattern.  It requires special treatment because it must have no
-        # added leading whitespace. So we create a special indentation item
-        # which is not in the stack.
-        if ($in_continued_quote) {
-            my $space_count     = 0;
-            my $available_space = 0;
-            $level = -1;    # flag to prevent storing in item_list
-            $leading_spaces_to_go[$max_index_to_go] =
-              $reduced_spaces_to_go[$max_index_to_go] =
-              new_lp_indentation_item( $space_count, $level, $ci_level,
-                $available_space, 0 );
-            return;
-        }
-
-        # get the top state from the stack
-        my $space_count      = $gnu_stack[$max_gnu_stack_index]->get_spaces();
-        my $current_level    = $gnu_stack[$max_gnu_stack_index]->get_level();
-        my $current_ci_level = $gnu_stack[$max_gnu_stack_index]->get_ci_level();
-
-        my $type        = $types_to_go[$max_index_to_go];
-        my $token       = $tokens_to_go[$max_index_to_go];
-        my $total_depth = $nesting_depth_to_go[$max_index_to_go];
-
-        if ( $type eq '{' || $type eq '(' ) {
-
-            $gnu_comma_count{ $total_depth + 1 } = 0;
-            $gnu_arrow_count{ $total_depth + 1 } = 0;
-
-            # If we come to an opening token after an '=' token of some type,
-            # see if it would be helpful to 'break' after the '=' to save space
-            my $last_equals = $last_gnu_equals{$total_depth};
-            if ( $last_equals && $last_equals > $line_start_index_to_go ) {
-
-                my $seqno = $type_sequence_to_go[$max_index_to_go];
-
-                # find the position if we break at the '='
-                my $i_test = $last_equals;
-
-                # Fix for issue b1229, check for break before
-                if ( $want_break_before{ $types_to_go[$i_test] } ) {
-                    if ( $i_test > 0 ) { $i_test-- }
-                }
-                elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
-
-                # TESTING
-                ##my $too_close = ($i_test==$max_index_to_go-1);
-
-                my $test_position =
-                  total_line_length( $i_test, $max_index_to_go );
-                my $mll =
-                  $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
-
-                my $bbc_flag = $break_before_container_types{$token};
-
-                if (
-
-                    # the equals is not just before an open paren (testing)
-                    ##!$too_close &&
-
-                    # if we are beyond the midpoint
-                    $gnu_position_predictor >
-                    $mll - $rOpts_maximum_line_length / 2
-
-                    # if a -bbx flag WANTS a break before this opening token
-                    || ( $seqno && $rbreak_before_container_by_seqno->{$seqno} )
-
-                    # or if we MIGHT want a break (fixes case b826 b909 b989)
-                    || ( $bbc_flag && $bbc_flag >= 2 )
-
-                    # or we are beyond the 1/4 point and there was an old
-                    # break at an assignment (not '=>') [fix for b1035]
-                    || (
-                        $gnu_position_predictor >
-                        $mll - $rOpts_maximum_line_length * 3 / 4
-                        && $types_to_go[$last_equals] ne '=>'
-                        && (
-                            $old_breakpoint_to_go[$last_equals]
-                            || (   $last_equals > 0
-                                && $old_breakpoint_to_go[ $last_equals - 1 ] )
-                            || (   $last_equals > 1
-                                && $types_to_go[ $last_equals - 1 ] eq 'b'
-                                && $old_breakpoint_to_go[ $last_equals - 2 ] )
-                        )
-                    )
-                  )
-                {
-
-                    # then make the switch -- note that we do not set a real
-                    # breakpoint here because we may not really need one; sub
-                    # scan_list will do that if necessary
-                    $line_start_index_to_go = $i_test + 1;
-                    $gnu_position_predictor = $test_position;
-                }
-            }
-        }
-
-        my $halfway =
-          $maximum_line_length_at_level[$level] -
-          $rOpts_maximum_line_length / 2;
-
-        # Check for decreasing depth ..
-        # Note that one token may have both decreasing and then increasing
-        # depth. For example, (level, ci) can go from (1,1) to (2,0).  So,
-        # in this example we would first go back to (1,0) then up to (2,0)
-        # in a single call.
-        if ( $level < $current_level || $ci_level < $current_ci_level ) {
-
-            # loop to find the first entry at or completely below this level
-            my ( $lev, $ci_lev );
-            while (1) {
-                if ($max_gnu_stack_index) {
-
-                    # save index of token which closes this level
-                    $gnu_stack[$max_gnu_stack_index]
-                      ->set_closed($max_index_to_go);
-
-                    # Undo any extra indentation if we saw no commas
-                    my $available_spaces =
-                      $gnu_stack[$max_gnu_stack_index]->get_available_spaces();
-
-                    my $comma_count = 0;
-                    my $arrow_count = 0;
-                    if ( $type eq '}' || $type eq ')' ) {
-                        $comma_count = $gnu_comma_count{$total_depth};
-                        $arrow_count = $gnu_arrow_count{$total_depth};
-                        $comma_count = 0 unless $comma_count;
-                        $arrow_count = 0 unless $arrow_count;
-                    }
-                    $gnu_stack[$max_gnu_stack_index]
-                      ->set_comma_count($comma_count);
-                    $gnu_stack[$max_gnu_stack_index]
-                      ->set_arrow_count($arrow_count);
-
-                    if ( $available_spaces > 0 ) {
-
-                        if ( $comma_count <= 0 || $arrow_count > 0 ) {
-
-                            my $i =
-                              $gnu_stack[$max_gnu_stack_index]->get_index();
-                            my $seqno =
-                              $gnu_stack[$max_gnu_stack_index]
-                              ->get_sequence_number();
-
-                            # Be sure this item was created in this batch.  This
-                            # should be true because we delete any available
-                            # space from open items at the end of each batch.
-                            if (   $gnu_sequence_number != $seqno
-                                || $i > $max_gnu_item_index )
-                            {
-                                # non-fatal, keep going except in DEVEL_MODE
-                                if (DEVEL_MODE) {
-                                    Fault(<<EOM);
-Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
-EOM
-                                }
-                            }
-                            else {
-                                if ( $arrow_count == 0 ) {
-                                    $gnu_item_list[$i]
-                                      ->permanently_decrease_available_spaces(
-                                        $available_spaces);
-                                }
-                                else {
-                                    $gnu_item_list[$i]
-                                      ->tentatively_decrease_available_spaces(
-                                        $available_spaces);
-                                }
-                                foreach my $j ( $i + 1 .. $max_gnu_item_index )
-                                {
-                                    $gnu_item_list[$j]
-                                      ->decrease_SPACES($available_spaces);
-                                }
-                            }
-                        }
-                    }
-
-                    # go down one level
-                    --$max_gnu_stack_index;
-                    $lev    = $gnu_stack[$max_gnu_stack_index]->get_level();
-                    $ci_lev = $gnu_stack[$max_gnu_stack_index]->get_ci_level();
-
-                    # stop when we reach a level at or below the current level
-                    if ( $lev <= $level && $ci_lev <= $ci_level ) {
-                        $space_count =
-                          $gnu_stack[$max_gnu_stack_index]->get_spaces();
-                        $current_level    = $lev;
-                        $current_ci_level = $ci_lev;
-                        last;
-                    }
-                }
-
-                # reached bottom of stack .. should never happen because
-                # only negative levels can get here, and $level was forced
-                # to be positive above.
-                else {
-
-                    # non-fatal, keep going except in DEVEL_MODE
-                    if (DEVEL_MODE) {
-                        Fault(<<EOM);
-program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
-EOM
-                    }
-                    last;
-                }
-            }
-        }
-
-        # handle increasing depth
-        if ( $level > $current_level || $ci_level > $current_ci_level ) {
-
-            # Compute the standard incremental whitespace.  This will be
-            # the minimum incremental whitespace that will be used.  This
-            # choice results in a smooth transition between the gnu-style
-            # and the standard style.
-            my $standard_increment =
-              ( $level - $current_level ) *
-              $rOpts_indent_columns +
-              ( $ci_level - $current_ci_level ) *
-              $rOpts_continuation_indentation;
-
-            # Now we have to define how much extra incremental space
-            # ("$available_space") we want.  This extra space will be
-            # reduced as necessary when long lines are encountered or when
-            # it becomes clear that we do not have a good list.
-            my $available_space = 0;
-            my $align_paren     = 0;
-            my $excess          = 0;
-
-            my $last_nonblank_seqno;
-            if ( defined($K_last_nonblank) ) {
-                $last_nonblank_seqno =
-                  $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
-            }
-
-            # initialization on empty stack..
-            if ( $max_gnu_stack_index == 0 ) {
-                $space_count = $level * $rOpts_indent_columns;
-            }
-
-            # if this is a BLOCK, add the standard increment
-            elsif ($last_nonblank_block_type) {
-                $space_count += $standard_increment;
-            }
-
-            # add the standard increment for containers excluded by user rules
-            # or which contain here-docs or multiline qw text
-            elsif ( defined($last_nonblank_seqno)
-                && $ris_excluded_lp_container->{$last_nonblank_seqno} )
-            {
-                $space_count += $standard_increment;
-            }
-
-            # if last nonblank token was not structural indentation,
-            # just use standard increment
-            elsif ( $last_nonblank_type ne '{' ) {
-                $space_count += $standard_increment;
-            }
-
-            # otherwise use the space to the first non-blank level change token
-            else {
-
-                $space_count = $gnu_position_predictor;
-
-                my $min_gnu_indentation =
-                  $gnu_stack[$max_gnu_stack_index]->get_spaces();
-
-                $available_space = $space_count - $min_gnu_indentation;
-                if ( $available_space >= $standard_increment ) {
-                    $min_gnu_indentation += $standard_increment;
-                }
-                elsif ( $available_space > 1 ) {
-                    $min_gnu_indentation += $available_space + 1;
-                }
-                elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
-                    if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
-                        $min_gnu_indentation += 2;
-                    }
-                    else {
-                        $min_gnu_indentation += 1;
-                    }
-                }
-                else {
-                    $min_gnu_indentation += $standard_increment;
-                }
-                $available_space = $space_count - $min_gnu_indentation;
-
-                if ( $available_space < 0 ) {
-                    $space_count     = $min_gnu_indentation;
-                    $available_space = 0;
-                }
-                $align_paren = 1;
-            }
-
-            # update state, but not on a blank token
-            if ( $types_to_go[$max_index_to_go] ne 'b' ) {
-
-                $gnu_stack[$max_gnu_stack_index]->set_have_child(1);
-
-                ++$max_gnu_stack_index;
-                $gnu_stack[$max_gnu_stack_index] =
-                  new_lp_indentation_item( $space_count, $level, $ci_level,
-                    $available_space, $align_paren );
-
-                # If the opening paren is beyond the half-line length, then
-                # we will use the minimum (standard) indentation.  This will
-                # help avoid problems associated with running out of space
-                # near the end of a line.  As a result, in deeply nested
-                # lists, there will be some indentations which are limited
-                # to this minimum standard indentation. But the most deeply
-                # nested container will still probably be able to shift its
-                # parameters to the right for proper alignment, so in most
-                # cases this will not be noticeable.
-                if ( $available_space > 0 && $space_count > $halfway ) {
-                    $gnu_stack[$max_gnu_stack_index]
-                      ->tentatively_decrease_available_spaces($available_space);
-                }
-            }
-        }
-
-        # Count commas and look for non-list characters.  Once we see a
-        # non-list character, we give up and don't look for any more commas.
-        if ( $type eq '=>' ) {
-            $gnu_arrow_count{$total_depth}++;
-
-            # remember '=>' like '=' for estimating breaks (but see above note
-            # for b1035)
-            $last_gnu_equals{$total_depth} = $max_index_to_go;
-        }
-
-        elsif ( $type eq ',' ) {
-            $gnu_comma_count{$total_depth}++;
-        }
-
-        elsif ( $is_assignment{$type} ) {
-            $last_gnu_equals{$total_depth} = $max_index_to_go;
-        }
-
-        # this token might start a new line
-        # if this is a non-blank..
-        if ( $type ne 'b' ) {
-
-            # and if ..
-            if (
-
-                # this is the first nonblank token of the line
-                $max_index_to_go == 1 && $types_to_go[0] eq 'b'
-
-                # or previous character was one of these:
-                || $last_nonblank_type_in_batch =~ /^([\:\?\,f])$/
-
-                # or previous character was opening and this does not close it
-                || ( $last_nonblank_type_in_batch eq '{' && $type ne '}' )
-                || ( $last_nonblank_type_in_batch eq '(' and $type ne ')' )
-
-                # or this token is one of these:
-                || $type =~ /^([\.]|\|\||\&\&)$/
-
-                # or this is a closing structure
-                || (   $last_nonblank_type_in_batch eq '}'
-                    && $last_nonblank_token_in_batch eq
-                    $last_nonblank_type_in_batch )
-
-                # or previous token was keyword 'return'
-                || (
-                    $last_nonblank_type_in_batch eq 'k'
-                    && (   $last_nonblank_token_in_batch eq 'return'
-                        && $type ne '{' )
-                )
-
-                # or starting a new line at certain keywords is fine
-                || (   $type eq 'k'
-                    && $is_if_unless_and_or_last_next_redo_return{$token} )
-
-                # or this is after an assignment after a closing structure
-                || (
-                    $is_assignment{$last_nonblank_type_in_batch}
-                    && (
-                        $last_last_nonblank_type_in_batch =~ /^[\}\)\]]$/
-
-                        # and it is significantly to the right
-                        || $gnu_position_predictor > $halfway
-                    )
-                )
-              )
-            {
-                check_for_long_gnu_style_lines($max_index_to_go);
-                $line_start_index_to_go = $max_index_to_go;
-
-                # back up 1 token if we want to break before that type
-                # otherwise, we may strand tokens like '?' or ':' on a line
-                if ( $line_start_index_to_go > 0 ) {
-                    if ( $last_nonblank_type_in_batch eq 'k' ) {
-
-                        if ( $want_break_before{$last_nonblank_token_in_batch} )
-                        {
-                            $line_start_index_to_go--;
-                        }
-                    }
-                    elsif ( $want_break_before{$last_nonblank_type_in_batch} ) {
-                        $line_start_index_to_go--;
-                    }
-                }
-            }
-        }
-
-        # remember the predicted position of this token on the output line
-        if ( $max_index_to_go > $line_start_index_to_go ) {
-            $gnu_position_predictor =
-              total_line_length( $line_start_index_to_go, $max_index_to_go );
-        }
-        else {
-            $gnu_position_predictor =
-              $space_count + $token_lengths_to_go[$max_index_to_go];
-        }
-
-        # store the indentation object for this token
-        # this allows us to manipulate the leading whitespace
-        # (in case we have to reduce indentation to fit a line) without
-        # having to change any token values
-        $leading_spaces_to_go[$max_index_to_go] =
-          $gnu_stack[$max_gnu_stack_index];
-        $reduced_spaces_to_go[$max_index_to_go] =
-          ( $max_gnu_stack_index > 0 && $ci_level )
-          ? $gnu_stack[ $max_gnu_stack_index - 1 ]
-          : $gnu_stack[$max_gnu_stack_index];
         return;
     }
 
@@ -20848,6 +20341,10 @@ EOM
 
     sub finish_lp_batch {
 
+        #---------------------------------
+        # This routine is being phased out
+        #---------------------------------
+
         # This routine is called once after each output stream batch is
         # finished to undo indentation for all incomplete -lp
         # indentation levels.  It is too risky to leave a level open,
@@ -20888,13 +20385,13 @@ EOM
         }
         return;
     }
-} ## end closure set_leading_whitespace
+} ## end closure set_lp_indentation
 
 sub reduce_lp_indentation {
 
     # reduce the leading whitespace at token $i if possible by $spaces_needed
     # (a large value of $spaces_needed will remove all excess space)
-    # NOTE: to be called from scan_list only for a sequence of tokens
+    # NOTE: to be called from break_lists only for a sequence of tokens
     # contained between opening and closing parens/braces/brackets
 
     my ( $self, $i, $spaces_wanted ) = @_;
@@ -22271,7 +21768,7 @@ sub get_seqno {
         # This is needed to compensate for a change which was made in 'sub
         # starting_one_line_block' to prevent blinkers.  Previously, that sub
         # would not look at the total block size and rely on sub
-        # set_continuation_breaks to break up long blocks. Consequently, the
+        # break_long_lines to break up long blocks. Consequently, the
         # first line of those batches would end in the opening block brace of a
         # sort/map/grep/eval block.  When this was changed to immediately check
         # for blocks which were too long, the opening block brace would go out
