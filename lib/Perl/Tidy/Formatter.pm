@@ -18416,6 +18416,7 @@ EOM
             $i_last_comma = $rcomma_index->[ --$item_count - 1 ];
             return if ( $item_count < 1 );
         }
+        my $is_lp_formatting = ref( $leading_spaces_to_go[$i_first_comma] );
 
         #---------------------------------------------------------------
         # find lengths of all items in the list to calculate page layout
@@ -18614,7 +18615,7 @@ EOM
         # items aligned.  This is necessary if any of the list terms
         # exceeds the available space after the '('.
         my $need_lp_break_open = $must_break_open;
-        if ( $rOpts_line_up_parentheses && !$must_break_open ) {
+        if ( $is_lp_formatting && !$must_break_open ) {
             my $columns_if_unbroken =
               $maximum_line_length_at_level[ $levels_to_go[$i_opening_minus] ]
               - total_line_length( $i_opening_minus, $i_opening_paren );
@@ -18760,7 +18761,7 @@ EOM
         # undo some indentation
         # ----------------------------------------------------------------------
         if (
-            $rOpts_line_up_parentheses
+            $is_lp_formatting
             && (
                 $number_of_fields == 0
                 || (   $number_of_fields == 1
@@ -18976,8 +18977,8 @@ EOM
             # Shortcut method 1: for -lp and just one comma:
             # This is a no-brainer, just break at the comma.
             if (
-                $rOpts_line_up_parentheses    # -lp
-                && $item_count == 2           # two items, one comma
+                $is_lp_formatting      # -lp
+                && $item_count == 2    # two items, one comma
                 && !$must_break_open
               )
             {
@@ -19011,8 +19012,7 @@ EOM
                     if ( $break_count <= 1 ) {
                         ${$rdo_not_break_apart} = 1;
                     }
-                    elsif ( $rOpts_line_up_parentheses && !$need_lp_break_open )
-                    {
+                    elsif ( $is_lp_formatting && !$need_lp_break_open ) {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
@@ -19107,8 +19107,7 @@ EOM
                     if ( $break_count <= 1 ) {
                         ${$rdo_not_break_apart} = 1;
                     }
-                    elsif ( $rOpts_line_up_parentheses && !$need_lp_break_open )
-                    {
+                    elsif ( $is_lp_formatting && !$need_lp_break_open ) {
                         ${$rdo_not_break_apart} = 1;
                     }
                 }
