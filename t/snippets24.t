@@ -637,7 +637,8 @@ debug(
 # simple function call with code block
 $m->command(
     -label   => 'Save',
-    -command => sub { print "DOS\n"; save_dialog($win); } );
+    -command => sub { print "DOS\n"; save_dialog($win); }
+);
 
 # function call, ternary in list
 return OptArgs2::Result->usage(
@@ -771,7 +772,8 @@ debug(
 # simple function call with code block
 $m->command(
     -label   => 'Save',
-    -command => sub { print "DOS\n"; save_dialog($win); } );
+    -command => sub { print "DOS\n"; save_dialog($win); }
+);
 
 # function call, ternary in list
 return OptArgs2::Result->usage(

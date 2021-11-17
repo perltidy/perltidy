@@ -23762,6 +23762,8 @@ sub set_vertical_tightness_flags {
     my $rwant_container_open = $self->[_rwant_container_open_];
     my $rK_weld_left         = $self->[_rK_weld_left_];
 
+    my $is_lp_formatting = ref( $leading_spaces_to_go[$ibeg] );
+
     # Uses these global parameters:
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
@@ -23787,6 +23789,7 @@ sub set_vertical_tightness_flags {
         my $ibeg_next = $ri_first->[ $n + 1 ];
         my $token_end = $tokens_to_go[$iend];
         my $iend_next = $ri_last->[ $n + 1 ];
+        $is_lp_formatting ||= ref( $leading_spaces_to_go[$ibeg_next] );
         if (
                $type_sequence_to_go[$iend]
             && !$block_type_to_go[$iend]
@@ -23795,7 +23798,7 @@ sub set_vertical_tightness_flags {
                 $opening_vertical_tightness{$token_end} > 0
 
                 # allow 2-line method call to be closed up
-                || (   $rOpts_line_up_parentheses
+                || (   $is_lp_formatting
                     && $token_end eq '('
                     && $iend > $ibeg
                     && $types_to_go[ $iend - 1 ] ne 'b' )
@@ -23872,7 +23875,7 @@ sub set_vertical_tightness_flags {
                             $cvt == 1
 
                             # allow closing up 2-line method calls
-                            || (   $rOpts_line_up_parentheses
+                            || (   $is_lp_formatting
                                 && $token_next eq ')' )
                         )
                     )
@@ -23906,7 +23909,7 @@ sub set_vertical_tightness_flags {
                     # flag off and set the maximum to 0. This is equivalent to
                     # using a large number.
                     my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
-                    if (   $rOpts_line_up_parentheses
+                    if (   $is_lp_formatting
                         && $total_weld_count
                         && $self->is_welded_at_seqno($seqno_ibeg_next) )
                     {
@@ -23964,7 +23967,7 @@ sub set_vertical_tightness_flags {
             && $token_end ne '||' && $token_end ne '&&'
 
             # Keep break after '=' if -lp. Fixes b964 b1040 b1062 b1083 b1089.
-            && !( $token_end eq '=' && $rOpts_line_up_parentheses )
+            && !( $token_end eq '=' && $is_lp_formatting )
 
             # looks bad if we align vertically with the wrong container
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
