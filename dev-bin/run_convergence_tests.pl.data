@@ -8274,6 +8274,24 @@ printf
 --paren-vertical-tightness-closing=2
 --weld-nested-containers
 
+==> b1257.in <==
+# S1
+    my $hour_angle
+      = 2 * PI
+      * ( $hour / 12 + $min / ( 12 * 60 ) )
+      - PI
+      / 2;
+
+# S2
+    my $hour_angle
+      = 2 * PI
+      * ( $hour / 12 + $min / ( 12 * 60 ) )
+      - PI / 2;
+
+==> b1257.par <==
+--break-before-all-operators
+--maximum-line-length=50
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

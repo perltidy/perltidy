@@ -3740,6 +3740,7 @@ EOM
             # strength on both sides of a blank is the same
             if ( $type eq 'b' && $last_type ne 'b' ) {
                 $bond_strength_to_go[$i] = $bond_strength_to_go[ $i - 1 ];
+                $nobreak_to_go[$i] ||= $nobreak_to_go[ $i - 1 ]; # fix for b1257
                 next;
             }
 
@@ -15628,7 +15629,7 @@ sub break_equals {
                 }
 
                 # honor no-break's
-                next if ( $bs >= NO_BREAK - 1 );
+                ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
 
                 # remember the pair with the greatest bond strength
                 if ( !$n_best ) {
