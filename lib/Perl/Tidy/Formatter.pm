@@ -401,6 +401,7 @@ BEGIN {
         _rhas_broken_code_block_    => $i++,
         _rhas_ternary_              => $i++,
         _ris_excluded_lp_container_ => $i++,
+        _ris_lp_parent_container_   => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
         _rbrace_left_               => $i++,
@@ -798,6 +799,7 @@ sub new {
     $self->[_rhas_broken_code_block_]    = {};
     $self->[_rhas_ternary_]              = {};
     $self->[_ris_excluded_lp_container_] = {};
+    $self->[_ris_lp_parent_container_]   = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
     $self->[_rbrace_left_]               = {};
@@ -15047,7 +15049,7 @@ sub break_equals {
                     # This doesn't work well with -icb through
                     if (
                            $block_type_to_go[$iend_1] eq 'eval'
-                        && !$rOpts_line_up_parentheses
+                        && !ref( $leading_spaces_to_go[$iend_1] )
                         && !$rOpts_indent_closing_brace
                         && $tokens_to_go[$iend_2] eq '{'
                         && (
@@ -15227,8 +15229,12 @@ sub break_equals {
                             #                       "bubba Borrower Entry");
                             #  so we will recombine if -lp is used we have
                             #  ending comma
-                            && (  !$rOpts_line_up_parentheses
-                                || $type_iend_2 ne ',' )
+                            ##&& (  !$rOpts_line_up_parentheses
+                            && !(
+                                   $ibeg_3 > 0
+                                && ref( $leading_spaces_to_go[$ibeg_3] )
+                                && $type_iend_2 eq ','
+                            )
                           )
                         {
 
@@ -19669,6 +19675,7 @@ sub get_available_spaces_to_go {
         my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
         my $rLL                       = $self->[_rLL_];
         my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
+        my $ris_lp_parent_container   = $self->[_ris_lp_parent_container_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
         my $radjusted_levels = $self->[_radjusted_levels_];
@@ -20017,6 +20024,7 @@ EOM
 
                     $in_lp_mode  = 1;
                     $space_count = $gnu_position_predictor;
+                    $ris_lp_parent_container->{$last_nonblank_seqno} = 1;
 
                     my $rGS_top             = $rGS->[$max_gnu_stack_index];
                     my $min_gnu_indentation = $rGS_top->[_gs_space_count_];
@@ -23227,9 +23235,12 @@ sub make_paren_name {
             # Undo ci of line with leading closing eval brace,
             # but not beyond the indention of the line with
             # the opening brace.
-            if (   $block_type_beg eq 'eval'
-                && !$rOpts_line_up_parentheses
-                && !$rOpts_indent_closing_brace )
+            if (
+                $block_type_beg eq 'eval'
+                ##&& !$rOpts_line_up_parentheses
+                && !ref($leading_spaces_beg)
+                && !$rOpts_indent_closing_brace
+              )
             {
                 (
                     $opening_indentation, $opening_offset,
@@ -23453,14 +23464,14 @@ sub make_paren_name {
             # only options are all or none: nothing in-between looks good
             $lev = $level_beg;
             if ( $space_count < $last_spaces ) {
-                if ($rOpts_line_up_parentheses) {
-                    my $lev = $level_beg;
-                    $indentation =
-                      new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
-                }
-                else {
-                    $indentation = $space_count;
-                }
+##              if ($rOpts_line_up_parentheses) {
+##                  my $lev = $level_beg;
+##                  $indentation =
+##                    new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
+##              }
+##              else {
+                $indentation = $space_count;
+##              }
             }
 
             # revert to default if it doesn't work
@@ -23641,13 +23652,13 @@ sub make_paren_name {
                     $space_count = 1;
                 }
 
-                if ($rOpts_line_up_parentheses) {
-                    $indentation =
-                      new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
-                }
-                else {
-                    $indentation = $space_count;
-                }
+##              if ($rOpts_line_up_parentheses) {
+##                  $indentation =
+##                    new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
+##              }
+##              else {
+                $indentation = $space_count;
+##              }
             }
         }
 
@@ -23762,8 +23773,6 @@ sub set_vertical_tightness_flags {
     my $rwant_container_open = $self->[_rwant_container_open_];
     my $rK_weld_left         = $self->[_rK_weld_left_];
 
-    my $is_lp_formatting = ref( $leading_spaces_to_go[$ibeg] );
-
     # Uses these global parameters:
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
@@ -23789,7 +23798,7 @@ sub set_vertical_tightness_flags {
         my $ibeg_next = $ri_first->[ $n + 1 ];
         my $token_end = $tokens_to_go[$iend];
         my $iend_next = $ri_last->[ $n + 1 ];
-        $is_lp_formatting ||= ref( $leading_spaces_to_go[$ibeg_next] );
+
         if (
                $type_sequence_to_go[$iend]
             && !$block_type_to_go[$iend]
@@ -23798,8 +23807,10 @@ sub set_vertical_tightness_flags {
                 $opening_vertical_tightness{$token_end} > 0
 
                 # allow 2-line method call to be closed up
-                || (   $is_lp_formatting
+                || (   $rOpts_line_up_parentheses
                     && $token_end eq '('
+                    && $self->[_ris_lp_parent_container_]
+                    ->{ $type_sequence_to_go[$iend] }
                     && $iend > $ibeg
                     && $types_to_go[ $iend - 1 ] ne 'b' )
             )
@@ -23875,8 +23886,10 @@ sub set_vertical_tightness_flags {
                             $cvt == 1
 
                             # allow closing up 2-line method calls
-                            || (   $is_lp_formatting
-                                && $token_next eq ')' )
+                            || (   $rOpts_line_up_parentheses
+                                && $token_next eq ')'
+                                && $self->[_ris_lp_parent_container_]
+                                ->{ $type_sequence_to_go[$ibeg_next] } )
                         )
                     )
                 )
@@ -23909,8 +23922,10 @@ sub set_vertical_tightness_flags {
                     # flag off and set the maximum to 0. This is equivalent to
                     # using a large number.
                     my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
-                    if (   $is_lp_formatting
+                    if (   $rOpts_line_up_parentheses
                         && $total_weld_count
+                        && $self->[_ris_lp_parent_container_]
+                        ->{$seqno_ibeg_next}
                         && $self->is_welded_at_seqno($seqno_ibeg_next) )
                     {
                         $min_lines  = 1;
@@ -23967,7 +23982,12 @@ sub set_vertical_tightness_flags {
             && $token_end ne '||' && $token_end ne '&&'
 
             # Keep break after '=' if -lp. Fixes b964 b1040 b1062 b1083 b1089.
-            && !( $token_end eq '=' && $is_lp_formatting )
+            && !(
+                   $token_end eq '='
+                && $rOpts_line_up_parentheses
+                && $self->[_ris_lp_parent_container_]
+                ->{ $type_sequence_to_go[$ibeg_next] }
+            )
 
             # looks bad if we align vertically with the wrong container
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
