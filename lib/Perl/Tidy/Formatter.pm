@@ -17669,6 +17669,11 @@ EOM
 
                 my $i_opening = $opening_structure_index_stack[$current_depth];
                 my $saw_opening_structure = ( $i_opening >= 0 );
+                my $is_lp_container;
+                if ( $rOpts_line_up_parentheses && $saw_opening_structure ) {
+                    $is_lp_container = $self->[_ris_lp_parent_container_]
+                      ->{ $type_sequence_to_go[$i_opening] };
+                }
 
                 # this term is long if we had to break at interior commas..
                 my $is_long_term = $bp_count > 0;
@@ -17919,8 +17924,7 @@ EOM
 
                     # open up a long 'for' or 'foreach' container to allow
                     # leading term alignment unless -lp is used.
-                    $has_comma_breakpoints = 1
-                      unless $rOpts_line_up_parentheses;
+                    $has_comma_breakpoints = 1 unless ($is_lp_container);
                 } ## end if ( $is_long_term && ...)
 
                 if (
@@ -17959,8 +17963,8 @@ EOM
                     # the token which has been identified as starting
                     # this indentation level.  This is necessary for
                     # proper alignment.
-                    if ( $rOpts_line_up_parentheses && $saw_opening_structure )
-                    {
+                    ##if ( $rOpts_line_up_parentheses && $saw_opening_structure )
+                    if ($is_lp_container) {
                         my $item = $leading_spaces_to_go[ $i_opening + 1 ];
                         if (   $i_opening + 1 < $max_index_to_go
                             && $types_to_go[ $i_opening + 1 ] eq 'b' )
@@ -18004,7 +18008,7 @@ EOM
                                 }
                             } ## end if ( defined($i_start_2...))
                         } ## end if ( defined($item) )
-                    } ## end if ( $rOpts_line_up_parentheses...)
+                    } ## end if ( $is_opening_container...)
 
                     # break after opening structure.
                     # note: break before closing structure will be automatic
