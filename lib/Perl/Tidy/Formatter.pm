@@ -20029,7 +20029,6 @@ EOM
 
                     $in_lp_mode  = 1;
                     $space_count = $gnu_position_predictor;
-                    $ris_lp_parent_container->{$last_nonblank_seqno} = 1;
 
                     my $rGS_top             = $rGS->[$max_gnu_stack_index];
                     my $min_gnu_indentation = $rGS_top->[_gs_space_count_];
@@ -20081,6 +20080,7 @@ EOM
                         $gs_object =
                           new_lp_indentation_item( $space_count,
                             $level, $ci_level, $available_space, $align_paren );
+                        $ris_lp_parent_container->{$last_nonblank_seqno} = 1;
                     }
 
                     $rGS->[$max_gnu_stack_index]->[_gs_ci_level_] = $ci_level;
