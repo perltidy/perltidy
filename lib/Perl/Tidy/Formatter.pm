@@ -401,7 +401,7 @@ BEGIN {
         _rhas_broken_code_block_    => $i++,
         _rhas_ternary_              => $i++,
         _ris_excluded_lp_container_ => $i++,
-        _ris_lp_parent_container_   => $i++,
+        _ris_lp_container_          => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
         _rbrace_left_               => $i++,
@@ -799,7 +799,7 @@ sub new {
     $self->[_rhas_broken_code_block_]    = {};
     $self->[_rhas_ternary_]              = {};
     $self->[_ris_excluded_lp_container_] = {};
-    $self->[_ris_lp_parent_container_]   = {};
+    $self->[_ris_lp_container_]          = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
     $self->[_rbrace_left_]               = {};
@@ -10399,8 +10399,9 @@ sub set_excluded_lp_containers {
 
 sub process_all_lines {
 
-    # Main loop over all lines of a file.
-    # Lines are processed according to type.
+    #----------------------------------------------------------
+    # Main loop to format all lines of a file according to type
+    #----------------------------------------------------------
 
     my $self                       = shift;
     my $rlines                     = $self->[_rlines_];
@@ -10525,8 +10526,8 @@ sub process_all_lines {
             }
             else {
 
-          # Let logger see all non-blank lines of code. This is a slow operation
-          # so we avoid it if it is not going to be saved.
+                # Let logger see all non-blank lines of code. This is a slow
+                # operation so we avoid it if it is not going to be saved.
                 if ( $save_logfile && $logger_object ) {
                     $logger_object->black_box( $line_of_tokens,
                         $vertical_aligner_object->get_output_line_number );
@@ -10591,7 +10592,9 @@ sub process_all_lines {
 sub keyword_group_scan {
     my $self = shift;
 
-    # Called once per file to process the --keyword-group-blanks-* parameters.
+    #-------------------------------------------------------------------------
+    # Called once per file to process any --keyword-group-blanks-* parameters.
+    #-------------------------------------------------------------------------
 
     # Manipulate blank lines around keyword groups (kgb* flags)
     # Scan all lines looking for runs of consecutive lines beginning with
@@ -11566,8 +11569,10 @@ EOM
 
         my ( $self, $my_line_of_tokens ) = @_;
 
-        # This routine is called once per INPUT line to process all of the
+        #----------------------------------------------------------------
+        # This routine is called once per INPUT line to format all of the
         # tokens on that line.
+        #----------------------------------------------------------------
 
         # It outputs full-line comments and blank lines immediately.
 
@@ -11658,9 +11663,9 @@ EOM
         my $in_quote = $line_of_tokens->{_ending_in_quote};
         $ending_in_quote = $in_quote;
 
-        # ------------------------------------
-        # Handle a block (full-line) comment..
-        # ------------------------------------
+        #------------------------------------
+        # Handle a block (full-line) comment.
+        #------------------------------------
         if ($is_comment) {
 
             if ( $rOpts->{'delete-block-comments'} ) {
@@ -11744,9 +11749,9 @@ EOM
                 $guessed_indentation_level, $input_line_number );
         }
 
-        # -----------------------
+        #------------------------
         # Handle indentation-only
-        # -----------------------
+        #------------------------
 
         # NOTE: In previous versions we sent all qw lines out immediately here.
         # No longer doing this: also write a line which is entirely a 'qw' list
@@ -11776,9 +11781,9 @@ EOM
             return;
         }
 
-        # --------------------------
+        #---------------------------
         # Handle all other lines ...
-        # --------------------------
+        #---------------------------
 
         # If we just saw the end of an elsif block, write nag message
         # if we do not see another elseif or an else.
@@ -11826,9 +11831,9 @@ EOM
             }
         }
 
-        # -------------------------------------
+        #--------------------------------------
         # loop to process the tokens one-by-one
-        # -------------------------------------
+        #--------------------------------------
 
         # We do not want a leading blank if the previous batch just got output
         if ( $max_index_to_go < 0 && $rLL->[$K_first]->[_TYPE_] eq 'b' ) {
@@ -11903,18 +11908,18 @@ EOM
             # if at last token ...
             else {
 
-                # --------------------
+                #---------------------
                 # handle side comments
-                # --------------------
+                #---------------------
                 if ( $type eq '#' ) {
                     $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                     next;
                 }
             }
 
-            # -------------
+            #--------------
             # handle blanks
-            # -------------
+            #--------------
             if ( $type eq 'b' ) {
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                 next;
@@ -11922,9 +11927,9 @@ EOM
 
             # Process non-blank and non-comment tokens ...
 
-            # ----------------
+            #-----------------
             # handle semicolon
-            # ----------------
+            #-----------------
             if ( $type eq ';' ) {
 
                 my $next_nonblank_token_type = 'b';
@@ -11964,9 +11969,9 @@ EOM
 
             }
 
-            # ----------
+            #-----------
             # handle '{'
-            # ----------
+            #-----------
             elsif ($is_opening_BLOCK) {
 
                 # Tentatively output this token.  This is required before
@@ -12040,9 +12045,9 @@ EOM
                   if ( $max_index_to_go >= 0 && !$no_internal_newlines );
             }
 
-            # ----------
+            #-----------
             # handle '}'
-            # ----------
+            #-----------
             elsif ($is_closing_BLOCK) {
 
                 my $next_nonblank_token_type = 'b';
@@ -12286,9 +12291,9 @@ EOM
 
             } ## end treatment of closing block token
 
-            # -----------------------------
+            #------------------------------
             # handle here_doc target string
-            # -----------------------------
+            #------------------------------
             elsif ( $type eq 'h' ) {
 
                 # no newlines after seeing here-target
@@ -12297,9 +12302,9 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
-            # ----------------------------
+            #-----------------------------
             # handle all other token types
-            # ----------------------------
+            #-----------------------------
             else {
 
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -15230,7 +15235,6 @@ sub break_equals {
                             #                       "bubba Borrower Entry");
                             #  so we will recombine if -lp is used we have
                             #  ending comma
-                            ##&& (  !$rOpts_line_up_parentheses
                             && !(
                                    $ibeg_3 > 0
                                 && ref( $leading_spaces_to_go[$ibeg_3] )
@@ -16873,7 +16877,7 @@ sub break_long_lines {
     my ( @has_broken_sublist, @dont_align, @want_comma_break );
 
     my $length_tol;
-    my $length_tol_boost;
+    my $lp_tol_boost;
 
     sub initialize_break_lists {
         @dont_align         = ();
@@ -16915,30 +16919,29 @@ sub break_long_lines {
         # 'find_token_starting_list' to go back before an initial blank space.
         # This fixed these three cases, and allowed the tolerances to be
         # reduced to continue to fix all other known cases of instability.
-        # This gives the current tolerance formulation (note that
-        # variable $length_tol_boost is always 0 now):
+        # This gives the current tolerance formulation.
 
-        $length_tol_boost = 0;
+        $lp_tol_boost = 0;
+
         if ($rOpts_line_up_parentheses) {
 
+            # boost tol for combination -lp -xci
             if ($rOpts_extended_continuation_indentation) {
-                $length_tol += 2;
-                $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
+                $lp_tol_boost = 2;
             }
+
+            # boost tol for combination -lp and any -vtc > 0, but only for
+            # non-list containers
             else {
                 foreach ( keys %closing_vertical_tightness ) {
                     next
                       unless ( $closing_vertical_tightness{$_} );
-                    $length_tol_boost = 1;    # Fixes B1193;
+                    $lp_tol_boost = 1;    # Fixes B1193;
                     last;
                 }
             }
         }
 
-        # The -xci option alone also needs a slightly larger tol for non-lists
-        elsif ($rOpts_extended_continuation_indentation) {
-            $length_tol_boost = 0;    # was 1 for FIX2, 0 for FIX3
-        }
         return;
     }
 
@@ -17672,7 +17675,7 @@ EOM
                 my $saw_opening_structure = ( $i_opening >= 0 );
                 my $is_lp_container;
                 if ( $rOpts_line_up_parentheses && $saw_opening_structure ) {
-                    $is_lp_container = $self->[_ris_lp_parent_container_]
+                    $is_lp_container = $self->[_ris_lp_container_]
                       ->{ $type_sequence_to_go[$i_opening] };
                 }
 
@@ -17742,11 +17745,18 @@ EOM
                     my $excess =
                       $self->excess_line_length( $i_opening_minus, $i );
 
-                    my $tol =
-                      $length_tol_boost
-                      && !$ris_list_by_seqno->{$type_sequence}
-                      ? $length_tol + $length_tol_boost
-                      : $length_tol;
+                    my $tol = $length_tol;
+
+                    # boost tol for an -lp container
+                    if (
+                           $lp_tol_boost
+                        && $is_lp_container
+                        && ( $rOpts_extended_continuation_indentation
+                            || !$ris_list_by_seqno->{$type_sequence} )
+                      )
+                    {
+                        $tol += $lp_tol_boost;
+                    }
 
                     # Patch to avoid blinking with -bbxi=2 and -cab=2
                     # in which variations in -ci cause unstable formatting
@@ -19680,7 +19690,7 @@ sub get_available_spaces_to_go {
         my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
         my $rLL                       = $self->[_rLL_];
         my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-        my $ris_lp_parent_container   = $self->[_ris_lp_parent_container_];
+        my $ris_lp_parent_container   = $self->[_ris_lp_container_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
         my $radjusted_levels = $self->[_radjusted_levels_];
@@ -21571,10 +21581,23 @@ sub get_seqno {
 
         # Loop over all lines of the batch ...
 
-        # Workaround for problem c007, in which the combination -lp -xci
-        # can produce a "Program bug" message in unusual circumstances.
-        my $skip_SECTION_1 = $rOpts_line_up_parentheses
-          && $rOpts_extended_continuation_indentation;
+        # Workaround originally created for problem c007, in which the
+        # combination -lp -xci could produce a "Program bug" message in unusual
+        # circumstances.
+        my $skip_SECTION_1;
+        if (   $rOpts_line_up_parentheses
+            && $rOpts_extended_continuation_indentation )
+        {
+
+            # Only set this flag if -lp is actually used here
+            foreach my $line ( 0 .. $max_line ) {
+                my $ibeg = $ri_first->[$line];
+                if ( ref( $leading_spaces_to_go[$ibeg] ) ) {
+                    $skip_SECTION_1 = 1;
+                    last;
+                }
+            }
+        }
 
         foreach my $line ( 0 .. $max_line ) {
 
@@ -23469,14 +23492,7 @@ sub make_paren_name {
             # only options are all or none: nothing in-between looks good
             $lev = $level_beg;
             if ( $space_count < $last_spaces ) {
-##              if ($rOpts_line_up_parentheses) {
-##                  my $lev = $level_beg;
-##                  $indentation =
-##                    new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
-##              }
-##              else {
                 $indentation = $space_count;
-##              }
             }
 
             # revert to default if it doesn't work
@@ -23657,13 +23673,7 @@ sub make_paren_name {
                     $space_count = 1;
                 }
 
-##              if ($rOpts_line_up_parentheses) {
-##                  $indentation =
-##                    new_lp_indentation_item( $space_count, $lev, 0, 0, 0 );
-##              }
-##              else {
                 $indentation = $space_count;
-##              }
             }
         }
 
@@ -23814,7 +23824,7 @@ sub set_vertical_tightness_flags {
                 # allow 2-line method call to be closed up
                 || (   $rOpts_line_up_parentheses
                     && $token_end eq '('
-                    && $self->[_ris_lp_parent_container_]
+                    && $self->[_ris_lp_container_]
                     ->{ $type_sequence_to_go[$iend] }
                     && $iend > $ibeg
                     && $types_to_go[ $iend - 1 ] ne 'b' )
@@ -23893,7 +23903,7 @@ sub set_vertical_tightness_flags {
                             # allow closing up 2-line method calls
                             || (   $rOpts_line_up_parentheses
                                 && $token_next eq ')'
-                                && $self->[_ris_lp_parent_container_]
+                                && $self->[_ris_lp_container_]
                                 ->{ $type_sequence_to_go[$ibeg_next] } )
                         )
                     )
@@ -23929,8 +23939,7 @@ sub set_vertical_tightness_flags {
                     my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
                     if (   $rOpts_line_up_parentheses
                         && $total_weld_count
-                        && $self->[_ris_lp_parent_container_]
-                        ->{$seqno_ibeg_next}
+                        && $self->[_ris_lp_container_]->{$seqno_ibeg_next}
                         && $self->is_welded_at_seqno($seqno_ibeg_next) )
                     {
                         $min_lines  = 1;
@@ -23990,7 +23999,7 @@ sub set_vertical_tightness_flags {
             && !(
                    $token_end eq '='
                 && $rOpts_line_up_parentheses
-                && $self->[_ris_lp_parent_container_]
+                && $self->[_ris_lp_container_]
                 ->{ $type_sequence_to_go[$ibeg_next] }
             )
 
