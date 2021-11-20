@@ -8,6 +8,8 @@
 #5 lp2.def
 #6 lp2.lp
 #7 braces.braces8
+#8 rt140025.def
+#9 rt140025.rt140025
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,6 +35,7 @@ BEGIN {
         'novalign1' => "-novalign",
         'novalign2' => "-nvsc -nvbc -msc=2",
         'novalign3' => "-nvc",
+        'rt140025'  => "-lp -xci -ci=4 -ce",
     };
 
     ############################
@@ -116,6 +119,29 @@ my $endkit = 0;    # saw end of kit
 my $fail = 0;    # failed
 }
 
+----------
+
+        'rt140025' => <<'----------',
+eval {
+my $cpid;
+my $cmd;
+
+ FORK: {
+ if( $cpid = fork ) {
+ close( STDOUT );
+ last;
+ } elsif( defined $cpid ) {
+ close( STDIN );
+ open( STDIN, '<', '/dev/null' ) or die( "open3: $!\n" );
+ exec $cmd or die( "exec: $!\n" );
+ } elsif( $! == EAGAIN ) {
+ sleep 3;
+ redo FORK;
+ } else {
+ die( "Can't fork: $!\n" );
+ }
+ }
+};
 ----------
     };
 
@@ -287,6 +313,63 @@ catch {
     die;
 };
 #7...........
+        },
+
+        'rt140025.def' => {
+            source => "rt140025",
+            params => "def",
+            expect => <<'#8...........',
+eval {
+    my $cpid;
+    my $cmd;
+
+  FORK: {
+        if ( $cpid = fork ) {
+            close(STDOUT);
+            last;
+        }
+        elsif ( defined $cpid ) {
+            close(STDIN);
+            open( STDIN, '<', '/dev/null' ) or die("open3: $!\n");
+            exec $cmd                       or die("exec: $!\n");
+        }
+        elsif ( $! == EAGAIN ) {
+            sleep 3;
+            redo FORK;
+        }
+        else {
+            die("Can't fork: $!\n");
+        }
+    }
+};
+#8...........
+        },
+
+        'rt140025.rt140025' => {
+            source => "rt140025",
+            params => "rt140025",
+            expect => <<'#9...........',
+eval {
+    my $cpid;
+    my $cmd;
+
+FORK: {
+        if ( $cpid = fork ) {
+            close(STDOUT);
+            last;
+        } elsif ( defined $cpid ) {
+            close(STDIN);
+            open( STDIN, '<', '/dev/null' ) or die("open3: $!\n");
+            exec $cmd                       or die("exec: $!\n");
+        } elsif ( $! == EAGAIN ) {
+            sleep 3;
+            redo FORK;
+        } else {
+            die("Can't fork: $!\n");
+        }
+    }
+};
+#9...........
         },
     };
 

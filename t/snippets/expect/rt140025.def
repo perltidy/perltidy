@@ -1,0 +1,23 @@
+eval {
+    my $cpid;
+    my $cmd;
+
+  FORK: {
+        if ( $cpid = fork ) {
+            close(STDOUT);
+            last;
+        }
+        elsif ( defined $cpid ) {
+            close(STDIN);
+            open( STDIN, '<', '/dev/null' ) or die("open3: $!\n");
+            exec $cmd                       or die("exec: $!\n");
+        }
+        elsif ( $! == EAGAIN ) {
+            sleep 3;
+            redo FORK;
+        }
+        else {
+            die("Can't fork: $!\n");
+        }
+    }
+};
