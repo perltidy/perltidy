@@ -46,13 +46,6 @@ use warnings;
 # This flag gets switched on during automated testing for extra checking
 use constant DEVEL_MODE => 0;
 
-# This temporary flag is being used to test new coding for -lp:
-# 0 = old version, process by token   [ no longer available ]
-# 1 = new version, process in batches [ like 0 but more one-line blocks ]
-# 2 = new version w/minimal objects   [ like 1 but faster and improves -xci ]
-# 3 = new version plus skip finish_lp [ like 2 plus -lp works past line breaks ]
-use constant TEST_NEW_LP => 2;
-
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
@@ -201,6 +194,7 @@ my (
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
     $rOpts_whitespace_cycle,
+    $rOpts_extended_line_up_parentheses,
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
@@ -1270,6 +1264,11 @@ sub check_options {
         Exit(0);
     }
 
+    # -xlp implies -lp
+    if ( $rOpts->{'extended-line-up-parentheses'} ) {
+        $rOpts->{'line-up-parentheses'} ||= 1;
+    }
+
     if ( $rOpts->{'line-up-parentheses'} ) {
 
         if (   $rOpts->{'indent-only'}
@@ -1709,7 +1708,9 @@ EOM
     $rOpts_indent_only              = $rOpts->{'indent-only'};
     $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
     $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
-    $rOpts_logical_padding          = $rOpts->{'logical-padding'};
+    $rOpts_extended_line_up_parentheses =
+      $rOpts->{'extended-line-up-parentheses'};
+    $rOpts_logical_padding = $rOpts->{'logical-padding'};
     $rOpts_maximum_consecutive_blank_lines =
       $rOpts->{'maximum-consecutive-blank-lines'};
     $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
@@ -13374,8 +13375,7 @@ EOM
         if ($rOpts_line_up_parentheses) {
             $self->set_lp_indentation();
 
-            # This call will eventually be removed
-            finish_lp_batch() if ( TEST_NEW_LP < 3 );
+            finish_lp_batch() if ( !$rOpts_extended_line_up_parentheses );
         }
 
         #----------------------------
@@ -19575,10 +19575,6 @@ sub get_available_spaces_to_go {
         $max_gnu_item_index  = -1;
 
         my $gs_object;
-        if ( TEST_NEW_LP < 2 && $rOpts_line_up_parentheses ) {
-            $gs_object = new_lp_indentation_item( 0, -1, -1, 0, 0 );
-        }
-
         $rGS = [];
 
         $rGS->[$max_gnu_stack_index]->[_gs_ci_level_]     = -1;
@@ -20696,6 +20692,11 @@ EOM
           )
         {
             $rvao_args->{outdent_long_lines} = 1;
+
+            # convert -lp indentation objects to spaces to allow outdenting
+            if ( ref($indentation) ) {
+                $indentation = $indentation->get_spaces();
+            }
         }
 
         # --------------------------------------------------

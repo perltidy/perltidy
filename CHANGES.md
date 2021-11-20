@@ -1,5 +1,10 @@
 # Perltidy Change Log
 
+## 2021 10 29 xx
+
+    - The coding for the -lp flag has been rewritten to avoid some problems
+      and limitations.
+
 ## 2021 10 29
 
     - No significant bugs have been found since the last release, but several

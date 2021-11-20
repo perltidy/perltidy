@@ -2263,6 +2263,7 @@ sub generate_options {
     $add_option->( 'continuation-indentation',             'ci',    '=i' );
     $add_option->( 'extended-continuation-indentation',    'xci',   '!' );
     $add_option->( 'line-up-parentheses',                  'lp',    '!' );
+    $add_option->( 'extended-line-up-parentheses',         'xlp',   '!' );
     $add_option->( 'line-up-parentheses-exclusion-list',   'lpxl',  '=s' );
     $add_option->( 'outdent-keyword-list',                 'okwl',  '=s' );
     $add_option->( 'outdent-keywords',                     'okw',   '!' );
