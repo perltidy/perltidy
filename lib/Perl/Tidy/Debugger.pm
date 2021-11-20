@@ -7,7 +7,7 @@
 package Perl::Tidy::Debugger;
 use strict;
 use warnings;
-our $VERSION = '20211029';
+our $VERSION = '20211029.01';
 
 sub new {
 

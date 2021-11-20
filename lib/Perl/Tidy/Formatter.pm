@@ -49,7 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-our $VERSION = '20211029';
+our $VERSION = '20211029.01';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -709,7 +709,7 @@ sub new {
     initialize_undo_ci();
     initialize_process_line_of_CODE();
     initialize_grind_batch_of_CODE();
-    initialize_adjusted_indentation();
+    initialize_final_indentation_adjustment();
     initialize_postponed_breakpoint();
     initialize_batch_variables();
     initialize_forced_breakpoint_vars();
@@ -9728,7 +9728,7 @@ sub break_before_list_opening_containers {
         next unless ($ci_flag);
 
         # -bbxi=1: This option removes ci and is handled in
-        # later sub set_adjusted_indentation
+        # later sub final_indentation_adjustment
         if ( $ci_flag == 1 ) {
             $rwant_reduced_ci->{$seqno} = 1;
             next;
@@ -14999,7 +14999,7 @@ sub break_equals {
                     # trailing clause will be far to the right.
                     #
                     # The logic here is synchronized with the logic in sub
-                    # sub set_adjusted_indentation, which actually does
+                    # sub final_indentation_adjustment, which actually does
                     # the outdenting.
                     #
                     $skip_Section_3 ||= $this_line_is_semicolon_terminated
@@ -15050,7 +15050,7 @@ sub break_equals {
                     #       #handle error
                     #     };
                     # The alternative, for uncuddled style, is to create
-                    # a patch in set_adjusted_indentation which undoes
+                    # a patch in final_indentation_adjustment which undoes
                     # the indentation of a leading line like 'or do {'.
                     # This doesn't work well with -icb through
                     if (
@@ -20602,7 +20602,7 @@ sub convey_batch_to_vertical_aligner {
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
-        #  $ljump is a level jump needed by 'sub set_adjusted_indentation'
+        #  $ljump is a level jump needed by 'sub final_indentation_adjustment'
         my $ljump = 0;
 
         # Get some vars on line [n+1], if any:
@@ -20668,7 +20668,7 @@ EOM
         # --------------------------------------
         my ( $indentation, $lev, $level_end, $terminal_type,
             $terminal_block_type, $is_semicolon_terminated, $is_outdented_line )
-          = $self->set_adjusted_indentation( $ibeg, $iend, $rfields,
+          = $self->final_indentation_adjustment( $ibeg, $iend, $rfields,
             $rpatterns,         $ri_first, $ri_last,
             $rindentation_list, $ljump,    $starting_in_quote,
             $is_static_block_comment, );
@@ -20963,7 +20963,7 @@ EOM
     } ## end of loop to output each line
 
     # remember indentation of lines containing opening containers for
-    # later use by sub set_adjusted_indentation
+    # later use by sub final_indentation_adjustment
     $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list )
       if ( !$is_block_comment );
 
@@ -21705,7 +21705,7 @@ sub get_seqno {
             # SECTION 2: Undo ci at cuddled blocks
             #-------------------------------------
 
-            # Note that sub set_adjusted_indentation will be called later to
+            # Note that sub final_indentation_adjustment will be called later to
             # actually do this, but for now we will tentatively mark cuddled
             # lines with ci=0 so that the the -xci loop which follows will be
             # correct at cuddles.
@@ -22920,25 +22920,27 @@ sub make_paren_name {
     return $name;
 }
 
-{    ## begin closure set_adjusted_indentation
+{    ## begin closure final_indentation_adjustment
 
     my ( $last_indentation_written, $last_unadjusted_indentation,
         $last_leading_token );
 
-    sub initialize_adjusted_indentation {
+    sub initialize_final_indentation_adjustment {
         $last_indentation_written    = 0;
         $last_unadjusted_indentation = 0;
         $last_leading_token          = "";
         return;
     }
 
-    sub set_adjusted_indentation {
+    sub final_indentation_adjustment {
 
-        # This routine has the final say regarding the actual indentation of
-        # a line.  It starts with the basic indentation which has been
-        # defined for the leading token, and then takes into account any
-        # options that the user has set regarding special indenting and
-        # outdenting.
+        #--------------------------------------------------------------------
+        # This routine sets the final indentation of a line in the Formatter.
+        #--------------------------------------------------------------------
+
+        # It starts with the basic indentation which has been defined for the
+        # leading token, and then takes into account any options that the user
+        # has set regarding special indenting and outdenting.
 
         # This routine has to resolve a number of complex interacting issues,
         # including:
@@ -23682,7 +23684,7 @@ sub make_paren_name {
             $terminal_block_type, $is_semicolon_terminated,
             $is_outdented_line );
     }
-} ## end closure set_adjusted_indentation
+} ## end closure final_indentation_adjustment
 
 sub get_opening_indentation {
 
