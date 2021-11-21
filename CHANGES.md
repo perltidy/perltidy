@@ -8,14 +8,6 @@
       where -lp and -xci flags were not working well together have been fixed, such
       as happened in issue rt140025.
 
-    - A new flag -xlp has been added which can be set to avoid most of the
-      limitations of the -lp flag regarding side comments, blank lines, and
-      code blocks.  This is off by default to avoid changing existing coding,
-      so this flag has to be set to turn this feature on.  [Documentation still
-      needs to be written].  It will be included in the next release to CPAN,
-      but some details regarding how it handles very long lines may change before
-      the final release to CPAN.  This fixes issues git #64 and git #74.
-
 ## 2021 10 29
 
     - No significant bugs have been found since the last release, but several

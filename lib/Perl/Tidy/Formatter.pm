@@ -18615,10 +18615,20 @@ EOM
         # Return if this will fit on one line
         #-------------------------------------------------------------------
 
+        # The -bbxi=2 parameters can add an extra hidden level of indentation;
+        # this needs a tolerance to avoid instability.  Fixes b1259, 1260.
+        my $tol = 0;
+        if (   $break_before_container_types{$opening_token}
+            && $container_indentation_options{$opening_token}
+            && $container_indentation_options{$opening_token} == 2 )
+        {
+            $tol = $rOpts_indent_columns;
+        }
+
         my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
         return
           unless $self->excess_line_length( $i_opening_minus, $i_closing_paren )
-          > 0;
+          + $tol > 0;
 
         #-------------------------------------------------------------------
         # Now we know that this block spans multiple lines; we have to set

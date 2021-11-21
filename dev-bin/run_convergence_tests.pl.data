@@ -8292,6 +8292,57 @@ printf
 --break-before-all-operators
 --maximum-line-length=50
 
+==> b1259.in <==
+# S1
+    $menubar->Menubutton(
+        -tearoff=>0,
+        -text=>'File',
+        -menuitems=>
+            [
+            [Button=>'Save',-command=>\&save_bookmarks],[Button=>'Quit',-command=>\&exit_program],
+            ]
+    )->pack(-side=>'left');
+
+# S2
+    $menubar->Menubutton(
+        -tearoff=>0,
+        -text=>'File',
+        -menuitems=>
+                 [
+            [Button=>'Save',-command=>\&save_bookmarks],
+            [Button=>'Quit',-command=>\&exit_program],
+                 ]
+    )->pack(-side=>'left');
+
+==> b1259.par <==
+--noadd-whitespace
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=3
+--continuation-indentation=9
+--ignore-old-breakpoints
+--maximum-line-length=94
+--variable-maximum-line-length
+
+==> b1260.in <==
+# S1
+        my @cmd =
+
+                ( $::cfg_path_diff, split ( / /, $::cfg_args_diff ), $match1, $match2 ) ;
+# S2
+        my @cmd =
+
+                 ( $::cfg_path_diff, split ( / /, $::cfg_args_diff ), $match1,
+                $match2 ) ;
+
+==> b1260.par <==
+--break-before-paren-and-indent=2
+--break-before-paren=2
+--continuation-indentation=9
+--indent-columns=8
+--maximum-line-length=89
+--space-keyword-paren
+--space-terminal-semicolon
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
