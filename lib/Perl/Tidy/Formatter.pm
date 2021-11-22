@@ -19559,7 +19559,6 @@ sub get_available_spaces_to_go {
     # option.  The coding is rather complex, but is only for -lp.
 
     my $gnu_position_predictor;
-    my $gnu_sequence_number;
     my $line_start_index_to_go;
     my $max_gnu_item_index;
     my $max_gnu_stack_index;
@@ -19617,7 +19616,6 @@ sub get_available_spaces_to_go {
 
         # initialize gnu variables for a new batch;
         # must be called before each new batch
-        $gnu_sequence_number++;    # increment output batch counter
         %last_gnu_equals        = ();
         %gnu_comma_count        = ();
         %gnu_arrow_count        = ();
@@ -19644,15 +19642,14 @@ sub get_available_spaces_to_go {
         }
 
         my $item = Perl::Tidy::IndentationItem->new(
-            spaces              => $spaces,
-            level               => $level,
-            ci_level            => $ci_level,
-            available_spaces    => $available_spaces,
-            index               => $index,
-            gnu_sequence_number => $gnu_sequence_number,
-            align_paren         => $align_paren,
-            stack_depth         => $max_gnu_stack_index,
-            starting_index_K    => $starting_index_K,
+            spaces           => $spaces,
+            level            => $level,
+            ci_level         => $ci_level,
+            available_spaces => $available_spaces,
+            lp_stack_index   => $index,
+            align_paren      => $align_paren,
+            stack_depth      => $max_gnu_stack_index,
+            starting_index_K => $starting_index_K,
         );
 
         if ( $level >= 0 ) {
@@ -19887,26 +19884,24 @@ sub get_available_spaces_to_go {
                             # Undo any extra indentation if we saw no commas
                             my $available_spaces =
                               $gs_object->get_available_spaces();
+                            my $K_start = $gs_object->get_starting_index_K();
 
-                            if ( $available_spaces > 0
+                            if (   $available_spaces > 0
+                                && $K_start >= $K_to_go[0]
                                 && ( $comma_count <= 0 || $arrow_count > 0 ) )
                             {
 
-                                my $i     = $gs_object->get_index();
-                                my $seqno = $gs_object->get_sequence_number();
+                                my $i = $gs_object->get_lp_stack_index();
 
-                                # Be sure this item was created in this batch.
-                                # This should be true because we delete any
-                                # available space from open items at the end of
-                                # each batch.
-                                if (   $gnu_sequence_number != $seqno
-                                    || $i > $max_gnu_item_index )
-                                {
-                                    # non-fatal, keep going except in DEVEL_MODE
-                                    # DEACTIVATED for testing -xlp
-                                    if ( 0 && DEVEL_MODE ) {
+                                # Safety check for a valid stack index. It
+                                # should be ok because we just checked that the
+                                # index K of the token associated with this
+                                # indentation is in this batch.
+                                if ( $i < 0 || $i > $max_gnu_item_index ) {
+                                    if (DEVEL_MODE) {
+                                        my $lno = $rLL->[$KK]->[_LINE_INDEX_];
                                         Fault(<<EOM);
-Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
+Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_gnu_item_index
 EOM
                                     }
                                 }

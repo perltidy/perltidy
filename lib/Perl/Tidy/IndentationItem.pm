@@ -23,7 +23,7 @@ BEGIN {
         _closed_             => $i++,
         _comma_count_        => $i++,
         _sequence_number_    => $i++,
-        _index_              => $i++,
+        _lp_stack_index_     => $i++,
         _have_child_         => $i++,
         _recoverable_spaces_ => $i++,
         _align_paren_        => $i++,
@@ -74,8 +74,7 @@ sub new {
     #                        # for this level
     # closed             =>  # index where we saw closing '}'
     # comma_count        =>  # how many commas at this level?
-    # sequence_number    =>  # output batch number
-    # index              =>  # index in output batch list
+    # lp_stack_index     =>  # index in output batch list
     # have_child         =>  # any dependents?
     # recoverable_spaces =>  # how many spaces to the right
     #                        # we would like to move to get
@@ -94,8 +93,7 @@ sub new {
     $self->[_available_spaces_]   = $input_hash{available_spaces};
     $self->[_closed_]             = -1;
     $self->[_comma_count_]        = 0;
-    $self->[_sequence_number_]    = $input_hash{gnu_sequence_number};
-    $self->[_index_]              = $input_hash{index};
+    $self->[_lp_stack_index_]     = $input_hash{lp_stack_index};
     $self->[_have_child_]         = 0;
     $self->[_recoverable_spaces_] = 0;
     $self->[_align_paren_]        = $input_hash{align_paren};
@@ -227,12 +225,8 @@ sub get_spaces_level_ci {
     return [ $self->[_spaces_], $self->[_level_], $self->[_ci_level_] ];
 }
 
-sub get_sequence_number {
-    return $_[0]->[_sequence_number_];
-}
-
-sub get_index {
-    return $_[0]->[_index_];
+sub get_lp_stack_index {
+    return $_[0]->[_lp_stack_index_];
 }
 
 sub get_starting_index_K {
