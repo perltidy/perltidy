@@ -304,7 +304,8 @@ my (
     # from level.
     @maximum_line_length_at_level,
     @maximum_text_length_at_level,
-    $stress_level,
+    $stress_level_alpha,
+    $stress_level_beta,
 
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
@@ -1841,19 +1842,37 @@ EOM
         }
     }
 
-    # Find a '$stress_level' = an estimated indentation level at which
-    # indentation starts to be under stress.
-    my $denom = max( 1, $rOpts_indent_columns );
-
-    # Define a fixed number of spaces for a typical variable.
-    # Cases b1197-b1204 work ok with const=12 but not with const=8
-    my $const = 16;
-    $stress_level = 0;
-
-    # Put a reasonable limit on stress level (say 100) in case the
+    # Define two measures of indentation level, alpha and beta, at which some
+    # formatting features come under stress and need to start shutting down.
+    # Some combination of the two will be used to shut down different
+    # formatting features.
+    # Put a reasonable upper limit on stress level (say 100) in case the
     # whitespace-cycle variable is used.
     my $stress_level_limit = min( 100, $level_max );
 
+    # Find stress_level_alpha, targeted at very short maximum line lengths.
+    $stress_level_alpha = $stress_level_limit + 1;
+    foreach my $level_test ( 0 .. $stress_level_limit ) {
+        my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
+        my $excess_inside_space =
+          $max_len -
+          $rOpts_continuation_indentation -
+          $rOpts_indent_columns - 8;
+        if ( $excess_inside_space <= 0 ) {
+            $stress_level_alpha = $level_test;
+            last;
+        }
+    }
+
+    # Find stress level beta, a stress level targeted at formatting
+    # at deep levels near the maximum line length.  We start increasing
+    # from zero and stop at the first level which shows no more space.
+
+    # 'const' is a fixed number of spaces for a typical variable.
+    # Cases b1197-b1204 work ok with const=12 but not with const=8
+    my $const = 16;
+    my $denom = max( 1, $rOpts_indent_columns );
+    $stress_level_beta = 0;
     foreach my $level ( 0 .. $stress_level_limit ) {
         my $remaining_cycles = max(
             0,
@@ -1863,7 +1882,7 @@ EOM
             ) / $denom
         );
         last if ( $remaining_cycles <= 3 );    # 2 does not work
-        $stress_level = $level;
+        $stress_level_beta = $level;
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
@@ -8355,25 +8374,13 @@ sub weld_nested_containers {
       max( $rOpts_indent_columns, $rOpts_continuation_indentation );
 
     # Define a welding cutoff level: do not start a weld if the inside
-    # container level equals or exceeds this level.  We use the minimum of two
-    # criteria, either of which may be more restrictive.
-    # Start with a value based on the global stress (cases b1206, b1243):
-    # Note that this has a minimum cutoff level of 3.
-    my $weld_cutoff_level = $stress_level + 3;
+    # container level equals or exceeds this level.
 
-    # But use an alternative criterion if more restrictive (cases b1206, b1252)
-    # This allows the cutoff level to go down to 0 in extreme cases.
-    foreach my $level_test ( 0 .. $weld_cutoff_level ) {
-        my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
-        my $excess_inside_space =
-          $max_len -
-          $rOpts_continuation_indentation -
-          $rOpts_indent_columns - 8;
-        if ( $excess_inside_space <= 0 ) {
-            $weld_cutoff_level = $level_test;
-            last;
-        }
-    }
+    # We use the minimum of two criteria, either of which may be more
+    # restrictive.  The 'alpha' value is more restrictive in (b1206, b1252) and
+    # the 'beta' value is more restrictive in other cases (b1243).
+
+    my $weld_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 3 );
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
@@ -10025,10 +10032,10 @@ sub extended_ci {
 
         # Fix for b1197 b1198 b1199 b1200 b1201 b1202
         # Do not apply -xci if we are running out of space
-        if ( $level >= $stress_level ) {
+        if ( $level >= $stress_level_beta ) {
             DEBUG_XCI
               && print
-"XCI: Skipping seqno=$seqno, level=$level exceeds stress level=$stress_level\n";
+"XCI: Skipping seqno=$seqno, level=$level exceeds stress level=$stress_level_beta\n";
             next;
         }
 
@@ -16878,6 +16885,7 @@ sub break_long_lines {
 
     my $length_tol;
     my $lp_tol_boost;
+    my $list_stress_level;
 
     sub initialize_break_lists {
         @dont_align         = ();
@@ -16941,6 +16949,10 @@ sub break_long_lines {
                 }
             }
         }
+
+        # Define a level where list formatting becomes highly stressed and
+        # needs to be simplified. Introduced for case b1262.
+        $list_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
         return;
     }
@@ -17489,8 +17501,9 @@ EOM
                         $i_last_colon = $i;
 
                         # retain break at a ':' line break
-                        if ( ( $i == $i_line_start || $i == $i_line_end )
-                            && $rOpts_break_at_old_ternary_breakpoints )
+                        if (   ( $i == $i_line_start || $i == $i_line_end )
+                            && $rOpts_break_at_old_ternary_breakpoints
+                            && $levels_to_go[$i] < $list_stress_level )
                         {
 
                             $self->set_forced_breakpoint($i);
@@ -17704,7 +17717,7 @@ EOM
                 # Ignore old breakpoints when under stress.
                 # Fixes b1203 b1204 as well as b1197-b1200.
                 if (   $saw_opening_structure
-                    && $levels_to_go[$i_opening] >= $stress_level )
+                    && $levels_to_go[$i_opening] >= $stress_level_beta )
                 {
                     $cab_flag = 2;
 
@@ -17714,12 +17727,12 @@ EOM
                    # This option fixes b1235, b1237, b1240 with old and new -lp,
                    # but formatting is nicer with next option.
                     ## $is_long_term ||=
-                    ##  $levels_to_go[$i_opening] > $stress_level + 1;
+                    ##  $levels_to_go[$i_opening] > $stress_level_beta + 1;
 
                     # This option fixes b1240 but not b1235, b1237 with new -lp,
                     # but this gives better formatting than the previous option.
                     $do_not_break_apart ||=
-                      $levels_to_go[$i_opening] > $stress_level;
+                      $levels_to_go[$i_opening] > $stress_level_beta;
                 }
 
                 if (  !$is_long_term
@@ -19595,21 +19608,8 @@ sub get_available_spaces_to_go {
 
         @gnu_item_list = ();
 
-        $lp_cutoff_level = $stress_level + 2;
-
-        # use an alternative criterion if more restrictive (case b1255)
-        # This allows the cutoff level to go down to 0 in extreme cases.
-        foreach my $level_test ( 0 .. $lp_cutoff_level ) {
-            my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
-            my $excess_inside_space =
-              $max_len -
-              $rOpts_continuation_indentation -
-              $rOpts_indent_columns - 8;
-            if ( $excess_inside_space <= 0 ) {
-                $lp_cutoff_level = $level_test;
-                last;
-            }
-        }
+        # set a level at which we need to stop welding to avoid instability
+        $lp_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
         return;
     }
 
@@ -19903,7 +19903,8 @@ sub get_available_spaces_to_go {
                                     || $i > $max_gnu_item_index )
                                 {
                                     # non-fatal, keep going except in DEVEL_MODE
-                                    if (DEVEL_MODE) {
+                                    # DEACTIVATED for testing -xlp
+                                    if ( 0 && DEVEL_MODE ) {
                                         Fault(<<EOM);
 Program bug with -lp.  seqno=$seqno should be $gnu_sequence_number and i=$i should be less than max=$max_gnu_item_index
 EOM
@@ -20035,7 +20036,7 @@ EOM
                     $space_count += $standard_increment;
                 }
 
-                # do not start -lp under stress .. fixes b1244
+                # do not start -lp under stress .. fixes b1244, b1255
                 elsif ( !$in_lp_mode && $level >= $lp_cutoff_level ) {
                     $space_count += $standard_increment;
                 }

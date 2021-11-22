@@ -8343,6 +8343,38 @@ printf
 --space-keyword-paren
 --space-terminal-semicolon
 
+==> b1262.in <==
+# S1
+            @theme_args =
+              get_themes(
+                \%opt,
+                ( $2 ? $2 :
+                      (
+                        shift(
+                            @theme_args)
+                          ||
+                          shift(@ARGV)
+                      ) ) );
+
+# S2
+            @theme_args =
+              get_themes(
+                \%opt,
+                ( $2 ?
+                      $2 : (
+                        shift(
+                            @theme_args)
+                          ||
+                          shift(@ARGV)
+                      ) ) );
+
+==> b1262.par <==
+--break-after-all-operators
+--delete-old-whitespace
+--maximum-line-length=14
+--opening-paren-right
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
