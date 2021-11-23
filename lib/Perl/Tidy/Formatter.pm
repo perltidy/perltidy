@@ -17710,8 +17710,13 @@ EOM
 
                 # Ignore old breakpoints when under stress.
                 # Fixes b1203 b1204 as well as b1197-b1200.
+                # But not if -lp: fixes b1264, b1265.  NOTE: rechecked with
+                # b1264 to see if this check is still required at all, and
+                # these still require a check, but at higher level beta+3
+                # instead of beta:  b1193 b780
                 if (   $saw_opening_structure
-                    && $levels_to_go[$i_opening] >= $stress_level_beta )
+                    && !$is_lp_container
+                    && $levels_to_go[$i_opening] >= $stress_level_beta + 3 )
                 {
                     $cab_flag = 2;
 

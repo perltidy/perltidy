@@ -8375,6 +8375,33 @@ printf
 --opening-paren-right
 --variable-maximum-line-length
 
+==> b1264.in <==
+#S1
+function(
+          'objectclass'=>['top','person',
+              'organizationalPerson','inetOrgperson'],
+);
+# S2
+function(
+          'objectclass'=>['top','person',
+                          'organizationalPerson',
+                          'inetOrgperson'],
+);
+# S3
+function(
+          'objectclass'=>
+            ['top','person','organizationalPerson',
+                    'inetOrgperson'],
+);
+
+==> b1264.par <==
+--noadd-whitespace
+--break-before-square-bracket=1
+--line-up-parentheses
+--indent-columns=10
+--maximum-line-length=41
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
