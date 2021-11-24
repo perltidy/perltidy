@@ -1,0 +1,9 @@
+$self->func(
+  {
+    command  => [ 'command', 'argument1', 'argument2' ],
+    callback => sub {
+      my ($res) = @_;
+      print($res);
+    }
+  }
+);

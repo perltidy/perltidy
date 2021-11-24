@@ -12,6 +12,8 @@
 #9 rt140025.rt140025
 #10 xlp1.def
 #11 xlp1.xlp1
+#12 git74.def
+#13 git74.git74
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -32,7 +34,26 @@ BEGIN {
         'braces8' => <<'----------',
 -bl -bbvt=1 -blxl=' ' -bll='sub do asub'
 ----------
-        'def'       => "",
+        'def'   => "",
+        'git74' => <<'----------',
+-xlp
+--iterations=2
+--maximum-line-length=120
+--line-up-parentheses
+--continuation-indentation=4
+--closing-token-indentation=1
+--want-left-space="= -> ( )"
+--want-right-space="= -> ( )"
+--space-function-paren
+--space-keyword-paren
+--space-terminal-semicolon
+--opening-brace-on-new-line
+--opening-sub-brace-on-new-line
+--opening-anonymous-sub-brace-on-new-line
+--brace-left-and-indent
+--brace-left-and-indent-list="*"
+--break-before-hash-brace=3
+----------
         'lp'        => "-lp",
         'novalign1' => "-novalign",
         'novalign2' => "-nvsc -nvbc -msc=2",
@@ -95,6 +116,18 @@ try {
 catch {
     die;
 };
+----------
+
+        'git74' => <<'----------',
+$self->func(
+  {
+    command  => [ 'command', 'argument1', 'argument2' ],
+    callback => sub {
+      my ($res) = @_;
+      print($res);
+    }
+  }
+);
 ----------
 
         'lp2' => <<'----------',
@@ -436,6 +469,39 @@ $cb1 = $act_page->Checkbutton(
           -sticky => 'e'
 );
 #11...........
+        },
+
+        'git74.def' => {
+            source => "git74",
+            params => "def",
+            expect => <<'#12...........',
+$self->func(
+    {
+        command  => [ 'command', 'argument1', 'argument2' ],
+        callback => sub {
+            my ($res) = @_;
+            print($res);
+        }
+    }
+);
+#12...........
+        },
+
+        'git74.git74' => {
+            source => "git74",
+            params => "git74",
+            expect => <<'#13...........',
+$self -> func (
+                {
+                   command  => [ 'command', 'argument1', 'argument2' ],
+                   callback => sub
+                       {
+                       my ($res) = @_ ;
+                       print ($res) ;
+                       }
+                }
+              ) ;
+#13...........
         },
     };
 

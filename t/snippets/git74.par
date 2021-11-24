@@ -1,0 +1,17 @@
+-xlp
+--iterations=2
+--maximum-line-length=120
+--line-up-parentheses
+--continuation-indentation=4
+--closing-token-indentation=1
+--want-left-space="= -> ( )"
+--want-right-space="= -> ( )"
+--space-function-paren
+--space-keyword-paren
+--space-terminal-semicolon
+--opening-brace-on-new-line
+--opening-sub-brace-on-new-line
+--opening-anonymous-sub-brace-on-new-line
+--brace-left-and-indent
+--brace-left-and-indent-list="*"
+--break-before-hash-brace=3
