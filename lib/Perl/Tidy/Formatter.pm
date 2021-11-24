@@ -6295,7 +6295,10 @@ sub respace_tokens {
         # package the tokenized lines as it received them.  If we
         # get a fault here it has not output a continuous sequence
         # of K values.  Or a line of CODE may have been mismarked as
-        # something else.  We better stop on an error here.
+        # something else.  There is no good way to continue after such an
+        # error.
+        # FIXME: Calling Fault will produce zero output; it would be best to
+        # find a way to dump the input file.
         if ( defined($last_K_out) ) {
             if ( $Kfirst != $last_K_out + 1 ) {
                 Fault(
@@ -6993,11 +6996,17 @@ sub copy_token_as_type {
     }
     else {
 
-        # This sub is only programmed to handle certain token types.
-        # We better stop on this error.
-        Fault(<<EOM);
+        # Unexpected type ... this sub will work as long as both $token and
+        # $type are defined, but we should catch any unexpected types during
+        # development.
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
 sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
 EOM
+        }
+        else {
+            # shouldn't happen
+        }
     }
 
     my @rnew_token = @{$rold_token};
@@ -7395,7 +7404,9 @@ EOM
     # There shouldn't be any nodes beyond the last one.  This routine is
     # relinking lines and tokens after the tokens have been respaced.  A fault
     # here indicates some kind of bug has been introduced into the above loops.
-    # We better stop here.
+    # There is not good way to keep going; we better stop here.
+    # FIXME: This will produce zero output. it would be best to find a way to
+    # dump the input file.
     if ( $Knext <= $Kmax ) {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
@@ -13990,9 +14001,11 @@ sub lookup_opening_indentation {
     if ( !@{$ri_last} ) {
 
         # An error here implies a bug introduced by a recent program change.
-        # Every batch of code has lines.
-        Fault("Error in opening_indentation: no lines");
-        return;
+        # Every batch of code has lines, so this should never happen.
+        if (DEVEL_MODE) {
+            Fault("Error in opening_indentation: no lines");
+        }
+        return ( 0, 0, 0 );
     }
 
     my $nline = $rindentation_list->[0];    # line number of previous lookup
@@ -14010,11 +14023,13 @@ sub lookup_opening_indentation {
     # We better stop here.
     else {
         my $i_last_line = $ri_last->[-1];
-        Fault(<<EOM);
+        if (DEVEL_MODE) {
+            Fault(<<EOM);
 Program bug in call to lookup_opening_indentation - index out of range
  called with index i_opening=$i_opening  > $i_last_line = max index of last line
 This batch has max index = $max_index_to_go,
 EOM
+        }
         $nline = $#{$ri_last};
     }
 
@@ -14037,10 +14052,10 @@ EOM
 
     sub terminal_type_i {
 
-      #    returns type of last token on this line (terminal token), as follows:
-      #    returns # for a full-line comment
-      #    returns ' ' for a blank line
-      #    otherwise returns final token type
+        #  returns type of last token on this line (terminal token), as follows:
+        #  returns # for a full-line comment
+        #  returns ' ' for a blank line
+        #  otherwise returns final token type
 
         my ( $ibeg, $iend ) = @_;
 
@@ -14680,7 +14695,12 @@ sub break_equals {
                 # Shouldn't happen because splice below decreases nmax on each
                 # iteration.  An error can only be due to a recent programming
                 # change.  We better stop here.
-                Fault("Program bug-infinite loop in recombine breakpoints\n");
+                if (DEVEL_MODE) {
+                    Fault(
+                        "Program bug-infinite loop in recombine breakpoints\n");
+                }
+                $more_to_do = 0;
+                last;
             }
             $nmax_last  = $nmax;
             $more_to_do = 0;
@@ -19562,6 +19582,9 @@ sub get_available_spaces_to_go {
     # an -lp indentation level.  This survives between batches.
     my $lp_position_predictor;
 
+    # A level at which the lp format becomes too highly stressed to continue
+    my $lp_cutoff_level;
+
     BEGIN {
 
         # Index names for the -lp stack variables.
@@ -19582,13 +19605,14 @@ sub get_available_spaces_to_go {
         # initialize gnu variables for a new file;
         # must be called once at the start of a new file.
 
-        # initialize the leading whitespace stack to negative levels
-        # so that we can never run off the end of the stack
-        $lp_position_predictor = 0; # where the current token is predicted to be
+        $lp_position_predictor = 0;
         $max_lp_stack          = 0;
+        $lp_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
         $rLP = [];
 
+        # initialize the leading whitespace stack to negative levels
+        # so that we can never run off the end of the stack
         $rLP->[$max_lp_stack]->[_lp_ci_level_]        = -1;
         $rLP->[$max_lp_stack]->[_lp_level_]           = -1;
         $rLP->[$max_lp_stack]->[_lp_object_]          = undef;
@@ -19634,10 +19658,6 @@ sub get_available_spaces_to_go {
         my %lp_arrow_count;
         my $ii_begin_line     = 0;
         my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
-
-        # set a level at which we need to stop welding to avoid instability
-        my $lp_cutoff_level =
-          min( $stress_level_alpha, $stress_level_beta + 2 );
 
         my $rLL                       = $self->[_rLL_];
         my $Klimit                    = $self->[_Klimit_];
@@ -20490,16 +20510,6 @@ sub convey_batch_to_vertical_aligner {
     my $ri_last    = $this_batch->[_ri_last_];
 
     $self->check_convey_batch_input( $ri_first, $ri_last ) if (DEVEL_MODE);
-
-    if ( !defined($ri_first) || !@{$ri_first} ) {
-
-        # This should never happen because sub grind_batch_of_CODE always
-        # receives tokens which it turns into one or more lines. If we get here
-        # it means that a programming error in sub grind_batch_of_CODE has
-        # caused those lines to be lost.  Turn on DEVEL_MODE to find the error.
-        # We better stop here.
-        Fault("Unexpected call with no lines");
-    }
 
     my $n_last_line = @{$ri_first} - 1;
 

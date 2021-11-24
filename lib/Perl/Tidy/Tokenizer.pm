@@ -7113,9 +7113,15 @@ sub scan_identifier_do {
         else {
 
             # shouldn't happen: bad call parameter
-            Fault(<<EOM);
-Program Bug: scan_identifier received bad starting token = '$tok'
-EOM
+            my $msg =
+"Program bug detected: scan_identifier received bad starting token = '$tok'\n";
+            if (DEVEL_MODE) { Fault($msg) }
+            if ( !$tokenizer_self->[_in_error_] ) {
+                warning($msg);
+                $tokenizer_self->[_in_error_] = 1;
+            }
+            $id_scan_state = '';
+            goto RETURN;
         }
         $saw_type = !$saw_alpha;
     }
@@ -7703,6 +7709,8 @@ EOM
         $tok = $tok_begin;
         $i   = $i_begin;
     }
+
+  RETURN:
 
     DEBUG_SCAN_ID && do {
         my ( $a, $b, $c ) = caller;
