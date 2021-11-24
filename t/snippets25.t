@@ -10,6 +10,8 @@
 #7 braces.braces8
 #8 rt140025.def
 #9 rt140025.rt140025
+#10 xlp1.def
+#11 xlp1.xlp1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,6 +38,7 @@ BEGIN {
         'novalign2' => "-nvsc -nvbc -msc=2",
         'novalign3' => "-nvc",
         'rt140025'  => "-lp -xci -ci=4 -ce",
+        'xlp1'      => "-xlp",
     };
 
     ############################
@@ -142,6 +145,24 @@ my $cmd;
  }
  }
 };
+----------
+
+        'xlp1' => <<'----------',
+# test -xlp with comments, broken sub blocks, blank line, line length limit
+$cb1 = $act_page->Checkbutton(
+  -text     => M "Verwenden",
+  -variable => \$qualitaet_s_optimierung,
+  -command  => sub {
+    change_state_all( $act_page1, $qualitaet_s_optimierung, { $cb1 => 1 } )
+      ;    # sc
+  },
+)->grid(
+
+  # block comment
+  -row    => $gridy++,
+  -column => 2,
+  -sticky => 'e'
+);
 ----------
     };
 
@@ -370,6 +391,51 @@ FORK: {
     }
 };
 #9...........
+        },
+
+        'xlp1.def' => {
+            source => "xlp1",
+            params => "def",
+            expect => <<'#10...........',
+# test -xlp with comments, broken sub blocks, blank line, line length limit
+$cb1 = $act_page->Checkbutton(
+    -text     => M "Verwenden",
+    -variable => \$qualitaet_s_optimierung,
+    -command  => sub {
+        change_state_all( $act_page1, $qualitaet_s_optimierung, { $cb1 => 1 } )
+          ;    # sc
+    },
+)->grid(
+
+    # block comment
+    -row    => $gridy++,
+    -column => 2,
+    -sticky => 'e'
+);
+#10...........
+        },
+
+        'xlp1.xlp1' => {
+            source => "xlp1",
+            params => "xlp1",
+            expect => <<'#11...........',
+# test -xlp with comments, broken sub blocks, blank line, line length limit
+$cb1 = $act_page->Checkbutton(
+                               -text     => M "Verwenden",
+                               -variable => \$qualitaet_s_optimierung,
+                               -command  => sub {
+                                   change_state_all( $act_page1,
+                                                     $qualitaet_s_optimierung,
+                                                     { $cb1 => 1 } );    # sc
+                               },
+)->grid(
+
+          # block comment
+          -row    => $gridy++,
+          -column => 2,
+          -sticky => 'e'
+);
+#11...........
         },
     };
 
