@@ -2101,7 +2101,7 @@ Only the last will be used.
 EOM
     }
 
-    # Possible speedup: we could turn off -lp if it is not actually used
+    # Speedup: we can turn off -lp if it is not actually used
     my $all_off = 1;
     foreach my $key (qw# ( { [ #) {
         my $rflags = $line_up_parentheses_exclusion_rules{$key};
@@ -2112,13 +2112,7 @@ EOM
         }
     }
     if ($all_off) {
-
-        # FIXME: This speedup works but is currently deactivated because at
-        # present users of -lp could see some discontinuities in formatting,
-        # such as those involving the choice of breaks at '='.  Only if/when
-        # these issues have been checked and resolved it should be reactivated
-        # as a speedup.
-        ## $rOpts->{'line-up-parentheses'} = "";
+        $rOpts->{'line-up-parentheses'} = "";
     }
 
     return;
@@ -12141,7 +12135,10 @@ EOM
                         && $next_nonblank_token_type eq ','
                         && $Knnb eq $K_last )
                     {
-                        $iend_nobreak = $max_index_to_go;
+                        my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
+                        my $is_excluded =
+                          $self->[_ris_excluded_lp_container_]->{$p_seqno};
+                        $iend_nobreak = $max_index_to_go if ( !$is_excluded );
                     }
 
                     $self->set_nobreaks( $index_start_one_line_block,
@@ -12234,8 +12231,11 @@ EOM
                               $self->[_K_opening_container_];
                             my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
                             my $Kc      = $K_closing_container->{$p_seqno};
+                            my $is_excluded =
+                              $self->[_ris_excluded_lp_container_]->{$p_seqno};
                             if (   defined($Kc)
                                 && $rLL->[$Kc]->[_TOKEN_] eq '}'
+                                && !$is_excluded
                                 && $Kc - $Ktoken_vars <= 2 )
                             {
                                 $rbrace_follower = undef;
