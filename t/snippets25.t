@@ -128,6 +128,50 @@ $self->func(
     }
   }
 );
+
+my $test_var = $self->test_call(    #
+    $arg1,
+    $arg2
+);
+
+my $test_var = $self->test_call(
+    $arg1,                          #
+    $arg2
+);
+
+my $test_var = $self->test_call(
+    #
+    $arg1,
+    $arg2,
+);
+
+my $test_var = $self->test_call(
+
+    $arg1,
+    $arg2,
+);
+
+my $test_var = $self->test_call(
+    $arg1,
+    $arg2
+
+);
+
+my $test_var = $self->test_call(
+
+    $arg1,
+    $arg2,
+
+);
+
+my $test_var =
+
+  $self->test_call(
+    $arg1,
+    $arg2
+
+  );
+
 ----------
 
         'lp2' => <<'----------',
@@ -484,6 +528,50 @@ $self->func(
         }
     }
 );
+
+my $test_var = $self->test_call(    #
+    $arg1,
+    $arg2
+);
+
+my $test_var = $self->test_call(
+    $arg1,                          #
+    $arg2
+);
+
+my $test_var = $self->test_call(
+    #
+    $arg1,
+    $arg2,
+);
+
+my $test_var = $self->test_call(
+
+    $arg1,
+    $arg2,
+);
+
+my $test_var = $self->test_call(
+    $arg1,
+    $arg2
+
+);
+
+my $test_var = $self->test_call(
+
+    $arg1,
+    $arg2,
+
+);
+
+my $test_var =
+
+  $self->test_call(
+    $arg1,
+    $arg2
+
+  );
+
 #12...........
         },
 
@@ -501,6 +589,50 @@ $self -> func (
                        }
                 }
               ) ;
+
+my $test_var = $self -> test_call (    #
+                                    $arg1,
+                                    $arg2
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                    $arg1,    #
+                                    $arg2
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                   #
+                                   $arg1,
+                                   $arg2,
+                                  ) ;
+
+my $test_var = $self -> test_call (
+
+                                   $arg1,
+                                   $arg2,
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                    $arg1,
+                                    $arg2
+
+                                  ) ;
+
+my $test_var = $self -> test_call (
+
+                                   $arg1,
+                                   $arg2,
+
+                                  ) ;
+
+my $test_var =
+
+    $self -> test_call (
+                         $arg1,
+                         $arg2
+
+                       ) ;
+
 #13...........
         },
     };

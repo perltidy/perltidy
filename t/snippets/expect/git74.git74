@@ -8,3 +8,47 @@ $self -> func (
                        }
                 }
               ) ;
+
+my $test_var = $self -> test_call (    #
+                                    $arg1,
+                                    $arg2
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                    $arg1,    #
+                                    $arg2
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                   #
+                                   $arg1,
+                                   $arg2,
+                                  ) ;
+
+my $test_var = $self -> test_call (
+
+                                   $arg1,
+                                   $arg2,
+                                  ) ;
+
+my $test_var = $self -> test_call (
+                                    $arg1,
+                                    $arg2
+
+                                  ) ;
+
+my $test_var = $self -> test_call (
+
+                                   $arg1,
+                                   $arg2,
+
+                                  ) ;
+
+my $test_var =
+
+    $self -> test_call (
+                         $arg1,
+                         $arg2
+
+                       ) ;
+

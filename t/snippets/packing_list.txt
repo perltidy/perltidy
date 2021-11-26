@@ -338,6 +338,8 @@
 ../snippets25.t	rt140025.rt140025
 ../snippets25.t	xlp1.def
 ../snippets25.t	xlp1.xlp1
+../snippets25.t	git74.def
+../snippets25.t	git74.git74
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -478,5 +480,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets25.t	git74.def
-../snippets25.t	git74.git74
