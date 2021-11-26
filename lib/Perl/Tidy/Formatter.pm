@@ -19772,8 +19772,6 @@ sub get_available_spaces_to_go {
                     my $mll =
                       $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
 
-                    my $bbc_flag = $break_before_container_types{$token};
-
                     if (
 
                         # the equals is not just before an open paren (testing)
@@ -19786,9 +19784,6 @@ sub get_available_spaces_to_go {
                         # if a -bbx flag WANTS a break before this opening token
                         || (   $seqno
                             && $rbreak_before_container_by_seqno->{$seqno} )
-
-                       # or if we MIGHT want a break (fixes case b826 b909 b989)
-                        || ( $bbc_flag && $bbc_flag >= 2 )
 
                         # or we are beyond the 1/4 point and there was an old
                         # break at an assignment (not '=>') [fix for b1035]
@@ -19813,8 +19808,17 @@ sub get_available_spaces_to_go {
                         # then make the switch -- note that we do not set a
                         # real breakpoint here because we may not really need
                         # one; sub break_lists will do that if necessary.
-                        $ii_begin_line         = $i_test + 1;
-                        $lp_position_predictor = $test_position;
+
+                        # But only if the closing token is in this batch (c117).
+                        # Otherwise it cannot be done by sub break_lists.
+                        my $K_closing_container =
+                          $self->[_K_closing_container_];
+                        my $Kc = $K_closing_container->{$seqno};
+                        if ( defined($Kc) && $Kc <= $K_to_go[$max_index_to_go] )
+                        {
+                            $ii_begin_line         = $i_test + 1;
+                            $lp_position_predictor = $test_position;
+                        }
                     }
                 }
             } ## end update position predictor
