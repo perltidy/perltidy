@@ -396,7 +396,7 @@ BEGIN {
         _rhas_broken_code_block_    => $i++,
         _rhas_ternary_              => $i++,
         _ris_excluded_lp_container_ => $i++,
-        _ris_lp_container_          => $i++,
+        _rlp_object_by_seqno_       => $i++,
         _rwant_reduced_ci_          => $i++,
         _rno_xci_by_seqno_          => $i++,
         _rbrace_left_               => $i++,
@@ -793,7 +793,7 @@ sub new {
     $self->[_rhas_broken_code_block_]    = {};
     $self->[_rhas_ternary_]              = {};
     $self->[_ris_excluded_lp_container_] = {};
-    $self->[_ris_lp_container_]          = {};
+    $self->[_rlp_object_by_seqno_]       = {};
     $self->[_rwant_reduced_ci_]          = {};
     $self->[_rno_xci_by_seqno_]          = {};
     $self->[_rbrace_left_]               = {};
@@ -17313,6 +17313,72 @@ sub break_long_lines {
         my $i_line_start = -1;
         my $i_last_colon = -1;
 
+        #----------------------------------------------------------------------
+        # sub to set a requested break before an opening container in -lp mode.
+        #----------------------------------------------------------------------
+        my $do_requested_lp_break = sub {
+
+            my ( $lp_object, $i_opening ) = @_;
+
+            # Given:
+            #   $lp_object = the indentation object
+            #   $i_opening = index of the opening container
+
+            # Set any requested break at a token before this opening container
+            # token. This is often an '=' or '=>' but can also be things like
+            # '.', ',', 'return'.  It was defined by sub set_lp_breaks.
+
+            # Important:
+            #   For intact containers, call this at the closing token.
+            #   For broken containers, call this at the opening token.
+            # This will avoid needless breaks when it turns out that the
+            # container does not actually get broken.  This isn't known until
+            # the closing container for intact blocks.
+
+            my $i_start_2;
+            my $K_start_2 = $lp_object->get_K_begin_line();
+            return if ( !defined($K_start_2) );
+
+            $i_start_2 = $K_start_2 - $K_to_go[0];
+            return
+              if ( $i_start_2 < 0
+                || $i_start_2 > $max_index_to_go );
+
+            # Handle request to put a break break immediately before this token.
+            # We may not want to do that since we are also breaking after it.
+            if ( $i_start_2 == $i_opening ) {
+
+                # The following rules should be reviewed.  We may want to always
+                # allow the break.  If we do not do the break, the indentation
+                # may be off.
+
+                # RULE: don't break before it unless it is welded to a qw.
+                # This works well, but we may want to relax this to allow
+                # breaks in additional cases.
+                return
+                  if ( !$self->[_rK_weld_right_]->{ $K_to_go[$i_opening] } );
+                return unless ( $types_to_go[$max_index_to_go] eq 'q' );
+            }
+
+            # Only break for breakpoints at the same
+            # indentation level as the opening paren
+            my $test1 = $nesting_depth_to_go[$i_opening];
+            my $test2 = $nesting_depth_to_go[$i_start_2];
+            return if ( $test2 != $test1 );
+
+            # Back up at a blank (fixes case b932)
+            my $ibr = $i_start_2 - 1;
+            if (   $ibr > 0
+                && $types_to_go[$ibr] eq 'b' )
+            {
+                $ibr--;
+            }
+            if ( $ibr >= 0 ) {
+                $self->set_forced_breakpoint($ibr);
+            }
+            return;
+        };
+
         #----------------------------------------
         # Main loop over all tokens in this batch
         #----------------------------------------
@@ -17570,6 +17636,24 @@ EOM
                         $self->set_closing_breakpoint($i);
                     } ## end if ( $i_colon <= 0  ||...)
                 } ## end elsif ( $token eq '?' )
+
+                elsif ( $is_opening_token{$token} ) {
+
+                    # do requeste -lp breaks at the OPENING token for BROKEN
+                    # blocks.  NOTE: this can be done for both -lp and -xlp,
+                    # but only -xlp can really take advantage of this.  So this
+                    # is currently restricted to -xlp to avoid excess changes to
+                    # existing -lp formatting.
+                    if (   $rOpts_extended_line_up_parentheses
+                        && $mate_index_to_go[$i] < 0 )
+                    {
+                        my $lp_object =
+                          $self->[_rlp_object_by_seqno_]->{$type_sequence};
+                        $do_requested_lp_break->( $lp_object, $i )
+                          if ($lp_object);
+                    }
+                }
+
             } ## end if ($type_sequence)
 
 #print "LISTX sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth\n";
@@ -17700,9 +17784,9 @@ EOM
 
                 my $i_opening = $opening_structure_index_stack[$current_depth];
                 my $saw_opening_structure = ( $i_opening >= 0 );
-                my $is_lp_container;
+                my $lp_object;
                 if ( $rOpts_line_up_parentheses && $saw_opening_structure ) {
-                    $is_lp_container = $self->[_ris_lp_container_]
+                    $lp_object = $self->[_rlp_object_by_seqno_]
                       ->{ $type_sequence_to_go[$i_opening] };
                 }
 
@@ -17735,7 +17819,7 @@ EOM
                 # these still require a check, but at higher level beta+3
                 # instead of beta:  b1193 b780
                 if (   $saw_opening_structure
-                    && !$is_lp_container
+                    && !$lp_object
                     && $levels_to_go[$i_opening] >= $stress_level_beta + 3 )
                 {
                     $cab_flag = 2;
@@ -17782,7 +17866,7 @@ EOM
                     # boost tol for an -lp container
                     if (
                            $lp_tol_boost
-                        && $is_lp_container
+                        && $lp_object
                         && ( $rOpts_extended_continuation_indentation
                             || !$ris_list_by_seqno->{$type_sequence} )
                       )
@@ -17967,7 +18051,7 @@ EOM
 
                     # open up a long 'for' or 'foreach' container to allow
                     # leading term alignment unless -lp is used.
-                    $has_comma_breakpoints = 1 unless ($is_lp_container);
+                    $has_comma_breakpoints = 1 unless ($lp_object);
                 } ## end if ( $is_long_term && ...)
 
                 if (
@@ -18002,56 +18086,11 @@ EOM
                   )
                 {
 
-                    # For -lp option, we must put a breakpoint before
-                    # the token which has been identified as starting
-                    # this indentation level.  This is necessary for
-                    # proper alignment.
-                    ##if ( $rOpts_line_up_parentheses && $saw_opening_structure )
-                    if ($is_lp_container) {
-                        my $item = $leading_spaces_to_go[ $i_opening + 1 ];
-                        if (   $i_opening + 1 < $max_index_to_go
-                            && $types_to_go[ $i_opening + 1 ] eq 'b' )
-                        {
-                            $item = $leading_spaces_to_go[ $i_opening + 2 ];
-                        }
-                        if ( defined($item) && ref($item) ) {   # c098 added ref
-                            my $i_start_2;
-                            my $K_start_2 = $item->get_K_begin_line();
-                            if ( defined($K_start_2) ) {
-                                $i_start_2 = $K_start_2 - $K_to_go[0];
-                            }
-                            if (
-                                defined($i_start_2)
-
-                                # we are breaking after an opening brace, paren,
-                                # so don't break before it too
-                                && $i_start_2 ne $i_opening
-                                && $i_start_2 >= 0
-                                && $i_start_2 <= $max_index_to_go
-                              )
-                            {
-
-                                # Only break for breakpoints at the same
-                                # indentation level as the opening paren
-                                my $test1 = $nesting_depth_to_go[$i_opening];
-                                my $test2 = $nesting_depth_to_go[$i_start_2];
-                                if ( $test2 == $test1 ) {
-
-                                    # Back up at a blank (fixes case b932)
-                                    my $ibr = $i_start_2 - 1;
-                                    if (   $ibr > 0
-                                        && $types_to_go[$ibr] eq 'b' )
-                                    {
-                                        $ibr--;
-                                    }
-                                    if ( $ibr >= 0 ) {
-                                        $self->set_forced_breakpoint($ibr);
-                                    }
-
-                                }
-                            } ## end if ( defined($i_start_2...))
-                        } ## end if ( defined($item) )
-                    } ## end if ( $is_opening_container...)
+                    # do special -lp breaks at the CLOSING token for INTACT
+                    # blocks (because we might not do them if the block does
+                    # not break open)
+                    $do_requested_lp_break->( $lp_object, $i_opening )
+                      if ($lp_object);
 
                     # break after opening structure.
                     # note: break before closing structure will be automatic
@@ -19656,8 +19695,7 @@ sub get_available_spaces_to_go {
         my %last_lp_equals;
         my %lp_comma_count;
         my %lp_arrow_count;
-        my $ii_begin_line     = 0;
-        my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
+        my $ii_begin_line = 0;
 
         my $rLL                       = $self->[_rLL_];
         my $Klimit                    = $self->[_Klimit_];
@@ -19665,14 +19703,23 @@ sub get_available_spaces_to_go {
         my $rshort_nested             = $self->[_rshort_nested_];
         my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
         my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-        my $ris_lp_parent_container   = $self->[_ris_lp_container_];
+        my $starting_in_quote   = $self->[_this_batch_]->[_starting_in_quote_];
+        my $K_closing_container = $self->[_K_closing_container_];
+        my $rlp_object_by_seqno = $self->[_rlp_object_by_seqno_];
+        my $radjusted_levels    = $self->[_radjusted_levels_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
-        my $radjusted_levels = $self->[_radjusted_levels_];
 
         my $nws  = @{$radjusted_levels};
         my $imin = 0;
         my $imax = $max_index_to_go;
+
+        my $i_term = $imax;
+        if ( $tokens_to_go[$i_term] eq '#' && $i_term > 0 ) {
+            $i_term--;
+            $i_term--
+              if ( $tokens_to_go[$i_term] eq 'b' && $i_term > 0 );
+        }
 
         # The 'starting_in_quote' flag means that the first token is the first
         # token of a line and it is also the continuation of some kind of
@@ -19809,12 +19856,19 @@ sub get_available_spaces_to_go {
                         # real breakpoint here because we may not really need
                         # one; sub break_lists will do that if necessary.
 
-                        # But only if the closing token is in this batch (c117).
-                        # Otherwise it cannot be done by sub break_lists.
-                        my $K_closing_container =
-                          $self->[_K_closing_container_];
                         my $Kc = $K_closing_container->{$seqno};
-                        if ( defined($Kc) && $Kc <= $K_to_go[$max_index_to_go] )
+                        if (
+
+                            # For -lp, only if the closing token is in this
+                            # batch (c117).  Otherwise it cannot be done by sub
+                            # break_lists.
+                            defined($Kc) && $Kc <= $K_to_go[$max_index_to_go]
+
+                            # For -xlp, we only need one nonblank token after
+                            # the opening token.
+                            || (   $rOpts_extended_line_up_parentheses
+                                && $ii < $i_term )
+                          )
                         {
                             $ii_begin_line         = $i_test + 1;
                             $lp_position_predictor = $test_position;
@@ -20096,7 +20150,12 @@ EOM
                               $lp_object;
                         }
 
-                        $ris_lp_parent_container->{$last_nonblank_seqno} = 1;
+                        if (   $last_nonblank_token =~ /^[\{\[\(]$/
+                            && $last_nonblank_seqno )
+                        {
+                            $rlp_object_by_seqno->{$last_nonblank_seqno} =
+                              $lp_object;
+                        }
                     }
 
                     #------------------------------------
@@ -23834,7 +23893,7 @@ sub set_vertical_tightness_flags {
                 # allow 2-line method call to be closed up
                 || (   $rOpts_line_up_parentheses
                     && $token_end eq '('
-                    && $self->[_ris_lp_container_]
+                    && $self->[_rlp_object_by_seqno_]
                     ->{ $type_sequence_to_go[$iend] }
                     && $iend > $ibeg
                     && $types_to_go[ $iend - 1 ] ne 'b' )
@@ -23913,7 +23972,7 @@ sub set_vertical_tightness_flags {
                             # allow closing up 2-line method calls
                             || (   $rOpts_line_up_parentheses
                                 && $token_next eq ')'
-                                && $self->[_ris_lp_container_]
+                                && $self->[_rlp_object_by_seqno_]
                                 ->{ $type_sequence_to_go[$ibeg_next] } )
                         )
                     )
@@ -23949,7 +24008,7 @@ sub set_vertical_tightness_flags {
                     my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
                     if (   $rOpts_line_up_parentheses
                         && $total_weld_count
-                        && $self->[_ris_lp_container_]->{$seqno_ibeg_next}
+                        && $self->[_rlp_object_by_seqno_]->{$seqno_ibeg_next}
                         && $self->is_welded_at_seqno($seqno_ibeg_next) )
                     {
                         $min_lines  = 1;
@@ -24009,7 +24068,7 @@ sub set_vertical_tightness_flags {
             && !(
                    $token_end eq '='
                 && $rOpts_line_up_parentheses
-                && $self->[_ris_lp_container_]
+                && $self->[_rlp_object_by_seqno_]
                 ->{ $type_sequence_to_go[$ibeg_next] }
             )
 
