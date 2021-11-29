@@ -13049,6 +13049,11 @@ sub compare_indentation_levels {
         # - If a break is made after an opening token, then a break will
         #   also be made before the corresponding closing token.
 
+        # Returns '$i_nonblank':
+        #   = index of the token after which the breakpoint was actually placed
+        #   = undef if breakpoint was not set.
+        my $i_nonblank;
+
         if ( !defined($i) || $i < 0 ) {
 
             # Calls with bad index $i are harmless but waste time and should
@@ -13063,7 +13068,7 @@ sub compare_indentation_levels {
         }
 
         # Break after token $i
-        my ($i_nonblank) = $self->set_forced_breakpoint_AFTER($i);
+        $i_nonblank = $self->set_forced_breakpoint_AFTER($i);
 
         # If we break at an opening container..break at the closing
         my $set_closing;
@@ -13094,7 +13099,7 @@ EOM
             print STDOUT $msg;
         };
 
-        return;
+        return $i_nonblank;
     }
 
     sub set_forced_breakpoint_AFTER {
@@ -17374,7 +17379,14 @@ sub break_long_lines {
                 $ibr--;
             }
             if ( $ibr >= 0 ) {
-                $self->set_forced_breakpoint($ibr);
+                my $i_nonblank = $self->set_forced_breakpoint($ibr);
+
+                # Crude patch to prevent sub recombine_breakpoints from undoing
+                # this break, especially after an '='.  It will leave old
+                # breakpoints alone. See c098/x045 for some examples.
+                if ( defined($i_nonblank) ) {
+                    $old_breakpoint_to_go[$i_nonblank] = 1;
+                }
             }
             return;
         };
