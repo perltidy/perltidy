@@ -17318,79 +17318,6 @@ sub break_long_lines {
         my $i_line_start = -1;
         my $i_last_colon = -1;
 
-        #----------------------------------------------------------------------
-        # sub to set a requested break before an opening container in -lp mode.
-        #----------------------------------------------------------------------
-        my $do_requested_lp_break = sub {
-
-            my ( $lp_object, $i_opening ) = @_;
-
-            # Given:
-            #   $lp_object = the indentation object
-            #   $i_opening = index of the opening container
-
-            # Set any requested break at a token before this opening container
-            # token. This is often an '=' or '=>' but can also be things like
-            # '.', ',', 'return'.  It was defined by sub set_lp_breaks.
-
-            # Important:
-            #   For intact containers, call this at the closing token.
-            #   For broken containers, call this at the opening token.
-            # This will avoid needless breaks when it turns out that the
-            # container does not actually get broken.  This isn't known until
-            # the closing container for intact blocks.
-
-            my $i_start_2;
-            my $K_start_2 = $lp_object->get_K_begin_line();
-            return if ( !defined($K_start_2) );
-
-            $i_start_2 = $K_start_2 - $K_to_go[0];
-            return
-              if ( $i_start_2 < 0
-                || $i_start_2 > $max_index_to_go );
-
-            # Handle request to put a break break immediately before this token.
-            # We may not want to do that since we are also breaking after it.
-            if ( $i_start_2 == $i_opening ) {
-
-                # The following rules should be reviewed.  We may want to always
-                # allow the break.  If we do not do the break, the indentation
-                # may be off.
-
-                # RULE: don't break before it unless it is welded to a qw.
-                # This works well, but we may want to relax this to allow
-                # breaks in additional cases.
-                return
-                  if ( !$self->[_rK_weld_right_]->{ $K_to_go[$i_opening] } );
-                return unless ( $types_to_go[$max_index_to_go] eq 'q' );
-            }
-
-            # Only break for breakpoints at the same
-            # indentation level as the opening paren
-            my $test1 = $nesting_depth_to_go[$i_opening];
-            my $test2 = $nesting_depth_to_go[$i_start_2];
-            return if ( $test2 != $test1 );
-
-            # Back up at a blank (fixes case b932)
-            my $ibr = $i_start_2 - 1;
-            if (   $ibr > 0
-                && $types_to_go[$ibr] eq 'b' )
-            {
-                $ibr--;
-            }
-            if ( $ibr >= 0 ) {
-                my $i_nonblank = $self->set_forced_breakpoint($ibr);
-
-                # Crude patch to prevent sub recombine_breakpoints from undoing
-                # this break, especially after an '='.  It will leave old
-                # breakpoints alone. See c098/x045 for some examples.
-                if ( defined($i_nonblank) ) {
-                    $old_breakpoint_to_go[$i_nonblank] = 1;
-                }
-            }
-            return;
-        };
-
         #----------------------------------------
         # Main loop over all tokens in this batch
         #----------------------------------------
@@ -17661,8 +17588,11 @@ EOM
                     {
                         my $lp_object =
                           $self->[_rlp_object_by_seqno_]->{$type_sequence};
-                        $do_requested_lp_break->( $lp_object, $i )
-                          if ($lp_object);
+                        if ($lp_object) {
+                            my $K_begin_line = $lp_object->get_K_begin_line();
+                            my $i_begin_line = $K_begin_line - $K_to_go[0];
+                            $self->set_forced_lp_break( $i_begin_line, $i );
+                        }
                     }
                 }
 
@@ -18101,8 +18031,11 @@ EOM
                     # do special -lp breaks at the CLOSING token for INTACT
                     # blocks (because we might not do them if the block does
                     # not break open)
-                    $do_requested_lp_break->( $lp_object, $i_opening )
-                      if ($lp_object);
+                    if ($lp_object) {
+                        my $K_begin_line = $lp_object->get_K_begin_line();
+                        my $i_begin_line = $K_begin_line - $K_to_go[0];
+                        $self->set_forced_lp_break( $i_begin_line, $i_opening );
+                    }
 
                     # break after opening structure.
                     # note: break before closing structure will be automatic
@@ -19724,14 +19657,6 @@ sub get_available_spaces_to_go {
 
         my $nws  = @{$radjusted_levels};
         my $imin = 0;
-        my $imax = $max_index_to_go;
-
-        my $i_term = $imax;
-        if ( $tokens_to_go[$i_term] eq '#' && $i_term > 0 ) {
-            $i_term--;
-            $i_term--
-              if ( $tokens_to_go[$i_term] eq 'b' && $i_term > 0 );
-        }
 
         # The 'starting_in_quote' flag means that the first token is the first
         # token of a line and it is also the continuation of some kind of
@@ -19765,7 +19690,7 @@ sub get_available_spaces_to_go {
         #-----------------------------------
         # Loop over all tokens in this batch
         #-----------------------------------
-        foreach my $ii ( $imin .. $imax ) {
+        foreach my $ii ( $imin .. $max_index_to_go ) {
 
             my $KK          = $K_to_go[$ii];
             my $type        = $types_to_go[$ii];
@@ -19878,12 +19803,32 @@ sub get_available_spaces_to_go {
 
                             # For -xlp, we only need one nonblank token after
                             # the opening token.
-                            || (   $rOpts_extended_line_up_parentheses
-                                && $ii < $i_term )
+                            || $rOpts_extended_line_up_parentheses
                           )
                         {
                             $ii_begin_line         = $i_test + 1;
                             $lp_position_predictor = $test_position;
+
+                            #--------------------------------------------------
+                            # Fix for an opening container terminating a batch:
+                            #--------------------------------------------------
+                            # To get alignment of a -lp container with its
+                            # contents, we have to put a break after $i_test.
+                            # For $ii<$max_index_to_go, this will be done by
+                            # sub break_lists based on the indentation object.
+                            # But for $ii=$max_index_to_go, the indentation
+                            # object for this seqno will not be created until
+                            # the next batch, so we have to set a break at
+                            # $i_test right now in order to get one.
+                            if (   $ii == $max_index_to_go
+                                && !$block_type_to_go[$ii]
+                                && $type eq '{'
+                                && $seqno
+                                && !$ris_excluded_lp_container->{$seqno} )
+                            {
+                                $self->set_forced_lp_break( $ii_begin_line,
+                                    $ii );
+                            }
                         }
                     }
                 }
@@ -20492,6 +20437,74 @@ EOM
         return;
     }
 } ## end closure set_lp_indentation
+
+#----------------------------------------------------------------------
+# sub to set a requested break before an opening container in -lp mode.
+#----------------------------------------------------------------------
+sub set_forced_lp_break {
+
+    my ( $self, $i_begin_line, $i_opening ) = @_;
+
+    # Given:
+    #   $i_begin_line = index of break in the _to_go arrays
+    #   $i_opening = index of the opening container
+
+    # Set any requested break at a token before this opening container
+    # token. This is often an '=' or '=>' but can also be things like
+    # '.', ',', 'return'.  It was defined by sub set_lp_indentation.
+
+    # Important:
+    #   For intact containers, call this at the closing token.
+    #   For broken containers, call this at the opening token.
+    # This will avoid needless breaks when it turns out that the
+    # container does not actually get broken.  This isn't known until
+    # the closing container for intact blocks.
+
+    return
+      if ( $i_begin_line < 0
+        || $i_begin_line > $max_index_to_go );
+
+    # Handle request to put a break break immediately before this token.
+    # We may not want to do that since we are also breaking after it.
+    if ( $i_begin_line == $i_opening ) {
+
+        # The following rules should be reviewed.  We may want to always
+        # allow the break.  If we do not do the break, the indentation
+        # may be off.
+
+        # RULE: don't break before it unless it is welded to a qw.
+        # This works well, but we may want to relax this to allow
+        # breaks in additional cases.
+        return
+          if ( !$self->[_rK_weld_right_]->{ $K_to_go[$i_opening] } );
+        return unless ( $types_to_go[$max_index_to_go] eq 'q' );
+    }
+
+    # Only break for breakpoints at the same
+    # indentation level as the opening paren
+    my $test1 = $nesting_depth_to_go[$i_opening];
+    my $test2 = $nesting_depth_to_go[$i_begin_line];
+    return if ( $test2 != $test1 );
+
+    # Back up at a blank (fixes case b932)
+    my $ibr = $i_begin_line - 1;
+    if (   $ibr > 0
+        && $types_to_go[$ibr] eq 'b' )
+    {
+        $ibr--;
+    }
+    if ( $ibr >= 0 ) {
+        my $i_nonblank = $self->set_forced_breakpoint($ibr);
+
+        # Crude patch to prevent sub recombine_breakpoints from undoing
+        # this break, especially after an '='.  It will leave old
+        # breakpoints alone. See c098/x045 for some examples.
+        if ( defined($i_nonblank) ) {
+            $old_breakpoint_to_go[$i_nonblank] = 1;
+        }
+    }
+    return;
+}
 
 sub reduce_lp_indentation {
 
