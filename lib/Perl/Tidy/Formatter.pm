@@ -1479,6 +1479,29 @@ EOM
         $break_before_container_types{'('} = $_ if $_ && $_ > 0;
     }
 
+    #--------------------------------------------------------------
+    # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
+    #--------------------------------------------------------------
+    # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
+    # NOTE: we could make this more precise by looking at any exclusion
+    # flags for -lp, and allowing -bbx=2 for excluded types.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'ignore-old-breakpoints'}
+        && $rOpts->{'line-up-parentheses'} )
+    {
+        my @changed;
+        foreach my $key ( keys %break_before_container_types ) {
+            if ( $break_before_container_types{$key} == 2 ) {
+                $break_before_container_types{$key} = 1;
+                push @changed, $key;
+            }
+        }
+        if (@changed) {
+
+            # could write warning here
+        }
+    }
+
     %container_indentation_options = ();
     foreach my $pair (
         [ 'break-before-hash-brace-and-indent',     '{' ],

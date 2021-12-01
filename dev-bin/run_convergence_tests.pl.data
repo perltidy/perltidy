@@ -8402,6 +8402,31 @@ function(
 --maximum-line-length=41
 --variable-maximum-line-length
 
+==> b1266.in <==
+        $self->{SUMMARY} =[
+                           {
+                             'descr' => 'Total number of users using the site',
+                             'value' => commify ($total_users)
+                           }
+        ];
+
+        $self->{SUMMARY} =
+          [
+            { 'descr' => 'Total number of users using the site', 'value' => commify ($total_users) }
+          ];
+
+==> b1266.par <==
+--break-before-square-bracket=2
+--extended-continuation-indentation
+--line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=8
+--maximum-line-length=88
+--nowant-right-space='!= | * >= = - &= -= %= .= = != | += >= += >='
+--space-function-paren
+--square-bracket-tightness=2
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
