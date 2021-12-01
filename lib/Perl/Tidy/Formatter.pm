@@ -13383,7 +13383,15 @@ EOM
                 $token = $tokens_to_go[$max_index_to_go];
                 $type  = $types_to_go[$max_index_to_go];
             }
-            my $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
+            my $output_str = "";
+            if ( $max_index_to_go > 20 ) {
+                my $mm = $max_index_to_go - 10;
+                $output_str = join( "", @tokens_to_go[ 0 .. 10 ] ) . " ... "
+                  . join( "", @tokens_to_go[ $mm .. $max_index_to_go ] );
+            }
+            else {
+                $output_str = join "", @tokens_to_go[ 0 .. $max_index_to_go ];
+            }
             print STDERR <<EOM;
 grind got batch number $batch_count with $max_index_to_go tokens, last type '$type' tok='$token', text:
 $output_str
@@ -13821,8 +13829,7 @@ EOM
 
             # now we do a correction step to clean this up a bit
             # (The only time we would not do this is for debugging)
-            ( $ri_first, $ri_last ) =
-              $self->recombine_breakpoints( $ri_first, $ri_last )
+            $self->recombine_breakpoints( $ri_first, $ri_last )
               if ( $rOpts_recombine && @{$ri_first} > 1 );
 
             $self->insert_final_ternary_breaks( $ri_first, $ri_last )
@@ -14655,6 +14662,9 @@ sub break_equals {
         # $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end ) = @_;
 
+        # do nothing under extreme stress
+        return if ( $stress_level_alpha < 1 );
+
         my $rK_weld_right = $self->[_rK_weld_right_];
         my $rK_weld_left  = $self->[_rK_weld_left_];
 
@@ -14662,6 +14672,7 @@ sub break_equals {
         # n-1 and n.
         my @joint;
         my $nmax = @{$ri_end} - 1;
+        return if ( $nmax <= 0 );
         for my $n ( 1 .. $nmax ) {
             my $ibeg_1 = $ri_beg->[ $n - 1 ];
             my $iend_1 = $ri_end->[ $n - 1 ];
@@ -14689,7 +14700,16 @@ sub break_equals {
         # until there are no more possible recombinations
         my $nmax_last = @{$ri_end};
         my $reverse   = 0;
+
+        # This is an O(n-squared) loop, but not critical, so we put a limit on
+        # the number of operations (fixes issue c118, which pushed about 5.e5
+        # lines through here).
+        my $count     = 0;
+        my $count_max = 1000 / $nmax;
+        if ( $count_max > $nmax ) { $count_max = $nmax }
         while ($more_to_do) {
+            $count++;
+            last if ( $count > $count_max );
             my $n_best = 0;
             my $bs_best;
             my $nmax = @{$ri_end} - 1;
@@ -15685,7 +15705,7 @@ sub break_equals {
                 $more_to_do++;
             }
         }
-        return ( $ri_beg, $ri_end );
+        return;
     }
 } ## end closure recombine_breakpoints
 
@@ -19592,6 +19612,12 @@ sub get_available_spaces_to_go {
         $lp_position_predictor = 0;
         $max_lp_stack          = 0;
         $lp_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+
+        # we can turn off -lp if all levels will be at or above the cutoff
+        if ( $lp_cutoff_level <= 1 ) {
+            $rOpts_line_up_parentheses          = 0;
+            $rOpts_extended_line_up_parentheses = 0;
+        }
 
         $rLP = [];
 
