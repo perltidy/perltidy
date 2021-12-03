@@ -8427,6 +8427,31 @@ function(
 --square-bracket-tightness=2
 --variable-maximum-line-length
 
+==> b1267.in <==
+# S1
+    foreach (
+        grep
+        ( $self->{_unique_nodes}->{$_}
+            > 1,
+            keys
+            %{ $self->{_unique_nodes} } )
+    )
+# S2
+    foreach (
+        grep
+        ( $self->{_unique_nodes}->{$_}
+            > 1,
+            keys %{
+                $self->{_unique_nodes}
+            } )
+    )
+
+==> b1267.par <==
+--continuation-indentation=0
+--line-up-parentheses
+--maximum-line-length=30
+--variable-maximum-line-length
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

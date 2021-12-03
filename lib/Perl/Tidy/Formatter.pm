@@ -1482,6 +1482,7 @@ EOM
     #--------------------------------------------------------------
     # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
     #--------------------------------------------------------------
+    # The -vmll and -lp parameters do not really work well together.
     # To avoid instabilities, we will change any -bbx=2 to -bbx=1 (stable).
     # NOTE: we could make this more precise by looking at any exclusion
     # flags for -lp, and allowing -bbx=2 for excluded types.
@@ -1498,8 +1499,21 @@ EOM
         }
         if (@changed) {
 
-            # could write warning here
+            # we could write a warning here
         }
+    }
+
+    #-----------------------------------------------------------
+    # The combination -lp -vmll can be unstable if -ci<2 (b1267)
+    #-----------------------------------------------------------
+    # The -vmll and -lp parameters do not really work well together.
+    # This is a very crude fix for an unusual parameter combination.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'line-up-parentheses'}
+        && $rOpts->{'continuation-indentation'} < 2 )
+    {
+        $rOpts->{'continuation-indentation'} = 2;
+        ##Warn("Increased -ci=n to n=2 for stability with -lp and -vmll\n");
     }
 
     %container_indentation_options = ();
