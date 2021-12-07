@@ -498,13 +498,13 @@ $cb1 = $act_page->Checkbutton(
             expect => <<'#11...........',
 # test -xlp with comments, broken sub blocks, blank line, line length limit
 $cb1 = $act_page->Checkbutton(
-                               -text     => M "Verwenden",
-                               -variable => \$qualitaet_s_optimierung,
-                               -command  => sub {
-                                   change_state_all( $act_page1,
-                                                     $qualitaet_s_optimierung,
-                                                     { $cb1 => 1 } );    # sc
-                               },
+                              -text     => M "Verwenden",
+                              -variable => \$qualitaet_s_optimierung,
+                              -command  => sub {
+                                  change_state_all( $act_page1,
+                                       $qualitaet_s_optimierung, { $cb1 => 1 } )
+                                    ;    # sc
+                              },
 )->grid(
 
           # block comment

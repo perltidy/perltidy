@@ -468,10 +468,12 @@ BEGIN {
         _rending_multiline_qw_seqno_by_K_   => $i++,
         _rKrange_multiline_qw_by_seqno_     => $i++,
         _rmultiline_qw_has_extra_level_     => $i++,
-        _rbreak_before_container_by_seqno_  => $i++,
-        _ris_essential_old_breakpoint_      => $i++,
-        _roverride_cab3_                    => $i++,
-        _ris_assigned_structure_            => $i++,
+
+        _rcollapsed_length_by_seqno_       => $i++,
+        _rbreak_before_container_by_seqno_ => $i++,
+        _ris_essential_old_breakpoint_     => $i++,
+        _roverride_cab3_                   => $i++,
+        _ris_assigned_structure_           => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -870,6 +872,7 @@ sub new {
     $self->[_rKrange_multiline_qw_by_seqno_]     = {};
     $self->[_rmultiline_qw_has_extra_level_]     = {};
 
+    $self->[_rcollapsed_length_by_seqno_]       = {};
     $self->[_rbreak_before_container_by_seqno_] = {};
     $self->[_ris_essential_old_breakpoint_]     = {};
     $self->[_roverride_cab3_]                   = {};
@@ -5253,6 +5256,9 @@ EOM
     $self->set_excluded_lp_containers();
 
     $self->find_multiline_qw();
+
+    $self->collapsed_lengths()
+      if ($rOpts_extended_line_up_parentheses);
 
     $self->keep_old_line_breaks();
 
@@ -10292,7 +10298,7 @@ EOM
 
     # For the -lp option we need to mark all parent containers of
     # multiline quotes
-    if ($rOpts_line_up_parentheses) {
+    if ( $rOpts_line_up_parentheses && !$rOpts_extended_line_up_parentheses ) {
 
         while ( my ( $qw_seqno, $rKrange ) =
             each %{$rKrange_multiline_qw_by_seqno} )
@@ -10337,6 +10343,183 @@ EOM
     $self->[_rKrange_multiline_qw_by_seqno_] = $rKrange_multiline_qw_by_seqno;
     $self->[_rmultiline_qw_has_extra_level_] = $rmultiline_qw_has_extra_level;
 
+    return;
+}
+
+use constant DEBUG_COLLAPSED_LENGTHS => 0;
+
+my %is_handle_type;
+
+BEGIN {
+    my @q = qw( w C U G i k );
+    @is_handle_type{@q} = (1) x scalar(@q);
+
+    my $i = 0;
+    use constant {
+        _max_prong_len_ => $i++,
+        _handle_len_    => $i++,
+    };
+}
+
+sub collapsed_lengths {
+
+    my $self = shift;
+
+    #----------------------------------------------------------------
+    # Define the collapsed lengths of containers for -xlp indentation
+    #----------------------------------------------------------------
+
+    # We need an estimate of the minimum required line length starting at any
+    # opening container for the -xlp style. This is needed to avoid using too
+    # much indentation space for lower level containers and thereby causing
+    # outer container tokens to get excessive line breaks due to the maximum
+    # line length limit.
+
+    # At each node in the tree we imagine that we have a fork with a handle
+    # and collapsable prongs:
+    #                            |------------
+    #                            |--------
+    #                ------------|-------
+    #                 handle     |------------
+    #                            |--------
+    #                              prongs
+    #
+    # Each prong has a minimum collapsed length. The collapsed length at a node
+    # is the maximum of these minimum lengths, plus the handle length.  Each of
+    # the prongs may itself be a tree node.
+
+    # This is just a rough calculation to get an approximate starting point for
+    # indentation.  Later routines can be more precise.  It is important that
+    # these estimates be independent of the line breaks of the input stream in
+    # order to avoid instabilities.
+
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    my $rlines = $self->[_rlines_];
+
+    my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
+    my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
+
+    my $max_prong_len = 0;
+    my $handle_len    = 0;
+    my @stack;
+    push @stack, [ $max_prong_len, $handle_len ];
+
+    #----------------------------------
+    # step through all sequenced tokens
+    #----------------------------------
+    my $last_nonblank_type = 'b';
+    my $len                = 0;
+    my $KK                 = -1;
+    my $KNEXT              = $self->[_K_first_seq_item_];
+    my $type;
+    while ( defined($KNEXT) ) {
+        my $Kstop = $KNEXT;
+        $KNEXT = $rLL->[$Kstop]->[_KNEXT_SEQ_ITEM_];
+
+        #-----------------------------
+        # scan to next sequenced token
+        #-----------------------------
+        $len = 0;
+        while ( ++$KK <= $Kstop - 1 ) {
+            my $rtoken_vars = $rLL->[$KK];
+            my $type        = $rtoken_vars->[_TYPE_];
+            if ( $type eq 'b' ) { next }
+
+            # Ignore all comment lengths ...
+            # - block comments lengths can always be ignored
+            # - side comments lengths can be ignored if -iscl is set
+            #   BUT: we are always ignoring them here because they can mess
+            #   things up badly and -iscl is strongly recommended with this
+            #   style.
+            if ( $type eq '#' ) { $len = 0; next }
+
+            # Count lengths of things like 'xx => yy' as a single item
+            my $token_length = $rtoken_vars->[_TOKEN_LENGTH_];
+            if ( $type eq '=>' || $last_nonblank_type eq '=>' ) {
+                $len += $token_length;
+            }
+            else {
+                $len = $token_length;
+            }
+
+            if ( $len > $max_prong_len ) {
+                $max_prong_len = $len;
+            }
+
+            $last_nonblank_type = $type;
+        }
+
+        #------------------------------
+        # now handle the sequenced item
+        #------------------------------
+        my $token = $rLL->[$Kstop]->[_TOKEN_];
+        my $seqno = $rLL->[$Kstop]->[_TYPE_SEQUENCE_];
+
+        #----------------------------
+        # entering a new container...
+        #----------------------------
+        if ( $is_opening_token{$token} ) {
+
+            # save current prong length
+            $stack[-1]->[_max_prong_len_] = $max_prong_len;
+
+            # Start new prong one level deeper
+            my $handle_len = 0;
+            if ( $rblock_type_of_seqno->{$seqno} ) {
+
+                # code blocks do not use -lp indentation, but behave as if they
+                # had a handle of one indentation length
+                $handle_len = $rOpts_indent_columns;
+            }
+            elsif ( $is_handle_type{$last_nonblank_type} ) {
+                $handle_len = $len;
+            }
+
+            $max_prong_len = 0;
+            push @stack, [ $max_prong_len, $handle_len ];
+        }
+
+        #--------------------
+        # exiting a container
+        #--------------------
+        elsif ( $is_closing_token{$token} ) {
+            if (@stack) {
+
+                # The current prong ends - get its handle
+                my $item       = pop @stack;
+                my $handle_len = $item->[_handle_len_];
+
+                # Store the result.  Some extra space, '2', allows for
+                # length of an opening token, inside space, comma, ...
+                # This constant has been tuned to give good overall results.
+                my $collapsed_len = 2 + $max_prong_len;
+                $rcollapsed_length_by_seqno->{$seqno} = $collapsed_len;
+
+                # Restart scanning the lower level prong
+                if (@stack) {
+                    $max_prong_len = $stack[-1]->[_max_prong_len_];
+                    $collapsed_len += $handle_len;
+                    if ( $collapsed_len > $max_prong_len ) {
+                        $max_prong_len = $collapsed_len;
+                    }
+                }
+            }
+        }
+        $last_nonblank_type = $rLL->[$Kstop]->[_TYPE_];
+    }
+
+    if (DEBUG_COLLAPSED_LENGTHS) {
+        print "\nCollapsed lengths--\n";
+        foreach
+          my $key ( sort { $a <=> $b } keys %{$rcollapsed_length_by_seqno} )
+        {
+            my $clen = $rcollapsed_length_by_seqno->{$key};
+            print "$key -> $clen\n";
+        }
+    }
+
+    # we could get the collapsed length of the tree root here but do not need it
     return;
 }
 
@@ -14742,11 +14925,13 @@ sub break_equals {
 
             # Update the section list
             my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
-            if ( $excess <= 1
+            if (
+                $excess <= 1
 
                 # The number 5 here is an arbitrary small number intended
                 # to keep most small matches in one sub-section.
-                || ( defined($nend) && ( $nn < 5 || $nmax - $nn < 5 ) ) )
+                || ( defined($nend) && ( $nn < 5 || $nmax - $nn < 5 ) )
+              )
             {
                 $nend = $nn;
             }
@@ -14807,7 +14992,7 @@ sub break_equals {
             my ( $nbeg, $nend ) = @{$section};
 
             # number of ending lines to leave untouched in this pass
-            $nmax = @{$ri_end} - 1 ;
+            $nmax = @{$ri_end} - 1;
             my $num_freeze = $nmax - $nend;
 
             my $more_to_do = 1;
@@ -19834,11 +20019,13 @@ sub get_available_spaces_to_go {
         my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
         my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
         my $starting_in_quote   = $self->[_this_batch_]->[_starting_in_quote_];
+        my $K_opening_container = $self->[_K_opening_container_];    ##TESTING
         my $K_closing_container = $self->[_K_closing_container_];
         my $rlp_object_by_seqno = $self->[_rlp_object_by_seqno_];
         my $radjusted_levels    = $self->[_radjusted_levels_];
         my $rbreak_before_container_by_seqno =
           $self->[_rbreak_before_container_by_seqno_];
+        my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
 
         my $nws  = @{$radjusted_levels};
         my $imin = 0;
@@ -20210,8 +20397,22 @@ EOM
                 # otherwise use the space to the first non-blank level change
                 else {
 
-                    $in_lp_mode  = 1;
-                    $space_count = $lp_position_predictor;
+                    # see how much space we have
+                    my $test_space_count = $lp_position_predictor;
+                    my $excess           = 0;
+                    my $min_len =
+                      $rcollapsed_length_by_seqno->{$last_nonblank_seqno};
+                    if ( defined($min_len) ) {
+
+                        $excess =
+                          $test_space_count +
+                          $min_len -
+                          $maximum_line_length_at_level[$level];
+                        if ( $excess > 0 ) {
+                            $test_space_count -= $excess;
+
+                        }
+                    }
 
                     my $rLP_top             = $rLP->[$max_lp_stack];
                     my $min_gnu_indentation = $rLP_top->[_lp_space_count_];
@@ -20219,32 +20420,44 @@ EOM
                         $min_gnu_indentation =
                           $rLP_top->[_lp_object_]->get_spaces();
                     }
+                    $available_spaces =
+                      $test_space_count - $min_gnu_indentation;
 
-                    $available_spaces = $space_count - $min_gnu_indentation;
-                    if ( $available_spaces >= $standard_increment ) {
-                        $min_gnu_indentation += $standard_increment;
+                    # Do not start -lp indentation mode if no space
+                    if ( $available_spaces <= 0 && !$in_lp_mode ) {
+                        $space_count += $standard_increment;
                     }
-                    elsif ( $available_spaces > 1 ) {
-                        $min_gnu_indentation += $available_spaces + 1;
-                    }
-                    elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
-                        if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
-                            $min_gnu_indentation += 2;
+
+                    # Use -lp mode
+                    else {
+                        $space_count = $test_space_count;
+
+                        $in_lp_mode = 1;
+                        if ( $available_spaces >= $standard_increment ) {
+                            $min_gnu_indentation += $standard_increment;
+                        }
+                        elsif ( $available_spaces > 1 ) {
+                            $min_gnu_indentation += $available_spaces + 1;
+                        }
+                        elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
+                            if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
+                                $min_gnu_indentation += 2;
+                            }
+                            else {
+                                $min_gnu_indentation += 1;
+                            }
                         }
                         else {
-                            $min_gnu_indentation += 1;
+                            $min_gnu_indentation += $standard_increment;
                         }
-                    }
-                    else {
-                        $min_gnu_indentation += $standard_increment;
-                    }
-                    $available_spaces = $space_count - $min_gnu_indentation;
+                        $available_spaces = $space_count - $min_gnu_indentation;
 
-                    if ( $available_spaces < 0 ) {
-                        $space_count      = $min_gnu_indentation;
-                        $available_spaces = 0;
+                        if ( $available_spaces < 0 ) {
+                            $space_count      = $min_gnu_indentation;
+                            $available_spaces = 0;
+                        }
+                        $align_paren = 1;
                     }
-                    $align_paren = 1;
                 }
 
                 # update state, but not on a blank token
