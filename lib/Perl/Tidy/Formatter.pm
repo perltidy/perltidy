@@ -10351,7 +10351,7 @@ use constant DEBUG_COLLAPSED_LENGTHS => 0;
 my %is_handle_type;
 
 BEGIN {
-    my @q = qw( w C U G i k );
+    my @q = qw( w C U G i k => );
     @is_handle_type{@q} = (1) x scalar(@q);
 
     my $i = 0;
@@ -10423,7 +10423,7 @@ sub collapsed_lengths {
         $len = 0;
         while ( ++$KK <= $Kstop - 1 ) {
             my $rtoken_vars = $rLL->[$KK];
-            my $type        = $rtoken_vars->[_TYPE_];
+            $type = $rtoken_vars->[_TYPE_];
             if ( $type eq 'b' ) { next }
 
             # Ignore all comment lengths ...
@@ -10436,15 +10436,20 @@ sub collapsed_lengths {
 
             # Count lengths of things like 'xx => yy' as a single item
             my $token_length = $rtoken_vars->[_TOKEN_LENGTH_];
-            if ( $type eq '=>' || $last_nonblank_type eq '=>' ) {
+            if ( $type eq '=>' ) {
+                $len += $token_length + 1;
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+            }
+            elsif ( $last_nonblank_type eq '=>' ) {
                 $len += $token_length;
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+
+                # only one => per item
+                if ( $last_nonblank_type eq '=>' ) { $len = $token_length }
             }
             else {
                 $len = $token_length;
-            }
-
-            if ( $len > $max_prong_len ) {
-                $max_prong_len = $len;
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
 
             $last_nonblank_type = $type;
@@ -10474,6 +10479,7 @@ sub collapsed_lengths {
             }
             elsif ( $is_handle_type{$last_nonblank_type} ) {
                 $handle_len = $len;
+                $handle_len += 1 if ( $type eq 'b' );
             }
 
             $max_prong_len = 0;
@@ -20128,14 +20134,26 @@ sub get_available_spaces_to_go {
                     my $mll =
                       $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
 
+                    #------------------------------------------------------
+                    # Break if structure will reach the maximum line length
+                    #------------------------------------------------------
+
+                    # Historically, -lp just used one-half line length here
+                    my $len_increase = $rOpts_maximum_line_length / 2;
+
+                    # For -xlp, we can also use the pre-computed lengths
+                    my $min_len = $rcollapsed_length_by_seqno->{$seqno};
+                    if ( $min_len && $min_len > $len_increase ) {
+                        $len_increase = $min_len;
+                    }
+
                     if (
 
                         # the equals is not just before an open paren (testing)
                         ##!$too_close &&
 
-                        # if we are beyond the midpoint
-                        $lp_position_predictor >
-                        $mll - $rOpts_maximum_line_length / 2
+                        # if we might exceed the maximum line length
+                        $lp_position_predictor + $len_increase > $mll
 
                         # if a -bbx flag WANTS a break before this opening token
                         || (   $seqno
@@ -20397,13 +20415,14 @@ EOM
                 # otherwise use the space to the first non-blank level change
                 else {
 
-                    # see how much space we have
+                    # see how much space we have available
                     my $test_space_count = $lp_position_predictor;
                     my $excess           = 0;
                     my $min_len =
                       $rcollapsed_length_by_seqno->{$last_nonblank_seqno};
-                    if ( defined($min_len) ) {
+                    my $next_opening_too_far;
 
+                    if ( defined($min_len) ) {
                         $excess =
                           $test_space_count +
                           $min_len -
@@ -20411,6 +20430,10 @@ EOM
                         if ( $excess > 0 ) {
                             $test_space_count -= $excess;
 
+                            # will the next opening token be a long way out?
+                            $next_opening_too_far =
+                              $lp_position_predictor + $excess >
+                              $maximum_line_length_at_level[$level];
                         }
                     }
 
@@ -20423,9 +20446,13 @@ EOM
                     $available_spaces =
                       $test_space_count - $min_gnu_indentation;
 
-                    # Do not start -lp indentation mode if no space
-                    if ( $available_spaces <= 0 && !$in_lp_mode ) {
+                    # Do not startup -lp indentation mode if no space ...
+                    # ... or if it puts the opening far to the right
+                    if ( !$in_lp_mode
+                        && ( $available_spaces <= 0 || $next_opening_too_far ) )
+                    {
                         $space_count += $standard_increment;
+                        $available_spaces = 0;
                     }
 
                     # Use -lp mode
@@ -20532,7 +20559,7 @@ EOM
                     # nested container will still probably be able to shift its
                     # parameters to the right for proper alignment, so in most
                     # cases this will not be noticeable.
-                    if ( $available_spaces > 0 ) {
+                    if ( $available_spaces > 0 && $lp_object ) {
                         my $halfway =
                           $maximum_line_length_at_level[$level] -
                           $rOpts_maximum_line_length / 2;
