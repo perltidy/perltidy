@@ -22,11 +22,10 @@ BEGIN {
         _available_spaces_   => $i++,
         _closed_             => $i++,
         _comma_count_        => $i++,
-        _sequence_number_    => $i++,
         _lp_item_index_      => $i++,
         _have_child_         => $i++,
         _recoverable_spaces_ => $i++,
-        _align_paren_        => $i++,
+        _align_seqno_        => $i++,
         _marked_             => $i++,
         _stack_depth_        => $i++,
         _K_begin_line_       => $i++,
@@ -79,8 +78,8 @@ sub new {
     # recoverable_spaces =>  # how many spaces to the right
     #                        # we would like to move to get
     #                        # alignment (negative if left)
-    # align_paren        =>  # do we want to try to align
-    #                        # with an opening structure?
+    # align_seqno        =>  # if we are aligning with an opening structure,
+    #                        # this is its seqno
     # marked             =>  # if visited by corrector logic
     # stack_depth        =>  # indentation nesting depth
     # K_begin_line   =>  # first token index K of this level
@@ -96,7 +95,7 @@ sub new {
     $self->[_lp_item_index_]      = $input_hash{lp_item_index};
     $self->[_have_child_]         = 0;
     $self->[_recoverable_spaces_] = 0;
-    $self->[_align_paren_]        = $input_hash{align_paren};
+    $self->[_align_seqno_]        = $input_hash{align_seqno};
     $self->[_marked_]             = 0;
     $self->[_stack_depth_]        = $input_hash{stack_depth};
     $self->[_K_begin_line_]       = $input_hash{K_begin_line};
@@ -188,8 +187,8 @@ sub decrease_available_spaces {
     return $self->[_available_spaces_];
 }
 
-sub get_align_paren {
-    return $_[0]->[_align_paren_];
+sub get_align_seqno {
+    return $_[0]->[_align_seqno_];
 }
 
 sub get_recoverable_spaces {

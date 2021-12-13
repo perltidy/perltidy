@@ -1,12 +1,17 @@
-    # the closing braces should have the same position for these two hashes with -gnu
+    # These closing braces no longer have the same position with -gnu after an
+    # update 13 dec 2021 in which the vertical aligner zeros recoverable spaces.
+    # But adding the -xlp should make them all have the same indentation.
+    $var1 = {
+             'foo10' => undef,
+             'foo72' => ' ',
+            };
     $var1 = {
         'foo10' => undef,
         'foo72' => '
 ',
-            };
+    };
     $var2 = {
         'foo72' => '
 ',
         'foo10' => undef,
             };
-

@@ -16346,7 +16346,7 @@ sub correct_lp_indentation {
 
                 # looking for indentation item for which we are aligning
                 # with parens, braces, and brackets
-                next unless ( $indentation->get_align_paren() );
+                next unless ( $indentation->get_align_seqno() );
 
                 # skip closed container on this line
                 if ( $i > $ibeg ) {
@@ -20363,7 +20363,7 @@ EOM
                 # reduced as necessary when long lines are encountered or when
                 # it becomes clear that we do not have a good list.
                 my $available_spaces = 0;
-                my $align_paren      = 0;
+                my $align_seqno      = 0;
                 my $excess           = 0;
 
                 my $last_nonblank_seqno;
@@ -20483,7 +20483,7 @@ EOM
                             $space_count      = $min_gnu_indentation;
                             $available_spaces = 0;
                         }
-                        $align_paren = 1;
+                        $align_seqno = $last_nonblank_seqno;
                     }
                 }
 
@@ -20522,7 +20522,7 @@ EOM
                             ci_level         => $ci_level,
                             available_spaces => $available_spaces,
                             lp_item_index    => $lp_item_index,
-                            align_paren      => $align_paren,
+                            align_seqno      => $align_seqno,
                             stack_depth      => $max_lp_stack,
                             K_begin_line     => $K_begin_line,
                         );

@@ -104,7 +104,13 @@ my $mapping = [
 ----------
 
         'gnu6' => <<'----------',
-# the closing braces should have the same position for these two hashes with -gnu
+# These closing braces no longer have the same position with -gnu after an
+# update 13 dec 2021 in which the vertical aligner zeros recoverable spaces.
+# But adding the -xlp should make them all have the same indentation.
+    $var1 = {
+        'foo10' => undef,
+        'foo72' => ' ',
+    };
     $var1 = {
         'foo10' => undef,
         'foo72' => '
@@ -115,7 +121,6 @@ my $mapping = [
 ',
         'foo10' => undef,
     };
-
 ----------
 
         'hanging_side_comments3' => <<'----------',
@@ -409,7 +414,13 @@ else {
             source => "gnu6",
             params => "def",
             expect => <<'#9...........',
-# the closing braces should have the same position for these two hashes with -gnu
+    # These closing braces no longer have the same position with -gnu after an
+    # update 13 dec 2021 in which the vertical aligner zeros recoverable spaces.
+    # But adding the -xlp should make them all have the same indentation.
+    $var1 = {
+        'foo10' => undef,
+        'foo72' => ' ',
+    };
     $var1 = {
         'foo10' => undef,
         'foo72' => '
@@ -420,7 +431,6 @@ else {
 ',
         'foo10' => undef,
     };
-
 #9...........
         },
 
@@ -428,18 +438,23 @@ else {
             source => "gnu6",
             params => "gnu",
             expect => <<'#10...........',
-    # the closing braces should have the same position for these two hashes with -gnu
+    # These closing braces no longer have the same position with -gnu after an
+    # update 13 dec 2021 in which the vertical aligner zeros recoverable spaces.
+    # But adding the -xlp should make them all have the same indentation.
+    $var1 = {
+             'foo10' => undef,
+             'foo72' => ' ',
+            };
     $var1 = {
         'foo10' => undef,
         'foo72' => '
 ',
-            };
+    };
     $var2 = {
         'foo72' => '
 ',
         'foo10' => undef,
             };
-
 #10...........
         },
 
