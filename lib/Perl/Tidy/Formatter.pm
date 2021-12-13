@@ -24010,7 +24010,10 @@ sub make_paren_name {
             # indented, but this is better than frequently leaving it not
             # indented enough.
             my $last_spaces = get_spaces($last_indentation_written);
-            if ( !$is_closing_token{$last_leading_token} ) {
+
+            if ( ref($last_indentation_written)
+                && !$is_closing_token{$last_leading_token} )
+            {
                 $last_spaces +=
                   get_recoverable_spaces($last_indentation_written);
             }
@@ -24018,14 +24021,32 @@ sub make_paren_name {
             # reset the indentation to the new space count if it works
             # only options are all or none: nothing in-between looks good
             $lev = $level_beg;
-            if ( $space_count < $last_spaces ) {
+
+            my $diff = $last_spaces - $space_count;
+            if ( $diff > 0 ) {
                 $indentation = $space_count;
             }
-
-            # revert to default if it doesn't work
             else {
-                $space_count = leading_spaces_to_go($ibeg);
-                if ( $default_adjust_indentation == 0 ) {
+
+                # We need to fix things ... but there is no good way to do it.
+                # The best solution is for the user to use a longer maximum
+                # line length.  We could get a smooth variation if we just move
+                # the paren in using
+                #    $space_count -= ( 1 - $diff );
+                # But unfortunately this can give a rather unbalanced look.
+
+                # For -xlp we currently allow a tolerance of one indentation
+                # level and then revert to a simpler default.  This will jump
+                # suddenly but keeps a balanced look.
+                if (   $rOpts_extended_line_up_parentheses
+                    && $diff >= -$rOpts_indent_columns
+                    && $space_count > $leading_spaces_beg )
+                {
+                    $indentation = $space_count;
+                }
+
+                # Otherwise revert to defaults
+                elsif ( $default_adjust_indentation == 0 ) {
                     $indentation = $leading_spaces_beg;
                 }
                 elsif ( $default_adjust_indentation == 1 ) {
