@@ -10447,6 +10447,14 @@ sub collapsed_lengths {
                 # only one => per item
                 if ( $last_nonblank_type eq '=>' ) { $len = $token_length }
             }
+            elsif ( $type eq 'h' ) {
+                my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
+                my $rK_range = $rlines->[$iline]->{_rK_range};
+                my ( $K_first, $K_last ) = @{$rK_range};
+                $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] -
+                  $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+            }
             else {
                 $len = $token_length;
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
