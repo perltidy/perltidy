@@ -1513,6 +1513,12 @@ sub _flush_group_lines {
         );
     }
 
+    # Let the formatter know that this object has been processed and any
+    # recoverable spaces have been handled.  This is needed for setting the
+    # closing paren location in -lp mode.
+    my $object = $rgroup_lines->[0]->get_indentation();
+    if ( ref($object) ) { $object->set_recoverable_spaces(0) }
+
     $self->initialize_for_new_group();
     return;
 }
