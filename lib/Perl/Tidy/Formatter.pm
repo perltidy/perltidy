@@ -16247,6 +16247,8 @@ sub note_embedded_tab {
     return;
 }
 
+use constant DEBUG_CORRECT_LP => 0;
+
 sub correct_lp_indentation {
 
     # When the -lp option is used, we need to make a last pass through
@@ -16257,7 +16259,9 @@ sub correct_lp_indentation {
     # tries to patch things up once the actual opening paren locations
     # are known.
     my ( $self, $ri_first, $ri_last ) = @_;
-    my $do_not_pad = 0;
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
+    my $do_not_pad          = 0;
 
     #  Note on flag '$do_not_pad':
     #  We want to avoid a situation like this, where the aligner inserts
@@ -16331,70 +16335,76 @@ sub correct_lp_indentation {
     #-------------------------------------------------------------------
     # PASS 2: look for and fix other problems in each line of this batch
     #-------------------------------------------------------------------
+
+    # look at each output line ...
     my ( $ibeg, $iend );
     foreach my $line ( 0 .. $max_line ) {
         $ibeg = $ri_first->[$line];
         $iend = $ri_last->[$line];
 
-        # looking at each token in this output line..
+        # looking at each token in this output line ...
         foreach my $i ( $ibeg .. $iend ) {
 
             # How many space characters to place before this token
             # for special alignment.  Actual padding is done in the
             # continue block.
 
-            # looking for next unvisited indentation item
+            # looking for next unvisited indentation item ...
             my $indentation = $leading_spaces_to_go[$i];
 
             # This is just for indentation objects (c098)
             next unless ( ref($indentation) );
 
-            if ( !$indentation->get_marked() ) {
-                $indentation->set_marked(1);
+            # Visit each indentation object just once
+            next if ( $indentation->get_marked() );
 
-                # looking for indentation item for which we are aligning
-                # with parens, braces, and brackets
-                next unless ( $indentation->get_align_seqno() );
+            # Mark first visit
+            $indentation->set_marked(1);
 
-                # skip closed container on this line
-                if ( $i > $ibeg ) {
-                    my $im = max( $ibeg, $iprev_to_go[$i] );
-                    if (   $type_sequence_to_go[$im]
-                        && $mate_index_to_go[$im] <= $iend )
-                    {
-                        next;
+            # Skip indentation objects which do not align with container tokens
+            my $align_seqno = $indentation->get_align_seqno();
+            next unless ($align_seqno);
+
+            # Skip a container which is entirely on this line
+            my $Ko = $K_opening_container->{$align_seqno};
+            my $Kc = $K_closing_container->{$align_seqno};
+            if ( defined($Ko) && defined($Kc) ) {
+                next if ( $Ko >= $K_to_go[$ibeg] && $Kc <= $K_to_go[$iend] );
+            }
+
+            if ( $line == 1 && $i == $ibeg ) {
+                $do_not_pad = 1;
+            }
+
+            #--------------------------------------------
+            # Now see what the error is and try to fix it
+            #--------------------------------------------
+            my $closing_index = $indentation->get_closed();
+            my $predicted_pos = $indentation->get_spaces();
+
+            # Find actual position:
+            my $actual_pos;
+
+            if ( $i == $ibeg ) {
+
+                # Case 1: token is first character of of batch - table lookup
+                if ( $line == 0 ) {
+
+                    $actual_pos = $predicted_pos;
+
+                    my ( $indent, $offset, $is_leading, $exists ) =
+                      get_saved_opening_indentation($align_seqno);
+                    if ( defined($indent) ) {
+
+                        # FIXME: should use '1' here if no space after opening
+                        # and '2' if want space; hardwired at 1 like -gnu-style
+                        $actual_pos = get_spaces($indent) + $offset + 1;
                     }
                 }
 
-                if ( $line == 1 && $i == $ibeg ) {
-                    $do_not_pad = 1;
-                }
+                # Case 2: token starts a new line - use length of previous line
+                else {
 
-                # Ok, let's see what the error is and try to fix it
-                my $actual_pos;
-                my $predicted_pos = $indentation->get_spaces();
-                if ( $i > $ibeg ) {
-
-                    # token is mid-line - use length to previous token
-                    $actual_pos = total_line_length( $ibeg, $i - 1 );
-
-                    # for mid-line token, we must check to see if all
-                    # additional lines have continuation indentation,
-                    # and remove it if so.  Otherwise, we do not get
-                    # good alignment.
-                    my $closing_index = $indentation->get_closed();
-                    if ( $closing_index > $iend ) {
-                        my $ibeg_next = $ri_first->[ $line + 1 ];
-                        if ( $ci_levels_to_go[$ibeg_next] > 0 ) {
-                            $self->undo_lp_ci( $line, $i, $closing_index,
-                                $ri_first, $ri_last );
-                        }
-                    }
-                }
-                elsif ( $line > 0 ) {
-
-                    # handle case where token starts a new line;
-                    # use length of previous line
                     my $ibegm = $ri_first->[ $line - 1 ];
                     my $iendm = $ri_last->[ $line - 1 ];
                     $actual_pos = total_line_length( $ibegm, $iendm );
@@ -16402,125 +16412,166 @@ sub correct_lp_indentation {
                     # follow -pt style
                     ++$actual_pos
                       if ( $types_to_go[ $iendm + 1 ] eq 'b' );
-                }
-                else {
 
-                    # token is first character of first line of batch
-                    $actual_pos = $predicted_pos;
-                }
-
-                my $move_right = $actual_pos - $predicted_pos;
-
-                # done if no error to correct (gnu2.t)
-                if ( $move_right == 0 ) {
-                    $indentation->set_recoverable_spaces($move_right);
-                    next;
-                }
-
-                # if we have not seen closure for this indentation in
-                # this batch, we can only pass on a request to the
-                # vertical aligner
-                my $closing_index = $indentation->get_closed();
-
-                if ( $closing_index < 0 ) {
-                    $indentation->set_recoverable_spaces($move_right);
-                    next;
-                }
-
-                # If necessary, look ahead to see if there is really any
-                # leading whitespace dependent on this whitespace, and
-                # also find the longest line using this whitespace.
-                # Since it is always safe to move left if there are no
-                # dependents, we only need to do this if we may have
-                # dependent nodes or need to move right.
-
-                my $right_margin = 0;
-                my $have_child   = $indentation->get_have_child();
-
-                my %saw_indentation;
-                my $line_count = 1;
-                $saw_indentation{$indentation} = $indentation;
-
-                if ( $have_child || $move_right > 0 ) {
-                    $have_child = 0;
-                    my $max_length = 0;
-                    if ( $i == $ibeg ) {
-                        $max_length = total_line_length( $ibeg, $iend );
-                    }
-
-                    # look ahead at the rest of the lines of this batch..
-                    foreach my $line_t ( $line + 1 .. $max_line ) {
-                        my $ibeg_t = $ri_first->[$line_t];
-                        my $iend_t = $ri_last->[$line_t];
-                        last if ( $closing_index <= $ibeg_t );
-
-                        # remember all different indentation objects
-                        my $indentation_t = $leading_spaces_to_go[$ibeg_t];
-                        $saw_indentation{$indentation_t} = $indentation_t;
-                        $line_count++;
-
-                        # remember longest line in the group
-                        my $length_t = total_line_length( $ibeg_t, $iend_t );
-                        if ( $length_t > $max_length ) {
-                            $max_length = $length_t;
-                        }
-                    }
-                    $right_margin =
-                      $maximum_line_length_at_level[ $levels_to_go[$ibeg] ] -
-                      $max_length;
-                    if ( $right_margin < 0 ) { $right_margin = 0 }
-                }
-
-                my $first_line_comma_count =
-                  grep { $_ eq ',' } @types_to_go[ $ibeg .. $iend ];
-                my $comma_count = $indentation->get_comma_count();
-                my $arrow_count = $indentation->get_arrow_count();
-
-                # This is a simple approximate test for vertical alignment:
-                # if we broke just after an opening paren, brace, bracket,
-                # and there are 2 or more commas in the first line,
-                # and there are no '=>'s,
-                # then we are probably vertically aligned.  We could set
-                # an exact flag in sub break_lists, but this is good
-                # enough.
-                my $indentation_count = keys %saw_indentation;
-                my $is_vertically_aligned =
-                  (      $i == $ibeg
-                      && $first_line_comma_count > 1
-                      && $indentation_count == 1
-                      && ( $arrow_count == 0 || $arrow_count == $line_count ) );
-
-                # Make the move if possible ..
-                if (
-
-                    # we can always move left
-                    $move_right < 0
-
-                    # but we should only move right if we are sure it will
-                    # not spoil vertical alignment
-                    || ( $comma_count == 0 )
-                    || ( $comma_count > 0 && !$is_vertically_aligned )
-                  )
-                {
-                    my $move =
-                      ( $move_right <= $right_margin )
-                      ? $move_right
-                      : $right_margin;
-
-                    foreach ( keys %saw_indentation ) {
-                        $saw_indentation{$_}
-                          ->permanently_decrease_available_spaces( -$move );
-                    }
-                }
-
-                # Otherwise, record what we want and the vertical aligner
-                # will try to recover it.
-                else {
-                    $indentation->set_recoverable_spaces($move_right);
                 }
             }
-        }
-    }
+
+            # Case 3: $i>$ibeg: token is mid-line - use length to previous token
+            else {
+
+                $actual_pos = total_line_length( $ibeg, $i - 1 );
+
+                # for mid-line token, we must check to see if all
+                # additional lines have continuation indentation,
+                # and remove it if so.  Otherwise, we do not get
+                # good alignment.
+                if ( $closing_index > $iend ) {
+                    my $ibeg_next = $ri_first->[ $line + 1 ];
+                    if ( $ci_levels_to_go[$ibeg_next] > 0 ) {
+                        $self->undo_lp_ci( $line, $i, $closing_index,
+                            $ri_first, $ri_last );
+                    }
+                }
+            }
+
+            # By how many spaces (plus or minus) would we need to increase the
+            # indentation to get alignment with the opening token?
+            my $move_right = $actual_pos - $predicted_pos;
+
+            if (DEBUG_CORRECT_LP) {
+                print
+"CORRECT_LP for seq=$align_seqno, predicted pos=$predicted_pos actual=$actual_pos => move right=$move_right\n";
+            }
+
+            # nothing more to do if no error to correct (gnu2.t)
+            if ( $move_right == 0 ) {
+                $indentation->set_recoverable_spaces($move_right);
+                next;
+            }
+
+            # Get any collapsed length defined for -xlp
+            my $collapsed_length =
+              $self->[_rcollapsed_length_by_seqno_]->{$align_seqno};
+            $collapsed_length = 0 unless ( defined($collapsed_length) );
+
+            # if we have not seen closure for this indentation in this batch,
+            # and do not have a collapsed length estimate, we can only pass on
+            # a request to the vertical aligner
+            if ( $closing_index < 0 && !$collapsed_length ) {
+                $indentation->set_recoverable_spaces($move_right);
+                next;
+            }
+
+            # If necessary, look ahead to see if there is really any leading
+            # whitespace dependent on this whitespace, and also find the
+            # longest line using this whitespace.  Since it is always safe to
+            # move left if there are no dependents, we only need to do this if
+            # we may have dependent nodes or need to move right.
+
+            my $have_child = $indentation->get_have_child();
+            my %saw_indentation;
+            my $line_count = 1;
+            $saw_indentation{$indentation} = $indentation;
+
+            # How far can we move right before we hit the limit?
+            # let $right_margen = the number of spaces that we can increase
+            # the current indentation before hitting the maximum line length.
+            my $right_margin = 0;
+
+            if ( $have_child || $move_right > 0 ) {
+                $have_child = 0;
+
+                # include estimated collapsed length for incomplete containers
+                my $max_length = 0;
+                if ( $Kc > $K_to_go[$max_index_to_go] ) {
+                    $max_length =
+                      $collapsed_length + leading_spaces_to_go($ibeg);
+                }
+
+                if ( $i == $ibeg ) {
+                    my $length = total_line_length( $ibeg, $iend );
+                    if ( $length > $max_length ) { $max_length = $length }
+                }
+
+                # look ahead at the rest of the lines of this batch..
+                foreach my $line_t ( $line + 1 .. $max_line ) {
+                    my $ibeg_t = $ri_first->[$line_t];
+                    my $iend_t = $ri_last->[$line_t];
+                    last if ( $closing_index <= $ibeg_t );
+
+                    # remember all different indentation objects
+                    my $indentation_t = $leading_spaces_to_go[$ibeg_t];
+                    $saw_indentation{$indentation_t} = $indentation_t;
+                    $line_count++;
+
+                    # remember longest line in the group
+                    my $length_t = total_line_length( $ibeg_t, $iend_t );
+                    if ( $length_t > $max_length ) {
+                        $max_length = $length_t;
+                    }
+                }
+                $right_margin =
+                  $maximum_line_length_at_level[ $levels_to_go[$ibeg] ] -
+                  $max_length;
+                if ( $right_margin < 0 ) { $right_margin = 0 }
+            }
+
+            my $first_line_comma_count =
+              grep { $_ eq ',' } @types_to_go[ $ibeg .. $iend ];
+            my $comma_count = $indentation->get_comma_count();
+            my $arrow_count = $indentation->get_arrow_count();
+
+            # This is a simple approximate test for vertical alignment:
+            # if we broke just after an opening paren, brace, bracket,
+            # and there are 2 or more commas in the first line,
+            # and there are no '=>'s,
+            # then we are probably vertically aligned.  We could set
+            # an exact flag in sub break_lists, but this is good
+            # enough.
+            my $indentation_count = keys %saw_indentation;
+            my $is_vertically_aligned =
+              (      $i == $ibeg
+                  && $first_line_comma_count > 1
+                  && $indentation_count == 1
+                  && ( $arrow_count == 0 || $arrow_count == $line_count ) );
+
+            # Make the move if possible ..
+            if (
+
+                # we can always move left
+                $move_right < 0
+
+                # -xlp
+
+                # incomplete container
+                || (   $rOpts_extended_line_up_parentheses
+                    && $Kc > $K_to_go[$max_index_to_go] )
+                || $closing_index < 0
+
+                # but we should only move right if we are sure it will
+                # not spoil vertical alignment
+                || ( $comma_count == 0 )
+                || ( $comma_count > 0 && !$is_vertically_aligned )
+              )
+            {
+                my $move =
+                  ( $move_right <= $right_margin )
+                  ? $move_right
+                  : $right_margin;
+
+                foreach ( keys %saw_indentation ) {
+                    $saw_indentation{$_}
+                      ->permanently_decrease_available_spaces( -$move );
+                }
+            }
+
+            # Otherwise, record what we want and the vertical aligner
+            # will try to recover it.
+            else {
+                $indentation->set_recoverable_spaces($move_right);
+            }
+        } ## end loop over tokens in a line
+    } ## end loop over lines
     return $do_not_pad;
 }
 

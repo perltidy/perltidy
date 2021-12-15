@@ -507,10 +507,10 @@ $cb1 = $act_page->Checkbutton(
                               },
 )->grid(
 
-          # block comment
-          -row    => $gridy++,
-          -column => 2,
-          -sticky => 'e'
+        # block comment
+        -row    => $gridy++,
+        -column => 2,
+        -sticky => 'e'
 );
 #11...........
         },
