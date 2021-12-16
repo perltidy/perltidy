@@ -10348,6 +10348,11 @@ EOM
 
 use constant DEBUG_COLLAPSED_LENGTHS => 0;
 
+# Minimum space reserved for contents of a code block.  A value of 40 has given
+# reasonable results.  With a large line length, say -l=120, this will not
+# normally be noticable but it will prevent making a mess in some edge cases.
+use constant MIN_BLOCK_LEN => 40;
+
 my %is_handle_type;
 
 BEGIN {
@@ -10393,9 +10398,11 @@ sub collapsed_lengths {
     # these estimates be independent of the line breaks of the input stream in
     # order to avoid instabilities.
 
-    my $rLL    = $self->[_rLL_];
-    my $Klimit = $self->[_Klimit_];
-    my $rlines = $self->[_rlines_];
+    my $rLL                 = $self->[_rLL_];
+    my $Klimit              = $self->[_Klimit_];
+    my $rlines              = $self->[_rlines_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
 
     my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
     my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
@@ -10476,6 +10483,7 @@ sub collapsed_lengths {
 
             # save current prong length
             $stack[-1]->[_max_prong_len_] = $max_prong_len;
+            $max_prong_len = 0;
 
             # Start new prong one level deeper
             my $handle_len = 0;
@@ -10484,13 +10492,13 @@ sub collapsed_lengths {
                 # code blocks do not use -lp indentation, but behave as if they
                 # had a handle of one indentation length
                 $handle_len = $rOpts_indent_columns;
+
             }
             elsif ( $is_handle_type{$last_nonblank_type} ) {
                 $handle_len = $len;
                 $handle_len += 1 if ( $type eq 'b' );
             }
 
-            $max_prong_len = 0;
             push @stack, [ $max_prong_len, $handle_len ];
         }
 
@@ -10501,13 +10509,59 @@ sub collapsed_lengths {
             if (@stack) {
 
                 # The current prong ends - get its handle
-                my $item       = pop @stack;
-                my $handle_len = $item->[_handle_len_];
+                my $item          = pop @stack;
+                my $handle_len    = $item->[_handle_len_];
+                my $collapsed_len = $max_prong_len;
+
+                #------------------------------------------
+                # Rules to avoid scrunching code blocks ...
+                #------------------------------------------
+                # Some test cases:
+                # c098/x107 x108 x110 x112 x114 x115 x117 x118 x119
+                if ( $rblock_type_of_seqno->{$seqno} ) {
+
+                    my $K_o          = $K_opening_container->{$seqno};
+                    my $K_c          = $K_closing_container->{$seqno};
+                    my $block_length = MIN_BLOCK_LEN;
+                    my $is_one_line_block;
+                    my $level = $rLL->[$K_o]->[_LEVEL_];
+                    if ( defined($K_o) && defined($K_c) ) {
+                        my $iline_o = $rLL->[$K_o]->[_LINE_INDEX_];
+                        my $iline_c = $rLL->[$K_c]->[_LINE_INDEX_];
+                        my $block_length =
+                          $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
+                          $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
+                        $is_one_line_block = $iline_c == $iline_o;
+                    }
+
+                    # Code block rule 1: Use the total block length if it is
+                    # less than the minimum.
+                    if ( $block_length < MIN_BLOCK_LEN ) {
+                        $collapsed_len = $block_length;
+                    }
+
+                    # Code block rule 2: Use the full length of a one-line
+                    # block to avoid breaking it, unless extremely long.  We do
+                    # not need to do a precise check here, because if it breaks
+                    # then it will stay broken on later iterations.
+                    elsif ($is_one_line_block
+                        && $block_length <
+                        $maximum_line_length_at_level[$level] )
+                    {
+                        $collapsed_len = $block_length;
+                    }
+
+                    # Code block rule 3: Otherwise the length should be at
+                    # least MIN_BLOCK_LEN to avoid scrunching code blocks.
+                    elsif ( $collapsed_len < MIN_BLOCK_LEN ) {
+                        $collapsed_len = MIN_BLOCK_LEN;
+                    }
+                }
 
                 # Store the result.  Some extra space, '2', allows for
                 # length of an opening token, inside space, comma, ...
                 # This constant has been tuned to give good overall results.
-                my $collapsed_len = 2 + $max_prong_len;
+                $collapsed_len += 2;
                 $rcollapsed_length_by_seqno->{$seqno} = $collapsed_len;
 
                 # Restart scanning the lower level prong
@@ -16454,6 +16508,11 @@ sub correct_lp_indentation {
               $self->[_rcollapsed_length_by_seqno_]->{$align_seqno};
             $collapsed_length = 0 unless ( defined($collapsed_length) );
 
+            if (DEBUG_CORRECT_LP) {
+                print
+"CORRECT_LP for seq=$align_seqno, collapsed length is $collapsed_length\n";
+            }
+
             # if we have not seen closure for this indentation in this batch,
             # and do not have a collapsed length estimate, we can only pass on
             # a request to the vertical aligner
@@ -16558,6 +16617,11 @@ sub correct_lp_indentation {
                   ( $move_right <= $right_margin )
                   ? $move_right
                   : $right_margin;
+
+                if (DEBUG_CORRECT_LP) {
+                    print
+                      "CORRECT_LP for seq=$align_seqno, moving $move spaces\n";
+                }
 
                 foreach ( keys %saw_indentation ) {
                     $saw_indentation{$_}
@@ -20573,6 +20637,17 @@ EOM
                             && $ii_begin_line <= $max_index_to_go )
                         {
                             $K_begin_line = $K_to_go[$ii_begin_line];
+                        }
+
+                        # Minor Fix: when creating indentation at a side
+                        # comment we don't know what the space to the actual
+                        # next code token will be.  We will allow a space for
+                        # sub correct_lp to move it in if necessary.
+                        if (   $type eq '#'
+                            && $max_index_to_go > 0
+                            && $align_seqno )
+                        {
+                            $available_spaces += 1;
                         }
 
                         $lp_object = Perl::Tidy::IndentationItem->new(
