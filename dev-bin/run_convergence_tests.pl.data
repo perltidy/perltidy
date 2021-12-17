@@ -8452,6 +8452,50 @@ function(
 --maximum-line-length=30
 --variable-maximum-line-length
 
+==> b1280.in <==
+# S1
+    for my $method qw(GetBook Wishlist AddBook RemoveBook
+      PurchaseBooks) {
+        eval "sub $method";
+        *$method = sub {
+            my $self = shift->new;
+            die SOAP::Fault->faultcode('Server.RequestError')
+              ->faultstring('Could not get object')
+              unless $self;
+
+            my $smethod = "SUPER::$method";
+            my $res     = $self->$smethod(@_);
+            die SOAP::Fault->faultcode('Server.ExecError')
+              ->faultstring("Execution error: $res")
+              unless ref($res);
+
+            $res;
+        };
+      }
+# S2
+    for my $method qw(GetBook Wishlist AddBook RemoveBook
+      PurchaseBooks)
+      {
+        eval "sub $method";
+        *$method = sub {
+            my $self = shift->new;
+            die SOAP::Fault->faultcode('Server.RequestError')
+              ->faultstring('Could not get object')
+              unless $self;
+
+            my $smethod = "SUPER::$method";
+            my $res     = $self->$smethod(@_);
+            die SOAP::Fault->faultcode('Server.ExecError')
+              ->faultstring("Execution error: $res")
+              unless ref($res);
+
+            $res;
+        };
+      }
+
+==> b1280.par <==
+--brace-left-and-indent
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

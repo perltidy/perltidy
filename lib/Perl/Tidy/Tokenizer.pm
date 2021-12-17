@@ -3500,7 +3500,11 @@ EOM
                     $routput_token_type->[$i] = $type;
 
                 }
-                $tok = $quote_character if ($quote_character);
+
+                # Removed to fix b1280.  This is not needed and was causing the
+                # starting type 'qw' to be lost, leading to mis-tokenization of
+                # a trailing block brace in a parenless for stmt 'for .. qw.. {'
+                ##$tok = $quote_character if ($quote_character);
 
                 # scan for the end of the quote or pattern
                 (
@@ -9806,4 +9810,3 @@ BEGIN {
 
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
 }
-1;
