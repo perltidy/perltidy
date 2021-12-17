@@ -10433,17 +10433,34 @@ sub collapsed_lengths {
             $type = $rtoken_vars->[_TYPE_];
             if ( $type eq 'b' ) { next }
 
-            # Ignore all comment lengths ...
-            # - block comments lengths can always be ignored
-            # - side comments lengths can be ignored if -iscl is set
-            #   BUT: we are always ignoring them here because they can mess
-            #   things up badly and -iscl is strongly recommended with this
-            #   style.
-            if ( $type eq '#' ) { $len = 0; next }
+            my $token_length = $rtoken_vars->[_TOKEN_LENGTH_];
+
+            # Comments ...
+            if ( $type eq '#' ) {
+
+                # ignore all comments if -iscl is set (recommended setting)
+                if ($rOpts_ignore_side_comment_lengths) {
+                    $len = 0;
+                    next;
+                }
+
+                # block comments lengths are always ignored
+                my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
+                my $rK_range = $rlines->[$iline]->{_rK_range};
+                my ( $K_first, $K_last ) = @{$rK_range};
+                if ( defined($K_first) && $KK == $K_first ) {
+                    $len = 0;
+                    next;
+                }
+
+                # For a side comment when -iscl is NOT set, include length of
+                # the previous token and 1 space
+                $len += $token_length + 1;
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+            }
 
             # Count lengths of things like 'xx => yy' as a single item
-            my $token_length = $rtoken_vars->[_TOKEN_LENGTH_];
-            if ( $type eq '=>' ) {
+            elsif ( $type eq '=>' ) {
                 $len += $token_length + 1;
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
