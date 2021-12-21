@@ -2,6 +2,10 @@
 
 ## 2021 10 29.03
 
+    - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
+      git #77.  This allows code blocks passed to list operator functions to
+      be formatted in the same way as a code block passed to grep, map, or sort.
+
     - A new flag -xlp has been added which can be set to avoid most of the
       limitations of the -lp flag regarding side comments, blank lines, and
       code blocks.  This is off by default to avoid changing existing coding,

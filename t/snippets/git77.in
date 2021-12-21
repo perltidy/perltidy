@@ -1,0 +1,18 @@
+# These should format the same with -gal='Map Grep'
+    return +{
+        Map  {
+$_->init_arg => $_->get_value($instance) }
+        Grep { $_->has_value($instance) }
+        Grep {
+defined( $_->init_arg ) }
+$class->get_all_attributes
+    };
+
+    return +{
+        map  {
+$_->init_arg => $_->get_value($instance) }
+        grep { $_->has_value($instance) }
+        grep {
+defined( $_->init_arg ) }
+$class->get_all_attributes
+    };

@@ -14,6 +14,8 @@
 #11 xlp1.xlp1
 #12 git74.def
 #13 git74.git74
+#14 git77.def
+#15 git77.git77
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -53,6 +55,9 @@ BEGIN {
 --brace-left-and-indent
 --brace-left-and-indent-list="*"
 --break-before-hash-brace=3
+----------
+        'git77' => <<'----------',
+-gal='Grep Map'
 ----------
         'lp'        => "-lp",
         'novalign1' => "-novalign",
@@ -172,6 +177,27 @@ my $test_var =
 
   );
 
+----------
+
+        'git77' => <<'----------',
+# These should format the same with -gal='Map Grep'
+    return +{
+        Map  {
+$_->init_arg => $_->get_value($instance) }
+        Grep { $_->has_value($instance) }
+        Grep {
+defined( $_->init_arg ) }
+$class->get_all_attributes
+    };
+
+    return +{
+        map  {
+$_->init_arg => $_->get_value($instance) }
+        grep { $_->has_value($instance) }
+        grep {
+defined( $_->init_arg ) }
+$class->get_all_attributes
+    };
 ----------
 
         'lp2' => <<'----------',
@@ -634,6 +660,48 @@ my $test_var =
                        ) ;
 
 #13...........
+        },
+
+        'git77.def' => {
+            source => "git77",
+            params => "def",
+            expect => <<'#14...........',
+    # These should format the same with -gal='Map Grep'
+    return +{
+        Map {
+            $_->init_arg => $_->get_value($instance)
+        } Grep { $_->has_value($instance) }
+        Grep {
+            defined( $_->init_arg )
+        }
+        $class->get_all_attributes
+    };
+
+    return +{
+        map  { $_->init_arg => $_->get_value($instance) }
+        grep { $_->has_value($instance) }
+        grep { defined( $_->init_arg ) } $class->get_all_attributes
+    };
+#14...........
+        },
+
+        'git77.git77' => {
+            source => "git77",
+            params => "git77",
+            expect => <<'#15...........',
+    # These should format the same with -gal='Map Grep'
+    return +{
+        Map  { $_->init_arg => $_->get_value($instance) }
+        Grep { $_->has_value($instance) }
+        Grep { defined( $_->init_arg ) } $class->get_all_attributes
+    };
+
+    return +{
+        map  { $_->init_arg => $_->get_value($instance) }
+        grep { $_->has_value($instance) }
+        grep { defined( $_->init_arg ) } $class->get_all_attributes
+    };
+#15...........
         },
     };
 

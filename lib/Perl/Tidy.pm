@@ -2256,6 +2256,7 @@ sub generate_options {
     $add_option->( 'assert-tidy',                  'ast',  '!' );
     $add_option->( 'assert-untidy',                'asu',  '!' );
     $add_option->( 'sub-alias-list',               'sal',  '=s' );
+    $add_option->( 'grep-alias-list',              'gal',  '=s' );
 
     ########################################
     $category = 2;    # Code indentation control
@@ -3377,6 +3378,30 @@ EOM
         }
         my $joined_words = join ' ', @filtered_word_list;
         $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
+    }
+
+    if ( $rOpts->{'grep-alias-list'} ) {
+        my $grep_alias_string = $rOpts->{'grep-alias-list'};
+        $grep_alias_string =~ s/,/ /g;    # allow commas
+        $grep_alias_string =~ s/^\s+//;
+        $grep_alias_string =~ s/\s+$//;
+        my @grep_alias_list = split /\s+/, $grep_alias_string;
+        my @filtered_word_list;
+        my %seen;
+
+        foreach my $word (@grep_alias_list) {
+            if ($word) {
+                if ( $word !~ /^\w[\w\d]*$/ ) {
+                    Warn("unexpected grep alias '$word' - ignoring\n");
+                }
+                if ( !$seen{$word} ) {
+                    $seen{$word}++;
+                    push @filtered_word_list, $word;
+                }
+            }
+        }
+        my $joined_words = join ' ', @filtered_word_list;
+        $rOpts->{'grep-alias-list'} = join ' ', @filtered_word_list;
     }
 
     # Turn on fuzzy-line-length unless this is an extrude run, as determined

@@ -92,6 +92,8 @@ use vars qw{
   %is_valid_token_type
   %is_keyword
   %is_code_block_token
+  %is_sort_map_grep_eval_do
+  %is_grep_alias
   %really_want_term
   @opening_brace_names
   @closing_brace_names
@@ -308,6 +310,17 @@ sub check_options {
         foreach my $word (@sub_alias_list) {
             $is_sub{$word} = 1;
         }
+    }
+
+    # Install any aliases to 'grep'
+    if ( $rOpts->{'grep-alias-list'} ) {
+
+        # Note that 'grep-alias-list' has been preprocessed to be a trimmed,
+        # space-separated list
+        my @q = split /\s+/, $rOpts->{'grep-alias-list'};
+        @{is_grep_alias}{@q}            = (1) x scalar(@q);
+        @{is_code_block_token}{@q}      = (1) x scalar(@q);
+        @{is_sort_map_grep_eval_do}{@q} = (1) x scalar(@q);
     }
 
     $rOpts_code_skipping = $rOpts->{'code-skipping'};
@@ -2604,7 +2617,8 @@ EOM
                     && $last_nonblank_i >= 0 )
                 {
                     if ( $routput_token_type->[$last_nonblank_i] eq 'w' ) {
-                        $routput_token_type->[$last_nonblank_i] = 'G';
+                        $routput_token_type->[$last_nonblank_i] =
+                          $is_grep_alias{$block_type} ? 'k' : 'G';
                     }
                 }
 
@@ -3200,10 +3214,6 @@ EOM
     @_ = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
       if elsif else unless while until for foreach switch case given when);
     @is_zero_continuation_block_type{@_} = (1) x scalar(@_);
-
-    my %is_not_zero_continuation_block_type;
-    @_ = qw(sort grep map do eval);
-    @is_not_zero_continuation_block_type{@_} = (1) x scalar(@_);
 
     my %is_logical_container;
     @_ = qw(if elsif unless while and or err not && !  || for foreach);
@@ -4988,7 +4998,7 @@ EOM
                         # ..but these are not terminal types:
                         #     /^(sort|grep|map|do|eval)$/ )
                         elsif (
-                            $is_not_zero_continuation_block_type{
+                            $is_sort_map_grep_eval_do{
                                 $routput_block_type->[$i]
                             }
                           )
@@ -9248,6 +9258,13 @@ BEGIN {
       switch case given when default catch try finally);
     @is_code_block_token{@q} = (1) x scalar(@q);
 
+    # Note: this hash was formerly named '%is_not_zero_continuation_block_type'
+    # to contrast it with the block types in '%is_zero_continuation_block_type'
+    @q = qw( sort map grep eval do );
+    @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
+
+    %is_grep_alias = ();
+
     # I'll build the list of keywords incrementally
     my @Keywords = ();
 
@@ -9810,3 +9827,4 @@ BEGIN {
 
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
 }
+1;

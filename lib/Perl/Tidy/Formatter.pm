@@ -205,6 +205,8 @@ my (
     %is_last_next_redo_return,
     %is_sort_map_grep,
     %is_sort_map_grep_eval,
+    %is_sort_map_grep_eval_do,
+    %block_type_map,
     %is_if_unless,
     %is_and_or,
     %is_chain_operator,
@@ -580,6 +582,22 @@ BEGIN {
 
     @q = qw(sort map grep eval);
     @is_sort_map_grep_eval{@q} = (1) x scalar(@q);
+
+    @q = qw(sort map grep eval do);
+    @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
+
+    # Map related block names into a common name to allow vertical alignment
+    # used by sub make_alignment_patterns
+    %block_type_map = (
+        'unless'  => 'if',
+        'else'    => 'if',
+        'elsif'   => 'if',
+        'when'    => 'if',
+        'default' => 'if',
+        'case'    => 'if',
+        'sort'    => 'map',
+        'grep'    => 'map',
+    );
 
     @q = qw(if unless);
     @is_if_unless{@q} = (1) x scalar(@q);
@@ -1208,6 +1226,7 @@ sub check_options {
 
     initialize_whitespace_hashes();
     initialize_bond_strength_hashes();
+    install_grep_alias_list( $rOpts->{'grep-alias-list'} );
 
     # Make needed regex patterns for matching text.
     # NOTE: sub_matching_patterns must be made first because later patterns use
@@ -1927,6 +1946,23 @@ EOM
     initialize_weld_nested_exclusion_rules($rOpts);
     initialize_line_up_parentheses_exclusion_rules($rOpts);
     return;
+}
+
+sub install_grep_alias_list {
+    my ($str) = @_;
+    return unless ($str);
+
+    # Note that any 'grep-alias-list' string has been preprocessed to be a
+    # trimmed, space-separated list.
+    my @q = split /\s+/, $str;
+    @{is_sort_map_grep}{@q}          = (1) x scalar(@q);
+    @{is_sort_map_grep_eval}{@q}     = (1) x scalar(@q);
+    @{is_sort_map_grep_eval_do}{@q}  = (1) x scalar(@q);
+    @{is_block_with_ci}{@q}          = (1) x scalar(@q);
+    @{is_keyword_returning_list}{@q} = (1) x scalar(@q);
+    foreach (@q) {
+        $block_type_map{$_} = 'map' unless ( $_ eq 'map' );
+    }
 }
 
 sub initialize_weld_nested_exclusion_rules {
@@ -2903,8 +2939,6 @@ EOM
     BEGIN {
 
         my @q;
-        @q = qw(sort grep map);
-        @is_sort_grep_map{@q} = (1) x scalar(@q);
 
         @q = qw(for foreach);
         @is_for_foreach{@q} = (1) x scalar(@q);
@@ -3138,7 +3172,7 @@ EOM
                 ## || $typel eq 'Y'
 
                 # must have space between grep and left paren; "grep(" will fail
-                || $is_sort_grep_map{$tokenl}
+                || $is_sort_map_grep{$tokenl}
 
                 # don't stick numbers next to left parens, as in:
                 #use Mail::Internet 1.28 (); (see Entity.pm, Head.pm, Test.pm)
@@ -14358,62 +14392,51 @@ EOM
     return ( $rindentation_list->[ $nline + 1 ], $offset, $is_leading );
 }
 
-{    ## begin closure terminal_type_i
+sub terminal_type_i {
 
-    my %is_sort_map_grep_eval_do;
+    #  returns type of last token on this line (terminal token), as follows:
+    #  returns # for a full-line comment
+    #  returns ' ' for a blank line
+    #  otherwise returns final token type
 
-    BEGIN {
-        my @q = qw(sort map grep eval do);
-        @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
+    my ( $ibeg, $iend ) = @_;
+
+    # Start at the end and work backwards
+    my $i      = $iend;
+    my $type_i = $types_to_go[$i];
+
+    # Check for side comment
+    if ( $type_i eq '#' ) {
+        $i--;
+        if ( $i < $ibeg ) {
+            return wantarray ? ( $type_i, $ibeg ) : $type_i;
+        }
+        $type_i = $types_to_go[$i];
     }
 
-    sub terminal_type_i {
-
-        #  returns type of last token on this line (terminal token), as follows:
-        #  returns # for a full-line comment
-        #  returns ' ' for a blank line
-        #  otherwise returns final token type
-
-        my ( $ibeg, $iend ) = @_;
-
-        # Start at the end and work backwards
-        my $i      = $iend;
-        my $type_i = $types_to_go[$i];
-
-        # Check for side comment
-        if ( $type_i eq '#' ) {
-            $i--;
-            if ( $i < $ibeg ) {
-                return wantarray ? ( $type_i, $ibeg ) : $type_i;
-            }
-            $type_i = $types_to_go[$i];
+    # Skip past a blank
+    if ( $type_i eq 'b' ) {
+        $i--;
+        if ( $i < $ibeg ) {
+            return wantarray ? ( $type_i, $ibeg ) : $type_i;
         }
-
-        # Skip past a blank
-        if ( $type_i eq 'b' ) {
-            $i--;
-            if ( $i < $ibeg ) {
-                return wantarray ? ( $type_i, $ibeg ) : $type_i;
-            }
-            $type_i = $types_to_go[$i];
-        }
-
-        # Found it..make sure it is a BLOCK termination,
-        # but hide a terminal } after sort/grep/map because it is not
-        # necessarily the end of the line.  (terminal.t)
-        my $block_type = $block_type_to_go[$i];
-        if (
-            $type_i eq '}'
-            && ( !$block_type
-                || ( $is_sort_map_grep_eval_do{$block_type} ) )
-          )
-        {
-            $type_i = 'b';
-        }
-        return wantarray ? ( $type_i, $i ) : $type_i;
+        $type_i = $types_to_go[$i];
     }
 
-} ## end closure terminal_type_i
+    # Found it..make sure it is a BLOCK termination,
+    # but hide a terminal } after sort/map/grep/eval/do because it is not
+    # necessarily the end of the line.  (terminal.t)
+    my $block_type = $block_type_to_go[$i];
+    if (
+        $type_i eq '}'
+        && ( !$block_type
+            || ( $is_sort_map_grep_eval_do{$block_type} ) )
+      )
+    {
+        $type_i = 'b';
+    }
+    return wantarray ? ( $type_i, $i ) : $type_i;
+}
 
 sub pad_array_to_go {
 
@@ -22993,7 +23016,6 @@ sub pad_token {
 
 {    ## begin closure make_alignment_patterns
 
-    my %block_type_map;
     my %keyword_map;
     my %operator_map;
     my %is_w_n_C;
@@ -23006,18 +23028,7 @@ sub pad_token {
 
     BEGIN {
 
-        # map related block names into a common name to
-        # allow alignment
-        %block_type_map = (
-            'unless'  => 'if',
-            'else'    => 'if',
-            'elsif'   => 'if',
-            'when'    => 'if',
-            'default' => 'if',
-            'case'    => 'if',
-            'sort'    => 'map',
-            'grep'    => 'map',
-        );
+        # Note: %block_type_map is now global to enable the -gal=s option
 
         # map certain keywords to the same 'if' class to align
         # long if/elsif sequences. [elsif.pl]
