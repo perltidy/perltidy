@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 10 29.03
+## 2021 10 29.04
 
     - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
       git #77.  This allows code blocks passed to list operator functions to

@@ -404,10 +404,11 @@ For example, the code block arguments to functions 'My_grep' and 'My_map' can be
 
         perltidy -gal='My_grep My_map'
 
-By default, the following list operators in List::Util are automatically included, and any operators listed in B<--grep-alias-list> are added to this list:
+By default, the following list operators in List::Util are automatically included:
 
       all any first none notall reduce reductions
 
+Any operators specified with B<--grep-alias-list> are added to this list.
 The next parameter can be used to remove words from this default list.
 
 =item B<-gaxl=s>,   B<--grep-alias-exclusion-list=s>
@@ -4923,7 +4924,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20211029.03
+This man page documents perltidy version 20211029.04
 
 =head1 BUG REPORTS
 
