@@ -5,6 +5,11 @@
     - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
       git #77.  This allows code blocks passed to list operator functions to
       be formatted in the same way as a code block passed to grep, map, or sort.
+      By default, the following list operators in List::Util are included:
+
+        all any first none notall reduce reductions
+
+      They can be changed with the flag -gaxl=s, -grep-alias-exclusion-list=s
 
     - A new flag -xlp has been added which can be set to avoid most of the
       limitations of the -lp flag regarding side comments, blank lines, and

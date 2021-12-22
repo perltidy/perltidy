@@ -392,13 +392,28 @@ You do not need to include any sub aliases in these lists. Just include keyword 
 
 =item B<-gal=s>,   B<--grep-alias-list=s>
 
-This flag causes a code block following a specified word to be formatted as if it followed the keyword 'grep'.  The string B<s> contains one or more such alias words, separated by spaces or commas.
+This flag causes a code block following a specified word to be formatted as if it followed the keyword 'grep' (or 'map' or 'sort').  The string B<s> contains one or more such alias words, separated by spaces or commas.
 
-This allows code block arguments to external list operator functions to be formatted in the same way as code blocks which follow the perl builtin keywords 'grep', 'map', and 'sort'.  Perltidy tries to keep code blocks for these functions intact, and does not automatically break after the closing brace since a list may follow.
+This allows code block arguments to external list operator functions to be formatted in the same way as code blocks which follow the perl builtin keywords 'grep', 'map', and 'sort'.  By 'list operator' is meant a function which is invoked in the form
 
-For example, the functions 'any' and 'all' in module List::Util can be given formatting like 'grep' with
+      word {BLOCK} @list
 
-        perltidy -gal='any all'
+Perltidy tries to keep code blocks for these functions intact, since they are usually short, and does not automatically break after the closing brace since a list may follow. It also does some special handling of continuation indentation.
+
+For example, the code block arguments to functions 'My_grep' and 'My_map' can be given formatting like 'grep' with
+
+        perltidy -gal='My_grep My_map'
+
+By default, the following list operators in List::Util are automatically included, and any operators listed in B<--grep-alias-list> are added to this list:
+
+      all any first none notall reduce reductions
+
+The next parameter can be used to remove words from this default list.
+
+=item B<-gaxl=s>,   B<--grep-alias-exclusion-list=s>
+
+The B<-gaxl=s> flag provides a method for removing any of the default list operators given above
+by listing them in the string B<s>.  To remove all of the default operators use B<-gaxl='*'>.
 
 =back
 

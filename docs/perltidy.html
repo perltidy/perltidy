@@ -333,6 +333,34 @@
 <p>Note that several other parameters accept a list of keywords, including &#39;sub&#39; (see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>). You do not need to include any sub aliases in these lists. Just include keyword &#39;sub&#39; if you wish, and all aliases are automatically included.</p>
 
 </dd>
+<dt id="gal-s---grep-alias-list-s"><b>-gal=s</b>, <b>--grep-alias-list=s</b></dt>
+<dd>
+
+<p>This flag causes a code block following a specified word to be formatted as if it followed the keyword &#39;grep&#39; (or &#39;map&#39; or &#39;sort&#39;). The string <b>s</b> contains one or more such alias words, separated by spaces or commas.</p>
+
+<p>This allows code block arguments to external list operator functions to be formatted in the same way as code blocks which follow the perl builtin keywords &#39;grep&#39;, &#39;map&#39;, and &#39;sort&#39;. By &#39;list operator&#39; is meant a function which is invoked in the form</p>
+
+<pre><code>      word {BLOCK} @list</code></pre>
+
+<p>Perltidy tries to keep code blocks for these functions intact, since they are usually short, and does not automatically break after the closing brace since a list may follow. It also does some special handling of continuation indentation.</p>
+
+<p>For example, the code block arguments to functions &#39;My_grep&#39; and &#39;My_map&#39; can be given formatting like &#39;grep&#39; with</p>
+
+<pre><code>        perltidy -gal=&#39;My_grep My_map&#39;</code></pre>
+
+<p>By default, the following list operators in List::Util are automatically included, and any operators listed in <b>--grep-alias-list</b> are added to this list:</p>
+
+<pre><code>      all any first none notall pairfirst pairgrep pairmap reduce reductions</code></pre>
+
+<p>The next parameter can be used to remove words from this default list.</p>
+
+</dd>
+<dt id="gaxl-s---grep-alias-exclusion-list-s"><b>-gaxl=s</b>, <b>--grep-alias-exclusion-list=s</b></dt>
+<dd>
+
+<p>The <b>-gaxl=s</b> flag provides a method for removing any of the default list operators given above by listing them in the string <b>s</b>. To remove all of the default operators use <b>-gaxl=&#39;*&#39;</b>.</p>
+
+</dd>
 </dl>
 
 <h1 id="FORMATTING-OPTIONS">FORMATTING OPTIONS</h1>
@@ -3796,7 +3824,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20211029</p>
+<p>This man page documents perltidy version 20211029.03</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

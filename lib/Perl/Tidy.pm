@@ -2257,6 +2257,7 @@ sub generate_options {
     $add_option->( 'assert-untidy',                'asu',  '!' );
     $add_option->( 'sub-alias-list',               'sal',  '=s' );
     $add_option->( 'grep-alias-list',              'gal',  '=s' );
+    $add_option->( 'grep-alias-exclusion-list',    'gaxl', '=s' );
 
     ########################################
     $category = 2;    # Code indentation control
@@ -3205,6 +3206,66 @@ EOM
         $rexpansion, $roption_category, $roption_range );
 } ## end of _process_command_line
 
+sub make_grep_alias_string {
+    my ($rOpts) = @_;
+
+    # Defaults: list operators in List::Util
+    # Possible future additions:  pairfirst pairgrep pairmap
+    my $default_string = join ' ', qw(
+      all
+      any
+      first
+      none
+      notall
+      reduce
+      reductions
+    );
+
+    # make a hash of any excluded words
+    my %is_excluded_word;
+    my $exclude_string = $rOpts->{'grep-alias-exclusion-list'};
+    if ($exclude_string) {
+        $exclude_string =~ s/,/ /g;    # allow commas
+        $exclude_string =~ s/^\s+//;
+        $exclude_string =~ s/\s+$//;
+        my @q = split /\s+/, $exclude_string;
+        @is_excluded_word{@q} = (1) x scalar(@q);
+    }
+
+    # The special option -gaxl='*' removes all defaults
+    if ( $is_excluded_word{'*'} ) { $default_string = "" }
+
+    # combine the defaults and any input list
+    my $input_string = $rOpts->{'grep-alias-list'};
+    if ($input_string) { $input_string .= " " . $default_string }
+    else               { $input_string = $default_string }
+
+    # Now make the final list of unique grep alias words
+    $input_string =~ s/,/ /g;    # allow commas
+    $input_string =~ s/^\s+//;
+    $input_string =~ s/\s+$//;
+    my @word_list = split /\s+/, $input_string;
+    my @filtered_word_list;
+    my %seen;
+
+    foreach my $word (@word_list) {
+        if ($word) {
+            if ( $word !~ /^\w[\w\d]*$/ ) {
+                Warn(
+                    "unexpected word in --grep-alias-list: '$word' - ignoring\n"
+                );
+            }
+            if ( !$seen{$word} && !$is_excluded_word{$word} ) {
+                $seen{$word}++;
+                push @filtered_word_list, $word;
+            }
+        }
+    }
+    my $joined_words = join ' ', @filtered_word_list;
+    $rOpts->{'grep-alias-list'} = $joined_words;
+    return;
+}
+
 sub check_options {
 
     my ( $rOpts, $is_Windows, $Windows_type, $rpending_complaint ) = @_;
@@ -3376,33 +3437,10 @@ EOM
                 }
             }
         }
-        my $joined_words = join ' ', @filtered_word_list;
         $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
     }
 
-    if ( $rOpts->{'grep-alias-list'} ) {
-        my $grep_alias_string = $rOpts->{'grep-alias-list'};
-        $grep_alias_string =~ s/,/ /g;    # allow commas
-        $grep_alias_string =~ s/^\s+//;
-        $grep_alias_string =~ s/\s+$//;
-        my @grep_alias_list = split /\s+/, $grep_alias_string;
-        my @filtered_word_list;
-        my %seen;
-
-        foreach my $word (@grep_alias_list) {
-            if ($word) {
-                if ( $word !~ /^\w[\w\d]*$/ ) {
-                    Warn("unexpected grep alias '$word' - ignoring\n");
-                }
-                if ( !$seen{$word} ) {
-                    $seen{$word}++;
-                    push @filtered_word_list, $word;
-                }
-            }
-        }
-        my $joined_words = join ' ', @filtered_word_list;
-        $rOpts->{'grep-alias-list'} = join ' ', @filtered_word_list;
-    }
+    make_grep_alias_string($rOpts);
 
     # Turn on fuzzy-line-length unless this is an extrude run, as determined
     # by the -i and -ci settings. Otherwise blinkers can form (case b935)

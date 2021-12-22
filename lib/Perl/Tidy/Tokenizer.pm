@@ -312,15 +312,13 @@ sub check_options {
         }
     }
 
-    # Install any aliases to 'grep'
+    %is_grep_alias = ();
     if ( $rOpts->{'grep-alias-list'} ) {
 
         # Note that 'grep-alias-list' has been preprocessed to be a trimmed,
         # space-separated list
         my @q = split /\s+/, $rOpts->{'grep-alias-list'};
-        @{is_grep_alias}{@q}            = (1) x scalar(@q);
-        @{is_code_block_token}{@q}      = (1) x scalar(@q);
-        @{is_sort_map_grep_eval_do}{@q} = (1) x scalar(@q);
+        @{is_grep_alias}{@q} = (1) x scalar(@q);
     }
 
     $rOpts_code_skipping = $rOpts->{'code-skipping'};
@@ -4969,16 +4967,16 @@ EOM
 
                     # zero continuation flag at terminal BLOCK '}' which
                     # ends a statement.
-                    if ( $routput_block_type->[$i] ) {
+                    my $block_type_i = $routput_block_type->[$i];
+                    if ($block_type_i) {
 
                         # ...These include non-anonymous subs
                         # note: could be sub ::abc { or sub 'abc
-                        if ( $routput_block_type->[$i] =~ m/^sub\s*/gc ) {
+                        if ( $block_type_i =~ m/^sub\s*/gc ) {
 
                          # note: older versions of perl require the /gc modifier
                          # here or else the \G does not work.
-                            if ( $routput_block_type->[$i] =~ /\G('|::|\w)/gc )
-                            {
+                            if ( $block_type_i =~ /\G('|::|\w)/gc ) {
                                 $in_statement_continuation = 0;
                             }
                         }
@@ -4987,27 +4985,21 @@ EOM
 # block prototypes and these: (sort|grep|map|do|eval)
 # /^(\}|\{|BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|;|if|elsif|else|unless|while|until|for|foreach)$/
                         elsif (
-                            $is_zero_continuation_block_type{
-                                $routput_block_type->[$i]
-                            }
-                          )
+                            $is_zero_continuation_block_type{$block_type_i} )
                         {
                             $in_statement_continuation = 0;
                         }
 
                         # ..but these are not terminal types:
                         #     /^(sort|grep|map|do|eval)$/ )
-                        elsif (
-                            $is_sort_map_grep_eval_do{
-                                $routput_block_type->[$i]
-                            }
-                          )
+                        elsif ($is_sort_map_grep_eval_do{$block_type_i}
+                            || $is_grep_alias{$block_type_i} )
                         {
                         }
 
                         # ..and a block introduced by a label
                         # /^\w+\s*:$/gc ) {
-                        elsif ( $routput_block_type->[$i] =~ /:$/ ) {
+                        elsif ( $block_type_i =~ /:$/ ) {
                             $in_statement_continuation = 0;
                         }
 
@@ -5674,7 +5666,9 @@ sub code_block_type {
 # otherwise, look at previous token.  This must be a code block if
 # it follows any of these:
 # /^(BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|if|elsif|else|unless|do|while|until|eval|for|foreach|map|grep|sort)$/
-    elsif ( $is_code_block_token{$last_nonblank_token} ) {
+    elsif ($is_code_block_token{$last_nonblank_token}
+        || $is_grep_alias{$last_nonblank_token} )
+    {
 
         # Bug Patch: Note that the opening brace after the 'if' in the following
         # snippet is an anonymous hash ref and not a code block!

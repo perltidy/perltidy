@@ -198,15 +198,10 @@ my (
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
-    %is_keyword_returning_list,
     %is_if_unless_and_or_last_next_redo_return,
     %is_if_elsif_else_unless_while_until_for_foreach,
     %is_if_unless_while_until_for_foreach,
     %is_last_next_redo_return,
-    %is_sort_map_grep,
-    %is_sort_map_grep_eval,
-    %is_sort_map_grep_eval_do,
-    %block_type_map,
     %is_if_unless,
     %is_and_or,
     %is_chain_operator,
@@ -217,7 +212,6 @@ my (
     %is_opening_token,
     %is_closing_token,
     %is_equal_or_fat_comma,
-    %is_block_with_ci,
     %is_counted_type,
     %is_opening_sequence_token,
     %is_closing_sequence_token,
@@ -233,6 +227,15 @@ my (
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
+
+    # Initialized and re-initialized in sub initialize_grep_and_friends;
+    # These can be modified by grep-alias-list
+    %is_sort_map_grep,
+    %is_sort_map_grep_eval,
+    %is_sort_map_grep_eval_do,
+    %is_block_with_ci,
+    %is_keyword_returning_list,
+    %block_type_map,
 
     # Initialized in sub initialize_whitespace_hashes;
     # Some can be modified according to user parameters.
@@ -549,16 +552,6 @@ BEGIN {
     );
     @is_assignment{@q} = (1) x scalar(@q);
 
-    @q = qw(
-      grep
-      keys
-      map
-      reverse
-      sort
-      split
-    );
-    @is_keyword_returning_list{@q} = (1) x scalar(@q);
-
     @q = qw(is if unless and or err last next redo return);
     @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
 
@@ -577,17 +570,10 @@ BEGIN {
     @q = qw(last next redo return);
     @is_last_next_redo_return{@q} = (1) x scalar(@q);
 
-    @q = qw(sort map grep);
-    @is_sort_map_grep{@q} = (1) x scalar(@q);
-
-    @q = qw(sort map grep eval);
-    @is_sort_map_grep_eval{@q} = (1) x scalar(@q);
-
-    @q = qw(sort map grep eval do);
-    @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
-
     # Map related block names into a common name to allow vertical alignment
-    # used by sub make_alignment_patterns
+    # used by sub make_alignment_patterns. Note: this is normally unchanged,
+    # but it contains 'grep' and can be re-initized in
+    # sub initialize_grep_and_friends in a testing mode.
     %block_type_map = (
         'unless'  => 'if',
         'else'    => 'if',
@@ -674,14 +660,6 @@ BEGIN {
     @q = qw( => ; h f );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
-
-    # These block types can take ci.  This is used by the -xci option.
-    # Note that the 'sub' in this list is an anonymous sub.  To be more correct
-    # we could remove sub and use ASUB pattern to also handle a
-    # prototype/signature.  But that would slow things down and would probably
-    # never be useful.
-    @q = qw( do sub eval sort map grep );
-    @is_block_with_ci{@q} = (1) x scalar(@q);
 
 }
 
@@ -1226,7 +1204,9 @@ sub check_options {
 
     initialize_whitespace_hashes();
     initialize_bond_strength_hashes();
-    install_grep_alias_list( $rOpts->{'grep-alias-list'} );
+
+    # This function must be called early to get hashes with grep initialized
+    initialize_grep_and_friends( $rOpts->{'grep-alias-list'} );
 
     # Make needed regex patterns for matching text.
     # NOTE: sub_matching_patterns must be made first because later patterns use
@@ -1278,6 +1258,8 @@ sub check_options {
 
     # Make initial list of desired one line block types
     # They will be modified by 'prepare_cuddled_block_types'
+    # NOTE: this line must come after is_sort_map_grep_eval is
+    # initialized in sub 'initialize_grep_and_friends'
     %want_one_line_block = %is_sort_map_grep_eval;
 
     prepare_cuddled_block_types();
@@ -1948,21 +1930,74 @@ EOM
     return;
 }
 
-sub install_grep_alias_list {
+use constant ALIGN_GREP_ALIASES => 0;
+
+sub initialize_grep_and_friends {
     my ($str) = @_;
-    return unless ($str);
+
+    # Initialize or re-initialize hashes with 'grep' and grep aliases. This
+    # must be done after each set of options because new grep aliases may be
+    # used.
+
+    # re-initialize the hash ... this is critical!
+    %is_sort_map_grep = ();
+
+    my @q = qw(sort map grep);
+    @is_sort_map_grep{@q} = (1) x scalar(@q);
 
     # Note that any 'grep-alias-list' string has been preprocessed to be a
     # trimmed, space-separated list.
-    my @q = split /\s+/, $str;
-    @{is_sort_map_grep}{@q}          = (1) x scalar(@q);
-    @{is_sort_map_grep_eval}{@q}     = (1) x scalar(@q);
-    @{is_sort_map_grep_eval_do}{@q}  = (1) x scalar(@q);
-    @{is_block_with_ci}{@q}          = (1) x scalar(@q);
-    @{is_keyword_returning_list}{@q} = (1) x scalar(@q);
-    foreach (@q) {
-        $block_type_map{$_} = 'map' unless ( $_ eq 'map' );
+    my @grep_aliases = split /\s+/, $str;
+    @{is_sort_map_grep}{@grep_aliases} = (1) x scalar(@grep_aliases);
+
+    ##@q = qw(sort map grep eval);
+    %is_sort_map_grep_eval = %is_sort_map_grep;
+    $is_sort_map_grep_eval{'eval'} = 1;
+
+    ##@q = qw(sort map grep eval do);
+    %is_sort_map_grep_eval_do = %is_sort_map_grep_eval;
+    $is_sort_map_grep_eval_do{'do'} = 1;
+
+    # These block types can take ci.  This is used by the -xci option.
+    # Note that the 'sub' in this list is an anonymous sub.  To be more correct
+    # we could remove sub and use ASUB pattern to also handle a
+    # prototype/signature.  But that would slow things down and would probably
+    # never be useful.
+    ##@q = qw( do sub eval sort map grep );
+    %is_block_with_ci = %is_sort_map_grep_eval_do;
+    $is_block_with_ci{'sub'} = 1;
+
+    %is_keyword_returning_list = ();
+    @q                         = qw(
+      grep
+      keys
+      map
+      reverse
+      sort
+      split
+    );
+    push @q, @grep_aliases;
+    @is_keyword_returning_list{@q} = (1) x scalar(@q);
+
+    # This code enables vertical alignment of grep aliases for testing.  It has
+    # not been found to be beneficial, so it is off by default.  But it is
+    # useful for precise testing of the grep alias coding.
+    if (ALIGN_GREP_ALIASES) {
+        %block_type_map = (
+            'unless'  => 'if',
+            'else'    => 'if',
+            'elsif'   => 'if',
+            'when'    => 'if',
+            'default' => 'if',
+            'case'    => 'if',
+            'sort'    => 'map',
+            'grep'    => 'map',
+        );
+        foreach (@q) {
+            $block_type_map{$_} = 'map' unless ( $_ eq 'map' );
+        }
     }
+    return;
 }
 
 sub initialize_weld_nested_exclusion_rules {
@@ -2940,6 +2975,11 @@ EOM
 
         my @q;
 
+        # NOTE: This hash is like the global %is_sort_map_grep, but it ignores
+        # grep aliases on purpose, since here we are looking parens, not braces
+        @q = qw(sort grep map);
+        @is_sort_grep_map{@q} = (1) x scalar(@q);
+
         @q = qw(for foreach);
         @is_for_foreach{@q} = (1) x scalar(@q);
 
@@ -3172,7 +3212,7 @@ EOM
                 ## || $typel eq 'Y'
 
                 # must have space between grep and left paren; "grep(" will fail
-                || $is_sort_map_grep{$tokenl}
+                || $is_sort_grep_map{$tokenl}
 
                 # don't stick numbers next to left parens, as in:
                 #use Mail::Internet 1.28 (); (see Entity.pm, Head.pm, Test.pm)
@@ -14429,8 +14469,8 @@ sub terminal_type_i {
     my $block_type = $block_type_to_go[$i];
     if (
         $type_i eq '}'
-        && ( !$block_type
-            || ( $is_sort_map_grep_eval_do{$block_type} ) )
+        && (  !$block_type
+            || $is_sort_map_grep_eval_do{$block_type} )
       )
     {
         $type_i = 'b';

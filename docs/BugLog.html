@@ -12,6 +12,7 @@
 
 
 <ul id="index">
+  <li><a href="#Issues-fixed-after-release-20211029">Issues fixed after release 20211029</a></li>
   <li><a href="#Issues-fixed-after-release-20210625">Issues fixed after release 20210625</a></li>
   <li><a href="#Issues-fixed-after-release-20210402">Issues fixed after release 20210402</a></li>
   <li><a href="#Issues-fixed-after-release-20210111">Issues fixed after release 20210111</a></li>
@@ -21,6 +22,104 @@
   <li><a href="#Issues-fixed-after-release-20200907">Issues fixed after release 20200907</a></li>
   <li><a href="#Open-Issues">Open Issues</a></li>
 </ul>
+
+<h1 id="Issues-fixed-after-release-20211029">Issues fixed after release 20211029</h1>
+
+<dl>
+
+<dt id="Fix-tokenization-issue-c109"><b>Fix tokenization issue c109</b></dt>
+<dd>
+
+<p>Automated random testing produced an error tokenizing the following code fragment:</p>
+
+<pre><code>    s s(..)(.)sss
+    ;</code></pre>
+
+<p>This is equivalent to &#39;s/(..)(.)//s&#39; with &#39;s&#39; as the delimiter instead of &#39;/&#39;. It was tokenized correctly except when the final &#39;s&#39; was followed by a newline, as in the example. When the delimiter is a letter rather than a punctuation character, perltidy exercises some seldom-used code which had an off-by-one loop limit. This has been fixed.</p>
+
+<p>12 Nov 2021.</p>
+
+</dd>
+<dt id="Fix-tokenization-of-issue-c106"><b>Fix tokenization of $$^, issue c106</b></dt>
+<dd>
+
+<p>Automated random testing produced an error tokenizing the following fragment:</p>
+
+<pre><code>   my$seed=$$^$^T;</code></pre>
+
+<p>The first ^ should have been tokenized as the bitwise xor operator but was not. This is fixed with this update.</p>
+
+<p>8 Nov 2021</p>
+
+</dd>
+<dt id="Fix-coding-error-issue-c104"><b>Fix coding error, issue c104</b></dt>
+<dd>
+
+<p>Automated random testing produced an error with something like the following input line taken from an obfuscated perl script:</p>
+
+<pre><code>    open(IN, $ 0);</code></pre>
+
+<p>The &#39;0&#39; was missing in the output:</p>
+
+<pre><code>    open( IN, $ );</code></pre>
+
+<p>The tokenization was correct, but a line of code in the formatter which removes the space between the &#39;$&#39; and the &#39;0&#39; should have used a &#39;defined&#39; when doing a check:</p>
+
+<pre><code>    $token .= $word if ($word);             # OLD: error</code></pre>
+
+<p>This if test fails on &#39;0&#39;. The corrected line is</p>
+
+<pre><code>    $token .= $word if ( defined($word) );  # NEW: fixes c104</code></pre>
+
+<p>This fixes the problem and gives the correct formatted result</p>
+
+<pre><code>    open( IN, $0 );</code></pre>
+
+<p>8 Nov 2021.</p>
+
+</dd>
+<dt id="Fix-undefined-variable-reference-c102"><b>Fix undefined variable reference, c102</b></dt>
+<dd>
+
+<p>Random testing produced an undefined variable reference for the following input</p>
+
+<pre><code>    make_sorter ( sort_sha =&gt; sub {sha512 ( $_} );
+    make_sorter ( sort_ids =&gt; sub {/^ID:(\d+)/} );</code></pre>
+
+<p>when formatted with the following input parameters:</p>
+
+<pre><code>    --space-function-paren
+    --maximum-line-length=26
+    --noadd-newlines</code></pre>
+
+<p>Notice that the input script has a peculiar syntax error - the last two closing tokens of the first line are transposed. (Ironically, this snippet is taken from code which accompanied the book Perl Best Practices). The perltidy tokenizer caught the syntax error, but the formatter touched an undefined variable while attempting to do the formatting. It would be possible to just skip formatting for errors like this, but it can sometimes help finding bugs to see an attempted formatting. So the formatter coding has been corrected to avoid the undefined variable reference.</p>
+
+<p>This fixes issue c102.</p>
+
+<p>5 Nov 2021.</p>
+
+</dd>
+<dt id="Some-blocks-with-side-comments-exceed-line-length"><b>Some blocks with side comments exceed line length</b></dt>
+<dd>
+
+<p>In some rare cases, one-line blocks with side comments were exceeding the line length limit. These usually had a semicolon between the closing block brace and the side comment. For example:</p>
+
+<pre><code>        my $size
+            = do { local $^W; -f $local &amp;&amp; -s _ }; # no ALLO if sending data from a pipe</code></pre>
+
+<p>This update breaks the one-line block in an attempt to keep the total length below the line length limit. The result on the above is:</p>
+
+<pre><code>        my $size = do {
+            local $^W;
+            -f $local &amp;&amp; -s _;
+        };    # no ALLO if sending data from a pipe</code></pre>
+
+<p>Note that this break can be prevented by including the flag --ignore-side-comment-lengths or -iscl.</p>
+
+<p>3 Nov 2021.</p>
+
+</dd>
+</dl>
 
 <h1 id="Issues-fixed-after-release-20210625">Issues fixed after release 20210625</h1>
 
@@ -33,7 +132,7 @@
 
 <pre><code>   do $roff ( &amp;verify($tpage) );</code></pre>
 
-<p>20 Oct 2021.</p>
+<p>20 Oct 2021, 72e4bb1.</p>
 
 </dd>
 <dt id="Fix-c091-incorrect-closing-side-comment"><b>Fix c091, incorrect closing side comment</b></dt>
@@ -41,7 +140,7 @@
 
 <p>An error was discovered and corrected in the behavior of the --closing-side-comment (-csc) flag when only subs were being marked with the setting -cscl=&#39;sub&#39;. The problem was that in rare cases a closing paren could be marked with &#39;## end&#39;. The cause of the problem is that the pattern matching regex which was generated for this case happens to match an empty string, and it could happen that certain parens had empty strings as block names. This was fixed in two ways. First, the regex was fixed so that it cannot match an empty string. Second, a test for an empty string was added.</p>
 
-<p>20 Oct 2021.</p>
+<p>20 Oct 2021, aa1a019.</p>
 
 </dd>
 <dt id="Issue-c089-improve-vertical-alignment-for-lists-without-parens"><b>Issue c089, improve vertical alignment for lists without parens</b></dt>

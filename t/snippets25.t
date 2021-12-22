@@ -180,7 +180,8 @@ my $test_var =
 ----------
 
         'git77' => <<'----------',
-# These should format the same with -gal='Map Grep'
+# These should format about the same with -gal='Map Grep'.
+# NOTE: The braces only align if the internal code flag ALIGN_GREP_ALIASES is set
     return +{
         Map  {
 $_->init_arg => $_->get_value($instance) }
@@ -666,7 +667,8 @@ my $test_var =
             source => "git77",
             params => "def",
             expect => <<'#14...........',
-    # These should format the same with -gal='Map Grep'
+# These should format about the same with -gal='Map Grep'.
+# NOTE: The braces only align if the internal code flag ALIGN_GREP_ALIASES is set
     return +{
         Map {
             $_->init_arg => $_->get_value($instance)
@@ -689,9 +691,10 @@ my $test_var =
             source => "git77",
             params => "git77",
             expect => <<'#15...........',
-    # These should format the same with -gal='Map Grep'
+# These should format about the same with -gal='Map Grep'.
+# NOTE: The braces only align if the internal code flag ALIGN_GREP_ALIASES is set
     return +{
-        Map  { $_->init_arg => $_->get_value($instance) }
+        Map { $_->init_arg => $_->get_value($instance) }
         Grep { $_->has_value($instance) }
         Grep { defined( $_->init_arg ) } $class->get_all_attributes
     };
