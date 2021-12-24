@@ -17881,6 +17881,7 @@ sub break_long_lines {
         my $total_depth_variation = 0;
         my $i_old_assignment_break;
         my $depth_last = $starting_depth;
+        my $comma_follows_last_closing_token;
 
         check_for_new_minimum_depth($current_depth);
 
@@ -18273,6 +18274,9 @@ EOM
             elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
 
                 check_for_new_minimum_depth($depth);
+
+                $comma_follows_last_closing_token =
+                  $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
 
                 # force all outer logical containers to break after we see on
                 # old breakpoint
@@ -18815,8 +18819,13 @@ EOM
                 next;
             } ## end if ( $want_comma_break...)
 
-            # break after all commas above starting depth
-            if ( $depth < $starting_depth && !$dont_align[$depth] ) {
+            # Break after all commas above starting depth...
+            # But only if the last closing token was followed by a comma,
+            #   to avoid breaking a list operator (issue c119)
+            if (   $depth < $starting_depth
+                && $comma_follows_last_closing_token
+                && !$dont_align[$depth] )
+            {
                 $self->set_forced_breakpoint($i)
                   unless ( $next_nonblank_type eq '#' );
                 next;
