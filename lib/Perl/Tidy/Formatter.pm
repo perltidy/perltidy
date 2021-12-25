@@ -1288,7 +1288,8 @@ arbitrarily large numbers of line breakpoints.  This isn't possible
 with these flags.
 -----------------------------------------------------------------------
 EOM
-            $rOpts->{'line-up-parentheses'} = 0;
+            $rOpts->{'line-up-parentheses'}          = 0;
+            $rOpts->{'extended-line-up-parentheses'} = 0;
         }
 
         if ( $rOpts->{'whitespace-cycle'} ) {
@@ -5332,7 +5333,7 @@ EOM
     $self->find_multiline_qw();
 
     $self->collapsed_lengths()
-      if ($rOpts_extended_line_up_parentheses);
+      if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
 
     $self->keep_old_line_breaks();
 
@@ -10437,6 +10438,9 @@ BEGIN {
     use constant {
         _max_prong_len_ => $i++,
         _handle_len_    => $i++,
+        _seqno_o_       => $i++,
+        _iline_o_       => $i++,
+        _K_o_           => $i++,
     };
 }
 
@@ -10450,12 +10454,13 @@ sub collapsed_lengths {
 
     # We need an estimate of the minimum required line length starting at any
     # opening container for the -xlp style. This is needed to avoid using too
-    # much indentation space for lower level containers and thereby causing
-    # outer container tokens to get excessive line breaks due to the maximum
-    # line length limit.
+    # much indentation space for lower level containers and thereby running
+    # out of space for outer container tokens due to the maximum line length
+    # limit.
 
-    # At each node in the tree we imagine that we have a fork with a handle
-    # and collapsable prongs:
+    # The basic idea is that at each node in the tree we imagine that we have a
+    # fork with a handle and collapsable prongs:
+    #
     #                            |------------
     #                            |--------
     #                ------------|-------
@@ -10468,7 +10473,7 @@ sub collapsed_lengths {
     # the prongs may itself be a tree node.
 
     # This is just a rough calculation to get an approximate starting point for
-    # indentation.  Later routines can be more precise.  It is important that
+    # indentation.  Later routines will be more precise.  It is important that
     # these estimates be independent of the line breaks of the input stream in
     # order to avoid instabilities.
 
@@ -10480,61 +10485,199 @@ sub collapsed_lengths {
 
     my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
     my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
+    my $ris_excluded_lp_container  = $self->[_ris_excluded_lp_container_];
 
     my $max_prong_len = 0;
     my $handle_len    = 0;
     my @stack;
-    push @stack, [ $max_prong_len, $handle_len ];
-
-    #----------------------------------
-    # step through all sequenced tokens
-    #----------------------------------
-    my $last_nonblank_type = 'b';
     my $len                = 0;
-    my $KK                 = -1;
-    my $KNEXT              = $self->[_K_first_seq_item_];
-    my $type;
-    while ( defined($KNEXT) ) {
-        my $Kstop = $KNEXT;
-        $KNEXT = $rLL->[$Kstop]->[_KNEXT_SEQ_ITEM_];
+    my $last_nonblank_type = 'b';
+    push @stack, [ $max_prong_len, $handle_len, SEQ_ROOT, undef, undef ];
 
-        #-----------------------------
-        # scan to next sequenced token
-        #-----------------------------
-        $len = 0;
-        while ( ++$KK <= $Kstop - 1 ) {
-            my $rtoken_vars = $rLL->[$KK];
-            $type = $rtoken_vars->[_TYPE_];
-            if ( $type eq 'b' ) { next }
+    my $iline = -1;
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $iline++;
+        my $line_type = $line_of_tokens->{_line_type};
+        next if ( $line_type ne 'CODE' );
+        my $CODE_type = $line_of_tokens->{_code_type};
 
-            my $token_length = $rtoken_vars->[_TOKEN_LENGTH_];
+        # Always skip blank lines
+        next if ( $CODE_type eq 'BL' );
 
-            # Comments ...
-            if ( $type eq '#' ) {
+        # Note on other line types:
+        # 'FS' (Format Skipping) lines may contain opening/closing tokens so
+        #      we have to process them to keep the stack correctly sequenced.
+        # 'VB' (Verbatim) lines could be skipped, but testing shows that
+        #      results look better if we include their lengths.
 
-                # ignore all comments if -iscl is set (recommended setting)
-                if ($rOpts_ignore_side_comment_lengths) {
-                    $len = 0;
-                    next;
+        # Also note that we could exclude -xlp formatting of containers with
+        # 'FS' and 'VB' lines, but in testing that was not really beneficial.
+
+        # So we process tokens in 'FS' and 'VB' lines like all the rest...
+
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $K_first, $K_last ) = @{$rK_range};
+        next unless ( defined($K_first) && defined($K_last) );
+
+        my $has_comment = $rLL->[$K_last]->[_TYPE_] eq '#';
+
+        # Always ignore block comments
+        next if ( $has_comment && $K_first == $K_last );
+
+        # Find the terminal token, before any side comment
+        my $K_terminal = $K_last;
+        if ($has_comment) {
+            $K_terminal -= 1;
+            $K_terminal -= 1
+              if ( $rLL->[$K_terminal]->[_TYPE_] eq 'b'
+                && $K_terminal > $K_first );
+        }
+
+        # Loop over tokens on this line ...
+        foreach my $KK ( $K_first .. $K_terminal ) {
+
+            my $type = $rLL->[$KK]->[_TYPE_];
+            next if ( $type eq 'b' );
+
+            #------------------------
+            # Handle sequenced tokens
+            #------------------------
+            my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+            if ($seqno) {
+
+                my $token = $rLL->[$KK]->[_TOKEN_];
+
+                #----------------------------
+                # Entering a new container...
+                #----------------------------
+                if ( $is_opening_token{$token} ) {
+
+                    # save current prong length
+                    $stack[-1]->[_max_prong_len_] = $max_prong_len;
+                    $max_prong_len = 0;
+
+                    # Start new prong one level deeper
+                    my $handle_len = 0;
+                    if ( $rblock_type_of_seqno->{$seqno} ) {
+
+                        # code blocks do not use -lp indentation, but behave as
+                        # if they had a handle of one indentation length
+                        $handle_len = $rOpts_indent_columns;
+
+                    }
+                    elsif ( $is_handle_type{$last_nonblank_type} ) {
+                        $handle_len = $len;
+                        $handle_len += 1
+                          if ( $KK > 0 && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
+                    }
+                    push @stack,
+                      [ $max_prong_len, $handle_len, $seqno, $iline, $KK ];
                 }
 
-                # block comments lengths are always ignored
-                my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
-                my $rK_range = $rlines->[$iline]->{_rK_range};
-                my ( $K_first, $K_last ) = @{$rK_range};
-                if ( defined($K_first) && $KK == $K_first ) {
-                    $len = 0;
-                    next;
+                #--------------------
+                # Exiting a container
+                #--------------------
+                elsif ( $is_closing_token{$token} ) {
+                    if (@stack) {
+
+                        # The current prong ends - get its handle
+                        my $item          = pop @stack;
+                        my $handle_len    = $item->[_handle_len_];
+                        my $seqno_o       = $item->[_seqno_o_];
+                        my $iline_o       = $item->[_iline_o_];
+                        my $K_o           = $item->[_K_o_];
+                        my $collapsed_len = $max_prong_len;
+
+                        if ( $seqno_o ne $seqno ) {
+
+                         # Shouldn't happen - some lines must have been skipped.
+                         # Not fatal but some formatting could get messed up.
+                            if (DEVEL_MODE) {
+                                Fault(<<EOM);
+sequence numbers differ; at CLOSING line $iline, seq=$seqno .. at OPENING line $iline_o, seq=$seqno_o
+EOM
+                            }
+                        }
+
+                        #------------------------------------------
+                        # Rules to avoid scrunching code blocks ...
+                        #------------------------------------------
+                        # Some test cases:
+                        # c098/x107 x108 x110 x112 x114 x115 x117 x118 x119
+                        if ( $rblock_type_of_seqno->{$seqno} ) {
+
+                            my $K_c          = $KK;
+                            my $block_length = MIN_BLOCK_LEN;
+                            my $is_one_line_block;
+                            my $level = $rLL->[$K_o]->[_LEVEL_];
+                            if ( defined($K_o) && defined($K_c) ) {
+                                my $block_length =
+                                  $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
+                                  $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
+                                $is_one_line_block = $iline == $iline_o;
+                            }
+
+                            # Code block rule 1: Use the total block length if
+                            # it is less than the minimum.
+                            if ( $block_length < MIN_BLOCK_LEN ) {
+                                $collapsed_len = $block_length;
+                            }
+
+                            # Code block rule 2: Use the full length of a
+                            # one-line block to avoid breaking it, unless
+                            # extremely long.  We do not need to do a precise
+                            # check here, because if it breaks then it will
+                            # stay broken on later iterations.
+                            elsif ($is_one_line_block
+                                && $block_length <
+                                $maximum_line_length_at_level[$level] )
+                            {
+                                $collapsed_len = $block_length;
+                            }
+
+                            # Code block rule 3: Otherwise the length should be
+                            # at least MIN_BLOCK_LEN to avoid scrunching code
+                            # blocks.
+                            elsif ( $collapsed_len < MIN_BLOCK_LEN ) {
+                                $collapsed_len = MIN_BLOCK_LEN;
+                            }
+                        }
+
+                        # Store the result.  Some extra space, '2', allows for
+                        # length of an opening token, inside space, comma, ...
+                        # This constant has been tuned to give good overall
+                        # results.
+                        $collapsed_len += 2;
+                        $rcollapsed_length_by_seqno->{$seqno} = $collapsed_len;
+
+                        # Restart scanning the lower level prong
+                        if (@stack) {
+                            $max_prong_len = $stack[-1]->[_max_prong_len_];
+                            $collapsed_len += $handle_len;
+                            if ( $collapsed_len > $max_prong_len ) {
+                                $max_prong_len = $collapsed_len;
+                            }
+                        }
+                    }
                 }
 
-                # For a side comment when -iscl is NOT set, include length of
-                # the previous token and 1 space
-                $len += $token_length + 1;
-                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+                # it is a ternary - no special processing for these yet
+                else {
+
+                }
+
+                $len                = 0;
+                $last_nonblank_type = $type;
+                next;
             }
 
+            #----------------------------
+            # Handle non-container tokens
+            #----------------------------
+            my $token_length = $rLL->[$KK]->[_TOKEN_LENGTH_];
+
             # Count lengths of things like 'xx => yy' as a single item
-            elsif ( $type eq '=>' ) {
+            if ( $type eq '=>' ) {
                 $len += $token_length + 1;
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
@@ -10542,131 +10685,45 @@ sub collapsed_lengths {
                 $len += $token_length;
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
 
-                # only one => per item
+                # but only include one => per item
                 if ( $last_nonblank_type eq '=>' ) { $len = $token_length }
             }
+
+            # include everthing to end of line after a here target
             elsif ( $type eq 'h' ) {
-                my $iline    = $rLL->[$KK]->[_LINE_INDEX_];
-                my $rK_range = $rlines->[$iline]->{_rK_range};
-                my ( $K_first, $K_last ) = @{$rK_range};
                 $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
+
+            # for everything else just use the token length
             else {
                 $len = $token_length;
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
-
             $last_nonblank_type = $type;
-        }
 
-        #------------------------------
-        # now handle the sequenced item
-        #------------------------------
-        my $token = $rLL->[$Kstop]->[_TOKEN_];
-        my $seqno = $rLL->[$Kstop]->[_TYPE_SEQUENCE_];
+        } ## end loop over tokens on this line
 
-        #----------------------------
-        # entering a new container...
-        #----------------------------
-        if ( $is_opening_token{$token} ) {
-
-            # save current prong length
-            $stack[-1]->[_max_prong_len_] = $max_prong_len;
-            $max_prong_len = 0;
-
-            # Start new prong one level deeper
-            my $handle_len = 0;
-            if ( $rblock_type_of_seqno->{$seqno} ) {
-
-                # code blocks do not use -lp indentation, but behave as if they
-                # had a handle of one indentation length
-                $handle_len = $rOpts_indent_columns;
-
+        # Now take care of any side comment
+        if ($has_comment) {
+            if ($rOpts_ignore_side_comment_lengths) {
+                $len = 0;
             }
-            elsif ( $is_handle_type{$last_nonblank_type} ) {
-                $handle_len = $len;
-                $handle_len += 1 if ( $type eq 'b' );
-            }
+            else {
 
-            push @stack, [ $max_prong_len, $handle_len ];
-        }
-
-        #--------------------
-        # exiting a container
-        #--------------------
-        elsif ( $is_closing_token{$token} ) {
-            if (@stack) {
-
-                # The current prong ends - get its handle
-                my $item          = pop @stack;
-                my $handle_len    = $item->[_handle_len_];
-                my $collapsed_len = $max_prong_len;
-
-                #------------------------------------------
-                # Rules to avoid scrunching code blocks ...
-                #------------------------------------------
-                # Some test cases:
-                # c098/x107 x108 x110 x112 x114 x115 x117 x118 x119
-                if ( $rblock_type_of_seqno->{$seqno} ) {
-
-                    my $K_o          = $K_opening_container->{$seqno};
-                    my $K_c          = $K_closing_container->{$seqno};
-                    my $block_length = MIN_BLOCK_LEN;
-                    my $is_one_line_block;
-                    my $level = $rLL->[$K_o]->[_LEVEL_];
-                    if ( defined($K_o) && defined($K_c) ) {
-                        my $iline_o = $rLL->[$K_o]->[_LINE_INDEX_];
-                        my $iline_c = $rLL->[$K_c]->[_LINE_INDEX_];
-                        my $block_length =
-                          $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
-                          $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
-                        $is_one_line_block = $iline_c == $iline_o;
-                    }
-
-                    # Code block rule 1: Use the total block length if it is
-                    # less than the minimum.
-                    if ( $block_length < MIN_BLOCK_LEN ) {
-                        $collapsed_len = $block_length;
-                    }
-
-                    # Code block rule 2: Use the full length of a one-line
-                    # block to avoid breaking it, unless extremely long.  We do
-                    # not need to do a precise check here, because if it breaks
-                    # then it will stay broken on later iterations.
-                    elsif ($is_one_line_block
-                        && $block_length <
-                        $maximum_line_length_at_level[$level] )
-                    {
-                        $collapsed_len = $block_length;
-                    }
-
-                    # Code block rule 3: Otherwise the length should be at
-                    # least MIN_BLOCK_LEN to avoid scrunching code blocks.
-                    elsif ( $collapsed_len < MIN_BLOCK_LEN ) {
-                        $collapsed_len = MIN_BLOCK_LEN;
-                    }
-                }
-
-                # Store the result.  Some extra space, '2', allows for
-                # length of an opening token, inside space, comma, ...
-                # This constant has been tuned to give good overall results.
-                $collapsed_len += 2;
-                $rcollapsed_length_by_seqno->{$seqno} = $collapsed_len;
-
-                # Restart scanning the lower level prong
-                if (@stack) {
-                    $max_prong_len = $stack[-1]->[_max_prong_len_];
-                    $collapsed_len += $handle_len;
-                    if ( $collapsed_len > $max_prong_len ) {
-                        $max_prong_len = $collapsed_len;
-                    }
-                }
+                # For a side comment when -iscl is not set, measure length from
+                # the start of the previous nonblank token
+                my $len0 =
+                    $K_terminal > 0
+                  ? $rLL->[ $K_terminal - 1 ]->[_CUMULATIVE_LENGTH_]
+                  : 0;
+                $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - $len0;
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
             }
         }
-        $last_nonblank_type = $rLL->[$Kstop]->[_TYPE_];
-    }
+
+    } ## end loop over lines
 
     if (DEBUG_COLLAPSED_LENGTHS) {
         print "\nCollapsed lengths--\n";
@@ -10678,7 +10735,6 @@ sub collapsed_lengths {
         }
     }
 
-    # we could get the collapsed length of the tree root here but do not need it
     return;
 }
 
