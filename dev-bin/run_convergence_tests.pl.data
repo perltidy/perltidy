@@ -8496,6 +8496,124 @@ function(
 ==> b1280.par <==
 --brace-left-and-indent
 
+==> b1289.in <==
+my $sim4
+        = new Bio::Tools::Sim4::Results (
+                          -file =>
+                                  Bio::Root::IO->catfile (
+                                                           "t", "sim4.rev"
+                                  ),
+                          -estisfirst => 0
+        );
+
+my $sim4
+        = new Bio::Tools::Sim4::Results (
+                            -file => Bio::Root::IO->catfile ( "t", "sim4.rev" ),
+                            -estisfirst => 0
+        );
+
+
+==> b1289.par <==
+--break-at-old-comma-breakpoints
+--continuation-indentation=8
+--extended-line-up-parentheses
+--space-function-paren
+--want-break-before='> &&= = += / =~ >= <= > <<= | !~ <<= & & <<= |'
+
+==> b1295.in <==
+        $after=
+          join("","\\begin",$opt,"\{verbatim_code\}",
+               $verbatim_mark,$env,
+               $global{'verbatim_counter'},"#",
+               "\\end\{verbatim_code\}",$after
+          );
+
+        $after=join(
+                    "","\\begin",$opt,"\{verbatim_code\}",
+                    $verbatim_mark,$env,
+                    $global{'verbatim_counter'},"#",
+                    "\\end\{verbatim_code\}",$after
+        );
+
+
+==> b1295.par <==
+--noadd-whitespace
+--break-at-old-comma-breakpoints
+--delete-old-whitespace
+--extended-line-up-parentheses
+--maximum-line-length=50
+--paren-vertical-tightness=1
+--variable-maximum-line-length
+
+==> b1297.in <==
+# S1
+my %MyTokens =
+  (
+   '{' => $Text::TeX::Tokens{'{'},
+
+  # Just pretend they actually ARE new paragraph markers!
+   '\maketitle' => { 'class' => 'Text::TeX::Paragraph' },
+  );
+
+# S2
+my %MyTokens =
+  (
+ '{' => $Text::TeX::Tokens{'{'},
+
+ # Just pretend they actually ARE new paragraph markers!
+ '\maketitle' => { 'class' => 'Text::TeX::Paragraph' },);
+
+==> b1297.par <==
+--break-before-paren=2
+--extended-line-up-parentheses
+--indent-columns=0
+--maximum-line-length=57
+--paren-tightness=2
+--paren-vertical-tightness-closing=2
+--want-break-after='* = > / + x > %= / % *= -= &&= & x & =~'
+
+==> b1298.in <==
+# S1
+my $file = $menubar->Menubutton(
+     qw/-text File -underline 0 -menuitems/ =>
+       [
+          [    Cascade    => '~View',
+               -menuitems =>
+                 [
+                    [  Button => '~widget', -command => [ \&view_widget_code, __FILE__ ]
+                    ],
+                    [ Button => '~WidgetDemo', -command => [ \&view_widget_code, $wd ] ],
+                 ],    # end cascade menuitems
+          ],    # end view cascade
+          [ Separator => '' ],
+          [ Button    => '~Quit', -command => [ \&exit ] ],
+       ]
+)->grid(qw/-sticky w/);
+
+# S2
+my $file = $menubar->Menubutton(
+     qw/-text File -underline 0 -menuitems/ =>
+       [
+          [  Cascade    => '~View',
+             -menuitems =>
+             [  [ Button => '~widget',     -command => [ \&view_widget_code, __FILE__ ] ],
+                [ Button => '~WidgetDemo', -command => [ \&view_widget_code, $wd ] ],
+             ],    # end cascade menuitems
+          ],    # end view cascade
+          [ Separator => '' ],
+          [ Button    => '~Quit', -command => [ \&exit ] ],
+       ]
+)->grid(qw/-sticky w/);
+
+==> b1298.par <==
+--break-at-old-comma-breakpoints
+--break-before-square-bracket=2
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=5
+--maximum-line-length=91
+--square-bracket-vertical-tightness=1
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
