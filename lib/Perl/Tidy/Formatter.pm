@@ -10436,11 +10436,13 @@ BEGIN {
 
     my $i = 0;
     use constant {
-        _max_prong_len_ => $i++,
-        _handle_len_    => $i++,
-        _seqno_o_       => $i++,
-        _iline_o_       => $i++,
-        _K_o_           => $i++,
+        _max_prong_len_         => $i++,
+        _handle_len_            => $i++,
+        _seqno_o_               => $i++,
+        _iline_o_               => $i++,
+        _K_o_                   => $i++,
+        _K_c_                   => $i++,
+        _interrupded_list_rule_ => $i++,
     };
 }
 
@@ -10477,22 +10479,25 @@ sub collapsed_lengths {
     # these estimates be independent of the line breaks of the input stream in
     # order to avoid instabilities.
 
-    my $rLL                 = $self->[_rLL_];
-    my $Klimit              = $self->[_Klimit_];
-    my $rlines              = $self->[_rlines_];
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
-
+    my $rLL                        = $self->[_rLL_];
+    my $Klimit                     = $self->[_Klimit_];
+    my $rlines                     = $self->[_rlines_];
+    my $K_opening_container        = $self->[_K_opening_container_];
+    my $K_closing_container        = $self->[_K_closing_container_];
     my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
     my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
     my $ris_excluded_lp_container  = $self->[_ris_excluded_lp_container_];
+    my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
+    my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
+    my $rhas_broken_list           = $self->[_rhas_broken_list_];
 
     my $max_prong_len = 0;
     my $handle_len    = 0;
     my @stack;
     my $len                = 0;
     my $last_nonblank_type = 'b';
-    push @stack, [ $max_prong_len, $handle_len, SEQ_ROOT, undef, undef ];
+    push @stack,
+      [ $max_prong_len, $handle_len, SEQ_ROOT, undef, undef, undef, undef ];
 
     my $iline = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -10533,6 +10538,31 @@ sub collapsed_lengths {
                 && $K_terminal > $K_first );
         }
 
+        # Use length to terminal comma if interrupded list rule applies
+        if ( @stack && $stack[-1]->[_interrupded_list_rule_] ) {
+            my $K_c = $stack[-1]->[_K_c_];
+            if (
+                defined($K_c)
+                && $rLL->[$K_terminal]->[_TYPE_] eq ','
+
+                # Ignore a terminal comma, causes instability (b1297)
+                && (   $K_c - $K_terminal > 2
+                    || $rLL->[ $K_terminal + 1 ]->[_TYPE_] eq 'b' )
+              )
+            {
+                my $Kend = $K_terminal;
+                if ( $has_comment && !$rOpts_ignore_side_comment_lengths ) {
+                    $Kend = $K_last;
+                }
+                $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+                  $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+
+                # TODO: if there are no sequence items in the line we could
+                # skip the loop as a minor optimization
+            }
+        }
+
         # Loop over tokens on this line ...
         foreach my $KK ( $K_first .. $K_terminal ) {
 
@@ -10570,8 +10600,57 @@ sub collapsed_lengths {
                         $handle_len += 1
                           if ( $KK > 0 && $rLL->[ $KK - 1 ]->[_TYPE_] eq 'b' );
                     }
+
+                    # Set a flag if the 'Interrupted List Rule' will be applied
+                    # (see sub copy_old_breakpoints).
+                    # - Added check on has_broken_list to fix issue b1298
+
+                    my $interrupted_list_rule =
+                         $ris_permanently_broken->{$seqno}
+                      && $ris_list_by_seqno->{$seqno}
+                      && !$rhas_broken_list->{$seqno}
+                      && !$rOpts_ignore_old_breakpoints;
+
+                    # NOTES: Since we are looking at old line numbers we have
+                    # to be very careful not to introduce an instability.
+
+                    # This following causes instability (b1288-b1296):
+                    #   $interrupted_list_rule ||=
+                    #     $rOpts_break_at_old_comma_breakpoints;
+
+                    #  - We could turn off the interrupted list rule if there is
+                    #    a broken sublist, to follow 'Compound List Rule 1'.
+                    #  - We could use the _rhas_broken_list_ flag for this.
+                    #  - But it seems safer not to do this, to avoid
+                    #    instability, since the broken sublist could be
+                    #    temporary.  It seems better to let the formatting
+                    #    stabilize by itself after one or two iterations.
+                    #  - So, not doing this for now
+
+                    # TESTING: Include length to a comma ending this line
+                    if (   $interrupted_list_rule
+                        && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
+                    {
+                        my $Kend = $K_terminal;
+                        if ( $Kend < $K_last
+                            && !$rOpts_ignore_side_comment_lengths )
+                        {
+                            $Kend = $K_last;
+                        }
+                        my $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+                          $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+                        if ( $len > $max_prong_len ) { $max_prong_len = $len }
+                    }
+
+                    my $K_c = $K_closing_container->{$seqno};
+
                     push @stack,
-                      [ $max_prong_len, $handle_len, $seqno, $iline, $KK ];
+                      [
+                        $max_prong_len, $handle_len,
+                        $seqno,         $iline,
+                        $KK,            $K_c,
+                        $interrupted_list_rule
+                      ];
                 }
 
                 #--------------------
@@ -10586,15 +10665,16 @@ sub collapsed_lengths {
                         my $seqno_o       = $item->[_seqno_o_];
                         my $iline_o       = $item->[_iline_o_];
                         my $K_o           = $item->[_K_o_];
+                        my $K_c_expect    = $item->[_K_c_];
                         my $collapsed_len = $max_prong_len;
 
                         if ( $seqno_o ne $seqno ) {
 
-                         # Shouldn't happen - some lines must have been skipped.
-                         # Not fatal but some formatting could get messed up.
+                            # Shouldn't happen - must have skipped some lines.
+                            # Not fatal but -lp formatting could get messed up.
                             if (DEVEL_MODE) {
                                 Fault(<<EOM);
-sequence numbers differ; at CLOSING line $iline, seq=$seqno .. at OPENING line $iline_o, seq=$seqno_o
+sequence numbers differ; at CLOSING line $iline, seq=$seqno, Kc=$KK .. at OPENING line $iline_o, seq=$seqno_o, Ko=$K_o, expecting Kc=$K_c_expect
 EOM
                             }
                         }
