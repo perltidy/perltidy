@@ -4154,17 +4154,19 @@ EOM
             {
                 $rtype = $next_nonblank_type . $next_nonblank_token;
 
+                # Alternate Fix #1 for issue b1299.  This version makes the
+                # decision as soon as possible.  See Alternate Fix #2 also.
                 # Do not separate a bareword identifier from its paren: b1299
                 # This is currently needed for stability because if the bareword
                 # gets separated from a preceding '->' and following '(' then
                 # the tokenizer may switch from type 'i' to type 'w'.  This
                 # patch will prevent this by keeping it adjacent to its '('.
-                if (   $next_nonblank_token eq '('
-                    && $ltype eq 'i'
-                    && substr( $token, 0, 1 ) =~ /^\w$/ )
-                {
-                    $ltype = 'w';
-                }
+##              if (   $next_nonblank_token eq '('
+##                  && $ltype eq 'i'
+##                  && substr( $token, 0, 1 ) =~ /^\w$/ )
+##              {
+##                  $ltype = 'w';
+##              }
             }
 
             # apply binary rules which apply regardless of space between tokens
@@ -17012,6 +17014,18 @@ sub break_long_lines {
         my $maximum_line_length =
           $maximum_line_length_at_level[ $levels_to_go[$i_begin] ];
 
+        # Do not separate an isolated bare word from an opening paren.
+        # Alternate Fix #2 for issue b1299.  This waits as long as possible
+        # to make the decision.
+        if ( $types_to_go[$i_begin] eq 'i'
+            && substr( $tokens_to_go[$i_begin], 0, 1 ) =~ /\w/ )
+        {
+            my $i_next_nonblank = $inext_to_go[$i_begin];
+            if ( $tokens_to_go[$i_next_nonblank] eq '(' ) {
+                $bond_strength_to_go[$i_begin] = NO_BREAK;
+            }
+        }
+
         #-------------------------------------------------------
         # BEGINNING of inner loop to find the best next breakpoint
         #-------------------------------------------------------
@@ -20727,13 +20741,13 @@ EOM
                                 else {
                                     if ( $arrow_count == 0 ) {
                                         $rlp_object_list->[$i]
-                                          ->permanently_decrease_available_spaces(
-                                            $available_spaces);
+                                          ->permanently_decrease_available_spaces
+                                          ($available_spaces);
                                     }
                                     else {
                                         $rlp_object_list->[$i]
-                                          ->tentatively_decrease_available_spaces(
-                                            $available_spaces);
+                                          ->tentatively_decrease_available_spaces
+                                          ($available_spaces);
                                     }
                                     foreach
                                       my $j ( $i + 1 .. $max_lp_object_list )
