@@ -5513,6 +5513,25 @@ is(
 --vertical-tightness=1
 --weld-nested-containers
 
+==> b1132.in <==
+   my @temp
+         =unexpand (
+       map { sprintf "%-32s%s", @$_ } @_ ) ;
+
+   my @temp = unexpand(
+      map {
+         sprintf "%-32s%s",
+           @$_
+      } @_
+   );
+
+
+==> b1132.par <==
+--indent-columns=3
+--line-up-parentheses
+--maximum-line-length=44
+--norecombine
+
 ==> b1134.in <==
 {
        ok do{
@@ -8451,6 +8470,36 @@ function(
 --line-up-parentheses
 --maximum-line-length=30
 --variable-maximum-line-length
+
+==> b1272.in <==
+ $this->{Normals} =
+   (
+     PDL->zeroes(
+                  3, (
+                    map { $_ - 1 }
+                      @{ $this->{XYDims} }
+                  ),
+                  @{ $this->{OverDims} }
+     )->double
+ )->dummy( 3, $this->{XYDims}[1] );
+
+ $this->{Normals} = (
+           PDL->zeroes(
+                        3, (
+                         map { $_ - 1 }
+                           @{ $this->{XYDims} }
+                        ),
+                        @{ $this->{OverDims} }
+           )->double
+ )->dummy( 3, $this->{XYDims}[1] );
+
+
+==> b1272.par <==
+--break-before-paren=2
+--extended-line-up-parentheses
+--indent-columns=1
+--maximum-line-length=47
+--opening-paren-right
 
 ==> b1280.in <==
 # S1
