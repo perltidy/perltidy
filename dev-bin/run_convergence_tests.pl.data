@@ -8614,6 +8614,36 @@ my $file = $menubar->Menubutton(
 --maximum-line-length=91
 --square-bracket-vertical-tightness=1
 
+==> b1299.in <==
+# S1
+                                        $cod_offset=
+                                                  $flds[6]-
+                                                  (
+                                                ($predobj->start(
+                                                                  )
+                                                                  -
+                                                                  1
+                                                )% 3);
+
+# S2
+                                        $cod_offset=
+                                                  $flds[6]-
+                                                  (
+                                                ($predobj->
+                                                                  start
+                                                                  (
+                                                                  )
+                                                                  -
+                                                                  1
+                                                )% 3);
+
+==> b1299.par <==
+--noadd-whitespace
+--continuation-indentation=10
+--ignore-old-breakpoints
+--indent-columns=8
+--maximum-line-length=65
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

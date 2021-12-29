@@ -4153,6 +4153,18 @@ EOM
                 && $is_container_token{$next_nonblank_token} )
             {
                 $rtype = $next_nonblank_type . $next_nonblank_token;
+
+                # Do not separate a bareword identifier from its paren: b1299
+                # This is currently needed for stability because if the bareword
+                # gets separated from a preceding '->' and following '(' then
+                # the tokenizer may switch from type 'i' to type 'w'.  This
+                # patch will prevent this by keeping it adjacent to its '('.
+                if (   $next_nonblank_token eq '('
+                    && $ltype eq 'i'
+                    && substr( $token, 0, 1 ) =~ /^\w$/ )
+                {
+                    $ltype = 'w';
+                }
             }
 
             # apply binary rules which apply regardless of space between tokens
