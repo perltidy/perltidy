@@ -19142,6 +19142,22 @@ EOM
 
     my %is_keyword_with_special_leading_term;
 
+    # Possible future control.  See discussion of git #78.
+    # Could be implemented if it seems useful.
+    # The value of the parameter is a flag which uses the same codes as the
+    # weld exclusion rules. That is:
+    ## undef matches no parens
+    ##  '0' matches no parens
+    ##  '1' matches all parens [not used in weld exclusion rules]
+    ##  '*' matches all parens
+    ##  'k' matches only if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
+    ##  'K' matches if 'k' does not, meaning if the previous token is not a keyword.
+    ##  'f' matches if the previous token is a function other than a keyword.
+    ##  'F' matches if 'f' does not.
+    ##  'w' matches if either 'k' or 'f' match.
+    ##  'W' matches if 'w' does not.
+    my $rOpts_open_up_paren_list_types;
+
     BEGIN {
 
         # These keywords have prototypes which allow a special leading item
@@ -19149,6 +19165,44 @@ EOM
         my @q =
           qw(formline grep kill map printf sprintf push chmod join pack unshift);
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
+    }
+
+    sub match_excluded_flag {
+
+        # Decide if this paren is excluded by user request.
+        # NOTE: copied from part of is_excluded_weld.
+        # TODO: this coding can be merged with is_excluded_weld.
+        my ( $self, $KK, $flag ) = @_;
+        my $rLL         = $self->[_rLL_];
+        my $rtoken_vars = $rLL->[$KK];
+        my $token       = $rtoken_vars->[_TOKEN_];
+        return 0 unless ( defined($flag) );
+        return 1 if $flag eq '*';
+
+        my ( $is_f, $is_k, $is_w );
+        my $Kp = $self->K_previous_nonblank($KK);
+        if ( defined($Kp) ) {
+            my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
+            my $type_p = $rLL->[$Kp]->[_TYPE_];
+
+            # keyword?
+            $is_k = $type_p eq 'k';
+
+            # function call?
+            $is_f = $self->[_ris_function_call_paren_]->{$seqno};
+
+            # either keyword or function call?
+            $is_w = $is_k || $is_f;
+        }
+
+        my $match;
+        if    ( $flag eq 'k' ) { $match = $is_k }
+        elsif ( $flag eq 'K' ) { $match = !$is_k }
+        elsif ( $flag eq 'f' ) { $match = $is_f }
+        elsif ( $flag eq 'F' ) { $match = !$is_f }
+        elsif ( $flag eq 'w' ) { $match = $is_w }
+        elsif ( $flag eq 'W' ) { $match = !$is_w }
+        return $match;
     }
 
     use constant DEBUG_SPARSE => 0;
@@ -19740,14 +19794,42 @@ EOM
           : ( $packed_lines == 2 ) ? 0.4
           :                          0.7;
 
+        my $two_line_word_wrap_ok;
+        if ( $opening_token eq '(' ) {
+
+            # default is to allow wrapping of short paren lists
+            $two_line_word_wrap_ok = 1;
+
+            # but turn off word wrap where requested
+            if ($rOpts_open_up_paren_list_types) {
+
+                my $flag = $rOpts_open_up_paren_list_types;
+                if (   $flag eq '1'
+                    || $flag eq '*' )
+                {
+                    $two_line_word_wrap_ok = 0;
+                }
+                elsif ( $flag eq '0' ) {
+                    $two_line_word_wrap_ok = 1;
+                }
+                else {
+
+                    my $KK = $K_to_go[$i_opening_paren];
+                    $two_line_word_wrap_ok =
+                      !$self->match_excluded_flag( $KK, $flag );
+                }
+            }
+        }
+
         # Begin check for shortcut methods, which avoid treating a list
         # as a table for relatively small parenthesized lists.  These
         # are usually easier to read if not formatted as tables.
         if (
-            $packed_lines <= 2          # probably can fit in 2 lines
-            && $item_count < 9          # doesn't have too many items
-            && $opening_is_in_block     # not a sub-container
-            && $opening_token eq '('    # is paren list
+            $packed_lines <= 2           # probably can fit in 2 lines
+            && $item_count < 9           # doesn't have too many items
+            && $opening_is_in_block      # not a sub-container
+            && $two_line_word_wrap_ok    # ok to wrap this paren list
+            ##&& $opening_token eq '('    # is paren list
           )
         {
 
@@ -19845,7 +19927,8 @@ EOM
         # structure.
         my $must_break_open_container = $must_break_open
           || ( $too_long
-            && ( $in_hierarchical_list || $opening_token ne '(' ) );
+            && ( $in_hierarchical_list || !$two_line_word_wrap_ok ) );
+        ##&& ( $in_hierarchical_list || $opening_token ne '(' ) );
 
 #print "LISTX: next=$next_nonblank_type  avail cols=$columns packed=$packed_columns must format = $must_break_open_container too-long=$too_long  opening=$opening_token list_type=$list_type formatted_lines=$formatted_lines  packed=$packed_lines max_sparsity= $max_allowed_sparsity sparsity=$sparsity \n";
 
@@ -20644,13 +20727,13 @@ EOM
                                 else {
                                     if ( $arrow_count == 0 ) {
                                         $rlp_object_list->[$i]
-                                          ->permanently_decrease_available_spaces
-                                          ($available_spaces);
+                                          ->permanently_decrease_available_spaces(
+                                            $available_spaces);
                                     }
                                     else {
                                         $rlp_object_list->[$i]
-                                          ->tentatively_decrease_available_spaces
-                                          ($available_spaces);
+                                          ->tentatively_decrease_available_spaces(
+                                            $available_spaces);
                                     }
                                     foreach
                                       my $j ( $i + 1 .. $max_lp_object_list )
