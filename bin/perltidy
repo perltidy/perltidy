@@ -4184,6 +4184,35 @@ excess of the maximum line length.  If this occurs, the entire group of
 comments will remain aligned and be outdented by the same amount.  This coordinated
 alignment will not occur if B<-nvbc> is set.  The default is B<-vbc>.
 
+=item B<Finer alignment control with --valign-exclusion-list=s or -vxl=s and --valign-inclusion-list=s or -vil=s>
+
+More detailed control of alignment types is available with these two parameters.
+Most of the alignments in typical programs occur at one of the tokens ',' '=',
+and '=>', but many others are possible.  The complete list of token types where
+vertical alignment can occur is:
+
+  = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+  { ( ? : , ; => && || ~~ !~~ =~ !~ // <=> ->
+  if unless and or err for foreach while until
+
+These alignments are all enabled by default, but they can be selectively disabled by including one or more of these tokens in the list B<valign-exclusion-list=s>.  For example, the following would prevent alignment at B<=> and B<if>:
+
+  --valign-exclusion-list='= if'
+
+If it is simpler to specify only the token types which are to be aligned, use the special symbol B<*> for this list and include the types which are to be aligned in the list of B<--valign-inclusion-list>. For example,
+the following parameters enable alignment only at commas and 'fat commas':
+
+  --valign-exclusion-list='*'
+  --valign-inclusion-list=', =>'
+
+These parameter lists should consist of space-separated tokens from the above
+list of possible alignment tokens.  If an unrecognized parameter appears, it is
+simply ignored. And if a parameter is entered in both lists (it should
+not), then the exclusion list has priority.
+
+Note that control of side comment alignment is not done with these parameters but
+rather with the B<--valign-side_comments> listed above.
+
 =back
 
 =head2 Other Controls

@@ -22422,6 +22422,13 @@ EOM
                     elsif ( $i > $i_elsif_open && $i < $i_elsif_close ) {
 
                     }
+
+                    # and ignore any tokens which have leading padded spaces
+                    # example: perl527/lop.t
+                    elsif ( substr( $alignment_type, 0, 1 ) eq ' ' ) {
+
+                    }
+
                     else {
                         $ralignment_type_to_go->[$i] = $alignment_type;
                         $ralignment_hash_by_line->[$line]->{$i} =
@@ -23601,6 +23608,10 @@ sub pad_token {
                         if ( $token eq '(' ) {
                             $name = $self->make_paren_name($i);
                         }
+
+                        # name cannot be '.', so change to something else if so
+                        if ( $name eq '.' ) { $name = 'dot' }
+
                         $container_name{$depth} = "+" . $name;
 
                         # Make the container name even more unique if necessary.

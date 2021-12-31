@@ -777,6 +777,7 @@ EOM
 
     Perl::Tidy::Formatter::check_options($rOpts);
     Perl::Tidy::Tokenizer::check_options($rOpts);
+    Perl::Tidy::VerticalAligner::check_options($rOpts);
     if ( $rOpts->{'format'} eq 'html' ) {
         Perl::Tidy::HtmlWriter->check_options($rOpts);
     }
@@ -2314,6 +2315,8 @@ sub generate_options {
     $add_option->( 'valign-code',                               'vc',    '!' );
     $add_option->( 'valign-block-comments',                     'vbc',   '!' );
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );
+    $add_option->( 'valign-exclusion-list',                     'vxl',   '=s' );
+    $add_option->( 'valign-inclusion-list',                     'vil',   '=s' );
 
     ########################################
     $category = 4;    # Comment controls

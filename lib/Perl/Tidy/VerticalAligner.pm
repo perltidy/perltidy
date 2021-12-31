@@ -172,7 +172,50 @@ BEGIN {
     };
 
     DEBUG_TABS && $debug_warning->('TABS');
+}
 
+# GLOBAL variables
+my (
+
+    %valign_control_hash,
+    $valign_control_default,
+
+);
+
+sub check_options {
+
+    # This routine is called to check the user-supplied run parameters
+    # and to configure the control hashes to them.
+    my ($rOpts) = @_;
+
+    %valign_control_hash    = ();
+    $valign_control_default = 1;
+
+    if ( $rOpts->{'valign-inclusion-list'} ) {
+        my @list = split /\s+/, $rOpts->{'valign-inclusion-list'};
+        @valign_control_hash{@list} = (1) x scalar(@list);
+    }
+
+    # Note that the -vxl list is done after -vil, so -vxl has priority
+    # in the event of duplicate entries.
+    if ( $rOpts->{'valign-exclusion-list'} ) {
+        my @list = split /\s+/, $rOpts->{'valign-exclusion-list'};
+        @valign_control_hash{@list} = (0) x scalar(@list);
+    }
+
+    # '$valign_control_default' applies to types not in the hash:
+    # - If a '*' was entered then set it to be that default type
+    # - Otherwise, leave it set it to 1
+    if ( defined( $valign_control_hash{'*'} ) ) {
+        $valign_control_default = $valign_control_hash{'*'};
+    }
+
+    # Side comments are controlled separately and must be removed if specified
+    if ( defined( $valign_control_hash{'#'} ) ) {
+        delete $valign_control_hash{'#'};
+    }
+
+    return;
 }
 
 sub new {
@@ -1225,6 +1268,7 @@ sub check_fit {
     my $rfield_lengths      = $new_line->get_rfield_lengths();
     my $padding_available   = $old_line->get_available_space_on_right();
     my $jmax_old            = $old_line->get_jmax();
+    my $rtokens_old         = $old_line->get_rtokens();
 
     # Safety check ... only lines with equal array sizes should arrive here
     # from sub check_match.  So if this error occurs, look at recent changes in
@@ -1257,11 +1301,31 @@ EOM
             $pad += $leading_space_count;
         }
 
-        # Keep going if this field does not need any space.
-        next if $pad < 0;
+        # Give up if not enough space is available
+        my $revert = $pad > $padding_available;
 
-        # See if it needs too much space.
-        if ( $pad > $padding_available ) {
+        # Apply any user-defined vertical alignment controls in top-down sweep
+        if (  !$revert
+            && $j < $jmax
+            && %valign_control_hash )
+        {
+
+            # FIXME: This call is a little inefficient; need to do profiling
+            # to see if it should be avoided.
+            my $tok = $rtokens_old->[$j];
+            my ( $raw_tok, $lev, $tag, $tok_count ) =
+              decode_alignment_token($tok);
+
+            my $align_ok = $valign_control_hash{$raw_tok};
+            $align_ok = $valign_control_default unless defined($align_ok);
+
+            if ( !$align_ok && $pad != 0 ) {
+                $revert = 1;
+            }
+        }
+
+        # Revert to the starting state if does not fit
+        if ($revert) {
 
             ################################################
             # Line does not fit -- revert to starting state
@@ -1271,6 +1335,9 @@ EOM
             }
             return;
         }
+
+        # Keep going if this field does not need any space.
+        next if ( $pad < 0 );
 
         # make room for this field
         $old_line->increase_field_width( $j, $pad );
@@ -2223,6 +2290,21 @@ sub sweep_left_to_right {
                       (      $lines_below == 1
                           || $lines_below == 2 && $lines_above >= 4 )
                       && $col > $col_want + $short_pad * $factor;
+                }
+
+                # Apply user-defined vertical alignment controls in l-r sweep
+                if ( !$is_big_gap && %valign_control_hash ) {
+
+                    my $align_ok = $valign_control_hash{$raw_tok};
+                    $align_ok = $valign_control_default
+                      unless defined($align_ok);
+
+                    # Note that the following definition of $pad is not the
+                    # total pad because we are working at group boundaries. But
+                    # we can still see if it is zero or not.
+                    if ( !$align_ok && $col_want != $col ) {
+                        $is_big_gap = 1;
+                    }
                 }
 
                 # if match is limited by gap size, stop aligning at this level
