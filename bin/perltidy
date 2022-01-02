@@ -4210,8 +4210,34 @@ list of possible alignment tokens.  If an unrecognized parameter appears, it is
 simply ignored. And if a parameter is entered in both lists (it should
 not), then the exclusion list has priority.
 
-Note that control of side comment alignment is not done with these parameters but
-rather with the B<--valign-side_comments> listed above.
+To illustrate, consider the following snippet with default formatting
+
+    # perltidy
+    $co_description = ($color) ? 'bold cyan'  : '';           # description
+    $co_prompt      = ($color) ? 'bold green' : '';           # prompt
+    $co_unused      = ($color) ? 'on_green'   : 'reverse';    # unused
+
+To exclude all alignments except the equals we could use:
+
+    # perltidy -vxl='*' -vil='='
+    $co_description = ($color) ? 'bold cyan' : '';          # description
+    $co_prompt      = ($color) ? 'bold green' : '';         # prompt
+    $co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
+
+To exclude only the equals we could use:
+
+    # perltidy -vxl='='
+    $co_description = ($color) ? 'bold cyan' : '';     # description
+    $co_prompt = ($color) ? 'bold green' : '';         # prompt
+    $co_unused = ($color) ? 'on_green' : 'reverse';    # unused
+
+Notice in this last example that although only the equals alignment was
+excluded, the ternary alignments were also lost.  This happens because
+alignments are formed from left-to-right, and when an alignment is prevented
+for any reason, any remaining possible alignments to its right are skipped.
+
+Also notice side comments remain aligned because their alignment is
+controlled separately with the parameter B<--valign-side_comments> described above.
 
 =back
 

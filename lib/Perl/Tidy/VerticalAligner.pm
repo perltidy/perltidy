@@ -1313,30 +1313,11 @@ EOM
             $pad += $leading_space_count;
         }
 
-        # Give up if not enough space is available to increase padding.
-        # Note: $padding_available can be a negative number.
-        my $no_fit = $pad > 0 && $pad > $padding_available;
-
-        # Apply any user-defined vertical alignment controls in top-down sweep
-        if (  !$no_fit
-            && $j < $jmax
-            && %valign_control_hash )
-        {
-
-            my $tok = $rtokens_old->[$j];
-            my ( $raw_tok, $lev, $tag, $tok_count ) =
-              decode_alignment_token($tok);
-
-            my $align_ok = $valign_control_hash{$raw_tok};
-            $align_ok = $valign_control_default unless defined($align_ok);
-
-            if ( !$align_ok && $pad != 0 ) {
-                $no_fit = 1;
-            }
-        }
+        # Keep going if this field does not need any space.
+        next if ( $pad < 0 );
 
         # Revert to the starting state if does not fit
-        if ($no_fit) {
+        if ( $pad > $padding_available ) {
 
             ################################################
             # Line does not fit -- revert to starting state
@@ -1346,9 +1327,6 @@ EOM
             }
             return;
         }
-
-        # Keep going if this field does not need any space.
-        next if ( $pad < 0 );
 
         # make room for this field
         $old_line->increase_field_width( $j, $pad );
@@ -2303,21 +2281,6 @@ sub sweep_left_to_right {
                       && $col > $col_want + $short_pad * $factor;
                 }
 
-                # Apply user-defined vertical alignment controls in l-r sweep
-                if ( !$is_big_gap && %valign_control_hash ) {
-
-                    my $align_ok = $valign_control_hash{$raw_tok};
-                    $align_ok = $valign_control_default
-                      unless defined($align_ok);
-
-                    # Note that the following definition of $pad is not the
-                    # total pad because we are working at group boundaries. But
-                    # we can still see if it is zero or not.
-                    if ( !$align_ok && $col_want != $col ) {
-                        $is_big_gap = 1;
-                    }
-                }
-
                 # if match is limited by gap size, stop aligning at this level
                 if ($is_big_gap) {
                     $blocking_level[$ng] = $lev - 1;
@@ -2835,7 +2798,7 @@ EOM
                     # this way so they have to be applied elsewhere too.
                     my $align_ok = 1;
                     if (%valign_control_hash) {
-                        my $align_ok = $valign_control_hash{$raw_tok};
+                        $align_ok = $valign_control_hash{$raw_tok};
                         $align_ok = $valign_control_default
                           unless defined($align_ok);
                         $delete_me ||= !$align_ok;
