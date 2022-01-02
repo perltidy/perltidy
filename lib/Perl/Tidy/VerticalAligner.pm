@@ -210,9 +210,9 @@ sub check_options {
         $valign_control_default = $valign_control_hash{'*'};
     }
 
-    # Side comments are controlled separately and must be removed if specified
-    if ( defined( $valign_control_hash{'#'} ) ) {
-        delete $valign_control_hash{'#'};
+    # Side comments are controlled separately and not removed by this control
+    if (%valign_control_hash) {
+        $valign_control_hash{'#'} = 1;
     }
 
     return;
@@ -932,6 +932,12 @@ sub fix_terminal_ternary {
     return unless ($old_line);
     use constant EXPLAIN_TERNARY => 0;
 
+    if (%valign_control_hash) {
+        my $align_ok = $valign_control_hash{'?'};
+        $align_ok = $valign_control_default unless defined($align_ok);
+        return unless ($align_ok);
+    }
+
     my $jmax        = @{$rfields} - 1;
     my $rfields_old = $old_line->get_rfields();
 
@@ -1100,6 +1106,12 @@ sub fix_terminal_else {
     return unless ($old_line);
     my $jmax = @{$rfields} - 1;
     return unless ( $jmax > 0 );
+
+    if (%valign_control_hash) {
+        my $align_ok = $valign_control_hash{'{'};
+        $align_ok = $valign_control_default unless defined($align_ok);
+        return unless ($align_ok);
+    }
 
     # check for balanced else block following if/elsif/unless
     my $rfields_old = $old_line->get_rfields();
@@ -1301,17 +1313,16 @@ EOM
             $pad += $leading_space_count;
         }
 
-        # Give up if not enough space is available
-        my $revert = $pad > $padding_available;
+        # Give up if not enough space is available to increase padding.
+        # Note: $padding_available can be a negative number.
+        my $no_fit = $pad > 0 && $pad > $padding_available;
 
         # Apply any user-defined vertical alignment controls in top-down sweep
-        if (  !$revert
+        if (  !$no_fit
             && $j < $jmax
             && %valign_control_hash )
         {
 
-            # FIXME: This call is a little inefficient; need to do profiling
-            # to see if it should be avoided.
             my $tok = $rtokens_old->[$j];
             my ( $raw_tok, $lev, $tag, $tok_count ) =
               decode_alignment_token($tok);
@@ -1320,12 +1331,12 @@ EOM
             $align_ok = $valign_control_default unless defined($align_ok);
 
             if ( !$align_ok && $pad != 0 ) {
-                $revert = 1;
+                $no_fit = 1;
             }
         }
 
         # Revert to the starting state if does not fit
-        if ($revert) {
+        if ($no_fit) {
 
             ################################################
             # Line does not fit -- revert to starting state
@@ -2820,6 +2831,16 @@ EOM
                     #######################################################
                     my $delete_me = !defined($il) && !defined($ir);
 
+                    # Apply any user controls. Note that not all lines pass
+                    # this way so they have to be applied elsewhere too.
+                    my $align_ok = 1;
+                    if (%valign_control_hash) {
+                        my $align_ok = $valign_control_hash{$raw_tok};
+                        $align_ok = $valign_control_default
+                          unless defined($align_ok);
+                        $delete_me ||= !$align_ok;
+                    }
+
                     # But now we modify this with exceptions...
 
                     # EXCEPTION 1: If we are in a complete ternary or
@@ -2915,6 +2936,9 @@ EOM
                             }
                         }
                     }
+
+                    # Do not let a user exclusion be reactivated by above rules
+                    $delete_me ||= !$align_ok;
 
                     #####################################
                     # Add this token to the deletion list
