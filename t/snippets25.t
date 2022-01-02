@@ -16,6 +16,9 @@
 #13 git74.git74
 #14 git77.def
 #15 git77.git77
+#16 vxl.def
+#17 vxl.vxl1
+#18 vxl.vxl2
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -64,7 +67,13 @@ BEGIN {
         'novalign2' => "-nvsc -nvbc -msc=2",
         'novalign3' => "-nvc",
         'rt140025'  => "-lp -xci -ci=4 -ce",
-        'xlp1'      => "-xlp",
+        'vxl1'      => <<'----------',
+-vxl='='
+----------
+        'vxl2' => <<'----------',
+-vxl='*' -vil='='
+----------
+        'xlp1' => "-xlp",
     };
 
     ############################
@@ -249,6 +258,14 @@ my $cmd;
  }
  }
 };
+----------
+
+        'vxl' => <<'----------',
+# if equals is excluded then ternary is automatically excluded
+# side comment alignments always remain
+$co_description = ($color) ? 'bold cyan' : '';          # description
+$co_prompt      = ($color) ? 'bold green' : '';         # prompt
+$co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
 ----------
 
         'xlp1' => <<'----------',
@@ -705,6 +722,42 @@ my $test_var =
         grep { defined( $_->init_arg ) } $class->get_all_attributes
     };
 #15...........
+        },
+
+        'vxl.def' => {
+            source => "vxl",
+            params => "def",
+            expect => <<'#16...........',
+# if equals is excluded then ternary is automatically excluded
+# side comment alignments always remain
+$co_description = ($color) ? 'bold cyan'  : '';           # description
+$co_prompt      = ($color) ? 'bold green' : '';           # prompt
+$co_unused      = ($color) ? 'on_green'   : 'reverse';    # unused
+#16...........
+        },
+
+        'vxl.vxl1' => {
+            source => "vxl",
+            params => "vxl1",
+            expect => <<'#17...........',
+# if equals is excluded then ternary is automatically excluded
+# side comment alignments always remain
+$co_description = ($color) ? 'bold cyan' : '';     # description
+$co_prompt = ($color) ? 'bold green' : '';         # prompt
+$co_unused = ($color) ? 'on_green' : 'reverse';    # unused
+#17...........
+        },
+
+        'vxl.vxl2' => {
+            source => "vxl",
+            params => "vxl2",
+            expect => <<'#18...........',
+# if equals is excluded then ternary is automatically excluded
+# side comment alignments always remain
+$co_description = ($color) ? 'bold cyan' : '';          # description
+$co_prompt      = ($color) ? 'bold green' : '';         # prompt
+$co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
+#18...........
         },
     };
 

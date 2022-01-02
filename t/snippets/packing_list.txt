@@ -482,3 +482,6 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets25.t	vxl.def
+../snippets25.t	vxl.vxl1
+../snippets25.t	vxl.vxl2

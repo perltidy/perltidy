@@ -1,0 +1,5 @@
+# if equals is excluded then ternary is automatically excluded
+# side comment alignments always remain
+$co_description = ($color) ? 'bold cyan' : '';     # description
+$co_prompt = ($color) ? 'bold green' : '';         # prompt
+$co_unused = ($color) ? 'on_green' : 'reverse';    # unused

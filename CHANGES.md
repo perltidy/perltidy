@@ -2,6 +2,10 @@
 
 ## 2021 10 29.04
 
+    - Two new flags have been added to provide finer vertical alignment control,
+      --valign-exclusion-list=s (-vxl=s) and  --valign-inclusion-list=s (-vil=s).
+      This has been requested several times, recently in git #79.
+
     - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
       git #77.  This allows code blocks passed to list operator functions to
       be formatted in the same way as a code block passed to grep, map, or sort.
