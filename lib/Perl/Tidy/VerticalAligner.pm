@@ -188,31 +188,42 @@ sub check_options {
     # and to configure the control hashes to them.
     my ($rOpts) = @_;
 
+    # All alignments are done by default
     %valign_control_hash    = ();
     $valign_control_default = 1;
 
-    if ( $rOpts->{'valign-inclusion-list'} ) {
-        my @list = split /\s+/, $rOpts->{'valign-inclusion-list'};
-        @valign_control_hash{@list} = (1) x scalar(@list);
-    }
-
-    # Note that the -vxl list is done after -vil, so -vxl has priority
-    # in the event of duplicate entries.
+    # See if the user wants to exclude any alignment types ...
     if ( $rOpts->{'valign-exclusion-list'} ) {
-        my @list = split /\s+/, $rOpts->{'valign-exclusion-list'};
-        @valign_control_hash{@list} = (0) x scalar(@list);
-    }
 
-    # '$valign_control_default' applies to types not in the hash:
-    # - If a '*' was entered then set it to be that default type
-    # - Otherwise, leave it set it to 1
-    if ( defined( $valign_control_hash{'*'} ) ) {
-        $valign_control_default = $valign_control_hash{'*'};
-    }
+        # The inclusion list is only relevant if there is an exclusion list
+        if ( $rOpts->{'valign-inclusion-list'} ) {
+            my @vil = split /\s+/, $rOpts->{'valign-inclusion-list'};
+            @valign_control_hash{@vil} = (1) x scalar(@vil);
+        }
 
-    # Side comments are controlled separately and not removed by this control
-    if (%valign_control_hash) {
-        $valign_control_hash{'#'} = 1;
+        # Note that the -vxl list is done after -vil, so -vxl has priority
+        # in the event of duplicate entries.
+        my @vxl = split /\s+/, $rOpts->{'valign-exclusion-list'};
+        @valign_control_hash{@vxl} = (0) x scalar(@vxl);
+
+        # Optimization: revert to defaults if no exclusions.
+        # This could happen with -vxl='  ' and any -vil list
+        if ( !@vxl ) {
+            %valign_control_hash = ();
+        }
+
+        # '$valign_control_default' applies to types not in the hash:
+        # - If a '*' was entered then set it to be that default type
+        # - Otherwise, leave it set it to 1
+        if ( defined( $valign_control_hash{'*'} ) ) {
+            $valign_control_default = $valign_control_hash{'*'};
+        }
+
+        # Side comments are controlled separately and must be removed
+        # if given in a list.
+        if (%valign_control_hash) {
+            $valign_control_hash{'#'} = 1;
+        }
     }
 
     return;
