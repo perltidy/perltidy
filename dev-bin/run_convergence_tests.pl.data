@@ -8693,6 +8693,36 @@ my $file = $menubar->Menubutton(
 --indent-columns=8
 --maximum-line-length=65
 
+==> b1301.in <==
+subtest '->save' => sub {
+    plan tests => 1;
+    my $layout
+    =C4::Patroncards::Layout->new (layout_name => "new patron card",
+                                   layout_id   => '',                # The interface send an empty string
+                                   layout_xml  => 'some_xml'
+    );
+};
+
+subtest '->save' => sub {
+    plan tests => 1;
+    my $layout
+    =C4::Patroncards::Layout->new (
+                                  layout_name => "new patron card",
+                                  layout_id   => '',                 # The interface send an empty string
+                                  layout_xml  => 'some_xml'
+    );
+};
+
+==> b1301.par <==
+--break-before-all-operators
+--continuation-indentation=0
+--extended-line-up-parentheses
+--ignore-side-comment-lengths
+--maximum-line-length=70
+--nowant-right-space='- = .= **= *= + >= >>= ||= != <<= >= + ||= < /= //='
+--space-function-paren
+--vertical-tightness=1
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

@@ -10676,8 +10676,17 @@ sub collapsed_lengths {
                         {
                             $Kend = $K_last;
                         }
+
+                        # Measure from the next blank if any (fixes b1301)
+                        my $Kbeg = $KK;
+                        if (   $rLL->[ $Kbeg + 1 ]->[_TYPE_] eq 'b'
+                            && $Kbeg < $Kend )
+                        {
+                            $Kbeg++;
+                        }
                         my $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
-                          $rLL->[$KK]->[_CUMULATIVE_LENGTH_];
+                          $rLL->[$Kbeg]->[_CUMULATIVE_LENGTH_];
+
                         if ( $len > $max_prong_len ) { $max_prong_len = $len }
                     }
 
