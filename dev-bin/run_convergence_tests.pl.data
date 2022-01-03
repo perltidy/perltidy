@@ -8491,6 +8491,23 @@ function(
 --maximum-line-length=37
 --vertical-tightness=2
 
+==> b1271.in <==
+          exit (
+                    $opts{"-exitval"}
+          ) ;
+
+          exit (
+                    $opts{
+"-exitval"
+                    } ) ;
+
+==> b1271.par <==
+--indent-columns=10
+--maximum-line-length=37
+--paren-vertical-tightness-closing=1
+--space-keyword-paren
+--space-terminal-semicolon
+
 ==> b1272.in <==
  $this->{Normals} =
    (
@@ -8520,6 +8537,29 @@ function(
 --indent-columns=1
 --maximum-line-length=47
 --opening-paren-right
+
+==> b1273.in <==
+                     if (
+                            (
+                                   $n = index( $trial,
+                                          $frag )
+                            ) >= $[
+                       );
+
+                     if (
+                            (
+                                   $n =
+                                   index( $trial,
+                                          $frag )
+                            ) >= $[
+                       );
+
+==> b1273.par <==
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=7
+--keyword-paren-inner-tightness=2
+--maximum-line-length=56
 
 ==> b1280.in <==
 # S1
@@ -8762,6 +8802,29 @@ if (( $response = $browser->request($curreq)
 --maximum-line-length=53
 --paren-vertical-tightness-closing=2
 --novalign-code
+
+==> b1304.in <==
+# S1
+          (
+                    $hisaddr=recv(
+                              SOCKET,$histime='',4,
+                              0
+                    )
+          );
+# S2
+          (
+                    $hisaddr=
+                            recv(SOCKET,
+                              $histime='',4,0)
+          );
+
+==> b1304.par <==
+--noadd-whitespace
+--continuation-indentation=8
+--ignore-old-breakpoints
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=52
 
 ==> b131.in <==
         unless

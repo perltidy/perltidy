@@ -18531,9 +18531,11 @@ EOM
                 # b1264 to see if this check is still required at all, and
                 # these still require a check, but at higher level beta+3
                 # instead of beta:  b1193 b780
-                if (   $saw_opening_structure
+                if (
+                    $saw_opening_structure
                     && !$lp_object
-                    && $levels_to_go[$i_opening] >= $stress_level_beta + 3 )
+                    && $levels_to_go[$i_opening] >= $list_stress_level
+                  )
                 {
                     $cab_flag = 2;
 
