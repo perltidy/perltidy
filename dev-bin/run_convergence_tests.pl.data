@@ -8471,6 +8471,50 @@ function(
 --maximum-line-length=30
 --variable-maximum-line-length
 
+==> b1268.in <==
+$|||=sub
+{   ($_[$[<$]],$_[$[])
+};
+
+$|||=sub
+{($_[$[<$]],$_[$[])};
+
+==> b1268.par <==
+--noadd-whitespace
+--block-brace-vertical-tightness=1
+--continuation-indentation=5
+--delete-old-whitespace
+--line-up-parentheses
+--maximum-line-length=26
+--opening-anonymous-sub-brace-on-new-line
+--variable-maximum-line-length
+--weld-nested-containers
+
+==> b1269.in <==
+use overload
+     "=="=>\&_equals,
+     "!="=>
+     sub{not _equals(@_)},
+     q{""}=>
+     sub{($_[0]->{_type})};
+
+use overload
+     "=="=>\&_equals,
+     "!="=>
+     sub{not _equals(@_)},
+     q{""}=>sub
+{($_[0]->{_type})};
+
+
+==> b1269.par <==
+--noadd-whitespace
+--continuation-indentation=5
+--line-up-parentheses
+--maximum-line-length=26
+--opening-anonymous-sub-brace-on-new-line
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b1270.in <==
           $this->{SymAutoCor} = (
                     PDL->zeroes(
@@ -8560,6 +8604,54 @@ function(
 --indent-columns=7
 --keyword-paren-inner-tightness=2
 --maximum-line-length=56
+
+==> b1277.in <==
+# S1
+          match_on_type @_ => Null => sub { [] },
+                  ArrayRef =>
+                  sub { [ @{ rev ( tail ($_) ) }, head ($_) ] } ;
+
+# S2
+          match_on_type @_ => Null => sub { [] },
+                  ArrayRef =>
+                  sub { [
+                    @{ rev ( tail ($_) ) }, head ($_) ] } ;
+
+# S3
+          match_on_type @_ => Null => sub { [] },
+                  ArrayRef => sub
+          { [ @{ rev ( tail ($_) ) }, head ($_) ] } ;
+
+
+==> b1277.par <==
+--continuation-indentation=8
+--indent-columns=10
+--line-up-parentheses
+--maximum-line-length=64
+--opening-anonymous-sub-brace-on-new-line
+--space-function-paren
+--space-terminal-semicolon
+--weld-nested-containers
+
+==> b1278.in <==
+# S1
+    match_on_type @_  => Null => sub { [] },
+             ArrayRef => sub
+    { [ @{ rev( tail($_) ) }, head($_) ] };
+
+# S2
+    match_on_type @_  => Null => sub { [] },
+             ArrayRef => sub
+    {   [ @{ rev( tail($_) ) }, head($_) ]
+    };
+
+==> b1278.par <==
+--block-brace-vertical-tightness=2
+--continuation-indentation=9
+--extended-line-up-parentheses
+--maximum-line-length=52
+--opening-anonymous-sub-brace-on-new-line
+--weld-nested-containers
 
 ==> b1280.in <==
 # S1

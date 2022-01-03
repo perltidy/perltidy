@@ -8881,10 +8881,13 @@ EOM
         # DO-NOT-WELD RULE 2A:
         # Do not weld an opening asub brace in -lp mode to avoid interfering
         # with one-line block formation.  Fixes b1241.
-        if (  !$do_not_weld_rule
-            && $is_one_line_weld
+        # Removed 1-line test to fix b1268.  See also b1269, b1277, b1278.
+        if (
+            !$do_not_weld_rule
+            ##&& $is_one_line_weld
             && $rOpts_line_up_parentheses
-            && $ris_asub_block->{$outer_seqno} )
+            && $ris_asub_block->{$outer_seqno}
+          )
         {
             $do_not_weld_rule = '2A';
         }
@@ -18531,11 +18534,9 @@ EOM
                 # b1264 to see if this check is still required at all, and
                 # these still require a check, but at higher level beta+3
                 # instead of beta:  b1193 b780
-                if (
-                    $saw_opening_structure
+                if (   $saw_opening_structure
                     && !$lp_object
-                    && $levels_to_go[$i_opening] >= $list_stress_level
-                  )
+                    && $levels_to_go[$i_opening] >= $list_stress_level )
                 {
                     $cab_flag = 2;
 
@@ -19797,12 +19798,13 @@ EOM
             # but turn off word wrap where requested
             if ($rOpts_break_open_paren_list) {
 
-                #  '0' matches no parens
-                #  '1' matches all parens
-                #  otherwise use same values as weld-exclusion-list
+                # This parameter is a one-character flag, as follows:
+                #  '0' matches no parens  -> break open NOT OK -> word wrap OK
+                #  '1' matches all parens -> break open OK -> word wrap NOT OK
+                #  Other values are the same as used by the weld-exclusion-list
                 my $flag = $rOpts_break_open_paren_list;
-                if (   $flag eq '1'
-                    || $flag eq '*' )
+                if (   $flag eq '*'
+                    || $flag eq '1' )
                 {
                     $two_line_word_wrap_ok = 0;
                 }
