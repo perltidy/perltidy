@@ -7628,19 +7628,17 @@ sub keep_old_line_breaks {
                 my $seqno = $rLL->[$Kfirst]->[_TYPE_SEQUENCE_];
                 next unless ($seqno);
 
-                # Patch to avoid blinkers: but do not do this unless the
-                # container holds a list, or the opening and closing parens are
-                # separated by more than one* line.
-                # Fixes case b977.
-                # *To fix b1215: use min line count = 2 if -vt=n to avoid
-                # oscillations with function of opening vertical tightness.
-                my $lc_min = $opening_vertical_tightness{$token} ? 2 : 1;
-                next
-                  if (
-                    !$ris_list_by_seqno->{$seqno}
-                    && (  !$ris_broken_container->{$seqno}
-                        || $ris_broken_container->{$seqno} <= $lc_min )
-                  );
+                # Note: in previous versions there was a fix here to avoid
+                # instability between conflicting -bom and -pvt or -pvtc flags.
+                # The fix skipped -bom for a small line difference.  But this
+                # was troublesome, and instead the fix has been moved to
+                # sub set_vertical_tightness_flags where priority is given to
+                # the -bom flag over -pvt and -pvtc flags.  Both opening and
+                # closing paren flags are involved because even though -bom only
+                # requests breaking before the closing paren, automated logic
+                # opens the opening paren when the closing paren opens.
+                # Relevant cases are b977, b1215, b1270, b1303
+
                 $rwant_container_open->{$seqno} = 1;
             }
         }
@@ -10666,7 +10664,7 @@ sub collapsed_lengths {
                     #    stabilize by itself after one or two iterations.
                     #  - So, not doing this for now
 
-                    # TESTING: Include length to a comma ending this line
+                    # Include length to a comma ending this line
                     if (   $interrupted_list_rule
                         && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
                     {
@@ -10684,9 +10682,9 @@ sub collapsed_lengths {
                         {
                             $Kbeg++;
                         }
+
                         my $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                           $rLL->[$Kbeg]->[_CUMULATIVE_LENGTH_];
-
                         if ( $len > $max_prong_len ) { $max_prong_len = $len }
                     }
 
@@ -24816,7 +24814,6 @@ sub set_vertical_tightness_flags {
             )
           )
         {
-
             # avoid multiple jumps in nesting depth in one line if
             # requested
             my $ovt       = $opening_vertical_tightness{$token_end};
@@ -24828,6 +24825,13 @@ sub set_vertical_tightness_flags {
             $ovt = 0
               if ( $self->[_rK_weld_left_]->{ $K_to_go[$iend_next] }
                 && $is_closing_type{$type_end_next} );
+
+            # Avoid conflict of -bom and -pt=1 or -pt=2, fixes b1270
+            # See similar patch above for $cvt.
+            my $seqno = $type_sequence_to_go[$iend];
+            if ( $ovt && $self->[_rwant_container_open_]->{$seqno} ) {
+                $ovt = 0;
+            }
 
             unless (
                 $ovt < 2
@@ -24861,6 +24865,13 @@ sub set_vertical_tightness_flags {
         {
             my $ovt = $opening_vertical_tightness{$token_next};
             my $cvt = $closing_vertical_tightness{$token_next};
+
+            # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
+            # See similar patch above for $ovt.
+            my $seqno = $type_sequence_to_go[$ibeg_next];
+            if ( $cvt && $self->[_rwant_container_open_]->{$seqno} ) {
+                $cvt = 0;
+            }
 
             # Implement cvt=3: like cvt=0 for assigned structures, like cvt=1
             # otherwise.  Added for rt136417.

@@ -8471,6 +8471,26 @@ function(
 --maximum-line-length=30
 --variable-maximum-line-length
 
+==> b1270.in <==
+          $this->{SymAutoCor} = (
+                    PDL->zeroes(
+                              $n *
+                                2 - 1
+                    )->float
+          );
+
+          $this->{SymAutoCor} =
+            ( PDL->zeroes(    $n *
+                                2 - 1
+          )->float );
+
+
+==> b1270.par <==
+--break-at-old-method-breakpoints
+--indent-columns=10
+--maximum-line-length=37
+--vertical-tightness=2
+
 ==> b1272.in <==
  $this->{Normals} =
    (
@@ -8722,6 +8742,26 @@ subtest '->save' => sub {
 --nowant-right-space='- = .= **= *= + >= >>= ||= != <<= >= + ||= < /= //='
 --space-function-paren
 --vertical-tightness=1
+
+==> b1303.in <==
+if (
+    (
+      $response = $browser->request($curreq)
+    )->is_error() );
+
+if (( $response = $browser->request($curreq)
+)->is_error());
+
+
+==> b1303.par <==
+--break-at-old-method-breakpoints
+--continuation-indentation=9
+--extended-line-up-parentheses
+--indent-columns=2
+--keyword-paren-inner-tightness=2
+--maximum-line-length=53
+--paren-vertical-tightness-closing=2
+--novalign-code
 
 ==> b131.in <==
         unless
