@@ -150,6 +150,7 @@ my (
     $rOpts_break_at_old_logical_breakpoints,
     $rOpts_break_at_old_semicolon_breakpoints,
     $rOpts_break_at_old_ternary_breakpoints,
+    $rOpts_break_open_paren_list,
     $rOpts_closing_side_comments,
     $rOpts_closing_side_comment_else_flag,
     $rOpts_closing_side_comment_maximum_text,
@@ -1724,6 +1725,7 @@ EOM
       $rOpts->{'break-at-old-semicolon-breakpoints'};
     $rOpts_break_at_old_ternary_breakpoints =
       $rOpts->{'break-at-old-ternary-breakpoints'};
+    $rOpts_break_open_paren_list = $rOpts->{'break-open-paren-list'};
     $rOpts_closing_side_comments = $rOpts->{'closing-side-comments'};
     $rOpts_closing_side_comment_else_flag =
       $rOpts->{'closing-side-comment-else-flag'};
@@ -8173,19 +8175,28 @@ sub find_nested_pairs {
     return \@nested_pairs;
 }
 
-sub is_excluded_weld {
+sub match_paren_flag {
 
-    # decide if this weld is excluded by user request
-    my ( $self, $KK, $is_leading ) = @_;
+    # Decide if this paren is excluded by user request:
+    #   undef matches no parens
+    #   '*' matches all parens
+    #   'k' matches only if the previous nonblank token is a perl builtin
+    #       keyword (such as 'if', 'while'),
+    #   'K' matches if 'k' does not, meaning if the previous token is not a
+    #       keyword.
+    #   'f' matches if the previous token is a function other than a keyword.
+    #   'F' matches if 'f' does not.
+    #   'w' matches if either 'k' or 'f' match.
+    #   'W' matches if 'w' does not.
+    my ( $self, $KK, $flag ) = @_;
+
+    return 0 unless ( defined($flag) );
+    return 0 if $flag eq '0';
+    return 1 if $flag eq '*';
+    return 0 unless ( defined($KK) );
+
     my $rLL         = $self->[_rLL_];
     my $rtoken_vars = $rLL->[$KK];
-    my $token       = $rtoken_vars->[_TOKEN_];
-    my $rflags      = $weld_nested_exclusion_rules{$token};
-    return 0 unless ( defined($rflags) );
-    my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
-    return 0 unless ( defined($flag) );
-    return 1 if $flag eq '*';
-
     my ( $is_f, $is_k, $is_w );
     my $Kp = $self->K_previous_nonblank($KK);
     if ( defined($Kp) ) {
@@ -8201,7 +8212,6 @@ sub is_excluded_weld {
         # either keyword or function call?
         $is_w = $is_k || $is_f;
     }
-
     my $match;
     if    ( $flag eq 'k' ) { $match = $is_k }
     elsif ( $flag eq 'K' ) { $match = !$is_k }
@@ -8210,6 +8220,21 @@ sub is_excluded_weld {
     elsif ( $flag eq 'w' ) { $match = $is_w }
     elsif ( $flag eq 'W' ) { $match = !$is_w }
     return $match;
+}
+
+sub is_excluded_weld {
+
+    # decide if this weld is excluded by user request
+    my ( $self, $KK, $is_leading ) = @_;
+    my $rLL         = $self->[_rLL_];
+    my $rtoken_vars = $rLL->[$KK];
+    my $token       = $rtoken_vars->[_TOKEN_];
+    my $rflags      = $weld_nested_exclusion_rules{$token};
+    return 0 unless ( defined($rflags) );
+    my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
+    return 0 unless ( defined($flag) );
+    return 1 if $flag eq '*';
+    return $self->match_paren_flag( $KK, $flag );
 }
 
 # hashes to simplify welding logic
@@ -19156,22 +19181,6 @@ EOM
 
     my %is_keyword_with_special_leading_term;
 
-    # Possible future control.  See discussion of git #78.
-    # Could be implemented if it seems useful.
-    # The value of the parameter is a flag which uses the same codes as the
-    # weld exclusion rules. That is:
-    ## undef matches no parens
-    ##  '0' matches no parens
-    ##  '1' matches all parens [not used in weld exclusion rules]
-    ##  '*' matches all parens
-    ##  'k' matches only if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
-    ##  'K' matches if 'k' does not, meaning if the previous token is not a keyword.
-    ##  'f' matches if the previous token is a function other than a keyword.
-    ##  'F' matches if 'f' does not.
-    ##  'w' matches if either 'k' or 'f' match.
-    ##  'W' matches if 'w' does not.
-    my $rOpts_open_up_paren_list_types;
-
     BEGIN {
 
         # These keywords have prototypes which allow a special leading item
@@ -19179,44 +19188,6 @@ EOM
         my @q =
           qw(formline grep kill map printf sprintf push chmod join pack unshift);
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
-    }
-
-    sub match_excluded_flag {
-
-        # Decide if this paren is excluded by user request.
-        # NOTE: copied from part of is_excluded_weld.
-        # TODO: this coding can be merged with is_excluded_weld.
-        my ( $self, $KK, $flag ) = @_;
-        my $rLL         = $self->[_rLL_];
-        my $rtoken_vars = $rLL->[$KK];
-        my $token       = $rtoken_vars->[_TOKEN_];
-        return 0 unless ( defined($flag) );
-        return 1 if $flag eq '*';
-
-        my ( $is_f, $is_k, $is_w );
-        my $Kp = $self->K_previous_nonblank($KK);
-        if ( defined($Kp) ) {
-            my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
-            my $type_p = $rLL->[$Kp]->[_TYPE_];
-
-            # keyword?
-            $is_k = $type_p eq 'k';
-
-            # function call?
-            $is_f = $self->[_ris_function_call_paren_]->{$seqno};
-
-            # either keyword or function call?
-            $is_w = $is_k || $is_f;
-        }
-
-        my $match;
-        if    ( $flag eq 'k' ) { $match = $is_k }
-        elsif ( $flag eq 'K' ) { $match = !$is_k }
-        elsif ( $flag eq 'f' ) { $match = $is_f }
-        elsif ( $flag eq 'F' ) { $match = !$is_f }
-        elsif ( $flag eq 'w' ) { $match = $is_w }
-        elsif ( $flag eq 'W' ) { $match = !$is_w }
-        return $match;
     }
 
     use constant DEBUG_SPARSE => 0;
@@ -19815,9 +19786,12 @@ EOM
             $two_line_word_wrap_ok = 1;
 
             # but turn off word wrap where requested
-            if ($rOpts_open_up_paren_list_types) {
+            if ($rOpts_break_open_paren_list) {
 
-                my $flag = $rOpts_open_up_paren_list_types;
+                #  '0' matches no parens
+                #  '1' matches all parens
+                #  otherwise use same values as weld-exclusion-list
+                my $flag = $rOpts_break_open_paren_list;
                 if (   $flag eq '1'
                     || $flag eq '*' )
                 {
@@ -19827,10 +19801,9 @@ EOM
                     $two_line_word_wrap_ok = 1;
                 }
                 else {
-
                     my $KK = $K_to_go[$i_opening_paren];
                     $two_line_word_wrap_ok =
-                      !$self->match_excluded_flag( $KK, $flag );
+                      !$self->match_paren_flag( $KK, $flag );
                 }
             }
         }
@@ -19942,7 +19915,6 @@ EOM
         my $must_break_open_container = $must_break_open
           || ( $too_long
             && ( $in_hierarchical_list || !$two_line_word_wrap_ok ) );
-        ##&& ( $in_hierarchical_list || $opening_token ne '(' ) );
 
 #print "LISTX: next=$next_nonblank_type  avail cols=$columns packed=$packed_columns must format = $must_break_open_container too-long=$too_long  opening=$opening_token list_type=$list_type formatted_lines=$formatted_lines  packed=$packed_lines max_sparsity= $max_allowed_sparsity sparsity=$sparsity \n";
 

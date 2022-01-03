@@ -4169,6 +4169,8 @@ negative B<-novalign> is an alias for B<-nvc -nvsc -nvbc>.
 =item B<Controlling code alignment with --valign-code or -vc>
 
 The B<-vc> flag enables alignment of code symbols such as B<=>.  The default is B<-vc>.
+For detailed control of which symbols to align, see the B<-valign-exclude-list> parameter
+below.
 
 =item B<Controlling side comment alignment with --valign-side-comments or -vsc>
 
@@ -4207,8 +4209,8 @@ the following parameters enable alignment only at commas and 'fat commas':
 
 These parameter lists should consist of space-separated tokens from the above
 list of possible alignment tokens.  If an unrecognized parameter appears, it is
-simply ignored. And if a parameter is entered in both lists (it should
-not), then the exclusion list has priority.
+simply ignored. And if a parameter is entered in both lists by mistake
+then the exclusion list has priority.
 
 To illustrate, consider the following snippet with default formatting
 
@@ -4233,8 +4235,8 @@ To exclude only the equals we could use:
 
 Notice in this last example that although only the equals alignment was
 excluded, the ternary alignments were also lost.  This happens because
-alignments are formed from left-to-right, and when an alignment is prevented
-for any reason, any remaining possible alignments to its right are skipped.
+alignments are formed from left-to-right, and if an alignment cannot be made
+then potential alignments to its right might be skipped to avoid poor alignments.
 
 Also notice side comments remain aligned because their alignment is
 controlled separately with the parameter B<--valign-side_comments> described above.

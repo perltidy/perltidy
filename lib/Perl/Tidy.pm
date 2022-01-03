@@ -2399,6 +2399,7 @@ sub generate_options {
     $add_option->( 'break-before-paren-and-indent',           'bbpi',  '=i' );
     $add_option->( 'brace-left-list',                         'bll',   '=s' );
     $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
+    $add_option->( 'break-open-paren-list',                   'bopl',  '=s' );
 
     ########################################
     $category = 6;    # Controlling list formatting
