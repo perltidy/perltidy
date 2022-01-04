@@ -8697,6 +8697,26 @@ use overload
 ==> b1280.par <==
 --brace-left-and-indent
 
+==> b1284.in <==
+# S1
+                     if (   ($before)
+                            && (   !(     $before=~
+                                          /$begin_env_rx|$begin_cmd_rx/ ) ) );
+# S2
+                     if (   ($before)
+                            && ( !($before=~/$begin_env_rx|$begin_cmd_rx/ ) )
+                       );
+
+
+==> b1284.par <==
+--indent-columns=7
+--maximum-line-length=77
+--nowant-left-space='/= &&= .= = -= + += ^= += //= % >>= % |= >= ||= =~'
+--nowant-right-space='>= / / - &= ||= ||= /= + =~ >>= == = ||= >= -= |='
+--paren-vertical-tightness-closing=2
+--paren-vertical-tightness=2
+--weld-nested-containers
+
 ==> b1289.in <==
 my $sim4
         = new Bio::Tools::Sim4::Results (

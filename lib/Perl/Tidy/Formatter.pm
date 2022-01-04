@@ -8777,7 +8777,8 @@ EOM
                   $self->excess_line_length_for_Krange( $Kstart, $Kstop );
 
                 # Coding simplified here for case b1219.
-                $is_one_line_weld = $excess <= 0;
+                # Increased tol to 1 to fix b1284.
+                $is_one_line_weld = $excess <= 1;    ##0;
             }
 
             # DO-NOT-WELD RULE 1:
