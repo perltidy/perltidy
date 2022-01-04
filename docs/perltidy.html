@@ -3297,7 +3297,7 @@
 <dt id="Controlling-code-alignment-with---valign-code-or--vc"><b>Controlling code alignment with --valign-code or -vc</b></dt>
 <dd>
 
-<p>The <b>-vc</b> flag enables alignment of code symbols such as <b>=</b>. The default is <b>-vc</b>.</p>
+<p>The <b>-vc</b> flag enables alignment of code symbols such as <b>=</b>. The default is <b>-vc</b>. For detailed control of which symbols to align, see the <b>-valign-exclude-list</b> parameter below.</p>
 
 </dd>
 <dt id="Controlling-side-comment-alignment-with---valign-side-comments-or--vsc"><b>Controlling side comment alignment with --valign-side-comments or -vsc</b></dt>
@@ -3310,6 +3310,57 @@
 <dd>
 
 <p>When <b>-vbc</b> is enabled, block comments can become aligned for example if one comment of a consecutive sequence of comments becomes outdented due a length in excess of the maximum line length. If this occurs, the entire group of comments will remain aligned and be outdented by the same amount. This coordinated alignment will not occur if <b>-nvbc</b> is set. The default is <b>-vbc</b>.</p>
+
+</dd>
+<dt id="Finer-alignment-control-with---valign-exclusion-list-s-or--vxl-s-and---valign-inclusion-list-s-or--vil-s"><b>Finer alignment control with --valign-exclusion-list=s or -vxl=s and --valign-inclusion-list=s or -vil=s</b></dt>
+<dd>
+
+<p>More detailed control of alignment types is available with these two parameters. Most of the vertical alignments in typical programs occur at one of the tokens &#39;,&#39;, &#39;=&#39;, and &#39;=&gt;&#39;, but many other alignments are possible and are given in the following list:</p>
+
+<pre><code>  = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
+  { ( ? : , ; =&gt; &amp;&amp; || ~~ !~~ =~ !~ // &lt;=&gt; -&gt;
+  if unless and or err for foreach while until</code></pre>
+
+<p>These alignments are all enabled by default, but they can be selectively disabled by including one or more of these tokens in the space-separated list <b>valign-exclusion-list=s</b>. For example, the following would prevent alignment at <b>=</b> and <b>if</b>:</p>
+
+<pre><code>  --valign-exclusion-list=&#39;= if&#39;</code></pre>
+
+<p>If it is simpler to specify only the token types which are to be aligned, then use the special symbol <b>*</b> for this exclusion list and include the types which are to be aligned in the list of <b>--valign-inclusion-list</b> (this works because <b>*</b> is not one of the alignment tokens). For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
+
+<pre><code>  --valign-exclusion-list=&#39;*&#39;
+  --valign-inclusion-list=&#39;, =&gt;&#39;</code></pre>
+
+<p>These parameter lists should consist of space-separated tokens from the above list of possible alignment tokens. If an unrecognized parameter appears, it is simply ignored. And if a parameter is entered in both lists by mistake then the exclusion list has priority.</p>
+
+<p>The default values of these parameters enable all alignments and are equivalent to</p>
+
+<pre><code>  --valign-exclusion-list=&#39; &#39;
+  --valign-inclusion-list=&#39;*&#39;</code></pre>
+
+<p>To illustrate, consider the following snippet with default formatting</p>
+
+<pre><code>    # perltidy
+    $co_description = ($color) ? &#39;bold cyan&#39;  : &#39;&#39;;           # description
+    $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;           # prompt
+    $co_unused      = ($color) ? &#39;on_green&#39;   : &#39;reverse&#39;;    # unused</code></pre>
+
+<p>To exclude all alignments except the equals we could use:</p>
+
+<pre><code>    # perltidy -vxl=&#39;*&#39; -vil=&#39;=&#39;
+    $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;          # description
+    $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
+    $co_unused      = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
+
+<p>To exclude only the equals we could use:</p>
+
+<pre><code>    # perltidy -vxl=&#39;=&#39;
+    $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;     # description
+    $co_prompt = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
+    $co_unused = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
+
+<p>Notice in this last example that although only the equals alignment was excluded, the ternary alignments were also lost. This happens because the vertical aligner sweeps from left-to-right and usually stops if an important alignment cannot be made for some reason.</p>
+
+<p>But also notice that side comments remain aligned because their alignment is controlled separately with the parameter <b>--valign-side_comments</b> described above.</p>
 
 </dd>
 </dl>
@@ -3824,7 +3875,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20211029.04</p>
+<p>This man page documents perltidy version 20211029.05</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2021 10 29.04
+## 2021 10 29.05
 
     - Two new flags have been added to provide finer vertical alignment control,
       --valign-exclusion-list=s (-vxl=s) and  --valign-inclusion-list=s (-vil=s).
