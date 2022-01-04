@@ -8504,6 +8504,7 @@ sub weld_nested_containers {
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     my $ris_asub_block            = $self->[_ris_asub_block_];
+    my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
@@ -8540,6 +8541,13 @@ sub weld_nested_containers {
     # the 'beta' value is more restrictive in other cases (b1243).
 
     my $weld_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 3 );
+
+    # The vertical tightness flags can throw off line length calculations.
+    # This patch was added to fix instability issue b1284.
+    # It works to always use a tol of 1 for 1 line block length tests, but
+    # this restricted value keeps test case wn6.wn working as before.
+    # It may be necessary to include '[' and '{' here in the future.
+    my $one_line_tol = $opening_vertical_tightness{'('} ? 1 : 0;
 
     my $length_to_opening_seqno = sub {
         my ($seqno) = @_;
@@ -8777,8 +8785,8 @@ EOM
                   $self->excess_line_length_for_Krange( $Kstart, $Kstop );
 
                 # Coding simplified here for case b1219.
-                # Increased tol to 1 to fix b1284.
-                $is_one_line_weld = $excess <= 1;    ##0;
+                # Increased tol from 0 to 1 when pvt>0 to fix b1284.
+                $is_one_line_weld = $excess <= $one_line_tol;
             }
 
             # DO-NOT-WELD RULE 1:
@@ -8880,13 +8888,17 @@ EOM
         }
 
         # DO-NOT-WELD RULE 2A:
-        # Do not weld an opening asub brace in -lp mode to avoid interfering
-        # with one-line block formation.  Fixes b1241.
-        # Removed 1-line test to fix b1268.  See also b1269, b1277, b1278.
+        # Do not weld an opening asub brace in -lp mode if -asbl is set. This
+        # helps avoid instabilities in one-line block formation, and fixes
+        # b1241.  Previously, the '$is_one_line_weld' flag was tested here
+        # instead of -asbl, and this fixed most cases. But it turns out that
+        # the real problem was the -asbl flag, and switching to this was
+        # necessary to fixe b1268.  This also fixes b1269, b1277, b1278.
         if (
             !$do_not_weld_rule
             ##&& $is_one_line_weld
             && $rOpts_line_up_parentheses
+            && $rOpts_asbl
             && $ris_asub_block->{$outer_seqno}
           )
         {
