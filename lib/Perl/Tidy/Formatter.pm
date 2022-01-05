@@ -9803,6 +9803,15 @@ sub break_before_list_opening_containers {
         my $break_option = $break_before_container_types{$token};
         next unless ($break_option);
 
+        # Do not use -bbx under stress for stability ... fixes b1300
+        my $level = $rLL->[$KK]->[_LEVEL_];
+        if ( $level >= $stress_level_beta ) {
+            DEBUG_BBX
+              && print
+"BBX: Switching off at $seqno: level=$level exceeds beta stress level=$stress_level_beta\n";
+            next;
+        }
+
         # Require previous nonblank to be '=' or '=>'
         my $Kprev = $KK - 1;
         next if ( $Kprev < 0 );
@@ -9968,7 +9977,6 @@ sub break_before_list_opening_containers {
         # single line.  Use the least possble indentation in the estmate (ci=0),
         # so we are not subtracting $ci * $rOpts_continuation_indentation from
         # tablulated $maximum_text_length  value.
-        my $level               = $rLL->[$KK]->[_LEVEL_];
         my $maximum_text_length = $maximum_text_length_at_level[$level];
         my $K_closing           = $K_closing_container->{$seqno};
         my $length = $self->cumulative_length_before_K($K_closing) -

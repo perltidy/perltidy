@@ -8865,6 +8865,32 @@ my $file = $menubar->Menubutton(
 --indent-columns=8
 --maximum-line-length=65
 
+==> b1300.in <==
+$obj = {
+   foo =>
+            [
+      {a => "b"},
+      0, 1, 2
+            ]
+};
+
+$obj = {
+   foo =>
+      [
+      {a => "b"}, 0, 1, 2
+      ]
+};
+
+==> b1300.par <==
+--brace-tightness=2
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=2
+--continuation-indentation=9
+--ignore-old-breakpoints
+--indent-columns=3
+--maximum-line-length=29
+--variable-maximum-line-length
+
 ==> b1301.in <==
 subtest '->save' => sub {
     plan tests => 1;
