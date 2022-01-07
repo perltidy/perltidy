@@ -9850,25 +9850,27 @@ sub break_before_list_opening_containers {
                 }
 
                 # finally, we will call it complex if there are inner opening
-                # and closing container tokens within the outer container
-                # tokens.
+                # and closing container tokens, not parens, within the outer
+                # container tokens.
                 if ( !$is_complex ) {
-                    my $Kp     = $self->K_next_nonblank($KK);
-                    my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : 'b';
-                    if ( $is_opening_type{$type_p} ) {
+                    my $Kp      = $self->K_next_nonblank($KK);
+                    my $token_p = defined($Kp) ? $rLL->[$Kp]->[_TOKEN_] : 'b';
+                    if ( $is_opening_token{$token_p} && $token_p ne '(' ) {
 
-                        my $Kc     = $K_closing_container->{$seqno};
-                        my $Km     = $self->K_previous_nonblank($Kc);
-                        my $type_m = defined($Km) ? $rLL->[$Km]->[_TYPE_] : 'b';
+                        my $Kc = $K_closing_container->{$seqno};
+                        my $Km = $self->K_previous_nonblank($Kc);
+                        my $token_m =
+                          defined($Km) ? $rLL->[$Km]->[_TOKEN_] : 'b';
 
                         # ignore any optional ending comma
-                        if ( $type_m eq ',' ) {
+                        if ( $token_m eq ',' ) {
                             $Km = $self->K_previous_nonblank($Km);
-                            $type_m =
-                              defined($Km) ? $rLL->[$Km]->[_TYPE_] : 'b';
+                            $token_m =
+                              defined($Km) ? $rLL->[$Km]->[_TOKEN_] : 'b';
                         }
 
-                        $is_complex ||= $is_closing_type{$type_m};
+                        $is_complex ||=
+                          $is_closing_token{$token_m} && $token_m ne ')';
                     }
                 }
 
