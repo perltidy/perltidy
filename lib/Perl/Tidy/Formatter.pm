@@ -18369,8 +18369,10 @@ EOM
 
                             $self->set_forced_breakpoint($i);
 
-                            # break at previous '='
-                            if ( $i_equals[$depth] > 0 ) {
+                            # Break at a previous '=', but only if it is before
+                            # the mating '?'. Mate_index test fixes b1287.
+                            my $ieq = $i_equals[$depth];
+                            if ( $ieq > 0 && $ieq < $mate_index_to_go[$i] ) {
                                 $self->set_forced_breakpoint(
                                     $i_equals[$depth] );
                                 $i_equals[$depth] = -1;

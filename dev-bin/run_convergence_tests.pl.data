@@ -8789,6 +8789,50 @@ use overload
 --paren-vertical-tightness=2
 --weld-nested-containers
 
+==> b1287.in <==
+    $" < 2 ?
+            $_[ $/ ][ $. ] |= 1 << $" :
+            (
+        $_[ $@[ -1 ][ 1 ] ][ $@[ -1 ][ 0 ] ]
+                |= 1 << $" - 2 );
+
+    $" < 2 ?
+            $_[ $/ ][ $. ] |=
+            1 << $" : (
+        $_[ $@[ -1 ][ 1 ] ][ $@[ -1 ][ 0 ] ]
+                |= 1 << $" - 2 );
+
+
+==> b1287.par <==
+--break-after-all-operators
+--continuation-indentation=8
+--maximum-line-length=36
+--opening-paren-right
+--short-concatenation-item-length=3
+--show-options
+--space-after-keyword='local local if if'
+--nospace-for-semicolon
+--space-function-paren
+--nospace-keyword-paren
+--space-prototype-paren=0
+--nospace-terminal-semicolon
+--square-bracket-tightness=0
+--square-bracket-vertical-tightness=1
+--stack-closing-block-brace
+--nostack-closing-hash-brace
+--stack-closing-paren
+--stack-closing-square-bracket
+--nostack-opening-hash-brace
+--stack-opening-paren
+--stack-opening-square-bracket
+--static-side-comments
+--notight-secret-operators
+--trim-pod
+--notrim-qw
+--variable-maximum-line-length
+--vertical-tightness-closing=1
+--vertical-tightness=0
+
 ==> b1289.in <==
 my $sim4
         = new Bio::Tools::Sim4::Results (
