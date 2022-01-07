@@ -8964,6 +8964,34 @@ if (( $response = $browser->request($curreq)
 --line-up-parentheses
 --maximum-line-length=52
 
+==> b1305.in <==
+my %Map =(
+  File::Spec->catfile(
+    $Dir,"linktest_with_dir.tar"
+        ) =>
+    [
+    [   0, qr/SECURE EXTRACT MODE/],[ 1, qr/^$/ ]
+    ],
+);
+
+my %Map =(
+  File::Spec->catfile(
+    $Dir,"linktest_with_dir.tar"
+        ) =>
+        [
+    [   0, qr/SECURE EXTRACT MODE/],
+    [ 1, qr/^$/ ]
+        ],
+);
+
+==> b1305.par <==
+--noadd-whitespace
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=1
+--continuation-indentation=6
+--indent-columns=2
+--maximum-line-length=53
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )

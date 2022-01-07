@@ -9944,6 +9944,12 @@ sub break_before_list_opening_containers {
         # Only consider containers already broken
         next if ( !$ris_broken_container->{$seqno} );
 
+        # Patch to fix issue b1305: the combination of -naws and ci>i appears
+        # to cause an instability.  It should almost never occur in practice.
+        next
+          if (!$rOpts_add_whitespace
+            && $rOpts_continuation_indentation > $rOpts_indent_columns );
+
         # Always ok to change ci for permanently broken containers
         if ( $ris_permanently_broken->{$seqno} ) {
             goto OK;
