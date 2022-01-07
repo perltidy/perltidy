@@ -8605,6 +8605,78 @@ use overload
 --keyword-paren-inner-tightness=2
 --maximum-line-length=56
 
+==> b1274.in <==
+# S1
+       $$d{"month_abb"} = [
+                          [
+                            "Jan", "Feb", "Mar", "Apr",
+                            "Maj", "Jun", "Jul", "Aug",
+                            "Sep", "Okt", "Nov", "Dec"
+                          ]
+       ];
+# S2
+       $$d{"month_abb"} =
+       [
+          [
+             "Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
+             "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"
+          ]
+       ];
+
+# S3
+       $$d{"month_abb"} = [
+            [
+              "Jan", "Feb", "Mar", "Apr", "Maj", "Jun",
+              "Jul", "Aug", "Sep", "Okt", "Nov", "Dec"
+            ]
+       ];
+
+
+
+==> b1274.par <==
+--break-before-square-bracket=2
+--continuation-indentation=0
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=7
+--maximum-line-length=56
+
+==> b1275.in <==
+    $$d{"month_abb"} = [
+           [
+               "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paz.", "lis.", "gru."
+           ], [
+               "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paŸ.", "lis.", "gru."
+           ]
+       ];
+
+    $$d{"month_abb"} = [
+        [ "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paz.", "lis.", "gru." ],
+        [ "sty.", "lut.", "mar.", "kwi.", "maj", "cze.", "lip.", "sie.", "wrz.", "paŸ.", "lis.", "gru." ]
+    ];
+
+==> b1275.par <==
+--break-before-square-bracket=2
+--continuation-indentation=3
+--extended-continuation-indentation
+--maximum-line-length=100
+--opening-square-bracket-right
+--nostack-closing-block-brace
+--nostack-closing-hash-brace
+--nostack-closing-paren
+--nostack-closing-square-bracket
+--nostack-opening-hash-brace
+--nostack-opening-paren
+--nostack-opening-square-bracket
+--nostatic-block-comments
+--notight-secret-operators
+--notrim-pod
+--use-unicode-gcstring
+--novalign-side-comments
+--variable-maximum-line-length
+--vertical-tightness-closing=0
+--vertical-tightness=0
+
 ==> b1277.in <==
 # S1
           match_on_type @_ => Null => sub { [] },

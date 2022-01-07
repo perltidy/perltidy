@@ -9825,6 +9825,59 @@ sub break_before_list_opening_containers {
 
         my $ci = $rLL->[$KK]->[_CI_LEVEL_];
 
+        #--------------------------------------------
+        # New coding for option 2 (break if complex).
+        #--------------------------------------------
+        # This new coding uses clues which are invariant under formatting to
+        # decide if a list is complex.  For now it is only applied when -lp
+        # and -vmll are used, but eventually it may become the standard method.
+        # Fixes b1274, b1275, and others, including b1099.
+        if ( $break_option == 2 ) {
+
+            if (   $rOpts_line_up_parentheses
+                || $rOpts_variable_maximum_line_length )
+            {
+
+                # Start with the basic definition of a complex list...
+                my $is_complex = $is_list && $has_list;
+
+                # and it is also complex if the parent is a list
+                if ( !$is_complex ) {
+                    my $parent = $rparent_of_seqno->{$seqno};
+                    if ( $self->is_list_by_seqno($parent) ) {
+                        $is_complex = 1;
+                    }
+                }
+
+                # finally, we will call it complex if there are inner opening
+                # and closing container tokens within the outer container
+                # tokens.
+                if ( !$is_complex ) {
+                    my $Kp     = $self->K_next_nonblank($KK);
+                    my $type_p = defined($Kp) ? $rLL->[$Kp]->[_TYPE_] : 'b';
+                    if ( $is_opening_type{$type_p} ) {
+
+                        my $Kc     = $K_closing_container->{$seqno};
+                        my $Km     = $self->K_previous_nonblank($Kc);
+                        my $type_m = defined($Km) ? $rLL->[$Km]->[_TYPE_] : 'b';
+
+                        # ignore any optional ending comma
+                        if ( $type_m eq ',' ) {
+                            $Km = $self->K_previous_nonblank($Km);
+                            $type_m =
+                              defined($Km) ? $rLL->[$Km]->[_TYPE_] : 'b';
+                        }
+
+                        $is_complex ||= $is_closing_type{$type_m};
+                    }
+                }
+
+                # Convert to option 3 (always break) if complex
+                next unless ($is_complex);
+                $break_option = 3;
+            }
+        }
+
         # Fix for b1231: the has_list_with_lec does not cover all cases.
         # A broken container containing a list and with line-ending commas
         # will stay broken, so can be treated as if it had a list with lec.
@@ -9871,15 +9924,6 @@ sub break_before_list_opening_containers {
                 if ( $self->is_list_by_seqno($parent) ) {
                     DEBUG_BBX && do { $Msg = "parent is list" };
                     $ok_to_break = 1;
-                }
-            }
-
-            # Patch to fix b1099 for -lp
-            #  ok in -lp mode if this is a list which contains a list
-            if ( !$ok_to_break && $rOpts_line_up_parentheses ) {
-                if ( $is_list && $has_list ) {
-                    $ok_to_break = 1;
-                    DEBUG_BBX && do { $Msg = "is list or has list" };
                 }
             }
 
