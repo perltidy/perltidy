@@ -8769,6 +8769,41 @@ use overload
 ==> b1280.par <==
 --brace-left-and-indent
 
+==> b1283.in <==
+       $_=join(
+              '',$_,
+              (
+                     (      $MAX_SPLIT_DEPTH<=$section_commands{
+                                   $outermost_level} )?"\n<HR>\n":'' ),
+              "\\$outermost_level",
+              "*",
+              "$O$X$C$O$Y$C\\infopagename$O$Y$C$O$X$C\n",
+              ,
+              " \\textohtmlinfopage" );
+
+       $_=join(
+              '',$_,
+              (      ($MAX_SPLIT_DEPTH<=
+                              $section_commands{$outermost_level})?
+                       "\n<HR>\n":'' ),
+              "\\$outermost_level",
+              "*",
+              "$O$X$C$O$Y$C\\infopagename$O$Y$C$O$X$C\n",
+              ,
+              " \\textohtmlinfopage" );
+
+==> b1283.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--indent-columns=7
+--maximum-line-length=71
+--paren-vertical-tightness=2
+--nospace-function-paren
+--nospace-keyword-paren
+--nostack-closing-paren
+--stack-opening-paren
+--vertical-tightness-closing=2
+
 ==> b1284.in <==
 # S1
                      if (   ($before)

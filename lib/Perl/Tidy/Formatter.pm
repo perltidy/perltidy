@@ -24959,6 +24959,15 @@ sub set_vertical_tightness_flags {
                 $cvt = $self->[_ris_assigned_structure_]->{$seqno} ? 0 : 1;
             }
 
+            # The unusual combination -pvtc=2 -dws -naws can be unstable.
+            # This fixes b1282, b1283.  This can be moved to set_options.
+            if (   $cvt == 2
+                && $rOpts_delete_old_whitespace
+                && !$rOpts_add_whitespace )
+            {
+                $cvt = 1;
+            }
+
             if (
 
                 # Never append a trailing line like   ')->pack(' because it
