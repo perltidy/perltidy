@@ -10664,11 +10664,22 @@ sub collapsed_lengths {
               )
             {
                 my $Kend = $K_terminal;
-                if ( $has_comment && !$rOpts_ignore_side_comment_lengths ) {
+
+                # Ignore comment length if -vmll. Some rare instabilities have
+                # been found involving side comments and -vmll. So side comment
+                # lengths are ignored in this loop if -vmll is set for now.
+                # (They are still checked elsewhere). This could cause
+                # occasional excess line lengths, but -vmll use is rare and
+                # that is preferable to instability.  Fixes b1302 and b1306.
+                if (   $has_comment
+                    && !$rOpts_ignore_side_comment_lengths
+                    && !$rOpts_variable_maximum_line_length )
+                {
                     $Kend = $K_last;
                 }
                 $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
 
                 # TODO: if there are no sequence items in the line we could

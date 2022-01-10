@@ -9072,6 +9072,27 @@ subtest '->save' => sub {
 --space-function-paren
 --vertical-tightness=1
 
+==> b1302.in <==
+use vars (
+   q!$Start_Dir!
+   , # The top directory find was called with
+   q!%Future!
+   ,    # topdirs find will handle later
+);
+
+use vars (
+ q!$Start_Dir!
+ ,   # The top directory find was called with
+ q!%Future!, # topdirs find will handle later
+);
+
+==> b1302.par <==
+--extended-line-up-parentheses
+--indent-columns=3
+--maximum-line-length=42
+--paren-tightness=2
+--variable-maximum-line-length
+
 ==> b1303.in <==
 if (
     (
@@ -9142,6 +9163,31 @@ my %Map =(
 --continuation-indentation=6
 --indent-columns=2
 --maximum-line-length=53
+
+==> b1306.in <==
+$oreo =
+  cookie(
+        -NAME    => 'filling',
+        -VALUE   => "vanilla crème",
+        -EXPIRES => '+3M'
+        ,   # M for month, m for minute
+        -DOMAIN => '.perl.com'
+  );
+
+$oreo = cookie(
+    -NAME    => 'filling',
+    -VALUE   => "vanilla crème",
+    -EXPIRES => '+3M'
+    ,    # M for month, m for minute
+    -DOMAIN => '.perl.com'
+);
+
+
+==> b1306.par <==
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--maximum-line-length=35
+--variable-maximum-line-length
 
 ==> b131.in <==
         unless
