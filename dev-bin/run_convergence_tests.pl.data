@@ -8824,6 +8824,29 @@ use overload
 --paren-vertical-tightness=2
 --weld-nested-containers
 
+==> b1285.in <==
+foreach $func (
+        @{$Win32API::Registry::EXPORT_TAGS{FuncA}
+        },
+        @{$Win32API::Registry::EXPORT_TAGS{FuncW}
+        }
+          );
+
+foreach $func (
+    @{$Win32API::Registry::EXPORT_TAGS{FuncA}
+    },
+    @{    $Win32API::Registry::EXPORT_TAGS{FuncW}
+    }
+          );
+
+
+==> b1285.par <==
+--brace-vertical-tightness=2
+--continuation-indentation=10
+--extended-line-up-parentheses
+--indent-columns=2
+--maximum-line-length=49
+
 ==> b1287.in <==
     $" < 2 ?
             $_[ $/ ][ $. ] |= 1 << $" :

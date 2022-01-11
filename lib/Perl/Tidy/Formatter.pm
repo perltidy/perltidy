@@ -20454,6 +20454,8 @@ sub get_available_spaces_to_go {
 
 {    ## begin closure set_lp_indentation
 
+    use constant DEBUG_LP => 0;
+
     # Stack of -lp index objects which survives between batches.
     my $rLP;
     my $max_lp_stack;
@@ -20903,42 +20905,52 @@ EOM
                       : undef;
                 }
 
-                # initialization on empty stack..
                 $in_lp_mode = $rLP->[$max_lp_stack]->[_lp_object_];
+
+                #-----------------------------------------------
+                # Initialize indentation spaces on empty stack..
+                #-----------------------------------------------
                 if ( $max_lp_stack == 0 ) {
                     $space_count = $level * $rOpts_indent_columns;
                 }
 
-                # if this is a BLOCK, add the standard increment
-                elsif ($last_nonblank_block_type) {
-                    $space_count += $standard_increment;
-                }
+                #----------------------------------------
+                # Add the standard space increment if ...
+                #----------------------------------------
+                elsif (
 
-                # if this is not a sequenced item, add the standard increment
-                elsif ( !$last_nonblank_seqno ) {
-                    $space_count += $standard_increment;
-                }
+                    # if this is a BLOCK, add the standard increment
+                    $last_nonblank_block_type
 
-                # add the standard increment for containers excluded by user
-                # rules or which contain here-docs or multiline qw text
-                elsif ( defined($last_nonblank_seqno)
-                    && $ris_excluded_lp_container->{$last_nonblank_seqno} )
+                    # or if this is not a sequenced item
+                    || !$last_nonblank_seqno
+
+                    # or this continer is excluded by user rules
+                    # or contains here-docs or multiline qw text
+                    || defined($last_nonblank_seqno)
+                    && $ris_excluded_lp_container->{$last_nonblank_seqno}
+
+                    # or if last nonblank token was not structural indentation
+                    || $last_nonblank_type ne '{'
+
+                    # and do not start -lp under stress .. fixes b1244, b1255
+                    || !$in_lp_mode && $level >= $lp_cutoff_level
+
+                  )
                 {
+
+                    # If we have entered lp mode, use the top lp object to get
+                    # the current indentation spaces because it may have
+                    # changed.  Fixes b1285, b1286.
+                    if ($in_lp_mode) {
+                        $space_count = $in_lp_mode->get_spaces();
+                    }
                     $space_count += $standard_increment;
                 }
 
-                # if last nonblank token was not structural indentation,
-                # just use standard increment
-                elsif ( $last_nonblank_type ne '{' ) {
-                    $space_count += $standard_increment;
-                }
-
-                # do not start -lp under stress .. fixes b1244, b1255
-                elsif ( !$in_lp_mode && $level >= $lp_cutoff_level ) {
-                    $space_count += $standard_increment;
-                }
-
-                # otherwise use the space to the first non-blank level change
+                #---------------------------------------------------------------
+                # -lp mode: try to use space to the first non-blank level change
+                #---------------------------------------------------------------
                 else {
 
                     # see how much space we have available
@@ -21013,7 +21025,9 @@ EOM
                     }
                 }
 
-                # update state, but not on a blank token
+                #-------------------------------------------
+                # update the state, but not on a blank token
+                #-------------------------------------------
                 if ( $type ne 'b' ) {
 
                     if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
@@ -21063,6 +21077,13 @@ EOM
                             stack_depth      => $max_lp_stack,
                             K_begin_line     => $K_begin_line,
                         );
+
+                        DEBUG_LP && do {
+                            my $tok_beg = $rLL->[$K_begin_line]->[_TOKEN_];
+                            print STDERR <<EOM;
+DEBUG_LP: Created object at tok=$token type=$type for seqno $align_seqno level=$level ci=$ci_level spaces=$space_count avail=$available_spaces kbeg=$K_begin_line tokbeg=$tok_beg lp=$lp_position_predictor
+EOM
+                        };
 
                         if ( $level >= 0 ) {
                             $rlp_object_list->[$max_lp_object_list] =
