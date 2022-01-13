@@ -1437,12 +1437,13 @@ sub _flush_comment_lines {
         my $file_writer_object = $self->[_file_writer_object_];
         my $last_outdented_line_at =
           $file_writer_object->get_output_line_number();
-        $self->[_last_outdented_line_at_] = $last_outdented_line_at;
+        my $nlines = @{$rgroup_lines};
+        $self->[_last_outdented_line_at_] =
+          $last_outdented_line_at + $nlines - 1;
         my $outdented_line_count = $self->[_outdented_line_count_];
         unless ($outdented_line_count) {
             $self->[_first_outdented_line_at_] = $last_outdented_line_at;
         }
-        my $nlines = @{$rgroup_lines};
         $outdented_line_count += $nlines;
         $self->[_outdented_line_count_] = $outdented_line_count;
     }
