@@ -5348,13 +5348,13 @@ EOM
 
     $self->find_multiline_qw();
 
-    $self->collapsed_lengths()
-      if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
-
     $self->keep_old_line_breaks();
 
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
+
+    $self->collapsed_lengths()
+      if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
 
     # Locate small nested blocks which should not be broken
     $self->mark_short_nested_blocks();
@@ -10604,8 +10604,10 @@ sub collapsed_lengths {
     my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
     my $rhas_broken_list           = $self->[_rhas_broken_list_];
 
-    my $max_prong_len = 0;
-    my $handle_len    = 0;
+    my $K_start_multiline_qw;
+    my $level_start_multiline_qw = 0;
+    my $max_prong_len            = 0;
+    my $handle_len               = 0;
     my @stack;
     my $len                = 0;
     my $last_nonblank_type = 'b';
@@ -10641,6 +10643,58 @@ sub collapsed_lengths {
 
         # Always ignore block comments
         next if ( $has_comment && $K_first == $K_last );
+
+        # Handle an intermediate line of a multiline qw quote. These may
+        # require including some -ci or -i spaces.  See cases c098/x063.
+        if ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
+
+            my $KK       = $K_first;
+            my $level    = $rLL->[$KK]->[_LEVEL_];
+            my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
+
+            # remember the level of the start
+            if ( !defined($K_start_multiline_qw) ) {
+                $K_start_multiline_qw     = $K_first;
+                $level_start_multiline_qw = $level;
+                my $seqno_qw =
+                  $self->[_rstarting_multiline_qw_seqno_by_K_]
+                  ->{$K_start_multiline_qw};
+                if ( !$seqno_qw ) {
+                    my $Kp = $self->K_previous_nonblank($K_first);
+                    if ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 'q' ) {
+
+                        $K_start_multiline_qw = $Kp;
+                        $level_start_multiline_qw =
+                          $rLL->[$K_start_multiline_qw]->[_LEVEL_];
+                    }
+                }
+            }
+
+            $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
+              $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+
+            # We may have to add the spaces of one level or ci level ...  it
+            # depends depends on the -xci flag, the -wn flag, and if the qw
+            # uses a container token as the quote delimiter.
+
+            # First rule: add ci if there is a $ci_level
+            if ($ci_level) {
+                $len += $rOpts_continuation_indentation;
+            }
+
+            # Second rule: otherwise, look for an extra indentation level
+            # from the start and add one indentation level if found.
+            elsif ( $level > $level_start_multiline_qw ) {
+                $len += $rOpts_indent_columns;
+            }
+
+            if ( $len > $max_prong_len ) { $max_prong_len = $len }
+
+            # We can skip the loop over tokens below
+            $last_nonblank_type = 'q';
+            next;
+        }
+        $K_start_multiline_qw = undef;
 
         # Find the terminal token, before any side comment
         my $K_terminal = $K_last;
@@ -16842,8 +16896,10 @@ sub correct_lp_indentation {
             my $move_right = $actual_pos - $predicted_pos;
 
             if (DEBUG_CORRECT_LP) {
+                my $tok   = substr( $tokens_to_go[$i], 0, 8 );
+                my $avail = $self->get_available_spaces_to_go($ibeg);
                 print
-"CORRECT_LP for seq=$align_seqno, predicted pos=$predicted_pos actual=$actual_pos => move right=$move_right\n";
+"CORRECT_LP for seq=$align_seqno, predicted pos=$predicted_pos actual=$actual_pos => move right=$move_right available=$avail i=$i max=$max_index_to_go tok=$tok\n";
             }
 
             # nothing more to do if no error to correct (gnu2.t)
@@ -16892,8 +16948,7 @@ sub correct_lp_indentation {
                 # include estimated collapsed length for incomplete containers
                 my $max_length = 0;
                 if ( $Kc > $K_to_go[$max_index_to_go] ) {
-                    $max_length =
-                      $collapsed_length + leading_spaces_to_go($ibeg);
+                    $max_length = $collapsed_length + $predicted_pos;
                 }
 
                 if ( $i == $ibeg ) {
@@ -16918,6 +16973,7 @@ sub correct_lp_indentation {
                         $max_length = $length_t;
                     }
                 }
+
                 $right_margin =
                   $maximum_line_length_at_level[ $levels_to_go[$ibeg] ] -
                   $max_length;
