@@ -12773,10 +12773,12 @@ EOM
                 if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
 
                     # Fix for b1208: if a side comment follows this closing
-                    # brace then we must include its length in the length test.
+                    # brace then we must include its length in the length test
+                    # ... unless the -issl flag is set (fixes b1307-1309).
                     # Assume a minimum of 1 blank space to the comment.
                     my $added_length =
                       $side_comment_follows
+                      && !$rOpts_ignore_side_comment_lengths
                       ? 1 + $rLL->[$Knnb]->[_TOKEN_LENGTH_]
                       : 0;
 

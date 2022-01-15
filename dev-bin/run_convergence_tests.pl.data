@@ -9212,6 +9212,25 @@ $oreo = cookie(
 --maximum-line-length=35
 --variable-maximum-line-length
 
+==> b1307.in <==
+if ( ) { }
+
+else {
+    }  #
+
+if ( ) { }
+
+else
+{   }  #
+
+
+==> b1307.par <==
+--block-brace-vertical-tightness=2
+--ignore-side-comment-lengths
+--indent-closing-brace
+--maximum-line-length=8
+--opening-brace-on-new-line
+
 ==> b131.in <==
         unless
           ( open( SCORE, "+>>$Score_File" ) )
