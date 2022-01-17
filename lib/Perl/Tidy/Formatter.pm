@@ -1509,6 +1509,20 @@ EOM
         }
     }
 
+    #-------------------------------------------------------------------
+    # The combination -xlp and -vmll can be unstable unless -iscl is set
+    #-------------------------------------------------------------------
+    # This is a temporary fix for issue b1302.  See also b1306, b1310.
+    # FIXME: look for a better fix.
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'extended-line-up-parentheses'}
+        && !$rOpts->{'ignore-side-comment-lengths'} )
+    {
+        $rOpts->{'ignore-side-comment-lengths'} = 1;
+
+        # we could write a warning here
+    }
+
     #-----------------------------------------------------------
     # The combination -lp -vmll can be unstable if -ci<2 (b1267)
     #-----------------------------------------------------------
@@ -10719,15 +10733,8 @@ sub collapsed_lengths {
             {
                 my $Kend = $K_terminal;
 
-                # Ignore comment length if -vmll. Some rare instabilities have
-                # been found involving side comments and -vmll. So side comment
-                # lengths are ignored in this loop if -vmll is set for now.
-                # (They are still checked elsewhere). This could cause
-                # occasional excess line lengths, but -vmll use is rare and
-                # that is preferable to instability.  Fixes b1302 and b1306.
-                if (   $has_comment
-                    && !$rOpts_ignore_side_comment_lengths
-                    && !$rOpts_variable_maximum_line_length )
+                if ( $has_comment
+                    && !$rOpts_ignore_side_comment_lengths )
                 {
                     $Kend = $K_last;
                 }

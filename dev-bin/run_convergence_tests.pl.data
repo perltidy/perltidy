@@ -9241,6 +9241,38 @@ else
 --maximum-line-length=46
 --weld-nested-containers
 
+==> b1310.in <==
+isnt(
+      exception {
+          $meta =
+            Moose::Meta::Class->create_anon_class(
+                       superclasses => ['t::bugs::Bar',], # any old class will work
+                       roles        => ['Role::BreakOnLoad',], )
+      },
+      undef,
+      'Class dies when attempting composition'
+);
+
+isnt(
+      exception {
+          $meta =
+            Moose::Meta::Class->create_anon_class(
+                                               superclasses => ['t::bugs::Bar',]
+                                               ,    # any old class will work
+                                               roles => ['Role::BreakOnLoad',],
+            )
+      },
+      undef,
+      'Class dies when attempting composition'
+);
+
+
+==> b1310.par <==
+--extended-line-up-parentheses
+--maximum-line-length=71
+--square-bracket-tightness=2
+--variable-maximum-line-length
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
