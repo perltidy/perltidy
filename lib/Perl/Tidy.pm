@@ -1020,6 +1020,7 @@ EOM
         my $encoding_in              = "";
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
         my $encoding_log_message;
+        my $decoded_input_as = "";
 
         # Case 1. See if we already have an encoded string. In that
         # case, we have to ignore any encoding flag.
@@ -1082,6 +1083,7 @@ EOM
                         $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' successfully decoded
 EOM
+                        $decoded_input_as = $encoding_in;
                     }
                 }
             }
@@ -1107,6 +1109,7 @@ EOM
                 $encoding_log_message .= <<EOM;
 Specified encoding '$encoding_in' successfully decoded
 EOM
+                $decoded_input_as = $encoding_in;
             }
         }
 
@@ -1235,6 +1238,7 @@ EOM
             }
         }
         elsif ($destination_stream) {
+
             $output_file = $destination_stream;
         }
         elsif ($source_stream) {    # source but no destination goes to stdout
@@ -1282,6 +1286,20 @@ EOM
           || $remove_terminal_newline
           || $rOpts->{'assert-tidy'}
           || $rOpts->{'assert-untidy'};
+
+        # Postpone final output to a destination SCALAR ref to allow
+        # possible encoding at the end of processing.
+        my $destination_buffer;
+        my $use_destination_buffer;
+        if (
+            ref($destination_stream)
+            && (   ref($destination_stream) eq 'SCALAR'
+                || ref($destination_stream) eq 'ARRAY' )
+          )
+        {
+            $use_destination_buffer = 1;
+            $output_file            = \$destination_buffer;
+        }
 
         $sink_object = Perl::Tidy::LineSink->new(
             output_file    => $use_buffer ? \$postfilter_buffer : $output_file,
@@ -1643,6 +1661,50 @@ EOM
             }
 
             $source_object->close_input_file();
+        }
+
+        if ($use_destination_buffer) {
+
+            #------------------------------------------------------------------
+            # For string output, store the result to the destination, encoding
+            # if appropriate. This is a fix for issue git #83 (tidyall issue)
+            #------------------------------------------------------------------
+
+            # At this point, all necessary encoding has been done except for
+            # output to a string or array ref. We use the -eos flag to decide
+            # if we should encode.
+
+            # [DEFAULT]: encoding is done by the program which writes to the
+            # file system. In this case, we do not encode string output.
+
+            # [WITH -eos flag]: encoding is done by the program which decodes.
+
+            if ( $rOpts->{'encode-output-strings'} && $decoded_input_as ) {
+                my $encoded_buffer;
+                eval {
+                    $encoded_buffer =
+                      Encode::encode( "UTF-8", $destination_buffer,
+                        Encode::FB_CROAK | Encode::LEAVE_SRC );
+                };
+                if ($@) {
+
+                    Warn(
+"Error attempting to encode output string ref; encoding not done\n"
+                    );
+                }
+                else {
+                    $destination_buffer = $encoded_buffer;
+                }
+            }
+
+            # Final string storage
+            if ( ref($destination_stream) eq 'SCALAR' ) {
+                ${$destination_stream} = $destination_buffer;
+            }
+            else {
+                my @lines = split /^/, $destination_buffer;
+                @{$destination_stream} = @lines;
+            }
         }
 
         # Save names of the input and output files
@@ -2256,6 +2318,7 @@ sub generate_options {
     $add_option->( 'extended-syntax',              'xs',   '!' );
     $add_option->( 'assert-tidy',                  'ast',  '!' );
     $add_option->( 'assert-untidy',                'asu',  '!' );
+    $add_option->( 'encode-output-strings',        'eos',  '!' );
     $add_option->( 'sub-alias-list',               'sal',  '=s' );
     $add_option->( 'grep-alias-list',              'gal',  '=s' );
     $add_option->( 'grep-alias-exclusion-list',    'gaxl', '=s' );
