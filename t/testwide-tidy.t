@@ -14,10 +14,6 @@ use Perl::Tidy;
 
 # The test file is UTF-8 encoded
 
-# The original version did hex compares of source and destination streams.  To
-# just test the -eos flag, and avoid line ending issues, this version does
-# line-by-line hex tests on chomped lines.
-
 plan( tests => 6 );
 
 test_all();
@@ -54,9 +50,8 @@ sub test_file2file {
     my $destination_hex = unpack( 'H*', $destination_str );
 
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
-    ##ok($tidy_hex eq $destination_hex, 'file content compare');
-    ok( hex_compare_by_lines( $tidy_str, $destination_str ),
-        'file2file content compare' );
+    ok($tidy_hex eq $destination_hex, 'file content compare');
+
 }
 
 sub test_scalar2scalar {
@@ -79,9 +74,8 @@ sub test_scalar2scalar {
     my $destination_hex = unpack( 'H*', $destination );
 
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
-    ##ok($tidy_hex eq $destination_hex, 'scalar content compare');
-    ok( hex_compare_by_lines( $tidy_str, $destination ),
-        'scalar2scalar content compare' );
+    ok($tidy_hex eq $destination_hex, 'scalar content compare');
+
 }
 
 sub test_scalararray2scalararray {
@@ -105,9 +99,7 @@ sub test_scalararray2scalararray {
     my $destination_hex = unpack( 'H*', $destination_str );
 
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
-    ##ok($tidy_hex eq $destination_hex, 'scalararray content compare');
-    ok( hex_compare_by_lines( $tidy_str, $destination_str ),
-        'scalararray content compare' );
+    ok($tidy_hex eq $destination_hex, 'scalararray content compare');
 }
 
 sub slurp_raw {

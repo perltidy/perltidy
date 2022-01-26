@@ -50,6 +50,11 @@ jobs:
       # display the version of perl - just for possible manual verification
       - run: perl -V
 
+      # added to avoid problems with line ending conversions in git #83 update
+      - run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       # Instal the dependencies declared by the module ...
       # There are no deps for perltidy, but this would be the command:
       # - run: cpanm --installdeps .

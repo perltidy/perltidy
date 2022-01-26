@@ -9,16 +9,12 @@ use Test::More;
 BEGIN { unshift @INC, "./" }
 use Perl::Tidy;
 
-# This is off pending a good resolution of the problem with line endings.
-
 # This tests the -eos (--encode-output-strings) which was added for issue
 # git #83 to fix an issue with tidyall.
 
-# The test file has no tidying needs but is UTF-8 encoded, so all passes
-# through perltidy should read/write identical contents (previously only
-# file test behaved correctly)
+# The test file is UTF-8 encoded
 
-# This attempted fix did not work:
+# This attempted fix failed under Windows
 # The original version did hex compares of source and destination streams.  To
 # just test the -eos flag, and avoid line ending issues, this version does
 # line-by-line hex tests on chomped lines.
@@ -28,14 +24,18 @@ plan( tests => 6 );
 test_all();
 
 sub test_all {
-    my $test_file = "$Bin/testwide-passthrough.pl.src";
-    test_file2file($test_file);
-    test_scalar2scalar($test_file);
-    test_scalararray2scalararray($test_file);
+    my $test_file = "$Bin/testwide-tidy.pl.src";
+    my $tidy_file = "$Bin/testwide-tidy.pl.srctdy";
+    my $tidy_str  = slurp_raw($tidy_file);
+    test_file2file( $test_file, $tidy_str );
+    test_scalar2scalar( $test_file, $tidy_str );
+    test_scalararray2scalararray( $test_file, $tidy_str );
 }
 
 sub test_file2file {
     my $test_file = shift;
+    my $tidy_str  = shift;
+    my $tidy_hex  = unpack( 'H*', $tidy_str );
 
     my $tmp_file = File::Temp->new( TMPDIR => 1 );
 
@@ -51,20 +51,22 @@ sub test_file2file {
     );
     ok( !$tidyresult, 'perltidy' );
 
-    my $source_str      = slurp_raw($source);
     my $destination_str = slurp_raw($destination);
-
-    my $source_hex      = unpack( 'H*', $source_str );
     my $destination_hex = unpack( 'H*', $destination_str );
-    note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
 
-    ok($source_hex eq $destination_hex, 'file content compare');
+    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    ok($tidy_hex eq $destination_hex, 'file content compare');
+
+    # This failed on Windows
+    ##ok( hex_compare_by_lines( $tidy_str, $destination_str ), 'file2file content compare' );
 }
 
 sub test_scalar2scalar {
-    my $testfile = shift;
+    my $test_file = shift;
+    my $tidy_str  = shift;
+    my $tidy_hex  = unpack( 'H*', $tidy_str );
 
-    my $source = slurp_raw($testfile);
+    my $source = slurp_raw($test_file);
     my $destination;
 
     note("Testing scalar2scalar\n");
@@ -76,17 +78,21 @@ sub test_scalar2scalar {
     );
     ok( !$tidyresult, 'perltidy' );
 
-    my $source_hex      = unpack( 'H*', $source );
     my $destination_hex = unpack( 'H*', $destination );
 
-    note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
-    ok($source_hex eq $destination_hex, 'scalar content compare');
+    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    ok($tidy_hex eq $destination_hex, 'scalar content compare');
+
+    # This failed on Windows
+    ## ok( hex_compare_by_lines( $tidy_str, $destination ), 'scalar2scalar content compare' );
 }
 
 sub test_scalararray2scalararray {
-    my $testfile = shift;
+    my $test_file = shift;
+    my $tidy_str  = shift;
+    my $tidy_hex  = unpack( 'H*', $tidy_str );
 
-    my $source      = [ lines_raw($testfile) ];
+    my $source      = [ lines_raw($test_file) ];
     my $destination = [];
 
     note("Testing scalararray2scalararray\n");
@@ -98,14 +104,14 @@ sub test_scalararray2scalararray {
     );
     ok( !$tidyresult, 'perltidy' );
 
-    my $source_str      = join( "", @$source );
-    my $destination_str = join( "", @$destination );
-
-    my $source_hex      = unpack( 'H*', $source_str );
+    my $destination_str = join( '', @$destination );
     my $destination_hex = unpack( 'H*', $destination_str );
 
-    note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
-    ok($source_hex eq $destination_hex, 'scalararray content compare');
+    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    ok($tidy_hex eq $destination_hex, 'scalararray content compare');
+
+    # This failed on Windows
+    ##ok( hex_compare_by_lines( $tidy_str, $destination_str ), 'scalararray content compare' );
 }
 
 sub slurp_raw {
@@ -148,4 +154,3 @@ sub hex_compare_by_lines {
     }
     return !@source && !@destination;
 }
-
