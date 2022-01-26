@@ -14,11 +14,6 @@ use Perl::Tidy;
 
 # The test file is UTF-8 encoded
 
-# This attempted fix failed under Windows
-# The original version did hex compares of source and destination streams.  To
-# just test the -eos flag, and avoid line ending issues, this version does
-# line-by-line hex tests on chomped lines.
-
 plan( tests => 6 );
 
 test_all();
@@ -57,8 +52,6 @@ sub test_file2file {
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'file content compare');
 
-    # This failed on Windows
-    ##ok( hex_compare_by_lines( $tidy_str, $destination_str ), 'file2file content compare' );
 }
 
 sub test_scalar2scalar {
@@ -83,8 +76,6 @@ sub test_scalar2scalar {
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'scalar content compare');
 
-    # This failed on Windows
-    ## ok( hex_compare_by_lines( $tidy_str, $destination ), 'scalar2scalar content compare' );
 }
 
 sub test_scalararray2scalararray {
@@ -109,9 +100,6 @@ sub test_scalararray2scalararray {
 
     note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'scalararray content compare');
-
-    # This failed on Windows
-    ##ok( hex_compare_by_lines( $tidy_str, $destination_str ), 'scalararray content compare' );
 }
 
 sub slurp_raw {

@@ -59,9 +59,6 @@ sub test_file2file {
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
 
     ok($source_hex eq $destination_hex, 'file content compare');
-
-    # This failed on Windows
-    ## ok( hex_compare_by_lines( $source_str, $destination_str ) );
 }
 
 sub test_scalar2scalar {
@@ -84,9 +81,6 @@ sub test_scalar2scalar {
 
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
     ok($source_hex eq $destination_hex, 'scalar content compare');
-
-    # This failed on Windows:
-    ##ok( hex_compare_by_lines( $source, $destination ), 'scalar content compare' );
 }
 
 sub test_scalararray2scalararray {
@@ -112,9 +106,6 @@ sub test_scalararray2scalararray {
 
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
     ok($source_hex eq $destination_hex, 'scalararray content compare');
-
-    # This failed on Windows
-    ##ok( hex_compare_by_lines( $source_str, $destination_str ), 'scalararray content compare' );
 }
 
 sub slurp_raw {
