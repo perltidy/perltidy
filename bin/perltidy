@@ -3446,9 +3446,9 @@ To prevent this, and thereby always form longer lines, use B<-nboa>.
 
 =item B<Keeping old breakpoints at specific token types>
 
-Two command line parameters provide detailed control over whether
-perltidy should keep an old line break before or after a specific
-token type:
+It is possible to override the choice of line breaks made by perltidy, and
+force it to follow certain line breaks in the input stream, with these two
+parameters:
 
 B<-kbb=s> or B<--keep-old-breakpoints-before=s>, and
 
@@ -3485,6 +3485,36 @@ For example, given the script:
         my ( $self, $x, $y ) = ( shift, @_ );
         ...;
       };
+
+For the container tokens '{', '[' and '(' and, their closing counterparts, use the token symbol. Thus,
+the command to keep a break after all opening parens is:
+
+   perltidy -kba='('
+
+It is possible to be more specific in matching parentheses by preceding them
+with a letter.  The possible letters are 'k', 'K', 'f', 'F', 'w', and 'W', with
+these meanings (these are the same as used in the
+B<--weld-nested-exclusion-list> and B<--line-up-parentheses-exclusion-list>
+parameters):
+
+ 'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
+ 'f' matches if the previous token is a function other than a keyword.
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+
+So for example the the following parameter will keep breaks after opening function call
+parens:
+
+   perltidy -kba='f('
+
+B<NOTE>: To match all opening curly braces, and no other opening tokens, please
+prefix the brace it with an asterisk, like this: '*{'.  Otherwise a warning
+message will occur. This is necessary to avoid problems while the input scheme
+is being updated and generalized.  A single bare curly brace previously matched
+all container tokens, and tentatively still does. Likewise, to match all
+closing curly braces, and no other closing tokens, use '*}'.
 
 =item B<-iob>,  B<--ignore-old-breakpoints>
 

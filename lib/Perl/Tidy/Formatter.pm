@@ -1667,44 +1667,36 @@ EOM
         '?' => ':',
     );
 
-    # note any requested old line breaks to keep
-    %keep_break_before_type = ();
-    %keep_break_after_type  = ();
-    if ( !$rOpts->{'ignore-old-breakpoints'} ) {
+    if ( $rOpts->{'ignore-old-breakpoints'} ) {
 
-        # FIXME: could check for valid types here.
-        # Invalid types are harmless but probably not intended.
-        my @types;
-        @types = ( split_words( $rOpts->{'keep-old-breakpoints-before'} ) );
-        @keep_break_before_type{@types} = (1) x scalar(@types);
-        @types = ( split_words( $rOpts->{'keep-old-breakpoints-after'} ) );
-        @keep_break_after_type{@types} = (1) x scalar(@types);
-    }
-    else {
+        my @conflicts;
         if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
-            Warn("Conflicting parameters: -iob and -bom; -bom will be ignored\n"
-            );
             $rOpts->{'break-at-old-method-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-method-breakpoints (-bom)';
         }
         if ( $rOpts->{'break-at-old-comma-breakpoints'} ) {
-            Warn("Conflicting parameters: -iob and -boc; -boc will be ignored\n"
-            );
             $rOpts->{'break-at-old-comma-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-comma-breakpoints (-boc)';
         }
         if ( $rOpts->{'break-at-old-semicolon-breakpoints'} ) {
-            Warn("Conflicting parameters: -iob and -bos; -bos will be ignored\n"
-            );
             $rOpts->{'break-at-old-semicolon-breakpoints'} = 0;
+            push @conflicts, '--break-at-old-semicolon-breakpoints (-bos)';
         }
         if ( $rOpts->{'keep-old-breakpoints-before'} ) {
-            Warn("Conflicting parameters: -iob and -kbb; -kbb will be ignored\n"
-            );
             $rOpts->{'keep-old-breakpoints-before'} = "";
+            push @conflicts, '--keep-old-breakpoints-before (-kbb)';
         }
         if ( $rOpts->{'keep-old-breakpoints-after'} ) {
-            Warn("Conflicting parameters: -iob and -kba; -kba will be ignored\n"
-            );
             $rOpts->{'keep-old-breakpoints-after'} = "";
+            push @conflicts, '--keep-old-breakpoints-after (-kba)';
+        }
+
+        if (@conflicts) {
+            my $msg = join( "\n  ",
+" Conflict: These conflicts with --ignore-old-breakponts (-iob) will be turned off:",
+                @conflicts )
+              . "\n";
+            Warn($msg);
         }
 
         # Note: These additional parameters are made inactive by -iob.
@@ -1715,6 +1707,14 @@ EOM
         $rOpts->{'break-at-old-ternary-breakpoints'}   = 0;
         $rOpts->{'break-at-old-attribute-breakpoints'} = 0;
     }
+
+    %keep_break_before_type = ();
+    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-before'},
+        'kbb', \%keep_break_before_type );
+
+    %keep_break_after_type = ();
+    initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
+        'kba', \%keep_break_after_type );
 
     #------------------------------------------------------------
     # Make global vars for frequently used options for efficiency
@@ -2244,6 +2244,96 @@ EOM
     }
 
     return;
+}
+
+use constant DEBUG_KB => 0;
+
+sub initialize_keep_old_breakpoints {
+    my ( $str, $short_name, $rkeep_break_hash ) = @_;
+    return unless $str;
+
+    my %flags = ();
+    my @list  = split_words($str);
+
+    # - pull out any any leading container letter code, like 'f(
+    map { s/^ ([\w\*]) ( [  [\{\(\[\}\)\]  ] ) $/$2/x; $flags{$2} .= $1 if ($1) }
+      @list;
+
+    @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
+
+    foreach my $key ( keys %flags ) {
+        my $flag = $flags{$key};
+
+        if ( length($flag) != 1 ) {
+            Warn(<<EOM);
+Multiple entries given for '$key' in '$short_name'
+EOM
+        }
+        elsif ( ( $key eq '(' || $key eq ')' ) && $flag !~ /^[kKfFwW\*]$/ ) {
+            Warn(<<EOM);
+Unknown flag '$flag' given for '$key' in '$short_name'
+EOM
+        }
+        elsif ( ( $key eq '}' || $key eq '}' ) && $flag !~ /^[bB\*]$/ ) {
+            Warn(<<EOM);
+Unknown flag '$flag' given for '$key' in '$short_name'
+EOM
+        }
+
+        $rkeep_break_hash->{$key} = $flag;
+    }
+
+    # Temporary patch and warning during changeover from using type to token for
+    # containers .  This can be eliminated after one or two future releases.
+    if (   $rkeep_break_hash->{'{'}
+        && $rkeep_break_hash->{'{'} eq '1'
+        && !$rkeep_break_hash->{'('}
+        && !$rkeep_break_hash->{'['} )
+    {
+        $rkeep_break_hash->{'('} = 1;
+        $rkeep_break_hash->{'['} = 1;
+        Warn(<<EOM);
+Sorry, but the format for the -kbb and -kba flags for container tokens is changing a
+little to allow generalization and for consistency with other parameters.  You entered '{'
+which currently still matches '{' '(' and '[', but in the future it will only match '{'.
+To prevent this message please do one of the following:
+  use '{ ( [' if you want to match all opening containers, or
+  use '(' or '[' to match just those containers, or
+  use '*{' to match only opening braces
+EOM
+    }
+
+    if (   $rkeep_break_hash->{'}'}
+        && $rkeep_break_hash->{'}'} eq '1'
+        && !$rkeep_break_hash->{')'}
+        && !$rkeep_break_hash->{']'} )
+    {
+        $rkeep_break_hash->{'('} = 1;
+        $rkeep_break_hash->{'['} = 1;
+        Warn(<<EOM);
+Sorry, but the format for the -kbb and -kba flags for container tokens is changing a
+little to allow generalization and for consistency with other parameters.  You entered '}'
+which currently still matches '}' ')' and ']', but in the future it will only match '}'.
+To prevent this message please do one of the following:
+  use '} ) ]' if you want to match all closing containers, or
+  use ')' or ']' to match just those containers, or
+  use '*}' to match only closing braces
+EOM
+    }
+
+    if ( DEBUG_KB && @list ) {
+        my @tmp = %flags;
+        print <<EOM;
+
+DEBUG_KB -$short_name flag: $str
+final keys: @list
+special flags: @tmp
+EOM
+
+    }
+
+    return;
+
 }
 
 sub initialize_whitespace_hashes {
@@ -7660,18 +7750,56 @@ sub keep_old_line_breaks {
 
     return unless ( %keep_break_before_type || %keep_break_after_type );
 
+    my $check_for_break = sub {
+        my ( $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
+        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+
+        # non-container tokens use the type as the key
+        if ( !$seqno ) {
+            my $type = $rLL->[$KK]->[_TYPE_];
+            if ( $rkeep_break_hash->{$type} ) {
+                $rbreak_hash->{$KK} = 1;
+            }
+        }
+
+        # container tokens use the token as the key
+        else {
+            my $token = $rLL->[$KK]->[_TOKEN_];
+            my $flag  = $rkeep_break_hash->{$token};
+            if ($flag) {
+
+                my $match = $flag eq '1' || $flag eq '*';
+
+                # check for special matching codes
+                if ( !$match ) {
+                    if ( $token eq '(' || $token eq ')' ) {
+                        $match = $self->match_paren_flag( $KK, $flag );
+                    }
+                    elsif ( $token eq '{' || $token eq '}' ) {
+
+                        # codes for brace types could be expanded in the future
+                        my $block_type =
+                          $self->[_rblock_type_of_seqno_]->{$seqno};
+                        if    ( $flag eq 'b' ) { $match = $block_type }
+                        elsif ( $flag eq 'B' ) { $match = !$block_type }
+                        else {
+                            # unknown code - no match
+                        }
+                    }
+                }
+                $rbreak_hash->{$KK} = 1 if ($match);
+            }
+        }
+    };
+
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
-
-        my $type_first = $rLL->[$Kfirst]->[_TYPE_];
-        if ( $keep_break_before_type{$type_first} ) {
-            $rbreak_before_Kfirst->{$Kfirst} = 1;
-        }
-
-        my $type_last = $rLL->[$Klast]->[_TYPE_];
-        if ( $keep_break_after_type{$type_last} ) {
-            $rbreak_after_Klast->{$Klast} = 1;
-        }
+        $check_for_break->(
+            $Kfirst, \%keep_break_before_type, $rbreak_before_Kfirst
+        );
+        $check_for_break->(
+            $Klast, \%keep_break_after_type, $rbreak_after_Klast
+        );
     }
     return;
 }
@@ -8204,15 +8332,24 @@ sub match_paren_flag {
 
     return 0 unless ( defined($flag) );
     return 0 if $flag eq '0';
+    return 1 if $flag eq '1';
     return 1 if $flag eq '*';
     return 0 unless ( defined($KK) );
 
     my $rLL         = $self->[_rLL_];
     my $rtoken_vars = $rLL->[$KK];
+    my $seqno       = $rtoken_vars->[_TYPE_SEQUENCE_];
+    return 0 unless ($seqno);
+    my $token     = $rtoken_vars->[_TOKEN_];
+    my $K_opening = $KK;
+    if ( !$is_opening_token{$token} ) {
+        $K_opening = $self->[_K_opening_container_]->{$seqno};
+    }
+    return unless ( defined($K_opening) );
+
     my ( $is_f, $is_k, $is_w );
-    my $Kp = $self->K_previous_nonblank($KK);
+    my $Kp = $self->K_previous_nonblank($K_opening);
     if ( defined($Kp) ) {
-        my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
         my $type_p = $rLL->[$Kp]->[_TYPE_];
 
         # keyword?
