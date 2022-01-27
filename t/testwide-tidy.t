@@ -12,6 +12,11 @@ use Perl::Tidy;
 # This tests the -eos (--encode-output-strings) which was added for issue
 # git #83 to fix an issue with tidyall.
 
+# NOTE: to prevent automatic conversion of line endings LF to CRLF under github
+# Actions with Windows, which would cause test failure, it is essential that
+# there be a file 't/.gitattributes' with the line:
+# * -text
+
 # The test file is UTF-8 encoded
 
 plan( tests => 6 );
@@ -123,22 +128,4 @@ sub lines_raw {
     close(TMP);
 
     return @contents;
-}
-
-sub hex_compare_by_lines {
-    my ( $source_str, $destination_str ) = @_;
-
-    my @source      = split /^/m, $source_str;
-    my @destination = split /^/m, $destination_str;
-
-    while (@source) {
-        my $ss = pop(@source);
-        my $dd = pop(@destination);
-        chomp $ss;
-        chomp $dd;
-        $ss = unpack( 'H*', $ss );
-        $dd = unpack( 'H*', $dd );
-        last if $ss ne $dd;
-    }
-    return !@source && !@destination;
 }

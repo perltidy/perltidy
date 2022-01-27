@@ -9,19 +9,17 @@ use Test::More;
 BEGIN { unshift @INC, "./" }
 use Perl::Tidy;
 
-# This is off pending a good resolution of the problem with line endings.
-
 # This tests the -eos (--encode-output-strings) which was added for issue
 # git #83 to fix an issue with tidyall.
+
+# NOTE: to prevent automatic conversion of line endings LF to CRLF under github
+# Actions with Windows, which would cause test failure, it is essential that
+# there be a file 't/.gitattributes' with the line:
+# * -text
 
 # The test file has no tidying needs but is UTF-8 encoded, so all passes
 # through perltidy should read/write identical contents (previously only
 # file test behaved correctly)
-
-# This attempted fix did not work:
-# The original version did hex compares of source and destination streams.  To
-# just test the -eos flag, and avoid line ending issues, this version does
-# line-by-line hex tests on chomped lines.
 
 plan( tests => 6 );
 
@@ -58,7 +56,7 @@ sub test_file2file {
     my $destination_hex = unpack( 'H*', $destination_str );
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
 
-    ok($source_hex eq $destination_hex, 'file content compare');
+    ok( $source_hex eq $destination_hex, 'file content compare' );
 }
 
 sub test_scalar2scalar {
@@ -80,7 +78,7 @@ sub test_scalar2scalar {
     my $destination_hex = unpack( 'H*', $destination );
 
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
-    ok($source_hex eq $destination_hex, 'scalar content compare');
+    ok( $source_hex eq $destination_hex, 'scalar content compare' );
 }
 
 sub test_scalararray2scalararray {
@@ -105,7 +103,7 @@ sub test_scalararray2scalararray {
     my $destination_hex = unpack( 'H*', $destination_str );
 
     note("Comparing contents:\n  $source_hex\n  $destination_hex\n");
-    ok($source_hex eq $destination_hex, 'scalararray content compare');
+    ok( $source_hex eq $destination_hex, 'scalararray content compare' );
 }
 
 sub slurp_raw {
@@ -130,22 +128,3 @@ sub lines_raw {
 
     return @contents;
 }
-
-sub hex_compare_by_lines {
-    my ( $source_str, $destination_str ) = @_;
-
-    my @source      = split /^/m, $source_str;
-    my @destination = split /^/m, $destination_str;
-
-    while (@source) {
-        my $ss = pop(@source);
-        my $dd = pop(@destination);
-        chomp $ss;
-        chomp $dd;
-        $ss = unpack( 'H*', $ss );
-        $dd = unpack( 'H*', $dd );
-        last if $ss ne $dd;
-    }
-    return !@source && !@destination;
-}
-
