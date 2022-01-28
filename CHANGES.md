@@ -2,6 +2,39 @@
 
 ## 2021 10 29.05
 
+    - A new flag --break-after-labels=i, or -bal=i, was added as requested
+      in git #86.  This controls line breaks after labels, as follows:
+
+            -bal=0 follows the input line breaks [DEFAULT]
+            -bal=1 always break after a label
+            -bal=2 never break after a label
+
+      So for example, for the following input
+
+          INIT: {
+                $xx = 1.234;
+            }
+
+          # perltidy -bal=1
+          INIT:
+            {
+                $xx = 1.234;
+            }
+
+    - A new flag, --encode-output-strings, or -eos, has been added to resolve
+      issue git #83.  This issue involves the interface between Perl::Tidy and
+      calling programs, and tidyall in particular.  If you use tidyall and have
+      encoded files you may want to set this flag.  The crux of the matter is
+      that by default perltidy returns unencoded strings to the calling program.
+      Some programs need encoded strings, and setting this flag causes encoding.
+      If you use tidyall with encoded files (like utf8) you should probably
+      set this flag.  If you run the perltidy binary this flag has no effect.
+
+    - The flags -kbb=s or --keep-old-breakpoints-before=s, and its counterpart
+      -kba=s or --keep-old-breakpoints-after=s have expanded functionality
+      for the container tokens { [ ( and } ] ).  See the updated man pages for
+      details.
+
     - Two new flags have been added to provide finer vertical alignment control,
       --valign-exclusion-list=s (-vxl=s) and  --valign-inclusion-list=s (-vil=s).
       This has been requested several times, recently in git #79.

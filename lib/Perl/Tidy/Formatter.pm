@@ -144,6 +144,7 @@ my (
     $rOpts_blank_lines_after_opening_block,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
+    $rOpts_break_after_labels,
     $rOpts_break_at_old_attribute_breakpoints,
     $rOpts_break_at_old_comma_breakpoints,
     $rOpts_break_at_old_keyword_breakpoints,
@@ -1727,6 +1728,7 @@ EOM
     $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
+    $rOpts_break_after_labels = $rOpts->{'break-after-labels'};
     $rOpts_break_at_old_attribute_breakpoints =
       $rOpts->{'break-at-old-attribute-breakpoints'};
     $rOpts_break_at_old_comma_breakpoints =
@@ -2254,10 +2256,26 @@ sub initialize_keep_old_breakpoints {
 
     my %flags = ();
     my @list  = split_words($str);
+    if ( DEBUG_KB && @list ) {
+        local $" = ' ';
+        print <<EOM;
+DEBUG_KB entering for '$short_name' with str=$str\n";
+list is: @list;
+EOM
+    }
 
-    # - pull out any any leading container letter code, like 'f(
-    map { s/^ ([\w\*]) ( [  [\{\(\[\}\)\]  ] ) $/$2/x; $flags{$2} .= $1 if ($1) }
-      @list;
+    # - pull out any any leading container code, like f( or *{
+    foreach (@list) {
+        if ( $_ =~ /^( [ \w\* ] )( [ \{\(\[\}\)\] ] )$/x ) {
+            $_ = $2;
+            $flags{$2} = $1;
+        }
+    }
+
+    #--------------------------------------------------------------------------
+    # FIXME: check @list for valid token types here. For example, a missing
+    # space like '=>,' would cause an error and be hard to find.
+    #--------------------------------------------------------------------------
 
     @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
 
@@ -2323,11 +2341,12 @@ EOM
 
     if ( DEBUG_KB && @list ) {
         my @tmp = %flags;
+        local $" = ' ';
         print <<EOM;
 
 DEBUG_KB -$short_name flag: $str
-final keys: @list
-special flags: @tmp
+final keys:  @list
+special flags:  @tmp
 EOM
 
     }
@@ -7777,7 +7796,9 @@ sub keep_old_line_breaks {
                     }
                     elsif ( $token eq '{' || $token eq '}' ) {
 
-                        # codes for brace types could be expanded in the future
+                        # These tentative codes 'b' and 'B' for brace types are
+                        # placeholders for possible future brace types. They
+                        # are not documented and may be changed.
                         my $block_type =
                           $self->[_rblock_type_of_seqno_]->{$seqno};
                         if    ( $flag eq 'b' ) { $match = $block_type }
@@ -13172,6 +13193,12 @@ EOM
             else {
 
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
+
+                # break after a label if requested
+                if ( $type eq 'J' && $rOpts_break_after_labels == 1 ) {
+                    $self->end_batch()
+                      unless ($no_internal_newlines);
+                }
             }
 
             # remember two previous nonblank, non-comment OUTPUT tokens
@@ -13198,7 +13225,7 @@ EOM
             || $is_VERSION_statement
 
             # to keep a label at the end of a line
-            || $type eq 'J'
+            || ( $type eq 'J' && $rOpts_break_after_labels != 2 )
 
             # if we have a hard break request
             || $break_flag && $break_flag != 2

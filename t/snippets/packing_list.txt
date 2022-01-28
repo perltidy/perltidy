@@ -342,6 +342,9 @@
 ../snippets25.t	git74.git74
 ../snippets25.t	git77.def
 ../snippets25.t	git77.git77
+../snippets25.t	vxl.def
+../snippets25.t	vxl.vxl1
+../snippets25.t	vxl.vxl2
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -482,6 +485,6 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets25.t	vxl.def
-../snippets25.t	vxl.vxl1
-../snippets25.t	vxl.vxl2
+../snippets25.t	bal.bal1
+../snippets26.t	bal.bal2
+../snippets26.t	bal.def

@@ -19,6 +19,7 @@
 #16 vxl.def
 #17 vxl.vxl1
 #18 vxl.vxl2
+#19 bal.bal1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -36,6 +37,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'bal1'    => "-bal=1",
         'braces8' => <<'----------',
 -bl -bbvt=1 -blxl=' ' -bll='sub do asub'
 ----------
@@ -80,6 +82,14 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bal' => <<'----------',
+{
+  L1:
+  L2:
+  L2: return;
+};
+----------
 
         'braces' => <<'----------',
 sub message {
@@ -758,6 +768,19 @@ $co_description = ($color) ? 'bold cyan' : '';          # description
 $co_prompt      = ($color) ? 'bold green' : '';         # prompt
 $co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
 #18...........
+        },
+
+        'bal.bal1' => {
+            source => "bal",
+            params => "bal1",
+            expect => <<'#19...........',
+{
+  L1:
+  L2:
+  L2:
+    return;
+};
+#19...........
         },
     };
 

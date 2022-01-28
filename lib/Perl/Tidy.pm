@@ -2462,7 +2462,12 @@ sub generate_options {
     $add_option->( 'break-before-paren-and-indent',           'bbpi',  '=i' );
     $add_option->( 'brace-left-list',                         'bll',   '=s' );
     $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
-    $add_option->( 'break-open-paren-list',                   'bopl',  '=s' );
+    $add_option->( 'break-after-labels',                      'bal',   '=i' );
+
+    ## This was an experiment mentioned in git #78. It works, but it does not
+    ## look very useful.  Instead, I expanded the functionality of the
+    ## --keep-old-breakpoint-xxx flags.
+    ##$add_option->( 'break-open-paren-list',                   'bopl',  '=s' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -2619,6 +2624,7 @@ sub generate_options {
         'keyword-group-blanks-after'  => [ 0, 2 ],
 
         'space-prototype-paren' => [ 0, 2 ],
+        'break-after-labels'    => [ 0, 2 ],
     );
 
     # Note: we could actually allow negative ci if someone really wants it:
@@ -2651,6 +2657,7 @@ sub generate_options {
       brace-tightness=1
       brace-vertical-tightness-closing=0
       brace-vertical-tightness=0
+      break-after-labels=0
       break-at-old-logical-breakpoints
       break-at-old-ternary-breakpoints
       break-at-old-attribute-breakpoints
