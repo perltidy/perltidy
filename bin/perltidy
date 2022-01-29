@@ -3174,6 +3174,24 @@ with the B<-wba> and B<-wbb> flags.  For example, to break before all operators
 except an B<=> one could use --bbao -wba='=' rather than listing every
 single perl operator except B<=> on a -wbb flag.
 
+=item B<bal=n, --break-after-labels=n>
+
+This flag controls whether or not a line break occurs after a label. There
+are three possible valuse for B<n>:
+
+  -bal=0  break if there is a break in the input [DEFAULt]
+  -bal=1  always break after a label
+  -bal=2  never break after a label
+
+For example,
+
+      # perltidy -bal=1
+      RETURN:
+        return;
+
+      # perltidy -bal=2
+      RETURN: return;
+
 =back
 
 =head2 Controlling List Formatting

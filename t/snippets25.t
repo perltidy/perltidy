@@ -87,7 +87,7 @@ BEGIN {
 {
   L1:
   L2:
-  L2: return;
+  L3: return;
 };
 ----------
 
@@ -777,7 +777,7 @@ $co_unused      = ($color) ? 'on_green' : 'reverse';    # unused
 {
   L1:
   L2:
-  L2:
+  L3:
     return;
 };
 #19...........

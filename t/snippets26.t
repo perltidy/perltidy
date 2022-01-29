@@ -33,7 +33,7 @@ BEGIN {
 {
   L1:
   L2:
-  L2: return;
+  L3: return;
 };
 ----------
     };
@@ -48,7 +48,7 @@ BEGIN {
             params => "bal2",
             expect => <<'#1...........',
 {
-  L1: L2: L2: return;
+  L1: L2: L3: return;
 };
 #1...........
         },
@@ -60,7 +60,7 @@ BEGIN {
 {
   L1:
   L2:
-  L2: return;
+  L3: return;
 };
 #2...........
         },
