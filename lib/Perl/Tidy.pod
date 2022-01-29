@@ -83,6 +83,19 @@ filenames may be specified in the @ARGV array or B<argv> parameter.
 If the B<destination> parameter is given, it will be used to define the
 file or memory location to receive output of perltidy.  
 
+If the destination is a string or array reference, and it contains encoded
+characters, then by default it will NOT be encoded by Perl::Tidy.
+
+This default is not always convenient, particularly if the calling program did
+not do the decoding, and can be changed by including the B<-eos> or
+B<--encode-output-strings> flag described in the B<perltidy> manual.  When this
+flag is set, and if Perl::Tidy decoded a string, then it will encode the string
+before returning. For some background information see the discussion at github
+for perltidy issue git #83 at
+L<https://github.com/perltidy/perltidy/issues/83>.
+
+This B<-eos> parameter was added after perltidy version 20211029.05.
+
 =item stderr
 
 The B<stderr> parameter allows the calling program to redirect the stream that
