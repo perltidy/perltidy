@@ -803,10 +803,17 @@ guessed indentation will be wrong.
 If the default method does not work correctly, or you want to change the
 starting level, use B<-sil=n>, to force the starting level to be n.
 
-=item B<List indentation> using B<-lp>, B<--line-up-parentheses>
+=item B<List indentation> using B<--line-up-parentheses>, B<-lp> or B<--extended--line-up-parentheses> , B<-xlp>
 
-By default, perltidy indents lists with 4 spaces, or whatever value
-is specified with B<-i=n>.  Here is a small list formatted in this way:
+These flags provide an alternative indentation method for list data.  The
+original flag for this is B<-lp>, but it has some limitations (explained below)
+which are avoided with the newer B<-xlp> flag.  So B<-xlp> is probably the better
+choice for new work, but the B<-lp> flag is retained to minimize changes to
+existing formatting.
+
+In the default indentation method perltidy indents lists with 4 spaces, or
+whatever value is specified with B<-i=n>.  Here is a small list formatted in
+this way:
 
     # perltidy (default)
     @month_of_year = (
@@ -814,12 +821,12 @@ is specified with B<-i=n>.  Here is a small list formatted in this way:
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     );
 
-Use the B<-lp> flag to add extra indentation to cause the data to begin
-past the opening parentheses of a sub call or list, or opening square
-bracket of an anonymous array, or opening curly brace of an anonymous
-hash.  With this option, the above list would become:
+The B<-lp> or B<-xlp> flags add extra indentation to cause the data to begin
+past the opening parentheses of a sub call or list, or opening square bracket
+of an anonymous array, or opening curly brace of an anonymous hash.  With this
+option, the above list would become:
 
-    # perltidy -lp
+    # perltidy -lp or -xlp
     @month_of_year = (
                        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -829,32 +836,54 @@ If the available line length (see B<-l=n> ) does not permit this much
 space, perltidy will use less.   For alternate placement of the
 closing paren, see the next section.
 
-This option has no effect on code BLOCKS, such as if/then/else blocks,
+These flags have no effect on code BLOCKS, such as if/then/else blocks,
 which always use whatever is specified with B<-i=n>.
 
-In situations where perltidy does not have complete freedom to choose line
-breaks it may temporarily revert to its default indentation method.  This can
-occur for example if there are blank lines, block comments, multi-line quotes,
-or side comments between the opening and closing parens, braces, or brackets.
-It will also occur if a multi-line anonymous sub occurs within a container
-since that will impose specific line breaks (such as line breaks
-after statements).
+A limitation on B<-lp>, but not B<-xlp>, occurs in situations where perltidy
+does not have complete freedom to choose line breaks it may temporarily revert
+to its default indentation method.  This can occur for example if there are
+blank lines, block comments, multi-line quotes, or side comments between the
+opening and closing parens, braces, or brackets.  It will also occur if a
+multi-line anonymous sub occurs within a container since that will impose
+specific line breaks (such as line breaks after statements).
 
-In addition, any parameter which significantly restricts the ability of
-perltidy to choose newlines will conflict with B<-lp> and will cause
-B<-lp> to be deactivated.  These include B<-io>, B<-fnl>, B<-nanl>, and
-B<-ndnl>.  The reason is that the B<-lp> indentation style can require
-the careful coordination of an arbitrary number of break points in
-hierarchical lists, and these flags may prevent that.
+For both the B<-lp> and B<-xlp> flags, any parameter which significantly
+restricts the ability of perltidy to choose newlines will conflict with these
+flags and will cause them to be deactivated.  These include B<-io>, B<-fnl>,
+B<-nanl>, and B<-ndnl>.
 
-The B<-lp> option may not be used together with the B<-t> tabs option.
-It may, however, be used with the B<-et=n> tab method.
+The B<-lp> and B<-xlp> options may not be used together with the B<-t> tabs option.
+They may, however, be used with the B<-et=n> tab method
 
+If you enter both B<-lp> and B<-xlp>, then B<-xlp> will be used.
+
+There are some potential disadvantages of this indentation method compared to
+the default method that should be noted:
+
+(1) The available line length can quickly be used up if variable names are
+long.  This can cause deeply nested code to quickly reach the line length
+limit, and become badly formatted, much sooner than would occur with the
+default indentation method.
+
+(2) Since the indentation depends on the lengths of variable names, small
+changes in variable names can cause changes in indentation over many lines in a
+file.  This means that minor name changes can produce significant file
+differences.  This can be annoying and does not occur with the default
+indentation method.
+
+Some things that can be done to minimize these problems are:
+
+(1) Increase B<--maximum-line-length=n> above the default B<n=80> characters if
+necessary.
+
+(2) Apply this style in a limited way.  By default, it applies to all list
+containers (not just lists in parentheses).  The next section describes how to
+limit this style to, for example, just function calls.  The default indentation
+method will be applied elsewhere.
 
 =item B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
 
-This is an experimental parameter; the details might change as experience
-with it is gained.
+The following discussion mentions B<-lp> but applies equally to B<-xlp>.
 
 The B<-lp> indentation style works well for some types of coding but can
 produce very long lines when variables have long names and/or containers are
@@ -903,15 +932,24 @@ token immediately before the paren.  The possible letters are currently 'k',
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
 
-For example,
+The logic of writing these codes is somewhat counter-intuitive because they
+describe what is not getting the -lp indentation.  So the 'F' indicates that
+non-function calls are not getting -lp, or in other words that function calls
+are getting the -lp indentation.  In practice, one of the following examples
+is likely to be appropriate:
+
+  -lpxl = '[ { F('
+
+means only apply -lp to parenthesized lists which follow a function call.
+
+  -lpxl = '[ { W('
+
+means only apply -lp to parenthesized lists which follow a keyword or function call.
 
   -lpxl = '[ { F(2'
 
 means only apply -lp to parenthesized lists which follow a function call and
-which do not contain any sublists, code blocks or ternary expressions.  The logic
-of writing these codes is somewhat counter-intuitive because they describe what is not
-getting the -lp indentation.  So the 'F' indicates that non-function calls are
-not getting -lp, or in other words that function calls are getting the -lp indentation.
+which do not contain any sublists, code blocks or ternary expressions.
 
 =item B<-cti=n>, B<--closing-token-indentation>
 
