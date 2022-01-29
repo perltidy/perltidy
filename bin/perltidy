@@ -456,7 +456,7 @@ A problem arises using a fixed maximum line length with very deeply nested code
 and data structures because eventually the amount of leading whitespace used
 for indicating indentation takes up most or all of the available line width,
 leaving little or no space for the actual code or data.  One solution is to use
-a vary long line length.  Another solution is to use the B<-vmll> flag, which
+a very long line length.  Another solution is to use the B<-vmll> flag, which
 basically tells perltidy to ignore leading whitespace when measuring the line
 length.
 
