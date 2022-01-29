@@ -352,8 +352,6 @@ open( CVSLOG,
 --indent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=72
-#--keep-old-breakpoints-after='=+'
-#--keep-old-breakpoints-before='=+'
 --keyword-group-blanks-before=0
 --keyword-group-blanks-delete
 --keyword-group-blanks-repeat-count=17
@@ -4324,8 +4322,6 @@ __END__
 --indent-spaced-block-comments
 --nokeep-interior-semicolons
 --keep-old-blank-lines=87
-#--keep-old-breakpoints-after='=+'
-#--keep-old-breakpoints-before='!'
 --keyword-group-blanks-after=0
 --keyword-group-blanks-delete
 --keyword-group-blanks-repeat-count=48
@@ -4541,8 +4537,6 @@ sub receive_bgp_update_message {
 --indent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=9
---keep-old-breakpoints-after='train'
---keep-old-breakpoints-before='sub'
 --keyword-group-blanks-after=2
 --keyword-group-blanks-before=2
 --keyword-group-blanks-repeat-count=82
@@ -9604,8 +9598,6 @@ Readonly::Hash my%CAPTURE_REFERENCE_ENGLISH=>
 --indent-spaced-block-comments
 --nokeep-interior-semicolons
 --keep-old-blank-lines=46
---keep-old-breakpoints-after='=+'
---keep-old-breakpoints-before='sub'
 --keyword-group-blanks-before=2
 --keyword-group-blanks-inside
 --keyword-group-blanks-repeat-count=69
@@ -10052,8 +10044,6 @@ Readonly::Scalar
 --noindent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=20
---keep-old-breakpoints-after='subaru'
---keep-old-breakpoints-before='train'
 --keyword-group-blanks-before=2
 --keyword-group-blanks-inside
 --keyword-group-blanks-repeat-count=45
@@ -11854,8 +11844,6 @@ my%where=
 --noindent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=27
---keep-old-breakpoints-after='train'
---keep-old-breakpoints-before='sub'
 --keyword-group-blanks-after=2
 --keyword-group-blanks-repeat-count=59
 --keyword-group-blanks-size='2.8'
@@ -11953,8 +11941,6 @@ my%where=
 --indent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=24
-#--keep-old-breakpoints-after='!'
-#--keep-old-breakpoints-before='=+'
 --keyword-group-blanks-delete
 --keyword-group-blanks-repeat-count=92
 --keyword-group-blanks-size='2.8'
@@ -12871,8 +12857,6 @@ __END__
 ##--iterations=93
 --nokeep-interior-semicolons
 --keep-old-blank-lines=70
-#--keep-old-breakpoints-after='subaru'
-#--keep-old-breakpoints-before='train'
 --keyword-group-blanks-before=2
 --keyword-group-blanks-repeat-count=43
 --keyword-group-blanks-size='7'
@@ -13010,8 +12994,6 @@ foreach my $key
 ##--iterations=61
 --keep-interior-semicolons
 --keep-old-blank-lines=82
-#--keep-old-breakpoints-after='train'
-#--keep-old-breakpoints-before='subaru'
 --keyword-group-blanks-after=2
 --keyword-group-blanks-before=2
 --keyword-group-blanks-delete
@@ -13190,8 +13172,6 @@ foreach my $key
 --indent-spaced-block-comments
 --nokeep-interior-semicolons
 --keep-old-blank-lines=39
---keep-old-breakpoints-after='1x'
---keep-old-breakpoints-before='!'
 --keyword-group-blanks-inside
 --keyword-group-blanks-repeat-count=59
 --keyword-group-blanks-size='2.8'
@@ -13324,8 +13304,6 @@ explain
 --indent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=7
-#--keep-old-breakpoints-after='1x'
-#--keep-old-breakpoints-before='sub'
 --keyword-group-blanks-before=0
 --keyword-group-blanks-delete
 --keyword-group-blanks-inside
@@ -14258,11 +14236,8 @@ if ($printmask
 --ignore-side-comment-lengths
 --indent-closing-brace
 --indent-spaced-block-comments
-##--iterations=93
 --nokeep-interior-semicolons
 --keep-old-blank-lines=37
---keep-old-breakpoints-after='sub'
---keep-old-breakpoints-before='=+'
 --keyword-group-blanks-after=2
 --keyword-group-blanks-before=0
 --keyword-group-blanks-delete
@@ -14570,11 +14545,8 @@ my ( $template, $loggedinuser, $cookie )
 --noignore-side-comment-lengths
 --noindent-closing-brace
 --indent-spaced-block-comments
-#--iterations=92
 --keep-interior-semicolons
 --keep-old-blank-lines=16
-#--keep-old-breakpoints-after='train'
-#--keep-old-breakpoints-before='=+'
 --keyword-group-blanks-before=2
 --keyword-group-blanks-delete
 --keyword-group-blanks-repeat-count=63
@@ -14706,8 +14678,6 @@ while (<>)
 --indent-spaced-block-comments
 --keep-interior-semicolons
 --keep-old-blank-lines=5
---keep-old-breakpoints-after='subaru'
---keep-old-breakpoints-before='=+'
 --keyword-group-blanks-before=2
 --keyword-group-blanks-repeat-count=44
 --keyword-group-blanks-size='1.8'
@@ -14879,11 +14849,8 @@ $cron =
 --indent-closing-brace
 --indent-columns=5
 --indent-spaced-block-comments
-#--iterations=17
 --keep-interior-semicolons
 --keep-old-blank-lines=39
---keep-old-breakpoints-after='!'
---keep-old-breakpoints-before='train'
 --keyword-group-blanks-after=2
 --keyword-group-blanks-before=2
 --keyword-group-blanks-repeat-count=23
@@ -15050,11 +15017,8 @@ my @cellbits=(
 --noindent-closing-brace
 --indent-columns=6
 --noindent-spaced-block-comments
-##--iterations=8
 --keep-interior-semicolons
 --keep-old-blank-lines=87
---keep-old-breakpoints-after='sub'
---keep-old-breakpoints-before='1x'
 --keyword-group-blanks-repeat-count=94
 --keyword-group-blanks-size='10'
 --line-up-parentheses

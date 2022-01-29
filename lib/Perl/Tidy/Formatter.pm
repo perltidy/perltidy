@@ -2272,10 +2272,21 @@ EOM
         }
     }
 
-    #--------------------------------------------------------------------------
-    # FIXME: check @list for valid token types here. For example, a missing
-    # space like '=>,' would cause an error and be hard to find.
-    #--------------------------------------------------------------------------
+    my @unknown_types;
+    foreach my $type (@list) {
+        if ( !Perl::Tidy::Tokenizer::is_valid_token_type($type) ) {
+            push @unknown_types, $type;
+        }
+    }
+
+    if (@unknown_types) {
+        my $num = @unknown_types;
+        local $" = ' ';
+        Warn(<<EOM);
+$num unrecognized token types were input with --$short_name :
+@unknown_types
+EOM
+    }
 
     @{$rkeep_break_hash}{@list} = (1) x scalar(@list);
 

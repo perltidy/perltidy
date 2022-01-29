@@ -747,6 +747,11 @@ sub report_v_string {
     return;
 }
 
+sub is_valid_token_type {
+    my ($type) = @_;
+    return $is_valid_token_type{$type};
+}
+
 sub get_input_line_number {
     return $tokenizer_self->[_last_line_number_];
 }
