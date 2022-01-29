@@ -641,6 +641,21 @@ A perltidy output file is unencoded if the input file is unencoded, and
 otherwise it is encoded as B<utf8>, even if the input encoding was not
 B<utf8>.
 
+=item B<-eos=s>,   B<--encode-output-strings=s>
+
+This flag has been added to resolve an issue involving the interface between
+Perl::Tidy and calling programs, and in particular the widely used B<tidyall>
+program.  The crux of the matter is that, as a result of its historical
+evolution, by default perltidy returns unencoded strings to the calling
+program.  Some programs need encoded strings, and setting this flag causes
+Perl::Tidy to encode output strings, but only if it decoded them.  For some
+background information see the discussion at github for perltidy issue git #83 at
+L<https://github.com/perltidy/perltidy/issues/83>
+
+If you only run the perltidy binary this flag has no effect.
+
+If you use B<tidyall> with encoded files you should probably set this flag.
+
 =item B<-gcs>,  B<--use-unicode-gcstring>
 
 This flag controls whether or not perltidy may use module Unicode::GCString to
