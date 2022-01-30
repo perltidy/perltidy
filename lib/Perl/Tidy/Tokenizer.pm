@@ -6131,11 +6131,13 @@ sub decrease_nesting_depth {
         }
 
         # Fix part #2 for git82: use saved type for propagation of type 'Z'
-        # through type L-R braces.
+        # through type L-R braces.  Perl seems to allow ${bareword}
+        # as an indirect object, but nothing much more complex than that.
         ( $statement_type, my $saved_type, my $saved_token ) =
           @{ $nested_statement_type[$aa][ $current_depth[$aa] ] };
         if (   $aa == BRACE
             && $saved_type eq 'Z'
+            && $last_nonblank_type eq 'w'
             && $brace_structural_type[$brace_depth] eq 'L' )
         {
             $last_nonblank_type = $saved_type;
