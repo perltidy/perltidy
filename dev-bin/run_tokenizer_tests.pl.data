@@ -154,3 +154,15 @@ my$seed=$$^$^T;
 s s(..)(.)sss
 ;
 
+==> git82.in <==
+say
+$
+{
+fh
+} <<~EOM;
+
+say { $fh } <<EOM;
+
+b^^
+   EOM
+

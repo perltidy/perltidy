@@ -3122,6 +3122,7 @@ EOM
                 }
             }
             else {
+                error_if_expecting_OPERATOR();
             }
         },
         '->' => sub {
@@ -3655,8 +3656,12 @@ EOM
                       $last_nonblank_container_type;
                     $last_last_nonblank_type_sequence =
                       $last_nonblank_type_sequence;
-                    $last_nonblank_token          = $tok;
-                    $last_nonblank_type           = $type;
+
+                    # Fix part #3 for git82: propagate type 'Z' though L-R pair
+                    unless ( $type eq 'R' && $last_nonblank_type eq 'Z' ) {
+                        $last_nonblank_token = $tok;
+                        $last_nonblank_type  = $type;
+                    }
                     $last_nonblank_prototype      = $prototype;
                     $last_nonblank_block_type     = $block_type;
                     $last_nonblank_container_type = $container_type;
@@ -6075,7 +6080,10 @@ sub increase_nesting_depth {
             }
         }
     }
-    $nested_statement_type[$aa][ $current_depth[$aa] ] = $statement_type;
+
+    # Fix part #1 for git82: save last token type for propagation of type 'Z'
+    $nested_statement_type[$aa][ $current_depth[$aa] ] =
+      [ $statement_type, $last_nonblank_type, $last_nonblank_token ];
     $statement_type = "";
     return ( $seqno, $indent );
 }
@@ -6121,7 +6129,17 @@ sub decrease_nesting_depth {
         if ( $aa == QUESTION_COLON ) {
             $outdent = $nested_ternary_flag[ $current_depth[$aa] ];
         }
-        $statement_type = $nested_statement_type[$aa][ $current_depth[$aa] ];
+
+        # Fix part #2 for git82: use saved type for propagation of type 'Z'
+        # through type L-R braces.
+        ( $statement_type, my $saved_type, my $saved_token ) =
+          @{ $nested_statement_type[$aa][ $current_depth[$aa] ] };
+        if (   $aa == BRACE
+            && $saved_type eq 'Z'
+            && $brace_structural_type[$brace_depth] eq 'L' )
+        {
+            $last_nonblank_type = $saved_type;
+        }
 
         # check that any brace types $bb contained within are balanced
         for my $bb ( 0 .. @closing_brace_names - 1 ) {
