@@ -55,6 +55,7 @@ Makefile.PL
 MANIFEST			This list of files
 pm2pl
 README.md
+t/.gitattributes
 t/atee.t
 t/filter_example.t
 t/snippets1.t
@@ -75,6 +76,7 @@ t/snippets22.t
 t/snippets23.t
 t/snippets24.t
 t/snippets25.t
+t/snippets26.t
 t/snippets3.t
 t/snippets4.t
 t/snippets5.t
@@ -86,5 +88,10 @@ t/test-eol.t
 t/test.t
 t/testsa.t
 t/testss.t
+t/testwide-passthrough.pl.src
+t/testwide-passthrough.t
+t/testwide-tidy.pl.src
+t/testwide-tidy.pl.srctdy
+t/testwide-tidy.t
 t/testwide.pl.src
 t/testwide.t
