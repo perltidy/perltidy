@@ -1087,6 +1087,9 @@ EOM
                     }
                 }
             }
+            $encoding_log_message .= <<EOM;
+Unable to guess a character encoding
+EOM
         }
 
         # Case 4. Decode with a specific encoding
@@ -3347,6 +3350,15 @@ sub check_options {
     #---------------------------------------------------------------
     # check and handle any interactions among the basic options..
     #---------------------------------------------------------------
+
+    # Since perltidy only encodes in utf8, problems can occur if we let it
+    # decode anything else.  See discussions for issue git #83.
+    my $encoding = $rOpts->{'character-encoding'};
+    if ( $encoding !~ /^\s*(guess|none|utf8|utf-8)\s*$/i ) {
+        Die(<<EOM);
+--character-encoding = '$encoding' is not allowed; the options are: 'none', 'guess', 'utf8'
+EOM
+    }
 
     # Since -vt, -vtc, and -cti are abbreviations, but under
     # msdos, an unquoted input parameter like vtc=1 will be

@@ -2,6 +2,7 @@
 
 ## 2021 10 29.06
 
+
     - A new flag --break-after-labels=i, or -bal=i, was added as requested
       in git #86.  This controls line breaks after labels, as follows:
 
@@ -24,6 +25,14 @@
 
     - Fix issue git #82, an error handling something like ${bareword} in a possible
       indirect object location.
+
+    - The possible values of the string 's' for the flag '--character-encoding=s'
+      have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
+      arbitrary encoding could also be specified, but as a result of discussions
+      regarding git #83 it became clear that this was a bad idea and could lead
+      to problems since the output encoding was still restricted to UTF-8. Users
+      who need to work in other encodings can write a short program calling
+      Perl::Tidy with pre- and post-processing to handle encoding/decoding.
 
     - A new flag, --encode-output-strings, or -eos, has been added to resolve
       issue git #83.  This issue involves the interface between Perl::Tidy and
