@@ -3,6 +3,7 @@
 # Contents:
 #1 bal.bal2
 #2 bal.def
+#3 lpxl.lpxl6
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -20,8 +21,12 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bal2' => "-bal=2",
-        'def'  => "",
+        'bal2'  => "-bal=2",
+        'def'   => "",
+        'lpxl6' => <<'----------',
+# equivalent to -lpxl='{ [ F(2'
+-lp -lpil='f(2'
+----------
     };
 
     ############################
@@ -35,6 +40,69 @@ BEGIN {
   L2:
   L3: return;
 };
+----------
+
+        'lpxl' => <<'----------',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+      "Connecting to DB.",
+      "Extra-Parameters: " . join("<->", $extra_parms),
+      "Config: " . join("<->", %config)
+     );
+
+# simple function call with code block
+$m->command(-label   => 'Save',
+            -command => sub { print "DOS\n"; save_dialog($win); });
+
+# function call, ternary in list
+return
+  OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run            => \%runparam,
+    -file           => '',
+    -parse          => 1,
+    -signif         => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+    local (
+        $len,    $pts,      @colspec, $char, $cols,
+        $repeat, $celldata, $at_text, $after_text
+    );
+
+# square bracket with sublists
+$data = [
+         ListElem->new(id => 0, val => 100),
+         ListElem->new(id => 2, val => 50),
+         ListElem->new(id => 1, val => 10),
+        ];
+
+# curly brace with sublists
+$behaviour = {
+              cat   => {nap    => "lap",   eat  => "meat"},
+              dog   => {prowl  => "growl", pool => "drool"},
+              mouse => {nibble => "kibble"},
+             };
 ----------
     };
 
@@ -63,6 +131,74 @@ BEGIN {
   L3: return;
 };
 #2...........
+        },
+
+        'lpxl.lpxl6' => {
+            source => "lpxl",
+            params => "lpxl6",
+            expect => <<'#3...........',
+# simple function call
+my $loanlength = getLoanLength(
+                                $borrower->{'categorycode'},    # sc1
+                                $iteminformation->{'itemtype'},
+                                $borrower->{'branchcode'}       # sc3
+);
+
+# function call, more than one level deep
+my $o = very::long::class::name->new(
+    {
+        propA => "a",
+        propB => "b",
+        propC => "c",
+    }
+);
+
+# function call with sublist
+debug(
+    "Connecting to DB.",
+    "Extra-Parameters: " . join( "<->", $extra_parms ),
+    "Config: " . join( "<->", %config )
+);
+
+# simple function call with code block
+$m->command(
+    -label   => 'Save',
+    -command => sub { print "DOS\n"; save_dialog($win); }
+);
+
+# function call, ternary in list
+return OptArgs2::Result->usage(
+    $style == OptArgs2::STYLE_FULL ? 'FullUsage' : 'NormalUsage',
+    'usage: ' . $usage . "\n" );
+
+# not a function call
+%blastparam = (
+    -run    => \%runparam,
+    -file   => '',
+    -parse  => 1,
+    -signif => 1e-5,
+);
+
+# 'local' is a keyword, not a user function
+local (
+    $len,    $pts,      @colspec, $char, $cols,
+    $repeat, $celldata, $at_text, $after_text
+);
+
+# square bracket with sublists
+$data = [
+    ListElem->new( id => 0, val => 100 ),
+    ListElem->new( id => 2, val => 50 ),
+    ListElem->new( id => 1, val => 10 ),
+];
+
+# curly brace with sublists
+$behaviour = {
+    cat   => { nap    => "lap",   eat  => "meat" },
+    dog   => { prowl  => "growl", pool => "drool" },
+    mouse => { nibble => "kibble" },
+};
+#3...........
         },
     };
 

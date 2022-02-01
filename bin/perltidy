@@ -893,58 +893,57 @@ Some things that can be done to minimize these problems are:
 (1) Increase B<--maximum-line-length=n> above the default B<n=80> characters if
 necessary.
 
-(2) Apply this style in a limited way.  By default, it applies to all list
+(2) If you use B<-xlp> then long side comments can limit the indentation over
+multiple lines.  Consider adding the flag B<--ignore-side-comment-lengths> to
+prevent this, or minimizing the use of side comments.
+
+(3) Apply this style in a limited way.  By default, it applies to all list
 containers (not just lists in parentheses).  The next section describes how to
 limit this style to, for example, just function calls.  The default indentation
 method will be applied elsewhere.
 
-(3) If you use B<-xlp> then long side comments can limit the indentation over
-multiple lines.  Consider adding the flag B<--ignore-side-comment-lengths> to
-prevent this, or minimizing the use of side comments.
+=item B<-lpil=s>, B<--line-up-parentheses-inclusion-list> and B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
 
-=item B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
-
-The following discussion mentions B<-lp> but applies equally to B<-xlp>.
+These parameters can be used to restrict the application of the B<-lp> or B<-xlp> styles.
+The following discussion is written for B<-lp> but applies equally to the newer B<-xlp> version.
 
 The B<-lp> indentation style works well for some types of coding but can
 produce very long lines when variables have long names and/or containers are
-very deeply nested.  The B<-lpxl=s> flag is intended to help mitigate this problem by
-providing control over the containers to which the B<-lp> indentation style is
-applied.  The B<-lp> flag by default is "greedy" and applies to as many
-containers as possible.  This flag specifies a list of things which should
-B<not> be use B<-lp> indentation.
+very deeply nested.  One solution to this problem is to limit the application
+of this style to just certain containers.  By default, the B<-lp> flag applies
+to as many containers as possible.  The set of containers to which it applies
+can be reduced by either one of these two flags:
 
-This list is a string with space-separated items.  Each item consists of up to
-three pieces of information in this order: (1) an optional letter code (2) a
-required container type, and (3) an optional numeric code.
+The B<-lpil=s> flag to specifies the containers to which B<-lp> applies.
+
+The B<-lpxl=s> flag to specifies the containers to which B<-lp> does NOT apply.
+
+Only one of these two flags may be used.  Both flags can achieve the same
+result, but the B<-lpil=s> flag is much easier to describe and use and is
+recommended.  The B<-lpxl=s> flag was the original implementation and is
+retained for backwards compatibility.
+
+This list B<s> for these parametes is a string with space-separated items.
+Each item consists of up to three pieces of information in this order: (1) an
+optional letter code (2) a required container type, and (3) an optional numeric
+code.
 
 The only required piece of information is a container type, which is one of
 '(', '[', or '{'.  For example the string
 
-  -lpxl='[ {'
+  -lpil='('
 
-means do B<NOT> include use -lp formatting within square-bracets or braces.  The only unspecified
-container is '(', so this string means that only the contents within parens will use -lp indentation.
+means use -lp formatting only on lists within parentheses, not lists in square-bracets or braces.
+The same thing could alternatively be specified with
 
-An optional numeric code may follow any of the container types to further refine the selection based
-on container contents.  The numeric codes are:
+  -lpxl = '[ {'
 
-  '0' or blank: no check on contents
-  '1' reject -lp unless the contents is a simple list without sublists
-  '2' reject -lp unless the contents is a simple list without sublists, without
-      code blocks, and without ternary operators
+which says to exclude lists within square-brackets and braces.  So what remains is lists within parentheses.
 
-For example,
-
-  -lpxl = '[ { (2'
-
-means only apply -lp to parenthesized lists which do not contain any sublists,
-code blocks or ternary expressions.
-
-A third optional item of information which can be given for parens is an alphanumeric
+A second B<optional> item of information which can be given for parentheses is an alphanumeric
 letter which is used to limit the selection further depending on the type of
 token immediately before the paren.  The possible letters are currently 'k',
-'K', 'f', 'F', 'w', and 'W', with these meanings:
+'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
 
  'k' matches if the previous nonblank token is a perl builtin keyword (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
@@ -953,24 +952,37 @@ token immediately before the paren.  The possible letters are currently 'k',
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
 
-The logic of writing these codes is somewhat counter-intuitive because they
-describe what is not getting the -lp indentation.  So the 'F' indicates that
-non-function calls are not getting -lp, or in other words that function calls
-are getting the -lp indentation.  In practice, one of the following examples
-is likely to be appropriate:
+For example:
 
-  -lpxl = '[ { F('
+  -lpil = 'f('
 
-means only apply -lp to parenthesized lists which follow a function call.
+means only apply -lp to function calls, and
+
+  -lpil = 'w('
+
+means only apply -lp to parenthesized lists which follow a function or a keyword.
+
+This last example could alternatively be written using the B<-lpxl=s> flag as
 
   -lpxl = '[ { W('
 
-means only apply -lp to parenthesized lists which follow a keyword or function call.
+which says exclude B<-lp> for lists within square-brackets, braces, and parens NOT preceded by
+a keyword or function.   Clearly, the B<-lpil=s> method is easier to understand.
 
-  -lpxl = '[ { F(2'
+An optional numeric code may follow any of the container types to further refine the selection based
+on container contents.  The numeric codes are:
 
-means only apply -lp to parenthesized lists which follow a function call and
-which do not contain any sublists, code blocks or ternary expressions.
+  '0' or blank: no check on contents is made
+  '1' exclude B<-lp> unless the contents is a simple list without sublists
+  '2' exclude B<-lp> unless the contents is a simple list without sublists, without
+      code blocks, and without ternary operators
+
+For example,
+
+  -lpil = 'f(2'
+
+means only apply -lp to function call lists which do not contain any sublists,
+code blocks or ternary expressions.
 
 =item B<-cti=n>, B<--closing-token-indentation>
 
@@ -4050,6 +4062,8 @@ style overrides the default style with the following parameters:
 
     -lp -bl -noll -pt=2 -bt=2 -sbt=2 -icp
 
+To use this style with B<-xlp> instead of B<-lp> use B<-gnu -xlp>.
+
 =item B<-pbp>, B<--perl-best-practices>
 
 B<-pbp> is an abbreviation for the parameters in the book B<Perl Best Practices>
@@ -4981,19 +4995,19 @@ The following list shows all short parameter names which allow a prefix
  baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc
  bok    bol    bom    bos    bot    cblx   ce     conv   cs     csc
  cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop
- dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    f
- fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
- hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
- hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
- hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
- hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    isbc
- iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
- mem    nib    ohbr   okw    ola    olc    oll    olq    opr    opt
- osbc   osbr   otr    ple    pod    pvl    q      sac    sbc    sbl
- scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
- sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
- tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc    vc
- vmll   vsc    w      wn     x      xci    xs
+ dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    eos
+ f      fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
+ hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
+ hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
+ hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
+ his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob
+ isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
+ lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
+ sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
+ sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
+ tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
+ vc     vmll   vsc    w      wn     x      xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

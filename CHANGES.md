@@ -61,6 +61,10 @@
 
       They can be changed with the flag -gaxl=s, -grep-alias-exclusion-list=s
 
+    - A new flag -lpil=s, --line-up-parentheses-inclusion-list=s, has been added
+      as an alternative to -lpxl=s, --line-up-parentheses-exclusion-list=s.
+      It supplies equivalent information but is easier to describe and use.
+
     - A new flag -xlp has been added which can be set to avoid most of the
       limitations of the -lp flag regarding side comments, blank lines, and
       code blocks.  This is off by default to avoid changing existing coding,

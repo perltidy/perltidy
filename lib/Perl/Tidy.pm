@@ -2334,6 +2334,7 @@ sub generate_options {
     $add_option->( 'line-up-parentheses',                  'lp',    '!' );
     $add_option->( 'extended-line-up-parentheses',         'xlp',   '!' );
     $add_option->( 'line-up-parentheses-exclusion-list',   'lpxl',  '=s' );
+    $add_option->( 'line-up-parentheses-inclusion-list',   'lpil',  '=s' );
     $add_option->( 'outdent-keyword-list',                 'okwl',  '=s' );
     $add_option->( 'outdent-keywords',                     'okw',   '!' );
     $add_option->( 'outdent-labels',                       'ola',   '!' );

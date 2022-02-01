@@ -283,7 +283,8 @@ my (
     %stack_closing_token,
 
     %weld_nested_exclusion_rules,
-    %line_up_parentheses_exclusion_rules,
+    %line_up_parentheses_control_hash,
+    $line_up_parentheses_control_is_lxpl,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1945,7 +1946,27 @@ EOM
     }
 
     initialize_weld_nested_exclusion_rules($rOpts);
-    initialize_line_up_parentheses_exclusion_rules($rOpts);
+
+    %line_up_parentheses_control_hash    = ();
+    $line_up_parentheses_control_is_lxpl = 1;
+    my $lpxl = $rOpts->{'line-up-parentheses-exclusion-list'};
+    my $lpil = $rOpts->{'line-up-parentheses-inclusion-list'};
+    if ( $lpxl && $lpil ) {
+        Warn( <<EOM );
+You entered values for both -lpxl=s and -lpil=s; the -lpil list will be ignored
+EOM
+    }
+    if ($lpxl) {
+        $line_up_parentheses_control_is_lxpl = 1;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-exclusion-list'}, 'lpxl' );
+    }
+    elsif ($lpil) {
+        $line_up_parentheses_control_is_lxpl = 0;
+        initialize_line_up_parentheses_control_hash(
+            $rOpts->{'line-up-parentheses-inclusion-list'}, 'lpil' );
+    }
+
     return;
 }
 
@@ -2139,11 +2160,8 @@ EOM
     return;
 }
 
-sub initialize_line_up_parentheses_exclusion_rules {
-    my ($rOpts) = @_;
-    %line_up_parentheses_exclusion_rules = ();
-    my $opt_name = 'line-up-parentheses-exclusion-list';
-    my $str      = $rOpts->{$opt_name};
+sub initialize_line_up_parentheses_control_hash {
+    my ( $str, $opt_name ) = @_;
     return unless ($str);
     $str =~ s/^\s+//;
     $str =~ s/\s+$//;
@@ -2198,13 +2216,13 @@ sub initialize_line_up_parentheses_exclusion_rules {
             next;
         }
 
-        if ( !defined( $line_up_parentheses_exclusion_rules{$key} ) ) {
-            $line_up_parentheses_exclusion_rules{$key} = [ $flag1, $flag2 ];
+        if ( !defined( $line_up_parentheses_control_hash{$key} ) ) {
+            $line_up_parentheses_control_hash{$key} = [ $flag1, $flag2 ];
             next;
         }
 
         # check for multiple conflicting specifications
-        my $rflags = $line_up_parentheses_exclusion_rules{$key};
+        my $rflags = $line_up_parentheses_control_hash{$key};
         my $err;
         if ( defined( $rflags->[0] ) && $rflags->[0] ne $flag1 ) {
             $err = 1;
@@ -2232,17 +2250,19 @@ EOM
     }
 
     # Speedup: we can turn off -lp if it is not actually used
-    my $all_off = 1;
-    foreach my $key (qw# ( { [ #) {
-        my $rflags = $line_up_parentheses_exclusion_rules{$key};
-        if ( defined($rflags) ) {
-            my ( $flag1, $flag2 ) = @{$rflags};
-            if ( $flag1 && $flag1 ne '*' ) { $all_off = 0; last }
-            if ($flag2)                    { $all_off = 0; last }
+    if ($line_up_parentheses_control_is_lxpl) {
+        my $all_off = 1;
+        foreach my $key (qw# ( { [ #) {
+            my $rflags = $line_up_parentheses_control_hash{$key};
+            if ( defined($rflags) ) {
+                my ( $flag1, $flag2 ) = @{$rflags};
+                if ( $flag1 && $flag1 ne '*' ) { $all_off = 0; last }
+                if ($flag2)                    { $all_off = 0; last }
+            }
         }
-    }
-    if ($all_off) {
-        $rOpts->{'line-up-parentheses'} = "";
+        if ($all_off) {
+            $rOpts->{'line-up-parentheses'} = "";
+        }
     }
 
     return;
@@ -11183,61 +11203,82 @@ EOM
 
 sub is_excluded_lp {
 
-    # decide if this container is excluded by user request
-    # returns true if this token is excluded (i.e., may not use -lp)
-    # returns false otherwise
+    # Decide if this container is excluded by user request:
+    #  returns true if this token is excluded (i.e., may not use -lp)
+    #  returns false otherwise
 
-    # note similarity with sub 'is_excluded_weld'
+    # The control hash can either describe:
+    #   what to exclude:  $line_up_parentheses_control_is_lxpl = 1, or
+    #   what to include:  $line_up_parentheses_control_is_lxpl = 0
+
     my ( $self, $KK ) = @_;
     my $rLL         = $self->[_rLL_];
     my $rtoken_vars = $rLL->[$KK];
     my $token       = $rtoken_vars->[_TOKEN_];
-    my $rflags      = $line_up_parentheses_exclusion_rules{$token};
-    return 0 unless ( defined($rflags) );
-    my ( $flag1, $flag2 ) = @{$rflags};
+    my $rflags      = $line_up_parentheses_control_hash{$token};
 
-    # There are two flags:
-    # flag1 excludes based on the preceding nonblank word
-    # flag2 excludes based on the contents of the container
-    return 0 unless ( defined($flag1) );
-    return 1 if $flag1 eq '*';
+    #-----------------------------------------------
+    # TEST #1: check match to listed container types
+    #-----------------------------------------------
+    if ( !defined($rflags) ) {
 
-    # Find the previous token
-    my ( $is_f, $is_k, $is_w );
-    my $Kp = $self->K_previous_nonblank($KK);
-    if ( defined($Kp) ) {
-        my $type_p = $rLL->[$Kp]->[_TYPE_];
-        my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
-
-        # keyword?
-        $is_k = $type_p eq 'k';
-
-        # function call?
-        $is_f = $self->[_ris_function_call_paren_]->{$seqno};
-
-        # either keyword or function call?
-        $is_w = $is_k || $is_f;
+        # There is no entry for this container, so we are done
+        return !$line_up_parentheses_control_is_lxpl;
     }
 
-    # Check for exclusion based on flag1 and the previous token:
-    my $match;
-    if    ( $flag1 eq 'k' ) { $match = $is_k }
-    elsif ( $flag1 eq 'K' ) { $match = !$is_k }
-    elsif ( $flag1 eq 'f' ) { $match = $is_f }
-    elsif ( $flag1 eq 'F' ) { $match = !$is_f }
-    elsif ( $flag1 eq 'w' ) { $match = $is_w }
-    elsif ( $flag1 eq 'W' ) { $match = !$is_w }
-    return $match if ($match);
+    my ( $flag1, $flag2 ) = @{$rflags};
 
-    # Check for exclusion based on flag2 and the container contents
-    # Current options to filter on contents:
-    # 0 or blank: ignore container contents
-    # 1 exclude non-lists or lists with sublists
-    # 2 same as 1 but also exclude lists with code blocks
+    #-----------------------------------------------------------
+    # TEST #2: check match to flag1, the preceding nonblank word
+    #-----------------------------------------------------------
+    my $match_flag1 = !defined($flag1) || $flag1 eq '*';
+    if ( !$match_flag1 ) {
 
-    # Note:
-    # Containers with multiline-qw containers are automatically
-    # excluded so do not need to be checked.
+        # Find the previous token
+        my ( $is_f, $is_k, $is_w );
+        my $Kp = $self->K_previous_nonblank($KK);
+        if ( defined($Kp) ) {
+            my $type_p = $rLL->[$Kp]->[_TYPE_];
+            my $seqno  = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+            # keyword?
+            $is_k = $type_p eq 'k';
+
+            # function call?
+            $is_f = $self->[_ris_function_call_paren_]->{$seqno};
+
+            # either keyword or function call?
+            $is_w = $is_k || $is_f;
+        }
+
+        # Check for match based on flag1 and the previous token:
+        if    ( $flag1 eq 'k' ) { $match_flag1 = $is_k }
+        elsif ( $flag1 eq 'K' ) { $match_flag1 = !$is_k }
+        elsif ( $flag1 eq 'f' ) { $match_flag1 = $is_f }
+        elsif ( $flag1 eq 'F' ) { $match_flag1 = !$is_f }
+        elsif ( $flag1 eq 'w' ) { $match_flag1 = $is_w }
+        elsif ( $flag1 eq 'W' ) { $match_flag1 = !$is_w }
+    }
+
+    # See if we can exclude this based on the flag1 test...
+    if ($line_up_parentheses_control_is_lxpl) {
+        return 1 if ($match_flag1);
+    }
+    else {
+        return 1 if ( !$match_flag1 );
+    }
+
+    #-------------------------------------------------------------
+    # TEST #3: exclusion based on flag2 and the container contents
+    #-------------------------------------------------------------
+
+    # Note that this is an exclusion test for both -lpxl or -lpil input methods
+    # The options are:
+    #  0 or blank: ignore container contents
+    #  1 exclude non-lists or lists with sublists
+    #  2 same as 1 but also exclude lists with code blocks
+
+    my $match_flag2;
     if ($flag2) {
 
         my $seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
@@ -11246,14 +11287,15 @@ sub is_excluded_lp {
         my $has_list       = $self->[_rhas_list_]->{$seqno};
         my $has_code_block = $self->[_rhas_code_block_]->{$seqno};
         my $has_ternary    = $self->[_rhas_ternary_]->{$seqno};
+
         if (  !$is_list
             || $has_list
             || $flag2 eq '2' && ( $has_code_block || $has_ternary ) )
         {
-            $match = 1;
+            $match_flag2 = 1;
         }
     }
-    return $match;
+    return $match_flag2;
 }
 
 sub set_excluded_lp_containers {
