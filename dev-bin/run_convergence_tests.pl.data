@@ -9267,6 +9267,48 @@ isnt(
 --square-bracket-tightness=2
 --variable-maximum-line-length
 
+==> b1311.in <==
+# S1
+WriteMakefile(
+          'NAME'         => 'C4::Search',
+          'VERSION_FROM' => 'Search.pm',    # finds $VERSION
+          'PREREQ_PM'    => {},    # e.g., Module::Name => 1.1
+          (
+             $] >= 5.005
+             ?  ## Add these new keywords supported since 5.005
+             (
+                ABSTRACT_FROM =>
+                'Search.pm',    # retrieve abstract from module
+                AUTHOR => 'Koha Dev Team <info@koha.org>'
+             )
+             : ()
+          ),
+);
+
+# S2
+WriteMakefile(
+        'NAME'         => 'C4::Search',
+        'VERSION_FROM' => 'Search.pm',    # finds $VERSION
+        'PREREQ_PM'    => {},    # e.g., Module::Name => 1.1
+        (
+                $] >= 5.005
+                ? ## Add these new keywords supported since 5.005
+                  (
+                        ABSTRACT_FROM => 'Search.pm'
+                        ,    # retrieve abstract from module
+                        AUTHOR =>
+                          'Koha Dev Team <info@koha.org>'
+                  )
+                : ()
+        ),
+);
+
+==> b1311.par <==
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=8
+--maximum-line-length=63
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

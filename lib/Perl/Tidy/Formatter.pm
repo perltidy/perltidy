@@ -10758,7 +10758,7 @@ BEGIN {
         _iline_o_               => $i++,
         _K_o_                   => $i++,
         _K_c_                   => $i++,
-        _interrupded_list_rule_ => $i++,
+        _interrupted_list_rule_ => $i++,
     };
 }
 
@@ -10909,7 +10909,7 @@ sub collapsed_lengths {
         }
 
         # Use length to terminal comma if interrupded list rule applies
-        if ( @stack && $stack[-1]->[_interrupded_list_rule_] ) {
+        if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
             my $K_c = $stack[-1]->[_K_c_];
             if (
                 defined($K_c)
@@ -10922,18 +10922,19 @@ sub collapsed_lengths {
             {
                 my $Kend = $K_terminal;
 
-                if ( $has_comment
-                    && !$rOpts_ignore_side_comment_lengths )
-                {
-                    $Kend = $K_last;
-                }
+                # This caused an instability in b1311 by making the result
+                # dependent on input.  It is not really necessary because the
+                # comment length is added at the end of the loop.
+                ##if ( $has_comment
+                ##    && !$rOpts_ignore_side_comment_lengths )
+                ##{
+                ##    $Kend = $K_last;
+                ##}
+
                 $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
 
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
-
-                # TODO: if there are no sequence items in the line we could
-                # skip the loop as a minor optimization
             }
         }
 
