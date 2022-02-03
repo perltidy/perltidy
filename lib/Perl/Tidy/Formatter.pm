@@ -334,6 +334,7 @@ my (
     @levels_to_go,
     @leading_spaces_to_go,
     @reduced_spaces_to_go,
+    @standard_spaces_to_go,
     @mate_index_to_go,
     @ci_levels_to_go,
     @nesting_depth_to_go,
@@ -12382,6 +12383,8 @@ EOM
             $leading_spaces_to_go[$max_index_to_go] =
               $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
         }
+        $standard_spaces_to_go[$max_index_to_go] =
+          $leading_spaces_to_go[$max_index_to_go];
 
         DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
@@ -18945,6 +18948,21 @@ EOM
 
                     my $excess =
                       $self->excess_line_length( $i_opening_minus, $i );
+
+                    # Use standard spaces for indentation of lists in -lp mode
+                    # if it gives a longer line length. This helps to avoid an
+                    # instability due to forming and breaking one-line blocks.
+                    # This fixes case b1314.
+                    my $indentation = $leading_spaces_to_go[$i_opening_minus];
+                    if ( ref($indentation)
+                        && $ris_broken_container->{$type_sequence} )
+                    {
+                        my $lp_spaces = $indentation->get_spaces();
+                        my $std_spaces =
+                          $standard_spaces_to_go[$i_opening_minus];
+                        my $diff = $std_spaces - $lp_spaces;
+                        if ( $diff > 0 ) { $excess += $diff }
+                    }
 
                     my $tol = $length_tol;
 
