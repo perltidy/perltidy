@@ -41,8 +41,8 @@ else {
 }
 
 # see if DEVEL_MODE is set, turn it on if not
-if ($perltidy eq "./perltidy.pl") {
-   check_DEVEL_MODE($perltidy);
+if ( $perltidy eq "./perltidy.pl" ) {
+    check_DEVEL_MODE($perltidy);
 }
 
 query(<<EOM);
@@ -210,7 +210,7 @@ sub filter_files {
     @{$rlist} = grep { -f $_ && !-z $_ } @{$rlist};
 
     # and text files
-    @{$rlist} = grep { -T $_  } @{$rlist};
+    @{$rlist} = grep { -T $_ } @{$rlist};
 
     # Ignore .tdy and related files
     @{$rlist} = grep { $_ !~ /\.DEBUG$/ } @{$rlist};
@@ -439,7 +439,7 @@ sub write_GO {
     if ( -e $runme ) {
         my $bak = "$runme.bak";
         if ( -e $bak ) { unlink $bak }
-        system ("mv $runme $bak");
+        system("mv $runme $bak");
     }
 
     my $fh;
@@ -962,7 +962,6 @@ sub get_num {
             @parameters = @{$rparameters_current};
             print STDERR "Updating perltidy parameters....\n";
         }
-
     }
 
     sub make_profiles {
@@ -1060,6 +1059,23 @@ EOM
 
         my @random_words = qw(bannanas sub subaru train 1x =+ !);
 
+        my @token_types = qw#
+          A b C G L R f h Q k t w i q n p m F pp mm U j J Y Z v { } ( ) [ ] ; +
+          - / * | % ! x ~ = \ ? : . < > ^ & .. :: << >> ** && .. || // -> => +=
+          -= .= %= &= |= ^= *= <> <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
+          ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~ <<>> CORE::
+          #;
+        push @token_types, '#';
+        push @token_types, ',';
+
+        my @valign_list = qw#
+          = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
+          { ( ? : , ; => && || ~~ !~~ =~ !~ // <=> ->
+          if unless and or err for foreach while until
+          #;
+
+        my @valign_exclude_all = qw( * * );
+
         my @operators =
           qw(% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=);
         my @keywords = qw(my our local do while if  garbage1 34 );
@@ -1117,6 +1133,7 @@ EOM
             'keyword-group-blanks-after'  => [ 0, 2 ],
 
             'space-prototype-paren' => [ 0, 2 ],
+            'break-after-labels'    => [ 0, 2 ],
 
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
@@ -1142,12 +1159,18 @@ EOM
             'nowant-left-space'  => \@operators,
             'nowant-right-space' => \@operators,
 
+            'keep-old-breakpoints-after'  => \@token_types,
+            'keep-old-breakpoints-before' => \@token_types,
+
             #'keyword-group-blanks-list=s
             'keyword-group-blanks-size' => [ 0, 2, 4, 7, 10, 2.8, 1.8 ],
 
             # TODO: FILL thESE with multiple random keywords
             'space-after-keyword'   => \@keywords,
             'nospace-after-keyword' => \@keywords,
+
+            'valign-exclusion-list' => \@valign_exclude_all,
+            'valign-inclusion-list' => \@valign_list,
 
             'html-color-background'      => \@colors,
             'html-color-bareword'        => \@colors,
@@ -1171,14 +1194,18 @@ EOM
         );
 
         my %is_multiword_list = (
-            'want-break-after'      => 1,
-            'want-break-before'     => 1,
-            'want-left-space'       => 1,
-            'want-right-space'      => 1,
-            'nowant-left-space'     => 1,
-            'nowant-right-space'    => 1,
-            'space-after-keyword'   => 1,
-            'nospace-after-keyword' => 1,
+            'want-break-after'            => 1,
+            'want-break-before'           => 1,
+            'want-left-space'             => 1,
+            'want-right-space'            => 1,
+            'nowant-left-space'           => 1,
+            'nowant-right-space'          => 1,
+            'space-after-keyword'         => 1,
+            'nospace-after-keyword'       => 1,
+            'keep-old-breakpoints-after'  => 1,
+            'keep-old-breakpoints-before' => 1,
+            'valign-exclusion-list'       => 0,
+            'valign-inclusion-list'       => 1,
         );
 
         ###################################################################
@@ -1254,10 +1281,9 @@ EOM
                     if (   $name =~ /-(list|prefix)/
                         || $name =~ /character-encoding/ )
                     {
-                        next;
+                        next unless ( $name =~ /^valign-/ );
                     }
                 }
-
                 my $rrange = $option_range{$name};
                 ##print "$parameter => $name  $flag $type\n";
                 my $line = "";
@@ -1273,6 +1299,7 @@ EOM
                     my $count = 1;
                     if ( $is_multiword_list{$name} ) {
                         $count = $imax / 2 + 1;
+                        if ( $count > 10 ) { $count = 10 }
                     }
                     foreach my $i ( 1 .. $count ) {
                         my $index = int( rand($imax) + 0.5 );
