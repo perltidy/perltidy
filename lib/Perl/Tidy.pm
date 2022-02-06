@@ -1677,10 +1677,13 @@ EOM
             # output to a string or array ref. We use the -eos flag to decide
             # if we should encode.
 
-            # [DEFAULT]: encoding is done by the program which writes to the
-            # file system. In this case, we do not encode string output.
+            # [DEFAULT]: perltidy does not return encoded string output.  This
+            # is a result of the code evolution but not very convenient for most
+            # applications.  It would be hard to change without breaking some
+            # programs.
 
-            # [WITH -eos flag]: encoding is done by the program which decodes.
+            # [WITH -eos flag]: If perltidy decodes a string, regardless of
+            # source, it encodes before returning.
 
             if ( $rOpts->{'encode-output-strings'} && $decoded_input_as ) {
                 my $encoded_buffer;

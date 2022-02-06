@@ -2,6 +2,25 @@
 
 ## 2021 10 29.06
 
+    - A new flag, --encode-output-strings, or -eos, has been added to resolve
+      issue git #83. This issue involves the interface between Perl::Tidy and
+      calling programs, and 'tidyall' in particular.  The crux of the matter is
+      that perltidy by default returns decoded character strings to the calling
+      program.  This is a result of its evolution over time, and it is not the best
+      default, but it is difficult to change without breaking existing programs.
+      Programs or users who require encoded character strings can set this flag.
+      In particular, tidyall users who process encoded (utf8) files should
+      probably set -eos to avoid problems. If you run the 'perltidy' binary
+      this flag has no effect.
+
+    - The possible values of the string 's' for the flag '--character-encoding=s'
+      have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
+      arbitrary encoding could also be specified, but as a result of discussions
+      regarding git #83 it became clear that this was a bad idea and could lead
+      to problems since the output encoding was still restricted to UTF-8. Users
+      who need to work in other encodings can write a short program calling
+      Perl::Tidy with pre- and post-processing to handle encoding/decoding.
+
 
     - A new flag --break-after-labels=i, or -bal=i, was added as requested
       in git #86.  This controls line breaks after labels, as follows:
@@ -25,23 +44,6 @@
 
     - Fix issue git #82, an error handling something like ${bareword} in a possible
       indirect object location.
-
-    - The possible values of the string 's' for the flag '--character-encoding=s'
-      have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
-      arbitrary encoding could also be specified, but as a result of discussions
-      regarding git #83 it became clear that this was a bad idea and could lead
-      to problems since the output encoding was still restricted to UTF-8. Users
-      who need to work in other encodings can write a short program calling
-      Perl::Tidy with pre- and post-processing to handle encoding/decoding.
-
-    - A new flag, --encode-output-strings, or -eos, has been added to resolve
-      issue git #83.  This issue involves the interface between Perl::Tidy and
-      calling programs, and tidyall in particular.  If you use tidyall and have
-      encoded files you may want to set this flag.  The crux of the matter is
-      that by default perltidy returns unencoded strings to the calling program.
-      Some programs need encoded strings, and setting this flag causes encoding.
-      If you use tidyall with encoded files (like utf8) you should probably
-      set this flag.  If you run the perltidy binary this flag has no effect.
 
     - The flags -kbb=s or --keep-old-breakpoints-before=s, and its counterpart
       -kba=s or --keep-old-breakpoints-after=s have expanded functionality
