@@ -192,6 +192,13 @@ sub check_options {
     %valign_control_hash    = ();
     $valign_control_default = 1;
 
+    # If -vil=s is entered without -vxl, assume -vxl='*'
+    if (  !$rOpts->{'valign-exclusion-list'}
+        && $rOpts->{'valign-inclusion-list'} )
+    {
+        $rOpts->{'valign-exclusion-list'} = '*';
+    }
+
     # See if the user wants to exclude any alignment types ...
     if ( $rOpts->{'valign-exclusion-list'} ) {
 
