@@ -4,33 +4,31 @@
 
     - A new flag, --encode-output-strings, or -eos, has been added to resolve
       issue git #83. This issue involves the interface between Perl::Tidy and
-      calling programs, and 'tidyall' in particular.  The crux of the matter is
-      that perltidy by default returns decoded character strings to the calling
-      program.  This is a result of its evolution over time, and it is not the best
-      default, but it is difficult to change without breaking existing programs.
-      Programs or users who require encoded character strings can set this flag.
-      In particular, tidyall users who process encoded (utf8) files should
-      probably set -eos to avoid problems. If you run the 'perltidy' binary
-      this flag has no effect.
+      calling programs, and Code::TidyAll (tidyall) in particular.  The problem
+      is that perltidy by default returns decoded character strings, but
+      tidyall expects encoded strings.  Tidyall users who process encoded (utf8)
+      files should update to this version of Perl::Tidy and use -eos for tidyall.
+      Note that if you run the 'perltidy' binary this flag has no effect. See:
+      https://github.com/houseabsolute/perl-code-tidyall/issues/84, and
+      https://github.com/perltidy/perltidy/issues/83
 
     - The possible values of the string 's' for the flag '--character-encoding=s'
       have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
       arbitrary encoding could also be specified, but as a result of discussions
-      regarding git #83 it became clear that this was a bad idea and could lead
-      to problems since the output encoding was still restricted to UTF-8. Users
+      regarding git #83 it became clear that this could lead to problems
+      since the output encoding was still restricted to UTF-8. Users
       who need to work in other encodings can write a short program calling
       Perl::Tidy with pre- and post-processing to handle encoding/decoding.
 
-
-    - A new flag --break-after-labels=i, or -bal=i, was added as requested
-      in git #86.  This controls line breaks after labels, as follows:
+    - A new flag --break-after-labels=i, or -bal=i, was added for git #86.  This
+      controls line breaks after labels, to provide a uniform style, as follows:
 
             -bal=0 follows the input line breaks [DEFAULT]
             -bal=1 always break after a label
             -bal=2 never break after a label
 
       For example:
- 
+
           # perltidy -bal=1
           INIT:
             {
@@ -43,7 +41,7 @@
             }
 
     - Fix issue git #82, an error handling something like ${bareword} in a possible
-      indirect object location.
+      indirect object location. Perl allows this, now perltidy does too.
 
     - The flags -kbb=s or --keep-old-breakpoints-before=s, and its counterpart
       -kba=s or --keep-old-breakpoints-after=s have expanded functionality
@@ -52,7 +50,8 @@
 
     - Two new flags have been added to provide finer vertical alignment control,
       --valign-exclusion-list=s (-vxl=s) and  --valign-inclusion-list=s (-vil=s).
-      This has been requested several times, recently in git #79.
+      This has been requested several times, most recently in git #79, and we finally
+      got it done.
 
     - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
       git #77.  This allows code blocks passed to list operator functions to
@@ -63,19 +62,16 @@
 
       They can be changed with the flag -gaxl=s, -grep-alias-exclusion-list=s
 
-    - A new flag -lpil=s, --line-up-parentheses-inclusion-list=s, has been added
-      as an alternative to -lpxl=s, --line-up-parentheses-exclusion-list=s.
-      It supplies equivalent information but is easier to describe and use.
-
     - A new flag -xlp has been added which can be set to avoid most of the
       limitations of the -lp flag regarding side comments, blank lines, and
-      code blocks.  This is off by default to avoid changing existing coding,
-      so this flag has to be set to turn this feature on.  [Documentation still
-      needs to be written].  It will be included in the next release to CPAN,
-      but some details regarding how it handles very long lines may change before
-      the final release to CPAN.  This fixes issues git #64 and git #74.
+      code blocks.  See the man pages for more info. This fixes git #64 and git #74.
 
-    - The coding for the -lp flag has been rewritten to avoid some problems
+    - A new flag -lpil=s, --line-up-parentheses-inclusion-list=s, has been added
+      as an alternative to -lpxl=s, --line-up-parentheses-exclusion-list=s.
+      It supplies equivalent information but is much easier to describe and use.
+      It works for both the older -lp version and the newer -xlp.
+
+    - The coding for the older -lp flag has been updated to avoid some problems
       and limitations.  The new coding allows the -lp indentation style to
       mix smoothly with the standard indentation in a single file.  Some problems
       where -lp and -xci flags were not working well together have been fixed, such
@@ -181,8 +177,8 @@
       comment '#<<V' which is not terminated with a closing comment '#>>V'. This
       makes code-skipping and format-skipping behave in a similar way: an
       opening comment without a corresponding closing comment will cause
-      the rest of a file to be skipped.  If there is a question about which lines 
-      are skipped, a .LOG file can be produced with the -g flag and it will have 
+      the rest of a file to be skipped.  If there is a question about which lines
+      are skipped, a .LOG file can be produced with the -g flag and it will have
       this information.
 
     - Removed the limit on -ci=n when -xci is set, reference: rt #136415.
@@ -249,14 +245,14 @@
     flags and the --line-up-parens flag.
 
     - Fixed issue git #54 regarding irregular application of the --break-before-paren
-    and similar --break-before-xxx flags, in which lists without commas were not 
+    and similar --break-before-xxx flags, in which lists without commas were not
     being formatted according to these flags.
 
-    - Fixed issue git #53. A flag was added to turn off alignment of spaced function 
+    - Fixed issue git #53. A flag was added to turn off alignment of spaced function
     parens.  If the --space-function-paren, -sfp flag is set, a side-effect is that the
     spaced function parens may get vertically aligned.  This can be undesirable,
     so a new parameter '--function-paren-vertical-alignment', or '-fpva', has been
-    added to turn this vertical alignment off. The default is '-fpva', so that 
+    added to turn this vertical alignment off. The default is '-fpva', so that
     existing formatting is not changed.  Use '-nfpva' to turn off unwanted
     vertical alignment.  To illustrate the possibilities:
 
@@ -267,7 +263,7 @@
         # perltidy -sfp
         myfun     ( $aaa, $b, $cc );
         mylongfun ( $a, $b, $c );
-    
+
         # perltidy -sfp -nfpva
         myfun ( $aaa, $b, $cc );
         mylongfun ( $a, $b, $c );
@@ -362,9 +358,9 @@
 
 ## 2020 12 01
 
-    - This release is being made primarily to make available a several new formatting 
-      parameters, in particular -xci, -kbb=s, -kba=s, and -wnxl=s. No significant 
-      bugs have been found since the previous release, but numerous minor issues have 
+    - This release is being made primarily to make available a several new formatting
+      parameters, in particular -xci, -kbb=s, -kba=s, and -wnxl=s. No significant
+      bugs have been found since the previous release, but numerous minor issues have
       been found and fixed as listed below.
 
     - This version is about 20% faster than the previous version due to optimizations
@@ -377,7 +373,7 @@
 
     - Fixed issue git #45, -vtc=n flag was ignored when -wn was set.
 
-    - implement request RT #133649, delete-old-newlines selectively. Two parameters, 
+    - implement request RT #133649, delete-old-newlines selectively. Two parameters,
 
       -kbb=s or --keep-old-breakpoints-before=s, and
       -kba=s or --keep-old-breakpoints-after=s
@@ -385,7 +381,7 @@
       were added to request that old breakpoints be kept before or after
       selected token types.  For example, -kbb='=>' means that newlines before
       fat commas should be kept.
-      
+ 
     - Fix git #44, fix exit status for assert-tidy/untidy.  The exit status was
       always 0 for --assert-tidy if the user had turned off all error messages with
       the -quiet flag.  This has been fixed.

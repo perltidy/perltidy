@@ -392,9 +392,9 @@ You do not need to include any sub aliases in these lists. Just include keyword 
 
 =item B<-gal=s>,   B<--grep-alias-list=s>
 
-This flag causes a code block following a specified word to be formatted as if it followed the keyword 'grep' (or 'map' or 'sort').  The string B<s> contains one or more such alias words, separated by spaces or commas.
+This flag allows a code block following an external 'list operator' function to be formatted as if it followed one of the builtin keywords B<grep>,  B<map> or B<sort>.  The string B<s> contains the names of one or more such list operators, separated by spaces or commas.
 
-This allows code block arguments to external list operator functions to be formatted in the same way as code blocks which follow the perl builtin keywords 'grep', 'map', and 'sort'.  By 'list operator' is meant a function which is invoked in the form
+By 'list operator' is meant a function which is invoked in the form
 
       word {BLOCK} @list
 
@@ -604,10 +604,11 @@ as B<use utf8>, and instead relies on this flag to determine the encoding.
 (Note that perltidy often works on snippets of code rather than complete files
 so it cannot rely on B<use utf8> directives).
 
-The possible values for B<s> are :
-(1) B<none> if no encoding is used, or
-(2) B<utf8> or B<UTF8> or B<UTF-8>, or
-(3) <guess> if perltidy should guess between these two possibilities.
+The possible values for B<s> are:
+
+ -enc=none if no encoding is used, or
+ -enc=utf8 for encoding in utf8
+ -enc=guess if perltidy should guess between these two possibilities.
 
 The value B<none> causes the stream to be processed without special encoding
 assumptions.  This is appropriate for files which are written in single-byte
@@ -618,19 +619,20 @@ UTF-8.  If the input stream cannot be decoded with this encoding then
 processing is not done.
 
 The value B<guess> tells perltidy to guess between either utf8 encoding or no
-encoding (meaning one character per byte).  The 'guess' option uses the
-Encode::Guess module which has been found to be quite reliable at detecting
+encoding (meaning one character per byte).  The B<guess> option uses the
+Encode::Guess module which has been found to be reliable at detecting
 if a file is encoded in utf8 or not.
 
 The current default is B<guess>.
 
 The abbreviations B<-utf8> or B<-UTF8> are equivalent to B<-enc=utf8>, and the
-abbreviation B<-guess> is equivalent to <-enc=guess>.  So to process a file
+abbreviation B<-guess> is equivalent to B<-enc=guess>.  So to process a file
 named B<file.pl> which is encoded in UTF-8 you can use:
 
    perltidy -utf8 file.pl
 
 or
+
    perltidy -guess file.pl
 
 or simply
@@ -646,17 +648,18 @@ post-processing to handle decoding and encoding.
 =item B<-eos=s>,   B<--encode-output-strings=s>
 
 This flag has been added to resolve an issue involving the interface between
-Perl::Tidy and calling programs, and in particular the widely used B<tidyall>
-program.  The crux of the matter is that, as a result of its historical
-evolution, by default perltidy returns unencoded strings to the calling
-program.  Some programs need encoded strings, and setting this flag causes
-Perl::Tidy to encode output strings, but only if it decoded them.  For some
-background information see the discussion at github for perltidy issue git #83 at
-L<https://github.com/perltidy/perltidy/issues/83>
+Perl::Tidy and calling programs, and in particular B<Code::TidyAll (tidyall)>.
+By default Perl::Tidy returns unencoded strings to the calling
+program, but some programs expect encoded strings. Setting this flag causes
+Perl::Tidy to return encoded output strings which it decoded.  For some
+background information see
+L<https://github.com/perltidy/perltidy/issues/83> and
+L<https://github.com/houseabsolute/perl-code-tidyall/issues/84>.
 
 If you only run the perltidy binary this flag has no effect.
 
-If you use B<tidyall> with encoded files you should probably set this flag.
+If you use B<tidyall> with encoded files and encounter irregularities such as
+B<wide character> messages you should set this flag.
 
 =item B<-gcs>,  B<--use-unicode-gcstring>
 
@@ -827,6 +830,8 @@ original flag for this is B<-lp>, but it has some limitations (explained below)
 which are avoided with the newer B<-xlp> flag.  So B<-xlp> is probably the better
 choice for new work, but the B<-lp> flag is retained to minimize changes to
 existing formatting.
+If you enter both B<-lp> and B<-xlp>, then B<-xlp> will be used.
+
 
 In the default indentation method perltidy indents lists with 4 spaces, or
 whatever value is specified with B<-i=n>.  Here is a small list formatted in
@@ -856,72 +861,95 @@ closing paren, see the next section.
 These flags have no effect on code BLOCKS, such as if/then/else blocks,
 which always use whatever is specified with B<-i=n>.
 
+Some limitiations on these flags are:
+
+=over 4
+
+=item *
+
 A limitation on B<-lp>, but not B<-xlp>, occurs in situations where perltidy
-does not have complete freedom to choose line breaks it may temporarily revert
+does not have complete freedom to choose line breaks. Then it may temporarily revert
 to its default indentation method.  This can occur for example if there are
 blank lines, block comments, multi-line quotes, or side comments between the
 opening and closing parens, braces, or brackets.  It will also occur if a
 multi-line anonymous sub occurs within a container since that will impose
 specific line breaks (such as line breaks after statements).
 
+=item *
+
 For both the B<-lp> and B<-xlp> flags, any parameter which significantly
 restricts the ability of perltidy to choose newlines will conflict with these
 flags and will cause them to be deactivated.  These include B<-io>, B<-fnl>,
 B<-nanl>, and B<-ndnl>.
 
+=item *
+
 The B<-lp> and B<-xlp> options may not be used together with the B<-t> tabs option.
 They may, however, be used with the B<-et=n> tab method
 
-If you enter both B<-lp> and B<-xlp>, then B<-xlp> will be used.
+=back
 
 There are some potential disadvantages of this indentation method compared to
 the default method that should be noted:
 
-(1) The available line length can quickly be used up if variable names are
+=over 4
+
+=item *
+
+The available line length can quickly be used up if variable names are
 long.  This can cause deeply nested code to quickly reach the line length
 limit, and become badly formatted, much sooner than would occur with the
 default indentation method.
 
-(2) Since the indentation depends on the lengths of variable names, small
+=item *
+
+Since the indentation depends on the lengths of variable names, small
 changes in variable names can cause changes in indentation over many lines in a
 file.  This means that minor name changes can produce significant file
 differences.  This can be annoying and does not occur with the default
 indentation method.
 
+=back
+
 Some things that can be done to minimize these problems are:
 
-(1) Increase B<--maximum-line-length=n> above the default B<n=80> characters if
+=over 4
+
+=item *
+
+Increase B<--maximum-line-length=n> above the default B<n=80> characters if
 necessary.
 
-(2) If you use B<-xlp> then long side comments can limit the indentation over
+=item *
+
+If you use B<-xlp> then long side comments can limit the indentation over
 multiple lines.  Consider adding the flag B<--ignore-side-comment-lengths> to
 prevent this, or minimizing the use of side comments.
 
-(3) Apply this style in a limited way.  By default, it applies to all list
+=item *
+
+Apply this style in a limited way.  By default, it applies to all list
 containers (not just lists in parentheses).  The next section describes how to
 limit this style to, for example, just function calls.  The default indentation
 method will be applied elsewhere.
 
+=back
+
 =item B<-lpil=s>, B<--line-up-parentheses-inclusion-list> and B<-lpxl=s>,  B<--line-up-parentheses-exclusion-list>
 
-These parameters can be used to restrict the application of the B<-lp> or B<-xlp> styles.
 The following discussion is written for B<-lp> but applies equally to the newer B<-xlp> version.
+By default, the B<-lp> flag applies to as many containers as possible.
+The set of containers to which the B<-lp> style applies can be reduced by
+either one of these two flags:
 
-The B<-lp> indentation style works well for some types of coding but can
-produce very long lines when variables have long names and/or containers are
-very deeply nested.  One solution to this problem is to limit the application
-of this style to just certain containers.  By default, the B<-lp> flag applies
-to as many containers as possible.  The set of containers to which it applies
-can be reduced by either one of these two flags:
+Use B<-lpil=s> to specify the containers to which B<-lp> applies, or
 
-The B<-lpil=s> flag to specifies the containers to which B<-lp> applies.
-
-The B<-lpxl=s> flag to specifies the containers to which B<-lp> does NOT apply.
+use B<-lpxl=s> to specify the containers to which B<-lp> does NOT apply.
 
 Only one of these two flags may be used.  Both flags can achieve the same
 result, but the B<-lpil=s> flag is much easier to describe and use and is
 recommended.  The B<-lpxl=s> flag was the original implementation and is
-retained for backwards compatibility.
+only retained for backwards compatibility.
 
 This list B<s> for these parametes is a string with space-separated items.
 Each item consists of up to three pieces of information in this order: (1) an
@@ -940,7 +968,7 @@ The same thing could alternatively be specified with
 
 which says to exclude lists within square-brackets and braces.  So what remains is lists within parentheses.
 
-A second B<optional> item of information which can be given for parentheses is an alphanumeric
+A second optional item of information which can be given for parentheses is an alphanumeric
 letter which is used to limit the selection further depending on the type of
 token immediately before the paren.  The possible letters are currently 'k',
 'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
@@ -1123,7 +1151,7 @@ has been set to), if possible.  This is the default.  For example:
             fixit($i);
         }
 
-Use B<-nola> to not outdent labels.
+Use B<-nola> to not outdent labels.  To control line breaks after labels see L<bal=n, --break-after-labels=n>.
 
 =item B<Outdenting Keywords>
 
@@ -4361,7 +4389,7 @@ To exclude only the equals we could use:
 Notice in this last example that although only the equals alignment was
 excluded, the ternary alignments were also lost.  This happens because the
 vertical aligner sweeps from left-to-right and usually stops if an important
-alignment cannot be made for some reason. 
+alignment cannot be made for some reason.
 
 But also notice that side comments remain aligned because their alignment is
 controlled separately with the parameter B<--valign-side_comments> described above.

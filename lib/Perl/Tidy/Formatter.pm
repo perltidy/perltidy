@@ -2343,9 +2343,9 @@ EOM
         $rkeep_break_hash->{'('} = 1;
         $rkeep_break_hash->{'['} = 1;
         Warn(<<EOM);
-Sorry, but the format for the -kbb and -kba flags for container tokens is changing a
-little to allow generalization and for consistency with other parameters.  You entered '{'
-which currently still matches '{' '(' and '[', but in the future it will only match '{'.
+Sorry, but the format for the -kbb and -kba flags for container tokens is
+changing for consistency with other parameters.  You entered '{' which
+currently matches '{' '(' and '[', but in the future it will only match '{'.
 To prevent this message please do one of the following:
   use '{ ( [' if you want to match all opening containers, or
   use '(' or '[' to match just those containers, or
