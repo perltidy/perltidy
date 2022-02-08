@@ -9353,6 +9353,56 @@ WriteMakefile(
 --indent-columns=8
 --maximum-line-length=54
 
+==> b1315.in <==
+# S1
+our %EXPORT_TAGS
+        = (
+   'all' => [
+              qw(
+
+                      )
+   ]
+        );
+
+# S2
+our %EXPORT_TAGS
+        = (
+ 'all' => [
+  qw(
+
+          ) ]
+        );
+
+
+==> b1315.par <==
+--closing-brace-indentation=2
+--continuation-indentation=8
+--extended-line-up-parentheses
+--indent-columns=1
+--maximum-line-length=18
+--stack-closing-square-bracket
+--variable-maximum-line-length
+
+==> b1316.in <==
+# S1
+$garage->add_path(
+           qw( move_car move_LPs move_sofa
+                    hoover_floor wash_floor )
+);
+
+# S2
+$garage->add_path(
+        qw( move_car move_LPs move_sofa
+                 hoover_floor wash_floor ));
+
+==> b1316.par <==
+--continuation-indentation=9
+--delete-old-whitespace
+--extended-line-up-parentheses
+--maximum-line-length=44
+--paren-tightness=2
+--paren-vertical-tightness-closing=2
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

@@ -1666,12 +1666,11 @@ EOM
             $source_object->close_input_file();
         }
 
+        #------------------------------------------------------------------
+        # For string output, store the result to the destination, encoding
+        # if requested. This is a fix for issue git #83 (tidyall issue)
+        #------------------------------------------------------------------
         if ($use_destination_buffer) {
-
-            #------------------------------------------------------------------
-            # For string output, store the result to the destination, encoding
-            # if appropriate. This is a fix for issue git #83 (tidyall issue)
-            #------------------------------------------------------------------
 
             # At this point, all necessary encoding has been done except for
             # output to a string or array ref. We use the -eos flag to decide

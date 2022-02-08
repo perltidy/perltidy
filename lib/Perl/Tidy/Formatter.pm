@@ -2343,9 +2343,9 @@ EOM
         $rkeep_break_hash->{'('} = 1;
         $rkeep_break_hash->{'['} = 1;
         Warn(<<EOM);
-Sorry, but the format for the -kbb and -kba flags for container tokens is
-changing for consistency with other parameters.  You entered '{' which
-currently matches '{' '(' and '[', but in the future it will only match '{'.
+Sorry, but the format for the -kbb and -kba flags is changing a little.
+You entered '{' which currently matches '{' '(' and '[',
+but in the future it will only match '{'.
 To prevent this message please do one of the following:
   use '{ ( [' if you want to match all opening containers, or
   use '(' or '[' to match just those containers, or
@@ -2361,9 +2361,9 @@ EOM
         $rkeep_break_hash->{'('} = 1;
         $rkeep_break_hash->{'['} = 1;
         Warn(<<EOM);
-Sorry, but the format for the -kbb and -kba flags for container tokens is changing a
-little to allow generalization and for consistency with other parameters.  You entered '}'
-which currently still matches '}' ')' and ']', but in the future it will only match '}'.
+Sorry, but the format for the -kbb and -kba flags is changing a little.
+You entered '}' which currently matches each of '}' ')' and ']',
+but in the future it will only match '}'.
 To prevent this message please do one of the following:
   use '} ) ]' if you want to match all closing containers, or
   use ')' or ']' to match just those containers, or
@@ -10850,7 +10850,9 @@ sub collapsed_lengths {
 
         # Handle an intermediate line of a multiline qw quote. These may
         # require including some -ci or -i spaces.  See cases c098/x063.
-        if ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
+        # Updated to check all lines (not just $K_first==$K_last) to fix b1316
+        my $K_begin_loop = $K_first;
+        if ( $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
 
             my $KK       = $K_first;
             my $level    = $rLL->[$KK]->[_LEVEL_];
@@ -10894,9 +10896,13 @@ sub collapsed_lengths {
 
             if ( $len > $max_prong_len ) { $max_prong_len = $len }
 
-            # We can skip the loop over tokens below
             $last_nonblank_type = 'q';
-            next;
+
+            $K_begin_loop = $K_first + 1;
+
+            # We can skip to the next line if more tokens
+            next if ( $K_begin_loop > $K_last );
+
         }
         $K_start_multiline_qw = undef;
 
@@ -10940,7 +10946,7 @@ sub collapsed_lengths {
         }
 
         # Loop over tokens on this line ...
-        foreach my $KK ( $K_first .. $K_terminal ) {
+        foreach my $KK ( $K_begin_loop .. $K_terminal ) {
 
             my $type = $rLL->[$KK]->[_TYPE_];
             next if ( $type eq 'b' );
