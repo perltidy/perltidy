@@ -5137,7 +5137,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20211029.06
+This man page documents perltidy version 20220215
 
 =head1 BUG REPORTS
 
@@ -5149,7 +5149,7 @@ The source code repository is at L<https://github.com/perltidy/perltidy>.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2021 by Steve Hancock
+Copyright (c) 2000-2022 by Steve Hancock
 
 =head1 LICENSE
 

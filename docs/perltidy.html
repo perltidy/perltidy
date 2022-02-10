@@ -336,9 +336,9 @@
 <dt id="gal-s---grep-alias-list-s"><b>-gal=s</b>, <b>--grep-alias-list=s</b></dt>
 <dd>
 
-<p>This flag causes a code block following a specified word to be formatted as if it followed the keyword &#39;grep&#39; (or &#39;map&#39; or &#39;sort&#39;). The string <b>s</b> contains one or more such alias words, separated by spaces or commas.</p>
+<p>This flag allows a code block following an external &#39;list operator&#39; function to be formatted as if it followed one of the builtin keywords <b>grep</b>, <b>map</b> or <b>sort</b>. The string <b>s</b> contains the names of one or more such list operators, separated by spaces or commas.</p>
 
-<p>This allows code block arguments to external list operator functions to be formatted in the same way as code blocks which follow the perl builtin keywords &#39;grep&#39;, &#39;map&#39;, and &#39;sort&#39;. By &#39;list operator&#39; is meant a function which is invoked in the form</p>
+<p>By &#39;list operator&#39; is meant a function which is invoked in the form</p>
 
 <pre><code>      word {BLOCK} @list</code></pre>
 
@@ -394,7 +394,7 @@
 <dt id="vmll---variable-maximum-line-length"><b>-vmll</b>, <b>--variable-maximum-line-length</b></dt>
 <dd>
 
-<p>A problem arises using a fixed maximum line length with very deeply nested code and data structures because eventually the amount of leading whitespace used for indicating indentation takes up most or all of the available line width, leaving little or no space for the actual code or data. One solution is to use a vary long line length. Another solution is to use the <b>-vmll</b> flag, which basically tells perltidy to ignore leading whitespace when measuring the line length.</p>
+<p>A problem arises using a fixed maximum line length with very deeply nested code and data structures because eventually the amount of leading whitespace used for indicating indentation takes up most or all of the available line width, leaving little or no space for the actual code or data. One solution is to use a very long line length. Another solution is to use the <b>-vmll</b> flag, which basically tells perltidy to ignore leading whitespace when measuring the line length.</p>
 
 <p>To be precise, when the <b>-vmll</b> parameter is set, the maximum line length of a line of code will be M+L*I, where</p>
 
@@ -488,29 +488,47 @@
 <dt id="enc-s---character-encoding-s"><b>-enc=s</b>, <b>--character-encoding=s</b></dt>
 <dd>
 
-<p>This flag indicates the character encoding, if any, of the input data stream. Perltidy does not look for the encoding directives in the soure stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (Note that perltidy often works on snippets of code rather than complete files so it cannot rely on <b>use utf8</b> directives).</p>
+<p>This flag indicates if the input data stream use a character encoding. Perltidy does not look for the encoding directives in the soure stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (Note that perltidy often works on snippets of code rather than complete files so it cannot rely on <b>use utf8</b> directives).</p>
 
-<p>The possible values for <b>s</b> are (1) the name of an encoding recognized by the Encode.pm module, (2) <b>none</b> if no encoding is used, or (3) &lt;guess&gt; if perltidy should guess.</p>
+<p>The possible values for <b>s</b> are:</p>
 
-<p>For example, the value <b>utf8</b> causes the stream to be read and written as UTF-8. If the input stream cannot be decoded with a specified encoding then processing is not done.</p>
+<pre><code> -enc=none if no encoding is used, or
+ -enc=utf8 for encoding in utf8
+ -enc=guess if perltidy should guess between these two possibilities.</code></pre>
 
 <p>The value <b>none</b> causes the stream to be processed without special encoding assumptions. This is appropriate for files which are written in single-byte character encodings such as latin-1.</p>
 
-<p>The value <b>guess</b> tells perltidy to guess between either utf8 encoding or no encoding (meaning one character per byte). The guess uses the Encode::Guess module and this restricted range of guesses covers the most common cases. Testing showed that considering any greater number of encodings as guess suspects is too risky.</p>
+<p>The value <b>utf8</b> causes the stream to be read and written as UTF-8. If the input stream cannot be decoded with this encoding then processing is not done.</p>
+
+<p>The value <b>guess</b> tells perltidy to guess between either utf8 encoding or no encoding (meaning one character per byte). The <b>guess</b> option uses the Encode::Guess module which has been found to be reliable at detecting if a file is encoded in utf8 or not.</p>
 
 <p>The current default is <b>guess</b>.</p>
 
-<p>The abbreviations <b>-utf8</b> or <b>-UTF8</b> are equivalent to <b>-enc=utf8</b>, and the abbreviation <b>-guess</b> is equivalent to &lt;-enc=guess&gt;. So to process a file named <b>file.pl</b> which is encoded in UTF-8 you can use:</p>
+<p>The abbreviations <b>-utf8</b> or <b>-UTF8</b> are equivalent to <b>-enc=utf8</b>, and the abbreviation <b>-guess</b> is equivalent to <b>-enc=guess</b>. So to process a file named <b>file.pl</b> which is encoded in UTF-8 you can use:</p>
 
 <pre><code>   perltidy -utf8 file.pl</code></pre>
 
-<p>or perltidy -guess file.pl</p>
+<p>or</p>
 
-<p>To process a file in <b>euc-jp</b> you could use</p>
+<pre><code>   perltidy -guess file.pl</code></pre>
 
-<pre><code>   perltidy -enc=euc-jp file.pl</code></pre>
+<p>or simply</p>
 
-<p>A perltidy output file is unencoded if the input file is unencoded, and otherwise it is encoded as <b>utf8</b>, even if the input encoding was not <b>utf8</b>.</p>
+<pre><code>   perltidy file.pl</code></pre>
+
+<p>since <b>-guess</b> is the default.</p>
+
+<p>To process files with an encoding other than UTF-8, it would be necessary to write a short program which calls the Perl::Tidy module with some pre- and post-processing to handle decoding and encoding.</p>
+
+</dd>
+<dt id="eos-s---encode-output-strings-s"><b>-eos=s</b>, <b>--encode-output-strings=s</b></dt>
+<dd>
+
+<p>This flag has been added to resolve an issue involving the interface between Perl::Tidy and calling programs, and in particular <b>Code::TidyAll (tidyall)</b>. By default Perl::Tidy returns unencoded strings to the calling program, but some programs expect encoded strings. Setting this flag causes Perl::Tidy to return encoded output strings which it decoded. For some background information see <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a> and <a href="https://github.com/houseabsolute/perl-code-tidyall/issues/84">https://github.com/houseabsolute/perl-code-tidyall/issues/84</a>.</p>
+
+<p>If you only run the perltidy binary this flag has no effect.</p>
+
+<p>If you use <b>tidyall</b> with encoded files and encounter irregularities such as <b>wide character</b> messages you should set this flag.</p>
 
 </dd>
 <dt id="gcs---use-unicode-gcstring"><b>-gcs</b>, <b>--use-unicode-gcstring</b></dt>
@@ -629,10 +647,12 @@
 <p>If the default method does not work correctly, or you want to change the starting level, use <b>-sil=n</b>, to force the starting level to be n.</p>
 
 </dd>
-<dt id="List-indentation-using--lp---line-up-parentheses"><b>List indentation</b> using <b>-lp</b>, <b>--line-up-parentheses</b></dt>
+<dt id="List-indentation-using---line-up-parentheses--lp-or---extended--line-up-parentheses--xlp"><b>List indentation</b> using <b>--line-up-parentheses</b>, <b>-lp</b> or <b>--extended--line-up-parentheses</b> , <b>-xlp</b></dt>
 <dd>
 
-<p>By default, perltidy indents lists with 4 spaces, or whatever value is specified with <b>-i=n</b>. Here is a small list formatted in this way:</p>
+<p>These flags provide an alternative indentation method for list data. The original flag for this is <b>-lp</b>, but it has some limitations (explained below) which are avoided with the newer <b>-xlp</b> flag. So <b>-xlp</b> is probably the better choice for new work, but the <b>-lp</b> flag is retained to minimize changes to existing formatting. If you enter both <b>-lp</b> and <b>-xlp</b>, then <b>-xlp</b> will be used.</p>
+
+<p>In the default indentation method perltidy indents lists with 4 spaces, or whatever value is specified with <b>-i=n</b>. Here is a small list formatted in this way:</p>
 
 <pre><code>    # perltidy (default)
     @month_of_year = (
@@ -640,9 +660,9 @@
         &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Nov&#39;, &#39;Dec&#39;
     );</code></pre>
 
-<p>Use the <b>-lp</b> flag to add extra indentation to cause the data to begin past the opening parentheses of a sub call or list, or opening square bracket of an anonymous array, or opening curly brace of an anonymous hash. With this option, the above list would become:</p>
+<p>The <b>-lp</b> or <b>-xlp</b> flags add extra indentation to cause the data to begin past the opening parentheses of a sub call or list, or opening square bracket of an anonymous array, or opening curly brace of an anonymous hash. With this option, the above list would become:</p>
 
-<pre><code>    # perltidy -lp
+<pre><code>    # perltidy -lp or -xlp
     @month_of_year = (
                        &#39;Jan&#39;, &#39;Feb&#39;, &#39;Mar&#39;, &#39;Apr&#39;, &#39;May&#39;, &#39;Jun&#39;,
                        &#39;Jul&#39;, &#39;Aug&#39;, &#39;Sep&#39;, &#39;Oct&#39;, &#39;Nov&#39;, &#39;Dec&#39;
@@ -650,44 +670,75 @@
 
 <p>If the available line length (see <b>-l=n</b> ) does not permit this much space, perltidy will use less. For alternate placement of the closing paren, see the next section.</p>
 
-<p>This option has no effect on code BLOCKS, such as if/then/else blocks, which always use whatever is specified with <b>-i=n</b>.</p>
+<p>These flags have no effect on code BLOCKS, such as if/then/else blocks, which always use whatever is specified with <b>-i=n</b>.</p>
 
-<p>In situations where perltidy does not have complete freedom to choose line breaks it may temporarily revert to its default indentation method. This can occur for example if there are blank lines, block comments, multi-line quotes, or side comments between the opening and closing parens, braces, or brackets. It will also occur if a multi-line anonymous sub occurs within a container since that will impose specific line breaks (such as line breaks after statements).</p>
+<p>Some limitiations on these flags are:</p>
 
-<p>In addition, any parameter which significantly restricts the ability of perltidy to choose newlines will conflict with <b>-lp</b> and will cause <b>-lp</b> to be deactivated. These include <b>-io</b>, <b>-fnl</b>, <b>-nanl</b>, and <b>-ndnl</b>. The reason is that the <b>-lp</b> indentation style can require the careful coordination of an arbitrary number of break points in hierarchical lists, and these flags may prevent that.</p>
+<ul>
 
-<p>The <b>-lp</b> option may not be used together with the <b>-t</b> tabs option. It may, however, be used with the <b>-et=n</b> tab method.</p>
+<li><p>A limitation on <b>-lp</b>, but not <b>-xlp</b>, occurs in situations where perltidy does not have complete freedom to choose line breaks. Then it may temporarily revert to its default indentation method. This can occur for example if there are blank lines, block comments, multi-line quotes, or side comments between the opening and closing parens, braces, or brackets. It will also occur if a multi-line anonymous sub occurs within a container since that will impose specific line breaks (such as line breaks after statements).</p>
+
+</li>
+<li><p>For both the <b>-lp</b> and <b>-xlp</b> flags, any parameter which significantly restricts the ability of perltidy to choose newlines will conflict with these flags and will cause them to be deactivated. These include <b>-io</b>, <b>-fnl</b>, <b>-nanl</b>, and <b>-ndnl</b>.</p>
+
+</li>
+<li><p>The <b>-lp</b> and <b>-xlp</b> options may not be used together with the <b>-t</b> tabs option. They may, however, be used with the <b>-et=n</b> tab method</p>
+
+</li>
+</ul>
+
+<p>There are some potential disadvantages of this indentation method compared to the default method that should be noted:</p>
+
+<ul>
+
+<li><p>The available line length can quickly be used up if variable names are long. This can cause deeply nested code to quickly reach the line length limit, and become badly formatted, much sooner than would occur with the default indentation method.</p>
+
+</li>
+<li><p>Since the indentation depends on the lengths of variable names, small changes in variable names can cause changes in indentation over many lines in a file. This means that minor name changes can produce significant file differences. This can be annoying and does not occur with the default indentation method.</p>
+
+</li>
+</ul>
+
+<p>Some things that can be done to minimize these problems are:</p>
+
+<ul>
+
+<li><p>Increase <b>--maximum-line-length=n</b> above the default <b>n=80</b> characters if necessary.</p>
+
+</li>
+<li><p>If you use <b>-xlp</b> then long side comments can limit the indentation over multiple lines. Consider adding the flag <b>--ignore-side-comment-lengths</b> to prevent this, or minimizing the use of side comments.</p>
+
+</li>
+<li><p>Apply this style in a limited way. By default, it applies to all list containers (not just lists in parentheses). The next section describes how to limit this style to, for example, just function calls. The default indentation method will be applied elsewhere.</p>
+
+</li>
+</ul>
 
 </dd>
-<dt id="lpxl-s---line-up-parentheses-exclusion-list"><b>-lpxl=s</b>, <b>--line-up-parentheses-exclusion-list</b></dt>
+<dt id="lpil-s---line-up-parentheses-inclusion-list-and--lpxl-s---line-up-parentheses-exclusion-list"><b>-lpil=s</b>, <b>--line-up-parentheses-inclusion-list</b> and <b>-lpxl=s</b>, <b>--line-up-parentheses-exclusion-list</b></dt>
 <dd>
 
-<p>This is an experimental parameter; the details might change as experience with it is gained.</p>
+<p>The following discussion is written for <b>-lp</b> but applies equally to the newer <b>-xlp</b> version. By default, the <b>-lp</b> flag applies to as many containers as possible. The set of containers to which the <b>-lp</b> style applies can be reduced by either one of these two flags:</p>
 
-<p>The <b>-lp</b> indentation style works well for some types of coding but can produce very long lines when variables have long names and/or containers are very deeply nested. The <b>-lpxl=s</b> flag is intended to help mitigate this problem by providing control over the containers to which the <b>-lp</b> indentation style is applied. The <b>-lp</b> flag by default is &quot;greedy&quot; and applies to as many containers as possible. This flag specifies a list of things which should <b>not</b> be use <b>-lp</b> indentation.</p>
+<p>Use <b>-lpil=s</b> to specify the containers to which <b>-lp</b> applies, or</p>
 
-<p>This list is a string with space-separated items. Each item consists of up to three pieces of information in this order: (1) an optional letter code (2) a required container type, and (3) an optional numeric code.</p>
+<p>use <b>-lpxl=s</b> to specify the containers to which <b>-lp</b> does NOT apply.</p>
+
+<p>Only one of these two flags may be used. Both flags can achieve the same result, but the <b>-lpil=s</b> flag is much easier to describe and use and is recommended. The <b>-lpxl=s</b> flag was the original implementation and is only retained for backwards compatibility.</p>
+
+<p>This list <b>s</b> for these parametes is a string with space-separated items. Each item consists of up to three pieces of information in this order: (1) an optional letter code (2) a required container type, and (3) an optional numeric code.</p>
 
 <p>The only required piece of information is a container type, which is one of &#39;(&#39;, &#39;[&#39;, or &#39;{&#39;. For example the string</p>
 
-<pre><code>  -lpxl=&#39;[ {&#39;</code></pre>
+<pre><code>  -lpil=&#39;(&#39;</code></pre>
 
-<p>means do <b>NOT</b> include use -lp formatting within square-bracets or braces. The only unspecified container is &#39;(&#39;, so this string means that only the contents within parens will use -lp indentation.</p>
+<p>means use -lp formatting only on lists within parentheses, not lists in square-bracets or braces. The same thing could alternatively be specified with</p>
 
-<p>An optional numeric code may follow any of the container types to further refine the selection based on container contents. The numeric codes are:</p>
+<pre><code>  -lpxl = &#39;[ {&#39;</code></pre>
 
-<pre><code>  &#39;0&#39; or blank: no check on contents
-  &#39;1&#39; reject -lp unless the contents is a simple list without sublists
-  &#39;2&#39; reject -lp unless the contents is a simple list without sublists, without
-      code blocks, and without ternary operators</code></pre>
+<p>which says to exclude lists within square-brackets and braces. So what remains is lists within parentheses.</p>
 
-<p>For example,</p>
-
-<pre><code>  -lpxl = &#39;[ { (2&#39;</code></pre>
-
-<p>means only apply -lp to parenthesized lists which do not contain any sublists, code blocks or ternary expressions.</p>
-
-<p>A third optional item of information which can be given for parens is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
+<p>A second optional item of information which can be given for parentheses is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
 <pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
@@ -696,11 +747,34 @@
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
  &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
 
+<p>For example:</p>
+
+<pre><code>  -lpil = &#39;f(&#39;</code></pre>
+
+<p>means only apply -lp to function calls, and</p>
+
+<pre><code>  -lpil = &#39;w(&#39;</code></pre>
+
+<p>means only apply -lp to parenthesized lists which follow a function or a keyword.</p>
+
+<p>This last example could alternatively be written using the <b>-lpxl=s</b> flag as</p>
+
+<pre><code>  -lpxl = &#39;[ { W(&#39;</code></pre>
+
+<p>which says exclude <b>-lp</b> for lists within square-brackets, braces, and parens NOT preceded by a keyword or function. Clearly, the <b>-lpil=s</b> method is easier to understand.</p>
+
+<p>An optional numeric code may follow any of the container types to further refine the selection based on container contents. The numeric codes are:</p>
+
+<pre><code>  &#39;0&#39; or blank: no check on contents is made
+  &#39;1&#39; exclude B&lt;-lp&gt; unless the contents is a simple list without sublists
+  &#39;2&#39; exclude B&lt;-lp&gt; unless the contents is a simple list without sublists, without
+      code blocks, and without ternary operators</code></pre>
+
 <p>For example,</p>
 
-<pre><code>  -lpxl = &#39;[ { F(2&#39;</code></pre>
+<pre><code>  -lpil = &#39;f(2&#39;</code></pre>
 
-<p>means only apply -lp to parenthesized lists which follow a function call and which do not contain any sublists, code blocks or ternary expressions. The logic of writing these codes is somewhat counter-intuitive because they describe what is not getting the -lp indentation. So the &#39;F&#39; indicates that non-function calls are not getting -lp, or in other words that function calls are getting the -lp indentation.</p>
+<p>means only apply -lp to function call lists which do not contain any sublists, code blocks or ternary expressions.</p>
 
 </dd>
 <dt id="cti-n---closing-token-indentation"><b>-cti=n</b>, <b>--closing-token-indentation</b></dt>
@@ -812,7 +886,7 @@
             fixit($i);
         }</code></pre>
 
-<p>Use <b>-nola</b> to not outdent labels.</p>
+<p>Use <b>-nola</b> to not outdent labels. To control line breaks after labels see <a href="#bal-n---break-after-labels-n">&quot;bal=n, --break-after-labels=n&quot;</a>.</p>
 
 </dd>
 <dt id="Outdenting-Keywords"><b>Outdenting Keywords</b></dt>
@@ -2520,6 +2594,25 @@
 <p>and the <b>-bbao</b> flag sets the default to break before all of these operators. These can be used to define an initial break preference which can be fine-tuned with the <b>-wba</b> and <b>-wbb</b> flags. For example, to break before all operators except an <b>=</b> one could use --bbao -wba=&#39;=&#39; rather than listing every single perl operator except <b>=</b> on a -wbb flag.</p>
 
 </dd>
+<dt id="bal-n---break-after-labels-n"><b>bal=n, --break-after-labels=n</b></dt>
+<dd>
+
+<p>This flag controls whether or not a line break occurs after a label. There are three possible valuse for <b>n</b>:</p>
+
+<pre><code>  -bal=0  break if there is a break in the input [DEFAULt]
+  -bal=1  always break after a label
+  -bal=2  never break after a label</code></pre>
+
+<p>For example,</p>
+
+<pre><code>      # perltidy -bal=1
+      RETURN:
+        return;
+
+      # perltidy -bal=2
+      RETURN: return;</code></pre>
+
+</dd>
 </dl>
 
 <h2 id="Controlling-List-Formatting">Controlling List Formatting</h2>
@@ -2741,7 +2834,7 @@
 <dt id="Keeping-old-breakpoints-at-specific-token-types"><b>Keeping old breakpoints at specific token types</b></dt>
 <dd>
 
-<p>Two command line parameters provide detailed control over whether perltidy should keep an old line break before or after a specific token type:</p>
+<p>It is possible to override the choice of line breaks made by perltidy, and force it to follow certain line breaks in the input stream, with these two parameters:</p>
 
 <p><b>-kbb=s</b> or <b>--keep-old-breakpoints-before=s</b>, and</p>
 
@@ -2773,6 +2866,25 @@
         my ( $self, $x, $y ) = ( shift, @_ );
         ...;
       };</code></pre>
+
+<p>For the container tokens &#39;{&#39;, &#39;[&#39; and &#39;(&#39; and, their closing counterparts, use the token symbol. Thus, the command to keep a break after all opening parens is:</p>
+
+<pre><code>   perltidy -kba=&#39;(&#39;</code></pre>
+
+<p>It is possible to be more specific in matching parentheses by preceding them with a letter. The possible letters are &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings (these are the same as used in the <b>--weld-nested-exclusion-list</b> and <b>--line-up-parentheses-exclusion-list</b> parameters):</p>
+
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
+ &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;F&#39; matches if &#39;f&#39; does not.
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
+ &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+
+<p>So for example the the following parameter will keep breaks after opening function call parens:</p>
+
+<pre><code>   perltidy -kba=&#39;f(&#39;</code></pre>
+
+<p><b>NOTE</b>: To match all opening curly braces, and no other opening tokens, please prefix the brace it with an asterisk, like this: &#39;*{&#39;. Otherwise a warning message will occur. This is necessary to avoid problems while the input scheme is being updated and generalized. A single bare curly brace previously matched all container tokens, and tentatively still does. Likewise, to match all closing curly braces, and no other closing tokens, use &#39;*}&#39;.</p>
 
 </dd>
 <dt id="iob---ignore-old-breakpoints"><b>-iob</b>, <b>--ignore-old-breakpoints</b></dt>
@@ -3116,6 +3228,8 @@
 
 <pre><code>    -lp -bl -noll -pt=2 -bt=2 -sbt=2 -icp</code></pre>
 
+<p>To use this style with <b>-xlp</b> instead of <b>-lp</b> use <b>-gnu -xlp</b>.</p>
+
 </dd>
 <dt id="pbp---perl-best-practices"><b>-pbp</b>, <b>--perl-best-practices</b></dt>
 <dd>
@@ -3325,12 +3439,12 @@
 
 <pre><code>  --valign-exclusion-list=&#39;= if&#39;</code></pre>
 
-<p>If it is simpler to specify only the token types which are to be aligned, then use the special symbol <b>*</b> for this exclusion list and include the types which are to be aligned in the list of <b>--valign-inclusion-list</b> (this works because <b>*</b> is not one of the alignment tokens). For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
+<p>If it is simpler to specify only the token types which are to be aligned, then include the types which are to be aligned in the list of <b>--valign-inclusion-list</b>. You may leave the <b>valign-exclusion-list</b> undefined, or use the special symbol <b>*</b> for the exclusion list. For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
 
-<pre><code>  --valign-exclusion-list=&#39;*&#39;
-  --valign-inclusion-list=&#39;, =&gt;&#39;</code></pre>
+<pre><code>  --valign-inclusion-list=&#39;, =&gt;&#39;
+  --valign-exclusion-list=&#39;*&#39;     ( this is optional and may be omitted )</code></pre>
 
-<p>These parameter lists should consist of space-separated tokens from the above list of possible alignment tokens. If an unrecognized parameter appears, it is simply ignored. And if a parameter is entered in both lists by mistake then the exclusion list has priority.</p>
+<p>These parameter lists should consist of space-separated tokens from the above list of possible alignment tokens, or a &#39;*&#39;. If an unrecognized token appears, it is simply ignored. And if a specific token is entered in both lists by mistake then the exclusion list has priority.</p>
 
 <p>The default values of these parameters enable all alignments and are equivalent to</p>
 
@@ -3344,9 +3458,9 @@
     $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;           # prompt
     $co_unused      = ($color) ? &#39;on_green&#39;   : &#39;reverse&#39;;    # unused</code></pre>
 
-<p>To exclude all alignments except the equals we could use:</p>
+<p>To exclude all alignments except the equals (i.e., include only equals) we could use:</p>
 
-<pre><code>    # perltidy -vxl=&#39;*&#39; -vil=&#39;=&#39;
+<pre><code>    # perltidy -vil=&#39;=&#39;
     $co_description = ($color) ? &#39;bold cyan&#39; : &#39;&#39;;          # description
     $co_prompt      = ($color) ? &#39;bold green&#39; : &#39;&#39;;         # prompt
     $co_unused      = ($color) ? &#39;on_green&#39; : &#39;reverse&#39;;    # unused</code></pre>
@@ -3785,19 +3899,19 @@
  baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc
  bok    bol    bom    bos    bot    cblx   ce     conv   cs     csc
  cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop
- dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    f
- fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco   hbh
- hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu   hbq
- hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih    hihh
- hii    hij    hik    him    hin    hip    hipd   hipu   hiq    his
- hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob    isbc
- iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp     lsl
- mem    nib    ohbr   okw    ola    olc    oll    olq    opr    opt
- osbc   osbr   otr    ple    pod    pvl    q      sac    sbc    sbl
- scbb   schb   scp    scsb   sct    se     sfp    sfs    skp    sob
- sobb   sohb   sop    sosb   sot    ssc    st     sts    t      tac
- tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc    vc
- vmll   vsc    w      wn     x      xci    xs</code></pre>
+ dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    eos
+ f      fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
+ hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
+ hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
+ hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
+ his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob
+ isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
+ lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
+ opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
+ sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
+ sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
+ tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
+ vc     vmll   vsc    w      wn     x      xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -3875,7 +3989,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20211029.05</p>
+<p>This man page documents perltidy version 20220215</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
@@ -3887,7 +4001,7 @@
 
 <h1 id="COPYRIGHT">COPYRIGHT</h1>
 
-<p>Copyright (c) 2000-2021 by Steve Hancock</p>
+<p>Copyright (c) 2000-2022 by Steve Hancock</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

@@ -3,7 +3,7 @@
 #
 #    perltidy - a perl script indenter and formatter
 #
-#    Copyright (c) 2000-2021 by Steve Hancock
+#    Copyright (c) 2000-2022 by Steve Hancock
 #    Distributed under the GPL license agreement; see file COPYING
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -110,7 +110,7 @@ BEGIN {
     # Release version must be bumped, and it is probably past time for a
     # release anyway.
 
-    $VERSION = '20211029.06';
+    $VERSION = '20220215';
 }
 
 sub DESTROY {
@@ -1290,7 +1290,7 @@ EOM
           || $rOpts->{'assert-tidy'}
           || $rOpts->{'assert-untidy'};
 
-        # Postpone final output to a destination SCALAR ref to allow
+        # Postpone final output to a destination SCALAR or ARRAY ref to allow
         # possible encoding at the end of processing.
         my $destination_buffer;
         my $use_destination_buffer;
@@ -1676,12 +1676,12 @@ EOM
             # output to a string or array ref. We use the -eos flag to decide
             # if we should encode.
 
-            # [DEFAULT]: perltidy does not return encoded string output.  This
-            # is a result of the code evolution but not very convenient for most
-            # applications.  It would be hard to change without breaking some
-            # programs.
+            # -neos, DEFAULT: perltidy does not return encoded string output.
+            # This is a result of the code evolution but not very convenient for
+            # most applications.  It would be hard to change without breaking
+            # some programs.
 
-            # [WITH -eos flag]: If perltidy decodes a string, regardless of
+            # -eos flag set: If perltidy decodes a string, regardless of
             # source, it encodes before returning.
 
             if ( $rOpts->{'encode-output-strings'} && $decoded_input_as ) {
@@ -4348,7 +4348,7 @@ sub show_version {
     print STDOUT <<"EOM";
 This is perltidy, v$VERSION 
 
-Copyright 2000-2021, Steve Hancock
+Copyright 2000-2022, Steve Hancock
 
 Perltidy is free software and may be copied under the terms of the GNU
 General Public License, which is included in the distribution files.

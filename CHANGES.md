@@ -1,21 +1,26 @@
 # Perltidy Change Log
 
-## 2021 10 29.06
+## 2022 02 15
 
     - A new flag, --encode-output-strings, or -eos, has been added to resolve
       issue git #83. This issue involves the interface between Perl::Tidy and
       calling programs, and Code::TidyAll (tidyall) in particular.  The problem
       is that perltidy by default returns decoded character strings, but
-      tidyall expects encoded strings.  Tidyall users who process encoded (utf8)
-      files should update to this version of Perl::Tidy and use -eos for tidyall.
-      Note that if you run the 'perltidy' binary this flag has no effect. See:
+      tidyall expects encoded strings.  This flag provides a fix for that.
+
+      So, tidyall users who process encoded (utf8) files should update to this
+      version of Perl::Tidy and use -eos for tidyall.  For further info see:
+
       https://github.com/houseabsolute/perl-code-tidyall/issues/84, and
       https://github.com/perltidy/perltidy/issues/83
+
+      If there are other applications having utf8 problems at the interface
+      with Perl::Tidy, this flag probably may need to be set.
 
     - The possible values of the string 's' for the flag '--character-encoding=s'
       have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
       arbitrary encoding could also be specified, but as a result of discussions
-      regarding git #83 it became clear that this could lead to problems
+      regarding git #83 it became clear that this could cause trouble
       since the output encoding was still restricted to UTF-8. Users
       who need to work in other encodings can write a short program calling
       Perl::Tidy with pre- and post-processing to handle encoding/decoding.
@@ -40,8 +45,8 @@
                 $xx = 1.234;
             }
 
-    - Fix issue git #82, an error handling something like ${bareword} in a possible
-      indirect object location. Perl allows this, now perltidy does too.
+    - Fix issue git #82, an error handling something like ${bareword} in a
+      possible indirect object location. Perl allows this, now perltidy does too.
 
     - The flags -kbb=s or --keep-old-breakpoints-before=s, and its counterpart
       -kba=s or --keep-old-breakpoints-after=s have expanded functionality
@@ -50,8 +55,8 @@
 
     - Two new flags have been added to provide finer vertical alignment control,
       --valign-exclusion-list=s (-vxl=s) and  --valign-inclusion-list=s (-vil=s).
-      This has been requested several times, most recently in git #79, and we finally
-      got it done.
+      This has been requested several times, most recently in git #79, and it
+      finally got done.  For example, -vil='=>' means just align on '=>'.
 
     - A new flag -gal=s, --grep-alias-list=s, has been added as suggested in
       git #77.  This allows code blocks passed to list operator functions to
@@ -65,6 +70,7 @@
     - A new flag -xlp has been added which can be set to avoid most of the
       limitations of the -lp flag regarding side comments, blank lines, and
       code blocks.  See the man pages for more info. This fixes git #64 and git #74.
+      The older -lp flag still works.
 
     - A new flag -lpil=s, --line-up-parentheses-inclusion-list=s, has been added
       as an alternative to -lpxl=s, --line-up-parentheses-exclusion-list=s.
@@ -75,7 +81,15 @@
       and limitations.  The new coding allows the -lp indentation style to
       mix smoothly with the standard indentation in a single file.  Some problems
       where -lp and -xci flags were not working well together have been fixed, such
-      as happened in issue rt140025.
+      as happened in issue rt140025.  As a result of these updates some minor
+      changes in existing code using the -lp style may occur.
+
+    - This version of perltidy was stress-tested for many cpu hours with
+      random input parameters. No failures to converge, internal fault checks,
+      undefined variable references or other irregularities were seen.
+
+    - Numerous minor fixes have been made, mostly very rare formatting
+      instabilities found in random testing.
 
 ## 2021 10 29
 
@@ -88,7 +102,7 @@
       without parens around the call args.  Some examples:
 
         # OLD
-        mkTextConfig $c, $x, $y, -anchor => 'se', $color;
+        mkTextConfi2022 Helen Hancockg $c, $x, $y, -anchor => 'se', $color;
         mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
         mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
         mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;
