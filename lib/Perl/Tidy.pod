@@ -49,9 +49,9 @@ either a B<getline> or B<print> method, as appropriate.
         destination       - the destination of the formatted output
         stderr            - standard error output
         perltidyrc        - the .perltidyrc file
-        logfile           - the .LOG file stream, if any 
+        logfile           - the .LOG file stream, if any
         errorfile         - the .ERR file stream, if any
-        dump_options      - ref to a hash to receive parameters (see below), 
+        dump_options      - ref to a hash to receive parameters (see below),
         dump_options_type - controls contents of dump_options
         dump_getopt_flags - ref to a hash to receive Getopt flags
         dump_options_category - ref to a hash giving category of options
@@ -72,79 +72,110 @@ close method will be called at the end of the stream.
 
 =over 4
 
-=item source
+=item B<source>
 
 If the B<source> parameter is given, it defines the source of the input stream.
 If an input stream is defined with the B<source> parameter then no other source
 filenames may be specified in the @ARGV array or B<argv> parameter.
 
-=item destination
+=item B<destination>
 
 If the B<destination> parameter is given, it will be used to define the
-file or memory location to receive output of perltidy.  
+file or memory location to receive output of perltidy.
 
-If the destination is a string or array reference, and it contains encoded
-characters, then by default it will NOT be encoded by Perl::Tidy.
+B<Important note if destination is a string or array reference>.  Perl
+strings of characters can be stored in one of two states, and it is important that the
+calling program and Perl::Tidy are in agreement regarding the state to be
+returned.  A flag B<--encode-output-strings>, or simply B<-eos>, was added
+in versions of Perl::Tidy after 20220101 for this
+purpose. This flag should be added to the end of the B<argv> paremeter (described below).
+The options are as follows.
 
-This default is not always convenient, particularly if the calling program did
-not do the decoding, and can be changed by including the B<-eos> or
-B<--encode-output-strings> flag described in the B<perltidy> manual.  This can
-either be set by the user or by the calling program in the B<argv> parameter
-described below.  When this flag is set, and if Perl::Tidy decoded a string,
-then it will encode the string before returning. For some background
-information see the discussion at github for perltidy issue git #83 at
-L<https://github.com/perltidy/perltidy/issues/83>.
+=over 4
 
-This B<-eos> parameter is available in perltidy version 20211029.06 and later.
+=item *
 
-=item stderr
+Use B<-eos> if Perl::Tidy should encode any string which it decodes.
+This is probably most convenient for most programs.
+But do not use this setting if the calling program will
+encode the data too, because double encoding will corrupt data.
+
+=item *
+
+Use B<-neos> if a string should remain decoded if it was decoded by Perl::Tidy.
+This is appropriate if
+the calling program will handle any needed encoding before outputting the string.
+This is the current default, but it should still be set, if appropriate,
+to allow for the possibility of a future change in the default.
+
+=back
+
+For example, to set B<-eos> the following could be used
+
+        $argv .= " -eos" if ( $Perl::Tidy::VERSION > 20220101 );
+
+        $error_flag = Perl::Tidy::perltidy(
+            argv        => $argv,
+            source      => \$source,
+            destination => \$destination,
+            stderr      => \$stderr,
+            errorfile   => \$errorfile
+        );
+
+The test on version allows older versions of Perl::Tidy to still be used.
+
+For some background information see
+L<https://github.com/perltidy/perltidy/issues/83> and
+L<https://github.com/houseabsolute/perl-code-tidyall/issues/84>.
+
+=item B<stderr>
 
 The B<stderr> parameter allows the calling program to redirect the stream that
 would otherwise go to the standard error output device to any of the stream
-types listed above.  This stream contains important warnings and errors 
+types listed above.  This stream contains important warnings and errors
 related to the parameters passed to perltidy.
 
-=item perltidyrc
+=item B<perltidyrc>
 
 If the B<perltidyrc> file is given, it will be used instead of any
-F<.perltidyrc> configuration file that would otherwise be used. 
+F<.perltidyrc> configuration file that would otherwise be used.
 
-=item errorfile
+=item B<errorfile>
 
 The B<errorfile> parameter allows the calling program to capture
 the stream that would otherwise go to either a .ERR file.  This
 stream contains warnings or errors related to the contents of one
-source file or stream. 
+source file or stream.
 
 The reason that this is different from the stderr stream is that when perltidy
 is called to process multiple files there will be up to one .ERR file created
-for each file and it would be very confusing if they were combined.  
+for each file and it would be very confusing if they were combined.
 
 However if perltidy is called to process just a single perl script then it may
 be more convenient to combine the B<errorfile> stream with the B<stderr>
 stream.  This can be done by setting the B<-se> parameter, in which case this
 parameter is ignored.
 
-=item logfile
+=item B<logfile>
 
 The B<logfile> parameter allows the calling program to capture the log stream.
 This stream is only created if requested with a B<-g> parameter.  It contains
 detailed diagnostic information about a script which may be useful for
 debugging.
 
-=item teefile
+=item B<teefile>
 
 The B<teefile> parameter allows the calling program to capture the tee stream.
 This stream is only created if requested with one of the 'tee' parameters,
 a B<--tee-pod> , B<--tee-block-comments>, B<--tee-side-commnts>, or B<--tee-all-comments>.
 
-=item debugfile
+=item B<debugfile>
 
 The B<debugfile> parameter allows the calling program to capture the stream
-produced by the B<--DEBUG> parameter.  This parameter is mainly used for 
+produced by the B<--DEBUG> parameter.  This parameter is mainly used for
 debugging perltidy itself.
 
-=item argv
+=item B<argv>
 
 If the B<argv> parameter is given, it will be used instead of the
 B<@ARGV> array.  The B<argv> parameter may be a string, a reference to a
@@ -152,7 +183,7 @@ string, or a reference to an array.  If it is a string or reference to a
 string, it will be parsed into an array of items just as if it were a
 command line string.
 
-=item dump_options
+=item B<dump_options>
 
 If the B<dump_options> parameter is given, it must be the reference to a hash.
 In this case, the parameters contained in any perltidyrc configuration file
@@ -166,14 +197,14 @@ this feature, F<perltidyrc_dump.pl>, is included in the distribution.
 
 Any combination of the B<dump_> parameters may be used together.
 
-=item dump_options_type
+=item B<dump_options_type>
 
 This parameter is a string which can be used to control the parameters placed
 in the hash reference supplied by B<dump_options>.  The possible values are
 'perltidyrc' (default) and 'full'.  The 'full' parameter causes both the
 default options plus any options found in a perltidyrc file to be returned.
 
-=item dump_getopt_flags
+=item B<dump_getopt_flags>
 
 If the B<dump_getopt_flags> parameter is given, it must be the reference to a
 hash.  This hash will receive all of the parameters that perltidy understands
@@ -182,26 +213,26 @@ used alone or with the B<dump_options> flag.  Perltidy will
 exit immediately after filling this hash.  See the demo program
 F<perltidyrc_dump.pl> for example usage.
 
-=item dump_options_category
+=item B<dump_options_category>
 
 If the B<dump_options_category> parameter is given, it must be the reference to a
 hash.  This hash will receive a hash with keys equal to all long parameter names
 and values equal to the title of the corresponding section of the perltidy manual.
 See the demo program F<perltidyrc_dump.pl> for example usage.
 
-=item dump_abbreviations
+=item B<dump_abbreviations>
 
 If the B<dump_abbreviations> parameter is given, it must be the reference to a
 hash.  This hash will receive all abbreviations used by Perl::Tidy.  See the
 demo program F<perltidyrc_dump.pl> for example usage.
 
-=item prefilter
+=item B<prefilter>
 
 A code reference that will be applied to the source before tidying. It is
 expected to take the full content as a string in its input, and output the
 transformed content.
 
-=item postfilter
+=item B<postfilter>
 
 A code reference that will be applied to the tidied result before outputting.
 It is expected to take the full content as a string in its input, and output
@@ -225,17 +256,17 @@ errors in the input parameters.  This can happen for example if a parameter is
 misspelled or given an invalid value.  The calling program should check for
 this flag because if it is set the destination stream will be empty or
 incomplete and should be ignored.  Error messages in the B<stderr> stream will
-indicate the cause of any problem.  
+indicate the cause of any problem.
 
 An exit value of 2 indicates that perltidy ran to completion but there there
 are warning messages in the B<stderr> stream related to parameter errors or
 conflicts and/or warning messages in the B<errorfile> stream relating to
-possible syntax errors in the source code being tidied. 
+possible syntax errors in the source code being tidied.
 
 In the event of a catastrophic error for which recovery is not possible
 B<perltidy> terminates by making calls to B<croak> or B<confess> to help the
 programmer localize the problem.  These should normally only occur during
-program development.  
+program development.
 
 =head1 NOTES ON FORMATTING PARAMETERS
 
@@ -244,15 +275,15 @@ F<.perltidyrc> configuration file, in the B<perltidyrc> parameter, and in the
 B<argv> parameter.
 
 The B<-syn> (B<--check-syntax>) flag may be used with all source and
-destination streams except for standard input and output.  However 
-data streams which are not associated with a filename will 
+destination streams except for standard input and output.  However
+data streams which are not associated with a filename will
 be copied to a temporary file before being passed to Perl.  This
 use of temporary files can cause somewhat confusing output from Perl.
 
 If the B<-pbp> style is used it will typically be necessary to also
 specify a B<-nst> flag.  This is necessary to turn off the B<-st> flag
 contained in the B<-pbp> parameter set which otherwise would direct
-the output stream to the standard output.  
+the output stream to the standard output.
 
 =head1 EXAMPLES
 
@@ -260,13 +291,13 @@ The following example uses string references to hold the input and output
 code and error streams, and illustrates checking for errors.
 
   use Perl::Tidy;
-  
+
   my $source_string = <<'EOT';
   my$error=Perl::Tidy::perltidy(argv=>$argv,source=>\$source_string,
     destination=>\$dest_string,stderr=>\$stderr_string,
   errorfile=>\$errorfile_string,);
   EOT
-  
+
   my $dest_string;
   my $stderr_string;
   my $errorfile_string;
@@ -275,9 +306,9 @@ code and error streams, and illustrates checking for errors.
   $argv .= " -nst";     # Must turn off -st in case -pbp is specified
   $argv .= " -se";      # -se appends the errorfile to stderr
   ## $argv .= " --spell-check";  # uncomment to trigger an error
-  
+
   print "<<RAW SOURCE>>\n$source_string\n";
-  
+
   my $error = Perl::Tidy::perltidy(
       argv        => $argv,
       source      => \$source_string,
@@ -286,19 +317,19 @@ code and error streams, and illustrates checking for errors.
       errorfile   => \$errorfile_string,    # ignored when -se flag is set
       ##phasers   => 'stun',                # uncomment to trigger an error
   );
-  
+
   if ($error) {
-  
+
       # serious error in input parameters, no tidied output
       print "<<STDERR>>\n$stderr_string\n";
       die "Exiting because of serious errors\n";
   }
-  
+
   if ($dest_string)      { print "<<TIDIED SOURCE>>\n$dest_string\n" }
   if ($stderr_string)    { print "<<STDERR>>\n$stderr_string\n" }
   if ($errorfile_string) { print "<<.ERR file>>\n$errorfile_string\n" }
 
-Additional examples are given in examples section of the perltidy distribution.  
+Additional examples are given in examples section of the perltidy distribution.
 
 =head1 Using the B<formatter> Callback Object
 
@@ -309,13 +340,13 @@ formatting options which are built into perltidy (beautification or
 html) are ignored.  The following diagram illustrates the logical flow:
 
                     |-- (normal route)   -> code beautification
-  caller->perltidy->|-- (-html flag )    -> create html 
+  caller->perltidy->|-- (-html flag )    -> create html
                     |-- (formatter given)-> callback to write_line
 
-This can be useful for processing perl scripts in some way.  The 
+This can be useful for processing perl scripts in some way.  The
 parameter C<$formatter> in the perltidy call,
 
-        formatter   => $formatter,  
+        formatter   => $formatter,
 
 is an object created by the caller with a C<write_line> method which
 will accept and process tokenized lines, one line per call.  Here is
@@ -323,7 +354,7 @@ a simple example of a C<write_line> which merely prints the line number,
 the line type (as determined by perltidy), and the text of the line:
 
  sub write_line {
- 
+
      # This is called from perltidy line-by-line
      my $self              = shift;
      my $line_of_tokens    = shift;
@@ -364,11 +395,11 @@ can slow down processing.  Here is a B<write_line>, from the example
 program B<find_naughty.pl>, which does that:
 
  sub write_line {
- 
+
      # This is called back from perltidy line-by-line
      # We're looking for $`, $&, and $'
      my ( $self, $line_of_tokens ) = @_;
- 
+
      # pull out some stuff we might need
      my $line_type         = $line_of_tokens->{_line_type};
      my $input_line_number = $line_of_tokens->{_line_number};
@@ -376,19 +407,19 @@ program B<find_naughty.pl>, which does that:
      my $rtoken_type       = $line_of_tokens->{_rtoken_type};
      my $rtokens           = $line_of_tokens->{_rtokens};
      chomp $input_line;
- 
+
      # skip comments, pod, etc
      return if ( $line_type ne 'CODE' );
- 
+
      # loop over tokens looking for $`, $&, and $'
      for ( my $j = 0 ; $j < @$rtoken_type ; $j++ ) {
- 
+
          # we only want to examine token types 'i' (identifier)
          next unless $$rtoken_type[$j] eq 'i';
- 
+
          # pull out the actual token text
          my $token = $$rtokens[$j];
- 
+
          # and check it
          if ( $token =~ /^\$[\`\&\']$/ ) {
              print STDERR
@@ -426,7 +457,7 @@ to get started is to find one of the examples which most closely matches
 your application and start modifying it.
 
 For help with perltidy's peculiar way of breaking lines into tokens, you
-might run, from the command line, 
+might run, from the command line,
 
  perltidy -D filename
 
@@ -459,7 +490,7 @@ Please refer to the file "COPYING" for details.
 
 A list of current bugs and issues can be found at the CPAN site L<https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy>
 
-To report a new bug or problem, use the link on this page.  
+To report a new bug or problem, use the link on this page.
 
 The source code repository is at L<https://github.com/perltidy/perltidy>.
 

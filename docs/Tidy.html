@@ -69,9 +69,9 @@
         destination       - the destination of the formatted output
         stderr            - standard error output
         perltidyrc        - the .perltidyrc file
-        logfile           - the .LOG file stream, if any 
+        logfile           - the .LOG file stream, if any
         errorfile         - the .ERR file stream, if any
-        dump_options      - ref to a hash to receive parameters (see below), 
+        dump_options      - ref to a hash to receive parameters (see below),
         dump_options_type - controls contents of dump_options
         dump_getopt_flags - ref to a hash to receive Getopt flags
         dump_options_category - ref to a hash giving category of options
@@ -90,37 +90,59 @@
 
 <dl>
 
-<dt id="source">source</dt>
+<dt id="source"><b>source</b></dt>
 <dd>
 
 <p>If the <b>source</b> parameter is given, it defines the source of the input stream. If an input stream is defined with the <b>source</b> parameter then no other source filenames may be specified in the @ARGV array or <b>argv</b> parameter.</p>
 
 </dd>
-<dt id="destination">destination</dt>
+<dt id="destination"><b>destination</b></dt>
 <dd>
 
 <p>If the <b>destination</b> parameter is given, it will be used to define the file or memory location to receive output of perltidy.</p>
 
-<p>If the destination is a string or array reference, and it contains encoded characters, then by default it will NOT be encoded by Perl::Tidy.</p>
+<p><b>Important note if destination is a string or array reference</b>. Perl strings of characters can be stored in one of two states, and it is important that the calling program and Perl::Tidy are in agreement regarding the state to be returned. A flag <b>--encode-output-strings</b>, or simply <b>-eos</b>, was added in versions of Perl::Tidy after 20220101 for this purpose. This flag should be added to the end of the <b>argv</b> paremeter (described below). The options are as follows.</p>
 
-<p>This default is not always convenient, particularly if the calling program did not do the decoding, and can be changed by including the <b>-eos</b> or <b>--encode-output-strings</b> flag described in the <b>perltidy</b> manual. This can either be set by the user or by the calling program in the <b>argv</b> parameter described below. When this flag is set, and if Perl::Tidy decoded a string, then it will encode the string before returning. For some background information see the discussion at github for perltidy issue git #83 at <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a>.</p>
+<ul>
 
-<p>This <b>-eos</b> parameter is available in perltidy version 20211029.06 and later.</p>
+<li><p>Use <b>-eos</b> if Perl::Tidy should encode any string which it decodes. This is probably most convenient for most programs. But do not use this setting if the calling program will encode the data too, because double encoding will corrupt data.</p>
+
+</li>
+<li><p>Use <b>-neos</b> if a string should remain decoded if it was decoded by Perl::Tidy. This is appropriate if the calling program will handle any needed encoding before outputting the string. This is the current default, but it should still be set, if appropriate, to allow for the possibility of a future change in the default.</p>
+
+</li>
+</ul>
+
+<p>For example, to set <b>-eos</b> the following could be used</p>
+
+<pre><code>        $argv .= &quot; -eos&quot; if ( $Perl::Tidy::VERSION &gt; 20220101 );
+
+        $error_flag = Perl::Tidy::perltidy(
+            argv        =&gt; $argv,
+            source      =&gt; \$source,
+            destination =&gt; \$destination,
+            stderr      =&gt; \$stderr,
+            errorfile   =&gt; \$errorfile
+        );</code></pre>
+
+<p>The test on version allows older versions of Perl::Tidy to still be used.</p>
+
+<p>For some background information see <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a> and <a href="https://github.com/houseabsolute/perl-code-tidyall/issues/84">https://github.com/houseabsolute/perl-code-tidyall/issues/84</a>.</p>
 
 </dd>
-<dt id="stderr">stderr</dt>
+<dt id="stderr"><b>stderr</b></dt>
 <dd>
 
 <p>The <b>stderr</b> parameter allows the calling program to redirect the stream that would otherwise go to the standard error output device to any of the stream types listed above. This stream contains important warnings and errors related to the parameters passed to perltidy.</p>
 
 </dd>
-<dt id="perltidyrc">perltidyrc</dt>
+<dt id="perltidyrc"><b>perltidyrc</b></dt>
 <dd>
 
 <p>If the <b>perltidyrc</b> file is given, it will be used instead of any <i>.perltidyrc</i> configuration file that would otherwise be used.</p>
 
 </dd>
-<dt id="errorfile">errorfile</dt>
+<dt id="errorfile"><b>errorfile</b></dt>
 <dd>
 
 <p>The <b>errorfile</b> parameter allows the calling program to capture the stream that would otherwise go to either a .ERR file. This stream contains warnings or errors related to the contents of one source file or stream.</p>
@@ -130,31 +152,31 @@
 <p>However if perltidy is called to process just a single perl script then it may be more convenient to combine the <b>errorfile</b> stream with the <b>stderr</b> stream. This can be done by setting the <b>-se</b> parameter, in which case this parameter is ignored.</p>
 
 </dd>
-<dt id="logfile">logfile</dt>
+<dt id="logfile"><b>logfile</b></dt>
 <dd>
 
 <p>The <b>logfile</b> parameter allows the calling program to capture the log stream. This stream is only created if requested with a <b>-g</b> parameter. It contains detailed diagnostic information about a script which may be useful for debugging.</p>
 
 </dd>
-<dt id="teefile">teefile</dt>
+<dt id="teefile"><b>teefile</b></dt>
 <dd>
 
 <p>The <b>teefile</b> parameter allows the calling program to capture the tee stream. This stream is only created if requested with one of the &#39;tee&#39; parameters, a <b>--tee-pod</b> , <b>--tee-block-comments</b>, <b>--tee-side-commnts</b>, or <b>--tee-all-comments</b>.</p>
 
 </dd>
-<dt id="debugfile">debugfile</dt>
+<dt id="debugfile"><b>debugfile</b></dt>
 <dd>
 
 <p>The <b>debugfile</b> parameter allows the calling program to capture the stream produced by the <b>--DEBUG</b> parameter. This parameter is mainly used for debugging perltidy itself.</p>
 
 </dd>
-<dt id="argv">argv</dt>
+<dt id="argv"><b>argv</b></dt>
 <dd>
 
 <p>If the <b>argv</b> parameter is given, it will be used instead of the <b>@ARGV</b> array. The <b>argv</b> parameter may be a string, a reference to a string, or a reference to an array. If it is a string or reference to a string, it will be parsed into an array of items just as if it were a command line string.</p>
 
 </dd>
-<dt id="dump_options">dump_options</dt>
+<dt id="dump_options"><b>dump_options</b></dt>
 <dd>
 
 <p>If the <b>dump_options</b> parameter is given, it must be the reference to a hash. In this case, the parameters contained in any perltidyrc configuration file will be placed in this hash and perltidy will return immediately. This is equivalent to running perltidy with --dump-options, except that the parameters are returned in a hash rather than dumped to standard output. Also, by default only the parameters in the perltidyrc file are returned, but this can be changed (see the next parameter). This parameter provides a convenient method for external programs to read a perltidyrc file. An example program using this feature, <i>perltidyrc_dump.pl</i>, is included in the distribution.</p>
@@ -162,37 +184,37 @@
 <p>Any combination of the <b>dump_</b> parameters may be used together.</p>
 
 </dd>
-<dt id="dump_options_type">dump_options_type</dt>
+<dt id="dump_options_type"><b>dump_options_type</b></dt>
 <dd>
 
 <p>This parameter is a string which can be used to control the parameters placed in the hash reference supplied by <b>dump_options</b>. The possible values are &#39;perltidyrc&#39; (default) and &#39;full&#39;. The &#39;full&#39; parameter causes both the default options plus any options found in a perltidyrc file to be returned.</p>
 
 </dd>
-<dt id="dump_getopt_flags">dump_getopt_flags</dt>
+<dt id="dump_getopt_flags"><b>dump_getopt_flags</b></dt>
 <dd>
 
 <p>If the <b>dump_getopt_flags</b> parameter is given, it must be the reference to a hash. This hash will receive all of the parameters that perltidy understands and flags that are passed to Getopt::Long. This parameter may be used alone or with the <b>dump_options</b> flag. Perltidy will exit immediately after filling this hash. See the demo program <i>perltidyrc_dump.pl</i> for example usage.</p>
 
 </dd>
-<dt id="dump_options_category">dump_options_category</dt>
+<dt id="dump_options_category"><b>dump_options_category</b></dt>
 <dd>
 
 <p>If the <b>dump_options_category</b> parameter is given, it must be the reference to a hash. This hash will receive a hash with keys equal to all long parameter names and values equal to the title of the corresponding section of the perltidy manual. See the demo program <i>perltidyrc_dump.pl</i> for example usage.</p>
 
 </dd>
-<dt id="dump_abbreviations">dump_abbreviations</dt>
+<dt id="dump_abbreviations"><b>dump_abbreviations</b></dt>
 <dd>
 
 <p>If the <b>dump_abbreviations</b> parameter is given, it must be the reference to a hash. This hash will receive all abbreviations used by Perl::Tidy. See the demo program <i>perltidyrc_dump.pl</i> for example usage.</p>
 
 </dd>
-<dt id="prefilter">prefilter</dt>
+<dt id="prefilter"><b>prefilter</b></dt>
 <dd>
 
 <p>A code reference that will be applied to the source before tidying. It is expected to take the full content as a string in its input, and output the transformed content.</p>
 
 </dd>
-<dt id="postfilter">postfilter</dt>
+<dt id="postfilter"><b>postfilter</b></dt>
 <dd>
 
 <p>A code reference that will be applied to the tidied result before outputting. It is expected to take the full content as a string in its input, and output the transformed content.</p>
@@ -227,13 +249,13 @@
 <p>The following example uses string references to hold the input and output code and error streams, and illustrates checking for errors.</p>
 
 <pre><code>  use Perl::Tidy;
-  
+
   my $source_string = &lt;&lt;&#39;EOT&#39;;
   my$error=Perl::Tidy::perltidy(argv=&gt;$argv,source=&gt;\$source_string,
     destination=&gt;\$dest_string,stderr=&gt;\$stderr_string,
   errorfile=&gt;\$errorfile_string,);
   EOT
-  
+
   my $dest_string;
   my $stderr_string;
   my $errorfile_string;
@@ -242,9 +264,9 @@
   $argv .= &quot; -nst&quot;;     # Must turn off -st in case -pbp is specified
   $argv .= &quot; -se&quot;;      # -se appends the errorfile to stderr
   ## $argv .= &quot; --spell-check&quot;;  # uncomment to trigger an error
-  
+
   print &quot;&lt;&lt;RAW SOURCE&gt;&gt;\n$source_string\n&quot;;
-  
+
   my $error = Perl::Tidy::perltidy(
       argv        =&gt; $argv,
       source      =&gt; \$source_string,
@@ -253,14 +275,14 @@
       errorfile   =&gt; \$errorfile_string,    # ignored when -se flag is set
       ##phasers   =&gt; &#39;stun&#39;,                # uncomment to trigger an error
   );
-  
+
   if ($error) {
-  
+
       # serious error in input parameters, no tidied output
       print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot;;
       die &quot;Exiting because of serious errors\n&quot;;
   }
-  
+
   if ($dest_string)      { print &quot;&lt;&lt;TIDIED SOURCE&gt;&gt;\n$dest_string\n&quot; }
   if ($stderr_string)    { print &quot;&lt;&lt;STDERR&gt;&gt;\n$stderr_string\n&quot; }
   if ($errorfile_string) { print &quot;&lt;&lt;.ERR file&gt;&gt;\n$errorfile_string\n&quot; }</code></pre>
@@ -272,17 +294,17 @@
 <p>The <b>formatter</b> parameter is an optional callback object which allows the calling program to receive tokenized lines directly from perltidy for further specialized processing. When this parameter is used, the two formatting options which are built into perltidy (beautification or html) are ignored. The following diagram illustrates the logical flow:</p>
 
 <pre><code>                    |-- (normal route)   -&gt; code beautification
-  caller-&gt;perltidy-&gt;|-- (-html flag )    -&gt; create html 
+  caller-&gt;perltidy-&gt;|-- (-html flag )    -&gt; create html
                     |-- (formatter given)-&gt; callback to write_line</code></pre>
 
 <p>This can be useful for processing perl scripts in some way. The parameter <code>$formatter</code> in the perltidy call,</p>
 
-<pre><code>        formatter   =&gt; $formatter,  </code></pre>
+<pre><code>        formatter   =&gt; $formatter,</code></pre>
 
 <p>is an object created by the caller with a <code>write_line</code> method which will accept and process tokenized lines, one line per call. Here is a simple example of a <code>write_line</code> which merely prints the line number, the line type (as determined by perltidy), and the text of the line:</p>
 
 <pre><code> sub write_line {
- 
+
      # This is called from perltidy line-by-line
      my $self              = shift;
      my $line_of_tokens    = shift;
@@ -316,11 +338,11 @@
 <p>Most applications will be only interested in lines of type <b>CODE</b>. For another example, let&#39;s write a program which checks for one of the so-called <i>naughty matching variables</i> <code>&amp;`</code>, <code>$&amp;</code>, and <code>$&#39;</code>, which can slow down processing. Here is a <b>write_line</b>, from the example program <b>find_naughty.pl</b>, which does that:</p>
 
 <pre><code> sub write_line {
- 
+
      # This is called back from perltidy line-by-line
      # We&#39;re looking for $`, $&amp;, and $&#39;
      my ( $self, $line_of_tokens ) = @_;
- 
+
      # pull out some stuff we might need
      my $line_type         = $line_of_tokens-&gt;{_line_type};
      my $input_line_number = $line_of_tokens-&gt;{_line_number};
@@ -328,19 +350,19 @@
      my $rtoken_type       = $line_of_tokens-&gt;{_rtoken_type};
      my $rtokens           = $line_of_tokens-&gt;{_rtokens};
      chomp $input_line;
- 
+
      # skip comments, pod, etc
      return if ( $line_type ne &#39;CODE&#39; );
- 
+
      # loop over tokens looking for $`, $&amp;, and $&#39;
      for ( my $j = 0 ; $j &lt; @$rtoken_type ; $j++ ) {
- 
+
          # we only want to examine token types &#39;i&#39; (identifier)
          next unless $$rtoken_type[$j] eq &#39;i&#39;;
- 
+
          # pull out the actual token text
          my $token = $$rtokens[$j];
- 
+
          # and check it
          if ( $token =~ /^\$[\`\&amp;\&#39;]$/ ) {
              print STDERR
