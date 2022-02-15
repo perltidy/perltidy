@@ -83,13 +83,14 @@ filenames may be specified in the @ARGV array or B<argv> parameter.
 If the B<destination> parameter is given, it will be used to define the
 file or memory location to receive output of perltidy.
 
-B<Important note if destination is a string or array reference>.  Perl
-strings of characters can be stored in one of two states, and it is important that the
+B<Important note if destination is a string or array reference>.  Perl strings
+of characters which are decoded as utf8 by Perl::Tidy can be returned in either
+of two possible states, decoded or encoded, and it is important that the
 calling program and Perl::Tidy are in agreement regarding the state to be
-returned.  A flag B<--encode-output-strings>, or simply B<-eos>, was added
-in versions of Perl::Tidy after 20220101 for this
-purpose. This flag should be added to the end of the B<argv> paremeter (described below).
-The options are as follows.
+returned.  A flag B<--encode-output-strings>, or simply B<-eos>, was added in
+versions of Perl::Tidy after 20220101 for this purpose. This flag should be
+added to the end of the B<argv> paremeter (described below).  The options are
+as follows.
 
 =over 4
 
@@ -105,8 +106,12 @@ encode the data too, because double encoding will corrupt data.
 Use B<-neos> if a string should remain decoded if it was decoded by Perl::Tidy.
 This is appropriate if
 the calling program will handle any needed encoding before outputting the string.
-This is the current default, but it should still be set, if appropriate,
-to allow for the possibility of a future change in the default.
+
+=item *
+
+The current default is B<-neos>, but B<the default could change in a future
+version>, so B<-neos> should still be set, if appropriate, to allow for the
+possibility of a future change in the default.
 
 =back
 

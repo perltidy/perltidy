@@ -17,6 +17,13 @@
   If there are other applications having utf8 problems at the interface
   with Perl::Tidy, this flag probably may need to be set.
 
+- The default value of the new flag, --encode-output-strings, -eos, is currently
+  -neos BUT THIS MAY CHANGE in a future release because the current
+  default is inconvenient.  So authors of programs which
+  receive character strings back from Perl::Tidy should set this flag
+  to avoid any problems when the default changes.  For more information see the
+  above links and the Perl::Tidy man pages for example coding.
+
 - The possible values of the string 's' for the flag '--character-encoding=s'
   have been limited to 'utf8' (or UTF-8), 'none', or 'guess'.  Previously an
   arbitrary encoding could also be specified, but as a result of discussions
