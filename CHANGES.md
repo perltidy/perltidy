@@ -19,8 +19,8 @@
 
     - The default value of the new flag, --encode-output-strings, -eos, is currently
       -neos BUT THIS MAY CHANGE in a future release because the current
-      default is inconvenient.  So authors of programs which
-      receive character strings back from Perl::Tidy should set this flag
+      default is inconvenient.  So authors of programs which receive character
+      strings back from Perl::Tidy should set this flag, if necessary,
       to avoid any problems when the default changes.  For more information see the
       above links and the Perl::Tidy man pages for example coding.
 
