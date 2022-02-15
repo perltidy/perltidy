@@ -526,9 +526,11 @@
 
 <p>This flag has been added to resolve an issue involving the interface between Perl::Tidy and calling programs, and in particular <b>Code::TidyAll (tidyall)</b>. By default Perl::Tidy returns unencoded strings to the calling program, but some programs expect encoded strings. Setting this flag causes Perl::Tidy to return encoded output strings which it decoded. For some background information see <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a> and <a href="https://github.com/houseabsolute/perl-code-tidyall/issues/84">https://github.com/houseabsolute/perl-code-tidyall/issues/84</a>.</p>
 
-<p>If you only run the perltidy binary this flag has no effect.</p>
+<p>If you only run the <b>perltidy</b> binary this flag has no effect.</p>
 
 <p>If you use <b>tidyall</b> with encoded files and encounter irregularities such as <b>wide character</b> messages you should set this flag.</p>
+
+<p>Additional information can be found in the man pages for the <b>Perl::Tidy</b> module.</p>
 
 </dd>
 <dt id="gcs---use-unicode-gcstring"><b>-gcs</b>, <b>--use-unicode-gcstring</b></dt>
@@ -3989,7 +3991,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20220215</p>
+<p>This man page documents perltidy version 20220217</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

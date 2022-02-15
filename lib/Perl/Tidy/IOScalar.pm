@@ -10,7 +10,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20220216';
+our $VERSION = '20220217';
 
 sub AUTOLOAD {
 

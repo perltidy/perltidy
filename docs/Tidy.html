@@ -101,7 +101,7 @@
 
 <p>If the <b>destination</b> parameter is given, it will be used to define the file or memory location to receive output of perltidy.</p>
 
-<p><b>Important note if destination is a string or array reference</b>. Perl strings of characters which are decoded as utf8 by Perl::Tidy can be returned in either of two possible states, decoded or encoded, and it is important that the calling program and Perl::Tidy are in agreement regarding the state to be returned. A flag <b>--encode-output-strings</b>, or simply <b>-eos</b>, was added in versions of Perl::Tidy after 20220101 for this purpose. This flag should be added to the end of the <b>argv</b> paremeter (described below). The options are as follows.</p>
+<p><b>Important note if destination is a string or array reference</b>. Perl strings of characters which are decoded as utf8 by Perl::Tidy can be returned in either of two possible states, decoded or encoded, and it is important that the calling program and Perl::Tidy are in agreement regarding the state to be returned. A flag <b>--encode-output-strings</b>, or simply <b>-eos</b>, was added in versions of Perl::Tidy after 20220101 for this purpose. This flag should be added to the end of the <b>argv</b> paremeter (described below) if Perl::Tidy will be decoding utf8 text. The options are as follows.</p>
 
 <ul>
 
@@ -403,7 +403,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents Perl::Tidy version 20220215</p>
+<p>This man page documents Perl::Tidy version 20220217</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

@@ -89,9 +89,9 @@ t/test.t
 t/testsa.t
 t/testss.t
 t/testwide-passthrough.pl.src
-t/testwide-passthrough.t
+t/testwide-passthrough.t.SKIP
 t/testwide-tidy.pl.src
 t/testwide-tidy.pl.srctdy
-t/testwide-tidy.t
+t/testwide-tidy.t.SKIP
 t/testwide.pl.src
 t/testwide.t
