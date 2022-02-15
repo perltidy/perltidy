@@ -39,7 +39,6 @@ foreach (@skip) {
     if ( $abbrev{$_} ) { delete $abbrev{$_} }
 }
 
-
 # Select the short names which can be negated
 my @short_list;
 foreach my $long (@binary_long_names) {
@@ -52,21 +51,21 @@ foreach my $long (@binary_long_names) {
 
 # special aliases not obtained automatically
 my @special = qw(
-oll 
-dac
-tac
-html
-sob
-baa
-bbs
-kgb
-icp
-otr
-sot
-sct
-sac
-sobb
-conv
+  oll
+  dac
+  tac
+  html
+  sob
+  baa
+  bbs
+  kgb
+  icp
+  otr
+  sot
+  sct
+  sac
+  sobb
+  conv
 );
 
 my $FIELD_WIDTH    = 6;
@@ -74,7 +73,7 @@ my $WORDS_PER_LINE = 10;
 
 my $line  = " ";
 my $count = 0;
-foreach my $word ( sort (@short_list, @special) ) {
+foreach my $word ( sort ( @short_list, @special ) ) {
     my $len = length($word);
     my $nsp = $FIELD_WIDTH - $len + 1;
     $word .= " " x $nsp;

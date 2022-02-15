@@ -4,21 +4,24 @@ use warnings;
 use Perl::Tidy;
 use Data::Dumper;
 
+#--------------------------------------------------------------------------
+# NOTE: While this gives useful information, I have concluded that due to
+# the large number of parameters and their possible interactions, automated
+# random testing is a better way to be sure perltidy parameters are tested.
+# So this program is no longer used.
+#--------------------------------------------------------------------------
+
 # This will eventually read all of the '.par' files and write a report
 # showing the parameter coverage.
 
 # The starting point for this program is 'examples/perltidyrc_dump.pl'
 
-# The plan is: 
+# The plan is:
 # read each '.par' file
 # use perltidy's options-dump feature to convert to long names and return in a hash
 # combine all of these results and write back to standard output in sorted order
 #
 # It will also be useful to output a list of unused parameters
-
-# NOTE: While this gives useful information, I have concluded that due to
-# the large number of parameters and their possible interactions, automated
-# random testing is a better way to be sure perltidy parameters are tested.
 
 my $usage = <<EOM;
 # writes a summary of parameters covered in snippet testing
@@ -39,8 +42,8 @@ my $cmdline = $0 . " " . join " ", @ARGV;
 getopts( 'hdsq', \%my_opts ) or die "$usage";
 if ( $my_opts{h} ) { die "$usage" }
 
-my @files=@ARGV;
-if ( !@files )   { @files=glob('*.par')}
+my @files = @ARGV;
+if ( !@files ) { @files = glob('*.par') }
 
 # Get a list of all options, their sections and abbreviations
 # Also get the list of defaults
@@ -65,7 +68,7 @@ my $rsaw_values = {};
 
 # Initialize to defaults
 foreach my $long_name ( keys %{$rGetopt_flags} ) {
-    if ( defined($rOpts_default->{$long_name}) ) {
+    if ( defined( $rOpts_default->{$long_name} ) ) {
         my $val = $rOpts_default->{$long_name};
         $rsaw_values->{$long_name} = [$val];
     }
@@ -74,12 +77,11 @@ foreach my $long_name ( keys %{$rGetopt_flags} ) {
         # Store a 0 default for all switches with no default value
         my $flag = $rGetopt_flags->{$long_name};
         if ( $flag eq '!' ) {
-	    my $val=0;
+            my $val = 0;
             $rsaw_values->{$long_name} = [$val];
         }
     }
 }
-
 
 # Loop over config files
 foreach my $config_file (@files) {
@@ -107,23 +109,23 @@ foreach my $long_name ( keys %{$rGetopt_flags} ) {
         my @uniq   = uniq(@vals);
         my @sorted = sort { $a cmp $b } @uniq;
         $rsaw_values->{$long_name} = \@sorted;
-	my $options_flag = $rGetopt_flags->{$long_name};
+        my $options_flag = $rGetopt_flags->{$long_name};
 
-	# Consider switches with just one value as not seen
-	if ($options_flag eq '!' && @sorted<2) {
-       	    push @not_seen, $long_name;
-	}
-	else {
-	    push @seen, $long_name;
-	}
+        # Consider switches with just one value as not seen
+        if ( $options_flag eq '!' && @sorted < 2 ) {
+            push @not_seen, $long_name;
+        }
+        else {
+            push @seen, $long_name;
+        }
     }
     else {
-       push @not_seen, $long_name;
+        push @not_seen, $long_name;
     }
 }
 
 # Remove the unseen from the big hash
-foreach my $long_name(@not_seen) {
+foreach my $long_name (@not_seen) {
     delete $rsaw_values->{$long_name};
 }
 
@@ -143,7 +145,7 @@ print "wrote $fnot_seen\n";
 #print Data::Dumper->Dump($rsaw_values);
 my $fseen = "coverage_values.txt";
 open( $fh, ">", $fseen ) || die "can open $fseen: $!\n";
-$fh->print( Dumper($rsaw_values));
+$fh->print( Dumper($rsaw_values) );
 $fh->close();
 print "wrote $fseen\n";
 
@@ -286,6 +288,7 @@ sub dump_options {
 "# ERROR in dump_options: unrecognized flag $flag for $long_name\n";
                 }
             }
+
 =pod
     # These long option names have no abbreviations or are treated specially
     @option_string = qw(
@@ -301,18 +304,17 @@ sub dump_options {
 
             # print the long version of the parameter
             # with the short version as a side comment
-            my $short_name   = $short_name{$long_name};
-            my $long_option  = $prefix . $long_name . $suffix;
+            my $short_name  = $short_name{$long_name};
+            my $long_option = $prefix . $long_name . $suffix;
 
-
-	    # A few options do not have a short abbreviation
-	    # so we will make it the same as the long option
-	    # These include 'recombine' and 'valign', which are mainly
-	    # for debugging.
-	    my $short_option = $long_option;
-	    if ($short_name) {
-            	$short_option = $short_prefix . $short_name . $suffix;
-	    }
+            # A few options do not have a short abbreviation
+            # so we will make it the same as the long option
+            # These include 'recombine' and 'valign', which are mainly
+            # for debugging.
+            my $short_option = $long_option;
+            if ($short_name) {
+                $short_option = $short_prefix . $short_name . $suffix;
+            }
 
             my $note = $requals_default->{$long_name} ? "  [=default]" : "";
             if ( $rmy_opts->{s} ) {
@@ -392,8 +394,10 @@ sub get_perltidy_options {
         }
     }
 
-    return ( $error_message, \%Getopt_flags, \%sections, \%abbreviations,
-        \%Opts_default, );
+    return (
+        $error_message,  \%Getopt_flags, \%sections,
+        \%abbreviations, \%Opts_default,
+    );
 }
 
 sub read_perltidyrc {
@@ -417,12 +421,12 @@ sub read_perltidyrc {
 
     my %abbreviations;
     Perl::Tidy::perltidy(
-        perltidyrc            => $config_file,
-        dump_options          => \%Opts,
-        dump_options_type     => 'perltidyrc',      # default is 'perltidyrc'
-        dump_abbreviations    => \%abbreviations,
-        stderr                => \$stderr,
-        argv                  => \$argv,
+        perltidyrc         => $config_file,
+        dump_options       => \%Opts,
+        dump_options_type  => 'perltidyrc',      # default is 'perltidyrc'
+        dump_abbreviations => \%abbreviations,
+        stderr             => \$stderr,
+        argv               => \$argv,
     );
 
     # try to capture any errors generated by perltidy call
@@ -437,7 +441,7 @@ sub read_perltidyrc {
             print "$key -> $Opts{$key}\n";
         }
     }
-    return ( $error_message, \%Opts); 
+    return ( $error_message, \%Opts );
 }
 
 sub xx_read_perltidyrc {

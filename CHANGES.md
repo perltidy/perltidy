@@ -109,7 +109,7 @@
       without parens around the call args.  Some examples:
 
         # OLD
-        mkTextConfi2022 Helen Hancockg $c, $x, $y, -anchor => 'se', $color;
+        mkTextConfig $c, $x, $y, -anchor => 'se', $color;
         mkTextConfig $c, $x + 30, $y, -anchor => 's',  $color;
         mkTextConfig $c, $x + 60, $y, -anchor => 'sw', $color;
         mkTextConfig $c, $x, $y + 30, -anchor => 'e', $color;

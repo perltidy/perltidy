@@ -72,13 +72,14 @@ my $get_param = sub {
     my ($pname) = @_;
     if ( $pname && !defined( $rparams->{$pname} ) ) {
         my $pstring = $get_string->( $pname . ".par" );
-	chomp $pstring;
-#        my $pstring = $read_parameters->( $pname . ".par" );
-#        if ($pstring) {
-#            $pstring =~ s/\n/ /g;
-#            $pstring =~ s/\s+/ /;
-#            $pstring =~ s/\s*$//;
-#        }
+        chomp $pstring;
+
+        #        my $pstring = $read_parameters->( $pname . ".par" );
+        #        if ($pstring) {
+        #            $pstring =~ s/\n/ /g;
+        #            $pstring =~ s/\s+/ /;
+        #            $pstring =~ s/\s*$//;
+        #        }
         $rparams->{$pname} = $pstring;
     }
 };
@@ -92,8 +93,8 @@ if ( !defined( $rparams->{$defname} ) ) {
 # To speed up testing, you may enter specific files
 # if none are given all are used
 my @files = @ARGV;
-if (!@files) {
-   @files = glob('*.in *.par');
+if ( !@files ) {
+    @files = glob('*.in *.par');
 }
 
 foreach my $file (@files) {
@@ -117,22 +118,22 @@ foreach my $sname ( keys %{$rsources} ) {
     my @pnames;
     @pnames = keys %{$rparams};
     foreach my $pname (@pnames) {
-    	my $proot = ( $pname =~ /^([^\d]+)/ ) ? $1 : $pname;
+        my $proot = ( $pname =~ /^([^\d]+)/ ) ? $1 : $pname;
         my $match =
 
-	     # exact match of source and parameter file base names
-             $pname eq $sname
+          # exact match of source and parameter file base names
+          $pname eq $sname
 
-	     # match of source root to parameter file base name
+          # match of source root to parameter file base name
           || $pname eq $sroot
 
-	     # match of source base name to parameter root
+          # match of source base name to parameter root
           || $proot eq $sname
 
-	     # defaults apply to all files
+          # defaults apply to all files
           || $pname eq $defname;
 
-	next unless ($match);
+        next unless ($match);
 
         my $output;
         my $source = $rsources->{$sname};
@@ -143,22 +144,22 @@ foreach my $sname ( keys %{$rsources} ) {
             source      => \$source,
             destination => \$output,
             perltidyrc  => \$params,
-            argv        => '',         # don't let perltidy look at my @ARGV
+            argv        => '',             # don't let perltidy look at my @ARGV
             stderr      => \$stderr_string,
-            errorfile   => \$errorfile_string,    # not used when -se flag is set
+            errorfile   => \$errorfile_string,   # not used when -se flag is set
         );
         if ($stderr_string) {
-	    print STDERR "---------------------\n";
+            print STDERR "---------------------\n";
             print STDERR "<<STDERR>>\n$stderr_string\n";
-	    print STDERR "---------------------\n";
+            print STDERR "---------------------\n";
             die "The above error was received with $source + $params\n";
         }
-	if ($errorfile_string) { 
-	    print STDERR "---------------------\n";
+        if ($errorfile_string) {
+            print STDERR "---------------------\n";
             print STDERR "<<.ERR file>>\n$errorfile_string\n";
-	    print STDERR "---------------------\n";
+            print STDERR "---------------------\n";
             die "The above .ERR was received with $source + $params\n";
-	}
+        }
         if ($err) {
             die "error calling Perl::Tidy with $source + $params\n";
         }
@@ -184,8 +185,8 @@ foreach my $basename (@olist) {
     my $tname = $opath . $basename;
     my $ename = $epath . $basename;
     if ( !-e $ename ) {
-	my $new_file = "tmp/$basename";
-	push @new, $new_file;
+        my $new_file = "tmp/$basename";
+        push @new, $new_file;
         print "$new_file is a new file\n";
         push @mv, "cp $tname $ename";
     }
@@ -198,8 +199,8 @@ foreach my $basename (@olist) {
     }
 }
 
-my $diff_file="diff.txt";
-if ( -e "$diff_file" ) { unlink("$diff_file") } 
+my $diff_file = "diff.txt";
+if ( -e "$diff_file" ) { unlink("$diff_file") }
 if (@same) {
     my $num = @same;
     print "$num Unchanged files\n";
@@ -226,7 +227,7 @@ my $runme = "RUNME.sh";
 
 if ( !@mv ) {
     print "No differences\n";
-    if (-e $runme) {unlink $runme}
+    if ( -e $runme ) { unlink $runme }
     exit;
 }
 
@@ -287,21 +288,24 @@ If the differences and any new results look okay, then
 Enter ./$runme to move results from tmp/ to expect/ and make new .t files
 EOM
 }
+
 sub query {
     my ($msg) = @_;
     print $msg;
     my $ans = <STDIN>;
     chomp $ans;
+
     #my $val=$ans;
     return $ans;
 }
+
 sub ifyes {
 
-  # Updated to have default, which should be "Y" or "N"
-  my ($msg, $default)=@_;
+    # Updated to have default, which should be "Y" or "N"
+    my ( $msg, $default ) = @_;
     my $count = 0;
   ASK:
-    my $ans   = query($msg);
+    my $ans = query($msg);
     if ( defined($default) ) {
         $ans = $default unless ($ans);
     }

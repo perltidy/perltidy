@@ -2,6 +2,7 @@
 use strict;
 my @files = @ARGV;
 my %saw;
+
 # Look at a number of .pro profiles and show their common flags.
 # This can help pinpoint the flags which are causing an issue.
 foreach my $file (@files) {
@@ -15,8 +16,8 @@ foreach my $file (@files) {
     }
     close IN;
 }
-my $nfiles=@files;
-foreach my $key(sort keys %saw) {
-   next if ($saw{$key} != $nfiles);
-   print $key,"\n";
+my $nfiles = @files;
+foreach my $key ( sort keys %saw ) {
+    next if ( $saw{$key} != $nfiles );
+    print $key, "\n";
 }
