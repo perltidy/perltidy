@@ -656,10 +656,12 @@ background information see
 L<https://github.com/perltidy/perltidy/issues/83> and
 L<https://github.com/houseabsolute/perl-code-tidyall/issues/84>.
 
-If you only run the perltidy binary this flag has no effect.
+If you only run the B<perltidy> binary this flag has no effect.
 
 If you use B<tidyall> with encoded files and encounter irregularities such as
 B<wide character> messages you should set this flag.
+
+Additional information can be found in the man pages for the B<Perl::Tidy> module.
 
 =item B<-gcs>,  B<--use-unicode-gcstring>
 
@@ -5137,7 +5139,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20220215
+This man page documents perltidy version 20220216
 
 =head1 BUG REPORTS
 

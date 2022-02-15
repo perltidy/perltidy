@@ -20,7 +20,7 @@
 package Perl::Tidy::Diagnostics;
 use strict;
 use warnings;
-our $VERSION = '20220215';
+our $VERSION = '20220216';
 
 sub AUTOLOAD {
 

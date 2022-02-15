@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 02 15
+## 2022 02 16
 
     - A new flag, --encode-output-strings, or -eos, has been added to resolve
       issue git #83. This issue involves the interface between Perl::Tidy and
