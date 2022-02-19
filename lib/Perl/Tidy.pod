@@ -89,7 +89,7 @@ of two possible states, decoded or encoded, and it is important that the
 calling program and Perl::Tidy are in agreement regarding the state to be
 returned.  A flag B<--encode-output-strings>, or simply B<-eos>, was added in
 versions of Perl::Tidy after 20220101 for this purpose. This flag should be
-added to the end of the B<argv> paremeter (described below) if Perl::Tidy
+added to the end of the B<argv> parameter (described below) if Perl::Tidy
 will be decoding utf8 text.  The options are as follows.
 
 =over 4
