@@ -45,7 +45,7 @@ sub test_file2file {
     note("Testing file2file: '$source' => '$destination'\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
-        argv        => '-utf8',
+        argv        => '-utf8 -npro',
         source      => $source,
         destination => $destination
     );
@@ -70,7 +70,7 @@ sub test_scalar2scalar {
     note("Testing scalar2scalar\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
-        argv        => '-utf8 -eos',
+        argv        => '-utf8 -eos -npro',
         source      => \$source,
         destination => \$destination
     );
@@ -94,7 +94,7 @@ sub test_scalararray2scalararray {
     note("Testing scalararray2scalararray\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
-        argv        => '-utf8 -eos',
+        argv        => '-utf8 -eos -npro',
         source      => $source,
         destination => $destination
     );
