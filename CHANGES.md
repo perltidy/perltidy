@@ -2,6 +2,10 @@
 
 ## 2022 02 17
 
+    - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
+
+## 2022 02 17
+
     - A new flag, --encode-output-strings, or -eos, has been added to resolve
       issue git #83. This issue involves the interface between Perl::Tidy and
       calling programs, and Code::TidyAll (tidyall) in particular.  The problem
