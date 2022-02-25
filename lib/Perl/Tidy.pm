@@ -4226,6 +4226,11 @@ sub parse_args {
     my $quote_char = "";
     my $part       = "";
     my $msg        = "";
+
+    # Check for external call with undefined $body - added to fix
+    # github issue Perl-Tidy-Sweetened issue #23
+    if ( !defined($body) ) { $body = "" }
+
     while (1) {
 
         # looking for ending quote character
