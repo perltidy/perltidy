@@ -30,6 +30,8 @@ EOM
 
 my $output;
 
+# The source is in character mode here, so perltidy will not decode.
+# So here we do not need to set -eos or -neos
 Perl::Tidy::perltidy(
     source      => \$source,
     destination => \$output,
@@ -39,11 +41,15 @@ Perl::Tidy::perltidy(
 
 ok($output, $expected_output);
 
+# Since default encoding is 'guess' and the source is a file of utf8, perltidy
+# will guess utf8 and decode the input. But we are comparing to a string which
+# is in character mode, so we do not want perltidy to encode the output in this
+# case and therefore must set -neos.
 Perl::Tidy::perltidy(
     source      => $FindBin::Bin . '/testwide.pl.src',
     destination => \$output,
     perltidyrc  => \$perltidyrc,
-    argv        => '-nsyn',
+    argv        => '-nsyn -neos',
 );
 
 ok($output, $expected_output);
