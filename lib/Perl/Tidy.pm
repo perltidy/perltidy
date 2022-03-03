@@ -419,6 +419,51 @@ sub perltidy {
         postfilter            => undef,
     );
 
+    # Status information which can be returned for diagnostic purposes.
+    # This is still under development and has not been documented.
+
+    # file_count         => number of files processed in this call
+    # opt_format         => value of --format: 'tidy', 'html', or 'user'
+    # opt_encoding       => value of -enc flag: 'utf8', 'none', or 'guess'
+    # opt_encode_output  => value of -eos flag: 'eos' or 'neos'
+    # opt_max_iterations => value of --iterations=n
+    #
+    # If there are multiple files, these values will be for the last file:
+    # input_name         => display name of the input stream
+    # output_name        => display name of the output stream
+    # string_mode_source => 'byte' or 'char' : in which of Perl's two string
+    #   modes is the source ( after reading from any file.  Will be 'char'
+    #   mode if we received a string with utf8::is_utf8() set ).
+    # string_mode_used   => 'byte' or 'char' : in which of Perl's two string
+    #                        modes was the text processed?
+    # input_decoded_as   => non-blank if perltidy decoded the source text
+    # output_encoded_as  => non-blank if perltidy encoded before return
+    # iteration_count    => number of iterations done
+    #                       ( can be from 1 to opt_max_iterations )
+    # converged          => true if stopped on convergence
+    #                       ( can only happen if opt_max_iterations > 1 )
+    # blinking           => true if stopped on blinking states
+    #                       ( i.e., unstable formatting, should not happen )
+
+    my $rstatus = {
+
+        file_count         => 0,
+        opt_format         => "",
+        opt_encoding       => "",
+        opt_encode_output  => "",
+        opt_max_iterations => "",
+
+        input_name         => "",
+        output_name        => "",
+        string_mode_source => 0,
+        string_mode_used   => "",
+        input_decoded_as   => "",
+        output_encoded_as  => "",
+        iteration_count    => 0,
+        converged          => 0,
+        blinking           => 0,
+    };
+
     # Fix for issue git #57
     $Warn_count = 0;
 
@@ -698,6 +743,11 @@ EOM
         html => 'html',
         user => '',
     );
+
+    $rstatus->{'opt_format'}         = $rOpts->{'format'};
+    $rstatus->{'opt_max_iterations'} = $rOpts->{'iterations'};
+    $rstatus->{'opt_encode_output'} =
+      $rOpts->{'encode-output-strings'} ? 'eos' : 'neos';
 
     # be sure we have a valid output format
     unless ( exists $default_file_extension{ $rOpts->{'format'} } ) {
@@ -1021,11 +1071,18 @@ EOM
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
         my $encoding_log_message;
         my $decoded_input_as = "";
+        $rstatus->{'string_mode_source'} = 'byte';
 
-        # Case 1. See if we already have an encoded string. In that
-        # case, we have to ignore any encoding flag.
+        # Case 1: If the UTF8 flag is set, then Perl is already in a
+        # character-oriented mode for this string rather than a byte-oriented
+        # mode.  This can happen for example if the caller has decoded the
+        # string before calling perltidy.  In any case, our only option is to
+        # ignore any encoding flag.  See https://perldoc.perl.org/Encode.
+        # Note: you have to do this test within 'if' parens as below.  You
+        # can NOT use: my $flag = utf8::is_utf8($buf) - gives wrong result.
         if ( utf8::is_utf8($buf) ) {
             $encoding_in = "utf8";
+            $rstatus->{'string_mode_source'} = 'char';
         }
 
         # Case 2. No input stream encoding requested.  This is appropriate
@@ -1123,7 +1180,13 @@ EOM
         # we must not treat it as encoded data.
         my $is_encoded_data = $encoding_in ? 'utf8' : "";
 
-       # Define the function to determine the display width of character strings
+        $rstatus->{'input_name'}       = $display_name;
+        $rstatus->{'opt_encoding'}     = $rOpts_character_encoding;
+        $rstatus->{'string_mode_used'} = $encoding_in ? 'char' : 'byte';
+        $rstatus->{'input_decoded_as'} = $decoded_input_as;
+
+        # Define the function to determine the display width of character
+        # strings
         my $length_function = sub { return length( $_[0] ) };
         if ($is_encoded_data) {
 
@@ -1187,6 +1250,7 @@ EOM
         # prepare the output stream
         #---------------------------------------------------------------
         my $output_file = undef;
+        my $output_name = "";
         my $actual_output_extension;
 
         if ( $rOpts->{'outfile'} ) {
@@ -1210,6 +1274,7 @@ EOM
                     Die("You may not specify -o and -oext together\n");
                 }
                 $output_file = $rOpts->{outfile};
+                $output_name = $output_file;
 
                 # make sure user gives a file name after -o
                 if ( $output_file =~ /^-/ ) {
@@ -1233,6 +1298,7 @@ EOM
                 Die("$msg\n");
             }
             $output_file = '-';
+            $output_name = "<stdout>";
 
             if ( $number_of_files <= 1 ) {
             }
@@ -1243,23 +1309,33 @@ EOM
         elsif ($destination_stream) {
 
             $output_file = $destination_stream;
+            $output_name = "<destination_stream>";
         }
         elsif ($source_stream) {    # source but no destination goes to stdout
             $output_file = '-';
+            $output_name = "<stdout>";
         }
         elsif ( $input_file eq '-' ) {
             $output_file = '-';
+            $output_name = "<stdout>";
         }
         else {
             if ($in_place_modify) {
                 $output_file = IO::File->new_tmpfile()
                   or Die("cannot open temp file for -b option: $!\n");
+                $output_name = $display_name;
             }
             else {
                 $actual_output_extension = $output_extension;
                 $output_file             = $fileroot . $output_extension;
+                $output_name             = $output_file;
             }
         }
+
+        $rstatus->{'file_count'} += 1;
+        $rstatus->{'output_name'}     = $output_name;
+        $rstatus->{'iteration_count'} = 0;
+        $rstatus->{'converged'}       = 0;
 
         my $fh_tee;
         my $tee_file = $fileroot . $dot . "TEE";
@@ -1366,6 +1442,8 @@ EOM
         my $iteration_of_formatter_convergence;
 
         foreach my $iter ( 1 .. $max_iterations ) {
+
+            $rstatus->{'iteration_count'} += 1;
 
             # send output stream to temp buffers until last iteration
             my $sink_buffer;
@@ -1477,6 +1555,7 @@ EOM
             {
                 if ( $formatter->get_convergence_check() ) {
                     $iteration_of_formatter_convergence = $iter;
+                    $rstatus->{'converged'} = 1;
                 }
             }
 
@@ -1522,6 +1601,7 @@ EOM
                             # with extreme parameter values, such as very short
                             # maximum line lengths.  We want to catch and fix
                             # them when they happen.
+                            $rstatus->{'blinking'} = 1;
                             $convergence_log_message = <<EOM;
 BLINKER. Output for iteration $iter same as for $saw_md5{$digest}. 
 EOM
@@ -1544,6 +1624,7 @@ EOM
                             $diagnostics_object->write_diagnostics(
                                 $convergence_log_message)
                               if $diagnostics_object && $iterm > 2;
+                            $rstatus->{'converged'} = 1;
                         }
                     }
                 } ## end if ($do_convergence_test)
@@ -1683,6 +1764,7 @@ EOM
 
             # -eos flag set: If perltidy decodes a string, regardless of
             # source, it encodes before returning.
+            $rstatus->{'output_encoded_as'} = '';
 
             if ( $rOpts->{'encode-output-strings'} && $decoded_input_as ) {
                 my $encoded_buffer;
@@ -1699,6 +1781,7 @@ EOM
                 }
                 else {
                     $destination_buffer = $encoded_buffer;
+                    $rstatus->{'output_encoded_as'} = 'UTF-8';
                 }
             }
 
@@ -1709,6 +1792,13 @@ EOM
             else {
                 my @lines = split /^/, $destination_buffer;
                 @{$destination_stream} = @lines;
+            }
+        }
+        else {
+
+            # output went to a file ...
+            if ($is_encoded_data) {
+                $rstatus->{'output_encoded_as'} = 'UTF-8';
             }
         }
 
@@ -1902,10 +1992,11 @@ EOM
 
   NORMAL_EXIT:
     my $ret = $Warn_count ? 2 : 0;
-    return $ret;
+    return wantarray ? ( $ret, $rstatus ) : $ret;
 
   ERROR_EXIT:
-    return 1;
+    return wantarray ? ( 1, $rstatus ) : 1;
+
 } ## end of main program perltidy
 } ## end of closure for sub perltidy
 
