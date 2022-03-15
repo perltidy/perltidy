@@ -3,10 +3,9 @@ use utf8;
 use Test;
 use Carp;
 use FindBin;
-BEGIN {unshift @INC, "./"}
-BEGIN {plan tests => 3}
-use Perl::Tidy; 
-
+BEGIN { unshift @INC, "./" }
+BEGIN { plan tests => 3 }
+use Perl::Tidy;
 
 my $source = <<'EOM';
 %pangrams=("Plain","ASCII",
@@ -15,7 +14,7 @@ my $source = <<'EOM';
 "Любя, съешь щипцы, — вздохнёт мэр, — кайф жгуч.","RU");
 EOM
 
-my $expected_output=<<'EOM';
+my $expected_output = <<'EOM';
 %pangrams = (
              "Plain",                                                  "ASCII",
              "Zwölf große Boxkämpfer jagen Vik quer über den Sylter.", "DE",
@@ -39,20 +38,30 @@ Perl::Tidy::perltidy(
     argv        => '-nsyn',
 );
 
-ok($output, $expected_output);
+ok( $output, $expected_output );
 
-# Since default encoding is 'guess' and the source is a file of utf8, perltidy
-# will guess utf8 and decode the input. But we are comparing to a string which
-# is in character mode, so we do not want perltidy to encode the output in this
-# case and therefore must set -neos.
 Perl::Tidy::perltidy(
     source      => $FindBin::Bin . '/testwide.pl.src',
     destination => \$output,
     perltidyrc  => \$perltidyrc,
-    argv        => '-nsyn -neos',
+    argv        => '-nsyn',
 );
 
-ok($output, $expected_output);
+# We have to be careful here ...  In this test we are comparing $output to a
+# source string which is in character mode (since it is in this file declared
+# with 'use utf8'). We need to compare strings which have the same storage
+# mode.
+
+# The internal storage mode of $output was character mode (decoded) for
+# vesions prior to 20220217.02, but is byte mode (encoded) for the latest
+# version of perltidy.
+
+# The following statement will decode $output if it is stored in byte mode,
+# and leave it unchanged (and return an error) otherwise.  So this will work
+# with all version of perltidy.  See https://perldoc.perl.org/utf8
+utf8::decode($output);
+
+ok( $output, $expected_output );
 
 # Test writing encoded output to stdout with the -st flag
 # References: RT #133166, RT #133171, git #35
@@ -72,7 +81,7 @@ do {
         source => \$source,
         ##destination => ... we are using -st, so no destination is specified
         perltidyrc => \$perltidyrc,
-        argv       => '-nsyn -st',  # added -st
+        argv       => '-nsyn -st',    # added -st
     );
     close STDOUT;
 
@@ -83,5 +92,5 @@ do {
     while ( my $line = <TMP> ) { $output .= $line }
 };
 
-ok($output, $expected_output);
+ok( $output, $expected_output );
 

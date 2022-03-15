@@ -394,6 +394,25 @@ sub Warn_msg { my $msg = shift; $fh_stderr->print($msg); return }
 # Output Warn message and bump Warn count
 sub Warn { my $msg = shift; $fh_stderr->print($msg); $Warn_count++; return }
 
+sub is_char_mode {
+
+    my ($string) = @_;
+
+    # Returns:
+    #   true  if $string is in Perl's internal character mode
+    #         (also called the 'upgraded form', or UTF8=1)
+    #   false if $string is in Perl's internal byte mode
+
+    # This function isolates the call to Perl's internal function
+    # utf8::is_utf8() which is true for strings represented in an 'upgraded
+    # form'. It is available after Perl version 5.8.
+    # See https://perldoc.perl.org/Encode.
+    # See also comments in Carp.pm and other modules using this function
+
+    return 1 if ( utf8::is_utf8($string) );
+    return;
+}
+
 sub perltidy {
 
     my %input_hash = @_;
@@ -420,24 +439,36 @@ sub perltidy {
     );
 
     # Status information which can be returned for diagnostic purposes.
-    # This is still under development and has not been documented.
+    # This is intended for testing and subject to change.
 
-    # file_count         => number of files processed in this call
+    # List of "key => value" hash entries:
+
+    # Some relevant user input parameters for convenience:
     # opt_format         => value of --format: 'tidy', 'html', or 'user'
     # opt_encoding       => value of -enc flag: 'utf8', 'none', or 'guess'
     # opt_encode_output  => value of -eos flag: 'eos' or 'neos'
     # opt_max_iterations => value of --iterations=n
-    #
-    # If there are multiple files, these values will be for the last file:
-    # input_name         => display name of the input stream
-    # output_name        => display name of the output stream
-    # string_mode_source => 'byte' or 'char' : in which of Perl's two string
-    #   modes is the source ( after reading from any file.  Will be 'char'
-    #   mode if we received a string with utf8::is_utf8() set ).
-    # string_mode_used   => 'byte' or 'char' : in which of Perl's two string
-    #                        modes was the text processed?
+
+    # file_count         => number of files processed in this call
+
+    # If multiple files are processed, then the following values will be for
+    # the last file only:
+
+    # input_name         => name of the input stream
+    # output_name        => name of the output stream
+
+    # The following two variables refer to Perl's two internal string modes,
+    # and have the values 0 for 'byte' mode and 1 for 'char' mode:
+    # char_mode_source   => true if source is in 'char' mode. Will be false
+    #      unless we received a source string ref with utf8::is_utf8() set.
+    # char_mode_used     => true if text processed by perltidy in 'char' mode.
+    #      Normally true for text identified as utf8, otherwise false.
+
+    # These variables tell what utf8 decoding/encoding was done:
     # input_decoded_as   => non-blank if perltidy decoded the source text
     # output_encoded_as  => non-blank if perltidy encoded before return
+
+    # These variables are related to iterations and convergence testing:
     # iteration_count    => number of iterations done
     #                       ( can be from 1 to opt_max_iterations )
     # converged          => true if stopped on convergence
@@ -453,15 +484,15 @@ sub perltidy {
         opt_encode_output  => "",
         opt_max_iterations => "",
 
-        input_name         => "",
-        output_name        => "",
-        string_mode_source => 0,
-        string_mode_used   => "",
-        input_decoded_as   => "",
-        output_encoded_as  => "",
-        iteration_count    => 0,
-        converged          => 0,
-        blinking           => 0,
+        input_name        => "",
+        output_name       => "",
+        char_mode_source  => 0,
+        char_mode_used    => 0,
+        input_decoded_as  => "",
+        output_encoded_as => "",
+        iteration_count   => 0,
+        converged         => 0,
+        blinking          => 0,
     };
 
     # Fix for issue git #57
@@ -1066,23 +1097,22 @@ EOM
         my $remove_terminal_newline =
           !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
 
-        # Decode the input stream if necessary requested
+        # Decode the input stream if necessary or requested
         my $encoding_in              = "";
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
         my $encoding_log_message;
         my $decoded_input_as = "";
-        $rstatus->{'string_mode_source'} = 'byte';
+        $rstatus->{'char_mode_source'} = 0;
 
-        # Case 1: If the UTF8 flag is set, then Perl is already in a
-        # character-oriented mode for this string rather than a byte-oriented
-        # mode.  This can happen for example if the caller has decoded the
-        # string before calling perltidy.  In any case, our only option is to
-        # ignore any encoding flag.  See https://perldoc.perl.org/Encode.
-        # Note: you have to do this test within 'if' parens as below.  You
-        # can NOT use: my $flag = utf8::is_utf8($buf) - gives wrong result.
-        if ( utf8::is_utf8($buf) ) {
+        # Case 1: If Perl is already in a character-oriented mode for this
+        # string rather than a byte-oriented mode.  Normally, this happens if
+        # the caller has decoded a utf8 string before calling perltidy.  But it
+        # could also happen if the user has done some unusual manipulations of
+        # the source.  In any case, we will not attempt to decode it because
+        # that could result in an output string in a different mode.
+        if ( is_char_mode($buf) ) {
             $encoding_in = "utf8";
-            $rstatus->{'string_mode_source'} = 'char';
+            $rstatus->{'char_mode_source'} = 1;
         }
 
         # Case 2. No input stream encoding requested.  This is appropriate
@@ -1182,7 +1212,7 @@ EOM
 
         $rstatus->{'input_name'}       = $display_name;
         $rstatus->{'opt_encoding'}     = $rOpts_character_encoding;
-        $rstatus->{'string_mode_used'} = $encoding_in ? 'char' : 'byte';
+        $rstatus->{'char_mode_used'}   = $encoding_in ? 1 : 0;
         $rstatus->{'input_decoded_as'} = $decoded_input_as;
 
         # Define the function to determine the display width of character
@@ -2781,6 +2811,7 @@ sub generate_options {
       delete-old-newlines
       delete-semicolons
       extended-syntax
+      encode-output-strings
       function-paren-vertical-alignment
       fuzzy-line-length
       hanging-side-comments
