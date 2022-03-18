@@ -1515,8 +1515,8 @@ EOM
     #-------------------------------------------------------------------
     # The combination -xlp and -vmll can be unstable unless -iscl is set
     #-------------------------------------------------------------------
-    # This is a temporary fix for issue b1302.  See also b1306, b1310.
-    # FIXME: look for a better fix.
+    # This is a temporary fix for issue b1310. FIXME: look for a better fix.
+    # No longer needed for b1302, b1306.
     if (   $rOpts->{'variable-maximum-line-length'}
         && $rOpts->{'extended-line-up-parentheses'}
         && !$rOpts->{'ignore-side-comment-lengths'} )
@@ -10938,10 +10938,11 @@ sub collapsed_lengths {
                 ##    $Kend = $K_last;
                 ##}
 
-                $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+                # changed from $len to my $leng to fix b1302 b1306 b1317 b1321
+                my $leng = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
 
-                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+                if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
             }
         }
 
