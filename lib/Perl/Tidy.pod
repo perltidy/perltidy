@@ -130,8 +130,7 @@ For example, to set B<-eos> the following could be used
 The test on version allows older versions of Perl::Tidy to still be used.
 
 For some background information see
-L<https://github.com/perltidy/perltidy/issues/83> and
-L<https://github.com/houseabsolute/perl-code-tidyall/issues/84>.
+L<https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md>
 
 =item B<stderr>
 

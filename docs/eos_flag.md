@@ -24,11 +24,15 @@ For a filtering operation we expect to be able to directly compare the source an
 
 The problem is that in versions of perltidy prior to 2022 there was a use case
 where this was not possible.  That case was when perltidy received an encoded
-source string and decoded it from a utf8 but did not re-encode the output.  So
-the source string was in a different storage mode than the output string, and
-a direct comparison was not meaningful.
+source and decoded it from a utf8 but did not re-encode it before storing in
+the output string.  So the source string was in a different storage mode than
+the output string, and a direct comparison was not meaningful.
 
 This problem is an unintentional result of the historical evolution of perltidy and needs to be fixed.
+
+The same problem occurs if the destination is an array rather than a string,
+so for simplicity we can limit this discussion to string destinations, which
+are more common.
 
 ## How will the problem be fixed?
 
@@ -36,9 +40,9 @@ A fix is being phased in over a couple of steps. The first step was to
 introduce a new flag in in version 20220217.  The new flag is
 **--encode-output-strings**, or **-eos**.  When this is set, perltidy will fix
 the specific problem mentioned above by doing an encoding before returning.
-So perltidy will behave well as a filter when **-eos** is set.  In
-fact, a more intuitive name for the flag might have been **--be-a-nice-filter**. To
-illustrate using this flag in the above example, we could write
+So perltidy will behave well as a filter when **-eos** is set.
+
+To illustrate using this flag in the above example, we could write
 
 ```
     my $output;
@@ -62,7 +66,7 @@ The first step is safe because the default behavior is unchanged.  But the progr
 
 The second step, in which **-eos** becomes the default, will have no effect on programs which do not require perltidy to decode strings, and it will make some programs start processing encoded strings correctly.  But there is also the possibility of  **double encoding** of the output, or in other words data corruption, in some cases.  This could happen if an existing program already has already worked around this issue by encoding the output that it receives back from perltidy.  It is important to check for this.
 
-To see how common this problem might be, all programs on CPAN which use Perl::Tidy as a filter were examined.  Of a total of 43 programs located, one was identified for which the change in default would definitely cause double encoding, and in a couple of other programs it might be possible possible but it was difficult to determine.  The majority of programs would either not be affected or would start working correctly when processing encoded files. Here is a slightly revised version of the code for the program which would have a problem with double encoding with the new default:
+To see how common this problem might be, all programs on CPAN which use Perl::Tidy as a filter were examined.  Of a total of 45 programs located, one was identified for which the change in default would definitely cause double encoding, and in one program it was difficult to determine.  It looked like the rest of the programs would either not be affected or would start working correctly when processing encoded files.  Here is a slightly revised version of the code for the program which would have a problem with double encoding with the new default:
 
 ```
     my $output;
@@ -119,6 +123,10 @@ the default setting.  Programs which use Perl::Tidy as a
 filter can be tested right now with the new **-eos** flag to be sure that double
 encoding is not possible when the default is changed.
 
+## Reference
+
+This flag was originally introduced to fix a problem with the widely-used **tidyall** program (see https://github.com/houseabsolute/perl-code-tidyall/issues/84).
+
 ## Appendix, a little closer look
 
 A string of text (here, a Perl script) can be stored by Perl in one of two
@@ -139,10 +147,12 @@ the destination can only be in 'C' mode if the destination is a Perl program.
 
 Let us make a list of all possible sets of modes to be sure that all cases are
 covered.  If each of the three states could be in 'B' or 'C' mode then we
-would have a total of 2 x 2 x 2 = 8 combinations of states.  Here is a list of
-them, with a note indicating which ones are possible, and when:
+would have a total of 2 x 2 x 2 = 8 combinations of states.  Each end may
+either be a file or a string reference. Here is a list of them, with a note
+indicating which ones are possible, and when:
 
-    1 - B->B->B  always ok
+    #   modes    when
+    1 - B->B->B  always ok: (file or string )->(file or string)
     2 - B->B->C  never (trailing B->C never done)
     3 - B->C->B  ok if destination is a file or -eos is set     [NEW DEFAULT]
     4 - B->C->C  ok if destination is a string and -neos is set [OLD DEFAULT]
@@ -158,16 +168,18 @@ destination is a string:
     1 - B->B->B  ok
     3 - B->C->B  ok if -eos is set  [NEW DEFAULt]
     4 - B->C->C  ok if -neos is set [OLD DEFAULT]
-    8 - C->C->C  ok 
+    8 - C->C->C  string-to-string only
 
-From this we can see that, if **-eos** is set, then the problematic case 4 will
-not occur and the starting and ending states have the same storage mode for
-all routes through perltidy.  This verfies that perltidy work well as a filter in
-all cases when **-eos** flag.
+The first three of these may start at either a file or a string, and the last one only starts at a string.
 
-It is worth noting that programs which decode text before calling perltidy pass by the C->C->C route and are not influenced by the -eos flag setting. This is a fairly common usage pattern.
+From this we can see that, if **-eos** is set, then only cases 1, 3, and 8 can occur.  In that case the starting and ending states have the same storage mode for all routes through perltidy which end at a string.  This verfies that perltidy work well as a filter in all cases when **-eos** flag, which is the goal here.
 
-Also note that case 7, the C->C->B route, is an unusual but possible situation
-involving a source string being sent directly to a file.  It is the only
-situation in which perltidy does an encoding without having done a
-corresponding previous decoding.
+The last case in the table, the C->C->C route, corresponds to programs which pass decoded strings to perltidy. This is a common usage pattern, and this route is not influenced by the **-eos** flag setting, which it only applies to strings that have been decoded by perltidy itself.  So the full name of the flag, **--encode-output-strings**, is not the best because it does not describe what happens in this case.  It was difficult to find a concise name for this flag.  A more correct name would have been **--encode-output-strings-that-you-decode**, but that is too
+long.  A more intuitive name for the flag might have been **--be-a-nice-filter**.
+
+Referring back to the full table, note that case 7, the C->C->B route, is an
+unusual but possible situation involving a source string being sent directly
+to a file.  It is the only situation in which perltidy does an encoding
+without having done a corresponding previous decoding.
+
+
