@@ -9403,6 +9403,64 @@ $garage->add_path(
 --paren-tightness=2
 --paren-vertical-tightness-closing=2
 
+==> b1317.in <==
+# S1
+my %config = (
+  checkincludedtext =>
+    0,
+  includedcutoff => 40,
+  includedratio => 0.6,
+  quotere => '^[>:]',
+  antiquotere =>
+    '^[<]',    # so as not to reject dict(1) output
+);
+
+# S2
+my %config = (
+    checkincludedtext =>
+      0,
+    includedcutoff =>
+      40,
+    includedratio =>
+      0.6,
+    quotere => '^[>:]',
+    antiquotere =>
+      '^[<]',    # so as not to reject dict(1) output
+);
+
+==> b1317.par <==
+--extended-line-up-parentheses
+--maximum-line-length=19
+--variable-maximum-line-length
+
+==> b1321.in <==
+my $parser =
+  Pod::Markdown->new(
+
+       perldoc_fragment_format =>
+       'pod_simple_html',  # CodeRef ( $self, $text )
+       markdown_fragment_format =>
+       'pod_simple_html',  # CodeRef ( $self, $text )
+       include_meta_tags => 0,
+  );
+
+my $parser =
+  Pod::Markdown->new(
+
+                perldoc_fragment_format =>
+                'pod_simple_html', # CodeRef ( $self, $text )
+                markdown_fragment_format =>
+                'pod_simple_html'
+                ,    # CodeRef ( $self, $text )
+                include_meta_tags => 0,
+  );
+
+==> b1321.par <==
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=0
+--maximum-line-length=53
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
