@@ -140,10 +140,13 @@ it is processed by perltidy at three well-defined points:
     - at the intermediate stage as it is processed
     - when it is leaves to its destination
 
-Since 'C' mode only has meaning within Perl scripts, a rule is that
-outside of the realm of Perl the text must exist in 'B' mode.  So the source
-can only be in 'C' mode if it arrives by a call from another Perl program, and
-the destination can only be in 'C' mode if the destination is a Perl program.
+Since 'C' mode only has meaning within Perl scripts, a rule is that outside of
+the realm of Perl the text must exist in 'B' mode.  So the source can only be
+in 'C' mode if it arrives by a call from another Perl program, and the
+destination can only be in 'C' mode if the destination is a Perl program. If
+the destination is a file, or object with a print method, then it will be
+assumed to be ending its existance as a Perl string and will be placed in an
+end state which is 'B' mode.
 
 Let us make a list of all possible sets of modes to be sure that all cases are
 covered.  If each of the three states could be in 'B' or 'C' mode then we
@@ -181,5 +184,3 @@ Referring back to the full table, note that case 7, the C->C->B route, is an
 unusual but possible situation involving a source string being sent directly
 to a file.  It is the only situation in which perltidy does an encoding
 without having done a corresponding previous decoding.
-
-

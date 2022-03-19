@@ -196,7 +196,7 @@ sub streamhandle {
                     $New = sub { undef };
                     confess <<EOM;
 ------------------------------------------------------------------------
-No 'getline' method is defined for object of class $ref
+No 'getline' method is defined for object of class '$ref'
 Please check your call to Perl::Tidy::perltidy.  Trace follows.
 ------------------------------------------------------------------------
 EOM
@@ -216,7 +216,7 @@ EOM
                     $New = sub { undef };
                     confess <<EOM;
 ------------------------------------------------------------------------
-No 'print' method is defined for object of class $ref
+No 'print' method is defined for object of class '$ref'
 Please check your call to Perl::Tidy::perltidy. Trace follows.
 ------------------------------------------------------------------------
 EOM
@@ -1400,14 +1400,32 @@ EOM
         # possible encoding at the end of processing.
         my $destination_buffer;
         my $use_destination_buffer;
-        if (
-            ref($destination_stream)
-            && (   ref($destination_stream) eq 'SCALAR'
-                || ref($destination_stream) eq 'ARRAY' )
-          )
-        {
+        my $encode_destination_buffer;
+        my $ref_destination_stream = ref($destination_stream);
+        if ($ref_destination_stream) {
             $use_destination_buffer = 1;
             $output_file            = \$destination_buffer;
+
+            # Strings and arrays use special encoding rules
+            if (   $ref_destination_stream eq 'SCALAR'
+                || $ref_destination_stream eq 'ARRAY' )
+            {
+                $encode_destination_buffer =
+                  $rOpts->{'encode-output-strings'} && $decoded_input_as;
+            }
+
+            # An object with a print method will use file encoding rules
+            elsif ( $ref_destination_stream->can('print') ) {
+                $encode_destination_buffer = $is_encoded_data;
+            }
+            else {
+                confess <<EOM;
+------------------------------------------------------------------------
+No 'print' method is defined for object of class '$ref_destination_stream'
+Please check your call to Perl::Tidy::perltidy. Trace follows.
+------------------------------------------------------------------------
+EOM
+            }
         }
 
         $sink_object = Perl::Tidy::LineSink->new(
@@ -1796,7 +1814,7 @@ EOM
             # source, it encodes before returning.
             $rstatus->{'output_encoded_as'} = '';
 
-            if ( $rOpts->{'encode-output-strings'} && $decoded_input_as ) {
+            if ($encode_destination_buffer) {
                 my $encoded_buffer;
                 eval {
                     $encoded_buffer =
@@ -1815,13 +1833,25 @@ EOM
                 }
             }
 
-            # Final string storage
+            # Send data for SCALAR, ARRAY & OBJ refs to its final destination
             if ( ref($destination_stream) eq 'SCALAR' ) {
                 ${$destination_stream} = $destination_buffer;
             }
             else {
                 my @lines = split /^/, $destination_buffer;
-                @{$destination_stream} = @lines;
+                if ( ref($destination_stream) eq 'ARRAY' ) {
+                    @{$destination_stream} = @lines;
+                }
+
+                # destination is object with print method
+                else {
+                    foreach (@lines) {
+                        $destination_stream->print($_);
+                    }
+                    if ( $ref_destination_stream->can('close') ) {
+                        $destination_stream->close();
+                    }
+                }
             }
         }
         else {
