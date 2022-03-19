@@ -2358,8 +2358,8 @@ EOM
         && !$rkeep_break_hash->{')'}
         && !$rkeep_break_hash->{']'} )
     {
-        $rkeep_break_hash->{'('} = 1;
-        $rkeep_break_hash->{'['} = 1;
+        $rkeep_break_hash->{')'} = 1;
+        $rkeep_break_hash->{']'} = 1;
         Warn(<<EOM);
 Sorry, but the format for the -kbb and -kba flags is changing a little.
 You entered '}' which currently matches each of '}' ')' and ']',

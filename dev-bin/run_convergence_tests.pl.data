@@ -9461,6 +9461,23 @@ my $parser =
 --indent-columns=0
 --maximum-line-length=53
 
+==> b1327.in <==
+ @where=
+   $self->_where()->where_clause(
+                  'Fey::FakeDBI','no WHERE'
+   )if$self->_has_where();
+
+ @where=$self->_where()->where_clause(
+                  'Fey::FakeDBI','no WHERE'
+ )if$self->_has_where();
+
+==> b1327.par <==
+--noadd-whitespace
+--extended-line-up-parentheses
+--indent-columns=1
+--keep-old-breakpoints-after='} ) ]'
+--maximum-line-length=43
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
