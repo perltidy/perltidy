@@ -9433,6 +9433,31 @@ my %config = (
 --maximum-line-length=19
 --variable-maximum-line-length
 
+==> b1319.in <==
+# S1
+my @tests = (
+    {
+      expects => [
+                  sort qw/ Class::Moose::RoleList1 Class::Moose::RoleList2 /
+      ],
+    },
+);
+
+# S2
+my @tests = (
+          {
+            expects => [
+                         sort
+                                qw/ Class::Moose::RoleList1 Class::Moose::RoleList2 /
+            ],
+          },
+);
+
+==> b1319.par <==
+--continuation-indentation=7
+--extended-line-up-parentheses
+--keep-old-breakpoints-after='q'
+
 ==> b1321.in <==
 my $parser =
   Pod::Markdown->new(

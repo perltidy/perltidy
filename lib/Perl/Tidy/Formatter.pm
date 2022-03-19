@@ -10873,6 +10873,11 @@ sub collapsed_lengths {
                         $level_start_multiline_qw =
                           $rLL->[$K_start_multiline_qw]->[_LEVEL_];
                     }
+                    else {
+
+                        # Fix for b1319, b1320
+                        goto NOT_MULTILINE_QW;
+                    }
                 }
             }
 
@@ -10904,6 +10909,8 @@ sub collapsed_lengths {
             next if ( $K_begin_loop > $K_last );
 
         }
+
+      NOT_MULTILINE_QW:
         $K_start_multiline_qw = undef;
 
         # Find the terminal token, before any side comment
