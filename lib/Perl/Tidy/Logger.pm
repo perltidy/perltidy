@@ -7,7 +7,7 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
-our $VERSION = '20220217.01';
+our $VERSION = '20220217.02';
 
 sub AUTOLOAD {
 

@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 02 17.01
+## 2022 02 17.02
 
     - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
 
