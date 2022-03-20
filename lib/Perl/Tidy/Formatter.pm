@@ -1512,20 +1512,6 @@ EOM
         }
     }
 
-    #-------------------------------------------------------------------
-    # The combination -xlp and -vmll can be unstable unless -iscl is set
-    #-------------------------------------------------------------------
-    # This is a temporary fix for issue b1310. FIXME: look for a better fix.
-    # No longer needed for b1302, b1306.
-    if (   $rOpts->{'variable-maximum-line-length'}
-        && $rOpts->{'extended-line-up-parentheses'}
-        && !$rOpts->{'ignore-side-comment-lengths'} )
-    {
-        $rOpts->{'ignore-side-comment-lengths'} = 1;
-
-        # we could write a warning here
-    }
-
     #-----------------------------------------------------------
     # The combination -lp -vmll can be unstable if -ci<2 (b1267)
     #-----------------------------------------------------------
@@ -10807,6 +10793,7 @@ sub collapsed_lengths {
     my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
     my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
     my $rhas_broken_list           = $self->[_rhas_broken_list_];
+    my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
 
     my $K_start_multiline_qw;
     my $level_start_multiline_qw = 0;
@@ -11016,6 +11003,18 @@ sub collapsed_lengths {
                     #    temporary.  It seems better to let the formatting
                     #    stabilize by itself after one or two iterations.
                     #  - So, not doing this for now
+
+                    # Turn off the interrupted list rule if -vmll is set and a
+                    # list has '=>' characters.  This avoids instabilities due
+                    # to dependence on old line breaks; issue b1325.
+                    if (   $interrupted_list_rule
+                        && $rOpts_variable_maximum_line_length )
+                    {
+                        my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                        if ( $rtype_count && $rtype_count->{'=>'} ) {
+                            $interrupted_list_rule = 0;
+                        }
+                    }
 
                     # Include length to a comma ending this line
                     if (   $interrupted_list_rule

@@ -9486,6 +9486,37 @@ my $parser =
 --indent-columns=0
 --maximum-line-length=53
 
+==> b1325.in <==
+WriteMakefile(
+   PREREQ_PM    => {
+           'Tk'            =>'800.025',
+           'Tk::DiffText'  => 0,
+           'Perl::Tidy'    => 0, # comes in the perltidy application
+           'Log::Log4perl' => '1.0',
+           'version'       => 0, # used to detect old Tk's and use different widgets where required
+   },
+);
+
+WriteMakefile(
+   PREREQ_PM    => {
+      'Tk'            =>
+            '800.025',
+      'Tk::DiffText'  => 0,
+      'Perl::Tidy'    => 0, # comes in the perltidy application
+      'Log::Log4perl' => '1.0',
+      'version'       => 0, # used to detect old Tk's and use different widgets where required
+   },
+);
+
+==> b1325.par <==
+--noadd-whitespace
+--continuation-indentation=6
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=3
+--maximum-line-length=33
+--variable-maximum-line-length
+
 ==> b1327.in <==
  @where=
    $self->_where()->where_clause(
