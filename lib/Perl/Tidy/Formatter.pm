@@ -20956,7 +20956,26 @@ sub get_available_spaces_to_go {
                 # type, see if it would be helpful to 'break' after the '=' to
                 # save space
                 my $last_equals = $last_lp_equals{$total_depth};
-                if ( $last_equals && $last_equals > $ii_begin_line ) {
+
+                # Skip an empty set of parens, such as after channel():
+                #   my $exchange = $self->_channel()->exchange(
+                # This fixes issues b1318 b1322 b1323 b1328
+                # TODO: maybe also skip parens with just one token?
+                my $is_empty_container;
+                if ( $last_equals && $ii < $max_index_to_go ) {
+                    my $seqno    = $type_sequence_to_go[$ii];
+                    my $inext_nb = $ii + 1;
+                    $inext_nb++
+                      if ( $types_to_go[$inext_nb] eq 'b' );
+                    my $seqno_nb = $type_sequence_to_go[$inext_nb];
+                    $is_empty_container =
+                      $seqno && $seqno_nb && $seqno_nb == $seqno;
+                }
+
+                if (   $last_equals
+                    && $last_equals > $ii_begin_line
+                    && !$is_empty_container )
+                {
 
                     my $seqno = $type_sequence_to_go[$ii];
 

@@ -9433,6 +9433,22 @@ my %config = (
 --maximum-line-length=19
 --variable-maximum-line-length
 
+==> b1318.in <==
+        my $h = $integerValue->copy()->bmod(
+                                            '16'
+        )->bstr();
+
+        my $h =
+          $integerValue->copy()->bmod(
+                                      '16'
+        )->bstr();
+
+==> b1318.par <==
+--extended-line-up-parentheses
+--keep-old-breakpoints-before='Q'
+--maximum-line-length=61
+--variable-maximum-line-length
+
 ==> b1319.in <==
 # S1
 my @tests = (
@@ -9485,6 +9501,23 @@ my $parser =
 --extended-line-up-parentheses
 --indent-columns=0
 --maximum-line-length=53
+
+==> b1322.in <==
+    my$result
+      =$self->bus()->connection_settermchar(
+        $self->connection_handle(),$termchar
+      );
+
+    my$result=$self->bus()->connection_settermchar(
+        $self->connection_handle(),$termchar
+    );
+
+==> b1322.par <==
+--noadd-whitespace
+--extended-line-up-parentheses
+--keep-old-breakpoints-before='i'
+--maximum-line-length=53
+--want-break-before='='
 
 ==> b1324.in <==
     if (
@@ -9574,6 +9607,22 @@ WriteMakefile(
 --indent-columns=1
 --keep-old-breakpoints-after='} ) ]'
 --maximum-line-length=43
+
+==> b1328.in <==
+    my $exchange = $self->_channel()->exchange(
+                                               name => $self->_fq_name('order'),
+    );
+
+    my $exchange
+      = $self->_channel()->exchange(
+                                    name => $self->_fq_name('order'),
+      );
+
+==> b1328.par <==
+--extended-line-up-parentheses
+--keep-old-breakpoints-after='('
+--variable-maximum-line-length
+--want-break-before='='
 
 ==> b140.in <==
 $cmd[ $i ]=[
