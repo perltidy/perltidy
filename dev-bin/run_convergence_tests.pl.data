@@ -9486,6 +9486,47 @@ my $parser =
 --indent-columns=0
 --maximum-line-length=53
 
+==> b1324.in <==
+    if (
+        blessed(
+            $element->statement )
+        and
+        $element->statement
+        ->isa(
+'PPI::Statement::Variable'
+        )
+        and
+        $element->statement
+        ->type eq 'our'
+        and any {
+            $_->symbol eq '@ISA'
+        } $element->statement
+        ->symbols
+      );
+
+    if (
+        blessed(
+            $element->statement )
+        and
+        $element->statement
+        ->isa(
+'PPI::Statement::Variable'
+        )
+        and
+        $element->statement
+        ->type eq 'our'
+        and any
+        {
+            $_->symbol eq '@ISA'
+        } $element->statement
+        ->symbols
+      );
+
+==> b1324.par <==
+--break-before-all-operators
+--maximum-line-length=22
+--variable-maximum-line-length
+
 ==> b1325.in <==
 WriteMakefile(
    PREREQ_PM    => {

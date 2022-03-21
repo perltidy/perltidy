@@ -15114,19 +15114,19 @@ sub break_all_chain_tokens {
         $typer = '+' if ( $typer eq '-' );
         $typel = '*' if ( $typel eq '/' );    # treat * and / the same
         $typer = '*' if ( $typer eq '/' );
-        my $tokenl = $tokens_to_go[$il];
-        my $tokenr = $tokens_to_go[$ir];
 
-        if ( $is_chain_operator{$tokenl} && $want_break_before{$typel} ) {
+        my $keyl = $typel eq 'k' ? $tokens_to_go[$il] : $typel;
+        my $keyr = $typer eq 'k' ? $tokens_to_go[$ir] : $typer;
+        if ( $is_chain_operator{$keyl} && $want_break_before{$typel} ) {
             next if ( $typel eq '?' );
-            push @{ $left_chain_type{$typel} }, $il;
-            $saw_chain_type{$typel} = 1;
+            push @{ $left_chain_type{$keyl} }, $il;
+            $saw_chain_type{$keyl} = 1;
             $count++;
         }
-        if ( $is_chain_operator{$tokenr} && !$want_break_before{$typer} ) {
+        if ( $is_chain_operator{$keyr} && !$want_break_before{$typer} ) {
             next if ( $typer eq '?' );
-            push @{ $right_chain_type{$typer} }, $ir;
-            $saw_chain_type{$typer} = 1;
+            push @{ $right_chain_type{$keyr} }, $ir;
+            $saw_chain_type{$keyr} = 1;
             $count++;
         }
     }
@@ -15139,10 +15139,11 @@ sub break_all_chain_tokens {
         my $ir = $ri_right->[$n];
         foreach my $i ( $il + 1 .. $ir - 1 ) {
             my $type = $types_to_go[$i];
-            $type = '+' if ( $type eq '-' );
-            $type = '*' if ( $type eq '/' );
-            if ( $saw_chain_type{$type} ) {
-                push @{ $interior_chain_type{$type} }, $i;
+            my $key  = $type eq 'k' ? $tokens_to_go[$i] : $type;
+            $key = '+' if ( $key eq '-' );
+            $key = '*' if ( $key eq '/' );
+            if ( $saw_chain_type{$key} ) {
+                push @{ $interior_chain_type{$key} }, $i;
                 $count++;
             }
         }
@@ -15153,20 +15154,20 @@ sub break_all_chain_tokens {
     my @insert_list;
 
     # loop over all chain types
-    foreach my $type ( keys %saw_chain_type ) {
+    foreach my $key ( keys %saw_chain_type ) {
 
         # quit if just ONE continuation line with leading .  For example--
         # print LATEXFILE '\framebox{\parbox[c][' . $h . '][t]{' . $w . '}{'
         #  . $contents;
-        last if ( $nmax == 1 && $type =~ /^[\.\+]$/ );
+        last if ( $nmax == 1 && $key =~ /^[\.\+]$/ );
 
         # loop over all interior chain tokens
-        foreach my $itest ( @{ $interior_chain_type{$type} } ) {
+        foreach my $itest ( @{ $interior_chain_type{$key} } ) {
 
             # loop over all left end tokens of same type
-            if ( $left_chain_type{$type} ) {
+            if ( $left_chain_type{$key} ) {
                 next if $nobreak_to_go[ $itest - 1 ];
-                foreach my $i ( @{ $left_chain_type{$type} } ) {
+                foreach my $i ( @{ $left_chain_type{$key} } ) {
                     next unless $self->in_same_container_i( $i, $itest );
                     push @insert_list, $itest - 1;
 
@@ -15178,7 +15179,7 @@ sub break_all_chain_tokens {
                     #     ( $_ & 1 ) ? ( $_ & 4 ) ? $THRf_DEAD : $THRf_ZOMBIE
                     #   : ( $_ & 4 ) ? $THRf_R_DETACHED
                     #   :              $THRf_R_JOINABLE;
-                    if (   $type eq ':'
+                    if (   $key eq ':'
                         && $levels_to_go[$i] != $levels_to_go[$itest] )
                     {
                         my $i_question = $mate_index_to_go[$itest];
@@ -15191,14 +15192,14 @@ sub break_all_chain_tokens {
             }
 
             # loop over all right end tokens of same type
-            if ( $right_chain_type{$type} ) {
+            if ( $right_chain_type{$key} ) {
                 next if $nobreak_to_go[$itest];
-                foreach my $i ( @{ $right_chain_type{$type} } ) {
+                foreach my $i ( @{ $right_chain_type{$key} } ) {
                     next unless $self->in_same_container_i( $i, $itest );
                     push @insert_list, $itest;
 
                     # break at matching ? if this : is at a different level
-                    if (   $type eq ':'
+                    if (   $key eq ':'
                         && $levels_to_go[$i] != $levels_to_go[$itest] )
                     {
                         my $i_question = $mate_index_to_go[$itest];
@@ -15378,10 +15379,9 @@ sub break_equals {
         my $il     = $ri_left->[$n];
         my $typel  = $types_to_go[$il];
         my $tokenl = $tokens_to_go[$il];
+        my $keyl   = $typel eq 'k' ? $tokenl : $typel;
 
-        my $has_leading_op = ( $tokenl =~ /^\w/ )
-          ? $is_chain_operator{$tokenl}    # + - * / : ? && ||
-          : $is_chain_operator{$typel};    # and, or
+        my $has_leading_op = $is_chain_operator{$keyl};
         return unless ($has_leading_op);
         if ( $n > 1 ) {
             return
