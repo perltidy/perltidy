@@ -16145,6 +16145,10 @@ sub break_equals {
 
                             # handle '.' and '?' specially below
                             || ( $type_ibeg_2 =~ /^[\.\?]$/ )
+
+                            # fix for c054 (unusual -pbp case)
+                            || $type_ibeg_2 eq '=='
+
                           );
                     }
 
