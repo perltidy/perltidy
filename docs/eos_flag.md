@@ -22,9 +22,13 @@ For a filtering operation we expect to be able to directly compare the source an
     if ($output eq $source) {print "Your formatting is unchanged\n";}
 ```
 
+Or we might want to optionally skip the filtering step and pass the source
+directly on to the next stage of processing.  This requires that the source
+and output strings be in the same storage mode.
+
 The problem is that in versions of perltidy prior to 2022 there was a use case
 where this was not possible.  That case was when perltidy received an encoded
-source and decoded it from a utf8 but did not re-encode it before storing in
+source and decoded it from a utf8 but did not re-encode it before storing it in
 the output string.  So the source string was in a different storage mode than
 the output string, and a direct comparison was not meaningful.
 
@@ -84,7 +88,7 @@ To see how common this problem might be, all programs on CPAN which use Perl::Ti
 ```
 
 The problem is in the last line where encoding is done after the call to perltidy.  This
-encoding operation was added by the author to compensate for the lack of an
+encoding operation was added by the module author to compensate for the lack of an
 encoding step with the old default behavior.  But if we run this code with
 **-eos**, which is the planned new default, encoding will also be done by perltidy before
 it returns, with the result that `$output` gets double encoding.  This must be avoided. Here
@@ -130,29 +134,39 @@ This flag was originally introduced to fix a problem with the widely-used **tidy
 ## Appendix, a little closer look
 
 A string of text (here, a Perl script) can be stored by Perl in one of two
-internal storage formats.  For simplicity let's call them 'B' mode (for
-'Byte') mode and 'C' mode (for 'Character').  The 'C' mode is needed for
-working with multi-byte characters.  Thinking of a Perl script as a single
-long string of text, we can look at the mode of the text of a source script as
-it is processed by perltidy at three well-defined points:
+internal storage formats.  For simplicity let's call them 'B' mode (for 'Byte')
+mode and 'C' mode (for 'Character').  The 'B' mode can be used for text with
+single-byte characters or for storing an encoded string of multi-byte
+characters.  The 'C' mode is needed for actually working with multi-byte
+characters.  Thinking of a Perl script as a single long string of text, we can
+look at the mode of the text of a source script as it is processed by perltidy
+at three points as it is processed by perltidy:
 
     - when it enters as a source
     - at the intermediate stage as it is processed
     - when it is leaves to its destination
 
 Since 'C' mode only has meaning within Perl scripts, a rule is that outside of
-the realm of Perl the text must exist in 'B' mode.  So the source can only be
-in 'C' mode if it arrives by a call from another Perl program, and the
-destination can only be in 'C' mode if the destination is a Perl program. If
-the destination is a file, or object with a print method, then it will be
-assumed to be ending its existance as a Perl string and will be placed in an
-end state which is 'B' mode.
+the realm of Perl the text must be stored in 'B' mode.
 
-Let us make a list of all possible sets of modes to be sure that all cases are
-covered.  If each of the three states could be in 'B' or 'C' mode then we
-would have a total of 2 x 2 x 2 = 8 combinations of states.  Each end may
-either be a file or a string reference. Here is a list of them, with a note
-indicating which ones are possible, and when:
+The source can only be in 'C' mode if it arrives by a call from another Perl
+program, and the destination can only be in 'C' mode if the destination is a
+Perl program.  Otherwise, if the destination is a file, or object with a print
+method, then it will be assumed to be ending its existance as a Perl string and
+will be placed in an end state which is 'B' mode.
+
+Transition from a starting 'B' mode to 'C' mode is done by a decoding operation
+according to the user settings. A transition from an intermediate 'C' mode to
+an ending 'B' mode is done by an encoding operation.  It never makes sense to
+transition from a starting 'C' mode to a 'B' mode, or from an intermediate 'B'
+mode to an ending 'C' mode.
+
+Let us make a list of all possible sets of string storage modes to be sure that
+all cases are covered.  If each of the three stages list above (entry,
+intermedite, and exit) could be in 'B' or 'C' mode then we would have a total
+of 2 x 2 x 2 = 8 combinations of states.  Each end point may either be a file
+or a string reference. Here is a list of them, with a note indicating which
+ones are possible, and when:
 
     #   modes    when
     1 - B->B->B  always ok: (file or string )->(file or string)
@@ -165,7 +179,7 @@ indicating which ones are possible, and when:
     8 - C->C->C  only for string-to-string
 
 So three of these cases (2, 5, and 6) cannot occur and the other five can
-occur.  Of these five possible cases, four are possible when the
+occur.  Of these five possible cases, only four are possible when the
 destination is a string:
 
     1 - B->B->B  ok
@@ -175,12 +189,19 @@ destination is a string:
 
 The first three of these may start at either a file or a string, and the last one only starts at a string.
 
-From this we can see that, if **-eos** is set, then only cases 1, 3, and 8 can occur.  In that case the starting and ending states have the same storage mode for all routes through perltidy which end at a string.  This verfies that perltidy work well as a filter in all cases when **-eos** flag, which is the goal here.
+From this we can see that, if **-eos** is set, then only cases 1, 3, and 8 can occur.  In that case the starting and ending states have the same storage mode for all routes through perltidy which end at a string.  This verfies that perltidy will work well as a filter in all cases when **-eos** flag, which is the goal here.
 
-The last case in the table, the C->C->C route, corresponds to programs which pass decoded strings to perltidy. This is a common usage pattern, and this route is not influenced by the **-eos** flag setting, which it only applies to strings that have been decoded by perltidy itself.  So the full name of the flag, **--encode-output-strings**, is not the best because it does not describe what happens in this case.  It was difficult to find a concise name for this flag.  A more correct name would have been **--encode-output-strings-that-you-decode**, but that is too
-long.  A more intuitive name for the flag might have been **--be-a-nice-filter**.
+The last case in this table, the C->C->C route, corresponds to programs which
+pass decoded strings to perltidy. This is a common usage pattern, and this
+route is not influenced by the **-eos** flag setting, since it only applies to
+strings that have been decoded by perltidy itself.  So the full name of the
+flag, **--encode-output-strings**, is not the best because it does not describe
+what happens in this case.  It was difficult to find a concise name for this
+flag.  A more correct name would have been
+**--encode-output-strings-that-you-decode**, but that is rather long.  A more
+intuitive name for the flag might have been **--be-a-nice-filter**.
 
-Referring back to the full table, note that case 7, the C->C->B route, is an
-unusual but possible situation involving a source string being sent directly
-to a file.  It is the only situation in which perltidy does an encoding
-without having done a corresponding previous decoding.
+Finally, note that case 7 in the full table, the C->C->B route, is an unusual
+but possible situation involving a source string being sent directly to a file.
+It is the only situation in which perltidy does an encoding without having done
+a corresponding previous decoding.
