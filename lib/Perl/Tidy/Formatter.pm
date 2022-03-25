@@ -10916,9 +10916,12 @@ sub collapsed_lengths {
                 defined($K_c)
                 && $rLL->[$K_terminal]->[_TYPE_] eq ','
 
-                # Ignore a terminal comma, causes instability (b1297)
-                && (   $K_c - $K_terminal > 2
-                    || $rLL->[ $K_terminal + 1 ]->[_TYPE_] eq 'b' )
+                # Ignore a terminal comma, causes instability (b1297, b1330)
+                && (
+                    $K_c - $K_terminal > 2
+                    || (   $K_c - $K_terminal == 2
+                        && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
+                )
               )
             {
                 my $Kend = $K_terminal;

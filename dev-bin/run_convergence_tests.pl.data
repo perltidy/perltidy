@@ -9624,6 +9624,25 @@ WriteMakefile(
 --variable-maximum-line-length
 --want-break-before='='
 
+==> b1330.in <==
+  print $tbl->render_row(
+    [    #
+      "$STATUS->{$status}->[2] $STATUS->{$status}->[0] $RESET",
+      "$STATUS->{$status}->[2]  @{[ $total->{data}->{$status} // 0 ]}  $RESET",
+    ]
+  );
+
+  print $tbl->render_row(
+   [    #
+     "$STATUS->{$status}->[2] $STATUS->{$status}->[0] $RESET",
+     "$STATUS->{$status}->[2]  @{[ $total->{data}->{$status} // 0 ]}  $RESET", ]
+  );
+
+==> b1330.par <==
+--extended-line-up-parentheses
+--indent-columns=1
+--square-bracket-vertical-tightness-closing=1
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
