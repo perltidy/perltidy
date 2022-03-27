@@ -327,7 +327,6 @@ my (
     $max_index_to_go,
     @block_type_to_go,
     @type_sequence_to_go,
-    @bond_strength_to_go,
     @forced_breakpoint_to_go,
     @token_lengths_to_go,
     @summed_lengths_to_go,
@@ -3972,7 +3971,9 @@ EOM
 
     sub set_bond_strengths {
 
-        my ($self) = @_;
+        my ( $self, $rcomma_bias_to_go ) = @_;
+
+        my $rbond_strength_to_go = [];
 
         my $rK_weld_right = $self->[_rK_weld_right_];
         my $rK_weld_left  = $self->[_rK_weld_left_];
@@ -4010,7 +4011,7 @@ EOM
 
             # strength on both sides of a blank is the same
             if ( $type eq 'b' && $last_type ne 'b' ) {
-                $bond_strength_to_go[$i] = $bond_strength_to_go[ $i - 1 ];
+                $rbond_strength_to_go->[$i] = $rbond_strength_to_go->[ $i - 1 ];
                 $nobreak_to_go[$i] ||= $nobreak_to_go[ $i - 1 ]; # fix for b1257
                 next;
             }
@@ -4106,12 +4107,12 @@ EOM
             if ( $type eq '||' || $type eq 'k' && $token eq 'or' ) {
                 if ( $next_nonblank_token =~ /^(die|confess|croak|warn)$/ ) {
                     if ( $want_break_before{$token} && $i > 0 ) {
-                        $bond_strength_to_go[ $i - 1 ] -= $delta_bias;
+                        $rbond_strength_to_go->[ $i - 1 ] -= $delta_bias;
 
                         # keep bond strength of a token and its following blank
                         # the same
                         if ( $types_to_go[ $i - 1 ] eq 'b' && $i > 2 ) {
-                            $bond_strength_to_go[ $i - 2 ] -= $delta_bias;
+                            $rbond_strength_to_go->[ $i - 2 ] -= $delta_bias;
                         }
                     }
                     else {
@@ -4367,10 +4368,10 @@ EOM
                   : $next_nonblank_token
               : $next_nonblank_type;
 
-            if ( $type eq ',' ) {
+            if ( $type eq ',' && $rcomma_bias_to_go->[$i] ) {
 
                 # add any bias set by sub break_lists at old comma break points
-                $bond_str += $bond_strength_to_go[$i];
+                $bond_str += $rcomma_bias_to_go->[$i];
 
             }
 
@@ -4457,7 +4458,7 @@ EOM
             # always break after side comment
             if ( $type eq '#' ) { $strength = 0 }
 
-            $bond_strength_to_go[$i] = $strength;
+            $rbond_strength_to_go->[$i] = $strength;
 
             # Fix for case c001: be sure NO_BREAK's are enforced by later
             # routines, except at a '?' because '?' as quote delimiter is
@@ -4477,7 +4478,7 @@ EOM
             };
 
         } ## end main loop
-        return;
+        return $rbond_strength_to_go;
     } ## end sub set_bond_strengths
 } ## end closure set_bond_strengths
 
@@ -12165,7 +12166,6 @@ EOM
         0 && do { #<<<
         @block_type_to_go        = ();
         @type_sequence_to_go     = ();
-        @bond_strength_to_go     = ();
         @forced_breakpoint_to_go = ();
         @token_lengths_to_go     = ();
         @levels_to_go            = ();
@@ -14407,9 +14407,8 @@ EOM
         @unmatched_opening_indexes_in_this_batch = ();
 
         for ( my $i = 0 ; $i <= $max_index_to_go ; $i++ ) {
-            $bond_strength_to_go[$i] = 0;
-            $iprev_to_go[$i]         = $ilast_nonblank;
-            $inext_to_go[$i]         = $i + 1;
+            $iprev_to_go[$i] = $ilast_nonblank;
+            $inext_to_go[$i] = $i + 1;
 
             my $type = $types_to_go[$i];
             if ( $type ne 'b' ) {
@@ -14699,6 +14698,7 @@ EOM
               $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
         }
 
+        my $rcomma_bias_to_go = [];
         if (
                $is_long_line
             || $old_line_count_in_batch > 1
@@ -14725,7 +14725,7 @@ EOM
             $self->pad_array_to_go();
             $called_pad_array_to_go = 1;
 
-            my $sgb = $self->break_lists($is_long_line);
+            my $sgb = $self->break_lists( $is_long_line, $rcomma_bias_to_go );
             $saw_good_break ||= $sgb;
         }
 
@@ -14768,8 +14768,9 @@ EOM
             # already done so
             $self->pad_array_to_go() unless ($called_pad_array_to_go);
 
-            ( $ri_first, $ri_last ) =
-              $self->break_long_lines( $saw_good_break, \@colon_list );
+            ( $ri_first, $ri_last, my $rbond_strength_to_go ) =
+              $self->break_long_lines( $saw_good_break, \@colon_list,
+                $rcomma_bias_to_go );
 
             $self->break_all_chain_tokens( $ri_first, $ri_last );
 
@@ -14777,7 +14778,8 @@ EOM
 
             # now we do a correction step to clean this up a bit
             # (The only time we would not do this is for debugging)
-            $self->recombine_breakpoints( $ri_first, $ri_last )
+            $self->recombine_breakpoints( $ri_first, $ri_last,
+                $rbond_strength_to_go )
               if ( $rOpts_recombine && @{$ri_first} > 1 );
 
             $self->insert_final_ternary_breaks( $ri_first, $ri_last )
@@ -15591,7 +15593,7 @@ sub break_equals {
         # We are given indexes to the current lines:
         #  $ri_beg = ref to array of BEGinning indexes of each line
         #  $ri_end = ref to array of ENDing indexes of each line
-        my ( $self, $ri_beg, $ri_end ) = @_;
+        my ( $self, $ri_beg, $ri_end, $rbond_strength_to_go ) = @_;
 
         # sub break_long_lines is very liberal in setting line breaks
         # for long lines, always setting breaks at good breakpoints, even
@@ -16695,7 +16697,7 @@ sub break_equals {
                     # honor hard breakpoints
                     next if ( $forced_breakpoint_to_go[$iend_1] > 0 );
 
-                    my $bs = $bond_strength_to_go[$iend_1] + $bs_tweak;
+                    my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
 
                  # Require a few extra spaces before recombining lines if we are
                  # at an old breakpoint unless this is a simple list or terminal
@@ -17382,7 +17384,7 @@ sub break_long_lines {
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
 
-    my ( $self, $saw_good_break, $rcolon_list ) = @_;
+    my ( $self, $saw_good_break, $rcolon_list, $rcomma_bias_to_go ) = @_;
 
     # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
     # order.
@@ -17394,7 +17396,7 @@ sub break_long_lines {
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
 
-    $self->set_bond_strengths();
+    my $rbond_strength_to_go = $self->set_bond_strengths($rcomma_bias_to_go);
 
     my $imin = 0;
     my $imax = $max_index_to_go;
@@ -17447,7 +17449,7 @@ sub break_long_lines {
         {
             my $i_next_nonblank = $inext_to_go[$i_begin];
             if ( $tokens_to_go[$i_next_nonblank] eq '(' ) {
-                $bond_strength_to_go[$i_begin] = NO_BREAK;
+                $rbond_strength_to_go->[$i_begin] = NO_BREAK;
             }
         }
 
@@ -17469,7 +17471,7 @@ sub break_long_lines {
             # we must keep the bond strength of a token and its following blank
             # the same;
             my $last_strength = $strength;
-            $strength = $bond_strength_to_go[$i_test];
+            $strength = $rbond_strength_to_go->[$i_test];
             if ( $type eq 'b' ) { $strength = $last_strength }
 
             # reduce strength a bit to break ties at an old comma breakpoint ...
@@ -18019,7 +18021,7 @@ sub break_long_lines {
             }
         }
     }
-    return ( \@i_first, \@i_last );
+    return ( \@i_first, \@i_last, $rbond_strength_to_go );
 }
 
 ###########################################
@@ -18181,7 +18183,7 @@ sub break_long_lines {
     #     be broken open
     sub set_comma_breakpoints {
 
-        my ( $self, $dd ) = @_;
+        my ( $self, $dd, $rcomma_bias_to_go ) = @_;
         my $bp_count           = 0;
         my $do_not_break_apart = 0;
 
@@ -18197,7 +18199,7 @@ sub break_long_lines {
 
             # handle commas not in containers...
             if ( $dont_align[$dd] ) {
-                $self->do_uncontained_comma_breaks($dd);
+                $self->do_uncontained_comma_breaks( $dd, $rcomma_bias_to_go );
             }
 
             # handle commas within containers...
@@ -18259,13 +18261,13 @@ sub break_long_lines {
         # won't work very well. However, the user can always
         # prevent following the old breakpoints with the
         # -iob flag.
-        my ( $self, $dd ) = @_;
+        my ( $self, $dd, $rcomma_bias_to_go ) = @_;
         my $bias                  = -.01;
         my $old_comma_break_count = 0;
         foreach my $ii ( @{ $comma_index[$dd] } ) {
             if ( $old_breakpoint_to_go[$ii] ) {
                 $old_comma_break_count++;
-                $bond_strength_to_go[$ii] = $bias;
+                $rcomma_bias_to_go->[$ii] = $bias;
 
                 # reduce bias magnitude to force breaks in order
                 $bias *= 0.99;
@@ -18433,7 +18435,7 @@ sub break_long_lines {
 
     sub break_lists {
 
-        my ( $self, $is_long_line ) = @_;
+        my ( $self, $is_long_line, $rcomma_bias_to_go ) = @_;
 
         #----------------------------------------------------------------------
         # This routine is called once per batch, if the batch is a list, to set
@@ -18888,7 +18890,8 @@ EOM
 
                 # set breaks at commas if necessary
                 my ( $bp_count, $do_not_break_apart ) =
-                  $self->set_comma_breakpoints($current_depth);
+                  $self->set_comma_breakpoints( $current_depth,
+                    $rcomma_bias_to_go );
 
                 my $i_opening = $opening_structure_index_stack[$current_depth];
                 my $saw_opening_structure = ( $i_opening >= 0 );
@@ -19467,7 +19470,7 @@ EOM
 
             $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
-            $self->set_comma_breakpoints($dd);
+            $self->set_comma_breakpoints( $dd, $rcomma_bias_to_go );
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
             $self->set_for_semicolon_breakpoints($dd);
