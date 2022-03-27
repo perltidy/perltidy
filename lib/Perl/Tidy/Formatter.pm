@@ -3287,12 +3287,10 @@ EOM
 
                 # keep a space between a token ending in '$' and any word;
                 # this caused trouble:  "die @$ if $@"
-                ##|| $typel eq 'i' && $tokenl =~ /\$$/
                 || $typel eq 'i' && substr( $tokenl, -1, 1 ) eq '$'
 
                 # don't combine $$ or $# with any alphanumeric
                 # (testfile mangle.t with --mangle)
-                ##|| $tokenl =~ /^\$[\$\#]$/
                 || $tokenl eq '$$'
                 || $tokenl eq '$#'
 
@@ -3319,7 +3317,6 @@ EOM
 
           # perl is very fussy about spaces before <<
           || substr( $tokenr, 0, 2 ) eq '<<'
-          ##|| $tokenr =~ /^\<\</
 
           # avoid combining tokens to create new meanings. Example:
           #     $a+ +$b must not become $a++$b
@@ -3368,11 +3365,9 @@ EOM
 
           # be careful with a space around ++ and --, to avoid ambiguity as to
           # which token it applies
-          ##|| $typer =~ /^(pp|mm)$/     && $tokenl !~ /^[\;\{\(\[]/
           || ( $typer eq 'pp' || $typer eq 'mm' ) && $tokenl !~ /^[\;\{\(\[]/
           || ( $typel eq '++' || $typel eq '--' )
           && $tokenr !~ /^[\;\}\)\]]/
-          ##|| $typel =~ /^(\+\+|\-\-)$/ && $tokenr !~ /^[\;\}\)\]]/
 
           # need space after foreach my; for example, this will fail in
           # older versions of Perl:
@@ -3381,7 +3376,6 @@ EOM
             $tokenl eq 'my'
 
             && substr( $tokenr, 0, 1 ) eq '$'
-            ##&& $tokenr =~ /^\$/
 
             #  /^(for|foreach)$/
             && $is_for_foreach{$tokenll}
@@ -18236,12 +18230,9 @@ sub break_long_lines {
 
     # These types are excluded at breakpoints to prevent blinking
     # Switched from excluded to included as part of fix for b1214
-    ##my %is_uncontained_comma_break_excluded_type;
     my %is_uncontained_comma_break_included_type;
 
     BEGIN {
-        ##my @q = qw< L { ( [ ? : + - =~ >;
-        ##@is_uncontained_comma_break_excluded_type{@q} = (1) x scalar(@q);
 
         my @q = qw< k R } ) ] Y Z U w i q Q .
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=>;
@@ -18361,8 +18352,6 @@ sub break_long_lines {
 
                     # Switched from excluded to included for b1214. If necessary
                     # the token could also be checked if type_m eq 'k'
-                    ##if ( !$is_uncontained_comma_break_excluded_type{$type_m} ) {
-                    ##my $token_m = $tokens_to_go[$ibreak_m];
                     if ( $is_uncontained_comma_break_included_type{$type_m} ) {
                         $self->set_forced_breakpoint($ibreak);
                     }
@@ -18938,8 +18927,8 @@ EOM
                     # Do not break hash braces under stress (fixes b1238)
                     $do_not_break_apart ||= $types_to_go[$i_opening] eq 'L';
 
-                   # This option fixes b1235, b1237, b1240 with old and new -lp,
-                   # but formatting is nicer with next option.
+                    # This option fixes b1235, b1237, b1240 with old and new
+                    # -lp, but formatting is nicer with next option.
                     ## $is_long_term ||=
                     ##  $levels_to_go[$i_opening] > $stress_level_beta + 1;
 
@@ -19575,8 +19564,6 @@ sub find_token_starting_list {
         # to the flag --space-function-paren, and similar.
         # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
         for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
-            ##last if ( $types_to_go[$j] =~ /^[\(\[\{L\}\]\)Rb,]$/ );
-            ##last if ( $is_key_type{ $types_to_go[$j] } );
             if ( $is_key_type{ $types_to_go[$j] } ) {
 
                 # fix for b1211
@@ -20722,7 +20709,7 @@ sub excess_line_length {
     # Therefore I have eliminated additional calls to subs from it.
     my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
 
-    # Original expression for line length
+    # Original expression for line length: this is okay but slow
     ##$length = leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
 
     # This is basically sub 'leading_spaces_to_go':
@@ -20877,7 +20864,6 @@ sub get_available_spaces_to_go {
         my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
         my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
         my $starting_in_quote   = $self->[_this_batch_]->[_starting_in_quote_];
-        my $K_opening_container = $self->[_K_opening_container_];    ##TESTING
         my $K_closing_container = $self->[_K_closing_container_];
         my $rlp_object_by_seqno = $self->[_rlp_object_by_seqno_];
         my $radjusted_levels    = $self->[_radjusted_levels_];
@@ -20998,9 +20984,6 @@ sub get_available_spaces_to_go {
                     }
                     elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
 
-                    # TESTING
-                    ##my $too_close = ($i_test==$ii-1);
-
                     my $test_position = total_line_length( $i_test, $ii );
                     my $mll =
                       $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
@@ -21019,9 +21002,6 @@ sub get_available_spaces_to_go {
                     }
 
                     if (
-
-                        # the equals is not just before an open paren (testing)
-                        ##!$too_close &&
 
                         # if we might exceed the maximum line length
                         $lp_position_predictor + $len_increase > $mll
