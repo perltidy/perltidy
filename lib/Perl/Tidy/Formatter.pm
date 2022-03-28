@@ -18145,12 +18145,19 @@ sub break_long_lines {
     # routine to define essential variables when we go 'up' to
     # a new depth
     sub check_for_new_minimum_depth {
-        my $depth = shift;
+        my ( $self, $depth, $seqno ) = @_;
         if ( $depth < $minimum_depth ) {
 
             $minimum_depth = $depth;
 
             # these arrays need not retain values between calls
+            $type_sequence_stack[$depth] = $seqno;
+            $override_cab3[$depth] =
+                 $rOpts_comma_arrow_breakpoints == 3
+              && $seqno
+              && $self->[_roverride_cab3_]->{$seqno};
+
+            $override_cab3[$depth]                 = undef;
             $breakpoint_stack[$depth]              = $starting_breakpoint_count;
             $container_type[$depth]                = "";
             $identifier_count_stack[$depth]        = 0;
@@ -18489,7 +18496,8 @@ EOM
         my $depth_last = $starting_depth;
         my $comma_follows_last_closing_token;
 
-        check_for_new_minimum_depth($current_depth);
+        $self->check_for_new_minimum_depth( $current_depth,
+            $parent_seqno_to_go[0] );
 
         my $want_previous_breakpoint = -1;
 
@@ -18792,36 +18800,40 @@ EOM
             # must be opening..fixes c102
             if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
 
+                #----------------------------------------------------------
+                # BEGIN initialize depth arrays
+                # ... use the same order as sub check_for_new_minimum_depth
+                #----------------------------------------------------------
                 $type_sequence_stack[$depth] = $type_sequence;
                 $override_cab3[$depth] =
                      $rOpts_comma_arrow_breakpoints == 3
                   && $type_sequence
                   && $self->[_roverride_cab3_]->{$type_sequence};
+
                 $breakpoint_stack[$depth] = get_forced_breakpoint_count();
-                $breakpoint_undo_stack[$depth] =
-                  get_forced_breakpoint_undo_count();
-                $has_broken_sublist[$depth]            = 0;
-                $identifier_count_stack[$depth]        = 0;
-                $index_before_arrow[$depth]            = -1;
-                $interrupted_list[$depth]              = 0;
-                $item_count_stack[$depth]              = 0;
-                $comma_index[$depth]                   = undef;
-                $last_comma_index[$depth]              = undef;
-                $last_dot_index[$depth]                = undef;
-                $last_nonblank_type[$depth]            = $last_nonblank_type;
-                $old_breakpoint_count_stack[$depth]    = $old_breakpoint_count;
-                $opening_structure_index_stack[$depth] = $i;
-                $rand_or_list[$depth]                  = [];
-                $rfor_semicolon_list[$depth]           = [];
-                $i_equals[$depth]                      = -1;
-                $want_comma_break[$depth]              = 0;
                 $container_type[$depth] =
 
                   #      k => && || ? : .
                   $is_container_label_type{$last_nonblank_type}
                   ? $last_nonblank_token
                   : "";
+                $identifier_count_stack[$depth]        = 0;
+                $index_before_arrow[$depth]            = -1;
+                $interrupted_list[$depth]              = 0;
+                $item_count_stack[$depth]              = 0;
+                $last_nonblank_type[$depth]            = $last_nonblank_type;
+                $opening_structure_index_stack[$depth] = $i;
+
+                $breakpoint_undo_stack[$depth] =
+                  get_forced_breakpoint_undo_count();
+                $comma_index[$depth]                 = undef;
+                $last_comma_index[$depth]            = undef;
+                $last_dot_index[$depth]              = undef;
+                $old_breakpoint_count_stack[$depth]  = $old_breakpoint_count;
                 $has_old_logical_breakpoints[$depth] = 0;
+                $rand_or_list[$depth]                = [];
+                $rfor_semicolon_list[$depth]         = [];
+                $i_equals[$depth]                    = -1;
 
                 # if line ends here then signal closing token to break
                 if ( $next_nonblank_type eq 'b' || $next_nonblank_type eq '#' )
@@ -18848,6 +18860,12 @@ EOM
                     # a trailing '(' usually indicates a non-list
                     || ( $next_nonblank_type eq '(' )
                   );
+                $has_broken_sublist[$depth] = 0;
+                $want_comma_break[$depth]   = 0;
+
+                #-------------------------------------
+                # END initialize depth arrays
+                #-------------------------------------
 
                 # patch to outdent opening brace of long if/for/..
                 # statements (like this one).  See similar coding in
@@ -18882,7 +18900,8 @@ EOM
             # must be closing .. fixes c102
             elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
 
-                check_for_new_minimum_depth($depth);
+                $self->check_for_new_minimum_depth( $depth,
+                    $parent_seqno_to_go[$i] );
 
                 $comma_follows_last_closing_token =
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
