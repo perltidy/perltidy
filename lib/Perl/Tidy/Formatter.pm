@@ -3965,7 +3965,7 @@ EOM
 
     sub set_bond_strengths {
 
-        my ( $self, $rcomma_bias_to_go ) = @_;
+        my ($self) = @_;
 
         my $rbond_strength_to_go = [];
 
@@ -4362,15 +4362,8 @@ EOM
                   : $next_nonblank_token
               : $next_nonblank_type;
 
-            if ( $type eq ',' && $rcomma_bias_to_go->[$i] ) {
-
-                # add any bias set by sub break_lists at old comma break points
-                $bond_str += $rcomma_bias_to_go->[$i];
-
-            }
-
             # bias left token
-            elsif ( defined( $bias{$left_key} ) ) {
+            if ( defined( $bias{$left_key} ) ) {
                 if ( !$want_break_before{$left_key} ) {
                     $bias{$left_key} += $delta_bias;
                     $bond_str += $bias{$left_key};
@@ -14692,7 +14685,7 @@ EOM
               $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
         }
 
-        my $rcomma_bias_to_go = [];
+        my $rbond_strength_bias = [];
         if (
                $is_long_line
             || $old_line_count_in_batch > 1
@@ -14719,7 +14712,7 @@ EOM
             $self->pad_array_to_go();
             $called_pad_array_to_go = 1;
 
-            my $sgb = $self->break_lists( $is_long_line, $rcomma_bias_to_go );
+            my $sgb = $self->break_lists( $is_long_line, $rbond_strength_bias );
             $saw_good_break ||= $sgb;
         }
 
@@ -14764,7 +14757,7 @@ EOM
 
             ( $ri_first, $ri_last, my $rbond_strength_to_go ) =
               $self->break_long_lines( $saw_good_break, \@colon_list,
-                $rcomma_bias_to_go );
+                $rbond_strength_bias );
 
             $self->break_all_chain_tokens( $ri_first, $ri_last );
 
@@ -17378,7 +17371,7 @@ sub break_long_lines {
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
 
-    my ( $self, $saw_good_break, $rcolon_list, $rcomma_bias_to_go ) = @_;
+    my ( $self, $saw_good_break, $rcolon_list, $rbond_strength_bias ) = @_;
 
     # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
     # order.
@@ -17390,13 +17383,30 @@ sub break_long_lines {
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
 
-    my $rbond_strength_to_go = $self->set_bond_strengths($rcomma_bias_to_go);
+    my $rbond_strength_to_go = $self->set_bond_strengths();
+
+    # Add any comma bias set by break_lists
+    if ( @{$rbond_strength_bias} ) {
+        foreach my $item ( @{$rbond_strength_bias} ) {
+            my ( $ii, $bias ) = @{$item};
+            if ( $ii >= 0 && $ii <= $max_index_to_go ) {
+                $rbond_strength_to_go->[$ii] += $bias;
+            }
+            elsif (DEVEL_MODE) {
+                my $KK  = $K_to_go[0];
+                my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                Fault(
+"Bad bond strength bias near line $lno: i=$ii must be between 0 and $max_index_to_go\n"
+                );
+            }
+        }
+    }
 
     my $imin = 0;
     my $imax = $max_index_to_go;
     if ( $types_to_go[$imin] eq 'b' ) { $imin++ }
     if ( $types_to_go[$imax] eq 'b' ) { $imax-- }
-    my $i_begin = $imin;        # index for starting next iteration
+    my $i_begin = $imin;    # index for starting next iteration
 
     my $leading_spaces          = leading_spaces_to_go($imin);
     my $line_count              = 0;
@@ -18177,7 +18187,7 @@ sub break_long_lines {
     #     be broken open
     sub set_comma_breakpoints {
 
-        my ( $self, $dd, $rcomma_bias_to_go ) = @_;
+        my ( $self, $dd, $rbond_strength_bias ) = @_;
         my $bp_count           = 0;
         my $do_not_break_apart = 0;
 
@@ -18193,7 +18203,7 @@ sub break_long_lines {
 
             # handle commas not in containers...
             if ( $dont_align[$dd] ) {
-                $self->do_uncontained_comma_breaks( $dd, $rcomma_bias_to_go );
+                $self->do_uncontained_comma_breaks( $dd, $rbond_strength_bias );
             }
 
             # handle commas within containers...
@@ -18252,7 +18262,7 @@ sub break_long_lines {
         # won't work very well. However, the user can always
         # prevent following the old breakpoints with the
         # -iob flag.
-        my ( $self, $dd, $rcomma_bias_to_go ) = @_;
+        my ( $self, $dd, $rbond_strength_bias ) = @_;
 
         # Check added for issue c131; an error here would be due to an
         # error initializing @comma_index when entering depth $dd.
@@ -18274,7 +18284,9 @@ EOM
 
             if ( $old_breakpoint_to_go[$ii] ) {
                 $old_comma_break_count++;
-                $rcomma_bias_to_go->[$ii] = $bias;
+
+                # Store the bias info for use by sub set_bond_strength
+                push @{$rbond_strength_bias}, [ $ii, $bias ];
 
                 # reduce bias magnitude to force breaks in order
                 $bias *= 0.99;
@@ -18440,7 +18452,7 @@ EOM
 
     sub break_lists {
 
-        my ( $self, $is_long_line, $rcomma_bias_to_go ) = @_;
+        my ( $self, $is_long_line, $rbond_strength_bias ) = @_;
 
         #----------------------------------------------------------------------
         # This routine is called once per batch, if the batch is a list, to set
@@ -18897,7 +18909,7 @@ EOM
                 # set breaks at commas if necessary
                 my ( $bp_count, $do_not_break_apart ) =
                   $self->set_comma_breakpoints( $current_depth,
-                    $rcomma_bias_to_go );
+                    $rbond_strength_bias );
 
                 my $i_opening = $opening_structure_index_stack[$current_depth];
                 my $saw_opening_structure = ( $i_opening >= 0 );
@@ -19476,7 +19488,7 @@ EOM
 
             $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
-            $self->set_comma_breakpoints( $dd, $rcomma_bias_to_go );
+            $self->set_comma_breakpoints( $dd, $rbond_strength_bias );
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
             $self->set_for_semicolon_breakpoints($dd);
