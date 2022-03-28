@@ -18253,9 +18253,25 @@ sub break_long_lines {
         # prevent following the old breakpoints with the
         # -iob flag.
         my ( $self, $dd, $rcomma_bias_to_go ) = @_;
+
+        # Check added for issue c131; an error here would be due to an
+        # error initializing @comma_index when entering depth $dd.
+        if (DEVEL_MODE) {
+            foreach my $ii ( @{ $comma_index[$dd] } ) {
+                if ( $ii < 0 || $ii > $max_index_to_go ) {
+                    my $KK  = $K_to_go[0];
+                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                    Fault(<<EOM);
+Bad comma index near line $lno: i=$ii must be between 0 and $max_index_to_go
+EOM
+                }
+            }
+        }
+
         my $bias                  = -.01;
         my $old_comma_break_count = 0;
         foreach my $ii ( @{ $comma_index[$dd] } ) {
+
             if ( $old_breakpoint_to_go[$ii] ) {
                 $old_comma_break_count++;
                 $rcomma_bias_to_go->[$ii] = $bias;
@@ -18777,6 +18793,7 @@ EOM
                 $index_before_arrow[$depth]            = -1;
                 $interrupted_list[$depth]              = 0;
                 $item_count_stack[$depth]              = 0;
+                $comma_index[$depth]                   = undef;
                 $last_comma_index[$depth]              = undef;
                 $last_dot_index[$depth]                = undef;
                 $last_nonblank_type[$depth]            = $last_nonblank_type;
