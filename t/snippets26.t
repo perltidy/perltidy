@@ -4,6 +4,8 @@
 #1 bal.bal2
 #2 bal.def
 #3 lpxl.lpxl6
+#4 c133.c133
+#5 c133.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -22,6 +24,7 @@ BEGIN {
     ###########################################
     $rparams = {
         'bal2'  => "-bal=2",
+        'c133'  => "-boc",
         'def'   => "",
         'lpxl6' => <<'----------',
 # equivalent to -lpxl='{ [ F(2'
@@ -40,6 +43,26 @@ BEGIN {
   L2:
   L3: return;
 };
+----------
+
+        'c133' => <<'----------',
+# this will make 1 line unless -boc is used
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+);
+
+# broken list - issue c133
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+
+);
+
+# no parens
+return
+  $x * cos($a) - $y * sin($a),
+  $x * sin($a) + $y * cos($a);
 ----------
 
         'lpxl' => <<'----------',
@@ -199,6 +222,51 @@ $behaviour = {
     mouse => { nibble => "kibble" },
 };
 #3...........
+        },
+
+        'c133.c133' => {
+            source => "c133",
+            params => "c133",
+            expect => <<'#4...........',
+# this will make 1 line unless -boc is used
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+);
+
+# broken list - issue c133
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+
+);
+
+# no parens
+return
+  $x * cos($a) - $y * sin($a),
+  $x * sin($a) + $y * cos($a);
+#4...........
+        },
+
+        'c133.def' => {
+            source => "c133",
+            params => "def",
+            expect => <<'#5...........',
+# this will make 1 line unless -boc is used
+return ( $x * cos($a) - $y * sin($a), $x * sin($a) + $y * cos($a) );
+
+# broken list - issue c133
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+
+);
+
+# no parens
+return
+  $x * cos($a) - $y * sin($a),
+  $x * sin($a) + $y * cos($a);
+#5...........
         },
     };
 

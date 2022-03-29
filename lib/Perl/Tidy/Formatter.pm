@@ -3969,8 +3969,10 @@ EOM
 
         my $rbond_strength_to_go = [];
 
-        my $rK_weld_right = $self->[_rK_weld_right_];
-        my $rK_weld_left  = $self->[_rK_weld_left_];
+        my $rLL               = $self->[_rLL_];
+        my $rK_weld_right     = $self->[_rK_weld_right_];
+        my $rK_weld_left      = $self->[_rK_weld_left_];
+        my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
 
         # patch-its always ok to break at end of line
         $nobreak_to_go[$max_index_to_go] = 0;
@@ -4048,6 +4050,22 @@ EOM
             # this will cause good preceding breaks to be retained
             if ( $i_next_nonblank > $max_index_to_go ) {
                 $bsl = NOMINAL;
+
+                # But weaken the bond at a 'missing terminal comma'.  If an
+                # optional comma is missing at the end of a broken list, use
+                # the strength of a comma anyway to make formatting the same as
+                # if it were there. Fixes issue c133.
+                if ( !defined($bsr) || $bsr > VERY_WEAK ) {
+                    my $seqno = $parent_seqno_to_go[$max_index_to_go];
+                    if ( $ris_list_by_seqno->{$seqno} ) {
+                        my $KK      = $K_to_go[$max_index_to_go];
+                        my $Kn      = $self->K_next_nonblank($KK);
+                        my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
+                        if ( $seqno_n && $seqno_n eq $seqno ) {
+                            $bsl = VERY_WEAK;
+                        }
+                    }
+                }
             }
 
             # define right bond strengths of certain keywords

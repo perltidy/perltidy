@@ -1,0 +1,17 @@
+# this will make 1 line unless -boc is used
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+);
+
+# broken list - issue c133
+return (
+    $x * cos($a) - $y * sin($a),
+    $x * sin($a) + $y * cos($a)
+
+);
+
+# no parens
+return
+  $x * cos($a) - $y * sin($a),
+  $x * sin($a) + $y * cos($a);
