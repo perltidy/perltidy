@@ -511,8 +511,12 @@ here-documents, they will remain.
 
 =item B<-et=n>,   B<--entab-leading-whitespace>
 
-This flag causes each B<n> initial space characters to be replaced by
-one tab character.
+This flag causes each B<n> leading space characters produced by the
+formatting process to be replaced by one tab character.  The
+formatting process itself works with space characters. The B<-et=n> parameter is applied
+as a last step, after formatting is complete, to convert leading spaces into tabs.
+Before starting to use tabs, it is essential to first get the indentation
+controls set as desired without tabs, particularly the two parameters B<--indent-columns=n> (or B<-i=n>) and B<--continuation-indentation=n> (or B<-ci=n>).
 
 The value of the integer B<n> can be any value but can be coordinated with the
 number of spaces used for intentation. For example, B<-et=4 -ci=4 -i=4> will
@@ -527,7 +531,8 @@ of indentation.  Certain other features are incompatible with this
 option, and if these options are also given, then a warning message will
 be issued and this flag will be unset.  One example is the B<-lp>
 option. This flag is retained for backwards compatibility, but
-if you use tabs, the B<-et=n> flag is recommended.
+if you use tabs, the B<-et=n> flag is recommended.  If both B<-t> and
+B<-et=n> are set, the B<-et=n> is used.
 
 =item B<-dt=n>,   B<--default-tabsize=n>
 
