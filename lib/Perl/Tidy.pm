@@ -464,6 +464,9 @@ sub perltidy {
     # char_mode_used     => true if text processed by perltidy in 'char' mode.
     #      Normally true for text identified as utf8, otherwise false.
 
+    # This tells if Unicode::GCString was used
+    # gcs_used           => true if -gcs and Unicode::GCString found & used
+
     # These variables tell what utf8 decoding/encoding was done:
     # input_decoded_as   => non-blank if perltidy decoded the source text
     # output_encoded_as  => non-blank if perltidy encoded before return
@@ -490,6 +493,7 @@ sub perltidy {
         char_mode_used    => 0,
         input_decoded_as  => "",
         output_encoded_as => "",
+        gcs_used          => 0,
         iteration_count   => 0,
         converged         => 0,
         blinking          => 0,
@@ -1174,9 +1178,11 @@ EOM
                     }
                 }
             }
-            $encoding_log_message .= <<EOM;
+            else {
+                $encoding_log_message .= <<EOM;
 Unable to guess a character encoding
 EOM
+            }
         }
 
         # Case 4. Decode with a specific encoding
@@ -1244,6 +1250,10 @@ EOM
                 $length_function = sub {
                     return Unicode::GCString->new( $_[0] )->columns;
                 };
+                $encoding_log_message .= <<EOM;
+Using 'Unicode::GCString' to measure horizontal character widths
+EOM
+                $rstatus->{'gcs_used'} = 1;
             }
         }
 
@@ -3635,7 +3645,14 @@ EOM
         }
 
         # entab leading whitespace has priority over the older 'tabs' option
-        if ( $rOpts->{'tabs'} ) { $rOpts->{'tabs'} = 0; }
+        if ( $rOpts->{'tabs'} ) {
+
+            # The following warning could be added but would annoy a lot of
+            # users who have a perltidyrc with both -t and -et=n.  So instead
+            # there is a note in the manual that -et overrides -t.
+            ##Warn("-tabs and -et=n confict; ignoring -tabs\n");
+            $rOpts->{'tabs'} = 0;
+        }
     }
 
     # set a default tabsize to be used in guessing the starting indentation
