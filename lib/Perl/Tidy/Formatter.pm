@@ -205,6 +205,7 @@ my (
     %is_if_unless_while_until_for_foreach,
     %is_last_next_redo_return,
     %is_if_unless,
+    %is_if_unless_elsif,
     %is_and_or,
     %is_chain_operator,
     %is_block_without_semicolon,
@@ -590,6 +591,9 @@ BEGIN {
 
     @q = qw(if unless);
     @is_if_unless{@q} = (1) x scalar(@q);
+
+    @q = qw(if unless elsif);
+    @is_if_unless_elsif{@q} = (1) x scalar(@q);
 
     @q = qw(and or err);
     @is_and_or{@q} = (1) x scalar(@q);
@@ -13135,7 +13139,8 @@ EOM
                         $rbrace_follower = { ')' => 1 };
                     }
                 }
-                elsif ( $block_type =~ /^(if|elsif|unless)$/ ) {
+                ##elsif ( $block_type =~ /^(if|elsif|unless)$/ ) {
+                elsif ( $is_if_unless_elsif{$block_type} ) {
                     $rbrace_follower = \%is_if_brace_follower;
                 }
                 elsif ( $block_type eq 'else' ) {
@@ -21393,7 +21398,8 @@ EOM
                         elsif ( $available_spaces > 1 ) {
                             $min_gnu_indentation += $available_spaces + 1;
                         }
-                        elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
+                        ##elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
+                        elsif ( $is_opening_token{$last_nonblank_token} ) {
                             if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
                                 $min_gnu_indentation += 2;
                             }
@@ -21479,7 +21485,8 @@ EOM
                               $lp_object;
                         }
 
-                        if (   $last_nonblank_token =~ /^[\{\[\(]$/
+                        ##if (   $last_nonblank_token =~ /^[\{\[\(]$/
+                        if (   $is_opening_token{$last_nonblank_token}
                             && $last_nonblank_seqno )
                         {
                             $rlp_object_by_seqno->{$last_nonblank_seqno} =
@@ -22003,9 +22010,12 @@ sub convey_batch_to_vertical_aligner {
     }
 
     # flush before a long if statement to avoid unwanted alignment
-    if (   $n_last_line > 0
+    if (
+           $n_last_line > 0
         && $type_beg_next eq 'k'
-        && $token_beg_next =~ /^(if|unless)$/ )
+        && $is_if_unless{$token_beg_next}
+        ## && $token_beg_next =~ /^(if|unless)$/ )
+      )
     {
         $self->flush_vertical_aligner();
     }
@@ -22823,8 +22833,9 @@ EOM
 
                         if ( $vert_last_nonblank_type eq 'k' ) {
                             $alignment_type = ""
-                              unless $vert_last_nonblank_token =~
-                              /^(if|unless|elsif)$/;
+                              unless
+                              $is_if_unless_elsif{$vert_last_nonblank_token};
+                            ##unless $vert_last_nonblank_token =~ /^(if|unless|elsif)$/;
                         }
 
                         # Do not align a spaced-function-paren if requested.

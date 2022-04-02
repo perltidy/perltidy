@@ -3215,39 +3215,40 @@ EOM
     # semicolon
     # patched for SWITCH/CASE/
     my %is_zero_continuation_block_type;
-    @_ = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
+    my @q;
+    @q = qw( } { BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue ;
       if elsif else unless while until for foreach switch case given when);
-    @is_zero_continuation_block_type{@_} = (1) x scalar(@_);
+    @is_zero_continuation_block_type{@q} = (1) x scalar(@q);
 
     my %is_logical_container;
-    @_ = qw(if elsif unless while and or err not && !  || for foreach);
-    @is_logical_container{@_} = (1) x scalar(@_);
+    @q = qw(if elsif unless while and or err not && !  || for foreach);
+    @is_logical_container{@q} = (1) x scalar(@q);
 
     my %is_binary_type;
-    @_ = qw(|| &&);
-    @is_binary_type{@_} = (1) x scalar(@_);
+    @q = qw(|| &&);
+    @is_binary_type{@q} = (1) x scalar(@q);
 
     my %is_binary_keyword;
-    @_ = qw(and or err eq ne cmp);
-    @is_binary_keyword{@_} = (1) x scalar(@_);
+    @q = qw(and or err eq ne cmp);
+    @is_binary_keyword{@q} = (1) x scalar(@q);
 
     # 'L' is token for opening { at hash key
     my %is_opening_type;
-    @_ = qw< L { ( [ >;
-    @is_opening_type{@_} = (1) x scalar(@_);
+    @q = qw< L { ( [ >;
+    @is_opening_type{@q} = (1) x scalar(@q);
 
     # 'R' is token for closing } at hash key
     my %is_closing_type;
-    @_ = qw< R } ) ] >;
-    @is_closing_type{@_} = (1) x scalar(@_);
+    @q = qw< R } ) ] >;
+    @is_closing_type{@q} = (1) x scalar(@q);
 
     my %is_redo_last_next_goto;
-    @_ = qw(redo last next goto);
-    @is_redo_last_next_goto{@_} = (1) x scalar(@_);
+    @q = qw(redo last next goto);
+    @is_redo_last_next_goto{@q} = (1) x scalar(@q);
 
     my %is_use_require;
-    @_ = qw(use require);
-    @is_use_require{@_} = (1) x scalar(@_);
+    @q = qw(use require);
+    @is_use_require{@q} = (1) x scalar(@q);
 
     # This hash holds the array index in $tokenizer_self for these keywords:
     # Fix for issue c035: removed 'format' from this hash
@@ -3255,6 +3256,11 @@ EOM
         '__END__'  => _in_end_,
         '__DATA__' => _in_data_,
     );
+
+    my %is_list_end_type;
+    @q = qw( ; { } );
+    push @q, ',';
+    @is_list_end_type{@q} = (1) x scalar(@q);
 
     # original ref: camel 3 p 147,
     # but perl may accept undocumented flags
@@ -5031,7 +5037,10 @@ EOM
                     #     );
                     elsif ( $tok eq ')' ) {
                         $in_statement_continuation = 1
-                          if $routput_container_type->[$i] =~ /^[;,\{\}]$/;
+                          if (
+                            $is_list_end_type{ $routput_container_type->[$i] }
+                          );
+                        ##if $routput_container_type->[$i] =~ /^[;,\{\}]$/;
                     }
 
                     elsif ( $tok eq ';' ) { $in_statement_continuation = 0 }

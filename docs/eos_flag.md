@@ -140,7 +140,7 @@ single-byte characters or for storing an encoded string of multi-byte
 characters.  The 'C' mode is needed for actually working with multi-byte
 characters.  Thinking of a Perl script as a single long string of text, we can
 look at the mode of the text of a source script as it is processed by perltidy
-at three points as it is processed by perltidy:
+at three points:
 
     - when it enters as a source
     - at the intermediate stage as it is processed
@@ -189,7 +189,7 @@ destination is a string:
 
 The first three of these may start at either a file or a string, and the last one only starts at a string.
 
-From this we can see that, if **-eos** is set, then only cases 1, 3, and 8 can occur.  In that case the starting and ending states have the same storage mode for all routes through perltidy which end at a string.  This verfies that perltidy will work well as a filter in all cases when the **-eos** flag is set, which is the goal here.
+From this we can see that, if **-eos** is set, then only cases 1, 3, and 8 can occur.  In that case the starting and ending states have the same storage mode for all routes through perltidy which end at a string.  This verifies that perltidy will work well as a filter in all cases when the **-eos** flag is set, which is the goal here.
 
 The last case in this table, the C->C->C route, corresponds to programs which
 pass decoded strings to perltidy. This is a common usage pattern, and this
