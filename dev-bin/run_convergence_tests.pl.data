@@ -9643,6 +9643,23 @@ WriteMakefile(
 --indent-columns=1
 --square-bracket-vertical-tightness-closing=1
 
+==> b1332.in <==
+# S1
+      $b->configure (
+                    -text  => $dayArray[$col],  # disable the button
+                    -state => 'disabled' );
+
+# S2
+      $b->configure ( -text => $dayArray[$col], # disable the button
+                      -state => 'disabled' );
+
+==> b1332.par <==
+--extended-line-up-parentheses
+--indent-columns=2
+--maximum-line-length=68
+--paren-vertical-tightness=2
+--space-function-paren
+
 ==> b1333.in <==
 # S1
         $_[

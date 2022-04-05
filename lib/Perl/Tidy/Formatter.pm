@@ -11034,11 +11034,13 @@ sub collapsed_lengths {
                         && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
                     {
                         my $Kend = $K_terminal;
-                        if ( $Kend < $K_last
-                            && !$rOpts_ignore_side_comment_lengths )
-                        {
-                            $Kend = $K_last;
-                        }
+
+                        # fix for b1332: side comments handled at end of loop
+                        ##if ( $Kend < $K_last
+                        ##    && !$rOpts_ignore_side_comment_lengths )
+                        ##{
+                        ##    $Kend = $K_last;
+                        ##}
 
                         # Measure from the next blank if any (fixes b1301)
                         my $Kbeg = $KK;
