@@ -10926,7 +10926,7 @@ sub collapsed_lengths {
                 defined($K_c)
                 && $rLL->[$K_terminal]->[_TYPE_] eq ','
 
-                # Ignore a terminal comma, causes instability (b1297, b1330)
+                # Ignore if terminal comma, causes instability (b1297, b1330)
                 && (
                     $K_c - $K_terminal > 2
                     || (   $K_c - $K_terminal == 2
@@ -10948,6 +10948,12 @@ sub collapsed_lengths {
                 # changed from $len to my $leng to fix b1302 b1306 b1317 b1321
                 my $leng = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+
+                # Fix for b1331: at a broken => item, include the length of
+                # the previous half of the item plus one for the missing space
+                if ( $last_nonblank_type eq '=>' ) {
+                    $leng += $len + 1;
+                }
 
                 if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
             }
@@ -11179,7 +11185,7 @@ EOM
                 if ( $len > $max_prong_len ) { $max_prong_len = $len }
 
                 # but only include one => per item
-                if ( $last_nonblank_type eq '=>' ) { $len = $token_length }
+                $len = $token_length;
             }
 
             # include everthing to end of line after a here target

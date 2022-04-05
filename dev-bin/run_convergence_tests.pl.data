@@ -9643,6 +9643,28 @@ WriteMakefile(
 --indent-columns=1
 --square-bracket-vertical-tightness-closing=1
 
+==> b1331.in <==
+# S1
+WriteMakefile PREREQ_PM =>
+  {  # e.g., Module::Name => 1.1
+  'ExtUtils::MakeMaker' => 5.45,
+  'LWP::UserAgent'      => 0,
+  },
+  ;
+
+# S2
+WriteMakefile PREREQ_PM =>
+  {  # e.g., Module::Name => 1.1
+  'ExtUtils::MakeMaker' => 5.45,
+  'LWP::UserAgent'      => 0,
+  },
+  ;
+
+
+==> b1331.par <==
+--extended-line-up-parentheses
+--maximum-line-length=32
+
 ==> b1332.in <==
 # S1
       $b->configure (
