@@ -12194,7 +12194,11 @@ EOM
 
         $rbrace_follower = undef;
         $ending_in_quote = 0;
-        destroy_one_line_block();
+
+        # These get re-initialized by calls to sub destroy_one_line_block():
+        $index_start_one_line_block            = UNDEFINED_INDEX;
+        $semicolons_before_block_self_destruct = 0;
+
         return;
     }
 
@@ -14586,30 +14590,6 @@ EOM
             my $leading_token = $tokens_to_go[$imin];
             my $leading_type  = $types_to_go[$imin];
 
-            # blank lines before subs except declarations and one-liners
-            if ( $leading_type eq 'i' ) {
-                if (
-
-                    # quick check
-                    (
-                        substr( $leading_token, 0, 3 ) eq 'sub'
-                        || $rOpts_sub_alias_list
-                    )
-
-                    # slow check
-                    && $leading_token =~ /$SUB_PATTERN/
-                  )
-                {
-                    $want_blank = $rOpts->{'blank-lines-before-subs'}
-                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
-                }
-
-                # break before all package declarations
-                elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
-                    $want_blank = $rOpts->{'blank-lines-before-packages'};
-                }
-            }
-
             # break before certain key blocks except one-liners
             if ( $leading_type eq 'k' ) {
                 if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' ) {
@@ -14641,8 +14621,32 @@ EOM
                 }
             }
 
+            # blank lines before subs except declarations and one-liners
+            elsif ( $leading_type eq 'i' ) {
+                if (
+
+                    # quick check
+                    (
+                        substr( $leading_token, 0, 3 ) eq 'sub'
+                        || $rOpts_sub_alias_list
+                    )
+
+                    # slow check
+                    && $leading_token =~ /$SUB_PATTERN/
+                  )
+                {
+                    $want_blank = $rOpts->{'blank-lines-before-subs'}
+                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
+                }
+
+                # break before all package declarations
+                elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
+                    $want_blank = $rOpts->{'blank-lines-before-packages'};
+                }
+            }
+
             # Check for blank lines wanted before a closing brace
-            if ( $leading_token eq '}' ) {
+            elsif ( $leading_token eq '}' ) {
                 if (   $rOpts->{'blank-lines-before-closing-block'}
                     && $block_type_to_go[$imin]
                     && $block_type_to_go[$imin] =~
@@ -20748,10 +20752,16 @@ sub set_nobreaks {
 sub token_sequence_length {
 
     # return length of tokens ($ibeg .. $iend) including $ibeg & $iend
-    # returns 0 if $ibeg > $iend (shouldn't happen)
     my ( $ibeg, $iend ) = @_;
-    return 0 if ( !defined($iend) || $iend < 0 || $ibeg > $iend );
-    return $summed_lengths_to_go[ $iend + 1 ] if ( $ibeg < 0 );
+
+    # fix possible negative starting index
+    if ( $ibeg < 0 ) { $ibeg = 0 }
+
+    # returns 0 if index range is empty (some subs assume this)
+    if ( $ibeg > $iend ) {
+        return 0;
+    }
+
     return $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
 }
 
@@ -20760,49 +20770,45 @@ sub total_line_length {
     # return length of a line of tokens ($ibeg .. $iend)
     my ( $ibeg, $iend ) = @_;
 
-    # original coding:
-    #return leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
+    # Start with the leading spaces on this line ...
+    my $length = $leading_spaces_to_go[$ibeg];
+    if ( ref($length) ) { $length = $length->get_spaces() }
 
-    # this is basically sub 'leading_spaces_to_go':
-    my $indentation = $leading_spaces_to_go[$ibeg];
-    if ( ref($indentation) ) { $indentation = $indentation->get_spaces() }
+    # ... then add the net token length
+    $length +=
+      $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
 
-    return $indentation + $summed_lengths_to_go[ $iend + 1 ] -
-      $summed_lengths_to_go[$ibeg];
+    return $length;
 }
 
 sub excess_line_length {
 
     # return number of characters by which a line of tokens ($ibeg..$iend)
     # exceeds the allowable line length.
+    # NOTE: profiling shows that efficiency of this routine is essential.
 
-    # NOTE: Profiling shows that this is a critical routine for efficiency.
-    # Therefore I have eliminated additional calls to subs from it.
     my ( $self, $ibeg, $iend, $ignore_right_weld ) = @_;
 
-    # Original expression for line length: this is okay but slow
-    ##$length = leading_spaces_to_go($ibeg) + token_sequence_length( $ibeg, $iend );
+    # Start with the leading spaces on this line ...
+    my $excess = $leading_spaces_to_go[$ibeg];
+    if ( ref($excess) ) { $excess = $excess->get_spaces() }
 
-    # This is basically sub 'leading_spaces_to_go':
-    my $indentation = $leading_spaces_to_go[$ibeg];
-    if ( ref($indentation) ) { $indentation = $indentation->get_spaces() }
-
-    my $length =
-      $indentation +
+    # ... then add the net token length, minus the maximum length
+    $excess +=
       $summed_lengths_to_go[ $iend + 1 ] -
-      $summed_lengths_to_go[$ibeg];
+      $summed_lengths_to_go[$ibeg] -
+      $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
 
-    # Include right weld lengths unless requested not to.
+    # ... and include right weld lengths unless requested not to
     if (   $total_weld_count
-        && !$ignore_right_weld
-        && $type_sequence_to_go[$iend] )
+        && $type_sequence_to_go[$iend]
+        && !$ignore_right_weld )
     {
         my $wr = $self->[_rweld_len_right_at_K_]->{ $K_to_go[$iend] };
-        $length += $wr if defined($wr);
+        $excess += $wr if defined($wr);
     }
 
-    # return the excess
-    return $length - $maximum_line_length_at_level[ $levels_to_go[$ibeg] ];
+    return $excess;
 }
 
 sub get_spaces {
