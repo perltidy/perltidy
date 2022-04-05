@@ -19570,9 +19570,12 @@ EOM
         # This is complex ($total_depth_variation=6):
         # $res2 =
         #  (is_boundp("a", 'self-insert') && is_boundp("b", 'self-insert'));
+
+        # The check ($i_old_.. < $max_index_to_go) was added to fix b1333
         elsif ($i_old_assignment_break
             && $total_depth_variation > 4
-            && $old_breakpoint_count == 1 )
+            && $old_breakpoint_count == 1
+            && $i_old_assignment_break < $max_index_to_go )
         {
             $saw_good_breakpoint = 1;
         } ## end elsif ( $i_old_assignment_break...)

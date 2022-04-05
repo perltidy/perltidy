@@ -9643,6 +9643,27 @@ WriteMakefile(
 --indent-columns=1
 --square-bracket-vertical-tightness-closing=1
 
+==> b1333.in <==
+# S1
+        $_[
+          HEAP
+
+        ]->{postback_tests}->{$test_number}
+          =
+
+          "ok $test_number\n";
+
+# S2
+        $_[
+          HEAP
+
+          ]->{postback_tests}->{$test_number} =
+
+          "ok $test_number\n";
+
+==> b1333.par <==
+--break-before-all-operators
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
