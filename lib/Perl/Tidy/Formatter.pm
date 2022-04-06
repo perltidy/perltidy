@@ -717,7 +717,6 @@ sub new {
     initialize_final_indentation_adjustment();
     initialize_postponed_breakpoint();
     initialize_batch_variables();
-    initialize_forced_breakpoint_vars();
     initialize_write_line();
 
     my $vertical_aligner_object = Perl::Tidy::VerticalAligner->new(
@@ -12165,8 +12164,10 @@ EOM
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
-        $max_index_to_go            = UNDEFINED_INDEX;
-        @summed_lengths_to_go       = @nesting_depth_to_go = (0);
+        $max_index_to_go         = UNDEFINED_INDEX;
+        $summed_lengths_to_go[0] = 0;
+        $nesting_depth_to_go[0]  = 0;
+        ##@summed_lengths_to_go       = @nesting_depth_to_go = (0);
         $ri_starting_one_line_block = [];
 
         # The initialization code for the remaining batch arrays is as follows
@@ -12206,6 +12207,8 @@ EOM
         # These get re-initialized by calls to sub destroy_one_line_block():
         $index_start_one_line_block            = UNDEFINED_INDEX;
         $semicolons_before_block_self_destruct = 0;
+
+        initialize_forced_breakpoint_vars();
 
         return;
     }
@@ -12467,7 +12470,6 @@ EOM
         $self->[_this_batch_] = [];
 
         initialize_batch_variables();
-        initialize_forced_breakpoint_vars();
 
         return;
     }
@@ -13979,7 +13981,7 @@ sub compare_indentation_levels {
         $forced_breakpoint_count      = 0;
         $index_max_forced_break       = UNDEFINED_INDEX;
         $forced_breakpoint_undo_count = 0;
-        @forced_breakpoint_undo_stack = ();
+        ##@forced_breakpoint_undo_stack = (); # not needed
         return;
     }
 
