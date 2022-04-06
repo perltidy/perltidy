@@ -1412,7 +1412,7 @@ EOM
         my $use_destination_buffer;
         my $encode_destination_buffer;
         my $ref_destination_stream = ref($destination_stream);
-        if ($ref_destination_stream) {
+        if ( $ref_destination_stream && !$user_formatter ) {
             $use_destination_buffer = 1;
             $output_file            = \$destination_buffer;
 
@@ -1847,13 +1847,13 @@ EOM
             if ( ref($destination_stream) eq 'SCALAR' ) {
                 ${$destination_stream} = $destination_buffer;
             }
-            else {
+            elsif ($destination_buffer) {
                 my @lines = split /^/, $destination_buffer;
                 if ( ref($destination_stream) eq 'ARRAY' ) {
                     @{$destination_stream} = @lines;
                 }
 
-                # destination is object with print method
+                # destination stream must be an object with print method
                 else {
                     foreach (@lines) {
                         $destination_stream->print($_);
@@ -1862,6 +1862,11 @@ EOM
                         $destination_stream->close();
                     }
                 }
+            }
+            else {
+
+                # Empty destination buffer not going to a string ... could
+                # happen for example if user deleted all pod or comments
             }
         }
         else {
