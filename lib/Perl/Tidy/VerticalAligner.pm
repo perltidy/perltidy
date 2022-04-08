@@ -3254,10 +3254,10 @@ sub match_line_pairs {
             # left with scalars on the left.  We will also prevent
             # any partial alignments.
 
-          # set return code 2 if the = is at line level, but
-          # set return code 1 if the = is below line level, i.e.
-          #    sub new { my ( $p, $v ) = @_; bless \$v, $p }
-          #    sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
+            # set return code 2 if the = is at line level, but
+            # set return code 1 if the = is below line level, i.e.
+            #  sub new { my ( $p, $v ) = @_; bless \$v, $p }
+            #  sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
 
             elsif (
                 ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) )
@@ -3372,8 +3372,8 @@ sub match_line_pairs {
                             $tok, $tok_m, $pat, $pat_m, $pad
                         );
                         if ($match_code) {
-                            if    ( $match_code eq 1 ) { $i_nomatch = $i }
-                            elsif ( $match_code eq 2 ) { $i_nomatch = 0 }
+                            if    ( $match_code == 1 ) { $i_nomatch = $i }
+                            elsif ( $match_code == 2 ) { $i_nomatch = 0 }
                             last;
                         }
                     }
