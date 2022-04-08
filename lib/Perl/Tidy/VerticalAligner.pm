@@ -4834,16 +4834,10 @@ sub get_output_line_number {
     my $cached_seqno_string;
     my $cached_line_Kend;
     my $cached_line_maximum_length;
+
+    # These are passed to step_C:
     my $seqno_string;
     my $last_nonblank_seqno_string;
-
-    sub get_seqno_string {
-        return $seqno_string;
-    }
-
-    sub get_last_nonblank_seqno_string {
-        return $last_nonblank_seqno_string;
-    }
 
     sub set_last_nonblank_seqno_string {
         my ($val) = @_;
@@ -4896,6 +4890,9 @@ sub get_output_line_number {
         if ($cached_line_type) {
             $seqno_string = $cached_seqno_string;
             $self->valign_output_step_C(
+                $seqno_string,
+                $last_nonblank_seqno_string,
+
                 $cached_line_text,
                 $cached_line_leading_space_count,
                 $self->[_last_level_written_],
@@ -5019,8 +5016,13 @@ sub get_output_line_number {
             # Dump an invalid cached line
             if ( !$cached_line_valid ) {
                 $self->valign_output_step_C(
-                    $cached_line_text,   $cached_line_leading_space_count,
-                    $last_level_written, $cached_line_Kend
+                    $seqno_string,
+                    $last_nonblank_seqno_string,
+
+                    $cached_line_text,
+                    $cached_line_leading_space_count,
+                    $last_level_written,
+                    $cached_line_Kend
                 );
             }
 
@@ -5069,8 +5071,13 @@ sub get_output_line_number {
                 }
                 else {
                     $self->valign_output_step_C(
-                        $cached_line_text,   $cached_line_leading_space_count,
-                        $last_level_written, $cached_line_Kend
+                        $seqno_string,
+                        $last_nonblank_seqno_string,
+
+                        $cached_line_text,
+                        $cached_line_leading_space_count,
+                        $last_level_written,
+                        $cached_line_Kend
                     );
                 }
             }
@@ -5215,8 +5222,13 @@ sub get_output_line_number {
                 }
                 else {
                     $self->valign_output_step_C(
-                        $cached_line_text,   $cached_line_leading_space_count,
-                        $last_level_written, $cached_line_Kend
+                        $seqno_string,
+                        $last_nonblank_seqno_string,
+
+                        $cached_line_text,
+                        $cached_line_leading_space_count,
+                        $last_level_written,
+                        $cached_line_Kend
                     );
                 }
             }
@@ -5247,8 +5259,15 @@ sub get_output_line_number {
         # fix for case b999: do not cache an outdented line
         if ( !$open_or_close || $side_comment_length > 0 || $is_outdented_line )
         {
-            $self->valign_output_step_C( $line, $leading_space_count, $level,
-                $Kend );
+            $self->valign_output_step_C(
+                $seqno_string,
+                $last_nonblank_seqno_string,
+
+                $line,
+                $leading_space_count,
+                $level,
+                $Kend
+            );
         }
         else {
             $cached_line_text                = $line;
@@ -5331,10 +5350,13 @@ sub get_output_line_number {
         # The reason for storing lines is that we may later want to reduce their
         # indentation when -sot and -sct are both used.
         ###############################################################
-        my ( $self, @args ) = @_;
+        my (
+            $self,
+            $seqno_string,
+            $last_nonblank_seqno_string,
 
-        my $seqno_string               = get_seqno_string();
-        my $last_nonblank_seqno_string = get_last_nonblank_seqno_string();
+            @args_to_D
+        ) = @_;
 
         # Dump any saved lines if we see a line with an unbalanced opening or
         # closing token.
@@ -5343,10 +5365,10 @@ sub get_output_line_number {
 
         # Either store or write this line
         if ($valign_buffer_filling) {
-            push @valign_buffer, [@args];
+            push @valign_buffer, [@args_to_D];
         }
         else {
-            $self->valign_output_step_D(@args);
+            $self->valign_output_step_D(@args_to_D);
         }
 
         # For lines starting or ending with opening or closing tokens..
@@ -5358,7 +5380,7 @@ sub get_output_line_number {
             # opening tokens.
             # patch for RT #94354, requested by Colin Williams
             if (   $seqno_string =~ /^\d+(\:+\d+)+$/
-                && $args[0] !~ /^[\}\)\]\:\?]/ )
+                && $args_to_D[0] !~ /^[\}\)\]\:\?]/ )
             {
 
                 # This test is efficient but a little subtle: The first test
