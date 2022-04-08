@@ -480,6 +480,8 @@ sub complain {
     my $msg           = shift;
     my $logger_object = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
+        my $input_line_number = $tokenizer_self->[_last_line_number_] + 1;
+        $msg = "Line $input_line_number: $msg";
         $logger_object->complain($msg);
     }
     return;
