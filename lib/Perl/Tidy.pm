@@ -1180,7 +1180,7 @@ EOM
             }
             else {
                 $encoding_log_message .= <<EOM;
-Unable to guess a character encoding
+Does not look like utf8 encoded text so processing as raw bytes
 EOM
             }
         }
