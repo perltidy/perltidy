@@ -347,6 +347,10 @@ my (
     @iprev_to_go,
     @parent_seqno_to_go,
 
+    # forced breakpoint variables associated with each batch of code
+    $forced_breakpoint_count,
+    $forced_breakpoint_undo_count,
+    $index_max_forced_break,
 );
 
 BEGIN {
@@ -12207,7 +12211,10 @@ EOM
         $index_start_one_line_block            = UNDEFINED_INDEX;
         $semicolons_before_block_self_destruct = 0;
 
-        initialize_forced_breakpoint_vars();
+        # initialize forced breakpoint vars associated with each output batch
+        $forced_breakpoint_count      = 0;
+        $index_max_forced_break       = UNDEFINED_INDEX;
+        $forced_breakpoint_undo_count = 0;
 
         return;
     }
@@ -13577,7 +13584,6 @@ sub starting_one_line_block {
 
     my $block_type = $rblock_type_of_seqno->{$type_sequence};
     $block_type = "" unless ( defined($block_type) );
-    my $index_max_forced_break = get_index_max_forced_break();
 
     my $previous_nonblank_token = '';
     my $i_last_nonblank         = -1;
@@ -13964,10 +13970,12 @@ sub compare_indentation_levels {
 
 {    ## begin closure set_forced_breakpoint
 
-    my $forced_breakpoint_count;
-    my $forced_breakpoint_undo_count;
     my @forced_breakpoint_undo_stack;
-    my $index_max_forced_break;
+
+    # These are global vars for efficiency:
+    # my $forced_breakpoint_count;
+    # my $forced_breakpoint_undo_count;
+    # my $index_max_forced_break;
 
     # Break before or after certain tokens based on user settings
     my %break_before_or_after_token;
@@ -13983,24 +13991,13 @@ sub compare_indentation_levels {
         @break_before_or_after_token{@q} = (1) x scalar(@q);
     }
 
+    # This is no longer called - global vars - moved into initialize_batch_vars
     sub initialize_forced_breakpoint_vars {
         $forced_breakpoint_count      = 0;
         $index_max_forced_break       = UNDEFINED_INDEX;
         $forced_breakpoint_undo_count = 0;
         ##@forced_breakpoint_undo_stack = (); # not needed
         return;
-    }
-
-    sub get_forced_breakpoint_count {
-        return $forced_breakpoint_count;
-    }
-
-    sub get_forced_breakpoint_undo_count {
-        return $forced_breakpoint_undo_count;
-    }
-
-    sub get_index_max_forced_break {
-        return $index_max_forced_break;
     }
 
     sub set_fake_breakpoint {
@@ -14781,7 +14778,7 @@ EOM
                 && !$saw_good_break
 
                 # and we don't already have an interior breakpoint
-                && !get_forced_breakpoint_count()
+                && !$forced_breakpoint_count
             )
           )
         {
@@ -17726,7 +17723,7 @@ sub break_long_lines {
                 # the same breakpoints will occur.  scbreak.t
                 if (
                     $i_test == $imax            # we are at the end
-                    && !get_forced_breakpoint_count()
+                    && !$forced_breakpoint_count
                     && $saw_good_break          # old line had good break
                     && $type =~ /^[#;\{]$/      # and this line ends in
                                                 # ';' or side comment
@@ -18258,7 +18255,7 @@ sub break_long_lines {
 
             # handle commas within containers...
             elsif ($real_comma_count) {
-                my $fbc = get_forced_breakpoint_count();
+                my $fbc = $forced_breakpoint_count;
 
                 # always open comma lists not preceded by keywords,
                 # barewords, identifiers (that is, anything that doesn't
@@ -18281,7 +18278,7 @@ sub break_long_lines {
                         has_broken_sublist  => $has_broken_sublist[$dd],
                     }
                 );
-                $bp_count           = get_forced_breakpoint_count() - $fbc;
+                $bp_count           = $forced_breakpoint_count - $fbc;
                 $do_not_break_apart = 0 if $must_break_open;
             }
         }
@@ -18529,7 +18526,7 @@ EOM
         $last_old_breakpoint_count = 0;
         $minimum_depth = $current_depth + 1;    # forces update in check below
         $old_breakpoint_count      = 0;
-        $starting_breakpoint_count = get_forced_breakpoint_count();
+        $starting_breakpoint_count = $forced_breakpoint_count;
         $token                     = ';';
         $type                      = ';';
         $type_sequence             = '';
@@ -18853,7 +18850,7 @@ EOM
                   && $type_sequence
                   && $self->[_roverride_cab3_]->{$type_sequence};
 
-                $breakpoint_stack[$depth] = get_forced_breakpoint_count();
+                $breakpoint_stack[$depth] = $forced_breakpoint_count;
                 $container_type[$depth] =
 
                   #      k => && || ? : .
@@ -18867,11 +18864,10 @@ EOM
                 $last_nonblank_type[$depth]            = $last_nonblank_type;
                 $opening_structure_index_stack[$depth] = $i;
 
-                $breakpoint_undo_stack[$depth] =
-                  get_forced_breakpoint_undo_count();
-                $comma_index[$depth]                 = undef;
-                $last_comma_index[$depth]            = undef;
-                $last_dot_index[$depth]              = undef;
+                $breakpoint_undo_stack[$depth] = $forced_breakpoint_undo_count;
+                $comma_index[$depth]           = undef;
+                $last_comma_index[$depth]      = undef;
+                $last_dot_index[$depth]        = undef;
                 $old_breakpoint_count_stack[$depth]  = $old_breakpoint_count;
                 $has_old_logical_breakpoints[$depth] = 0;
                 $rand_or_list[$depth]                = [];
@@ -19122,7 +19118,7 @@ EOM
 
                     # and we made breakpoints between the opening and closing
                     && ( $breakpoint_undo_stack[$current_depth] <
-                        get_forced_breakpoint_undo_count() )
+                        $forced_breakpoint_undo_count )
 
                     # and this block is short enough to fit on one line
                     # Note: use < because need 1 more space for possible comma
@@ -19137,7 +19133,7 @@ EOM
                 # now see if we have any comma breakpoints left
                 my $has_comma_breakpoints =
                   ( $breakpoint_stack[$current_depth] !=
-                      get_forced_breakpoint_count() );
+                      $forced_breakpoint_count );
 
                 # update broken-sublist flag of the outer container
                 $has_broken_sublist[$depth] =
@@ -19364,7 +19360,7 @@ EOM
                     if (
                         $is_assignment{$next_nonblank_type}
                         && ( $breakpoint_stack[$current_depth] !=
-                            get_forced_breakpoint_count() )
+                            $forced_breakpoint_count )
                       )
                     {
                         $self->set_forced_breakpoint($i);
@@ -20745,7 +20741,6 @@ sub set_nobreaks {
 
         0 && do {
             my ( $a, $b, $c ) = caller();
-            my $forced_breakpoint_count = get_forced_breakpoint_count();
             print STDOUT
 "NOBREAK: forced_breakpoint $forced_breakpoint_count from $a $c with i=$i max=$max_index_to_go type=$types_to_go[$i]\n";
         };
