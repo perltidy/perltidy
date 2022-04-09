@@ -9703,6 +9703,32 @@ WriteMakefile PREREQ_PM =>
 ==> b1333.par <==
 --break-before-all-operators
 
+==> b1334.in <==
+# S1
+my $pcc_tt = Params::CheckCompiler::validation_for(
+params =>
+       [
+{ type => Int },
+{ type => ArrayRef },
+{ type => InstanceOf ['DateTime'], optional => 1 },
+       ],
+);
+
+# S2
+my $pcc_tt = Params::CheckCompiler::validation_for(
+params =>
+[
+{ type => Int }, { type => ArrayRef }, { type => InstanceOf ['DateTime'], optional => 1 },
+],
+);
+
+==> b1334.par <==
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=2
+--continuation-indentation=7
+--indent-columns=0
+--maximum-line-length=96
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

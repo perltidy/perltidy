@@ -19905,6 +19905,11 @@ EOM
             && $container_indentation_options{$opening_token} == 2 )
         {
             $tol = $rOpts_indent_columns;
+
+            # use greater of -ci and -i (fix for case b1334)
+            if ( $tol < $rOpts_continuation_indentation ) {
+                $tol = $rOpts_continuation_indentation;
+            }
         }
 
         my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
