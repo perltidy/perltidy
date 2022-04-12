@@ -12128,16 +12128,15 @@ EOM
 
     # past stored nonblank tokens and flags
     my (
-        $K_last_nonblank_code, $K_last_last_nonblank_code,
-        $looking_for_else,     $is_static_block_comment,
-        $batch_CODE_type,      $last_line_had_side_comment,
-        $next_parent_seqno,    $next_slevel,
+        $K_last_nonblank_code,       $looking_for_else,
+        $is_static_block_comment,    $batch_CODE_type,
+        $last_line_had_side_comment, $next_parent_seqno,
+        $next_slevel,
     );
 
     # Called once at the start of a new file
     sub initialize_process_line_of_CODE {
         $K_last_nonblank_code       = undef;
-        $K_last_last_nonblank_code  = undef;
         $looking_for_else           = 0;
         $is_static_block_comment    = 0;
         $batch_CODE_type            = "";
@@ -13244,7 +13243,8 @@ EOM
                 {
                     unless ($rbrace_follower) {
                         $self->end_batch()
-                          unless ($no_internal_newlines);
+                          unless ( $no_internal_newlines
+                            || $max_index_to_go < 0 );
                     }
                 }
 
@@ -13285,15 +13285,17 @@ EOM
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
 
                 # break after a label if requested
-                if ( $type eq 'J' && $rOpts_break_after_labels == 1 ) {
+                if (   $rOpts_break_after_labels
+                    && $type eq 'J'
+                    && $rOpts_break_after_labels == 1 )
+                {
                     $self->end_batch()
                       unless ($no_internal_newlines);
                 }
             }
 
-            # remember two previous nonblank, non-comment OUTPUT tokens
-            $K_last_last_nonblank_code = $K_last_nonblank_code;
-            $K_last_nonblank_code      = $Ktoken_vars;
+            # remember previous nonblank, non-comment OUTPUT token
+            $K_last_nonblank_code = $Ktoken_vars;
 
         } ## end of loop over all tokens in this line
 
