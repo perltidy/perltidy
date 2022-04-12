@@ -252,12 +252,16 @@ EOM
             elsif ( $filename eq '-' ) {
                 binmode STDOUT, ":raw:encoding(UTF-8)";
             }
+            else {
+                # shouldn't happen
+            }
         }
 
         # Case 2: handle unencoded data
         else {
             if    ( ref($fh) eq 'IO::File' ) { binmode $fh }
             elsif ( $filename eq '-' )       { binmode STDOUT }
+            else                             { }    # shouldn't happen
         }
     }
 

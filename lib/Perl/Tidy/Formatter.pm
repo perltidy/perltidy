@@ -206,6 +206,7 @@ my (
     %is_last_next_redo_return,
     %is_if_unless,
     %is_if_unless_elsif,
+    %is_if_unless_elsif_else,
     %is_and_or,
     %is_chain_operator,
     %is_block_without_semicolon,
@@ -225,8 +226,6 @@ my (
     # Initialized in check_options. These are constants and could
     # just as well be initialized in a BEGIN block.
     %is_do_follower,
-    %is_if_brace_follower,
-    %is_else_brace_follower,
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
@@ -598,6 +597,9 @@ BEGIN {
 
     @q = qw(if unless elsif);
     @is_if_unless_elsif{@q} = (1) x scalar(@q);
+
+    @q = qw(if unless elsif else);
+    @is_if_unless_elsif_else{@q} = (1) x scalar(@q);
 
     @q = qw(and or err);
     @is_and_or{@q} = (1) x scalar(@q);
@@ -1563,13 +1565,6 @@ EOM
     my @dof = qw(until while unless if ; : );
     push @dof, ',';
     @is_do_follower{@dof} = (1) x scalar(@dof);
-
-    # What tokens may follow the closing brace of an if or elsif block?
-    # Not used. Previously used for cuddled else, but no longer needed.
-    %is_if_brace_follower = ();
-
-    # nothing can follow the closing curly of an else { } block:
-    %is_else_brace_follower = ();
 
     # what can follow a multi-line anonymous sub definition closing curly:
     my @asf = qw# ; : => or and  && || ~~ !~~ ) #;
@@ -4167,11 +4162,6 @@ EOM
                     $bond_str = NO_BREAK;
                 }
 
-            }
-
-            # good to break before 'if', 'unless', etc
-            if ( $is_if_brace_follower{$next_nonblank_token} ) {
-                $bond_str = VERY_WEAK;
             }
 
             if ( $next_nonblank_type eq 'k' && $type ne 'CORE::' ) {
@@ -12769,7 +12759,7 @@ EOM
         # if we do not see another elseif or an else.
         if ($looking_for_else) {
 
-            unless ( $rLL->[$K_first]->[_TOKEN_] =~ /^(elsif|else)$/ ) {
+            unless ( $rLL->[$K_first_true]->[_TOKEN_] =~ /^(elsif|else)$/ ) {
                 write_logfile_entry("(No else block)\n");
             }
             $looking_for_else = 0;
@@ -13151,7 +13141,10 @@ EOM
 
                 # set string indicating what we need to look for brace follower
                 # tokens
-                if ( $block_type eq 'do' ) {
+                if ( $is_if_unless_elsif_else{$block_type} ) {
+                    $rbrace_follower = undef;
+                }
+                elsif ( $block_type eq 'do' ) {
                     $rbrace_follower = \%is_do_follower;
                     if (
                         $self->tight_paren_follows( $K_to_go[0], $Ktoken_vars )
@@ -13159,13 +13152,6 @@ EOM
                     {
                         $rbrace_follower = { ')' => 1 };
                     }
-                }
-                ##elsif ( $block_type =~ /^(if|elsif|unless)$/ ) {
-                elsif ( $is_if_unless_elsif{$block_type} ) {
-                    $rbrace_follower = \%is_if_brace_follower;
-                }
-                elsif ( $block_type eq 'else' ) {
-                    $rbrace_follower = \%is_else_brace_follower;
                 }
 
                 # added eval for borris.t
