@@ -30,6 +30,7 @@ BEGIN {
         _stack_depth_        => $i++,
         _K_begin_line_       => $i++,
         _arrow_count_        => $i++,
+        _standard_spaces_    => $i++,
     };
 }
 
@@ -100,6 +101,7 @@ sub new {
     $self->[_stack_depth_]        = $input_hash{stack_depth};
     $self->[_K_begin_line_]       = $input_hash{K_begin_line};
     $self->[_arrow_count_]        = 0;
+    $self->[_standard_spaces_]    = $input_hash{standard_spaces};
 
     bless $self, $class;
     return $self;
@@ -153,6 +155,10 @@ sub get_stack_depth {
 
 sub get_spaces {
     return $_[0]->[_spaces_];
+}
+
+sub get_standard_spaces {
+    return $_[0]->[_standard_spaces_];
 }
 
 sub get_marked {

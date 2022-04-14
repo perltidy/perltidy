@@ -333,7 +333,6 @@ my (
     @levels_to_go,
     @leading_spaces_to_go,
     @reduced_spaces_to_go,
-    @standard_spaces_to_go,
     @mate_index_to_go,
     @ci_levels_to_go,
     @nesting_depth_to_go,
@@ -10968,7 +10967,9 @@ sub collapsed_lengths {
                 #----------------------------
                 # Entering a new container...
                 #----------------------------
-                if ( $is_opening_token{$token} ) {
+                if ( $is_opening_token{$token}
+                    && defined( $K_closing_container->{$seqno} ) )
+                {
 
                     # save current prong length
                     $stack[-1]->[_max_prong_len_] = $max_prong_len;
@@ -11081,9 +11082,10 @@ sub collapsed_lengths {
 
                         if ( $seqno_o ne $seqno ) {
 
-                            # Shouldn't happen - must have skipped some lines.
-                            # Not fatal but -lp formatting could get messed up.
-                            if (DEVEL_MODE) {
+                            # This can happen if input file has brace errors.
+                            # Otherwise it shouldn't happen.  Not fatal but -lp
+                            # formatting could get messed up.
+                            if ( DEVEL_MODE && !get_saw_brace_error() ) {
                                 Fault(<<EOM);
 sequence numbers differ; at CLOSING line $iline, seq=$seqno, Kc=$KK .. at OPENING line $iline_o, seq=$seqno_o, Ko=$K_o, expecting Kc=$K_c_expect
 EOM
@@ -12418,8 +12420,6 @@ EOM
             $leading_spaces_to_go[$max_index_to_go] =
               $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
         }
-        $standard_spaces_to_go[$max_index_to_go] =
-          $leading_spaces_to_go[$max_index_to_go];
 
         DEBUG_STORE && do {
             my ( $a, $b, $c ) = caller();
@@ -19050,10 +19050,9 @@ EOM
                     if ( ref($indentation)
                         && $ris_broken_container->{$type_sequence} )
                     {
-                        my $lp_spaces = $indentation->get_spaces();
-                        my $std_spaces =
-                          $standard_spaces_to_go[$i_opening_minus];
-                        my $diff = $std_spaces - $lp_spaces;
+                        my $lp_spaces  = $indentation->get_spaces();
+                        my $std_spaces = $indentation->get_standard_spaces();
+                        my $diff       = $std_spaces - $lp_spaces;
                         if ( $diff > 0 ) { $excess += $diff }
                     }
 
@@ -20998,12 +20997,13 @@ sub get_available_spaces_to_go {
         #-----------------------------------
         foreach my $ii ( $imin .. $max_index_to_go ) {
 
-            my $KK          = $K_to_go[$ii];
-            my $type        = $types_to_go[$ii];
-            my $token       = $tokens_to_go[$ii];
-            my $level       = $levels_to_go[$ii];
-            my $ci_level    = $ci_levels_to_go[$ii];
-            my $total_depth = $nesting_depth_to_go[$ii];
+            my $KK              = $K_to_go[$ii];
+            my $type            = $types_to_go[$ii];
+            my $token           = $tokens_to_go[$ii];
+            my $level           = $levels_to_go[$ii];
+            my $ci_level        = $ci_levels_to_go[$ii];
+            my $total_depth     = $nesting_depth_to_go[$ii];
+            my $standard_spaces = $leading_spaces_to_go[$ii];
 
             #--------------------------------------------------
             # Adjust levels if necessary to recycle whitespace:
@@ -21490,6 +21490,7 @@ EOM
                             align_seqno      => $align_seqno,
                             stack_depth      => $max_lp_stack,
                             K_begin_line     => $K_begin_line,
+                            standard_spaces  => $standard_spaces,
                         );
 
                         DEBUG_LP && do {
