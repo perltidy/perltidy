@@ -12307,7 +12307,13 @@ EOM
         my $seqno = $type_sequence_to_go[$max_index_to_go] =
           $rtoken_vars->[_TYPE_SEQUENCE_];
 
+        my $in_continued_quote =
+          ( $Ktoken_vars == $K_first ) && $line_of_tokens->{_starting_in_quote};
+
+        # Initializations for first token of new batch
         if ( $max_index_to_go == 0 ) {
+
+            $starting_in_quote = $in_continued_quote;
 
             # Update the next parent sequence number for each new batch.
 
@@ -12398,12 +12404,6 @@ EOM
         #   summed_lengths_to_go[$i+1] = total length to just after token $i
         $summed_lengths_to_go[ $max_index_to_go + 1 ] =
           $summed_lengths_to_go[$max_index_to_go] + $length;
-
-        my $in_continued_quote =
-          ( $Ktoken_vars == $K_first ) && $line_of_tokens->{_starting_in_quote};
-        if ( $max_index_to_go == 0 ) {
-            $starting_in_quote = $in_continued_quote;
-        }
 
         # Define the indentation that this token will have in two cases:
         # Without CI = reduced_spaces_to_go
@@ -12596,8 +12596,12 @@ EOM
 
         my $input_line = $line_of_tokens->{_line_text};
 
-        my $is_comment =
-          ( $K_first == $K_last && $rLL->[$K_first]->[_TYPE_] eq '#' );
+        my ( $is_block_comment, $has_side_comment );
+        if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
+            if   ( $K_last == $K_first ) { $is_block_comment = 1 }
+            else                         { $has_side_comment = 1 }
+        }
+
         my $is_static_block_comment_without_leading_space =
           $CODE_type eq 'SBCX';
         $is_static_block_comment =
@@ -12616,7 +12620,7 @@ EOM
         if ( $max_index_to_go >= 0 ) {
             $last_old_nonblank_type   = $types_to_go[$max_index_to_go];
             $first_new_nonblank_token = $rLL->[$K_first]->[_TOKEN_];
-            if (  !$is_comment
+            if (  !$is_block_comment
                 && $types_to_go[$max_index_to_go] ne 'b'
                 && $K_first > 0
                 && $rLL->[ $K_first - 1 ]->[_TYPE_] eq 'b' )
@@ -12633,7 +12637,7 @@ EOM
         #------------------------------------
         # Handle a block (full-line) comment.
         #------------------------------------
-        if ($is_comment) {
+        if ($is_block_comment) {
 
             if ( $rOpts->{'delete-block-comments'} ) {
                 $self->flush();
@@ -12805,6 +12809,7 @@ EOM
         #--------------------------------------
 
         # We do not want a leading blank if the previous batch just got output
+
         if ( $max_index_to_go < 0 && $rLL->[$K_first]->[_TYPE_] eq 'b' ) {
             $K_first++;
         }
@@ -12814,10 +12819,22 @@ EOM
             my $rtoken_vars = $rLL->[$Ktoken_vars];
             my $type        = $rtoken_vars->[_TYPE_];
 
+            #--------------
+            # handle blanks
+            #--------------
+            if ( $type eq 'b' ) {
+                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
+                next;
+            }
+
+            #------------------
+            # handle non-blanks
+            #------------------
+
             # If we are continuing after seeing a right curly brace, flush
             # buffer unless we see what we are looking for, as in
             #   } else ...
-            if ( $rbrace_follower && $type ne 'b' ) {
+            if ($rbrace_follower) {
                 my $token = $rtoken_vars->[_TOKEN_];
                 unless ( $rbrace_follower->{$token} ) {
                     $self->end_batch() if ( $max_index_to_go >= 0 );
@@ -12830,6 +12847,7 @@ EOM
                 $is_opening_BLOCK, $is_closing_BLOCK,
                 $nobreak_BEFORE_BLOCK
             );
+
             if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
 
                 my $token = $rtoken_vars->[_TOKEN_];
@@ -12853,45 +12871,28 @@ EOM
                 }
             }
 
-            # Find next nonblank token on this line and look for a side comment
-            my ( $Knnb, $side_comment_follows );
-
-            # if before last token ...
-            if ( $Ktoken_vars < $K_last ) {
-                $Knnb = $Ktoken_vars + 1;
-                if (   $Knnb < $K_last
-                    && $rLL->[$Knnb]->[_TYPE_] eq 'b' )
-                {
-                    $Knnb++;
-                }
-
-                if ( $rLL->[$Knnb]->[_TYPE_] eq '#' ) {
-                    $side_comment_follows = 1;
-
-                    # Do not allow breaks which would promote a side comment to
-                    # a block comment.
-                    $no_internal_newlines = 2;
-                }
-            }
-
             # if at last token ...
-            else {
+            if ( $Ktoken_vars == $K_last ) {
 
                 #---------------------
                 # handle side comments
                 #---------------------
-                if ( $type eq '#' ) {
+                if ($has_side_comment) {
                     $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                     next;
                 }
             }
 
-            #--------------
-            # handle blanks
-            #--------------
-            if ( $type eq 'b' ) {
-                $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
-                next;
+            # if before last token ... do not allow breaks which would promote
+            # a side comment to a block comment
+            elsif (
+                $has_side_comment
+                && (   $Ktoken_vars == $K_last - 1
+                    || $Ktoken_vars == $K_last - 2
+                    && $rLL->[ $K_last - 1 ]->[_TYPE_] eq 'b' )
+              )
+            {
+                $no_internal_newlines = 2;
             }
 
             # Process non-blank and non-comment tokens ...
@@ -12903,7 +12904,9 @@ EOM
 
                 my $next_nonblank_token_type = 'b';
                 my $next_nonblank_token      = '';
-                if ( defined($Knnb) ) {
+                if ( $Ktoken_vars < $K_last ) {
+                    my $Knnb = $Ktoken_vars + 1;
+                    $Knnb++ if ( $rLL->[$Knnb]->[_TYPE_] eq 'b' );
                     $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
                     $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
                 }
@@ -12935,7 +12938,6 @@ EOM
                         && $Ktoken_vars < $K_last )
                     || ( $next_nonblank_token eq '}' )
                   );
-
             }
 
             #-----------
@@ -13021,7 +13023,10 @@ EOM
 
                 my $next_nonblank_token_type = 'b';
                 my $next_nonblank_token      = '';
-                if ( defined($Knnb) ) {
+                my $Knnb;
+                if ( $Ktoken_vars < $K_last ) {
+                    $Knnb = $Ktoken_vars + 1;
+                    $Knnb++ if ( $rLL->[$Knnb]->[_TYPE_] eq 'b' );
                     $next_nonblank_token      = $rLL->[$Knnb]->[_TOKEN_];
                     $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
                 }
@@ -13033,11 +13038,13 @@ EOM
                     # brace then we must include its length in the length test
                     # ... unless the -issl flag is set (fixes b1307-1309).
                     # Assume a minimum of 1 blank space to the comment.
-                    my $added_length =
-                      $side_comment_follows
-                      && !$rOpts_ignore_side_comment_lengths
-                      ? 1 + $rLL->[$Knnb]->[_TOKEN_LENGTH_]
-                      : 0;
+                    my $added_length = 0;
+                    if (   $has_side_comment
+                        && !$rOpts_ignore_side_comment_lengths
+                        && $next_nonblank_token_type eq '#' )
+                    {
+                        $added_length = 1 + $rLL->[$K_last]->[_TOKEN_LENGTH_];
+                    }
 
                     # we have to terminate it if..
                     if (
@@ -13247,7 +13254,6 @@ EOM
                             || $max_index_to_go < 0 );
                     }
                 }
-
                 elsif ($rbrace_follower) {
 
                     unless ( $rbrace_follower->{$next_nonblank_token} ) {
