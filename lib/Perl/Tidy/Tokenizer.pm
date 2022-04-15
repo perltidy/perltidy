@@ -21,7 +21,7 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
-our $VERSION = '20220217.02';
+our $VERSION = '20220217.03';
 
 # this can be turned on for extra checking during development
 use constant DEVEL_MODE => 0;
