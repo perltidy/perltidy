@@ -22795,6 +22795,13 @@ EOM
                     }
                 }
 
+                # align qw in a 'use' statement (issue git #93)
+                elsif ( $type eq 'q' ) {
+                    if ( $types_to_go[0] eq 'k' && $tokens_to_go[0] eq 'use' ) {
+                        $alignment_type = $type;
+                    }
+                }
+
                 # align before one of these types..
                 elsif ( $is_vertical_alignment_type{$type}
                     && !$is_not_vertical_alignment_token{$token} )
