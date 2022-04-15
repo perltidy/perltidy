@@ -2,6 +2,28 @@
 
 ## 2022 02 17.02
 
+    - The flag --encode-output-strings, or -eos, is now set on by default, as
+      noted in the discussion of issue git #92.  This has no effect on the use
+      of the 'perltidy' binary but could change the behavior of programs which
+      use the Perl::Tidy module on files encoded in UTF-8.  If any problems are
+      noticed, an emergency fix can be made by reverting to the old default with
+      the flag -neos.  For complete details see:
+
+           https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md
+
+    - Add vertical alignment for qw quotes in 'use' statements (see issue #git 93).
+      This is on by default but can be turned off with -vxl='q':
+
+        # old default or -vxl='q'
+        use Getopt::Long qw(GetOptions);
+        use Fcntl qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
+        use Symbol qw(gensym);
+
+        # new default
+        use Getopt::Long qw(GetOptions);
+        use Fcntl        qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
+        use Symbol       qw(gensym);
+
     - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
 
 ## 2022 02 17
