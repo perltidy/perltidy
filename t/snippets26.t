@@ -6,6 +6,8 @@
 #3 lpxl.lpxl6
 #4 c133.c133
 #5 c133.def
+#6 git93.def
+#7 git93.git93
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -26,6 +28,9 @@ BEGIN {
         'bal2'  => "-bal=2",
         'c133'  => "-boc",
         'def'   => "",
+        'git93' => <<'----------',
+-vxl='q'
+----------
         'lpxl6' => <<'----------',
 # equivalent to -lpxl='{ [ F(2'
 -lp -lpil='f(2'
@@ -63,6 +68,30 @@ return (
 return
   $x * cos($a) - $y * sin($a),
   $x * sin($a) + $y * cos($a);
+----------
+
+        'git93' => <<'----------',
+use Cwd qw[cwd];
+use Carp qw(carp);
+use IPC::Cmd qw{can_run run QUOTE};
+use File::Path qw/mkpath/;
+use File::Temp qw[tempdir];
+use Params::Check qw<check>;
+use Module::Load::Conditional qw#can_load#;
+use Locale::Maketext::Simple Style => 'gettext';    # does not align
+
+# do not align on these 'q' token types - not use statements...
+my $gene_color_sets = [
+    [ qw( blue blue blue blue ) => 'blue' ],
+    [ qw( brown blue blue blue ) => 'brown' ],
+    [ qw( brown brown green green ) => 'brown' ],
+];
+
+sub quux : PluginKeyword { 'quux' }
+sub qaax : PluginKeyword(qiix) { die "unimplemented" }
+
+use vars qw($curdir);
+no strict qw(vars);
 ----------
 
         'lpxl' => <<'----------',
@@ -267,6 +296,62 @@ return
   $x * cos($a) - $y * sin($a),
   $x * sin($a) + $y * cos($a);
 #5...........
+        },
+
+        'git93.def' => {
+            source => "git93",
+            params => "def",
+            expect => <<'#6...........',
+use Cwd                       qw[cwd];
+use Carp                      qw(carp);
+use IPC::Cmd                  qw{can_run run QUOTE};
+use File::Path                qw/mkpath/;
+use File::Temp                qw[tempdir];
+use Params::Check             qw<check>;
+use Module::Load::Conditional qw#can_load#;
+use Locale::Maketext::Simple Style => 'gettext';    # does not align
+
+# do not align on these 'q' token types - not use statements...
+my $gene_color_sets = [
+    [ qw( blue blue blue blue )     => 'blue' ],
+    [ qw( brown blue blue blue )    => 'brown' ],
+    [ qw( brown brown green green ) => 'brown' ],
+];
+
+sub quux : PluginKeyword       { 'quux' }
+sub qaax : PluginKeyword(qiix) { die "unimplemented" }
+
+use vars qw($curdir);
+no strict qw(vars);
+#6...........
+        },
+
+        'git93.git93' => {
+            source => "git93",
+            params => "git93",
+            expect => <<'#7...........',
+use Cwd qw[cwd];
+use Carp qw(carp);
+use IPC::Cmd qw{can_run run QUOTE};
+use File::Path qw/mkpath/;
+use File::Temp qw[tempdir];
+use Params::Check qw<check>;
+use Module::Load::Conditional qw#can_load#;
+use Locale::Maketext::Simple Style => 'gettext';    # does not align
+
+# do not align on these 'q' token types - not use statements...
+my $gene_color_sets = [
+    [ qw( blue blue blue blue )     => 'blue' ],
+    [ qw( brown blue blue blue )    => 'brown' ],
+    [ qw( brown brown green green ) => 'brown' ],
+];
+
+sub quux : PluginKeyword       { 'quux' }
+sub qaax : PluginKeyword(qiix) { die "unimplemented" }
+
+use vars qw($curdir);
+no strict qw(vars);
+#7...........
         },
     };
 
