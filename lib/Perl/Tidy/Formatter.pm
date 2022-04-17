@@ -22873,6 +22873,14 @@ EOM
                                 $alignment_type = "";
                             }
                         }
+
+                        # make () align with qw in a 'use' statement (git #93)
+                        if (   $tokens_to_go[0] eq 'use'
+                            && $types_to_go[0] eq 'k'
+                            && $inext_to_go[$i] == $i + 1 )
+                        {
+                            $alignment_type = 'q';
+                        }
                     }
 
                     # be sure the alignment tokens are unique
