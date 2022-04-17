@@ -477,10 +477,10 @@ use IO::File ();
             params => "def",
             expect => <<'#15...........',
 # Keep the space before the '()' here:
-use Foo::Bar ();
-use Foo::Bar ();
+use Foo::Bar     ();
+use Foo::Bar     ();
 use Foo::Bar 1.0 ();
-use Foo::Bar qw(baz);
+use Foo::Bar     qw(baz);
 use Foo::Bar 1.0 qw(baz);
 #15...........
         },

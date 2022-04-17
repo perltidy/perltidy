@@ -464,7 +464,7 @@ $self->method_with_long_name ( 'parameter_0', 'parameter_1' );
             expect => <<'#5...........',
 log_something_with_long_function ( 'This is a log message.', 2 );
 Coro::AnyEvent::sleep ( 3, 4 );
-use Carp ();
+use Carp       ();
 use File::Spec ();
 use File::Path ();
 $self -> method ( 'parameter_0', 'parameter_1' );
