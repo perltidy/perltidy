@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 02 17.03
+## 2022 02 17.04
 
     - The flag --encode-output-strings, or -eos, is now set on by default, as
       noted in the discussion of issue git #92.  This has no effect on the use
@@ -18,11 +18,13 @@
         use Getopt::Long qw(GetOptions);
         use Fcntl qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
         use Symbol qw(gensym);
+        use Exporter ();
 
         # new default
         use Getopt::Long qw(GetOptions);
         use Fcntl        qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
         use Symbol       qw(gensym);
+        use Exporter     ();
 
     - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
 
