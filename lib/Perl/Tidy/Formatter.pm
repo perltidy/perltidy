@@ -504,7 +504,6 @@ BEGIN {
         _ri_last_                    => $i++,
         _do_not_pad_                 => $i++,
         _peak_batch_size_            => $i++,
-        _max_index_to_go_            => $i++,
         _batch_count_                => $i++,
         _rix_seqno_controlling_ci_   => $i++,
         _batch_CODE_type_            => $i++,
@@ -6083,6 +6082,10 @@ sub respace_tokens {
 
         # This will be the index of this item in the new array
         my $KK_new = @{$rLL_new};
+
+        #------------------------------------------------------------------
+        # NOTE: called once per token so coding efficiency is critical here
+        #------------------------------------------------------------------
 
         my $type       = $item->[_TYPE_];
         my $is_blank   = $type eq 'b';
@@ -12131,7 +12134,7 @@ EOM
     # past stored nonblank tokens and flags
     my (
         $K_last_nonblank_code,       $looking_for_else,
-        $is_static_block_comment,    $batch_CODE_type,
+        $is_static_block_comment,    $last_CODE_type,
         $last_line_had_side_comment, $next_parent_seqno,
         $next_slevel,
     );
@@ -12141,7 +12144,6 @@ EOM
         $K_last_nonblank_code       = undef;
         $looking_for_else           = 0;
         $is_static_block_comment    = 0;
-        $batch_CODE_type            = "";
         $last_line_had_side_comment = 0;
         $next_parent_seqno          = SEQ_ROOT;
         $next_slevel                = undef;
@@ -12247,6 +12249,10 @@ EOM
         #   $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
         #                  unless they are temporarily being overridden
 
+        #------------------------------------------------------------------
+        # NOTE: called once per token so coding efficiency is critical here
+        #------------------------------------------------------------------
+
         my $type = $rtoken_vars->[_TYPE_];
 
         # Check for emergency flush...
@@ -12260,8 +12266,7 @@ EOM
         #    if ( $_ =~ /PENCIL/ ) { $pencil_flag= 1 } ; ;
         #    $yy=1;
         if ( $max_index_to_go >= 0 ) {
-            my $Klast = $K_to_go[$max_index_to_go];
-            if ( $Ktoken_vars != $Klast + 1 ) {
+            if ( $Ktoken_vars != $K_to_go[$max_index_to_go] + 1 ) {
                 $self->flush_batch_of_CODE();
             }
 
@@ -12287,9 +12292,10 @@ EOM
             if ( $type eq 'b' ) { return }
         }
 
-        ++$max_index_to_go;
-        $batch_CODE_type               = $CODE_type;
-        $K_to_go[$max_index_to_go]     = $Ktoken_vars;
+        #----------------------------
+        # add this token to the batch
+        #----------------------------
+        $K_to_go[ ++$max_index_to_go ] = $Ktoken_vars;
         $types_to_go[$max_index_to_go] = $type;
 
         $old_breakpoint_to_go[$max_index_to_go]    = 0;
@@ -12297,6 +12303,7 @@ EOM
         $mate_index_to_go[$max_index_to_go]        = -1;
 
         my $token = $tokens_to_go[$max_index_to_go] = $rtoken_vars->[_TOKEN_];
+
         my $ci_level = $ci_levels_to_go[$max_index_to_go] =
           $rtoken_vars->[_CI_LEVEL_];
 
@@ -12319,11 +12326,13 @@ EOM
 
             # Update the next parent sequence number for each new batch.
 
-            #------------------------------------------
-            # Begin coding from sub parent_seqno_from_K
-            #------------------------------------------
+            #----------------------------------------
+            # Begin coding from sub parent_seqno_by_K
+            #----------------------------------------
 
-            ## $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+            # The following is equivalent to this call but much faster:
+            #    $next_parent_seqno = $self->parent_seqno_by_K($Ktoken_vars);
+
             $next_parent_seqno = SEQ_ROOT;
             if ($seqno) {
                 $next_parent_seqno = $rparent_of_seqno->{$seqno};
@@ -12349,44 +12358,52 @@ EOM
             $next_parent_seqno = SEQ_ROOT
               unless ( defined($next_parent_seqno) );
 
-            #----------------------------------------
-            # End coding from sub parent_seqno_from_K
-            #----------------------------------------
+            #--------------------------------------
+            # End coding from sub parent_seqno_by_K
+            #--------------------------------------
 
             $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
 
         # Initialize some sequence-dependent variables to their normal values
-        my $parent_seqno = $next_parent_seqno;
-        my $slevel       = $next_slevel;
-        my $block_type   = "";
+        $parent_seqno_to_go[$max_index_to_go]  = $next_parent_seqno;
+        $nesting_depth_to_go[$max_index_to_go] = $next_slevel;
+        $block_type_to_go[$max_index_to_go]    = "";
 
         # Then fix them at container tokens:
         if ($seqno) {
+
+            $block_type_to_go[$max_index_to_go] =
+              $rblock_type_of_seqno->{$seqno}
+              if ( $rblock_type_of_seqno->{$seqno} );
+
             if ( $is_opening_token{$token} ) {
+
+                my $slevel = $rdepth_of_opening_seqno->[$seqno];
+                $nesting_depth_to_go[$max_index_to_go] = $slevel;
+                $next_slevel = $slevel + 1;
+
                 $next_parent_seqno = $seqno;
-                $slevel            = $rdepth_of_opening_seqno->[$seqno];
-                $next_slevel       = $slevel + 1;
-                $block_type        = $rblock_type_of_seqno->{$seqno};
+
             }
             elsif ( $is_closing_token{$token} ) {
-                $next_slevel       = $rdepth_of_opening_seqno->[$seqno];
-                $slevel            = $next_slevel + 1;
-                $block_type        = $rblock_type_of_seqno->{$seqno};
-                $parent_seqno      = $rparent_of_seqno->{$seqno};
-                $parent_seqno      = SEQ_ROOT unless defined($parent_seqno);
-                $next_parent_seqno = $parent_seqno;
+
+                $next_slevel = $rdepth_of_opening_seqno->[$seqno];
+                my $slevel = $next_slevel + 1;
+                $nesting_depth_to_go[$max_index_to_go] = $slevel;
+
+                my $parent_seqno = $rparent_of_seqno->{$seqno};
+                $parent_seqno = SEQ_ROOT unless defined($parent_seqno);
+                $parent_seqno_to_go[$max_index_to_go] = $parent_seqno;
+                $next_parent_seqno                    = $parent_seqno;
+
             }
             else {
                 # ternary token: nothing to do
             }
-            $block_type = "" unless ( defined($block_type) );
         }
 
-        $parent_seqno_to_go[$max_index_to_go]  = $parent_seqno;
-        $nesting_depth_to_go[$max_index_to_go] = $slevel;
-        $block_type_to_go[$max_index_to_go]    = $block_type;
-        $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
+        $nobreak_to_go[$max_index_to_go] = $no_internal_newlines;
 
         my $length = $rtoken_vars->[_TOKEN_LENGTH_];
 
@@ -12397,7 +12414,9 @@ EOM
         # but we will use the character count to have a defined value.  In the
         # future, it would be nicer to have 'respace_tokens' convert the lines
         # to quotes and get correct lengths.
-        if ( !defined($length) ) { $length = length($token) }
+        if ( !defined($length) ) {
+            $length = length($token);
+        }
 
         $token_lengths_to_go[$max_index_to_go] = $length;
 
@@ -12415,10 +12434,13 @@ EOM
             $reduced_spaces_to_go[$max_index_to_go] = 0;
         }
         else {
-            $reduced_spaces_to_go[$max_index_to_go] = my $reduced_spaces =
-              $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
             $leading_spaces_to_go[$max_index_to_go] =
-              $reduced_spaces + $rOpts_continuation_indentation * $ci_level;
+              $reduced_spaces_to_go[$max_index_to_go] =
+              $rOpts_indent_columns * $radjusted_levels->[$Ktoken_vars];
+
+            $leading_spaces_to_go[$max_index_to_go] +=
+              $rOpts_continuation_indentation * $ci_level
+              if ($ci_level);
         }
 
         DEBUG_STORE && do {
@@ -12435,36 +12457,43 @@ EOM
         # This must be the only call to grind_batch_of_CODE()
         my ($self) = @_;
 
-        return unless ( $max_index_to_go >= 0 );
+        if ( $max_index_to_go >= 0 ) {
 
-        # Create an array to hold variables for this batch
-        my $this_batch = [];
-        $this_batch->[_starting_in_quote_] = $starting_in_quote;
-        $this_batch->[_ending_in_quote_]   = $ending_in_quote;
-        $this_batch->[_max_index_to_go_]   = $max_index_to_go;
-        $this_batch->[_batch_CODE_type_]   = $batch_CODE_type;
+            # Create an array to hold variables for this batch
+            my $this_batch = [];
 
-        # The flag $is_static_block_comment applies to the line which just
-        # arrived. So it only applies if we are outputting that line.
-        $this_batch->[_is_static_block_comment_] =
-             defined($K_first)
-          && $max_index_to_go == 0
-          && $K_to_go[0] == $K_first ? $is_static_block_comment : 0;
+            $this_batch->[_starting_in_quote_] = 1 if ($starting_in_quote);
+            $this_batch->[_ending_in_quote_]   = 1 if ($ending_in_quote);
 
-        $this_batch->[_ri_starting_one_line_block_] =
-          $ri_starting_one_line_block;
+            if ( $CODE_type || $last_CODE_type ) {
+                $this_batch->[_batch_CODE_type_] =
+                    $K_to_go[$max_index_to_go] >= $K_first
+                  ? $CODE_type
+                  : $last_CODE_type;
+            }
 
-        $self->[_this_batch_] = $this_batch;
+            $last_line_had_side_comment =
+              ( $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq '#' );
 
-        $last_line_had_side_comment =
-          $max_index_to_go > 0 && $types_to_go[$max_index_to_go] eq '#';
+            # The flag $is_static_block_comment applies to the line which just
+            # arrived. So it only applies if we are outputting that line.
+            if ( $is_static_block_comment && !$last_line_had_side_comment ) {
+                $this_batch->[_is_static_block_comment_] =
+                  $K_to_go[0] == $K_first;
+            }
 
-        $self->grind_batch_of_CODE();
+            $this_batch->[_ri_starting_one_line_block_] =
+              $ri_starting_one_line_block;
 
-        # Done .. this batch is history
-        $self->[_this_batch_] = [];
+            $self->[_this_batch_] = $this_batch;
 
-        initialize_batch_variables();
+            $self->grind_batch_of_CODE();
+
+            # Done .. this batch is history
+            $self->[_this_batch_] = undef;
+
+            initialize_batch_variables();
+        }
 
         return;
     }
@@ -12568,15 +12597,18 @@ EOM
         # begin initialize closure variables
         #-----------------------------------
         $line_of_tokens = $my_line_of_tokens;
-        $CODE_type      = $line_of_tokens->{_code_type};
         my $rK_range = $line_of_tokens->{_rK_range};
-        ( $K_first, $K_last ) = @{$rK_range};
-        if ( !defined($K_first) ) {
+        if ( !defined( $rK_range->[0] ) ) {
 
             # Empty line: This can happen if tokens are deleted, for example
             # with the -mangle parameter
             return;
         }
+
+        ( $K_first, $K_last ) = @{$rK_range};
+        $last_CODE_type = $CODE_type;
+        $CODE_type      = $line_of_tokens->{_code_type};
+
         $rLL                     = $self->[_rLL_];
         $radjusted_levels        = $self->[_radjusted_levels_];
         $rparent_of_seqno        = $self->[_rparent_of_seqno_];
@@ -12817,12 +12849,11 @@ EOM
         foreach my $Ktoken_vars ( $K_first .. $K_last ) {
 
             my $rtoken_vars = $rLL->[$Ktoken_vars];
-            my $type        = $rtoken_vars->[_TYPE_];
 
             #--------------
             # handle blanks
             #--------------
-            if ( $type eq 'b' ) {
+            if ( $rtoken_vars->[_TYPE_] eq 'b' ) {
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                 next;
             }
@@ -12830,6 +12861,7 @@ EOM
             #------------------
             # handle non-blanks
             #------------------
+            my $type = $rtoken_vars->[_TYPE_];
 
             # If we are continuing after seeing a right curly brace, flush
             # buffer unless we see what we are looking for, as in
@@ -14410,10 +14442,6 @@ EOM
         my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
         my $rwant_container_open     = $self->[_rwant_container_open_];
 
-        my $starting_in_quote       = $this_batch->[_starting_in_quote_];
-        my $ending_in_quote         = $this_batch->[_ending_in_quote_];
-        my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
-
         #-------------------------------------------------------
         # Loop over the batch to initialize some batch variables
         #-------------------------------------------------------
@@ -14421,7 +14449,7 @@ EOM
         my $ilast_nonblank       = -1;
         my @colon_list;
         my @ix_seqno_controlling_ci;
-        my %comma_arrow_count           = ();
+        my %comma_arrow_count;
         my $comma_arrow_count_contained = 0;
         my @unmatched_closing_indexes_in_this_batch;
 
