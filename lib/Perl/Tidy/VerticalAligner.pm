@@ -2787,7 +2787,7 @@ EOM
             #####################################################
             # Loop over lines to remove unwanted alignment tokens
             #####################################################
-            for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+            foreach my $jj ( $jbeg .. $jend ) {
                 my $line    = $rnew_lines->[$jj];
                 my $rtokens = $line->get_rtokens();
                 my $rhash   = $rline_hashes->[$jj];
@@ -2801,7 +2801,7 @@ EOM
                 $saw_large_group ||= $nlines > 2 && $imax > 1;
 
                 # Loop over all alignment tokens
-                for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                foreach my $i ( 0 .. $imax ) {
                     my $tok = $rtokens->[$i];
                     next if ( $tok eq '#' );    # shouldn't happen
                     my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
@@ -3056,7 +3056,7 @@ sub delete_null_alignments {
         $j_match_end = $jj;
 
         # Keep track of any padding that would be needed for each token
-        for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+        foreach my $i ( 0 .. $imax ) {
             next if ( $rneed_pad->[$i] );
             my $length       = $rfield_lengths->[$i];
             my $length_match = $rfield_lengths_match->[$i];
