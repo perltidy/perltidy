@@ -10188,7 +10188,13 @@ sub break_before_list_opening_containers {
             next;
         }
 
-        # -bbxi=2 ...
+        # -bbxi=2: This option changes the level ...
+        # This option can conflict with -xci in some cases.  We can turn off
+        # -xci for this container to avoid blinking.  For now, only do this if
+        # -vmll is set.  ( fixes b1335, b1336 )
+        if ($rOpts_variable_maximum_line_length) {
+            $rno_xci_by_seqno->{$seqno} = 1;
+        }
 
         #----------------------------------------------------------------
         # Part 2: Perform tests before committing to changing ci and level

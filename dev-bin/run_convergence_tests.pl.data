@@ -9729,6 +9729,30 @@ params =>
 --indent-columns=0
 --maximum-line-length=96
 
+==> b1336.in <==
+# S1
+    my $expect =
+            [
+                {
+                    type => 'preformatted',
+                    text => "preformatted line\n",
+                }
+            ];
+
+# S2
+    my $expect =
+        [
+        { type => 'preformatted', text => "preformatted line\n", } ];
+
+==> b1336.par <==
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=2
+--continuation-indentation=8
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--maximum-line-length=63
+--variable-maximum-line-length
+
 ==> b1337.in <==
 # S1: 'new' was given type 'i' here
         print JSON::PP->new
