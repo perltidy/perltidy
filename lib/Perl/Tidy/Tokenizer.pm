@@ -7736,6 +7736,12 @@ sub scan_identifier_do {
             # type 'w' includes anything without leading type info
             # ($,%,@,*) including something like abc::def::ghi
             $type = 'w';
+
+            # Fix for b1337, if restarting scan after line break between '->' or
+            # sigil and identifier name, use type 'i'
+            if ( $id_scan_state_begin && $identifier =~ /^([\$\%\@\*\&]|->)/ ) {
+                $type = 'i';
+            }
         }
         else {
             $type = '';

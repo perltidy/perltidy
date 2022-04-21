@@ -2545,8 +2545,12 @@ sub set_whitespace_flags {
 
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
-    my ( $rtokh,      $token,      $type );
-    my ( $rtokh_last, $last_token, $last_type );
+    my ( $rtokh, $token, $type );
+    my $rtokh_last      = $rLL->[0];
+    my $rtokh_last_last = $rtokh_last;
+
+    my $last_type  = '';
+    my $last_token = '';
 
     my $j_tight_closing_paren = -1;
 
@@ -2658,6 +2662,8 @@ sub set_whitespace_flags {
             next;
         }
 
+        $rtokh_last_last = $rtokh_last;
+
         $rtokh_last = $rtokh;
         $last_token = $token;
         $last_type  = $type;
@@ -2709,19 +2715,19 @@ sub set_whitespace_flags {
                 }
                 else { $tightness = $tightness{$last_token} }
 
-               #=============================================================
-               # Patch for test problem <<snippets/fabrice_bug.in>>
-               # We must always avoid spaces around a bare word beginning
-               # with ^ as in:
-               #    my $before = ${^PREMATCH};
-               # Because all of the following cause an error in perl:
-               #    my $before = ${ ^PREMATCH };
-               #    my $before = ${ ^PREMATCH};
-               #    my $before = ${^PREMATCH };
-               # So if brace tightness flag is -bt=0 we must temporarily reset
-               # to bt=1.  Note that here we must set tightness=1 and not 2 so
-               # that the closing space
-               # is also avoided (via the $j_tight_closing_paren flag in coding)
+                #=============================================================
+                # Patch for test problem <<snippets/fabrice_bug.in>>
+                # We must always avoid spaces around a bare word beginning
+                # with ^ as in:
+                #    my $before = ${^PREMATCH};
+                # Because all of the following cause an error in perl:
+                #    my $before = ${ ^PREMATCH };
+                #    my $before = ${ ^PREMATCH};
+                #    my $before = ${^PREMATCH };
+                # So if brace tightness flag is -bt=0 we must temporarily reset
+                # to bt=1.  Note that here we must set tightness=1 and not 2 so
+                # that the closing space is also avoided
+                # (via the $j_tight_closing_paren flag in coding)
                 if ( $type eq 'w' && $token =~ /^\^/ ) { $tightness = 1 }
 
                 #=============================================================
@@ -2799,21 +2805,21 @@ sub set_whitespace_flags {
 
                 my $seqno = $rtokh->[_TYPE_SEQUENCE_];
 
-              # This will have to be tweaked as tokenization changes.
-              # We usually want a space at '} (', for example:
-              # <<snippets/space1.in>>
-              #     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
-              #
-              # But not others:
-              #     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
-              # At present, the above & block is marked as type L/R so this case
-              # won't go through here.
+                # This will have to be tweaked as tokenization changes.
+                # We usually want a space at '} (', for example:
+                # <<snippets/space1.in>>
+                #     map { 1 * $_; } ( $y, $M, $w, $d, $h, $m, $s );
+                #
+                # But not others:
+                #     &{ $_->[1] }( delete $_[$#_]{ $_->[0] } );
+                # At present, the above & block is marked as type L/R so this
+                # case won't go through here.
                 if ( $last_type eq '}' && $last_token ne ')' ) { $ws = WS_YES }
 
-               # NOTE: some older versions of Perl had occasional problems if
-               # spaces are introduced between keywords or functions and opening
-               # parens.  So the default is not to do this except is certain
-               # cases.  The current Perl seems to tolerate spaces.
+                # NOTE: some older versions of Perl had occasional problems if
+                # spaces are introduced between keywords or functions and
+                # opening parens.  So the default is not to do this except is
+                # certain cases.  The current Perl seems to tolerate spaces.
 
                 # Space between keyword and '('
                 elsif ( $last_type eq 'k' ) {
@@ -2831,18 +2837,35 @@ sub set_whitespace_flags {
                 #   myfun(    &myfun(   ->myfun(
                 # -----------------------------------------------------
 
-              # Note that at this point an identifier may still have a leading
-              # arrow, but the arrow will be split off during token respacing.
-              # After that, the token may become a bare word without leading
-              # arrow.  The point is, it is best to mark function call parens
-              # right here before that happens.
-              # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
-              # NOTE: this would be the place to allow spaces between repeated
-              # parens, like () () (), as in case c017, but I decided that would
-              # not be a good idea.
+                # Note that at this point an identifier may still have a
+                # leading arrow, but the arrow will be split off during token
+                # respacing.  After that, the token may become a bare word
+                # without leading arrow.  The point is, it is best to mark
+                # function call parens right here before that happens.
+                # Patch: added 'C' to prevent blinker, case b934, i.e. 'pi()'
+                # NOTE: this would be the place to allow spaces between
+                # repeated parens, like () () (), as in case c017, but I
+                # decided that would not be a good idea.
                 elsif (
-                       ( $last_type =~ /^[wCUG]$/ )
-                    || ( $last_type =~ /^[wi]$/ && $last_token =~ /^([\&]|->)/ )
+                    $last_type =~ /^[wCUG]$/
+                    || (
+                        $last_type =~ /^[wi]$/
+
+                        && (
+                            $last_token =~ /^([\&]|->)/
+
+                            # or -> or & split from bareword by newline (b1337)
+                            || (
+                                $last_token =~ /^\w/
+                                && (
+                                    $rtokh_last_last->[_TYPE_] eq '->'
+                                    || (   $rtokh_last_last->[_TYPE_] eq 't'
+                                        && $rtokh_last_last->[_TOKEN_] =~
+                                        /^\&\s*$/ )
+                                )
+                            )
+                        )
+                    )
                   )
                 {
                     $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
@@ -2850,10 +2873,10 @@ sub set_whitespace_flags {
                     $ris_function_call_paren->{$seqno} = 1;
                 }
 
-               # space between something like $i and ( in <<snippets/space2.in>>
-               # for $i ( 0 .. 20 ) {
-               # FIXME: eventually, type 'i' could be split into multiple
-               # token types so this can be a hardwired rule.
+                # space between something like $i and ( in 'snippets/space2.in'
+                # for $i ( 0 .. 20 ) {
+                # FIXME: eventually, type 'i' could be split into multiple
+                # token types so this can be a hardwired rule.
                 elsif ( $last_type eq 'i' && $last_token =~ /^[\$\%\@]/ ) {
                     $ws = WS_YES;
                 }
@@ -2996,24 +3019,24 @@ sub set_whitespace_flags {
             # Apply default rules not covered above.
             #---------------------------------------------------------------
 
-           # If we fall through to here, look at the pre-defined hash tables for
-           # the two tokens, and:
-           #  if (they are equal) use the common value
-           #  if (either is zero or undef) use the other
-           #  if (either is -1) use it
-           # That is,
-           # left  vs right
-           #  1    vs    1     -->  1
-           #  0    vs    0     -->  0
-           # -1    vs   -1     --> -1
-           #
-           #  0    vs   -1     --> -1
-           #  0    vs    1     -->  1
-           #  1    vs    0     -->  1
-           # -1    vs    0     --> -1
-           #
-           # -1    vs    1     --> -1
-           #  1    vs   -1     --> -1
+            # If we fall through to here, look at the pre-defined hash tables
+            # for the two tokens, and:
+            #  if (they are equal) use the common value
+            #  if (either is zero or undef) use the other
+            #  if (either is -1) use it
+            # That is,
+            # left  vs right
+            #  1    vs    1     -->  1
+            #  0    vs    0     -->  0
+            # -1    vs   -1     --> -1
+            #
+            #  0    vs   -1     --> -1
+            #  0    vs    1     -->  1
+            #  1    vs    0     -->  1
+            # -1    vs    0     --> -1
+            #
+            # -1    vs    1     --> -1
+            #  1    vs   -1     --> -1
             if ( !defined($ws) ) {
                 my $wl = $want_left_space{$type};
                 my $wr = $want_right_space{$last_type};

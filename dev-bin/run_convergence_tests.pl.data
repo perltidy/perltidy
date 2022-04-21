@@ -9729,6 +9729,36 @@ params =>
 --indent-columns=0
 --maximum-line-length=96
 
+==> b1337.in <==
+# S1: 'new' was given type 'i' here
+        print JSON::PP->new
+          ->indent
+          ->space_after
+          ->canonical
+          ->convert_blessed
+          ->encode(
+              $self->{abbrev}
+            ? $schema
+              ->abbreviated
+            : $schema );
+
+# S2: 'new' was given type 'w' here, but type 'i' is better
+        print JSON::PP->
+          new->indent
+          ->space_after
+          ->canonical
+          ->convert_blessed
+          ->encode(
+              $self->{abbrev}
+            ? $schema
+              ->abbreviated
+            : $schema );
+
+==> b1337.par <==
+--ignore-old-breakpoints
+--maximum-line-length=19
+--variable-maximum-line-length
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
