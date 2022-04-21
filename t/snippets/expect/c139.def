@@ -1,0 +1,18 @@
+# The '&' has trailing spaces
+@l = &_( -49, -71 );
+
+# This '$' has trailing spaces
+my $b = 40;
+
+# this arrow has trailing spaces
+$r = $c->sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+
+# spaces and blank line
+@l = &
+
+  _( -49, -71 );
+
+# spaces and blank line
+$r = $c->
+
+  sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );

@@ -7310,6 +7310,7 @@ sub scan_identifier_do {
 
                 $tok_is_blank = 1;
 
+                # note: an id with a leading '&' does not actually come this way
                 if ( $identifier =~ /^[\$\%\*\&\@]/ ) {
 
                     if ( length($identifier) > 1 ) {
@@ -7319,6 +7320,13 @@ sub scan_identifier_do {
                         last;
                     }
                     else {
+
+                        # fix c139: trim line-ending type 't'
+                        if ( $i == $max_token_index ) {
+                            $i    = $i_save;
+                            $type = 't';
+                            last;
+                        }
 
                         # spaces after $'s are common, and space after @
                         # is harmless, so only complain about space
@@ -7335,8 +7343,16 @@ sub scan_identifier_do {
                     }
                 }
 
-                # else:
-                # space after '->' is ok
+                elsif ( $identifier eq '->' ) {
+
+                    # space after '->' is ok except at line end ..
+                    # so trim line-ending in type '->' (fixes c139)
+                    if ( $i == $max_token_index ) {
+                        $i    = $i_save;
+                        $type = '->';
+                        last;
+                    }
+                }
             }
             elsif ( $tok eq '^' ) {
 
@@ -7595,6 +7611,13 @@ sub scan_identifier_do {
             }
             elsif ( $tok =~ /^\s*$/ ) {               # allow space
                 $tok_is_blank = 1;
+
+                # fix c139: trim line-ending type 't'
+                if ( length($identifier) == 1 && $i == $max_token_index ) {
+                    $i    = $i_save;
+                    $type = 't';
+                    last;
+                }
             }
             elsif ( $tok eq '::' ) {                  # leading ::
                 $id_scan_state = 'A';                 # accept alpha next

@@ -8,6 +8,7 @@
 #5 c133.def
 #6 git93.def
 #7 git93.git93
+#8 c139.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -68,6 +69,32 @@ return (
 return
   $x * cos($a) - $y * sin($a),
   $x * sin($a) + $y * cos($a);
+----------
+
+        'c139' => <<'----------',
+# The '&' has trailing spaces
+@l = &    
+_  
+( -49, -71 );
+
+# This '$' has trailing spaces
+my $    
+b = 40;
+
+# this arrow has trailing spaces
+$r = $c->         
+sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+
+# spaces and blank line
+@l = &    
+
+_  
+( -49, -71 );
+
+# spaces and blank line
+$r = $c->         
+
+sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
 ----------
 
         'git93' => <<'----------',
@@ -352,6 +379,31 @@ sub qaax : PluginKeyword(qiix) { die "unimplemented" }
 use vars qw($curdir);
 no strict qw(vars);
 #7...........
+        },
+
+        'c139.def' => {
+            source => "c139",
+            params => "def",
+            expect => <<'#8...........',
+# The '&' has trailing spaces
+@l = &_( -49, -71 );
+
+# This '$' has trailing spaces
+my $b = 40;
+
+# this arrow has trailing spaces
+$r = $c->sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+
+# spaces and blank line
+@l = &
+
+  _( -49, -71 );
+
+# spaces and blank line
+$r = $c->
+
+  sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+#8...........
         },
     };
 
