@@ -1147,16 +1147,6 @@ sub get_line {
         return $line_of_tokens;
     }
 
-    # Update indentation levels for log messages.
-    # Skip blank lines and also block comments, unless a logfile is requested.
-    # Note that _line_of_text_ is the input line but trimmed from left to right.
-    my $lot = $tokenizer_self->[_line_of_text_];
-    if ( $lot && ( $self->[_rOpts_logfile_] || substr( $lot, 0, 1 ) ne '#' ) ) {
-        my $rlevels = $line_of_tokens->{_rlevels};
-        $line_of_tokens->{_guessed_indentation_level} =
-          guess_old_indentation_level($input_line);
-    }
-
     # see if this line contains here doc targets
     my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
     if ( @{$rhere_target_list} ) {
@@ -3439,10 +3429,30 @@ EOM
         # do not trim end because we might end in a quote (test: deken4.pl)
         # Perl::Tidy::Formatter will delete needless trailing blanks
         unless ( $in_quote && ( $quote_type eq 'Q' ) ) {
-            $input_line =~ s/^\s+//;    # trim left end
+            $input_line =~ s/^(\s+)//;    # trim left end
+
+            # calculate a guessed level for nonblank lines to avoid calls to
+            #    sub guess_old_indentation_level()
+            if ( $input_line && $1 ) {
+                my $leading_spaces = $1;
+                my $spaces         = length($leading_spaces);
+
+                # handle any tabs
+                if ( ord( substr( $leading_spaces, 0, 1 ) ) == 9
+                    && $leading_spaces =~ /^(\t+)/ )
+                {
+                    $spaces +=
+                      length($1) * ( $tokenizer_self->[_tabsize_] - 1 );
+                }
+
+                my $indent_columns = $tokenizer_self->[_indent_columns_];
+                $indent_columns = 4 if ( !$indent_columns );
+                $line_of_tokens->{_guessed_indentation_level} =
+                  int( $spaces / $indent_columns );
+            }
 
             $is_END_or_DATA = substr( $input_line, 0, 1 ) eq '_'
-              && $input_line =~ /^\s*__(END|DATA)__\s*$/;
+              && $input_line =~ /^__(END|DATA)__\s*$/;
         }
 
         # update the copy of the line for use in error messages
@@ -3767,11 +3777,12 @@ EOM
             # I have allowed tokens starting with <, such as <=,
             # because I don't think these could be valid angle operators.
             # test file: storrs4.pl
-            my $test_tok   = $tok . $rtokens->[ $i + 1 ];
-            my $combine_ok = $is_digraph{$test_tok};
+            if ( $is_digraph{ $tok . $rtokens->[ $i + 1 ] } ) {
 
-            # check for special cases which cannot be combined
-            if ($combine_ok) {
+                my $combine_ok = 1;
+                my $test_tok   = $tok . $rtokens->[ $i + 1 ];
+
+                # check for special cases which cannot be combined
 
                 # '//' must be defined_or operator if an operator is expected.
                 # TODO: Code for other ambiguous digraphs (/=, x=, **, *=)
@@ -3798,41 +3809,43 @@ EOM
                 if ( $test_tok eq '**' ) {
                     if ( $last_nonblank_type ne 'Z' ) { $combine_ok = 0 }
                 }
-            }
 
-            if (
-                $combine_ok
+                if (
 
-                && ( $test_tok ne '/=' )    # might be pattern
-                && ( $test_tok ne 'x=' )    # might be $x
-                && ( $test_tok ne '*=' )    # typeglob?
+                    # still ok to combine?
+                    $combine_ok
 
-                # Moved above as part of fix for
-                # RT #114359: Missparsing of "print $x ** 0.5;
-                # && ( $test_tok ne '**' )    # typeglob?
-              )
-            {
-                $tok = $test_tok;
-                $i++;
+                    && ( $test_tok ne '/=' )    # might be pattern
+                    && ( $test_tok ne 'x=' )    # might be $x
+                    && ( $test_tok ne '*=' )    # typeglob?
 
-                # Now try to assemble trigraphs.  Note that all possible
-                # perl trigraphs can be constructed by appending a character
-                # to a digraph.
-                $test_tok = $tok . $rtokens->[ $i + 1 ];
-
-                if ( $is_trigraph{$test_tok} ) {
+                    # Moved above as part of fix for
+                    # RT #114359: Missparsing of "print $x ** 0.5;
+                    # && ( $test_tok ne '**' )    # typeglob?
+                  )
+                {
                     $tok = $test_tok;
                     $i++;
-                }
 
-                # The only current tetragraph is the double diamond operator
-                # and its first three characters are not a trigraph, so
-                # we do can do a special test for it
-                elsif ( $test_tok eq '<<>' ) {
-                    $test_tok .= $rtokens->[ $i + 2 ];
-                    if ( $is_tetragraph{$test_tok} ) {
+                    # Now try to assemble trigraphs.  Note that all possible
+                    # perl trigraphs can be constructed by appending a character
+                    # to a digraph.
+                    $test_tok = $tok . $rtokens->[ $i + 1 ];
+
+                    if ( $is_trigraph{$test_tok} ) {
                         $tok = $test_tok;
-                        $i += 2;
+                        $i++;
+                    }
+
+                    # The only current tetragraph is the double diamond operator
+                    # and its first three characters are not a trigraph, so
+                    # we do can do a special test for it
+                    elsif ( $test_tok eq '<<>' ) {
+                        $test_tok .= $rtokens->[ $i + 2 ];
+                        if ( $is_tetragraph{$test_tok} ) {
+                            $tok = $test_tok;
+                            $i += 2;
+                        }
                     }
                 }
             }
@@ -3854,7 +3867,7 @@ EOM
 
             # Turn off attribute list on first non-blank, non-bareword.
             # Added '#' to fix c038.
-            if ( $pre_type ne 'w' && $pre_type ne '#' ) {
+            if ( $in_attribute_list && $pre_type ne 'w' && $pre_type ne '#' ) {
                 $in_attribute_list = 0;
             }
 
