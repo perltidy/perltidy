@@ -86,6 +86,7 @@ use vars qw{
   %expecting_term_types
   %expecting_term_token
   %is_digraph
+  %can_start_digraph
   %is_file_test_operator
   %is_trigraph
   %is_tetragraph
@@ -438,6 +439,11 @@ sub new {
       $rOpts->{'maximum-unexpected-errors'};
     $self->[_rOpts_logfile_] = $rOpts->{'logfile'};
     $self->[_rOpts_]         = $rOpts;
+
+    # These vars are used for guessing indentation and must be positive
+    $self->[_tabsize_]        = 8 if ( !$self->[_tabsize_] );
+    $self->[_indent_columns_] = 4 if ( !$self->[_indent_columns_] );
+
     bless $self, $class;
 
     $tokenizer_self = $self;
@@ -3437,16 +3443,15 @@ EOM
                 my $leading_spaces = $1;
                 my $spaces         = length($leading_spaces);
 
-                # handle any tabs
+                # handle leading tabs
                 if ( ord( substr( $leading_spaces, 0, 1 ) ) == 9
                     && $leading_spaces =~ /^(\t+)/ )
                 {
-                    $spaces +=
-                      length($1) * ( $tokenizer_self->[_tabsize_] - 1 );
+                    my $tabsize = $tokenizer_self->[_tabsize_];
+                    $spaces += length($1) * ( $tabsize - 1 );
                 }
 
                 my $indent_columns = $tokenizer_self->[_indent_columns_];
-                $indent_columns = 4 if ( !$indent_columns );
                 $line_of_tokens->{_guessed_indentation_level} =
                   int( $spaces / $indent_columns );
             }
@@ -3505,6 +3510,7 @@ EOM
         push( @{$rtoken_type}, 'b', 'b', 'b' );
 
         # initialize for main loop
+        if (0) { #<<< this is not necessary
         foreach my $ii ( 0 .. $max_token_index + 3 ) {
             $routput_token_type->[$ii]     = "";
             $routput_block_type->[$ii]     = "";
@@ -3512,6 +3518,8 @@ EOM
             $routput_type_sequence->[$ii]  = "";
             $routput_indent_flag->[$ii]    = 0;
         }
+        }
+
         $i     = -1;
         $i_tok = -1;
 
@@ -3711,16 +3719,21 @@ EOM
                 $routput_type_sequence->[$i_tok]  = $type_sequence;
                 $routput_indent_flag->[$i_tok]    = $indent_flag;
             }
-            my $pre_tok  = $rtokens->[$i];        # get the next pre-token
-            my $pre_type = $rtoken_type->[$i];    # and type
-            $tok        = $pre_tok;
-            $type       = $pre_type;              # to be modified as necessary
-            $block_type = "";    # blank for all tokens except code block braces
-            $container_type = "";    # blank for all tokens except some parens
-            $type_sequence  = "";    # blank for all tokens except ?/:
-            $indent_flag    = 0;
-            $prototype = "";    # blank for all tokens except user defined subs
-            $i_tok     = $i;
+
+            # get the next pre-token and type
+            # $tok and $type will be modified to make the output token
+            my $pre_tok  = $tok  = $rtokens->[$i];      # get the next pre-token
+            my $pre_type = $type = $rtoken_type->[$i];  # and type
+
+            # remember the starting index of this token; we will be updating $i
+            $i_tok = $i;
+
+            # re-initialize various flags for the next output token
+            $block_type     &&= "";
+            $container_type &&= "";
+            $type_sequence  &&= "";
+            $indent_flag    &&= 0;
+            $prototype      &&= "";
 
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
@@ -3777,7 +3790,10 @@ EOM
             # I have allowed tokens starting with <, such as <=,
             # because I don't think these could be valid angle operators.
             # test file: storrs4.pl
-            if ( $is_digraph{ $tok . $rtokens->[ $i + 1 ] } ) {
+            if (   $can_start_digraph{$tok}
+                && $i < $max_token_index
+                && $is_digraph{ $tok . $rtokens->[ $i + 1 ] } )
+            {
 
                 my $combine_ok = 1;
                 my $test_tok   = $tok . $rtokens->[ $i + 1 ];
@@ -3788,12 +3804,12 @@ EOM
                 # TODO: Code for other ambiguous digraphs (/=, x=, **, *=)
                 # could be migrated here for clarity
 
-              # Patch for RT#102371, misparsing a // in the following snippet:
-              #     state $b //= ccc();
-              # The solution is to always accept the digraph (or trigraph) after
-              # token type 'Z' (possible file handle).  The reason is that
-              # sub operator_expected gives TERM expected here, which is
-              # wrong in this case.
+                # Patch for RT#102371, misparsing a // in the following snippet:
+                #     state $b //= ccc();
+                # The solution is to always accept the digraph (or trigraph)
+                # after type 'Z' (possible file handle).  The reason is that
+                # sub operator_expected gives TERM expected here, which is
+                # wrong in this case.
                 if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
                     my $next_type = $rtokens->[ $i + 1 ];
                     my $expecting =
@@ -3923,8 +3939,8 @@ EOM
                                 }
                             );
 
-                   # If successful, mark as type 'q' to be consistent with other
-                   # attributes.  Note that type 'w' would also work.
+                            # If successful, mark as type 'q' to be consistent
+                            # with other attributes.  Type 'w' would also work.
                             if ( $i > $i_beg ) {
                                 $type = 'q';
                                 next;
@@ -3969,24 +3985,24 @@ EOM
                         }
                         else {
 
-                           # Bareword followed by a fat comma ... see 'git18.in'
-                           # If tok is something like 'x17' then it could
-                           # actually be operator x followed by number 17.
-                           # For example, here:
-                           #     123x17 => [ 792, 1224 ],
-                           # (a key of 123 repeated 17 times, perhaps not
-                           # what was intended). We will mark x17 as type
-                           # 'n' and it will be split. If the previous token
-                           # was also a bareword then it is not very clear is
-                           # going on.  In this case we will not be sure that
-                           # an operator is expected, so we just mark it as a
-                           # bareword.  Perl is a little murky in what it does
-                           # with stuff like this, and its behavior can change
-                           # over time.  Something like
-                           #    a x18 => [792, 1224], will compile as
-                           # a key with 18 a's.  But something like
-                           #    push @array, a x18;
-                           # is a syntax error.
+                            # Bareword followed by a fat comma - see 'git18.in'
+                            # If tok is something like 'x17' then it could
+                            # actually be operator x followed by number 17.
+                            # For example, here:
+                            #     123x17 => [ 792, 1224 ],
+                            # (a key of 123 repeated 17 times, perhaps not
+                            # what was intended). We will mark x17 as type
+                            # 'n' and it will be split. If the previous token
+                            # was also a bareword then it is not very clear is
+                            # going on.  In this case we will not be sure that
+                            # an operator is expected, so we just mark it as a
+                            # bareword.  Perl is a little murky in what it does
+                            # with stuff like this, and its behavior can change
+                            # over time.  Something like
+                            #    a x18 => [792, 1224], will compile as
+                            # a key with 18 a's.  But something like
+                            #    push @array, a x18;
+                            # is a syntax error.
                             if (
                                    $expecting == OPERATOR
                                 && substr( $tok, 0, 1 ) eq 'x'
@@ -4012,11 +4028,12 @@ EOM
                     }
                 }
 
-     # quote a bare word within braces..like xxx->{s}; note that we
-     # must be sure this is not a structural brace, to avoid
-     # mistaking {s} in the following for a quoted bare word:
-     #     for(@[){s}bla}BLA}
-     # Also treat q in something like var{-q} as a bare word, not qoute operator
+                # quote a bare word within braces..like xxx->{s}; note that we
+                # must be sure this is not a structural brace, to avoid
+                # mistaking {s} in the following for a quoted bare word:
+                #     for(@[){s}bla}BLA}
+                # Also treat q in something like var{-q} as a bare word, not
+                # a qoute operator
                 if (
                     $next_nonblank_token eq '}'
                     && (
@@ -9281,10 +9298,15 @@ BEGIN {
     my @q;
 
     my @digraphs = qw(
-      .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
+      .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
       <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
     );
     @is_digraph{@digraphs} = (1) x scalar(@digraphs);
+
+    @q = qw(
+      . : < > * & | / - = + -  %  ^ !  x ~
+    );
+    @can_start_digraph{@q} = (1) x scalar(@q);
 
     my @trigraphs = qw( ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~);
     @is_trigraph{@trigraphs} = (1) x scalar(@trigraphs);

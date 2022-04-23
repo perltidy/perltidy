@@ -3161,7 +3161,7 @@ EOM
         @is_for_foreach{@q} = (1) x scalar(@q);
 
         @q = qw(
-          .. :: << >> ** && .. || // -> => += -= .= %= &= |= ^= *= <>
+          .. :: << >> ** && || // -> => += -= .= %= &= |= ^= *= <>
           <= >= == =~ !~ != ++ -- /= x= ~~ ~. |. &. ^.
         );
         @is_digraph{@q} = (1) x scalar(@q);
@@ -5128,6 +5128,7 @@ EOM
             my $seqno = $rtype_sequence->[$j];
             my $token = $rtokens->[$j];
             my $type  = $rtoken_type->[$j];
+            $seqno = "" unless ( defined($seqno) );
             my $err_msg =
 "Error at j=$j, line number $input_line_no, seqno='$seqno', type='$type', tok='$token':\n";
 
@@ -5414,6 +5415,9 @@ EOM
                         else { $Iss_closing->[$seqno] = @{$rSS} }
                         push @{$rSS}, $sign * $seqno;
 
+                    }
+                    else {
+                        $seqno = "" unless ( defined($seqno) );
                     }
 
                     my @tokary;
