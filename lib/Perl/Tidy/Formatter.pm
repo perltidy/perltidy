@@ -7072,9 +7072,12 @@ EOM
             }
 
             # Store this token with possible previous blank
-            $store_token_and_space->(
-                $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
-            );
+            if ( $rwhitespace_flags->[$KK] == WS_YES ) {
+                $store_token_and_space->( $rtoken_vars, 1 );
+            }
+            else {
+                $store_token->($rtoken_vars);
+            }
 
         }    # End token loop
     }    # End line loop
