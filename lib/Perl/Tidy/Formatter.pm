@@ -8738,6 +8738,18 @@ sub weld_nested_containers {
     my $ris_asub_block            = $self->[_ris_asub_block_];
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
+    # Setup hash needed for RULE 2B involving -lp -wn -vt=2
+    # Note: this could be changed in the future to include -vt=1 and -vt=2
+    # but for now only -vt=2 has caused instabilities with -wn.
+    my %no_weld_to_one_line_container;
+    if ($rOpts_line_up_parentheses) {
+        foreach ( keys %opening_vertical_tightness ) {
+            if ( $opening_vertical_tightness{$_} == 2 ) {
+                $no_weld_to_one_line_container{$_} = 1;
+            }
+        }
+    }
+
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
 
@@ -9135,6 +9147,19 @@ EOM
           )
         {
             $do_not_weld_rule = '2A';
+        }
+
+        # DO-NOT-WELD RULE 2B: Turn off welding to a *one-line container for* an
+        # opening token which uses both -lp indentation and -vt=2.  See issue
+        # b1338. Also see related issue b1183 involving welds and -vt>0.
+        if (  !$do_not_weld_rule
+            && %no_weld_to_one_line_container
+            && $iline_io == $iline_ic
+            && $no_weld_to_one_line_container{$token_oo}
+            && !$rblock_type_of_seqno->{$outer_seqno}
+            && !$ris_excluded_lp_container->{$outer_seqno} )
+        {
+            $do_not_weld_rule = '2B';
         }
 
         # DO-NOT-WELD RULE 3:

@@ -9783,6 +9783,25 @@ params =>
 --maximum-line-length=19
 --variable-maximum-line-length
 
+==> b1338.in <==
+# S1:
+      (
+         sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) )
+      )[0];
+
+# S2:
+      (  sockaddr_in ( getsockname( $_[0]->[_SOCKET] ) )
+      )[0];
+
+==> b1338.par <==
+--continuation-indentation=7
+--extended-line-up-parentheses
+--indent-columns=6
+--maximum-line-length=57
+--paren-vertical-tightness=2
+--space-function-paren
+--weld-nested-containers
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
