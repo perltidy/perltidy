@@ -9802,6 +9802,40 @@ params =>
 --space-function-paren
 --weld-nested-containers
 
+==> b1339.in <==
+# S1
+   $LANGUAGE{'groff'}={
+                       'filename'=>'\\.groff$',
+                       'regex'=>'',
+                       'patterns'=>[
+                                    {
+                                     'name'=>'comment',
+                                     'regex'=>'\\\\".*?$',
+                                     'style'=>'comment',
+                                     'childregex'=>[]
+                                    }
+                       ]
+   };
+
+# S2
+   $LANGUAGE{'groff'}={
+        'filename'=>'\\.groff$',
+        'regex'=>'',
+        'patterns'=>[{'name'=>'comment','regex'=>'\\\\".*?$','style'=>'comment','childregex'=>[]}]
+   };
+
+==> b1339.par <==
+--noadd-whitespace
+--brace-vertical-tightness-closing=1
+--comma-arrow-breakpoints=0
+--continuation-indentation=8
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=3
+--maximum-line-length=98
+--square-bracket-vertical-tightness=2
+--weld-nested-containers
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

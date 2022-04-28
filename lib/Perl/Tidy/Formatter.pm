@@ -8744,9 +8744,11 @@ sub weld_nested_containers {
     # Setup hash needed for RULE 2B involving -lp -wn -vt=2
     # Note: this could be changed in the future to include -vt=1 and -vt=2
     # but for now only -vt=2 has caused instabilities with -wn.
+    # Note: used all keys for b1338, but switched to just '(' to fix b1339.
     my %no_weld_to_one_line_container;
     if ($rOpts_line_up_parentheses) {
-        foreach ( keys %opening_vertical_tightness ) {
+        ##foreach ( keys %opening_vertical_tightness ) {
+        foreach ( '(' ) {
             if ( $opening_vertical_tightness{$_} == 2 ) {
                 $no_weld_to_one_line_container{$_} = 1;
             }
@@ -9153,8 +9155,8 @@ EOM
         }
 
         # DO-NOT-WELD RULE 2B: Turn off welding to a *one-line container for* an
-        # opening token which uses both -lp indentation and -vt=2.  See issue
-        # b1338. Also see related issue b1183 involving welds and -vt>0.
+        # opening token which uses both -lp indentation and -vt=2.  See issues
+        # b1338, b1339. Also see related issue b1183 involving welds and -vt>0.
         if (  !$do_not_weld_rule
             && %no_weld_to_one_line_container
             && $iline_io == $iline_ic
