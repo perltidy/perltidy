@@ -981,7 +981,7 @@ sub check_token_array {
     # when the DEVEL_MODE flag is set, so this Fault will only occur
     # during code development.
     my $rLL = $self->[_rLL_];
-    for ( my $KK = 0 ; $KK < @{$rLL} ; $KK++ ) {
+    foreach my $KK ( 0 .. @{$rLL} - 1 ) {
         my $nvars = @{ $rLL->[$KK] };
         if ( $nvars != _NVARS ) {
             my $NVARS = _NVARS;
@@ -2794,7 +2794,9 @@ sub set_whitespace_flags {
                 {
                     my $level = $rLL->[$j]->[_LEVEL_];
                     my $jp    = $j;
-                    for ( my $inc = 1 ; $inc < 10 ; $inc++ ) {
+                    ## NOTE: we might use the KNEXT variable to avoid this loop
+                    ## but profiling shows that little would be saved
+                    foreach my $inc ( 1 .. 9 ) {
                         $jp++;
                         last if ( $jp > $jmax );
                         last if ( $rLL->[$jp]->[_LEVEL_] != $level );    # b1236
@@ -7604,7 +7606,7 @@ sub resync_lines_and_tokens {
     # blank spaces).  It must have set a bad old line index.
     if ( DEVEL_MODE && defined($Klimit) ) {
         my $iline = $rLL->[0]->[_LINE_INDEX_];
-        for ( my $KK = 1 ; $KK <= $Klimit ; $KK++ ) {
+        foreach my $KK ( 1 .. $Klimit ) {
             my $iline_last = $iline;
             $iline = $rLL->[$KK]->[_LINE_INDEX_];
             if ( $iline < $iline_last ) {
@@ -8570,7 +8572,7 @@ sub setup_new_weld_measurements {
                     my $iline_prev = $rLL->[$Kprev]->[_LINE_INDEX_];
                     my $rK_range   = $rlines->[$iline_prev]->{_rK_range};
                     my ( $Kfirst, $Klast ) = @{$rK_range};
-                    for ( my $KK = $Kref - 1 ; $KK >= $Kfirst ; $KK-- ) {
+                    foreach my $KK ( reverse( $Kfirst .. $Kref - 1 ) ) {
                         next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                         $Kref = $KK;
                         last;
@@ -8748,7 +8750,7 @@ sub weld_nested_containers {
     my %no_weld_to_one_line_container;
     if ($rOpts_line_up_parentheses) {
         ##foreach ( keys %opening_vertical_tightness ) {
-        foreach ( '(' ) {
+        foreach ('(') {
             if ( $opening_vertical_tightness{$_} == 2 ) {
                 $no_weld_to_one_line_container{$_} = 1;
             }
@@ -9155,8 +9157,8 @@ EOM
         }
 
         # DO-NOT-WELD RULE 2B: Turn off welding to a *one-line container for* an
-        # opening token which uses both -lp indentation and -vt=2.  See issues
-        # b1338, b1339. Also see related issue b1183 involving welds and -vt>0.
+        # opening token which uses both -lp indentation and -vt=2.  See issue
+        # b1338. Also see related issue b1183 involving welds and -vt>0.
         if (  !$do_not_weld_rule
             && %no_weld_to_one_line_container
             && $iline_io == $iline_ic
@@ -9358,7 +9360,7 @@ EOM
         if ( $dlevel != 0 ) {
             my $Kstart = $Kinner_opening;
             my $Kstop  = $Kinner_closing;
-            for ( my $KK = $Kstart ; $KK <= $Kstop ; $KK++ ) {
+            foreach my $KK ( $Kstart .. $Kstop ) {
                 $rLL->[$KK]->[_LEVEL_] += $dlevel;
             }
 
@@ -10431,7 +10433,7 @@ sub extended_ci {
             my $space   = $available_space{$seqno_top};
             my $length  = $rLL->[$KLAST]->[_CUMULATIVE_LENGTH_];
             my $count   = 0;
-            for ( my $Kt = $KLAST + 1 ; $Kt < $KNEXT ; $Kt++ ) {
+            foreach my $Kt ( $KLAST + 1 .. $KNEXT - 1 ) {
 
                 # But do not include tokens which might exceed the line length
                 # and are not in a list.
@@ -11761,7 +11763,7 @@ EOM
         push @subgroup, scalar @group;
         my $kbeg = 1;
         my $kend = @subgroup - 1;
-        for ( my $k = $kbeg ; $k <= $kend ; $k++ ) {
+        foreach my $k ( $kbeg .. $kend ) {
 
             # index j runs through all keywords found
             my $j_b = $subgroup[ $k - 1 ];
@@ -14648,7 +14650,7 @@ EOM
             # Walk backwards from the end and
             # set break at any closing block braces at the same level.
             # But quit if we are not in a chain of blocks.
-            for ( my $i = $max_index_to_go - 1 ; $i >= 0 ; $i-- ) {
+            foreach my $i ( reverse( 0 .. $max_index_to_go - 1 ) ) {
                 last if ( $levels_to_go[$i] < $lev );   # stop at a lower level
                 next if ( $levels_to_go[$i] > $lev );   # skip past higher level
 
@@ -15526,7 +15528,7 @@ sub break_equals {
 
     # now make a list of all new break points
     my @insert_list;
-    for ( my $i = $ir - 1 ; $i > $il ; $i-- ) {
+    foreach my $i ( reverse( $il + 1 .. $ir - 1 ) ) {
         my $type = $types_to_go[$i];
         if (   $is_assignment{$type}
             && $nesting_depth_to_go[$i] eq $depth_beg )
@@ -16930,7 +16932,7 @@ sub insert_final_ternary_breaks {
         my $i_question = $mate_index_to_go[$i_first_colon];
         if ( $i_question > 0 ) {
             my @insert_list;
-            for ( my $ii = $i_question - 1 ; $ii >= 0 ; $ii -= 1 ) {
+            foreach my $ii ( reverse( 0 .. $i_question - 1 ) ) {
                 my $token = $tokens_to_go[$ii];
                 my $type  = $types_to_go[$ii];
 
@@ -18487,7 +18489,7 @@ EOM
         {
             my $ibreak    = -1;
             my $obp_count = 0;
-            for ( my $ii = $i_first_comma - 1 ; $ii >= 0 ; $ii -= 1 ) {
+            foreach my $ii ( reverse( 0 .. $i_first_comma - 1 ) ) {
                 if ( $old_breakpoint_to_go[$ii] ) {
                     $obp_count++;
                     last if ( $obp_count > 1 );
@@ -19637,7 +19639,7 @@ EOM
         #-------------------------------------------
 
         # set breaks for any unfinished lists ..
-        for ( my $dd = $current_depth ; $dd >= $minimum_depth ; $dd-- ) {
+        foreach my $dd ( reverse( $minimum_depth .. $current_depth ) ) {
 
             $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
@@ -19748,7 +19750,7 @@ sub find_token_starting_list {
         # at the previous nonblank. This makes the result insensitive
         # to the flag --space-function-paren, and similar.
         # previous loop: for ( my $j = $im1 ; $j >= 0 ; $j-- ) {
-        for ( my $j = $iprev_nb ; $j >= 0 ; $j-- ) {
+        foreach my $j ( reverse( 0 .. $iprev_nb ) ) {
             if ( $is_key_type{ $types_to_go[$j] } ) {
 
                 # fix for b1211
@@ -23527,7 +23529,7 @@ sub get_seqno {
                     #      : eval($_) ? 1
                     #      :            0;
 
-                   # be sure levels agree (do not indent after an indented 'if')
+                    # be sure levels agree (never indent after an indented 'if')
                     next
                       if ( $levels_to_go[$ibeg] ne $levels_to_go[$ibeg_next] );
 
@@ -23640,7 +23642,7 @@ sub get_seqno {
             # find interior token to pad if necessary
             if ( !defined($ipad) ) {
 
-                for ( my $i = $ibeg ; ( $i < $iend ) && !$ipad ; $i++ ) {
+                foreach my $i ( $ibeg .. $iend - 1 ) {
 
                     # find any unclosed container
                     next
@@ -23649,9 +23651,9 @@ sub get_seqno {
 
                     # find next nonblank token to pad
                     $ipad = $inext_to_go[$i];
-                    last if ( $ipad > $iend );
+                    last if $ipad;
                 }
-                last unless $ipad;
+                last if ( !$ipad || $ipad > $iend );
             }
 
             # We cannot pad the first leading token of a file because
@@ -26230,7 +26232,7 @@ sub set_vertical_tightness_flags {
 
         # loop to examine characters one-by-one, RIGHT to LEFT and
         # build a balancing ending, LEFT to RIGHT.
-        for ( my $pos = length($csc) - 1 ; $pos >= 0 ; $pos-- ) {
+        foreach my $pos ( reverse( 0 .. length($csc) - 1 ) ) {
 
             my $char = substr( $csc, $pos, 1 );
 

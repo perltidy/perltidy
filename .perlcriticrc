@@ -9,9 +9,8 @@ severity = 4
 # in the Tokenizer.pm module
 [-Variables::RequireInitializationForLocalVars] 
 
-# C-style for loops are essential when working with multiple indexed
-# arrays
-[-ControlStructures::ProhibitCStyleForLoops] 
+# C-style for loops are avoided now because profiling shows them to be very slow
+# [-ControlStructures::ProhibitCStyleForLoops]
 
 # There is a stringy eval in Formatter.pm which is essential.  
 [-BuiltinFunctions::ProhibitStringyEval] 

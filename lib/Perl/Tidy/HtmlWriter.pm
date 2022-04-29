@@ -1271,7 +1271,7 @@ sub markup_tokens {
     my $rlast_level    = $self->{_rlast_level};
     my $rpackage_stack = $self->{_rpackage_stack};
 
-    for ( my $j = 0 ; $j < @{$rtoken_type} ; $j++ ) {
+    foreach my $j ( 0 .. @{$rtoken_type} - 1 ) {
         $type  = $rtoken_type->[$j];
         $token = $rtokens->[$j];
         $level = $rlevels->[$j];

@@ -1892,7 +1892,7 @@ sub two_line_pad {
 
     my $lensum_m = 0;
     my $lensum   = 0;
-    for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+    foreach my $i ( 0 .. $imax_min ) {
         $lensum_m += $rfield_lengths_m->[$i];
         $lensum   += $rfield_lengths->[$i];
     }
@@ -1905,7 +1905,7 @@ sub two_line_pad {
         $patterns_match = 1;
         my $rpatterns_m = $line_m->get_rpatterns();
         my $rpatterns   = $line->get_rpatterns();
-        for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+        foreach my $i ( 0 .. $imax_min ) {
             my $pat   = $rpatterns->[$i];
             my $pat_m = $rpatterns_m->[$i];
             if ( $pat ne $pat_m ) { $patterns_match = 0; last }
@@ -2397,7 +2397,7 @@ EOM
 
     # Loop to either copy items or concatenate fields and patterns
     my $jmin_del;
-    for ( my $j = 0 ; $j < $jmax_old ; $j++ ) {
+    foreach my $j ( 0 .. $jmax_old - 1 ) {
         my $token        = $rtokens_old->[$j];
         my $field        = $rfields_old->[ $j + 1 ];
         my $field_length = $rfield_lengths_old->[ $j + 1 ];
@@ -2643,7 +2643,7 @@ EOM
         # compare each line pair and record matches
         my $rtok_hash = {};
         my $nr        = 0;
-        for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+        foreach my $jl ( 0 .. $jmax - 1 ) {
             my $nl = $nr;
             $nr = 0;
             my $jr      = $jl + 1;
@@ -2711,7 +2711,7 @@ EOM
         # find subgroups
         my @subgroups;
         push @subgroups, [ 0, $jmax ];
-        for ( my $jl = 0 ; $jl < $jmax ; $jl++ ) {
+        foreach my $jl ( 0 .. $jmax - 1 ) {
             if ( $rnew_lines->[$jl]->get_end_group() ) {
                 $subgroups[-1]->[1] = $jl;
                 push @subgroups, [ $jl + 1, $jmax ];
@@ -2759,7 +2759,7 @@ EOM
             my %token_line_count;
             if ( $nlines > 2 ) {
 
-                for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+                foreach my $jj ( $jbeg .. $jend ) {
                     my %seen;
                     my $line    = $rnew_lines->[$jj];
                     my $rtokens = $line->get_rtokens();
@@ -3087,7 +3087,7 @@ sub delete_null_alignments {
           );
 
         # Note that we are skipping the token at i=0
-        for ( my $i = 1 ; $i <= $imax_match ; $i++ ) {
+        foreach my $i ( 1 .. $imax_match ) {
 
             # do not delete a token which requires padding to align
             next if ( $rneed_pad->[$i] );
@@ -3119,7 +3119,7 @@ sub delete_null_alignments {
         my $nlines = $jend - $jbeg + 1;
         next unless ( $nlines > 2 );
 
-        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+        foreach my $jj ( $jbeg .. $jend ) {
             my $line = $rnew_lines->[$jj];
             $rtokens        = $line->get_rtokens();
             $rfield_lengths = $line->get_rfield_lengths();
@@ -3134,7 +3134,7 @@ sub delete_null_alignments {
             # see if all tokens of this line match the current group
             my $match;
             if ( $imax == $imax_match ) {
-                for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+                foreach my $i ( 0 .. $imax ) {
                     my $tok       = $rtokens->[$i];
                     my $tok_match = $rtokens_match->[$i];
                     last if ( $tok ne $tok_match );
@@ -3289,7 +3289,7 @@ sub match_line_pairs {
         next unless ( $nlines > 1 );
 
         # loop over lines in a subgroup
-        for ( my $jj = $jbeg ; $jj <= $jend ; $jj++ ) {
+        foreach my $jj ( $jbeg .. $jend ) {
 
             $line_m           = $line;
             $rtokens_m        = $rtokens;
@@ -3336,7 +3336,7 @@ sub match_line_pairs {
                 if ($ci_jump) { $imax_min = -1 }
 
                 my $i_nomatch = $imax_min + 1;
-                for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+                foreach my $i ( 0 .. $imax_min ) {
                     my $tok   = $rtokens->[$i];
                     my $tok_m = $rtokens_m->[$i];
                     if ( $tok ne $tok_m ) {
@@ -3353,7 +3353,7 @@ sub match_line_pairs {
             ##################
             else {
                 my $i_nomatch = $imax_min + 1;
-                for ( my $i = 0 ; $i <= $imax_min ; $i++ ) {
+                foreach my $i ( 0 .. $imax_min ) {
                     my $tok   = $rtokens->[$i];
                     my $tok_m = $rtokens_m->[$i];
                     if ( $tok ne $tok_m ) {
@@ -3430,7 +3430,7 @@ sub get_line_token_info {
     #  $$d{"hours"}   = [ "h",  "hr",  "hrs", "hour", "hours" ];
     my @all_token_info;
     my $all_monotonic = 1;
-    for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
+    foreach my $jj ( 0 .. @{$rlines} - 1 ) {
         my ($line) = $rlines->[$jj];
         my $rtokens = $line->get_rtokens();
         my $last_lev;
@@ -3450,7 +3450,7 @@ sub get_line_token_info {
     }
 
     my $rline_values = [];
-    for ( my $jj = 0 ; $jj < @{$rlines} ; $jj++ ) {
+    foreach my $jj ( 0 .. @{$rlines} - 1 ) {
         my ($line) = $rlines->[$jj];
 
         my $rtokens = $line->get_rtokens();
@@ -3739,7 +3739,7 @@ sub prune_alignment_tree {
     ######################################################
     # Prune Tree Step 2. Loop to form the tree of matches.
     ######################################################
-    for ( my $jp = 0 ; $jp <= $jmax ; $jp++ ) {
+    foreach my $jp ( 0 .. $jmax ) {
 
         # working with two adjacent line indexes, 'm'=minus, 'p'=plus
         my $jm = $jp - 1;
@@ -3818,7 +3818,7 @@ sub prune_alignment_tree {
     # can find the children.  We store the range of children nodes ($nc_beg,
     # $nc_end) of each parent with two additional indexes in the orignal array.
     # These will be undef if no children.
-    for ( my $depth = $MAX_DEPTH ; $depth > 0 ; $depth-- ) {
+    foreach my $depth ( reverse( 1 .. $MAX_DEPTH ) ) {
         next unless defined( $match_tree[$depth] );
         my $nc_max = @{ $match_tree[$depth] } - 1;
         my $np_now;
@@ -3868,7 +3868,7 @@ sub prune_alignment_tree {
         @todo_list = ( 0 .. @{ $match_tree[0] } - 1 );
     }
 
-    for ( my $depth = 0 ; $depth <= $MAX_DEPTH ; $depth++ ) {
+    foreach my $depth ( 0 .. $MAX_DEPTH ) {
         last unless (@todo_list);
         my @todo_next;
         foreach my $np (@todo_list) {
@@ -3935,7 +3935,7 @@ sub prune_alignment_tree {
             my @idel;
             my $rtokens = $line->get_rtokens();
             my $imax    = @{$rtokens} - 2;
-            for ( my $i = 0 ; $i <= $imax ; $i++ ) {
+            foreach my $i ( 0 .. $imax ) {
                 my $tok = $rtokens->[$i];
                 my ( $raw_tok, $lev, $tag, $tok_count ) =
                   decode_alignment_token($tok);
@@ -4057,7 +4057,7 @@ sub Dump_tree_groups {
         my $j0_eq_pad;
         my $j0_max_pad = 0;
 
-        for ( my $j = 0 ; $j < $jmax_1 - 1 ; $j++ ) {
+        foreach my $j ( 0 .. $jmax_1 - 2 ) {
             my ( $raw_tok, $lev, $tag, $tok_count ) =
               decode_alignment_token( $rtokens_1->[$j] );
             if ( $raw_tok && $lev == $group_level ) {
@@ -4525,7 +4525,7 @@ sub align_side_comments {
     # Count $num5 = number of comments in the 5 lines after the first comment
     # This is an important factor in a decision formula
     my $num5 = 1;
-    for ( my $jj = $j_sc_beg + 1 ; $jj < @{$rlines} ; $jj++ ) {
+    foreach my $jj ( $j_sc_beg + 1 .. @{$rlines} - 1 ) {
         my $ldiff = $jj - $j_sc_beg;
         last if ( $ldiff > 5 );
         my $line   = $rlines->[$jj];
@@ -4550,7 +4550,7 @@ sub align_side_comments {
 
     # Loop over passes
     my $max_comment_column = $last_side_comment_column;
-    for ( my $PASS = 1 ; $PASS <= $MAX_PASS ; $PASS++ ) {
+    foreach my $PASS ( 1 .. $MAX_PASS ) {
 
         # If there are two passes, then on the last pass make the old column
         # equal to the largest of the group.  This will result in the comments
@@ -4638,7 +4638,7 @@ sub align_side_comments {
     my $j_sc_last;
     my $ng_last = $todo[-1];
     my ( $jbeg, $jend ) = @{ $rgroups->[$ng_last] };
-    for ( my $jj = $jend ; $jj >= $jbeg ; $jj-- ) {
+    foreach my $jj ( reverse( $jbeg .. $jend ) ) {
         my $line = $rlines->[$jj];
         my $jmax = $line->get_jmax();
         if ( $line->get_rfield_lengths()->[$jmax] ) {
