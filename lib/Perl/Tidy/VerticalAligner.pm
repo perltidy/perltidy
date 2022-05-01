@@ -2583,7 +2583,6 @@ EOM
 
         my @equals_info;
         my @line_info;
-        my %is_good_tok;
 
         # create a hash of tokens for each line
         my $rline_hashes = [];
@@ -3458,7 +3457,6 @@ sub get_line_token_info {
         my ( $lev_min, $lev_max );
         my $token_pattern_max = "";
         my %saw_level;
-        my @token_info;
         my $is_monotonic = 1;
 
         # find the index of the last token before the side comment
@@ -3855,9 +3853,10 @@ sub prune_alignment_tree {
     #  $level_keep is the minimum level to keep
     my @delete_list;
 
+    # Not currently used:
     #  Groups with ending comma lists and their range of sizes:
     #  $ragged_comma_group{$id} = [ imax_group_min, imax_group_max ]
-    my %ragged_comma_group;
+    ## my %ragged_comma_group;
 
     # Define a threshold line count for forcing a break
     my $nlines_break = 3;

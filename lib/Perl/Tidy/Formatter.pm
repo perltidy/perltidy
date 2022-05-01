@@ -5983,7 +5983,6 @@ my %is_wit;
 my %is_sigil;
 my %is_nonlist_keyword;
 my %is_nonlist_type;
-my %is_special_check_type;
 my %is_s_y_m_slash;
 my %is_unexpected_equals;
 
@@ -22756,7 +22755,6 @@ EOM
         my $last_vertical_alignment_BEFORE_index;
         my $vert_last_nonblank_type;
         my $vert_last_nonblank_token;
-        my $vert_last_nonblank_block_type;
 
         foreach my $line ( 0 .. $max_line ) {
 
