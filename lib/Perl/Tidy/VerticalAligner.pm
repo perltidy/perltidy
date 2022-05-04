@@ -2388,12 +2388,12 @@ EOM
     my %delete_me;
     @delete_me{ @{$ridel} } = (1) x scalar( @{$ridel} );
 
-    my $pattern      = $rpatterns_old->[0];
-    my $field        = $rfields_old->[0];
-    my $field_length = $rfield_lengths_old->[0];
-    push @{$rfields_new},        $field;
-    push @{$rfield_lengths_new}, $field_length;
-    push @{$rpatterns_new},      $pattern;
+    my $pattern_0      = $rpatterns_old->[0];
+    my $field_0        = $rfields_old->[0];
+    my $field_length_0 = $rfield_lengths_old->[0];
+    push @{$rfields_new},        $field_0;
+    push @{$rfield_lengths_new}, $field_length_0;
+    push @{$rpatterns_new},      $pattern_0;
 
     # Loop to either copy items or concatenate fields and patterns
     my $jmin_del;
@@ -3475,12 +3475,12 @@ sub get_line_token_info {
 
         my $tok_end = fat_comma_to_comma( $rtokens->[$imax] );
         if ( $all_monotonic && $tok_end =~ /^,/ ) {
-            my $i = $imax - 1;
-            while ( $i >= 0
-                && fat_comma_to_comma( $rtokens->[$i] ) eq $tok_end )
+            my $ii = $imax - 1;
+            while ( $ii >= 0
+                && fat_comma_to_comma( $rtokens->[$ii] ) eq $tok_end )
             {
-                $imax = $i;
-                $i--;
+                $imax = $ii;
+                $ii--;
             }
         }
 
@@ -4535,11 +4535,11 @@ sub align_side_comments {
     }
 
     # Forget the old side comment location if necessary
-    my $line = $rlines->[$j_sc_beg];
+    my $line_0 = $rlines->[$j_sc_beg];
     my $lnum =
       $j_sc_beg + $self->[_file_writer_object_]->get_output_line_number();
     my $keep_it =
-      $self->is_good_side_comment_column( $line, $lnum, $group_level, $num5 );
+      $self->is_good_side_comment_column( $line_0, $lnum, $group_level, $num5 );
     my $last_side_comment_column =
       $keep_it ? $self->[_last_side_comment_column_] : 0;
 

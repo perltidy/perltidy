@@ -663,14 +663,14 @@ EOM
 
         # string
         else {
-            my ( $rargv, $msg ) = parse_args($argv);
+            my ( $rargv_str, $msg ) = parse_args($argv);
             if ($msg) {
                 Die(<<EOM);
 Error parsing this string passed to to perltidy with 'argv': 
 $msg
 EOM
             }
-            @ARGV = @{$rargv};
+            @ARGV = @{$rargv_str};
         }
     }
 
@@ -1747,17 +1747,17 @@ EOM
                 is_encoded_data          => $is_encoded_data,
             );
 
-            my $buf =
+            my $buf_post =
                 $postfilter
               ? $postfilter->($postfilter_buffer)
               : $postfilter_buffer;
 
             # Check if file changed if requested, but only after any postfilter
             if ( $rOpts->{'assert-tidy'} ) {
-                my $digest_output = $md5_hex->($buf);
+                my $digest_output = $md5_hex->($buf_post);
                 if ( $digest_output ne $digest_input ) {
                     my $diff_msg =
-                      compare_string_buffers( $saved_input_buf, $buf,
+                      compare_string_buffers( $saved_input_buf, $buf_post,
                         $is_encoded_data );
                     $logger_object->warning(<<EOM);
 assertion failure: '--assert-tidy' is set but output differs from input
@@ -1769,7 +1769,7 @@ EOM
                 }
             }
             if ( $rOpts->{'assert-untidy'} ) {
-                my $digest_output = $md5_hex->($buf);
+                my $digest_output = $md5_hex->($buf_post);
                 if ( $digest_output eq $digest_input ) {
                     $logger_object->warning(
 "assertion failure: '--assert-untidy' is set but output equals input\n"
@@ -1779,7 +1779,7 @@ EOM
             }
 
             $source_object = Perl::Tidy::LineSource->new(
-                input_file               => \$buf,
+                input_file               => \$buf_post,
                 rOpts                    => $rOpts,
                 rpending_logfile_message => $rpending_logfile_message,
             );
@@ -3776,7 +3776,6 @@ sub expand_command_abbreviations {
     # 10 should be plenty, but it may be increased to allow deeply
     # nested expansions.
     my $max_passes = 10;
-    my @new_argv   = ();
 
     # keep looping until all expansions have been converted into actual
     # dash parameters..

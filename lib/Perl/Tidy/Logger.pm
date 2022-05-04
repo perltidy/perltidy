@@ -485,7 +485,6 @@ sub finish {
     }
 
     if ($save_logfile) {
-        my $log_file        = $self->{_log_file};
         my $is_encoded_data = $self->{_is_encoded_data};
         my ( $fh, $filename ) =
           Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );

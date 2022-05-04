@@ -844,8 +844,8 @@ sub pod_to_html {
                 $html_print->("<hr />\n") if $rOpts->{'frames'};
                 $html_print->("<h2>Code Index:</h2>\n");
                 ##my @toc = map { $_ .= "\n" } split /\n/, $toc_string;
-                my @toc = map { $_ . "\n" } split /\n/, $toc_string;
-                $html_print->(@toc);
+                my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
+                $html_print->(@toc_st);
             }
             $in_toc   = "";
             $no_print = 0;
@@ -869,8 +869,8 @@ sub pod_to_html {
                     $html_print->("<hr />\n") if $rOpts->{'frames'};
                     $html_print->("<h2>Code Index:</h2>\n");
                     ##my @toc = map { $_ .= "\n" } split /\n/, $toc_string;
-                    my @toc = map { $_ . "\n" } split /\n/, $toc_string;
-                    $html_print->(@toc);
+                    my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
+                    $html_print->(@toc_st);
                 }
                 $in_toc   = "";
                 $ul_level = 0;

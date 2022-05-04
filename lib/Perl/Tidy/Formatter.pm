@@ -215,6 +215,7 @@ my (
     %is_closing_type,
     %is_opening_token,
     %is_closing_token,
+    %is_ternary,
     %is_equal_or_fat_comma,
     %is_counted_type,
     %is_opening_sequence_token,
@@ -651,6 +652,9 @@ BEGIN {
 
     @q = qw< } ) ] >;
     @is_closing_token{@q} = (1) x scalar(@q);
+
+    @q = qw( ? : );
+    @is_ternary{@q} = (1) x scalar(@q);
 
     @q = qw< { ( [ ? >;
     @is_opening_sequence_token{@q} = (1) x scalar(@q);
@@ -1931,7 +1935,7 @@ EOM
         $stress_level_beta = $level;
     }
 
-    initialize_weld_nested_exclusion_rules($rOpts);
+    initialize_weld_nested_exclusion_rules();
 
     %line_up_parentheses_control_hash    = ();
     $line_up_parentheses_control_is_lxpl = 1;
@@ -2027,7 +2031,6 @@ sub initialize_grep_and_friends {
 }
 
 sub initialize_weld_nested_exclusion_rules {
-    my ($rOpts) = @_;
     %weld_nested_exclusion_rules = ();
 
     my $opt_name = 'weld-nested-exclusion-list';
@@ -4092,12 +4095,12 @@ EOM
                 # the strength of a comma anyway to make formatting the same as
                 # if it were there. Fixes issue c133.
                 if ( !defined($bsr) || $bsr > VERY_WEAK ) {
-                    my $seqno = $parent_seqno_to_go[$max_index_to_go];
-                    if ( $ris_list_by_seqno->{$seqno} ) {
+                    my $seqno_px = $parent_seqno_to_go[$max_index_to_go];
+                    if ( $ris_list_by_seqno->{$seqno_px} ) {
                         my $KK      = $K_to_go[$max_index_to_go];
                         my $Kn      = $self->K_next_nonblank($KK);
                         my $seqno_n = $rLL->[$Kn]->[_TYPE_SEQUENCE_];
-                        if ( $seqno_n && $seqno_n eq $seqno ) {
+                        if ( $seqno_n && $seqno_n eq $seqno_px ) {
                             $bsl = VERY_WEAK;
                         }
                     }
@@ -5515,7 +5518,16 @@ EOM
         $self->[_save_logfile_] = $logger_object->get_save_logfile();
     }
 
-    $self->set_CODE_type();
+    my $rix_side_comments = $self->set_CODE_type();
+
+    # Handle any requested side comment deletions. It is easier to get
+    # this done here rather than farther down the pipeline because IO
+    # lines take a different route, and because lines with deleted HSC
+    # become BL lines.  We have already handled any tee requests in sub
+    # getline, so it is safe to delete side comments now.
+    $self->delete_side_comments($rix_side_comments)
+      if ( $rOpts_delete_side_comments
+        || $rOpts_delete_closing_side_comments );
 
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
@@ -5562,12 +5574,8 @@ EOM
 sub set_CODE_type {
     my ($self) = @_;
 
-    # This routine performs two tasks:
-
-    # TASK 1: Examine each line of code and set a flag '$CODE_type' to describe
-    # any special processing that it requires.
-
-    # TASK 2: Delete side comments if requested.
+    # Examine each line of code and set a flag '$CODE_type' to describe.
+    # Return list of lines with side comments.
 
     my $rLL                  = $self->[_rLL_];
     my $Klimit               = $self->[_Klimit_];
@@ -5588,9 +5596,7 @@ sub set_CODE_type {
     my ( $Kfirst, $Klast );
     my $CODE_type;
 
-    #------------------------------
-    # TASK 1: Loop to set CODE_type
-    #------------------------------
+    # Loop to set CODE_type
 
     # Possible CODE_types
     # 'VB'  = Verbatim - line goes out verbatim (a quote)
@@ -5868,23 +5874,20 @@ sub set_CODE_type {
         push @ix_side_comments, $ix_line;
     }
 
-    return
-      if ( !$rOpts_delete_side_comments
-        && !$rOpts_delete_closing_side_comments );
+    return \@ix_side_comments;
+}
 
-    #-------------------------------------
-    # TASK 2: Loop to delete side comments
-    #-------------------------------------
+sub delete_side_comments {
+    my ( $self, $rix_side_comments ) = @_;
 
-    # Handle any requested side comment deletions. It is easier to get
-    # this done here rather than farther down the pipeline because IO
-    # lines take a different route, and because lines with deleted HSC
-    # become BL lines.  We have already handled any tee requests in sub
-    # getline, so it is safe to delete side comments now.
+    # Given a list of indexes of lines with side comments, handle any
+    # requested side comment deletions.
 
-    # Also, we can get this done efficiently here.
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
-    foreach my $ix (@ix_side_comments) {
+    foreach my $ix ( @{$rix_side_comments} ) {
         my $line_of_tokens = $rlines->[$ix];
         my $line_type      = $line_of_tokens->{_line_type};
 
@@ -5892,8 +5895,9 @@ sub set_CODE_type {
         # side comments in the TASK 1 loop above.
         if ( $line_type ne 'CODE' ) {
             if (DEVEL_MODE) {
+                my $lno = $ix + 1;
                 Fault(<<EOM);
-Hit unexpected line_type = '$line_type' while deleting side comments, should be 'CODE'
+Hit unexpected line_type = '$line_type' near line $lno while deleting side comments, should be 'CODE'
 EOM
             }
             next;
@@ -5902,22 +5906,34 @@ EOM
         my $CODE_type = $line_of_tokens->{_code_type};
         my $rK_range  = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
+
+        unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+            if (DEVEL_MODE) {
+                my $lno = $ix + 1;
+                Fault(<<EOM);
+Did not find side comment near line $lno while deleting side comments
+EOM
+            }
+            next;
+        }
+
         my $delete_side_comment =
              $rOpts_delete_side_comments
-          && defined($Kfirst)
-          && $rLL->[$Klast]->[_TYPE_] eq '#'
           && ( $Klast > $Kfirst || $CODE_type eq 'HSC' )
           && (!$CODE_type
             || $CODE_type eq 'HSC'
             || $CODE_type eq 'IO'
             || $CODE_type eq 'NIN' );
 
+        #---------------------------------------------------
+        # TODO: Do not delete special control side comments,
+        # but maybe add a flag to delete them?
+        #---------------------------------------------------
+
         if (
                $rOpts_delete_closing_side_comments
             && !$delete_side_comment
-            && defined($Kfirst)
             && $Klast > $Kfirst
-            && $rLL->[$Klast]->[_TYPE_] eq '#'
             && (  !$CODE_type
                 || $CODE_type eq 'HSC'
                 || $CODE_type eq 'IO'
@@ -5963,7 +5979,6 @@ EOM
             if ( $CODE_type eq 'HSC' ) { $line_of_tokens->{_code_type} = 'BL' }
         }
     }
-
     return;
 }
 
@@ -6225,7 +6240,6 @@ sub respace_tokens {
                     # if the tokenizer has been changed to mark some other
                     # tokens with sequence numbers.
                     if (DEVEL_MODE) {
-                        my $type = $item->[_TYPE_];
                         Fault(
 "Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
                         );
@@ -6651,8 +6665,8 @@ sub respace_tokens {
             if ( $CODE_type eq 'HSC' ) {
 
                 # Safety Check: This must be a line with one token (a comment)
-                my $rtoken_vars = $rLL->[$Kfirst];
-                if ( $Kfirst == $Klast && $rtoken_vars->[_TYPE_] eq '#' ) {
+                my $rvars_Kfirst = $rLL->[$Kfirst];
+                if ( $Kfirst == $Klast && $rvars_Kfirst->[_TYPE_] eq '#' ) {
 
                     # Note that even if the flag 'noadd-whitespace' is set, we
                     # will make an exception here and allow a blank to be
@@ -6662,11 +6676,11 @@ sub respace_tokens {
                     # hanging side comment from getting converted to a block
                     # comment if whitespace gets deleted, as for example with
                     # the -extrude and -mangle options.
-                    my $rcopy = copy_token_as_type( $rtoken_vars, 'q', '' );
+                    my $rcopy = copy_token_as_type( $rvars_Kfirst, 'q', '' );
                     $store_token->($rcopy);
-                    $rcopy = copy_token_as_type( $rtoken_vars, 'b', ' ' );
+                    $rcopy = copy_token_as_type( $rvars_Kfirst, 'b', ' ' );
                     $store_token->($rcopy);
-                    $store_token->($rtoken_vars);
+                    $store_token->($rvars_Kfirst);
                     next;
                 }
                 else {
@@ -6895,9 +6909,9 @@ sub respace_tokens {
                     # store a blank after the arrow if requested
                     # added for issue git #33
                     if ( $want_right_space{'->'} == WS_YES ) {
-                        my $rcopy =
+                        my $rcopy_b =
                           copy_token_as_type( $rtoken_vars, 'b', ' ' );
-                        $store_token->($rcopy);
+                        $store_token->($rcopy_b);
                     }
 
                     # then reset the current token to be the remainder,
@@ -6951,12 +6965,12 @@ sub respace_tokens {
                     # witch
                     # ()   # prototype may be on new line ...
                     # ...
-                    my $ord = ord( substr( $token, -1, 1 ) );
+                    my $ord_ch = ord( substr( $token, -1, 1 ) );
                     if (
 
                         # quick check for possible ending space
-                        $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
-                            || $ord > ORD_PRINTABLE_MAX )
+                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                            || $ord_ch > ORD_PRINTABLE_MAX )
                       )
                     {
                         $token =~ s/\s+$//g;
@@ -7741,10 +7755,8 @@ EOM
         $is_assignment_or_fat_comma{'=>'} = 1;
         my $ris_essential_old_breakpoint =
           $self->[_ris_essential_old_breakpoint_];
-        my $iline = -1;
         my ( $Kfirst, $Klast );
         foreach my $line_of_tokens ( @{$rlines} ) {
-            $iline++;
             my $line_type = $line_of_tokens->{_line_type};
             if ( $line_type ne 'CODE' ) {
                 ( $Kfirst, $Klast ) = ( undef, undef );
@@ -8306,7 +8318,6 @@ sub find_nested_pairs {
 
         # Count nonblank characters separating them.
         if ( $K_diff < 0 ) { next }    # Shouldn't happen
-        my $Kn             = $K_outer_opening;
         my $nonblank_count = 0;
         my $type;
         my $is_name;
@@ -8319,12 +8330,7 @@ sub find_nested_pairs {
         my $Kn_first = $K_outer_opening;
         my $Kn_last_nonblank;
         my $saw_comment;
-        for (
-            my $Kn = $K_outer_opening + 1 ;
-            $Kn <= $K_inner_opening ;
-            $Kn += 1
-          )
-        {
+        foreach my $Kn ( $K_outer_opening + 1 .. $K_inner_opening ) {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
             if ( !$nonblank_count )        { $Kn_first = $Kn }
             if ( $Kn eq $K_inner_opening ) { $nonblank_count++; last; }
@@ -8473,7 +8479,6 @@ sub is_excluded_weld {
 
 # hashes to simplify welding logic
 my %type_ok_after_bareword;
-my %is_ternary;
 my %has_tight_paren;
 
 BEGIN {
@@ -8481,9 +8486,6 @@ BEGIN {
     # types needed for welding RULE 6
     my @q = qw# => -> { ( [ #;
     @type_ok_after_bareword{@q} = (1) x scalar(@q);
-
-    @q = qw( ? : );
-    @is_ternary{@q} = (1) x scalar(@q);
 
     # these types do not 'like' to be separated from a following paren
     @q = qw(w i q Q G C Z U);
@@ -8568,10 +8570,10 @@ sub setup_new_weld_measurements {
                 # Fix for b1144 and b1112: backup to the first nonblank
                 # character before the =>, or to the start of its line.
                 if ( $type_prev eq '=>' ) {
-                    my $iline_prev = $rLL->[$Kprev]->[_LINE_INDEX_];
-                    my $rK_range   = $rlines->[$iline_prev]->{_rK_range};
-                    my ( $Kfirst, $Klast ) = @{$rK_range};
-                    foreach my $KK ( reverse( $Kfirst .. $Kref - 1 ) ) {
+                    my $iline_prev    = $rLL->[$Kprev]->[_LINE_INDEX_];
+                    my $rK_range_prev = $rlines->[$iline_prev]->{_rK_range};
+                    my ( $Kfirst_prev, $Klast_prev ) = @{$rK_range_prev};
+                    foreach my $KK ( reverse( $Kfirst_prev .. $Kref - 1 ) ) {
                         next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                         $Kref = $KK;
                         last;
@@ -10721,7 +10723,7 @@ EOM
     # works well but is currently only activated when the -xci flag is set.
     # The reason is to avoid unexpected changes in formatting.
     if ($rOpts_extended_continuation_indentation) {
-        while ( my ( $qw_seqno, $rKrange ) =
+        while ( my ( $qw_seqno_x, $rKrange ) =
             each %{$rKrange_multiline_qw_by_seqno} )
         {
             my ( $Kbeg, $Kend ) = @{$rKrange};
@@ -10749,7 +10751,7 @@ EOM
             }
 
             # set flag for -wn option, which will remove the level
-            $rmultiline_qw_has_extra_level->{$qw_seqno} = 1;
+            $rmultiline_qw_has_extra_level->{$qw_seqno_x} = 1;
         }
     }
 
@@ -10757,7 +10759,7 @@ EOM
     # multiline quotes
     if ( $rOpts_line_up_parentheses && !$rOpts_extended_line_up_parentheses ) {
 
-        while ( my ( $qw_seqno, $rKrange ) =
+        while ( my ( $qw_seqno_x, $rKrange ) =
             each %{$rKrange_multiline_qw_by_seqno} )
         {
             my ( $Kbeg, $Kend ) = @{$rKrange};
@@ -10877,12 +10879,12 @@ sub collapsed_lengths {
     my $K_start_multiline_qw;
     my $level_start_multiline_qw = 0;
     my $max_prong_len            = 0;
-    my $handle_len               = 0;
+    my $handle_len_x             = 0;
     my @stack;
     my $len                = 0;
     my $last_nonblank_type = 'b';
     push @stack,
-      [ $max_prong_len, $handle_len, SEQ_ROOT, undef, undef, undef, undef ];
+      [ $max_prong_len, $handle_len_x, SEQ_ROOT, undef, undef, undef, undef ];
 
     my $iline = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -11127,9 +11129,9 @@ sub collapsed_lengths {
                             $Kbeg++;
                         }
 
-                        my $len = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
+                        my $leng = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
                           $rLL->[$Kbeg]->[_CUMULATIVE_LENGTH_];
-                        if ( $len > $max_prong_len ) { $max_prong_len = $len }
+                        if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
                     }
 
                     my $K_c = $K_closing_container->{$seqno};
@@ -11182,7 +11184,9 @@ EOM
                             my $is_one_line_block;
                             my $level = $rLL->[$K_o]->[_LEVEL_];
                             if ( defined($K_o) && defined($K_c) ) {
-                                my $block_length =
+
+                                # note: fixed 3 May 2022 (removed 'my')
+                                $block_length =
                                   $rLL->[ $K_c - 1 ]->[_CUMULATIVE_LENGTH_] -
                                   $rLL->[$K_o]->[_CUMULATIVE_LENGTH_];
                                 $is_one_line_block = $iline == $iline_o;
@@ -11806,8 +11810,7 @@ EOM
 
         # delete line $i if it is blank
         return unless ( $i >= 0 && $i < @{$rlines} );
-        my $line_type = $rlines->[$i]->{_line_type};
-        return if ( $line_type ne 'CODE' );
+        return if ( $rlines->[$i]->{_line_type} ne 'CODE' );
         my $code_type = $rlines->[$i]->{_code_type};
         if ( $code_type eq 'BL' ) { $rhash_of_desires->{$i} = 2; }
         return;
@@ -12415,18 +12418,18 @@ EOM
             else {
                 my $Kt = $rLL->[$Ktoken_vars]->[_KNEXT_SEQ_ITEM_];
                 if ( defined($Kt) ) {
-                    my $type_sequence = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
-                    my $type          = $rLL->[$Kt]->[_TYPE_];
+                    my $type_sequence_t = $rLL->[$Kt]->[_TYPE_SEQUENCE_];
+                    my $type_t          = $rLL->[$Kt]->[_TYPE_];
 
                     # if next container token is closing, it is the parent seqno
-                    if ( $is_closing_type{$type} ) {
-                        $next_parent_seqno = $type_sequence;
+                    if ( $is_closing_type{$type_t} ) {
+                        $next_parent_seqno = $type_sequence_t;
                     }
 
                     # otherwise we want its parent container
                     else {
                         $next_parent_seqno =
-                          $rparent_of_seqno->{$type_sequence};
+                          $rparent_of_seqno->{$type_sequence_t};
                     }
                 }
             }
@@ -12617,7 +12620,7 @@ EOM
     # flush is called to output any tokens in the pipeline, so that
     # an alternate source of lines can be written in the correct order
     sub flush {
-        my ( $self, $CODE_type ) = @_;
+        my ( $self, $CODE_type_flush ) = @_;
 
         # end the current batch with 1 exception
 
@@ -12626,7 +12629,7 @@ EOM
         # Exception: if we are flushing within the code stream only to insert
         # blank line(s), then we can keep the batch intact at a weld. This
         # improves formatting of -ce.  See test 'ce1.ce'
-        if ( $CODE_type && $CODE_type eq 'BL' ) {
+        if ( $CODE_type_flush && $CODE_type_flush eq 'BL' ) {
             $self->end_batch() if ( $max_index_to_go >= 0 );
         }
 
@@ -13675,15 +13678,15 @@ sub starting_one_line_block {
     }
 
     # Return if block should be broken
-    my $type_sequence = $rLL->[$Kj]->[_TYPE_SEQUENCE_];
-    if ( $rbreak_container->{$type_sequence} ) {
+    my $type_sequence_j = $rLL->[$Kj]->[_TYPE_SEQUENCE_];
+    if ( $rbreak_container->{$type_sequence_j} ) {
         return 0;
     }
 
     my $ris_bli_container = $self->[_ris_bli_container_];
-    my $is_bli            = $ris_bli_container->{$type_sequence};
+    my $is_bli            = $ris_bli_container->{$type_sequence_j};
 
-    my $block_type = $rblock_type_of_seqno->{$type_sequence};
+    my $block_type = $rblock_type_of_seqno->{$type_sequence_j};
     $block_type = "" unless ( defined($block_type) );
 
     my $previous_nonblank_token = '';
@@ -13710,8 +13713,8 @@ sub starting_one_line_block {
     elsif (
         $i_last_nonblank >= 0
         && (   $previous_nonblank_token eq $block_type
-            || $self->[_ris_asub_block_]->{$type_sequence}
-            || $self->[_ris_sub_block_]->{$type_sequence}
+            || $self->[_ris_asub_block_]->{$type_sequence_j}
+            || $self->[_ris_sub_block_]->{$type_sequence_j}
             || substr( $block_type, -2, 2 ) eq '()' )
       )
     {
@@ -13802,7 +13805,7 @@ sub starting_one_line_block {
 
     # See if everything to the closing token will fit on one line
     # This is part of an update to fix cases b562 .. b983
-    my $K_closing = $self->[_K_closing_container_]->{$type_sequence};
+    my $K_closing = $self->[_K_closing_container_]->{$type_sequence_j};
     return 0 unless ( defined($K_closing) );
     my $container_length = $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
       $rLL->[$Kj]->[_CUMULATIVE_LENGTH_];
@@ -13810,7 +13813,7 @@ sub starting_one_line_block {
     my $excess = $pos + 1 + $container_length - $maximum_line_length;
 
     # Add a small tolerance for welded tokens (case b901)
-    if ( $total_weld_count && $self->is_welded_at_seqno($type_sequence) ) {
+    if ( $total_weld_count && $self->is_welded_at_seqno($type_sequence_j) ) {
         $excess += 2;
     }
 
@@ -13836,8 +13839,8 @@ sub starting_one_line_block {
         else { $pos += $rLL->[$Ki]->[_TOKEN_LENGTH_] }
 
         # ignore some small blocks
-        my $type_sequence = $rLL->[$Ki]->[_TYPE_SEQUENCE_];
-        my $nobreak       = $rshort_nested->{$type_sequence};
+        my $type_sequence_i = $rLL->[$Ki]->[_TYPE_SEQUENCE_];
+        my $nobreak         = $rshort_nested->{$type_sequence_i};
 
         # Return false result if we exceed the maximum line length,
         if ( $pos > $maximum_line_length ) {
@@ -13845,7 +13848,7 @@ sub starting_one_line_block {
         }
 
         # keep going for non-containers
-        elsif ( !$type_sequence ) {
+        elsif ( !$type_sequence_i ) {
 
         }
 
@@ -13853,7 +13856,7 @@ sub starting_one_line_block {
         # closing brace.
         elsif ($rLL->[$Ki]->[_TOKEN_] eq '{'
             && $rLL->[$Ki]->[_TYPE_] eq '{'
-            && $rblock_type_of_seqno->{$type_sequence}
+            && $rblock_type_of_seqno->{$type_sequence_i}
             && !$nobreak )
         {
             return 0;
@@ -13862,7 +13865,7 @@ sub starting_one_line_block {
         # if we find our closing brace..
         elsif ($rLL->[$Ki]->[_TOKEN_] eq '}'
             && $rLL->[$Ki]->[_TYPE_] eq '}'
-            && $rblock_type_of_seqno->{$type_sequence}
+            && $rblock_type_of_seqno->{$type_sequence_i}
             && !$nobreak )
         {
 
@@ -14584,7 +14587,6 @@ EOM
                             {
                                 $mate_index_to_go[$i]      = $i_mate;
                                 $mate_index_to_go[$i_mate] = $i;
-                                my $seqno = $type_sequence_to_go[$i];
                                 if ( $comma_arrow_count{$seqno} ) {
                                     $comma_arrow_count_contained +=
                                       $comma_arrow_count{$seqno};
@@ -15571,9 +15573,9 @@ sub break_equals {
     #        or $icon = $html_icons{$type}
     #        or $icon = $html_icons{$state} )
     for my $n ( 1 .. 2 ) {
-        my $il = $ri_left->[$n];
-        my $ir = $ri_right->[$n];
-        foreach my $i ( $il + 1 .. $ir ) {
+        my $il_n = $ri_left->[$n];
+        my $ir_n = $ri_right->[$n];
+        foreach my $i ( $il_n + 1 .. $ir_n ) {
             my $type = $types_to_go[$i];
             return
               if ( $is_assignment{$type}
@@ -15594,7 +15596,6 @@ sub break_equals {
     # to combine some of the lines into which the batch has been broken.
 
     my %is_amp_amp;
-    my %is_ternary;
     my %is_math_op;
     my %is_plus_minus;
     my %is_mult_div;
@@ -15604,9 +15605,6 @@ sub break_equals {
         my @q;
         @q = qw( && || );
         @is_amp_amp{@q} = (1) x scalar(@q);
-
-        @q = qw( ? : );
-        @is_ternary{@q} = (1) x scalar(@q);
 
         @q = qw( + - * / );
         @is_math_op{@q} = (1) x scalar(@q);
@@ -15731,10 +15729,8 @@ sub break_equals {
         my $rK_weld_right = $self->[_rK_weld_right_];
         my $rK_weld_left  = $self->[_rK_weld_left_];
 
-        my $nmax = @{$ri_end} - 1;
-        return if ( $nmax <= 0 );
-
-        my $nmax_start = $nmax;
+        my $nmax_start = @{$ri_end} - 1;
+        return if ( $nmax_start <= 0 );
 
         # Make a list of all good joining tokens between the lines
         # n-1 and n.
@@ -15743,10 +15739,10 @@ sub break_equals {
         # Break the total batch sub-sections with lengths short enough to
         # recombine
         my $rsections = [];
-        my $nbeg      = 0;
-        my $nend;
+        my $nbeg_sec  = 0;
+        my $nend_sec;
         my $nmax_section = 0;
-        foreach my $nn ( 1 .. $nmax ) {
+        foreach my $nn ( 1 .. $nmax_start ) {
             my $ibeg_1 = $ri_beg->[ $nn - 1 ];
             my $iend_1 = $ri_end->[ $nn - 1 ];
             my $iend_2 = $ri_end->[$nn];
@@ -15773,25 +15769,26 @@ sub break_equals {
 
                 # The number 5 here is an arbitrary small number intended
                 # to keep most small matches in one sub-section.
-                || ( defined($nend) && ( $nn < 5 || $nmax - $nn < 5 ) )
+                || ( defined($nend_sec)
+                    && ( $nn < 5 || $nmax_start - $nn < 5 ) )
               )
             {
-                $nend = $nn;
+                $nend_sec = $nn;
             }
             else {
-                if ( defined($nend) ) {
-                    push @{$rsections}, [ $nbeg, $nend ];
-                    my $num = $nend - $nbeg;
+                if ( defined($nend_sec) ) {
+                    push @{$rsections}, [ $nbeg_sec, $nend_sec ];
+                    my $num = $nend_sec - $nbeg_sec;
                     if ( $num > $nmax_section ) { $nmax_section = $num }
-                    $nbeg = $nn;
-                    $nend = undef;
+                    $nbeg_sec = $nn;
+                    $nend_sec = undef;
                 }
-                $nbeg = $nn;
+                $nbeg_sec = $nn;
             }
         }
-        if ( defined($nend) ) {
-            push @{$rsections}, [ $nbeg, $nend ];
-            my $num = $nend - $nbeg;
+        if ( defined($nend_sec) ) {
+            push @{$rsections}, [ $nbeg_sec, $nend_sec ];
+            my $num = $nend_sec - $nbeg_sec;
             if ( $num > $nmax_section ) { $nmax_section = $num }
         }
 
@@ -15818,14 +15815,15 @@ sub break_equals {
 
         if ( DEBUG_RECOMBINE > 1 ) {
             my $max = 0;
-            print STDERR "-----\n$num_sections sections found for nmax=$nmax\n";
+            print STDERR
+              "-----\n$num_sections sections found for nmax=$nmax_start\n";
             foreach my $sect ( @{$rsections} ) {
                 my ( $nbeg, $nend ) = @{$sect};
                 my $num = $nend - $nbeg;
                 if ( $num > $max ) { $max = $num }
                 print STDERR "$nbeg $nend\n";
             }
-            print STDERR "max size=$max of $nmax lines\n";
+            print STDERR "max size=$max of $nmax_start lines\n";
         }
 
         # Loop over all sub-sections.  Note that we have to work backwards
@@ -15835,14 +15833,14 @@ sub break_equals {
             my ( $nbeg, $nend ) = @{$section};
 
             # number of ending lines to leave untouched in this pass
-            $nmax = @{$ri_end} - 1;
-            my $num_freeze = $nmax - $nend;
+            my $nmax_sec   = @{$ri_end} - 1;
+            my $num_freeze = $nmax_sec - $nend;
 
             my $more_to_do = 1;
 
             # We keep looping over all of the lines of this batch
             # until there are no more possible recombinations
-            my $nmax_last = $nmax + 1;
+            my $nmax_last = $nmax_sec + 1;
             my $reverse   = 0;
 
             while ($more_to_do) {
@@ -16892,9 +16890,9 @@ sub break_equals {
       RETURN:
 
         if (DEBUG_RECOMBINE) {
-            my $nmax = @{$ri_end} - 1;
+            my $nmax_last = @{$ri_end} - 1;
             print STDERR
-"exiting recombine with $nmax lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
+"exiting recombine with $nmax_last lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
         }
         return;
     }
@@ -18282,43 +18280,43 @@ sub break_long_lines {
     # routine to define essential variables when we go 'up' to
     # a new depth
     sub check_for_new_minimum_depth {
-        my ( $self, $depth, $seqno ) = @_;
-        if ( $depth < $minimum_depth ) {
+        my ( $self, $depth_t, $seqno ) = @_;
+        if ( $depth_t < $minimum_depth ) {
 
-            $minimum_depth = $depth;
+            $minimum_depth = $depth_t;
 
             # these arrays need not retain values between calls
-            $type_sequence_stack[$depth] = $seqno;
-            $override_cab3[$depth] =
+            $type_sequence_stack[$depth_t] = $seqno;
+            $override_cab3[$depth_t] =
                  $rOpts_comma_arrow_breakpoints == 3
               && $seqno
               && $self->[_roverride_cab3_]->{$seqno};
 
-            $override_cab3[$depth]                 = undef;
-            $breakpoint_stack[$depth]              = $starting_breakpoint_count;
-            $container_type[$depth]                = "";
-            $identifier_count_stack[$depth]        = 0;
-            $index_before_arrow[$depth]            = -1;
-            $interrupted_list[$depth]              = 1;
-            $item_count_stack[$depth]              = 0;
-            $last_nonblank_type[$depth]            = "";
-            $opening_structure_index_stack[$depth] = -1;
+            $override_cab3[$depth_t]          = undef;
+            $breakpoint_stack[$depth_t]       = $starting_breakpoint_count;
+            $container_type[$depth_t]         = "";
+            $identifier_count_stack[$depth_t] = 0;
+            $index_before_arrow[$depth_t]     = -1;
+            $interrupted_list[$depth_t]       = 1;
+            $item_count_stack[$depth_t]       = 0;
+            $last_nonblank_type[$depth_t]     = "";
+            $opening_structure_index_stack[$depth_t] = -1;
 
-            $breakpoint_undo_stack[$depth]       = undef;
-            $comma_index[$depth]                 = undef;
-            $last_comma_index[$depth]            = undef;
-            $last_dot_index[$depth]              = undef;
-            $old_breakpoint_count_stack[$depth]  = undef;
-            $has_old_logical_breakpoints[$depth] = 0;
-            $rand_or_list[$depth]                = [];
-            $rfor_semicolon_list[$depth]         = [];
-            $i_equals[$depth]                    = -1;
+            $breakpoint_undo_stack[$depth_t]       = undef;
+            $comma_index[$depth_t]                 = undef;
+            $last_comma_index[$depth_t]            = undef;
+            $last_dot_index[$depth_t]              = undef;
+            $old_breakpoint_count_stack[$depth_t]  = undef;
+            $has_old_logical_breakpoints[$depth_t] = 0;
+            $rand_or_list[$depth_t]                = [];
+            $rfor_semicolon_list[$depth_t]         = [];
+            $i_equals[$depth_t]                    = -1;
 
             # these arrays must retain values between calls
-            if ( !defined( $has_broken_sublist[$depth] ) ) {
-                $dont_align[$depth]         = 0;
-                $has_broken_sublist[$depth] = 0;
-                $want_comma_break[$depth]   = 0;
+            if ( !defined( $has_broken_sublist[$depth_t] ) ) {
+                $dont_align[$depth_t]         = 0;
+                $has_broken_sublist[$depth_t] = 0;
+                $want_comma_break[$depth_t]   = 0;
             }
         }
         return;
@@ -19949,9 +19947,9 @@ EOM
                 }
                 else {
                     $skipped_count = 0;
-                    my $i = $i_term_comma[ $j - 1 ];
-                    last unless defined $i;
-                    $self->set_forced_breakpoint($i);
+                    my $i_tc = $i_term_comma[ $j - 1 ];
+                    last unless defined $i_tc;
+                    $self->set_forced_breakpoint($i_tc);
                 }
             }
 
@@ -20139,10 +20137,10 @@ EOM
                 # If a line starts with paren+space+terms, then its max length
                 # could be up to ci+2-i spaces less than if the term went out
                 # on a line after the paren.  So..
-                my $tol = max( 0,
+                my $tol_w = max( 0,
                     2 + $rOpts_continuation_indentation -
                       $rOpts_indent_columns );
-                $columns = max( 0, $columns - $tol );
+                $columns = max( 0, $columns - $tol_w );
 
                 ## Here is the original b1210 fix, but it failed on b1216-b1218
                 ##my $columns2 = table_columns_available($i_opening_paren);
@@ -20289,7 +20287,8 @@ EOM
 #           )
 #           if $style eq 'all';
 
-            my $i_last_comma = $rcomma_index->[ $comma_count - 1 ];
+            $i_last_comma = $rcomma_index->[ $comma_count - 1 ];
+
             my $long_last_term =
               $self->excess_line_length( 0, $i_last_comma ) <= 0;
             my $long_first_term =
@@ -20501,9 +20500,9 @@ EOM
         # thing before the '=>'.  This is crude and should be improved by
         # actually looking back token by token.
         if ( !$too_long && $i_opening_paren > 0 && $list_type eq '=>' ) {
-            my $i_opening_minus = $i_opening_paren - 4;
+            my $i_opening_minus_test = $i_opening_paren - 4;
             if ( $i_opening_minus >= 0 ) {
-                $too_long = $self->excess_line_length( $i_opening_minus,
+                $too_long = $self->excess_line_length( $i_opening_minus_test,
                     $i_effective_last_comma + 1 ) > 0;
             }
         }
@@ -20575,8 +20574,8 @@ EOM
             $j += $number_of_fields
           )
         {
-            my $i = $rcomma_index->[$j];
-            $self->set_forced_breakpoint($i);
+            my $i_comma = $rcomma_index->[$j];
+            $self->set_forced_breakpoint($i_comma);
         }
         return;
     }
@@ -21278,7 +21277,6 @@ sub get_available_spaces_to_go {
             if ( $level < $current_level || $ci_level < $current_ci_level ) {
 
                 # loop to find the first entry at or completely below this level
-                my ( $lev, $ci_lev );
                 while (1) {
                     if ($max_lp_stack) {
 
@@ -21376,8 +21374,9 @@ EOM
 
                         # non-fatal, keep going except in DEVEL_MODE
                         if (DEVEL_MODE) {
+##program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
                             Fault(<<EOM);
-program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
+program bug with -lp: stack_error. level=$level; ci_level=$ci_level; rerun with -nlp
 EOM
                         }
                         last;
@@ -21408,7 +21407,6 @@ EOM
                 # it becomes clear that we do not have a good list.
                 my $available_spaces = 0;
                 my $align_seqno      = 0;
-                my $excess           = 0;
 
                 my $last_nonblank_seqno;
                 my $last_nonblank_block_type;
@@ -21823,10 +21821,9 @@ EOM
         # from whitespace items created on this batch, since others have
         # already been used and cannot be undone.
         my @candidates = ();
-        my $i;
 
         # loop over all whitespace items created for the current batch
-        for ( $i = 0 ; $i <= $max_lp_object_list ; $i++ ) {
+        foreach my $i ( 0 .. $max_lp_object_list ) {
             my $item = $rlp_object_list->[$i];
 
             # item must still be open to be a candidate (otherwise it
@@ -22133,12 +22130,9 @@ sub convey_batch_to_vertical_aligner {
     }
 
     # flush before a long if statement to avoid unwanted alignment
-    if (
-           $n_last_line > 0
+    if (   $n_last_line > 0
         && $type_beg_next eq 'k'
-        && $is_if_unless{$token_beg_next}
-        ## && $token_beg_next =~ /^(if|unless)$/ )
-      )
+        && $is_if_unless{$token_beg_next} )
     {
         $self->flush_vertical_aligner();
     }
@@ -22161,9 +22155,8 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
     # ----------------------------------------------
-    my ( $type_beg, $token_beg );
-    my ($type_end);
-    my ( $ibeg, $iend );
+    my ( $type_beg, $type_end, $token_beg );
+
     for my $n ( 0 .. $n_last_line ) {
 
         # ----------------------------------------------------------------
@@ -23679,17 +23672,17 @@ sub get_seqno {
 ##                      $font->{'loca'}->{'glyphs'}[$x]->read->{'xMin'} * 1000
 ##                    / $upem
 ##            ),
-##?            # do not put leading padding for just 2 lines of math
-##?            if (   $ipad == $ibeg
-##?                && $line > 0
-##?                && $levels_to_go[$ipad] > $levels_to_go[ $ipad - 1 ]
-##?                && $is_math_op{$type_next}
-##?                && $line + 2 <= $max_line )
-##?            {
-##?                my $ibeg_next_next = $ri_first->[ $line + 2 ];
-##?                my $type_next_next = $types_to_go[$ibeg_next_next];
-##?                next if !$is_math_op{$type_next_next};
-##?            }
+##            # do not put leading padding for just 2 lines of math
+##            if (   $ipad == $ibeg
+##                && $line > 0
+##                && $levels_to_go[$ipad] > $levels_to_go[ $ipad - 1 ]
+##                && $is_math_op{$type_next}
+##                && $line + 2 <= $max_line )
+##            {
+##                my $ibeg_next_next = $ri_first->[ $line + 2 ];
+##                my $type_next_next = $types_to_go[$ibeg_next_next];
+##                next if !$is_math_op{$type_next_next};
+##            }
 
             # next line must not be at greater depth
             my $iend_next = $ri_last->[ $line + 1 ];
@@ -23700,7 +23693,6 @@ sub get_seqno {
             # lines must be somewhat similar to be padded..
             my $inext_next = $inext_to_go[$ibeg_next];
             my $type       = $types_to_go[$ipad];
-            my $type_next  = $types_to_go[ $ipad + 1 ];
 
             # see if there are multiple continuation lines
             my $logical_continuation_lines = 1;
@@ -23784,16 +23776,18 @@ sub get_seqno {
                 my $l = $line + 1;
                 foreach my $ltest ( $line + 2 .. $max_line ) {
                     $l = $ltest;
-                    my $ibg = $ri_first->[$l];
+                    my $ibeg_t = $ri_first->[$l];
 
                     # quit looking at the end of this container
                     last
-                      if ( $nesting_depth_to_go[ $ibg + 1 ] < $depth )
-                      || ( $nesting_depth_to_go[$ibg] < $depth );
+                      if ( $nesting_depth_to_go[ $ibeg_t + 1 ] < $depth )
+                      || ( $nesting_depth_to_go[$ibeg_t] < $depth );
 
                     # cannot do the pad if a later line would be
                     # outdented more
-                    if ( $levels_to_go[$ibg] + $ci_levels_to_go[$ibg] < $lsp ) {
+                    if ( $levels_to_go[$ibeg_t] + $ci_levels_to_go[$ibeg_t] <
+                        $lsp )
+                    {
                         $ok_to_pad = 0;
                         last;
                     }
@@ -25464,8 +25458,7 @@ sub set_vertical_tightness_flags {
         {
             # avoid multiple jumps in nesting depth in one line if
             # requested
-            my $ovt       = $opening_vertical_tightness{$token_end};
-            my $iend_next = $ri_last->[ $n + 1 ];
+            my $ovt = $opening_vertical_tightness{$token_end};
 
             # Turn off the -vt flag if the next line ends in a weld.
             # This avoids an instability with one-line welds (fixes b1183).
@@ -25524,7 +25517,6 @@ sub set_vertical_tightness_flags {
             # Implement cvt=3: like cvt=0 for assigned structures, like cvt=1
             # otherwise.  Added for rt136417.
             if ( $cvt == 3 ) {
-                my $seqno = $type_sequence_to_go[$ibeg_next];
                 $cvt = $self->[_ris_assigned_structure_]->{$seqno} ? 0 : 1;
             }
 

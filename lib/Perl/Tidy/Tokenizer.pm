@@ -1985,7 +1985,6 @@ EOM
             # We will call the full method
             my $identifier_simple = $identifier;
             my $tok_simple        = $tok;
-            my $fast_scan_type    = $type;
             my $i_simple          = $i;
             my $context_simple    = $context;
 
@@ -3811,9 +3810,9 @@ EOM
                 # sub operator_expected gives TERM expected here, which is
                 # wrong in this case.
                 if ( $test_tok eq '//' && $last_nonblank_type ne 'Z' ) {
-                    my $next_type = $rtokens->[ $i + 1 ];
-                    my $expecting =
-                      operator_expected( [ $prev_type, $tok, $next_type ] );
+
+                    # note that here $tok = '/' and the next tok and type is '/'
+                    $expecting = operator_expected( [ $prev_type, $tok, '/' ] );
 
                     # Patched for RT#101547, was 'unless ($expecting==OPERATOR)'
                     $combine_ok = 0 if ( $expecting == TERM );
@@ -4176,13 +4175,13 @@ EOM
                     and ( $last_nonblank_token eq 'use' ) )
                 {
                     scan_bare_identifier();
-                    my ( $next_nonblank_token, $i_next ) =
+                    my ( $next_nonblank_tok2, $i_next2 ) =
                       find_next_nonblank_token( $i, $rtokens,
                         $max_token_index );
 
-                    if ($next_nonblank_token) {
+                    if ($next_nonblank_tok2) {
 
-                        if ( $is_keyword{$next_nonblank_token} ) {
+                        if ( $is_keyword{$next_nonblank_tok2} ) {
 
                             # Assume qw is used as a quote and okay, as in:
                             #  use constant qw{ DEBUG 0 };
@@ -4191,15 +4190,15 @@ EOM
                             # NOTE: This warning is deactivated because recent
                             # versions of perl do not complain here, but
                             # the coding is retained for reference.
-                            if ( 0 && $next_nonblank_token ne 'qw' ) {
+                            if ( 0 && $next_nonblank_tok2 ne 'qw' ) {
                                 warning(
-"Attempting to define constant '$next_nonblank_token' which is a perl keyword\n"
+"Attempting to define constant '$next_nonblank_tok2' which is a perl keyword\n"
                                 );
                             }
                         }
 
                         else {
-                            $is_constant{$current_package}{$next_nonblank_token}
+                            $is_constant{$current_package}{$next_nonblank_tok2}
                               = 1;
                         }
                     }
@@ -4600,8 +4599,10 @@ EOM
             }
         }
 
+        #-----------------------------------------------
         # all done tokenizing this line ...
         # now prepare the final list of tokens and types
+        #-----------------------------------------------
 
         my @token_type     = ();   # stack of output token types
         my @block_type     = ();   # stack of output code block types
@@ -4696,7 +4697,9 @@ EOM
         {    # scan the list of pre-tokens indexes
 
             # self-checking for valid token types
-            my $type                    = $routput_token_type->[$i];
+            # NOTE: would prefer 'my $type' here but that will cause
+            #    the PC error 'Reused variable name in lexical scope'
+            $type = $routput_token_type->[$i];
             my $forced_indentation_flag = $routput_indent_flag->[$i];
 
             # See if we should undo the $forced_indentation_flag.
@@ -4786,7 +4789,9 @@ EOM
                 }
             }
 
-            my $tok = $rtokens->[$i];  # the token, but ONLY if same as pretoken
+            # NOTE: would prefer 'my $tok' here but that will cause
+            #    the PC error 'Reused variable name in lexical scope'
+            $tok     = $rtokens->[$i]; # the token, but ONLY if same as pretoken
             $level_i = $level_in_tokenizer;
 
             # This can happen by running perltidy on non-scripts
