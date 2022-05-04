@@ -1,19 +1,25 @@
-severity = 4
+severity = 3
 
-# Following is a list of policies to be skipped:  
+# verbose = 8 # uncomment to see policy names
+
+#--------------------------------------------------------------
+# Following is a list of policies to be skipped for severity=4:
+#--------------------------------------------------------------
 
 # There is a localization in Tokenizer.pm that is essential
-[-Variables::ProhibitLocalVars] 
+[-Variables::ProhibitLocalVars]
 
 # immediate initialization of locals is not appropriate where used
 # in the Tokenizer.pm module
-[-Variables::RequireInitializationForLocalVars] 
+[-Variables::RequireInitializationForLocalVars]
 
-# C-style for loops are avoided now because profiling shows them to be very slow
+# C-style for loops are avoided because profiling shows them to be slow.  But
+# they are still needed for loops over tables with increments > 1.  These can
+# be hidden from PerlCritic by writing them over multiple lines.
 # [-ControlStructures::ProhibitCStyleForLoops]
 
-# There is a stringy eval in Formatter.pm which is essential.  
-[-BuiltinFunctions::ProhibitStringyEval] 
+# There is a stringy eval in Formatter.pm which is essential.
+[-BuiltinFunctions::ProhibitStringyEval]
 
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
@@ -21,7 +27,7 @@ severity = 4
 # print and close homonyms are appropriate where they are used.
 [-Subroutines::ProhibitBuiltinHomonyms]
 
-# Nested subs are needed for error handling in Tidy.pm. 
+# Nested subs are needed for error handling in Tidy.pm.
 [-Subroutines::ProhibitNestedSubs]
 
 # In critical routines this can significantly reduce processing speed
@@ -38,3 +44,46 @@ severity = 4
 # Perlcritic doesn't know ARGV actually is localized
 [-Variables::RequireLocalizedPunctuationVars]
 
+#--------------------------------------------------------------
+# Following is a list of policies to be skipped for severity=3:
+#--------------------------------------------------------------
+
+# AUTOLOAD is only used in perltidy to help find and debug programming errors
+[-ClassHierarchies::ProhibitAutoloading]
+
+# These are good general policies but are sometimes hard to avoid
+[-Subroutines::ProhibitExcessComplexity]
+[-Modules::ProhibitExcessMainComplexity]
+[-ControlStructures::ProhibitDeepNests]
+[-ControlStructures::ProhibitCascadingIfElse]
+
+# An 'unless' is sometimes clearer than an 'if'
+[-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
+
+# $@ is checked
+[-ErrorHandling::RequireCheckingReturnValueOfEval]
+
+# this is a good general policy but not always best
+[-Subroutines::ProhibitManyArgs]
+
+[-ClassHierarchies::ProhibitExplicitISA]
+
+# These are okay where used
+[-NamingConventions::ProhibitAmbiguousNames]
+
+# I find the lvalue substr more clear where it is used rather
+# than add another arg to substr.
+[-BuiltinFunctions::ProhibitLvalueSubstr]
+
+# The Tokenizer.pm needs package variables
+[-Variables::ProhibitPackageVars]
+
+# this is not always useful
+[-RegularExpressions::RequireExtendedFormatting]
+
+# Changing debugged regexes is risky, especially complex regexes
+[-RegularExpressions::ProhibitComplexRegexes]
+
+# perlcritic does not distinguish between use of parens for capture and for precedence
+[-RegularExpressions::ProhibitUnusedCapture]
+[-RegularExpressions::ProhibitCaptureWithoutTest]
