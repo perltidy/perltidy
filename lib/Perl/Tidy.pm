@@ -3883,7 +3883,7 @@ New abbreviations may be defined in a .perltidyrc file.
 For a list of all long names, use perltidy --dump-long-names (-dln).
 --------------------------------------------------------------------------
 EOM
-    foreach my $abbrev ( sort keys %$rexpansion ) {
+    foreach my $abbrev ( sort keys %{$rexpansion} ) {
         my @list = @{ $rexpansion->{$abbrev} };
         print STDOUT "$abbrev --> @list\n";
     }
@@ -4245,15 +4245,15 @@ sub read_config_file {
             $opening_brace_line = $line_no unless ( $body && $body =~ s/\}$// );
 
             # handle a new alias definition
-            if ( ${$rexpansion}{$name} ) {
+            if ( $rexpansion->{$name} ) {
                 local $" = ')(';
-                my @names = sort keys %$rexpansion;
+                my @names = sort keys %{$rexpansion};
                 $death_message =
                     "Here is a list of all installed aliases\n(@names)\n"
                   . "Attempting to redefine alias ($name) in config file $config_file line $.\n";
                 last;
             }
-            ${$rexpansion}{$name} = [];
+            $rexpansion->{$name} = [];
         }
 
         # leading opening braces not allowed
@@ -4294,7 +4294,7 @@ EOM
 
                 # remove leading dashes if this is an alias
                 foreach ( @{$rbody_parts} ) { s/^\-+//; }
-                push @{ ${$rexpansion}{$name} }, @{$rbody_parts};
+                push @{ $rexpansion->{$name} }, @{$rbody_parts};
             }
             else {
                 push( @config_list, @{$rbody_parts} );
