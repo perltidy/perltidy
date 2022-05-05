@@ -487,6 +487,8 @@ BEGIN {
         _roverride_cab3_                   => $i++,
         _ris_assigned_structure_           => $i++,
 
+        _rseqno_non_indenting_brace_by_ix_ => $i++,
+
         _LAST_SELF_INDEX_ => $i - 1,
     };
 }
@@ -887,6 +889,8 @@ sub new {
     $self->[_ris_essential_old_breakpoint_]     = {};
     $self->[_roverride_cab3_]                   = {};
     $self->[_ris_assigned_structure_]           = {};
+
+    $self->[_rseqno_non_indenting_brace_by_ix_] = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -5520,6 +5524,8 @@ EOM
 
     my $rix_side_comments = $self->set_CODE_type();
 
+    $self->find_non_indenting_braces($rix_side_comments);
+
     # Handle any requested side comment deletions. It is easier to get
     # this done here rather than farther down the pipeline because IO
     # lines take a different route, and because lines with deleted HSC
@@ -5574,8 +5580,8 @@ EOM
 sub set_CODE_type {
     my ($self) = @_;
 
-    # Examine each line of code and set a flag '$CODE_type' to describe.
-    # Return list of lines with side comments.
+    # Examine each line of code and set a flag '$CODE_type' to describe it.
+    # Also return a list of lines with side comments.
 
     my $rLL                  = $self->[_rLL_];
     my $Klimit               = $self->[_Klimit_];
@@ -5877,6 +5883,61 @@ sub set_CODE_type {
     return \@ix_side_comments;
 }
 
+sub find_non_indenting_braces {
+
+    my ( $self, $rix_side_comments ) = @_;
+    return unless ( $rOpts->{'non-indenting-braces'} );
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    return unless ( defined($rLL) && @{$rLL} );
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $rseqno_non_indenting_brace_by_ix =
+      $self->[_rseqno_non_indenting_brace_by_ix_];
+
+    foreach my $ix ( @{$rix_side_comments} ) {
+        my $line_of_tokens = $rlines->[$ix];
+        my $line_type      = $line_of_tokens->{_line_type};
+        if ( $line_type ne 'CODE' ) {
+
+            # shouldn't happen
+            next;
+        }
+        my $CODE_type = $line_of_tokens->{_code_type};
+        my $rK_range  = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
+
+            # shouldn't happen
+            next;
+        }
+        next unless ( $Klast > $Kfirst );    # maybe HSC
+        my $token_sc = $rLL->[$Klast]->[_TOKEN_];
+        my $K_m      = $Klast - 1;
+        my $type_m   = $rLL->[$K_m]->[_TYPE_];
+        if ( $type_m eq 'b' && $K_m > $Kfirst ) {
+            $K_m--;
+            $type_m = $rLL->[$K_m]->[_TYPE_];
+        }
+        my $seqno_m = $rLL->[$K_m]->[_TYPE_SEQUENCE_];
+        if ($seqno_m) {
+            my $block_type_m = $rblock_type_of_seqno->{$seqno_m};
+
+            # The pattern ends in \s but we have removed the newline, so
+            # we added it back for the match. That way we require an exact
+            # match to the special string and also allow additional text.
+            $token_sc .= "\n";
+            if (   $block_type_m
+                && $is_opening_type{$type_m}
+                && $token_sc =~ /$non_indenting_brace_pattern/ )
+            {
+                $rseqno_non_indenting_brace_by_ix->{$ix} = $seqno_m;
+            }
+        }
+    }
+    return;
+}
+
 sub delete_side_comments {
     my ( $self, $rix_side_comments ) = @_;
 
@@ -5886,6 +5947,8 @@ sub delete_side_comments {
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $rseqno_non_indenting_brace_by_ix =
+      $self->[_rseqno_non_indenting_brace_by_ix_];
 
     foreach my $ix ( @{$rix_side_comments} ) {
         my $line_of_tokens = $rlines->[$ix];
@@ -5925,10 +5988,10 @@ EOM
             || $CODE_type eq 'IO'
             || $CODE_type eq 'NIN' );
 
-        #---------------------------------------------------
-        # TODO: Do not delete special control side comments,
-        # but maybe add a flag to delete them?
-        #---------------------------------------------------
+        # Do not delete special control side comments
+        if ( $rseqno_non_indenting_brace_by_ix->{$ix} ) {
+            $delete_side_comment = 0;
+        }
 
         if (
                $rOpts_delete_closing_side_comments
@@ -9810,7 +9873,7 @@ sub adjust_indentation_levels {
     }
 
     # First set adjusted levels for any non-indenting braces.
-    $self->non_indenting_braces();
+    $self->do_non_indenting_braces();
 
     # Adjust breaks and indentation list containers
     $self->break_before_list_opening_containers();
@@ -9843,18 +9906,20 @@ sub clip_adjusted_levels {
     return;
 }
 
-sub non_indenting_braces {
+sub do_non_indenting_braces {
 
     # Called once per file to handle the --non-indenting-braces parameter.
     # Remove indentation within marked braces if requested
     my ($self) = @_;
-    return unless ( $rOpts->{'non-indenting-braces'} );
 
-    my $rLL = $self->[_rLL_];
-    return unless ( defined($rLL) && @{$rLL} );
+    # Any non-indenting braces have been found by sub find_non_indenting_braces
+    # and are defined by the following hash:
+    my $rseqno_non_indenting_brace_by_ix =
+      $self->[_rseqno_non_indenting_brace_by_ix_];
+    return unless ( %{$rseqno_non_indenting_brace_by_ix} );
 
-    my $Klimit                     = $self->[_Klimit_];
-    my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
+    my $rLL                        = $self->[_rLL_];
+    my $rlines                     = $self->[_rlines_];
     my $K_opening_container        = $self->[_K_opening_container_];
     my $K_closing_container        = $self->[_K_closing_container_];
     my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
@@ -9862,31 +9927,13 @@ sub non_indenting_braces {
 
     # First locate all of the marked blocks
     my @K_stack;
-    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
-        my $KK = $K_opening_container->{$seqno};
-
-        # followed by a comment
-        my $K_sc = $KK + 1;
-        $K_sc += 1
-          if ( $K_sc <= $Klimit && $rLL->[$K_sc]->[_TYPE_] eq 'b' );
-        next unless ( $K_sc <= $Klimit );
-        my $type_sc = $rLL->[$K_sc]->[_TYPE_];
-        next unless ( $type_sc eq '#' );
-
-        # on the same line
-        my $line_index    = $rLL->[$KK]->[_LINE_INDEX_];
-        my $line_index_sc = $rLL->[$K_sc]->[_LINE_INDEX_];
-        next unless ( $line_index_sc == $line_index );
-
-        # get the side comment text
-        my $token_sc = $rLL->[$K_sc]->[_TOKEN_];
-
-        # The pattern ends in \s but we have removed the newline, so
-        # we added it back for the match. That way we require an exact
-        # match to the special string and also allow additional text.
-        $token_sc .= "\n";
-        next unless ( $token_sc =~ /$non_indenting_brace_pattern/ );
-        $rspecial_side_comment_type->{$K_sc} = 'NIB';
+    foreach my $ix ( keys %{$rseqno_non_indenting_brace_by_ix} ) {
+        my $seqno          = $rseqno_non_indenting_brace_by_ix->{$ix};
+        my $KK             = $K_opening_container->{$seqno};
+        my $line_of_tokens = $rlines->[$ix];
+        my $rK_range       = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        $rspecial_side_comment_type->{$Klast} = 'NIB';
         push @K_stack, [ $KK, 1 ];
         my $Kc = $K_closing_container->{$seqno};
         push @K_stack, [ $Kc, -1 ] if ( defined($Kc) );

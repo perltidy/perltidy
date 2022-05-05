@@ -4424,6 +4424,10 @@ Two commands which remove comments (but not pod) are: B<-dbc> or
 B<--delete-block-comments> and B<-dsc> or  B<--delete-side-comments>.
 (Hanging side comments will be deleted with side comments here.)
 
+When side comments are deleted, any special control side comments for
+non-indenting braces will be retained unless they are deactivated with
+a B<-nnib> flag.
+
 The negatives of these commands also work, and are the defaults.  When
 block comments are deleted, any leading 'hash-bang' will be retained.
 Also, if the B<-x> flag is used, any system commands before a leading

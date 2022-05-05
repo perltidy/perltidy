@@ -26,6 +26,11 @@
         use Symbol       qw(gensym);
         use Exporter     ();
 
+    - Previously, if a -dsc command was used to delete all side comments,
+      then any special control comments for non-indenting braces got deleted too.
+      Now, these control side comments are retained when -dsc is set unless
+      a -nnib flag is also set to deactivate them.
+
     - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
 
 ## 2022 02 17
