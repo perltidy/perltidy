@@ -487,7 +487,8 @@ BEGIN {
         _roverride_cab3_                   => $i++,
         _ris_assigned_structure_           => $i++,
 
-        _rseqno_non_indenting_brace_by_ix_ => $i++,
+        _rseqno_non_indenting_brace_by_ix_    => $i++,
+        _rreduce_vertical_tightness_by_seqno_ => $i++,
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
@@ -890,7 +891,8 @@ sub new {
     $self->[_roverride_cab3_]                   = {};
     $self->[_ris_assigned_structure_]           = {};
 
-    $self->[_rseqno_non_indenting_brace_by_ix_] = {};
+    $self->[_rseqno_non_indenting_brace_by_ix_]    = {};
+    $self->[_rreduce_vertical_tightness_by_seqno_] = {};
 
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
@@ -8807,25 +8809,38 @@ sub weld_nested_containers {
     my $ris_asub_block            = $self->[_ris_asub_block_];
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
-    # Setup hash needed for RULE 2B involving -lp -wn -vt=2
-    # Note: this could be changed in the future to include -vt=1 and -vt=2
-    # but for now only -vt=2 has caused instabilities with -wn.
-    # Note: used all keys for b1338, but switched to just '(' to fix b1339.
-    my %no_weld_to_one_line_container;
-    if ($rOpts_line_up_parentheses) {
-        ##foreach ( keys %opening_vertical_tightness ) {
-        foreach ('(') {
-            if ( $opening_vertical_tightness{$_} == 2 ) {
-                $no_weld_to_one_line_container{$_} = 1;
-            }
-        }
-    }
-
     # Find nested pairs of container tokens for any welding.
     my $rnested_pairs = $self->find_nested_pairs();
 
     # Return unless there are nested pairs to weld
     return unless defined($rnested_pairs) && @{$rnested_pairs};
+
+    # NOTE: It would be nice to apply RULE 5 right here by deleting unwanted
+    # pairs.  But it isn't clear if this is possible because we don't know
+    # which sequences might actually start a weld.
+
+    # Setup a hash to avoid instabilities with combination -lp -wn -pvt=2.
+    # We do this by reducing -vt=2 to -vt=1 where there could be a conflict
+    # with welding at the same tokens.
+    # See issues b1338, b1339, b1340, b1341, b1342, b1343.
+    if ($rOpts_line_up_parentheses) {
+
+        # NOTE: just parens for now but this could be applied to all types if
+        # necessary.
+        if ( $opening_vertical_tightness{'('} == 2 ) {
+            my $rreduce_vertical_tightness_by_seqno =
+              $self->[_rreduce_vertical_tightness_by_seqno_];
+            foreach my $item ( @{$rnested_pairs} ) {
+                my ( $inner_seqno, $outer_seqno ) = @{$item};
+                if ( !$ris_excluded_lp_container->{$outer_seqno} ) {
+
+                    # Set a flag which means that if a token has -vt=2
+                    # then reduce it to -vt=1.
+                    $rreduce_vertical_tightness_by_seqno->{$outer_seqno} = 1;
+                }
+            }
+        }
+    }
 
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
@@ -9216,19 +9231,6 @@ EOM
           )
         {
             $do_not_weld_rule = '2A';
-        }
-
-        # DO-NOT-WELD RULE 2B: Turn off welding to a *one-line container for* an
-        # opening token which uses both -lp indentation and -vt=2.  See issue
-        # b1338. Also see related issue b1183 involving welds and -vt>0.
-        if (  !$do_not_weld_rule
-            && %no_weld_to_one_line_container
-            && $iline_io == $iline_ic
-            && $no_weld_to_one_line_container{$token_oo}
-            && !$rblock_type_of_seqno->{$outer_seqno}
-            && !$ris_excluded_lp_container->{$outer_seqno} )
-        {
-            $do_not_weld_rule = '2B';
         }
 
         # DO-NOT-WELD RULE 3:
@@ -25515,6 +25517,12 @@ sub set_vertical_tightness_flags {
             my $seqno = $type_sequence_to_go[$iend];
             if ( $ovt && $self->[_rwant_container_open_]->{$seqno} ) {
                 $ovt = 0;
+            }
+
+            if (   $ovt == 2
+                && $self->[_rreduce_vertical_tightness_by_seqno_]->{$seqno} )
+            {
+                $ovt = 1;
             }
 
             unless (
