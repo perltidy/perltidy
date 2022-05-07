@@ -9084,11 +9084,9 @@ EOM
                 #   if unbalanced (b1232)
                 if ( $Kouter_opening > $Kfirst && $level_oo > $level_first ) {
                     $Kstart = $Kouter_opening;
-                    for (
-                        my $KK = $Kouter_opening - 1 ;
-                        $KK > $Kfirst ;
-                        $KK -= 1
-                      )
+
+                    foreach
+                      my $KK ( reverse( $Kfirst + 1 .. $Kouter_opening - 1 ) )
                     {
                         next if ( $rLL->[$KK]->[_TYPE_] eq 'b' );
                         last if ( $rLL->[$KK]->[_LEVEL_] < $level_oo );
@@ -17494,9 +17492,10 @@ sub undo_lp_ci {
 
     # see if all additional lines in this container have continuation
     # indentation
-    my $n;
     my $line_1 = 1 + $line_open;
-    for ( $n = $line_1 ; $n <= $max_line ; ++$n ) {
+    my $n      = $line_open;
+
+    while ( ++$n <= $max_line ) {
         my $ibeg = $ri_first->[$n];
         my $iend = $ri_last->[$n];
         if ( $ibeg eq $closing_index ) { $n--; last }
@@ -17643,7 +17642,8 @@ sub break_long_lines {
         # BEGINNING of inner loop to find the best next breakpoint
         #-------------------------------------------------------
         my $strength = NO_BREAK;
-        for ( $i_test = $i_begin ; $i_test <= $imax ; $i_test++ ) {
+        $i_test = $i_begin - 1;
+        while ( ++$i_test <= $imax ) {
             my $type                     = $types_to_go[$i_test];
             my $token                    = $tokens_to_go[$i_test];
             my $next_type                = $types_to_go[ $i_test + 1 ];
@@ -20615,14 +20615,11 @@ EOM
         my $j_first_break =
           $use_separate_first_term ? $number_of_fields : $number_of_fields - 1;
 
-        for (
-            my $j = $j_first_break ;
-            $j < $comma_count ;
-            $j += $number_of_fields
-          )
-        {
+        my $j = $j_first_break;
+        while ( $j < $comma_count ) {
             my $i_comma = $rcomma_index->[$j];
             $self->set_forced_breakpoint($i_comma);
+            $j += $number_of_fields;
         }
         return;
     }
@@ -20840,16 +20837,14 @@ sub compactify_table {
     # better.
     my ( $item_count, $number_of_fields, $formatted_lines, $odd_or_even ) = @_;
     if ( $number_of_fields >= $odd_or_even * 2 && $formatted_lines > 0 ) {
-        my $min_fields;
 
-        for (
-            $min_fields = $number_of_fields ;
-            $min_fields >= $odd_or_even
-            && $min_fields * $formatted_lines >= $item_count ;
-            $min_fields -= $odd_or_even
-          )
+        my $min_fields = $number_of_fields;
+
+        while ($min_fields >= $odd_or_even
+            && $min_fields * $formatted_lines >= $item_count )
         {
             $number_of_fields = $min_fields;
+            $min_fields -= $odd_or_even;
         }
     }
     return $number_of_fields;
@@ -21905,7 +21900,8 @@ EOM
 
             # update the leading whitespace of this item and all items
             # that came after it
-            for ( ; $i <= $max_lp_object_list ; $i++ ) {
+            $i -= 1;
+            while ( ++$i <= $max_lp_object_list ) {
 
                 my $old_spaces = $rlp_object_list->[$i]->get_spaces();
                 if ( $old_spaces >= $deleted_spaces ) {
