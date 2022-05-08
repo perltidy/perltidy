@@ -618,7 +618,9 @@ EOM
         unless ( defined($dump_options_type) ) {
             $dump_options_type = 'perltidyrc';
         }
-        unless ( $dump_options_type =~ /^(perltidyrc|full)$/ ) {
+        if (   $dump_options_type ne 'perltidyrc'
+            && $dump_options_type ne 'full' )
+        {
             croak <<EOM;
 ------------------------------------------------------------------------
 Please check value of -dump_options_type in call to perltidy;
@@ -704,9 +706,8 @@ EOM
         $rpending_complaint, $dump_options_type,
       );
 
-    my $saw_extrude = ( grep { m/^-extrude$/ } @{$rraw_options} ) ? 1 : 0;
     my $saw_pbp =
-      ( grep { m/^-(pbp|perl-best-practices)$/ } @{$rraw_options} ) ? 1 : 0;
+      grep { $_ eq '-pbp' || $_ eq '-perl-best-practices' } @{$rraw_options};
 
     #---------------------------------------------------------------
     # Handle requests to dump information
@@ -1133,7 +1134,9 @@ EOM
         }
 
         # Case 3. guess input stream encoding if requested
-        elsif ( $rOpts_character_encoding =~ /^guess$/i ) {
+        elsif ($rOpts_character_encoding eq 'guess'
+            || $rOpts_character_encoding eq 'GUESS' )
+        {
 
             # The guessing strategy is simple: use Encode::Guess to guess
             # an encoding.  If and only if the guess is utf8, try decoding and
@@ -1150,7 +1153,7 @@ EOM
             my $decoder = guess_encoding( $buf_in, 'utf8' );
             if ( ref($decoder) ) {
                 $encoding_in = $decoder->name;
-                if ( $encoding_in !~ /^(UTF-8|utf8)$/ ) {
+                if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
                     $encoding_in = "";
                     $buf         = $buf_in;
                     $encoding_log_message .= <<EOM;
@@ -1463,7 +1466,6 @@ EOM
             log_file        => $log_file,
             warning_file    => $warning_file,
             fh_stderr       => $fh_stderr,
-            saw_extruce     => $saw_extrude,
             display_name    => $display_name,
             is_encoded_data => $is_encoded_data,
         );

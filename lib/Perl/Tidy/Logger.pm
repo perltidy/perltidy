@@ -44,7 +44,6 @@ sub new {
         log_file        => undef,
         warning_file    => undef,
         fh_stderr       => undef,
-        saw_extruce     => undef,
         display_name    => undef,
         is_encoded_data => undef,
     );
@@ -55,7 +54,6 @@ sub new {
     my $log_file        = $args{log_file};
     my $warning_file    = $args{warning_file};
     my $fh_stderr       = $args{fh_stderr};
-    my $saw_extrude     = $args{saw_extrude};
     my $display_name    = $args{display_name};
     my $is_encoded_data = $args{is_encoded_data};
 
@@ -97,7 +95,6 @@ sub new {
         _is_encoded_data               => $is_encoded_data,
         _saw_code_bug      => -1,                   # -1=no 0=maybe 1=for sure
         _saw_brace_error   => 0,
-        _saw_extrude       => $saw_extrude,
         _output_array      => [],
         _input_stream_name => $input_stream_name,
         _filename_stamp    => $filename_stamp,
