@@ -9836,6 +9836,27 @@ params =>
 --square-bracket-vertical-tightness=2
 --weld-nested-containers
 
+==> b1340.in <==
+# S1
+print to_json(
+              {
+                success => $success ? 1 : 0
+              }
+);
+
+# S2
+print to_json({success => $success ? 1 : 0});
+
+==> b1340.par <==
+--noadd-whitespace
+--brace-vertical-tightness=2
+--continuation-indentation=10
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--maximum-line-length=50
+--paren-vertical-tightness=2
+--weld-nested-containers
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
