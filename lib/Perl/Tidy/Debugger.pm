@@ -7,6 +7,7 @@
 package Perl::Tidy::Debugger;
 use strict;
 use warnings;
+use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
 sub new {
@@ -29,7 +30,7 @@ sub really_open_debug_file {
     my ( $fh, $filename ) =
       Perl::Tidy::streamhandle( $debug_file, 'w', $is_encoded_data );
     if ( !$fh ) {
-        Perl::Tidy::Warn("can't open $debug_file: $!\n");
+        Perl::Tidy::Warn("can't open $debug_file: $ERRNO\n");
     }
     $self->{_debug_file_opened} = 1;
     $self->{_fh}                = $fh;

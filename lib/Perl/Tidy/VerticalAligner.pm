@@ -2,6 +2,7 @@ package Perl::Tidy::VerticalAligner;
 use strict;
 use warnings;
 use Carp;
+use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
@@ -1003,7 +1004,7 @@ sub fix_terminal_ternary {
     my @field_lengths = @{$rfield_lengths};
 
     EXPLAIN_TERNARY && do {
-        local $" = '><';
+        local $LIST_SEPARATOR = '><';
         print STDOUT "CURRENT FIELDS=<@{$rfields_old}>\n";
         print STDOUT "CURRENT TOKENS=<@{$rtokens_old}>\n";
         print STDOUT "CURRENT PATTERNS=<@{$rpatterns_old}>\n";
@@ -1092,7 +1093,7 @@ sub fix_terminal_ternary {
     }
 
     EXPLAIN_TERNARY && do {
-        local $" = '><';
+        local $LIST_SEPARATOR = '><';
         print STDOUT "MODIFIED TOKENS=<@tokens>\n";
         print STDOUT "MODIFIED PATTERNS=<@patterns>\n";
         print STDOUT "MODIFIED FIELDS=<@fields>\n";
@@ -1387,7 +1388,7 @@ sub copy_old_alignments {
 sub dump_array {
 
     # debug routine to dump array contents
-    local $" = ')(';
+    local $LIST_SEPARATOR = ')(';
     print STDOUT "(@_)\n";
     return;
 }
@@ -2368,7 +2369,7 @@ sub delete_selected_tokens {
 
     use constant EXPLAIN_DELETE_SELECTED => 0;
 
-    local $" = '> <';
+    local $LIST_SEPARATOR = '> <';
     EXPLAIN_DELETE_SELECTED && print <<EOM;
 delete indexes: <@{$ridel}>
 old jmax: $jmax_old
@@ -3557,7 +3558,7 @@ sub get_line_token_info {
 
         # debug
         0 && do {
-            local $" = ')(';
+            local $LIST_SEPARATOR = ')(';
             print "lev_min=$lev_min, lev_max=$lev_max, levels=(@levs)\n";
             foreach my $key ( sort keys %{$rtoken_patterns} ) {
                 print "$key => $rtoken_patterns->{$key}\n";
@@ -3954,7 +3955,7 @@ sub prune_alignment_tree {
 sub Dump_tree_groups {
     my ( $rgroup, $msg ) = @_;
     print "$msg\n";
-    local $" = ')(';
+    local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
         my @fix = @{$item};
         foreach (@fix) { $_ = "undef" unless defined $_; }

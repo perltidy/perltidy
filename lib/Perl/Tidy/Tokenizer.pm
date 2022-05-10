@@ -21,6 +21,8 @@
 package Perl::Tidy::Tokenizer;
 use strict;
 use warnings;
+use English qw( -no_match_vars );
+
 our $VERSION = '20220217.04';
 
 # this can be turned on for extra checking during development
@@ -94,6 +96,7 @@ use vars qw{
   %is_keyword
   %is_code_block_token
   %is_sort_map_grep_eval_do
+  %is_sort_map_grep
   %is_grep_alias
   %really_want_term
   @opening_brace_names
@@ -102,10 +105,13 @@ use vars qw{
   %is_keyword_taking_optional_arg
   %is_keyword_rejecting_slash_as_pattern_delimiter
   %is_keyword_rejecting_question_as_pattern_delimiter
+  %is_q_qq_qx_qr_s_y_tr_m
   %is_q_qq_qw_qx_qr_s_y_tr_m
   %is_sub
   %is_package
   %is_comma_question_colon
+  %is_if_elsif_unless
+  %is_if_elsif_unless_case_when
   %other_line_endings
   $code_skipping_pattern_begin
   $code_skipping_pattern_end
@@ -273,7 +279,7 @@ sub bad_pattern {
     # by this program.
     my ($pattern) = @_;
     eval "'##'=~/$pattern/";
-    return $@;
+    return $EVAL_ERROR;
 }
 
 sub make_code_skipping_pattern {
@@ -733,7 +739,7 @@ EOM
           @{ $tokenizer_self->[_rlower_case_labels_at_] };
         write_logfile_entry(
             "Suggest using upper case characters in label(s)\n");
-        local $" = ')(';
+        local $LIST_SEPARATOR = ')(';
         write_logfile_entry("  defined at line(s): (@lower_case_labels_at)\n");
     }
     return $severe_error;
@@ -788,7 +794,9 @@ sub get_line {
     # Find and remove what characters terminate this line, including any
     # control r
     my $input_line_separator = "";
-    if ( chomp($input_line) ) { $input_line_separator = $/ }
+    if ( chomp($input_line) ) {
+        $input_line_separator = $INPUT_RECORD_SEPARATOR;
+    }
 
     # The first test here very significantly speeds things up, but be sure to
     # keep the regex and hash %other_line_endings the same.
@@ -3870,12 +3878,12 @@ EOM
             $next_type = $rtoken_type->[ $i + 1 ];
 
             DEBUG_TOKENIZE && do {
-                local $" = ')(';
+                local $LIST_SEPARATOR = ')(';
                 my @debug_list = (
                     $last_nonblank_token,      $tok,
                     $next_tok,                 $brace_depth,
                     $brace_type[$brace_depth], $paren_depth,
-                    $paren_type[$paren_depth]
+                    $paren_type[$paren_depth],
                 );
                 print STDOUT "TOKENIZE:(@debug_list)\n";
             };
@@ -4332,9 +4340,12 @@ EOM
                     # else or elsif blocks to be formatted.  This is indicated
                     # by a last noblank token of ';'
                     elsif ( $tok eq 'elsif' ) {
-                        if (   $last_nonblank_token ne ';'
-                            && $last_nonblank_block_type !~
-                            /^(if|elsif|unless)$/ )
+                        if (
+                            $last_nonblank_token ne ';'
+
+                            ## !~ /^(if|elsif|unless)$/
+                            && !$is_if_elsif_unless{$last_nonblank_block_type}
+                          )
                         {
                             warning(
 "expecting '$tok' to follow one of 'if|elsif|unless'\n"
@@ -4345,15 +4356,17 @@ EOM
 
                         # patched for SWITCH/CASE
                         if (
-                               $last_nonblank_token ne ';'
-                            && $last_nonblank_block_type !~
-                            /^(if|elsif|unless|case|when)$/
+                            $last_nonblank_token ne ';'
+
+                            ## !~ /^(if|elsif|unless|case|when)$/
+                            && !$is_if_elsif_unless_case_when{
+                                $last_nonblank_block_type}
 
                             # patch to avoid an unwanted error message for
                             # the case of a parenless 'case' (RT 105484):
                             # switch ( 1 ) { case x { 2 } else { } }
-                            && $statement_type !~
-                            /^(if|elsif|unless|case|when)$/
+                            ## !~ /^(if|elsif|unless|case|when)$/
+                            && !$is_if_elsif_unless_case_when{$statement_type}
                           )
                         {
                             warning(
@@ -5731,8 +5744,11 @@ sub code_block_type {
         #   print 'hi' if { x => 1, }->{x};
         # We can identify this situation because the last nonblank type
         # will be a keyword (instead of a closing peren)
-        if (   $last_nonblank_token =~ /^(if|unless)$/
-            && $last_nonblank_type eq 'k' )
+        if (
+            $last_nonblank_type eq 'k'
+            && (   $last_nonblank_token eq 'if'
+                || $last_nonblank_token eq 'unless' )
+          )
         {
             return "";
         }
@@ -5781,7 +5797,9 @@ sub code_block_type {
     # Check for a code block within a parenthesized function call
     elsif ( $last_nonblank_token eq '(' ) {
         my $paren_type = $paren_type[$paren_depth];
-        if ( $paren_type && $paren_type =~ /^(map|grep|sort)$/ ) {
+
+        #                   /^(map|grep|sort)$/
+        if ( $paren_type && $is_sort_map_grep{$paren_type} ) {
 
             # We will mark this as a code block but use type 't' instead
             # of the name of the contining function.  This will allow for
@@ -5911,8 +5929,9 @@ sub decide_if_code_block {
 
                 # it is a comma which is not a pattern delimeter except for qw
                 (
-                       $pre_types[$j] eq ','
-                    && $pre_tokens[$jbeg] !~ /^(s|m|y|tr|qr|q|qq|qx)$/
+                    $pre_types[$j] eq ','
+                    ## !~ /^(s|m|y|tr|qr|q|qq|qx)$/
+                    && !$is_q_qq_qx_qr_s_y_tr_m{ $pre_tokens[$jbeg] }
                 )
 
                 # or a =>
@@ -7782,7 +7801,10 @@ sub scan_identifier_do {
                 # In something like '$${' we have type '$$' (and only
                 # part of an identifier)
                 && !( $identifier =~ /\$$/ && $tok eq '{' )
-                && ( $identifier !~ /^(sub |package )$/ )
+
+                ## && ( $identifier !~ /^(sub |package )$/ )
+                && $identifier ne 'sub '
+                && $identifier ne 'package '
               )
             {
                 $type = 'i';
@@ -9362,6 +9384,9 @@ BEGIN {
     @q = qw( sort map grep eval do );
     @is_sort_map_grep_eval_do{@q} = (1) x scalar(@q);
 
+    @q = qw( sort map grep );
+    @is_sort_map_grep{@q} = (1) x scalar(@q);
+
     %is_grep_alias = ();
 
     # I'll build the list of keywords incrementally
@@ -9691,7 +9716,10 @@ BEGIN {
     delete $really_want_term{'F'}; # file test works on $_ if no following term
     delete $really_want_term{'Y'}; # indirect object, too risky to check syntax;
                                    # let perl do it
+    @q = qw(q qq qx qr s y tr m);
+    @is_q_qq_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
+    # Note added 'qw' here
     @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
@@ -9701,6 +9729,12 @@ BEGIN {
     @q = qw( ? : );
     push @q, ',';
     @is_comma_question_colon{@q} = (1) x scalar(@q);
+
+    @q = qw( if elsif unless );
+    @is_if_elsif_unless{@q} = (1) x scalar(@q);
+
+    @q = qw( if elsif unless case when );
+    @is_if_elsif_unless_case_when{@q} = (1) x scalar(@q);
 
     # Hash of other possible line endings which may occur.
     # Keep these coordinated with the regex where this is used.

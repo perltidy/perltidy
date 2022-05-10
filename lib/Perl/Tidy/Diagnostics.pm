@@ -20,6 +20,7 @@
 package Perl::Tidy::Diagnostics;
 use strict;
 use warnings;
+use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
 sub AUTOLOAD {
@@ -70,7 +71,7 @@ sub write_diagnostics {
 
     unless ( $self->{_write_diagnostics_count} ) {
         open( $self->{_fh}, ">", "DIAGNOSTICS" )
-          or Perl::Tidy::Die("couldn't open DIAGNOSTICS: $!\n");
+          or Perl::Tidy::Die("couldn't open DIAGNOSTICS: $ERRNO\n");
     }
 
     my $fh                   = $self->{_fh};

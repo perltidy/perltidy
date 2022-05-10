@@ -9,6 +9,7 @@ use strict;
 use warnings;
 our $VERSION = '20220217.04';
 
+use English qw( -no_match_vars );
 use File::Basename;
 
 # class variables
@@ -31,10 +32,10 @@ use vars qw{
 
 BEGIN {
     if ( !eval { require HTML::Entities; 1 } ) {
-        $missing_html_entities = $@ ? $@ : 1;
+        $missing_html_entities = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
     if ( !eval { require Pod::Html; 1 } ) {
-        $missing_pod_html = $@ ? $@ : 1;
+        $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
 }
 
@@ -88,7 +89,7 @@ sub new {
     ( $html_fh, my $html_filename ) =
       Perl::Tidy::streamhandle( $html_file, 'w' );
     unless ($html_fh) {
-        Perl::Tidy::Warn("can't open $html_file: $!\n");
+        Perl::Tidy::Warn("can't open $html_file: $ERRNO\n");
         return;
     }
     $html_file_opened = 1;
@@ -589,7 +590,7 @@ sub write_style_sheet_file {
     my $css_filename = shift;
     my $fh;
     unless ( $fh = IO::File->new("> $css_filename") ) {
-        Perl::Tidy::Die("can't open $css_filename: $!\n");
+        Perl::Tidy::Die("can't open $css_filename: $ERRNO\n");
     }
     write_style_sheet_data($fh);
     close_object($fh);
@@ -953,7 +954,8 @@ sub pod_to_html {
     # because the tmpfile may be one of the names used for frames
     if ( -e $tmpfile ) {
         unless ( unlink($tmpfile) ) {
-            Perl::Tidy::Warn("couldn't unlink temporary file $tmpfile: $!\n");
+            Perl::Tidy::Warn(
+                "couldn't unlink temporary file $tmpfile: $ERRNO\n");
             $success_flag = 0;
         }
     }
@@ -1000,7 +1002,8 @@ sub make_frame {
 
     # 2. The current .html filename is renamed to be the contents panel
     rename( $html_filename, $src_filename )
-      or Perl::Tidy::Die("Cannot rename $html_filename to $src_filename:$!\n");
+      or Perl::Tidy::Die(
+        "Cannot rename $html_filename to $src_filename: $ERRNO\n");
 
     # 3. Then use the original html filename for the frame
     write_frame_html(
@@ -1015,7 +1018,7 @@ sub write_toc_html {
     # write a separate html table of contents file for frames
     my ( $title, $toc_filename, $src_basename, $rtoc, $src_frame_name ) = @_;
     my $fh = IO::File->new( $toc_filename, 'w' )
-      or Perl::Tidy::Die("Cannot open $toc_filename:$!\n");
+      or Perl::Tidy::Die("Cannot open $toc_filename: $ERRNO\n");
     $fh->print(<<EOM);
 <html>
 <head>
@@ -1046,7 +1049,7 @@ sub write_frame_html {
     ) = @_;
 
     my $fh = IO::File->new( $frame_filename, 'w' )
-      or Perl::Tidy::Die("Cannot open $toc_basename:$!\n");
+      or Perl::Tidy::Die("Cannot open $toc_basename: $ERRNO\n");
 
     $fh->print(<<EOM);
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Frameset//EN"

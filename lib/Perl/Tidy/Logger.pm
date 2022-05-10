@@ -7,6 +7,7 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
+use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
 sub AUTOLOAD {
@@ -64,7 +65,7 @@ sub new {
         if ( -e $warning_file ) {
             unlink($warning_file)
               or Perl::Tidy::Die(
-                "couldn't unlink warning file $warning_file: $!\n");
+                "couldn't unlink warning file $warning_file: $ERRNO\n");
         }
     }
 
@@ -363,7 +364,8 @@ sub warning {
             my $warning_file = $self->{_warning_file};
             ( $fh_warnings, my $filename ) =
               Perl::Tidy::streamhandle( $warning_file, 'w', $is_encoded_data );
-            $fh_warnings or Perl::Tidy::Die("couldn't open $filename $!\n");
+            $fh_warnings
+              or Perl::Tidy::Die("couldn't open $filename: $ERRNO\n");
             Perl::Tidy::Warn_msg("## Please see file $filename\n")
               unless ref($warning_file);
             $self->{_fh_warnings} = $fh_warnings;

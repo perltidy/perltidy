@@ -49,6 +49,7 @@ use constant DEVEL_MODE => 0;
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
+use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
 # The Tokenizer will be loaded with the Formatter
@@ -205,8 +206,10 @@ my (
     %is_if_unless_while_until_for_foreach,
     %is_last_next_redo_return,
     %is_if_unless,
+    %is_if_elsif,
     %is_if_unless_elsif,
     %is_if_unless_elsif_else,
+    %is_elsif_else,
     %is_and_or,
     %is_chain_operator,
     %is_block_without_semicolon,
@@ -221,6 +224,8 @@ my (
     %is_opening_sequence_token,
     %is_closing_sequence_token,
     %is_container_label_type,
+    %is_die_confess_croak_warn,
+    %is_my_our_local,
 
     @all_operators,
 
@@ -532,7 +537,7 @@ BEGIN {
     use constant WS_NO       => -1;
 
     # Token bond strengths.
-    use constant NO_BREAK    => 10000;
+    use constant NO_BREAK    => 10_000;
     use constant VERY_STRONG => 100;
     use constant STRONG      => 2.1;
     use constant NOMINAL     => 1.1;
@@ -597,11 +602,17 @@ BEGIN {
     @q = qw(if unless);
     @is_if_unless{@q} = (1) x scalar(@q);
 
+    @q = qw(if elsif);
+    @is_if_elsif{@q} = (1) x scalar(@q);
+
     @q = qw(if unless elsif);
     @is_if_unless_elsif{@q} = (1) x scalar(@q);
 
     @q = qw(if unless elsif else);
     @is_if_unless_elsif_else{@q} = (1) x scalar(@q);
+
+    @q = qw(elsif else);
+    @is_elsif_else{@q} = (1) x scalar(@q);
 
     @q = qw(and or err);
     @is_and_or{@q} = (1) x scalar(@q);
@@ -668,6 +679,12 @@ BEGIN {
     # a hash needed by sub break_lists for labeling containers
     @q = qw( k => && || ? : . );
     @is_container_label_type{@q} = (1) x scalar(@q);
+
+    @q = qw( die confess croak warn );
+    @is_die_confess_croak_warn{@q} = (1) x scalar(@q);
+
+    @q = qw( my our local );
+    @is_my_our_local{@q} = (1) x scalar(@q);
 
     # Braces -bbht etc must follow these. Note: experimentation with
     # including a simple comma shows that it adds little and can lead
@@ -968,7 +985,7 @@ sub check_keys {
     my $error = @unknown_keys;
     if ($exact_match) { $error ||= @missing_keys }
     if ($error) {
-        local $" = ')(';
+        local $LIST_SEPARATOR = ')(';
         my @expected_keys = sort keys %{$rvalid};
         @unknown_keys = sort @unknown_keys;
         Fault(<<EOM);
@@ -1266,7 +1283,7 @@ sub check_options {
         if ( $rOpts->{'delete-closing-side-comments'} ) {
             $rOpts->{'delete-closing-side-comments'}  = 0;
             $rOpts->{'closing-side-comments'}         = 1;
-            $rOpts->{'closing-side-comment-interval'} = 100000000;
+            $rOpts->{'closing-side-comment-interval'} = 100_000_000;
         }
     }
 
@@ -1598,12 +1615,12 @@ EOM
 
     # make -l=0  equal to -l=infinite
     if ( !$rOpts->{'maximum-line-length'} ) {
-        $rOpts->{'maximum-line-length'} = 1000000;
+        $rOpts->{'maximum-line-length'} = 1_000_000;
     }
 
     # make -lbl=0  equal to -lbl=infinite
     if ( !$rOpts->{'long-block-line-count'} ) {
-        $rOpts->{'long-block-line-count'} = 1000000;
+        $rOpts->{'long-block-line-count'} = 1_000_000;
     }
 
     my $ole = $rOpts->{'output-line-ending'};
@@ -2272,7 +2289,7 @@ sub initialize_keep_old_breakpoints {
     my %flags = ();
     my @list  = split_words($str);
     if ( DEBUG_KB && @list ) {
-        local $" = ' ';
+        local $LIST_SEPARATOR = ' ';
         print <<EOM;
 DEBUG_KB entering for '$short_name' with str=$str\n";
 list is: @list;
@@ -2296,7 +2313,7 @@ EOM
 
     if (@unknown_types) {
         my $num = @unknown_types;
-        local $" = ' ';
+        local $LIST_SEPARATOR = ' ';
         Warn(<<EOM);
 $num unrecognized token types were input with --$short_name :
 @unknown_types
@@ -2367,7 +2384,7 @@ EOM
 
     if ( DEBUG_KB && @list ) {
         my @tmp = %flags;
-        local $" = ' ';
+        local $LIST_SEPARATOR = ' ';
         print <<EOM;
 
 DEBUG_KB -$short_name flag: $str
@@ -3114,7 +3131,7 @@ sub set_whitespace_flags {
 
 sub dump_want_left_space {
     my $fh = shift;
-    local $" = "\n";
+    local $LIST_SEPARATOR = "\n";
     $fh->print(<<EOM);
 These values are the main control of whitespace to the left of a token type;
 They may be altered with the -wls parameter.
@@ -3131,7 +3148,7 @@ EOM
 
 sub dump_want_right_space {
     my $fh = shift;
-    local $" = "\n";
+    local $LIST_SEPARATOR = "\n";
     $fh->print(<<EOM);
 These values are the main control of whitespace to the right of a token type;
 They may be altered with the -wrs parameter.
@@ -4162,7 +4179,9 @@ EOM
             # In any case if the user places a break at either the = or the ||
             # it should remain there.
             if ( $type eq '||' || $type eq 'k' && $token eq 'or' ) {
-                if ( $next_nonblank_token =~ /^(die|confess|croak|warn)$/ ) {
+
+                #    /^(die|confess|croak|warn)$/
+                if ( $is_die_confess_croak_warn{$next_nonblank_token} ) {
                     if ( $want_break_before{$token} && $i > 0 ) {
                         $rbond_strength_to_go->[ $i - 1 ] -= $delta_bias;
 
@@ -4534,7 +4553,7 @@ sub bad_pattern {
     # by this program.
     my ($pattern) = @_;
     eval "'##'=~/$pattern/";
-    return $@;
+    return $EVAL_ERROR;
 }
 
 {    ## begin closure prepare_cuddled_block_types
@@ -4912,7 +4931,7 @@ sub make_keyword_group_list_pattern {
         my @keyword_list;
         my @comment_list;
         foreach my $word (@words) {
-            if ( $word =~ /^(BC|SBC)$/ ) {
+            if ( $word eq 'BC' || $word eq 'SBC' ) {
                 push @comment_list, $word;
                 if ( $word eq 'SBC' ) { push @comment_list, 'SBCX' }
             }
@@ -6647,7 +6666,8 @@ sub respace_tokens {
             && $next_nonblank_token =~ /^[; \)\}]$/
 
             # scalar is not declared
-            && !( $type_0 eq 'k' && $token_0 =~ /^(my|our|local)$/ )
+            ##                      =~ /^(my|our|local)$/
+            && !( $type_0 eq 'k' && $is_my_our_local{$token_0} )
           )
         {
             my $lno   = 1 + $rLL_new->[$Kp]->[_LINE_INDEX_];
@@ -7233,12 +7253,13 @@ EOM
             $block_type =~ s/\s+$//;
 
             # Try to filter out parenless sub calls
-            my ( $Knn1, $Knn2 );
-            my ( $type_nn1, $type_nn2 ) = ( 'b', 'b' );
-            $Knn1 = $self->K_next_nonblank( $K_opening, $rLL_new );
-            $Knn2 = $self->K_next_nonblank( $Knn1, $rLL_new ) if defined($Knn1);
-            $type_nn1 = $rLL_new->[$Knn1]->[_TYPE_] if ( defined($Knn1) );
-            $type_nn2 = $rLL_new->[$Knn2]->[_TYPE_] if ( defined($Knn2) );
+            my $Knn1 = $self->K_next_nonblank( $K_opening, $rLL_new );
+            my $Knn2;
+            if ( defined($Knn1) ) {
+                $Knn2 = $self->K_next_nonblank( $Knn1, $rLL_new );
+            }
+            my $type_nn1 = defined($Knn1) ? $rLL_new->[$Knn1]->[_TYPE_] : 'b';
+            my $type_nn2 = defined($Knn2) ? $rLL_new->[$Knn2]->[_TYPE_] : 'b';
 
             #   if ( $type_nn1 =~ /^[wU]$/ && $type_nn2 =~ /^[wiqQGCZ]$/ ) {
             if ( $wU{$type_nn1} && $wiq{$type_nn2} ) {
@@ -12919,7 +12940,8 @@ EOM
         # if we do not see another elseif or an else.
         if ($looking_for_else) {
 
-            unless ( $rLL->[$K_first_true]->[_TOKEN_] =~ /^(elsif|else)$/ ) {
+            ##     /^(elsif|else)$/
+            if ( !$is_elsif_else{ $rLL->[$K_first_true]->[_TOKEN_] } ) {
                 write_logfile_entry("(No else block)\n");
             }
             $looking_for_else = 0;
@@ -13387,8 +13409,8 @@ EOM
                         $looking_for_else = 1;    # ok, check on next line
                     }
                     else {
-
-                        unless ( $next_nonblank_token =~ /^(elsif|else)$/ ) {
+                        ##    /^(elsif|else)$/
+                        if ( !$is_elsif_else{$next_nonblank_token} ) {
                             write_logfile_entry("No else block :(\n");
                         }
                     }
@@ -13970,7 +13992,8 @@ sub starting_one_line_block {
                 #     ; # very long comment......
                 # so we do not need to include the length of the comment, which
                 # would break the block. Project 'bioperl' has coding like this.
-                if (   $block_type !~ /^(if|else|elsif|unless)$/
+                ##    !~ /^(if|else|elsif|unless)$/
+                if (  !$is_if_unless_elsif_else{$block_type}
                     || $K_last == $Ki_nonblank )
                 {
                     $Ki_nonblank = $K_last;
@@ -17730,8 +17753,12 @@ sub break_long_lines {
                     $nesting_depth_to_go[$i_next_nonblank] )
                 && (
                     $next_nonblank_type =~ /^(\.|\&\&|\|\|)$/
-                    || (   $next_nonblank_type eq 'k'
-                        && $next_nonblank_token =~ /^(and|or)$/ )
+                    || (
+                        $next_nonblank_type eq 'k'
+
+                        ##  /^(and|or)$/  # note: includes 'xor' now
+                        && $is_and_or{$next_nonblank_token}
+                    )
                 )
               )
             {
@@ -21884,8 +21911,9 @@ EOM
         return unless (@candidates);
 
         # sort by available whitespace so that we can remove whitespace
-        # from the maximum available first
-        @candidates = sort { $b->[1] <=> $a->[1] } @candidates;
+        # from the maximum available first.
+        @candidates =
+          sort { $b->[1] <=> $a->[1] || $a->[0] <=> $b->[0] } @candidates;
 
         # keep removing whitespace until we are done or have no more
         foreach my $candidate (@candidates) {
@@ -25883,7 +25911,8 @@ sub set_vertical_tightness_flags {
         # save text after 'if' and 'elsif' to append after 'else'
         if ($accumulating_text_for_block) {
 
-            if ( $accumulating_text_for_block =~ /^(if|elsif)$/ ) {
+            ## ( $accumulating_text_for_block =~ /^(if|elsif)$/ ) {
+            if ( $is_if_elsif{$accumulating_text_for_block} ) {
                 push @{$rleading_block_if_elsif_text}, $leading_block_text;
             }
         }

@@ -62,6 +62,7 @@ use warnings;
 use strict;
 use Exporter;
 use Carp;
+use English     qw( -no_match_vars );
 use Digest::MD5 qw(md5_hex);
 use Perl::Tidy::Debugger;
 use Perl::Tidy::DevNull;
@@ -77,7 +78,7 @@ use Perl::Tidy::LineSource;
 use Perl::Tidy::Logger;
 use Perl::Tidy::Tokenizer;
 use Perl::Tidy::VerticalAligner;
-local $| = 1;
+local $OUTPUT_AUTOFLUSH = 1;
 
 # this can be turned on for extra checking during development
 use constant DEVEL_MODE => 0;
@@ -237,7 +238,7 @@ EOM
     $fh = $New->( $filename, $mode );
     if ( !$fh ) {
 
-        Warn("Couldn't open file:$filename in mode:$mode : $!\n");
+        Warn("Couldn't open file:$filename in mode:$mode : $ERRNO\n");
 
     }
     else {
@@ -286,7 +287,7 @@ sub find_input_line_ending {
     binmode $fh;
     my $buf;
     read( $fh, $buf, 1024 );
-    close $fh;
+    close $fh || return $ending;
     if ( $buf && $buf =~ /([\012\015]+)/ ) {
         my $test = $1;
 
@@ -315,7 +316,7 @@ sub find_input_line_ending {
 
     BEGIN {
         eval { require File::Spec };
-        $missing_file_spec = $@;
+        $missing_file_spec = $EVAL_ERROR;
     }
 
     sub catfile {
@@ -338,7 +339,7 @@ sub find_input_line_ending {
         my $test_file = $path . $name;
         my ( $test_name, $test_path ) = fileparse($test_file);
         return $test_file if ( $test_name eq $name );
-        return            if ( $^O eq 'VMS' );
+        return            if ( $OSNAME eq 'VMS' );
 
         # this should work at least for Windows and Unix:
         $test_file = $path . '/' . $name;
@@ -511,7 +512,7 @@ sub perltidy {
     local *STDERR = *STDERR;
 
     if ( my @bad_keys = grep { !exists $defaults{$_} } keys %input_hash ) {
-        local $" = ')(';
+        local $LIST_SEPARATOR = ')(';
         my @good_keys = sort keys %defaults;
         @bad_keys = sort @bad_keys;
         confess <<EOM;
@@ -687,7 +688,7 @@ EOM
     # instead of .tdy, etc. (but see also sub check_vms_filename)
     my $dot;
     my $dot_pattern;
-    if ( $^O eq 'VMS' ) {
+    if ( $OSNAME eq 'VMS' ) {
         $dot         = '_';
         $dot_pattern = '_';
     }
@@ -1044,7 +1045,7 @@ EOM
             $fileroot        = $input_file;
             @input_file_stat = stat($input_file);
 
-            if ( $^O eq 'VMS' ) {
+            if ( $OSNAME eq 'VMS' ) {
                 ( $fileroot, $dot ) = check_vms_filename($fileroot);
             }
 
@@ -1055,7 +1056,7 @@ EOM
                 my $new_path = $rOpts->{'output-path'};
                 unless ( -d $new_path ) {
                     unless ( mkdir $new_path, 0777 ) {
-                        Die("unable to create directory $new_path: $!\n");
+                        Die("unable to create directory $new_path: $ERRNO\n");
                     }
                 }
                 my $path = $new_path;
@@ -1134,9 +1135,7 @@ EOM
         }
 
         # Case 3. guess input stream encoding if requested
-        elsif ($rOpts_character_encoding eq 'guess'
-            || $rOpts_character_encoding eq 'GUESS' )
-        {
+        elsif ( lc($rOpts_character_encoding) eq 'guess' ) {
 
             # The guessing strategy is simple: use Encode::Guess to guess
             # an encoding.  If and only if the guess is utf8, try decoding and
@@ -1163,7 +1162,7 @@ EOM
                 else {
 
                     eval { $buf = $decoder->decode($buf_in); };
-                    if ($@) {
+                    if ($EVAL_ERROR) {
 
                         $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' but decoding was unsuccessful; no encoding is used
@@ -1199,7 +1198,7 @@ EOM
                 $buf = Encode::decode( $encoding_in, $buf,
                     Encode::FB_CROAK | Encode::LEAVE_SRC );
             };
-            if ($@) {
+            if ($EVAL_ERROR) {
 
                 # Quit if we cannot decode by the requested encoding;
                 # Something is not right.
@@ -1240,11 +1239,11 @@ EOM
             # requested, when the first encoded file is encountered
             if ( !defined($loaded_unicode_gcstring) ) {
                 eval { require Unicode::GCString };
-                $loaded_unicode_gcstring = !$@;
-                if ( $@ && $rOpts->{'use-unicode-gcstring'} ) {
+                $loaded_unicode_gcstring = !$EVAL_ERROR;
+                if ( $EVAL_ERROR && $rOpts->{'use-unicode-gcstring'} ) {
                     Warn(<<EOM);
 ----------------------
-Unable to load Unicode::GCString: $@
+Unable to load Unicode::GCString: $EVAL_ERROR
 Processing continues but some vertical alignment may be poor
 To prevent this warning message, you can either:
 - install module Unicode::GCString, or
@@ -1369,7 +1368,7 @@ EOM
         else {
             if ($in_place_modify) {
                 $output_file = IO::File->new_tmpfile()
-                  or Die("cannot open temp file for -b option: $!\n");
+                  or Die("cannot open temp file for -b option: $ERRNO\n");
                 $output_name = $display_name;
             }
             else {
@@ -1394,7 +1393,7 @@ EOM
             ( $fh_tee, my $tee_filename ) =
               Perl::Tidy::streamhandle( $tee_file, 'w', $is_encoded_data );
             if ( !$fh_tee ) {
-                Warn("couldn't open TEE file $tee_file: $!\n");
+                Warn("couldn't open TEE file $tee_file: $ERRNO\n");
             }
         }
 
@@ -1837,7 +1836,7 @@ EOM
                       Encode::encode( "UTF-8", $destination_buffer,
                         Encode::FB_CROAK | Encode::LEAVE_SRC );
                 };
-                if ($@) {
+                if ($EVAL_ERROR) {
 
                     Warn(
 "Error attempting to encode output string ref; encoding not done\n"
@@ -1903,7 +1902,7 @@ EOM
             if ( -f $backup_name ) {
                 unlink($backup_name)
                   or Die(
-"unable to remove previous '$backup_name' for -b option; check permissions: $!\n"
+"unable to remove previous '$backup_name' for -b option; check permissions: $ERRNO\n"
                   );
             }
 
@@ -1911,12 +1910,12 @@ EOM
             # we use copy for symlinks, move for regular files
             if ( -l $input_file ) {
                 File::Copy::copy( $input_file, $backup_name )
-                  or Die("File::Copy failed trying to backup source: $!");
+                  or Die("File::Copy failed trying to backup source: $ERRNO");
             }
             else {
                 rename( $input_file, $backup_name )
                   or Die(
-"problem renaming $input_file to $backup_name for -b option: $!\n"
+"problem renaming $input_file to $backup_name for -b option: $ERRNO\n"
                   );
             }
             $ifname = $backup_name;
@@ -1927,13 +1926,14 @@ EOM
             # handle of an open nameless temporary file so we would lose
             # everything if we closed it.
             seek( $output_file, 0, 0 )
-              or Die("unable to rewind a temporary file for -b option: $!\n");
+              or
+              Die("unable to rewind a temporary file for -b option: $ERRNO\n");
 
             my ( $fout, $iname ) =
               Perl::Tidy::streamhandle( $input_file, 'w', $is_encoded_data );
             if ( !$fout ) {
                 Die(
-"problem re-opening $input_file for write for -b option; check file and directory permissions: $!\n"
+"problem re-opening $input_file for write for -b option; check file and directory permissions: $ERRNO\n"
                 );
             }
 
@@ -2047,7 +2047,7 @@ EOM
             else {
                 unlink($ifname)
                   or Die(
-"unable to remove previous '$ifname' for -b option; check permissions: $!\n"
+"unable to remove previous '$ifname' for -b option; check permissions: $ERRNO\n"
                   );
             }
         }
@@ -2101,7 +2101,7 @@ sub line_diff {
         while ( $mask =~ /[^\0]/g ) {
             $count++;
             my $pos_last = $pos;
-            $pos = $-[0];
+            $pos = $LAST_MATCH_START[0];
             if ( $count == 1 ) { $pos1 = $pos; }
             $diff_marker .= ' ' x ( $pos - $pos_last - 1 ) . '^';
 
@@ -2295,7 +2295,7 @@ sub write_logfile_header {
         $rraw_options, $Windows_type,  $readable_options
     ) = @_;
     $logger_object->write_logfile_entry(
-"perltidy version $VERSION log file on a $^O system, OLD_PERL_VERSION=$]\n"
+"perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$OLD_PERL_VERSION\n"
     );
     if ($Windows_type) {
         $logger_object->write_logfile_entry("Windows type is $Windows_type\n");
@@ -3211,7 +3211,7 @@ sub _process_command_line {
     # Previous configuration is reset at the exit of this routine.
     my $glc;
     eval { $glc = Getopt::Long::Configure() };
-    unless ($@) {
+    unless ($EVAL_ERROR) {
         eval { Getopt::Long::ConfigDefaults() };
     }
     else { $glc = undef }
@@ -3284,7 +3284,7 @@ sub _process_command_line {
                 }
             }
             unless ( -e $config_file ) {
-                Warn("cannot find file given with -pro=$config_file: $!\n");
+                Warn("cannot find file given with -pro=$config_file: $ERRNO\n");
                 $config_file = "";
             }
         }
@@ -3839,7 +3839,7 @@ sub expand_command_abbreviations {
 
         # make sure we are not in an infinite loop
         if ( $pass_count == $max_passes ) {
-            local $" = ')(';
+            local $LIST_SEPARATOR = ')(';
             Warn(<<EOM);
 I'm tired. We seem to be in an infinite loop trying to expand aliases.
 Here are the raw options;
@@ -3938,7 +3938,7 @@ sub Win_OS_Type {
 
     my $rpending_complaint = shift;
     my $os                 = "";
-    return $os unless $^O =~ /win32|dos/i;    # is it a MS box?
+    return $os unless $OSNAME =~ /win32|dos/i;    # is it a MS box?
 
     # Systems built from Perl source may not have Win32.pm
     # But probably have Win32::GetOSVersion() anyway so the
@@ -3993,10 +3993,10 @@ EOS
 
 sub is_unix {
     return
-         ( $^O !~ /win32|dos/i )
-      && ( $^O ne 'VMS' )
-      && ( $^O ne 'OS2' )
-      && ( $^O ne 'MacOS' );
+         ( $OSNAME !~ /win32|dos/i )
+      && ( $OSNAME ne 'VMS' )
+      && ( $OSNAME ne 'OS2' )
+      && ( $OSNAME ne 'MacOS' );
 }
 
 sub look_for_Windows {
@@ -4004,7 +4004,7 @@ sub look_for_Windows {
     # determine Windows sub-type and location of
     # system-wide configuration files
     my $rpending_complaint = shift;
-    my $is_Windows         = ( $^O =~ /win32|dos/i );
+    my $is_Windows         = ( $OSNAME =~ /win32|dos/i );
     my $Windows_type;
     $Windows_type = Win_OS_Type($rpending_complaint) if $is_Windows;
     return ( $is_Windows, $Windows_type );
@@ -4023,7 +4023,7 @@ sub find_config_file {
         ${$rconfig_file_chatter} .= "Windows $Windows_type\n";
     }
     else {
-        ${$rconfig_file_chatter} .= " $^O\n";
+        ${$rconfig_file_chatter} .= " $OSNAME\n";
     }
 
     # sub to check file existence and record all tests
@@ -4073,7 +4073,7 @@ sub find_config_file {
 
     # Check the NT/2k/XP locations, first a local machine def, then a
     # network def
-    push @envs, qw(USERPROFILE HOMESHARE) if $^O =~ /win32/i;
+    push @envs, qw(USERPROFILE HOMESHARE) if $OSNAME =~ /win32/i;
 
     # Now go through the environment ...
     foreach my $var (@envs) {
@@ -4135,11 +4135,11 @@ sub find_config_file {
     }
 
     # Place to add customization code for other systems
-    elsif ( $^O eq 'OS2' ) {
+    elsif ( $OSNAME eq 'OS2' ) {
     }
-    elsif ( $^O eq 'MacOS' ) {
+    elsif ( $OSNAME eq 'MacOS' ) {
     }
-    elsif ( $^O eq 'VMS' ) {
+    elsif ( $OSNAME eq 'VMS' ) {
     }
 
     # Assume some kind of Unix
@@ -4248,11 +4248,11 @@ sub read_config_file {
 
             # handle a new alias definition
             if ( $rexpansion->{$name} ) {
-                local $" = ')(';
+                local $LIST_SEPARATOR = ')(';
                 my @names = sort keys %{$rexpansion};
                 $death_message =
                     "Here is a list of all installed aliases\n(@names)\n"
-                  . "Attempting to redefine alias ($name) in config file $config_file line $.\n";
+                  . "Attempting to redefine alias ($name) in config file $config_file line $INPUT_LINE_NUMBER\n";
                 last;
             }
             $rexpansion->{$name} = [];
