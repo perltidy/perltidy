@@ -2295,7 +2295,7 @@ sub write_logfile_header {
         $rraw_options, $Windows_type,  $readable_options
     ) = @_;
     $logger_object->write_logfile_entry(
-"perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$OLD_PERL_VERSION\n"
+"perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$]\n"
     );
     if ($Windows_type) {
         $logger_object->write_logfile_entry("Windows type is $Windows_type\n");
