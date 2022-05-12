@@ -37,6 +37,7 @@ sub DESTROY {
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 
+use constant DEFAULT_LOGFILE_GAP => 50;
 sub new {
 
     my ( $class, @args ) = @_;
@@ -73,7 +74,7 @@ sub new {
     my $logfile_gap =
       defined( $rOpts->{'logfile-gap'} )
       ? $rOpts->{'logfile-gap'}
-      : 50;
+      : DEFAULT_LOGFILE_GAP;
     if ( $logfile_gap == 0 ) { $logfile_gap = 1 }
 
     my $filename_stamp    = $display_name ? $display_name . ':' : "??";
@@ -155,6 +156,7 @@ sub we_are_at_the_last_line {
 }
 
 # record some stuff in case we go down in flames
+use constant MAX_PRINTED_CHARS => 35;
 sub black_box {
     my ( $self, $line_of_tokens, $output_line_number ) = @_;
     my $input_line        = $line_of_tokens->{_line_text};
@@ -183,8 +185,8 @@ sub black_box {
 
         $out_str = ( '.' x $structural_indentation_level ) . $out_str;
 
-        if ( length($out_str) > 35 ) {
-            $out_str = substr( $out_str, 0, 35 ) . " ....";
+        if ( length($out_str) > MAX_PRINTED_CHARS ) {
+            $out_str = substr( $out_str, 0, MAX_PRINTED_CHARS ) . " ....";
         }
         $self->logfile_output( EMPTY_STRING, "$out_str\n" );
     }
