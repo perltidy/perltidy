@@ -7,8 +7,9 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
-use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
+use English qw( -no_match_vars );
+use constant EMPTY_STRING => q{};
 
 sub AUTOLOAD {
 
@@ -185,7 +186,7 @@ sub black_box {
         if ( length($out_str) > 35 ) {
             $out_str = substr( $out_str, 0, 35 ) . " ....";
         }
-        $self->logfile_output( "", "$out_str\n" );
+        $self->logfile_output( EMPTY_STRING, "$out_str\n" );
     }
     return;
 }
@@ -224,7 +225,7 @@ sub make_line_information_string {
     my $self                    = shift;
     my $line_of_tokens          = $self->{_line_of_tokens};
     my $input_line_number       = $line_of_tokens->{_line_number};
-    my $line_information_string = "";
+    my $line_information_string = EMPTY_STRING;
     if ($input_line_number) {
 
         my $output_line_number   = $self->{_output_line_number};
@@ -240,15 +241,15 @@ sub make_line_information_string {
 
         # keep logfile columns aligned for scripts up to 999 lines;
         # for longer scripts it doesn't really matter
-        my $extra_space = "";
+        my $extra_space = EMPTY_STRING;
         $extra_space .=
             ( $input_line_number < 10 )  ? "  "
           : ( $input_line_number < 100 ) ? " "
-          :                                "";
+          :                                EMPTY_STRING;
         $extra_space .=
             ( $output_line_number < 10 )  ? "  "
           : ( $output_line_number < 100 ) ? " "
-          :                                 "";
+          :                                 EMPTY_STRING;
 
         # there are 2 possible nesting strings:
         # the original which looks like this:  (0 [1 {2
@@ -308,17 +309,16 @@ sub increment_brace_error {
 sub brace_warning {
     my ( $self, $msg ) = @_;
 
-    #use constant BRACE_WARNING_LIMIT => 10;
-    my $BRACE_WARNING_LIMIT = 10;
-    my $saw_brace_error     = $self->{_saw_brace_error};
+    use constant BRACE_WARNING_LIMIT => 10;
+    my $saw_brace_error = $self->{_saw_brace_error};
 
-    if ( $saw_brace_error < $BRACE_WARNING_LIMIT ) {
+    if ( $saw_brace_error < BRACE_WARNING_LIMIT ) {
         $self->warning($msg);
     }
     $saw_brace_error++;
     $self->{_saw_brace_error} = $saw_brace_error;
 
-    if ( $saw_brace_error == $BRACE_WARNING_LIMIT ) {
+    if ( $saw_brace_error == BRACE_WARNING_LIMIT ) {
         $self->warning("No further warnings of this type will be given\n");
     }
     return;
@@ -348,8 +348,7 @@ sub warning {
     # report errors to .ERR file (or stdout)
     my ( $self, $msg ) = @_;
 
-    #use constant WARNING_LIMIT => 50;
-    my $WARNING_LIMIT = 50;
+    use constant WARNING_LIMIT => 50;
 
     # Always bump the warn count, even if no message goes out
     Perl::Tidy::Warn_count_bump();
@@ -374,7 +373,7 @@ sub warning {
 
         my $filename_stamp = $self->{_filename_stamp};
 
-        if ( $warning_count < $WARNING_LIMIT ) {
+        if ( $warning_count < WARNING_LIMIT ) {
 
             if ( !$warning_count ) {
 
@@ -389,7 +388,7 @@ sub warning {
                 # Turn off filename stamping unless error output is directed
                 # to the standard error output (with -se flag)
                 if ( !$rOpts->{'standard-error-output'} ) {
-                    $filename_stamp = "";
+                    $filename_stamp = EMPTY_STRING;
                     $self->{_filename_stamp} = $filename_stamp;
                 }
             }
@@ -426,7 +425,7 @@ sub warning {
         $warning_count++;
         $self->{_warning_count} = $warning_count;
 
-        if ( $warning_count == $WARNING_LIMIT ) {
+        if ( $warning_count == WARNING_LIMIT ) {
             $fh_warnings->print(
                 $filename_stamp . "No further warnings will be given\n" );
         }
