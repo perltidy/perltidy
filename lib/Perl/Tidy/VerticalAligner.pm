@@ -3757,11 +3757,11 @@ sub prune_alignment_tree {
             $levels_next[$MAX_DEPTH] = $rlevs->[-1];
         }
         my $depth = 0;
-        foreach (@levels_next) {
+        foreach my $item (@levels_next) {
             $token_patterns_next[$depth] =
-              defined($_) ? $rtoken_patterns->{$_} : undef;
+              defined($item) ? $rtoken_patterns->{$item} : undef;
             $token_indexes_next[$depth] =
-              defined($_) ? $rtoken_indexes->{$_} : undef;
+              defined($item) ? $rtoken_indexes->{$item} : undef;
             $depth++;
         }
 
@@ -3958,7 +3958,7 @@ sub Dump_tree_groups {
     local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
         my @fix = @{$item};
-        foreach (@fix) { $_ = "undef" unless defined $_; }
+        foreach my $val (@fix) { $val = "undef" unless defined $val; }
         $fix[4] = "...";
         print "(@fix)\n";
     }

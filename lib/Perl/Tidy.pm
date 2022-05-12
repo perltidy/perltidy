@@ -944,7 +944,8 @@ EOM
         @ARGV =
           map  { $_->[0] }
           sort { $a->[1] <=> $b->[1] }
-          map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
+          map  { [ $_, -e ? -s : 0 ] } @ARGV;
+        ##map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
     }
 
     my $number_of_files = @ARGV;
@@ -996,7 +997,8 @@ EOM
                     my $dh;
                     if ( opendir( $dh, './' ) ) {
                         my @files =
-                          grep { /$pattern/ && !-d $_ } readdir($dh);
+                          grep { /$pattern/ && !-d } readdir($dh);
+                        ##grep { /$pattern/ && !-d $_ } readdir($dh);
                         closedir($dh);
                         if (@files) {
                             unshift @ARGV, @files;
@@ -1860,8 +1862,8 @@ EOM
 
                 # destination stream must be an object with print method
                 else {
-                    foreach (@lines) {
-                        $destination_stream->print($_);
+                    foreach my $line (@lines) {
+                        $destination_stream->print($line);
                     }
                     if ( $ref_destination_stream->can('close') ) {
                         $destination_stream->close();
@@ -2294,6 +2296,9 @@ sub write_logfile_header {
         $rOpts,        $logger_object, $config_file,
         $rraw_options, $Windows_type,  $readable_options
     ) = @_;
+
+    # Note: the punctuation variable '$]' is not in older versions of
+    # English.pm so leave it as is to avoid failing installation tests.
     $logger_object->write_logfile_entry(
 "perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$]\n"
     );

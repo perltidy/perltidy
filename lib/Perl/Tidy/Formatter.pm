@@ -2296,10 +2296,11 @@ list is: @list;
 EOM
     }
 
-    # - pull out any any leading container code, like f( or *{
-    foreach (@list) {
-        if ( $_ =~ /^( [ \w\* ] )( [ \{\(\[\}\)\] ] )$/x ) {
-            $_ = $2;
+    # pull out any any leading container code, like f( or *{
+    # For example: 'f(' becomes flags hash entry '(' => 'f'
+    foreach my $item (@list) {
+        if ( $item =~ /^( [ \w\* ] )( [ \{\(\[\}\)\] ] )$/x ) {
+            $item = $2;
             $flags{$2} = $1;
         }
     }

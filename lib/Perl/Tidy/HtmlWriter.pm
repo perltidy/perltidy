@@ -762,9 +762,9 @@ sub pod_to_html {
 
     # This routine will write the html selectively and store the toc
     my $html_print = sub {
-        foreach (@_) {
-            $html_fh->print($_) unless ($no_print);
-            if ($in_toc) { push @toc, $_ }
+        foreach my $line (@_) {
+            $html_fh->print($line) unless ($no_print);
+            if ($in_toc) { push @toc, $line }
         }
         return;
     };

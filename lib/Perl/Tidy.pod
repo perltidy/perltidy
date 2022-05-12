@@ -1,3 +1,4 @@
+
 =head1 NAME
 
 Perl::Tidy - Parses and beautifies perl source
@@ -38,7 +39,7 @@ For example, the perltidy script is basically just this:
 The call to B<perltidy> returns a scalar B<$error_flag> which is TRUE if an
 error caused premature termination, and FALSE if the process ran to normal
 completion.  Additional discuss of errors is contained below in the
-L<ERROR HANDLING> section.
+L<ERROR HANDLING|"ERROR HANDLING"> section.
 
 The module accepts input and output streams by a variety of methods.
 The following list of parameters may be any of the following: a

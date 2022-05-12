@@ -50,8 +50,7 @@ Perltidy can produce output on either of two modes, depending on the
 existence of an B<-html> flag.  Without this flag, the output is passed
 through a formatter.  The default formatting tries to follow the
 recommendations in perlstyle(1), but it can be controlled in detail with
-numerous input parameters, which are described in L<"FORMATTING
-OPTIONS">.
+numerous input parameters, which are described in L<"FORMATTING OPTIONS">.
 
 When the B<-html> flag is given, the output is passed through an HTML
 formatter which is described in L<"HTML OPTIONS">.
@@ -209,7 +208,7 @@ desired with B<-nse> on the command line.
 
 Change the extension of the output file to be F<ext> instead of the
 default F<tdy> (or F<html> in case the -B<-html> option is used).
-See L<Specifying File Extensions>.
+See L<"Specifying File Extensions">.
 
 =item	B<-opath>=path,    B<--output-path>=path
 
@@ -254,7 +253,7 @@ file to be something other than the default F<.bak>, and (2) to indicate
 that no backup file should be saved.
 
 To change the default extension to something other than F<.bak> see
-L<Specifying File Extensions>.
+L<"Specifying File Extensions">.
 
 A backup file of the source is always written, but you can request that it
 be deleted at the end of processing if there were no errors.  This is risky
@@ -387,7 +386,7 @@ For example,
 
 will cause the perltidy to treate the words 'method', 'fun', '_sub' and 'M4' to be treated the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
 
-Note that several other parameters accept a list of keywords, including 'sub' (see L<Specifying Block Types>).
+Note that several other parameters accept a list of keywords, including 'sub' (see L<"Specifying Block Types">).
 You do not need to include any sub aliases in these lists. Just include keyword 'sub' if you wish, and all aliases are automatically included.
 
 =item B<-gal=s>,   B<--grep-alias-list=s>
@@ -430,7 +429,7 @@ This flag disables all formatting and causes the input to be copied unchanged
 to the output except for possible changes in line ending characters and any
 pre- and post-filters.  This can be useful in conjunction with a hierarchical
 set of F<.perltidyrc> files to avoid unwanted code tidying.  See also
-L<Skipping Selected Sections of Code> for a way to avoid tidying specific
+L<"Skipping Selected Sections of Code"> for a way to avoid tidying specific
 sections of code.
 
 =item B<-i=n>,  B<--indent-columns=n>
@@ -570,7 +569,7 @@ This flag is enabled by default but it can be deactivated with B<-nxs>.
 Probably the only reason to deactivate this flag is to generate more diagnostic
 messages when debugging a script.
 
-For another method of handling extended syntax see the section L<Skipping Selected Sections of Code>.
+For another method of handling extended syntax see the section L<"Skipping Selected Sections of Code">.
 
 =item B<-io>,   B<--indent-only>
 
@@ -1158,7 +1157,7 @@ has been set to), if possible.  This is the default.  For example:
             fixit($i);
         }
 
-Use B<-nola> to not outdent labels.  To control line breaks after labels see L<bal=n, --break-after-labels=n>.
+Use B<-nola> to not outdent labels.  To control line breaks after labels see L<"bal=n, --break-after-labels=n">.
 
 =item B<Outdenting Keywords>
 
@@ -1828,7 +1827,7 @@ where C<string> is a list of block types to be tagged with closing side
 comments.  By default, all code block types preceded by a keyword or
 label (such as C<if>, C<sub>, and so on) will be tagged.  The B<-cscl>
 command changes the default list to be any selected block types; see
-L<Specifying Block Types>.
+L<"Specifying Block Types">.
 For example, the following command
 requests that only C<sub>'s, labels, C<BEGIN>, and C<END> blocks be
 affected by any B<-csc> or B<-dcsc> operation:
@@ -2151,7 +2150,7 @@ but they can be helpful for working around occasional problems.
 Note that it may be possible to avoid the use of B<--format-skipping> for the
 specific case of a comma-separated list of values, as in the above example, by
 simply inserting a blank or comment somewhere between the opening and closing
-parens.  See the section L<Controlling List Formatting>.
+parens.  See the section L<"Controlling List Formatting">.
 
 The following sections describe the available controls for these options.  They
 should not normally be needed.
@@ -2232,8 +2231,7 @@ The default is equivalent to -cse='#>>V'.
 
 The parameters in this section control breaks after
 non-blank lines of code.  Blank lines are controlled
-separately by parameters in the section L<Blank Line
-Control>.
+separately by parameters in the section L<"Blank Line Control">.
 
 =over 4
 
@@ -2243,13 +2241,13 @@ If you do not want any changes to the line breaks within
 lines of code in your script, set
 B<-fnl>, and they will remain fixed, and the rest of the commands in
 this section and sections
-L<Controlling List Formatting>,
-L<Retaining or Ignoring Existing Line Breaks>.
+L<"Controlling List Formatting">,
+L<"Retaining or Ignoring Existing Line Breaks">.
 You may want to use B<-noll> with this.
 
 Note: If you also want to keep your blank lines exactly
 as they are, you can use the B<-fbl> flag which is described
-in the section L<Blank Line Control>.
+in the section L<"Blank Line Control">.
 
 =item B<-ce>,   B<--cuddled-else>
 
@@ -2400,14 +2398,14 @@ parameters B<--brace-left-list> and B<-brace-left-exclusion-list> described in t
 =item B<-bll=s>, B<--brace-left-list=s>
 
 Use this parameter to change the types of block braces for which the
-B<-bl> flag applies; see L<Specifying Block Types>.  For example,
+B<-bl> flag applies; see L<"Specifying Block Types">.  For example,
 B<-bll='if elsif else sub'> would apply it to only C<if/elsif/else>
 and named sub blocks.  The default is all blocks, B<-bll='*'>.
 
 =item B<-blxl=s>, B<--brace-left-exclusion-list=s>
 
 Use this parameter to exclude types of block braces for which the
-B<-bl> flag applies; see L<Specifying Block Types>.  For example,
+B<-bl> flag applies; see L<"Specifying Block Types">.  For example,
 the default settings B<-bll='*'> and B<-blxl='sort map grep eval asub'>
 mean all blocks except B<sort map grep eval> and anonymous sub blocks.
 
@@ -2487,14 +2485,14 @@ a certain block type, the B<-bli> style has priority.
 =item B<-blil=s>,    B<--brace-left-and-indent-list=s>
 
 Use this parameter to change the types of block braces for which the
-B<-bli> flag applies; see L<Specifying Block Types>.
+B<-bli> flag applies; see L<"Specifying Block Types">.
 
 The default is B<-blil='if else elsif unless while for foreach do : sub'>.
 
 =item B<-blixl=s>, B<--brace-left-and-indent-exclusion-list=s>
 
 Use this parameter to exclude types of block braces for which the B<-bli> flag
-applies; see L<Specifying Block Types>.
+applies; see L<"Specifying Block Types">.
 
 This might be useful in conjunction with selecting all blocks B<-blil='*'>.
 The default setting is B<-blixl=' '>, which does not exclude any blocks.
@@ -3080,7 +3078,7 @@ B<until>, and also with a preceding label.  This can be changed with
 the parameter B<-bbvtl=string>, or
 B<--block-brace-vertical-tightness-list=string>, where B<string> is a
 space-separated list of block types.  For more information on the
-possible values of this string, see L<Specifying Block Types>
+possible values of this string, see L<"Specifying Block Types">
 
 For example, if we want to just apply this style to C<if>,
 C<elsif>, and C<else> blocks, we could use
@@ -3345,7 +3343,7 @@ anywhere between the opening and closing parens.  Vertical alignment
 of the list items will still occur if possible.
 
 For another possibility see
-the -fs flag in L<Skipping Selected Sections of Code>.
+the -fs flag in L<"Skipping Selected Sections of Code">.
 
 =over 4
 
@@ -4839,13 +4837,13 @@ ignored.
 
 Use this flag to specify the extra file extension of the table of contents file
 when html frames are used.  The default is "toc".
-See L<Specifying File Extensions>.
+See L<"Specifying File Extensions">.
 
 =item  The B<-sext=s>, or B<--html-src-extension> flag
 
 Use this flag to specify the extra file extension of the content file when html
 frames are used.  The default is "src".
-See L<Specifying File Extensions>.
+See L<"Specifying File Extensions">.
 
 =item  The B<-hent>, or B<--html-entities> flag
 

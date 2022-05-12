@@ -489,7 +489,7 @@ sub finish {
           Perl::Tidy::streamhandle( $log_file, 'w', $is_encoded_data );
         if ($fh) {
             my $routput_array = $self->{_output_array};
-            foreach ( @{$routput_array} ) { $fh->print($_) }
+            foreach my $line ( @{$routput_array} ) { $fh->print($line) }
             if ( $log_file ne '-' && !ref $log_file ) {
                 eval { $fh->close() };
             }

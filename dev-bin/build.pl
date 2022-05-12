@@ -231,7 +231,7 @@ sub run_perl_critic {
     $rstatus->{'PC'} = 'TBD';
 
     # running with parameters in .perlcritic
-    my $cmd = "perlcritic lib/Perl/* >tmp/perlcritic.out";
+    my $cmd = "perlcritic lib/Perl/ >tmp/perlcritic.out";
     system_echo($cmd);
     my $fh;
     if ( !open( $fh, '<', $pcoutput ) ) {
