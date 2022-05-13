@@ -437,6 +437,29 @@ BEGIN {
     @is_closing_token{@q} = (1) x scalar(@q);
 }
 
+#--------------------------------------------
+# VTFLAGS: Vertical tightness types and flags
+#--------------------------------------------
+# Vertical tightness is controlled by a 'type' and associated 'flags' for each
+# line.  These values are set by sub Formatter::set_vertical_tightness_flags.
+# These are defined as follows:
+
+# Vertical Tightness Line Type Codes:
+# Type 0, no vertical tightness condition
+# Type 1, last token of this line is a non-block opening token
+# Type 2, first token of next line is a non-block closing
+# Type 3, isolated opening block brace
+# type 4, isolated closing block brace
+
+# Opening token flag values are the vertical tightness flags
+# 0 do not join with next line
+# 1 just one join per line
+# 2 any number of joins
+
+# Closing token flag values indicate spacing:
+# 0 = no space added before closing token
+# 1 = single space added before closing token
+
 sub valign_input {
 
     # Place one line in the current vertical group.
@@ -603,8 +626,8 @@ sub valign_input {
             }
         }
 
-        # do not join an opening block brace with an unbalanced line
-        # unless requested with a flag value of 2
+        # do not join an opening block brace (type 3, see VTFLAGS)
+        # with an unbalanced line unless requested with a flag value of 2
         if (   $cached_line_type == 3
             && !$self->group_line_count()
             && $cached_line_opening_flag < 2
