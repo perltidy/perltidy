@@ -94,6 +94,10 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Following is a list of policies to be skipped for severity=2:
 #--------------------------------------------------------------
 
+# Following this policy caused a parsing error in Perl version 5.14 at
+# file test operators.
+[-BuiltinFunctions::ProhibitUselessTopic]
+
 # Do not change any debugged regular expressions without good reason
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]

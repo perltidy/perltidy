@@ -946,8 +946,7 @@ EOM
         @ARGV =
           map  { $_->[0] }
           sort { $a->[1] <=> $b->[1] }
-          map  { [ $_, -e ? -s : 0 ] } @ARGV;
-        ##map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
+          map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
     }
 
     my $number_of_files = @ARGV;
