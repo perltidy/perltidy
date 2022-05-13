@@ -80,8 +80,10 @@ use Perl::Tidy::Tokenizer;
 use Perl::Tidy::VerticalAligner;
 local $OUTPUT_AUTOFLUSH = 1;
 
-# this can be turned on for extra checking during development
-use constant DEVEL_MODE => 0;
+# DEVEL_MODE can be turned on for extra checking during development
+use constant DEVEL_MODE   => 0;
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 
 use vars qw{
   $VERSION
@@ -487,17 +489,17 @@ sub perltidy {
     my $rstatus = {
 
         file_count         => 0,
-        opt_format         => "",
-        opt_encoding       => "",
-        opt_encode_output  => "",
-        opt_max_iterations => "",
+        opt_format         => EMPTY_STRING,
+        opt_encoding       => EMPTY_STRING,
+        opt_encode_output  => EMPTY_STRING,
+        opt_max_iterations => EMPTY_STRING,
 
-        input_name        => "",
-        output_name       => "",
+        input_name        => EMPTY_STRING,
+        output_name       => EMPTY_STRING,
         char_mode_source  => 0,
         char_mode_used    => 0,
-        input_decoded_as  => "",
-        output_encoded_as => "",
+        input_decoded_as  => EMPTY_STRING,
+        output_encoded_as => EMPTY_STRING,
         gcs_used          => 0,
         iteration_count   => 0,
         converged         => 0,
@@ -633,7 +635,7 @@ EOM
         }
     }
     else {
-        $dump_options_type = "";
+        $dump_options_type = EMPTY_STRING;
     }
 
     if ($user_formatter) {
@@ -678,9 +680,9 @@ EOM
     }
 
     my $rpending_complaint;
-    ${$rpending_complaint} = "";
+    ${$rpending_complaint} = EMPTY_STRING;
     my $rpending_logfile_message;
-    ${$rpending_logfile_message} = "";
+    ${$rpending_logfile_message} = EMPTY_STRING;
 
     my ( $is_Windows, $Windows_type ) = look_for_Windows($rpending_complaint);
 
@@ -722,7 +724,7 @@ EOM
         $quit_now = 1;
         foreach my $op ( @{$roption_string} ) {
             my $opt  = $op;
-            my $flag = "";
+            my $flag = EMPTY_STRING;
 
             # Examples:
             #  some-option=s
@@ -782,7 +784,7 @@ EOM
     my %default_file_extension = (
         tidy => 'tdy',
         html => 'html',
-        user => '',
+        user => EMPTY_STRING,
     );
 
     $rstatus->{'opt_format'}         = $rOpts->{'format'};
@@ -792,7 +794,7 @@ EOM
 
     # be sure we have a valid output format
     unless ( exists $default_file_extension{ $rOpts->{'format'} } ) {
-        my $formats = join ' ',
+        my $formats = join SPACE,
           sort map { "'" . $_ . "'" } keys %default_file_extension;
         my $fmt = $rOpts->{'format'};
         Die("-format='$fmt' but must be one of: $formats\n");
@@ -1101,7 +1103,7 @@ EOM
         my %saw_md5;
         my $digest_input = 0;
 
-        my $buf = '';
+        my $buf = EMPTY_STRING;
         while ( my $line = $source_object->get_line() ) {
             $buf .= $line;
         }
@@ -1110,10 +1112,10 @@ EOM
           !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
 
         # Decode the input stream if necessary or requested
-        my $encoding_in              = "";
+        my $encoding_in              = EMPTY_STRING;
         my $rOpts_character_encoding = $rOpts->{'character-encoding'};
         my $encoding_log_message;
-        my $decoded_input_as = "";
+        my $decoded_input_as = EMPTY_STRING;
         $rstatus->{'char_mode_source'} = 0;
 
         # Case 1: If Perl is already in a character-oriented mode for this
@@ -1155,7 +1157,7 @@ EOM
             if ( ref($decoder) ) {
                 $encoding_in = $decoder->name;
                 if ( $encoding_in ne 'UTF-8' && $encoding_in ne 'utf8' ) {
-                    $encoding_in = "";
+                    $encoding_in = EMPTY_STRING;
                     $buf         = $buf_in;
                     $encoding_log_message .= <<EOM;
 Guessed encoding '$encoding_in' is not utf8; no encoding will be used
@@ -1175,7 +1177,7 @@ EOM
                         Warn(
 "file: $input_file: bad guess to decode source as $encoding_in\n"
                         );
-                        $encoding_in = "";
+                        $encoding_in = EMPTY_STRING;
                         $buf         = $buf_in;
                     }
                     else {
@@ -1222,7 +1224,7 @@ EOM
         # read and write it as encoded data, and we will normalize these
         # operations with utf8.  If we have not decoded the data, then
         # we must not treat it as encoded data.
-        my $is_encoded_data = $encoding_in ? 'utf8' : "";
+        my $is_encoded_data = $encoding_in ? 'utf8' : EMPTY_STRING;
 
         $rstatus->{'input_name'}       = $display_name;
         $rstatus->{'opt_encoding'}     = $rOpts_character_encoding;
@@ -1298,7 +1300,7 @@ EOM
         # prepare the output stream
         #---------------------------------------------------------------
         my $output_file = undef;
-        my $output_name = "";
+        my $output_name = EMPTY_STRING;
         my $actual_output_extension;
 
         if ( $rOpts->{'outfile'} ) {
@@ -1829,7 +1831,7 @@ EOM
 
             # -eos flag set: If perltidy decodes a string, regardless of
             # source, it encodes before returning.
-            $rstatus->{'output_encoded_as'} = '';
+            $rstatus->{'output_encoded_as'} = EMPTY_STRING;
 
             if ($encode_destination_buffer) {
                 my $encoded_buffer;
@@ -2093,7 +2095,7 @@ sub line_diff {
     # have same common characters so non-null characters indicate character
     # differences.
     my ( $s1, $s2 ) = @_;
-    my $diff_marker = "";
+    my $diff_marker = EMPTY_STRING;
     my $pos         = -1;
     my $pos1        = $pos;
     if ( defined($s1) && defined($s2) ) {
@@ -2105,7 +2107,7 @@ sub line_diff {
             my $pos_last = $pos;
             $pos = $LAST_MATCH_START[0];
             if ( $count == 1 ) { $pos1 = $pos; }
-            $diff_marker .= ' ' x ( $pos - $pos_last - 1 ) . '^';
+            $diff_marker .= SPACE x ( $pos - $pos_last - 1 ) . '^';
 
             # we could continue to mark all differences, but there is no point
             last;
@@ -2129,9 +2131,9 @@ sub compare_string_buffers {
     my ( $fhi, $fnamei ) = streamhandle( \$bufi, 'r', $is_encoded_data );
     my ( $fho, $fnameo ) = streamhandle( \$bufo, 'r', $is_encoded_data );
     return $msg unless ( $fho && $fhi );    # for safety, shouldn't happen
-    my ( $linei,              $lineo );
-    my ( $counti,             $counto )              = ( 0,  0 );
-    my ( $last_nonblank_line, $last_nonblank_count ) = ( "", 0 );
+    my ( $linei,  $lineo );
+    my ( $counti, $counto )                          = ( 0, 0 );
+    my ( $last_nonblank_line, $last_nonblank_count ) = ( EMPTY_STRING, 0 );
     my $truncate = sub {
         my ( $str, $lenmax ) = @_;
         if ( length($str) > $lenmax ) {
@@ -2160,7 +2162,7 @@ sub compare_string_buffers {
         my ( $line_diff, $pos1 ) = line_diff( $linei, $lineo );
         my $reason = "Files first differ at character $pos1 of line $counti";
 
-        my ( $leading_ws_i, $leading_ws_o ) = ( "", "" );
+        my ( $leading_ws_i, $leading_ws_o ) = ( EMPTY_STRING, EMPTY_STRING );
         if ( $linei =~ /^(\s+)/ ) { $leading_ws_i = $1; }
         if ( $lineo =~ /^(\s+)/ ) { $leading_ws_o = $1; }
         if ( $leading_ws_i ne $leading_ws_o ) {
@@ -2170,7 +2172,8 @@ sub compare_string_buffers {
             }
         }
         else {
-            my ( $trailing_ws_i, $trailing_ws_o ) = ( "", "" );
+            my ( $trailing_ws_i, $trailing_ws_o ) =
+              ( EMPTY_STRING, EMPTY_STRING );
             if ( $linei =~ /(\s+)$/ ) { $trailing_ws_i = $1; }
             if ( $lineo =~ /(\s+)$/ ) { $trailing_ws_o = $1; }
             if ( $trailing_ws_i ne $trailing_ws_o ) {
@@ -2182,9 +2185,9 @@ sub compare_string_buffers {
         # limit string display length
         if ( $pos1 > 60 ) {
             my $drop = $pos1 - 40;
-            $linei     = "..." . substr( $linei,     $drop );
-            $lineo     = "..." . substr( $lineo,     $drop );
-            $line_diff = "   " . substr( $line_diff, $drop );
+            $linei     = "..." . substr( $linei, $drop );
+            $lineo     = "..." . substr( $lineo, $drop );
+            $line_diff = SPACE x 3 . substr( $line_diff, $drop );
         }
         $linei              = $truncate->( $linei,              72 );
         $lineo              = $truncate->( $lineo,              72 );
@@ -2196,7 +2199,7 @@ sub compare_string_buffers {
  $last_nonblank_count:$last_nonblank_line
 EOM
         }
-        $line_diff = ' ' x ( 2 + length($counto) ) . $line_diff;
+        $line_diff = SPACE x ( 2 + length($counto) ) . $line_diff;
         $msg .= <<EOM;
 <$counti:$linei
 >$counto:$lineo
@@ -2305,7 +2308,7 @@ sub write_logfile_header {
     if ($Windows_type) {
         $logger_object->write_logfile_entry("Windows type is $Windows_type\n");
     }
-    my $options_string = join( ' ', @{$rraw_options} );
+    my $options_string = join( SPACE, @{$rraw_options} );
 
     if ($config_file) {
         $logger_object->write_logfile_entry(
@@ -2726,11 +2729,11 @@ sub generate_options {
     $add_option->( 'dump-want-left-space',    'dwls', '!' );
     $add_option->( 'dump-want-right-space',   'dwrs', '!' );
     $add_option->( 'fuzzy-line-length',       'fll',  '!' );
-    $add_option->( 'help',                    'h',    '' );
+    $add_option->( 'help',                    'h',    EMPTY_STRING );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
     $add_option->( 'show-options',                    'opt',   '!' );
     $add_option->( 'timestamp',                       'ts',    '!' );
-    $add_option->( 'version',                         'v',     '' );
+    $add_option->( 'version',                         'v',     EMPTY_STRING );
     $add_option->( 'memoize',                         'mem',   '!' );
     $add_option->( 'file-size-order',                 'fso',   '!' );
     $add_option->( 'maximum-file-size-mb',            'maxfs', '=i' );
@@ -3246,7 +3249,7 @@ sub _process_command_line {
 
     my $word;
     my @raw_options        = ();
-    my $config_file        = "";
+    my $config_file        = EMPTY_STRING;
     my $saw_ignore_profile = 0;
     my $saw_dump_profile   = 0;
 
@@ -3290,7 +3293,7 @@ sub _process_command_line {
             }
             unless ( -e $config_file ) {
                 Warn("cannot find file given with -pro=$config_file: $ERRNO\n");
-                $config_file = "";
+                $config_file = EMPTY_STRING;
             }
         }
         elsif ( $i =~ /^-(pro|profile)=?$/ ) {
@@ -3351,7 +3354,7 @@ EOM
 
         # look for a config file if we don't have one yet
         my $rconfig_file_chatter;
-        ${$rconfig_file_chatter} = "";
+        ${$rconfig_file_chatter} = EMPTY_STRING;
         $config_file =
           find_config_file( $is_Windows, $Windows_type, $rconfig_file_chatter,
             $rpending_complaint )
@@ -3469,7 +3472,7 @@ sub make_grep_alias_string {
 
     # Defaults: list operators in List::Util
     # Possible future additions:  pairfirst pairgrep pairmap
-    my $default_string = join ' ', qw(
+    my $default_string = join SPACE, qw(
       all
       any
       first
@@ -3491,11 +3494,11 @@ sub make_grep_alias_string {
     }
 
     # The special option -gaxl='*' removes all defaults
-    if ( $is_excluded_word{'*'} ) { $default_string = "" }
+    if ( $is_excluded_word{'*'} ) { $default_string = EMPTY_STRING }
 
     # combine the defaults and any input list
     my $input_string = $rOpts->{'grep-alias-list'};
-    if ($input_string) { $input_string .= " " . $default_string }
+    if ($input_string) { $input_string .= SPACE . $default_string }
     else               { $input_string = $default_string }
 
     # Now make the final list of unique grep alias words
@@ -3519,7 +3522,7 @@ sub make_grep_alias_string {
             }
         }
     }
-    my $joined_words = join ' ', @filtered_word_list;
+    my $joined_words = join SPACE, @filtered_word_list;
     $rOpts->{'grep-alias-list'} = $joined_words;
     return;
 }
@@ -3711,7 +3714,7 @@ EOM
                 }
             }
         }
-        $rOpts->{'sub-alias-list'} = join ' ', @filtered_word_list;
+        $rOpts->{'sub-alias-list'} = join SPACE, @filtered_word_list;
     }
 
     make_grep_alias_string($rOpts);
@@ -3811,7 +3814,7 @@ sub expand_command_abbreviations {
                 # to allow abbreviations with arguments such as '-vt=1'
                 if ( $rexpansion->{ $abr . $flags } ) {
                     $abr   = $abr . $flags;
-                    $flags = "";
+                    $flags = EMPTY_STRING;
                 }
 
                 # if we see this dash item in the expansion hash..
@@ -3926,7 +3929,7 @@ sub check_vms_filename {
     $base .= '.' unless $base =~ /(?:^|[^^])\./;
 
     # if we don't already have an extension then we just append the extension
-    my $separator = ( $base =~ /\.$/ ) ? "" : "_";
+    my $separator = ( $base =~ /\.$/ ) ? EMPTY_STRING : "_";
     return ( $path . $base, $separator );
 }
 
@@ -3942,7 +3945,7 @@ sub Win_OS_Type {
     # We need to know this to decide where to look for config files
 
     my $rpending_complaint = shift;
-    my $os                 = "";
+    my $os                 = EMPTY_STRING;
     return $os unless $OSNAME =~ /win32|dos/i;    # is it a MS box?
 
     # Systems built from Perl source may not have Win32.pm
@@ -3980,7 +3983,7 @@ sub Win_OS_Type {
     # If $os is undefined, the above code is out of date.  Suggested updates
     # are welcome.
     unless ( defined $os ) {
-        $os = "";
+        $os = EMPTY_STRING;
 
         # Deactivated this message 20180322 because it was needlessly
         # causing some test scripts to fail.  Need help from someone
@@ -4177,8 +4180,8 @@ sub Win_Config_Locs {
 
     return unless $os;
 
-    my $system   = "";
-    my $allusers = "";
+    my $system   = EMPTY_STRING;
+    my $allusers = EMPTY_STRING;
 
     if ( $os =~ /9[58]|Me/ ) {
         $system = "C:/Windows";
@@ -4221,7 +4224,7 @@ sub read_config_file {
     my @config_list = ();
 
     # file is bad if non-empty $death_message is returned
-    my $death_message = "";
+    my $death_message = EMPTY_STRING;
 
     my $name = undef;
     my $line_no;
@@ -4321,11 +4324,11 @@ sub strip_comment {
 
     # Strip any comment from a command line
     my ( $instr, $config_file, $line_no ) = @_;
-    my $msg = "";
+    my $msg = EMPTY_STRING;
 
     # check for full-line comment
     if ( $instr =~ /^\s*#/ ) {
-        return ( "", $msg );
+        return ( EMPTY_STRING, $msg );
     }
 
     # nothing to do if no comments
@@ -4346,14 +4349,14 @@ sub strip_comment {
     }
 
     # handle comments and quotes
-    my $outstr     = "";
-    my $quote_char = "";
+    my $outstr     = EMPTY_STRING;
+    my $quote_char = EMPTY_STRING;
     while (1) {
 
         # looking for ending quote character
         if ($quote_char) {
             if ( $instr =~ /\G($quote_char)/gc ) {
-                $quote_char = "";
+                $quote_char = EMPTY_STRING;
                 $outstr .= $1;
             }
             elsif ( $instr =~ /\G(.)/gc ) {
@@ -4407,20 +4410,20 @@ sub parse_args {
 
     my ($body)     = @_;
     my @body_parts = ();
-    my $quote_char = "";
-    my $part       = "";
-    my $msg        = "";
+    my $quote_char = EMPTY_STRING;
+    my $part       = EMPTY_STRING;
+    my $msg        = EMPTY_STRING;
 
     # Check for external call with undefined $body - added to fix
     # github issue Perl-Tidy-Sweetened issue #23
-    if ( !defined($body) ) { $body = "" }
+    if ( !defined($body) ) { $body = EMPTY_STRING }
 
     while (1) {
 
         # looking for ending quote character
         if ($quote_char) {
             if ( $body =~ /\G($quote_char)/gc ) {
-                $quote_char = "";
+                $quote_char = EMPTY_STRING;
             }
             elsif ( $body =~ /\G(.)/gc ) {
                 $part .= $1;
@@ -4444,7 +4447,7 @@ EOM
             }
             elsif ( $body =~ /\G(\s+)/gc ) {
                 if ( length($part) ) { push @body_parts, $part; }
-                $part = "";
+                $part = EMPTY_STRING;
             }
             elsif ( $body =~ /\G(.)/gc ) {
                 $part .= $1;
@@ -4499,7 +4502,7 @@ sub readable_options {
     $readable_options .=
       "# See utility 'perltidyrc_dump.pl' for nicer formatting.\n";
     foreach my $opt ( @{$roption_string} ) {
-        my $flag = "";
+        my $flag = EMPTY_STRING;
         if ( $opt =~ /(.*)(!|=.*)$/ ) {
             $opt  = $1;
             $flag = $2;
@@ -4512,7 +4515,7 @@ sub readable_options {
         my $flag   = $rGetopt_flags->{$key};
         my $value  = $rOpts->{$key};
         my $prefix = '--';
-        my $suffix = "";
+        my $suffix = EMPTY_STRING;
         if ($flag) {
             if ( $flag =~ /^=/ ) {
                 if ( $value !~ /^\d+$/ ) { $value = '"' . $value . '"' }

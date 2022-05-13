@@ -9,7 +9,8 @@ use strict;
 use warnings;
 our $VERSION = '20220217.04';
 
-use constant DEVEL_MODE => 0;
+use constant DEVEL_MODE   => 0;
+use constant EMPTY_STRING => q{};
 
 sub AUTOLOAD {
 
@@ -37,10 +38,10 @@ sub DESTROY {
     # required to avoid call to AUTOLOAD in some versions of perl
 }
 
-my $input_stream_name = "";
+my $input_stream_name = EMPTY_STRING;
 
 # Maximum number of little messages; probably need not be changed.
-my $MAX_NAG_MESSAGES = 6;
+use constant MAX_NAG_MESSAGES => 6;
 
 BEGIN {
 
@@ -142,11 +143,11 @@ sub new {
     $self->[_max_output_line_length_at_]   = 0;
     $self->[_rK_checklist_]                = [];
     $self->[_K_arrival_order_matches_]     = 0;
-    $self->[_K_sequence_error_msg_]        = "";
+    $self->[_K_sequence_error_msg_]        = EMPTY_STRING;
     $self->[_K_last_arrival_]              = -1;
 
     # save input stream name for local error messages
-    $input_stream_name = "";
+    $input_stream_name = EMPTY_STRING;
     if ($logger_object) {
         $input_stream_name = $logger_object->get_input_stream_name();
     }
@@ -168,7 +169,7 @@ sub setup_convergence_test {
         $self->[_rK_checklist_] = \@list;
     }
     $self->[_K_arrival_order_matches_] = 1;
-    $self->[_K_sequence_error_msg_]    = "";
+    $self->[_K_sequence_error_msg_]    = EMPTY_STRING;
     $self->[_K_last_arrival_]          = -1;
     return;
 }
@@ -256,6 +257,8 @@ sub write_blank_code_line {
     return;
 }
 
+use constant MAX_PRINTED_CHARS => 80;
+
 sub write_code_line {
     my ( $self, $str, $K ) = @_;
 
@@ -290,8 +293,8 @@ sub write_code_line {
             my $K_prev = $self->[_K_last_arrival_];
             if ( $K < $K_prev ) {
                 chomp $str;
-                if ( length($str) > 80 ) {
-                    $str = substr( $str, 0, 80 ) . "...";
+                if ( length($str) > MAX_PRINTED_CHARS ) {
+                    $str = substr( $str, 0, MAX_PRINTED_CHARS ) . "...";
                 }
 
                 my $msg = <<EOM;
@@ -355,7 +358,7 @@ sub write_line {
             $self->[_max_line_length_error_at_] = $output_line_number - 1;
         }
 
-        if ( $self->[_line_length_error_count_] < $MAX_NAG_MESSAGES ) {
+        if ( $self->[_line_length_error_count_] < MAX_NAG_MESSAGES ) {
             $self->write_logfile_entry(
                 "Line length exceeded by $exceed characters\n");
         }
@@ -380,12 +383,12 @@ sub report_line_length_errors {
     }
     else {
 
-        my $word = ( $line_length_error_count > 1 ) ? "s" : "";
+        my $word = ( $line_length_error_count > 1 ) ? "s" : EMPTY_STRING;
         $self->write_logfile_entry(
 "$line_length_error_count output line$word exceeded $rOpts->{'maximum-line-length'} characters:\n"
         );
 
-        $word = ( $line_length_error_count > 1 ) ? "First" : "";
+        $word = ( $line_length_error_count > 1 ) ? "First" : EMPTY_STRING;
         my $first_line_length_error    = $self->[_first_line_length_error_];
         my $first_line_length_error_at = $self->[_first_line_length_error_at_];
         $self->write_logfile_entry(

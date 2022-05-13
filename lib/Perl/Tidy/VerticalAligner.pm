@@ -7,7 +7,9 @@ our $VERSION = '20220217.04';
 use Perl::Tidy::VerticalAligner::Alignment;
 use Perl::Tidy::VerticalAligner::Line;
 
-use constant DEVEL_MODE => 0;
+use constant DEVEL_MODE   => 0;
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 
 # The Perl::Tidy::VerticalAligner package collects output lines and
 # attempts to line up certain common tokens, such as => and #, which are
@@ -287,7 +289,7 @@ sub new {
     # Batch of lines being collected
     $self->[_rgroup_lines_]                = [];
     $self->[_group_level_]                 = 0;
-    $self->[_group_type_]                  = "";
+    $self->[_group_type_]                  = EMPTY_STRING;
     $self->[_group_maximum_line_length_]   = undef;
     $self->[_zero_count_]                  = 0;
     $self->[_comment_leading_space_count_] = 0;
@@ -335,7 +337,7 @@ sub initialize_for_new_group {
     my ($self) = @_;
 
     $self->[_rgroup_lines_]                = [];
-    $self->[_group_type_]                  = "";
+    $self->[_group_type_]                  = EMPTY_STRING;
     $self->[_zero_count_]                  = 0;
     $self->[_comment_leading_space_count_] = 0;
     $self->[_last_leading_space_count_]    = 0;
@@ -375,7 +377,7 @@ sub write_diagnostics {
     }
 
     sub get_input_stream_name {
-        my $input_stream_name = "";
+        my $input_stream_name = EMPTY_STRING;
         if ($logger_object) {
             $input_stream_name = $logger_object->get_input_stream_name();
         }
@@ -645,7 +647,7 @@ sub valign_input {
     # --------------------------------------------------------------------
     # Collect outdentable block COMMENTS
     # --------------------------------------------------------------------
-    my $is_blank_line = "";
+    my $is_blank_line = EMPTY_STRING;
     if ( $self->[_group_type_] eq 'COMMENT' ) {
         if (
             (
@@ -771,7 +773,7 @@ sub valign_input {
     if ( ( $jmax == 0 ) || ( $rtokens->[ $jmax - 1 ] ne '#' ) ) {
         $jmax += 1;
         $rtokens->[ $jmax - 1 ]  = '#';
-        $rfields->[$jmax]        = '';
+        $rfields->[$jmax]        = EMPTY_STRING;
         $rfield_lengths->[$jmax] = 0;
         $rpatterns->[$jmax]      = '#';
     }
@@ -790,7 +792,7 @@ sub valign_input {
             leading_space_count       => $leading_space_count,
             outdent_long_lines        => $outdent_long_lines,
             list_seqno                => $list_seqno,
-            list_type                 => "",
+            list_type                 => EMPTY_STRING,
             is_hanging_side_comment   => $is_hanging_side_comment,
             rvertical_tightness_flags => $rvertical_tightness_flags,
             is_terminal_ternary       => $is_terminal_ternary,
@@ -882,10 +884,10 @@ sub join_hanging_comment {
     $rtokens->[ $jmax - 1 ]   = $rtokens->[0];
     $rpatterns->[ $jmax - 1 ] = $rpatterns->[0];
     foreach my $j ( 1 .. $jmax - 1 ) {
-        $rfields->[$j]         = '';
+        $rfields->[$j]         = EMPTY_STRING;
         $rfield_lengths->[$j]  = 0;
-        $rtokens->[ $j - 1 ]   = "";
-        $rpatterns->[ $j - 1 ] = "";
+        $rtokens->[ $j - 1 ]   = EMPTY_STRING;
+        $rpatterns->[ $j - 1 ] = EMPTY_STRING;
     }
     return 1;
 }
@@ -921,7 +923,7 @@ sub join_hanging_comment {
                 ( $raw_tok, $lev, $tag, $tok_count ) =
                   decode_alignment_token( $rtokens->[$_] );
                 if ( !$is_comma_token{$raw_tok} ) {
-                    $list_type = "";
+                    $list_type = EMPTY_STRING;
                     last;
                 }
             }
@@ -967,7 +969,7 @@ sub fix_terminal_ternary {
     # look for the question mark after the :
     my ($jquestion);
     my $depth_question;
-    my $pad        = "";
+    my $pad        = EMPTY_STRING;
     my $pad_length = 0;
     foreach my $j ( 0 .. $maximum_field_index - 1 ) {
         my $tok = $rtokens_old->[$j];
@@ -981,7 +983,7 @@ sub fix_terminal_ternary {
             $jquestion = $j;
             if ( $rfields_old->[ $j + 1 ] =~ /^(\?\s*)/ ) {
                 $pad_length = length($1);
-                $pad        = " " x $pad_length;
+                $pad        = SPACE x $pad_length;
             }
             else {
                 return;    # shouldn't happen
@@ -1044,8 +1046,8 @@ sub fix_terminal_ternary {
             unshift( @patterns, @{$rpatterns_old}[ 0 .. $jquestion ] );
 
             # insert appropriate number of empty fields
-            splice( @fields,        1, 0, ('') x $jadd ) if $jadd;
-            splice( @field_lengths, 1, 0, (0) x $jadd )  if $jadd;
+            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if $jadd;
+            splice( @field_lengths, 1, 0, (0) x $jadd )            if $jadd;
         }
 
         # handle sub-case of first field just equal to leading colon.
@@ -1068,8 +1070,8 @@ sub fix_terminal_ternary {
             # leading token and inserting appropriate number of empty fields
             splice( @tokens,   0, 1, @{$rtokens_old}[ 0 .. $jquestion ] );
             splice( @patterns, 1, 0, @{$rpatterns_old}[ 1 .. $jquestion ] );
-            splice( @fields,        1, 0, ('') x $jadd ) if $jadd;
-            splice( @field_lengths, 1, 0, (0) x $jadd )  if $jadd;
+            splice( @fields,        1, 0, (EMPTY_STRING) x $jadd ) if $jadd;
+            splice( @field_lengths, 1, 0, (0) x $jadd )            if $jadd;
         }
     }
 
@@ -1088,8 +1090,8 @@ sub fix_terminal_ternary {
         $jadd             = $jquestion + 1;
         $fields[0]        = $pad . $fields[0];
         $field_lengths[0] = $pad_length + $field_lengths[0];
-        splice( @fields,        0, 0, ('') x $jadd ) if $jadd;
-        splice( @field_lengths, 0, 0, (0) x $jadd )  if $jadd;
+        splice( @fields,        0, 0, (EMPTY_STRING) x $jadd ) if $jadd;
+        splice( @field_lengths, 0, 0, (0) x $jadd )            if $jadd;
     }
 
     EXPLAIN_TERNARY && do {
@@ -1173,7 +1175,7 @@ sub fix_terminal_else {
     my $jadd = $jbrace - $jparen;
     splice( @{$rtokens},   0, 0, @{$rtokens_old}[ $jparen .. $jbrace - 1 ] );
     splice( @{$rpatterns}, 1, 0, @{$rpatterns_old}[ $jparen + 1 .. $jbrace ] );
-    splice( @{$rfields},        1, 0, ('') x $jadd );
+    splice( @{$rfields},        1, 0, (EMPTY_STRING) x $jadd );
     splice( @{$rfield_lengths}, 1, 0, (0) x $jadd );
 
     # force a flush after this line if it does not follow a case
@@ -1210,7 +1212,7 @@ sub check_match {
     my $imax_align = -1;
 
     # variable $GoToMsg explains reason for no match, for debugging
-    my $GoToMsg = "";
+    my $GoToMsg = EMPTY_STRING;
     use constant EXPLAIN_CHECK_MATCH => 0;
 
     # This is a flag for testing alignment by sub sweep_left_to_right only.
@@ -2444,7 +2446,7 @@ EOM
         # An existing list will still be a list but with possibly different
         # leading token
         my $old_list_type = $line_obj->get_list_type();
-        my $new_list_type = "";
+        my $new_list_type = EMPTY_STRING;
         if ( $rtokens_new->[0] =~ /^(=>|,)/ ) {
             $new_list_type = $rtokens_new->[0];
         }
@@ -2506,7 +2508,7 @@ EOM
             return @{ $decoded_token{$tok} };
         }
 
-        my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, "", 1 );
+        my ( $raw_tok, $lev, $tag, $tok_count ) = ( $tok, 0, EMPTY_STRING, 1 );
         if ( $tok =~ /^(\D+)(\d+)([^\.]*)(\.(\d+))?$/ ) {
             $raw_tok   = $1;
             $lev       = $2;
@@ -2797,7 +2799,7 @@ EOM
                 my $delete_above_level;
                 my $deleted_assignment_token;
 
-                my $saw_dividing_token = "";
+                my $saw_dividing_token = EMPTY_STRING;
                 $saw_large_group ||= $nlines > 2 && $imax > 1;
 
                 # Loop over all alignment tokens
@@ -3190,7 +3192,7 @@ sub match_line_pairs {
         #   2 = no match, and lines do not match at all
 
         my ( $tok, $tok_m, $pat, $pat_m, $pad ) = @_;
-        my $GoToMsg     = "";
+        my $GoToMsg     = EMPTY_STRING;
         my $return_code = 1;
 
         my ( $alignment_token, $lev, $tag, $tok_count ) =
@@ -3456,7 +3458,7 @@ sub get_line_token_info {
         my $rtokens = $line->get_rtokens();
         my $i       = -1;
         my ( $lev_min, $lev_max );
-        my $token_pattern_max = "";
+        my $token_pattern_max = EMPTY_STRING;
         my %saw_level;
         my $is_monotonic = 1;
 
@@ -3517,7 +3519,7 @@ sub get_line_token_info {
             $lev_min                     = -1;
             $lev_max                     = -1;
             $levs[0]                     = -1;
-            $rtoken_patterns->{$lev_min} = "";
+            $rtoken_patterns->{$lev_min} = EMPTY_STRING;
             $rtoken_indexes->{$lev_min}  = [];
         }
 
@@ -4050,8 +4052,8 @@ sub Dump_tree_groups {
         # it seems that the an alignment would look bad.
         my $max_pad            = 0;
         my $saw_good_alignment = 0;
-        my $saw_if_or;        # if we saw an 'if' or 'or' at group level
-        my $raw_tokb = "";    # first token seen at group level
+        my $saw_if_or;                # if we saw an 'if' or 'or' at group level
+        my $raw_tokb = EMPTY_STRING;  # first token seen at group level
         my $jfirst_bad;
         my $line_ending_fat_comma;    # is last token just a '=>' ?
         my $j0_eq_pad;
@@ -4737,7 +4739,7 @@ sub valign_output_step_A {
         # only add padding when we have a finite field;
         # this avoids extra terminal spaces if we have empty fields
         if ( $rfield_lengths->[$j] > 0 ) {
-            $str .= ' ' x $total_pad_count;
+            $str .= SPACE x $total_pad_count;
             $str_len += $total_pad_count;
             $total_pad_count = 0;
             $str .= $rfields->[$j];
@@ -4866,7 +4868,7 @@ sub get_output_line_number {
     sub initialize_step_B_cache {
 
         # valign_output_step_B cache:
-        $cached_line_text                = "";
+        $cached_line_text                = EMPTY_STRING;
         $cached_line_text_length         = 0;
         $cached_line_type                = 0;
         $cached_line_opening_flag        = 0;
@@ -4874,14 +4876,14 @@ sub get_output_line_number {
         $cached_seqno                    = 0;
         $cached_line_valid               = 0;
         $cached_line_leading_space_count = 0;
-        $cached_seqno_string             = "";
+        $cached_seqno_string             = EMPTY_STRING;
         $cached_line_Kend                = undef;
         $cached_line_maximum_length      = undef;
 
         # These vars hold a string of sequence numbers joined together used by
         # the cache
-        $seqno_string               = "";
-        $last_nonblank_seqno_string = "";
+        $seqno_string               = EMPTY_STRING;
+        $last_nonblank_seqno_string = EMPTY_STRING;
         return;
     }
 
@@ -4899,9 +4901,9 @@ sub get_output_line_number {
                 $cached_line_Kend,
             );
             $cached_line_type           = 0;
-            $cached_line_text           = "";
+            $cached_line_text           = EMPTY_STRING;
             $cached_line_text_length    = 0;
-            $cached_seqno_string        = "";
+            $cached_seqno_string        = EMPTY_STRING;
             $cached_line_Kend           = undef;
             $cached_line_maximum_length = undef;
         }
@@ -4965,7 +4967,9 @@ sub get_output_line_number {
         # later by entabbing, so we have to keep track of any changes
         # to the leading_space_count from here on.
         my $leading_string =
-          $leading_space_count > 0 ? ( ' ' x $leading_space_count ) : "";
+          $leading_space_count > 0
+          ? ( SPACE x $leading_space_count )
+          : EMPTY_STRING;
         my $leading_string_length = length($leading_string);
 
         # Unpack any recombination data; it was packed by
@@ -5063,7 +5067,7 @@ sub get_output_line_number {
 
                 if ( $gap >= 0 && defined($seqno_beg) ) {
                     $maximum_line_length   = $cached_line_maximum_length;
-                    $leading_string        = $cached_line_text . ' ' x $gap;
+                    $leading_string        = $cached_line_text . SPACE x $gap;
                     $leading_string_length = $cached_line_text_length + $gap;
                     $leading_space_count   = $cached_line_leading_space_count;
                     $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
@@ -5085,7 +5089,7 @@ sub get_output_line_number {
             # Handle cached line ending in CLOSING tokens
             else {
                 my $test_line =
-                  $cached_line_text . ' ' x $cached_line_closing_flag . $str;
+                  $cached_line_text . SPACE x $cached_line_closing_flag . $str;
                 my $test_line_length =
                   $cached_line_text_length +
                   $cached_line_closing_flag +
@@ -5214,7 +5218,7 @@ sub get_output_line_number {
                     # Change the args to look like we received the combined line
                     $str                   = $test_line;
                     $str_length            = $test_line_length;
-                    $leading_string        = "";
+                    $leading_string        = EMPTY_STRING;
                     $leading_string_length = 0;
                     $leading_space_count   = $cached_line_leading_space_count;
                     $level                 = $last_level_written;
@@ -5234,7 +5238,7 @@ sub get_output_line_number {
             }
         }
         $cached_line_type           = 0;
-        $cached_line_text           = "";
+        $cached_line_text           = EMPTY_STRING;
         $cached_line_text_length    = 0;
         $cached_line_Kend           = undef;
         $cached_line_maximum_length = undef;
@@ -5301,7 +5305,7 @@ sub get_output_line_number {
 
     sub initialize_valign_buffer {
         @valign_buffer         = ();
-        $valign_buffer_filling = "";
+        $valign_buffer_filling = EMPTY_STRING;
         return;
     }
 
@@ -5313,7 +5317,7 @@ sub get_output_line_number {
             }
             @valign_buffer = ();
         }
-        $valign_buffer_filling = "";
+        $valign_buffer_filling = EMPTY_STRING;
         return;
     }
 
@@ -5465,7 +5469,7 @@ sub valign_output_step_D {
               $leading_space_count % $rOpts_entab_leading_whitespace;
             my $tab_count =
               int( $leading_space_count / $rOpts_entab_leading_whitespace );
-            my $leading_string = "\t" x $tab_count . ' ' x $space_count;
+            my $leading_string = "\t" x $tab_count . SPACE x $space_count;
             if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
                 substr( $line, 0, $leading_space_count ) = $leading_string;
             }
@@ -5496,10 +5500,10 @@ sub valign_output_step_D {
 "Error entabbing in valign_output_step_D: for level=$level count=$leading_space_count\n"
                       );
                 }
-                $leading_string = ( ' ' x $leading_space_count );
+                $leading_string = ( SPACE x $leading_space_count );
             }
             else {
-                $leading_string .= ( ' ' x $space_count );
+                $leading_string .= ( SPACE x $space_count );
             }
             if ( $line =~ /^\s{$leading_space_count,$leading_space_count}/ ) {
                 substr( $line, 0, $leading_space_count ) = $leading_string;
@@ -5538,7 +5542,7 @@ sub valign_output_step_D {
         # Handle case of zero whitespace, which includes multi-line quotes
         # (which may have a finite level; this prevents tab problems)
         if ( $leading_whitespace_count <= 0 ) {
-            return "";
+            return EMPTY_STRING;
         }
 
         # look for previous result
@@ -5558,7 +5562,7 @@ sub valign_output_step_D {
         if ( !( $rOpts_tabs || $rOpts_entab_leading_whitespace )
             || $rOpts_indent_columns <= 0 )
         {
-            $leading_string = ( ' ' x $leading_whitespace_count );
+            $leading_string = ( SPACE x $leading_whitespace_count );
         }
 
         # Handle entab option
@@ -5567,7 +5571,7 @@ sub valign_output_step_D {
               $leading_whitespace_count % $rOpts_entab_leading_whitespace;
             my $tab_count = int(
                 $leading_whitespace_count / $rOpts_entab_leading_whitespace );
-            $leading_string = "\t" x $tab_count . ' ' x $space_count;
+            $leading_string = "\t" x $tab_count . SPACE x $space_count;
         }
 
         # Handle option of one tab per level
@@ -5584,10 +5588,10 @@ sub valign_output_step_D {
                   );
 
                 # -- skip entabbing
-                $leading_string = ( ' ' x $leading_whitespace_count );
+                $leading_string = ( SPACE x $leading_whitespace_count );
             }
             else {
-                $leading_string .= ( ' ' x $space_count );
+                $leading_string .= ( SPACE x $space_count );
             }
         }
         $leading_string_cache[$leading_whitespace_count] = $leading_string;

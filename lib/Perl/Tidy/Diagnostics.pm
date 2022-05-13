@@ -23,6 +23,8 @@ use warnings;
 use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
+use constant EMPTY_STRING => q{};
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
@@ -54,8 +56,8 @@ sub new {
     my $class = shift;
     return bless {
         _write_diagnostics_count => 0,
-        _last_diagnostic_file    => "",
-        _input_file              => "",
+        _last_diagnostic_file    => EMPTY_STRING,
+        _input_file              => EMPTY_STRING,
         _fh                      => undef,
     }, $class;
 }

@@ -12,6 +12,8 @@ use warnings;
 use Carp;
 our $VERSION = '20220217.04';
 
+use constant EMPTY_STRING => q{};
+
 sub AUTOLOAD {
 
     # Catch any undefined sub calls so that we are sure to get
@@ -50,7 +52,7 @@ EOM
 
     }
     if ( $mode eq 'w' ) {
-        ${$rscalar} = "";
+        ${$rscalar} = EMPTY_STRING;
         return bless [ $rscalar, $mode ], $package;
     }
     elsif ( $mode eq 'r' ) {

@@ -25,8 +25,9 @@ use English qw( -no_match_vars );
 
 our $VERSION = '20220217.04';
 
-# this can be turned on for extra checking during development
-use constant DEVEL_MODE => 0;
+use constant DEVEL_MODE   => 0;
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 
 use Perl::Tidy::LineBuffer;
 use Carp;
@@ -393,8 +394,8 @@ sub new {
     my $self = [];
     $self->[_rhere_target_list_]        = [];
     $self->[_in_here_doc_]              = 0;
-    $self->[_here_doc_target_]          = "";
-    $self->[_here_quote_character_]     = "";
+    $self->[_here_doc_target_]          = EMPTY_STRING;
+    $self->[_here_quote_character_]     = EMPTY_STRING;
     $self->[_in_data_]                  = 0;
     $self->[_in_end_]                   = 0;
     $self->[_in_format_]                = 0;
@@ -403,7 +404,7 @@ sub new {
     $self->[_in_skipped_]               = 0;
     $self->[_in_attribute_list_]        = 0;
     $self->[_in_quote_]                 = 0;
-    $self->[_quote_target_]             = "";
+    $self->[_quote_target_]             = EMPTY_STRING;
     $self->[_line_start_quote_]         = -1;
     $self->[_starting_level_]           = $args{starting_level};
     $self->[_know_starting_level_]      = defined( $args{starting_level} );
@@ -435,7 +436,7 @@ sub new {
     $self->[_unexpected_error_count_]   = 0;
     $self->[_started_looking_for_here_target_at_] = 0;
     $self->[_nearly_matched_here_target_at_]      = undef;
-    $self->[_line_of_text_]                       = "";
+    $self->[_line_of_text_]                       = EMPTY_STRING;
     $self->[_rlower_case_labels_at_]              = undef;
     $self->[_extended_syntax_]                    = $args{extended_syntax};
     $self->[_maximum_level_]                      = 0;
@@ -480,7 +481,7 @@ sub warning {
 }
 
 sub get_input_stream_name {
-    my $input_stream_name = "";
+    my $input_stream_name = EMPTY_STRING;
     my $logger_object     = $tokenizer_self->[_logger_object_];
     if ($logger_object) {
         $input_stream_name = $logger_object->get_input_stream_name();
@@ -793,7 +794,7 @@ sub get_line {
 
     # Find and remove what characters terminate this line, including any
     # control r
-    my $input_line_separator = "";
+    my $input_line_separator = EMPTY_STRING;
     if ( chomp($input_line) ) {
         $input_line_separator = $INPUT_RECORD_SEPARATOR;
     }
@@ -848,7 +849,7 @@ sub get_line {
         _curly_brace_depth         => $brace_depth,
         _square_bracket_depth      => $square_bracket_depth,
         _paren_depth               => $paren_depth,
-        _quote_character           => '',
+        _quote_character           => EMPTY_STRING,
 ##        _rtoken_type               => undef,
 ##        _rtokens                   => undef,
 ##        _rlevels                   => undef,
@@ -898,8 +899,8 @@ sub get_line {
             }
             else {
                 $tokenizer_self->[_in_here_doc_]          = 0;
-                $tokenizer_self->[_here_doc_target_]      = "";
-                $tokenizer_self->[_here_quote_character_] = "";
+                $tokenizer_self->[_here_doc_target_]      = EMPTY_STRING;
+                $tokenizer_self->[_here_quote_character_] = EMPTY_STRING;
             }
         }
 
@@ -1280,7 +1281,7 @@ sub find_starting_indentation_level {
         my $i = 0;
 
         # keep looking at lines until we find a hash bang or piece of code
-        my $msg = "";
+        my $msg = EMPTY_STRING;
         while ( $line =
             $tokenizer_self->[_line_buffer_object_]->peek_ahead( $i++ ) )
         {
@@ -1356,7 +1357,7 @@ sub dump_functions {
         $fh->print("\nnon-constant subs in package $pkg\n");
 
         foreach my $sub ( keys %{ $is_user_function{$pkg} } ) {
-            my $msg = "";
+            my $msg = EMPTY_STRING;
             if ( $is_block_list_function{$pkg}{$sub} ) {
                 $msg = 'block_list';
             }
@@ -1383,10 +1384,10 @@ sub prepare_for_a_new_file {
     # previous tokens needed to determine what to expect next
     $last_nonblank_token      = ';';    # the only possible starting state which
     $last_nonblank_type       = ';';    # will make a leading brace a code block
-    $last_nonblank_block_type = '';
+    $last_nonblank_block_type = EMPTY_STRING;
 
     # scalars for remembering statement types across multiple lines
-    $statement_type    = '';            # '' or 'use' or 'sub..' or 'case..'
+    $statement_type    = EMPTY_STRING;    # '' or 'use' or 'sub..' or 'case..'
     $in_attribute_list = 0;
 
     # scalars for remembering where we are in the file
@@ -1394,9 +1395,9 @@ sub prepare_for_a_new_file {
     $context         = UNKNOWN_CONTEXT;
 
     # hashes used to remember function information
-    %is_constant             = ();      # user-defined constants
-    %is_user_function        = ();      # user-defined functions
-    %user_function_prototype = ();      # their prototypes
+    %is_constant             = ();        # user-defined constants
+    %is_user_function        = ();        # user-defined functions
+    %user_function_prototype = ();        # their prototypes
     %is_block_function       = ();
     %is_block_list_function  = ();
     %saw_function_definition = ();
@@ -1428,15 +1429,15 @@ sub prepare_for_a_new_file {
     @nested_statement_type          = ();
     @starting_line_of_current_depth = ();
 
-    $paren_type[$paren_depth]            = '';
+    $paren_type[$paren_depth]            = EMPTY_STRING;
     $paren_semicolon_count[$paren_depth] = 0;
-    $paren_structural_type[$brace_depth] = '';
+    $paren_structural_type[$brace_depth] = EMPTY_STRING;
     $brace_type[$brace_depth] = ';';    # identify opening brace as code block
-    $brace_structural_type[$brace_depth]                   = '';
+    $brace_structural_type[$brace_depth]                   = EMPTY_STRING;
     $brace_context[$brace_depth]                           = UNKNOWN_CONTEXT;
     $brace_package[$paren_depth]                           = $current_package;
-    $square_bracket_type[$square_bracket_depth]            = '';
-    $square_bracket_structural_type[$square_bracket_depth] = '';
+    $square_bracket_type[$square_bracket_depth]            = EMPTY_STRING;
+    $square_bracket_structural_type[$square_bracket_depth] = EMPTY_STRING;
 
     initialize_tokenizer_state();
     return;
@@ -1513,27 +1514,27 @@ sub prepare_for_a_new_file {
         # TV3:
         $in_quote                = 0;
         $quote_type              = 'Q';
-        $quote_character         = "";
+        $quote_character         = EMPTY_STRING;
         $quote_pos               = 0;
         $quote_depth             = 0;
-        $quoted_string_1         = "";
-        $quoted_string_2         = "";
-        $allowed_quote_modifiers = "";
+        $quoted_string_1         = EMPTY_STRING;
+        $quoted_string_2         = EMPTY_STRING;
+        $allowed_quote_modifiers = EMPTY_STRING;
 
         # TV4:
-        $id_scan_state     = '';
-        $identifier        = '';
-        $want_paren        = "";
+        $id_scan_state     = EMPTY_STRING;
+        $identifier        = EMPTY_STRING;
+        $want_paren        = EMPTY_STRING;
         $indented_if_level = 0;
 
         # TV5:
-        $nesting_token_string             = "";
-        $nesting_type_string              = "";
-        $nesting_block_string             = '1';    # initially in a block
-        $nesting_block_flag               = 1;
-        $nesting_list_string              = '0';    # initially not in a list
-        $nesting_list_flag                = 0;      # initially not in a list
-        $ci_string_in_tokenizer           = "";
+        $nesting_token_string   = EMPTY_STRING;
+        $nesting_type_string    = EMPTY_STRING;
+        $nesting_block_string   = '1';            # initially in a block
+        $nesting_block_flag     = 1;
+        $nesting_list_string    = '0';            # initially not in a list
+        $nesting_list_flag      = 0;              # initially not in a list
+        $ci_string_in_tokenizer = EMPTY_STRING;
         $continuation_string_in_tokenizer = "0";
         $in_statement_continuation        = 0;
         $level_in_tokenizer               = 0;
@@ -1541,14 +1542,14 @@ sub prepare_for_a_new_file {
         $rslevel_stack                    = [];
 
         # TV6:
-        $last_nonblank_container_type      = '';
-        $last_nonblank_type_sequence       = '';
+        $last_nonblank_container_type      = EMPTY_STRING;
+        $last_nonblank_type_sequence       = EMPTY_STRING;
         $last_last_nonblank_token          = ';';
         $last_last_nonblank_type           = ';';
-        $last_last_nonblank_block_type     = '';
-        $last_last_nonblank_container_type = '';
-        $last_last_nonblank_type_sequence  = '';
-        $last_nonblank_prototype           = "";
+        $last_last_nonblank_block_type     = EMPTY_STRING;
+        $last_last_nonblank_container_type = EMPTY_STRING;
+        $last_last_nonblank_type_sequence  = EMPTY_STRING;
+        $last_nonblank_prototype           = EMPTY_STRING;
         return;
     }
 
@@ -1686,8 +1687,8 @@ sub prepare_for_a_new_file {
 
             # Split $tok into up to 3 tokens:
             my $tok_0 = substr( $pretoken, 0, $numc );
-            my $tok_1 = defined($1) ? $1 : "";
-            my $tok_2 = defined($2) ? $2 : "";
+            my $tok_1 = defined($1) ? $1 : EMPTY_STRING;
+            my $tok_2 = defined($2) ? $2 : EMPTY_STRING;
 
             my $len_0 = length($tok_0);
             my $len_1 = length($tok_1);
@@ -1887,7 +1888,7 @@ A space may be needed after '$var'.
 EOM
                 resume_logfile();
             }
-            $id_scan_state = "";
+            $id_scan_state = EMPTY_STRING;
         }
         return;
     }
@@ -1931,7 +1932,7 @@ EOM
 
             # look for $var, @var, ...
             if ( $rtoken_type->[ $i + 1 ] eq 'w' ) {
-                my $pretype_next = "";
+                my $pretype_next = EMPTY_STRING;
                 my $i_next       = $i + 2;
                 if ( $i_next <= $max_token_index ) {
                     if (   $rtoken_type->[$i_next] eq 'b'
@@ -2061,7 +2062,7 @@ EOM
         my $typ_d = $rtoken_type->[$i_d];
 
         # check for signed integer
-        my $sign = "";
+        my $sign = EMPTY_STRING;
         if (   $typ_d ne 'd'
             && ( $typ_d eq '+' || $typ_d eq '-' )
             && $i_d < $max_token_index )
@@ -2266,7 +2267,7 @@ EOM
             $paren_semicolon_count[$paren_depth] = 0;
             if ($want_paren) {
                 $container_type = $want_paren;
-                $want_paren     = "";
+                $want_paren     = EMPTY_STRING;
             }
             elsif ( $statement_type =~ /^sub\b/ ) {
                 $container_type = $statement_type;
@@ -2428,8 +2429,8 @@ EOM
         },
         ';' => sub {
             $context        = UNKNOWN_CONTEXT;
-            $statement_type = '';
-            $want_paren     = "";
+            $statement_type = EMPTY_STRING;
+            $want_paren     = EMPTY_STRING;
 
             #    /^(for|foreach)$/
             if ( $is_for_foreach{ $paren_type[$paren_depth] } )
@@ -2456,21 +2457,21 @@ EOM
               if ( $expecting == OPERATOR );
             $in_quote                = 1;
             $type                    = 'Q';
-            $allowed_quote_modifiers = "";
+            $allowed_quote_modifiers = EMPTY_STRING;
         },
         "'" => sub {
             error_if_expecting_OPERATOR("String")
               if ( $expecting == OPERATOR );
             $in_quote                = 1;
             $type                    = 'Q';
-            $allowed_quote_modifiers = "";
+            $allowed_quote_modifiers = EMPTY_STRING;
         },
         '`' => sub {
             error_if_expecting_OPERATOR("String")
               if ( $expecting == OPERATOR );
             $in_quote                = 1;
             $type                    = 'Q';
-            $allowed_quote_modifiers = "";
+            $allowed_quote_modifiers = EMPTY_STRING;
         },
         '/' => sub {
             my $is_pattern;
@@ -2526,14 +2527,14 @@ EOM
             # code block or anonymous hash.  (The type of a paren
             # pair is the preceding token, such as 'if', 'else',
             # etc).
-            $container_type = "";
+            $container_type = EMPTY_STRING;
 
             # ATTRS: for a '{' following an attribute list, reset
             # things to look like we just saw the sub name
             if ( $statement_type =~ /^sub\b/ ) {
                 $last_nonblank_token = $statement_type;
                 $last_nonblank_type  = 'i';
-                $statement_type      = "";
+                $statement_type      = EMPTY_STRING;
             }
 
             # patch for SWITCH/CASE: hide these keywords from an immediately
@@ -2566,7 +2567,7 @@ EOM
                     }
                     else {
                         my $list =
-                          join( ' ', sort keys %is_blocktype_with_paren );
+                          join( SPACE, sort keys %is_blocktype_with_paren );
                         warning(
 "syntax error at ') {', didn't see one of: <<$list>>; If this code is okay try using the -xs flag\n"
                         );
@@ -2586,7 +2587,7 @@ EOM
                     );
 
                 }
-                $want_paren = "";
+                $want_paren = EMPTY_STRING;
             }
 
             # now identify which of the three possible types of
@@ -2650,7 +2651,7 @@ EOM
         },
         '}' => sub {
             $block_type = $brace_type[$brace_depth];
-            if ($block_type) { $statement_type = '' }
+            if ($block_type) { $statement_type = EMPTY_STRING }
             if ( defined( $brace_package[$brace_depth] ) ) {
                 $current_package = $brace_package[$brace_depth];
             }
@@ -3104,7 +3105,7 @@ EOM
 
                     # Note that we put a leading space on the here quote
                     # character indicate that it may be preceded by spaces
-                    $here_quote_character = " " . $here_quote_character;
+                    $here_quote_character = SPACE . $here_quote_character;
                     push @{$rhere_target_list},
                       [ $here_doc_target, $here_quote_character ];
                     $type = 'h';
@@ -3283,10 +3284,10 @@ EOM
         'tr' => '[cdsr]',
         'm'  => '[msixpodualngc]',
         'qr' => '[msixpodualn]',
-        'q'  => "",
-        'qq' => "",
-        'qw' => "",
-        'qx' => "",
+        'q'  => EMPTY_STRING,
+        'qq' => EMPTY_STRING,
+        'qw' => EMPTY_STRING,
+        'qx' => EMPTY_STRING,
     );
 
     # table showing how many quoted things to look for after quote operator..
@@ -3512,17 +3513,18 @@ EOM
           pre_tokenize( $input_line, $max_tokens_wanted );
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
-        push( @{$rtokens}, ' ', ' ', ' ' );  # extra whitespace simplifies logic
+        push( @{$rtokens}, SPACE, SPACE, SPACE )
+          ;    # extra whitespace simplifies logic
         push( @{$rtoken_map},  0,   0,   0 );     # shouldn't be referenced
         push( @{$rtoken_type}, 'b', 'b', 'b' );
 
         # initialize for main loop
         if (0) { #<<< this is not necessary
         foreach my $ii ( 0 .. $max_token_index + 3 ) {
-            $routput_token_type->[$ii]     = "";
-            $routput_block_type->[$ii]     = "";
-            $routput_container_type->[$ii] = "";
-            $routput_type_sequence->[$ii]  = "";
+            $routput_token_type->[$ii]     = EMPTY_STRING;
+            $routput_block_type->[$ii]     = EMPTY_STRING;
+            $routput_container_type->[$ii] = EMPTY_STRING;
+            $routput_type_sequence->[$ii]  = EMPTY_STRING;
             $routput_indent_flag->[$ii]    = 0;
         }
         }
@@ -3573,11 +3575,11 @@ EOM
                 my $qs2 = $quoted_string_2;
 
                 # re-initialize for next search
-                $quote_character = '';
+                $quote_character = EMPTY_STRING;
                 $quote_pos       = 0;
                 $quote_type      = 'Q';
-                $quoted_string_1 = "";
-                $quoted_string_2 = "";
+                $quoted_string_1 = EMPTY_STRING;
+                $quoted_string_2 = EMPTY_STRING;
                 last if ( ++$i > $max_token_index );
 
                 # look for any modifiers
@@ -3663,7 +3665,7 @@ EOM
                     }
 
                     # re-initialize
-                    $allowed_quote_modifiers = "";
+                    $allowed_quote_modifiers = EMPTY_STRING;
                 }
             }
 
@@ -3736,11 +3738,11 @@ EOM
             $i_tok = $i;
 
             # re-initialize various flags for the next output token
-            $block_type     &&= "";
-            $container_type &&= "";
-            $type_sequence  &&= "";
+            $block_type     &&= EMPTY_STRING;
+            $container_type &&= EMPTY_STRING;
+            $type_sequence  &&= EMPTY_STRING;
             $indent_flag    &&= 0;
-            $prototype      &&= "";
+            $prototype      &&= EMPTY_STRING;
 
             # this pre-token will start an output token
             push( @{$routput_token_list}, $i_tok );
@@ -3784,7 +3786,7 @@ EOM
 
             # handle whitespace tokens..
             next if ( $type eq 'b' );
-            my $prev_tok  = $i > 0 ? $rtokens->[ $i - 1 ]     : ' ';
+            my $prev_tok  = $i > 0 ? $rtokens->[ $i - 1 ]     : SPACE;
             my $prev_type = $i > 0 ? $rtoken_type->[ $i - 1 ] : 'b';
 
             # Build larger tokens where possible, since we are not in a quote.
@@ -4629,9 +4631,9 @@ EOM
         my @nesting_blocks = ();   # string of block types leading to this depth
         my @nesting_lists  = ();   # string of list types leading to this depth
         my @ci_string = ();  # string needed to compute continuation indentation
-        my @container_environment = ();    # BLOCK or LIST
-        my $container_environment = '';
-        my $im                    = -1;    # previous $i value
+        my @container_environment = ();             # BLOCK or LIST
+        my $container_environment = EMPTY_STRING;
+        my $im                    = -1;             # previous $i value
         my $num;
 
         # Count the number of '1's in the string (previously sub ones_count)
@@ -4845,7 +4847,7 @@ EOM
                 $container_environment =
                     $nesting_block_flag ? 'BLOCK'
                   : $nesting_list_flag  ? 'LIST'
-                  :                       "";
+                  :                       EMPTY_STRING;
 
                 # if the difference between total nesting levels is not 1,
                 # there are intervening non-structural nesting types between
@@ -5100,7 +5102,7 @@ EOM
                 $container_environment =
                     $nesting_block_flag ? 'BLOCK'
                   : $nesting_list_flag  ? 'LIST'
-                  :                       "";
+                  :                       EMPTY_STRING;
                 $ci_string_i = $ci_string_sum + $in_statement_continuation;
                 $nesting_block_string_i = $nesting_block_string;
                 $nesting_list_string_i  = $nesting_list_string;
@@ -5112,7 +5114,7 @@ EOM
                 $container_environment =
                     $nesting_block_flag ? 'BLOCK'
                   : $nesting_list_flag  ? 'LIST'
-                  :                       "";
+                  :                       EMPTY_STRING;
 
                 # zero the continuation indentation at certain tokens so
                 # that they will be at the same level as its container.  For
@@ -5254,7 +5256,7 @@ EOM
         $tokenizer_self->[_in_attribute_list_] = $in_attribute_list;
         $tokenizer_self->[_in_quote_]          = $in_quote;
         $tokenizer_self->[_quote_target_] =
-          $in_quote ? matching_end_token($quote_character) : "";
+          $in_quote ? matching_end_token($quote_character) : EMPTY_STRING;
         $tokenizer_self->[_rhere_target_list_] = $rhere_target_list;
 
         $line_of_tokens->{_rtoken_type}            = \@token_type;
@@ -5380,7 +5382,7 @@ sub operator_expected {
 
     my ($rarg) = @_;
 
-    my $msg = "";
+    my $msg = EMPTY_STRING;
 
     ##############
     # Table lookup
@@ -5687,7 +5689,7 @@ sub code_block_type {
 
         # cannot start a code block within an anonymous hash
         else {
-            return "";
+            return EMPTY_STRING;
         }
     }
 
@@ -5750,7 +5752,7 @@ sub code_block_type {
                 || $last_nonblank_token eq 'unless' )
           )
         {
-            return "";
+            return EMPTY_STRING;
         }
         else {
             return $last_nonblank_token;
@@ -5785,7 +5787,7 @@ sub code_block_type {
 
         # check for syntax 'use MODULE LIST'
         # This fixes b1022 b1025 b1027 b1028 b1029 b1030 b1031
-        return "" if ( $statement_type eq 'use' );
+        return EMPTY_STRING if ( $statement_type eq 'use' );
 
         return decide_if_code_block( $i, $rtokens, $rtoken_type,
             $max_token_index );
@@ -5810,7 +5812,7 @@ sub code_block_type {
             return 't';    # (Not $paren_type)
         }
         else {
-            return "";
+            return EMPTY_STRING;
         }
     }
 
@@ -5822,7 +5824,7 @@ sub code_block_type {
 
     # anything else must be anonymous hash reference
     else {
-        return "";
+        return EMPTY_STRING;
     }
 }
 
@@ -5845,7 +5847,7 @@ sub decide_if_code_block {
     # Check for the common case of an empty anonymous hash reference:
     # Maybe something like sub { { } }
     if ( $next_nonblank_token eq '}' ) {
-        $code_block_type = "";
+        $code_block_type = EMPTY_STRING;
     }
 
     else {
@@ -5938,7 +5940,7 @@ sub decide_if_code_block {
                 || ( $pre_types[$j] eq '=' && $pre_types[ ++$j ] eq '>' )
               )
             {
-                $code_block_type = "";
+                $code_block_type = EMPTY_STRING;
             }
         }
 
@@ -5948,7 +5950,7 @@ sub decide_if_code_block {
             # If this brace follows a bareword, then append a space as a signal
             # to the formatter that this may not be a block brace.  To find the
             # corresponding code in Formatter.pm search for 'b1085'.
-            $code_block_type .= " " if ( $code_block_type =~ /^\w/ );
+            $code_block_type .= SPACE if ( $code_block_type =~ /^\w/ );
         }
     }
 
@@ -5972,7 +5974,7 @@ sub report_unexpected {
           make_numbered_line( $input_line_number, $input_line, $pos );
         $underline = write_on_underline( $underline, $pos - $offset, '^' );
 
-        my $trailer = "";
+        my $trailer = EMPTY_STRING;
         if ( ( $i_tok > 0 ) && ( $last_nonblank_i >= 0 ) ) {
             my $pos_prev = $rpretoken_map->[$last_nonblank_i];
             my $num;
@@ -6149,7 +6151,7 @@ sub increase_nesting_depth {
     # Fix part #1 for git82: save last token type for propagation of type 'Z'
     $nested_statement_type[$aa][ $current_depth[$aa] ] =
       [ $statement_type, $last_nonblank_type, $last_nonblank_token ];
-    $statement_type = "";
+    $statement_type = EMPTY_STRING;
     return ( $seqno, $indent );
 }
 
@@ -6239,7 +6241,7 @@ sub decrease_nesting_depth {
                     my ($ess);
 
                     if ( $diff == 1 || $diff == -1 ) {
-                        $ess = '';
+                        $ess = EMPTY_STRING;
                     }
                     else {
                         $ess = 's';
@@ -6395,7 +6397,7 @@ sub guess_if_pattern_or_conditional {
         # look for a possible ending ? on this line..
         my $in_quote        = 1;
         my $quote_depth     = 0;
-        my $quote_character = '';
+        my $quote_character = EMPTY_STRING;
         my $quote_pos       = 0;
         my $quoted_string;
         (
@@ -6506,7 +6508,7 @@ sub guess_if_pattern_or_division {
         # look for a possible ending / on this line..
         my $in_quote        = 1;
         my $quote_depth     = 0;
-        my $quote_character = '';
+        my $quote_character = EMPTY_STRING;
         my $quote_pos       = 0;
         my $quoted_string;
         (
@@ -6714,7 +6716,7 @@ sub scan_bare_identifier_do {
         # ($,%,@,*) including something like abc::def::ghi
         $type = 'w';
 
-        my $sub_name = "";
+        my $sub_name = EMPTY_STRING;
         if ( defined($2) ) { $sub_name = $2; }
         if ( defined($1) ) {
             $package = $1;
@@ -6905,7 +6907,7 @@ sub scan_id_do {
         $max_token_index )
       = @_;
     use constant DEBUG_NSCAN => 0;
-    my $type = '';
+    my $type = EMPTY_STRING;
     my ( $i_beg, $pos_beg );
 
     #print "NSCAN:entering i=$i, tok=$tok, type=$type, state=$id_scan_state\n";
@@ -6915,7 +6917,7 @@ sub scan_id_do {
     # on re-entry, start scanning at first token on the line
     if ($id_scan_state) {
         $i_beg = $i;
-        $type  = '';
+        $type  = EMPTY_STRING;
     }
 
     # on initial entry, start scanning just after type token
@@ -6974,12 +6976,12 @@ sub scan_id_do {
             ( $i, $tok, $type ) =
               do_scan_package( $input_line, $i, $i_beg, $tok, $type, $rtokens,
                 $rtoken_map, $max_token_index );
-            $id_scan_state = '';
+            $id_scan_state = EMPTY_STRING;
         }
 
         else {
             warning("invalid token in scan_id: $tok\n");
-            $id_scan_state = '';
+            $id_scan_state = EMPTY_STRING;
         }
     }
 
@@ -7149,13 +7151,13 @@ sub scan_identifier_do {
       = @_;
     use constant DEBUG_SCAN_ID => 0;
     my $i_begin   = $i;
-    my $type      = '';
+    my $type      = EMPTY_STRING;
     my $tok_begin = $rtokens->[$i_begin];
     if ( $tok_begin eq ':' ) { $tok_begin = '::' }
     my $id_scan_state_begin = $id_scan_state;
     my $identifier_begin    = $identifier;
     my $tok                 = $tok_begin;
-    my $message             = "";
+    my $message             = EMPTY_STRING;
     my $tok_is_blank;    # a flag to speed things up
 
     my $in_prototype_or_signature =
@@ -7196,7 +7198,7 @@ sub scan_identifier_do {
         elsif ( $tok eq 'sub' or $tok eq 'package' ) {
             $saw_alpha     = 0;     # 'sub' is considered type info here
             $id_scan_state = '$';
-            $identifier .= ' ';     # need a space to separate sub from sub name
+            $identifier .= SPACE;   # need a space to separate sub from sub name
         }
         elsif ( $tok eq '::' ) {
             $id_scan_state = 'A';
@@ -7218,7 +7220,7 @@ sub scan_identifier_do {
                 warning($msg);
                 $tokenizer_self->[_in_error_] = 1;
             }
-            $id_scan_state = '';
+            $id_scan_state = EMPTY_STRING;
             goto RETURN;
         }
         $saw_type = !$saw_alpha;
@@ -7261,7 +7263,7 @@ sub scan_identifier_do {
                 # we've got a punctuation variable if end of line (punct.t)
                 if ( $i == $max_token_index ) {
                     $type          = 'i';
-                    $id_scan_state = '';
+                    $id_scan_state = EMPTY_STRING;
                     last;
                 }
             }
@@ -7322,7 +7324,7 @@ sub scan_identifier_do {
                     elsif ( $id_scan_state eq '$' ) { $type = 't' }
                     else                            { $type = 'i' }
                     $i             = $i_save;
-                    $id_scan_state = '';
+                    $id_scan_state = EMPTY_STRING;
                     last;
                 }
             }
@@ -7345,16 +7347,18 @@ sub scan_identifier_do {
                     my $next1 = $rtokens->[ $i + 1 ];
                     $identifier .= $tok . $next1 . $next2;
                     $i += 2;
-                    $id_scan_state = '';
+                    $id_scan_state = EMPTY_STRING;
                     last;
                 }
 
                 # skip something like ${xxx} or ->{
-                $id_scan_state = '';
+                $id_scan_state = EMPTY_STRING;
 
                 # if this is the first token of a line, any tokens for this
                 # identifier have already been accumulated
-                if ( $identifier eq '$' || $i == 0 ) { $identifier = ''; }
+                if ( $identifier eq '$' || $i == 0 ) {
+                    $identifier = EMPTY_STRING;
+                }
                 $i = $i_save;
                 last;
             }
@@ -7368,7 +7372,7 @@ sub scan_identifier_do {
                 if ( $identifier =~ /^[\$\%\*\&\@]/ ) {
 
                     if ( length($identifier) > 1 ) {
-                        $id_scan_state = '';
+                        $id_scan_state = EMPTY_STRING;
                         $i             = $i_save;
                         $type          = 'i';    # probably punctuation variable
                         last;
@@ -7427,19 +7431,20 @@ sub scan_identifier_do {
 
                         # If pretoken $next1 is more than one character long,
                         # set a flag indicating that it needs to be split.
-                        $id_scan_state = ( length($next1) > 1 ) ? '^' : "";
+                        $id_scan_state =
+                          ( length($next1) > 1 ) ? '^' : EMPTY_STRING;
                         last;
                     }
                     else {
 
                         # it is just $^
                         # Simple test case (c065): '$aa=$^if($bb)';
-                        $id_scan_state = "";
+                        $id_scan_state = EMPTY_STRING;
                         last;
                     }
                 }
                 else {
-                    $id_scan_state = '';
+                    $id_scan_state = EMPTY_STRING;
                     $i             = $i_save;
                     last;    # c106
                 }
@@ -7457,8 +7462,8 @@ sub scan_identifier_do {
                     # '$' which will have been previously marked type 't'
                     # rather than 'i'.
                     if ( $i == $i_begin ) {
-                        $identifier = "";
-                        $type       = "";
+                        $identifier = EMPTY_STRING;
+                        $type       = EMPTY_STRING;
                     }
 
                     # at a # we have to mark as type 't' because more may
@@ -7472,7 +7477,7 @@ sub scan_identifier_do {
                         }
                         $i = $i_save;
                     }
-                    $id_scan_state = '';
+                    $id_scan_state = EMPTY_STRING;
                     last;
                 }
 
@@ -7522,9 +7527,11 @@ sub scan_identifier_do {
                 }
                 else {
                     $i = $i_save;
-                    if ( length($identifier) == 1 ) { $identifier = ''; }
+                    if ( length($identifier) == 1 ) {
+                        $identifier = EMPTY_STRING;
+                    }
                 }
-                $id_scan_state = '';
+                $id_scan_state = EMPTY_STRING;
                 last;
             }
         }
@@ -7556,7 +7563,7 @@ sub scan_identifier_do {
                 $identifier .= $tok;
             }
             else {
-                $id_scan_state = '';
+                $id_scan_state = EMPTY_STRING;
                 $i             = $i_save;
                 last;
             }
@@ -7582,7 +7589,7 @@ sub scan_identifier_do {
             elsif ( $tok eq "'" && $allow_tick ) {    # tick
 
                 if ( $is_keyword{$identifier} ) {
-                    $id_scan_state = '';              # that's all
+                    $id_scan_state = EMPTY_STRING;    # that's all
                     $i             = $i_save;
                 }
                 else {
@@ -7598,7 +7605,7 @@ sub scan_identifier_do {
                 $identifier .= $tok;
             }
             else {
-                $id_scan_state = '';        # that's all
+                $id_scan_state = EMPTY_STRING;    # that's all
                 $i             = $i_save;
                 last;
             }
@@ -7619,7 +7626,7 @@ sub scan_identifier_do {
                 $tok_is_blank = 1;
             }
             else {
-                $id_scan_state = '';        # that's all - no prototype
+                $id_scan_state = EMPTY_STRING;    # that's all - no prototype
                 $i             = $i_save;
                 last;
             }
@@ -7635,7 +7642,7 @@ sub scan_identifier_do {
 
             if ( $tok eq ')' ) {    # got it
                 $identifier .= $tok;
-                $id_scan_state = '';    # all done
+                $id_scan_state = EMPTY_STRING;    # all done
                 last;
             }
             elsif ( $tok =~ /^[\s\$\%\\\*\@\&\;]/ ) {
@@ -7678,9 +7685,11 @@ sub scan_identifier_do {
                 $identifier .= $tok;
             }
             elsif ( $tok eq '{' ) {
-                if ( $identifier eq '&' || $i == 0 ) { $identifier = ''; }
+                if ( $identifier eq '&' || $i == 0 ) {
+                    $identifier = EMPTY_STRING;
+                }
                 $i             = $i_save;
-                $id_scan_state = '';
+                $id_scan_state = EMPTY_STRING;
                 last;
             }
             elsif ( $tok eq '^' ) {
@@ -7701,17 +7710,18 @@ sub scan_identifier_do {
 
                         # If pretoken $next1 is more than one character long,
                         # set a flag indicating that it needs to be split.
-                        $id_scan_state = ( length($next1) > 1 ) ? '^' : "";
+                        $id_scan_state =
+                          ( length($next1) > 1 ) ? '^' : EMPTY_STRING;
                     }
                     else {
 
                         # it is &^
-                        $id_scan_state = "";
+                        $id_scan_state = EMPTY_STRING;
                     }
                     last;
                 }
                 else {
-                    $identifier = '';
+                    $identifier = EMPTY_STRING;
                     $i          = $i_save;
                 }
                 last;
@@ -7737,11 +7747,11 @@ sub scan_identifier_do {
                     $identifier .= $tok;
                 }
                 else {
-                    $identifier = '';
+                    $identifier = EMPTY_STRING;
                     $i          = $i_save;
                     $type       = '&';
                 }
-                $id_scan_state = '';
+                $id_scan_state = EMPTY_STRING;
                 last;
             }
         }
@@ -7751,7 +7761,7 @@ sub scan_identifier_do {
         ######################
 
         else {    # can get here due to error in initialization
-            $id_scan_state = '';
+            $id_scan_state = EMPTY_STRING;
             $i             = $i_save;
             last;
         }
@@ -7764,12 +7774,12 @@ sub scan_identifier_do {
     # once we enter the actual identifier, it may not extend beyond
     # the end of the current line
     if ( $id_scan_state =~ /^[A\:\(\)]/ ) {
-        $id_scan_state = '';
+        $id_scan_state = EMPTY_STRING;
     }
 
     # Patch: the deprecated variable $# does not combine with anything on the
     # next line.
-    if ( $identifier eq '$#' ) { $id_scan_state = '' }
+    if ( $identifier eq '$#' ) { $id_scan_state = EMPTY_STRING }
 
     if ( $i < 0 ) { $i = 0 }
 
@@ -7824,7 +7834,7 @@ sub scan_identifier_do {
             }
         }
         else {
-            $type = '';
+            $type = EMPTY_STRING;
         }    # this can happen on a restart
     }
 
@@ -7868,8 +7878,8 @@ sub scan_identifier_do {
 
     # initialize subname each time a new 'sub' keyword is encountered
     sub initialize_subname {
-        $package_saved = "";
-        $subname_saved = "";
+        $package_saved = EMPTY_STRING;
+        $subname_saved = EMPTY_STRING;
         return;
     }
 
@@ -7944,7 +7954,7 @@ sub scan_identifier_do {
           : $tok eq '('         ? PAREN_CALL
           :                       SUB_CALL;
 
-        $id_scan_state = "";    # normally we get everything in one call
+        $id_scan_state = EMPTY_STRING;  # normally we get everything in one call
         my $subname = $subname_saved;
         my $package = $package_saved;
         my $proto   = undef;
@@ -8174,7 +8184,7 @@ sub scan_identifier_do {
                 }
             }
             elsif ($next_nonblank_token) {    # EOF technically ok
-                $subname = "" unless defined($subname);
+                $subname = EMPTY_STRING unless defined($subname);
                 warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
                 );
@@ -8209,11 +8219,11 @@ sub find_next_nonblank_token {
     }
 
     my $next_nonblank_token = $rtokens->[ ++$i ];
-    return ( " ", $i ) unless defined($next_nonblank_token);
+    return ( SPACE, $i ) unless defined($next_nonblank_token);
 
     if ( $next_nonblank_token =~ /^\s*$/ ) {
         $next_nonblank_token = $rtokens->[ ++$i ];
-        return ( " ", $i ) unless defined($next_nonblank_token);
+        return ( SPACE, $i ) unless defined($next_nonblank_token);
     }
     return ( $next_nonblank_token, $i );
 }
@@ -8234,7 +8244,7 @@ sub find_next_noncomment_type {
           find_next_nonblank_token( $i_next, $rtokens, $max_token_index );
     }
 
-    goto RETURN if ( !$next_nonblank_token || $next_nonblank_token eq " " );
+    goto RETURN if ( !$next_nonblank_token || $next_nonblank_token eq SPACE );
 
     # check for possible a digraph
     goto RETURN if ( !defined( $rtokens->[ $i_next + 1 ] ) );
@@ -8357,7 +8367,7 @@ sub find_next_nonblank_token_on_this_line {
         }
     }
     else {
-        $next_nonblank_token = "";
+        $next_nonblank_token = EMPTY_STRING;
     }
     return ( $next_nonblank_token, $i );
 }
@@ -8718,8 +8728,8 @@ sub find_here_doc {
     my ( $expecting, $i, $rtokens, $rtoken_map, $max_token_index ) = @_;
     my $ibeg                 = $i;
     my $found_target         = 0;
-    my $here_doc_target      = '';
-    my $here_quote_character = '';
+    my $here_doc_target      = EMPTY_STRING;
+    my $here_quote_character = EMPTY_STRING;
     my $saw_error            = 0;
     my ( $next_nonblank_token, $i_next_nonblank, $next_token );
     $next_token = $rtokens->[ $i + 1 ];
@@ -8848,7 +8858,7 @@ sub do_quote {
         $quoted_string_2 .= $quoted_string;
         if ( $in_quote == 1 ) {
             if ( $quote_character =~ /[\{\[\<\(]/ ) { $i++; }
-            $quote_character = '';
+            $quote_character = EMPTY_STRING;
         }
         else {
             $quoted_string_2 .= "\n";
@@ -8894,7 +8904,7 @@ sub follow_quoted_string {
       = @_;
     my ( $tok, $end_tok );
     my $i             = $i_beg - 1;
-    my $quoted_string = "";
+    my $quoted_string = EMPTY_STRING;
 
     0 && do {
         print STDOUT
@@ -9117,7 +9127,7 @@ sub make_numbered_line {
     my $numbered_line = sprintf( "%d: ", $lineno );
     $offset -= length($numbered_line);
     $numbered_line .= $str;
-    my $underline = " " x length($numbered_line);
+    my $underline = SPACE x length($numbered_line);
     return ( $offset, $numbered_line, $underline );
 }
 

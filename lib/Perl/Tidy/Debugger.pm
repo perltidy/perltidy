@@ -10,6 +10,9 @@ use warnings;
 use English qw( -no_match_vars );
 our $VERSION = '20220217.04';
 
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
+
 sub new {
 
     my ( $class, $filename, $is_encoded_data ) = @_;
@@ -76,7 +79,7 @@ sub write_debug_entry {
     my $reconstructed_original = "$input_line_number: ";
     my $block_str              = "$input_line_number: ";
 
-    my $pattern   = "";
+    my $pattern   = EMPTY_STRING;
     my @next_char = ( '"', '"' );
     my $i_next    = 0;
     unless ( $self->{_debug_file_opened} ) { $self->really_open_debug_file() }
@@ -99,7 +102,7 @@ sub write_debug_entry {
         # be sure there are no blank tokens (shouldn't happen)
         # This can only happen if a programming error has been made
         # because all valid tokens are non-blank
-        if ( $type_str eq ' ' ) {
+        if ( $type_str eq SPACE ) {
             $fh->print("BLANK TOKEN on the next line\n");
             $type_str = $next_char[$i_next];
             $i_next   = 1 - $i_next;

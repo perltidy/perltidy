@@ -9,7 +9,9 @@ use strict;
 use warnings;
 our $VERSION = '20220217.04';
 use English qw( -no_match_vars );
+
 use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
 
 sub AUTOLOAD {
 
@@ -38,6 +40,7 @@ sub DESTROY {
 }
 
 use constant DEFAULT_LOGFILE_GAP => 50;
+
 sub new {
 
     my ( $class, @args ) = @_;
@@ -157,6 +160,7 @@ sub we_are_at_the_last_line {
 
 # record some stuff in case we go down in flames
 use constant MAX_PRINTED_CHARS => 35;
+
 sub black_box {
     my ( $self, $line_of_tokens, $output_line_number ) = @_;
     my $input_line        = $line_of_tokens->{_line_text};
@@ -245,12 +249,12 @@ sub make_line_information_string {
         # for longer scripts it doesn't really matter
         my $extra_space = EMPTY_STRING;
         $extra_space .=
-            ( $input_line_number < 10 )  ? "  "
-          : ( $input_line_number < 100 ) ? " "
+            ( $input_line_number < 10 )  ? SPACE x 2
+          : ( $input_line_number < 100 ) ? SPACE
           :                                EMPTY_STRING;
         $extra_space .=
-            ( $output_line_number < 10 )  ? "  "
-          : ( $output_line_number < 100 ) ? " "
+            ( $output_line_number < 10 )  ? SPACE x 2
+          : ( $output_line_number < 100 ) ? SPACE
           :                                 EMPTY_STRING;
 
         # there are 2 possible nesting strings:
@@ -267,7 +271,7 @@ sub make_line_information_string {
 
         if ( length($nesting_string_new) <= 8 ) {
             $nesting_string =
-              $nesting_string_new . " " x ( 8 - length($nesting_string_new) );
+              $nesting_string_new . SPACE x ( 8 - length($nesting_string_new) );
         }
         $line_information_string =
 "L$input_line_number:$output_line_number$extra_space i$guessed_indentation_level:$structural_indentation_level $ci_level $bk $nesting_string";
@@ -415,7 +419,7 @@ sub warning {
 
                 # add prefix 'filename: ' to message lines
                 if ($filename_stamp) {
-                    my $pre_string = $filename_stamp . " ";
+                    my $pre_string = $filename_stamp . SPACE;
                     chomp $msg;
                     $msg =~ s/\n/\n$pre_string/g;
                     $msg = $pre_string . $msg . "\n";

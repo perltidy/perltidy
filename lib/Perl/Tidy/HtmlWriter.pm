@@ -12,6 +12,9 @@ our $VERSION = '20220217.04';
 use English qw( -no_match_vars );
 use File::Basename;
 
+use constant EMPTY_STRING => q{};
+use constant SPACE        => q{ };
+
 # class variables
 use vars qw{
   %html_color
@@ -169,7 +172,7 @@ PRE_END
         ( $title, my $path ) = fileparse($input_file);
     }
     my $toc_item_count = 0;
-    my $in_toc_package = "";
+    my $in_toc_package = EMPTY_STRING;
     my $last_level     = 0;
     return bless {
         _input_file        => $input_file,          # name of input file
@@ -225,7 +228,7 @@ sub add_toc_item {
     my $end_package_list = sub {
         if ( ${$rin_toc_package} ) {
             $html_toc_fh->print("</ul>\n</li>\n");
-            ${$rin_toc_package} = "";
+            ${$rin_toc_package} = EMPTY_STRING;
         }
         return;
     };
@@ -623,7 +626,7 @@ EOM
         my $long_name = $short_to_long_names{$short_name};
 
         my $abbrev = '.' . $short_name;
-        if ( length($short_name) == 1 ) { $abbrev .= ' ' }    # for alignment
+        if ( length($short_name) == 1 ) { $abbrev .= SPACE }    # for alignment
         my $color = $html_color{$short_name};
         if ( !defined($color) ) { $color = $text_color }
         $fh->print("$abbrev \{ color: $color;");
@@ -773,7 +776,7 @@ sub pod_to_html {
     # the necessary perltidy html sections
     my ( $saw_body, $saw_index, $saw_body_end );
 
-    my $timestamp = "";
+    my $timestamp = EMPTY_STRING;
     if ( $rOpts->{'timestamp'} ) {
         my $date = localtime;
         $timestamp = "on $date";
@@ -848,7 +851,7 @@ sub pod_to_html {
                 my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
                 $html_print->(@toc_st);
             }
-            $in_toc   = "";
+            $in_toc   = EMPTY_STRING;
             $no_print = 0;
         }
 
@@ -873,7 +876,7 @@ sub pod_to_html {
                     my @toc_st = map { $_ . "\n" } split /\n/, $toc_string;
                     $html_print->(@toc_st);
                 }
-                $in_toc   = "";
+                $in_toc   = EMPTY_STRING;
                 $ul_level = 0;
                 $no_print = 0;
             }
@@ -982,7 +985,7 @@ sub make_frame {
     $title = escape_html($title);
 
     # FUTURE input parameter:
-    my $top_basename = "";
+    my $top_basename = EMPTY_STRING;
 
     # We need to produce 3 html files:
     # 1. - the table of contents
@@ -1030,7 +1033,7 @@ EOM
 
     my $first_anchor =
       change_anchor_names( $rtoc, $src_basename, "$src_frame_name" );
-    $fh->print( join "", @{$rtoc} );
+    $fh->print( join EMPTY_STRING, @{$rtoc} );
 
     $fh->print(<<EOM);
 </body>
@@ -1196,7 +1199,7 @@ ENDCSS
     # --------------------------------------------------
     my $input_file = $self->{_input_file};
     my $title      = escape_html($input_file);
-    my $timestamp  = "";
+    my $timestamp  = EMPTY_STRING;
     if ( $rOpts->{'timestamp'} ) {
         my $date = localtime;
         $timestamp = "on $date";
@@ -1316,7 +1319,7 @@ sub markup_tokens {
 
             # but don't include sub declarations in the toc;
             # these wlll have leading token types 'i;'
-            my $signature = join "", @{$rtoken_type};
+            my $signature = join EMPTY_STRING, @{$rtoken_type};
             unless ( $signature =~ /^i;/ ) {
                 my $subname = $token;
                 $subname =~ s/[\s\(].*$//; # remove any attributes and prototype
@@ -1421,11 +1424,11 @@ sub write_line {
             $html_line = $1;
         }
         else {
-            $html_line = "";
+            $html_line = EMPTY_STRING;
         }
         my ($rcolored_tokens) =
           $self->markup_tokens( $rtokens, $rtoken_type, $rlevels );
-        $html_line .= join '', @{$rcolored_tokens};
+        $html_line .= join EMPTY_STRING, @{$rcolored_tokens};
     }
 
     # markup line of non-code..
@@ -1480,7 +1483,7 @@ EOM
                     # otherwise, just clear the current string and start
                     # over
                     else {
-                        ${$rpre_string} = "";
+                        ${$rpre_string} = EMPTY_STRING;
                         $html_pod_fh->print("\n");
                     }
                 }
@@ -1499,11 +1502,11 @@ EOM
     # add the line number if requested
     if ( $rOpts->{'html-line-numbers'} ) {
         my $extra_space =
-            ( $line_number < 10 )   ? "   "
-          : ( $line_number < 100 )  ? "  "
-          : ( $line_number < 1000 ) ? " "
-          :                           "";
-        $html_line = $extra_space . $line_number . " " . $html_line;
+            ( $line_number < 10 )   ? SPACE x 3
+          : ( $line_number < 100 )  ? SPACE x 2
+          : ( $line_number < 1000 ) ? SPACE
+          :                           EMPTY_STRING;
+        $html_line = $extra_space . $line_number . SPACE . $html_line;
     }
 
     # write the line
