@@ -2449,7 +2449,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         return;
-    }
+    } ## end sub do_QUOTATION_MARK
 
     sub do_APOSTROPHE {
 
@@ -2460,7 +2460,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         return;
-    }
+    } ## end sub do_APOSTROPHE
 
     sub do_BACKTICK {
 
@@ -2471,7 +2471,7 @@ EOM
         $type                    = 'Q';
         $allowed_quote_modifiers = EMPTY_STRING;
         return;
-    }
+    } ## end sub do_BACKTICK
 
     sub do_SLASH {
 
@@ -3287,6 +3287,28 @@ EOM
           if ( $expecting == TERM );
         return;
     }
+
+    sub do_DIGITS {
+
+        # 'd' = string of digits
+        error_if_expecting_OPERATOR("Number")
+          if ( $expecting == OPERATOR );
+
+        my $number = scan_number_fast();
+        if ( !defined($number) ) {
+
+            # shouldn't happen - we should always get a number
+            if (DEVEL_MODE) {
+                Fault(<<EOM);
+non-number beginning with digit--program bug
+EOM
+            }
+            warning(
+                "Unexpected error condition: non-number beginning with digit\n"
+            );
+            report_definite_bug();
+        }
+    } ## end sub do_DIGITS
 
     # ------------------------------------------------------------
     # begin hash of code for handling most token types
@@ -4698,23 +4720,7 @@ EOM
             elsif ( $pre_type eq 'd' ) {
                 $expecting =
                   operator_expected( [ $prev_type, $tok, $next_type ] );
-                error_if_expecting_OPERATOR("Number")
-                  if ( $expecting == OPERATOR );
-
-                my $number = scan_number_fast();
-                if ( !defined($number) ) {
-
-                    # shouldn't happen - we should always get a number
-                    if (DEVEL_MODE) {
-                        Fault(<<EOM);
-non-number beginning with digit--program bug
-EOM
-                    }
-                    warning(
-"Unexpected error condition: non-number beginning with digit\n"
-                    );
-                    report_definite_bug();
-                }
+                do_DIGITS();
             }
 
             ###############################################################
