@@ -1,10 +1,12 @@
 severity = 1
 
-# a helpful link: 
+# Some useful links:
+# https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
 # https://perlmaven.com/perl-critic
+
 verbose = %f: [%p] %m at line %l, column %c.\n
 
-# Example for single policy on single module:
+# Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
 #--------------------------------------------------------------
@@ -52,9 +54,9 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # AUTOLOAD is only used in perltidy to help find and debug programming errors
 [-ClassHierarchies::ProhibitAutoloading]
 
-# These are good policies but can be hard to avoid without a significant loss
-# of processing efficiency.  So they are excluded here but It is worth running
-# them as single policy now and then to see if improvements can be made.
+# These are very good policies but can be very hard to avoid without a
+# significant loss of efficiency.  So they are excluded here but they should be
+# run as --single-policy from time to time to see if improvements can be made.
 [-Subroutines::ProhibitExcessComplexity]
 [-ControlStructures::ProhibitDeepNests]
 
@@ -84,10 +86,8 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # The Tokenizer.pm needs package variables
 [-Variables::ProhibitPackageVars]
 
-# this is not always useful
-[-RegularExpressions::RequireExtendedFormatting]
-
 # Do not change any debugged regular expressions without good reason
+[-RegularExpressions::RequireExtendedFormatting]
 [-RegularExpressions::ProhibitComplexRegexes]
 [-RegularExpressions::ProhibitUnusedCapture]
 [-RegularExpressions::ProhibitCaptureWithoutTest]
