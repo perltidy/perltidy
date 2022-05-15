@@ -138,7 +138,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub streamhandle {
 
@@ -269,7 +269,7 @@ EOM
     }
 
     return $fh, ( $ref or $filename );
-}
+} ## end sub streamhandle
 
 sub find_input_line_ending {
 
@@ -310,7 +310,7 @@ sub find_input_line_ending {
     else { }
 
     return $ending;
-}
+} ## end sub find_input_line_ending
 
 {    ## begin closure for sub catfile
 
@@ -348,7 +348,7 @@ sub find_input_line_ending {
         ( $test_name, $test_path ) = fileparse($test_file);
         return $test_file if ( $test_name eq $name );
         return;
-    }
+    } ## end sub catfile
 } ## end closure for sub catfile
 
 # Here is a map of the flow of data from the input source to the output
@@ -418,7 +418,7 @@ sub is_char_mode {
 
     return 1 if ( utf8::is_utf8($string) );
     return;
-}
+} ## end sub is_char_mode
 
 sub perltidy {
 
@@ -2081,7 +2081,7 @@ EOM
   ERROR_EXIT:
     return wantarray ? ( 1, $rstatus ) : 1;
 
-} ## end of main program perltidy
+} ## end sub perltidy
 } ## end of closure for sub perltidy
 
 sub line_diff {
@@ -2113,7 +2113,7 @@ sub line_diff {
         }
     }
     return wantarray ? ( $diff_marker, $pos1 ) : $diff_marker;
-}
+} ## end sub line_diff
 
 sub compare_string_buffers {
 
@@ -2224,7 +2224,7 @@ Text in lines of file match but checksums differ. Perhaps line endings differ.
 EOM
     }
     return $msg;
-}
+} ## end sub compare_string_buffers
 
 sub get_stream_as_named_file {
 
@@ -2264,7 +2264,7 @@ sub get_stream_as_named_file {
         }
     }
     return ( $fname, $is_tmpfile );
-}
+} ## end sub get_stream_as_named_file
 
 sub fileglob_to_re {
 
@@ -2291,7 +2291,7 @@ sub make_extension {
         $extension = $dot . $extension;
     }
     return $extension;
-}
+} ## end sub make_extension
 
 sub write_logfile_header {
     my (
@@ -2332,7 +2332,7 @@ sub write_logfile_header {
     $logger_object->write_logfile_entry(
         "To find error messages search for 'WARNING' with your editor\n");
     return;
-}
+} ## end sub write_logfile_header
 
 sub generate_options {
 
@@ -2649,10 +2649,11 @@ sub generate_options {
     $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
     $add_option->( 'break-after-labels',                      'bal',   '=i' );
 
-    ## This was an experiment mentioned in git #78. It works, but it does not
-    ## look very useful.  Instead, I expanded the functionality of the
-    ## --keep-old-breakpoint-xxx flags.
-    ##$add_option->( 'break-open-paren-list',                   'bopl',  '=s' );
+    # This was an experiment mentioned in git #78, originally named -bopl. I
+    # expanded it to also open logical blocks, based on git discussion #100,
+    # and renamed it -bocp. It works, but will remain commented out due to
+    # apparent of interest.
+    # $add_option->( 'break-open-compact-parens', 'bocp', '=s' );
 
     ########################################
     $category = 6;    # Controlling list formatting
@@ -3165,7 +3166,7 @@ q(wbb=% + - * / x != == >= <= =~ !~ < > | & = **= += *= &= <<= &&= -= /= |= >>= 
         \%option_category, \%option_range
     );
 
-} ## end of generate_options
+} ## end sub generate_options
 
 # Memoize process_command_line. Given same @ARGV passed in, return same
 # values and same @ARGV back.
@@ -3200,7 +3201,7 @@ sub process_command_line {
     else {
         return _process_command_line(@q);
     }
-}
+} ## end sub process_command_line
 
 # (note the underscore here)
 sub _process_command_line {
@@ -3464,7 +3465,7 @@ EOM
 
     return ( \%Opts, $config_file, \@raw_options, $roption_string,
         $rexpansion, $roption_category, $roption_range );
-} ## end of _process_command_line
+} ## end sub _process_command_line
 
 sub make_grep_alias_string {
     my ($rOpts) = @_;
@@ -3524,7 +3525,7 @@ sub make_grep_alias_string {
     my $joined_words = join SPACE, @filtered_word_list;
     $rOpts->{'grep-alias-list'} = $joined_words;
     return;
-}
+} ## end sub make_grep_alias_string
 
 sub check_options {
 
@@ -3749,7 +3750,7 @@ EOM
       : $rOpts->{'tabs'} ? $rOpts->{'indent-columns'}
       :                    $rOpts->{'default-tabsize'};
     return $tabsize;
-}
+} ## end sub check_options
 
 sub find_file_upwards {
     my ( $search_dir, $search_file ) = @_;
@@ -3773,7 +3774,7 @@ sub find_file_upwards {
     # This return is for Perl-Critic.
     # We shouldn't get out of the while loop without a return
     return;
-}
+} ## end sub find_file_upwards
 
 sub expand_command_abbreviations {
 
@@ -3880,7 +3881,7 @@ DIE
         } ## end of check for circular references
     } ## end of loop over all passes
     return;
-}
+} ## end sub expand_command_abbreviations
 
 # Debug routine -- this will dump the expansion hash
 sub dump_short_names {
@@ -3897,7 +3898,7 @@ EOM
         print STDOUT "$abbrev --> @list\n";
     }
     return;
-}
+} ## end sub dump_short_names
 
 sub check_vms_filename {
 
@@ -3930,7 +3931,7 @@ sub check_vms_filename {
     # if we don't already have an extension then we just append the extension
     my $separator = ( $base =~ /\.$/ ) ? EMPTY_STRING : "_";
     return ( $path . $base, $separator );
-}
+} ## end sub check_vms_filename
 
 sub Win_OS_Type {
 
@@ -3996,7 +3997,7 @@ EOS
     # Unfortunately the logic used for the various versions isn't so clever..
     # so we have to handle an outside case.
     return ( $os eq "2000" && $major != 5 ) ? "NT4" : $os;
-}
+} ## end sub Win_OS_Type
 
 sub is_unix {
     return
@@ -4015,7 +4016,7 @@ sub look_for_Windows {
     my $Windows_type;
     $Windows_type = Win_OS_Type($rpending_complaint) if $is_Windows;
     return ( $is_Windows, $Windows_type );
-}
+} ## end sub look_for_Windows
 
 sub find_config_file {
 
@@ -4161,7 +4162,7 @@ sub find_config_file {
 
     # Couldn't find a config file
     return;
-}
+} ## end sub find_config_file
 
 sub Win_Config_Locs {
 
@@ -4201,7 +4202,7 @@ sub Win_Config_Locs {
         return;
     }
     return wantarray ? ( $os, $system, $allusers ) : $os;
-}
+} ## end sub Win_Config_Locs
 
 sub dump_config_file {
     my ( $fh, $config_file, $rconfig_file_chatter ) = @_;
@@ -4215,7 +4216,7 @@ sub dump_config_file {
         print STDOUT "# ...no config file found\n";
     }
     return;
-}
+} ## end sub dump_config_file
 
 sub read_config_file {
 
@@ -4317,7 +4318,7 @@ EOM
     }
     eval { $fh->close() };
     return ( \@config_list, $death_message );
-}
+} ## end sub read_config_file
 
 sub strip_comment {
 
@@ -4395,7 +4396,7 @@ EOM
         }
     }
     return ( $outstr, $msg );
-}
+} ## end sub strip_comment
 
 sub parse_args {
 
@@ -4458,7 +4459,7 @@ EOM
         }
     }
     return ( \@body_parts, $msg );
-}
+} ## end sub parse_args
 
 sub dump_long_names {
 
@@ -4481,7 +4482,7 @@ EOM
 
     foreach my $name ( sort @names ) { print STDOUT "$name\n" }
     return;
-}
+} ## end sub dump_long_names
 
 sub dump_defaults {
     my @defaults = @_;
@@ -4533,7 +4534,7 @@ sub readable_options {
         $readable_options .= $prefix . $key . $suffix . "\n";
     }
     return $readable_options;
-}
+} ## end sub readable_options
 
 sub show_version {
     print STDOUT <<"EOM";
@@ -4548,7 +4549,7 @@ Complete documentation for perltidy can be found using 'man perltidy'
 or on the internet at http://perltidy.sourceforge.net.
 EOM
     return;
-}
+} ## end sub show_version
 
 sub usage {
 
@@ -4749,7 +4750,7 @@ or go to the perltidy home page at http://perltidy.sourceforge.net
 EOF
 
     return;
-}
+} ## end sub usage
 
 sub process_this_file {
 
@@ -4766,5 +4767,5 @@ sub process_this_file {
       if $formatter->can('finish_formatting');
 
     return;
-}
+} ## end sub process_this_file
 1;

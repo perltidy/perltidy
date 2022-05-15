@@ -76,7 +76,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
     my $self = shift;
@@ -123,7 +123,7 @@ EOM
     # We shouldn't get here, but this return is to keep Perl-Critic from
     # complaining.
     return;
-}
+} ## end sub Fault
 
 sub Exit {
     my ($msg) = @_;
@@ -154,7 +154,7 @@ my (
     $rOpts_break_at_old_logical_breakpoints,
     $rOpts_break_at_old_semicolon_breakpoints,
     $rOpts_break_at_old_ternary_breakpoints,
-    $rOpts_break_open_paren_list,
+    $rOpts_break_open_compact_parens,
     $rOpts_closing_side_comments,
     $rOpts_closing_side_comment_else_flag,
     $rOpts_closing_side_comment_maximum_text,
@@ -939,7 +939,7 @@ sub new {
 "Attempt to create more than 1 object in $class, which is not a true class yet\n";
     }
     return $self;
-}
+} ## end sub new
 
 ######################################
 # CODE SECTION 2: Some Basic Utilities
@@ -967,7 +967,7 @@ sub check_rLL {
         Fault("$msg ERROR: rLL has num=$num but Klimit='$Klimit'\n");
     }
     return;
-}
+} ## end sub check_rLL
 
 sub check_keys {
     my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
@@ -1001,7 +1001,7 @@ Missing key(s): (@missing_keys)
 EOM
     }
     return;
-}
+} ## end sub check_keys
 
 sub check_token_array {
     my $self = shift;
@@ -1039,7 +1039,7 @@ sub check_token_array {
         }
     }
     return;
-}
+} ## end sub check_token_array
 
 {    ## begin closure check_line_hashes
 
@@ -1085,7 +1085,7 @@ sub check_token_array {
                 "Checkpoint: line number =$iline,  line_type=$line_type", 1 );
         }
         return;
-    }
+    } ## end sub check_line_hashes
 } ## end closure check_line_hashes
 
 {    ## begin closure for logger routines
@@ -1229,7 +1229,7 @@ sub split_words {
     $str =~ s/\s+$//;
     $str =~ s/^\s+//;
     return split( /\s+/, $str );
-}
+} ## end sub split_words
 
 ###########################################
 # CODE SECTION 3: Check and process options
@@ -1759,8 +1759,8 @@ EOM
       $rOpts->{'break-at-old-semicolon-breakpoints'};
     $rOpts_break_at_old_ternary_breakpoints =
       $rOpts->{'break-at-old-ternary-breakpoints'};
-    $rOpts_break_open_paren_list = $rOpts->{'break-open-paren-list'};
-    $rOpts_closing_side_comments = $rOpts->{'closing-side-comments'};
+    $rOpts_break_open_compact_parens = $rOpts->{'break-open-compact-parens'};
+    $rOpts_closing_side_comments     = $rOpts->{'closing-side-comments'};
     $rOpts_closing_side_comment_else_flag =
       $rOpts->{'closing-side-comment-else-flag'};
     $rOpts_closing_side_comment_maximum_text =
@@ -1985,7 +1985,7 @@ EOM
     }
 
     return;
-}
+} ## end sub check_options
 
 use constant ALIGN_GREP_ALIASES => 0;
 
@@ -2055,7 +2055,7 @@ sub initialize_grep_and_friends {
         }
     }
     return;
-}
+} ## end sub initialize_grep_and_friends
 
 sub initialize_weld_nested_exclusion_rules {
     %weld_nested_exclusion_rules = ();
@@ -2174,7 +2174,7 @@ Only the last will be used.
 EOM
     }
     return;
-}
+} ## end sub initialize_weld_nested_exclusion_rules
 
 sub initialize_line_up_parentheses_control_hash {
     my ( $str, $opt_name ) = @_;
@@ -2282,7 +2282,7 @@ EOM
     }
 
     return;
-}
+} ## end sub initialize_line_up_parentheses_control_hash
 
 use constant DEBUG_KB => 0;
 
@@ -2401,7 +2401,7 @@ EOM
 
     return;
 
-}
+} ## end sub initialize_keep_old_breakpoints
 
 sub initialize_whitespace_hashes {
 
@@ -2531,7 +2531,7 @@ sub initialize_whitespace_hashes {
     $binary_ws_rules{'w'}{'{'} = WS_YES;
     return;
 
-} ## end initialize_whitespace_hashes
+} ## end sub initialize_whitespace_hashes
 
 my %is_special_ws_type;
 my %is_wCUG;
@@ -3149,7 +3149,7 @@ EOM
         $fh->print("$key\t$want_left_space{$key}\n");
     }
     return;
-}
+} ## end sub dump_want_left_space
 
 sub dump_want_right_space {
     my $fh = shift;
@@ -3166,7 +3166,7 @@ EOM
         $fh->print("$key\t$want_right_space{$key}\n");
     }
     return;
-}
+} ## end sub dump_want_right_space
 
 {    ## begin closure is_essential_whitespace
 
@@ -3471,7 +3471,7 @@ EOM
 
           ;    # the value of this long logic sequence is the result we want
         return $result;
-    }
+    } ## end sub is_essential_whitespace
 } ## end closure is_essential_whitespace
 
 {    ## begin closure new_secret_operator_whitespace
@@ -4673,8 +4673,8 @@ sub bad_pattern {
             }
         }
         return;
-    }
-}    ## begin closure prepare_cuddled_block_types
+    } ## end sub prepare_cuddled_block_types
+} ## end closure prepare_cuddled_block_types
 
 sub dump_cuddled_block_list {
     my ($fh) = @_;
@@ -4731,7 +4731,7 @@ EOM
 ------------------------------------------------------------------------
 EOM
     return;
-}
+} ## end sub dump_cuddled_block_list
 
 sub make_static_block_comment_pattern {
 
@@ -4761,7 +4761,7 @@ sub make_static_block_comment_pattern {
         $static_block_comment_pattern = $pattern;
     }
     return;
-}
+} ## end sub make_static_block_comment_pattern
 
 sub make_format_skipping_pattern {
     my ( $opt_name, $default ) = @_;
@@ -4778,7 +4778,7 @@ sub make_format_skipping_pattern {
         );
     }
     return $pattern;
-}
+} ## end sub make_format_skipping_pattern
 
 sub make_non_indenting_brace_pattern {
 
@@ -4804,7 +4804,7 @@ sub make_non_indenting_brace_pattern {
         $non_indenting_brace_pattern = $pattern;
     }
     return;
-}
+} ## end sub make_non_indenting_brace_pattern
 
 sub make_closing_side_comment_list_pattern {
 
@@ -4817,7 +4817,7 @@ sub make_closing_side_comment_list_pattern {
           make_block_pattern( '-cscl', $rOpts->{'closing-side-comment-list'} );
     }
     return;
-}
+} ## end sub make_closing_side_comment_list_pattern
 
 sub make_sub_matching_pattern {
 
@@ -4849,7 +4849,7 @@ sub make_sub_matching_pattern {
         $ASUB_PATTERN   =~ s/sub/\($sub_alias_list\)/;
     }
     return;
-}
+} ## end sub make_sub_matching_pattern
 
 sub make_bl_pattern {
 
@@ -4896,7 +4896,7 @@ sub make_bl_pattern {
     $bl_exclusion_pattern =
       make_block_pattern( '-blxl', $bl_exclusion_list_string );
     return;
-}
+} ## end sub make_bl_pattern
 
 sub make_bli_pattern {
 
@@ -4921,7 +4921,7 @@ sub make_bli_pattern {
     $bli_exclusion_pattern =
       make_block_pattern( '-blixl', $bli_exclusion_list_string );
     return;
-}
+} ## end sub make_bli_pattern
 
 sub make_keyword_group_list_pattern {
 
@@ -4950,7 +4950,7 @@ sub make_keyword_group_list_pattern {
           make_block_pattern( '-kgbl', join( SPACE, @comment_list ) );
     }
     return;
-}
+} ## end sub make_keyword_group_list_pattern
 
 sub make_block_brace_vertical_tightness_pattern {
 
@@ -4965,7 +4965,7 @@ sub make_block_brace_vertical_tightness_pattern {
             $rOpts->{'block-brace-vertical-tightness-list'} );
     }
     return;
-}
+} ## end sub make_block_brace_vertical_tightness_pattern
 
 sub make_blank_line_pattern {
 
@@ -4983,7 +4983,7 @@ sub make_blank_line_pattern {
           make_block_pattern( '-blaol', $rOpts->{$key} );
     }
     return;
-}
+} ## end sub make_blank_line_pattern
 
 sub make_block_pattern {
 
@@ -5048,7 +5048,7 @@ sub make_block_pattern {
     }
     $pattern = '^' . $pattern;
     return $pattern;
-}
+} ## end sub make_block_pattern
 
 sub make_static_side_comment_pattern {
 
@@ -5068,7 +5068,7 @@ sub make_static_side_comment_pattern {
         $static_side_comment_pattern = $pattern;
     }
     return;
-}
+} ## end sub make_static_side_comment_pattern
 
 sub make_closing_side_comment_prefix {
 
@@ -5124,7 +5124,7 @@ EOM
     $rOpts->{'closing-side-comment-prefix'} = $csc_prefix;
     $closing_side_comment_prefix_pattern = $csc_prefix_pattern;
     return;
-}
+} ## end sub make_closing_side_comment_prefix
 
 ##################################################
 # CODE SECTION 4: receive lines from the tokenizer
@@ -5149,7 +5149,7 @@ EOM
         %saw_closing_seqno = ();
 
         return;
-    }
+    } ## end sub initialize_write_line
 
     sub check_sequence_numbers {
 
@@ -5247,7 +5247,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub check_sequence_numbers
 
     sub write_line {
 
@@ -5506,7 +5506,7 @@ EOM
 
         push @{$rlines_new}, $line_of_tokens;
         return;
-    }
+    } ## end sub write_line
 } ## end closure write_line
 
 #############################################
@@ -5601,7 +5601,7 @@ EOM
     # A final routine to tie up any loose ends
     $self->wrapup();
     return;
-}
+} ## end sub finish_formatting
 
 sub set_CODE_type {
     my ($self) = @_;
@@ -5907,7 +5907,7 @@ sub set_CODE_type {
     }
 
     return \@ix_side_comments;
-}
+} ## end sub set_CODE_type
 
 sub find_non_indenting_braces {
 
@@ -5962,7 +5962,7 @@ sub find_non_indenting_braces {
         }
     }
     return;
-}
+} ## end sub find_non_indenting_braces
 
 sub delete_side_comments {
     my ( $self, $rix_side_comments ) = @_;
@@ -6069,7 +6069,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub delete_side_comments
 
 sub dump_verbatim {
     my $self   = shift;
@@ -7397,7 +7397,7 @@ EOM
     $self->resync_lines_and_tokens();
 
     return;
-}
+} ## end sub respace_tokens
 
 sub copy_token_as_type {
 
@@ -7436,7 +7436,7 @@ EOM
     $rnew_token[_TOKEN_]         = $token;
     $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
     return \@rnew_token;
-}
+} ## end sub copy_token_as_type
 
 sub Debug_dump_tokens {
 
@@ -7454,7 +7454,7 @@ sub Debug_dump_tokens {
         $K++;
     }
     return;
-}
+} ## end sub Debug_dump_tokens
 
 sub K_next_code {
     my ( $self, $KK, $rLL ) = @_;
@@ -7483,7 +7483,7 @@ sub K_next_code {
         $Knnb++;
     }
     return;
-}
+} ## end sub K_next_code
 
 sub K_next_nonblank {
     my ( $self, $KK, $rLL ) = @_;
@@ -7522,7 +7522,7 @@ sub K_next_nonblank {
         $Knnb++;
     }
     return;
-}
+} ## end sub K_next_nonblank
 
 sub K_previous_code {
 
@@ -7554,7 +7554,7 @@ sub K_previous_code {
         $Kpnb--;
     }
     return;
-}
+} ## end sub K_previous_code
 
 sub K_previous_nonblank {
 
@@ -7590,7 +7590,7 @@ sub K_previous_nonblank {
         $Kpnb--;
     }
     return;
-}
+} ## end sub K_previous_nonblank
 
 sub parent_seqno_by_K {
 
@@ -7641,7 +7641,7 @@ sub parent_seqno_by_K {
     }
     $parent_seqno = SEQ_ROOT unless ( defined($parent_seqno) );
     return $parent_seqno;
-}
+} ## end sub parent_seqno_by_K
 
 sub is_in_block_by_i {
     my ( $self, $i ) = @_;
@@ -7656,7 +7656,7 @@ sub is_in_block_by_i {
     return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
     return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );
     return;
-}
+} ## end sub is_in_block_by_i
 
 sub is_in_list_by_i {
     my ( $self, $i ) = @_;
@@ -7669,7 +7669,7 @@ sub is_in_list_by_i {
         return 1;
     }
     return;
-}
+} ## end sub is_in_list_by_i
 
 sub is_list_by_K {
 
@@ -7869,7 +7869,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub resync_lines_and_tokens
 
 sub keep_old_line_breaks {
 
@@ -7992,7 +7992,7 @@ sub keep_old_line_breaks {
         );
     }
     return;
-}
+} ## end sub keep_old_line_breaks
 
 sub weld_containers {
 
@@ -8109,7 +8109,7 @@ sub weld_containers {
     }
 
     return;
-}
+} ## end sub weld_containers
 
 sub cumulative_length_before_K {
     my ( $self, $KK ) = @_;
@@ -8294,7 +8294,7 @@ sub weld_cuddled_blocks {
         }
     }
     return;
-}
+} ## end sub weld_cuddled_blocks
 
 sub find_nested_pairs {
     my $self = shift;
@@ -8497,7 +8497,7 @@ sub find_nested_pairs {
       sort { $a->[2] <=> $b->[2] } @nested_pairs;
 
     return \@nested_pairs;
-}
+} ## end sub find_nested_pairs
 
 sub match_paren_flag {
 
@@ -8553,7 +8553,7 @@ sub match_paren_flag {
     elsif ( $flag eq 'w' ) { $match = $is_w }
     elsif ( $flag eq 'W' ) { $match = !$is_w }
     return $match;
-}
+} ## end sub match_paren_flag
 
 sub is_excluded_weld {
 
@@ -8568,7 +8568,7 @@ sub is_excluded_weld {
     return 0 unless ( defined($flag) );
     return 1 if $flag eq '*';
     return $self->match_paren_flag( $KK, $flag );
-}
+} ## end sub is_excluded_weld
 
 # hashes to simplify welding logic
 my %type_ok_after_bareword;
@@ -8773,7 +8773,7 @@ sub setup_new_weld_measurements {
         }
     }
     return ( $new_weld_ok, $maximum_text_length, $starting_lentot, $msg );
-}
+} ## end sub setup_new_weld_measurements
 
 sub excess_line_length_for_Krange {
     my ( $self, $Kfirst, $Klast ) = @_;
@@ -8812,7 +8812,7 @@ sub excess_line_length_for_Krange {
       && print
 "Kfirst=$Kfirst, Klast=$Klast, Kend=$Kend, level=$level, ci=$ci_level, max_text_length=$max_text_length, length=$length\n";
     return ($excess_length);
-}
+} ## end sub excess_line_length_for_Krange
 
 sub weld_nested_containers {
     my ($self) = @_;
@@ -9467,7 +9467,7 @@ EOM
     }
 
     return;
-}
+} ## end sub weld_nested_containers
 
 sub weld_nested_quotes {
 
@@ -9711,7 +9711,7 @@ sub weld_nested_quotes {
         }
     }
     return;
-}
+} ## end sub weld_nested_quotes
 
 sub is_welded_at_seqno {
 
@@ -9725,7 +9725,7 @@ sub is_welded_at_seqno {
     return unless defined($KK_o);
     return defined( $self->[_rK_weld_left_]->{$KK_o} )
       || defined( $self->[_rK_weld_right_]->{$KK_o} );
-}
+} ## end sub is_welded_at_seqno
 
 sub mark_short_nested_blocks {
 
@@ -9872,7 +9872,7 @@ sub mark_short_nested_blocks {
 
     }
     return;
-}
+} ## end sub mark_short_nested_blocks
 
 sub adjust_indentation_levels {
 
@@ -9921,7 +9921,7 @@ sub adjust_indentation_levels {
     $self->clip_adjusted_levels();
 
     return;
-}
+} ## end sub adjust_indentation_levels
 
 sub clip_adjusted_levels {
 
@@ -9932,7 +9932,7 @@ sub clip_adjusted_levels {
     return unless defined($radjusted_levels) && @{$radjusted_levels};
     foreach ( @{$radjusted_levels} ) { $_ = 0 if ( $_ < 0 ) }
     return;
-}
+} ## end sub clip_adjusted_levels
 
 sub do_non_indenting_braces {
 
@@ -9989,7 +9989,7 @@ sub do_non_indenting_braces {
         $KK_last = $KK;
     }
     return;
-}
+} ## end sub do_non_indenting_braces
 
 sub whitespace_cycle_adjustment {
 
@@ -10058,7 +10058,7 @@ sub whitespace_cycle_adjustment {
         }
     }
     return;
-}
+} ## end sub whitespace_cycle_adjustment
 
 use constant DEBUG_BBX => 0;
 
@@ -10441,7 +10441,7 @@ sub break_before_list_opening_containers {
       $rbreak_before_container_by_seqno;
     $self->[_rwant_reduced_ci_] = $rwant_reduced_ci;
     return;
-}
+} ## end sub break_before_list_opening_containers
 
 use constant DEBUG_XCI => 0;
 
@@ -10637,7 +10637,7 @@ sub extended_ci {
         $seqno_top = $seqno;
     }
     return;
-}
+} ## end sub extended_ci
 
 sub braces_left_setup {
 
@@ -10687,7 +10687,7 @@ sub braces_left_setup {
         }
     }
     return;
-}
+} ## end sub braces_left_setup
 
 sub bli_adjustment {
 
@@ -10720,7 +10720,7 @@ sub bli_adjustment {
         }
     }
     return;
-}
+} ## end sub bli_adjustment
 
 sub find_multiline_qw {
 
@@ -10878,7 +10878,7 @@ EOM
     $self->[_rmultiline_qw_has_extra_level_] = $rmultiline_qw_has_extra_level;
 
     return;
-}
+} ## end sub find_multiline_qw
 
 use constant DEBUG_COLLAPSED_LENGTHS => 0;
 
@@ -11386,7 +11386,7 @@ EOM
     }
 
     return;
-}
+} ## end sub collapsed_lengths
 
 sub is_excluded_lp {
 
@@ -11483,7 +11483,7 @@ sub is_excluded_lp {
         }
     }
     return $match_flag2;
-}
+} ## end sub is_excluded_lp
 
 sub set_excluded_lp_containers {
 
@@ -11510,7 +11510,7 @@ sub set_excluded_lp_containers {
         }
     }
     return;
-}
+} ## end sub set_excluded_lp_containers
 
 ######################################
 # CODE SECTION 6: Process line-by-line
@@ -12363,7 +12363,7 @@ EOM
         $forced_breakpoint_undo_count = 0;
 
         return;
-    }
+    } ## end sub initialize_batch_variables
 
     sub leading_spaces_to_go {
 
@@ -12374,7 +12374,7 @@ EOM
         return 0 if ( $ii < 0 );
         my $indentation = $leading_spaces_to_go[$ii];
         return ref($indentation) ? $indentation->get_spaces() : $indentation;
-    }
+    } ## end sub leading_spaces_to_go
 
     sub create_one_line_block {
         ( $index_start_one_line_block, $semicolons_before_block_self_destruct )
@@ -12602,7 +12602,7 @@ EOM
 "STORE: from $a $c: storing token $token type $type lev=$level at $max_index_to_go\n";
         };
         return;
-    }
+    } ## end sub store_token_to_go
 
     sub flush_batch_of_CODE {
 
@@ -12649,7 +12649,7 @@ EOM
         }
 
         return;
-    }
+    } ## end sub flush_batch_of_CODE
 
     sub end_batch {
 
@@ -12683,7 +12683,7 @@ EOM
 
         $self->flush_batch_of_CODE();
         return;
-    }
+    } ## end sub end_batch
 
     sub flush_vertical_aligner {
         my ($self) = @_;
@@ -12713,7 +12713,7 @@ EOM
 
         $self->flush_vertical_aligner();
         return;
-    }
+    } ## end sub flush
 
     sub process_line_of_CODE {
 
@@ -13707,7 +13707,7 @@ sub tight_paren_follows {
 
     # OK to keep the paren tight
     return 1;
-}
+} ## end sub tight_paren_follows
 
 my %is_brace_semicolon_colon;
 
@@ -14050,7 +14050,7 @@ sub starting_one_line_block {
         create_one_line_block( $i_start, 1 );
     }
     return 0;
-}
+} ## end sub starting_one_line_block
 
 sub unstore_token_to_go {
 
@@ -14063,7 +14063,7 @@ sub unstore_token_to_go {
         $max_index_to_go = UNDEFINED_INDEX;
     }
     return;
-}
+} ## end sub unstore_token_to_go
 
 sub compare_indentation_levels {
 
@@ -14143,7 +14143,7 @@ sub compare_indentation_levels {
         }
     }
     return;
-}
+} ## end sub compare_indentation_levels
 
 ###################################################
 # CODE SECTION 8: Utilities for setting breakpoints
@@ -14256,7 +14256,7 @@ EOM
         };
 
         return $i_nonblank;
-    }
+    } ## end sub set_forced_breakpoint
 
     sub set_forced_breakpoint_AFTER {
         my ( $self, $i ) = @_;
@@ -14322,7 +14322,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub set_forced_breakpoint_AFTER
 
     sub clear_breakpoint_undo_stack {
         my ($self) = @_;
@@ -14378,7 +14378,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub undo_forced_breakpoint_stack
 } ## end closure set_forced_breakpoint
 
 {    ## begin closure set_closing_breakpoint
@@ -14421,7 +14421,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub set_closing_breakpoint
 } ## end closure set_closing_breakpoint
 
 #########################################
@@ -14520,7 +14520,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub check_grind_input
 
     sub grind_batch_of_CODE {
 
@@ -15075,7 +15075,7 @@ EOM
         }
 
         return;
-    }
+    } ## end sub grind_batch_of_CODE
 
     sub save_opening_indentation {
 
@@ -15122,7 +15122,7 @@ EOM
             ];
         }
         return;
-    }
+    } ## end sub save_opening_indentation
 
     sub get_saved_opening_indentation {
         my ($seqno) = @_;
@@ -15140,7 +15140,7 @@ EOM
         # (example is badfile.t)
 
         return ( $indent, $offset, $is_leading, $exists );
-    }
+    } ## end sub get_saved_opening_indentation
 } ## end closure grind_batch_of_CODE
 
 sub lookup_opening_indentation {
@@ -15207,7 +15207,7 @@ EOM
     my $offset     = token_sequence_length( $ibeg, $i_opening ) - 1;
     my $is_leading = ( $ibeg == $i_opening );
     return ( $rindentation_list->[ $nline + 1 ], $offset, $is_leading );
-}
+} ## end sub lookup_opening_indentation
 
 sub terminal_type_i {
 
@@ -15253,7 +15253,7 @@ sub terminal_type_i {
         $type_i = 'b';
     }
     return wantarray ? ( $type_i, $i ) : $type_i;
-}
+} ## end sub terminal_type_i
 
 sub pad_array_to_go {
 
@@ -15297,7 +15297,7 @@ EOM
         $nesting_depth_to_go[ $max_index_to_go + 1 ] += 1;
     }
     return;
-}
+} ## end sub pad_array_to_go
 
 sub break_all_chain_tokens {
 
@@ -15429,7 +15429,7 @@ sub break_all_chain_tokens {
         $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
     }
     return;
-}
+} ## end sub break_all_chain_tokens
 
 sub insert_additional_breaks {
 
@@ -15476,7 +15476,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub insert_additional_breaks
 
 {    ## begin closure in_same_container_i
     my $ris_break_token;
@@ -15556,7 +15556,7 @@ EOM
             return if ( $rbreak->{$tok_i} );
         }
         return 1;
-    }
+    } ## end sub in_same_container_i
 } ## end closure in_same_container_i
 
 sub break_equals {
@@ -15668,7 +15668,7 @@ sub break_equals {
         $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
     }
     return;
-}
+} ## end sub break_equals
 
 {    ## begin closure recombine_breakpoints
 
@@ -15715,7 +15715,7 @@ sub break_equals {
         }
         print STDERR "----\n";
         return;
-    }
+    } ## end sub Debug_dump_breakpoints
 
     sub delete_one_line_semicolons {
 
@@ -15786,7 +15786,7 @@ sub break_equals {
             }
         }
         return;
-    }
+    } ## end sub delete_one_line_semicolons
 
     use constant DEBUG_RECOMBINE => 0;
 
@@ -16975,7 +16975,7 @@ sub break_equals {
 "exiting recombine with $nmax_last lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
         }
         return;
-    }
+    } ## end sub recombine_breakpoints
 } ## end closure recombine_breakpoints
 
 sub insert_final_ternary_breaks {
@@ -17045,7 +17045,7 @@ sub insert_final_ternary_breaks {
         }
     }
     return;
-}
+} ## end sub insert_final_ternary_breaks
 
 sub insert_breaks_before_list_opening_containers {
 
@@ -17120,7 +17120,7 @@ sub insert_breaks_before_list_opening_containers {
         $self->insert_additional_breaks( \@insert_list, $ri_left, $ri_right );
     }
     return;
-}
+} ## end sub insert_breaks_before_list_opening_containers
 
 sub note_added_semicolon {
     my ( $self, $line_number ) = @_;
@@ -17131,7 +17131,7 @@ sub note_added_semicolon {
     $self->[_added_semicolon_count_]++;
     write_logfile_entry("Added ';' here\n");
     return;
-}
+} ## end sub note_added_semicolon
 
 sub note_deleted_semicolon {
     my ( $self, $line_number ) = @_;
@@ -17142,7 +17142,7 @@ sub note_deleted_semicolon {
     $self->[_deleted_semicolon_count_]++;
     write_logfile_entry("Deleted unnecessary ';' at line $line_number\n");
     return;
-}
+} ## end sub note_deleted_semicolon
 
 sub note_embedded_tab {
     my ( $self, $line_number ) = @_;
@@ -17156,7 +17156,7 @@ sub note_embedded_tab {
         write_logfile_entry("Embedded tabs in quote or pattern\n");
     }
     return;
-}
+} ## end sub note_embedded_tab
 
 use constant DEBUG_CORRECT_LP => 0;
 
@@ -17496,7 +17496,7 @@ sub correct_lp_indentation {
         } ## end loop over tokens in a line
     } ## end loop over lines
     return $do_not_pad;
-}
+} ## end sub correct_lp_indentation
 
 sub undo_lp_ci {
 
@@ -17546,7 +17546,7 @@ sub undo_lp_ci {
     @leading_spaces_to_go[ @{$ri_first}[ $line_1 .. $n ] ] =
       @reduced_spaces_to_go[ @{$ri_first}[ $line_1 .. $n ] ];
     return;
-}
+} ## end sub undo_lp_ci
 
 ###############################################
 # CODE SECTION 10: Code to break long statments
@@ -18248,7 +18248,7 @@ sub break_long_lines {
         }
     }
     return ( \@i_first, \@i_last, $rbond_strength_to_go );
-}
+} ## end sub break_long_lines
 
 ###########################################
 # CODE SECTION 11: Code to break long lists
@@ -18362,7 +18362,7 @@ sub break_long_lines {
         $list_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
         return;
-    }
+    } ## end sub initialize_break_lists
 
     # routine to define essential variables when we go 'up' to
     # a new depth
@@ -18407,7 +18407,7 @@ sub break_long_lines {
             }
         }
         return;
-    }
+    } ## end sub check_for_new_minimum_depth
 
     # routine to decide which commas to break at within a container;
     # returns:
@@ -18465,7 +18465,7 @@ sub break_long_lines {
             }
         }
         return ( $bp_count, $do_not_break_apart );
-    }
+    } ## end sub set_comma_breakpoints
 
     # These types are excluded at breakpoints to prevent blinking
     # Switched from excluded to included as part of fix for b1214
@@ -18616,7 +18616,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub do_uncontained_comma_breaks
 
     my %is_logical_container;
     my %quick_filter;
@@ -18669,7 +18669,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub set_logical_breakpoints
 
     sub is_unbreakable_container {
 
@@ -19403,6 +19403,30 @@ EOM
 # broken open to avoid too much density.  Also, since it contains no 'or's, there
 # will be a forced break at its 'and'.
 
+                # Open-up if parens if requested. We do this by pretending we
+                # did not see the opening structure, since in that case parens
+                # always get opened up.
+                if (   $saw_opening_structure
+                    && $rOpts_break_open_compact_parens )
+                {
+
+                    # This parameter is a one-character flag, as follows:
+                    #  '0' matches no parens  -> break open NOT OK
+                    #  '1' matches all parens -> break open OK
+                    #  Other values are same as used by the weld-exclusion-list
+                    my $flag = $rOpts_break_open_compact_parens;
+                    if (   $flag eq '*'
+                        || $flag eq '1' )
+                    {
+                        $saw_opening_structure = 0;
+                    }
+                    else {
+                        my $KK = $K_to_go[$i_opening];
+                        $saw_opening_structure =
+                          !$self->match_paren_flag( $KK, $flag );
+                    }
+                }
+
                 # set some flags telling something about this container..
                 my $is_simple_logical_expression = 0;
                 if (   $item_count_stack[$current_depth] == 0
@@ -19853,7 +19877,7 @@ FIND_START: i=$i_opening_paren tok=$tokens_to_go[$i_opening_paren] => im=$i_open
 EOM
 
     return $i_opening_minus;
-}
+} ## end sub find_token_starting_list
 
 {    ## begin closure set_comma_breakpoints_do
 
@@ -20470,13 +20494,13 @@ EOM
             $two_line_word_wrap_ok = 1;
 
             # but turn off word wrap where requested
-            if ($rOpts_break_open_paren_list) {
+            if ($rOpts_break_open_compact_parens) {
 
                 # This parameter is a one-character flag, as follows:
                 #  '0' matches no parens  -> break open NOT OK -> word wrap OK
                 #  '1' matches all parens -> break open OK -> word wrap NOT OK
                 #  Other values are the same as used by the weld-exclusion-list
-                my $flag = $rOpts_break_open_paren_list;
+                my $flag = $rOpts_break_open_compact_parens;
                 if (   $flag eq '*'
                     || $flag eq '1' )
                 {
@@ -20662,7 +20686,7 @@ EOM
             $j += $number_of_fields;
         }
         return;
-    }
+    } ## end sub set_comma_breakpoints_do
 } ## end closure set_comma_breakpoints_do
 
 sub study_list_complexity {
@@ -20778,7 +20802,7 @@ sub study_list_complexity {
     }
 
     return ( $number_of_fields_best, \@i_ragged_break_list, $identifier_count );
-}
+} ## end sub study_list_complexity
 
 sub get_maximum_fields_wanted {
 
@@ -20840,7 +20864,7 @@ sub get_maximum_fields_wanted {
         }
     }
     return ($number_of_fields_best);
-}
+} ## end sub get_maximum_fields_wanted
 
 sub table_columns_available {
     my $i_first_comma = shift;
@@ -20854,7 +20878,7 @@ sub table_columns_available {
     # available columns is reduced by 1 character.
     $columns -= 1;
     return $columns;
-}
+} ## end sub table_columns_available
 
 sub maximum_number_of_fields {
 
@@ -20868,7 +20892,7 @@ sub maximum_number_of_fields {
         $number_of_fields++;
     }
     return $number_of_fields;
-}
+} ## end sub maximum_number_of_fields
 
 sub compactify_table {
 
@@ -20888,7 +20912,7 @@ sub compactify_table {
         }
     }
     return $number_of_fields;
-}
+} ## end sub compactify_table
 
 sub set_ragged_breakpoints {
 
@@ -20905,7 +20929,7 @@ sub set_ragged_breakpoints {
         }
     }
     return $break_count;
-}
+} ## end sub set_ragged_breakpoints
 
 sub copy_old_breakpoints {
     my ( $self, $i_first_comma, $i_last_comma ) = @_;
@@ -20939,7 +20963,7 @@ sub set_nobreaks {
         };
     }
     return;
-}
+} ## end sub set_nobreaks
 
 ###############################################
 # CODE SECTION 12: Code for setting indentation
@@ -20959,7 +20983,7 @@ sub token_sequence_length {
     }
 
     return $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
-}
+} ## end sub token_sequence_length
 
 sub total_line_length {
 
@@ -20975,7 +20999,7 @@ sub total_line_length {
       $summed_lengths_to_go[ $iend + 1 ] - $summed_lengths_to_go[$ibeg];
 
     return $length;
-}
+} ## end sub total_line_length
 
 sub excess_line_length {
 
@@ -21005,7 +21029,7 @@ sub excess_line_length {
     }
 
     return $excess;
-}
+} ## end sub excess_line_length
 
 sub get_spaces {
 
@@ -21034,7 +21058,7 @@ sub get_available_spaces_to_go {
     # indentation variable.  $indentation is either a constant number of
     # spaces or an object with a get_available_spaces method.
     return ref($item) ? $item->get_available_spaces() : 0;
-}
+} ## end sub get_available_spaces_to_go
 
 {    ## begin closure set_lp_indentation
 
@@ -21092,7 +21116,7 @@ sub get_available_spaces_to_go {
         $rLP->[$max_lp_stack]->[_lp_space_count_]     = 0;
 
         return;
-    }
+    } ## end sub initialize_lp_vars
 
     # hashes for efficient testing
     my %hash_test1;
@@ -21876,7 +21900,7 @@ EOM
           if ( !$rOpts_extended_line_up_parentheses );
 
         return;
-    }
+    } ## end sub set_lp_indentation
 
     sub check_for_long_gnu_style_lines {
 
@@ -21970,7 +21994,7 @@ EOM
             last unless ( $spaces_needed > 0 );
         }
         return;
-    }
+    } ## end sub check_for_long_gnu_style_lines
 
     sub undo_incomplete_lp_indentation {
 
@@ -22018,7 +22042,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub undo_incomplete_lp_indentation
 } ## end closure set_lp_indentation
 
 #----------------------------------------------------------------------
@@ -22087,7 +22111,7 @@ sub set_forced_lp_break {
         }
     }
     return;
-}
+} ## end sub set_forced_lp_break
 
 sub reduce_lp_indentation {
 
@@ -22115,7 +22139,7 @@ sub reduce_lp_indentation {
     }
 
     return $deleted_spaces;
-}
+} ## end sub reduce_lp_indentation
 
 ###########################################################
 # CODE SECTION 13: Preparing batches for vertical alignment
@@ -22162,7 +22186,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub check_convey_batch_input
 
 sub convey_batch_to_vertical_aligner {
 
@@ -22647,7 +22671,7 @@ EOM
         $file_writer_object->write_code_line( $cscw_block_comment . "\n" );
     }
     return;
-}
+} ## end sub convey_batch_to_vertical_aligner
 
 sub check_batch_summed_lengths {
 
@@ -22683,7 +22707,7 @@ EOM
         }
     }
     return;
-}
+} ## end sub check_batch_summed_lengths
 
 {    ## begin closure set_vertical_alignment_markers
     my %is_vertical_alignment_type;
@@ -23235,7 +23259,7 @@ sub get_seqno {
         }
     }
     return ($seqno);
-}
+} ## end sub get_seqno
 
 {
     my %undo_extended_ci;
@@ -23460,7 +23484,7 @@ sub get_seqno {
         }
 
         return;
-    }
+    } ## end sub undo_ci
 }
 
 {    ## begin closure set_logical_padding
@@ -23982,7 +24006,7 @@ sub get_seqno {
             $has_leading_op = $has_leading_op_next;
         } ## end of loop over lines
         return;
-    }
+    } ## end sub set_logical_padding
 } ## end closure set_logical_padding
 
 sub pad_token {
@@ -24018,7 +24042,7 @@ sub pad_token {
         $summed_lengths_to_go[ $i + 1 ] += $pad_spaces;
     }
     return;
-}
+} ## end sub pad_token
 
 {    ## begin closure make_alignment_patterns
 
@@ -24611,7 +24635,7 @@ sub make_paren_name {
         $name = substr( $name, 2 );
     }
     return $name;
-}
+} ## end sub make_paren_name
 
 {    ## begin closure final_indentation_adjustment
 
@@ -25397,7 +25421,7 @@ sub make_paren_name {
         return ( $indentation, $lev, $level_end, $terminal_type,
             $terminal_block_type, $is_semicolon_terminated,
             $is_outdented_line );
-    }
+    } ## end sub final_indentation_adjustment
 } ## end closure final_indentation_adjustment
 
 sub get_opening_indentation {
@@ -25445,7 +25469,7 @@ sub get_opening_indentation {
           get_saved_opening_indentation($seqno);
     }
     return ( $indent, $offset, $is_leading, $exists );
-}
+} ## end sub get_opening_indentation
 
 sub set_vertical_tightness_flags {
 
@@ -25886,7 +25910,7 @@ sub set_vertical_tightness_flags {
     };
 
     return ($rvertical_tightness_flags);
-}
+} ## end sub set_vertical_tightness_flags
 
 ##########################################################
 # CODE SECTION 14: Code for creating closing side comments
@@ -25920,7 +25944,7 @@ sub set_vertical_tightness_flags {
         $accumulating_text_for_block  = EMPTY_STRING;
         reset_block_text_accumulator();
         return;
-    }
+    } ## end sub initialize_csc_vars
 
     sub reset_block_text_accumulator {
 
@@ -25939,7 +25963,7 @@ sub set_vertical_tightness_flags {
         $leading_block_text_line_number     = 0;
         $leading_block_text_line_length     = 0;
         return;
-    }
+    } ## end sub reset_block_text_accumulator
 
     sub set_block_text_accumulator {
         my ( $self, $i ) = @_;
@@ -25960,7 +25984,7 @@ sub set_vertical_tightness_flags {
           length( $rOpts->{'closing-side-comment-prefix'} ) +
           $leading_block_text_level * $rOpts_indent_columns + 3;
         return;
-    }
+    } ## end sub set_block_text_accumulator
 
     sub accumulate_block_text {
         my ( $self, $i ) = @_;
@@ -26036,7 +26060,7 @@ sub set_vertical_tightness_flags {
             }
         }
         return;
-    }
+    } ## end sub accumulate_block_text
 
     sub accumulate_csc_text {
 
@@ -26204,7 +26228,7 @@ sub set_vertical_tightness_flags {
 
         return ( $terminal_type, $i_terminal, $i_block_leading_text,
             $block_leading_text, $block_line_count, $block_label );
-    }
+    } ## end sub accumulate_csc_text
 
     sub make_else_csc_text {
 
@@ -26278,7 +26302,7 @@ sub set_vertical_tightness_flags {
             $csc_text = $saved_text;
         }
         return $csc_text;
-    }
+    } ## end sub make_else_csc_text
 } ## end closure accumulate_csc_text
 
 {    ## begin closure balance_csc_text
@@ -26338,7 +26362,7 @@ sub set_vertical_tightness_flags {
 
         # return the balanced string
         return $csc;
-    }
+    } ## end sub balance_csc_text
 } ## end closure balance_csc_text
 
 sub add_closing_side_comment {
@@ -26559,7 +26583,7 @@ sub add_closing_side_comment {
         }
     }
     return ( $closing_side_comment, $cscw_block_comment );
-}
+} ## end sub add_closing_side_comment
 
 ############################
 # CODE SECTION 15: Summarize
@@ -26712,7 +26736,7 @@ sub wrapup {
       || $rOpts->{'indent-only'};
 
     return;
-}
+} ## end sub wrapup
 
 } ## end package Perl::Tidy::Formatter
 1;
