@@ -16,7 +16,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # There is a localization in Tokenizer.pm that is essential
 [-Variables::ProhibitLocalVars] 
 
-# immediate initialization of locals is not appropriate where used
+# Immediate initialization of locals is not appropriate where used
 # in the Tokenizer.pm module
 [-Variables::RequireInitializationForLocalVars] 
 
@@ -26,37 +26,39 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
 
-# print and close homonyms are appropriate where they are used.
+# 'print' and 'close' homonyms are appropriate where they are used.
 [-Subroutines::ProhibitBuiltinHomonyms]
 
 # Nested subs are needed for error handling in Tidy.pm. 
 [-Subroutines::ProhibitNestedSubs]
 
-# In critical routines this can significantly reduce processing speed
+# In critical routines this can significantly reduce processing speed.
 [-Subroutines::RequireArgUnpacking]
 
-# Perl::Tidy uses constants for efficient and robust coding of array indexes
-# and debug code.
+# Disagree. The advantages of 'use constant' significantly outweigh the
+# disadvantages.  Perl::Tidy uses constants for efficient and robust coding of
+# array indexes and debug code.
 [-ValuesAndExpressions::ProhibitConstantPragma]
 
-# Adding quotes on here doc terminators causes needless "line noise" in the
-# source code.  My editor uses color to make it clear if interpolation is in
-# effect.
+# Disagree: adding quotes on here doc terminators causes needless
+# "line noise" in the source code.  Almost always the default works.  My editor
+# uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't know ARGV actually is localized
+# Perlcritic doesn't know ARGV actually is localized.
 [-Variables::RequireLocalizedPunctuationVars]
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=3:
 #--------------------------------------------------------------
 
-# AUTOLOAD is only used in perltidy to help find and debug programming errors
+# AUTOLOAD is only used in perltidy to help find and debug programming errors.
 [-ClassHierarchies::ProhibitAutoloading]
 
-# These are very good policies but can be very hard to avoid without a
-# significant loss of efficiency.  So they are excluded here but they should be
-# run as --single-policy from time to time to see if improvements can be made.
+# TBD: These are both good policies but they can be very hard to
+# avoid without a significant loss of efficiency.  So they are excluded here
+# but they should be run as --single-policy from time to time to see if
+# improvements can be made.
 [-Subroutines::ProhibitExcessComplexity]
 [-ControlStructures::ProhibitDeepNests]
 
@@ -65,7 +67,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # any benefit in reduced run time.
 [-ControlStructures::ProhibitCascadingIfElse]
 
-# Sometimes an 'unless' is clearer than an 'if'
+# Agree in general but sometimes an 'unless' is just clearer than an 'if'
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
 
 # PerlCritic doesn't seem to recognize when $@ is checked
@@ -79,8 +81,8 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # These are okay where used
 [-NamingConventions::ProhibitAmbiguousNames]
 
-# I find the lvalue substr more clear where it is used rather
-# than add another arg to substr.
+# I find that using lvalue substr much clearer than adding another arg to
+# substr.  So skip this.
 [-BuiltinFunctions::ProhibitLvalueSubstr]
 
 # The Tokenizer.pm needs package variables
@@ -96,15 +98,15 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Following is a list of policies to be skipped for severity=2:
 #--------------------------------------------------------------
 
-# Following this policy caused a parsing error in Perl version 5.14 at
-# file test operators.
+# Disagree. In fact, following this policy caused a parsing error in Perl
+# version 5.14 at file test operators.
 [-BuiltinFunctions::ProhibitUselessTopic]
 
 # Do not change any debugged regular expressions without good reason
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]
 
-# This policy is rather silly
+# Disagree. Is '#' really harder to read than q{#}?
 [-ValuesAndExpressions::ProhibitNoisyQuotes]
 
 # In some cases a postfix control shows the logical flow best
@@ -131,8 +133,8 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Following is a list of policies to be skipped for severity=1:
 #--------------------------------------------------------------
 
-# This is generally a good policy but occasional capitalization can be quite
-# effective so we have to ignore it:
+# This is a good starting rule but occasional capitalization can be quite
+# effective, so we have to ignore it as a general rule:
 [-NamingConventions::Capitalization]
 
 # It would be nice if this option were configurable to skip STDERR and STDOUT
@@ -157,21 +159,18 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [-RegularExpressions::RequireBracesForMultiline]
 [-RegularExpressions::ProhibitSingleCharAlternation]
 
-# There is room for disagreement on this policy. Double quotes are easier to
-# read than single quotes and allow a uniform style for quotes.  My editor has
-# color coding which indicates interpolation. Double quotes do not increase
-# processing time by any measurable amount.  If I need to stick a "\n" at the
-# end of a string I don't have to remember to also change the quotes.  So
-# skip this:
+# Disagree. Double quotes are easier to read than single quotes and allow a
+# uniform style for quotes.  My editor has color coding which indicates
+# interpolation. Double quotes do not increase processing time by any
+# measurable amount.  Using them as default simplfies making editing changes.
+# So skip this:
 [-ValuesAndExpressions::ProhibitInterpolationOfLiterals]
 
 # These have been checked and are correct as written 
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
-# Disagree: parens can add clarity and may even be essential
-# i.e. these give different results:
-#  my $len1=length  $flag ? "yes" : "no";
-#  my $len2=length ($flag ? "yes" : "no");
+# Disagree: parens can add clarity and may even be essential.
+# There is little to be gained by omitting them.
 [-CodeLayout::ProhibitParensWithBuiltins] 
 
 # This is OK if we exclude 'print'
