@@ -1383,6 +1383,11 @@ EOM
         }
     }
 
+    # Require -msp > 0 to avoid future parsing problems (issue c147)
+    for ( $rOpts->{'minimum-space-to-comment'} ) {
+        if ( !$_ || $_ <= 0 ) { $_ = 1 }
+    }
+
     # implement outdenting preferences for keywords
     %outdent_keyword = ();
     my @okw = split_words( $rOpts->{'outdent-keyword-list'} );

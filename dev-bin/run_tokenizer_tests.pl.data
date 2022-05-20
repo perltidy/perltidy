@@ -154,6 +154,11 @@ my$seed=$$^$^T;
 s s(..)(.)sss
 ;
 
+==> c147.in <==
+my $str = $$# the process ID
+ . " xxx\n";
+print "str='$str'\n";
+
 ==> git82.in <==
 say
 $
@@ -165,4 +170,3 @@ say { $fh } <<EOM;
 
 b^^
    EOM
-

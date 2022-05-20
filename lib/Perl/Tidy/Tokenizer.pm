@@ -7507,6 +7507,8 @@ sub scan_identifier_do {
             }
             elsif ( $tok eq '#' ) {
 
+                my $is_punct_var = $identifier eq '$$';
+
                 # side comment or identifier?
                 if (
 
@@ -7524,6 +7526,9 @@ sub scan_identifier_do {
                     # May also be '$#array' or POSTDEFREF ->$#
                     && ( $identifier =~ /^[\%\@\$\*]$/ || $identifier =~ /\$$/ )
 
+                    # but a '#' after '$$' is a side comment; see c147
+                    && !$is_punct_var
+
                   )
                 {
                     $identifier .= $tok;    # keep same state, a $ could follow
@@ -7532,6 +7537,7 @@ sub scan_identifier_do {
 
                     # otherwise it is a side comment
                     if    ( $identifier eq '->' )   { }
+                    elsif ($is_punct_var)           { $type = 'i' }
                     elsif ( $id_scan_state eq '$' ) { $type = 't' }
                     else                            { $type = 'i' }
                     $i             = $i_save;
