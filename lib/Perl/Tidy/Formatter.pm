@@ -5312,18 +5312,13 @@ EOM
         # Handle line of code
         else {
 
-            my $rtokens         = $line_of_tokens_old->{_rtokens};
-            my $rtoken_type     = $line_of_tokens_old->{_rtoken_type};
-            my $rblock_type     = $line_of_tokens_old->{_rblock_type};
-            my $rcontainer_type = $line_of_tokens_old->{_rcontainer_type};
-            my $rcontainer_environment =
-              $line_of_tokens_old->{_rcontainer_environment};
-            my $rtype_sequence  = $line_of_tokens_old->{_rtype_sequence};
-            my $rlevels         = $line_of_tokens_old->{_rlevels};
-            my $rslevels        = $line_of_tokens_old->{_rslevels};
-            my $rci_levels      = $line_of_tokens_old->{_rci_levels};
-            my $rnesting_blocks = $line_of_tokens_old->{_rnesting_blocks};
-            my $rnesting_tokens = $line_of_tokens_old->{_rnesting_tokens};
+            my $rtokens        = $line_of_tokens_old->{_rtokens};
+            my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
+            my $rblock_type    = $line_of_tokens_old->{_rblock_type};
+            my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
+            my $rlevels        = $line_of_tokens_old->{_rlevels};
+            my $rslevels       = $line_of_tokens_old->{_rslevels};
+            my $rci_levels     = $line_of_tokens_old->{_rci_levels};
 
             my $jmax = @{$rtokens} - 1;
             if ( $jmax >= 0 ) {
@@ -5474,10 +5469,13 @@ EOM
                 $line_of_tokens->{_ended_in_blank_token} =
                   $rtoken_type->[$jmax] eq 'b';
 
-                $line_of_tokens->{_level_0}          = $rlevels->[0];
-                $line_of_tokens->{_ci_level_0}       = $rci_levels->[0];
-                $line_of_tokens->{_nesting_blocks_0} = $rnesting_blocks->[0];
-                $line_of_tokens->{_nesting_tokens_0} = $rnesting_tokens->[0];
+                $line_of_tokens->{_level_0}    = $rlevels->[0];
+                $line_of_tokens->{_ci_level_0} = $rci_levels->[0];
+                $line_of_tokens->{_nesting_blocks_0} =
+                  $line_of_tokens_old->{_nesting_blocks_0};
+                $line_of_tokens->{_nesting_tokens_0} =
+                  $line_of_tokens_old->{_nesting_tokens_0};
+
             } ## end if ( $jmax >= 0 )
 
             $tee_output ||=
