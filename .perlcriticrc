@@ -55,12 +55,14 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # AUTOLOAD is only used in perltidy to help find and debug programming errors.
 [-ClassHierarchies::ProhibitAutoloading]
 
-# TBD: These are both good policies but they can be very hard to
-# avoid without a significant loss of efficiency.  So they are excluded here
-# but they should be run as --single-policy from time to time to see if
-# improvements can be made.
-[-Subroutines::ProhibitExcessComplexity]
-[-ControlStructures::ProhibitDeepNests]
+# TBD: These are both good policies but they are hard to avoid without losing
+# efficiency or making risky program changes.  They are included here but
+# deactivated with with high max values.  The max values can be reduced to
+# locate code which might be improved.
+[Subroutines::ProhibitExcessComplexity]
+max_mccabe=270
+[ControlStructures::ProhibitDeepNests]
+max_nests=11
 
 # The if-elsif sequences in perltidy have all been profiled and
 # are fine as is. Changing them would complicate the code without
