@@ -11255,7 +11255,8 @@ EOM
                         #------------------------------------------
                         # Some test cases:
                         # c098/x107 x108 x110 x112 x114 x115 x117 x118 x119
-                        if ( $rblock_type_of_seqno->{$seqno} ) {
+                        my $block_type = $rblock_type_of_seqno->{$seqno};
+                        if ($block_type) {
 
                             my $K_c          = $KK;
                             my $block_length = MIN_BLOCK_LEN;
@@ -11281,9 +11282,15 @@ EOM
                             # extremely long.  We do not need to do a precise
                             # check here, because if it breaks then it will
                             # stay broken on later iterations.
-                            elsif ($is_one_line_block
+                            elsif (
+                                   $is_one_line_block
                                 && $block_length <
-                                $maximum_line_length_at_level[$level] )
+                                $maximum_line_length_at_level[$level]
+
+                                # But skip this for sort/map/grep/eval blocks
+                                # because they can reform (b1345)
+                                && !$is_sort_map_grep_eval{$block_type}
+                              )
                             {
                                 $collapsed_len = $block_length;
                             }

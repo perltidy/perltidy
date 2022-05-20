@@ -9857,6 +9857,29 @@ print to_json({success => $success ? 1 : 0});
 --paren-vertical-tightness=2
 --weld-nested-containers
 
+==> b1345.in <==
+# S1
+          $insert = [
+                    map { [
+                              _subnet_as_v6( $_->[ 0 ] ), $_->[ 1 ] ] } @{$insert}
+          ];
+
+# S2
+          $insert = [
+                      map { [ _subnet_as_v6( $_->[ 0 ] ), $_->[ 1 ] ] }
+                      @{$insert}
+          ];
+
+==> b1345.par <==
+--continuation-indentation=5
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=10
+--maximum-line-length=52
+--square-bracket-tightness=0
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
