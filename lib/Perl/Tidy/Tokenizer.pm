@@ -1979,13 +1979,16 @@ EOM
     }
 
     sub scan_identifier {
-        ( $i, $tok, $type, $id_scan_state, $identifier ) =
-          scan_identifier_do( $i, $id_scan_state, $identifier, $rtokens,
+        (
+            $i, $tok, $type, $id_scan_state, $identifier,
+            my $split_pretoken_flag
+          )
+          = scan_complex_identifier( $i, $id_scan_state, $identifier, $rtokens,
             $max_token_index, $expecting, $paren_type[$paren_depth] );
 
         # Check for signal to fix a special variable adjacent to a keyword,
         # such as '$^One$0'.
-        if ( $id_scan_state eq '^' ) {
+        if ($split_pretoken_flag) {
 
             # Try to fix it by splitting the pretoken
             if (   $i > 0
@@ -2007,7 +2010,6 @@ A space may be needed after '$var'.
 EOM
                 resume_logfile();
             }
-            $id_scan_state = EMPTY_STRING;
         }
         return;
     } ## end sub scan_identifier
@@ -2025,7 +2027,7 @@ EOM
         );
     }
 
-    sub scan_identifier_fast {
+    sub scan_simple_identifier {
 
         # This is a wrapper for sub scan_identifier. It does a fast preliminary
         # scan for certain common identifiers:
@@ -2128,7 +2130,7 @@ EOM
                 || $context ne $context_simple )
             {
                 print STDERR <<EOM;
-scan_identifier_fast differs from scan_identifier:
+scan_simple_identifier differs from scan_identifier:
 simple:  i=$i_simple, tok=$tok_simple, type=$fast_scan_type, ident=$identifier_simple, context='$context_simple
 full:    i=$i, tok=$tok, type=$type, ident=$identifier, context='$context state=$id_scan_state
 EOM
@@ -2142,7 +2144,7 @@ EOM
             scan_identifier();
         }
         return;
-    } ## end sub scan_identifier_fast
+    } ## end sub scan_simple_identifier
 
     sub scan_id {
         ( $i, $tok, $type, $id_scan_state ) =
@@ -2307,7 +2309,7 @@ EOM
         # start looking for a scalar
         error_if_expecting_OPERATOR("Scalar")
           if ( $expecting == OPERATOR );
-        scan_identifier_fast();
+        scan_simple_identifier();
 
         if ( $identifier eq '$^W' ) {
             $tokenizer_self->[_saw_perl_dash_w_] = 1;
@@ -2798,7 +2800,7 @@ EOM
             # For example we probably don't want & as sub call here:
             #    Fcntl::S_IRUSR & $mode;
             if ( $expecting == TERM || $next_type ne 'b' ) {
-                scan_identifier_fast();
+                scan_simple_identifier();
             }
         }
         else {
@@ -2896,7 +2898,7 @@ EOM
             }
         }
         if ( $expecting == TERM ) {
-            scan_identifier_fast();
+            scan_simple_identifier();
         }
         else {
 
@@ -3019,7 +3021,7 @@ EOM
         # '@' = sigil for array?
         error_if_expecting_OPERATOR("Array")
           if ( $expecting == OPERATOR );
-        scan_identifier_fast();
+        scan_simple_identifier();
         return;
     }
 
@@ -3033,7 +3035,7 @@ EOM
             }
         }
         if ( $expecting == TERM ) {
-            scan_identifier_fast();
+            scan_simple_identifier();
         }
         return;
     } ## end sub do_PERCENT_SIGN
@@ -3300,7 +3302,7 @@ EOM
         # ' @ % * '.  A disadvantage with doing this is that this would
         # have to be fixed if the perltidy syntax is ever extended to make
         # any of these valid.  So for now this check is not done.
-        scan_identifier_fast();
+        scan_simple_identifier();
         return;
     } ## end sub do_POINTER
 
@@ -4111,6 +4113,135 @@ EOM
 
     } ## end sub do_BAREWORD
 
+    sub do_FOLLOW_QUOTE {
+
+        # Continue following a quote on a new line
+        $type = $quote_type;
+
+        unless ( @{$routput_token_list} ) {    # initialize if continuation line
+            push( @{$routput_token_list}, $i );
+            $routput_token_type->[$i] = $type;
+
+        }
+
+        # Removed to fix b1280.  This is not needed and was causing the
+        # starting type 'qw' to be lost, leading to mis-tokenization of
+        # a trailing block brace in a parenless for stmt 'for .. qw.. {'
+        ##$tok = $quote_character if ($quote_character);
+
+        # scan for the end of the quote or pattern
+        (
+            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
+            $quoted_string_1, $quoted_string_2
+          )
+          = do_quote(
+            $i,               $in_quote,    $quote_character,
+            $quote_pos,       $quote_depth, $quoted_string_1,
+            $quoted_string_2, $rtokens,     $rtoken_map,
+            $max_token_index
+          );
+
+        # all done if we didn't find it
+        if ($in_quote) { return }
+
+        # save pattern and replacement text for rescanning
+        my $qs1 = $quoted_string_1;
+
+        # re-initialize for next search
+        $quote_character = EMPTY_STRING;
+        $quote_pos       = 0;
+        $quote_type      = 'Q';
+        $quoted_string_1 = EMPTY_STRING;
+        $quoted_string_2 = EMPTY_STRING;
+        if ( ++$i > $max_token_index ) { return }
+
+        # look for any modifiers
+        if ($allowed_quote_modifiers) {
+
+            # check for exact quote modifiers
+            if ( $rtokens->[$i] =~ /^[A-Za-z_]/ ) {
+                my $str = $rtokens->[$i];
+                my $saw_modifier_e;
+                while ( $str =~ /\G$allowed_quote_modifiers/gc ) {
+                    my $pos  = pos($str);
+                    my $char = substr( $str, $pos - 1, 1 );
+                    $saw_modifier_e ||= ( $char eq 'e' );
+                }
+
+                # For an 'e' quote modifier we must scan the replacement
+                # text for here-doc targets...
+                # but if the modifier starts a new line we can skip
+                # this because either the here doc will be fully
+                # contained in the replacement text (so we can
+                # ignore it) or Perl will not find it.
+                # See test 'here2.in'.
+                if ( $saw_modifier_e && $i_tok >= 0 ) {
+
+                    my $rht = scan_replacement_text($qs1);
+
+                    # Change type from 'Q' to 'h' for quotes with
+                    # here-doc targets so that the formatter (see sub
+                    # process_line_of_CODE) will not make any line
+                    # breaks after this point.
+                    if ($rht) {
+                        push @{$rhere_target_list}, @{$rht};
+                        $type = 'h';
+                        if ( $i_tok < 0 ) {
+                            my $ilast = $routput_token_list->[-1];
+                            $routput_token_type->[$ilast] = $type;
+                        }
+                    }
+                }
+
+                if ( defined( pos($str) ) ) {
+
+                    # matched
+                    if ( pos($str) == length($str) ) {
+                        if ( ++$i > $max_token_index ) { return }
+                    }
+
+                    # Looks like a joined quote modifier
+                    # and keyword, maybe something like
+                    # s/xxx/yyy/gefor @k=...
+                    # Example is "galgen.pl".  Would have to split
+                    # the word and insert a new token in the
+                    # pre-token list.  This is so rare that I haven't
+                    # done it.  Will just issue a warning citation.
+
+                    # This error might also be triggered if my quote
+                    # modifier characters are incomplete
+                    else {
+                        warning(<<EOM);
+
+Partial match to quote modifier $allowed_quote_modifiers at word: '$str'
+Please put a space between quote modifiers and trailing keywords.
+EOM
+
+                        # print "token $rtokens->[$i]\n";
+                        # my $num = length($str) - pos($str);
+                        # $rtokens->[$i]=substr($rtokens->[$i],pos($str),$num);
+                        # print "continuing with new token $rtokens->[$i]\n";
+
+                        # skipping past this token does least damage
+                        if ( ++$i > $max_token_index ) { return }
+                    }
+                }
+                else {
+
+                    # example file: rokicki4.pl
+                    # This error might also be triggered if my quote
+                    # modifier characters are incomplete
+                    write_logfile_entry(
+                        "Note: found word $str at quote modifier location\n");
+                }
+            }
+
+            # re-initialize
+            $allowed_quote_modifiers = EMPTY_STRING;
+        }
+        return;
+    } ## end sub do_FOLLOW_QUOTE
+
     # ------------------------------------------------------------
     # begin hash of code for handling most token types
     # ------------------------------------------------------------
@@ -4460,136 +4591,13 @@ EOM
         # into tokens
         while ( ++$i <= $max_token_index ) {
 
-            if ($in_quote) {    # continue looking for end of a quote
-                $type = $quote_type;
-
-                unless ( @{$routput_token_list} )
-                {               # initialize if continuation line
-                    push( @{$routput_token_list}, $i );
-                    $routput_token_type->[$i] = $type;
-
-                }
-
-                # Removed to fix b1280.  This is not needed and was causing the
-                # starting type 'qw' to be lost, leading to mis-tokenization of
-                # a trailing block brace in a parenless for stmt 'for .. qw.. {'
-                ##$tok = $quote_character if ($quote_character);
-
-                # scan for the end of the quote or pattern
-                (
-                    $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
-                    $quoted_string_1, $quoted_string_2
-                  )
-                  = do_quote(
-                    $i,               $in_quote,    $quote_character,
-                    $quote_pos,       $quote_depth, $quoted_string_1,
-                    $quoted_string_2, $rtokens,     $rtoken_map,
-                    $max_token_index
-                  );
-
-                # all done if we didn't find it
-                last if ($in_quote);
-
-                # save pattern and replacement text for rescanning
-                my $qs1 = $quoted_string_1;
-                my $qs2 = $quoted_string_2;
-
-                # re-initialize for next search
-                $quote_character = EMPTY_STRING;
-                $quote_pos       = 0;
-                $quote_type      = 'Q';
-                $quoted_string_1 = EMPTY_STRING;
-                $quoted_string_2 = EMPTY_STRING;
-                last if ( ++$i > $max_token_index );
-
-                # look for any modifiers
-                if ($allowed_quote_modifiers) {
-
-                    # check for exact quote modifiers
-                    if ( $rtokens->[$i] =~ /^[A-Za-z_]/ ) {
-                        my $str = $rtokens->[$i];
-                        my $saw_modifier_e;
-                        while ( $str =~ /\G$allowed_quote_modifiers/gc ) {
-                            my $pos  = pos($str);
-                            my $char = substr( $str, $pos - 1, 1 );
-                            $saw_modifier_e ||= ( $char eq 'e' );
-                        }
-
-                        # For an 'e' quote modifier we must scan the replacement
-                        # text for here-doc targets...
-                        # but if the modifier starts a new line we can skip
-                        # this because either the here doc will be fully
-                        # contained in the replacement text (so we can
-                        # ignore it) or Perl will not find it.
-                        # See test 'here2.in'.
-                        if ( $saw_modifier_e && $i_tok >= 0 ) {
-
-                            my $rht = scan_replacement_text($qs1);
-
-                            # Change type from 'Q' to 'h' for quotes with
-                            # here-doc targets so that the formatter (see sub
-                            # process_line_of_CODE) will not make any line
-                            # breaks after this point.
-                            if ($rht) {
-                                push @{$rhere_target_list}, @{$rht};
-                                $type = 'h';
-                                if ( $i_tok < 0 ) {
-                                    my $ilast = $routput_token_list->[-1];
-                                    $routput_token_type->[$ilast] = $type;
-                                }
-                            }
-                        }
-
-                        if ( defined( pos($str) ) ) {
-
-                            # matched
-                            if ( pos($str) == length($str) ) {
-                                last if ( ++$i > $max_token_index );
-                            }
-
-                            # Looks like a joined quote modifier
-                            # and keyword, maybe something like
-                            # s/xxx/yyy/gefor @k=...
-                            # Example is "galgen.pl".  Would have to split
-                            # the word and insert a new token in the
-                            # pre-token list.  This is so rare that I haven't
-                            # done it.  Will just issue a warning citation.
-
-                            # This error might also be triggered if my quote
-                            # modifier characters are incomplete
-                            else {
-                                warning(<<EOM);
-
-Partial match to quote modifier $allowed_quote_modifiers at word: '$str'
-Please put a space between quote modifiers and trailing keywords.
-EOM
-
-                         # print "token $rtokens->[$i]\n";
-                         # my $num = length($str) - pos($str);
-                         # $rtokens->[$i]=substr($rtokens->[$i],pos($str),$num);
-                         # print "continuing with new token $rtokens->[$i]\n";
-
-                                # skipping past this token does least damage
-                                last if ( ++$i > $max_token_index );
-                            }
-                        }
-                        else {
-
-                            # example file: rokicki4.pl
-                            # This error might also be triggered if my quote
-                            # modifier characters are incomplete
-                            write_logfile_entry(
-"Note: found word $str at quote modifier location\n"
-                            );
-                        }
-                    }
-
-                    # re-initialize
-                    $allowed_quote_modifiers = EMPTY_STRING;
-                }
+            # continue looking for the end of a quote
+            if ($in_quote) {
+                do_FOLLOW_QUOTE();
+                last if ( $in_quote || $i > $max_token_index );
             }
 
-            unless ( $type eq 'b' || $tok eq 'CORE::' ) {
+            if ( $type ne 'b' && $tok ne 'CORE::' ) {
 
                 # try to catch some common errors
                 if ( ( $type eq 'n' ) && ( $tok ne '0' ) ) {
@@ -7399,226 +7407,185 @@ BEGIN {
     @{is_special_variable_char}{@q} = (1) x scalar(@q);
 }
 
-sub scan_identifier_do {
+{    ## begin closure for sub scan_complex_identifier
 
-    # This routine assembles tokens into identifiers.  It maintains a
-    # scan state, id_scan_state.  It updates id_scan_state based upon
-    # current id_scan_state and token, and returns an updated
-    # id_scan_state and the next index after the identifier.
-
-    # USES GLOBAL VARIABLES: $context, $last_nonblank_token,
-    # $last_nonblank_type
-
-    my ( $i, $id_scan_state, $identifier, $rtokens, $max_token_index,
-        $expecting, $container_type )
-      = @_;
     use constant DEBUG_SCAN_ID => 0;
-    my $i_begin   = $i;
-    my $type      = EMPTY_STRING;
-    my $tok_begin = $rtokens->[$i_begin];
-    if ( $tok_begin eq ':' ) { $tok_begin = '::' }
-    my $id_scan_state_begin = $id_scan_state;
-    my $identifier_begin    = $identifier;
-    my $tok                 = $tok_begin;
-    my $message             = EMPTY_STRING;
-    my $tok_is_blank;    # a flag to speed things up
 
-    my $in_prototype_or_signature =
-      $container_type && $container_type =~ /^sub\b/;
+    # These are the possible states for this scanner:
+    my $scan_state_SIGIL     = '$';
+    my $scan_state_ALPHA     = 'A';
+    my $scan_state_COLON     = ':';
+    my $scan_state_LPAREN    = '(';
+    my $scan_state_RPAREN    = ')';
+    my $scan_state_AMPERSAND = '&';
+    my $scan_state_SPLIT     = '^';
 
-    # these flags will be used to help figure out the type:
+    # Only these non-blank states may be returned to caller:
+    my %is_returnable_scan_state = (
+        $scan_state_SIGIL     => 1,
+        $scan_state_AMPERSAND => 1,
+    );
+
+    # USES GLOBAL VARIABLES:
+    #    $context, $last_nonblank_token, $last_nonblank_type
+
+    #-----------
+    # call args:
+    #-----------
+    my ( $i, $id_scan_state, $identifier, $rtokens, $max_token_index,
+        $expecting, $container_type );
+
+    #-------------------------------------------
+    # my variables, re-initialized on each call:
+    #-------------------------------------------
+    my $i_begin;                # starting index $i
+    my $type;                   # returned identifier type
+    my $tok_begin;              # starting token
+    my $tok;                    # returned token
+    my $id_scan_state_begin;    # starting scan state
+    my $identifier_begin;       # starting identifier
+    my $i_save;                 # a last good index, in case of error
+    my $message;                # hold error message for log file
+    my $tok_is_blank;
+    my $last_tok_is_blank;
+    my $in_prototype_or_signature;
     my $saw_alpha;
     my $saw_type;
+    my $allow_tick;
 
-    # allow old package separator (') except in 'use' statement
-    my $allow_tick = ( $last_nonblank_token ne 'use' );
+    sub initialize_my_scan_id_vars {
 
-    #########################################################
-    # get started by defining a type and a state if necessary
-    #########################################################
+        # Initialize all 'my' vars on entry
+        $i_begin   = $i;
+        $type      = EMPTY_STRING;
+        $tok_begin = $rtokens->[$i_begin];
+        $tok       = $tok_begin;
+        if ( $tok_begin eq ':' ) { $tok_begin = '::' }
+        $id_scan_state_begin = $id_scan_state;
+        $identifier_begin    = $identifier;
+        $i_save              = undef;
 
-    if ( !$id_scan_state ) {
-        $context = UNKNOWN_CONTEXT;
+        $message           = EMPTY_STRING;
+        $tok_is_blank      = undef;          # a flag to speed things up
+        $last_tok_is_blank = undef;
 
-        # fixup for digraph
-        if ( $tok eq '>' ) {
-            $tok       = '->';
-            $tok_begin = $tok;
+        $in_prototype_or_signature =
+          $container_type && $container_type =~ /^sub\b/;
+
+        # these flags will be used to help figure out the type:
+        $saw_alpha = undef;
+        $saw_type  = undef;
+
+        # allow old package separator (') except in 'use' statement
+        $allow_tick = ( $last_nonblank_token ne 'use' );
+    } ## end sub initialize_my_scan_id_vars
+
+    #----------------------------------
+    # Routines for handling scan states
+    #----------------------------------
+    sub do_id_scan_state_dollar {
+
+        # We saw a sigil, now looking to start a variable name
+
+        if ( $tok eq '$' ) {
+
+            $identifier .= $tok;
+
+            # we've got a punctuation variable if end of line (punct.t)
+            if ( $i == $max_token_index ) {
+                $type          = 'i';
+                $id_scan_state = EMPTY_STRING;
+            }
         }
-        $identifier = $tok;
-
-        if ( $tok eq '$' || $tok eq '*' ) {
-            $id_scan_state = '$';
-            $context       = SCALAR_CONTEXT;
-        }
-        elsif ( $tok eq '%' || $tok eq '@' ) {
-            $id_scan_state = '$';
-            $context       = LIST_CONTEXT;
-        }
-        elsif ( $tok eq '&' ) {
-            $id_scan_state = '&';
-        }
-        elsif ( $tok eq 'sub' or $tok eq 'package' ) {
-            $saw_alpha     = 0;     # 'sub' is considered type info here
-            $id_scan_state = '$';
-            $identifier .= SPACE;   # need a space to separate sub from sub name
+        elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
+            $saw_alpha     = 1;
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $identifier .= $tok;
         }
         elsif ( $tok eq '::' ) {
-            $id_scan_state = 'A';
+            $id_scan_state = $scan_state_ALPHA;
+            $identifier .= $tok;
         }
-        elsif ( $tok =~ /^\w/ ) {
-            $id_scan_state = ':';
+
+        # POSTDEFREF ->@ ->% ->& ->*
+        elsif ( ( $tok =~ /^[\@\%\&\*]$/ ) && $identifier =~ /\-\>$/ ) {
+            $identifier .= $tok;
+        }
+        elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
             $saw_alpha     = 1;
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $identifier .= $tok;
+
+            # Perl will accept leading digits in identifiers,
+            # although they may not always produce useful results.
+            # Something like $main::0 is ok.  But this also works:
+            #
+            #  sub howdy::123::bubba{ print "bubba $54321!\n" }
+            #  howdy::123::bubba();
+            #
         }
-        elsif ( $tok eq '->' ) {
-            $id_scan_state = '$';
-        }
-        else {
+        elsif ( $tok eq '#' ) {
 
-            # shouldn't happen: bad call parameter
-            my $msg =
-"Program bug detected: scan_identifier received bad starting token = '$tok'\n";
-            if (DEVEL_MODE) { Fault($msg) }
-            if ( !$tokenizer_self->[_in_error_] ) {
-                warning($msg);
-                $tokenizer_self->[_in_error_] = 1;
+            my $is_punct_var = $identifier eq '$$';
+
+            # side comment or identifier?
+            if (
+
+                # A '#' starts a comment if it follows a space. For example,
+                # the following is equivalent to $ans=40.
+                #   my $ #
+                #     ans = 40;
+                !$last_tok_is_blank
+
+                # a # inside a prototype or signature can only start a
+                # comment
+                && !$in_prototype_or_signature
+
+                # these are valid punctuation vars: *# %# @# $#
+                # May also be '$#array' or POSTDEFREF ->$#
+                && (   $identifier =~ /^[\%\@\$\*]$/
+                    || $identifier =~ /\$$/ )
+
+                # but a '#' after '$$' is a side comment; see c147
+                && !$is_punct_var
+
+              )
+            {
+                $identifier .= $tok;    # keep same state, a $ could follow
             }
-            $id_scan_state = EMPTY_STRING;
-            goto RETURN;
-        }
-        $saw_type = !$saw_alpha;
-    }
-    else {
-        $i--;
-        $saw_alpha = ( $tok =~ /^\w/ );
-        $saw_type  = ( $tok =~ /([\$\%\@\*\&])/ );
-    }
+            else {
 
-    ###############################
-    # loop to gather the identifier
-    ###############################
-
-    my $i_save = $i;
-
-    while ( $i < $max_token_index ) {
-        my $last_tok_is_blank = $tok_is_blank;
-        if   ($tok_is_blank) { $tok_is_blank = undef }
-        else                 { $i_save       = $i }
-
-        $tok = $rtokens->[ ++$i ];
-
-        # patch to make digraph :: if necessary
-        if ( ( $tok eq ':' ) && ( $rtokens->[ $i + 1 ] eq ':' ) ) {
-            $tok = '::';
-            $i++;
+                # otherwise it is a side comment
+                if    ( $identifier eq '->' )                 { }
+                elsif ($is_punct_var)                         { $type = 'i' }
+                elsif ( $id_scan_state eq $scan_state_SIGIL ) { $type = 't' }
+                else                                          { $type = 'i' }
+                $i             = $i_save;
+                $id_scan_state = EMPTY_STRING;
+            }
         }
 
-        ########################
-        # Starting variable name
-        ########################
+        elsif ( $tok eq '{' ) {
 
-        if ( $id_scan_state eq '$' ) {
-
-            if ( $tok eq '$' ) {
-
-                $identifier .= $tok;
-
-                # we've got a punctuation variable if end of line (punct.t)
-                if ( $i == $max_token_index ) {
-                    $type          = 'i';
-                    $id_scan_state = EMPTY_STRING;
-                    last;
-                }
+            # check for something like ${#} or ${©}
+            if (
+                (
+                       $identifier eq '$'
+                    || $identifier eq '@'
+                    || $identifier eq '$#'
+                )
+                && $i + 2 <= $max_token_index
+                && $rtokens->[ $i + 2 ] eq '}'
+                && $rtokens->[ $i + 1 ] !~ /[\s\w]/
+              )
+            {
+                my $next2 = $rtokens->[ $i + 2 ];
+                my $next1 = $rtokens->[ $i + 1 ];
+                $identifier .= $tok . $next1 . $next2;
+                $i += 2;
+                $id_scan_state = EMPTY_STRING;
             }
-            elsif ( $tok =~ /^\w/ ) {    # alphanumeric ..
-                $saw_alpha     = 1;
-                $id_scan_state = ':';    # now need ::
-                $identifier .= $tok;
-            }
-            elsif ( $tok eq '::' ) {
-                $id_scan_state = 'A';
-                $identifier .= $tok;
-            }
-
-            # POSTDEFREF ->@ ->% ->& ->*
-            elsif ( ( $tok =~ /^[\@\%\&\*]$/ ) && $identifier =~ /\-\>$/ ) {
-                $identifier .= $tok;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
-                $saw_alpha     = 1;
-                $id_scan_state = ':';                 # now need ::
-                $identifier .= $tok;
-
-                # Perl will accept leading digits in identifiers,
-                # although they may not always produce useful results.
-                # Something like $main::0 is ok.  But this also works:
-                #
-                #  sub howdy::123::bubba{ print "bubba $54321!\n" }
-                #  howdy::123::bubba();
-                #
-            }
-            elsif ( $tok eq '#' ) {
-
-                my $is_punct_var = $identifier eq '$$';
-
-                # side comment or identifier?
-                if (
-
-                    # A '#' starts a comment if it follows a space. For example,
-                    # the following is equivalent to $ans=40.
-                    #   my $ #
-                    #     ans = 40;
-                    !$last_tok_is_blank
-
-                    # a # inside a prototype or signature can only start a
-                    # comment
-                    && !$in_prototype_or_signature
-
-                    # these are valid punctuation vars: *# %# @# $#
-                    # May also be '$#array' or POSTDEFREF ->$#
-                    && ( $identifier =~ /^[\%\@\$\*]$/ || $identifier =~ /\$$/ )
-
-                    # but a '#' after '$$' is a side comment; see c147
-                    && !$is_punct_var
-
-                  )
-                {
-                    $identifier .= $tok;    # keep same state, a $ could follow
-                }
-                else {
-
-                    # otherwise it is a side comment
-                    if    ( $identifier eq '->' )   { }
-                    elsif ($is_punct_var)           { $type = 'i' }
-                    elsif ( $id_scan_state eq '$' ) { $type = 't' }
-                    else                            { $type = 'i' }
-                    $i             = $i_save;
-                    $id_scan_state = EMPTY_STRING;
-                    last;
-                }
-            }
-
-            elsif ( $tok eq '{' ) {
-
-                # check for something like ${#} or ${©}
-                if (
-                    (
-                           $identifier eq '$'
-                        || $identifier eq '@'
-                        || $identifier eq '$#'
-                    )
-                    && $i + 2 <= $max_token_index
-                    && $rtokens->[ $i + 2 ] eq '}'
-                    && $rtokens->[ $i + 1 ] !~ /[\s\w]/
-                  )
-                {
-                    my $next2 = $rtokens->[ $i + 2 ];
-                    my $next1 = $rtokens->[ $i + 1 ];
-                    $identifier .= $tok . $next1 . $next2;
-                    $i += 2;
-                    $id_scan_state = EMPTY_STRING;
-                    last;
-                }
+            else {
 
                 # skip something like ${xxx} or ->{
                 $id_scan_state = EMPTY_STRING;
@@ -7629,507 +7596,666 @@ sub scan_identifier_do {
                     $identifier = EMPTY_STRING;
                 }
                 $i = $i_save;
-                last;
             }
+        }
 
-            # space ok after leading $ % * & @
-            elsif ( $tok =~ /^\s*$/ ) {
+        # space ok after leading $ % * & @
+        elsif ( $tok =~ /^\s*$/ ) {
 
-                $tok_is_blank = 1;
+            $tok_is_blank = 1;
 
-                # note: an id with a leading '&' does not actually come this way
-                if ( $identifier =~ /^[\$\%\*\&\@]/ ) {
+            # note: an id with a leading '&' does not actually come this way
+            if ( $identifier =~ /^[\$\%\*\&\@]/ ) {
 
-                    if ( length($identifier) > 1 ) {
-                        $id_scan_state = EMPTY_STRING;
-                        $i             = $i_save;
-                        $type          = 'i';    # probably punctuation variable
-                        last;
-                    }
-                    else {
-
-                        # fix c139: trim line-ending type 't'
-                        if ( $i == $max_token_index ) {
-                            $i    = $i_save;
-                            $type = 't';
-                            last;
-                        }
-
-                        # spaces after $'s are common, and space after @
-                        # is harmless, so only complain about space
-                        # after other type characters. Space after $ and
-                        # @ will be removed in formatting.  Report space
-                        # after % and * because they might indicate a
-                        # parsing error.  In other words '% ' might be a
-                        # modulo operator.  Delete this warning if it
-                        # gets annoying.
-                        if ( $identifier !~ /^[\@\$]$/ ) {
-                            $message =
-                              "Space in identifier, following $identifier\n";
-                        }
-                    }
+                if ( length($identifier) > 1 ) {
+                    $id_scan_state = EMPTY_STRING;
+                    $i             = $i_save;
+                    $type          = 'i';    # probably punctuation variable
                 }
+                else {
 
-                elsif ( $identifier eq '->' ) {
-
-                    # space after '->' is ok except at line end ..
-                    # so trim line-ending in type '->' (fixes c139)
+                    # fix c139: trim line-ending type 't'
                     if ( $i == $max_token_index ) {
                         $i    = $i_save;
-                        $type = '->';
-                        last;
+                        $type = 't';
                     }
-                }
-            }
-            elsif ( $tok eq '^' ) {
 
-                # check for some special variables like $^ $^W
-                if ( $identifier =~ /^[\$\*\@\%]$/ ) {
-                    $identifier .= $tok;
-                    $type = 'i';
-
-                    # There may be one more character, not a space, after the ^
-                    my $next1 = $rtokens->[ $i + 1 ];
-                    my $chr   = substr( $next1, 0, 1 );
-                    if ( $is_special_variable_char{$chr} ) {
-
-                        # It is something like $^W
-                        # Test case (c066) : $^Oeq'linux'
-                        $i++;
-                        $identifier .= $next1;
-
-                        # If pretoken $next1 is more than one character long,
-                        # set a flag indicating that it needs to be split.
-                        $id_scan_state =
-                          ( length($next1) > 1 ) ? '^' : EMPTY_STRING;
-                        last;
+                    # spaces after $'s are common, and space after @
+                    # is harmless, so only complain about space
+                    # after other type characters. Space after $ and
+                    # @ will be removed in formatting.  Report space
+                    # after % and * because they might indicate a
+                    # parsing error.  In other words '% ' might be a
+                    # modulo operator.  Delete this warning if it
+                    # gets annoying.
+                    elsif ( $identifier !~ /^[\@\$]$/ ) {
+                        $message =
+                          "Space in identifier, following $identifier\n";
                     }
                     else {
-
-                        # it is just $^
-                        # Simple test case (c065): '$aa=$^if($bb)';
-                        $id_scan_state = EMPTY_STRING;
-                        last;
+                        ## ok: silently accept space after '$' and '@' sigils
                     }
                 }
-                else {
-                    $id_scan_state = EMPTY_STRING;
-                    $i             = $i_save;
-                    last;    # c106
-                }
             }
-            else {           # something else
 
-                if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
+            elsif ( $identifier eq '->' ) {
 
-                    # We might be in an extrusion of
-                    #     sub foo2 ( $first, $, $third ) {
-                    # looking at a line starting with a comma, like
-                    #   $
-                    #   ,
-                    # in this case the comma ends the signature variable
-                    # '$' which will have been previously marked type 't'
-                    # rather than 'i'.
-                    if ( $i == $i_begin ) {
-                        $identifier = EMPTY_STRING;
-                        $type       = EMPTY_STRING;
-                    }
-
-                    # at a # we have to mark as type 't' because more may
-                    # follow, otherwise, in a signature we can let '$' be an
-                    # identifier here for better formatting.
-                    # See 'mangle4.in' for a test case.
-                    else {
-                        $type = 'i';
-                        if ( $id_scan_state eq '$' && $tok eq '#' ) {
-                            $type = 't';
-                        }
-                        $i = $i_save;
-                    }
-                    $id_scan_state = EMPTY_STRING;
-                    last;
-                }
-
-                # check for various punctuation variables
-                if ( $identifier =~ /^[\$\*\@\%]$/ ) {
-                    $identifier .= $tok;
-                }
-
-                # POSTDEFREF: Postfix reference ->$* ->%*  ->@* ->** ->&* ->$#*
-                elsif ($tok eq '*'
-                    && $identifier =~ /\-\>([\@\%\$\*\&]|\$\#)$/ )
-                {
-                    $identifier .= $tok;
-                }
-
-                elsif ( $identifier eq '$#' ) {
-
-                    if ( $tok eq '{' ) { $type = 'i'; $i = $i_save }
-
-                    # perl seems to allow just these: $#: $#- $#+
-                    elsif ( $tok =~ /^[\:\-\+]$/ ) {
-                        $type = 'i';
-                        $identifier .= $tok;
-                    }
-                    else {
-                        $i = $i_save;
-                        write_logfile_entry( 'Use of $# is deprecated' . "\n" );
-                    }
-                }
-                elsif ( $identifier eq '$$' ) {
-
-                    # perl does not allow references to punctuation
-                    # variables without braces.  For example, this
-                    # won't work:
-                    #  $:=\4;
-                    #  $a = $$:;
-                    # You would have to use
-                    #  $a = ${$:};
-
-                    # '$$' alone is punctuation variable for PID
-                    $i = $i_save;
-                    if   ( $tok eq '{' ) { $type = 't' }
-                    else                 { $type = 'i' }
-                }
-                elsif ( $identifier eq '->' ) {
-                    $i = $i_save;
-                }
-                else {
-                    $i = $i_save;
-                    if ( length($identifier) == 1 ) {
-                        $identifier = EMPTY_STRING;
-                    }
-                }
-                $id_scan_state = EMPTY_STRING;
-                last;
-            }
-        }
-
-        ###################################
-        # looking for alphanumeric after ::
-        ###################################
-
-        elsif ( $id_scan_state eq 'A' ) {
-
-            $tok_is_blank = $tok =~ /^\s*$/;
-
-            if ( $tok =~ /^\w/ ) {    # found it
-                $identifier .= $tok;
-                $id_scan_state = ':';    # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {
-                $identifier .= $tok;
-                $id_scan_state = ':';    # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
-                $id_scan_state = '(';
-                $identifier .= $tok;
-            }
-            elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
-                $id_scan_state = ')';
-                $identifier .= $tok;
-            }
-            else {
-                $id_scan_state = EMPTY_STRING;
-                $i             = $i_save;
-                last;
-            }
-        }
-
-        ###################################
-        # looking for :: after alphanumeric
-        ###################################
-
-        elsif ( $id_scan_state eq ':' ) {    # looking for :: after alpha
-
-            $tok_is_blank = $tok =~ /^\s*$/;
-
-            if ( $tok eq '::' ) {            # got it
-                $identifier .= $tok;
-                $id_scan_state = 'A';        # now require alpha
-            }
-            elsif ( $tok =~ /^\w/ ) {        # more alphanumeric is ok here
-                $identifier .= $tok;
-                $id_scan_state = ':';        # now need ::
-                $saw_alpha     = 1;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {    # tick
-
-                if ( $is_keyword{$identifier} ) {
-                    $id_scan_state = EMPTY_STRING;    # that's all
-                    $i             = $i_save;
-                }
-                else {
-                    $identifier .= $tok;
-                }
-            }
-            elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
-                $id_scan_state = '(';
-                $identifier .= $tok;
-            }
-            elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
-                $id_scan_state = ')';
-                $identifier .= $tok;
-            }
-            else {
-                $id_scan_state = EMPTY_STRING;    # that's all
-                $i             = $i_save;
-                last;
-            }
-        }
-
-        ##############################
-        # looking for '(' of prototype
-        ##############################
-
-        elsif ( $id_scan_state eq '(' ) {
-
-            if ( $tok eq '(' ) {    # got it
-                $identifier .= $tok;
-                $id_scan_state = ')';    # now find the end of it
-            }
-            elsif ( $tok =~ /^\s*$/ ) {    # blank - keep going
-                $identifier .= $tok;
-                $tok_is_blank = 1;
-            }
-            else {
-                $id_scan_state = EMPTY_STRING;    # that's all - no prototype
-                $i             = $i_save;
-                last;
-            }
-        }
-
-        ##############################
-        # looking for ')' of prototype
-        ##############################
-
-        elsif ( $id_scan_state eq ')' ) {
-
-            $tok_is_blank = $tok =~ /^\s*$/;
-
-            if ( $tok eq ')' ) {    # got it
-                $identifier .= $tok;
-                $id_scan_state = EMPTY_STRING;    # all done
-                last;
-            }
-            elsif ( $tok =~ /^[\s\$\%\\\*\@\&\;]/ ) {
-                $identifier .= $tok;
-            }
-            else {    # probable error in script, but keep going
-                warning("Unexpected '$tok' while seeking end of prototype\n");
-                $identifier .= $tok;
-            }
-        }
-
-        ###################
-        # Starting sub call
-        ###################
-
-        elsif ( $id_scan_state eq '&' ) {
-
-            if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
-                $id_scan_state = ':';     # now need ::
-                $saw_alpha     = 1;
-                $identifier .= $tok;
-            }
-            elsif ( $tok eq "'" && $allow_tick ) {    # alphanumeric ..
-                $id_scan_state = ':';                 # now need ::
-                $saw_alpha     = 1;
-                $identifier .= $tok;
-            }
-            elsif ( $tok =~ /^\s*$/ ) {               # allow space
-                $tok_is_blank = 1;
-
-                # fix c139: trim line-ending type 't'
-                if ( length($identifier) == 1 && $i == $max_token_index ) {
+                # space after '->' is ok except at line end ..
+                # so trim line-ending in type '->' (fixes c139)
+                if ( $i == $max_token_index ) {
                     $i    = $i_save;
-                    $type = 't';
-                    last;
+                    $type = '->';
                 }
             }
-            elsif ( $tok eq '::' ) {                  # leading ::
-                $id_scan_state = 'A';                 # accept alpha next
+
+            # stop at space after something other than -> or sigil
+            # TODO: see if we can arrive here
+            else {
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+Unexpected space while scanning with identifier = '$identifier',
+id_scan_state=$id_scan_state
+EOM
+                    $id_scan_state = EMPTY_STRING;
+                    $i             = $i_save;
+                    $type          = 'i';
+                }
+            }
+        }
+        elsif ( $tok eq '^' ) {
+
+            # check for some special variables like $^ $^W
+            if ( $identifier =~ /^[\$\*\@\%]$/ ) {
                 $identifier .= $tok;
-            }
-            elsif ( $tok eq '{' ) {
-                if ( $identifier eq '&' || $i == 0 ) {
-                    $identifier = EMPTY_STRING;
-                }
-                $i             = $i_save;
-                $id_scan_state = EMPTY_STRING;
-                last;
-            }
-            elsif ( $tok eq '^' ) {
-                if ( $identifier eq '&' ) {
+                $type = 'i';
 
-                    # Special variable (c066)
-                    $identifier .= $tok;
-                    $type = '&';
+                # There may be one more character, not a space, after the ^
+                my $next1 = $rtokens->[ $i + 1 ];
+                my $chr   = substr( $next1, 0, 1 );
+                if ( $is_special_variable_char{$chr} ) {
 
-                    # There may be one more character, not a space, after the ^
-                    my $next1 = $rtokens->[ $i + 1 ];
-                    my $chr   = substr( $next1, 0, 1 );
-                    if ( $is_special_variable_char{$chr} ) {
+                    # It is something like $^W
+                    # Test case (c066) : $^Oeq'linux'
+                    $i++;
+                    $identifier .= $next1;
 
-                        # It is something like &^O
-                        $i++;
-                        $identifier .= $next1;
-
-                        # If pretoken $next1 is more than one character long,
-                        # set a flag indicating that it needs to be split.
-                        $id_scan_state =
-                          ( length($next1) > 1 ) ? '^' : EMPTY_STRING;
-                    }
-                    else {
-
-                        # it is &^
-                        $id_scan_state = EMPTY_STRING;
-                    }
-                    last;
+                    # If pretoken $next1 is more than one character long,
+                    # set a flag indicating that it needs to be split.
+                    $id_scan_state =
+                      ( length($next1) > 1 ) ? $scan_state_SPLIT : EMPTY_STRING;
                 }
                 else {
-                    $identifier = EMPTY_STRING;
-                    $i          = $i_save;
+
+                    # it is just $^
+                    # Simple test case (c065): '$aa=$^if($bb)';
+                    $id_scan_state = EMPTY_STRING;
                 }
-                last;
             }
             else {
+                $id_scan_state = EMPTY_STRING;
+                $i             = $i_save;
+            }
+        }
+        else {    # something else
 
-                # punctuation variable?
-                # testfile: cunningham4.pl
-                #
-                # We have to be careful here.  If we are in an unknown state,
-                # we will reject the punctuation variable.  In the following
-                # example the '&' is a binary operator but we are in an unknown
-                # state because there is no sigil on 'Prima', so we don't
-                # know what it is.  But it is a bad guess that
-                # '&~' is a function variable.
-                # $self->{text}->{colorMap}->[
-                #   Prima::PodView::COLOR_CODE_FOREGROUND
-                #   & ~tb::COLOR_INDEX ] =
-                #   $sec->{ColorCode}
+            if ( $in_prototype_or_signature && $tok =~ /^[\),=#]/ ) {
 
-                # Fix for case c033: a '#' here starts a side comment
-                if ( $identifier eq '&' && $expecting && $tok ne '#' ) {
+                # We might be in an extrusion of
+                #     sub foo2 ( $first, $, $third ) {
+                # looking at a line starting with a comma, like
+                #   $
+                #   ,
+                # in this case the comma ends the signature variable
+                # '$' which will have been previously marked type 't'
+                # rather than 'i'.
+                if ( $i == $i_begin ) {
+                    $identifier = EMPTY_STRING;
+                    $type       = EMPTY_STRING;
+                }
+
+                # at a # we have to mark as type 't' because more may
+                # follow, otherwise, in a signature we can let '$' be an
+                # identifier here for better formatting.
+                # See 'mangle4.in' for a test case.
+                else {
+                    $type = 'i';
+                    if ( $id_scan_state eq $scan_state_SIGIL && $tok eq '#' ) {
+                        $type = 't';
+                    }
+                    $i = $i_save;
+                }
+                $id_scan_state = EMPTY_STRING;
+            }
+
+            # check for various punctuation variables
+            elsif ( $identifier =~ /^[\$\*\@\%]$/ ) {
+                $identifier .= $tok;
+            }
+
+            # POSTDEFREF: Postfix reference ->$* ->%*  ->@* ->** ->&* ->$#*
+            elsif ($tok eq '*'
+                && $identifier =~ /\-\>([\@\%\$\*\&]|\$\#)$/ )
+            {
+                $identifier .= $tok;
+            }
+
+            elsif ( $identifier eq '$#' ) {
+
+                if ( $tok eq '{' ) { $type = 'i'; $i = $i_save }
+
+                # perl seems to allow just these: $#: $#- $#+
+                elsif ( $tok =~ /^[\:\-\+]$/ ) {
+                    $type = 'i';
                     $identifier .= $tok;
                 }
                 else {
-                    $identifier = EMPTY_STRING;
-                    $i          = $i_save;
-                    $type       = '&';
+                    $i = $i_save;
+                    write_logfile_entry( 'Use of $# is deprecated' . "\n" );
                 }
-                $id_scan_state = EMPTY_STRING;
-                last;
             }
-        }
+            elsif ( $identifier eq '$$' ) {
 
-        ######################
-        # unknown state - quit
-        ######################
+                # perl does not allow references to punctuation
+                # variables without braces.  For example, this
+                # won't work:
+                #  $:=\4;
+                #  $a = $$:;
+                # You would have to use
+                #  $a = ${$:};
 
-        else {    # can get here due to error in initialization
-            $id_scan_state = EMPTY_STRING;
-            $i             = $i_save;
-            last;
-        }
-    } ## end of main loop
-
-    if ( $id_scan_state eq ')' ) {
-        warning("Hit end of line while seeking ) to end prototype\n");
-    }
-
-    # once we enter the actual identifier, it may not extend beyond
-    # the end of the current line
-    if ( $id_scan_state =~ /^[A\:\(\)]/ ) {
-        $id_scan_state = EMPTY_STRING;
-    }
-
-    # Patch: the deprecated variable $# does not combine with anything on the
-    # next line.
-    if ( $identifier eq '$#' ) { $id_scan_state = EMPTY_STRING }
-
-    if ( $i < 0 ) { $i = 0 }
-
-    # Be sure a token type is defined
-    if ( !$type ) {
-
-        if ($saw_type) {
-
-            if ($saw_alpha) {
-
-                # The type without the -> should be the same as with the -> so
-                # that if they get separated we get the same bond strengths,
-                # etc.  See b1234
-                if (   $identifier =~ /^->/
-                    && $last_nonblank_type eq 'w'
-                    && substr( $identifier, 2, 1 ) =~ /^\w/ )
-                {
-                    $type = 'w';
-                }
-                else { $type = 'i' }
+                # '$$' alone is punctuation variable for PID
+                $i = $i_save;
+                if   ( $tok eq '{' ) { $type = 't' }
+                else                 { $type = 'i' }
             }
             elsif ( $identifier eq '->' ) {
-                $type = '->';
+                $i = $i_save;
             }
-            elsif (
-                ( length($identifier) > 1 )
-
-                # In something like '@$=' we have an identifier '@$'
-                # In something like '$${' we have type '$$' (and only
-                # part of an identifier)
-                && !( $identifier =~ /\$$/ && $tok eq '{' )
-
-                ## && ( $identifier !~ /^(sub |package )$/ )
-                && $identifier ne 'sub '
-                && $identifier ne 'package '
-              )
-            {
-                $type = 'i';
+            else {
+                $i = $i_save;
+                if ( length($identifier) == 1 ) {
+                    $identifier = EMPTY_STRING;
+                }
             }
-            else { $type = 't' }
+            $id_scan_state = EMPTY_STRING;
         }
-        elsif ($saw_alpha) {
+        return;
+    } ## end sub do_id_scan_state_dollar
 
-            # type 'w' includes anything without leading type info
-            # ($,%,@,*) including something like abc::def::ghi
-            $type = 'w';
+    sub do_id_scan_state_alpha {
 
-            # Fix for b1337, if restarting scan after line break between '->' or
-            # sigil and identifier name, use type 'i'
-            if ( $id_scan_state_begin && $identifier =~ /^([\$\%\@\*\&]|->)/ ) {
-                $type = 'i';
+        # looking for alphanumeric after ::
+        $tok_is_blank = $tok =~ /^\s*$/;
+
+        if ( $tok =~ /^\w/ ) {    # found it
+            $identifier .= $tok;
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha     = 1;
+        }
+        elsif ( $tok eq "'" && $allow_tick ) {
+            $identifier .= $tok;
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha     = 1;
+        }
+        elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
+            $id_scan_state = $scan_state_LPAREN;
+            $identifier .= $tok;
+        }
+        elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
+            $id_scan_state = $scan_state_RPAREN;
+            $identifier .= $tok;
+        }
+        else {
+            $id_scan_state = EMPTY_STRING;
+            $i             = $i_save;
+        }
+        return;
+    } ## end sub do_id_scan_state_alpha
+
+    sub do_id_scan_state_colon {
+
+        # looking for possible :: after alphanumeric
+
+        $tok_is_blank = $tok =~ /^\s*$/;
+
+        if ( $tok eq '::' ) {    # got it
+            $identifier .= $tok;
+            $id_scan_state = $scan_state_ALPHA;    # now require alpha
+        }
+        elsif ( $tok =~ /^\w/ ) {    # more alphanumeric is ok here
+            $identifier .= $tok;
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha     = 1;
+        }
+        elsif ( $tok eq "'" && $allow_tick ) {     # tick
+
+            if ( $is_keyword{$identifier} ) {
+                $id_scan_state = EMPTY_STRING;     # that's all
+                $i             = $i_save;
+            }
+            else {
+                $identifier .= $tok;
+            }
+        }
+        elsif ( $tok_is_blank && $identifier =~ /^sub / ) {
+            $id_scan_state = $scan_state_LPAREN;
+            $identifier .= $tok;
+        }
+        elsif ( $tok eq '(' && $identifier =~ /^sub / ) {
+            $id_scan_state = $scan_state_RPAREN;
+            $identifier .= $tok;
+        }
+        else {
+            $id_scan_state = EMPTY_STRING;    # that's all
+            $i             = $i_save;
+        }
+        return;
+    } ## end sub do_id_scan_state_colon
+
+    sub do_id_scan_state_left_paren {
+
+        # looking for possible '(' of a prototype
+
+        if ( $tok eq '(' ) {    # got it
+            $identifier .= $tok;
+            $id_scan_state = $scan_state_RPAREN;    # now find the end of it
+        }
+        elsif ( $tok =~ /^\s*$/ ) {                 # blank - keep going
+            $identifier .= $tok;
+            $tok_is_blank = 1;
+        }
+        else {
+            $id_scan_state = EMPTY_STRING;          # that's all - no prototype
+            $i             = $i_save;
+        }
+        return;
+    } ## end sub do_id_scan_state_left_paren
+
+    sub do_id_scan_state_right_paren {
+
+        # looking for a ')' of prototype to close a '('
+
+        $tok_is_blank = $tok =~ /^\s*$/;
+
+        if ( $tok eq ')' ) {    # got it
+            $identifier .= $tok;
+            $id_scan_state = EMPTY_STRING;    # all done
+        }
+        elsif ( $tok =~ /^[\s\$\%\\\*\@\&\;]/ ) {
+            $identifier .= $tok;
+        }
+        else {    # probable error in script, but keep going
+            warning("Unexpected '$tok' while seeking end of prototype\n");
+            $identifier .= $tok;
+        }
+        return;
+    } ## end sub do_id_scan_state_right_paren
+
+    sub do_id_scan_state_ampersand {
+
+        # Starting sub call after seeing an '&'
+
+        if ( $tok =~ /^[\$\w]/ ) {    # alphanumeric ..
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha     = 1;
+            $identifier .= $tok;
+        }
+        elsif ( $tok eq "'" && $allow_tick ) {     # alphanumeric ..
+            $id_scan_state = $scan_state_COLON;    # now need ::
+            $saw_alpha     = 1;
+            $identifier .= $tok;
+        }
+        elsif ( $tok =~ /^\s*$/ ) {                # allow space
+            $tok_is_blank = 1;
+
+            # fix c139: trim line-ending type 't'
+            if ( length($identifier) == 1 && $i == $max_token_index ) {
+                $i    = $i_save;
+                $type = 't';
+            }
+        }
+        elsif ( $tok eq '::' ) {                   # leading ::
+            $id_scan_state = $scan_state_ALPHA;    # accept alpha next
+            $identifier .= $tok;
+        }
+        elsif ( $tok eq '{' ) {
+            if ( $identifier eq '&' || $i == 0 ) {
+                $identifier = EMPTY_STRING;
+            }
+            $i             = $i_save;
+            $id_scan_state = EMPTY_STRING;
+        }
+        elsif ( $tok eq '^' ) {
+            if ( $identifier eq '&' ) {
+
+                # Special variable (c066)
+                $identifier .= $tok;
+                $type = '&';
+
+                # There may be one more character, not a space, after the ^
+                my $next1 = $rtokens->[ $i + 1 ];
+                my $chr   = substr( $next1, 0, 1 );
+                if ( $is_special_variable_char{$chr} ) {
+
+                    # It is something like &^O
+                    $i++;
+                    $identifier .= $next1;
+
+                    # If pretoken $next1 is more than one character long,
+                    # set a flag indicating that it needs to be split.
+                    $id_scan_state =
+                      ( length($next1) > 1 ) ? $scan_state_SPLIT : EMPTY_STRING;
+                }
+                else {
+
+                    # it is &^
+                    $id_scan_state = EMPTY_STRING;
+                }
+            }
+            else {
+                $identifier = EMPTY_STRING;
+                $i          = $i_save;
             }
         }
         else {
-            $type = EMPTY_STRING;
-        }    # this can happen on a restart
-    }
 
-    # See if we formed an identifier...
-    if ($identifier) {
-        $tok = $identifier;
-        if ($message) { write_logfile_entry($message) }
-    }
+            # punctuation variable?
+            # testfile: cunningham4.pl
+            #
+            # We have to be careful here.  If we are in an unknown state,
+            # we will reject the punctuation variable.  In the following
+            # example the '&' is a binary operator but we are in an unknown
+            # state because there is no sigil on 'Prima', so we don't
+            # know what it is.  But it is a bad guess that
+            # '&~' is a function variable.
+            # $self->{text}->{colorMap}->[
+            #   Prima::PodView::COLOR_CODE_FOREGROUND
+            #   & ~tb::COLOR_INDEX ] =
+            #   $sec->{ColorCode}
 
-    # did not find an identifier, back  up
-    else {
-        $tok = $tok_begin;
-        $i   = $i_begin;
-    }
+            # Fix for case c033: a '#' here starts a side comment
+            if ( $identifier eq '&' && $expecting && $tok ne '#' ) {
+                $identifier .= $tok;
+            }
+            else {
+                $identifier = EMPTY_STRING;
+                $i          = $i_save;
+                $type       = '&';
+            }
+            $id_scan_state = EMPTY_STRING;
+        }
+        return;
+    } ## end sub do_id_scan_state_ampersand
 
-  RETURN:
-
-    DEBUG_SCAN_ID && do {
-        my ( $a, $b, $c ) = caller;
-        print STDOUT
-"SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";
-        print STDOUT
-"SCANID: returned with tok, i, state, identifier =$tok, $i, $id_scan_state, $identifier\n";
+    #-------------------
+    # hash of scanner subs
+    #-------------------
+    my $scan_identifier_code = {
+        $scan_state_SIGIL     => \&do_id_scan_state_dollar,
+        $scan_state_ALPHA     => \&do_id_scan_state_alpha,
+        $scan_state_COLON     => \&do_id_scan_state_colon,
+        $scan_state_LPAREN    => \&do_id_scan_state_left_paren,
+        $scan_state_RPAREN    => \&do_id_scan_state_right_paren,
+        $scan_state_AMPERSAND => \&do_id_scan_state_ampersand,
     };
-    return ( $i, $tok, $type, $id_scan_state, $identifier );
-} ## end sub scan_identifier_do
+
+    sub scan_complex_identifier {
+
+        # This routine assembles tokens into identifiers.  It maintains a
+        # scan state, id_scan_state.  It updates id_scan_state based upon
+        # current id_scan_state and token, and returns an updated
+        # id_scan_state and the next index after the identifier.
+
+        # This routine now serves a a backup for sub scan_simple_identifier
+        # which handles most identifiers.
+
+        (
+            $i,         $id_scan_state, $identifier, $rtokens, $max_token_index,
+            $expecting, $container_type
+        ) = @_;
+
+        # return flag telling caller to split the pretoken
+        my $split_pretoken_flag;
+
+        ####################
+        # Initialize my vars
+        ####################
+
+        initialize_my_scan_id_vars();
+
+        #########################################################
+        # get started by defining a type and a state if necessary
+        #########################################################
+
+        if ( !$id_scan_state ) {
+            $context = UNKNOWN_CONTEXT;
+
+            # fixup for digraph
+            if ( $tok eq '>' ) {
+                $tok       = '->';
+                $tok_begin = $tok;
+            }
+            $identifier = $tok;
+
+            if ( $tok eq '$' || $tok eq '*' ) {
+                $id_scan_state = $scan_state_SIGIL;
+                $context       = SCALAR_CONTEXT;
+            }
+            elsif ( $tok eq '%' || $tok eq '@' ) {
+                $id_scan_state = $scan_state_SIGIL;
+                $context       = LIST_CONTEXT;
+            }
+            elsif ( $tok eq '&' ) {
+                $id_scan_state = $scan_state_AMPERSAND;
+            }
+            elsif ( $tok eq 'sub' or $tok eq 'package' ) {
+                $saw_alpha     = 0;    # 'sub' is considered type info here
+                $id_scan_state = $scan_state_SIGIL;
+                $identifier .=
+                  SPACE;    # need a space to separate sub from sub name
+            }
+            elsif ( $tok eq '::' ) {
+                $id_scan_state = $scan_state_ALPHA;
+            }
+            elsif ( $tok =~ /^\w/ ) {
+                $id_scan_state = $scan_state_COLON;
+                $saw_alpha     = 1;
+            }
+            elsif ( $tok eq '->' ) {
+                $id_scan_state = $scan_state_SIGIL;
+            }
+            else {
+
+                # shouldn't happen: bad call parameter
+                my $msg =
+"Program bug detected: scan_identifier received bad starting token = '$tok'\n";
+                if (DEVEL_MODE) { Fault($msg) }
+                if ( !$tokenizer_self->[_in_error_] ) {
+                    warning($msg);
+                    $tokenizer_self->[_in_error_] = 1;
+                }
+                $id_scan_state = EMPTY_STRING;
+                goto RETURN;
+            }
+            $saw_type = !$saw_alpha;
+        }
+        else {
+            $i--;
+            $saw_alpha = ( $tok =~ /^\w/ );
+            $saw_type  = ( $tok =~ /([\$\%\@\*\&])/ );
+
+            # check for a valid starting state
+            if ( DEVEL_MODE && !$is_returnable_scan_state{$id_scan_state} ) {
+                Fault(<<EOM);
+Unexpected starting scan state in sub scan_complex_identifier: '$id_scan_state'
+EOM
+            }
+        }
+
+        ###############################
+        # loop to gather the identifier
+        ###############################
+
+        $i_save = $i;
+
+        while ( $i < $max_token_index && $id_scan_state ) {
+
+            # Be sure we have code to handle this state before we proceed
+            my $code = $scan_identifier_code->{$id_scan_state};
+            if ( !$code ) {
+
+                if ( $id_scan_state eq $scan_state_SPLIT ) {
+                    ## OK: this is the signal to exit and split the pretoken
+                }
+
+                # unknown state - should not happen
+                else {
+                    if (DEVEL_MODE) {
+                        Fault(<<EOM);
+Unknown scan state in sub scan_complex_identifier: '$id_scan_state'
+Scan state at sub entry was '$id_scan_state_begin'
+EOM
+                    }
+                    $id_scan_state = EMPTY_STRING;
+                    $i             = $i_save;
+                }
+                last;
+            }
+
+            # Remember the starting index for progress check below
+            my $i_start_loop = $i;
+
+            $last_tok_is_blank = $tok_is_blank;
+            if   ($tok_is_blank) { $tok_is_blank = undef }
+            else                 { $i_save       = $i }
+
+            $tok = $rtokens->[ ++$i ];
+
+            # patch to make digraph :: if necessary
+            if ( ( $tok eq ':' ) && ( $rtokens->[ $i + 1 ] eq ':' ) ) {
+                $tok = '::';
+                $i++;
+            }
+
+            $code->();
+
+            # check for forward progress: a decrease in the index $i
+            # implies that scanning has finished
+            last if ( $i <= $i_start_loop );
+
+        } ## end of main loop
+
+        ##############
+        # Check result
+        ##############
+
+        # Be sure a valid state is returned
+        if ($id_scan_state) {
+
+            if ( !$is_returnable_scan_state{$id_scan_state} ) {
+
+                if ( $id_scan_state eq $scan_state_SPLIT ) {
+                    $split_pretoken_flag = 1;
+                }
+
+                if ( $id_scan_state eq $scan_state_RPAREN ) {
+                    warning(
+                        "Hit end of line while seeking ) to end prototype\n");
+                }
+
+                $id_scan_state = EMPTY_STRING;
+            }
+
+            # Patch: the deprecated variable $# does not combine with anything
+            # on the next line.
+            if ( $identifier eq '$#' ) { $id_scan_state = EMPTY_STRING }
+        }
+
+        # Be sure the token index is valid
+        if ( $i < 0 ) { $i = 0 }
+
+        # Be sure a token type is defined
+        if ( !$type ) {
+
+            if ($saw_type) {
+
+                if ($saw_alpha) {
+
+                  # The type without the -> should be the same as with the -> so
+                  # that if they get separated we get the same bond strengths,
+                  # etc.  See b1234
+                    if (   $identifier =~ /^->/
+                        && $last_nonblank_type eq 'w'
+                        && substr( $identifier, 2, 1 ) =~ /^\w/ )
+                    {
+                        $type = 'w';
+                    }
+                    else { $type = 'i' }
+                }
+                elsif ( $identifier eq '->' ) {
+                    $type = '->';
+                }
+                elsif (
+                    ( length($identifier) > 1 )
+
+                    # In something like '@$=' we have an identifier '@$'
+                    # In something like '$${' we have type '$$' (and only
+                    # part of an identifier)
+                    && !( $identifier =~ /\$$/ && $tok eq '{' )
+
+                    ## && ( $identifier !~ /^(sub |package )$/ )
+                    && $identifier ne 'sub '
+                    && $identifier ne 'package '
+                  )
+                {
+                    $type = 'i';
+                }
+                else { $type = 't' }
+            }
+            elsif ($saw_alpha) {
+
+                # type 'w' includes anything without leading type info
+                # ($,%,@,*) including something like abc::def::ghi
+                $type = 'w';
+
+                # Fix for b1337, if restarting scan after line break between
+                # '->' or sigil and identifier name, use type 'i'
+                if (   $id_scan_state_begin
+                    && $identifier =~ /^([\$\%\@\*\&]|->)/ )
+                {
+                    $type = 'i';
+                }
+            }
+            else {
+                $type = EMPTY_STRING;
+            }    # this can happen on a restart
+        }
+
+        # See if we formed an identifier...
+        if ($identifier) {
+            $tok = $identifier;
+            if ($message) { write_logfile_entry($message) }
+        }
+
+        # did not find an identifier, back  up
+        else {
+            $tok = $tok_begin;
+            $i   = $i_begin;
+        }
+
+      RETURN:
+
+        DEBUG_SCAN_ID && do {
+            my ( $a, $b, $c ) = caller;
+            print STDOUT
+"SCANID: called from $a $b $c with tok, i, state, identifier =$tok_begin, $i_begin, $id_scan_state_begin, $identifier_begin\n";
+            print STDOUT
+"SCANID: returned with tok, i, state, identifier =$tok, $i, $id_scan_state, $identifier\n";
+        };
+        return ( $i, $tok, $type, $id_scan_state, $identifier,
+            $split_pretoken_flag );
+    } ## end sub scan_complex_identifier
+} ## end closure for sub scan_complex_identifier
 
 {    ## closure for sub do_scan_sub
 
