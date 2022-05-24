@@ -863,7 +863,6 @@ sub get_line {
 ##        _rtoken_type               => undef,
 ##        _rtokens                   => undef,
 ##        _rlevels                   => undef,
-##        _rslevels                  => undef,
 ##        _rblock_type               => undef,
 ##        _rcontainer_type           => undef,
 ##        _rcontainer_environment    => undef,
@@ -4544,7 +4543,6 @@ EOM
             $line_of_tokens->{_rtokens}          = [$input_line];
             $line_of_tokens->{_rtoken_type}      = ['#'];
             $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
-            $line_of_tokens->{_rslevels}         = [$slevel_in_tokenizer];
             $line_of_tokens->{_rci_levels}       = [$ci_string_i];
             $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
             $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
@@ -4925,16 +4923,17 @@ EOM
         # the result up for shipping.  Most of the remaining work involves
         # defining the various indentation parameters that the formatter needs
         # (indentation level and continuation indentation).  This turns out to
-        # be rather complicated.
+        # be somewhat complicated.
 
-        # TODO: variable 'slevel' is no longer needed and can be removed
+        # Programming note: the old variable @slevels has been eliminated
+        # but some of the slevel coding still remains and is used in the
+        # ci calculation.  It would be nice to find a way to remove it.
 
         my @token_type    = ();    # stack of output token types
         my @block_type    = ();    # stack of output code block types
         my @type_sequence = ();    # stack of output type sequence numbers
         my @tokens        = ();    # output tokens
         my @levels        = ();    # structural brace levels of output tokens
-        my @slevels       = ();    # secondary nesting levels of output tokens
         my @ci_string = ();  # string needed to compute continuation indentation
         my $container_environment = EMPTY_STRING;
         my $im                    = -1;             # previous $i value
@@ -5011,9 +5010,6 @@ EOM
 
         # loop over the list of pre-tokens indexes
         foreach my $i ( @{$routput_token_list} ) {
-
-            # We store the slevel value before it is updated for this token
-            push( @slevels, $slevel_in_tokenizer );
 
             # Get $tok_i, the PRE-token.  It only equals the token for symbols
             my $tok_i  = $rtokens->[$i];
@@ -5503,8 +5499,8 @@ EOM
                 }
             }
 
-            # Store the values for this token. Note that @slevel was
-            # stored at the top of the loop and @tokens is handled below.
+            # Store the values for this token except for @tokens,
+            # which is handled specially below.
             push( @block_type,    $routput_block_type->[$i] );
             push( @ci_string,     $ci_string_i );
             push( @levels,        $level_i );
@@ -5553,6 +5549,7 @@ EOM
             push( @tokens, substr( $input_line, $rtoken_map->[$im], $num ) );
         }
 
+        # TODO: maybe move these to the end of the loop sub
         $tokenizer_self->[_in_attribute_list_] = $in_attribute_list;
         $tokenizer_self->[_in_quote_]          = $in_quote;
         $tokenizer_self->[_quote_target_] =
@@ -5564,7 +5561,6 @@ EOM
         $line_of_tokens->{_rblock_type}    = \@block_type;
         $line_of_tokens->{_rtype_sequence} = \@type_sequence;
         $line_of_tokens->{_rlevels}        = \@levels;
-        $line_of_tokens->{_rslevels}       = \@slevels;
         $line_of_tokens->{_rci_levels}     = \@ci_string;
 
         return;

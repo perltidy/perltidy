@@ -67,7 +67,6 @@ sub write_debug_entry {
     my $rtoken_type = $line_of_tokens->{_rtoken_type};
     my $rtokens     = $line_of_tokens->{_rtokens};
     my $rlevels     = $line_of_tokens->{_rlevels};
-    my $rslevels    = $line_of_tokens->{_rslevels};
     my $rblock_type = $line_of_tokens->{_rblock_type};
 
     my $input_line_number = $line_of_tokens->{_line_number};

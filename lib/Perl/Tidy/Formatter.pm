@@ -5322,7 +5322,6 @@ EOM
             my $rblock_type    = $line_of_tokens_old->{_rblock_type};
             my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
             my $rlevels        = $line_of_tokens_old->{_rlevels};
-            my $rslevels       = $line_of_tokens_old->{_rslevels};
             my $rci_levels     = $line_of_tokens_old->{_rci_levels};
 
             my $jmax = @{$rtokens} - 1;
