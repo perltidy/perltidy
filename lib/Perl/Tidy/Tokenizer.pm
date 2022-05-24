@@ -114,6 +114,8 @@ use vars qw{
   %is_if_elsif_unless
   %is_if_elsif_unless_case_when
   %other_line_endings
+  %is_END_DATA_format_sub
+  %is_semicolon_or_t
   $code_skipping_pattern_begin
   $code_skipping_pattern_end
 };
@@ -308,6 +310,13 @@ sub check_options {
     %is_sub = ();
     $is_sub{'sub'} = 1;
 
+    %is_END_DATA_format_sub = (
+        '__END__'  => 1,
+        '__DATA__' => 1,
+        'format'   => 1,
+        'sub'      => 1,
+    );
+
     # Install any aliases to 'sub'
     if ( $rOpts->{'sub-alias-list'} ) {
 
@@ -316,7 +325,8 @@ sub check_options {
         # for example, it might be 'sub method fun'
         my @sub_alias_list = split /\s+/, $rOpts->{'sub-alias-list'};
         foreach my $word (@sub_alias_list) {
-            $is_sub{$word} = 1;
+            $is_sub{$word}                 = 1;
+            $is_END_DATA_format_sub{$word} = 1;
         }
     }
 
@@ -4911,6 +4921,14 @@ EOM
     sub tokenizer_finish {
         my ($line_of_tokens) = @_;
 
+        # We have broken the current line into tokens. Now we have to package
+        # the result up for shipping.  Most of the remaining work involves
+        # defining the various indentation parameters that the formatter needs
+        # (indentation level and continuation indentation).  This turns out to
+        # be rather complicated.
+
+        # TODO: variable 'slevel' is no longer needed and can be removed
+
         my @token_type    = ();    # stack of output token types
         my @block_type    = ();    # stack of output code block types
         my @type_sequence = ();    # stack of output type sequence numbers
@@ -4987,17 +5005,30 @@ EOM
 #       and '(' -- , regardless of context, is used to compute a nesting
 #       depth.
 
-        my ( $ci_string_i, $level_i, $nesting_token_string_i, );
+        $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
-        foreach my $i ( @{$routput_token_list} )
-        {    # scan the list of pre-tokens indexes
+        my $ci_string_i;
 
-            # self-checking for valid token types
-            # NOTE: would prefer 'my $type' here but that will cause
-            #    the PC error 'Reused variable name in lexical scope'
-            # TODO: change to 'my $type_i'
-            $type = $routput_token_type->[$i];
-            my $forced_indentation_flag = $routput_indent_flag->[$i];
+        # loop over the list of pre-tokens indexes
+        foreach my $i ( @{$routput_token_list} ) {
+
+            # We store the slevel value before it is updated for this token
+            push( @slevels, $slevel_in_tokenizer );
+
+            # Get $tok_i, the PRE-token.  It only equals the token for symbols
+            my $tok_i  = $rtokens->[$i];
+            my $type_i = $routput_token_type->[$i];
+
+            # Check for an invalid token type..
+            # This can happen by running perltidy on non-scripts
+            # although it could also be bug introduced by programming change.
+            # Perl silently accepts a 032 (^Z) and takes it as the end
+            if ( !$is_valid_token_type{$type_i} ) {
+                my $val = ord($type_i);
+                warning(
+                    "unexpected character decimal $val ($type_i) in script\n");
+                $tokenizer_self->[_in_error_] = 1;
+            }
 
             # See if we should undo the $forced_indentation_flag.
             # Forced indentation after 'if', 'unless', 'while' and 'until'
@@ -5023,7 +5054,8 @@ EOM
             #   line, is an opening container token or a comma.
             # This almost always works, but if not after another pass it will
             # be stable.
-            if ( $forced_indentation_flag && $type eq 'k' ) {
+            my $forced_indentation_flag = $routput_indent_flag->[$i];
+            if ( $forced_indentation_flag && $type_i eq 'k' ) {
                 my $ixlast  = -1;
                 my $ilast   = $routput_token_list->[$ixlast];
                 my $toklast = $routput_token_type->[$ilast];
@@ -5054,12 +5086,12 @@ EOM
             if ($indented_if_level) {
 
                 # don't try to nest trailing if's - shouldn't happen
-                if ( $type eq 'k' ) {
+                if ( $type_i eq 'k' ) {
                     $forced_indentation_flag = 0;
                 }
 
                 # check for the normal case - outdenting at next ';'
-                elsif ( $type eq ';' ) {
+                elsif ( $type_i eq ';' ) {
                     if ( $level_in_tokenizer == $indented_if_level ) {
                         $forced_indentation_flag = -1;
                         $indented_if_level       = 0;
@@ -5067,7 +5099,7 @@ EOM
                 }
 
                 # handle case of missing semicolon
-                elsif ( $type eq '}' ) {
+                elsif ( $type_i eq '}' ) {
                     if ( $level_in_tokenizer == $indented_if_level ) {
                         $indented_if_level = 0;
 
@@ -5084,40 +5116,16 @@ EOM
                 }
             }
 
-            # NOTE: would prefer 'my $tok' here but that will cause
-            #    the PC error 'Reused variable name in lexical scope'
-            $tok     = $rtokens->[$i]; # the token, but ONLY if same as pretoken
-            $level_i = $level_in_tokenizer;
-
-            # This can happen by running perltidy on non-scripts
-            # although it could also be bug introduced by programming change.
-            # Perl silently accepts a 032 (^Z) and takes it as the end
-            if ( !$is_valid_token_type{$type} ) {
-                my $val = ord($type);
-                warning(
-                    "unexpected character decimal $val ($type) in script\n");
-                $tokenizer_self->[_in_error_] = 1;
-            }
-
-            # ----------------------------------------------------------------
-            # TOKEN TYPE PATCHES
-            #  output __END__, __DATA__, and format as type 'k' instead of ';'
-            # to make html colors correct, etc.
-            my $fix_type = $type;
-            if ( $type eq ';' && $tok =~ /\w/ ) { $fix_type = 'k' }
-
-            # output anonymous 'sub' as keyword
-            if ( $type eq 't' && $is_sub{$tok} ) { $fix_type = 'k' }
-
-            # -----------------------------------------------------------------
-
-            $nesting_token_string_i = $nesting_token_string;
+            # Now we have the first approximation to the level
+            my $level_i = $level_in_tokenizer;
 
             # set primary indentation levels based on structural braces
             # Note: these are set so that the leading braces have a HIGHER
             # level than their CONTENTS, which is convenient for indentation
             # Also, define continuation indentation for each token.
-            if ( $type eq '{' || $type eq 'L' || $forced_indentation_flag > 0 )
+            if (   $type_i eq '{'
+                || $type_i eq 'L'
+                || $forced_indentation_flag > 0 )
             {
 
                 # use environment before updating
@@ -5193,8 +5201,8 @@ EOM
                 if ($forced_indentation_flag) {
 
                     # break BEFORE '?' when there is forced indentation
-                    if ( $type eq '?' ) { $level_i = $level_in_tokenizer; }
-                    if ( $type eq 'k' ) {
+                    if ( $type_i eq '?' ) { $level_i = $level_in_tokenizer; }
+                    if ( $type_i eq 'k' ) {
                         $indented_if_level = $level_in_tokenizer;
                     }
 
@@ -5272,7 +5280,7 @@ EOM
                 if (
                     !$routput_block_type->[$i]    # patch: skip for BLOCK
                     && ($in_statement_continuation)
-                    && !( $forced_indentation_flag && $type eq ':' )
+                    && !( $forced_indentation_flag && $type_i eq ':' )
                   )
                 {
                     $total_ci += $in_statement_continuation
@@ -5283,8 +5291,8 @@ EOM
                 $in_statement_continuation = 0;
             }
 
-            elsif ($type eq '}'
-                || $type eq 'R'
+            elsif ($type_i eq '}'
+                || $type_i eq 'R'
                 || $forced_indentation_flag < 0 )
             {
 
@@ -5326,9 +5334,8 @@ EOM
                             }
                         }
 
-# ...and include all block types except user subs with
-# block prototypes and these: (sort|grep|map|do|eval)
-# /^(\}|\{|BEGIN|END|CHECK|INIT|AUTOLOAD|DESTROY|UNITCHECK|continue|;|if|elsif|else|unless|while|until|for|foreach)$/
+                        # ...and include all block types except user subs with
+                        # block prototypes and these: (sort|grep|map|do|eval)
                         elsif (
                             $is_zero_continuation_block_type{$block_type_i} )
                         {
@@ -5364,7 +5371,7 @@ EOM
                     #           or $check eq "new"
                     #           or $check eq "old",
                     #     );
-                    elsif ( $tok eq ')' ) {
+                    elsif ( $tok_i eq ')' ) {
                         $in_statement_continuation = 1
                           if (
                             $is_list_end_type{ $routput_container_type->[$i] }
@@ -5372,7 +5379,7 @@ EOM
                         ##if $routput_container_type->[$i] =~ /^[;,\{\}]$/;
                     }
 
-                    elsif ( $tok eq ';' ) { $in_statement_continuation = 0 }
+                    elsif ( $tok_i eq ';' ) { $in_statement_continuation = 0 }
                 }
 
                 # use environment after updating
@@ -5396,8 +5403,8 @@ EOM
                 # commas, this simplifies the -lp indentation logic, which
                 # counts commas.  For ?: it makes them stand out.
                 if ($nesting_list_flag) {
-                    ##      $type =~ /^[,\?\:]$/
-                    if ( $is_comma_question_colon{$type} ) {
+                    ##      $type_i =~ /^[,\?\:]$/
+                    if ( $is_comma_question_colon{$type_i} ) {
                         $in_statement_continuation = 0;
                     }
                 }
@@ -5405,8 +5412,8 @@ EOM
                 # be sure binary operators get continuation indentation
                 if (
                     $container_environment
-                    && (   $type eq 'k' && $is_binary_keyword{$tok}
-                        || $is_binary_type{$type} )
+                    && (   $type_i eq 'k' && $is_binary_keyword{$tok_i}
+                        || $is_binary_type{$type_i} )
                   )
                 {
                     $in_statement_continuation = 1;
@@ -5418,13 +5425,13 @@ EOM
 
                 # update continuation flag ...
                 # if this isn't a blank or comment..
-                if ( $type ne 'b' && $type ne '#' ) {
+                if ( $type_i ne 'b' && $type_i ne '#' ) {
 
                     # and we are in a BLOCK
                     if ($nesting_block_flag) {
 
                         # the next token after a ';' and label starts a new stmt
-                        if ( $type eq ';' || $type eq 'J' ) {
+                        if ( $type_i eq ';' || $type_i eq 'J' ) {
                             $in_statement_continuation = 0;
                         }
 
@@ -5451,7 +5458,7 @@ EOM
                         # as a non block, to simplify formatting. But these
                         # are actually blocks and can have semicolons.
                         # See code_block_type() and is_non_structural_brace().
-                        elsif ( $type eq ',' || $type eq ';' ) {
+                        elsif ( $type_i eq ',' || $type_i eq ';' ) {
                             $in_statement_continuation = 0;
                         }
 
@@ -5474,37 +5481,54 @@ EOM
             # Note: these are set so that the nesting depth is the depth
             # of the PREVIOUS TOKEN, which is convenient for setting
             # the strength of token bonds
-            my $slevel_i = $slevel_in_tokenizer;
 
             #    /^[L\{\(\[]$/
-            if ( $is_opening_type{$type} ) {
+            if ( $is_opening_type{$type_i} ) {
                 $slevel_in_tokenizer++;
-                $nesting_token_string .= $tok;
-                $nesting_type_string  .= $type;
+                $nesting_token_string .= $tok_i;
+                $nesting_type_string  .= $type_i;
             }
 
             #       /^[R\}\)\]]$/
-            elsif ( $is_closing_type{$type} ) {
+            elsif ( $is_closing_type{$type_i} ) {
                 $slevel_in_tokenizer--;
                 my $char = chop $nesting_token_string;
 
-                if ( $char ne $matching_start_token{$tok} ) {
-                    $nesting_token_string .= $char . $tok;
-                    $nesting_type_string  .= $type;
+                if ( $char ne $matching_start_token{$tok_i} ) {
+                    $nesting_token_string .= $char . $tok_i;
+                    $nesting_type_string  .= $type_i;
                 }
                 else {
                     chop $nesting_type_string;
                 }
             }
 
+            # Store the values for this token. Note that @slevel was
+            # stored at the top of the loop and @tokens is handled below.
             push( @block_type,    $routput_block_type->[$i] );
             push( @ci_string,     $ci_string_i );
             push( @levels,        $level_i );
-            push( @slevels,       $slevel_i );
-            push( @token_type,    $fix_type );
             push( @type_sequence, $routput_type_sequence->[$i] );
+            push( @token_type,    $type_i );
 
-            # now form the previous token
+            #------------------
+            # TOKEN TYPE PATCH:
+            #------------------
+            # - output __END__, __DATA__, and format as type 'k' instead of ';'
+            #   to make html colors correct, etc.
+            # - output anonymous 'sub' as keyword
+            # The following hash tests are equivalent to these previous tests:
+            #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
+            #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
+            # This is seldom needed and profiling showed that it is fastest to
+            # do it as follows:
+            if (   $is_END_DATA_format_sub{$tok_i}
+                && $is_semicolon_or_t{$type_i} )
+            {
+                $token_type[-1] = 'k';
+            }
+
+            # Form and store the previous token
             if ( $im >= 0 ) {
                 $num =
                   $rtoken_map->[$i] - $rtoken_map->[$im];  # how many characters
@@ -5517,12 +5541,13 @@ EOM
 
             # or grab some values for the leading token (needed for log output)
             else {
-                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string_i;
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
             }
+
             $im = $i;
         }
 
+        # Form and store the final token
         $num = length($input_line) - $rtoken_map->[$im];   # make the last token
         if ( $num > 0 ) {
             push( @tokens, substr( $input_line, $rtoken_map->[$im], $num ) );
@@ -10141,6 +10166,9 @@ BEGIN {
 
     @q = qw( if elsif unless );
     @is_if_elsif_unless{@q} = (1) x scalar(@q);
+
+    @q = qw( ; t );
+    @is_semicolon_or_t{@q} = (1) x scalar(@q);
 
     @q = qw( if elsif unless case when );
     @is_if_elsif_unless_case_when{@q} = (1) x scalar(@q);
