@@ -34,7 +34,12 @@
     - This version runs 15 to 20 percent faster on large files than the
       previous release due to optimizations made with the help of Devel::NYTProf.
 
-    - Fixed and reactivated two failing tests (were reading local .perltidyrc file)
+    - This version of perltidy was stress-tested for many cpu hours with
+      random input parameters. No failures to converge, internal fault checks,
+      undefined variable references or other irregularities were seen.
+
+    - Fixed and reactivated two failing installation tests (they were reading
+      a local .perltidyrc file)
 
 
 ## 2022 02 17
