@@ -3669,7 +3669,7 @@ EOM
             # The following warning could be added but would annoy a lot of
             # users who have a perltidyrc with both -t and -et=n.  So instead
             # there is a note in the manual that -et overrides -t.
-            ##Warn("-tabs and -et=n confict; ignoring -tabs\n");
+            ##Warn("-tabs and -et=n conflict; ignoring -tabs\n");
             $rOpts->{'tabs'} = 0;
         }
     }
@@ -3925,7 +3925,7 @@ sub check_vms_filename {
                 \.-?\d*$       # match . version number
               /$1/x;
 
-    # normalise filename, if there are no unescaped dots then append one
+    # normalize filename, if there are no unescaped dots then append one
     $base .= '.' unless $base =~ /(?:^|[^^])\./;
 
     # if we don't already have an extension then we just append the extension

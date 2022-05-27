@@ -23,7 +23,7 @@
 #                 sub set_forced_breakpoint
 # CODE SECTION 9: Process batches of code
 #                 sub grind_batch_of_CODE
-# CODE SECTION 10: Code to break long statments
+# CODE SECTION 10: Code to break long statements
 #                  sub break_long_lines
 # CODE SECTION 11: Code to break long lists
 #                  sub break_lists
@@ -267,7 +267,7 @@ my (
     # Initialized in sub prepare_cuddled_block_types
     $rcuddled_block_types,
 
-    # Initialized and configured in check_optioms
+    # Initialized and configured in check_options
     %outdent_keyword,
     %keyword_paren_inner_tightness,
 
@@ -588,7 +588,7 @@ BEGIN {
 
     # Map related block names into a common name to allow vertical alignment
     # used by sub make_alignment_patterns. Note: this is normally unchanged,
-    # but it contains 'grep' and can be re-initized in
+    # but it contains 'grep' and can be re-initialized in
     # sub initialize_grep_and_friends in a testing mode.
     %block_type_map = (
         'unless'  => 'if',
@@ -1579,7 +1579,7 @@ EOM
         if ( defined($opt) && $opt > 0 && $break_before_container_types{$tok} )
         {
 
-            # (1) -lp is not compatable with opt=2, silently set to opt=0
+            # (1) -lp is not compatible with opt=2, silently set to opt=0
             # (2) opt=0 and 2 give same result if -i=-ci; but opt=0 is faster
             if ( $opt == 2 ) {
                 if (   $rOpts->{'line-up-parentheses'}
@@ -3293,7 +3293,7 @@ EOM
         #       { ... }
 
         # Also, I prefer not to put a ? and # together because ? used to be
-        # a pattern delmiter and spacing was used if guessing was needed.
+        # a pattern delimiter and spacing was used if guessing was needed.
 
         if ( $typer eq '#' ) {
 
@@ -3673,7 +3673,7 @@ EOM
         # real tokens
         $right_bond_strength{'b'} = NO_BREAK;
 
-        # try not to break on exponentation
+        # try not to break on exponentiation
         @q                       = qw# ** .. ... <=> #;
         @left_bond_strength{@q}  = (STRONG) x scalar(@q);
         @right_bond_strength{@q} = (STRONG) x scalar(@q);
@@ -4697,7 +4697,7 @@ sub dump_cuddled_block_list {
     #        },
     #    };
 
-    # SIMPLFIED METHOD: the simplified method uses a wildcard for
+    # SIMPLIFIED METHOD: the simplified method uses a wildcard for
     # the starting block type and puts all cuddled blocks together:
     #    my $rcuddled_block_types = {
     #        '*' => {
@@ -5643,7 +5643,7 @@ sub set_CODE_type {
     # 'IO'  = Indent Only - line goes out unchanged except for indentation
     # 'NIN' = No Internal Newlines - line does not get broken
     # 'VER' = VERSION statement
-    # ''    = ordinary line of code with no restructions
+    # ''    = ordinary line of code with no restrictions
 
     my $ix_line = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -6630,7 +6630,7 @@ sub respace_tokens {
         #        '$var = s/xxx/yyy/;'
         # in case it should have been '$var =~ s/xxx/yyy/;'
 
-        # Start by looking for a token begining with one of: s y m / tr
+        # Start by looking for a token beginning with one of: s y m / tr
         return
           unless ( $is_s_y_m_slash{ substr( $token, 0, 1 ) }
             || substr( $token, 0, 2 ) eq 'tr' );
@@ -6713,7 +6713,7 @@ sub respace_tokens {
         # An error here means that sub write_line() did not correctly
         # package the tokenized lines as it received them.  If we
         # get a fault here it has not output a continuous sequence
-        # of K values.  Or a line of CODE may have been mismarked as
+        # of K values.  Or a line of CODE may have been mis-marked as
         # something else.  There is no good way to continue after such an
         # error.
         # FIXME: Calling Fault will produce zero output; it would be best to
@@ -7078,7 +7078,7 @@ sub respace_tokens {
 
                 # Remove unnecessary semicolons, but not after bare
                 # blocks, where it could be unsafe if the brace is
-                # mistokenized.
+                # mis-tokenized.
                 if (
                     $rOpts->{'delete-semicolons'}
                     && (
@@ -7225,12 +7225,12 @@ EOM
 
             # We will define a list to be a container with one or more commas
             # and no semicolons. Note that we have included the semicolons
-            # in a 'for' container in the simicolon count to keep c-style for
+            # in a 'for' container in the semicolon count to keep c-style for
             # statements from being formatted as lists.
             if ( ( $comma_count || $fat_comma_count ) && !$semicolon_count ) {
                 $is_list = 1;
 
-                # We need to do one more check for a perenthesized list:
+                # We need to do one more check for a parenthesized list:
                 # At an opening paren following certain tokens, such as 'if',
                 # we do not want to format the contents as a list.
                 if ( $rLL_new->[$K_opening]->[_TOKEN_] eq '(' ) {
@@ -8002,7 +8002,7 @@ sub weld_containers {
     # flags.
     my ($self) = @_;
 
-    # This count is used to eliminate needless calls for weld checks elsewere
+    # This count is used to eliminate needless calls for weld checks elsewhere
     $total_weld_count = 0;
 
     return if ( $rOpts->{'indent-only'} );
@@ -9097,7 +9097,7 @@ EOM
                 # more complicated method has been developed.
 
                 # We are trying to avoid creating bad two-line welds when we are
-                # working on long, previously unwelded input text, such as
+                # working on long, previously un-welded input text, such as
 
                 # INPUT (example of a long input line weld candidate):
                 ## $mutation->transpos( $self->RNA->position($mutation->label, $atg_label));
@@ -10374,9 +10374,9 @@ sub break_before_list_opening_containers {
         }
 
         # The last check we can make is to see if this container could fit on a
-        # single line.  Use the least possble indentation in the estmate (ci=0),
+        # single line.  Use the least possible indentation estimate, ci=0,
         # so we are not subtracting $ci * $rOpts_continuation_indentation from
-        # tablulated $maximum_text_length  value.
+        # tabulated $maximum_text_length  value.
         my $maximum_text_length = $maximum_text_length_at_level[$level];
         my $K_closing           = $K_closing_container->{$seqno};
         my $length = $self->cumulative_length_before_K($K_closing) -
@@ -10496,7 +10496,7 @@ sub extended_ci {
     # The following variable can be used to allow a little extra space to
     # avoid blinkers.  A value $len_tol = 20 fixed the following
     # fixes cases: b1025 b1026 b1027 b1028 b1029 b1030 but NOT b1031.
-    # It turned out that the real problem was misparsing a list brace as
+    # It turned out that the real problem was mis-parsing a list brace as
     # a code block in a 'use' statement when the line length was extremely
     # small.  A value of 0 works now, but a slightly larger value can
     # be used to minimize the chance of a blinker.
@@ -10886,7 +10886,7 @@ use constant DEBUG_COLLAPSED_LENGTHS => 0;
 
 # Minimum space reserved for contents of a code block.  A value of 40 has given
 # reasonable results.  With a large line length, say -l=120, this will not
-# normally be noticable but it will prevent making a mess in some edge cases.
+# normally be noticeable but it will prevent making a mess in some edge cases.
 use constant MIN_BLOCK_LEN => 40;
 
 my %is_handle_type;
@@ -10922,7 +10922,7 @@ sub collapsed_lengths {
     # limit.
 
     # The basic idea is that at each node in the tree we imagine that we have a
-    # fork with a handle and collapsable prongs:
+    # fork with a handle and collapsible prongs:
     #
     #                            |------------
     #                            |--------
@@ -11067,7 +11067,7 @@ sub collapsed_lengths {
                 && $K_terminal > $K_first );
         }
 
-        # Use length to terminal comma if interrupded list rule applies
+        # Use length to terminal comma if interrupted list rule applies
         if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
             my $K_c = $stack[-1]->[_K_c_];
             if (
@@ -11348,7 +11348,7 @@ EOM
                 $len = $token_length;
             }
 
-            # include everthing to end of line after a here target
+            # include everything to end of line after a here target
             elsif ( $type eq 'h' ) {
                 $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] -
                   $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
@@ -11810,7 +11810,7 @@ EOM
     # Definitions:
     # ($ibeg, $iend) = starting and ending line indexes of this entire group
     #         $count = total number of keywords seen in this entire group
-    #     $level_beg = indententation level of this group
+    #     $level_beg = indentation level of this group
     #         @group = [ $i, $token, $count ] =list of all keywords & blanks
     #      @subgroup =  $j, index of group where token changes
     #       @iblanks = line indexes of blank lines in input stream in this group
@@ -12211,7 +12211,7 @@ EOM
         elsif ( $ibeg >= 0 ) {
 
             # - bail out on a large level change; we may have walked into a
-            #   data structure or anoymous sub code.
+            #   data structure or anonymous sub code.
             if ( $level > $level_beg + 1 || $level < $level_beg ) {
                 $end_group->(1);
                 next;
@@ -12667,7 +12667,7 @@ EOM
 
         if ( $max_index_to_go < 0 ) {
 
-            # This is harmless but should be elimintated in development
+            # This is harmless but should be eliminated in development
             if (DEVEL_MODE) {
                 Fault("End batch called with nothing to do; please fix\n");
             }
@@ -12751,7 +12751,7 @@ EOM
 
         # So this routine is just making an initial set of required line
         # breaks, basically regardless of the maximum requested line length.
-        # The subsequent stage of formating make additional line breaks
+        # The subsequent stage of formatting make additional line breaks
         # appropriate for lists and logical structures, and to keep line
         # lengths below the requested maximum line length.
 
@@ -12902,7 +12902,7 @@ EOM
 
         # Compare input/output indentation except for:
         #  - hanging side comments
-        #  - continuation lines (habe unknown amount of initial blank space)
+        #  - continuation lines (have unknown amount of initial blank space)
         #  - and lines which are quotes (because they may have been outdented)
         my $guessed_indentation_level =
           $line_of_tokens->{_guessed_indentation_level};
@@ -13439,7 +13439,7 @@ EOM
                     # keep going
                 }
 
-                # if no more tokens, postpone decision until re-entring
+                # if no more tokens, postpone decision until re-entering
                 elsif ( ( $next_nonblank_token_type eq 'b' )
                     && $rOpts_add_newlines )
                 {
@@ -13808,7 +13808,7 @@ sub starting_one_line_block {
         # For signatures and extended syntax ...
         # If this brace follows a parenthesized list, we should look back to
         # find the keyword before the opening paren because otherwise we might
-        # form a one line block which stays intack, and cause the parenthesized
+        # form a one line block which stays intact, and cause the parenthesized
         # expression to break open. That looks bad.
         if ( $tokens_to_go[$i_start] eq ')' ) {
 
@@ -14483,7 +14483,7 @@ EOM
     # - 'grind_batch_of_CODE' determines which tokens will form the OUTPUT
     # lines.
 
-    # So sub 'process_line_of_CODE' builds up the longest possible continouus
+    # So sub 'process_line_of_CODE' builds up the longest possible continuous
     # sequences of tokens, regardless of line length, and then
     # grind_batch_of_CODE breaks these sequences back down into the new output
     # lines.
@@ -14506,7 +14506,7 @@ EOM
         }
         my $Klimit = $self->[_Klimit_];
 
-        # The local batch tokens must be a continous part of the global token
+        # The local batch tokens must be a continuous part of the global token
         # array.
         my $KK;
         foreach my $ii ( 0 .. $max_index_to_go ) {
@@ -15888,7 +15888,7 @@ sub break_equals {
         # suggested by issue c118, which pushed about 5.e5 lines through here
         # and caused an excessive run time.
 
-        # Three lines of defence have been put in place to prevent excessive
+        # Three lines of defense have been put in place to prevent excessive
         # run times:
         #  1. do nothing if formatting under stress (c118 was under stress)
         #  2. break into small sub-sections to decrease the maximum n-squared.
@@ -18999,7 +18999,7 @@ EOM
 
                 elsif ( $is_opening_token{$token} ) {
 
-                    # do requeste -lp breaks at the OPENING token for BROKEN
+                    # do requested -lp breaks at the OPENING token for BROKEN
                     # blocks.  NOTE: this can be done for both -lp and -xlp,
                     # but only -xlp can really take advantage of this.  So this
                     # is currently restricted to -xlp to avoid excess changes to
@@ -21554,7 +21554,7 @@ EOM
                     # or if this is not a sequenced item
                     || !$last_nonblank_seqno
 
-                    # or this continer is excluded by user rules
+                    # or this container is excluded by user rules
                     # or contains here-docs or multiline qw text
                     || defined($last_nonblank_seqno)
                     && $ris_excluded_lp_container->{$last_nonblank_seqno}
@@ -22562,7 +22562,7 @@ EOM
         # to pass nesting depths to the vertical aligner. They remain invariant
         # under all formatting operations.  Previously, level values were sent
         # to the aligner.  But they can be altered in welding and other
-        # opeartions, and this can lead to alignement errors.
+        # operations, and this can lead to alignment errors.
         my $nesting_depth_beg = $nesting_depth_to_go[$ibeg];
         my $nesting_depth_end = $nesting_depth_to_go[$iend];
 
@@ -22903,7 +22903,7 @@ EOM
                     $i_good_paren++;
                 }
 
-                # Initializtion for 'elsif' patch: remember the paren range of
+                # Initialization for 'elsif' patch: remember the paren range of
                 # an elsif, and do not make alignments within them because this
                 # can cause loss of padding and overall brace alignment in the
                 # vertical aligner.
@@ -24990,7 +24990,7 @@ sub make_paren_name {
 
             # YVES patch 1 of 2:
             # Undo ci of line with leading closing eval brace,
-            # but not beyond the indention of the line with
+            # but not beyond the indentation of the line with
             # the opening brace.
             if (
                 $block_type_beg eq 'eval'
@@ -25029,7 +25029,7 @@ sub make_paren_name {
                 my $tok = $token_beg;
                 my $cti = $closing_token_indentation{$tok};
 
-                # Fix the value of 'cti' for an isloated non-welded closing qw
+                # Fix the value of 'cti' for an isolated non-welded closing qw
                 # delimiter.
                 if ( $seqno_qw_closing && $ibeg_weld_fix == $ibeg ) {
 
@@ -25258,7 +25258,7 @@ sub make_paren_name {
             }
         }
 
-        # Full indentaion of closing tokens (-icb and -icp or -cti=2)
+        # Full indentation of closing tokens (-icb and -icp or -cti=2)
         else {
 
             # handle -icb (indented closing code block braces)
@@ -25327,7 +25327,7 @@ sub make_paren_name {
 
             # Patch to make a line which is the end of a qw quote work with the
             # -lp option.  Make $token_beg look like a closing token as some
-            # type even if it is not.  This veriable will become
+            # type even if it is not.  This variable will become
             # $last_leading_token at the end of this loop.  Then, if the -lp
             # style is selected, and the next line is also a
             # closing token, it will not get more indentation than this line.

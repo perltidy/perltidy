@@ -22,7 +22,7 @@ use constant SPACE        => q{ };
 #
 # The sub valign_input collects lines into groups.  When a group reaches
 # the maximum possible size it is processed for alignment and output.
-# The maximum group size is reached whenerver there is a change in indentation
+# The maximum group size is reached whenever there is a change in indentation
 # level, a blank line, a block comment, or an external flush call.  The calling
 # routine may also force a break in alignment at any time.
 #
@@ -319,7 +319,7 @@ sub flush {
     # flush() is the external call to completely empty the pipeline.
     my ($self) = @_;
 
-    # push things out the pipline...
+    # push things out the pipeline...
 
     # push out any current group lines
     $self->_flush_group_lines();
@@ -1803,7 +1803,7 @@ EOM
 
             # If this line has no matching tokens, then flush out the lines
             # BEFORE this line unless both it and the previous line have side
-            # comments.  This prevents this line from pushing side coments out
+            # comments.  This prevents this line from pushing side comments out
             # to the right.
             elsif ( $new_line->get_jmax() == 1 ) {
 
@@ -1895,7 +1895,7 @@ sub two_line_pad {
     #  two isolated (list) lines
     #  imax_min = number of common alignment tokens
     # Return:
-    #  $pad_max = maximum suggested pad distnce
+    #  $pad_max = maximum suggested pad distance
     #           = 0 if alignment not recommended
     # Note that this is only for two lines which do not have alignment tokens
     # in common with any other lines.  It is intended for lists, but it might
@@ -2259,7 +2259,7 @@ sub sweep_left_to_right {
                 #  my $unknown6        = pack( "VV",  0x00, 0x1000 );
 
                 # On the other hand, it is okay to keep matching at the same
-                # level such as in a simple list of commas and/or fat arrors.
+                # level such as in a simple list of commas and/or fat commas.
 
                 my $is_blocked = defined( $blocking_level[$ng] )
                   && $lev > $blocking_level[$ng];
@@ -2268,7 +2268,7 @@ sub sweep_left_to_right {
                 # Do not let one or two lines with a **different number of
                 # alignments** open up a big gap in a large block.  For
                 # example, we will prevent something like this, where the first
-                # line prys open the rest:
+                # line pries open the rest:
 
             #  $worksheet->write( "B7", "http://www.perl.com", undef, $format );
             #  $worksheet->write( "C7", "",                    $format );
@@ -3622,7 +3622,7 @@ sub prune_alignment_tree {
     # );
 
     # In the above example, all lines have three commas at the lowest depth
-    # (zero), so if there were no other alignements, these lines would all
+    # (zero), so if there were no other alignments, these lines would all
     # align considering only the zero depth alignment token.  But some lines
     # have additional comma alignments at the next depth, so we need to decide
     # if we should drop those to keep the top level alignments, or keep those
@@ -3840,7 +3840,7 @@ sub prune_alignment_tree {
     # construction.  The children nodes have links up to the parent node which
     # created them.  Now make links in the opposite direction, so the parents
     # can find the children.  We store the range of children nodes ($nc_beg,
-    # $nc_end) of each parent with two additional indexes in the orignal array.
+    # $nc_end) of each parent with two additional indexes in the original array.
     # These will be undef if no children.
     foreach my $depth ( reverse( 1 .. $MAX_DEPTH ) ) {
         next unless defined( $match_tree[$depth] );
@@ -4514,7 +4514,7 @@ sub align_side_comments {
     # and fake side comments.  This has the consequence that the lengths of
     # long lines without real side comments can cause 'push' all side comments
     # to the right.  This seems unusual, but testing with and without this
-    # feature shows that it is usually better this way.  Othewise, side
+    # feature shows that it is usually better this way.  Otherwise, side
     # comments can be hidden between long lines without side comments and
     # thus be harder to read.
 

@@ -1318,7 +1318,7 @@ sub markup_tokens {
             $type  = 'M';
 
             # but don't include sub declarations in the toc;
-            # these wlll have leading token types 'i;'
+            # these will have leading token types 'i;'
             my $signature = join EMPTY_STRING, @{$rtoken_type};
             unless ( $signature =~ /^i;/ ) {
                 my $subname = $token;

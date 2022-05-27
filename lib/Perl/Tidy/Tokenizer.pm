@@ -594,7 +594,7 @@ sub report_tokenization_errors {
     my ($self) = @_;
 
     # Report any tokenization errors and return a flag '$severe_error'.
-    # Set $severe_error = 1 if the tokenizations errors are so severe that
+    # Set $severe_error = 1 if the tokenization errors are so severe that
     # the formatter should not attempt to format the file. Instead, it will
     # just output the file verbatim.
 
@@ -627,7 +627,7 @@ EOM
     check_final_nesting_depths();
 
     # Likewise, large numbers of brace errors usually indicate non-perl
-    # scirpts, so set the severe error flag at a low number.  This is similar
+    # scripts, so set the severe error flag at a low number.  This is similar
     # to the level check, but different because braces may balance but be
     # incorrectly interlaced.
     if ( $tokenizer_self->[_true_brace_error_count_] > 2 ) {
@@ -3947,7 +3947,7 @@ EOM
         # mistaking {s} in the following for a quoted bare word:
         #     for(@[){s}bla}BLA}
         # Also treat q in something like var{-q} as a bare word, not
-        # a qoute operator
+        # a quote operator
         elsif (
             $next_nonblank_token eq '}'
             && (
@@ -3960,7 +3960,7 @@ EOM
             $type = 'w';
         }
 
-        # Scan a bare word following a -> as an identifir; it could
+        # Scan a bare word following a -> as an identifier; it could
         # have a long package name.  Fixes c037, c041.
         elsif ( $last_nonblank_token eq '->' ) {
             scan_bare_identifier();
@@ -5756,7 +5756,7 @@ sub operator_expected {
                 $op_expected = OPERATOR;
             }
 
-            # Patch to allow a ? following 'split' to be a depricated pattern
+            # Patch to allow a ? following 'split' to be a deprecated pattern
             # delimiter.  This patch is coordinated with the omission of split
             # from the list
             # %is_keyword_rejecting_question_as_pattern_delimiter. This patch
@@ -5876,7 +5876,7 @@ sub operator_expected {
 
         # Exception to weird parsing rules for 'x(' ... see case b1205:
         # In something like 'print $vv x(...' the x is an operator;
-        # Likewise in 'print $vv x$ww' the x is an operatory (case b1207)
+        # Likewise in 'print $vv x$ww' the x is an operator (case b1207)
         # otherwise x follows the weird parsing rules.
         elsif ( $tok eq 'x' && $next_type =~ /^[\(\$\@\%]$/ ) {
             $op_expected = OPERATOR;
@@ -6056,7 +6056,7 @@ sub code_block_type {
         # snippet is an anonymous hash ref and not a code block!
         #   print 'hi' if { x => 1, }->{x};
         # We can identify this situation because the last nonblank type
-        # will be a keyword (instead of a closing peren)
+        # will be a keyword (instead of a closing paren)
         if (
             $last_nonblank_type eq 'k'
             && (   $last_nonblank_token eq 'if'
@@ -6115,7 +6115,7 @@ sub code_block_type {
         if ( $paren_type && $is_sort_map_grep{$paren_type} ) {
 
             # We will mark this as a code block but use type 't' instead
-            # of the name of the contining function.  This will allow for
+            # of the name of the containing function.  This will allow for
             # correct parsing but will usually produce better formatting.
             # Braces with block type 't' are not broken open automatically
             # in the formatter as are other code block types, and this usually
@@ -6240,7 +6240,7 @@ sub decide_if_code_block {
             # Patched for RT #95708
             if (
 
-                # it is a comma which is not a pattern delimeter except for qw
+                # it is a comma which is not a pattern delimiter except for qw
                 (
                     $pre_types[$j] eq ','
                     ## !~ /^(s|m|y|tr|qr|q|qq|qx)$/
@@ -10303,7 +10303,7 @@ BEGIN {
 
     # These are keywords for which an arg may optionally be omitted.  They are
     # currently only used to disambiguate a ? used as a ternary from one used
-    # as a (depricated) pattern delimiter.  In the future, they might be used
+    # as a (deprecated) pattern delimiter.  In the future, they might be used
     # to give a warning about ambiguous syntax before a /.
     # Note: split has been omitted (see not below).
     my @keywords_taking_optional_arg = qw(
@@ -10378,7 +10378,7 @@ BEGIN {
     @is_keyword_taking_optional_arg{@keywords_taking_optional_arg} =
       (1) x scalar(@keywords_taking_optional_arg);
 
-    # This list is used to decide if a pattern delmited by question marks,
+    # This list is used to decide if a pattern delimited by question marks,
     # ?pattern?, can follow one of these keywords.  Note that from perl 5.22
     # on, a ?pattern? is not recognized, so we can be much more strict than
     # with a /pattern/. Note that 'split' is not in this list. In current
