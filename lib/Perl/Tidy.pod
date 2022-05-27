@@ -89,49 +89,47 @@ of characters which are decoded as utf8 by Perl::Tidy can be returned in either
 of two possible states, decoded or encoded, and it is important that the
 calling program and Perl::Tidy are in agreement regarding the state to be
 returned.  A flag B<--encode-output-strings>, or simply B<-eos>, was added in
-versions of Perl::Tidy after 20220101 for this purpose. This flag should be
-added to the end of the B<argv> parameter (described below) if Perl::Tidy
-will be decoding utf8 text.  The options are as follows.
+Perl::Tidy version 20220217 for this purpose.
 
 =over 4
 
 =item *
 
-Use B<-eos> if Perl::Tidy should encode any string which it decodes.
-This is probably most convenient for most programs.
-But do not use this setting if the calling program will
-encode the data too, because double encoding will corrupt data.
+Use B<-eos> if Perl::Tidy should encode any string which it decodes.  This is
+the current default because it makes perltidy behave well as a filter, and is
+the correct setting for most programs.  But do not use this setting if the
+calling program will encode the data too, because double encoding will corrupt
+data.
 
 =item *
 
 Use B<-neos> if a string should remain decoded if it was decoded by Perl::Tidy.
-This is appropriate if
-the calling program will handle any needed encoding before outputting the string.
-
-=item *
-
-The current default is B<-neos>, but B<the default could change in a future
-version>, so B<-neos> should still be set, if appropriate, to allow for the
-possibility of a future change in the default.
+This is only appropriate if the calling program will handle any needed encoding
+before outputting the string.  If needed, this flag can be added to the end of
+the B<argv> parameter passed to Perl::Tidy.
 
 =back
 
-For example, to set B<-eos> the following could be used
-
-        $argv .= " -eos" if ( $Perl::Tidy::VERSION > 20220101 );
-
-        $error_flag = Perl::Tidy::perltidy(
-            argv        => $argv,
-            source      => \$source,
-            destination => \$destination,
-            stderr      => \$stderr,
-            errorfile   => \$errorfile
-        );
-
-The test on version allows older versions of Perl::Tidy to still be used.
-
 For some background information see
-L<https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md>
+L<https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md>.
+
+This change in default behavior was made over a period of time as follows:
+
+=over 4
+
+=item *
+
+For versions before 20220217 the B<-eos> flag was not available and the behavior was equivalent to B<-neos>.
+
+=item *
+
+In version 20220217 the B<-eos> flag was added but the default remained B<-neos>.
+
+=item *
+
+For versions after 20220217 the default was set to B<-eos>.
+
+=back
 
 =item B<stderr>
 
