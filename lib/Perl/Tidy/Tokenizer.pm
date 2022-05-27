@@ -3595,6 +3595,7 @@ EOM
                 $is_constant{$current_package}{$next_nonblank_tok2} = 1;
             }
         }
+        return;
     } ## end sub do_USE_CONSTANT
 
     sub do_KEYWORD {
@@ -5448,8 +5449,7 @@ EOM
 
                     # update continuation flag ...
 
-                    ## if this isn't a blank or comment..[this test moved above]
-                    ## if ( $type_i ne 'b' && $type_i ne '#' ) {  # (old, moved)
+                    ## if ( $type_i ne 'b' && $type_i ne '#' ) {  # moved above
 
                     # if we are in a BLOCK
                     if ($nesting_block_flag) {
@@ -5492,7 +5492,7 @@ EOM
                         }
                     } ## end else [ if ($nesting_block_flag)]
 
-                    ##}  ## end if ( $type_i ne 'b' ... # (old test, moved) 
+                    ##}  ## end if ( $type_i ne 'b' ... # (old moved above)
 
                 } ## end else [ if ( $type_i eq '{' ||...})]
 
@@ -5528,6 +5528,19 @@ EOM
                         chop $nesting_type_string;
                     }
                 }
+
+                # apply token type patch:
+                # - output anonymous 'sub' as keyword (type 'k')
+                # - output __END__, __DATA__, and format as type 'k' instead
+                #   of ';' to make html colors correct, etc.
+                # The following hash tests are equivalent to these older tests:
+                #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
+                #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
+                if (   $is_END_DATA_format_sub{$tok_i}
+                    && $is_semicolon_or_t{$type_i} )
+                {
+                    $type_i = 'k';
+                }
             } ## end else [ if ( $type_i eq 'b' ||...)]
 
             # Store the values for this token
@@ -5536,23 +5549,6 @@ EOM
             push( @block_type,    $routput_block_type->[$i] );
             push( @type_sequence, $routput_type_sequence->[$i] );
             push( @token_type,    $type_i );
-
-            #------------------
-            # token type patch:
-            #------------------
-            # - output __END__, __DATA__, and format as type 'k' instead of ';'
-            #   to make html colors correct, etc.
-            # - output anonymous 'sub' as keyword
-            # The following hash tests are equivalent to these previous tests:
-            #   if ( $type_i eq ';' && $tok_i =~ /\w/ ) { $fix_type = 'k' }
-            #   if ( $type_i eq 't' && $is_sub{$tok_i} ) { $fix_type = 'k' }
-            # This is seldom needed and profiling showed that it is fastest to
-            # do it as follows:
-            if (   $is_END_DATA_format_sub{$tok_i}
-                && $is_semicolon_or_t{$type_i} )
-            {
-                $token_type[-1] = 'k';
-            }
 
             # Form and store the previous token
             if ( $im >= 0 ) {
@@ -7522,6 +7518,7 @@ BEGIN {
 
         # allow old package separator (') except in 'use' statement
         $allow_tick = ( $last_nonblank_token ne 'use' );
+        return;
     } ## end sub initialize_my_scan_id_vars
 
     #----------------------------------
@@ -7693,17 +7690,12 @@ BEGIN {
             }
 
             # stop at space after something other than -> or sigil
-            # TODO: see if we can arrive here
+            # Example of what can arrive here:
+            #   eval { $MyClass->$$ };
             else {
-                if (DEVEL_MODE) {
-                    Fault(<<EOM);
-Unexpected space while scanning with identifier = '$identifier',
-id_scan_state=$id_scan_state
-EOM
-                    $id_scan_state = EMPTY_STRING;
-                    $i             = $i_save;
-                    $type          = 'i';
-                }
+                $id_scan_state = EMPTY_STRING;
+                $i             = $i_save;
+                $type          = 'i';
             }
         }
         elsif ( $tok eq '^' ) {
