@@ -61,7 +61,7 @@
 <pre><code>    use Perl::Tidy;
     Perl::Tidy::perltidy();</code></pre>
 
-<p>The call to <b>perltidy</b> returns a scalar <b>$error_flag</b> which is TRUE if an error caused premature termination, and FALSE if the process ran to normal completion. Additional discuss of errors is contained below in the <a href="#ERROR-HANDLING">&quot;ERROR HANDLING&quot;</a> section.</p>
+<p>The call to <b>perltidy</b> returns a scalar <b>$error_flag</b> which is TRUE if an error caused premature termination, and FALSE if the process ran to normal completion. Additional discuss of errors is contained below in the <a href="#ERROR-HANDLING">ERROR HANDLING</a> section.</p>
 
 <p>The module accepts input and output streams by a variety of methods. The following list of parameters may be any of the following: a filename, an ARRAY reference, a SCALAR reference, or an object with either a <b>getline</b> or <b>print</b> method, as appropriate.</p>
 
@@ -101,36 +101,34 @@
 
 <p>If the <b>destination</b> parameter is given, it will be used to define the file or memory location to receive output of perltidy.</p>
 
-<p><b>Important note if destination is a string or array reference</b>. Perl strings of characters which are decoded as utf8 by Perl::Tidy can be returned in either of two possible states, decoded or encoded, and it is important that the calling program and Perl::Tidy are in agreement regarding the state to be returned. A flag <b>--encode-output-strings</b>, or simply <b>-eos</b>, was added in versions of Perl::Tidy after 20220101 for this purpose. This flag should be added to the end of the <b>argv</b> paremeter (described below) if Perl::Tidy will be decoding utf8 text. The options are as follows.</p>
+<p><b>Important note if destination is a string or array reference</b>. Perl strings of characters which are decoded as utf8 by Perl::Tidy can be returned in either of two possible states, decoded or encoded, and it is important that the calling program and Perl::Tidy are in agreement regarding the state to be returned. A flag <b>--encode-output-strings</b>, or simply <b>-eos</b>, was added in Perl::Tidy version 20220217 for this purpose.</p>
 
 <ul>
 
-<li><p>Use <b>-eos</b> if Perl::Tidy should encode any string which it decodes. This is probably most convenient for most programs. But do not use this setting if the calling program will encode the data too, because double encoding will corrupt data.</p>
+<li><p>Use <b>-eos</b> if Perl::Tidy should encode any string which it decodes. This is the current default because it makes perltidy behave well as a filter, and is the correct setting for most programs. But do not use this setting if the calling program will encode the data too, because double encoding will corrupt data.</p>
 
 </li>
-<li><p>Use <b>-neos</b> if a string should remain decoded if it was decoded by Perl::Tidy. This is appropriate if the calling program will handle any needed encoding before outputting the string.</p>
-
-</li>
-<li><p>The current default is <b>-neos</b>, but <b>the default could change in a future version</b>, so <b>-neos</b> should still be set, if appropriate, to allow for the possibility of a future change in the default.</p>
+<li><p>Use <b>-neos</b> if a string should remain decoded if it was decoded by Perl::Tidy. This is only appropriate if the calling program will handle any needed encoding before outputting the string. If needed, this flag can be added to the end of the <b>argv</b> parameter passed to Perl::Tidy.</p>
 
 </li>
 </ul>
 
-<p>For example, to set <b>-eos</b> the following could be used</p>
+<p>For some background information see <a href="https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md">https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md</a>.</p>
 
-<pre><code>        $argv .= &quot; -eos&quot; if ( $Perl::Tidy::VERSION &gt; 20220101 );
+<p>This change in default behavior was made over a period of time as follows:</p>
 
-        $error_flag = Perl::Tidy::perltidy(
-            argv        =&gt; $argv,
-            source      =&gt; \$source,
-            destination =&gt; \$destination,
-            stderr      =&gt; \$stderr,
-            errorfile   =&gt; \$errorfile
-        );</code></pre>
+<ul>
 
-<p>The test on version allows older versions of Perl::Tidy to still be used.</p>
+<li><p>For versions before 20220217 the <b>-eos</b> flag was not available and the behavior was equivalent to <b>-neos</b>.</p>
 
-<p>For some background information see <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a> and <a href="https://github.com/houseabsolute/perl-code-tidyall/issues/84">https://github.com/houseabsolute/perl-code-tidyall/issues/84</a>.</p>
+</li>
+<li><p>In version 20220217 the <b>-eos</b> flag was added but the default remained <b>-neos</b>.</p>
+
+</li>
+<li><p>For versions after 20220217 the default was set to <b>-eos</b>.</p>
+
+</li>
+</ul>
 
 </dd>
 <dt id="stderr"><b>stderr</b></dt>
@@ -403,7 +401,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents Perl::Tidy version 20220217</p>
+<p>This man page documents Perl::Tidy version 20220601</p>
 
 <h1 id="LICENSE">LICENSE</h1>
 

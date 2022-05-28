@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 02 17.04
+## 2022 06 01
 
     - The flag --encode-output-strings, or -eos, is now set on by default, as
       noted in the discussion of issue git #92.  This has no effect on the use

@@ -51,6 +51,7 @@
 - *IMPORTANT:* Now untar the file (perhaps in /tmp) and take a look at the
   contents.  Be sure it does not have unwanted files.
    - If necessary, remove MANIFEST, fix MANIFEST.SKIP and run make manifest again
+- run 'cpants-lint.pl' on the .tar.gz and check results
 - Do test installs on several systems 
 - Upload Release to CPAN
 - Update CPAN tickets

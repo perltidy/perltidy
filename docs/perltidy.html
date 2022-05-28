@@ -328,7 +328,7 @@
 
 <pre><code>        perltidy -sal=&#39;method fun _sub M4&#39;</code></pre>
 
-<p>will cause the perltidy to treate the words &#39;method&#39;, &#39;fun&#39;, &#39;_sub&#39; and &#39;M4&#39; to be treated the same as if they were &#39;sub&#39;. Note that if the alias words are separated by spaces then the string of words should be placed in quotes.</p>
+<p>will cause the perltidy to treat the words &#39;method&#39;, &#39;fun&#39;, &#39;_sub&#39; and &#39;M4&#39; the same as if they were &#39;sub&#39;. Note that if the alias words are separated by spaces then the string of words should be placed in quotes.</p>
 
 <p>Note that several other parameters accept a list of keywords, including &#39;sub&#39; (see <a href="#Specifying-Block-Types">&quot;Specifying Block Types&quot;</a>). You do not need to include any sub aliases in these lists. Just include keyword &#39;sub&#39; if you wish, and all aliases are automatically included.</p>
 
@@ -336,7 +336,7 @@
 <dt id="gal-s---grep-alias-list-s"><b>-gal=s</b>, <b>--grep-alias-list=s</b></dt>
 <dd>
 
-<p>This flag allows a code block following an external &#39;list operator&#39; function to be formatted as if it followed one of the builtin keywords <b>grep</b>, <b>map</b> or <b>sort</b>. The string <b>s</b> contains the names of one or more such list operators, separated by spaces or commas.</p>
+<p>This flag allows a code block following an external &#39;list operator&#39; function to be formatted as if it followed one of the built-in keywords <b>grep</b>, <b>map</b> or <b>sort</b>. The string <b>s</b> contains the names of one or more such list operators, separated by spaces or commas.</p>
 
 <p>By &#39;list operator&#39; is meant a function which is invoked in the form</p>
 
@@ -431,15 +431,15 @@
 <dt id="et-n---entab-leading-whitespace"><b>-et=n</b>, <b>--entab-leading-whitespace</b></dt>
 <dd>
 
-<p>This flag causes each <b>n</b> initial space characters to be replaced by one tab character.</p>
+<p>This flag causes each <b>n</b> leading space characters produced by the formatting process to be replaced by one tab character. The formatting process itself works with space characters. The <b>-et=n</b> parameter is applied as a last step, after formatting is complete, to convert leading spaces into tabs. Before starting to use tabs, it is essential to first get the indentation controls set as desired without tabs, particularly the two parameters <b>--indent-columns=n</b> (or <b>-i=n</b>) and <b>--continuation-indentation=n</b> (or <b>-ci=n</b>).</p>
 
-<p>The value of the integer <b>n</b> can be any value but can be coordinated with the number of spaces used for intentation. For example, <b>-et=4 -ci=4 -i=4</b> will produce one tab for each indentation level and and one for each continuation indentation level. You may want to coordinate the value of <b>n</b> with what your display software assumes for the spacing of a tab.</p>
+<p>The value of the integer <b>n</b> can be any value but can be coordinated with the number of spaces used for indentation. For example, <b>-et=4 -ci=4 -i=4</b> will produce one tab for each indentation level and and one for each continuation indentation level. You may want to coordinate the value of <b>n</b> with what your display software assumes for the spacing of a tab.</p>
 
 </dd>
 <dt id="t---tabs"><b>-t</b>, <b>--tabs</b></dt>
 <dd>
 
-<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option. This flag is retained for backwards compatibility, but if you use tabs, the <b>-et=n</b> flag is recommended.</p>
+<p>This flag causes one leading tab character to be inserted for each level of indentation. Certain other features are incompatible with this option, and if these options are also given, then a warning message will be issued and this flag will be unset. One example is the <b>-lp</b> option. This flag is retained for backwards compatibility, but if you use tabs, the <b>-et=n</b> flag is recommended. If both <b>-t</b> and <b>-et=n</b> are set, the <b>-et=n</b> is used.</p>
 
 </dd>
 <dt id="dt-n---default-tabsize-n"><b>-dt=n</b>, <b>--default-tabsize=n</b></dt>
@@ -488,7 +488,7 @@
 <dt id="enc-s---character-encoding-s"><b>-enc=s</b>, <b>--character-encoding=s</b></dt>
 <dd>
 
-<p>This flag indicates if the input data stream use a character encoding. Perltidy does not look for the encoding directives in the soure stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (Note that perltidy often works on snippets of code rather than complete files so it cannot rely on <b>use utf8</b> directives).</p>
+<p>This flag indicates if the input data stream use a character encoding. Perltidy does not look for the encoding directives in the source stream, such as <b>use utf8</b>, and instead relies on this flag to determine the encoding. (Note that perltidy often works on snippets of code rather than complete files so it cannot rely on <b>use utf8</b> directives).</p>
 
 <p>The possible values for <b>s</b> are:</p>
 
@@ -524,13 +524,21 @@
 <dt id="eos-s---encode-output-strings-s"><b>-eos=s</b>, <b>--encode-output-strings=s</b></dt>
 <dd>
 
-<p>This flag has been added to resolve an issue involving the interface between Perl::Tidy and calling programs, and in particular <b>Code::TidyAll (tidyall)</b>. By default Perl::Tidy returns unencoded strings to the calling program, but some programs expect encoded strings. Setting this flag causes Perl::Tidy to return encoded output strings which it decoded. For some background information see <a href="https://github.com/perltidy/perltidy/issues/83">https://github.com/perltidy/perltidy/issues/83</a> and <a href="https://github.com/houseabsolute/perl-code-tidyall/issues/84">https://github.com/houseabsolute/perl-code-tidyall/issues/84</a>.</p>
+<p>This flag was added to resolve an issue involving the interface between Perl::Tidy and calling programs, and in particular <b>Code::TidyAll (tidyall)</b>.</p>
 
-<p>If you only run the <b>perltidy</b> binary this flag has no effect.</p>
+<p>If you only run the <b>perltidy</b> binary this flag has no effect. If you run a program which calls the Perl::Tidy module and receives a string in return, then the meaning of the flag is as follows:</p>
 
-<p>If you use <b>tidyall</b> with encoded files and encounter irregularities such as <b>wide character</b> messages you should set this flag.</p>
+<ul>
 
-<p>Additional information can be found in the man pages for the <b>Perl::Tidy</b> module.</p>
+<li><p>The setting <b>-eos</b> means Perl::Tidy should encode any string which it decodes. This is the default because it makes perltidy behave well as a filter, and is the correct setting for most programs.</p>
+
+</li>
+<li><p>The setting <b>-neos</b> means that a string should remain decoded if it was decoded by Perl::Tidy. This is only appropriate if the calling program will handle any needed encoding before outputting the string.</p>
+
+</li>
+</ul>
+
+<p>The default was changed from <b>-neos</b> to <b>-eos</b> in versions after 20220217. If this change causes a program to start running incorrectly on encoded files, an emergency fix might be to set <b>-neos</b>. Additional information can be found in the man pages for the <b>Perl::Tidy</b> module and also in <a href="https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md">https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md</a>.</p>
 
 </dd>
 <dt id="gcs---use-unicode-gcstring"><b>-gcs</b>, <b>--use-unicode-gcstring</b></dt>
@@ -644,7 +652,7 @@
 
 <p>By default, perltidy examines the input file and tries to determine the starting indentation level. While it is often zero, it may not be zero for a code snippet being sent from an editing session.</p>
 
-<p>To guess the starting indentation level perltidy simply assumes that indentation scheme used to create the code snippet is the same as is being used for the current perltidy process. This is the only sensible guess that can be made. It should be correct if this is true, but otherwise it probably won&#39;t. For example, if the input script was written with -i=2 and the current peltidy flags have -i=4, the wrong initial indentation will be guessed for a code snippet which has non-zero initial indentation. Likewise, if an entabbing scheme is used in the input script and not in the current process then the guessed indentation will be wrong.</p>
+<p>To guess the starting indentation level perltidy simply assumes that indentation scheme used to create the code snippet is the same as is being used for the current perltidy process. This is the only sensible guess that can be made. It should be correct if this is true, but otherwise it probably won&#39;t. For example, if the input script was written with -i=2 and the current perltidy flags have -i=4, the wrong initial indentation will be guessed for a code snippet which has non-zero initial indentation. Likewise, if an entabbing scheme is used in the input script and not in the current process then the guessed indentation will be wrong.</p>
 
 <p>If the default method does not work correctly, or you want to change the starting level, use <b>-sil=n</b>, to force the starting level to be n.</p>
 
@@ -674,7 +682,7 @@
 
 <p>These flags have no effect on code BLOCKS, such as if/then/else blocks, which always use whatever is specified with <b>-i=n</b>.</p>
 
-<p>Some limitiations on these flags are:</p>
+<p>Some limitations on these flags are:</p>
 
 <ul>
 
@@ -728,13 +736,13 @@
 
 <p>Only one of these two flags may be used. Both flags can achieve the same result, but the <b>-lpil=s</b> flag is much easier to describe and use and is recommended. The <b>-lpxl=s</b> flag was the original implementation and is only retained for backwards compatibility.</p>
 
-<p>This list <b>s</b> for these parametes is a string with space-separated items. Each item consists of up to three pieces of information in this order: (1) an optional letter code (2) a required container type, and (3) an optional numeric code.</p>
+<p>This list <b>s</b> for these parameters is a string with space-separated items. Each item consists of up to three pieces of information in this order: (1) an optional letter code (2) a required container type, and (3) an optional numeric code.</p>
 
 <p>The only required piece of information is a container type, which is one of &#39;(&#39;, &#39;[&#39;, or &#39;{&#39;. For example the string</p>
 
 <pre><code>  -lpil=&#39;(&#39;</code></pre>
 
-<p>means use -lp formatting only on lists within parentheses, not lists in square-bracets or braces. The same thing could alternatively be specified with</p>
+<p>means use -lp formatting only on lists within parentheses, not lists in square-brackets or braces. The same thing could alternatively be specified with</p>
 
 <pre><code>  -lpxl = &#39;[ {&#39;</code></pre>
 
@@ -742,7 +750,7 @@
 
 <p>A second optional item of information which can be given for parentheses is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -1121,7 +1129,7 @@
 <pre><code>  # perltidy -nwrs=&#39;+&#39;, syntax error:
   for my $severity ( reverse $SEVERITY_LOWEST +1 .. $SEVERITY_HIGHEST ) { ... }</code></pre>
 
-<p>To avoid subtle parsing problems like this, it is best to avoid spacing a binary operator asymetrically with a space on the left but not on the right.</p>
+<p>To avoid subtle parsing problems like this, it is best to avoid spacing a binary operator asymmetrically with a space on the left but not on the right.</p>
 
 </dd>
 <dt id="Space-between-specific-keywords-and-opening-paren"><b>Space between specific keywords and opening paren</b></dt>
@@ -2257,7 +2265,7 @@
 
 <p>A third optional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the container. If given, it goes just before the container symbol. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings:</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -2599,9 +2607,9 @@
 <dt id="bal-n---break-after-labels-n"><b>bal=n, --break-after-labels=n</b></dt>
 <dd>
 
-<p>This flag controls whether or not a line break occurs after a label. There are three possible valuse for <b>n</b>:</p>
+<p>This flag controls whether or not a line break occurs after a label. There are three possible values for <b>n</b>:</p>
 
-<pre><code>  -bal=0  break if there is a break in the input [DEFAULt]
+<pre><code>  -bal=0  break if there is a break in the input [DEFAULT]
   -bal=1  always break after a label
   -bal=2  never break after a label</code></pre>
 
@@ -2875,7 +2883,7 @@
 
 <p>It is possible to be more specific in matching parentheses by preceding them with a letter. The possible letters are &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings (these are the same as used in the <b>--weld-nested-exclusion-list</b> and <b>--line-up-parentheses-exclusion-list</b> parameters):</p>
 
-<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl builtin keyword (such as &#39;if&#39;, &#39;while&#39;),
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
  &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
@@ -3182,7 +3190,7 @@
 
 <p><b>-kgbi</b> or <b>--keyword-group-blanks-inside</b> controls the insertion of blank lines between the first and last statement of the entire group. If there is a continuous run of a single statement type with more than the minimum threshold number (as specified with <b>-kgbs=s</b>) then this switch causes a blank line be inserted between this subgroup and the others. In the example above this happened between the <b>use</b> and <b>my</b> statements.</p>
 
-<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such orignial blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>.</p>
+<p><b>-kgbd</b> or <b>--keyword-group-blanks-delete</b> controls the deletion of any blank lines that exist in the the group when it is first scanned. When statements are initially scanned, any existing blank lines are included in the collection. Any such original blank lines will be deleted before any other insertions are made when the parameter <b>-kgbd</b> is set. The default is not to do this, <b>-nkgbd</b>.</p>
 
 <p><b>-kgbr=n</b> or <b>--keyword-group-blanks-repeat-count=n</b> specifies <b>n</b>, the maximum number of times this logic will be applied to any file. The special value <b>n=0</b> is the same as n=infinity which means it will be applied to an entire script [Default]. A value <b>n=1</b> could be used to make it apply just one time for example. This might be useful for adjusting just the <b>use</b> statements in the top part of a module for example.</p>
 
@@ -3403,7 +3411,7 @@
 <dt id="Completely-turning-off-vertical-alignment-with--novalign"><b>Completely turning off vertical alignment with -novalign</b></dt>
 <dd>
 
-<p>The default is to use vertical alignment, but bertical alignment can be completely turned of with the <b>-novalign</b> flag.</p>
+<p>The default is to use vertical alignment, but vertical alignment can be completely turned of with the <b>-novalign</b> flag.</p>
 
 <p>A lower level of control of vertical alignment is possible with three parameters <b>-vc</b>, <b>-vsc</b>, and <b>-vbc</b>. These independently control alignment of code, side comments and block comments. They are described in the next section.</p>
 
@@ -3419,7 +3427,7 @@
 <dt id="Controlling-side-comment-alignment-with---valign-side-comments-or--vsc"><b>Controlling side comment alignment with --valign-side-comments or -vsc</b></dt>
 <dd>
 
-<p>The <b>-vsc</b> flag enables alignment of side comments and is enabled by default. If side comment aligment is disabled with <b>-nvsc</b> they will appear at a fixed space from the preceding code token. The default is <b>-vsc</b></p>
+<p>The <b>-vsc</b> flag enables alignment of side comments and is enabled by default. If side comment alignment is disabled with <b>-nvsc</b> they will appear at a fixed space from the preceding code token. The default is <b>-vsc</b></p>
 
 </dd>
 <dt id="Controlling-block-comment-alignment-with---valign-block-comments-or--vbc"><b>Controlling block comment alignment with --valign-block-comments or -vbc</b></dt>
@@ -3434,14 +3442,16 @@
 <p>More detailed control of alignment types is available with these two parameters. Most of the vertical alignments in typical programs occur at one of the tokens &#39;,&#39;, &#39;=&#39;, and &#39;=&gt;&#39;, but many other alignments are possible and are given in the following list:</p>
 
 <pre><code>  = **= += *= &amp;= &lt;&lt;= &amp;&amp;= -= /= |= &gt;&gt;= ||= //= .= %= ^= x=
-  { ( ? : , ; =&gt; &amp;&amp; || ~~ !~~ =~ !~ // &lt;=&gt; -&gt;
+  { ( ? : , ; =&gt; &amp;&amp; || ~~ !~~ =~ !~ // &lt;=&gt; -&gt; q
   if unless and or err for foreach while until</code></pre>
 
-<p>These alignments are all enabled by default, but they can be selectively disabled by including one or more of these tokens in the space-separated list <b>valign-exclusion-list=s</b>. For example, the following would prevent alignment at <b>=</b> and <b>if</b>:</p>
+<p>These alignment types correspond to perl symbols, operators and keywords except for &#39;q&#39;, which refers to the special case of alignment in a &#39;use&#39; statement of qw quotes and empty parens.</p>
+
+<p>They are all enabled by default, but they can be selectively disabled by including one or more of these tokens in the space-separated list <b>valign-exclusion-list=s</b>. For example, the following would prevent alignment at <b>=</b> and <b>if</b>:</p>
 
 <pre><code>  --valign-exclusion-list=&#39;= if&#39;</code></pre>
 
-<p>If it is simpler to specify only the token types which are to be aligned, then include the types which are to be aligned in the list of <b>--valign-inclusion-list</b>. You may leave the <b>valign-exclusion-list</b> undefined, or use the special symbol <b>*</b> for the exclusion list. For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
+<p>If it is simpler to specify only the token types which are to be aligned, then include the types which are to be aligned in the list of <b>--valign-inclusion-list</b>. In that case you may leave the <b>valign-exclusion-list</b> undefined, or use the special symbol <b>*</b> for the exclusion list. For example, the following parameters enable alignment only at commas and &#39;fat commas&#39;:</p>
 
 <pre><code>  --valign-inclusion-list=&#39;, =&gt;&#39;
   --valign-exclusion-list=&#39;*&#39;     ( this is optional and may be omitted )</code></pre>
@@ -3494,6 +3504,8 @@
 
 <p>Two commands which remove comments (but not pod) are: <b>-dbc</b> or <b>--delete-block-comments</b> and <b>-dsc</b> or <b>--delete-side-comments</b>. (Hanging side comments will be deleted with side comments here.)</p>
 
+<p>When side comments are deleted, any special control side comments for non-indenting braces will be retained unless they are deactivated with a <b>-nnib</b> flag.</p>
+
 <p>The negatives of these commands also work, and are the defaults. When block comments are deleted, any leading &#39;hash-bang&#39; will be retained. Also, if the <b>-x</b> flag is used, any system commands before a leading hash-bang will be retained (even if they are in the form of comments).</p>
 
 </dd>
@@ -3518,7 +3530,7 @@
 
 <p>These other locations are system-dependent, and may be displayed with the command <code>perltidy -dpro</code>. Under Unix systems, it will first look for an environment variable <b>PERLTIDY</b>. Then it will look for a <i>.perltidyrc</i> file in the home directory, and then for a system-wide file <i>/usr/local/etc/perltidyrc</i>, and then it will look for <i>/etc/perltidyrc</i>. Note that these last two system-wide files do not have a leading dot. Further system-dependent information will be found in the INSTALL file distributed with perltidy.</p>
 
-<p>Under Windows, perltidy will also search for a configuration file named perltidy.ini since Windows does not allow files with a leading period (.). Use <code>perltidy -dpro</code> to see the possible locations for your system. An example might be <i>C:\Documents and Settings\All Users\perltidy.ini</i>.</p>
+<p>Under Windows, perltidy will also search for a configuration file named <i>perltidy.ini</i> since Windows does not allow files with a leading period (.). Use <code>perltidy -dpro</code> to see the possible locations for your system. An example might be <i>C:\Documents and Settings\All Users\perltidy.ini</i>.</p>
 
 <p>Another option is the use of the PERLTIDY environment variable. The method for setting environment variables depends upon the version of Windows that you are using. Instructions for Windows 95 and later versions can be found here:</p>
 
@@ -3991,7 +4003,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20220217</p>
+<p>This man page documents perltidy version 20220601</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

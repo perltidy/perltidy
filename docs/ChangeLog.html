@@ -1,5 +1,47 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2022 06 01</h2>
+
+<pre><code>- The flag --encode-output-strings, or -eos, is now set on by default, as
+  noted in the discussion of issue git #92.  This has no effect on the use
+  of the 'perltidy' binary but could change the behavior of programs which
+  use the Perl::Tidy module on files encoded in UTF-8.  If any problems are
+  noticed, an emergency fix can be made by reverting to the old default with
+  the flag -neos.  For complete details see:
+
+       https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md
+
+- Add vertical alignment for qw quotes in 'use' statements (see issue #git 93).
+  This is on by default but can be turned off with -vxl='q':
+
+    # old default or -vxl='q'
+    use Getopt::Long qw(GetOptions);
+    use Fcntl qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
+    use Symbol qw(gensym);
+    use Exporter ();
+
+    # new default
+    use Getopt::Long qw(GetOptions);
+    use Fcntl        qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
+    use Symbol       qw(gensym);
+    use Exporter     ();
+
+- Previously, if a -dsc command was used to delete all side comments,
+  then any special control comments for non-indenting braces got deleted too.
+  Now, these control side comments are retained when -dsc is set unless
+  a -nnib flag is also set to deactivate them.
+
+- This version runs 15 to 20 percent faster on large files than the
+  previous release due to optimizations made with the help of Devel::NYTProf.
+
+- This version of perltidy was stress-tested for many cpu hours with
+  random input parameters. No failures to converge, internal fault checks,
+  undefined variable references or other irregularities were seen.
+
+- Fixed and reactivated two failing installation tests (they were reading
+  a local .perltidyrc file)
+</code></pre>
+
 <h2>2022 02 17</h2>
 
 <pre><code>- A new flag, --encode-output-strings, or -eos, has been added to resolve
