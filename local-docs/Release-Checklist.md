@@ -52,7 +52,12 @@
   contents.  Be sure it does not have unwanted files.
    - If necessary, remove MANIFEST, fix MANIFEST.SKIP and run make manifest again
 - run 'cpants-lint.pl' on the .tar.gz and check results
+  (this is an option in build.pl after making a new .tar.gz)
 - Do test installs on several systems 
+- Review the suggestions in Release::Checklist
+
+     https://metacpan.org/pod/Release::Checklist
+
 - Upload Release to CPAN
 - Update CPAN tickets
 - Upload release to sourceforge

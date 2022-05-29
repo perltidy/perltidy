@@ -26,6 +26,7 @@ chdir $git_home;
 #  cpanm Perl::Critic
 #  cpanm Tidy::All
 #  cpanm Perl::::MinimumVersion  (has perlver)
+#  cpanm App::CPANTS::Lint       (has cpants_lint.pl)
 #  sudo cpan App::perlbrew
 #  perlbrew init
 #  sudo apt-get install git
@@ -355,6 +356,17 @@ sub make_dist {
     my $default = $created_VERSION =~ /\./ ? "N" : "Y";
     if ( ifyes( "OK. Make a .zip too? [Y/N], <cr>=$default", $default ) ) {
         make_zip($tar_gz_file);
+    }
+
+    if (
+        ifyes(
+            "run cpants_lint.pl to check $tar_gz_file? [Y/N], <cr>='Y'", "Y"
+        )
+      )
+    {
+       my $fout   = "tmp/cpants_lint.out";
+       my $cmd = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
+       post_result($fout);
     }
     return;
 }
