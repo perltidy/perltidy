@@ -9880,6 +9880,46 @@ print to_json({success => $success ? 1 : 0});
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1346.in <==
+        return (
+            $s + $t - $a / 3,
+            -0.5 * ( $s + $t ) +
+                  sqrt(-1) * sqrt(3) / 2 *
+                  ( $s - $t ) -
+                  ( $a / 3 ),
+            -0.5 * ( $s + $t ) -
+                  sqrt(-1) *
+                  sqrt(3) / 2 *
+                  ( $s - $t ) - ( $a / 3 )
+        );
+
+        return (
+            $s + $t - $a / 3,
+            -0.5 * ( $s + $t ) + sqrt(-1) * sqrt(3) / 2 *
+                  ( $s - $t ) -
+                  ( $a / 3 ),
+            -0.5 * ( $s + $t ) - sqrt(-1) * sqrt(3) / 2 *
+                  ( $s - $t ) - ( $a / 3 )
+        );
+
+
+        return (
+            $s + $t - $a / 3,
+            -0.5 * ( $s + $t ) +
+                  sqrt(-1) * sqrt(3) / 2 *
+                  ( $s - $t ) -
+                  ( $a / 3 ),
+            -0.5 * ( $s + $t ) -
+                  sqrt(-1) * sqrt(3) / 2 *
+                  ( $s - $t ) - ( $a / 3 )
+        );
+
+==> b1346.par <==
+--keep-old-breakpoints-before=' n ( '
+--continuation-indentation=6
+--maximum-line-length=60
+--extended-continuation-indentation
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
