@@ -452,12 +452,7 @@ identifier is found, its actual text is checked to see if it is one
 being sought.  If so, the above write_line prints the token and its
 line number.
 
-The B<formatter> feature is relatively new in perltidy, and further
-documentation needs to be written to complete its description.  However,
-several example programs have been written and can be found in the
-B<examples> section of the source distribution.  Probably the best way
-to get started is to find one of the examples which most closely matches
-your application and start modifying it.
+The B<examples> section of the source distribution has some examples of programs which use the B<formatter> option.
 
 For help with perltidy's peculiar way of breaking lines into tokens, you
 might run, from the command line,
@@ -468,7 +463,7 @@ where F<filename> is a short script of interest.  This will produce
 F<filename.DEBUG> with interleaved lines of text and their token types.
 The B<-D> flag has been in perltidy from the beginning for this purpose.
 If you want to see the code which creates this file, it is
-C<write_debug_entry> in Tidy.pm.
+C<sub Perl::Tidy::Debugger::write_debug_entry>
 
 =head1 EXPORT
 
@@ -491,11 +486,9 @@ Please refer to the file "COPYING" for details.
 
 =head1 BUG REPORTS
 
-A list of current bugs and issues can be found at the CPAN site L<https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy>
-
-To report a new bug or problem, use the link on this page.
-
 The source code repository is at L<https://github.com/perltidy/perltidy>.
+
+To report a new bug or problem, use the "issues" link on this page.
 
 =head1 SEE ALSO
 

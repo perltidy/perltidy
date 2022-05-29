@@ -36,6 +36,11 @@ perltidy - a perl script indenter and reformatter
 =head1 DESCRIPTION
 
 Perltidy reads a perl script and writes an indented, reformatted script.
+This document describes the parameters available for controlling this formatting.
+
+Perltidy is a commandline frontend to the module Perl::Tidy.  For documentation
+describing how to call the Perl::Tidy module from other applications see the
+separate documentation for Perl::Tidy.  It is the file Perl::Tidy.pod in the source distribution.
 
 Many users will find enough information in L<"EXAMPLES"> to get
 started.  New users may benefit from the short tutorial
@@ -5167,11 +5172,9 @@ This man page documents perltidy version 20220601
 
 =head1 BUG REPORTS
 
-A list of current bugs and issues can be found at the CPAN site L<https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy>
-
-To report a new bug or problem, use the link on this page.
-
 The source code repository is at L<https://github.com/perltidy/perltidy>.
+
+To report a new bug or problem, use the "issues" link on this page.
 
 =head1 COPYRIGHT
 
