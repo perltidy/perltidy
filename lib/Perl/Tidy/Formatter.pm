@@ -2307,7 +2307,7 @@ EOM
 
     # ignore kbb='(' : can cause unstable math formatting (issue b1346)
     if ( $short_name eq 'kbb' ) {
-        @list = grep { $_ !~ /\(/ } @list;
+        @list = grep { !m/\(/ } @list;
     }
 
     # pull out any any leading container code, like f( or *{
