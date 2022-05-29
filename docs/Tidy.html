@@ -383,13 +383,13 @@
 
 <p>In the present example, we are only looking for tokens of type <b>i</b> (identifiers), so the for loop skips past all other types. When an identifier is found, its actual text is checked to see if it is one being sought. If so, the above write_line prints the token and its line number.</p>
 
-<p>The <b>formatter</b> feature is relatively new in perltidy, and further documentation needs to be written to complete its description. However, several example programs have been written and can be found in the <b>examples</b> section of the source distribution. Probably the best way to get started is to find one of the examples which most closely matches your application and start modifying it.</p>
+<p>The <b>examples</b> section of the source distribution has some examples of programs which use the <b>formatter</b> option.</p>
 
 <p>For help with perltidy&#39;s peculiar way of breaking lines into tokens, you might run, from the command line,</p>
 
 <pre><code> perltidy -D filename</code></pre>
 
-<p>where <i>filename</i> is a short script of interest. This will produce <i>filename.DEBUG</i> with interleaved lines of text and their token types. The <b>-D</b> flag has been in perltidy from the beginning for this purpose. If you want to see the code which creates this file, it is <code>write_debug_entry</code> in Tidy.pm.</p>
+<p>where <i>filename</i> is a short script of interest. This will produce <i>filename.DEBUG</i> with interleaved lines of text and their token types. The <b>-D</b> flag has been in perltidy from the beginning for this purpose. If you want to see the code which creates this file, it is <code>sub Perl::Tidy::Debugger::write_debug_entry</code></p>
 
 <h1 id="EXPORT">EXPORT</h1>
 
@@ -411,11 +411,9 @@
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 
-<p>A list of current bugs and issues can be found at the CPAN site <a href="https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy">https://rt.cpan.org/Public/Dist/Display.html?Name=Perl-Tidy</a></p>
-
-<p>To report a new bug or problem, use the link on this page.</p>
-
 <p>The source code repository is at <a href="https://github.com/perltidy/perltidy">https://github.com/perltidy/perltidy</a>.</p>
+
+<p>To report a new bug or problem, use the &quot;issues&quot; link on this page.</p>
 
 <h1 id="SEE-ALSO">SEE ALSO</h1>
 

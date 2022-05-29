@@ -2,17 +2,23 @@
 
 ## 2022 06 01
 
-    - The flag --encode-output-strings, or -eos, is now set on by default, as
-      noted in the discussion of issue git #92.  This has no effect on the use
-      of the 'perltidy' binary but could change the behavior of programs which
-      use the Perl::Tidy module on files encoded in UTF-8.  If any problems are
-      noticed, an emergency fix can be made by reverting to the old default with
-      the flag -neos.  For complete details see:
+    - Please note the following two significant changes in this distribution:
 
-           https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md
+    - The flag --encode-output-strings, or -eos, is now set 'on' by default.
+      This has no effect on the use of the 'perltidy' binary script, but could
+      change the behavior of some programs which use the Perl::Tidy module on
+      files encoded in UTF-8.  If any problems are noticed, an emergency fix
+      can be made by reverting to the old default by setting -neos.  For
+      an explanation of why this change needs to be made see:
 
-    - Add vertical alignment for qw quotes in 'use' statements (see issue #git 93).
-      This is on by default but can be turned off with -vxl='q':
+      https://github.com/perltidy/perltidy/issues/92
+
+      https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md
+
+    - Add vertical alignment for qw quotes and empty parens in 'use'
+      statements (see issue #git 93).  This new alignment is 'on' by default
+      and will change formatting as shown below. If this is not wanted it can
+      be turned off with the parameter -vxl='q' (--valign-exclude-list='q').
 
         # old default or -vxl='q'
         use Getopt::Long qw(GetOptions);
@@ -29,7 +35,7 @@
     - Previously, if a -dsc command was used to delete all side comments,
       then any special control comments for non-indenting braces got deleted too.
       Now, these control side comments are retained when -dsc is set unless
-      a -nnib flag is also set to deactivate them.
+      a -nnib (--nonon-indenting-braces) flag is also set to deactivate them.
 
     - This version runs 15 to 20 percent faster on large files than the
       previous release due to optimizations made with the help of Devel::NYTProf.
@@ -37,9 +43,6 @@
     - This version of perltidy was stress-tested for many cpu hours with
       random input parameters. No failures to converge, internal fault checks,
       undefined variable references or other irregularities were seen.
-
-    - Fixed and reactivated two failing installation tests (they were reading
-      a local .perltidyrc file)
 
 
 ## 2022 02 17
