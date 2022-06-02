@@ -52,7 +52,7 @@ use constant SPACE        => q{ };
 
 use Carp;
 use English qw( -no_match_vars );
-our $VERSION = '20220601';
+our $VERSION = '20220613';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -2305,9 +2305,13 @@ list is: @list;
 EOM
     }
 
-    # ignore kbb='(' : can cause unstable math formatting (issue b1346)
+    # Ignore kbb='(' and '[' and '{': can cause unstable math formatting
+    # (issues b1346, b1347, b1348) and likewise ignore kba=')' and ']' and '}'
     if ( $short_name eq 'kbb' ) {
-        @list = grep { !m/\(/ } @list;
+        @list = grep { !m/[\(\[\{]/ } @list;
+    }
+    elsif ( $short_name eq 'kba' ) {
+        @list = grep { !m/[\)\]\}]/ } @list;
     }
 
     # pull out any any leading container code, like f( or *{
@@ -2357,44 +2361,6 @@ EOM
         }
 
         $rkeep_break_hash->{$key} = $flag;
-    }
-
-    # Temporary patch and warning during changeover from using type to token for
-    # containers .  This can be eliminated after one or two future releases.
-    if (   $rkeep_break_hash->{'{'}
-        && $rkeep_break_hash->{'{'} eq '1'
-        && !$rkeep_break_hash->{'('}
-        && !$rkeep_break_hash->{'['} )
-    {
-        $rkeep_break_hash->{'('} = 1;
-        $rkeep_break_hash->{'['} = 1;
-        Warn(<<EOM);
-Sorry, but the format for the -kbb and -kba flags is changing a little.
-You entered '{' which currently matches '{' '(' and '[',
-but in the future it will only match '{'.
-To prevent this message please do one of the following:
-  use '{ ( [' if you want to match all opening containers, or
-  use '(' or '[' to match just those containers, or
-  use '*{' to match only opening braces
-EOM
-    }
-
-    if (   $rkeep_break_hash->{'}'}
-        && $rkeep_break_hash->{'}'} eq '1'
-        && !$rkeep_break_hash->{')'}
-        && !$rkeep_break_hash->{']'} )
-    {
-        $rkeep_break_hash->{')'} = 1;
-        $rkeep_break_hash->{']'} = 1;
-        Warn(<<EOM);
-Sorry, but the format for the -kbb and -kba flags is changing a little.
-You entered '}' which currently matches each of '}' ')' and ']',
-but in the future it will only match '}'.
-To prevent this message please do one of the following:
-  use '} ) ]' if you want to match all closing containers, or
-  use ')' or ']' to match just those containers, or
-  use '*}' to match only closing braces
-EOM
     }
 
     if ( DEBUG_KB && @list ) {
