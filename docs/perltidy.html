@@ -2890,13 +2890,14 @@
  &#39;f&#39; matches if the previous token is a function other than a keyword.
  &#39;F&#39; matches if &#39;f&#39; does not.
  &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
- &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+ &#39;W&#39; matches if &#39;w&#39; does not.
+ &#39;*&#39; always matches</code></pre>
 
 <p>So for example the the following parameter will keep breaks after opening function call parens:</p>
 
 <pre><code>   perltidy -kba=&#39;f(&#39;</code></pre>
 
-<p><b>NOTE</b>: To match all opening curly braces, and no other opening tokens, please prefix the brace it with an asterisk, like this: &#39;*{&#39;. Otherwise a warning message will occur. This is necessary to avoid problems while the input scheme is being updated and generalized. A single bare curly brace previously matched all container tokens, and tentatively still does. Likewise, to match all closing curly braces, and no other closing tokens, use &#39;*}&#39;.</p>
+<p><b>NOTE</b>: A request to break before an opening container, such as <b>-kbb=&#39;(&#39;</b>, will be silently ignored because it can lead to formatting instability. Likewise, a request to break after a closing container, such as <b>-kba</b>=&#39;)&#39;, will also be silently ignored.</p>
 
 </dd>
 <dt id="iob---ignore-old-breakpoints"><b>-iob</b>, <b>--ignore-old-breakpoints</b></dt>
@@ -4005,7 +4006,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20220601</p>
+<p>This man page documents perltidy version 20220613</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

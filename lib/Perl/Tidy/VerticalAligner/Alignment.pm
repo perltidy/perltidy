@@ -10,7 +10,7 @@ use warnings;
 
 { #<<< A non-indenting brace
 
-our $VERSION = '20220601';
+our $VERSION = '20220613';
 
 BEGIN {
 

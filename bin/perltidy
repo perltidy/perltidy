@@ -3643,18 +3643,17 @@ parameters):
  'F' matches if 'f' does not.
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
+ '*' always matches
 
 So for example the the following parameter will keep breaks after opening function call
 parens:
 
    perltidy -kba='f('
 
-B<NOTE>: To match all opening curly braces, and no other opening tokens, please
-prefix the brace it with an asterisk, like this: '*{'.  Otherwise a warning
-message will occur. This is necessary to avoid problems while the input scheme
-is being updated and generalized.  A single bare curly brace previously matched
-all container tokens, and tentatively still does. Likewise, to match all
-closing curly braces, and no other closing tokens, use '*}'.
+B<NOTE>: A request to break before an opening container, such as B<-kbb='('>,
+will be silently ignored because it can lead to formatting instability.
+Likewise, a request to break after a closing container, such as B<-kba>=')',
+will also be silently ignored.
 
 =item B<-iob>,  B<--ignore-old-breakpoints>
 
@@ -5168,7 +5167,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20220601
+This man page documents perltidy version 20220613
 
 =head1 BUG REPORTS
 

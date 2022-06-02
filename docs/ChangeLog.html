@@ -1,8 +1,12 @@
 <h1>Perltidy Change Log</h1>
 
-<h2>2022 06 01</h2>
+<h2>2022 06 13</h2>
 
-<pre><code>- Please note the following two significant changes in this distribution:
+<pre><code>- No significant bugs have been found since the last release but users
+  of programs which call the Perl::Tidy module should note the first
+  item below, which changes a default setting.  The main change to
+  existing formatting is the second item below, which adds vertical
+  alignment to 'use' statements.
 
 - The flag --encode-output-strings, or -eos, is now set 'on' by default.
   This has no effect on the use of the 'perltidy' binary script, but could
@@ -15,12 +19,12 @@
 
   https://github.com/perltidy/perltidy/blob/master/docs/eos_flag.md
 
-- Add vertical alignment for qw quotes and empty parens in 'use'
+- Added vertical alignment for qw quotes and empty parens in 'use'
   statements (see issue #git 93).  This new alignment is 'on' by default
   and will change formatting as shown below. If this is not wanted it can
   be turned off with the parameter -vxl='q' (--valign-exclude-list='q').
 
-    # old default or -vxl='q'
+    # old default, or -vxl='q'
     use Getopt::Long qw(GetOptions);
     use Fcntl qw(O_RDONLY O_WRONLY O_EXCL O_CREAT);
     use Symbol qw(gensym);
@@ -32,13 +36,20 @@
     use Symbol       qw(gensym);
     use Exporter     ();
 
-- Previously, if a -dsc command was used to delete all side comments,
-  then any special control comments for non-indenting braces got deleted too.
-  Now, these control side comments are retained when -dsc is set unless
-  a -nnib (--nonon-indenting-braces) flag is also set to deactivate them.
+- The parameter -kbb (--keep-break-before) now ignores a request to break
+  before an opening token, such as '('.  Likewise, -kba (--keep-break-after)
+  now ignores a request to break after a closing token, such as ')'. This
+  change was made to avoid a rare instability discovered in random testing.
 
-- This version runs 15 to 20 percent faster on large files than the
-  previous release due to optimizations made with the help of Devel::NYTProf.
+- Previously, if a -dsc command was used to delete all side comments,
+  then any special side comments for controlling non-indenting braces got
+  deleted too. Now, these control side comments are retained when -dsc is
+  set unless a -nnib (--nonon-indenting-braces) flag is also set to
+  deactivate them.
+
+- This version runs about 10 percent faster on large files than the previous
+  release due to optimizations made with the help of Devel::NYTProf.  Much
+  of the gain came from faster processing of blank tokens and comments.
 
 - This version of perltidy was stress-tested for many cpu hours with
   random input parameters. No failures to converge, internal fault checks,
