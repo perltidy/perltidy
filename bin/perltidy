@@ -3643,7 +3643,6 @@ parameters):
  'F' matches if 'f' does not.
  'w' matches if either 'k' or 'f' match.
  'W' matches if 'w' does not.
- '*' always matches
 
 So for example the the following parameter will keep breaks after opening function call
 parens:
