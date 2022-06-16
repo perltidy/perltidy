@@ -7608,7 +7608,7 @@ BEGIN {
 
         elsif ( $tok eq '{' ) {
 
-            # check for something like ${#} or ${©}
+            # check for something like ${#} or ${?}, where ? is a special char
             if (
                 (
                        $identifier eq '$'
