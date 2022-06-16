@@ -41,19 +41,17 @@ sub new {
     my ( $class, @args ) = @_;
 
     my %defaults = (
-        output_file              => undef,
-        line_separator           => undef,
-        rOpts                    => undef,
-        rpending_logfile_message => undef,
-        is_encoded_data          => undef,
+        output_file     => undef,
+        line_separator  => undef,
+        rOpts           => undef,
+        is_encoded_data => undef,
     );
     my %args = ( %defaults, @args );
 
-    my $output_file              = $args{output_file};
-    my $line_separator           = $args{line_separator};
-    my $rOpts                    = $args{rOpts};
-    my $rpending_logfile_message = $args{rpending_logfile_message};
-    my $is_encoded_data          = $args{is_encoded_data};
+    my $output_file     = $args{output_file};
+    my $line_separator  = $args{line_separator};
+    my $rOpts           = $args{rOpts};
+    my $is_encoded_data = $args{is_encoded_data};
 
     my $fh = undef;
 
@@ -71,14 +69,11 @@ sub new {
     if ( $output_file eq '-' || ref $output_file ) {
         if ( $rOpts->{'check-syntax'} ) {
 
+            # NOTE: THIS IS OLD CODING, left for safety. Should not get here.
             # Turning off syntax check when standard output is used.
             # The reason is that temporary files cause problems on
             # on many systems.
             $rOpts->{'check-syntax'} = 0;
-            ${$rpending_logfile_message} .= <<EOM;
-Note: --syntax check will be skipped because standard output is used
-EOM
-
         }
     }
 

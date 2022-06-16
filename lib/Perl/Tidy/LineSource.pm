@@ -41,16 +41,14 @@ sub new {
     my ( $class, @args ) = @_;
 
     my %defaults = (
-        input_file               => undef,
-        rOpts                    => undef,
-        rpending_logfile_message => undef,
+        input_file => undef,
+        rOpts      => undef,
     );
 
     my %args = ( %defaults, @args );
 
-    my $input_file               = $args{input_file};
-    my $rOpts                    = $args{rOpts};
-    my $rpending_logfile_message = $args{rpending_logfile_message};
+    my $input_file = $args{input_file};
+    my $rOpts      = $args{rOpts};
 
     my $input_line_ending;
     if ( $rOpts->{'preserve-line-endings'} ) {
@@ -65,14 +63,11 @@ sub new {
     if ( ( $input_file eq '-' || ref $input_file ) && $rOpts->{'check-syntax'} )
     {
 
+        # NOTE: THIS IS OLD CODING, left for safety. Should not get here.
         # Turning off syntax check when input output is used.
         # The reason is that temporary files cause problems on
         # on many systems.
         $rOpts->{'check-syntax'} = 0;
-
-        ${$rpending_logfile_message} .= <<EOM;
-Note: --syntax check will be skipped because standard input is used
-EOM
 
     }
 
@@ -124,4 +119,3 @@ sub get_line {
     return $line;
 }
 1;
-

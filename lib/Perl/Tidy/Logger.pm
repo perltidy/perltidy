@@ -458,7 +458,7 @@ sub get_save_logfile {
 sub finish {
 
     # called after all formatting to summarize errors
-    my ( $self, $formatter ) = @_;
+    my ($self) = @_;
 
     my $rOpts         = $self->{_rOpts};
     my $warning_count = $self->{_warning_count};
