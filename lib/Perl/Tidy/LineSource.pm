@@ -8,7 +8,10 @@
 package Perl::Tidy::LineSource;
 use strict;
 use warnings;
+use English qw( -no_match_vars );
 our $VERSION = '20220613';
+
+use constant DEVEL_MODE => 0;
 
 sub AUTOLOAD {
 
@@ -86,7 +89,10 @@ sub close_input_file {
     # Only close physical files, not STDIN and other objects
     my $filename = $self->{_filename};
     if ( $filename ne '-' && !ref $filename ) {
-        eval { $self->{_fh}->close() };
+        my $ok = eval { $self->{_fh}->close(); 1 };
+        if ( !$ok && DEVEL_MODE ) {
+            Fault("Could not close file handle(): $EVAL_ERROR\n");
+        }
     }
     return;
 }

@@ -281,8 +281,8 @@ sub bad_pattern {
     # but it should be safe because the pattern has been constructed
     # by this program.
     my ($pattern) = @_;
-    eval "'##'=~/$pattern/";
-    return $EVAL_ERROR;
+    my $ok = eval "'##'=~/$pattern/";
+    return !defined($ok) || $EVAL_ERROR;
 }
 
 sub make_code_skipping_pattern {

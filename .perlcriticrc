@@ -11,8 +11,10 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# Below is a list of policies that customize perlcritic to the needs of
-# Perl::Tidy.
+# Below is a list of policies that are skipped or customized to the needs of
+# Perl::Tidy.  After experimenting with ## no critic comments, I decided that
+# they cause more trouble than the value they provide, so policies are either
+# 'on' or 'off'.
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=4:
@@ -27,7 +29,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 
 # There is a stringy eval in Formatter.pm and Tokenizer.pm which is essential
 # for checking user input. So we have to skip this.
-[-BuiltinFunctions::ProhibitStringyEval] 
+[-BuiltinFunctions::ProhibitStringyEval]
 
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
 [-Modules::ProhibitAutomaticExportation]
@@ -81,9 +83,6 @@ max_nests=11
 
 # Agree - these are in process of being converted to if's
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
-
-# Agree - checks are in process of being checked
-[-ErrorHandling::RequireCheckingReturnValueOfEval] 
 
 # This is a good general policy but not always the best for efficiency
 [-Subroutines::ProhibitManyArgs]

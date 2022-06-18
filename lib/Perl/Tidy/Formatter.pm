@@ -4533,8 +4533,8 @@ sub bad_pattern {
     # but it should be safe because the pattern has been constructed
     # by this program.
     my ($pattern) = @_;
-    eval "'##'=~/$pattern/";
-    return $EVAL_ERROR;
+    my $ok = eval "'##'=~/$pattern/";
+    return !defined($ok) || $EVAL_ERROR;
 }
 
 {    ## begin closure prepare_cuddled_block_types

@@ -10,6 +10,7 @@ use warnings;
 our $VERSION = '20220613';
 use English qw( -no_match_vars );
 
+use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
@@ -496,11 +497,13 @@ sub finish {
             my $routput_array = $self->{_output_array};
             foreach my $line ( @{$routput_array} ) { $fh->print($line) }
             if ( $log_file ne '-' && !ref $log_file ) {
-                eval { $fh->close() };
+                my $ok = eval { $fh->close(); 1 };
+                if ( !$ok && DEVEL_MODE ) {
+                    Fault("Could not close file handle(): $EVAL_ERROR\n");
+                }
             }
         }
     }
     return;
 }
 1;
-
