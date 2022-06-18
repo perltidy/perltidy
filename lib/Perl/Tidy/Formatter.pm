@@ -23063,6 +23063,11 @@ EOM
                             && $mate_index_to_go[$i] == $i + 1 )
                         {
                             $alignment_type = 'q';
+
+                            ## Note on discussion git #101. We could make this
+                            ## a separate type '()' to separate it from qw's:
+                            ## $alignment_type =
+                            ##  $rOpts_valign_empty_parens_with_qw ? 'q' : '()';
                         }
                     }
 
