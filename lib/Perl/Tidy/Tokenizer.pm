@@ -1936,12 +1936,10 @@ EOM
         _decrement_count();    # avoid error check for multiple tokenizers
 
         # make a new tokenizer
-        my $rOpts = {};
-        my $rpending_logfile_message;
+        my $rOpts         = {};
         my $source_object = Perl::Tidy::LineSource->new(
-            input_file               => \$replacement_text,
-            rOpts                    => $rOpts,
-            rpending_logfile_message => $rpending_logfile_message,
+            input_file => \$replacement_text,
+            rOpts      => $rOpts,
         );
         my $tokenizer = Perl::Tidy::Tokenizer->new(
             source_object        => $source_object,
