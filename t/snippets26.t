@@ -9,6 +9,8 @@
 #6 git93.def
 #7 git93.git93
 #8 c139.def
+#9 drc.def
+#10 drc.drc
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,6 +31,7 @@ BEGIN {
         'bal2'  => "-bal=2",
         'c133'  => "-boc",
         'def'   => "",
+        'drc'   => "-drc",
         'git93' => <<'----------',
 -vxl='q'
 ----------
@@ -95,6 +98,10 @@ _
 $r = $c->         
 
 sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+----------
+
+        'drc' => <<'----------',
+ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
 ----------
 
         'git93' => <<'----------',
@@ -404,6 +411,22 @@ $r = $c->
 
   sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
 #8...........
+        },
+
+        'drc.def' => {
+            source => "drc",
+            params => "def",
+            expect => <<'#9...........',
+ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
+#9...........
+        },
+
+        'drc.drc' => {
+            source => "drc",
+            params => "drc",
+            expect => <<'#10...........',
+ignoreSpec( $file, "file", \%spec, \%Rspec );
+#10...........
         },
     };
 
