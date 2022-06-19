@@ -73,7 +73,7 @@ my $VERSION = get_version("lib/Perl/Tidy.pm");
 my $outfile = "perltidy-$VERSION.pl";
 if ( $Opts{o} ) { $outfile = $Opts{o} }
 my $fh_out;
-open( $fh_out,, ">", $outfile ) or die "can't open file '$outfile' : $!\n";
+open( $fh_out, ">", $outfile ) or die "can't open file '$outfile' : $!\n";
 print "Creating standalone perltidy script '$outfile' ....";
 
 # first, open the script and copy the first (hash-bang) line
