@@ -1,4 +1,4 @@
-# perlcritic is a great tool for locating potentially 'dodgy' coding.
+# perlcritic is a good tool for locating potentially 'dodgy' coding.
 
 # Some useful links:
 # https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
@@ -12,9 +12,11 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
 # Below is a list of policies that are skipped or customized to the needs of
-# Perl::Tidy.  After experimenting with ## no critic comments, I decided that
-# they cause more trouble than the value they provide, so policies are either
-# 'on' or 'off'.
+# Perl::Tidy.  I have found that using 'no critic' comments is very
+# troublesome*, so policies are either 'on' or 'off' for all modules.
+# ( *For example, why is it necessary to specify a policy in a side comment?
+# The very long policy names are ugly and typically make the side comment
+# exceed the desired line length. )
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=4:
@@ -81,7 +83,8 @@ max_nests=11
 # any benefit in reduced run time or clarity.
 [-ControlStructures::ProhibitCascadingIfElse]
 
-# Agree - these are in process of being converted to if's
+# This is a reasonable policy for new code but it is not worth changing
+# debugged code for it.
 [-ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions]
 
 # This is a good general policy but not always the best for efficiency

@@ -7140,6 +7140,17 @@ EOM
                 next;
             } ## end if ( $type eq 'q' )
 
+            # delete repeated commas if requested
+            elsif ( $type eq ',' ) {
+                if (   $last_nonblank_code_type eq ','
+                    && $rOpts->{'delete-repeated-commas'} )
+                {
+                    # Could note this deletion as a possible future update:
+                    ## $self->note_deleted_comma($input_line_number);
+                    next;
+                }
+            }
+
             # change 'LABEL   :'   to 'LABEL:'
             elsif ( $type eq 'J' ) {
                 $token =~ s/\s+//g;

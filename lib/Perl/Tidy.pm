@@ -2872,6 +2872,7 @@ sub generate_options {
     $add_option->( 'block-brace-tightness',                     'bbt',   '=i' );
     $add_option->( 'brace-tightness',                           'bt',    '=i' );
     $add_option->( 'delete-old-whitespace',                     'dws',   '!' );
+    $add_option->( 'delete-repeated-commas',                    'drc',   '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
