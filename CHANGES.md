@@ -32,7 +32,7 @@
     - Added vertical alignment for qw quotes and empty parens in 'use'
       statements (see issue #git 93).  This new alignment is 'on' by default
       and will change formatting as shown below. If this is not wanted it can
-      be turned off with the parameter -vxl='q' (--valign-exclude-list='q').
+      be turned off with the parameter -vxl='q' (--valign-exclusion-list='q').
 
         # old default, or -vxl='q'
         use Getopt::Long qw(GetOptions);
