@@ -846,18 +846,6 @@ EOM
     my ( $in_place_modify, $backup_extension, $delete_backup ) =
       $self->check_in_place_modify( $source_stream, $destination_stream );
 
-    # Turn off assert-tidy and assert-untidy unless we are tidying files
-    if ( $rOpts->{'format'} ne 'tidy' ) {
-        if ( $rOpts->{'assert-tidy'} ) {
-            $rOpts->{'assert-tidy'} = 0;
-            Warn("ignoring --assert-tidy, --format is not 'tidy'\n");
-        }
-        if ( $rOpts->{'assert-untidy'} ) {
-            $rOpts->{'assert-untidy'} = 0;
-            Warn("ignoring --assert-untidy, --format is not 'tidy'\n");
-        }
-    }
-
     Perl::Tidy::Formatter::check_options($rOpts);
     Perl::Tidy::Tokenizer::check_options($rOpts);
     Perl::Tidy::VerticalAligner::check_options($rOpts);
@@ -1822,6 +1810,15 @@ sub process_filter_layer {
     #         -> ( optional destination_buffer for encoding )
     #           -> final sink_object
 
+    # What is done based on format type:
+    #  utf8 decoding is done for all format types
+    #  prefiltering is applied to all format types
+    #   - because it may be needed to get through the tokenizer
+    #  postfiltering is only done for format='tidy'
+    #   - might cause problems operating on html text
+    #  encoding of decoded output is only done for format='tidy'
+    #   - because html does its own encoding; user formatter does what it wants
+
     my $rOpts              = $self->[_rOpts_];
     my $is_encoded_data    = $self->[_is_encoded_data_];
     my $logger_object      = $self->[_logger_object_];
@@ -1833,118 +1830,133 @@ sub process_filter_layer {
     my $decoded_input_as   = $self->[_decoded_input_as_];
     my $line_separator     = $self->[_line_separator_];
 
-    # evaluate MD5 sum of input file for assert tests before any prefilter
-    my $digest_input = 0;
-    my $saved_input_buf;
-    if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
-        $digest_input    = $md5_hex->($buf);
-        $saved_input_buf = $buf;
-    }
-
     my $remove_terminal_newline =
       !$rOpts->{'add-terminal-newline'} && substr( $buf, -1, 1 ) !~ /\n/;
 
-    # Create a 'sink_object' which knows how to write the output file
-    my ( $sink_object, $postfilter_buffer );
+    # vars for postfilter, if used
+    my $use_postfilter_buffer;
+    my $postfilter_buffer;
 
-    #-----------------------
-    # Setup prefilter buffer
-    #-----------------------
-    # If we need access to the output for filtering or checking assertions
-    # before writing to its ultimate destination, then we will send it
-    # to a temporary buffer. The variables are:
-    #  $postfilter_buffer     = the buffer to capture the output
-    #  $use_postfilter_buffer = is a postfilter buffer used?
-    # These are used below, just after iterations are made.
-    my $use_postfilter_buffer =
-         $postfilter
-      || $remove_terminal_newline
-      || $rOpts->{'assert-tidy'}
-      || $rOpts->{'assert-untidy'};
-
-    #-------------------------
-    # Setup destination_buffer
-    #-------------------------
-    # If the final output destination is not a file, then we might need to
-    # encode the result at the end of processing.  So in this case we will send
-    # the output to a temporary buffer.
-    # The key variables are:
-    #   $destination_buffer        - this will receive the formatted output
-    #   $use_destination_buffer    - is $destination_buffer used?
-    #   $encode_destination_buffer - is $destination_buffer to be encoded?
-    # These are used by sub 'copy_buffer_to_destination', below
-
+    # vars for destination buffer, if used
     my $destination_buffer;
     my $use_destination_buffer;
     my $encode_destination_buffer;
 
+    # vars for iterations, if done
+    my $sink_object;
+
+    # vars for checking assertions, if needed
+    my $digest_input = 0;
+    my $saved_input_buf;
+
     my $ref_destination_stream = ref($destination_stream);
-    if ( $ref_destination_stream && !$user_formatter ) {
-        $use_destination_buffer = 1;
-        $output_file            = \$destination_buffer;
-        $self->[_output_file_]  = $output_file;
 
-        # Strings and arrays use special encoding rules
-        if (   $ref_destination_stream eq 'SCALAR'
-            || $ref_destination_stream eq 'ARRAY' )
-        {
-            $encode_destination_buffer =
-              $rOpts->{'encode-output-strings'} && $decoded_input_as;
+    # Setup vars for postfilter, destination buffer, assertions and sink object
+    # if needed.  These are only used for 'tidy' formatting.
+    if ( $rOpts->{'format'} eq 'tidy' ) {
+
+        # evaluate MD5 sum of input file for assert tests before any prefilter
+        if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
+            $digest_input    = $md5_hex->($buf);
+            $saved_input_buf = $buf;
         }
 
-        # An object with a print method will use file encoding rules
-        elsif ( $ref_destination_stream->can('print') ) {
-            $encode_destination_buffer = $is_encoded_data;
-        }
-        else {
-            confess <<EOM;
+        #-----------------------
+        # Setup postfilter buffer
+        #-----------------------
+        # If we need access to the output for filtering or checking assertions
+        # before writing to its ultimate destination, then we will send it
+        # to a temporary buffer. The variables are:
+        #  $postfilter_buffer     = the buffer to capture the output
+        #  $use_postfilter_buffer = is a postfilter buffer used?
+        # These are used below, just after iterations are made.
+        $use_postfilter_buffer =
+             $postfilter
+          || $remove_terminal_newline
+          || $rOpts->{'assert-tidy'}
+          || $rOpts->{'assert-untidy'};
+
+        #-------------------------
+        # Setup destination_buffer
+        #-------------------------
+        # If the final output destination is not a file, then we might need to
+        # encode the result at the end of processing.  So in this case we will
+        # send the output to a temporary buffer.
+        # The key variables are:
+        #   $destination_buffer        - receives the formatted output
+        #   $use_destination_buffer    - is $destination_buffer used?
+        #   $encode_destination_buffer - encode $destination_buffer?
+        # These are used by sub 'copy_buffer_to_destination', below
+
+        if ($ref_destination_stream) {
+            $use_destination_buffer = 1;
+            $output_file            = \$destination_buffer;
+            $self->[_output_file_]  = $output_file;
+
+            # Strings and arrays use special encoding rules
+            if (   $ref_destination_stream eq 'SCALAR'
+                || $ref_destination_stream eq 'ARRAY' )
+            {
+                $encode_destination_buffer =
+                  $rOpts->{'encode-output-strings'} && $decoded_input_as;
+            }
+
+            # An object with a print method will use file encoding rules
+            elsif ( $ref_destination_stream->can('print') ) {
+                $encode_destination_buffer = $is_encoded_data;
+            }
+            else {
+                confess <<EOM;
 ------------------------------------------------------------------------
 No 'print' method is defined for object of class '$ref_destination_stream'
 Please check your call to Perl::Tidy::perltidy. Trace follows.
 ------------------------------------------------------------------------
 EOM
+            }
         }
+
+        #-------------------------------------------
+        # Make a sink object for the iteration phase
+        #-------------------------------------------
+        $sink_object = Perl::Tidy::LineSink->new(
+            output_file => $use_postfilter_buffer
+            ? \$postfilter_buffer
+            : $output_file,
+            line_separator  => $line_separator,
+            is_encoded_data => $is_encoded_data,
+        );
     }
 
-    #-------------------------------------------
-    # Make a sink object for the iteration phase
-    #-------------------------------------------
-    $sink_object = Perl::Tidy::LineSink->new(
-        output_file => $use_postfilter_buffer
-        ? \$postfilter_buffer
-        : $output_file,
-        line_separator  => $line_separator,
-        rOpts           => $rOpts,
-        is_encoded_data => $is_encoded_data,
-    );
-
-    #-------------------------------------------------------
-    # Apply any prefilter. The prefilter is a code reference
-    # that will be applied to the source before tidying.
-    #-------------------------------------------------------
+    #-----------------------------------------------------------------------
+    # Apply any prefilter. The prefilter is a code reference that will be
+    # applied to the source before tokenizing.  Note that we are doing this
+    # for all format types ('tidy', 'html', 'user') because it may be needed
+    # to avoid tokenization errors.
+    #-----------------------------------------------------------------------
     $buf = $prefilter->($buf) if $prefilter;
 
-    #----------------------------------------------------------
+    #----------------------------------------------------------------------
     # Format contents of string '$buf', iterating if requested.
-    # Formatted result will be written to '$sink_object'
-    #----------------------------------------------------------
+    # For 'tidy', formatted result will be written to '$sink_object'
+    # For 'html' and 'user', result goes directly to its ultimate destination.
+    #----------------------------------------------------------------------
     $self->process_iteration_layer( $buf, $sink_object );
-    $sink_object->close_output_file() if $sink_object;
 
     #--------------------------------
     # Do postfilter buffer processing
     #--------------------------------
     if ($use_postfilter_buffer) {
 
-        $sink_object = Perl::Tidy::LineSink->new(
+        my $sink_object_post = Perl::Tidy::LineSink->new(
             output_file     => $output_file,
             line_separator  => $line_separator,
-            rOpts           => $rOpts,
             is_encoded_data => $is_encoded_data,
         );
 
+        #----------------------------------------------------------------------
         # Apply any postfilter. The postfilter is a code reference that will be
         # applied to the source after tidying.
+        #----------------------------------------------------------------------
         my $buf_post =
             $postfilter
           ? $postfilter->($postfilter_buffer)
@@ -1965,6 +1977,7 @@ EOM
                 $logger_object->resume_logfile();
             }
         }
+
         if ( $rOpts->{'assert-untidy'} ) {
             my $digest_output = $md5_hex->($buf_post);
             if ( $digest_output eq $digest_input ) {
@@ -1982,7 +1995,7 @@ EOM
         # Copy the filtered buffer to the final destination
         if ( !$remove_terminal_newline ) {
             while ( my $line = $source_object->get_line() ) {
-                $sink_object->write_line($line);
+                $sink_object_post->write_line($line);
             }
         }
         else {
@@ -1991,16 +2004,16 @@ EOM
             # final line
             my $line;
             while ( my $next_line = $source_object->get_line() ) {
-                $sink_object->write_line($line) if ($line);
+                $sink_object_post->write_line($line) if ($line);
                 $line = $next_line;
             }
             if ($line) {
-                $sink_object->set_line_separator(undef);
+                $sink_object_post->set_line_separator(undef);
                 chomp $line;
-                $sink_object->write_line($line);
+                $sink_object_post->write_line($line);
             }
         }
-
+        $sink_object_post->close_output_file();
         $source_object->close_input_file();
     }
 
@@ -2013,8 +2026,8 @@ EOM
     }
     else {
 
-        # output went to a file ...
-        if ($is_encoded_data) {
+        # output went to a file in 'tidy' mode...
+        if ( $is_encoded_data && $rOpts->{'format'} eq 'tidy' ) {
             $rstatus->{'output_encoded_as'} = 'UTF-8';
         }
     }
@@ -2030,7 +2043,10 @@ sub process_iteration_layer {
     my ( $self, $buf, $sink_object ) = @_;
 
     # Do all formatting, iterating if requested, on the source string $buf.
-    # Return the result in the $sink_object.
+    # Output depends on format type:
+    #   For 'tidy' formatting, output goes to sink object
+    #   For 'html' formatting, output goes to the ultimate destination
+    #   For 'user' formatting, user formatter handles output
 
     # Total formatting is done with three layers of subroutines:
     #   process_filter_layer    - do any pre and post processing
@@ -2039,6 +2055,8 @@ sub process_iteration_layer {
 
     # Data Flow in this layer:
     #      $buf -> [ loop over iterations ] -> $sink_object
+
+    # Only 'tidy' formatting can use multiple iterations.
 
     my $diagnostics_object = $self->[_diagnostics_object_];
     my $display_name       = $self->[_display_name_];
@@ -2081,27 +2099,35 @@ sub process_iteration_layer {
         }
     }
 
+    # vars for iterations and convergence test
+    my $max_iterations = 1;
     my $convergence_log_message;
-    my $max_iterations = $rOpts->{'iterations'};
-
-    # check iteration count and quietly fix if necessary:
-    # - iterations option only applies to code beautification mode
-    # - the convergence check should stop most runs on iteration 2, and
-    #   virtually all on iteration 3.  But we'll allow up to 6.
-    if (   !defined($max_iterations)
-        || $max_iterations <= 0
-        || $rOpts->{'format'} ne 'tidy' )
-    {
-        $max_iterations = 1;
-    }
-    elsif ( $max_iterations > 6 ) { $max_iterations = 6 }
-
-    # get starting MD5 sum for convergence test
+    my $do_convergence_test;
     my %saw_md5;
-    my $do_convergence_test = $max_iterations > 1;
-    if ($do_convergence_test) {
-        my $digest = $md5_hex->($buf);
-        $saw_md5{$digest} = 0;
+
+    # Only 'tidy' formatting can use multiple iterations
+    if ( $rOpts->{'format'} eq 'tidy' ) {
+
+        # check iteration count and quietly fix if necessary:
+        # - iterations option only applies to code beautification mode
+        # - the convergence check should stop most runs on iteration 2, and
+        #   virtually all on iteration 3.  But we'll allow up to 6.
+        $max_iterations = $rOpts->{'iterations'};
+        if ( !defined($max_iterations)
+            || $max_iterations <= 0 )
+        {
+            $max_iterations = 1;
+        }
+        elsif ( $max_iterations > 6 ) {
+            $max_iterations = 6;
+        }
+
+        # get starting MD5 sum for convergence test
+        if ( $max_iterations > 1 ) {
+            $do_convergence_test = 1;
+            my $digest = $md5_hex->($buf);
+            $saw_md5{$digest} = 0;
+        }
     }
 
     # save objects to allow redirecting output during iterations
@@ -2122,7 +2148,6 @@ sub process_iteration_layer {
             $sink_object = Perl::Tidy::LineSink->new(
                 output_file     => \$sink_buffer,
                 line_separator  => $line_separator,
-                rOpts           => $rOpts,
                 is_encoded_data => $is_encoded_data,
             );
         }
@@ -2337,13 +2362,17 @@ EOM
         } ## end if ( $iter < $max_iterations)
     } ## end loop over iterations for one source file
 
+    $sink_object->close_output_file()    if $sink_object;
     $debugger_object->close_debug_file() if $debugger_object;
     $fh_tee->close()                     if $fh_tee;
+
+    # leave logger object open for additional messages
     $logger_object = $logger_object_final;
     $logger_object->write_logfile_entry($convergence_log_message)
       if $convergence_log_message;
 
     return;
+
 } ## end sub process_iteration_layer
 
 sub process_single_case {

@@ -61,19 +61,6 @@ sub new {
     ( my $fh, $input_file ) = Perl::Tidy::streamhandle( $input_file, 'r' );
     return unless $fh;
 
-    # in order to check output syntax when standard output is used,
-    # or when it is an object, we have to make a copy of the file
-    if ( ( $input_file eq '-' || ref $input_file ) && $rOpts->{'check-syntax'} )
-    {
-
-        # NOTE: THIS IS OLD CODING, left for safety. Should not get here.
-        # Turning off syntax check when input output is used.
-        # The reason is that temporary files cause problems on
-        # on many systems.
-        $rOpts->{'check-syntax'} = 0;
-
-    }
-
     return bless {
         _fh                => $fh,
         _filename          => $input_file,

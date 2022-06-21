@@ -43,39 +43,22 @@ sub new {
     my %defaults = (
         output_file     => undef,
         line_separator  => undef,
-        rOpts           => undef,
         is_encoded_data => undef,
     );
     my %args = ( %defaults, @args );
 
     my $output_file     = $args{output_file};
     my $line_separator  = $args{line_separator};
-    my $rOpts           = $args{rOpts};
     my $is_encoded_data = $args{is_encoded_data};
 
     my $fh = undef;
 
     my $output_file_open = 0;
 
-    if ( $rOpts->{'format'} eq 'tidy' ) {
-        ( $fh, $output_file ) =
-          Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
-        unless ($fh) { Perl::Tidy::Die("Cannot write to output stream\n"); }
-        $output_file_open = 1;
-    }
-
-    # in order to check output syntax when standard output is used,
-    # or when it is an object, we have to make a copy of the file
-    if ( $output_file eq '-' || ref $output_file ) {
-        if ( $rOpts->{'check-syntax'} ) {
-
-            # NOTE: THIS IS OLD CODING, left for safety. Should not get here.
-            # Turning off syntax check when standard output is used.
-            # The reason is that temporary files cause problems on
-            # on many systems.
-            $rOpts->{'check-syntax'} = 0;
-        }
-    }
+    ( $fh, $output_file ) =
+      Perl::Tidy::streamhandle( $output_file, 'w', $is_encoded_data );
+    unless ($fh) { Perl::Tidy::Die("Cannot write to output stream\n"); }
+    $output_file_open = 1;
 
     return bless {
         _fh               => $fh,
