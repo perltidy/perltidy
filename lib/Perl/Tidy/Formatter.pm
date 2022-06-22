@@ -15803,12 +15803,15 @@ sub break_equals {
         my $nmax_start = @{$ri_end} - 1;
         return if ( $nmax_start <= 0 );
 
-        # Make a list of all good joining tokens between the lines
+        #----------------------------------------------------------------
+        # Break into small sub-sections to decrease the maximum n-squared
+        # operations and avoid excess run time. See comments below.
+        #----------------------------------------------------------------
+
+        # Also make a list of all good joining tokens between the lines
         # n-1 and n.
         my @joint;
 
-        # Break the total batch sub-sections with lengths short enough to
-        # recombine
         my $rsections = [];
         my $nbeg_sec  = 0;
         my $nend_sec;
@@ -15819,7 +15822,7 @@ sub break_equals {
             my $iend_2 = $ri_end->[$nn];
             my $ibeg_2 = $ri_beg->[$nn];
 
-            # Define the joint variable
+            # Define certain good joint tokens
             my ( $itok, $itokp, $itokm );
             foreach my $itest ( $iend_1, $ibeg_2 ) {
                 my $type = $types_to_go[$itest];
@@ -15857,6 +15860,7 @@ sub break_equals {
                 $nbeg_sec = $nn;
             }
         }
+
         if ( defined($nend_sec) ) {
             push @{$rsections}, [ $nbeg_sec, $nend_sec ];
             my $num = $nend_sec - $nbeg_sec;
@@ -15942,8 +15946,13 @@ sub break_equals {
                 }
                 $nmax_last  = $nmax;
                 $more_to_do = 0;
-                my $skip_Section_3;
-                my $leading_amp_count = 0;
+
+                # Count lines with leading &&, ||, :, at any level.
+                # This is used to avoid some recombinations which might
+                # be hard to read.
+                my $rleading_amp_count;
+                ${$rleading_amp_count} = 0;
+
                 my $this_line_is_semicolon_terminated;
 
                 # loop over all remaining lines in this batch
@@ -15972,8 +15981,8 @@ sub break_equals {
                     # between the tokens at $iend_1 and $ibeg_2
                     #
                     # We will apply a number of ad-hoc tests to see if joining
-                    # here will look ok.  The code will just issue a 'next'
-                    # command if the join doesn't look good.  If we get through
+                    # here will look ok.  The code will just move to the next
+                    # pair if the join doesn't look good.  If we get through
                     # the gauntlet of tests, the lines will be recombined.
                     #----------------------------------------------------------
                     #
@@ -15997,16 +16006,6 @@ sub break_equals {
                     # terminal token of line 2 if any side comment is ignored:
                     my $iend_2t      = $iend_2;
                     my $type_iend_2t = $type_iend_2;
-
-                    # some beginning indexes of other lines, which may not exist
-                    my $ibeg_0 = $n > 1          ? $ri_beg->[ $n - 2 ] : -1;
-                    my $ibeg_3 = $n < $nmax      ? $ri_beg->[ $n + 1 ] : -1;
-                    my $ibeg_4 = $n + 2 <= $nmax ? $ri_beg->[ $n + 2 ] : -1;
-
-                    my $bs_tweak = 0;
-
-                    #my $depth_increase=( $nesting_depth_to_go[$ibeg_2] -
-                    #        $nesting_depth_to_go[$ibeg_1] );
 
                     DEBUG_RECOMBINE > 1 && do {
                         print STDERR
@@ -16041,172 +16040,13 @@ sub break_equals {
                     # to the left or right of an operator.
                     #----------------------------------------------------------
 
+                    # Note that parens around ($itok) are essential here:
                     my ($itok) = @{ $joint[$n] };
                     if ($itok) {
-
-                        my $type = $types_to_go[$itok];
-
-                        if ( $type eq ':' ) {
-
-                            # do not join at a colon unless it disobeys the
-                            # break request
-                            if ( $itok eq $iend_1 ) {
-                                next unless $want_break_before{$type};
-                            }
-                            else {
-                                $leading_amp_count++;
-                                next if $want_break_before{$type};
-                            }
-                        } ## end if ':'
-
-                        # handle math operators + - * /
-                        elsif ( $is_math_op{$type} ) {
-
-                            # Combine these lines if this line is a single
-                            # number, or if it is a short term with same
-                            # operator as the previous line.  For example, in
-                            # the following code we will combine all of the
-                            # short terms $A, $B, $C, $D, $E, $F, together
-                            # instead of leaving them one per line:
-                            #  my $time =
-                            #    $A * $B * $C * $D * $E * $F *
-                            #    ( 2. * $eps * $sigma * $area ) *
-                            #    ( 1. / $tcold**3 - 1. / $thot**3 );
-
-                            # This can be important in math-intensive code.
-
-                            my $good_combo;
-
-                            my $itokp  = min( $inext_to_go[$itok],  $iend_2 );
-                            my $itokpp = min( $inext_to_go[$itokp], $iend_2 );
-                            my $itokm  = max( $iprev_to_go[$itok],  $ibeg_1 );
-                            my $itokmm = max( $iprev_to_go[$itokm], $ibeg_1 );
-
-                            # check for a number on the right
-                            if ( $types_to_go[$itokp] eq 'n' ) {
-
-                                # ok if nothing else on right
-                                if ( $itokp == $iend_2 ) {
-                                    $good_combo = 1;
-                                }
-                                else {
-
-                                    # look one more token to right..
-                                    # okay if math operator or some termination
-                                    $good_combo =
-                                      ( ( $itokpp == $iend_2 )
-                                          && $is_math_op{ $types_to_go[$itokpp]
-                                          } )
-                                      || $types_to_go[$itokpp] =~ /^[#,;]$/;
-                                }
-                            }
-
-                            # check for a number on the left
-                            if ( !$good_combo && $types_to_go[$itokm] eq 'n' ) {
-
-                                # okay if nothing else to left
-                                if ( $itokm == $ibeg_1 ) {
-                                    $good_combo = 1;
-                                }
-
-                                # otherwise look one more token to left
-                                else {
-
-                                   # okay if math operator, comma, or assignment
-                                    $good_combo = ( $itokmm == $ibeg_1 )
-                                      && ( $is_math_op{ $types_to_go[$itokmm] }
-                                        || $types_to_go[$itokmm] =~ /^[,]$/
-                                        || $is_assignment{ $types_to_go[$itokmm]
-                                        } );
-                                }
-                            }
-
-                            # look for a single short token either side of the
-                            # operator
-                            if ( !$good_combo ) {
-
-                                # Slight adjustment factor to make results
-                                # independent of break before or after operator
-                                # in long summed lists.  (An operator and a
-                                # space make two spaces).
-                                my $two = ( $itok eq $iend_1 ) ? 2 : 0;
-
-                                $good_combo =
-
-                                  # numbers or id's on both sides of this joint
-                                  $types_to_go[$itokp] =~ /^[in]$/
-                                  && $types_to_go[$itokm] =~ /^[in]$/
-
-                                  # one of the two lines must be short:
-                                  && (
-                                    (
-                                        # no more than 2 nonblank tokens right
-                                        # of joint
-                                        $itokpp == $iend_2
-
-                                        # short
-                                        && token_sequence_length(
-                                            $itokp, $iend_2
-                                        ) < $two +
-                                        $rOpts_short_concatenation_item_length
-                                    )
-                                    || (
-                                        # no more than 2 nonblank tokens left of
-                                        # joint
-                                        $itokmm == $ibeg_1
-
-                                        # short
-                                        && token_sequence_length(
-                                            $ibeg_1, $itokm
-                                        ) < 2 - $two +
-                                        $rOpts_short_concatenation_item_length
-                                    )
-
-                                  )
-
-                                  # keep pure terms; don't mix +- with */
-                                  && !(
-                                    $is_plus_minus{$type}
-                                    && (   $is_mult_div{ $types_to_go[$itokmm] }
-                                        || $is_mult_div{ $types_to_go[$itokpp] }
-                                    )
-                                  )
-                                  && !(
-                                    $is_mult_div{$type}
-                                    && ( $is_plus_minus{ $types_to_go[$itokmm] }
-                                        || $is_plus_minus{ $types_to_go[$itokpp]
-                                        } )
-                                  )
-
-                                  ;
-                            }
-
-                            # it is also good to combine if we can reduce to 2
-                            # lines
-                            if ( !$good_combo ) {
-
-                                # index on other line where same token would be
-                                # in a long chain.
-                                my $iother =
-                                  ( $itok == $iend_1 ) ? $iend_2 : $ibeg_1;
-
-                                $good_combo =
-                                     $n == 2
-                                  && $n == $nmax
-                                  && $types_to_go[$iother] ne $type;
-                            }
-
-                            next unless ($good_combo);
-
-                        } ## end math
-
-                        elsif ( $is_amp_amp{$type} ) {
-                            ##TBD
-                        } ## end &&, ||
-
-                        elsif ( $is_assignment{$type} ) {
-                            ##TBD
-                        } ## end assignment
+                        my $ok_0 =
+                          recombine_section_0( $itok, $ri_beg, $ri_end, $n,
+                            $rleading_amp_count );
+                        next if ( !$ok_0 );
                     }
 
                     #----------------------------------------------------------
@@ -16233,654 +16073,32 @@ sub break_equals {
                     # Examine token at $iend_1 (right end of first line of pair)
                     #----------------------------------------------------------
 
-                    # an isolated '}' may join with a ';' terminated segment
-                    if ( $type_iend_1 eq '}' ) {
-
-                    # Check for cases where combining a semicolon terminated
-                    # statement with a previous isolated closing paren will
-                    # allow the combined line to be outdented.  This is
-                    # generally a good move.  For example, we can join up
-                    # the last two lines here:
-                    #  (
-                    #      $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
-                    #      $size, $atime, $mtime, $ctime, $blksize, $blocks
-                    #    )
-                    #    = stat($file);
-                    #
-                    # to get:
-                    #  (
-                    #      $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
-                    #      $size, $atime, $mtime, $ctime, $blksize, $blocks
-                    #  ) = stat($file);
-                    #
-                    # which makes the parens line up.
-                    #
-                    # Another example, from Joe Matarazzo, probably looks best
-                    # with the 'or' clause appended to the trailing paren:
-                    #  $self->some_method(
-                    #      PARAM1 => 'foo',
-                    #      PARAM2 => 'bar'
-                    #  ) or die "Some_method didn't work";
-                    #
-                    # But we do not want to do this for something like the -lp
-                    # option where the paren is not outdentable because the
-                    # trailing clause will be far to the right.
-                    #
-                    # The logic here is synchronized with the logic in sub
-                    # sub final_indentation_adjustment, which actually does
-                    # the outdenting.
-                    #
-                        $skip_Section_3 ||= $this_line_is_semicolon_terminated
-
-                          # only one token on last line
-                          && $ibeg_1 == $iend_1
-
-                          # must be structural paren
-                          && $tokens_to_go[$iend_1] eq ')'
-
-                          # style must allow outdenting,
-                          && !$closing_token_indentation{')'}
-
-                          # only leading '&&', '||', and ':' if no others seen
-                          # (but note: our count made below could be wrong
-                          # due to intervening comments)
-                          && ( $leading_amp_count == 0
-                            || $type_ibeg_2 !~ /^(:|\&\&|\|\|)$/ )
-
-                          # but leading colons probably line up with a
-                          # previous colon or question (count could be wrong).
-                          && $type_ibeg_2 ne ':'
-
-                          # only one step in depth allowed.  this line must not
-                          # begin with a ')' itself.
-                          && ( $nesting_depth_to_go[$iend_1] ==
-                            $nesting_depth_to_go[$iend_2] + 1 );
-
-                        # YVES patch 2 of 2:
-                        # Allow cuddled eval chains, like this:
-                        #   eval {
-                        #       #STUFF;
-                        #       1; # return true
-                        #   } or do {
-                        #       #handle error
-                        #   };
-                        # This patch works together with a patch in
-                        # setting adjusted indentation (where the closing eval
-                        # brace is outdented if possible).
-                        # The problem is that an 'eval' block has continuation
-                        # indentation and it looks better to undo it in some
-                        # cases.  If we do not use this patch we would get:
-                        #   eval {
-                        #       #STUFF;
-                        #       1; # return true
-                        #       }
-                        #       or do {
-                        #       #handle error
-                        #     };
-                        # The alternative, for uncuddled style, is to create
-                        # a patch in final_indentation_adjustment which undoes
-                        # the indentation of a leading line like 'or do {'.
-                        # This doesn't work well with -icb through
-                        if (
-                               $block_type_to_go[$iend_1] eq 'eval'
-                            && !ref( $leading_spaces_to_go[$iend_1] )
-                            && !$rOpts_indent_closing_brace
-                            && $tokens_to_go[$iend_2] eq '{'
-                            && (
-                                ( $type_ibeg_2 =~ /^(\&\&|\|\|)$/ )
-                                || (   $type_ibeg_2 eq 'k'
-                                    && $is_and_or{ $tokens_to_go[$ibeg_2] } )
-                                || $is_if_unless{ $tokens_to_go[$ibeg_2] }
-                            )
-                          )
-                        {
-                            $skip_Section_3 ||= 1;
-                        }
-
-                        next
-                          unless (
-                            $skip_Section_3
-
-                            # handle '.' and '?' specially below
-                            || ( $type_ibeg_2 =~ /^[\.\?]$/ )
-
-                            # fix for c054 (unusual -pbp case)
-                            || $type_ibeg_2 eq '=='
-
-                          );
-                    }
-
-                    elsif ( $type_iend_1 eq '{' ) {
-
-                        # YVES
-                        # honor breaks at opening brace
-                        # Added to prevent recombining something like this:
-                        #  } || eval { package main;
-                        next if $forced_breakpoint_to_go[$iend_1];
-                    }
-
-                    # do not recombine lines with ending &&, ||,
-                    elsif ( $is_amp_amp{$type_iend_1} ) {
-                        next unless $want_break_before{$type_iend_1};
-                    }
-
-                    # Identify and recombine a broken ?/: chain
-                    elsif ( $type_iend_1 eq '?' ) {
-
-                        # Do not recombine different levels
-                        next
-                          if (
-                            $levels_to_go[$ibeg_1] ne $levels_to_go[$ibeg_2] );
-
-                        # do not recombine unless next line ends in :
-                        next unless $type_iend_2 eq ':';
-                    }
-
-                    # for lines ending in a comma...
-                    elsif ( $type_iend_1 eq ',' ) {
-
-                        # Do not recombine at comma which is following the
-                        # input bias.
-                        # TODO: might be best to make a special flag
-                        next if ( $old_breakpoint_to_go[$iend_1] );
-
-                        # An isolated '},' may join with an identifier + ';'
-                        # This is useful for the class of a 'bless' statement
-                        # (bless.t)
-                        if (   $type_ibeg_1 eq '}'
-                            && $type_ibeg_2 eq 'i' )
-                        {
-                            next
-                              unless ( ( $ibeg_1 == ( $iend_1 - 1 ) )
-                                && ( $iend_2 == ( $ibeg_2 + 1 ) )
-                                && $this_line_is_semicolon_terminated );
-
-                            # override breakpoint
-                            $forced_breakpoint_to_go[$iend_1] = 0;
-                        }
-
-                        # but otherwise ..
-                        else {
-
-                            # do not recombine after a comma unless this will
-                            # leave just 1 more line
-                            next unless ( $n + 1 >= $nmax );
-
-                            # do not recombine if there is a change in
-                            # indentation depth
-                            next
-                              if ( $levels_to_go[$iend_1] !=
-                                $levels_to_go[$iend_2] );
-
-                            # do not recombine a "complex expression" after a
-                            # comma.  "complex" means no parens.
-                            my $saw_paren;
-                            foreach my $ii ( $ibeg_2 .. $iend_2 ) {
-                                if ( $tokens_to_go[$ii] eq '(' ) {
-                                    $saw_paren = 1;
-                                    last;
-                                }
-                            }
-                            next if $saw_paren;
-                        }
-                    }
-
-                    # opening paren..
-                    elsif ( $type_iend_1 eq '(' ) {
-
-                        # No longer doing this
-                    }
-
-                    elsif ( $type_iend_1 eq ')' ) {
-
-                        # No longer doing this
-                    }
-
-                    # keep a terminal for-semicolon
-                    elsif ( $type_iend_1 eq 'f' ) {
-                        next;
-                    }
-
-                    # if '=' at end of line ...
-                    elsif ( $is_assignment{$type_iend_1} ) {
-
-                        # keep break after = if it was in input stream
-                        # this helps prevent 'blinkers'
-                        next
-                          if (
-                            $old_breakpoint_to_go[$iend_1]
-
-                            # don't strand an isolated '='
-                            && $iend_1 != $ibeg_1
-                          );
-
-                        my $is_short_quote =
-                          (      $type_ibeg_2 eq 'Q'
-                              && $ibeg_2 == $iend_2
-                              && token_sequence_length( $ibeg_2, $ibeg_2 ) <
-                              $rOpts_short_concatenation_item_length );
-                        my $is_ternary = (
-                            $type_ibeg_1 eq '?' && ( $ibeg_3 >= 0
-                                && $types_to_go[$ibeg_3] eq ':' )
-                        );
-
-                        # always join an isolated '=', a short quote, or if this
-                        # will put ?/: at start of adjacent lines
-                        if (   $ibeg_1 != $iend_1
-                            && !$is_short_quote
-                            && !$is_ternary )
-                        {
-                            next
-                              unless (
-                                (
-
-                                    # unless we can reduce this to two lines
-                                    $nmax < $n + 2
-
-                                    # or three lines, the last with a leading
-                                    # semicolon
-                                    || (   $nmax == $n + 2
-                                        && $types_to_go[$ibeg_nmax] eq ';' )
-
-                                    # or the next line ends with a here doc
-                                    || $type_iend_2 eq 'h'
-
-                                    # or the next line ends in an open paren or
-                                    # brace and the break hasn't been forced
-                                    # [dima.t]
-                                    || (  !$forced_breakpoint_to_go[$iend_1]
-                                        && $type_iend_2 eq '{' )
-                                )
-
-                                # do not recombine if the two lines might align
-                                # well this is a very approximate test for this
-                                && (
-
-                                    # RT#127633 - the leading tokens are not
-                                    # operators
-                                    ( $type_ibeg_2 ne $tokens_to_go[$ibeg_2] )
-
-                                    # or they are different
-                                    || (   $ibeg_3 >= 0
-                                        && $type_ibeg_2 ne
-                                        $types_to_go[$ibeg_3] )
-                                )
-                              );
-
-                            if (
-
-                                # Recombine if we can make two lines
-                                $nmax >= $n + 2
-
-                                # -lp users often prefer this:
-                                #  my $title = function($env, $env, $sysarea,
-                                #                       "bubba Borrower Entry");
-                                #  so we will recombine if -lp is used we have
-                                #  ending comma
-                                && !(
-                                       $ibeg_3 > 0
-                                    && ref( $leading_spaces_to_go[$ibeg_3] )
-                                    && $type_iend_2 eq ','
-                                )
-                              )
-                            {
-
-                                # otherwise, scan the rhs line up to last token
-                                # for complexity.  Note that we are not
-                                # counting the last token in case it is an
-                                # opening paren.
-                                my $tv    = 0;
-                                my $depth = $nesting_depth_to_go[$ibeg_2];
-                                foreach my $i ( $ibeg_2 + 1 .. $iend_2 - 1 ) {
-                                    if ( $nesting_depth_to_go[$i] != $depth ) {
-                                        $tv++;
-                                        last if ( $tv > 1 );
-                                    }
-                                    $depth = $nesting_depth_to_go[$i];
-                                }
-
-                                # ok to recombine if no level changes before
-                                # last token
-                                if ( $tv > 0 ) {
-
-                                    # otherwise, do not recombine if more than
-                                    # two level changes.
-                                    next if ( $tv > 1 );
-
-                                    # check total complexity of the two
-                                    # adjacent lines that will occur if we do
-                                    # this join
-                                    my $istop =
-                                      ( $n < $nmax )
-                                      ? $ri_end->[ $n + 1 ]
-                                      : $iend_2;
-                                    foreach my $i ( $iend_2 .. $istop ) {
-                                        if (
-                                            $nesting_depth_to_go[$i] != $depth )
-                                        {
-                                            $tv++;
-                                            last if ( $tv > 2 );
-                                        }
-                                        $depth = $nesting_depth_to_go[$i];
-                                    }
-
-                                    # do not recombine if total is more than 2
-                                    # level changes
-                                    next if ( $tv > 2 );
-                                }
-                            }
-                        }
-
-                        unless ( $tokens_to_go[$ibeg_2] =~ /^[\{\(\[]$/ ) {
-                            $forced_breakpoint_to_go[$iend_1] = 0;
-                        }
-                    }
-
-                    # for keywords..
-                    elsif ( $type_iend_1 eq 'k' ) {
-
-                        # make major control keywords stand out
-                        # (recombine.t)
-                        next
-                          if (
-
-                            #/^(last|next|redo|return)$/
-                            $is_last_next_redo_return{ $tokens_to_go[$iend_1] }
-
-                            # but only if followed by multiple lines
-                            && $n < $nmax
-                          );
-
-                        if ( $is_and_or{ $tokens_to_go[$iend_1] } ) {
-                            next
-                              unless $want_break_before{ $tokens_to_go[$iend_1]
-                              };
-                        }
-                    }
+                    my ( $ok_2, $skip_Section_3 ) =
+                      recombine_section_2( $ri_beg, $ri_end, $n,
+                        $this_line_is_semicolon_terminated,
+                        $rleading_amp_count );
+                    next if ( !$ok_2 );
 
                     #----------------------------------------------------------
                     # Recombine Section 3:
                     # Examine token at $ibeg_2 (left end of second line of pair)
                     #----------------------------------------------------------
 
-                    # join lines identified above as capable of
-                    # causing an outdented line with leading closing paren
+                    # Join lines identified above as capable of
+                    # causing an outdented line with leading closing paren.
                     # Note that we are skipping the rest of this section
-                    # and the rest of the loop to do the join
+                    # and the rest of the loop to do the join.
                     if ($skip_Section_3) {
                         $forced_breakpoint_to_go[$iend_1] = 0;
                         $n_best = $n;
                         last;
                     }
 
-                    # handle lines with leading &&, ||
-                    elsif ( $is_amp_amp{$type_ibeg_2} ) {
-
-                        $leading_amp_count++;
-
-                        # ok to recombine if it follows a ? or :
-                        # and is followed by an open paren..
-                        my $ok =
-                          (      $is_ternary{$type_ibeg_1}
-                              && $tokens_to_go[$iend_2] eq '(' )
-
-                    # or is followed by a ? or : at same depth
-                    #
-                    # We are looking for something like this. We can
-                    # recombine the && line with the line above to make the
-                    # structure more clear:
-                    #  return
-                    #    exists $G->{Attr}->{V}
-                    #    && exists $G->{Attr}->{V}->{$u}
-                    #    ? %{ $G->{Attr}->{V}->{$u} }
-                    #    : ();
-                    #
-                    # We should probably leave something like this alone:
-                    #  return
-                    #       exists $G->{Attr}->{E}
-                    #    && exists $G->{Attr}->{E}->{$u}
-                    #    && exists $G->{Attr}->{E}->{$u}->{$v}
-                    #    ? %{ $G->{Attr}->{E}->{$u}->{$v} }
-                    #    : ();
-                    # so that we either have all of the &&'s (or ||'s)
-                    # on one line, as in the first example, or break at
-                    # each one as in the second example.  However, it
-                    # sometimes makes things worse to check for this because
-                    # it prevents multiple recombinations.  So this is not done.
-                          || ( $ibeg_3 >= 0
-                            && $is_ternary{ $types_to_go[$ibeg_3] }
-                            && $nesting_depth_to_go[$ibeg_3] ==
-                            $nesting_depth_to_go[$ibeg_2] );
-
-                        # Combine a trailing && term with an || term: fix for
-                        # c060 This is rare but can happen.
-                        $ok ||= 1
-                          if ( $ibeg_3 < 0
-                            && $type_ibeg_2 eq '&&'
-                            && $type_ibeg_1 eq '||'
-                            && $nesting_depth_to_go[$ibeg_2] ==
-                            $nesting_depth_to_go[$ibeg_1] );
-
-                        next if !$ok && $want_break_before{$type_ibeg_2};
-                        $forced_breakpoint_to_go[$iend_1] = 0;
-
-                        # tweak the bond strength to give this joint priority
-                        # over ? and :
-                        $bs_tweak = 0.25;
-                    }
-
-                    # Identify and recombine a broken ?/: chain
-                    elsif ( $type_ibeg_2 eq '?' ) {
-
-                        # Do not recombine different levels
-                        my $lev = $levels_to_go[$ibeg_2];
-                        next if ( $lev ne $levels_to_go[$ibeg_1] );
-
-                        # Do not recombine a '?' if either next line or
-                        # previous line does not start with a ':'.  The reasons
-                        # are that (1) no alignment of the ? will be possible
-                        # and (2) the expression is somewhat complex, so the
-                        # '?' is harder to see in the interior of the line.
-                        my $follows_colon = $ibeg_1 >= 0 && $type_ibeg_1 eq ':';
-                        my $precedes_colon =
-                          $ibeg_3 >= 0 && $types_to_go[$ibeg_3] eq ':';
-                        next unless ( $follows_colon || $precedes_colon );
-
-                        # we will always combining a ? line following a : line
-                        if ( !$follows_colon ) {
-
-                            # ...otherwise recombine only if it looks like a
-                            # chain.  we will just look at a few nearby lines
-                            # to see if this looks like a chain.
-                            my $local_count = 0;
-                            foreach
-                              my $ii ( $ibeg_0, $ibeg_1, $ibeg_3, $ibeg_4 )
-                            {
-                                $local_count++
-                                  if $ii >= 0
-                                  && $types_to_go[$ii] eq ':'
-                                  && $levels_to_go[$ii] == $lev;
-                            }
-                            next unless ( $local_count > 1 );
-                        }
-                        $forced_breakpoint_to_go[$iend_1] = 0;
-                    }
-
-                    # do not recombine lines with leading '.'
-                    elsif ( $type_ibeg_2 eq '.' ) {
-                        my $i_next_nonblank =
-                          min( $inext_to_go[$ibeg_2], $iend_2 );
-                        next
-                          unless (
-
-                   # ... unless there is just one and we can reduce
-                   # this to two lines if we do.  For example, this
-                   #
-                   #
-                   #  $bodyA .=
-                   #    '($dummy, $pat) = &get_next_tex_cmd;' . '$args .= $pat;'
-                   #
-                   #  looks better than this:
-                   #  $bodyA .= '($dummy, $pat) = &get_next_tex_cmd;'
-                   #    . '$args .= $pat;'
-
-                            (
-                                   $n == 2
-                                && $n == $nmax
-                                && $type_ibeg_1 ne $type_ibeg_2
-                            )
-
-                            # ... or this would strand a short quote , like this
-                            #                . "some long quote"
-                            #                . "\n";
-
-                            || (   $types_to_go[$i_next_nonblank] eq 'Q'
-                                && $i_next_nonblank >= $iend_2 - 1
-                                && $token_lengths_to_go[$i_next_nonblank] <
-                                $rOpts_short_concatenation_item_length )
-                          );
-                    }
-
-                    # handle leading keyword..
-                    elsif ( $type_ibeg_2 eq 'k' ) {
-
-                        # handle leading "or"
-                        if ( $tokens_to_go[$ibeg_2] eq 'or' ) {
-                            next
-                              unless (
-                                $this_line_is_semicolon_terminated
-                                && (
-                                    $type_ibeg_1 eq '}'
-                                    || (
-
-                                        # following 'if' or 'unless' or 'or'
-                                        $type_ibeg_1 eq 'k'
-                                        && $is_if_unless{ $tokens_to_go[$ibeg_1]
-                                        }
-
-                                        # important: only combine a very simple
-                                        # or statement because the step below
-                                        # may have combined a trailing 'and'
-                                        # with this or, and we do not want to
-                                        # then combine everything together
-                                        && ( $iend_2 - $ibeg_2 <= 7 )
-                                    )
-                                )
-                              );
-
-                            #X: RT #81854
-                            $forced_breakpoint_to_go[$iend_1] = 0
-                              unless ( $old_breakpoint_to_go[$iend_1] );
-                        }
-
-                        # handle leading 'and' and 'xor'
-                        elsif ($tokens_to_go[$ibeg_2] eq 'and'
-                            || $tokens_to_go[$ibeg_2] eq 'xor' )
-                        {
-
-                            # Decide if we will combine a single terminal 'and'
-                            # after an 'if' or 'unless'.
-
-                            #     This looks best with the 'and' on the same
-                            #     line as the 'if':
-                            #
-                            #         $a = 1
-                            #           if $seconds and $nu < 2;
-                            #
-                            #     But this looks better as shown:
-                            #
-                            #         $a = 1
-                            #           if !$this->{Parents}{$_}
-                            #           or $this->{Parents}{$_} eq $_;
-                            #
-                            next
-                              unless (
-                                $this_line_is_semicolon_terminated
-                                && (
-
-                                    # following 'if' or 'unless' or 'or'
-                                    $type_ibeg_1 eq 'k'
-                                    && ( $is_if_unless{ $tokens_to_go[$ibeg_1] }
-                                        || $tokens_to_go[$ibeg_1] eq 'or' )
-                                )
-                              );
-                        }
-
-                        # handle leading "if" and "unless"
-                        elsif ( $is_if_unless{ $tokens_to_go[$ibeg_2] } ) {
-
-                            # Combine something like:
-                            #    next
-                            #      if ( $lang !~ /${l}$/i );
-                            # into:
-                            #    next if ( $lang !~ /${l}$/i );
-                            next
-                              unless (
-                                $this_line_is_semicolon_terminated
-
-                                #  previous line begins with 'and' or 'or'
-                                && $type_ibeg_1 eq 'k'
-                                && $is_and_or{ $tokens_to_go[$ibeg_1] }
-
-                              );
-                        }
-
-                        # handle all other leading keywords
-                        else {
-
-                            # keywords look best at start of lines,
-                            # but combine things like "1 while"
-                            unless ( $is_assignment{$type_iend_1} ) {
-                                next
-                                  if ( ( $type_iend_1 ne 'k' )
-                                    && ( $tokens_to_go[$ibeg_2] ne 'while' ) );
-                            }
-                        }
-                    }
-
-                    # similar treatment of && and || as above for 'and' and
-                    # 'or': NOTE: This block of code is currently bypassed
-                    # because of a previous block but is retained for possible
-                    # future use.
-                    elsif ( $is_amp_amp{$type_ibeg_2} ) {
-
-                        # maybe looking at something like:
-                        # unless $TEXTONLY || $item =~ m%</?(hr>|p>|a|img)%i;
-
-                        next
-                          unless (
-                            $this_line_is_semicolon_terminated
-
-                            # previous line begins with an 'if' or 'unless'
-                            # keyword
-                            && $type_ibeg_1 eq 'k'
-                            && $is_if_unless{ $tokens_to_go[$ibeg_1] }
-
-                          );
-                    }
-
-                    # handle line with leading = or similar
-                    elsif ( $is_assignment{$type_ibeg_2} ) {
-                        next unless ( $n == 1 || $n == $nmax );
-                        next if ( $old_breakpoint_to_go[$iend_1] );
-                        next
-                          unless (
-
-                            # unless we can reduce this to two lines
-                            $nmax == 2
-
-                            # or three lines, the last with a leading semicolon
-                            || ( $nmax == 3 && $types_to_go[$ibeg_nmax] eq ';' )
-
-                            # or the next line ends with a here doc
-                            || $type_iend_2 eq 'h'
-
-                            # or this is a short line ending in ;
-                            || (   $n == $nmax
-                                && $this_line_is_semicolon_terminated )
-                          );
-                        $forced_breakpoint_to_go[$iend_1] = 0;
-                    }
+                    my ( $ok_3, $bs_tweak ) =
+                      recombine_section_3( $ri_beg, $ri_end, $n,
+                        $this_line_is_semicolon_terminated,
+                        $rleading_amp_count );
+                    next if ( !$ok_3 );
 
                     #----------------------------------------------------------
                     # Recombine Section 4:
@@ -16892,11 +16110,12 @@ sub break_equals {
 
                     my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
 
-                 # Require a few extra spaces before recombining lines if we are
-                 # at an old breakpoint unless this is a simple list or terminal
-                 # line.  The goal is to avoid oscillating between two
-                 # quasi-stable end states.  For example this snippet caused
-                 # problems:
+                    # Require a few extra spaces before recombining lines if we
+                    # are at an old breakpoint unless this is a simple list or
+                    # terminal line.  The goal is to avoid oscillating between
+                    # two quasi-stable end states.  For example this snippet
+                    # caused problems:
+
 ##    my $this =
 ##    bless {
 ##        TText => "[" . ( join ',', map { "\"$_\"" } split "\n", $_ ) . "]"
@@ -16928,7 +16147,7 @@ sub break_equals {
                           );
                     }
 
-                    # honor no-break's
+                    ## OLD: honor no-break's
                     ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
 
                     # remember the pair with the greatest bond strength
@@ -16967,6 +16186,902 @@ sub break_equals {
         }
         return;
     } ## end sub recombine_breakpoints
+
+    sub recombine_section_0 {
+        my ( $itok, $ri_beg, $ri_end, $n, $rleading_amp_count ) = @_;
+
+        # Recombine Section 0:
+        # Examine special candidate joining token $itok
+
+        # Given:
+        #  $itok = index of token at a possible join of lines $n-1 and $n
+
+        # Return:
+        #  true  => ok to combine
+        #  false => do not combine lines
+
+        # Here are Indexes of the endpoint tokens of the two lines:
+        #
+        #  -----line $n-1--- | -----line $n-----
+        #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
+        #              ^         ^
+        #              |         |
+        #              ------------$itok is one of these tokens
+
+        # Put as many tests in this section to avoid duplicate code
+        # and to make formatting independent of whether breaks are
+        # to the left or right of an operator.
+
+        my $nmax   = @{$ri_end} - 1;
+        my $ibeg_1 = $ri_beg->[ $n - 1 ];
+        my $iend_1 = $ri_end->[ $n - 1 ];
+        my $ibeg_2 = $ri_beg->[$n];
+        my $iend_2 = $ri_end->[$n];
+
+        if ($itok) {
+
+            my $type = $types_to_go[$itok];
+
+            if ( $type eq ':' ) {
+
+                # do not join at a colon unless it disobeys the
+                # break request
+                if ( $itok eq $iend_1 ) {
+                    return unless $want_break_before{$type};
+                }
+                else {
+                    ${$rleading_amp_count}++;
+                    return if $want_break_before{$type};
+                }
+            } ## end if ':'
+
+            # handle math operators + - * /
+            elsif ( $is_math_op{$type} ) {
+
+                # Combine these lines if this line is a single
+                # number, or if it is a short term with same
+                # operator as the previous line.  For example, in
+                # the following code we will combine all of the
+                # short terms $A, $B, $C, $D, $E, $F, together
+                # instead of leaving them one per line:
+                #  my $time =
+                #    $A * $B * $C * $D * $E * $F *
+                #    ( 2. * $eps * $sigma * $area ) *
+                #    ( 1. / $tcold**3 - 1. / $thot**3 );
+
+                # This can be important in math-intensive code.
+
+                my $good_combo;
+
+                my $itokp  = min( $inext_to_go[$itok],  $iend_2 );
+                my $itokpp = min( $inext_to_go[$itokp], $iend_2 );
+                my $itokm  = max( $iprev_to_go[$itok],  $ibeg_1 );
+                my $itokmm = max( $iprev_to_go[$itokm], $ibeg_1 );
+
+                # check for a number on the right
+                if ( $types_to_go[$itokp] eq 'n' ) {
+
+                    # ok if nothing else on right
+                    if ( $itokp == $iend_2 ) {
+                        $good_combo = 1;
+                    }
+                    else {
+
+                        # look one more token to right..
+                        # okay if math operator or some termination
+                        $good_combo =
+                          ( ( $itokpp == $iend_2 )
+                              && $is_math_op{ $types_to_go[$itokpp] } )
+                          || $types_to_go[$itokpp] =~ /^[#,;]$/;
+                    }
+                }
+
+                # check for a number on the left
+                if ( !$good_combo && $types_to_go[$itokm] eq 'n' ) {
+
+                    # okay if nothing else to left
+                    if ( $itokm == $ibeg_1 ) {
+                        $good_combo = 1;
+                    }
+
+                    # otherwise look one more token to left
+                    else {
+
+                        # okay if math operator, comma, or assignment
+                        $good_combo = ( $itokmm == $ibeg_1 )
+                          && ( $is_math_op{ $types_to_go[$itokmm] }
+                            || $types_to_go[$itokmm] =~ /^[,]$/
+                            || $is_assignment{ $types_to_go[$itokmm] } );
+                    }
+                }
+
+                # look for a single short token either side of the
+                # operator
+                if ( !$good_combo ) {
+
+                    # Slight adjustment factor to make results
+                    # independent of break before or after operator
+                    # in long summed lists.  (An operator and a
+                    # space make two spaces).
+                    my $two = ( $itok eq $iend_1 ) ? 2 : 0;
+
+                    $good_combo =
+
+                      # numbers or id's on both sides of this joint
+                      $types_to_go[$itokp] =~ /^[in]$/
+                      && $types_to_go[$itokm] =~ /^[in]$/
+
+                      # one of the two lines must be short:
+                      && (
+                        (
+                            # no more than 2 nonblank tokens right
+                            # of joint
+                            $itokpp == $iend_2
+
+                            # short
+                            && token_sequence_length( $itokp, $iend_2 ) <
+                            $two + $rOpts_short_concatenation_item_length
+                        )
+                        || (
+                            # no more than 2 nonblank tokens left of
+                            # joint
+                            $itokmm == $ibeg_1
+
+                            # short
+                            && token_sequence_length( $ibeg_1, $itokm ) <
+                            2 - $two + $rOpts_short_concatenation_item_length
+                        )
+
+                      )
+
+                      # keep pure terms; don't mix +- with */
+                      && !(
+                        $is_plus_minus{$type}
+                        && (   $is_mult_div{ $types_to_go[$itokmm] }
+                            || $is_mult_div{ $types_to_go[$itokpp] } )
+                      )
+                      && !(
+                        $is_mult_div{$type}
+                        && (   $is_plus_minus{ $types_to_go[$itokmm] }
+                            || $is_plus_minus{ $types_to_go[$itokpp] } )
+                      )
+
+                      ;
+                }
+
+                # it is also good to combine if we can reduce to 2
+                # lines
+                if ( !$good_combo ) {
+
+                    # index on other line where same token would be
+                    # in a long chain.
+                    my $iother = ( $itok == $iend_1 ) ? $iend_2 : $ibeg_1;
+
+                    $good_combo =
+                         $n == 2
+                      && $n == $nmax
+                      && $types_to_go[$iother] ne $type;
+                }
+
+                return unless ($good_combo);
+
+            } ## end math
+
+            elsif ( $is_amp_amp{$type} ) {
+                ##TBD
+            } ## end &&, ||
+
+            elsif ( $is_assignment{$type} ) {
+                ##TBD
+            } ## end assignment
+        }
+
+        # ok to combine lines
+        return 1;
+    } ## end sub recombine_section_0
+
+    sub recombine_section_2 {
+
+        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated,
+            $rleading_amp_count )
+          = @_;
+
+        # Recombine Section 2:
+        # Examine token at $iend_1 (right end of first line of pair)
+
+        # Here are Indexes of the endpoint tokens of the two lines:
+        #
+        #  -----line $n-1--- | -----line $n-----
+        #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
+        #              ^
+        #              |
+        #              -----Section 2 looks at this token
+
+        # Returns:
+        #   (nothing)         => do not join lines
+        #   1, skip_Section_3 => ok to join lines
+
+        # $skip_Section_3 is a flag for skipping the next section
+        my $skip_Section_3 = 0;
+
+        my $nmax      = @{$ri_end} - 1;
+        my $ibeg_1    = $ri_beg->[ $n - 1 ];
+        my $iend_1    = $ri_end->[ $n - 1 ];
+        my $iend_2    = $ri_end->[$n];
+        my $ibeg_2    = $ri_beg->[$n];
+        my $ibeg_3    = $n < $nmax ? $ri_beg->[ $n + 1 ] : -1;
+        my $ibeg_nmax = $ri_beg->[$nmax];
+
+        my $type_iend_1 = $types_to_go[$iend_1];
+        my $type_iend_2 = $types_to_go[$iend_2];
+        my $type_ibeg_1 = $types_to_go[$ibeg_1];
+        my $type_ibeg_2 = $types_to_go[$ibeg_2];
+
+        # an isolated '}' may join with a ';' terminated segment
+        if ( $type_iend_1 eq '}' ) {
+
+            # Check for cases where combining a semicolon terminated
+            # statement with a previous isolated closing paren will
+            # allow the combined line to be outdented.  This is
+            # generally a good move.  For example, we can join up
+            # the last two lines here:
+            #  (
+            #      $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
+            #      $size, $atime, $mtime, $ctime, $blksize, $blocks
+            #    )
+            #    = stat($file);
+            #
+            # to get:
+            #  (
+            #      $dev,  $ino,   $mode,  $nlink, $uid,     $gid, $rdev,
+            #      $size, $atime, $mtime, $ctime, $blksize, $blocks
+            #  ) = stat($file);
+            #
+            # which makes the parens line up.
+            #
+            # Another example, from Joe Matarazzo, probably looks best
+            # with the 'or' clause appended to the trailing paren:
+            #  $self->some_method(
+            #      PARAM1 => 'foo',
+            #      PARAM2 => 'bar'
+            #  ) or die "Some_method didn't work";
+            #
+            # But we do not want to do this for something like the -lp
+            # option where the paren is not outdentable because the
+            # trailing clause will be far to the right.
+            #
+            # The logic here is synchronized with the logic in sub
+            # sub final_indentation_adjustment, which actually does
+            # the outdenting.
+            #
+            $skip_Section_3 ||= $this_line_is_semicolon_terminated
+
+              # only one token on last line
+              && $ibeg_1 == $iend_1
+
+              # must be structural paren
+              && $tokens_to_go[$iend_1] eq ')'
+
+              # style must allow outdenting,
+              && !$closing_token_indentation{')'}
+
+              # only leading '&&', '||', and ':' if no others seen
+              # (but note: our count made below could be wrong
+              # due to intervening comments).  Note that this
+              # count includes these tokens at all levels.  The idea is
+              # that seeing these at any level can make it hard to read
+              # formatting if we recombine.
+              && ( !${$rleading_amp_count}
+                || $type_ibeg_2 !~ /^(:|\&\&|\|\|)$/ )
+
+              # but leading colons probably line up with a
+              # previous colon or question (count could be wrong).
+              && $type_ibeg_2 ne ':'
+
+              # only one step in depth allowed.  this line must not
+              # begin with a ')' itself.
+              && ( $nesting_depth_to_go[$iend_1] ==
+                $nesting_depth_to_go[$iend_2] + 1 );
+
+            # YVES patch 2 of 2:
+            # Allow cuddled eval chains, like this:
+            #   eval {
+            #       #STUFF;
+            #       1; # return true
+            #   } or do {
+            #       #handle error
+            #   };
+            # This patch works together with a patch in
+            # setting adjusted indentation (where the closing eval
+            # brace is outdented if possible).
+            # The problem is that an 'eval' block has continuation
+            # indentation and it looks better to undo it in some
+            # cases.  If we do not use this patch we would get:
+            #   eval {
+            #       #STUFF;
+            #       1; # return true
+            #       }
+            #       or do {
+            #       #handle error
+            #     };
+            # The alternative, for uncuddled style, is to create
+            # a patch in final_indentation_adjustment which undoes
+            # the indentation of a leading line like 'or do {'.
+            # This doesn't work well with -icb through
+            if (
+                   $block_type_to_go[$iend_1] eq 'eval'
+                && !ref( $leading_spaces_to_go[$iend_1] )
+                && !$rOpts_indent_closing_brace
+                && $tokens_to_go[$iend_2] eq '{'
+                && (
+                    ( $type_ibeg_2 =~ /^(\&\&|\|\|)$/ )
+                    || (   $type_ibeg_2 eq 'k'
+                        && $is_and_or{ $tokens_to_go[$ibeg_2] } )
+                    || $is_if_unless{ $tokens_to_go[$ibeg_2] }
+                )
+              )
+            {
+                $skip_Section_3 ||= 1;
+            }
+
+            return
+              unless (
+                $skip_Section_3
+
+                # handle '.' and '?' specially below
+                || ( $type_ibeg_2 =~ /^[\.\?]$/ )
+
+                # fix for c054 (unusual -pbp case)
+                || $type_ibeg_2 eq '=='
+
+              );
+        }
+
+        elsif ( $type_iend_1 eq '{' ) {
+
+            # YVES
+            # honor breaks at opening brace
+            # Added to prevent recombining something like this:
+            #  } || eval { package main;
+            return if $forced_breakpoint_to_go[$iend_1];
+        }
+
+        # do not recombine lines with ending &&, ||,
+        elsif ( $is_amp_amp{$type_iend_1} ) {
+            return unless $want_break_before{$type_iend_1};
+        }
+
+        # Identify and recombine a broken ?/: chain
+        elsif ( $type_iend_1 eq '?' ) {
+
+            # Do not recombine different levels
+            return
+              if ( $levels_to_go[$ibeg_1] ne $levels_to_go[$ibeg_2] );
+
+            # do not recombine unless next line ends in :
+            return unless $type_iend_2 eq ':';
+        }
+
+        # for lines ending in a comma...
+        elsif ( $type_iend_1 eq ',' ) {
+
+            # Do not recombine at comma which is following the
+            # input bias.
+            # TODO: might be best to make a special flag
+            return if ( $old_breakpoint_to_go[$iend_1] );
+
+            # An isolated '},' may join with an identifier + ';'
+            # This is useful for the class of a 'bless' statement
+            # (bless.t)
+            if (   $type_ibeg_1 eq '}'
+                && $type_ibeg_2 eq 'i' )
+            {
+                return
+                  unless ( ( $ibeg_1 == ( $iend_1 - 1 ) )
+                    && ( $iend_2 == ( $ibeg_2 + 1 ) )
+                    && $this_line_is_semicolon_terminated );
+
+                # override breakpoint
+                $forced_breakpoint_to_go[$iend_1] = 0;
+            }
+
+            # but otherwise ..
+            else {
+
+                # do not recombine after a comma unless this will
+                # leave just 1 more line
+                return unless ( $n + 1 >= $nmax );
+
+                # do not recombine if there is a change in
+                # indentation depth
+                return
+                  if ( $levels_to_go[$iend_1] != $levels_to_go[$iend_2] );
+
+                # do not recombine a "complex expression" after a
+                # comma.  "complex" means no parens.
+                my $saw_paren;
+                foreach my $ii ( $ibeg_2 .. $iend_2 ) {
+                    if ( $tokens_to_go[$ii] eq '(' ) {
+                        $saw_paren = 1;
+                        last;
+                    }
+                }
+                return if $saw_paren;
+            }
+        }
+
+        # opening paren..
+        elsif ( $type_iend_1 eq '(' ) {
+
+            # No longer doing this
+        }
+
+        elsif ( $type_iend_1 eq ')' ) {
+
+            # No longer doing this
+        }
+
+        # keep a terminal for-semicolon
+        elsif ( $type_iend_1 eq 'f' ) {
+            return;
+        }
+
+        # if '=' at end of line ...
+        elsif ( $is_assignment{$type_iend_1} ) {
+
+            # keep break after = if it was in input stream
+            # this helps prevent 'blinkers'
+            return
+              if (
+                $old_breakpoint_to_go[$iend_1]
+
+                # don't strand an isolated '='
+                && $iend_1 != $ibeg_1
+              );
+
+            my $is_short_quote =
+              (      $type_ibeg_2 eq 'Q'
+                  && $ibeg_2 == $iend_2
+                  && token_sequence_length( $ibeg_2, $ibeg_2 ) <
+                  $rOpts_short_concatenation_item_length );
+            my $is_ternary = (
+                $type_ibeg_1 eq '?' && ( $ibeg_3 >= 0
+                    && $types_to_go[$ibeg_3] eq ':' )
+            );
+
+            # always join an isolated '=', a short quote, or if this
+            # will put ?/: at start of adjacent lines
+            if (   $ibeg_1 != $iend_1
+                && !$is_short_quote
+                && !$is_ternary )
+            {
+                return
+                  unless (
+                    (
+
+                        # unless we can reduce this to two lines
+                        $nmax < $n + 2
+
+                        # or three lines, the last with a leading
+                        # semicolon
+                        || (   $nmax == $n + 2
+                            && $types_to_go[$ibeg_nmax] eq ';' )
+
+                        # or the next line ends with a here doc
+                        || $type_iend_2 eq 'h'
+
+                        # or the next line ends in an open paren or
+                        # brace and the break hasn't been forced
+                        # [dima.t]
+                        || (  !$forced_breakpoint_to_go[$iend_1]
+                            && $type_iend_2 eq '{' )
+                    )
+
+                    # do not recombine if the two lines might align
+                    # well this is a very approximate test for this
+                    && (
+
+                        # RT#127633 - the leading tokens are not
+                        # operators
+                        ( $type_ibeg_2 ne $tokens_to_go[$ibeg_2] )
+
+                        # or they are different
+                        || (   $ibeg_3 >= 0
+                            && $type_ibeg_2 ne $types_to_go[$ibeg_3] )
+                    )
+                  );
+
+                if (
+
+                    # Recombine if we can make two lines
+                    $nmax >= $n + 2
+
+                    # -lp users often prefer this:
+                    #  my $title = function($env, $env, $sysarea,
+                    #                       "bubba Borrower Entry");
+                    #  so we will recombine if -lp is used we have
+                    #  ending comma
+                    && !(
+                           $ibeg_3 > 0
+                        && ref( $leading_spaces_to_go[$ibeg_3] )
+                        && $type_iend_2 eq ','
+                    )
+                  )
+                {
+
+                    # otherwise, scan the rhs line up to last token
+                    # for complexity.  Note that we are not
+                    # counting the last token in case it is an
+                    # opening paren.
+                    my $tv    = 0;
+                    my $depth = $nesting_depth_to_go[$ibeg_2];
+                    foreach my $i ( $ibeg_2 + 1 .. $iend_2 - 1 ) {
+                        if ( $nesting_depth_to_go[$i] != $depth ) {
+                            $tv++;
+                            last if ( $tv > 1 );
+                        }
+                        $depth = $nesting_depth_to_go[$i];
+                    }
+
+                    # ok to recombine if no level changes before
+                    # last token
+                    if ( $tv > 0 ) {
+
+                        # otherwise, do not recombine if more than
+                        # two level changes.
+                        return if ( $tv > 1 );
+
+                        # check total complexity of the two
+                        # adjacent lines that will occur if we do
+                        # this join
+                        my $istop =
+                          ( $n < $nmax )
+                          ? $ri_end->[ $n + 1 ]
+                          : $iend_2;
+                        foreach my $i ( $iend_2 .. $istop ) {
+                            if ( $nesting_depth_to_go[$i] != $depth ) {
+                                $tv++;
+                                last if ( $tv > 2 );
+                            }
+                            $depth = $nesting_depth_to_go[$i];
+                        }
+
+                        # do not recombine if total is more than 2
+                        # level changes
+                        return if ( $tv > 2 );
+                    }
+                }
+            }
+
+            unless ( $tokens_to_go[$ibeg_2] =~ /^[\{\(\[]$/ ) {
+                $forced_breakpoint_to_go[$iend_1] = 0;
+            }
+        }
+
+        # for keywords..
+        elsif ( $type_iend_1 eq 'k' ) {
+
+            # make major control keywords stand out
+            # (recombine.t)
+            return
+              if (
+
+                #/^(last|next|redo|return)$/
+                $is_last_next_redo_return{ $tokens_to_go[$iend_1] }
+
+                # but only if followed by multiple lines
+                && $n < $nmax
+              );
+
+            if ( $is_and_or{ $tokens_to_go[$iend_1] } ) {
+                return
+                  unless $want_break_before{ $tokens_to_go[$iend_1] };
+            }
+        }
+        return ( 1, $skip_Section_3 );
+    } ## end sub recombine_section_2
+
+    sub recombine_section_3 {
+
+        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated,
+            $rleading_amp_count )
+          = @_;
+
+        # Recombine Section 3:
+        # Examine token at $ibeg_2 (right end of first line of pair)
+
+        # Here are Indexes of the endpoint tokens of the two lines:
+        #
+        #  -----line $n-1--- | -----line $n-----
+        #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
+        #                        ^
+        #                        |
+        #                        -----Section 3 looks at this token
+
+        # Returns:
+        #   (nothing)         => do not join lines
+        #   1, bs_tweak => ok to join lines
+
+        # $bstweak is a small tolerance to add to bond strengths
+        my $bs_tweak = 0;
+
+        my $nmax   = @{$ri_end} - 1;
+        my $ibeg_1 = $ri_beg->[ $n - 1 ];
+        my $iend_1 = $ri_end->[ $n - 1 ];
+        my $iend_2 = $ri_end->[$n];
+        my $ibeg_2 = $ri_beg->[$n];
+
+        my $ibeg_0    = $n > 1          ? $ri_beg->[ $n - 2 ] : -1;
+        my $ibeg_3    = $n < $nmax      ? $ri_beg->[ $n + 1 ] : -1;
+        my $ibeg_4    = $n + 2 <= $nmax ? $ri_beg->[ $n + 2 ] : -1;
+        my $ibeg_nmax = $ri_beg->[$nmax];
+
+        my $type_iend_1 = $types_to_go[$iend_1];
+        my $type_iend_2 = $types_to_go[$iend_2];
+        my $type_ibeg_1 = $types_to_go[$ibeg_1];
+        my $type_ibeg_2 = $types_to_go[$ibeg_2];
+
+        # handle lines with leading &&, ||
+        if ( $is_amp_amp{$type_ibeg_2} ) {
+
+            ${$rleading_amp_count}++;
+
+            # ok to recombine if it follows a ? or :
+            # and is followed by an open paren..
+            my $ok =
+              ( $is_ternary{$type_ibeg_1} && $tokens_to_go[$iend_2] eq '(' )
+
+              # or is followed by a ? or : at same depth
+              #
+              # We are looking for something like this. We can
+              # recombine the && line with the line above to make the
+              # structure more clear:
+              #  return
+              #    exists $G->{Attr}->{V}
+              #    && exists $G->{Attr}->{V}->{$u}
+              #    ? %{ $G->{Attr}->{V}->{$u} }
+              #    : ();
+              #
+              # We should probably leave something like this alone:
+              #  return
+              #       exists $G->{Attr}->{E}
+              #    && exists $G->{Attr}->{E}->{$u}
+              #    && exists $G->{Attr}->{E}->{$u}->{$v}
+              #    ? %{ $G->{Attr}->{E}->{$u}->{$v} }
+              #    : ();
+              # so that we either have all of the &&'s (or ||'s)
+              # on one line, as in the first example, or break at
+              # each one as in the second example.  However, it
+              # sometimes makes things worse to check for this because
+              # it prevents multiple recombinations.  So this is not done.
+              || ( $ibeg_3 >= 0
+                && $is_ternary{ $types_to_go[$ibeg_3] }
+                && $nesting_depth_to_go[$ibeg_3] ==
+                $nesting_depth_to_go[$ibeg_2] );
+
+            # Combine a trailing && term with an || term: fix for
+            # c060 This is rare but can happen.
+            $ok ||= 1
+              if ( $ibeg_3 < 0
+                && $type_ibeg_2 eq '&&'
+                && $type_ibeg_1 eq '||'
+                && $nesting_depth_to_go[$ibeg_2] ==
+                $nesting_depth_to_go[$ibeg_1] );
+
+            return if !$ok && $want_break_before{$type_ibeg_2};
+            $forced_breakpoint_to_go[$iend_1] = 0;
+
+            # tweak the bond strength to give this joint priority
+            # over ? and :
+            $bs_tweak = 0.25;
+        }
+
+        # Identify and recombine a broken ?/: chain
+        elsif ( $type_ibeg_2 eq '?' ) {
+
+            # Do not recombine different levels
+            my $lev = $levels_to_go[$ibeg_2];
+            return if ( $lev ne $levels_to_go[$ibeg_1] );
+
+            # Do not recombine a '?' if either next line or
+            # previous line does not start with a ':'.  The reasons
+            # are that (1) no alignment of the ? will be possible
+            # and (2) the expression is somewhat complex, so the
+            # '?' is harder to see in the interior of the line.
+            my $follows_colon  = $ibeg_1 >= 0 && $type_ibeg_1 eq ':';
+            my $precedes_colon = $ibeg_3 >= 0 && $types_to_go[$ibeg_3] eq ':';
+            return unless ( $follows_colon || $precedes_colon );
+
+            # we will always combining a ? line following a : line
+            if ( !$follows_colon ) {
+
+                # ...otherwise recombine only if it looks like a
+                # chain.  we will just look at a few nearby lines
+                # to see if this looks like a chain.
+                my $local_count = 0;
+                foreach my $ii ( $ibeg_0, $ibeg_1, $ibeg_3, $ibeg_4 ) {
+                    $local_count++
+                      if $ii >= 0
+                      && $types_to_go[$ii] eq ':'
+                      && $levels_to_go[$ii] == $lev;
+                }
+                return unless ( $local_count > 1 );
+            }
+            $forced_breakpoint_to_go[$iend_1] = 0;
+        }
+
+        # do not recombine lines with leading '.'
+        elsif ( $type_ibeg_2 eq '.' ) {
+            my $i_next_nonblank = min( $inext_to_go[$ibeg_2], $iend_2 );
+            return
+              unless (
+
+                # ... unless there is just one and we can reduce
+                # this to two lines if we do.  For example, this
+                #
+                #
+                #  $bodyA .=
+                #    '($dummy, $pat) = &get_next_tex_cmd;' . '$args .= $pat;'
+                #
+                #  looks better than this:
+                #  $bodyA .= '($dummy, $pat) = &get_next_tex_cmd;'
+                #    . '$args .= $pat;'
+
+                ( $n == 2 && $n == $nmax && $type_ibeg_1 ne $type_ibeg_2 )
+
+                # ... or this would strand a short quote , like this
+                #                . "some long quote"
+                #                . "\n";
+
+                || (   $types_to_go[$i_next_nonblank] eq 'Q'
+                    && $i_next_nonblank >= $iend_2 - 1
+                    && $token_lengths_to_go[$i_next_nonblank] <
+                    $rOpts_short_concatenation_item_length )
+              );
+        }
+
+        # handle leading keyword..
+        elsif ( $type_ibeg_2 eq 'k' ) {
+
+            # handle leading "or"
+            if ( $tokens_to_go[$ibeg_2] eq 'or' ) {
+                return
+                  unless (
+                    $this_line_is_semicolon_terminated
+                    && (
+                        $type_ibeg_1 eq '}'
+                        || (
+
+                            # following 'if' or 'unless' or 'or'
+                            $type_ibeg_1 eq 'k'
+                            && $is_if_unless{ $tokens_to_go[$ibeg_1] }
+
+                            # important: only combine a very simple
+                            # or statement because the step below
+                            # may have combined a trailing 'and'
+                            # with this or, and we do not want to
+                            # then combine everything together
+                            && ( $iend_2 - $ibeg_2 <= 7 )
+                        )
+                    )
+                  );
+
+                #X: RT #81854
+                $forced_breakpoint_to_go[$iend_1] = 0
+                  unless ( $old_breakpoint_to_go[$iend_1] );
+            }
+
+            # handle leading 'and' and 'xor'
+            elsif ($tokens_to_go[$ibeg_2] eq 'and'
+                || $tokens_to_go[$ibeg_2] eq 'xor' )
+            {
+
+                # Decide if we will combine a single terminal 'and'
+                # after an 'if' or 'unless'.
+
+                #     This looks best with the 'and' on the same
+                #     line as the 'if':
+                #
+                #         $a = 1
+                #           if $seconds and $nu < 2;
+                #
+                #     But this looks better as shown:
+                #
+                #         $a = 1
+                #           if !$this->{Parents}{$_}
+                #           or $this->{Parents}{$_} eq $_;
+                #
+                return
+                  unless (
+                    $this_line_is_semicolon_terminated
+                    && (
+
+                        # following 'if' or 'unless' or 'or'
+                        $type_ibeg_1 eq 'k'
+                        && (   $is_if_unless{ $tokens_to_go[$ibeg_1] }
+                            || $tokens_to_go[$ibeg_1] eq 'or' )
+                    )
+                  );
+            }
+
+            # handle leading "if" and "unless"
+            elsif ( $is_if_unless{ $tokens_to_go[$ibeg_2] } ) {
+
+                # Combine something like:
+                #    next
+                #      if ( $lang !~ /${l}$/i );
+                # into:
+                #    next if ( $lang !~ /${l}$/i );
+                return
+                  unless (
+                    $this_line_is_semicolon_terminated
+
+                    #  previous line begins with 'and' or 'or'
+                    && $type_ibeg_1 eq 'k'
+                    && $is_and_or{ $tokens_to_go[$ibeg_1] }
+
+                  );
+            }
+
+            # handle all other leading keywords
+            else {
+
+                # keywords look best at start of lines,
+                # but combine things like "1 while"
+                unless ( $is_assignment{$type_iend_1} ) {
+                    return
+                      if ( ( $type_iend_1 ne 'k' )
+                        && ( $tokens_to_go[$ibeg_2] ne 'while' ) );
+                }
+            }
+        }
+
+        # similar treatment of && and || as above for 'and' and
+        # 'or': NOTE: This block of code is currently bypassed
+        # because of a previous block but is retained for possible
+        # future use.
+        elsif ( $is_amp_amp{$type_ibeg_2} ) {
+
+            # maybe looking at something like:
+            # unless $TEXTONLY || $item =~ m%</?(hr>|p>|a|img)%i;
+
+            return
+              unless (
+                $this_line_is_semicolon_terminated
+
+                # previous line begins with an 'if' or 'unless'
+                # keyword
+                && $type_ibeg_1 eq 'k'
+                && $is_if_unless{ $tokens_to_go[$ibeg_1] }
+
+              );
+        }
+
+        # handle line with leading = or similar
+        elsif ( $is_assignment{$type_ibeg_2} ) {
+            return unless ( $n == 1 || $n == $nmax );
+            return if ( $old_breakpoint_to_go[$iend_1] );
+            return
+              unless (
+
+                # unless we can reduce this to two lines
+                $nmax == 2
+
+                # or three lines, the last with a leading semicolon
+                || ( $nmax == 3 && $types_to_go[$ibeg_nmax] eq ';' )
+
+                # or the next line ends with a here doc
+                || $type_iend_2 eq 'h'
+
+                # or this is a short line ending in ;
+                || (   $n == $nmax
+                    && $this_line_is_semicolon_terminated )
+              );
+            $forced_breakpoint_to_go[$iend_1] = 0;
+        }
+        return ( 1, $bs_tweak );
+    } ## end sub recombine_section_3
+
 } ## end closure recombine_breakpoints
 
 sub insert_final_ternary_breaks {
