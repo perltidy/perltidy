@@ -5225,6 +5225,26 @@ EOM
         return;
     } ## end sub check_sequence_numbers
 
+    sub store_block_type {
+        my ( $self, $block_type, $seqno ) = @_;
+
+        return if ( !$block_type );
+
+        $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
+
+        if ( substr( $block_type, 0, 3 ) eq 'sub'
+            || $rOpts_sub_alias_list )
+        {
+            if ( $block_type =~ /$ASUB_PATTERN/ ) {
+                $self->[_ris_asub_block_]->{$seqno} = 1;
+            }
+            elsif ( $block_type =~ /$SUB_PATTERN/ ) {
+                $self->[_ris_sub_block_]->{$seqno} = 1;
+            }
+        }
+        return;
+    }
+
     sub write_line {
 
         # This routine receives lines one-by-one from the tokenizer and stores
@@ -5240,7 +5260,6 @@ EOM
         my $K_opening_container     = $self->[_K_opening_container_];
         my $K_closing_container     = $self->[_K_closing_container_];
         my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
-        my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
         my $rSS                     = $self->[_rSS_];
         my $Iss_opening             = $self->[_Iss_opening_];
         my $Iss_closing             = $self->[_Iss_closing_];
@@ -5337,20 +5356,9 @@ EOM
                             # Save a sequenced block type at its opening token.
                             # Note that unsequenced block types can occur in
                             # unbalanced code with errors but are ignored here.
-                            if ( $rblock_type->[$j] ) {
-                                my $block_type = $rblock_type->[$j];
-                                $rblock_type_of_seqno->{$seqno} = $block_type;
-                                if ( substr( $block_type, 0, 3 ) eq 'sub'
-                                    || $rOpts_sub_alias_list )
-                                {
-                                    if ( $block_type =~ /$ASUB_PATTERN/ ) {
-                                        $self->[_ris_asub_block_]->{$seqno} = 1;
-                                    }
-                                    elsif ( $block_type =~ /$SUB_PATTERN/ ) {
-                                        $self->[_ris_sub_block_]->{$seqno} = 1;
-                                    }
-                                }
-                            }
+                            $self->store_block_type( $rblock_type->[$j],
+                                $seqno )
+                              if ( $rblock_type->[$j] );
                         }
                         elsif ( $is_closing_token{$token} ) {
 
@@ -21490,107 +21498,102 @@ sub get_available_spaces_to_go {
 
                 # loop to find the first entry at or completely below this level
                 while (1) {
-                    if ($max_lp_stack) {
 
-                        # save index of token which closes this level
-                        if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
-                            my $lp_object =
-                              $rLP->[$max_lp_stack]->[_lp_object_];
+                    # Be sure we have not hit the stack bottom - should never
+                    # happen because only negative levels can get here, and
+                    # $level was forced to be positive above.
+                    if ( !$max_lp_stack ) {
 
-                            $lp_object->set_closed($ii);
-
-                            my $comma_count = 0;
-                            my $arrow_count = 0;
-                            if ( $type eq '}' || $type eq ')' ) {
-                                $comma_count = $lp_comma_count{$total_depth};
-                                $arrow_count = $lp_arrow_count{$total_depth};
-                                $comma_count = 0 unless $comma_count;
-                                $arrow_count = 0 unless $arrow_count;
-                            }
-
-                            $lp_object->set_comma_count($comma_count);
-                            $lp_object->set_arrow_count($arrow_count);
-
-                            # Undo any extra indentation if we saw no commas
-                            my $available_spaces =
-                              $lp_object->get_available_spaces();
-                            my $K_start = $lp_object->get_K_begin_line();
-
-                            if (   $available_spaces > 0
-                                && $K_start >= $K_to_go[0]
-                                && ( $comma_count <= 0 || $arrow_count > 0 ) )
-                            {
-
-                                my $i = $lp_object->get_lp_item_index();
-
-                                # Safety check for a valid stack index. It
-                                # should be ok because we just checked that the
-                                # index K of the token associated with this
-                                # indentation is in this batch.
-                                if ( $i < 0 || $i > $max_lp_object_list ) {
-                                    if (DEVEL_MODE) {
-                                        my $lno = $rLL->[$KK]->[_LINE_INDEX_];
-                                        Fault(<<EOM);
-Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_lp_object_list
-EOM
-                                    }
-                                }
-                                else {
-                                    if ( $arrow_count == 0 ) {
-                                        $rlp_object_list->[$i]
-                                          ->permanently_decrease_available_spaces
-                                          ($available_spaces);
-                                    }
-                                    else {
-                                        $rlp_object_list->[$i]
-                                          ->tentatively_decrease_available_spaces
-                                          ($available_spaces);
-                                    }
-                                    foreach
-                                      my $j ( $i + 1 .. $max_lp_object_list )
-                                    {
-                                        $rlp_object_list->[$j]
-                                          ->decrease_SPACES($available_spaces);
-                                    }
-                                }
-                            }
-                        }
-
-                        # go down one level
-                        --$max_lp_stack;
-
-                        my $rLP_top = $rLP->[$max_lp_stack];
-                        my $ci_lev  = $rLP_top->[_lp_ci_level_];
-                        my $lev     = $rLP_top->[_lp_level_];
-                        my $spaces  = $rLP_top->[_lp_space_count_];
-                        if ( $rLP_top->[_lp_object_] ) {
-                            my $lp_obj = $rLP_top->[_lp_object_];
-                            ( $spaces, $lev, $ci_lev ) =
-                              @{ $lp_obj->get_spaces_level_ci() };
-                        }
-
-                        # stop when we reach a level at or below the current
-                        # level
-                        if ( $lev <= $level && $ci_lev <= $ci_level ) {
-                            $space_count      = $spaces;
-                            $current_level    = $lev;
-                            $current_ci_level = $ci_lev;
-                            last;
-                        }
-                    }
-
-                    # reached bottom of stack .. should never happen because
-                    # only negative levels can get here, and $level was forced
-                    # to be positive above.
-                    else {
-
-                        # non-fatal, keep going except in DEVEL_MODE
+                        # non-fatal, just keep going except in DEVEL_MODE
                         if (DEVEL_MODE) {
-##program bug with -lp: stack_error. level=$level; lev=$lev; ci_level=$ci_level; ci_lev=$ci_lev; rerun with -nlp
                             Fault(<<EOM);
 program bug with -lp: stack_error. level=$level; ci_level=$ci_level; rerun with -nlp
 EOM
                         }
+                        last;
+                    }
+
+                    # save index of token which closes this level
+                    if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
+                        my $lp_object = $rLP->[$max_lp_stack]->[_lp_object_];
+
+                        $lp_object->set_closed($ii);
+
+                        my $comma_count = 0;
+                        my $arrow_count = 0;
+                        if ( $type eq '}' || $type eq ')' ) {
+                            $comma_count = $lp_comma_count{$total_depth};
+                            $arrow_count = $lp_arrow_count{$total_depth};
+                            $comma_count = 0 unless $comma_count;
+                            $arrow_count = 0 unless $arrow_count;
+                        }
+
+                        $lp_object->set_comma_count($comma_count);
+                        $lp_object->set_arrow_count($arrow_count);
+
+                        # Undo any extra indentation if we saw no commas
+                        my $available_spaces =
+                          $lp_object->get_available_spaces();
+                        my $K_start = $lp_object->get_K_begin_line();
+
+                        if (   $available_spaces > 0
+                            && $K_start >= $K_to_go[0]
+                            && ( $comma_count <= 0 || $arrow_count > 0 ) )
+                        {
+
+                            my $i = $lp_object->get_lp_item_index();
+
+                            # Safety check for a valid stack index. It
+                            # should be ok because we just checked that the
+                            # index K of the token associated with this
+                            # indentation is in this batch.
+                            if ( $i < 0 || $i > $max_lp_object_list ) {
+                                if (DEVEL_MODE) {
+                                    my $lno = $rLL->[$KK]->[_LINE_INDEX_];
+                                    Fault(<<EOM);
+Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_lp_object_list
+EOM
+                                }
+                            }
+                            else {
+                                if ( $arrow_count == 0 ) {
+                                    $rlp_object_list->[$i]
+                                      ->permanently_decrease_available_spaces(
+                                        $available_spaces);
+                                }
+                                else {
+                                    $rlp_object_list->[$i]
+                                      ->tentatively_decrease_available_spaces(
+                                        $available_spaces);
+                                }
+                                foreach my $j ( $i + 1 .. $max_lp_object_list )
+                                {
+                                    $rlp_object_list->[$j]
+                                      ->decrease_SPACES($available_spaces);
+                                }
+                            }
+                        }
+                    }
+
+                    # go down one level
+                    --$max_lp_stack;
+
+                    my $rLP_top = $rLP->[$max_lp_stack];
+                    my $ci_lev  = $rLP_top->[_lp_ci_level_];
+                    my $lev     = $rLP_top->[_lp_level_];
+                    my $spaces  = $rLP_top->[_lp_space_count_];
+                    if ( $rLP_top->[_lp_object_] ) {
+                        my $lp_obj = $rLP_top->[_lp_object_];
+                        ( $spaces, $lev, $ci_lev ) =
+                          @{ $lp_obj->get_spaces_level_ci() };
+                    }
+
+                    # stop when we reach a level at or below the current
+                    # level
+                    if ( $lev <= $level && $ci_lev <= $ci_level ) {
+                        $space_count      = $spaces;
+                        $current_level    = $lev;
+                        $current_ci_level = $ci_lev;
                         last;
                     }
                 }
