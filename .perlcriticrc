@@ -70,13 +70,10 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [-ClassHierarchies::ProhibitAutoloading]
 
 # The max values below can be reduced to locate code which might be improved.
-# The max_mccabe value is insanely high, due to years of updates and new
-# features, and I have been working to reduce it.  Sometimes debug and
-# diagnostic code gives high max_nests.  
 [Subroutines::ProhibitExcessComplexity]
 max_mccabe=245
 [ControlStructures::ProhibitDeepNests]
-max_nests=9
+max_nests=8
 
 # The if-elsif sequences in perltidy have all been profiled and
 # are fine as is. Changing them would complicate the code without

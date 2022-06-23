@@ -5380,11 +5380,9 @@ EOM
                                 # incrementally upon encountering each new
                                 # opening token, so every positive sequence
                                 # number should correspond to an opening token.
-                                if (DEVEL_MODE) {
-                                    Fault(<<EOM);
+                                DEVEL_MODE && Fault(<<EOM);
 No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
 EOM
-                                }
                             }
                             $K_closing_container->{$seqno} = @{$rLL};
                             $nesting_depth                 = $opening_depth;
@@ -14617,86 +14615,84 @@ EOM
             $inext_to_go[$i] = $i + 1;
 
             my $type = $types_to_go[$i];
-            if ( $type ne 'b' ) {
-                if ( $ilast_nonblank >= 0 ) {
-                    $inext_to_go[$ilast_nonblank] = $i;
+            next if $type eq 'b';
 
-                    # just in case there are two blanks in a row (shouldn't
-                    # happen)
-                    if ( ++$ilast_nonblank < $i ) {
-                        $inext_to_go[$ilast_nonblank] = $i;
+            if ( $ilast_nonblank >= 0 ) {
+                $inext_to_go[$ilast_nonblank] = $i;
+
+                # just in case there are two blanks in a row (shouldn't
+                # happen)
+                if ( ++$ilast_nonblank < $i ) {
+                    $inext_to_go[$ilast_nonblank] = $i;
+                }
+            }
+            $ilast_nonblank = $i;
+
+            # This is a good spot to efficiently collect information needed
+            # for breaking lines...
+
+            # gather info needed by sub break_long_lines
+            if ( $type_sequence_to_go[$i] ) {
+                my $seqno = $type_sequence_to_go[$i];
+                my $token = $tokens_to_go[$i];
+
+                # remember indexes of any tokens controlling xci
+                # in this batch. This list is needed by sub undo_ci.
+                if ( $ris_seqno_controlling_ci->{$seqno} ) {
+                    push @ix_seqno_controlling_ci, $i;
+                }
+
+                if ( $is_opening_sequence_token{$token} ) {
+                    if ( $rwant_container_open->{$seqno} ) {
+                        $self->set_forced_breakpoint($i);
+                    }
+                    push @unmatched_opening_indexes_in_this_batch, $i;
+                    if ( $type eq '?' ) {
+                        push @colon_list, $type;
                     }
                 }
-                $ilast_nonblank = $i;
+                elsif ( $is_closing_sequence_token{$token} ) {
 
-                # This is a good spot to efficiently collect information needed
-                # for breaking lines...
-
-                # gather info needed by sub break_long_lines
-                if ( $type_sequence_to_go[$i] ) {
-                    my $seqno = $type_sequence_to_go[$i];
-                    my $token = $tokens_to_go[$i];
-
-                    # remember indexes of any tokens controlling xci
-                    # in this batch. This list is needed by sub undo_ci.
-                    if ( $ris_seqno_controlling_ci->{$seqno} ) {
-                        push @ix_seqno_controlling_ci, $i;
+                    if ( $i > 0 && $rwant_container_open->{$seqno} ) {
+                        $self->set_forced_breakpoint( $i - 1 );
                     }
 
-                    if ( $is_opening_sequence_token{$token} ) {
-                        if ( $rwant_container_open->{$seqno} ) {
-                            $self->set_forced_breakpoint($i);
-                        }
-                        push @unmatched_opening_indexes_in_this_batch, $i;
-                        if ( $type eq '?' ) {
-                            push @colon_list, $type;
-                        }
-                    }
-                    elsif ( $is_closing_sequence_token{$token} ) {
-
-                        if ( $i > 0 && $rwant_container_open->{$seqno} ) {
-                            $self->set_forced_breakpoint( $i - 1 );
-                        }
-
-                        my $i_mate =
-                          pop @unmatched_opening_indexes_in_this_batch;
-                        if ( defined($i_mate) && $i_mate >= 0 ) {
-                            if ( $type_sequence_to_go[$i_mate] ==
-                                $type_sequence_to_go[$i] )
-                            {
-                                $mate_index_to_go[$i]      = $i_mate;
-                                $mate_index_to_go[$i_mate] = $i;
-                                if ( $comma_arrow_count{$seqno} ) {
-                                    $comma_arrow_count_contained +=
-                                      $comma_arrow_count{$seqno};
-                                }
-                            }
-                            else {
-                                push @unmatched_opening_indexes_in_this_batch,
-                                  $i_mate;
-                                push @unmatched_closing_indexes_in_this_batch,
-                                  $i;
+                    my $i_mate = pop @unmatched_opening_indexes_in_this_batch;
+                    if ( defined($i_mate) && $i_mate >= 0 ) {
+                        if ( $type_sequence_to_go[$i_mate] ==
+                            $type_sequence_to_go[$i] )
+                        {
+                            $mate_index_to_go[$i]      = $i_mate;
+                            $mate_index_to_go[$i_mate] = $i;
+                            if ( $comma_arrow_count{$seqno} ) {
+                                $comma_arrow_count_contained +=
+                                  $comma_arrow_count{$seqno};
                             }
                         }
                         else {
+                            push @unmatched_opening_indexes_in_this_batch,
+                              $i_mate;
                             push @unmatched_closing_indexes_in_this_batch, $i;
                         }
-                        if ( $type eq ':' ) {
-                            push @colon_list, $type;
-                        }
-                    } ## end elsif ( $is_closing_sequence_token...)
-
-                } ## end if ($seqno)
-
-                elsif ( $type eq ',' ) { $comma_count_in_batch++; }
-                elsif ( $tokens_to_go[$i] eq '=>' ) {
-                    if (@unmatched_opening_indexes_in_this_batch) {
-                        my $j = $unmatched_opening_indexes_in_this_batch[-1];
-                        my $seqno = $type_sequence_to_go[$j];
-                        $comma_arrow_count{$seqno}++;
                     }
+                    else {
+                        push @unmatched_closing_indexes_in_this_batch, $i;
+                    }
+                    if ( $type eq ':' ) {
+                        push @colon_list, $type;
+                    }
+                } ## end elsif ( $is_closing_sequence_token...)
+
+            } ## end if ($seqno)
+
+            elsif ( $type eq ',' ) { $comma_count_in_batch++; }
+            elsif ( $tokens_to_go[$i] eq '=>' ) {
+                if (@unmatched_opening_indexes_in_this_batch) {
+                    my $j     = $unmatched_opening_indexes_in_this_batch[-1];
+                    my $seqno = $type_sequence_to_go[$j];
+                    $comma_arrow_count{$seqno}++;
                 }
-            } ## end if ( $type ne 'b' )
+            }
         } ## end for ( my $i = 0 ; $i <=...)
 
         my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
@@ -19648,8 +19644,10 @@ EOM
                               ? $i_opening - 2
                               : $i_opening - 1;
 
+                            my $type_prev  = $types_to_go[$i_prev];
+                            my $token_prev = $tokens_to_go[$i_prev];
                             if (
-                                $types_to_go[$i_prev] eq ','
+                                $type_prev eq ','
                                 && (   $types_to_go[ $i_prev - 1 ] eq ')'
                                     || $types_to_go[ $i_prev - 1 ] eq '}' )
                               )
@@ -19659,14 +19657,11 @@ EOM
 
                             # also break before something like ':('  or '?('
                             # if appropriate.
-                            elsif (
-                                $types_to_go[$i_prev] =~ /^([k\:\?]|&&|\|\|)$/ )
+                            elsif ($type_prev =~ /^([k\:\?]|&&|\|\|)$/
+                                && $want_break_before{$token_prev} )
                             {
-                                my $token_prev = $tokens_to_go[$i_prev];
-                                if ( $want_break_before{$token_prev} ) {
-                                    $self->set_forced_breakpoint($i_prev);
-                                }
-                            } ## end elsif ( $types_to_go[$i_prev...])
+                                $self->set_forced_breakpoint($i_prev);
+                            }
                         } ## end if ( $i_opening > 2 )
                     } ## end if ( $minimum_depth <=...)
 
@@ -21548,29 +21543,26 @@ EOM
                             # index K of the token associated with this
                             # indentation is in this batch.
                             if ( $i < 0 || $i > $max_lp_object_list ) {
-                                if (DEVEL_MODE) {
-                                    my $lno = $rLL->[$KK]->[_LINE_INDEX_];
-                                    Fault(<<EOM);
+                                my $lno = $rLL->[$KK]->[_LINE_INDEX_];
+                                DEVEL_MODE && Fault(<<EOM);
 Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_lp_object_list
 EOM
-                                }
+                                last;
+                            }
+
+                            if ( $arrow_count == 0 ) {
+                                $rlp_object_list->[$i]
+                                  ->permanently_decrease_available_spaces(
+                                    $available_spaces);
                             }
                             else {
-                                if ( $arrow_count == 0 ) {
-                                    $rlp_object_list->[$i]
-                                      ->permanently_decrease_available_spaces(
-                                        $available_spaces);
-                                }
-                                else {
-                                    $rlp_object_list->[$i]
-                                      ->tentatively_decrease_available_spaces(
-                                        $available_spaces);
-                                }
-                                foreach my $j ( $i + 1 .. $max_lp_object_list )
-                                {
-                                    $rlp_object_list->[$j]
-                                      ->decrease_SPACES($available_spaces);
-                                }
+                                $rlp_object_list->[$i]
+                                  ->tentatively_decrease_available_spaces(
+                                    $available_spaces);
+                            }
+                            foreach my $j ( $i + 1 .. $max_lp_object_list ) {
+                                $rlp_object_list->[$j]
+                                  ->decrease_SPACES($available_spaces);
                             }
                         }
                     }
@@ -23832,14 +23824,13 @@ sub get_seqno {
                             my $count = 1;
                             foreach my $l ( 2 .. 3 ) {
                                 last if ( $line + $l > $max_line );
-                                my $ibeg_next_next = $ri_first->[ $line + $l ];
-                                if ( $tokens_to_go[$ibeg_next_next] ne
-                                    $leading_token )
-                                {
-                                    $tokens_differ = 1;
-                                    last;
-                                }
                                 $count++;
+                                my $ibeg_next_next = $ri_first->[ $line + $l ];
+                                next
+                                  if ( $tokens_to_go[$ibeg_next_next] eq
+                                    $leading_token );
+                                $tokens_differ = 1;
+                                last;
                             }
                             next if ($tokens_differ);
                             next if ( $count < 3 && $leading_token ne ':' );
@@ -24512,8 +24503,8 @@ sub pad_token {
                                   leading_spaces_to_go($ibeg) -
                                   $levels_to_go[$i_start] *
                                   $rOpts_indent_columns;
-                                if ( $len < 0 ) { $len = 0 }
                             }
+                            if ( $len < 0 ) { $len = 0 }
 
                             # tack this length onto the container name to try
                             # to make a unique token name
