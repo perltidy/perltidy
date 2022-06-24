@@ -71,7 +71,7 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 
 # The max values below can be reduced to locate code which might be improved.
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=245
+max_mccabe=185
 [ControlStructures::ProhibitDeepNests]
 max_nests=8
 

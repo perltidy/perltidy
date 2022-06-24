@@ -2047,22 +2047,23 @@ EOM
 
         my $i_begin   = $i;
         my $tok_begin = $tok;
+        my $i_plus_1  = $i + 1;
         my $fast_scan_type;
 
         ###############################
         # quick scan with leading sigil
         ###############################
         if (  !$id_scan_state
-            && $i + 1 <= $max_token_index
+            && $i_plus_1 <= $max_token_index
             && $fast_scan_context{$tok} )
         {
             $context = $fast_scan_context{$tok};
 
             # look for $var, @var, ...
-            if ( $rtoken_type->[ $i + 1 ] eq 'w' ) {
+            if ( $rtoken_type->[$i_plus_1] eq 'w' ) {
                 my $pretype_next = EMPTY_STRING;
-                my $i_next       = $i + 2;
-                if ( $i_next <= $max_token_index ) {
+                if ( $i_plus_1 < $max_token_index ) {
+                    my $i_next = $i_plus_1 + 1;
                     if (   $rtoken_type->[$i_next] eq 'b'
                         && $i_next < $max_token_index )
                     {
@@ -2073,10 +2074,10 @@ EOM
                 if ( $pretype_next ne ':' && $pretype_next ne "'" ) {
 
                     # Found type 'i' like '$var', '@var', or '%var'
-                    $identifier     = $tok . $rtokens->[ $i + 1 ];
+                    $identifier     = $tok . $rtokens->[$i_plus_1];
                     $tok            = $identifier;
                     $type           = 'i';
-                    $i              = $i + 1;
+                    $i              = $i_plus_1;
                     $fast_scan_type = $type;
                 }
             }
@@ -2085,7 +2086,7 @@ EOM
             # But we must let the full scanner handle things ${ because it may
             # keep going to get a complete identifier like '${#}'  .
             elsif (
-                $rtoken_type->[ $i + 1 ] eq '{'
+                $rtoken_type->[$i_plus_1] eq '{'
                 && (   $tok_begin eq '@'
                     || $tok_begin eq '%' )
               )
@@ -2104,8 +2105,8 @@ EOM
         elsif (
                $tok eq '->'
             && $i < $max_token_index
-            && (   $rtokens->[ $i + 1 ] eq '{'
-                || $rtokens->[ $i + 1 ] eq '[' )
+            && (   $rtokens->[$i_plus_1] eq '{'
+                || $rtokens->[$i_plus_1] eq '[' )
           )
         {
             $type           = $tok;
