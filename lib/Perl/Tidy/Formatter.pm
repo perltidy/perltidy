@@ -18924,6 +18924,7 @@ EOM
             } ## end if ( $old_breakpoint_to_go...)
 
             next if ( $type eq 'b' );
+
             $depth = $nesting_depth_to_go[ $i + 1 ];
 
             $total_depth_variation += abs( $depth - $depth_last );
@@ -19122,12 +19123,10 @@ EOM
 
 #print "LISTX sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth\n";
 
-            #------------------------------------------------------------
+            #--------------------------
             # Handle Increasing Depth..
-            #
-            # prepare for a new list when depth increases
-            # token $i is a '(','{', or '['
-            #------------------------------------------------------------
+            #--------------------------
+
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be opening..fixes c102
             if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
@@ -19136,12 +19135,10 @@ EOM
 
             } ## end if ( $depth > $current_depth)
 
-            #------------------------------------------------------------
+            #--------------------------
             # Handle Decreasing Depth..
-            #
-            # finish off any old list when depth decreases
-            # token $i is a ')','}', or ']'
-            #------------------------------------------------------------
+            #--------------------------
+
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be closing .. fixes c102
             elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
@@ -19153,9 +19150,9 @@ EOM
 
             } ## end elsif ( $depth < $current_depth)
 
-            #------------------------------------------------------------
+            #------------------
             # Handle this token
-            #------------------------------------------------------------
+            #------------------
 
             $current_depth = $depth;
 
@@ -19293,9 +19290,9 @@ EOM
             }
         } ## end while ( ++$i <= $max_index_to_go)
 
-        #-------------------------------------------
+        #------------------------------------------
         # end of loop over all tokens in this batch
-        #-------------------------------------------
+        #------------------------------------------
 
         # set breaks for any unfinished lists ..
         foreach my $dd ( reverse( $minimum_depth .. $current_depth ) ) {
@@ -19354,6 +19351,11 @@ EOM
     sub break_lists_increase_depth {
 
         my ($self) = @_;
+
+        #--------------------------------------------
+        # prepare for a new list when depth increases
+        # token $i is a '(','{', or '['
+        #--------------------------------------------
 
         #----------------------------------------------------------
         # BEGIN initialize depth arrays
@@ -19416,9 +19418,9 @@ EOM
         $has_broken_sublist[$depth] = 0;
         $want_comma_break[$depth]   = 0;
 
-        #-------------------------------------
+        #----------------------------
         # END initialize depth arrays
-        #-------------------------------------
+        #----------------------------
 
         # patch to outdent opening brace of long if/for/..
         # statements (like this one).  See similar coding in
@@ -19443,16 +19445,16 @@ EOM
         } ## end if ( $block_type && ( ...))
 
         return;
-    }
+    } ## end sub break_lists_increase_depth
 
     sub break_lists_decrease_depth {
 
         my ( $self, $rbond_strength_bias ) = @_;
 
-        $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] );
+        # finish off any old list when depth decreases
+        # token $i is a ')','}', or ']'
 
-        ##$comma_follows_last_closing_token =
-        ##  $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
+        $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] );
 
         # force all outer logical containers to break after we see on
         # old breakpoint
@@ -19920,7 +19922,7 @@ EOM
         } ## end elsif ($is_long_term)
 
         return;
-    }
+    } ## end sub break_lists_decrease_depth
 } ## end closure break_lists
 
 my %is_kwiZ;
