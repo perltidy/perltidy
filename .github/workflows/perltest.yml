@@ -26,7 +26,7 @@ jobs:
     strategy:
       matrix:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        perl: [ '5.30', 'latest' ]
+        perl: [ '5.8', '5.10', '5.12', '5.14', '5.30', '5.32', 'latest' ]
  
     # Using the value from the matrix above we select the platform (operating system) to run on
     runs-on: ${{ matrix.os }}
