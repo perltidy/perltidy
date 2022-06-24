@@ -23,6 +23,17 @@ plan( tests => 6 );
 
 test_all();
 
+sub my_note {
+    my ($msg) = @_;
+
+    # work around problem where sub Test::More::note does not exist
+    # in older versions of perl
+    if ($] >= 5.010) {
+       note($msg);
+    }
+    return;
+}
+
 sub test_all {
     my $test_file = "$Bin/testwide-tidy.pl.src";
     my $tidy_file = "$Bin/testwide-tidy.pl.srctdy";
@@ -42,7 +53,7 @@ sub test_file2file {
     my $source      = $test_file;
     my $destination = $tmp_file->filename();
 
-    note("Testing file2file: '$source' => '$destination'\n");
+    my_note("Testing file2file: '$source' => '$destination'\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
         argv        => '-utf8 -npro',
@@ -54,7 +65,7 @@ sub test_file2file {
     my $destination_str = slurp_raw($destination);
     my $destination_hex = unpack( 'H*', $destination_str );
 
-    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    my_note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'file content compare');
 
 }
@@ -67,7 +78,7 @@ sub test_scalar2scalar {
     my $source = slurp_raw($test_file);
     my $destination;
 
-    note("Testing scalar2scalar\n");
+    my_note("Testing scalar2scalar\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
         argv        => '-utf8 -eos -npro',
@@ -78,7 +89,7 @@ sub test_scalar2scalar {
 
     my $destination_hex = unpack( 'H*', $destination );
 
-    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    my_note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'scalar content compare');
 
 }
@@ -91,7 +102,7 @@ sub test_scalararray2scalararray {
     my $source      = [ lines_raw($test_file) ];
     my $destination = [];
 
-    note("Testing scalararray2scalararray\n");
+    my_note("Testing scalararray2scalararray\n");
 
     my $tidyresult = Perl::Tidy::perltidy(
         argv        => '-utf8 -eos -npro',
@@ -103,7 +114,7 @@ sub test_scalararray2scalararray {
     my $destination_str = join( '', @$destination );
     my $destination_hex = unpack( 'H*', $destination_str );
 
-    note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
+    my_note("Comparing contents:\n  $tidy_hex\n  $destination_hex\n");
     ok($tidy_hex eq $destination_hex, 'scalararray content compare');
 }
 
