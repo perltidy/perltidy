@@ -2045,6 +2045,14 @@ EOM
         # This gives the same results as the full scanner in about 1/4 the
         # total runtime for a typical input stream.
 
+        # Notation:
+        #     $var * 2
+        #     ^^   ^
+        #     ||  |
+        #     ||  ---- $i_next [= next nonblank pretoken ]
+        #     |----$i_plus_1 [= a bareword ]
+        #     ---$i_begin [= a sigil]
+
         my $i_begin   = $i;
         my $tok_begin = $tok;
         my $i_plus_1  = $i + 1;
