@@ -19008,11 +19008,16 @@ EOM
                         # as '}') which forms a one-line block, this break might
                         # get undone.
 
-                        # And do not do this at an equals if the user wants
-                        # breaks before an equals (blinker cases b434 b903)
-                        unless ( $type eq '=' && $want_break_before{$type} ) {
-                            $want_previous_breakpoint = $i;
-                        }
+                        # But do not do this at an '=' if:
+                        # - the user wants breaks before an equals (b434 b903)
+                        # - or -naws is set (can be unstable, see b1354)
+                        my $skip = $type eq '='
+                          && ( $want_break_before{$type}
+                            || !$rOpts_add_whitespace );
+
+                        $want_previous_breakpoint = $i
+                          unless ($skip);
+
                     } ## end if ( $next_nonblank_type...)
                 } ## end if ($rOpts_break_at_old_keyword_breakpoints)
 

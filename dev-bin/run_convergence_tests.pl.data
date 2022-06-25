@@ -9920,6 +9920,22 @@ print to_json({success => $success ? 1 : 0});
 --maximum-line-length=60
 --extended-continuation-indentation
 
+==> b1354.in <==
+# S1
+while (
+         my ( $sid, $u, $lasttime )
+         = split( /:/, <S> ) )
+
+# S2
+while (my ( $sid, $u, $lasttime )=
+         split( /:/, <S> ) )
+
+
+==> b1354.par <==
+--noadd-whitespace
+--indent-columns=9
+--maximum-line-length=35
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
