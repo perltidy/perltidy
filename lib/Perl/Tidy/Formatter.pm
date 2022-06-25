@@ -8842,10 +8842,12 @@ sub setup_new_weld_measurements {
     # - Add ';' to fix case b1139
     # - Convert from '$ok_to_weld' to '$new_weld_ok' to fix b1162.
     # - relaxed constraints for b1227
+    # - added skip if type is 'q' for b1349 and b1350 b1351 b1352 b1353
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
         && !$rOpts_add_whitespace
+        && $rLL->[$Kinner_opening]->[_TYPE_] ne 'q'
         && defined($Kprev) )
     {
         my $type_first  = $rLL->[$Kfirst]->[_TYPE_];

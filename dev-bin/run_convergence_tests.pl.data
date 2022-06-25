@@ -9920,6 +9920,43 @@ print to_json({success => $success ? 1 : 0});
 --maximum-line-length=60
 --extended-continuation-indentation
 
+==> b1349.in <==
+# S1
+    my ( $database, $primary_id,
+         $optional_id, $comment )
+           = $self
+           ->_rearrange ( [ qw(DATABASE
+                            PRIMARY_ID
+                            OPTIONAL_ID
+                            COMMENT
+                          ) ],
+                          @args ) ;
+
+# S2
+    my($database,$primary_id,
+        $optional_id,$comment)
+           =$self
+           ->_rearrange(
+                       [ qw(DATABASE
+                                PRIMARY_ID
+                                OPTIONAL_ID
+                                COMMENT
+                         )
+                       ],
+                       @args );
+
+
+==> b1349.par <==
+--continuation-indentation=7
+--delete-old-whitespace
+--extended-line-up-parentheses
+--maximum-line-length=37
+--noadd-whitespace
+--variable-maximum-line-length
+--vertical-tightness=2
+--weld-nested-containers
+--break-at-old-method-breakpoints
+
 ==> b1354.in <==
 # S1
 while (
