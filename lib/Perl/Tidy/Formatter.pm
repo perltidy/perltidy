@@ -188,6 +188,7 @@ my (
     $rOpts_outdent_static_block_comments,
     $rOpts_recombine,
     $rOpts_short_concatenation_item_length,
+    $rOpts_space_prototype_paren,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
     $rOpts_sub_alias_list,
@@ -1810,6 +1811,7 @@ EOM
     $rOpts_recombine = $rOpts->{'recombine'};
     $rOpts_short_concatenation_item_length =
       $rOpts->{'short-concatenation-item-length'};
+    $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
     $rOpts_sub_alias_list            = $rOpts->{'sub-alias-list'};
@@ -6102,6 +6104,142 @@ BEGIN {
 
 }
 
+{ #<<< begin clousure respace_tokens
+
+my $rLL_new;    # This will be the new array of tokens
+
+# These are variables in $self
+my $rLL;
+my $length_function;
+my $is_encoded_data;
+
+my $K_closing_ternary;
+my $K_opening_ternary;
+my $rK_phantom_semicolons;
+my $rchildren_of_seqno;
+my $rhas_broken_code_block;
+my $rhas_broken_list;
+my $rhas_broken_list_with_lec;
+my $rhas_code_block;
+my $rhas_list;
+my $rhas_ternary;
+my $ris_assigned_structure;
+my $ris_broken_container;
+my $ris_excluded_lp_container;
+my $ris_list_by_seqno;
+my $ris_permanently_broken;
+my $rlec_count_by_seqno;
+my $roverride_cab3;
+my $rparent_of_seqno;
+my $rtype_count_by_seqno;
+my $rblock_type_of_seqno;
+
+my $K_opening_container;
+my $K_closing_container;
+
+my %K_first_here_doc_by_seqno;
+
+my $last_nonblank_code_type;
+my $last_nonblank_code_token;
+my $last_nonblank_block_type;
+my $last_last_nonblank_code_type;
+my $last_last_nonblank_code_token;
+
+my %seqno_stack;
+my %K_old_opening_by_seqno;
+my $depth_next;
+my $depth_next_max;
+
+my $cumulative_length;
+
+# Variables holding the current line info
+my $Ktoken_vars;
+my $Kfirst_old;
+my $Klast_old;
+my $Klast_old_code;
+my $CODE_type;
+
+##Possible closure variables:
+##my $Kfirst;
+##my $Klast;
+##my $input_line_number;
+
+my $rwhitespace_flags;
+
+sub initialize_respace_tokens_closure {
+
+    my ($self) = @_;
+
+    $rLL_new = [];    # This is the new array
+
+    $rLL             = $self->[_rLL_];
+    $length_function = $self->[_length_function_];
+    $is_encoded_data = $self->[_is_encoded_data_];
+
+    $K_closing_ternary         = $self->[_K_closing_ternary_];
+    $K_opening_ternary         = $self->[_K_opening_ternary_];
+    $rK_phantom_semicolons     = $self->[_rK_phantom_semicolons_];
+    $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
+    $rhas_broken_code_block    = $self->[_rhas_broken_code_block_];
+    $rhas_broken_list          = $self->[_rhas_broken_list_];
+    $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
+    $rhas_code_block           = $self->[_rhas_code_block_];
+    $rhas_list                 = $self->[_rhas_list_];
+    $rhas_ternary              = $self->[_rhas_ternary_];
+    $ris_assigned_structure    = $self->[_ris_assigned_structure_];
+    $ris_broken_container      = $self->[_ris_broken_container_];
+    $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
+    $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
+    $ris_permanently_broken    = $self->[_ris_permanently_broken_];
+    $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
+    $roverride_cab3            = $self->[_roverride_cab3_];
+    $rparent_of_seqno          = $self->[_rparent_of_seqno_];
+    $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
+
+    # Note that $K_opening_container and $K_closing_container have values
+    # defined in sub get_line() for the previous K indexes.  They were needed
+    # in case option 'indent-only' was set, and we didn't get here. We no longer
+    # need those and will eliminate them now to avoid any possible mixing of
+    # old and new values.
+    $K_opening_container = $self->[_K_opening_container_] = {};
+    $K_closing_container = $self->[_K_closing_container_] = {};
+
+    %K_first_here_doc_by_seqno = ();
+
+    $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    $last_nonblank_code_type       = ';';
+    $last_nonblank_code_token      = ';';
+    $last_nonblank_block_type      = EMPTY_STRING;
+    $last_last_nonblank_code_type  = ';';
+    $last_last_nonblank_code_token = ';';
+
+    %seqno_stack            = ();
+    %K_old_opening_by_seqno = ();    # Note: old K index
+    $depth_next             = 0;
+    $depth_next_max         = 0;
+
+    # we will be setting token lengths as we go
+    $cumulative_length = 0;
+
+    $Ktoken_vars    = undef;          # the old K value of $rtoken_vars
+    $Kfirst_old     = undef;          # min K of old line
+    $Klast_old      = undef;          # max K of old line
+    $Klast_old_code = undef;          # K of last token if side comment
+    $CODE_type      = EMPTY_STRING;
+
+    ##possible closure variables:
+    ##$Kfirst         = undef;
+    ##$Klast          = undef;
+    ##$input_line_number = undef;
+
+    # Set the whitespace flags, which indicate the token spacing preference.
+    $rwhitespace_flags = $self->set_whitespace_flags();
+
+    return;
+
+} ## end sub initialize_respace_tokens_closure
+
 sub respace_tokens {
 
     my $self = shift;
@@ -6127,546 +6265,14 @@ sub respace_tokens {
     # Method: The old tokens are copied one-by-one, with changes, from the old
     # linear storage array $rLL to a new array $rLL_new.
 
-    my $rLL             = $self->[_rLL_];
-    my $Klimit_old      = $self->[_Klimit_];
-    my $rlines          = $self->[_rlines_];
-    my $length_function = $self->[_length_function_];
-    my $is_encoded_data = $self->[_is_encoded_data_];
+    # (re-)initialize closure variables for this problem
+    $self->initialize_respace_tokens_closure();
 
-    my $rLL_new = [];    # This is the new array
-    my $rtoken_vars;
-    my $Ktoken_vars;                   # the old K value of $rtoken_vars
-    my ( $Kfirst_old, $Klast_old );    # Range of old line
-    my $Klast_old_code;                # K of last token if side comment
-    my $Kmax = @{$rLL} - 1;
-
-    my $CODE_type = EMPTY_STRING;
+    #--------------------------------
+    # Main over all lines of the file
+    #--------------------------------
+    my $rlines    = $self->[_rlines_];
     my $line_type = EMPTY_STRING;
-
-    # Set the whitespace flags, which indicate the token spacing preference.
-    my $rwhitespace_flags = $self->set_whitespace_flags();
-
-    # we will be setting token lengths as we go
-    my $cumulative_length = 0;
-
-    my %seqno_stack;
-    my %K_old_opening_by_seqno = ();    # Note: old K index
-    my $depth_next             = 0;
-    my $depth_next_max         = 0;
-
-    # Note that $K_opening_container and $K_closing_container have values
-    # defined in sub get_line() for the previous K indexes.  They were needed
-    # in case option 'indent-only' was set, and we didn't get here. We no longer
-    # need those and will eliminate them now to avoid any possible mixing of
-    # old and new values.
-    my $K_opening_container = $self->[_K_opening_container_] = {};
-    my $K_closing_container = $self->[_K_closing_container_] = {};
-
-    my $K_closing_ternary         = $self->[_K_closing_ternary_];
-    my $K_opening_ternary         = $self->[_K_opening_ternary_];
-    my $rK_phantom_semicolons     = $self->[_rK_phantom_semicolons_];
-    my $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
-    my $rhas_broken_code_block    = $self->[_rhas_broken_code_block_];
-    my $rhas_broken_list          = $self->[_rhas_broken_list_];
-    my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
-    my $rhas_code_block           = $self->[_rhas_code_block_];
-    my $rhas_list                 = $self->[_rhas_list_];
-    my $rhas_ternary              = $self->[_rhas_ternary_];
-    my $ris_assigned_structure    = $self->[_ris_assigned_structure_];
-    my $ris_broken_container      = $self->[_ris_broken_container_];
-    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
-    my $ris_list_by_seqno         = $self->[_ris_list_by_seqno_];
-    my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
-    my $rlec_count_by_seqno       = $self->[_rlec_count_by_seqno_];
-    my $roverride_cab3            = $self->[_roverride_cab3_];
-    my $rparent_of_seqno          = $self->[_rparent_of_seqno_];
-    my $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
-    my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-
-    my $last_nonblank_code_type       = ';';
-    my $last_nonblank_code_token      = ';';
-    my $last_nonblank_block_type      = EMPTY_STRING;
-    my $last_last_nonblank_code_type  = ';';
-    my $last_last_nonblank_code_token = ';';
-
-    my %K_first_here_doc_by_seqno;
-
-    my $set_permanently_broken = sub {
-        my ($seqno) = @_;
-        while ( defined($seqno) ) {
-            $ris_permanently_broken->{$seqno} = 1;
-            $seqno = $rparent_of_seqno->{$seqno};
-        }
-        return;
-    };
-    my $store_token = sub {
-        my ($item) = @_;
-
-        # This will be the index of this item in the new array
-        my $KK_new = @{$rLL_new};
-
-        #------------------------------------------------------------------
-        # NOTE: called once per token so coding efficiency is critical here
-        #------------------------------------------------------------------
-
-        my $type       = $item->[_TYPE_];
-        my $is_blank   = $type eq 'b';
-        my $block_type = EMPTY_STRING;
-
-        # Do not output consecutive blanks. This situation should have been
-        # prevented earlier, but it is worth checking because later routines
-        # make this assumption.
-        if ( $is_blank && $KK_new && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
-            return;
-        }
-
-        # check for a sequenced item (i.e., container or ?/:)
-        my $type_sequence = $item->[_TYPE_SEQUENCE_];
-        my $token         = $item->[_TOKEN_];
-        if ($type_sequence) {
-
-            if ( $is_opening_token{$token} ) {
-
-                $K_opening_container->{$type_sequence} = $KK_new;
-                $block_type = $rblock_type_of_seqno->{$type_sequence};
-
-                # Fix for case b1100: Count a line ending in ', [' as having
-                # a line-ending comma.  Otherwise, these commas can be hidden
-                # with something like --opening-square-bracket-right
-                if (   $last_nonblank_code_type eq ','
-                    && $Ktoken_vars == $Klast_old_code
-                    && $Ktoken_vars > $Kfirst_old )
-                {
-                    $rlec_count_by_seqno->{$type_sequence}++;
-                }
-
-                if (   $last_nonblank_code_type eq '='
-                    || $last_nonblank_code_type eq '=>' )
-                {
-                    $ris_assigned_structure->{$type_sequence} =
-                      $last_nonblank_code_type;
-                }
-
-                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-                push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
-                $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
-                $seqno_stack{$depth_next}               = $type_sequence;
-                $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
-                $depth_next++;
-
-                if ( $depth_next > $depth_next_max ) {
-                    $depth_next_max = $depth_next;
-                }
-            }
-            elsif ( $is_closing_token{$token} ) {
-
-                $K_closing_container->{$type_sequence} = $KK_new;
-                $block_type = $rblock_type_of_seqno->{$type_sequence};
-
-                # Do not include terminal commas in counts
-                if (   $last_nonblank_code_type eq ','
-                    || $last_nonblank_code_type eq '=>' )
-                {
-                    my $seqno = $seqno_stack{ $depth_next - 1 };
-                    if ($seqno) {
-                        $rtype_count_by_seqno->{$seqno}
-                          ->{$last_nonblank_code_type}--;
-
-                        if (   $Ktoken_vars == $Kfirst_old
-                            && $last_nonblank_code_type eq ','
-                            && $rlec_count_by_seqno->{$seqno} )
-                        {
-                            $rlec_count_by_seqno->{$seqno}--;
-                        }
-                    }
-                }
-
-                # Update the stack...
-                $depth_next--;
-            }
-            else {
-
-                # For ternary, note parent but do not include as child
-                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-                $rparent_of_seqno->{$type_sequence} = $seqno_parent;
-
-                # These are not yet used but could be useful
-                if ( $token eq '?' ) {
-                    $K_opening_ternary->{$type_sequence} = $KK_new;
-                }
-                elsif ( $token eq ':' ) {
-                    $K_closing_ternary->{$type_sequence} = $KK_new;
-                }
-                else {
-
-                    # We really shouldn't arrive here, just being cautious:
-                    # The only sequenced types output by the tokenizer are the
-                    # opening & closing containers and the ternary types. Each
-                    # of those was checked above. So we would only get here
-                    # if the tokenizer has been changed to mark some other
-                    # tokens with sequence numbers.
-                    if (DEVEL_MODE) {
-                        Fault(
-"Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
-                        );
-                    }
-                }
-            }
-        }
-
-        # Find the length of this token.  Later it may be adjusted if phantom
-        # or ignoring side comment lengths.
-        my $token_length =
-            $is_encoded_data
-          ? $length_function->($token)
-          : length($token);
-
-        # handle comments
-        my $is_comment = $type eq '#';
-        if ($is_comment) {
-
-            # trim comments if necessary
-            my $ord = ord( substr( $token, -1, 1 ) );
-            if (
-                $ord > 0
-                && (   $ord < ORD_PRINTABLE_MIN
-                    || $ord > ORD_PRINTABLE_MAX )
-                && $token =~ s/\s+$//
-              )
-            {
-                $token_length = $length_function->($token);
-                $item->[_TOKEN_] = $token;
-            }
-
-            # Mark length of side comments as just 1 if sc lengths are ignored
-            if ( $rOpts_ignore_side_comment_lengths
-                && ( !$CODE_type || $CODE_type eq 'HSC' ) )
-            {
-                $token_length = 1;
-            }
-            my $seqno = $seqno_stack{ $depth_next - 1 };
-            if ( defined($seqno)
-                && !$ris_permanently_broken->{$seqno} )
-            {
-                $set_permanently_broken->($seqno);
-            }
-        }
-
-        $item->[_TOKEN_LENGTH_] = $token_length;
-
-        # and update the cumulative length
-        $cumulative_length += $token_length;
-
-        # Save the length sum to just AFTER this token
-        $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
-
-        if ( !$is_blank && !$is_comment ) {
-
-            # Remember the most recent two non-blank, non-comment tokens.
-            # NOTE: the phantom semicolon code may change the output stack
-            # without updating these values.  Phantom semicolons are considered
-            # the same as blanks for now, but future needs might change that.
-            # See the related note in sub '$add_phantom_semicolon'.
-            $last_last_nonblank_code_type  = $last_nonblank_code_type;
-            $last_last_nonblank_code_token = $last_nonblank_code_token;
-
-            $last_nonblank_code_type  = $type;
-            $last_nonblank_code_token = $token;
-            $last_nonblank_block_type = $block_type;
-
-            # count selected types
-            if ( $is_counted_type{$type} ) {
-                my $seqno = $seqno_stack{ $depth_next - 1 };
-                if ( defined($seqno) ) {
-                    $rtype_count_by_seqno->{$seqno}->{$type}++;
-
-                    # Count line-ending commas for -bbx
-                    if ( $type eq ',' && $Ktoken_vars == $Klast_old_code ) {
-                        $rlec_count_by_seqno->{$seqno}++;
-                    }
-
-                    # Remember index of first here doc target
-                    if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
-                        $K_first_here_doc_by_seqno{$seqno} = $KK_new;
-                    }
-                }
-            }
-        }
-
-        # For reference, here is how to get the parent sequence number.
-        # This is not used because it is slower than finding it on the fly
-        # in sub parent_seqno_by_K:
-
-        # my $seqno_parent =
-        #     $type_sequence && $is_opening_token{$token}
-        #   ? $seqno_stack{ $depth_next - 2 }
-        #   : $seqno_stack{ $depth_next - 1 };
-        # my $KK = @{$rLL_new};
-        # $rseqno_of_parent_by_K->{$KK} = $seqno_parent;
-
-        # and finally, add this item to the new array
-        push @{$rLL_new}, $item;
-        return;
-    };
-
-    my $store_token_and_space = sub {
-        my ( $item, $want_space ) = @_;
-
-        # store a token with preceding space if requested and needed
-
-        # First store the space
-        if (   $want_space
-            && @{$rLL_new}
-            && $rLL_new->[-1]->[_TYPE_] ne 'b'
-            && $rOpts_add_whitespace )
-        {
-            my $rcopy = [ @{$item} ];
-            $rcopy->[_TYPE_]          = 'b';
-            $rcopy->[_TOKEN_]         = SPACE;
-            $rcopy->[_TYPE_SEQUENCE_] = EMPTY_STRING;
-
-            $rcopy->[_LINE_INDEX_] =
-              $rLL_new->[-1]->[_LINE_INDEX_];
-
-            # Patch 23-Jan-2021 to fix -lp blinkers:
-            # The level and ci_level of newly created spaces should be the same
-            # as the previous token.  Otherwise the coding for the -lp option
-            # can create a blinking state in some rare cases.
-            $rcopy->[_LEVEL_] =
-              $rLL_new->[-1]->[_LEVEL_];
-            $rcopy->[_CI_LEVEL_] =
-              $rLL_new->[-1]->[_CI_LEVEL_];
-
-            $store_token->($rcopy);
-        }
-
-        # then the token
-        $store_token->($item);
-        return;
-    };
-
-    my $add_phantom_semicolon = sub {
-
-        my ($KK) = @_;
-
-        my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-        return unless ( defined($Kp) );
-
-        # we are only adding semicolons for certain block types
-        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        return unless ($type_sequence);
-        my $block_type = $rblock_type_of_seqno->{$type_sequence};
-        return unless ($block_type);
-        return
-          unless ( $ok_to_add_semicolon_for_block_type{$block_type}
-            || $block_type =~ /^(sub|package)/
-            || $block_type =~ /^\w+\:$/ );
-
-        my $type_p          = $rLL_new->[$Kp]->[_TYPE_];
-        my $token_p         = $rLL_new->[$Kp]->[_TOKEN_];
-        my $type_sequence_p = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
-
-        # Do not add a semicolon if...
-        return
-          if (
-
-            # it would follow a comment (and be isolated)
-            $type_p eq '#'
-
-            # it follows a code block ( because they are not always wanted
-            # there and may add clutter)
-            || $type_sequence_p && $rblock_type_of_seqno->{$type_sequence_p}
-
-            # it would follow a label
-            || $type_p eq 'J'
-
-            # it would be inside a 'format' statement (and cause syntax error)
-            || (   $type_p eq 'k'
-                && $token_p =~ /format/ )
-
-          );
-
-        # Do not add a semicolon if it would impede a weld with an immediately
-        # following closing token...like this
-        #   { ( some code ) }
-        #                  ^--No semicolon can go here
-
-        # look at the previous token... note use of the _NEW rLL array here,
-        # but sequence numbers are invariant.
-        my $seqno_inner = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
-
-        # If it is also a CLOSING token we have to look closer...
-        if (
-               $seqno_inner
-            && $is_closing_token{$token_p}
-
-            # we only need to look if there is just one inner container..
-            && defined( $rchildren_of_seqno->{$type_sequence} )
-            && @{ $rchildren_of_seqno->{$type_sequence} } == 1
-          )
-        {
-
-            # Go back and see if the corresponding two OPENING tokens are also
-            # together.  Note that we are using the OLD K indexing here:
-            my $K_outer_opening = $K_old_opening_by_seqno{$type_sequence};
-            if ( defined($K_outer_opening) ) {
-                my $K_nxt = $self->K_next_nonblank($K_outer_opening);
-                if ( defined($K_nxt) ) {
-                    my $seqno_nxt = $rLL->[$K_nxt]->[_TYPE_SEQUENCE_];
-
-                    # Is the next token after the outer opening the same as
-                    # our inner closing (i.e. same sequence number)?
-                    # If so, do not insert a semicolon here.
-                    return if ( $seqno_nxt && $seqno_nxt == $seqno_inner );
-                }
-            }
-        }
-
-        # We will insert an empty semicolon here as a placeholder.  Later, if
-        # it becomes the last token on a line, we will bring it to life.  The
-        # advantage of doing this is that (1) we just have to check line
-        # endings, and (2) the phantom semicolon has zero width and therefore
-        # won't cause needless breaks of one-line blocks.
-        my $Ktop = -1;
-        if (   $rLL_new->[$Ktop]->[_TYPE_] eq 'b'
-            && $want_left_space{';'} == WS_NO )
-        {
-
-            # convert the blank into a semicolon..
-            # be careful: we are working on the new stack top
-            # on a token which has been stored.
-            my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', SPACE );
-
-            # Convert the existing blank to:
-            #   a phantom semicolon for one_line_block option = 0 or 1
-            #   a real semicolon    for one_line_block option = 2
-            my $tok     = EMPTY_STRING;
-            my $len_tok = 0;
-            if ( $rOpts_one_line_block_semicolons == 2 ) {
-                $tok     = ';';
-                $len_tok = 1;
-            }
-
-            $rLL_new->[$Ktop]->[_TOKEN_]        = $tok;
-            $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
-            $rLL_new->[$Ktop]->[_TYPE_]         = ';';
-
-            # NOTE: we are changing the output stack without updating variables
-            # $last_nonblank_code_type, etc. Future needs might require that
-            # those variables be updated here.  For now, it seems ok to skip
-            # this.
-
-            # Save list of new K indexes of phantom semicolons.
-            # This will be needed if we want to undo them for iterations in
-            # future coding.
-            push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
-
-            # Then store a new blank
-            $store_token->($rcopy);
-        }
-        else {
-
-            # Patch for issue c078: keep line indexes in order.  If the top
-            # token is a space that we are keeping (due to '-wls=';') then
-            # we have to check that old line indexes stay in order.
-            # In very rare
-            # instances in which side comments have been deleted and converted
-            # into blanks, we may have filtered down multiple blanks into just
-            # one. In that case the top blank may have a higher line number
-            # than the previous nonblank token. Although the line indexes of
-            # blanks are not really significant, we need to keep them in order
-            # in order to pass error checks.
-            if ( $rLL_new->[$Ktop]->[_TYPE_] eq 'b' ) {
-                my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
-                my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
-                if ( $new_top_ix < $old_top_ix ) {
-                    $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
-                }
-            }
-
-            my $rcopy =
-              copy_token_as_type( $rLL_new->[$Kp], ';', EMPTY_STRING );
-            $store_token->($rcopy);
-            push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
-        }
-        return;
-    };
-
-    my $check_Q = sub {
-
-        # Check that a quote looks okay
-        # This sub works but needs to by sync'd with the log file output
-        # before it can be used.
-        my ( $KK, $Kfirst, $line_number ) = @_;
-        my $token = $rLL->[$KK]->[_TOKEN_];
-        $self->note_embedded_tab($line_number) if ( $token =~ "\t" );
-
-        # The remainder of this routine looks for something like
-        #        '$var = s/xxx/yyy/;'
-        # in case it should have been '$var =~ s/xxx/yyy/;'
-
-        # Start by looking for a token beginning with one of: s y m / tr
-        return
-          unless ( $is_s_y_m_slash{ substr( $token, 0, 1 ) }
-            || substr( $token, 0, 2 ) eq 'tr' );
-
-        # ... and preceded by one of: = == !=
-        my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-        return unless ( defined($Kp) );
-        my $previous_nonblank_type = $rLL_new->[$Kp]->[_TYPE_];
-        return unless ( $is_unexpected_equals{$previous_nonblank_type} );
-        my $previous_nonblank_token = $rLL_new->[$Kp]->[_TOKEN_];
-
-        my $previous_nonblank_type_2  = 'b';
-        my $previous_nonblank_token_2 = EMPTY_STRING;
-        my $Kpp = $self->K_previous_nonblank( $Kp, $rLL_new );
-        if ( defined($Kpp) ) {
-            $previous_nonblank_type_2  = $rLL_new->[$Kpp]->[_TYPE_];
-            $previous_nonblank_token_2 = $rLL_new->[$Kpp]->[_TOKEN_];
-        }
-
-        my $next_nonblank_token = EMPTY_STRING;
-        my $Kn                  = $KK + 1;
-        if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
-        if ( $Kn <= $Kmax ) {
-            $next_nonblank_token = $rLL->[$Kn]->[_TOKEN_];
-        }
-
-        my $token_0 = $rLL->[$Kfirst]->[_TOKEN_];
-        my $type_0  = $rLL->[$Kfirst]->[_TYPE_];
-
-        if (
-            ##$token =~ /^(s|tr|y|m|\/)/
-            ##&& $previous_nonblank_token =~ /^(=|==|!=)$/
-            1
-
-            # preceded by simple scalar
-            && $previous_nonblank_type_2 eq 'i'
-            && $previous_nonblank_token_2 =~ /^\$/
-
-            # followed by some kind of termination
-            # (but give complaint if we can not see far enough ahead)
-            && $next_nonblank_token =~ /^[; \)\}]$/
-
-            # scalar is not declared
-            ##                      =~ /^(my|our|local)$/
-            && !( $type_0 eq 'k' && $is_my_our_local{$token_0} )
-          )
-        {
-            my $lno   = 1 + $rLL_new->[$Kp]->[_LINE_INDEX_];
-            my $guess = substr( $previous_nonblank_token, 0, 1 ) . '~';
-            complain(
-"Line $lno: Note: be sure you want '$previous_nonblank_token' instead of '$guess' here\n"
-            );
-        }
-        return;
-    };
-
-    #-------------------------------------------
-    # Main loop to respace all lines of the file
-    #-------------------------------------------
     my $last_K_out;
 
     foreach my $line_of_tokens ( @{$rlines} ) {
@@ -6683,7 +6289,7 @@ sub respace_tokens {
         ( $Kfirst_old, $Klast_old ) = ( $Kfirst, $Klast );
         $Klast_old_code = $Klast_old;
 
-        # Be sure an old K value is defined for sub $store_token
+        # Be sure an old K value is defined for sub store_token
         $Ktoken_vars = $Kfirst;
 
         # Check for correct sequence of token indexes...
@@ -6748,10 +6354,10 @@ sub respace_tokens {
                     # the -extrude and -mangle options.
                     my $rcopy =
                       copy_token_as_type( $rvars_Kfirst, 'q', EMPTY_STRING );
-                    $store_token->($rcopy);
+                    $self->store_token($rcopy);
                     $rcopy = copy_token_as_type( $rvars_Kfirst, 'b', SPACE );
-                    $store_token->($rcopy);
-                    $store_token->($rvars_Kfirst);
+                    $self->store_token($rcopy);
+                    $self->store_token($rvars_Kfirst);
                     next;
                 }
                 else {
@@ -6773,14 +6379,14 @@ sub respace_tokens {
                     && !$ris_permanently_broken->{$seqno}
                     && $rOpts_maximum_consecutive_blank_lines )
                 {
-                    $set_permanently_broken->($seqno);
+                    $self->set_permanently_broken($seqno);
                 }
             }
 
             # Copy tokens unchanged
             foreach my $KK ( $Kfirst .. $Klast ) {
                 $Ktoken_vars = $KK;
-                $store_token->( $rLL->[$KK] );
+                $self->store_token( $rLL->[$KK] );
             }
             next;
         }
@@ -6833,351 +6439,391 @@ sub respace_tokens {
                 $rcopy->[_CI_LEVEL_] =
                   $rLL_new->[-1]->[_CI_LEVEL_];
 
-                $store_token->($rcopy);
+                $self->store_token($rcopy);
             }
         }
 
-        #-------------------------------------------------------
-        # Loop to copy all tokens on this line, with any changes
-        #-------------------------------------------------------
-        my $type_sequence;
-        foreach my $KK ( $Kfirst .. $Klast ) {
-            $Ktoken_vars = $KK;
-            $rtoken_vars = $rLL->[$KK];
-            my $token              = $rtoken_vars->[_TOKEN_];
-            my $type               = $rtoken_vars->[_TYPE_];
-            my $last_type_sequence = $type_sequence;
-            $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+        #-----------------------------------------------
+        # Inner loop to respace tokens on a line of code
+        #-----------------------------------------------
 
-            # Handle a blank space ...
-            if ( $type eq 'b' ) {
+        # The inner loop is in a separate sub for clarity
+        $self->respace_tokens_inner_loop( $Kfirst, $Klast, $input_line_number );
 
-                # Delete it if not wanted by whitespace rules
-                # or we are deleting all whitespace
-                # Note that whitespace flag is a flag indicating whether a
-                # white space BEFORE the token is needed
-                next if ( $KK >= $Klast );    # skip terminal blank
-                my $Knext = $KK + 1;
+    }    # End line loop
 
-                if ($rOpts_freeze_whitespace) {
-                    $store_token->($rtoken_vars);
-                    next;
-                }
+    # finalize data structures
+    $self->respace_post_loop_ops();
 
-                my $ws = $rwhitespace_flags->[$Knext];
-                if (   $ws == -1
-                    || $rOpts_delete_old_whitespace )
-                {
+    # Reset memory to be the new array
+    $self->[_rLL_] = $rLL_new;
+    my $Klimit;
+    if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
+    $self->[_Klimit_] = $Klimit;
 
-                    my $token_next = $rLL->[$Knext]->[_TOKEN_];
-                    my $type_next  = $rLL->[$Knext]->[_TYPE_];
+    # During development, verify that the new array still looks okay.
+    DEVEL_MODE && $self->check_token_array();
 
-                    my $do_not_delete = is_essential_whitespace(
-                        $last_last_nonblank_code_token,
-                        $last_last_nonblank_code_type,
-                        $last_nonblank_code_token,
-                        $last_nonblank_code_type,
-                        $token_next,
-                        $type_next,
-                    );
+    # update the token limits of each line
+    $self->resync_lines_and_tokens();
 
-                    # Note that repeated blanks will get filtered out here
-                    next unless ($do_not_delete);
-                }
+    return;
+} ## end sub respace_tokens
 
-                # make it just one character
-                $rtoken_vars->[_TOKEN_] = SPACE;
-                $store_token->($rtoken_vars);
+sub respace_tokens_inner_loop {
+
+    my ( $self, $Kfirst, $Klast, $input_line_number ) = @_;
+
+    #-------------------------------------------------------
+    # Loop to copy all tokens on this line, with any changes
+    #-------------------------------------------------------
+    my $type_sequence;
+    my $rtoken_vars;
+    foreach my $KK ( $Kfirst .. $Klast ) {
+        $Ktoken_vars = $KK;
+        $rtoken_vars = $rLL->[$KK];
+        my $token              = $rtoken_vars->[_TOKEN_];
+        my $type               = $rtoken_vars->[_TYPE_];
+        my $last_type_sequence = $type_sequence;
+        $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        # Handle a blank space ...
+        if ( $type eq 'b' ) {
+
+            # Delete it if not wanted by whitespace rules
+            # or we are deleting all whitespace
+            # Note that whitespace flag is a flag indicating whether a
+            # white space BEFORE the token is needed
+            next if ( $KK >= $Klast );    # skip terminal blank
+            my $Knext = $KK + 1;
+
+            if ($rOpts_freeze_whitespace) {
+                $self->store_token($rtoken_vars);
                 next;
             }
 
-            # Handle a nonblank token...
+            my $ws = $rwhitespace_flags->[$Knext];
+            if (   $ws == -1
+                || $rOpts_delete_old_whitespace )
+            {
 
-            if ($type_sequence) {
+                my $token_next = $rLL->[$Knext]->[_TOKEN_];
+                my $type_next  = $rLL->[$Knext]->[_TYPE_];
 
-                # Insert a tentative missing semicolon if the next token is
-                # a closing block brace
-                if (
-                       $type eq '}'
-                    && $token eq '}'
+                my $do_not_delete = is_essential_whitespace(
+                    $last_last_nonblank_code_token,
+                    $last_last_nonblank_code_type,
+                    $last_nonblank_code_token,
+                    $last_nonblank_code_type,
+                    $token_next,
+                    $type_next,
+                );
 
-                    # not preceded by a ';'
-                    && $last_nonblank_code_type ne ';'
+                # Note that repeated blanks will get filtered out here
+                next unless ($do_not_delete);
+            }
 
-                    # and this is not a VERSION stmt (is all one line, we
-                    # are not inserting semicolons on one-line blocks)
-                    && $CODE_type ne 'VER'
+            # make it just one character
+            $rtoken_vars->[_TOKEN_] = SPACE;
+            $self->store_token($rtoken_vars);
+            next;
+        }
 
-                    # and we are allowed to add semicolons
-                    && $rOpts->{'add-semicolons'}
-                  )
-                {
-                    $add_phantom_semicolon->($KK);
+        # Handle a nonblank token...
+
+        if ($type_sequence) {
+
+            # Insert a tentative missing semicolon if the next token is
+            # a closing block brace
+            if (
+                   $type eq '}'
+                && $token eq '}'
+
+                # not preceded by a ';'
+                && $last_nonblank_code_type ne ';'
+
+                # and this is not a VERSION stmt (is all one line, we
+                # are not inserting semicolons on one-line blocks)
+                && $CODE_type ne 'VER'
+
+                # and we are allowed to add semicolons
+                && $rOpts->{'add-semicolons'}
+              )
+            {
+                $self->add_phantom_semicolon($KK);
+            }
+        }
+
+        # Modify certain tokens here for whitespace
+        # The following is not yet done, but could be:
+        #   sub (x x x)
+        #     ( $type =~ /^[wit]$/ )
+        elsif ( $is_wit{$type} ) {
+
+            # change '$  var'  to '$var' etc
+            # change '@    '   to '@'
+            # Examples: <<snippets/space1.in>>
+            my $ord = ord( substr( $token, 1, 1 ) );
+            if (
+
+                # quick test for possible blank at second char
+                $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
+                    || $ord > ORD_PRINTABLE_MAX )
+              )
+            {
+                my ( $sigil, $word ) = split /\s+/, $token, 2;
+
+                # $sigil =~ /^[\$\&\%\*\@]$/ )
+                if ( $is_sigil{$sigil} ) {
+                    $token = $sigil;
+                    $token .= $word if ( defined($word) );    # fix c104
+                    $rtoken_vars->[_TOKEN_] = $token;
                 }
             }
 
-            # Modify certain tokens here for whitespace
-            # The following is not yet done, but could be:
-            #   sub (x x x)
-            #     ( $type =~ /^[wit]$/ )
-            elsif ( $is_wit{$type} ) {
+            # Split identifiers with leading arrows, inserting blanks
+            # if necessary.  It is easier and safer here than in the
+            # tokenizer.  For example '->new' becomes two tokens, '->'
+            # and 'new' with a possible blank between.
+            #
+            # Note: there is a related patch in sub set_whitespace_flags
+            elsif (length($token) > 2
+                && substr( $token, 0, 2 ) eq '->'
+                && $token =~ /^\-\>(.*)$/
+                && $1 )
+            {
 
-                # change '$  var'  to '$var' etc
-                # change '@    '   to '@'
-                # Examples: <<snippets/space1.in>>
-                my $ord = ord( substr( $token, 1, 1 ) );
+                my $token_save = $1;
+                my $type_save  = $type;
+
+                # Change '-> new'  to '->new'
+                $token_save =~ s/^\s+//g;
+
+                # store a blank to left of arrow if necessary
+                my $Kprev = $self->K_previous_nonblank($KK);
+                if (   defined($Kprev)
+                    && $rLL->[$Kprev]->[_TYPE_] ne 'b'
+                    && $rOpts_add_whitespace
+                    && $want_left_space{'->'} == WS_YES )
+                {
+                    my $rcopy = copy_token_as_type( $rtoken_vars, 'b', SPACE );
+                    $self->store_token($rcopy);
+                }
+
+                # then store the arrow
+                my $rcopy = copy_token_as_type( $rtoken_vars, '->', '->' );
+                $self->store_token($rcopy);
+
+                # store a blank after the arrow if requested
+                # added for issue git #33
+                if ( $want_right_space{'->'} == WS_YES ) {
+                    my $rcopy_b =
+                      copy_token_as_type( $rtoken_vars, 'b', SPACE );
+                    $self->store_token($rcopy_b);
+                }
+
+                # then reset the current token to be the remainder,
+                # and reset the whitespace flag according to the arrow
+                $token = $rtoken_vars->[_TOKEN_] = $token_save;
+                $type  = $rtoken_vars->[_TYPE_]  = $type_save;
+                $self->store_token($rtoken_vars);
+                next;
+            }
+
+            # Trim certain spaces in identifiers
+            if ( $type eq 'i' ) {
+
                 if (
-
-                    # quick test for possible blank at second char
-                    $ord > 0 && ( $ord < ORD_PRINTABLE_MIN
-                        || $ord > ORD_PRINTABLE_MAX )
+                    (
+                        substr( $token, 0, 3 ) eq 'sub'
+                        || $rOpts_sub_alias_list
+                    )
+                    && $token =~ /$SUB_PATTERN/
                   )
                 {
-                    my ( $sigil, $word ) = split /\s+/, $token, 2;
 
-                    # $sigil =~ /^[\$\&\%\*\@]$/ )
-                    if ( $is_sigil{$sigil} ) {
-                        $token = $sigil;
-                        $token .= $word if ( defined($word) );    # fix c104
-                        $rtoken_vars->[_TOKEN_] = $token;
+                    # -spp = 0 : no space before opening prototype paren
+                    # -spp = 1 : stable (follow input spacing)
+                    # -spp = 2 : always space before opening prototype paren
+                    if ( !defined($rOpts_space_prototype_paren)
+                        || $rOpts_space_prototype_paren == 1 )
+                    {
+                        ## default: stable
+                    }
+                    elsif ( $rOpts_space_prototype_paren == 0 ) {
+                        $token =~ s/\s+\(/\(/;
+                    }
+                    elsif ( $rOpts_space_prototype_paren == 2 ) {
+                        $token =~ s/\(/ (/;
+                    }
+
+                    # one space max, and no tabs
+                    $token =~ s/\s+/ /g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+
+                # clean up spaces in package identifiers, like
+                #   "package        Bob::Dog;"
+                elsif ( substr( $token, 0, 7 ) eq 'package'
+                    && $token =~ /^package\s/ )
+                {
+                    $token =~ s/\s+/ /g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+
+                # trim identifiers of trailing blanks which can occur
+                # under some unusual circumstances, such as if the
+                # identifier 'witch' has trailing blanks on input here:
+                #
+                # sub
+                # witch
+                # ()   # prototype may be on new line ...
+                # ...
+                my $ord_ch = ord( substr( $token, -1, 1 ) );
+                if (
+
+                    # quick check for possible ending space
+                    $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
+                        || $ord_ch > ORD_PRINTABLE_MAX )
+                  )
+                {
+                    $token =~ s/\s+$//g;
+                    $rtoken_vars->[_TOKEN_] = $token;
+                }
+            }
+        }
+
+        # handle semicolons
+        elsif ( $type eq ';' ) {
+
+            # Remove unnecessary semicolons, but not after bare
+            # blocks, where it could be unsafe if the brace is
+            # mis-tokenized.
+            if (
+                $rOpts->{'delete-semicolons'}
+                && (
+                    (
+                           $last_nonblank_block_type
+                        && $last_nonblank_code_type eq '}'
+                        && (
+                            $is_block_without_semicolon{
+                                $last_nonblank_block_type}
+                            || $last_nonblank_block_type =~ /$SUB_PATTERN/
+                            || $last_nonblank_block_type =~ /^\w+:$/
+                        )
+                    )
+                    || $last_nonblank_code_type eq ';'
+                )
+              )
+            {
+
+                # This looks like a deletable semicolon, but even if a
+                # semicolon can be deleted it is not necessarily best to do
+                # so.  We apply these additional rules for deletion:
+                # - Always ok to delete a ';' at the end of a line
+                # - Never delete a ';' before a '#' because it would
+                #   promote it to a block comment.
+                # - If a semicolon is not at the end of line, then only
+                #   delete if it is followed by another semicolon or closing
+                #   token.  This includes the comment rule.  It may take
+                #   two passes to get to a final state, but it is a little
+                #   safer.  For example, keep the first semicolon here:
+                #      eval { sub bubba { ok(0) }; ok(0) } || ok(1);
+                #   It is not required but adds some clarity.
+                my $ok_to_delete = 1;
+                if ( $KK < $Klast ) {
+                    my $Kn = $self->K_next_nonblank($KK);
+                    if ( defined($Kn) && $Kn <= $Klast ) {
+                        my $next_nonblank_token_type = $rLL->[$Kn]->[_TYPE_];
+                        $ok_to_delete = $next_nonblank_token_type eq ';'
+                          || $next_nonblank_token_type eq '}';
                     }
                 }
 
-                # Split identifiers with leading arrows, inserting blanks
-                # if necessary.  It is easier and safer here than in the
-                # tokenizer.  For example '->new' becomes two tokens, '->'
-                # and 'new' with a possible blank between.
-                #
-                # Note: there is a related patch in sub set_whitespace_flags
-                elsif (length($token) > 2
-                    && substr( $token, 0, 2 ) eq '->'
-                    && $token =~ /^\-\>(.*)$/
-                    && $1 )
-                {
+                # do not delete only nonblank token in a file
+                else {
+                    my $Kp = $self->K_previous_code( undef, $rLL_new );
+                    my $Kn = $self->K_next_nonblank($KK);
+                    $ok_to_delete = defined($Kn) || defined($Kp);
+                }
 
-                    my $token_save = $1;
-                    my $type_save  = $type;
-
-                    # Change '-> new'  to '->new'
-                    $token_save =~ s/^\s+//g;
-
-                    # store a blank to left of arrow if necessary
-                    my $Kprev = $self->K_previous_nonblank($KK);
-                    if (   defined($Kprev)
-                        && $rLL->[$Kprev]->[_TYPE_] ne 'b'
-                        && $rOpts_add_whitespace
-                        && $want_left_space{'->'} == WS_YES )
-                    {
-                        my $rcopy =
-                          copy_token_as_type( $rtoken_vars, 'b', SPACE );
-                        $store_token->($rcopy);
-                    }
-
-                    # then store the arrow
-                    my $rcopy = copy_token_as_type( $rtoken_vars, '->', '->' );
-                    $store_token->($rcopy);
-
-                    # store a blank after the arrow if requested
-                    # added for issue git #33
-                    if ( $want_right_space{'->'} == WS_YES ) {
-                        my $rcopy_b =
-                          copy_token_as_type( $rtoken_vars, 'b', SPACE );
-                        $store_token->($rcopy_b);
-                    }
-
-                    # then reset the current token to be the remainder,
-                    # and reset the whitespace flag according to the arrow
-                    $token = $rtoken_vars->[_TOKEN_] = $token_save;
-                    $type  = $rtoken_vars->[_TYPE_]  = $type_save;
-                    $store_token->($rtoken_vars);
+                if ($ok_to_delete) {
+                    $self->note_deleted_semicolon($input_line_number);
                     next;
                 }
-
-                # Trim certain spaces in identifiers
-                if ( $type eq 'i' ) {
-
-                    if (
-                        (
-                            substr( $token, 0, 3 ) eq 'sub'
-                            || $rOpts_sub_alias_list
-                        )
-                        && $token =~ /$SUB_PATTERN/
-                      )
-                    {
-
-                        # -spp = 0 : no space before opening prototype paren
-                        # -spp = 1 : stable (follow input spacing)
-                        # -spp = 2 : always space before opening prototype paren
-                        my $spp = $rOpts->{'space-prototype-paren'};
-                        if ( defined($spp) ) {
-                            if    ( $spp == 0 ) { $token =~ s/\s+\(/\(/; }
-                            elsif ( $spp == 2 ) { $token =~ s/\(/ (/; }
-                        }
-
-                        # one space max, and no tabs
-                        $token =~ s/\s+/ /g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-                    }
-
-                    # clean up spaces in package identifiers, like
-                    #   "package        Bob::Dog;"
-                    elsif ( substr( $token, 0, 7 ) eq 'package'
-                        && $token =~ /^package\s/ )
-                    {
-                        $token =~ s/\s+/ /g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-                    }
-
-                    # trim identifiers of trailing blanks which can occur
-                    # under some unusual circumstances, such as if the
-                    # identifier 'witch' has trailing blanks on input here:
-                    #
-                    # sub
-                    # witch
-                    # ()   # prototype may be on new line ...
-                    # ...
-                    my $ord_ch = ord( substr( $token, -1, 1 ) );
-                    if (
-
-                        # quick check for possible ending space
-                        $ord_ch > 0 && ( $ord_ch < ORD_PRINTABLE_MIN
-                            || $ord_ch > ORD_PRINTABLE_MAX )
-                      )
-                    {
-                        $token =~ s/\s+$//g;
-                        $rtoken_vars->[_TOKEN_] = $token;
-                    }
+                else {
+                    write_logfile_entry("Extra ';'\n");
                 }
             }
+        }
 
-            # handle semicolons
-            elsif ( $type eq ';' ) {
-
-                # Remove unnecessary semicolons, but not after bare
-                # blocks, where it could be unsafe if the brace is
-                # mis-tokenized.
-                if (
-                    $rOpts->{'delete-semicolons'}
-                    && (
-                        (
-                               $last_nonblank_block_type
-                            && $last_nonblank_code_type eq '}'
-                            && (
-                                $is_block_without_semicolon{
-                                    $last_nonblank_block_type}
-                                || $last_nonblank_block_type =~ /$SUB_PATTERN/
-                                || $last_nonblank_block_type =~ /^\w+:$/
-                            )
-                        )
-                        || $last_nonblank_code_type eq ';'
-                    )
-                  )
-                {
-
-                    # This looks like a deletable semicolon, but even if a
-                    # semicolon can be deleted it is not necessarily best to do
-                    # so.  We apply these additional rules for deletion:
-                    # - Always ok to delete a ';' at the end of a line
-                    # - Never delete a ';' before a '#' because it would
-                    #   promote it to a block comment.
-                    # - If a semicolon is not at the end of line, then only
-                    #   delete if it is followed by another semicolon or closing
-                    #   token.  This includes the comment rule.  It may take
-                    #   two passes to get to a final state, but it is a little
-                    #   safer.  For example, keep the first semicolon here:
-                    #      eval { sub bubba { ok(0) }; ok(0) } || ok(1);
-                    #   It is not required but adds some clarity.
-                    my $ok_to_delete = 1;
-                    if ( $KK < $Klast ) {
-                        my $Kn = $self->K_next_nonblank($KK);
-                        if ( defined($Kn) && $Kn <= $Klast ) {
-                            my $next_nonblank_token_type =
-                              $rLL->[$Kn]->[_TYPE_];
-                            $ok_to_delete = $next_nonblank_token_type eq ';'
-                              || $next_nonblank_token_type eq '}';
-                        }
-                    }
-
-                    # do not delete only nonblank token in a file
-                    else {
-                        my $Kp = $self->K_previous_code( undef, $rLL_new );
-                        my $Kn = $self->K_next_nonblank($KK);
-                        $ok_to_delete = defined($Kn) || defined($Kp);
-                    }
-
-                    if ($ok_to_delete) {
-                        $self->note_deleted_semicolon($input_line_number);
-                        next;
-                    }
-                    else {
-                        write_logfile_entry("Extra ';'\n");
-                    }
-                }
-            }
-
-            # Old patch to add space to something like "x10".
-            # Note: This is now done in the Tokenizer, but this code remains
-            # for reference.
-            elsif ( $type eq 'n' ) {
-                if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
-                    $token =~ s/x/x /;
-                    $rtoken_vars->[_TOKEN_] = $token;
-                    if (DEVEL_MODE) {
-                        Fault(<<EOM);
+        # Old patch to add space to something like "x10".
+        # Note: This is now done in the Tokenizer, but this code remains
+        # for reference.
+        elsif ( $type eq 'n' ) {
+            if ( substr( $token, 0, 1 ) eq 'x' && $token =~ /^x\d+/ ) {
+                $token =~ s/x/x /;
+                $rtoken_vars->[_TOKEN_] = $token;
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
 Near line $input_line_number, Unexpected need to split a token '$token' - this should now be done by the Tokenizer
 EOM
-                    }
                 }
             }
+        }
 
-            # check for a qw quote
-            elsif ( $type eq 'q' ) {
+        # check for a qw quote
+        elsif ( $type eq 'q' ) {
 
-                # trim blanks from right of qw quotes
-                # (To avoid trimming qw quotes use -ntqw; the tokenizer handles
-                # this)
-                $token =~ s/\s*$//;
-                $rtoken_vars->[_TOKEN_] = $token;
-                $self->note_embedded_tab($input_line_number)
-                  if ( $token =~ "\t" );
-                $store_token_and_space->(
-                    $rtoken_vars, $rwhitespace_flags->[$KK] == WS_YES
-                );
+            # trim blanks from right of qw quotes
+            # (To avoid trimming qw quotes use -ntqw; the tokenizer handles
+            # this)
+            $token =~ s/\s*$//;
+            $rtoken_vars->[_TOKEN_] = $token;
+            $self->note_embedded_tab($input_line_number)
+              if ( $token =~ "\t" );
+            $self->store_token_and_space( $rtoken_vars,
+                $rwhitespace_flags->[$KK] == WS_YES );
+            next;
+        } ## end if ( $type eq 'q' )
+
+        # delete repeated commas if requested
+        elsif ( $type eq ',' ) {
+            if (   $last_nonblank_code_type eq ','
+                && $rOpts->{'delete-repeated-commas'} )
+            {
+                # Could note this deletion as a possible future update:
+                ## $self->note_deleted_comma($input_line_number);
                 next;
-            } ## end if ( $type eq 'q' )
-
-            # delete repeated commas if requested
-            elsif ( $type eq ',' ) {
-                if (   $last_nonblank_code_type eq ','
-                    && $rOpts->{'delete-repeated-commas'} )
-                {
-                    # Could note this deletion as a possible future update:
-                    ## $self->note_deleted_comma($input_line_number);
-                    next;
-                }
             }
+        }
 
-            # change 'LABEL   :'   to 'LABEL:'
-            elsif ( $type eq 'J' ) {
-                $token =~ s/\s+//g;
-                $rtoken_vars->[_TOKEN_] = $token;
-            }
+        # change 'LABEL   :'   to 'LABEL:'
+        elsif ( $type eq 'J' ) {
+            $token =~ s/\s+//g;
+            $rtoken_vars->[_TOKEN_] = $token;
+        }
 
-            # check a quote for problems
-            elsif ( $type eq 'Q' ) {
-                $check_Q->( $KK, $Kfirst, $input_line_number );
-            }
+        # check a quote for problems
+        elsif ( $type eq 'Q' ) {
+            $self->check_Q( $KK, $Kfirst, $input_line_number );
+        }
 
-            # Store this token with possible previous blank
-            if ( $rwhitespace_flags->[$KK] == WS_YES ) {
-                $store_token_and_space->( $rtoken_vars, 1 );
-            }
-            else {
-                $store_token->($rtoken_vars);
-            }
+        # Store this token with possible previous blank
+        if ( $rwhitespace_flags->[$KK] == WS_YES ) {
+            $self->store_token_and_space( $rtoken_vars, 1 );
+        }
+        else {
+            $self->store_token($rtoken_vars);
+        }
 
-        }    # End token loop
-    }    # End line loop
+    }    # End token loop
+    return;
+} ## end sub respace_tokens_inner_loop
+
+sub respace_post_loop_ops {
+
+    my ($self) = @_;
 
     # Walk backwards through the tokens, making forward links to sequence items.
     if ( @{$rLL_new} ) {
@@ -7373,21 +7019,484 @@ EOM
             }
         }
     }
-
-    # Reset memory to be the new array
-    $self->[_rLL_] = $rLL_new;
-    my $Klimit;
-    if ( @{$rLL_new} ) { $Klimit = @{$rLL_new} - 1 }
-    $self->[_Klimit_] = $Klimit;
-
-    # During development, verify that the new array still looks okay.
-    DEVEL_MODE && $self->check_token_array();
-
-    # reset the token limits of each line
-    $self->resync_lines_and_tokens();
-
     return;
-} ## end sub respace_tokens
+} ## end sub respace_post_loop_ops
+
+sub set_permanently_broken {
+    my ( $self, $seqno ) = @_;
+    while ( defined($seqno) ) {
+        $ris_permanently_broken->{$seqno} = 1;
+        $seqno = $rparent_of_seqno->{$seqno};
+    }
+    return;
+} ## end sub set_permanently_broken
+
+sub store_token {
+    my ( $self, $item ) = @_;
+
+    # This will be the index of this item in the new array
+    my $KK_new = @{$rLL_new};
+
+    #------------------------------------------------------------------
+    # NOTE: called once per token so coding efficiency is critical here
+    #------------------------------------------------------------------
+
+    my $type       = $item->[_TYPE_];
+    my $is_blank   = $type eq 'b';
+    my $block_type = EMPTY_STRING;
+
+    # Do not output consecutive blanks. This situation should have been
+    # prevented earlier, but it is worth checking because later routines
+    # make this assumption.
+    if ( $is_blank && $KK_new && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
+        return;
+    }
+
+    # check for a sequenced item (i.e., container or ?/:)
+    my $type_sequence = $item->[_TYPE_SEQUENCE_];
+    my $token         = $item->[_TOKEN_];
+    if ($type_sequence) {
+
+        if ( $is_opening_token{$token} ) {
+
+            $K_opening_container->{$type_sequence} = $KK_new;
+            $block_type = $rblock_type_of_seqno->{$type_sequence};
+
+            # Fix for case b1100: Count a line ending in ', [' as having
+            # a line-ending comma.  Otherwise, these commas can be hidden
+            # with something like --opening-square-bracket-right
+            if (   $last_nonblank_code_type eq ','
+                && $Ktoken_vars == $Klast_old_code
+                && $Ktoken_vars > $Kfirst_old )
+            {
+                $rlec_count_by_seqno->{$type_sequence}++;
+            }
+
+            if (   $last_nonblank_code_type eq '='
+                || $last_nonblank_code_type eq '=>' )
+            {
+                $ris_assigned_structure->{$type_sequence} =
+                  $last_nonblank_code_type;
+            }
+
+            my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+            $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+            push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
+            $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
+            $seqno_stack{$depth_next}               = $type_sequence;
+            $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
+            $depth_next++;
+
+            if ( $depth_next > $depth_next_max ) {
+                $depth_next_max = $depth_next;
+            }
+        }
+        elsif ( $is_closing_token{$token} ) {
+
+            $K_closing_container->{$type_sequence} = $KK_new;
+            $block_type = $rblock_type_of_seqno->{$type_sequence};
+
+            # Do not include terminal commas in counts
+            if (   $last_nonblank_code_type eq ','
+                || $last_nonblank_code_type eq '=>' )
+            {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ($seqno) {
+                    $rtype_count_by_seqno->{$seqno}->{$last_nonblank_code_type}
+                      --;
+
+                    if (   $Ktoken_vars == $Kfirst_old
+                        && $last_nonblank_code_type eq ','
+                        && $rlec_count_by_seqno->{$seqno} )
+                    {
+                        $rlec_count_by_seqno->{$seqno}--;
+                    }
+                }
+            }
+
+            # Update the stack...
+            $depth_next--;
+        }
+        else {
+
+            # For ternary, note parent but do not include as child
+            my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+            $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+            $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+
+            # These are not yet used but could be useful
+            if ( $token eq '?' ) {
+                $K_opening_ternary->{$type_sequence} = $KK_new;
+            }
+            elsif ( $token eq ':' ) {
+                $K_closing_ternary->{$type_sequence} = $KK_new;
+            }
+            else {
+
+                # We really shouldn't arrive here, just being cautious:
+                # The only sequenced types output by the tokenizer are the
+                # opening & closing containers and the ternary types. Each
+                # of those was checked above. So we would only get here
+                # if the tokenizer has been changed to mark some other
+                # tokens with sequence numbers.
+                if (DEVEL_MODE) {
+                    Fault(
+"Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
+                    );
+                }
+            }
+        }
+    }
+
+    # Find the length of this token.  Later it may be adjusted if phantom
+    # or ignoring side comment lengths.
+    my $token_length =
+        $is_encoded_data
+      ? $length_function->($token)
+      : length($token);
+
+    # handle comments
+    my $is_comment = $type eq '#';
+    if ($is_comment) {
+
+        # trim comments if necessary
+        my $ord = ord( substr( $token, -1, 1 ) );
+        if (
+            $ord > 0
+            && (   $ord < ORD_PRINTABLE_MIN
+                || $ord > ORD_PRINTABLE_MAX )
+            && $token =~ s/\s+$//
+          )
+        {
+            $token_length = $length_function->($token);
+            $item->[_TOKEN_] = $token;
+        }
+
+        # Mark length of side comments as just 1 if sc lengths are ignored
+        if ( $rOpts_ignore_side_comment_lengths
+            && ( !$CODE_type || $CODE_type eq 'HSC' ) )
+        {
+            $token_length = 1;
+        }
+        my $seqno = $seqno_stack{ $depth_next - 1 };
+        if ( defined($seqno)
+            && !$ris_permanently_broken->{$seqno} )
+        {
+            $self->set_permanently_broken($seqno);
+        }
+    }
+
+    $item->[_TOKEN_LENGTH_] = $token_length;
+
+    # and update the cumulative length
+    $cumulative_length += $token_length;
+
+    # Save the length sum to just AFTER this token
+    $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
+
+    if ( !$is_blank && !$is_comment ) {
+
+        # Remember the most recent two non-blank, non-comment tokens.
+        # NOTE: the phantom semicolon code may change the output stack
+        # without updating these values.  Phantom semicolons are considered
+        # the same as blanks for now, but future needs might change that.
+        # See the related note in sub 'add_phantom_semicolon'.
+        $last_last_nonblank_code_type  = $last_nonblank_code_type;
+        $last_last_nonblank_code_token = $last_nonblank_code_token;
+
+        $last_nonblank_code_type  = $type;
+        $last_nonblank_code_token = $token;
+        $last_nonblank_block_type = $block_type;
+
+        # count selected types
+        if ( $is_counted_type{$type} ) {
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if ( defined($seqno) ) {
+                $rtype_count_by_seqno->{$seqno}->{$type}++;
+
+                # Count line-ending commas for -bbx
+                if ( $type eq ',' && $Ktoken_vars == $Klast_old_code ) {
+                    $rlec_count_by_seqno->{$seqno}++;
+                }
+
+                # Remember index of first here doc target
+                if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
+                    $K_first_here_doc_by_seqno{$seqno} = $KK_new;
+                }
+            }
+        }
+    }
+
+    # For reference, here is how to get the parent sequence number.
+    # This is not used because it is slower than finding it on the fly
+    # in sub parent_seqno_by_K:
+
+    # my $seqno_parent =
+    #     $type_sequence && $is_opening_token{$token}
+    #   ? $seqno_stack{ $depth_next - 2 }
+    #   : $seqno_stack{ $depth_next - 1 };
+    # my $KK = @{$rLL_new};
+    # $rseqno_of_parent_by_K->{$KK} = $seqno_parent;
+
+    # and finally, add this item to the new array
+    push @{$rLL_new}, $item;
+    return;
+} ## end sub store_token
+
+sub store_token_and_space {
+    my ( $self, $item, $want_space ) = @_;
+
+    # store a token with preceding space if requested and needed
+
+    # First store the space
+    if (   $want_space
+        && @{$rLL_new}
+        && $rLL_new->[-1]->[_TYPE_] ne 'b'
+        && $rOpts_add_whitespace )
+    {
+        my $rcopy = [ @{$item} ];
+        $rcopy->[_TYPE_]          = 'b';
+        $rcopy->[_TOKEN_]         = SPACE;
+        $rcopy->[_TYPE_SEQUENCE_] = EMPTY_STRING;
+
+        $rcopy->[_LINE_INDEX_] =
+          $rLL_new->[-1]->[_LINE_INDEX_];
+
+        # Patch 23-Jan-2021 to fix -lp blinkers:
+        # The level and ci_level of newly created spaces should be the same
+        # as the previous token.  Otherwise the coding for the -lp option
+        # can create a blinking state in some rare cases.
+        $rcopy->[_LEVEL_] =
+          $rLL_new->[-1]->[_LEVEL_];
+        $rcopy->[_CI_LEVEL_] =
+          $rLL_new->[-1]->[_CI_LEVEL_];
+
+        $self->store_token($rcopy);
+    }
+
+    # then the token
+    $self->store_token($item);
+    return;
+} ## end sub store_token_and_space
+
+sub add_phantom_semicolon {
+
+    my ( $self, $KK ) = @_;
+
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+
+    # we are only adding semicolons for certain block types
+    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    return unless ($type_sequence);
+    my $block_type = $rblock_type_of_seqno->{$type_sequence};
+    return unless ($block_type);
+    return
+      unless ( $ok_to_add_semicolon_for_block_type{$block_type}
+        || $block_type =~ /^(sub|package)/
+        || $block_type =~ /^\w+\:$/ );
+
+    my $type_p          = $rLL_new->[$Kp]->[_TYPE_];
+    my $token_p         = $rLL_new->[$Kp]->[_TOKEN_];
+    my $type_sequence_p = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
+
+    # Do not add a semicolon if...
+    return
+      if (
+
+        # it would follow a comment (and be isolated)
+        $type_p eq '#'
+
+        # it follows a code block ( because they are not always wanted
+        # there and may add clutter)
+        || $type_sequence_p && $rblock_type_of_seqno->{$type_sequence_p}
+
+        # it would follow a label
+        || $type_p eq 'J'
+
+        # it would be inside a 'format' statement (and cause syntax error)
+        || (   $type_p eq 'k'
+            && $token_p =~ /format/ )
+
+      );
+
+    # Do not add a semicolon if it would impede a weld with an immediately
+    # following closing token...like this
+    #   { ( some code ) }
+    #                  ^--No semicolon can go here
+
+    # look at the previous token... note use of the _NEW rLL array here,
+    # but sequence numbers are invariant.
+    my $seqno_inner = $rLL_new->[$Kp]->[_TYPE_SEQUENCE_];
+
+    # If it is also a CLOSING token we have to look closer...
+    if (
+           $seqno_inner
+        && $is_closing_token{$token_p}
+
+        # we only need to look if there is just one inner container..
+        && defined( $rchildren_of_seqno->{$type_sequence} )
+        && @{ $rchildren_of_seqno->{$type_sequence} } == 1
+      )
+    {
+
+        # Go back and see if the corresponding two OPENING tokens are also
+        # together.  Note that we are using the OLD K indexing here:
+        my $K_outer_opening = $K_old_opening_by_seqno{$type_sequence};
+        if ( defined($K_outer_opening) ) {
+            my $K_nxt = $self->K_next_nonblank($K_outer_opening);
+            if ( defined($K_nxt) ) {
+                my $seqno_nxt = $rLL->[$K_nxt]->[_TYPE_SEQUENCE_];
+
+                # Is the next token after the outer opening the same as
+                # our inner closing (i.e. same sequence number)?
+                # If so, do not insert a semicolon here.
+                return if ( $seqno_nxt && $seqno_nxt == $seqno_inner );
+            }
+        }
+    }
+
+    # We will insert an empty semicolon here as a placeholder.  Later, if
+    # it becomes the last token on a line, we will bring it to life.  The
+    # advantage of doing this is that (1) we just have to check line
+    # endings, and (2) the phantom semicolon has zero width and therefore
+    # won't cause needless breaks of one-line blocks.
+    my $Ktop = -1;
+    if (   $rLL_new->[$Ktop]->[_TYPE_] eq 'b'
+        && $want_left_space{';'} == WS_NO )
+    {
+
+        # convert the blank into a semicolon..
+        # be careful: we are working on the new stack top
+        # on a token which has been stored.
+        my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', SPACE );
+
+        # Convert the existing blank to:
+        #   a phantom semicolon for one_line_block option = 0 or 1
+        #   a real semicolon    for one_line_block option = 2
+        my $tok     = EMPTY_STRING;
+        my $len_tok = 0;
+        if ( $rOpts_one_line_block_semicolons == 2 ) {
+            $tok     = ';';
+            $len_tok = 1;
+        }
+
+        $rLL_new->[$Ktop]->[_TOKEN_]        = $tok;
+        $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
+        $rLL_new->[$Ktop]->[_TYPE_]         = ';';
+
+        # NOTE: we are changing the output stack without updating variables
+        # $last_nonblank_code_type, etc. Future needs might require that
+        # those variables be updated here.  For now, it seems ok to skip
+        # this.
+
+        # Save list of new K indexes of phantom semicolons.
+        # This will be needed if we want to undo them for iterations in
+        # future coding.
+        push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
+
+        # Then store a new blank
+        $self->store_token($rcopy);
+    }
+    else {
+
+        # Patch for issue c078: keep line indexes in order.  If the top
+        # token is a space that we are keeping (due to '-wls=';') then
+        # we have to check that old line indexes stay in order.
+        # In very rare
+        # instances in which side comments have been deleted and converted
+        # into blanks, we may have filtered down multiple blanks into just
+        # one. In that case the top blank may have a higher line number
+        # than the previous nonblank token. Although the line indexes of
+        # blanks are not really significant, we need to keep them in order
+        # in order to pass error checks.
+        if ( $rLL_new->[$Ktop]->[_TYPE_] eq 'b' ) {
+            my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
+            my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
+            if ( $new_top_ix < $old_top_ix ) {
+                $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
+            }
+        }
+
+        my $rcopy = copy_token_as_type( $rLL_new->[$Kp], ';', EMPTY_STRING );
+        $self->store_token($rcopy);
+        push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
+    }
+    return;
+} ## end sub add_phantom_semicolon
+
+sub check_Q {
+
+    # Check that a quote looks okay
+    # This sub works but needs to by sync'd with the log file output
+    # before it can be used.
+    my ( $self, $KK, $Kfirst, $line_number ) = @_;
+    my $token = $rLL->[$KK]->[_TOKEN_];
+    $self->note_embedded_tab($line_number) if ( $token =~ "\t" );
+
+    # The remainder of this routine looks for something like
+    #        '$var = s/xxx/yyy/;'
+    # in case it should have been '$var =~ s/xxx/yyy/;'
+
+    # Start by looking for a token beginning with one of: s y m / tr
+    return
+      unless ( $is_s_y_m_slash{ substr( $token, 0, 1 ) }
+        || substr( $token, 0, 2 ) eq 'tr' );
+
+    # ... and preceded by one of: = == !=
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+    my $previous_nonblank_type = $rLL_new->[$Kp]->[_TYPE_];
+    return unless ( $is_unexpected_equals{$previous_nonblank_type} );
+    my $previous_nonblank_token = $rLL_new->[$Kp]->[_TOKEN_];
+
+    my $previous_nonblank_type_2  = 'b';
+    my $previous_nonblank_token_2 = EMPTY_STRING;
+    my $Kpp                       = $self->K_previous_nonblank( $Kp, $rLL_new );
+    if ( defined($Kpp) ) {
+        $previous_nonblank_type_2  = $rLL_new->[$Kpp]->[_TYPE_];
+        $previous_nonblank_token_2 = $rLL_new->[$Kpp]->[_TOKEN_];
+    }
+
+    my $next_nonblank_token = EMPTY_STRING;
+    my $Kn                  = $KK + 1;
+    my $Kmax                = @{$rLL} - 1;
+    if ( $Kn <= $Kmax && $rLL->[$Kn]->[_TYPE_] eq 'b' ) { $Kn += 1 }
+    if ( $Kn <= $Kmax ) {
+        $next_nonblank_token = $rLL->[$Kn]->[_TOKEN_];
+    }
+
+    my $token_0 = $rLL->[$Kfirst]->[_TOKEN_];
+    my $type_0  = $rLL->[$Kfirst]->[_TYPE_];
+
+    if (
+        ##$token =~ /^(s|tr|y|m|\/)/
+        ##&& $previous_nonblank_token =~ /^(=|==|!=)$/
+        1
+
+        # preceded by simple scalar
+        && $previous_nonblank_type_2 eq 'i'
+        && $previous_nonblank_token_2 =~ /^\$/
+
+        # followed by some kind of termination
+        # (but give complaint if we can not see far enough ahead)
+        && $next_nonblank_token =~ /^[; \)\}]$/
+
+        # scalar is not declared
+        ##                      =~ /^(my|our|local)$/
+        && !( $type_0 eq 'k' && $is_my_our_local{$token_0} )
+      )
+    {
+        my $lno   = 1 + $rLL_new->[$Kp]->[_LINE_INDEX_];
+        my $guess = substr( $previous_nonblank_token, 0, 1 ) . '~';
+        complain(
+"Line $lno: Note: be sure you want '$previous_nonblank_token' instead of '$guess' here\n"
+        );
+    }
+    return;
+} ## end sub check_Q
+
+} ## end closure respace_tokens
 
 sub copy_token_as_type {
 
@@ -7502,7 +7611,7 @@ sub K_next_nonblank {
         # Safety check, this fault shouldn't happen:  The $rLL array is the
         # main array of tokens, so all entries should be used.  It is
         # initialized in sub write_line, and then re-initialized by sub
-        # $store_token() within sub respace_tokens.  Tokens are pushed on
+        # store_token() within sub respace_tokens.  Tokens are pushed on
         # so there shouldn't be any gaps.
         if ( !defined( $rLL->[$Knnb] ) ) {
             Fault("Undefined entry for k=$Knnb") if (DEVEL_MODE);
@@ -22797,7 +22906,7 @@ sub check_batch_summed_lengths {
 
     # Verify that the summed lengths are correct. We want to be sure that
     # errors have not been introduced by programming changes.  Summed lengths
-    # are defined in sub $store_token.  Operations like padding and unmasking
+    # are defined in sub store_token.  Operations like padding and unmasking
     # semicolons can change token lengths, but those operations are expected to
     # update the summed lengths when they make changes.  So the summed lengths
     # should always be correct.
