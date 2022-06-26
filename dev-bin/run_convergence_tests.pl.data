@@ -9973,6 +9973,26 @@ while (my ( $sid, $u, $lasttime )=
 --indent-columns=9
 --maximum-line-length=35
 
+==> b1355.in <==
+# S1
+my $data = [
+ { value => "Tom" },
+ { value => 33 },
+ { value => "Sales" },
+];
+
+# S2
+my $data =
+ [ { value => "Tom" }, { value => 33 }, { value => "Sales" }, ];
+
+
+==> b1355.par <==
+--break-before-square-bracket-and-indent=2
+--break-before-square-bracket=2
+--continuation-indentation=9
+--indent-columns=1
+--maximum-line-length=72
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

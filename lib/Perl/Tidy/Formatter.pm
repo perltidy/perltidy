@@ -1582,10 +1582,13 @@ EOM
 
             # (1) -lp is not compatible with opt=2, silently set to opt=0
             # (2) opt=0 and 2 give same result if -i=-ci; but opt=0 is faster
+            # (3) set opt=0 if -i < -ci (can be unstable, case b1355)
             if ( $opt == 2 ) {
-                if (   $rOpts->{'line-up-parentheses'}
-                    || $rOpts->{'indent-columns'} ==
-                    $rOpts->{'continuation-indentation'} )
+                if (
+                    $rOpts->{'line-up-parentheses'}
+                    || ( $rOpts->{'indent-columns'} <=
+                        $rOpts->{'continuation-indentation'} )
+                  )
                 {
                     $opt = 0;
                 }
