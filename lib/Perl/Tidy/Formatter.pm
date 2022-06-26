@@ -13101,6 +13101,90 @@ EOM
         #--------------------------------------
         # loop to process the tokens one-by-one
         #--------------------------------------
+        $self->process_line_inner_loop($has_side_comment);
+
+        # if there is anything left in the output buffer ...
+        if ( $max_index_to_go >= 0 ) {
+
+            my $type       = $rLL->[$K_last]->[_TYPE_];
+            my $break_flag = $self->[_rbreak_after_Klast_]->{$K_last};
+
+            # we have to flush ..
+            if (
+
+                # if there is a side comment...
+                $type eq '#'
+
+                # if this line ends in a quote
+                # NOTE: This is critically important for insuring that quoted
+                # lines do not get processed by things like -sot and -sct
+                || $in_quote
+
+                # if this is a VERSION statement
+                || $CODE_type eq 'VER'
+
+                # to keep a label at the end of a line
+                || ( $type eq 'J' && $rOpts_break_after_labels != 2 )
+
+                # if we have a hard break request
+                || $break_flag && $break_flag != 2
+
+                # if we are instructed to keep all old line breaks
+                || !$rOpts->{'delete-old-newlines'}
+
+                # if this is a line of the form 'use overload'. A break here in
+                # the input file is a good break because it will allow the
+                # operators which follow to be formatted well. Without this
+                # break the formatting with -ci=4 -xci is poor, for example.
+
+                #   use overload
+                #     '+' => sub {
+                #       print length $_[2], "\n";
+                #       my ( $x, $y ) = _order(@_);
+                #       Number::Roman->new( int $x + $y );
+                #     },
+                #     '-' => sub {
+                #       my ( $x, $y ) = _order(@_);
+                #       Number::Roman->new( int $x - $y );
+                #     };
+                || (   $max_index_to_go == 2
+                    && $types_to_go[0] eq 'k'
+                    && $tokens_to_go[0] eq 'use'
+                    && $tokens_to_go[$max_index_to_go] eq 'overload' )
+              )
+            {
+                destroy_one_line_block();
+                $self->end_batch();
+            }
+
+            else {
+
+                # Check for a soft break request
+                if ( $break_flag && $break_flag == 2 ) {
+                    $self->set_forced_breakpoint($max_index_to_go);
+                }
+
+                # mark old line breakpoints in current output stream
+                if (  !$rOpts_ignore_old_breakpoints
+                    || $self->[_ris_essential_old_breakpoint_]->{$K_last} )
+                {
+                    my $jobp = $max_index_to_go;
+                    if (   $types_to_go[$max_index_to_go] eq 'b'
+                        && $max_index_to_go > 0 )
+                    {
+                        $jobp--;
+                    }
+                    $old_breakpoint_to_go[$jobp] = 1;
+                }
+            }
+        }
+
+        return;
+    } ## end sub process_line_of_CODE
+
+    sub process_line_inner_loop {
+
+        my ( $self, $has_side_comment ) = @_;
 
         # We do not want a leading blank if the previous batch just got output
 
@@ -13598,85 +13682,9 @@ EOM
             $K_last_nonblank_code = $Ktoken_vars;
 
         } ## end of loop over all tokens in this line
-
-        # if there is anything left in the output buffer ...
-        if ( $max_index_to_go >= 0 ) {
-
-            my $type       = $rLL->[$K_last]->[_TYPE_];
-            my $break_flag = $self->[_rbreak_after_Klast_]->{$K_last};
-
-            # we have to flush ..
-            if (
-
-                # if there is a side comment...
-                $type eq '#'
-
-                # if this line ends in a quote
-                # NOTE: This is critically important for insuring that quoted
-                # lines do not get processed by things like -sot and -sct
-                || $in_quote
-
-                # if this is a VERSION statement
-                || $CODE_type eq 'VER'
-
-                # to keep a label at the end of a line
-                || ( $type eq 'J' && $rOpts_break_after_labels != 2 )
-
-                # if we have a hard break request
-                || $break_flag && $break_flag != 2
-
-                # if we are instructed to keep all old line breaks
-                || !$rOpts->{'delete-old-newlines'}
-
-                # if this is a line of the form 'use overload'. A break here in
-                # the input file is a good break because it will allow the
-                # operators which follow to be formatted well. Without this
-                # break the formatting with -ci=4 -xci is poor, for example.
-
-                #   use overload
-                #     '+' => sub {
-                #       print length $_[2], "\n";
-                #       my ( $x, $y ) = _order(@_);
-                #       Number::Roman->new( int $x + $y );
-                #     },
-                #     '-' => sub {
-                #       my ( $x, $y ) = _order(@_);
-                #       Number::Roman->new( int $x - $y );
-                #     };
-                || (   $max_index_to_go == 2
-                    && $types_to_go[0] eq 'k'
-                    && $tokens_to_go[0] eq 'use'
-                    && $tokens_to_go[$max_index_to_go] eq 'overload' )
-              )
-            {
-                destroy_one_line_block();
-                $self->end_batch();
-            }
-
-            else {
-
-                # Check for a soft break request
-                if ( $break_flag && $break_flag == 2 ) {
-                    $self->set_forced_breakpoint($max_index_to_go);
-                }
-
-                # mark old line breakpoints in current output stream
-                if (  !$rOpts_ignore_old_breakpoints
-                    || $self->[_ris_essential_old_breakpoint_]->{$K_last} )
-                {
-                    my $jobp = $max_index_to_go;
-                    if (   $types_to_go[$max_index_to_go] eq 'b'
-                        && $max_index_to_go > 0 )
-                    {
-                        $jobp--;
-                    }
-                    $old_breakpoint_to_go[$jobp] = 1;
-                }
-            }
-        }
-
         return;
-    } ## end sub process_line_of_CODE
+    } ## end sub process_line_inner_loop
+
 } ## end closure process_line_of_CODE
 
 sub tight_paren_follows {
