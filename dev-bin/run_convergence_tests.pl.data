@@ -9920,6 +9920,80 @@ print to_json({success => $success ? 1 : 0});
 --maximum-line-length=60
 --extended-continuation-indentation
 
+==> b1348.in <==
+# S1
+                           $try =
+                             $costs[ $j - $i ][$k]
+                             + $costs[ $k + 1 ][$j]
+                             + $row1 *
+                             $col1 * $col2 ;
+
+# S2
+                           $try =
+                             $costs[ $j - $i ][$k]
+                             + $costs[ $k + 1 ][$j]
+                             + $row1 * $col1 *
+                             $col2 ;
+
+
+==> b1348.par <==
+--blank-lines-after-opening-block=0
+--nobreak-after-all-operators
+--break-at-old-comma-breakpoints
+--nobreak-at-old-semicolon-breakpoints
+--check-syntax
+--closing-side-comment-else-flag=1
+--closing-side-comment-interval=26
+--closing-side-comments
+--comma-arrow-breakpoints=1
+--cuddled-break-option=55
+--cuddled-else
+--nodelete-side-comments
+--noextended-line-up-parentheses
+--nofuzzy-line-length
+--noignore-old-breakpoints
+--noindent-closing-brace
+--indent-columns=9
+--noindent-spaced-block-comments
+--nokeep-interior-semicolons
+--keep-old-breakpoints-after='+= G -> \ [ ^.= ^ % n ]'
+--keyword-group-blanks-delete
+--keyword-paren-inner-tightness=2
+--line-up-parentheses
+--nolook-for-selfloader
+--maximum-consecutive-blank-lines=2
+--maximum-fields-per-table=53
+--maximum-level-errors=86
+--maximum-line-length=26
+--maximum-unexpected-errors=27
+--nomemoize
+--nowant-left-space='> & ||= != < & /= | / >>='
+--noopening-brace-always-on-right
+--opening-hash-brace-right
+--opening-paren-right
+--noopening-sub-brace-on-new-line
+--nooutdent-keywords
+--nooutdent-static-block-comments
+--paren-tightness=2
+--space-after-keyword='do while our while'
+--space-backslash-quote=2
+--nospace-for-semicolon
+--space-terminal-semicolon
+--square-bracket-vertical-tightness-closing=2
+--square-bracket-vertical-tightness=1
+--stack-closing-hash-brace
+--stack-closing-paren
+--stack-opening-paren
+--nostatic-block-comments
+--trim-pod
+--use-unicode-gcstring
+--valign-inclusion-list='-> x= >>= -> **= ( { ^= { :'
+--variable-maximum-line-length
+--vertical-tightness-closing=0
+--vertical-tightness=0
+--want-break-after='=~ <<= *= ^= ^= !~ != &&= += <='
+--want-break-before='x %= >= >>= |= | .= + < +='
+
 ==> b1349.in <==
 # S1
     my ( $database, $primary_id,
