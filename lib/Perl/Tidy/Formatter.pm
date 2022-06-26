@@ -12514,7 +12514,25 @@ EOM
         # NOTE: called once per token so coding efficiency is critical here
         #------------------------------------------------------------------
 
-        my $type = $rtoken_vars->[_TYPE_];
+        my (
+
+            $type,
+            $token,
+            $ci_level,
+            $level,
+            $seqno,
+            $length
+
+          ) = @{$rtoken_vars}[
+
+          _TYPE_,
+          _TOKEN_,
+          _CI_LEVEL_,
+          _LEVEL_,
+          _TYPE_SEQUENCE_,
+          _TOKEN_LENGTH_
+
+          ];
 
         # Check for emergency flush...
         # The K indexes in the batch must always be a continuous sequence of
@@ -12553,37 +12571,48 @@ EOM
             if ( $type eq 'b' ) { return }
         }
 
+        # Clip levels to zero if there are level errors in the file.
+        # We had to wait until now for reasons explained in sub 'write_line'.
+        if ( $level < 0 ) { $level = 0 }
+
+        # Safety check that length is defined. Should not be needed now.
+        # Former patch for indent-only, in which the entire set of tokens is
+        # turned into type 'q'. Lengths may have not been defined because sub
+        # 'respace_tokens' is bypassed. We do not need lengths in this case,
+        # but we will use the character count to have a defined value.  In the
+        # future, it would be nicer to have 'respace_tokens' convert the lines
+        # to quotes and get correct lengths.
+        if ( !defined($length) ) { $length = length($token) }
+
         #----------------------------
         # add this token to the batch
         #----------------------------
-        $K_to_go[ ++$max_index_to_go ] = $Ktoken_vars;
-        $types_to_go[$max_index_to_go] = $type;
-
+        $K_to_go[ ++$max_index_to_go ]             = $Ktoken_vars;
+        $types_to_go[$max_index_to_go]             = $type;
         $old_breakpoint_to_go[$max_index_to_go]    = 0;
         $forced_breakpoint_to_go[$max_index_to_go] = 0;
         $mate_index_to_go[$max_index_to_go]        = -1;
+        $tokens_to_go[$max_index_to_go]            = $token;
+        $ci_levels_to_go[$max_index_to_go]         = $ci_level;
+        $levels_to_go[$max_index_to_go]            = $level;
+        $type_sequence_to_go[$max_index_to_go]     = $seqno;
+        $nobreak_to_go[$max_index_to_go]           = $no_internal_newlines;
+        $token_lengths_to_go[$max_index_to_go]     = $length;
 
-        my $token = $tokens_to_go[$max_index_to_go] = $rtoken_vars->[_TOKEN_];
-
-        my $ci_level = $ci_levels_to_go[$max_index_to_go] =
-          $rtoken_vars->[_CI_LEVEL_];
-
-        # Clip levels to zero if there are level errors in the file.
-        # We had to wait until now for reasons explained in sub 'write_line'.
-        my $level = $rtoken_vars->[_LEVEL_];
-        if ( $level < 0 ) { $level = 0 }
-        $levels_to_go[$max_index_to_go] = $level;
-
-        my $seqno = $type_sequence_to_go[$max_index_to_go] =
-          $rtoken_vars->[_TYPE_SEQUENCE_];
-
-        my $in_continued_quote =
-          ( $Ktoken_vars == $K_first ) && $line_of_tokens->{_starting_in_quote};
+        # We keep a running sum of token lengths from the start of this batch:
+        #   summed_lengths_to_go[$i]   = total length to just before token $i
+        #   summed_lengths_to_go[$i+1] = total length to just after token $i
+        $summed_lengths_to_go[ $max_index_to_go + 1 ] =
+          $summed_lengths_to_go[$max_index_to_go] + $length;
 
         # Initializations for first token of new batch
         if ( $max_index_to_go == 0 ) {
 
-            $starting_in_quote = $in_continued_quote;
+            # Reset flag '$starting_in_quote' for a new batch.  It must be set
+            # to the value of '$in_continued_quote', but here for efficiency we
+            # set it to zero, which is its normal value. Then in coding below
+            # we will change it if we find we are actually in a continued quote.
+            $starting_in_quote = 0;
 
             # Update the next parent sequence number for each new batch.
 
@@ -12664,33 +12693,15 @@ EOM
             }
         }
 
-        $nobreak_to_go[$max_index_to_go] = $no_internal_newlines;
-
-        my $length = $rtoken_vars->[_TOKEN_LENGTH_];
-
-        # Safety check that length is defined. Should not be needed now.
-        # Former patch for indent-only, in which the entire set of tokens is
-        # turned into type 'q'. Lengths may have not been defined because sub
-        # 'respace_tokens' is bypassed. We do not need lengths in this case,
-        # but we will use the character count to have a defined value.  In the
-        # future, it would be nicer to have 'respace_tokens' convert the lines
-        # to quotes and get correct lengths.
-        if ( !defined($length) ) {
-            $length = length($token);
-        }
-
-        $token_lengths_to_go[$max_index_to_go] = $length;
-
-        # We keep a running sum of token lengths from the start of this batch:
-        #   summed_lengths_to_go[$i]   = total length to just before token $i
-        #   summed_lengths_to_go[$i+1] = total length to just after token $i
-        $summed_lengths_to_go[ $max_index_to_go + 1 ] =
-          $summed_lengths_to_go[$max_index_to_go] + $length;
-
         # Define the indentation that this token will have in two cases:
         # Without CI = reduced_spaces_to_go
         # With CI    = leading_spaces_to_go
-        if ($in_continued_quote) {
+        if ( ( $Ktoken_vars == $K_first )
+            && $line_of_tokens->{_starting_in_quote} )
+        {
+            # in a continued quote - correct value set above if first token
+            if ( $max_index_to_go == 0 ) { $starting_in_quote = 1 }
+
             $leading_spaces_to_go[$max_index_to_go] = 0;
             $reduced_spaces_to_go[$max_index_to_go] = 0;
         }
@@ -13249,28 +13260,25 @@ EOM
                 }
             }
 
-            # if at last token ...
-            if ( $Ktoken_vars == $K_last ) {
+            #---------------------
+            # handle side comments
+            #---------------------
+            if ($has_side_comment) {
 
-                #---------------------
-                # handle side comments
-                #---------------------
-                if ($has_side_comment) {
+                # if at last token ...
+                if ( $Ktoken_vars == $K_last ) {
                     $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
                     next;
                 }
-            }
 
-            # if before last token ... do not allow breaks which would promote
-            # a side comment to a block comment
-            elsif (
-                $has_side_comment
-                && (   $Ktoken_vars == $K_last - 1
+                # if before last token ... do not allow breaks which would
+                # promote a side comment to a block comment
+                elsif ($Ktoken_vars == $K_last - 1
                     || $Ktoken_vars == $K_last - 2
                     && $rLL->[ $K_last - 1 ]->[_TYPE_] eq 'b' )
-              )
-            {
-                $no_internal_newlines = 2;
+                {
+                    $no_internal_newlines = 2;
+                }
             }
 
             # Process non-blank and non-comment tokens ...
