@@ -4951,7 +4951,6 @@ EOM
         my @ci_string = ();  # string needed to compute continuation indentation
         my $container_environment = EMPTY_STRING;
         my $im                    = -1;             # previous $i value
-        my $num;
 
         # Count the number of '1's in the string (previously sub ones_count)
         my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
@@ -5354,9 +5353,8 @@ EOM
 
                                 # note: older versions of perl require the /gc
                                 # modifier here or else the \G does not work.
-                                if ( $block_type_i =~ /\G('|::|\w)/gc ) {
-                                    $in_statement_continuation = 0;
-                                }
+                                $in_statement_continuation = 0
+                                  if ( $block_type_i =~ /\G('|::|\w)/gc );
                             }
 
                             # ...and include all block types except user subs
@@ -5456,8 +5454,6 @@ EOM
 
                     # update continuation flag ...
 
-                    ## if ( $type_i ne 'b' && $type_i ne '#' ) {  # moved above
-
                     # if we are in a BLOCK
                     if ($nesting_block_flag) {
 
@@ -5498,8 +5494,6 @@ EOM
                             $in_statement_continuation = 1;
                         }
                     } ## end else [ if ($nesting_block_flag)]
-
-                    ##}  ## end if ( $type_i ne 'b' ... # (old moved above)
 
                 } ## end else [ if ( $type_i eq '{' ||...})]
 
@@ -5559,12 +5553,12 @@ EOM
 
             # Form and store the previous token
             if ( $im >= 0 ) {
-                $num =
+                my $numc =
                   $rtoken_map->[$i] - $rtoken_map->[$im];  # how many characters
 
-                if ( $num > 0 ) {
+                if ( $numc > 0 ) {
                     push( @tokens,
-                        substr( $input_line, $rtoken_map->[$im], $num ) );
+                        substr( $input_line, $rtoken_map->[$im], $numc ) );
                 }
             }
 
@@ -5577,9 +5571,9 @@ EOM
         } ## end foreach my $i ( @{$routput_token_list...})
 
         # Form and store the final token
-        $num = length($input_line) - $rtoken_map->[$im];   # make the last token
-        if ( $num > 0 ) {
-            push( @tokens, substr( $input_line, $rtoken_map->[$im], $num ) );
+        my $numc = length($input_line) - $rtoken_map->[$im];
+        if ( $numc > 0 ) {
+            push( @tokens, substr( $input_line, $rtoken_map->[$im], $numc ) );
         }
 
         $line_of_tokens->{_rtoken_type}    = \@token_type;
