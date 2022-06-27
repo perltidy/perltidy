@@ -7044,9 +7044,37 @@ sub store_token {
     # NOTE: called once per token so coding efficiency is critical here
     #------------------------------------------------------------------
 
-    my $type       = $item->[_TYPE_];
-    my $is_blank   = $type eq 'b';
-    my $block_type = EMPTY_STRING;
+    # The next multiple assignment statements are significantly faster than
+    # doing them one-by-one.
+    my (
+
+        $type,
+        $token,
+        $type_sequence
+
+      ) = @{$item}[
+
+      _TYPE_,
+      _TOKEN_,
+      _TYPE_SEQUENCE_
+
+      ];
+
+    my (
+
+        $is_blank,
+        $is_comment,
+        $token_length,
+        $block_type,
+
+    ) = (
+
+        $type eq 'b',
+        $type eq '#',
+        length($token),
+        EMPTY_STRING,
+
+    );
 
     # Do not output consecutive blanks. This situation should have been
     # prevented earlier, but it is worth checking because later routines
@@ -7055,9 +7083,11 @@ sub store_token {
         return;
     }
 
+    # Correct the token length if encoded.  Later it may be adjusted again if
+    # phantom or ignoring side comment lengths.
+    if ($is_encoded_data) { $token_length = $length_function->($token) }
+
     # check for a sequenced item (i.e., container or ?/:)
-    my $type_sequence = $item->[_TYPE_SEQUENCE_];
-    my $token         = $item->[_TOKEN_];
     if ($type_sequence) {
 
         if ( $is_opening_token{$token} ) {
@@ -7151,15 +7181,7 @@ sub store_token {
         }
     }
 
-    # Find the length of this token.  Later it may be adjusted if phantom
-    # or ignoring side comment lengths.
-    my $token_length =
-        $is_encoded_data
-      ? $length_function->($token)
-      : length($token);
-
     # handle comments
-    my $is_comment = $type eq '#';
     if ($is_comment) {
 
         # trim comments if necessary
