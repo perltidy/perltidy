@@ -2909,38 +2909,36 @@ EOM
                         && $nlines == 2 );
 
                     # EXCEPTION 5: misc additional rules for commas and equals
-                    if ($delete_me) {
+                    if ( $delete_me && $tok_count == 1 ) {
 
                         # okay to delete second and higher copies of a token
-                        if ( $tok_count == 1 ) {
 
-                            # for a comma...
-                            if ( $raw_tok eq ',' ) {
+                        # for a comma...
+                        if ( $raw_tok eq ',' ) {
 
-                                # Do not delete commas before an equals
-                                $delete_me = 0
-                                  if ( defined($i_eq) && $i < $i_eq );
+                            # Do not delete commas before an equals
+                            $delete_me = 0
+                              if ( defined($i_eq) && $i < $i_eq );
 
-                                # Do not delete line-level commas
-                                $delete_me = 0 if ( $lev <= $group_level );
+                            # Do not delete line-level commas
+                            $delete_me = 0 if ( $lev <= $group_level );
+                        }
+
+                        # For an assignment at group level..
+                        if (   $is_assignment{$raw_tok}
+                            && $lev == $group_level )
+                        {
+
+                            # Do not delete if it is the last alignment of
+                            # multiple tokens; this will prevent some
+                            # undesirable alignments
+                            if ( $imax > 0 && $i == $imax ) {
+                                $delete_me = 0;
                             }
 
-                            # For an assignment at group level..
-                            if (   $is_assignment{$raw_tok}
-                                && $lev == $group_level )
-                            {
-
-                                # Do not delete if it is the last alignment of
-                                # multiple tokens; this will prevent some
-                                # undesirable alignments
-                                if ( $imax > 0 && $i == $imax ) {
-                                    $delete_me = 0;
-                                }
-
-                                # Otherwise, set a flag to delete most
-                                # remaining tokens
-                                else { $deleted_assignment_token = $raw_tok }
-                            }
+                            # Otherwise, set a flag to delete most
+                            # remaining tokens
+                            else { $deleted_assignment_token = $raw_tok }
                         }
                     }
 
@@ -4933,6 +4931,254 @@ sub get_output_line_number {
         return;
     }
 
+    sub handle_cached_line {
+
+        my ( $self, $rinput, $leading_string, $leading_string_length ) = @_;
+
+        # The cached line will either be:
+        # - written out, or
+        # - or combined with the current line
+
+        my $last_level_written = $self->[_last_level_written_];
+
+        my $leading_space_count       = $rinput->{leading_space_count};
+        my $str                       = $rinput->{line};
+        my $str_length                = $rinput->{line_length};
+        my $rvertical_tightness_flags = $rinput->{rvertical_tightness_flags};
+        my $level                     = $rinput->{level};
+        my $level_end                 = $rinput->{level_end};
+        my $maximum_line_length       = $rinput->{maximum_line_length};
+
+        my ( $open_or_close, $opening_flag, $closing_flag, $seqno, $valid,
+            $seqno_beg, $seqno_end );
+        if ($rvertical_tightness_flags) {
+
+            $open_or_close = $rvertical_tightness_flags->{_vt_type};
+            $seqno_beg     = $rvertical_tightness_flags->{_vt_seqno_beg};
+        }
+
+        # Dump an invalid cached line
+        if ( !$cached_line_valid ) {
+            $self->valign_output_step_C(
+                $seqno_string,
+                $last_nonblank_seqno_string,
+
+                $cached_line_text,
+                $cached_line_leading_space_count,
+                $last_level_written,
+                $cached_line_Kend
+            );
+        }
+
+        # Handle cached line ending in OPENING tokens
+        elsif ( $cached_line_type == 1 || $cached_line_type == 3 ) {
+
+            my $gap = $leading_space_count - $cached_line_text_length;
+
+            # handle option of just one tight opening per line:
+            if ( $cached_line_opening_flag == 1 ) {
+                if ( defined($open_or_close) && $open_or_close == 1 ) {
+                    $gap = -1;
+                }
+            }
+
+            # Do not join the lines if this might produce a one-line
+            # container which exceeds the maximum line length.  This is
+            # necessary prevent blinking, particularly with the combination
+            # -xci -pvt=2.  In that case a one-line block alternately forms
+            # and breaks, causing -xci to alternately turn on and off (case
+            # b765).
+            # Patched to fix cases b656 b862 b971 b972: always do the check
+            # if the maximum line length changes (due to -vmll).
+            if (
+                $gap >= 0
+                && ( $maximum_line_length != $cached_line_maximum_length
+                    || ( defined($level_end) && $level > $level_end ) )
+              )
+            {
+                my $test_line_length =
+                  $cached_line_text_length + $gap + $str_length;
+
+                # Add a small tolerance in the length test (fixes case b862)
+                if ( $test_line_length > $cached_line_maximum_length - 2 ) {
+                    $gap = -1;
+                }
+            }
+
+            if ( $gap >= 0 && defined($seqno_beg) ) {
+                $maximum_line_length   = $cached_line_maximum_length;
+                $leading_string        = $cached_line_text . SPACE x $gap;
+                $leading_string_length = $cached_line_text_length + $gap;
+                $leading_space_count   = $cached_line_leading_space_count;
+                $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
+                $level        = $last_level_written;
+            }
+            else {
+                $self->valign_output_step_C(
+                    $seqno_string,
+                    $last_nonblank_seqno_string,
+
+                    $cached_line_text,
+                    $cached_line_leading_space_count,
+                    $last_level_written,
+                    $cached_line_Kend
+                );
+            }
+        }
+
+        # Handle cached line ending in CLOSING tokens
+        else {
+            my $test_line =
+              $cached_line_text . SPACE x $cached_line_closing_flag . $str;
+            my $test_line_length =
+              $cached_line_text_length +
+              $cached_line_closing_flag +
+              $str_length;
+            if (
+
+                # The new line must start with container
+                $seqno_beg
+
+                # The container combination must be okay..
+                && (
+
+                    # okay to combine like types
+                    ( $open_or_close == $cached_line_type )
+
+                    # closing block brace may append to non-block
+                    || ( $cached_line_type == 2 && $open_or_close == 4 )
+
+                    # something like ');'
+                    || ( !$open_or_close && $cached_line_type == 2 )
+
+                )
+
+                # The combined line must fit
+                && ( $test_line_length <= $cached_line_maximum_length )
+              )
+            {
+
+                $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
+
+                # Patch to outdent closing tokens ending # in ');' If we
+                # are joining a line like ');' to a previous stacked set of
+                # closing tokens, then decide if we may outdent the
+                # combined stack to the indentation of the ');'.  Since we
+                # should not normally outdent any of the other tokens more
+                # than the indentation of the lines that contained them, we
+                # will only do this if all of the corresponding opening
+                # tokens were on the same line.  This can happen with -sot
+                # and -sct.
+
+                # For example, it is ok here:
+                #   __PACKAGE__->load_components( qw(
+                #         PK::Auto
+                #         Core
+                #   ));
+                #
+                # But, for example, we do not outdent in this example
+                # because that would put the closing sub brace out farther
+                # than the opening sub brace:
+                #
+                #   perltidy -sot -sct
+                #   $c->Tk::bind(
+                #       '<Control-f>' => sub {
+                #           my ($c) = @_;
+                #           my $e = $c->XEvent;
+                #           itemsUnderArea $c;
+                #       } );
+                #
+                if (   $str =~ /^\);/
+                    && $cached_line_text =~ /^[\)\}\]\s]*$/ )
+                {
+
+                    # The way to tell this is if the stacked sequence
+                    # numbers of this output line are the reverse of the
+                    # stacked sequence numbers of the previous non-blank
+                    # line of sequence numbers.  So we can join if the
+                    # previous nonblank string of tokens is the mirror
+                    # image.  For example if stack )}] is 13:8:6 then we
+                    # are looking for a leading stack like [{( which
+                    # is 6:8:13. We only need to check the two ends,
+                    # because the intermediate tokens must fall in order.
+                    # Note on speed: having to split on colons and
+                    # eliminate multiple colons might appear to be slow,
+                    # but it's not an issue because we almost never come
+                    # through here.  In a typical file we don't.
+
+                    $seqno_string               =~ s/^:+//;
+                    $last_nonblank_seqno_string =~ s/^:+//;
+                    $seqno_string               =~ s/:+/:/g;
+                    $last_nonblank_seqno_string =~ s/:+/:/g;
+
+                    # how many spaces can we outdent?
+                    my $diff =
+                      $cached_line_leading_space_count - $leading_space_count;
+                    if (   $diff > 0
+                        && length($seqno_string)
+                        && length($last_nonblank_seqno_string) ==
+                        length($seqno_string) )
+                    {
+                        my @seqno_last =
+                          ( split /:/, $last_nonblank_seqno_string );
+                        my @seqno_now = ( split /:/, $seqno_string );
+                        if (   @seqno_now
+                            && @seqno_last
+                            && $seqno_now[-1] == $seqno_last[0]
+                            && $seqno_now[0] == $seqno_last[-1] )
+                        {
+
+                            # OK to outdent ..
+                            # for absolute safety, be sure we only remove
+                            # whitespace
+                            my $ws = substr( $test_line, 0, $diff );
+                            if ( ( length($ws) == $diff )
+                                && $ws =~ /^\s+$/ )
+                            {
+
+                                $test_line = substr( $test_line, $diff );
+                                $cached_line_leading_space_count -= $diff;
+                                $last_level_written =
+                                  $self->level_change(
+                                    $cached_line_leading_space_count,
+                                    $diff, $last_level_written );
+                                $self->reduce_valign_buffer_indentation($diff);
+                            }
+
+                            # shouldn't happen, but not critical:
+                            ##else {
+                            ## ERROR transferring indentation here
+                            ##}
+                        }
+                    }
+                }
+
+                # Change the args to look like we received the combined line
+                $str                   = $test_line;
+                $str_length            = $test_line_length;
+                $leading_string        = EMPTY_STRING;
+                $leading_string_length = 0;
+                $leading_space_count   = $cached_line_leading_space_count;
+                $level                 = $last_level_written;
+                $maximum_line_length   = $cached_line_maximum_length;
+            }
+            else {
+                $self->valign_output_step_C(
+                    $seqno_string,
+                    $last_nonblank_seqno_string,
+
+                    $cached_line_text,
+                    $cached_line_leading_space_count,
+                    $last_level_written,
+                    $cached_line_Kend
+                );
+            }
+        }
+        return ( $str, $str_length, $leading_string, $leading_string_length,
+            $leading_space_count, $level, $maximum_line_length, );
+
+    } ## end sub handle_cached_line
+
     sub valign_output_step_B {
 
         ###############################################################
@@ -4954,8 +5200,6 @@ sub get_output_line_number {
         my $level_end                 = $rinput->{level_end};
         my $Kend                      = $rinput->{Kend};
         my $maximum_line_length       = $rinput->{maximum_line_length};
-
-        my $last_level_written = $self->[_last_level_written_];
 
         # Useful -gcs test cases for wide characters are
         # perl527/(method.t.2, reg_mesg.t, mime-header.t)
@@ -5040,231 +5284,25 @@ sub get_output_line_number {
         # would be a disaster.
         if ( length($cached_line_text) ) {
 
-            # Dump an invalid cached line
-            if ( !$cached_line_valid ) {
-                $self->valign_output_step_C(
-                    $seqno_string,
-                    $last_nonblank_seqno_string,
+            (
+                $str,
+                $str_length,
+                $leading_string,
+                $leading_string_length,
+                $leading_space_count,
+                $level,
+                $maximum_line_length
 
-                    $cached_line_text,
-                    $cached_line_leading_space_count,
-                    $last_level_written,
-                    $cached_line_Kend
-                );
-            }
+            ) = $self->handle_cached_line( $rinput, $leading_string,
+                $leading_string_length );
 
-            # Handle cached line ending in OPENING tokens
-            elsif ( $cached_line_type == 1 || $cached_line_type == 3 ) {
+            $cached_line_type           = 0;
+            $cached_line_text           = EMPTY_STRING;
+            $cached_line_text_length    = 0;
+            $cached_line_Kend           = undef;
+            $cached_line_maximum_length = undef;
 
-                my $gap = $leading_space_count - $cached_line_text_length;
-
-                # handle option of just one tight opening per line:
-                if ( $cached_line_opening_flag == 1 ) {
-                    if ( defined($open_or_close) && $open_or_close == 1 ) {
-                        $gap = -1;
-                    }
-                }
-
-                # Do not join the lines if this might produce a one-line
-                # container which exceeds the maximum line length.  This is
-                # necessary prevent blinking, particularly with the combination
-                # -xci -pvt=2.  In that case a one-line block alternately forms
-                # and breaks, causing -xci to alternately turn on and off (case
-                # b765).
-                # Patched to fix cases b656 b862 b971 b972: always do the check
-                # if the maximum line length changes (due to -vmll).
-                if (
-                    $gap >= 0
-                    && ( $maximum_line_length != $cached_line_maximum_length
-                        || ( defined($level_end) && $level > $level_end ) )
-                  )
-                {
-                    my $test_line_length =
-                      $cached_line_text_length + $gap + $str_length;
-
-                    # Add a small tolerance in the length test (fixes case b862)
-                    if ( $test_line_length > $cached_line_maximum_length - 2 ) {
-                        $gap = -1;
-                    }
-                }
-
-                if ( $gap >= 0 && defined($seqno_beg) ) {
-                    $maximum_line_length   = $cached_line_maximum_length;
-                    $leading_string        = $cached_line_text . SPACE x $gap;
-                    $leading_string_length = $cached_line_text_length + $gap;
-                    $leading_space_count   = $cached_line_leading_space_count;
-                    $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
-                    $level        = $last_level_written;
-                }
-                else {
-                    $self->valign_output_step_C(
-                        $seqno_string,
-                        $last_nonblank_seqno_string,
-
-                        $cached_line_text,
-                        $cached_line_leading_space_count,
-                        $last_level_written,
-                        $cached_line_Kend
-                    );
-                }
-            }
-
-            # Handle cached line ending in CLOSING tokens
-            else {
-                my $test_line =
-                  $cached_line_text . SPACE x $cached_line_closing_flag . $str;
-                my $test_line_length =
-                  $cached_line_text_length +
-                  $cached_line_closing_flag +
-                  $str_length;
-                if (
-
-                    # The new line must start with container
-                    $seqno_beg
-
-                    # The container combination must be okay..
-                    && (
-
-                        # okay to combine like types
-                        ( $open_or_close == $cached_line_type )
-
-                        # closing block brace may append to non-block
-                        || ( $cached_line_type == 2 && $open_or_close == 4 )
-
-                        # something like ');'
-                        || ( !$open_or_close && $cached_line_type == 2 )
-
-                    )
-
-                    # The combined line must fit
-                    && ( $test_line_length <= $cached_line_maximum_length )
-                  )
-                {
-
-                    $seqno_string = $cached_seqno_string . ':' . $seqno_beg;
-
-                    # Patch to outdent closing tokens ending # in ');' If we
-                    # are joining a line like ');' to a previous stacked set of
-                    # closing tokens, then decide if we may outdent the
-                    # combined stack to the indentation of the ');'.  Since we
-                    # should not normally outdent any of the other tokens more
-                    # than the indentation of the lines that contained them, we
-                    # will only do this if all of the corresponding opening
-                    # tokens were on the same line.  This can happen with -sot
-                    # and -sct.
-
-                    # For example, it is ok here:
-                    #   __PACKAGE__->load_components( qw(
-                    #         PK::Auto
-                    #         Core
-                    #   ));
-                    #
-                    # But, for example, we do not outdent in this example
-                    # because that would put the closing sub brace out farther
-                    # than the opening sub brace:
-                    #
-                    #   perltidy -sot -sct
-                    #   $c->Tk::bind(
-                    #       '<Control-f>' => sub {
-                    #           my ($c) = @_;
-                    #           my $e = $c->XEvent;
-                    #           itemsUnderArea $c;
-                    #       } );
-                    #
-                    if (   $str =~ /^\);/
-                        && $cached_line_text =~ /^[\)\}\]\s]*$/ )
-                    {
-
-                        # The way to tell this is if the stacked sequence
-                        # numbers of this output line are the reverse of the
-                        # stacked sequence numbers of the previous non-blank
-                        # line of sequence numbers.  So we can join if the
-                        # previous nonblank string of tokens is the mirror
-                        # image.  For example if stack )}] is 13:8:6 then we
-                        # are looking for a leading stack like [{( which
-                        # is 6:8:13. We only need to check the two ends,
-                        # because the intermediate tokens must fall in order.
-                        # Note on speed: having to split on colons and
-                        # eliminate multiple colons might appear to be slow,
-                        # but it's not an issue because we almost never come
-                        # through here.  In a typical file we don't.
-
-                        $seqno_string               =~ s/^:+//;
-                        $last_nonblank_seqno_string =~ s/^:+//;
-                        $seqno_string               =~ s/:+/:/g;
-                        $last_nonblank_seqno_string =~ s/:+/:/g;
-
-                        # how many spaces can we outdent?
-                        my $diff =
-                          $cached_line_leading_space_count -
-                          $leading_space_count;
-                        if (   $diff > 0
-                            && length($seqno_string)
-                            && length($last_nonblank_seqno_string) ==
-                            length($seqno_string) )
-                        {
-                            my @seqno_last =
-                              ( split /:/, $last_nonblank_seqno_string );
-                            my @seqno_now = ( split /:/, $seqno_string );
-                            if (   @seqno_now
-                                && @seqno_last
-                                && $seqno_now[-1] == $seqno_last[0]
-                                && $seqno_now[0] == $seqno_last[-1] )
-                            {
-
-                                # OK to outdent ..
-                                # for absolute safety, be sure we only remove
-                                # whitespace
-                                my $ws = substr( $test_line, 0, $diff );
-                                if ( ( length($ws) == $diff )
-                                    && $ws =~ /^\s+$/ )
-                                {
-
-                                    $test_line = substr( $test_line, $diff );
-                                    $cached_line_leading_space_count -= $diff;
-                                    $last_level_written =
-                                      $self->level_change(
-                                        $cached_line_leading_space_count,
-                                        $diff, $last_level_written );
-                                    $self->reduce_valign_buffer_indentation(
-                                        $diff);
-                                }
-
-                                # shouldn't happen, but not critical:
-                                ##else {
-                                ## ERROR transferring indentation here
-                                ##}
-                            }
-                        }
-                    }
-
-                    # Change the args to look like we received the combined line
-                    $str                   = $test_line;
-                    $str_length            = $test_line_length;
-                    $leading_string        = EMPTY_STRING;
-                    $leading_string_length = 0;
-                    $leading_space_count   = $cached_line_leading_space_count;
-                    $level                 = $last_level_written;
-                    $maximum_line_length   = $cached_line_maximum_length;
-                }
-                else {
-                    $self->valign_output_step_C(
-                        $seqno_string,
-                        $last_nonblank_seqno_string,
-
-                        $cached_line_text,
-                        $cached_line_leading_space_count,
-                        $last_level_written,
-                        $cached_line_Kend
-                    );
-                }
-            }
         }
-        $cached_line_type           = 0;
-        $cached_line_text           = EMPTY_STRING;
-        $cached_line_text_length    = 0;
-        $cached_line_Kend           = undef;
-        $cached_line_maximum_length = undef;
 
         # make the line to be written
         my $line        = $leading_string . $str;
@@ -5650,3 +5688,4 @@ sub report_anything_unusual {
     return;
 }
 1;
+
