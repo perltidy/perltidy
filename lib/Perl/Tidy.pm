@@ -462,6 +462,7 @@ BEGIN {
         _postfilter_               => $i++,
         _prefilter_                => $i++,
         _rOpts_                    => $i++,
+        _saw_pbp_                  => $i++,
         _tabsize_                  => $i++,
         _teefile_stream_           => $i++,
         _user_formatter_           => $i++,
@@ -745,10 +746,14 @@ EOM
         $rpending_complaint, $dump_options_type,
       );
 
+    # Only filenames should remain in @ARGV
+    my @Arg_files = @ARGV;
+
     $self->[_rOpts_] = $rOpts;
 
     my $saw_pbp =
       grep { $_ eq '-pbp' || $_ eq '-perl-best-practices' } @{$rraw_options};
+    $self->[_saw_pbp_] = $saw_pbp;
 
     #------------------------------------
     # Handle requests to dump information
@@ -813,6 +818,7 @@ EOM
     #----------------------------------------
     my $tabsize =
       check_options( $rOpts, $is_Windows, $Windows_type, $rpending_complaint );
+    $self->[_tabsize_] = $tabsize;
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -874,14 +880,14 @@ EOM
 
     # no filenames should be given if input is from an array
     if ($source_stream) {
-        if ( @ARGV > 0 ) {
+        if ( @Arg_files > 0 ) {
             Die(
 "You may not specify any filenames when a source array is given\n"
             );
         }
 
-        # we'll stuff the source array into ARGV
-        unshift( @ARGV, $source_stream );
+        # we'll stuff the source array into Arg_files
+        unshift( @Arg_files, $source_stream );
 
         # No special treatment for source stream which is a filename.
         # This will enable checks for binary files and other bad stuff.
@@ -890,7 +896,7 @@ EOM
 
     # use stdin by default if no source array and no args
     else {
-        unshift( @ARGV, '-' ) unless @ARGV;
+        unshift( @Arg_files, '-' ) unless @Arg_files;
     }
 
     # Flag for loading module Unicode::GCString for evaluating text width:
@@ -902,375 +908,57 @@ EOM
         $loaded_unicode_gcstring = 0;
     }
 
-    #------------------------------------------------
-    # main loop to process all files in argument list
-    #------------------------------------------------
-
     # Remove duplicate filenames.  Otherwise, for example if the user entered
     #     perltidy -b myfile.pl myfile.pl
     # the backup version of the original would be lost.
-    if ( @ARGV > 1 ) {
+    if ( @Arg_files > 1 ) {
         my %seen = ();
-        @ARGV = grep { !$seen{$_}++ } @ARGV;
+        @Arg_files = grep { !$seen{$_}++ } @Arg_files;
     }
 
     # If requested, process in order of increasing file size
     # This can significantly reduce perl's virtual memory usage during testing.
-    if ( @ARGV > 1 && $rOpts->{'file-size-order'} ) {
-        @ARGV =
+    if ( @Arg_files > 1 && $rOpts->{'file-size-order'} ) {
+        @Arg_files =
           map  { $_->[0] }
           sort { $a->[1] <=> $b->[1] }
-          map  { [ $_, -e $_ ? -s $_ : 0 ] } @ARGV;
+          map  { [ $_, -e $_ ? -s $_ : 0 ] } @Arg_files;
     }
 
-    my $number_of_files = @ARGV;
-    while ( my $input_file = shift @ARGV ) {
+    my $logfile_header = make_logfile_header( $rOpts, $config_file,
+        $rraw_options, $Windows_type, $readable_options, );
 
-        my $fileroot;
-        my @input_file_stat;
-        my $display_name;
+    # Store some values needed by lower level routines
+    $self->[_diagnostics_object_] = $diagnostics_object;
+    $self->[_postfilter_]         = $postfilter;
+    $self->[_prefilter_]          = $prefilter;
+    $self->[_user_formatter_]     = $user_formatter;
 
-        #--------------------------
-        # prepare this input stream
-        #--------------------------
-        if ($source_stream) {
-            $fileroot     = "perltidy";
-            $display_name = "<source_stream>";
+    #--------------------------
+    # loop to process all files
+    #--------------------------
+    $self->process_all_files(
 
-            # If the source is from an array or string, then .LOG output
-            # is only possible if a logfile stream is specified.  This prevents
-            # unexpected perltidy.LOG files.
-            if ( !defined($logfile_stream) ) {
-                $logfile_stream = Perl::Tidy::DevNull->new();
+        \%input_hash,
+        \@Arg_files,
 
-                # Likewise for .TEE and .DEBUG output
-            }
-            if ( !defined($teefile_stream) ) {
-                $teefile_stream = Perl::Tidy::DevNull->new();
-            }
-            if ( !defined($debugfile_stream) ) {
-                $debugfile_stream = Perl::Tidy::DevNull->new();
-            }
-        }
-        elsif ( $input_file eq '-' ) {    # '-' indicates input from STDIN
-            $fileroot     = "perltidy";   # root name to use for .ERR, .LOG, etc
-            $display_name = "<stdin>";
-            $in_place_modify = 0;
-        }
-        else {
-            $fileroot     = $input_file;
-            $display_name = $input_file;
-            unless ( -e $input_file ) {
+        # filename stuff...
+        $output_extension,
+        $forbidden_file_extensions,
+        $in_place_modify,
+        $backup_extension,
+        $delete_backup,
 
-                # file doesn't exist - check for a file glob
-                if ( $input_file =~ /([\?\*\[\{])/ ) {
+        # logfile stuff...
+        $logfile_header,
+        $rpending_complaint,
+        $rpending_logfile_message,
 
-                    # Windows shell may not remove quotes, so do it
-                    my $input_file = $input_file;
-                    if ( $input_file =~ /^\'(.+)\'$/ ) { $input_file = $1 }
-                    if ( $input_file =~ /^\"(.+)\"$/ ) { $input_file = $1 }
-                    my $pattern = fileglob_to_re($input_file);
-                    my $dh;
-                    if ( opendir( $dh, './' ) ) {
-                        my @files =
-                          grep { /$pattern/ && !-d } readdir($dh);
-                        ##grep { /$pattern/ && !-d $_ } readdir($dh);
-                        closedir($dh);
-                        if (@files) {
-                            unshift @ARGV, @files;
-                            next;
-                        }
-                    }
-                }
-                Warn("skipping file: '$input_file': no matches found\n");
-                next;
-            }
+    );
 
-            unless ( -f $input_file ) {
-                Warn("skipping file: $input_file: not a regular file\n");
-                next;
-            }
-
-            # As a safety precaution, skip zero length files.
-            # If for example a source file got clobbered somehow,
-            # the old .tdy or .bak files might still exist so we
-            # shouldn't overwrite them with zero length files.
-            unless ( -s $input_file ) {
-                Warn("skipping file: $input_file: Zero size\n");
-                next;
-            }
-
-            # And avoid formatting extremely large files. Since perltidy reads
-            # files into memory, trying to process an extremely large file
-            # could cause system problems.
-            my $size_in_mb = ( -s $input_file ) / ( 1024 * 1024 );
-            if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
-                $size_in_mb = sprintf( "%0.1f", $size_in_mb );
-                Warn(
-"skipping file: $input_file: size $size_in_mb MB exceeds limit $rOpts->{'maximum-file-size-mb'}; use -mfs=i to change\n"
-                );
-                next;
-            }
-
-            unless ( ( -T $input_file ) || $rOpts->{'force-read-binary'} ) {
-                Warn(
-                    "skipping file: $input_file: Non-text (override with -f)\n"
-                );
-                next;
-            }
-
-            # we should have a valid filename now
-            $fileroot        = $input_file;
-            @input_file_stat = stat($input_file);
-
-            if ( $OSNAME eq 'VMS' ) {
-                ( $fileroot, $dot ) = check_vms_filename($fileroot);
-                $self->[_file_extension_separator_] = $dot;
-            }
-
-            # add option to change path here
-            if ( defined( $rOpts->{'output-path'} ) ) {
-
-                my ( $base, $old_path ) = fileparse($fileroot);
-                my $new_path = $rOpts->{'output-path'};
-                unless ( -d $new_path ) {
-                    unless ( mkdir $new_path, 0777 ) {
-                        Die("unable to create directory $new_path: $ERRNO\n");
-                    }
-                }
-                my $path = $new_path;
-                $fileroot = catfile( $path, $base );
-                unless ($fileroot) {
-                    Die(<<EOM);
-------------------------------------------------------------------------
-Problem combining $new_path and $base to make a filename; check -opath
-------------------------------------------------------------------------
-EOM
-                }
-            }
-        }
-
-        # Skip files with same extension as the output files because
-        # this can lead to a messy situation with files like
-        # script.tdy.tdy.tdy ... or worse problems ...  when you
-        # rerun perltidy over and over with wildcard input.
-        if (
-            !$source_stream
-            && (   $input_file =~ /$forbidden_file_extensions/
-                || $input_file eq 'DIAGNOSTICS' )
-          )
-        {
-            Warn("skipping file: $input_file: wrong extension\n");
-            next;
-        }
-
-        # copy source to a string buffer, decoding from utf8 if necessary
-        my (
-            $buf,
-            $is_encoded_data,
-            $decoded_input_as,
-            $encoding_log_message,
-            $length_function,
-
-        ) = $self->get_decoded_string_buffer( $input_file, $display_name,
-            $rpending_logfile_message );
-
-        # Skip this file on any error
-        next if ( !defined($buf) );
-
-        # Register this file name with the Diagnostics package, if any.
-        $diagnostics_object->set_input_file($input_file)
-          if $diagnostics_object;
-
-        # OK: the (possibly decoded) input is now in string $buf. We just need
-        # to to prepare the output and error logger before formatting it.
-
-        #--------------------------
-        # prepare the output stream
-        #--------------------------
-        my $output_file = undef;
-        my $output_name = EMPTY_STRING;
-        my $actual_output_extension;
-
-        if ( $rOpts->{'outfile'} ) {
-
-            if ( $number_of_files <= 1 ) {
-
-                if ( $rOpts->{'standard-output'} ) {
-                    my $msg = "You may not use -o and -st together";
-                    $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
-                    Die("$msg\n");
-                }
-                elsif ($destination_stream) {
-                    Die(
-"You may not specify a destination array and -o together\n"
-                    );
-                }
-                elsif ( defined( $rOpts->{'output-path'} ) ) {
-                    Die("You may not specify -o and -opath together\n");
-                }
-                elsif ( defined( $rOpts->{'output-file-extension'} ) ) {
-                    Die("You may not specify -o and -oext together\n");
-                }
-                $output_file = $rOpts->{outfile};
-                $output_name = $output_file;
-
-                # make sure user gives a file name after -o
-                if ( $output_file =~ /^-/ ) {
-                    Die("You must specify a valid filename after -o\n");
-                }
-
-                # do not overwrite input file with -o
-                if ( @input_file_stat && ( $output_file eq $input_file ) ) {
-                    Die("Use 'perltidy -b $input_file' to modify in-place\n");
-                }
-            }
-            else {
-                Die("You may not use -o with more than one input file\n");
-            }
-        }
-        elsif ( $rOpts->{'standard-output'} ) {
-            if ($destination_stream) {
-                my $msg =
-                  "You may not specify a destination array and -st together\n";
-                $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
-                Die("$msg\n");
-            }
-            $output_file = '-';
-            $output_name = "<stdout>";
-
-            if ( $number_of_files <= 1 ) {
-            }
-            else {
-                Die("You may not use -st with more than one input file\n");
-            }
-        }
-        elsif ($destination_stream) {
-
-            $output_file = $destination_stream;
-            $output_name = "<destination_stream>";
-        }
-        elsif ($source_stream) {    # source but no destination goes to stdout
-            $output_file = '-';
-            $output_name = "<stdout>";
-        }
-        elsif ( $input_file eq '-' ) {
-            $output_file = '-';
-            $output_name = "<stdout>";
-        }
-        else {
-            if ($in_place_modify) {
-
-                # Send output to a temporary array buffer. This will
-                # allow efficient copying back to the input by
-                # sub backup_and_modify_in_place, below.
-                my @tmp_buff;
-                $output_file = \@tmp_buff;
-                $output_name = $display_name;
-            }
-            else {
-                $actual_output_extension = $output_extension;
-                $output_file             = $fileroot . $output_extension;
-                $output_name             = $output_file;
-            }
-        }
-
-        $rstatus->{'file_count'} += 1;
-        $rstatus->{'output_name'}     = $output_name;
-        $rstatus->{'iteration_count'} = 0;
-        $rstatus->{'converged'}       = 0;
-
-        #------------------------------------------
-        # initialize the error logger for this file
-        #------------------------------------------
-        my $warning_file = $fileroot . $dot . "ERR";
-        if ($errorfile_stream) { $warning_file = $errorfile_stream }
-        my $log_file = $fileroot . $dot . "LOG";
-        if ($logfile_stream) { $log_file = $logfile_stream }
-
-        my $logger_object = Perl::Tidy::Logger->new(
-            rOpts           => $rOpts,
-            log_file        => $log_file,
-            warning_file    => $warning_file,
-            fh_stderr       => $fh_stderr,
-            display_name    => $display_name,
-            is_encoded_data => $is_encoded_data,
-        );
-        write_logfile_header(
-            $rOpts,        $logger_object, $config_file,
-            $rraw_options, $Windows_type,  $readable_options,
-        );
-        $logger_object->write_logfile_entry($encoding_log_message)
-          if $encoding_log_message;
-
-        # Now we can add any pending messages to the log
-        if ( ${$rpending_logfile_message} ) {
-            $logger_object->write_logfile_entry( ${$rpending_logfile_message} );
-        }
-        if ( ${$rpending_complaint} ) {
-            $logger_object->complain( ${$rpending_complaint} );
-        }
-
-        my $line_separator = $rOpts->{'output-line-ending'};
-        if ( $rOpts->{'preserve-line-endings'} ) {
-            $line_separator = find_input_line_ending($input_file);
-        }
-        $line_separator = "\n" unless defined($line_separator);
-
-        # additional parameters needed by lower level routines
-        $self->[_actual_output_extension_] = $actual_output_extension;
-        $self->[_debugfile_stream_]        = $debugfile_stream;
-        $self->[_decoded_input_as_]        = $decoded_input_as;
-        $self->[_destination_stream_]      = $destination_stream;
-        $self->[_diagnostics_object_]      = $diagnostics_object;
-        $self->[_display_name_]            = $display_name;
-        $self->[_fileroot_]                = $fileroot;
-        $self->[_is_encoded_data_]         = $is_encoded_data;
-        $self->[_length_function_]         = $length_function;
-        $self->[_line_separator_]          = $line_separator;
-        $self->[_logger_object_]           = $logger_object;
-        $self->[_output_file_]             = $output_file;
-        $self->[_postfilter_]              = $postfilter;
-        $self->[_prefilter_]               = $prefilter;
-        $self->[_tabsize_]                 = $tabsize;
-        $self->[_teefile_stream_]          = $teefile_stream;
-        $self->[_user_formatter_]          = $user_formatter;
-
-        #----------------------------------------------------------
-        # Do all formatting of this buffer.
-        # Results will go to the selected output file or streams(s)
-        #----------------------------------------------------------
-        $self->process_filter_layer($buf);
-
-        #--------------------------------------------------
-        # Handle the -b option (backup and modify in-place)
-        #--------------------------------------------------
-        if ($in_place_modify) {
-            $self->backup_and_modify_in_place(
-                $input_file,       $output_file,
-                $backup_extension, $delete_backup
-            );
-            $output_file = $input_file;
-        }
-
-        #---------------------------------------------------------
-        # Set output file ownership and permissions if appropriate
-        #---------------------------------------------------------
-        if ( $output_file && -f $output_file && !-l $output_file ) {
-            if (@input_file_stat) {
-                if ( $rOpts->{'format'} eq 'tidy' ) {
-                    $self->set_output_file_permissions( $output_file,
-                        \@input_file_stat, $in_place_modify );
-                }
-
-                # else use default permissions for html and any other format
-            }
-        }
-
-        $logger_object->finish()
-          if $logger_object;
-
-    } ## end of main loop to process all files
+    #-----
+    # Exit
+    #-----
 
     # Fix for RT #130297: return a true value if anything was written to the
     # standard error output, even non-fatal warning messages, otherwise return
@@ -1789,18 +1477,403 @@ EOM
     );
 } ## end sub get_decoded_string_buffer
 
+sub process_all_files {
+
+    my (
+
+        $self,
+        $rinput_hash,
+        $rfiles,
+
+        $output_extension,
+        $forbidden_file_extensions,
+        $in_place_modify,
+        $backup_extension,
+        $delete_backup,
+
+        $logfile_header,
+        $rpending_complaint,
+        $rpending_logfile_message,
+
+    ) = @_;
+
+    # This routine is the main loop to process all files.
+    # Total formatting is done with these layers of subroutines:
+    #   perltidy                - main routine; checks run parameters
+    #  *process_all_files       - main loop to process all files; *THIS LAYER
+    #   process_filter_layer    - do any pre and post processing;
+    #   process_iteration_layer - handle any iterations on formatting
+    #   process_single_case     - solves one formatting problem
+
+    my $rOpts              = $self->[_rOpts_];
+    my $dot                = $self->[_file_extension_separator_];
+    my $diagnostics_object = $self->[_diagnostics_object_];
+
+    my $destination_stream = $rinput_hash->{'destination'};
+    my $errorfile_stream   = $rinput_hash->{'errorfile'};
+    my $logfile_stream     = $rinput_hash->{'logfile'};
+    my $teefile_stream     = $rinput_hash->{'teefile'};
+    my $debugfile_stream   = $rinput_hash->{'debugfile'};
+    my $source_stream      = $rinput_hash->{'source'};
+    my $stderr_stream      = $rinput_hash->{'stderr'};
+
+    my $number_of_files = @{$rfiles};
+    while ( my $input_file = shift @{$rfiles} ) {
+
+        my $fileroot;
+        my @input_file_stat;
+        my $display_name;
+
+        #--------------------------
+        # prepare this input stream
+        #--------------------------
+        if ($source_stream) {
+            $fileroot     = "perltidy";
+            $display_name = "<source_stream>";
+
+            # If the source is from an array or string, then .LOG output
+            # is only possible if a logfile stream is specified.  This prevents
+            # unexpected perltidy.LOG files.
+            if ( !defined($logfile_stream) ) {
+                $logfile_stream = Perl::Tidy::DevNull->new();
+
+                # Likewise for .TEE and .DEBUG output
+            }
+            if ( !defined($teefile_stream) ) {
+                $teefile_stream = Perl::Tidy::DevNull->new();
+            }
+            if ( !defined($debugfile_stream) ) {
+                $debugfile_stream = Perl::Tidy::DevNull->new();
+            }
+        }
+        elsif ( $input_file eq '-' ) {    # '-' indicates input from STDIN
+            $fileroot     = "perltidy";   # root name to use for .ERR, .LOG, etc
+            $display_name = "<stdin>";
+            $in_place_modify = 0;
+        }
+        else {
+            $fileroot     = $input_file;
+            $display_name = $input_file;
+            unless ( -e $input_file ) {
+
+                # file doesn't exist - check for a file glob
+                if ( $input_file =~ /([\?\*\[\{])/ ) {
+
+                    # Windows shell may not remove quotes, so do it
+                    my $input_file = $input_file;
+                    if ( $input_file =~ /^\'(.+)\'$/ ) { $input_file = $1 }
+                    if ( $input_file =~ /^\"(.+)\"$/ ) { $input_file = $1 }
+                    my $pattern = fileglob_to_re($input_file);
+                    my $dh;
+                    if ( opendir( $dh, './' ) ) {
+                        my @files =
+                          grep { /$pattern/ && !-d } readdir($dh);
+                        closedir($dh);
+                        next unless (@files);
+                        unshift @{$rfiles}, @files;
+                        next;
+                    }
+                }
+                Warn("skipping file: '$input_file': no matches found\n");
+                next;
+            }
+
+            unless ( -f $input_file ) {
+                Warn("skipping file: $input_file: not a regular file\n");
+                next;
+            }
+
+            # As a safety precaution, skip zero length files.
+            # If for example a source file got clobbered somehow,
+            # the old .tdy or .bak files might still exist so we
+            # shouldn't overwrite them with zero length files.
+            unless ( -s $input_file ) {
+                Warn("skipping file: $input_file: Zero size\n");
+                next;
+            }
+
+            # And avoid formatting extremely large files. Since perltidy reads
+            # files into memory, trying to process an extremely large file
+            # could cause system problems.
+            my $size_in_mb = ( -s $input_file ) / ( 1024 * 1024 );
+            if ( $size_in_mb > $rOpts->{'maximum-file-size-mb'} ) {
+                $size_in_mb = sprintf( "%0.1f", $size_in_mb );
+                Warn(
+"skipping file: $input_file: size $size_in_mb MB exceeds limit $rOpts->{'maximum-file-size-mb'}; use -mfs=i to change\n"
+                );
+                next;
+            }
+
+            unless ( ( -T $input_file ) || $rOpts->{'force-read-binary'} ) {
+                Warn("skipping file: $input_file: Non-text (override with -f)\n"
+                );
+                next;
+            }
+
+            # we should have a valid filename now
+            $fileroot        = $input_file;
+            @input_file_stat = stat($input_file);
+
+            if ( $OSNAME eq 'VMS' ) {
+                ( $fileroot, $dot ) = check_vms_filename($fileroot);
+                $self->[_file_extension_separator_] = $dot;
+            }
+
+            # add option to change path here
+            if ( defined( $rOpts->{'output-path'} ) ) {
+
+                my ( $base, $old_path ) = fileparse($fileroot);
+                my $new_path = $rOpts->{'output-path'};
+                unless ( -d $new_path ) {
+                    unless ( mkdir $new_path, 0777 ) {
+                        Die("unable to create directory $new_path: $ERRNO\n");
+                    }
+                }
+                my $path = $new_path;
+                $fileroot = catfile( $path, $base );
+                unless ($fileroot) {
+                    Die(<<EOM);
+------------------------------------------------------------------------
+Problem combining $new_path and $base to make a filename; check -opath
+------------------------------------------------------------------------
+EOM
+                }
+            }
+        }
+
+        # Skip files with same extension as the output files because
+        # this can lead to a messy situation with files like
+        # script.tdy.tdy.tdy ... or worse problems ...  when you
+        # rerun perltidy over and over with wildcard input.
+        if (
+            !$source_stream
+            && (   $input_file =~ /$forbidden_file_extensions/
+                || $input_file eq 'DIAGNOSTICS' )
+          )
+        {
+            Warn("skipping file: $input_file: wrong extension\n");
+            next;
+        }
+
+        # copy source to a string buffer, decoding from utf8 if necessary
+        my (
+            $buf,
+            $is_encoded_data,
+            $decoded_input_as,
+            $encoding_log_message,
+            $length_function,
+
+        ) = $self->get_decoded_string_buffer( $input_file, $display_name,
+            $rpending_logfile_message );
+
+        # Skip this file on any error
+        next if ( !defined($buf) );
+
+        # Register this file name with the Diagnostics package, if any.
+        $diagnostics_object->set_input_file($input_file)
+          if $diagnostics_object;
+
+        # OK: the (possibly decoded) input is now in string $buf. We just need
+        # to to prepare the output and error logger before formatting it.
+
+        #--------------------------
+        # prepare the output stream
+        #--------------------------
+        my $output_file = undef;
+        my $output_name = EMPTY_STRING;
+        my $actual_output_extension;
+
+        if ( $rOpts->{'outfile'} ) {
+
+            if ( $number_of_files <= 1 ) {
+
+                if ( $rOpts->{'standard-output'} ) {
+                    my $saw_pbp = $self->[_saw_pbp_];
+                    my $msg     = "You may not use -o and -st together";
+                    $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
+                    Die("$msg\n");
+                }
+                elsif ($destination_stream) {
+                    Die(
+"You may not specify a destination array and -o together\n"
+                    );
+                }
+                elsif ( defined( $rOpts->{'output-path'} ) ) {
+                    Die("You may not specify -o and -opath together\n");
+                }
+                elsif ( defined( $rOpts->{'output-file-extension'} ) ) {
+                    Die("You may not specify -o and -oext together\n");
+                }
+                $output_file = $rOpts->{outfile};
+                $output_name = $output_file;
+
+                # make sure user gives a file name after -o
+                if ( $output_file =~ /^-/ ) {
+                    Die("You must specify a valid filename after -o\n");
+                }
+
+                # do not overwrite input file with -o
+                if ( @input_file_stat && ( $output_file eq $input_file ) ) {
+                    Die("Use 'perltidy -b $input_file' to modify in-place\n");
+                }
+            }
+            else {
+                Die("You may not use -o with more than one input file\n");
+            }
+        }
+        elsif ( $rOpts->{'standard-output'} ) {
+            if ($destination_stream) {
+                my $saw_pbp = $self->[_saw_pbp_];
+                my $msg =
+                  "You may not specify a destination array and -st together\n";
+                $msg .= " (-pbp contains -st; see manual)" if ($saw_pbp);
+                Die("$msg\n");
+            }
+            $output_file = '-';
+            $output_name = "<stdout>";
+
+            if ( $number_of_files <= 1 ) {
+            }
+            else {
+                Die("You may not use -st with more than one input file\n");
+            }
+        }
+        elsif ($destination_stream) {
+
+            $output_file = $destination_stream;
+            $output_name = "<destination_stream>";
+        }
+        elsif ($source_stream) {    # source but no destination goes to stdout
+            $output_file = '-';
+            $output_name = "<stdout>";
+        }
+        elsif ( $input_file eq '-' ) {
+            $output_file = '-';
+            $output_name = "<stdout>";
+        }
+        else {
+            if ($in_place_modify) {
+
+                # Send output to a temporary array buffer. This will
+                # allow efficient copying back to the input by
+                # sub backup_and_modify_in_place, below.
+                my @tmp_buff;
+                $output_file = \@tmp_buff;
+                $output_name = $display_name;
+            }
+            else {
+                $actual_output_extension = $output_extension;
+                $output_file             = $fileroot . $output_extension;
+                $output_name             = $output_file;
+            }
+        }
+
+        $rstatus->{'file_count'} += 1;
+        $rstatus->{'output_name'}     = $output_name;
+        $rstatus->{'iteration_count'} = 0;
+        $rstatus->{'converged'}       = 0;
+
+        #------------------------------------------
+        # initialize the error logger for this file
+        #------------------------------------------
+        my $warning_file = $fileroot . $dot . "ERR";
+        if ($errorfile_stream) { $warning_file = $errorfile_stream }
+        my $log_file = $fileroot . $dot . "LOG";
+        if ($logfile_stream) { $log_file = $logfile_stream }
+
+        my $logger_object = Perl::Tidy::Logger->new(
+            rOpts           => $rOpts,
+            log_file        => $log_file,
+            warning_file    => $warning_file,
+            fh_stderr       => $fh_stderr,
+            display_name    => $display_name,
+            is_encoded_data => $is_encoded_data,
+        );
+        $logger_object->write_logfile_entry($logfile_header);
+        $logger_object->write_logfile_entry($encoding_log_message)
+          if $encoding_log_message;
+
+        # Now we can add any pending messages to the log
+        if ( ${$rpending_logfile_message} ) {
+            $logger_object->write_logfile_entry( ${$rpending_logfile_message} );
+        }
+        if ( ${$rpending_complaint} ) {
+            $logger_object->complain( ${$rpending_complaint} );
+        }
+
+        my $line_separator = $rOpts->{'output-line-ending'};
+        if ( $rOpts->{'preserve-line-endings'} ) {
+            $line_separator = find_input_line_ending($input_file);
+        }
+        $line_separator = "\n" unless defined($line_separator);
+
+        # additional parameters needed by lower level routines
+        $self->[_actual_output_extension_] = $actual_output_extension;
+        $self->[_debugfile_stream_]        = $debugfile_stream;
+        $self->[_decoded_input_as_]        = $decoded_input_as;
+        $self->[_destination_stream_]      = $destination_stream;
+        $self->[_display_name_]            = $display_name;
+        $self->[_fileroot_]                = $fileroot;
+        $self->[_is_encoded_data_]         = $is_encoded_data;
+        $self->[_length_function_]         = $length_function;
+        $self->[_line_separator_]          = $line_separator;
+        $self->[_logger_object_]           = $logger_object;
+        $self->[_output_file_]             = $output_file;
+        $self->[_teefile_stream_]          = $teefile_stream;
+
+        #----------------------------------------------------------
+        # Do all formatting of this buffer.
+        # Results will go to the selected output file or streams(s)
+        #----------------------------------------------------------
+        $self->process_filter_layer($buf);
+
+        #--------------------------------------------------
+        # Handle the -b option (backup and modify in-place)
+        #--------------------------------------------------
+        if ($in_place_modify) {
+            $self->backup_and_modify_in_place(
+                $input_file,       $output_file,
+                $backup_extension, $delete_backup
+            );
+            $output_file = $input_file;
+        }
+
+        #---------------------------------------------------------
+        # Set output file ownership and permissions if appropriate
+        #---------------------------------------------------------
+        if ( $output_file && -f $output_file && !-l $output_file ) {
+            if (@input_file_stat) {
+                if ( $rOpts->{'format'} eq 'tidy' ) {
+                    $self->set_output_file_permissions( $output_file,
+                        \@input_file_stat, $in_place_modify );
+                }
+
+                # else use default permissions for html and any other format
+            }
+        }
+
+        $logger_object->finish()
+          if $logger_object;
+    } ## end of main loop to process all files
+
+    return;
+} ## end sub process_all_files
+
 sub process_filter_layer {
 
     my ( $self, $buf ) = @_;
 
+    # This is the filter layer of processing.
     # Do all requested formatting on the string '$buf', including any
     # pre- and post-processing with filters.
     # Store the results in the selected output file(s) or stream(s).
 
-    # Total formatting is done with three layers of subroutines:
+    # Total formatting is done with these layers of subroutines:
+    #   perltidy                - main routine; checks run parameters
+    #   process_all_files       - main loop to process all files;
     #  *process_filter_layer    - do any pre and post processing; *THIS LAYER
     #   process_iteration_layer - handle any iterations on formatting
-    #   process_single_case     - actual solves on formatting problem
+    #   process_single_case     - solves one formatting problem
 
     # Data Flow in this layer:
     #  $buf
@@ -2042,16 +2115,19 @@ sub process_iteration_layer {
 
     my ( $self, $buf, $sink_object ) = @_;
 
+    # This is the iteration layer of processing.
     # Do all formatting, iterating if requested, on the source string $buf.
     # Output depends on format type:
     #   For 'tidy' formatting, output goes to sink object
     #   For 'html' formatting, output goes to the ultimate destination
     #   For 'user' formatting, user formatter handles output
 
-    # Total formatting is done with three layers of subroutines:
+    # Total formatting is done with these layers of subroutines:
+    #   perltidy                - main routine; checks run parameters
+    #   process_all_files       - main loop to process all files;
     #   process_filter_layer    - do any pre and post processing
     #  *process_iteration_layer - do any iterations on formatting; *THIS LAYER
-    #   process_single_case     - actual solves on formatting problem
+    #   process_single_case     - solves one formatting problem
 
     # Data Flow in this layer:
     #      $buf -> [ loop over iterations ] -> $sink_object
@@ -2307,9 +2383,8 @@ EOM
 BLINKER. Output for iteration $iter same as for $saw_md5{$digest}. 
 EOM
                         $stopping_on_error ||= $convergence_log_message;
-                        if (DEVEL_MODE) {
-                            print STDERR $convergence_log_message;
-                        }
+                        DEVEL_MODE
+                          && print STDERR $convergence_log_message;
                         $diagnostics_object->write_diagnostics(
                             $convergence_log_message)
                           if $diagnostics_object;
@@ -2380,7 +2455,9 @@ sub process_single_case {
     # run the formatter on a single defined case
     my ( $tokenizer, $formatter ) = @_;
 
-    # Total formatting is done with three layers of subroutines:
+    # Total formatting is done with these layers of subroutines:
+    #   perltidy                - main routine; checks run parameters
+    #   process_all_files       - main loop to process all files;
     #   process_filter_layer    - do any pre and post processing;
     #   process_iteration_layer - do any iterations on formatting
     #  *process_single_case     - solve one formatting problem; *THIS LAYER
@@ -2657,44 +2734,48 @@ sub fileglob_to_re {
     return "^$x\\z";               # match whole word
 }
 
+sub make_logfile_header {
+    my ( $rOpts, $config_file, $rraw_options, $Windows_type, $readable_options )
+      = @_;
+
+    # Note: the punctuation variable '$]' is not in older versions of
+    # English.pm so leave it as is to avoid failing installation tests.
+    my $msg =
+"perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$]\n";
+    if ($Windows_type) {
+        $msg .= "Windows type is $Windows_type\n";
+    }
+    my $options_string = join( SPACE, @{$rraw_options} );
+
+    if ($config_file) {
+        $msg .= "Found Configuration File >>> $config_file \n";
+    }
+    $msg .= "Configuration and command line parameters for this run:\n";
+    $msg .= "$options_string\n";
+
+    if ( $rOpts->{'DEBUG'} || $rOpts->{'show-options'} ) {
+        $rOpts->{'logfile'} = 1;    # force logfile to be saved
+        $msg .= "Final parameter set for this run\n";
+        $msg .= "------------------------------------\n";
+
+        $msg .= $readable_options;
+
+        $msg .= "------------------------------------\n";
+    }
+    $msg .= "To find error messages search for 'WARNING' with your editor\n";
+    return $msg;
+} ## end sub make_logfile_header
+
 sub write_logfile_header {
     my (
         $rOpts,        $logger_object, $config_file,
         $rraw_options, $Windows_type,  $readable_options
     ) = @_;
 
-    # Note: the punctuation variable '$]' is not in older versions of
-    # English.pm so leave it as is to avoid failing installation tests.
-    $logger_object->write_logfile_entry(
-"perltidy version $VERSION log file on a $OSNAME system, OLD_PERL_VERSION=$]\n"
-    );
-    if ($Windows_type) {
-        $logger_object->write_logfile_entry("Windows type is $Windows_type\n");
-    }
-    my $options_string = join( SPACE, @{$rraw_options} );
+    my $msg = make_logfile_header( $rOpts, $config_file,
+        $rraw_options, $Windows_type, $readable_options );
 
-    if ($config_file) {
-        $logger_object->write_logfile_entry(
-            "Found Configuration File >>> $config_file \n");
-    }
-    $logger_object->write_logfile_entry(
-        "Configuration and command line parameters for this run:\n");
-    $logger_object->write_logfile_entry("$options_string\n");
-
-    if ( $rOpts->{'DEBUG'} || $rOpts->{'show-options'} ) {
-        $rOpts->{'logfile'} = 1;    # force logfile to be saved
-        $logger_object->write_logfile_entry(
-            "Final parameter set for this run\n");
-        $logger_object->write_logfile_entry(
-            "------------------------------------\n");
-
-        $logger_object->write_logfile_entry($readable_options);
-
-        $logger_object->write_logfile_entry(
-            "------------------------------------\n");
-    }
-    $logger_object->write_logfile_entry(
-        "To find error messages search for 'WARNING' with your editor\n");
+    $logger_object->write_logfile_entry($msg);
     return;
 } ## end sub write_logfile_header
 
