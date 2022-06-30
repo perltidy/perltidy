@@ -10067,6 +10067,30 @@ my $data =
 --indent-columns=1
 --maximum-line-length=72
 
+==> b1356.in <==
+# S1
+%phonebook = (
+ "Bob"  => "247305",
+ "Phil" => "205832",
+ "Sara" => "226010"
+);
+
+# S2
+%phonebook
+         = (
+   "Bob"  => "247305",
+   "Phil" => "205832",
+   "Sara" => "226010"
+         );
+
+
+==> b1356.par <==
+--continuation-indentation=9
+--extended-line-up-parentheses
+--indent-columns=1
+--maximum-line-length=22
+--want-break-before=' = '
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

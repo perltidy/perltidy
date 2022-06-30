@@ -21558,8 +21558,13 @@ sub get_available_spaces_to_go {
                     my $i_test = $last_equals;
 
                     # Fix for issue b1229, check for break before
+                    # Fix for issue b1356, i_test must never be blank
+                    #   ( the ci value for blanks can vary )
                     if ( $want_break_before{ $types_to_go[$i_test] } ) {
-                        if ( $i_test > 0 ) { $i_test-- }
+                        if ( $i_test > 0 && $types_to_go[ $i_test - 1 ] ne 'b' )
+                        {
+                            $i_test--;
+                        }
                     }
                     elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
 
