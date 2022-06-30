@@ -4440,22 +4440,15 @@ EOM
         my $line_of_tokens = shift;
         my ($untrimmed_input_line) = $line_of_tokens->{_line_text};
 
-        # patch while coding change is underway
-        # make callers private data to allow access
-        # $tokenizer_self = $caller_tokenizer_self;
-
-        # extract line number for use in error messages
+        # Extract line number for use in error messages
         $input_line_number = $line_of_tokens->{_line_number};
 
-        # reinitialize for multi-line quote
-        $line_of_tokens->{_starting_in_quote} = $in_quote && $quote_type eq 'Q';
-
-        # check for pod documentation
+        # Check for pod documentation
         if ( substr( $untrimmed_input_line, 0, 1 ) eq '='
             && $untrimmed_input_line =~ /^=[A-Za-z_]/ )
         {
 
-            # must not be in multi-line quote
+            # Must not be in multi-line quote
             # and must not be in an equation
             if ( !$in_quote
                 && ( operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
@@ -4474,15 +4467,21 @@ EOM
         # a fat comma.
         my $is_END_or_DATA;
 
-        # trim start of this line unless we are continuing a quoted line
-        # do not trim end because we might end in a quote (test: deken4.pl)
-        # Perl::Tidy::Formatter will delete needless trailing blanks
-        unless ( $in_quote && ( $quote_type eq 'Q' ) ) {
-            $input_line =~ s/^(\s+)//;    # trim left end
+        # Reinitialize the multi-line quote flag
+        if ( $in_quote && $quote_type eq 'Q' ) {
+            $line_of_tokens->{_starting_in_quote} = 1;
+        }
+        else {
+            $line_of_tokens->{_starting_in_quote} = 0;
 
-            # calculate a guessed level for nonblank lines to avoid calls to
+            # Trim start of this line unless we are continuing a quoted line.
+            # Do not trim end because we might end in a quote (test: deken4.pl)
+            # Perl::Tidy::Formatter will delete needless trailing blanks
+            $input_line =~ s/^(\s+)//;
+
+            # Calculate a guessed level for nonblank lines to avoid calls to
             #    sub guess_old_indentation_level()
-            if ( $input_line && $1 ) {
+            if ( length($input_line) && $1 ) {
                 my $leading_spaces = $1;
                 my $spaces         = length($leading_spaces);
 
@@ -4501,6 +4500,47 @@ EOM
 
             $is_END_or_DATA = substr( $input_line, 0, 1 ) eq '_'
               && $input_line =~ /^__(END|DATA)__\s*$/;
+        }
+
+        # Optimize for a full-line comment.
+        if ( !$in_quote ) {
+            if ( substr( $input_line, 0, 1 ) eq '#' ) {
+
+                # and check for skipped section
+                if (   $rOpts_code_skipping
+                    && $input_line =~ /$code_skipping_pattern_begin/ )
+                {
+                    $tokenizer_self->[_in_skipped_] = 1;
+                    return;
+                }
+
+                # Optional fast processing of a block comment
+                my $ci_string_sum =
+                  ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
+                my $ci_string_i = $ci_string_sum + $in_statement_continuation;
+                $line_of_tokens->{_line_type}        = 'CODE';
+                $line_of_tokens->{_rtokens}          = [$input_line];
+                $line_of_tokens->{_rtoken_type}      = ['#'];
+                $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
+                $line_of_tokens->{_rci_levels}       = [$ci_string_i];
+                $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
+                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+                return;
+            }
+
+            # Optimize handling of a blank line
+            if ( !length($input_line) ) {
+                $line_of_tokens->{_line_type}        = 'CODE';
+                $line_of_tokens->{_rtokens}          = [];
+                $line_of_tokens->{_rtoken_type}      = [];
+                $line_of_tokens->{_rlevels}          = [];
+                $line_of_tokens->{_rci_levels}       = [];
+                $line_of_tokens->{_rblock_type}      = [];
+                $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
+                $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
+                return;
+            }
         }
 
         # update the copy of the line for use in error messages
@@ -4526,39 +4566,7 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
-        # This variable signals pre_tokenize to get all tokens.
-        # But note that it is no longer needed with fast block comment
-        # option below.
-        my $max_tokens_wanted = 0;
-
-        # optimize for a full-line comment
-        if ( !$in_quote && substr( $input_line, 0, 1 ) eq '#' ) {
-            $max_tokens_wanted = 1;    # no use tokenizing a comment
-
-            # and check for skipped section
-            if (   $rOpts_code_skipping
-                && $input_line =~ /$code_skipping_pattern_begin/ )
-            {
-                $tokenizer_self->[_in_skipped_] = 1;
-                return;
-            }
-
-            # Optional fast processing of a block comment
-            my $ci_string_sum =
-              ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
-            my $ci_string_i = $ci_string_sum + $in_statement_continuation;
-            $line_of_tokens->{_line_type}        = 'CODE';
-            $line_of_tokens->{_rtokens}          = [$input_line];
-            $line_of_tokens->{_rtoken_type}      = ['#'];
-            $line_of_tokens->{_rlevels}          = [$level_in_tokenizer];
-            $line_of_tokens->{_rci_levels}       = [$ci_string_i];
-            $line_of_tokens->{_rblock_type}      = [EMPTY_STRING];
-            $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
-            $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
-            return;
-        }
-
-        tokenizer_main_loop( $max_tokens_wanted, $is_END_or_DATA );
+        tokenizer_main_loop($is_END_or_DATA);
 
         #-----------------------------------------------
         # all done tokenizing this line ...
@@ -4571,18 +4579,16 @@ EOM
     } ## end sub tokenize_this_line
 
     sub tokenizer_main_loop {
-        my ( $max_tokens_wanted, $is_END_or_DATA ) = @_;
-
-        # tokenization is done in two stages..
-        # stage 1 is a very simple pre-tokenization
+        my ($is_END_or_DATA) = @_;
 
         # start by breaking the line into pre-tokens
+        my $max_tokens_wanted = 0; # this signals pre_tokenize to get all tokens
         ( $rtokens, $rtoken_map, $rtoken_type ) =
           pre_tokenize( $input_line, $max_tokens_wanted );
 
         $max_token_index = scalar( @{$rtokens} ) - 1;
         push( @{$rtokens}, SPACE, SPACE, SPACE )
-          ;    # extra whitespace simplifies logic
+          ;                        # extra whitespace simplifies logic
         push( @{$rtoken_map},  0,   0,   0 );     # shouldn't be referenced
         push( @{$rtoken_type}, 'b', 'b', 'b' );
 
@@ -4950,7 +4956,6 @@ EOM
         my @levels        = ();    # structural brace levels of output tokens
         my @ci_string = ();  # string needed to compute continuation indentation
         my $container_environment = EMPTY_STRING;
-        my $im                    = -1;             # previous $i value
 
         # Count the number of '1's in the string (previously sub ones_count)
         my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
@@ -5022,6 +5027,7 @@ EOM
         my ( $ci_string_i, $level_i );
 
         # loop over the list of pre-tokens indexes
+        my $rtoken_map_im;
         foreach my $i ( @{$routput_token_list} ) {
 
             # Get $tok_i, the PRE-token.  It only equals the token for symbols
@@ -5552,13 +5558,20 @@ EOM
             push( @token_type,    $type_i );
 
             # Form and store the previous token
-            if ( $im >= 0 ) {
+            if ( defined($rtoken_map_im) ) {
                 my $numc =
-                  $rtoken_map->[$i] - $rtoken_map->[$im];  # how many characters
+                  $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
 
                 if ( $numc > 0 ) {
                     push( @tokens,
-                        substr( $input_line, $rtoken_map->[$im], $numc ) );
+                        substr( $input_line, $rtoken_map_im, $numc ) );
+                }
+                else {
+
+                    # Should not happen unless @{$rtoken_map} is corrupted
+                    DEVEL_MODE
+                      && Fault(
+                        "number of characters is '$numc' but should be >0\n");
                 }
             }
 
@@ -5567,13 +5580,22 @@ EOM
                 $line_of_tokens->{_nesting_blocks_0} = $nesting_block_string;
             }
 
-            $im = $i;
+            $rtoken_map_im = $rtoken_map->[$i];
         } ## end foreach my $i ( @{$routput_token_list...})
 
         # Form and store the final token
-        my $numc = length($input_line) - $rtoken_map->[$im];
-        if ( $numc > 0 ) {
-            push( @tokens, substr( $input_line, $rtoken_map->[$im], $numc ) );
+        if ( defined($rtoken_map_im) ) {
+            my $numc = length($input_line) - $rtoken_map_im;
+            if ( $numc > 0 ) {
+                push( @tokens, substr( $input_line, $rtoken_map_im, $numc ) );
+            }
+            else {
+
+                # Should not happen unless @{$rtoken_map} is corrupted
+                DEVEL_MODE
+                  && Fault(
+                    "Number of Characters is '$numc' but should be >0\n");
+            }
         }
 
         $line_of_tokens->{_rtoken_type}    = \@token_type;
@@ -5694,8 +5716,6 @@ sub operator_expected {
 
     my ($rarg) = @_;
 
-    my $msg = EMPTY_STRING;
-
     ##############
     # Table lookup
     ##############
@@ -5704,8 +5724,10 @@ sub operator_expected {
     # This typically handles half or more of the calls.
     my $op_expected = $op_expected_table{$last_nonblank_type};
     if ( defined($op_expected) ) {
-        $msg = "Table lookup";
-        goto RETURN;
+        DEBUG_OPERATOR_EXPECTED
+          && print STDOUT
+"OPERATOR_EXPECTED: Table Lookup; returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
+        return $op_expected;
     }
 
     ######################
@@ -5927,12 +5949,9 @@ sub operator_expected {
         $op_expected = UNKNOWN;
     }
 
-  RETURN:
-
-    DEBUG_OPERATOR_EXPECTED && do {
-        print STDOUT
-"OPERATOR_EXPECTED: $msg: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
-    };
+    DEBUG_OPERATOR_EXPECTED
+      && print STDOUT
+"OPERATOR_EXPECTED: returns $op_expected for last type $last_nonblank_type token $last_nonblank_token\n";
 
     return $op_expected;
 
