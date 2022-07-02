@@ -21414,6 +21414,22 @@ sub get_available_spaces_to_go {
         @hash_test3{@q} = (1) x scalar(@q);
     }
 
+    # shared variables, re-initialized for each batch
+    my $rlp_object_list    = [];
+    my $max_lp_object_list = UNDEFINED_INDEX;
+    my %lp_comma_count;
+    my %lp_arrow_count;
+    my $space_count;
+    my $current_level;
+    my $current_ci_level;
+    my $ii_begin_line;
+    my $in_lp_mode;
+    my $stack_changed;
+    my $K_last_nonblank;
+    my $last_nonblank_token;
+    my $last_nonblank_type;
+    my $last_last_nonblank_type;
+
     sub set_lp_indentation {
 
         #------------------------------------------------------------------
@@ -21427,27 +21443,28 @@ sub get_available_spaces_to_go {
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
 
         # List of -lp indentation objects created in this batch
-        my $rlp_object_list    = [];
-        my $max_lp_object_list = UNDEFINED_INDEX;
+        $rlp_object_list    = [];
+        $max_lp_object_list = UNDEFINED_INDEX;
 
-        my %last_lp_equals;
-        my %lp_comma_count;
-        my %lp_arrow_count;
-        my $ii_begin_line = 0;
+        %lp_comma_count          = ();
+        %lp_arrow_count          = ();
+        $space_count             = undef;
+        $current_level           = undef;
+        $current_ci_level        = undef;
+        $ii_begin_line           = 0;
+        $in_lp_mode              = 0;
+        $stack_changed           = 1;
+        $K_last_nonblank         = undef;
+        $last_nonblank_token     = EMPTY_STRING;
+        $last_nonblank_type      = EMPTY_STRING;
+        $last_last_nonblank_type = EMPTY_STRING;
 
-        my $rLL                       = $self->[_rLL_];
-        my $Klimit                    = $self->[_Klimit_];
-        my $rbreak_container          = $self->[_rbreak_container_];
-        my $rshort_nested             = $self->[_rshort_nested_];
-        my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
-        my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-        my $starting_in_quote   = $self->[_this_batch_]->[_starting_in_quote_];
-        my $K_closing_container = $self->[_K_closing_container_];
-        my $rlp_object_by_seqno = $self->[_rlp_object_by_seqno_];
-        my $radjusted_levels    = $self->[_radjusted_levels_];
-        my $rbreak_before_container_by_seqno =
-          $self->[_rbreak_before_container_by_seqno_];
-        my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
+        my %last_lp_equals = ();
+
+        my $rLL               = $self->[_rLL_];
+        my $Klimit            = $self->[_Klimit_];
+        my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
+        my $radjusted_levels  = $self->[_radjusted_levels_];
 
         my $nws  = @{$radjusted_levels};
         my $imin = 0;
@@ -21460,7 +21477,6 @@ sub get_available_spaces_to_go {
             $imin += 1;
         }
 
-        my $K_last_nonblank;
         my $Kpnb = $K_to_go[0] - 1;
         if ( $Kpnb > 0 && $rLL->[$Kpnb]->[_TYPE_] eq 'b' ) {
             $Kpnb -= 1;
@@ -21469,36 +21485,28 @@ sub get_available_spaces_to_go {
             $K_last_nonblank = $Kpnb;
         }
 
-        my $last_nonblank_token     = EMPTY_STRING;
-        my $last_nonblank_type      = EMPTY_STRING;
-        my $last_last_nonblank_type = EMPTY_STRING;
-
         if ( defined($K_last_nonblank) ) {
             $last_nonblank_token = $rLL->[$K_last_nonblank]->[_TOKEN_];
             $last_nonblank_type  = $rLL->[$K_last_nonblank]->[_TYPE_];
         }
-
-        my ( $space_count, $current_level, $current_ci_level, $in_lp_mode );
-        my $stack_changed = 1;
 
         #-----------------------------------
         # Loop over all tokens in this batch
         #-----------------------------------
         foreach my $ii ( $imin .. $max_index_to_go ) {
 
-            my $KK              = $K_to_go[$ii];
-            my $type            = $types_to_go[$ii];
-            my $token           = $tokens_to_go[$ii];
-            my $level           = $levels_to_go[$ii];
-            my $ci_level        = $ci_levels_to_go[$ii];
-            my $total_depth     = $nesting_depth_to_go[$ii];
-            my $standard_spaces = $leading_spaces_to_go[$ii];
+            my $type        = $types_to_go[$ii];
+            my $token       = $tokens_to_go[$ii];
+            my $level       = $levels_to_go[$ii];
+            my $ci_level    = $ci_levels_to_go[$ii];
+            my $total_depth = $nesting_depth_to_go[$ii];
 
             #--------------------------------------------------
             # Adjust levels if necessary to recycle whitespace:
             #--------------------------------------------------
             if ( defined($radjusted_levels) && @{$radjusted_levels} == $Klimit )
             {
+                my $KK = $K_to_go[$ii];
                 $level = $radjusted_levels->[$KK];
                 if ( $level < 0 ) { $level = 0 }  # note: this should not happen
             }
@@ -21519,145 +21527,21 @@ sub get_available_spaces_to_go {
                 $stack_changed = 0;
             }
 
-            #------------------------------
-            # update the position predictor
-            #------------------------------
+            #------------------------------------------------------------
+            # Break at a previous '=' if necessary to control line length
+            #------------------------------------------------------------
             if ( $type eq '{' || $type eq '(' ) {
-
                 $lp_comma_count{ $total_depth + 1 } = 0;
                 $lp_arrow_count{ $total_depth + 1 } = 0;
 
                 # If we come to an opening token after an '=' token of some
                 # type, see if it would be helpful to 'break' after the '=' to
                 # save space
-                my $last_equals = $last_lp_equals{$total_depth};
-
-                # Skip an empty set of parens, such as after channel():
-                #   my $exchange = $self->_channel()->exchange(
-                # This fixes issues b1318 b1322 b1323 b1328
-                # TODO: maybe also skip parens with just one token?
-                my $is_empty_container;
-                if ( $last_equals && $ii < $max_index_to_go ) {
-                    my $seqno    = $type_sequence_to_go[$ii];
-                    my $inext_nb = $ii + 1;
-                    $inext_nb++
-                      if ( $types_to_go[$inext_nb] eq 'b' );
-                    my $seqno_nb = $type_sequence_to_go[$inext_nb];
-                    $is_empty_container =
-                      $seqno && $seqno_nb && $seqno_nb == $seqno;
+                my $ii_last_equals = $last_lp_equals{$total_depth};
+                if ($ii_last_equals) {
+                    $self->lp_equals_break_check( $ii, $ii_last_equals );
                 }
-
-                if (   $last_equals
-                    && $last_equals > $ii_begin_line
-                    && !$is_empty_container )
-                {
-
-                    my $seqno = $type_sequence_to_go[$ii];
-
-                    # find the position if we break at the '='
-                    my $i_test = $last_equals;
-
-                    # Fix for issue b1229, check for break before
-                    # Fix for issue b1356, i_test must never be blank
-                    #   ( the ci value for blanks can vary )
-                    if ( $want_break_before{ $types_to_go[$i_test] } ) {
-                        if ( $i_test > 0 && $types_to_go[ $i_test - 1 ] ne 'b' )
-                        {
-                            $i_test--;
-                        }
-                    }
-                    elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
-
-                    my $test_position = total_line_length( $i_test, $ii );
-                    my $mll =
-                      $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
-
-                    #------------------------------------------------------
-                    # Break if structure will reach the maximum line length
-                    #------------------------------------------------------
-
-                    # Historically, -lp just used one-half line length here
-                    my $len_increase = $rOpts_maximum_line_length / 2;
-
-                    # For -xlp, we can also use the pre-computed lengths
-                    my $min_len = $rcollapsed_length_by_seqno->{$seqno};
-                    if ( $min_len && $min_len > $len_increase ) {
-                        $len_increase = $min_len;
-                    }
-
-                    if (
-
-                        # if we might exceed the maximum line length
-                        $lp_position_predictor + $len_increase > $mll
-
-                        # if a -bbx flag WANTS a break before this opening token
-                        || (   $seqno
-                            && $rbreak_before_container_by_seqno->{$seqno} )
-
-                        # or we are beyond the 1/4 point and there was an old
-                        # break at an assignment (not '=>') [fix for b1035]
-                        || (
-                            $lp_position_predictor >
-                            $mll - $rOpts_maximum_line_length * 3 / 4
-                            && $types_to_go[$last_equals] ne '=>'
-                            && (
-                                $old_breakpoint_to_go[$last_equals]
-                                || (   $last_equals > 0
-                                    && $old_breakpoint_to_go[ $last_equals - 1 ]
-                                )
-                                || (   $last_equals > 1
-                                    && $types_to_go[ $last_equals - 1 ] eq 'b'
-                                    && $old_breakpoint_to_go[ $last_equals - 2 ]
-                                )
-                            )
-                        )
-                      )
-                    {
-
-                        # then make the switch -- note that we do not set a
-                        # real breakpoint here because we may not really need
-                        # one; sub break_lists will do that if necessary.
-
-                        my $Kc = $K_closing_container->{$seqno};
-                        if (
-
-                            # For -lp, only if the closing token is in this
-                            # batch (c117).  Otherwise it cannot be done by sub
-                            # break_lists.
-                            defined($Kc) && $Kc <= $K_to_go[$max_index_to_go]
-
-                            # For -xlp, we only need one nonblank token after
-                            # the opening token.
-                            || $rOpts_extended_line_up_parentheses
-                          )
-                        {
-                            $ii_begin_line         = $i_test + 1;
-                            $lp_position_predictor = $test_position;
-
-                            #--------------------------------------------------
-                            # Fix for an opening container terminating a batch:
-                            #--------------------------------------------------
-                            # To get alignment of a -lp container with its
-                            # contents, we have to put a break after $i_test.
-                            # For $ii<$max_index_to_go, this will be done by
-                            # sub break_lists based on the indentation object.
-                            # But for $ii=$max_index_to_go, the indentation
-                            # object for this seqno will not be created until
-                            # the next batch, so we have to set a break at
-                            # $i_test right now in order to get one.
-                            if (   $ii == $max_index_to_go
-                                && !$block_type_to_go[$ii]
-                                && $type eq '{'
-                                && $seqno
-                                && !$ris_excluded_lp_container->{$seqno} )
-                            {
-                                $self->set_forced_lp_break( $ii_begin_line,
-                                    $ii );
-                            }
-                        }
-                    }
-                }
-            } ## end update position predictor
+            }
 
             #------------------------
             # Handle decreasing depth
@@ -21667,367 +21551,15 @@ sub get_available_spaces_to_go {
             # in this example we would first go back to (1,0) then up to (2,0)
             # in a single call.
             if ( $level < $current_level || $ci_level < $current_ci_level ) {
-
-                # loop to find the first entry at or completely below this level
-                while (1) {
-
-                    # Be sure we have not hit the stack bottom - should never
-                    # happen because only negative levels can get here, and
-                    # $level was forced to be positive above.
-                    if ( !$max_lp_stack ) {
-
-                        # non-fatal, just keep going except in DEVEL_MODE
-                        if (DEVEL_MODE) {
-                            Fault(<<EOM);
-program bug with -lp: stack_error. level=$level; ci_level=$ci_level; rerun with -nlp
-EOM
-                        }
-                        last;
-                    }
-
-                    # save index of token which closes this level
-                    if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
-                        my $lp_object = $rLP->[$max_lp_stack]->[_lp_object_];
-
-                        $lp_object->set_closed($ii);
-
-                        my $comma_count = 0;
-                        my $arrow_count = 0;
-                        if ( $type eq '}' || $type eq ')' ) {
-                            $comma_count = $lp_comma_count{$total_depth};
-                            $arrow_count = $lp_arrow_count{$total_depth};
-                            $comma_count = 0 unless $comma_count;
-                            $arrow_count = 0 unless $arrow_count;
-                        }
-
-                        $lp_object->set_comma_count($comma_count);
-                        $lp_object->set_arrow_count($arrow_count);
-
-                        # Undo any extra indentation if we saw no commas
-                        my $available_spaces =
-                          $lp_object->get_available_spaces();
-                        my $K_start = $lp_object->get_K_begin_line();
-
-                        if (   $available_spaces > 0
-                            && $K_start >= $K_to_go[0]
-                            && ( $comma_count <= 0 || $arrow_count > 0 ) )
-                        {
-
-                            my $i = $lp_object->get_lp_item_index();
-
-                            # Safety check for a valid stack index. It
-                            # should be ok because we just checked that the
-                            # index K of the token associated with this
-                            # indentation is in this batch.
-                            if ( $i < 0 || $i > $max_lp_object_list ) {
-                                my $lno = $rLL->[$KK]->[_LINE_INDEX_];
-                                DEVEL_MODE && Fault(<<EOM);
-Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_lp_object_list
-EOM
-                                last;
-                            }
-
-                            if ( $arrow_count == 0 ) {
-                                $rlp_object_list->[$i]
-                                  ->permanently_decrease_available_spaces(
-                                    $available_spaces);
-                            }
-                            else {
-                                $rlp_object_list->[$i]
-                                  ->tentatively_decrease_available_spaces(
-                                    $available_spaces);
-                            }
-                            foreach my $j ( $i + 1 .. $max_lp_object_list ) {
-                                $rlp_object_list->[$j]
-                                  ->decrease_SPACES($available_spaces);
-                            }
-                        }
-                    }
-
-                    # go down one level
-                    --$max_lp_stack;
-
-                    my $rLP_top = $rLP->[$max_lp_stack];
-                    my $ci_lev  = $rLP_top->[_lp_ci_level_];
-                    my $lev     = $rLP_top->[_lp_level_];
-                    my $spaces  = $rLP_top->[_lp_space_count_];
-                    if ( $rLP_top->[_lp_object_] ) {
-                        my $lp_obj = $rLP_top->[_lp_object_];
-                        ( $spaces, $lev, $ci_lev ) =
-                          @{ $lp_obj->get_spaces_level_ci() };
-                    }
-
-                    # stop when we reach a level at or below the current
-                    # level
-                    if ( $lev <= $level && $ci_lev <= $ci_level ) {
-                        $space_count      = $spaces;
-                        $current_level    = $lev;
-                        $current_ci_level = $ci_lev;
-                        last;
-                    }
-                }
-            } ## end decreasing depth
+                $self->lp_decreasing_depth($ii);
+            }
 
             #------------------------
             # handle increasing depth
             #------------------------
             if ( $level > $current_level || $ci_level > $current_ci_level ) {
-
-                $stack_changed = 1;
-
-                # Compute the standard incremental whitespace.  This will be
-                # the minimum incremental whitespace that will be used.  This
-                # choice results in a smooth transition between the gnu-style
-                # and the standard style.
-                my $standard_increment =
-                  ( $level - $current_level ) *
-                  $rOpts_indent_columns +
-                  ( $ci_level - $current_ci_level ) *
-                  $rOpts_continuation_indentation;
-
-                # Now we have to define how much extra incremental space
-                # ("$available_space") we want.  This extra space will be
-                # reduced as necessary when long lines are encountered or when
-                # it becomes clear that we do not have a good list.
-                my $available_spaces = 0;
-                my $align_seqno      = 0;
-
-                my $last_nonblank_seqno;
-                my $last_nonblank_block_type;
-                if ( defined($K_last_nonblank) ) {
-                    $last_nonblank_seqno =
-                      $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
-                    $last_nonblank_block_type =
-                        $last_nonblank_seqno
-                      ? $rblock_type_of_seqno->{$last_nonblank_seqno}
-                      : undef;
-                }
-
-                $in_lp_mode = $rLP->[$max_lp_stack]->[_lp_object_];
-
-                #-----------------------------------------------
-                # Initialize indentation spaces on empty stack..
-                #-----------------------------------------------
-                if ( $max_lp_stack == 0 ) {
-                    $space_count = $level * $rOpts_indent_columns;
-                }
-
-                #----------------------------------------
-                # Add the standard space increment if ...
-                #----------------------------------------
-                elsif (
-
-                    # if this is a BLOCK, add the standard increment
-                    $last_nonblank_block_type
-
-                    # or if this is not a sequenced item
-                    || !$last_nonblank_seqno
-
-                    # or this container is excluded by user rules
-                    # or contains here-docs or multiline qw text
-                    || defined($last_nonblank_seqno)
-                    && $ris_excluded_lp_container->{$last_nonblank_seqno}
-
-                    # or if last nonblank token was not structural indentation
-                    || $last_nonblank_type ne '{'
-
-                    # and do not start -lp under stress .. fixes b1244, b1255
-                    || !$in_lp_mode && $level >= $lp_cutoff_level
-
-                  )
-                {
-
-                    # If we have entered lp mode, use the top lp object to get
-                    # the current indentation spaces because it may have
-                    # changed.  Fixes b1285, b1286.
-                    if ($in_lp_mode) {
-                        $space_count = $in_lp_mode->get_spaces();
-                    }
-                    $space_count += $standard_increment;
-                }
-
-                #---------------------------------------------------------------
-                # -lp mode: try to use space to the first non-blank level change
-                #---------------------------------------------------------------
-                else {
-
-                    # see how much space we have available
-                    my $test_space_count = $lp_position_predictor;
-                    my $excess           = 0;
-                    my $min_len =
-                      $rcollapsed_length_by_seqno->{$last_nonblank_seqno};
-                    my $next_opening_too_far;
-
-                    if ( defined($min_len) ) {
-                        $excess =
-                          $test_space_count +
-                          $min_len -
-                          $maximum_line_length_at_level[$level];
-                        if ( $excess > 0 ) {
-                            $test_space_count -= $excess;
-
-                            # will the next opening token be a long way out?
-                            $next_opening_too_far =
-                              $lp_position_predictor + $excess >
-                              $maximum_line_length_at_level[$level];
-                        }
-                    }
-
-                    my $rLP_top             = $rLP->[$max_lp_stack];
-                    my $min_gnu_indentation = $rLP_top->[_lp_space_count_];
-                    if ( $rLP_top->[_lp_object_] ) {
-                        $min_gnu_indentation =
-                          $rLP_top->[_lp_object_]->get_spaces();
-                    }
-                    $available_spaces =
-                      $test_space_count - $min_gnu_indentation;
-
-                    # Do not startup -lp indentation mode if no space ...
-                    # ... or if it puts the opening far to the right
-                    if ( !$in_lp_mode
-                        && ( $available_spaces <= 0 || $next_opening_too_far ) )
-                    {
-                        $space_count += $standard_increment;
-                        $available_spaces = 0;
-                    }
-
-                    # Use -lp mode
-                    else {
-                        $space_count = $test_space_count;
-
-                        $in_lp_mode = 1;
-                        if ( $available_spaces >= $standard_increment ) {
-                            $min_gnu_indentation += $standard_increment;
-                        }
-                        elsif ( $available_spaces > 1 ) {
-                            $min_gnu_indentation += $available_spaces + 1;
-                        }
-                        ##elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
-                        elsif ( $is_opening_token{$last_nonblank_token} ) {
-                            if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
-                                $min_gnu_indentation += 2;
-                            }
-                            else {
-                                $min_gnu_indentation += 1;
-                            }
-                        }
-                        else {
-                            $min_gnu_indentation += $standard_increment;
-                        }
-                        $available_spaces = $space_count - $min_gnu_indentation;
-
-                        if ( $available_spaces < 0 ) {
-                            $space_count      = $min_gnu_indentation;
-                            $available_spaces = 0;
-                        }
-                        $align_seqno = $last_nonblank_seqno;
-                    }
-                }
-
-                #-------------------------------------------
-                # update the state, but not on a blank token
-                #-------------------------------------------
-                if ( $type ne 'b' ) {
-
-                    if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
-                        $rLP->[$max_lp_stack]->[_lp_object_]->set_have_child(1);
-                        $in_lp_mode = 1;
-                    }
-
-                    #----------------------------------------
-                    # Create indentation object if in lp-mode
-                    #----------------------------------------
-                    ++$max_lp_stack;
-                    my $lp_object;
-                    if ($in_lp_mode) {
-
-                        # A negative level implies not to store the item in the
-                        # item_list
-                        my $lp_item_index = 0;
-                        if ( $level >= 0 ) {
-                            $lp_item_index = ++$max_lp_object_list;
-                        }
-
-                        my $K_begin_line = 0;
-                        if (   $ii_begin_line >= 0
-                            && $ii_begin_line <= $max_index_to_go )
-                        {
-                            $K_begin_line = $K_to_go[$ii_begin_line];
-                        }
-
-                        # Minor Fix: when creating indentation at a side
-                        # comment we don't know what the space to the actual
-                        # next code token will be.  We will allow a space for
-                        # sub correct_lp to move it in if necessary.
-                        if (   $type eq '#'
-                            && $max_index_to_go > 0
-                            && $align_seqno )
-                        {
-                            $available_spaces += 1;
-                        }
-
-                        $lp_object = Perl::Tidy::IndentationItem->new(
-                            spaces           => $space_count,
-                            level            => $level,
-                            ci_level         => $ci_level,
-                            available_spaces => $available_spaces,
-                            lp_item_index    => $lp_item_index,
-                            align_seqno      => $align_seqno,
-                            stack_depth      => $max_lp_stack,
-                            K_begin_line     => $K_begin_line,
-                            standard_spaces  => $standard_spaces,
-                        );
-
-                        DEBUG_LP && do {
-                            my $tok_beg = $rLL->[$K_begin_line]->[_TOKEN_];
-                            print STDERR <<EOM;
-DEBUG_LP: Created object at tok=$token type=$type for seqno $align_seqno level=$level ci=$ci_level spaces=$space_count avail=$available_spaces kbeg=$K_begin_line tokbeg=$tok_beg lp=$lp_position_predictor
-EOM
-                        };
-
-                        if ( $level >= 0 ) {
-                            $rlp_object_list->[$max_lp_object_list] =
-                              $lp_object;
-                        }
-
-                        ##if (   $last_nonblank_token =~ /^[\{\[\(]$/
-                        if (   $is_opening_token{$last_nonblank_token}
-                            && $last_nonblank_seqno )
-                        {
-                            $rlp_object_by_seqno->{$last_nonblank_seqno} =
-                              $lp_object;
-                        }
-                    }
-
-                    #------------------------------------
-                    # Store this indentation on the stack
-                    #------------------------------------
-                    $rLP->[$max_lp_stack]->[_lp_ci_level_] = $ci_level;
-                    $rLP->[$max_lp_stack]->[_lp_level_]    = $level;
-                    $rLP->[$max_lp_stack]->[_lp_object_]   = $lp_object;
-                    $rLP->[$max_lp_stack]->[_lp_container_seqno_] =
-                      $last_nonblank_seqno;
-                    $rLP->[$max_lp_stack]->[_lp_space_count_] = $space_count;
-
-                    # If the opening paren is beyond the half-line length, then
-                    # we will use the minimum (standard) indentation.  This will
-                    # help avoid problems associated with running out of space
-                    # near the end of a line.  As a result, in deeply nested
-                    # lists, there will be some indentations which are limited
-                    # to this minimum standard indentation. But the most deeply
-                    # nested container will still probably be able to shift its
-                    # parameters to the right for proper alignment, so in most
-                    # cases this will not be noticeable.
-                    if ( $available_spaces > 0 && $lp_object ) {
-                        my $halfway =
-                          $maximum_line_length_at_level[$level] -
-                          $rOpts_maximum_line_length / 2;
-                        $lp_object->tentatively_decrease_available_spaces(
-                            $available_spaces)
-                          if ( $space_count > $halfway );
-                    }
-                }
-            } ## end increasing depth
+                $self->lp_increasing_depth($ii);
+            }
 
             #------------------
             # Handle all tokens
@@ -22055,48 +21587,55 @@ EOM
 
                 # this token might start a new line if ..
                 if (
+                    $ii > $ii_begin_line
 
-                    # this is the first nonblank token of the line
-                    $ii == 1 && $types_to_go[0] eq 'b'
+                    && (
 
-                    # or previous character was one of these:
-                    #  /^([\:\?\,f])$/
-                    || $hash_test2{$last_nonblank_type}
+                        # this is the first nonblank token of the line
+                        $ii == 1 && $types_to_go[0] eq 'b'
 
-                    # or previous character was opening and this is not closing
-                    || ( $last_nonblank_type eq '{' && $type ne '}' )
-                    || ( $last_nonblank_type eq '(' and $type ne ')' )
+                        # or previous character was one of these:
+                        #  /^([\:\?\,f])$/
+                        || $hash_test2{$last_nonblank_type}
 
-                    # or this token is one of these:
-                    #  /^([\.]|\|\||\&\&)$/
-                    || $hash_test3{$type}
+                        # or previous character was opening and this is not
+                        # closing
+                        || ( $last_nonblank_type eq '{' && $type ne '}' )
+                        || ( $last_nonblank_type eq '(' and $type ne ')' )
 
-                    # or this is a closing structure
-                    || (   $last_nonblank_type eq '}'
-                        && $last_nonblank_token eq $last_nonblank_type )
+                        # or this token is one of these:
+                        #  /^([\.]|\|\||\&\&)$/
+                        || $hash_test3{$type}
 
-                    # or previous token was keyword 'return'
-                    || (
-                        $last_nonblank_type eq 'k'
-                        && (   $last_nonblank_token eq 'return'
-                            && $type ne '{' )
-                    )
+                        # or this is a closing structure
+                        || (   $last_nonblank_type eq '}'
+                            && $last_nonblank_token eq $last_nonblank_type )
 
-                    # or starting a new line at certain keywords is fine
-                    || (   $type eq 'k'
-                        && $is_if_unless_and_or_last_next_redo_return{$token} )
+                        # or previous token was keyword 'return'
+                        || (
+                            $last_nonblank_type eq 'k'
+                            && (   $last_nonblank_token eq 'return'
+                                && $type ne '{' )
+                        )
 
-                    # or this is after an assignment after a closing structure
-                    || (
-                        $is_assignment{$last_nonblank_type}
-                        && (
-                            # /^[\}\)\]]$/
-                            $hash_test1{$last_last_nonblank_type}
+                        # or starting a new line at certain keywords is fine
+                        || ( $type eq 'k'
+                            && $is_if_unless_and_or_last_next_redo_return{
+                                $token} )
 
-                            # and it is significantly to the right
-                            || $lp_position_predictor > (
-                                $maximum_line_length_at_level[$level] -
-                                  $rOpts_maximum_line_length / 2
+                        # or this is after an assignment after a closing
+                        # structure
+                        || (
+                            $is_assignment{$last_nonblank_type}
+                            && (
+                                # /^[\}\)\]]$/
+                                $hash_test1{$last_last_nonblank_type}
+
+                                # and it is significantly to the right
+                                || $lp_position_predictor > (
+                                    $maximum_line_length_at_level[$level] -
+                                      $rOpts_maximum_line_length / 2
+                                )
                             )
                         )
                     )
@@ -22118,10 +21657,9 @@ EOM
                             $ii_begin_line--;
                         }
                     }
-                } ## end if ( $ii == 1 && $types_to_go...)
+                }
 
-                $K_last_nonblank = $KK;
-
+                $K_last_nonblank         = $K_to_go[$ii];
                 $last_last_nonblank_type = $last_nonblank_type;
                 $last_nonblank_type      = $type;
                 $last_nonblank_token     = $token;
@@ -22179,6 +21717,515 @@ EOM
 
         return;
     } ## end sub set_lp_indentation
+
+    sub lp_equals_break_check {
+
+        my ( $self, $ii, $ii_last_equals ) = @_;
+
+        # If we come to an opening token after an '=' token of some
+        # type, see if it would be helpful to 'break' after the '=' to
+        # save space.
+
+        # Given:
+        #   $ii = index of an opening token in the output batch
+        #   $ii_begin_line = index of token starting next output line
+        # Update:
+        #   $lp_position_predictor - updated position predictor
+        #   $ii_begin_line = updated starting token index
+
+        # Skip an empty set of parens, such as after channel():
+        #   my $exchange = $self->_channel()->exchange(
+        # This fixes issues b1318 b1322 b1323 b1328
+        # TODO: maybe also skip parens with just one token?
+        my $is_empty_container;
+        if ( $ii_last_equals && $ii < $max_index_to_go ) {
+            my $seqno    = $type_sequence_to_go[$ii];
+            my $inext_nb = $ii + 1;
+            $inext_nb++
+              if ( $types_to_go[$inext_nb] eq 'b' );
+            my $seqno_nb = $type_sequence_to_go[$inext_nb];
+            $is_empty_container = $seqno && $seqno_nb && $seqno_nb == $seqno;
+        }
+
+        if (   $ii_last_equals
+            && $ii_last_equals > $ii_begin_line
+            && !$is_empty_container )
+        {
+
+            my $seqno = $type_sequence_to_go[$ii];
+
+            # find the position if we break at the '='
+            my $i_test = $ii_last_equals;
+
+            # Fix for issue b1229, check for break before
+            # Fix for issue b1356, i_test must never be blank
+            #   ( the ci value for blanks can vary )
+            if ( $want_break_before{ $types_to_go[$i_test] } ) {
+                if ( $i_test > 0 && $types_to_go[ $i_test - 1 ] ne 'b' ) {
+                    $i_test--;
+                }
+            }
+            elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
+
+            my $test_position = total_line_length( $i_test, $ii );
+            my $mll = $maximum_line_length_at_level[ $levels_to_go[$i_test] ];
+
+            #------------------------------------------------------
+            # Break if structure will reach the maximum line length
+            #------------------------------------------------------
+
+            # Historically, -lp just used one-half line length here
+            my $len_increase = $rOpts_maximum_line_length / 2;
+
+            # For -xlp, we can also use the pre-computed lengths
+            my $min_len = $self->[_rcollapsed_length_by_seqno_]->{$seqno};
+            if ( $min_len && $min_len > $len_increase ) {
+                $len_increase = $min_len;
+            }
+
+            if (
+
+                # if we might exceed the maximum line length
+                $lp_position_predictor + $len_increase > $mll
+
+                # if a -bbx flag WANTS a break before this opening token
+                || (   $seqno
+                    && $self->[_rbreak_before_container_by_seqno_]->{$seqno} )
+
+                # or we are beyond the 1/4 point and there was an old
+                # break at an assignment (not '=>') [fix for b1035]
+                || (
+                    $lp_position_predictor >
+                    $mll - $rOpts_maximum_line_length * 3 / 4
+                    && $types_to_go[$ii_last_equals] ne '=>'
+                    && (
+                        $old_breakpoint_to_go[$ii_last_equals]
+                        || (   $ii_last_equals > 0
+                            && $old_breakpoint_to_go[ $ii_last_equals - 1 ] )
+                        || (   $ii_last_equals > 1
+                            && $types_to_go[ $ii_last_equals - 1 ] eq 'b'
+                            && $old_breakpoint_to_go[ $ii_last_equals - 2 ] )
+                    )
+                )
+              )
+            {
+
+                # then make the switch -- note that we do not set a
+                # real breakpoint here because we may not really need
+                # one; sub break_lists will do that if necessary.
+
+                my $Kc = $self->[_K_closing_container_]->{$seqno};
+                if (
+
+                    # For -lp, only if the closing token is in this
+                    # batch (c117).  Otherwise it cannot be done by sub
+                    # break_lists.
+                    defined($Kc) && $Kc <= $K_to_go[$max_index_to_go]
+
+                    # For -xlp, we only need one nonblank token after
+                    # the opening token.
+                    || $rOpts_extended_line_up_parentheses
+                  )
+                {
+                    $ii_begin_line         = $i_test + 1;
+                    $lp_position_predictor = $test_position;
+
+                    #--------------------------------------------------
+                    # Fix for an opening container terminating a batch:
+                    #--------------------------------------------------
+                    # To get alignment of a -lp container with its
+                    # contents, we have to put a break after $i_test.
+                    # For $ii<$max_index_to_go, this will be done by
+                    # sub break_lists based on the indentation object.
+                    # But for $ii=$max_index_to_go, the indentation
+                    # object for this seqno will not be created until
+                    # the next batch, so we have to set a break at
+                    # $i_test right now in order to get one.
+                    if (   $ii == $max_index_to_go
+                        && !$block_type_to_go[$ii]
+                        && $types_to_go[$ii] eq '{'
+                        && $seqno
+                        && !$self->[_ris_excluded_lp_container_]->{$seqno} )
+                    {
+                        $self->set_forced_lp_break( $ii_begin_line, $ii );
+                    }
+                }
+            }
+        }
+        return;
+    } ## end sub lp_equals_break_check
+
+    sub lp_decreasing_depth {
+        my ( $self, $ii ) = @_;
+
+        my $rLL = $self->[_rLL_];
+
+        my $level    = $levels_to_go[$ii];
+        my $ci_level = $ci_levels_to_go[$ii];
+
+        # loop to find the first entry at or completely below this level
+        while (1) {
+
+            # Be sure we have not hit the stack bottom - should never
+            # happen because only negative levels can get here, and
+            # $level was forced to be positive above.
+            if ( !$max_lp_stack ) {
+
+                # non-fatal, just keep going except in DEVEL_MODE
+                if (DEVEL_MODE) {
+                    Fault(<<EOM);
+program bug with -lp: stack_error. level=$level; ci_level=$ci_level; rerun with -nlp
+EOM
+                }
+                last;
+            }
+
+            # save index of token which closes this level
+            if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
+                my $lp_object = $rLP->[$max_lp_stack]->[_lp_object_];
+
+                $lp_object->set_closed($ii);
+
+                my $comma_count = 0;
+                my $arrow_count = 0;
+                my $type        = $types_to_go[$ii];
+                if ( $type eq '}' || $type eq ')' ) {
+                    my $total_depth = $nesting_depth_to_go[$ii];
+                    $comma_count = $lp_comma_count{$total_depth};
+                    $arrow_count = $lp_arrow_count{$total_depth};
+                    $comma_count = 0 unless $comma_count;
+                    $arrow_count = 0 unless $arrow_count;
+                }
+
+                $lp_object->set_comma_count($comma_count);
+                $lp_object->set_arrow_count($arrow_count);
+
+                # Undo any extra indentation if we saw no commas
+                my $available_spaces = $lp_object->get_available_spaces();
+                my $K_start          = $lp_object->get_K_begin_line();
+
+                if (   $available_spaces > 0
+                    && $K_start >= $K_to_go[0]
+                    && ( $comma_count <= 0 || $arrow_count > 0 ) )
+                {
+
+                    my $i = $lp_object->get_lp_item_index();
+
+                    # Safety check for a valid stack index. It
+                    # should be ok because we just checked that the
+                    # index K of the token associated with this
+                    # indentation is in this batch.
+                    if ( $i < 0 || $i > $max_lp_object_list ) {
+                        my $KK  = $K_to_go[$ii];
+                        my $lno = $rLL->[$KK]->[_LINE_INDEX_];
+                        DEVEL_MODE && Fault(<<EOM);
+Program bug with -lp near line $lno.  Stack index i=$i should be >=0 and <= max=$max_lp_object_list
+EOM
+                        last;
+                    }
+
+                    if ( $arrow_count == 0 ) {
+                        $rlp_object_list->[$i]
+                          ->permanently_decrease_available_spaces(
+                            $available_spaces);
+                    }
+                    else {
+                        $rlp_object_list->[$i]
+                          ->tentatively_decrease_available_spaces(
+                            $available_spaces);
+                    }
+                    foreach my $j ( $i + 1 .. $max_lp_object_list ) {
+                        $rlp_object_list->[$j]
+                          ->decrease_SPACES($available_spaces);
+                    }
+                }
+            }
+
+            # go down one level
+            --$max_lp_stack;
+
+            my $rLP_top = $rLP->[$max_lp_stack];
+            my $ci_lev  = $rLP_top->[_lp_ci_level_];
+            my $lev     = $rLP_top->[_lp_level_];
+            my $spaces  = $rLP_top->[_lp_space_count_];
+            if ( $rLP_top->[_lp_object_] ) {
+                my $lp_obj = $rLP_top->[_lp_object_];
+                ( $spaces, $lev, $ci_lev ) =
+                  @{ $lp_obj->get_spaces_level_ci() };
+            }
+
+            # stop when we reach a level at or below the current
+            # level
+            if ( $lev <= $level && $ci_lev <= $ci_level ) {
+                $space_count      = $spaces;
+                $current_level    = $lev;
+                $current_ci_level = $ci_lev;
+                last;
+            }
+        }
+        return;
+    } ## end sub lp_decreasing_depth
+
+    sub lp_increasing_depth {
+        my ( $self, $ii ) = @_;
+
+        my $rLL = $self->[_rLL_];
+
+        my $type     = $types_to_go[$ii];
+        my $level    = $levels_to_go[$ii];
+        my $ci_level = $ci_levels_to_go[$ii];
+
+        $stack_changed = 1;
+
+        # Compute the standard incremental whitespace.  This will be
+        # the minimum incremental whitespace that will be used.  This
+        # choice results in a smooth transition between the gnu-style
+        # and the standard style.
+        my $standard_increment =
+          ( $level - $current_level ) * $rOpts_indent_columns +
+          ( $ci_level - $current_ci_level ) * $rOpts_continuation_indentation;
+
+        # Now we have to define how much extra incremental space
+        # ("$available_space") we want.  This extra space will be
+        # reduced as necessary when long lines are encountered or when
+        # it becomes clear that we do not have a good list.
+        my $available_spaces = 0;
+        my $align_seqno      = 0;
+
+        my $last_nonblank_seqno;
+        my $last_nonblank_block_type;
+        if ( defined($K_last_nonblank) ) {
+            $last_nonblank_seqno = $rLL->[$K_last_nonblank]->[_TYPE_SEQUENCE_];
+            $last_nonblank_block_type =
+                $last_nonblank_seqno
+              ? $self->[_rblock_type_of_seqno_]->{$last_nonblank_seqno}
+              : undef;
+        }
+
+        $in_lp_mode = $rLP->[$max_lp_stack]->[_lp_object_];
+
+        #-----------------------------------------------
+        # Initialize indentation spaces on empty stack..
+        #-----------------------------------------------
+        if ( $max_lp_stack == 0 ) {
+            $space_count = $level * $rOpts_indent_columns;
+        }
+
+        #----------------------------------------
+        # Add the standard space increment if ...
+        #----------------------------------------
+        elsif (
+
+            # if this is a BLOCK, add the standard increment
+            $last_nonblank_block_type
+
+            # or if this is not a sequenced item
+            || !$last_nonblank_seqno
+
+            # or this container is excluded by user rules
+            # or contains here-docs or multiline qw text
+            || defined($last_nonblank_seqno)
+            && $self->[_ris_excluded_lp_container_]->{$last_nonblank_seqno}
+
+            # or if last nonblank token was not structural indentation
+            || $last_nonblank_type ne '{'
+
+            # and do not start -lp under stress .. fixes b1244, b1255
+            || !$in_lp_mode && $level >= $lp_cutoff_level
+
+          )
+        {
+
+            # If we have entered lp mode, use the top lp object to get
+            # the current indentation spaces because it may have
+            # changed.  Fixes b1285, b1286.
+            if ($in_lp_mode) {
+                $space_count = $in_lp_mode->get_spaces();
+            }
+            $space_count += $standard_increment;
+        }
+
+        #---------------------------------------------------------------
+        # -lp mode: try to use space to the first non-blank level change
+        #---------------------------------------------------------------
+        else {
+
+            # see how much space we have available
+            my $test_space_count = $lp_position_predictor;
+            my $excess           = 0;
+            my $min_len =
+              $self->[_rcollapsed_length_by_seqno_]->{$last_nonblank_seqno};
+            my $next_opening_too_far;
+
+            if ( defined($min_len) ) {
+                $excess =
+                  $test_space_count +
+                  $min_len -
+                  $maximum_line_length_at_level[$level];
+                if ( $excess > 0 ) {
+                    $test_space_count -= $excess;
+
+                    # will the next opening token be a long way out?
+                    $next_opening_too_far =
+                      $lp_position_predictor + $excess >
+                      $maximum_line_length_at_level[$level];
+                }
+            }
+
+            my $rLP_top             = $rLP->[$max_lp_stack];
+            my $min_gnu_indentation = $rLP_top->[_lp_space_count_];
+            if ( $rLP_top->[_lp_object_] ) {
+                $min_gnu_indentation = $rLP_top->[_lp_object_]->get_spaces();
+            }
+            $available_spaces = $test_space_count - $min_gnu_indentation;
+
+            # Do not startup -lp indentation mode if no space ...
+            # ... or if it puts the opening far to the right
+            if ( !$in_lp_mode
+                && ( $available_spaces <= 0 || $next_opening_too_far ) )
+            {
+                $space_count += $standard_increment;
+                $available_spaces = 0;
+            }
+
+            # Use -lp mode
+            else {
+                $space_count = $test_space_count;
+
+                $in_lp_mode = 1;
+                if ( $available_spaces >= $standard_increment ) {
+                    $min_gnu_indentation += $standard_increment;
+                }
+                elsif ( $available_spaces > 1 ) {
+                    $min_gnu_indentation += $available_spaces + 1;
+                }
+                ##elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
+                elsif ( $is_opening_token{$last_nonblank_token} ) {
+                    if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
+                        $min_gnu_indentation += 2;
+                    }
+                    else {
+                        $min_gnu_indentation += 1;
+                    }
+                }
+                else {
+                    $min_gnu_indentation += $standard_increment;
+                }
+                $available_spaces = $space_count - $min_gnu_indentation;
+
+                if ( $available_spaces < 0 ) {
+                    $space_count      = $min_gnu_indentation;
+                    $available_spaces = 0;
+                }
+                $align_seqno = $last_nonblank_seqno;
+            }
+        }
+
+        #-------------------------------------------
+        # update the state, but not on a blank token
+        #-------------------------------------------
+        if ( $type ne 'b' ) {
+
+            if ( $rLP->[$max_lp_stack]->[_lp_object_] ) {
+                $rLP->[$max_lp_stack]->[_lp_object_]->set_have_child(1);
+                $in_lp_mode = 1;
+            }
+
+            #----------------------------------------
+            # Create indentation object if in lp-mode
+            #----------------------------------------
+            ++$max_lp_stack;
+            my $lp_object;
+            if ($in_lp_mode) {
+
+                # A negative level implies not to store the item in the
+                # item_list
+                my $lp_item_index = 0;
+                if ( $level >= 0 ) {
+                    $lp_item_index = ++$max_lp_object_list;
+                }
+
+                my $K_begin_line = 0;
+                if (   $ii_begin_line >= 0
+                    && $ii_begin_line <= $max_index_to_go )
+                {
+                    $K_begin_line = $K_to_go[$ii_begin_line];
+                }
+
+                # Minor Fix: when creating indentation at a side
+                # comment we don't know what the space to the actual
+                # next code token will be.  We will allow a space for
+                # sub correct_lp to move it in if necessary.
+                if (   $type eq '#'
+                    && $max_index_to_go > 0
+                    && $align_seqno )
+                {
+                    $available_spaces += 1;
+                }
+
+                my $standard_spaces = $leading_spaces_to_go[$ii];
+                $lp_object = Perl::Tidy::IndentationItem->new(
+                    spaces           => $space_count,
+                    level            => $level,
+                    ci_level         => $ci_level,
+                    available_spaces => $available_spaces,
+                    lp_item_index    => $lp_item_index,
+                    align_seqno      => $align_seqno,
+                    stack_depth      => $max_lp_stack,
+                    K_begin_line     => $K_begin_line,
+                    standard_spaces  => $standard_spaces,
+                );
+
+                DEBUG_LP && do {
+                    my $tok_beg = $rLL->[$K_begin_line]->[_TOKEN_];
+                    my $token   = $tokens_to_go[$ii];
+                    print STDERR <<EOM;
+DEBUG_LP: Created object at tok=$token type=$type for seqno $align_seqno level=$level ci=$ci_level spaces=$space_count avail=$available_spaces kbeg=$K_begin_line tokbeg=$tok_beg lp=$lp_position_predictor
+EOM
+                };
+
+                if ( $level >= 0 ) {
+                    $rlp_object_list->[$max_lp_object_list] = $lp_object;
+                }
+
+                if (   $is_opening_token{$last_nonblank_token}
+                    && $last_nonblank_seqno )
+                {
+                    $self->[_rlp_object_by_seqno_]->{$last_nonblank_seqno} =
+                      $lp_object;
+                }
+            }
+
+            #------------------------------------
+            # Store this indentation on the stack
+            #------------------------------------
+            $rLP->[$max_lp_stack]->[_lp_ci_level_] = $ci_level;
+            $rLP->[$max_lp_stack]->[_lp_level_]    = $level;
+            $rLP->[$max_lp_stack]->[_lp_object_]   = $lp_object;
+            $rLP->[$max_lp_stack]->[_lp_container_seqno_] =
+              $last_nonblank_seqno;
+            $rLP->[$max_lp_stack]->[_lp_space_count_] = $space_count;
+
+            # If the opening paren is beyond the half-line length, then
+            # we will use the minimum (standard) indentation.  This will
+            # help avoid problems associated with running out of space
+            # near the end of a line.  As a result, in deeply nested
+            # lists, there will be some indentations which are limited
+            # to this minimum standard indentation. But the most deeply
+            # nested container will still probably be able to shift its
+            # parameters to the right for proper alignment, so in most
+            # cases this will not be noticeable.
+            if ( $available_spaces > 0 && $lp_object ) {
+                my $halfway =
+                  $maximum_line_length_at_level[$level] -
+                  $rOpts_maximum_line_length / 2;
+                $lp_object->tentatively_decrease_available_spaces(
+                    $available_spaces)
+                  if ( $space_count > $halfway );
+            }
+        }
+        return;
+    } ## end sub lp_increasing_depth
 
     sub check_for_long_gnu_style_lines {
 
