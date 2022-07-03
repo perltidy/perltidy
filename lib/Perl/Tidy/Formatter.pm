@@ -5258,18 +5258,8 @@ EOM
         # to do the actual formatting.
 
         my ( $self, $line_of_tokens_old ) = @_;
-        my $rLL        = $self->[_rLL_];
-        my $Klimit     = $self->[_Klimit_];
-        my $rlines_new = $self->[_rlines_];
 
-        my $K_opening_container     = $self->[_K_opening_container_];
-        my $K_closing_container     = $self->[_K_closing_container_];
-        my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
-        my $rSS                     = $self->[_rSS_];
-        my $Iss_opening             = $self->[_Iss_opening_];
-        my $Iss_closing             = $self->[_Iss_closing_];
-
-        my $Kfirst;
+        my $rLL            = $self->[_rLL_];
         my $line_of_tokens = {};
         foreach (
             qw(
@@ -5289,180 +5279,53 @@ EOM
             $line_of_tokens->{$_} = $line_of_tokens_old->{$_};
         }
 
-        # Data needed by Logger
-        $line_of_tokens->{_level_0}          = 0;
-        $line_of_tokens->{_ci_level_0}       = 0;
-        $line_of_tokens->{_nesting_blocks_0} = EMPTY_STRING;
-        $line_of_tokens->{_nesting_tokens_0} = EMPTY_STRING;
-
-        # Needed to avoid trimming quotes
-        $line_of_tokens->{_ended_in_blank_token} = undef;
-
-        my $line_type   = $line_of_tokens_old->{_line_type};
-        my $line_number = $line_of_tokens_old->{_line_number};
-        my $CODE_type   = EMPTY_STRING;
+        my $line_type = $line_of_tokens_old->{_line_type};
         my $tee_output;
+
+        my $Klimit = $self->[_Klimit_];
+        my $Kfirst;
 
         # Handle line of non-code
         if ( $line_type ne 'CODE' ) {
             $tee_output ||= $rOpts_tee_pod
               && substr( $line_type, 0, 3 ) eq 'POD';
+
+            # these are defined just in case logger uses them
+            $line_of_tokens->{_level_0}          = 0;
+            $line_of_tokens->{_ci_level_0}       = 0;
+            $line_of_tokens->{_nesting_blocks_0} = EMPTY_STRING;
+            $line_of_tokens->{_nesting_tokens_0} = EMPTY_STRING;
+
         }
 
         # Handle line of code
         else {
 
-            my $rtokens        = $line_of_tokens_old->{_rtokens};
-            my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
-            my $rblock_type    = $line_of_tokens_old->{_rblock_type};
-            my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
-            my $rlevels        = $line_of_tokens_old->{_rlevels};
-            my $rci_levels     = $line_of_tokens_old->{_rci_levels};
+            my $rtokens = $line_of_tokens_old->{_rtokens};
+            my $jmax    = @{$rtokens} - 1;
 
-            my $jmax = @{$rtokens} - 1;
             if ( $jmax >= 0 ) {
+
                 $Kfirst = defined($Klimit) ? $Klimit + 1 : 0;
 
-                DEVEL_MODE
-                  && check_sequence_numbers( $rtokens, $rtoken_type,
-                    $rtype_sequence, $line_number );
+                #----------------------------
+                # get the tokens on this line
+                #----------------------------
+                $self->write_line_inner_loop( $line_of_tokens_old,
+                    $line_of_tokens );
 
-                # Find the starting nesting depth ...
-                # It must be the value of variable 'level' of the first token
-                # because the nesting depth is used as a token tag in the
-                # vertical aligner and is compared to actual levels.
-                # So vertical alignment problems will occur with any other
-                # starting value.
-                if ( !defined($nesting_depth) ) {
-                    $nesting_depth = $rlevels->[0];
-                    $nesting_depth = 0 if ( $nesting_depth < 0 );
-                    $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
-                }
-
-                foreach my $j ( 0 .. $jmax ) {
-
-                    # Do not clip the 'level' variable yet. We will do this
-                    # later, in sub 'store_token_to_go'. The reason is that in
-                    # files with level errors, the logic in 'weld_cuddled_else'
-                    # uses a stack logic that will give bad welds if we clip
-                    # levels here.
-                    ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
-
-                    # Handle tokens with sequence numbers ...
-                    my $seqno = $rtype_sequence->[$j];
-                    if ($seqno) {
-                        my $token = $rtokens->[$j];
-                        my $sign  = 1;
-                        if ( $is_opening_token{$token} ) {
-                            $K_opening_container->{$seqno} = @{$rLL};
-                            $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
-                            $nesting_depth++;
-
-                            # Save a sequenced block type at its opening token.
-                            # Note that unsequenced block types can occur in
-                            # unbalanced code with errors but are ignored here.
-                            $self->store_block_type( $rblock_type->[$j],
-                                $seqno )
-                              if ( $rblock_type->[$j] );
-                        }
-                        elsif ( $is_closing_token{$token} ) {
-
-                            # The opening depth should always be defined, and
-                            # it should equal $nesting_depth-1.  To protect
-                            # against unforseen error conditions, however, we
-                            # will check this and fix things if necessary.  For
-                            # a test case see issue c055.
-                            my $opening_depth =
-                              $rdepth_of_opening_seqno->[$seqno];
-                            if ( !defined($opening_depth) ) {
-                                $opening_depth = $nesting_depth - 1;
-                                $opening_depth = 0 if ( $opening_depth < 0 );
-                                $rdepth_of_opening_seqno->[$seqno] =
-                                  $opening_depth;
-
-                                # This is not fatal but should not happen.  The
-                                # tokenizer generates sequence numbers
-                                # incrementally upon encountering each new
-                                # opening token, so every positive sequence
-                                # number should correspond to an opening token.
-                                DEVEL_MODE && Fault(<<EOM);
-No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
-EOM
-                            }
-                            $K_closing_container->{$seqno} = @{$rLL};
-                            $nesting_depth                 = $opening_depth;
-                            $sign                          = -1;
-                        }
-                        elsif ( $token eq '?' ) {
-                        }
-                        elsif ( $token eq ':' ) {
-                            $sign = -1;
-                        }
-
-                        # The only sequenced types output by the tokenizer are
-                        # the opening & closing containers and the ternary
-                        # types. So we would only get here if the tokenizer has
-                        # been changed to mark some other tokens with sequence
-                        # numbers, or if an error has been introduced in a
-                        # hash such as %is_opening_container
-                        else {
-                            if (DEVEL_MODE) {
-                                Fault(<<EOM);
-Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
-Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
-EOM
-                            }
-                        }
-
-                        if ( $sign > 0 ) {
-                            $Iss_opening->[$seqno] = @{$rSS};
-
-                            # For efficiency, we find the maximum level of
-                            # opening tokens of any type.  The actual maximum
-                            # level will be that of their contents which is 1
-                            # greater.  That will be fixed in sub
-                            # 'finish_formatting'.
-                            my $level = $rlevels->[$j];
-                            if ( $level > $self->[_maximum_level_] ) {
-                                $self->[_maximum_level_]         = $level;
-                                $self->[_maximum_level_at_line_] = $line_number;
-                            }
-                        }
-                        else { $Iss_closing->[$seqno] = @{$rSS} }
-                        push @{$rSS}, $sign * $seqno;
-
-                    }
-                    else {
-                        $seqno = EMPTY_STRING unless ( defined($seqno) );
-                    }
-
-                    my @tokary;
-                    @tokary[
-                      _TOKEN_, _TYPE_,     _TYPE_SEQUENCE_,
-                      _LEVEL_, _CI_LEVEL_, _LINE_INDEX_,
-                      ]
-                      = (
-                        $rtokens->[$j],    $rtoken_type->[$j],
-                        $seqno,            $rlevels->[$j],
-                        $rci_levels->[$j], $line_number - 1,
-                      );
-                    push @{$rLL}, \@tokary;
-                } ## end foreach my $j ( 0 .. $jmax )
-
+                # update Klimit for added tokens
                 $Klimit = @{$rLL} - 1;
 
-                # Need to remember if we can trim the input line
-                $line_of_tokens->{_ended_in_blank_token} =
-                  $rtoken_type->[$jmax] eq 'b';
-
-                $line_of_tokens->{_level_0}    = $rlevels->[0];
-                $line_of_tokens->{_ci_level_0} = $rci_levels->[0];
-                $line_of_tokens->{_nesting_blocks_0} =
-                  $line_of_tokens_old->{_nesting_blocks_0};
-                $line_of_tokens->{_nesting_tokens_0} =
-                  $line_of_tokens_old->{_nesting_tokens_0};
-
             } ## end if ( $jmax >= 0 )
+            else {
+
+                # these are defined just in case logger uses them
+                $line_of_tokens->{_level_0}          = 0;
+                $line_of_tokens->{_ci_level_0}       = 0;
+                $line_of_tokens->{_nesting_blocks_0} = EMPTY_STRING;
+                $line_of_tokens->{_nesting_tokens_0} = EMPTY_STRING;
+            }
 
             $tee_output ||=
                  $rOpts_tee_block_comments
@@ -5478,19 +5341,174 @@ EOM
         } ## end if ( $line_type eq 'CODE')
 
         # Finish storing line variables
+        $line_of_tokens->{_rK_range} = [ $Kfirst, $Klimit ];
+        $self->[_Klimit_] = $Klimit;
+        my $rlines = $self->[_rlines_];
+        push @{$rlines}, $line_of_tokens;
+
         if ($tee_output) {
             my $fh_tee    = $self->[_fh_tee_];
             my $line_text = $line_of_tokens_old->{_line_text};
             $fh_tee->print($line_text) if ($fh_tee);
         }
 
-        $line_of_tokens->{_rK_range}  = [ $Kfirst, $Klimit ];
-        $line_of_tokens->{_code_type} = $CODE_type;
-        $self->[_Klimit_]             = $Klimit;
-
-        push @{$rlines_new}, $line_of_tokens;
         return;
     } ## end sub write_line
+
+    sub write_line_inner_loop {
+        my ( $self, $line_of_tokens_old, $line_of_tokens ) = @_;
+
+        # Copy the tokens for this line to their new storage location
+
+        my $rtokens = $line_of_tokens_old->{_rtokens};
+        my $jmax    = @{$rtokens} - 1;
+        return if ( $jmax < 0 );    # safety check; shouldn't happen
+
+        my $line_number    = $line_of_tokens_old->{_line_number};
+        my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
+        my $rblock_type    = $line_of_tokens_old->{_rblock_type};
+        my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
+        my $rlevels        = $line_of_tokens_old->{_rlevels};
+        my $rci_levels     = $line_of_tokens_old->{_rci_levels};
+
+        my $rLL                     = $self->[_rLL_];
+        my $rSS                     = $self->[_rSS_];
+        my $rdepth_of_opening_seqno = $self->[_rdepth_of_opening_seqno_];
+
+        DEVEL_MODE
+          && check_sequence_numbers( $rtokens, $rtoken_type,
+            $rtype_sequence, $line_number );
+
+        # Find the starting nesting depth ...
+        # It must be the value of variable 'level' of the first token
+        # because the nesting depth is used as a token tag in the
+        # vertical aligner and is compared to actual levels.
+        # So vertical alignment problems will occur with any other
+        # starting value.
+        if ( !defined($nesting_depth) ) {
+            $nesting_depth                       = $rlevels->[0];
+            $nesting_depth                       = 0 if ( $nesting_depth < 0 );
+            $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
+        }
+
+        foreach my $j ( 0 .. $jmax ) {
+
+            # Do not clip the 'level' variable yet. We will do this
+            # later, in sub 'store_token_to_go'. The reason is that in
+            # files with level errors, the logic in 'weld_cuddled_else'
+            # uses a stack logic that will give bad welds if we clip
+            # levels here.
+            ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
+
+            # Handle tokens with sequence numbers ...
+            my $seqno = $rtype_sequence->[$j];
+            if ($seqno) {
+                my $token = $rtokens->[$j];
+                my $sign  = 1;
+                if ( $is_opening_token{$token} ) {
+                    $self->[_K_opening_container_]->{$seqno} = @{$rLL};
+                    $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
+                    $nesting_depth++;
+
+                    # Save a sequenced block type at its opening token.
+                    # Note that unsequenced block types can occur in
+                    # unbalanced code with errors but are ignored here.
+                    $self->store_block_type( $rblock_type->[$j], $seqno )
+                      if ( $rblock_type->[$j] );
+                }
+                elsif ( $is_closing_token{$token} ) {
+
+                    # The opening depth should always be defined, and
+                    # it should equal $nesting_depth-1.  To protect
+                    # against unforseen error conditions, however, we
+                    # will check this and fix things if necessary.  For
+                    # a test case see issue c055.
+                    my $opening_depth = $rdepth_of_opening_seqno->[$seqno];
+                    if ( !defined($opening_depth) ) {
+                        $opening_depth = $nesting_depth - 1;
+                        $opening_depth = 0 if ( $opening_depth < 0 );
+                        $rdepth_of_opening_seqno->[$seqno] = $opening_depth;
+
+                        # This is not fatal but should not happen.  The
+                        # tokenizer generates sequence numbers
+                        # incrementally upon encountering each new
+                        # opening token, so every positive sequence
+                        # number should correspond to an opening token.
+                        DEVEL_MODE && Fault(<<EOM);
+No opening token seen for closing token = '$token' at seq=$seqno at depth=$opening_depth
+EOM
+                    }
+                    $self->[_K_closing_container_]->{$seqno} = @{$rLL};
+                    $nesting_depth                           = $opening_depth;
+                    $sign                                    = -1;
+                }
+                elsif ( $token eq '?' ) {
+                }
+                elsif ( $token eq ':' ) {
+                    $sign = -1;
+                }
+
+                # The only sequenced types output by the tokenizer are
+                # the opening & closing containers and the ternary
+                # types. So we would only get here if the tokenizer has
+                # been changed to mark some other tokens with sequence
+                # numbers, or if an error has been introduced in a
+                # hash such as %is_opening_container
+                else {
+                    DEVEL_MODE && Fault(<<EOM);
+Unexpected sequenced token '$token' of type '$rtoken_type->[$j]', sequence=$seqno arrived from tokenizer.
+Expecting only opening or closing container tokens or ternary tokens with sequence numbers.
+EOM
+                }
+
+                if ( $sign > 0 ) {
+                    $self->[_Iss_opening_]->[$seqno] = @{$rSS};
+
+                    # For efficiency, we find the maximum level of
+                    # opening tokens of any type.  The actual maximum
+                    # level will be that of their contents which is 1
+                    # greater.  That will be fixed in sub
+                    # 'finish_formatting'.
+                    my $level = $rlevels->[$j];
+                    if ( $level > $self->[_maximum_level_] ) {
+                        $self->[_maximum_level_]         = $level;
+                        $self->[_maximum_level_at_line_] = $line_number;
+                    }
+                }
+                else { $self->[_Iss_closing_]->[$seqno] = @{$rSS} }
+                push @{$rSS}, $sign * $seqno;
+
+            }
+            else {
+                $seqno = EMPTY_STRING unless ( defined($seqno) );
+            }
+
+            my @tokary;
+            @tokary[
+              _TOKEN_, _TYPE_,     _TYPE_SEQUENCE_,
+              _LEVEL_, _CI_LEVEL_, _LINE_INDEX_,
+              ]
+              = (
+                $rtokens->[$j],    $rtoken_type->[$j], $seqno, $rlevels->[$j],
+                $rci_levels->[$j], $line_number - 1,
+              );
+            push @{$rLL}, \@tokary;
+        } ## end foreach my $j ( 0 .. $jmax )
+
+        # Need to remember if we can trim the input line
+        $line_of_tokens->{_ended_in_blank_token} = $rtoken_type->[$jmax] eq 'b';
+
+        $line_of_tokens->{_level_0}    = $rlevels->[0];
+        $line_of_tokens->{_ci_level_0} = $rci_levels->[0];
+        $line_of_tokens->{_nesting_blocks_0} =
+          $line_of_tokens_old->{_nesting_blocks_0};
+        $line_of_tokens->{_nesting_tokens_0} =
+          $line_of_tokens_old->{_nesting_tokens_0};
+
+        return;
+
+    } ## end sub write_line_inner_loop
+
 } ## end closure write_line
 
 #############################################
