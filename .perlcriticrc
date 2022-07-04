@@ -69,11 +69,11 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # This is very useful, so we have to skip this.
 [-ClassHierarchies::ProhibitAutoloading]
 
-# The max values below can be reduced to locate code which might be improved.
+# The max values below can be reduced to locate code which might be simplified.
 [Subroutines::ProhibitExcessComplexity]
 max_mccabe=153
 [ControlStructures::ProhibitDeepNests]
-max_nests=8
+max_nests=7
 
 # The if-elsif sequences in perltidy have all been profiled and
 # are fine as is. Changing them would complicate the code without
