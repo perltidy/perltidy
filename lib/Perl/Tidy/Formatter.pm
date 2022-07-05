@@ -3092,19 +3092,20 @@ sub set_whitespace_flags {
 
         $rwhitespace_flags->[$j] = $ws;
 
-        if (DEBUG_WHITE) {
-            my $str = substr( $last_token, 0, 15 );
-            $str .= SPACE x ( 16 - length($str) );
-            if ( !defined($ws_1) ) { $ws_1 = "*" }
-            if ( !defined($ws_2) ) { $ws_2 = "*" }
-            if ( !defined($ws_3) ) { $ws_3 = "*" }
-            if ( !defined($ws_4) ) { $ws_4 = "*" }
-            print STDOUT
+        next if ( !DEBUG_WHITE );
+
+        my $str = substr( $last_token, 0, 15 );
+        $str .= SPACE x( 16 - length($str) );
+        if ( !defined($ws_1) ) { $ws_1 = "*" }
+        if ( !defined($ws_2) ) { $ws_2 = "*" }
+        if ( !defined($ws_3) ) { $ws_3 = "*" }
+        if ( !defined($ws_4) ) { $ws_4 = "*" }
+        print STDOUT
 "NEW WHITE:  i=$j $str $last_type $type $ws_1 : $ws_2 : $ws_3 : $ws_4 : $ws \n";
 
-            # reset for next pass
-            $ws_1 = $ws_2 = $ws_3 = $ws_4 = undef;
-        }
+        # reset for next pass
+        $ws_1 = $ws_2 = $ws_3 = $ws_4 = undef;
+
     } ## end main loop
 
     if ( $rOpts->{'tight-secret-operators'} ) {
