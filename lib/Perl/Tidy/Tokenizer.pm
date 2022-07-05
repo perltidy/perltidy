@@ -23,7 +23,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20220613';
+our $VERSION = '20220613.01';
 
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};

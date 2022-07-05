@@ -52,7 +52,7 @@ use constant SPACE        => q{ };
 
 use Carp;
 use English qw( -no_match_vars );
-our $VERSION = '20220613';
+our $VERSION = '20220613.01';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -3095,7 +3095,7 @@ sub set_whitespace_flags {
         next if ( !DEBUG_WHITE );
 
         my $str = substr( $last_token, 0, 15 );
-        $str .= SPACE x( 16 - length($str) );
+        $str .= SPACE x ( 16 - length($str) );
         if ( !defined($ws_1) ) { $ws_1 = "*" }
         if ( !defined($ws_2) ) { $ws_2 = "*" }
         if ( !defined($ws_3) ) { $ws_3 = "*" }

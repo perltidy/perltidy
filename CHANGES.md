@@ -1,6 +1,8 @@
 # Perltidy Change Log
 
-## 2022 xx xx
+## 2022 06 13.01
+
+    - Fix undefined value message when perltidy -D is used. 
 
     - Added parameter --delete-repeated-commas (-drc) to delete repeated
       commas. This is off by default. For example, given this line:
