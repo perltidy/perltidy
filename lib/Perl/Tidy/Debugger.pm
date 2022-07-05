@@ -67,7 +67,6 @@ sub write_debug_entry {
     my $rtoken_type = $line_of_tokens->{_rtoken_type};
     my $rtokens     = $line_of_tokens->{_rtokens};
     my $rlevels     = $line_of_tokens->{_rlevels};
-    my $rblock_type = $line_of_tokens->{_rblock_type};
 
     my $input_line_number = $line_of_tokens->{_line_number};
     my $line_type         = $line_of_tokens->{_line_type};
@@ -76,7 +75,6 @@ sub write_debug_entry {
 
     my $token_str              = "$input_line_number: ";
     my $reconstructed_original = "$input_line_number: ";
-    my $block_str              = "$input_line_number: ";
 
     my $pattern   = EMPTY_STRING;
     my @next_char = ( '"', '"' );
@@ -94,7 +92,6 @@ sub write_debug_entry {
             $pattern .= $rtoken_type->[$j];
         }
         $reconstructed_original .= $rtokens->[$j];
-        $block_str              .= "($rblock_type->[$j])";
         $num = length( $rtokens->[$j] );
         my $type_str = $rtoken_type->[$j];
 
