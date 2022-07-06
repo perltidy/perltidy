@@ -2514,6 +2514,8 @@ sub initialize_whitespace_hashes {
 
 } ## end sub initialize_whitespace_hashes
 
+{ #<<< begin closure set_whitespace_flags
+
 my %is_special_ws_type;
 my %is_wCUG;
 my %is_wi;
@@ -2536,6 +2538,26 @@ BEGIN {
 
 use constant DEBUG_WHITE => 0;
 
+# closure variables
+my (
+
+    $rLL,
+    $jmax,
+
+    $j_tight_closing_paren,
+    $last_token,
+    $token,
+    $type,
+    $ws,
+
+);
+
+# Hashes to set spaces around container tokens according to their
+# sequence numbers.  These are set as keywords are examined.
+# They are controlled by the -kpit and -kpitl flags.
+my %opening_container_inside_ws;
+my %closing_container_inside_ws;
+
 sub set_whitespace_flags {
 
     # This routine is called once per file to set whitespace flags for that
@@ -2552,9 +2574,19 @@ sub set_whitespace_flags {
 
     my $self = shift;
 
-    my $rLL                  = $self->[_rLL_];
+    # initialize closure variables
+    $rLL  = $self->[_rLL_];
+    $jmax = @{$rLL} - 1;
+
+    $j_tight_closing_paren = -1;
+    $token                 = SPACE;
+    $type                  = 'b';
+    $last_token            = EMPTY_STRING;
+
+    %opening_container_inside_ws = ();
+    %closing_container_inside_ws = ();
+
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $jmax                 = @{$rLL} - 1;
 
     my $rOpts_space_keyword_paren   = $rOpts->{'space-keyword-paren'};
     my $rOpts_space_backslash_quote = $rOpts->{'space-backslash-quote'};
@@ -2567,110 +2599,18 @@ sub set_whitespace_flags {
 
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
-    my ( $rtokh, $token, $type );
+    my $rtokh;
     my $rtokh_last      = $rLL->[0];
     my $rtokh_last_last = $rtokh_last;
 
-    my $last_type  = EMPTY_STRING;
-    my $last_token = EMPTY_STRING;
-
-    my $j_tight_closing_paren = -1;
+    my $last_type = EMPTY_STRING;
 
     $rtokh = [ @{ $rLL->[0] } ];
-    $token = SPACE;
-    $type  = 'b';
 
     $rtokh->[_TOKEN_]         = $token;
     $rtokh->[_TYPE_]          = $type;
     $rtokh->[_TYPE_SEQUENCE_] = EMPTY_STRING;
     $rtokh->[_LINE_INDEX_]    = 0;
-
-    # This is some logic moved to a sub to avoid deep nesting of if stmts
-    my $ws_in_container = sub {
-
-        my ($j) = @_;
-        my $ws = WS_YES;
-        if ( $j + 1 > $jmax ) { return (WS_NO) }
-
-        # Patch to count '-foo' as single token so that
-        # each of  $a{-foo} and $a{foo} and $a{'foo'} do
-        # not get spaces with default formatting.
-        my $j_here = $j;
-        ++$j_here
-          if ( $token eq '-'
-            && $last_token eq '{'
-            && $rLL->[ $j + 1 ]->[_TYPE_] eq 'w' );
-
-        # Patch to count a sign separated from a number as a single token, as
-        # in the following line. Otherwise, it takes two steps to converge:
-        #    deg2rad(-  0.5)
-        if (   ( $type eq 'm' || $type eq 'p' )
-            && $j < $jmax + 1
-            && $rLL->[ $j + 1 ]->[_TYPE_] eq 'b'
-            && $rLL->[ $j + 2 ]->[_TYPE_] eq 'n'
-            && $rLL->[ $j + 2 ]->[_TOKEN_] =~ /^\d/ )
-        {
-            $j_here = $j + 2;
-        }
-
-        # $j_next is where a closing token should be if
-        # the container has a single token
-        if ( $j_here + 1 > $jmax ) { return (WS_NO) }
-        my $j_next =
-          ( $rLL->[ $j_here + 1 ]->[_TYPE_] eq 'b' )
-          ? $j_here + 2
-          : $j_here + 1;
-
-        if ( $j_next > $jmax ) { return WS_NO }
-        my $tok_next  = $rLL->[$j_next]->[_TOKEN_];
-        my $type_next = $rLL->[$j_next]->[_TYPE_];
-
-        # for tightness = 1, if there is just one token
-        # within the matching pair, we will keep it tight
-        if (
-            $tok_next eq $matching_token{$last_token}
-
-            # but watch out for this: [ [ ]    (misc.t)
-            && $last_token ne $token
-
-            # double diamond is usually spaced
-            && $token ne '<<>>'
-
-          )
-        {
-
-            # remember where to put the space for the closing paren
-            $j_tight_closing_paren = $j_next;
-            return (WS_NO);
-        }
-        return (WS_YES);
-    };
-
-    # Local hashes to set spaces around container tokens according to their
-    # sequence numbers.  These are set as keywords are examined.
-    # They are controlled by the -kpit and -kpitl flags.
-    my %opening_container_inside_ws;
-    my %closing_container_inside_ws;
-    my $set_container_ws_by_keyword = sub {
-
-        return unless (%keyword_paren_inner_tightness);
-
-        my ( $word, $sequence_number ) = @_;
-
-        # We just saw a keyword (or other function name) followed by an opening
-        # paren. Now check to see if the following paren should have special
-        # treatment for its inside space.  If so we set a hash value using the
-        # sequence number as key.
-        if ( $word && $sequence_number ) {
-            my $tightness = $keyword_paren_inner_tightness{$word};
-            if ( defined($tightness) && $tightness != 1 ) {
-                my $ws_flag = $tightness == 0 ? WS_YES : WS_NO;
-                $opening_container_inside_ws{$sequence_number} = $ws_flag;
-                $closing_container_inside_ws{$sequence_number} = $ws_flag;
-            }
-        }
-        return;
-    };
 
     my ( $ws_1, $ws_2, $ws_3, $ws_4 );
 
@@ -2692,7 +2632,7 @@ sub set_whitespace_flags {
         $token = $rtokh->[_TOKEN_];
         $type  = $rtokh->[_TYPE_];
 
-        my $ws;
+        $ws = undef;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 1:
@@ -2759,7 +2699,7 @@ sub set_whitespace_flags {
                     $ws = WS_NO;
                 }
                 else {
-                    $ws = $ws_in_container->($j);
+                    $ws = ws_in_container($j);
                 }
             }
 
@@ -2814,7 +2754,7 @@ sub set_whitespace_flags {
                         last if ( $rLL->[$jp]->[_LEVEL_] != $level );    # b1236
                         next unless ( $rLL->[$jp]->[_TOKEN_] eq '(' );
                         my $seqno_p = $rLL->[$jp]->[_TYPE_SEQUENCE_];
-                        $set_container_ws_by_keyword->( $token, $seqno_p );
+                        set_container_ws_by_keyword( $token, $seqno_p );
                         last;
                     }
                 }
@@ -2930,7 +2870,7 @@ sub set_whitespace_flags {
                         || $space_after_keyword{$last_token} );
 
                     # Set inside space flag if requested
-                    $set_container_ws_by_keyword->( $last_token, $seqno );
+                    set_container_ws_by_keyword( $last_token, $seqno );
                 }
 
                 # Space between function and '('
@@ -2973,7 +2913,7 @@ sub set_whitespace_flags {
                   )
                 {
                     $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
-                    $set_container_ws_by_keyword->( $last_token, $seqno );
+                    set_container_ws_by_keyword( $last_token, $seqno );
                     $ris_function_call_paren->{$seqno} = 1;
                 }
 
@@ -3115,6 +3055,88 @@ sub set_whitespace_flags {
     return $rwhitespace_flags;
 
 } ## end sub set_whitespace_flags
+
+sub set_container_ws_by_keyword {
+
+    my ( $word, $sequence_number ) = @_;
+    return unless (%keyword_paren_inner_tightness);
+
+    # We just saw a keyword (or other function name) followed by an opening
+    # paren. Now check to see if the following paren should have special
+    # treatment for its inside space.  If so we set a hash value using the
+    # sequence number as key.
+    if ( $word && $sequence_number ) {
+        my $tightness = $keyword_paren_inner_tightness{$word};
+        if ( defined($tightness) && $tightness != 1 ) {
+            my $ws_flag = $tightness == 0 ? WS_YES : WS_NO;
+            $opening_container_inside_ws{$sequence_number} = $ws_flag;
+            $closing_container_inside_ws{$sequence_number} = $ws_flag;
+        }
+    }
+    return;
+} ## end sub set_container_ws_by_keyword
+
+sub ws_in_container {
+
+    my ($j) = @_;
+    my $ws = WS_YES;
+    if ( $j + 1 > $jmax ) { return (WS_NO) }
+
+    # Patch to count '-foo' as single token so that
+    # each of  $a{-foo} and $a{foo} and $a{'foo'} do
+    # not get spaces with default formatting.
+    my $j_here = $j;
+    ++$j_here
+      if ( $token eq '-'
+        && $last_token eq '{'
+        && $rLL->[ $j + 1 ]->[_TYPE_] eq 'w' );
+
+    # Patch to count a sign separated from a number as a single token, as
+    # in the following line. Otherwise, it takes two steps to converge:
+    #    deg2rad(-  0.5)
+    if (   ( $type eq 'm' || $type eq 'p' )
+        && $j < $jmax + 1
+        && $rLL->[ $j + 1 ]->[_TYPE_] eq 'b'
+        && $rLL->[ $j + 2 ]->[_TYPE_] eq 'n'
+        && $rLL->[ $j + 2 ]->[_TOKEN_] =~ /^\d/ )
+    {
+        $j_here = $j + 2;
+    }
+
+    # $j_next is where a closing token should be if
+    # the container has a single token
+    if ( $j_here + 1 > $jmax ) { return (WS_NO) }
+    my $j_next =
+      ( $rLL->[ $j_here + 1 ]->[_TYPE_] eq 'b' )
+      ? $j_here + 2
+      : $j_here + 1;
+
+    if ( $j_next > $jmax ) { return WS_NO }
+    my $tok_next  = $rLL->[$j_next]->[_TOKEN_];
+    my $type_next = $rLL->[$j_next]->[_TYPE_];
+
+    # for tightness = 1, if there is just one token
+    # within the matching pair, we will keep it tight
+    if (
+        $tok_next eq $matching_token{$last_token}
+
+        # but watch out for this: [ [ ]    (misc.t)
+        && $last_token ne $token
+
+        # double diamond is usually spaced
+        && $token ne '<<>>'
+
+      )
+    {
+
+        # remember where to put the space for the closing paren
+        $j_tight_closing_paren = $j_next;
+        return (WS_NO);
+    }
+    return (WS_YES);
+} ## end sub ws_in_container
+
+} ## end closure set_whitespace_flags
 
 sub dump_want_left_space {
     my $fh = shift;
