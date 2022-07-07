@@ -3079,7 +3079,6 @@ sub set_container_ws_by_keyword {
 sub ws_in_container {
 
     my ($j) = @_;
-    my $ws = WS_YES;
     if ( $j + 1 > $jmax ) { return (WS_NO) }
 
     # Patch to count '-foo' as single token so that
@@ -21831,11 +21830,15 @@ sub get_available_spaces_to_go {
 
             # Fix for issue b1229, check for break before
             # Fix for issue b1356, i_test must never be blank
+            # Fix for issue b1357 .. b1370, i_test must be prev nonblank
             #   ( the ci value for blanks can vary )
+            # See also b223
             if ( $want_break_before{ $types_to_go[$i_test] } ) {
-                if ( $i_test > 0 && $types_to_go[ $i_test - 1 ] ne 'b' ) {
-                    $i_test--;
-                }
+                my $i_prev_nb = $i_test - 1;
+                $i_prev_nb -= 1
+                  if ( $types_to_go[$i_prev_nb] eq 'b' );
+                $i_test = $i_prev_nb
+                  if ( $i_prev_nb > $ii_begin_line );
             }
             elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
 

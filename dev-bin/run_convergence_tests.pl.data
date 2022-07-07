@@ -10091,6 +10091,25 @@ my $data =
 --maximum-line-length=22
 --want-break-before=' = '
 
+==> b1357.in <==
+# S1
+my ( $m, $i, $j )
+  =( length $P, 0,
+     -1 );
+
+# S2
+my ( $m, $i, $j ) =(
+             length $P, 0,
+             -1 );
+
+==> b1357.par <==
+--break-at-old-comma-breakpoints
+--extended-line-up-parentheses
+--indent-columns=0
+--maximum-line-length=26
+--nowant-right-space='='
+--want-break-before='='
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
