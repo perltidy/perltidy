@@ -3829,9 +3829,17 @@ EOM
             $next_tok = $rtokens->[ $i + 1 ];
             if ( $next_tok eq '(' ) {
 
+                # Patch for issue c151, where we are processing a snippet and
+                # have not seen that SPACE is a constant.  In this case 'x' is
+                # probably an operator. The only disadvantage with an incorrect
+                # guess is that the space after it may be incorrect. For example
+                #   $str .= SPACE x ( 16 - length($str) );
+                if ( $tok eq 'x' && $last_nonblank_type eq 'w' ) { $type = 'x' }
+
                 # Fix part 2 for git #63.  Leave type as 'w' to keep
                 # the type the same as if the -> were not separated
-                $type = 'U' unless ( $last_nonblank_type eq '->' );
+                elsif ( $last_nonblank_type ne '->' ) { $type = 'U' }
+
             }
 
             # underscore after file test operator is file handle
