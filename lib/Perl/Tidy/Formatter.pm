@@ -21828,17 +21828,20 @@ sub get_available_spaces_to_go {
             # find the position if we break at the '='
             my $i_test = $ii_last_equals;
 
-            # Fix for issue b1229, check for break before
-            # Fix for issue b1356, i_test must never be blank
+            # Fix for issue b1229, check if want break before this token
+            # Fix for issue b1356, if i_test is a blank, the leading spaces may
+            #   be incorrect (if it was an interline blank).
             # Fix for issue b1357 .. b1370, i_test must be prev nonblank
             #   ( the ci value for blanks can vary )
-            # See also b223
+            # See also case b223
+            # Fix for issue b1371-b1374 : all of these and the above are fixed
+            # by simply backing up one index and setting the leading spaces of
+            # a blank equal to that of the equals.
             if ( $want_break_before{ $types_to_go[$i_test] } ) {
-                my $i_prev_nb = $i_test - 1;
-                $i_prev_nb -= 1
-                  if ( $types_to_go[$i_prev_nb] eq 'b' );
-                $i_test = $i_prev_nb
-                  if ( $i_prev_nb > $ii_begin_line );
+                $i_test -= 1;
+                $leading_spaces_to_go[$i_test] =
+                  $leading_spaces_to_go[$ii_last_equals]
+                  if ( $types_to_go[$i_test] eq 'b' );
             }
             elsif ( $types_to_go[ $i_test + 1 ] eq 'b' ) { $i_test++ }
 

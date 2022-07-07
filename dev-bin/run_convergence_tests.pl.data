@@ -10110,6 +10110,39 @@ my ( $m, $i, $j ) =(
 --nowant-right-space='='
 --want-break-before='='
 
+==> b1371.in <==
+# S1
+my (
+$xpos,
+$ypos,
+$font_size
+) =(
+       100,
+       700,
+       12
+);
+
+# S2
+my (
+$xpos,
+$ypos,
+$font_size
+  )
+  =(
+     100,
+     700,
+     12
+  );
+
+
+==> b1371.par <==
+--break-before-all-operators
+--extended-line-up-parentheses
+--indent-columns=0
+--keep-old-breakpoints-before=' )'
+--maximum-line-length=12
+--nowant-right-space='='
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
