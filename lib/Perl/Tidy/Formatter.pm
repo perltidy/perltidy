@@ -388,7 +388,6 @@ BEGIN {
     my $i = 0;
     use constant {
         _rlines_                    => $i++,
-        _rlines_new_                => $i++,
         _rLL_                       => $i++,
         _Klimit_                    => $i++,
         _rdepth_of_opening_seqno_   => $i++,
@@ -779,7 +778,6 @@ sub new {
 
     # Basic data structures...
     $self->[_rlines_]     = [];    # = ref to array of lines of the file
-    $self->[_rlines_new_] = [];    # = ref to array of output lines
 
     # 'rLL' = reference to the continuous liner array of all tokens in a file.
     # 'LL' stands for 'Linked List'. Using a linked list was a disaster, but
@@ -25093,13 +25091,6 @@ sub make_paren_name {
             $is_static_block_comment,
         ) = @_;
 
-        my $rLL                      = $self->[_rLL_];
-        my $Klimit                   = $self->[_Klimit_];
-        my $ris_bli_container        = $self->[_ris_bli_container_];
-        my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
-        my $rwant_reduced_ci         = $self->[_rwant_reduced_ci_];
-        my $rK_weld_left             = $self->[_rK_weld_left_];
-
         # Find the last code token of this line
         my $i_terminal    = $iend;
         my $terminal_type = $types_to_go[$iend];
@@ -25111,19 +25102,19 @@ sub make_paren_name {
                 $terminal_type = $types_to_go[$i_terminal];
             }
         }
-
         my $terminal_block_type = $block_type_to_go[$i_terminal];
-        my $is_outdented_line   = 0;
+
+        my $is_outdented_line = 0;
 
         my $type_beg            = $types_to_go[$ibeg];
         my $token_beg           = $tokens_to_go[$ibeg];
-        my $block_type_beg      = $block_type_to_go[$ibeg];
         my $level_beg           = $levels_to_go[$ibeg];
+        my $block_type_beg      = $block_type_to_go[$ibeg];
         my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
-        my $K_beg               = $K_to_go[$ibeg];
         my $seqno_beg           = $type_sequence_to_go[$ibeg];
-        my $ibeg_weld_fix       = $ibeg;
         my $is_closing_type_beg = $is_closing_type{$type_beg};
+
+        my $ris_bli_container = $self->[_ris_bli_container_];
         my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
         # QW INDENTATION PATCH 3:
@@ -25185,7 +25176,7 @@ sub make_paren_name {
         );
 
         # Honor any flag to reduce -ci set by the -bbxi=n option
-        if ( $seqno_beg && $rwant_reduced_ci->{$seqno_beg} ) {
+        if ( $seqno_beg && $self->[_rwant_reduced_ci_]->{$seqno_beg} ) {
 
             # if this is an opening, it must be alone on the line ...
             if ( $is_closing_type{$type_beg} || $ibeg == $i_terminal ) {
@@ -25194,8 +25185,9 @@ sub make_paren_name {
 
             # ... or a single welded unit (fix for b1173)
             elsif ($total_weld_count) {
+                my $K_beg      = $K_to_go[$ibeg];
                 my $Kterm      = $K_to_go[$i_terminal];
-                my $Kterm_test = $rK_weld_left->{$Kterm};
+                my $Kterm_test = $self->[_rK_weld_left_]->{$Kterm};
                 if ( defined($Kterm_test) && $Kterm_test >= $K_beg ) {
                     $Kterm = $Kterm_test;
                 }
@@ -25212,6 +25204,7 @@ sub make_paren_name {
         if ( $is_bli_beg && $is_bli_beg == 1 ) {
             my $K_opening_container = $self->[_K_opening_container_];
             my $K_opening           = $K_opening_container->{$seqno_beg};
+            my $K_beg               = $K_to_go[$ibeg];
             if ( $K_beg eq $K_opening ) {
                 $ris_bli_container->{$seqno_beg} = $is_bli_beg = 2;
             }
@@ -25222,11 +25215,12 @@ sub make_paren_name {
         # For -lp formatting use $ibeg_weld_fix to get around the problem
         # that with -lp type formatting the opening and closing tokens to not
         # have sequence numbers.
+        my $ibeg_weld_fix = $ibeg;
         if ( $seqno_qw_closing && $total_weld_count ) {
             my $i_plus = $inext_to_go[$ibeg];
             if ( $i_plus <= $max_index_to_go ) {
                 my $K_plus = $K_to_go[$i_plus];
-                if ( defined( $rK_weld_left->{$K_plus} ) ) {
+                if ( defined( $self->[_rK_weld_left_]->{$K_plus} ) ) {
                     $ibeg_weld_fix = $i_plus;
                 }
             }
@@ -25234,6 +25228,8 @@ sub make_paren_name {
 
         # if we are at a closing token of some type..
         if ( $is_closing_type_beg || $seqno_qw_closing ) {
+
+            my $K_beg = $K_to_go[$ibeg];
 
             # get the indentation of the line containing the corresponding
             # opening token
@@ -25284,7 +25280,7 @@ sub make_paren_name {
                 # PATCH #2: and not if this token is under -xci control
                 || (   $level_jump < 0
                     && !$some_closing_token_indentation
-                    && !$rseqno_controlling_my_ci->{$K_beg} )
+                    && !$self->[_rseqno_controlling_my_ci_]->{$K_beg} )
 
                 # Patch for -wn=2, multiple welded closing tokens
                 || (   $i_terminal > $ibeg
@@ -25320,6 +25316,8 @@ sub make_paren_name {
             # it is the last token before a level decrease.  This will allow
             # a closing token to line up with its opening counterpart, and
             # avoids an indentation jump larger than 1 level.
+            my $rLL    = $self->[_rLL_];
+            my $Klimit = $self->[_Klimit_];
             if (   $i_terminal == $ibeg
                 && $is_closing_type_beg
                 && defined($K_beg)
@@ -25357,7 +25355,7 @@ sub make_paren_name {
                     # and do not undo ci if it was set by the -xci option
                     $adjust_indentation = 1
                       if ( $level_next < $lev
-                        && !$rseqno_controlling_my_ci->{$K_beg} );
+                        && !$self->[_rseqno_controlling_my_ci_]->{$K_beg} );
                 }
 
                 # Patch for RT #96101, in which closing brace of anonymous subs
@@ -25510,7 +25508,7 @@ sub make_paren_name {
                     $adjust_indentation = 3;
                 }
             }
-        }
+        } ## end if ( $is_closing_type_beg || $seqno_qw_closing )
 
         # if at ');', '};', '>;', and '];' of a terminal qw quote
         elsif (
