@@ -13,10 +13,11 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 
 # Below is a list of policies that are skipped or customized to the needs of
 # Perl::Tidy.  I have found that using 'no critic' comments is very
-# troublesome*, so policies are either 'on' or 'off' for all modules.
-# ( *For example, why is it necessary to specify a policy in a side comment?
-# The very long policy names are ugly and typically make the side comment
-# exceed the desired line length. )
+# troublesome*, so policies are either 'on' or 'off' for all modules.  ( *For
+# example, it is necessary to specify a policy even in a side comment, which
+# seems needless.  The very long policy names make the line hard to read, and
+# so long that side comment will usually exceed the desired line length,
+# leading to more trouble if that causes a new line break.
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=4:
@@ -57,9 +58,14 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # my editor uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't know ARGV actually is localized (it would be hard
-# to program it to determine this).
+# Perlcritic doesn't know ARGV actually is localized
 [-Variables::RequireLocalizedPunctuationVars]
+
+# Unfortunately the perlcritic coding for this policy is buggy when lines=n is
+# specified.  For example if I use lines=n to increase 'n' above the default of
+# 9, then suddenly I get error messages for code which previously passed with
+# the default. So we have to skip this.
+[-InputOutput::RequireBriefOpen]
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=3:
@@ -70,8 +76,10 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [-ClassHierarchies::ProhibitAutoloading]
 
 # The max values below can be reduced to locate code which might be simplified.
+# There are a couple of complex routines in Formatter.pm which reach a mccabe
+# of 150 and cannot be simplified without significantly slowing down perltidy.
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=153
+max_mccabe=150
 [ControlStructures::ProhibitDeepNests]
 max_nests=7
 
@@ -126,6 +134,10 @@ max_nests=7
 [-ControlStructures::ProhibitPostfixControls]
 
 # Sometimes an unless block is clearer than an if block
+# For example, I prefer the first of these:
+#  return unless ($everything_is_ok);
+# vs.
+#  return if (!$everything_is_ok);
 [-ControlStructures::ProhibitUnlessBlocks]
 
 # The very few instances of boolean grep are fine. Profiling shows that
@@ -147,7 +159,7 @@ max_nests=7
 #--------------------------------------------------------------
 
 # This is a good starting rule, but occasional capitalization can be quite
-# effective, so we have to ignore it as a general rule:
+# effective or appropriate, so we have to ignore it as a general rule:
 [-NamingConventions::Capitalization]
 
 # It would be nice if this option were configurable to skip STDERR and STDOUT

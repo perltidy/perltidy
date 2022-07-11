@@ -1221,6 +1221,7 @@ EOM
           assert-untidy
           backup-and-modify-in-place
           backup-file-extension
+          backup-method
           character-encoding
           dump-cuddled-block-list
           dump-defaults
