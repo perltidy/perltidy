@@ -1159,11 +1159,9 @@ sub backup_method_copy {
     $self->set_output_file_permissions( $backup_file, \@input_file_stat,
         $in_place_modify );
 
-    # Open a file with the original input file name for writing ...  Opening
-    # with either ">" or "+>" should truncate the existing data.  The '+>'
-    # indicates that we may also read, even though there will be nothing left
-    # to read, which might help insure that we get the same inode.
-    open( my $fout, "+>", $input_file )
+    # Open the original input file for writing ... opening with ">" will
+    # truncate the existing data.
+    open( my $fout, ">", $input_file )
       || Die(
 "problem re-opening $input_file for write for -b option; check file and directory permissions: $ERRNO\n"
       );
@@ -1206,8 +1204,8 @@ EOM
       or Die("cannot close '$input_file' with -b option: $OS_ERROR\n");
 
     # Set permissions of the output file to match the input file. This is
-    # necessary even if the inode remains unchanged. In particular,
-    # the suid/sgid bits may have changed.
+    # necessary even if the inode remains unchanged because suid/sgid bits may
+    # have been reset.
     $self->set_output_file_permissions( $input_file, \@input_file_stat,
         $in_place_modify );
 

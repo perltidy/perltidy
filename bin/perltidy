@@ -243,6 +243,11 @@ extension F<.bak>.  Any existing F<.bak> file will be deleted.  See next
 item for changing the default backup extension, and for eliminating the
 backup file altogether.
 
+B<Please Note>: Writing back to the input file increases the risk of data loss
+or corruption in the event of a software or hardware malfunction. Before using
+the B<-b> parameter please be sure to have backups and verify that it works
+correctly in your environment and operating system.
+
 A B<-b> flag will be ignored if input is from standard input or goes to
 standard output, or if the B<-html> flag is set.
 

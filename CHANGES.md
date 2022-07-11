@@ -2,6 +2,20 @@
 
 ## 2022 06 13.01
 
+    - Fix for issue git #103. For parameter -b, or --backup-and-modify-in-place,
+      the default backup method has been changed to preserve the inode value
+      of the file being formatted.  If this causes a problem, the previous
+      method is available and can be used by setting -backup-mode='move', or
+      -bm='move'.  The new default corresponds to -bm='copy'.  The difference
+      between the two methods is as follows.  For the older method,
+      -bm='move', the input file was moved to the backup, and a new file was
+      created for the formatted output.  This caused the inode to change.  For
+      the new default method, -bm='copy', the input is copied to the backup
+      and then the input file is reopened and rewritten. This preserves the
+      file inode. Before using the --backup-and-modify-in-place
+      parameter please verify that it works correctly in your environment and
+      operating system.
+
     - Fix undefined value message when perltidy -D is used (git #104)
 
     - Added parameter --delete-repeated-commas (-drc) to delete repeated
