@@ -641,6 +641,35 @@ EOM
         croak "unexpected return to Die";
     }
 
+    sub Fault {
+        my ($msg) = @_;
+
+        # This routine is called for errors that really should not occur
+        # except if there has been a bug introduced by a recent program change.
+        # Please add comments at calls to Fault to explain why the call
+        # should not occur, and where to look to fix it.
+        my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
+        my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
+        my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+
+        my $input_stream_name = $rstatus->{'input_name'};
+        $input_stream_name = '(unknown)' unless ($input_stream_name);
+        Die(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+Perl::Tidy::FileWriter.pm reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+        # This return is to keep Perl-Critic from complaining.
+        return;
+    }
+
     # extract various dump parameters
     my $dump_options_type     = $input_hash{'dump_options_type'};
     my $dump_options          = $get_hash_ref->('dump_options');
@@ -1075,15 +1104,169 @@ sub check_in_place_modify {
             'bak' );
     }
 
+    my $backup_method = $rOpts->{'backup-method'};
+    if (   defined($backup_method)
+        && $backup_method ne 'copy'
+        && $backup_method ne 'move' )
+    {
+        Die(
+"Unexpected --backup-method='$backup_method'; must be one of: 'move', 'copy'\n"
+        );
+    }
+
     return ( $in_place_modify, $backup_extension, $delete_backup );
 }
 
-sub backup_and_modify_in_place {
+sub backup_method_copy {
 
     my ( $self, $input_file, $output_file, $backup_extension, $delete_backup )
       = @_;
 
-    # Handle the -b (--backup-and-modify-in-place) option:
+    # Handle the -b (--backup-and-modify-in-place) option with -bm='copy':
+    # - First copy $input file to $backup_name.
+    # - Then open input file and rewrite with contents of $output_file
+    # - Then delete the backup if requested
+
+    # NOTES:
+    # - Die immediately on any error.
+    # - $output_file is actually an ARRAY ref
+
+    my $backup_file = $input_file . $backup_extension;
+
+    unless ( -f $input_file ) {
+
+        # no real file to backup ..
+        # This shouldn't happen because of numerous preliminary checks
+        Die(
+            "problem with -b backing up input file '$input_file': not a file\n"
+        );
+    }
+
+    if ( -f $backup_file ) {
+        unlink($backup_file)
+          or Die(
+"unable to remove previous '$backup_file' for -b option; check permissions: $ERRNO\n"
+          );
+    }
+
+    # Copy input file to backup
+    File::Copy::copy( $input_file, $backup_file )
+      or Die("File::Copy failed trying to backup source: $ERRNO");
+
+    # set permissions of the backup file to match the input file
+    my @input_file_stat = stat($input_file);
+    my $in_place_modify = 1;
+    $self->set_output_file_permissions( $backup_file, \@input_file_stat,
+        $in_place_modify );
+
+    # Open a file with the original input file name for writing ...  Opening
+    # with either ">" or "+>" should truncate the existing data.  The '+>'
+    # indicates that we may also read, even though there will be nothing left
+    # to read, which might help insure that we get the same inode.
+    open( my $fout, "+>", $input_file )
+      || Die(
+"problem re-opening $input_file for write for -b option; check file and directory permissions: $ERRNO\n"
+      );
+
+    if ( $self->[_is_encoded_data_] ) {
+        binmode $fout, ":raw:encoding(UTF-8)";
+    }
+
+    # Now copy the formatted output to it..
+
+    # if formatted output is in an ARRAY ref (normally this is true)...
+    if ( ref($output_file) eq 'ARRAY' ) {
+        foreach my $line ( @{$output_file} ) {
+            $fout->print($line)
+              or
+              Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
+        }
+    }
+
+    # or in a SCALAR ref (less efficient, and only used for testing)
+    elsif ( ref($output_file) eq 'SCALAR' ) {
+        foreach my $line ( split /^/, ${$output_file} ) {
+            $fout->print($line)
+              or
+              Die("cannot print to '$input_file' with -b option: $OS_ERROR\n");
+        }
+    }
+
+    # Error if anything else ...
+    # This can only happen if the output was changed from \@tmp_buff
+    else {
+        my $ref = ref($output_file);
+        Die(<<EOM);
+Programming error: unable to print to '$input_file' with -b option:
+unexpected ref type '$ref'; expecting 'ARRAY' or 'SCALAR'
+EOM
+    }
+
+    $fout->close()
+      or Die("cannot close '$input_file' with -b option: $OS_ERROR\n");
+
+    # Set permissions of the output file to match the input file. This is
+    # necessary even if the inode remains unchanged. In particular,
+    # the suid/sgid bits may have changed.
+    $self->set_output_file_permissions( $input_file, \@input_file_stat,
+        $in_place_modify );
+
+    #---------------------------------------------------------
+    # remove the original file for in-place modify as follows:
+    #   $delete_backup=0 never
+    #   $delete_backup=1 only if no errors
+    #   $delete_backup>1 always  : NOT ALLOWED, too risky
+    #---------------------------------------------------------
+    if ( $delete_backup && -f $backup_file ) {
+
+        # Currently, $delete_backup may only be 1. But if a future update
+        # allows a value > 1, then reduce it to 1 if there were warnings.
+        if (   $delete_backup > 1
+            && $self->[_logger_object_]->get_warning_count() )
+        {
+            $delete_backup = 1;
+        }
+
+        # As an added safety precaution, do not delete the source file
+        # if its size has dropped from positive to zero, since this
+        # could indicate a disaster of some kind, including a hardware
+        # failure.  Actually, this could happen if you had a file of
+        # all comments (or pod) and deleted everything with -dac (-dap)
+        # for some reason.
+        if ( !-s $output_file && -s $backup_file && $delete_backup == 1 ) {
+            Warn(
+"output file '$output_file' missing or zero length; original '$backup_file' not deleted\n"
+            );
+        }
+        else {
+            unlink($backup_file)
+              or Die(
+"unable to remove backup file '$backup_file' for -b option; check permissions: $ERRNO\n"
+              );
+        }
+    }
+
+    # Verify that inode is unchanged during development
+    if (DEVEL_MODE) {
+        my @output_file_stat = stat($input_file);
+        my $inode_input      = $input_file_stat[1];
+        my $inode_output     = $output_file_stat[1];
+        if ( $inode_input != $inode_output ) {
+            Fault(<<EOM);
+inode changed with -bm=copy for file '$input_file': inode_input=$inode_input inode_output=$inode_output
+EOM
+        }
+    }
+
+    return;
+} ## end sub backup_method_copy
+
+sub backup_method_move {
+
+    my ( $self, $input_file, $output_file, $backup_extension, $delete_backup )
+      = @_;
+
+    # Handle the -b (--backup-and-modify-in-place) option with -bm='move':
     # - First move $input file to $backup_name.
     # - Then copy $output_file to $input_file.
     # - Then delete the backup if requested
@@ -1109,6 +1292,8 @@ sub backup_and_modify_in_place {
 "unable to remove previous '$backup_name' for -b option; check permissions: $ERRNO\n"
           );
     }
+
+    my @input_file_stat = stat($input_file);
 
     # backup the input file
     # we use copy for symlinks, move for regular files
@@ -1166,6 +1351,11 @@ EOM
     $fout->close()
       or Die("cannot close '$input_file' with -b option: $OS_ERROR\n");
 
+    # set permissions of the output file to match the input file
+    my $in_place_modify = 1;
+    $self->set_output_file_permissions( $input_file, \@input_file_stat,
+        $in_place_modify );
+
     #---------------------------------------------------------
     # remove the original file for in-place modify as follows:
     #   $delete_backup=0 never
@@ -1200,8 +1390,10 @@ EOM
               );
         }
     }
+
     return;
-} ## end sub backup_and_modify_in_place
+
+} ## end sub backup_method_move
 
 sub set_output_file_permissions {
 
@@ -1240,7 +1432,7 @@ sub set_output_file_permissions {
         }
     }
 
-    # Make the output file for rw unless we are in -b mode.
+    # Mark the output file for rw unless we are in -b mode.
     # Explanation: perltidy does not unlink existing output
     # files before writing to them, for safety.  If a
     # designated output file exists and is not writable,
@@ -1610,6 +1802,18 @@ sub process_all_files {
                 next;
             }
 
+            # Input file must be writable for -b -bm='copy'.  We must catch
+            # this early to prevent encountering trouble after unlinking the
+            # previous backup.
+            if ( $in_place_modify && !-w $input_file ) {
+                my $backup_method = $rOpts->{'backup-method'};
+                if ( defined($backup_method) && $backup_method eq 'copy' ) {
+                    Warn
+"skipping file '$input_file' for -b option: file reported as non-writable\n";
+                    next;
+                }
+            }
+
             # we should have a valid filename now
             $fileroot        = $input_file;
             @input_file_stat = stat($input_file);
@@ -1831,17 +2035,33 @@ EOM
         # Handle the -b option (backup and modify in-place)
         #--------------------------------------------------
         if ($in_place_modify) {
-            $self->backup_and_modify_in_place(
-                $input_file,       $output_file,
-                $backup_extension, $delete_backup
-            );
+
+            my $backup_method = $rOpts->{'backup-method'};
+
+            # Option 1, -bm='copy': uses newer version in which original is
+            # copied to the backup and rewritten; see git #103.
+            if ( defined($backup_method) && $backup_method eq 'copy' ) {
+                $self->backup_method_copy(
+                    $input_file,       $output_file,
+                    $backup_extension, $delete_backup
+                );
+            }
+
+            # Option 2, -bm='move': uses older version, where original is moved
+            # to the backup and formatted output goes to a new file.
+            else {
+                $self->backup_method_move(
+                    $input_file,       $output_file,
+                    $backup_extension, $delete_backup
+                );
+            }
             $output_file = $input_file;
         }
 
-        #---------------------------------------------------------
-        # Set output file ownership and permissions if appropriate
-        #---------------------------------------------------------
-        if ( $output_file && -f $output_file && !-l $output_file ) {
+        #-------------------------------------------------------------------
+        # Otherwise set output file ownership and permissions if appropriate
+        #-------------------------------------------------------------------
+        elsif ( $output_file && -f $output_file && !-l $output_file ) {
             if (@input_file_stat) {
                 if ( $rOpts->{'format'} eq 'tidy' ) {
                     $self->set_output_file_permissions( $output_file,
@@ -2907,6 +3127,7 @@ sub generate_options {
     ###########################
     $add_option->( 'backup-and-modify-in-place', 'b',     '!' );
     $add_option->( 'backup-file-extension',      'bext',  '=s' );
+    $add_option->( 'backup-method',              'bm',    '=s' );
     $add_option->( 'character-encoding',         'enc',   '=s' );
     $add_option->( 'force-read-binary',          'f',     '!' );
     $add_option->( 'format',                     'fmt',   '=s' );
@@ -3374,6 +3595,7 @@ sub generate_options {
       timestamp
       trim-qw
       format=tidy
+      backup-method=copy
       backup-file-extension=bak
       code-skipping
       format-skipping
