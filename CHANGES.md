@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.01
+## 2022 06 13.02
 
     - Fix for issue git #103. For parameter -b, or --backup-and-modify-in-place,
       the default backup method has been changed to preserve the inode value

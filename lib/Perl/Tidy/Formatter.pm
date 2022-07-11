@@ -52,7 +52,7 @@ use constant SPACE        => q{ };
 
 use Carp;
 use English qw( -no_match_vars );
-our $VERSION = '20220613.01';
+our $VERSION = '20220613.02';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()

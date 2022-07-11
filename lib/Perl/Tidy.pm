@@ -113,7 +113,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20220613.01';
+    $VERSION = '20220613.02';
 }
 
 sub DESTROY {
