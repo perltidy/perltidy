@@ -777,7 +777,7 @@ sub new {
     my $self = [];
 
     # Basic data structures...
-    $self->[_rlines_]     = [];    # = ref to array of lines of the file
+    $self->[_rlines_] = [];    # = ref to array of lines of the file
 
     # 'rLL' = reference to the continuous liner array of all tokens in a file.
     # 'LL' stands for 'Linked List'. Using a linked list was a disaster, but
@@ -18536,33 +18536,39 @@ sub break_long_lines {
     # corresponding '?' unless this is a chain of ?: expressions
     #-------------------------------------------------------
     if (@i_colon_breaks) {
-
-        # using a simple method for deciding if we are in a ?/: chain --
-        # this is a chain if it has multiple ?/: pairs all in order;
-        # otherwise not.
-        # Note that if line starts in a ':' we count that above as a break
         my $is_chain = ( $colons_in_order && @i_colon_breaks > 1 );
-
-        unless ($is_chain) {
-            my @insert_list = ();
-            foreach (@i_colon_breaks) {
-                my $i_question = $mate_index_to_go[$_];
-                if ( $i_question >= 0 ) {
-                    if ( $want_break_before{'?'} ) {
-                        $i_question = $iprev_to_go[$i_question];
-                    }
-
-                    if ( $i_question >= 0 ) {
-                        push @insert_list, $i_question;
-                    }
-                }
-                $self->insert_additional_breaks( \@insert_list, \@i_first,
-                    \@i_last );
-            }
+        if ( !$is_chain ) {
+            $self->do_colon_breaks( \@i_colon_breaks, \@i_first, \@i_last );
         }
     }
+
     return ( \@i_first, \@i_last, $rbond_strength_to_go );
 } ## end sub break_long_lines
+
+sub do_colon_breaks {
+    my ( $self, $ri_colon_breaks, $ri_first, $ri_last ) = @_;
+
+    # using a simple method for deciding if we are in a ?/: chain --
+    # this is a chain if it has multiple ?/: pairs all in order;
+    # otherwise not.
+    # Note that if line starts in a ':' we count that above as a break
+
+    my @insert_list = ();
+    foreach ( @{$ri_colon_breaks} ) {
+        my $i_question = $mate_index_to_go[$_];
+        if ( $i_question >= 0 ) {
+            if ( $want_break_before{'?'} ) {
+                $i_question = $iprev_to_go[$i_question];
+            }
+
+            if ( $i_question >= 0 ) {
+                push @insert_list, $i_question;
+            }
+        }
+        $self->insert_additional_breaks( \@insert_list, $ri_first, $ri_last );
+    }
+    return;
+}
 
 ###########################################
 # CODE SECTION 11: Code to break long lists
