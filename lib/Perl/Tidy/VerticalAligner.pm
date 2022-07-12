@@ -670,17 +670,10 @@ sub valign_input {
     # --------------------------------------------------------------------
     # Collect outdentable block COMMENTS
     # --------------------------------------------------------------------
-    my $is_blank_line = EMPTY_STRING;
     if ( $self->[_group_type_] eq 'COMMENT' ) {
-        if (
-            (
-                   $is_block_comment
-                && $outdent_long_lines
-                && $leading_space_count ==
-                $self->[_comment_leading_space_count_]
-            )
-            || $is_blank_line
-          )
+        if (   $is_block_comment
+            && $outdent_long_lines
+            && $leading_space_count == $self->[_comment_leading_space_count_] )
         {
 
             # Note that for a comment group we are not storing a line
