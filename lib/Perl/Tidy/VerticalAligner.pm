@@ -1441,7 +1441,7 @@ EOM
     }
 
     # Save current columns in case this line does not fit.
-    my @alignments = $old_line->get_alignments();
+    my @alignments = @{ $old_line->{'ralignments'} };
     foreach my $alignment (@alignments) {
         $alignment->save_column();
     }
@@ -1493,21 +1493,23 @@ sub install_new_alignments {
     my $rfield_lengths = $new_line->{'rfield_lengths'};
     my $col            = $new_line->{'leading_space_count'};
 
+    my @alignments;
     for my $j ( 0 .. $jmax ) {
         $col += $rfield_lengths->[$j];
 
         # create initial alignments for the new group
         my $alignment =
           Perl::Tidy::VerticalAligner::Alignment->new( { column => $col } );
-        $new_line->set_alignment( $j, $alignment );
+        push @alignments, $alignment;
     }
+    $new_line->{'ralignments'} = \@alignments;
     return;
 }
 
 sub copy_old_alignments {
     my ( $new_line, $old_line ) = @_;
-    my @new_alignments = $old_line->get_alignments();
-    $new_line->set_alignments(@new_alignments);
+    my @new_alignments = @{ $old_line->{'ralignments'} };
+    $new_line->{'ralignments'} = \@new_alignments;
     return;
 }
 
@@ -4824,6 +4826,19 @@ sub valign_output_step_A {
     my $str     = $rfields->[0];
     my $str_len = $rfield_lengths->[0];
 
+    my @alignments = @{ $line->{'ralignments'} };
+    if ( @alignments != $maximum_field_index + 1 ) {
+
+        # Shouldn't happen: sub install_new_alignments makes jmax alignments
+        my $jmax_alignments = @alignments - 1;
+        if (DEVEL_MODE) {
+            Fault(
+"alignment jmax=$jmax_alignments should equal $maximum_field_index\n"
+            );
+        }
+        $do_not_align = 1;
+    }
+
     # loop to concatenate all fields of this line and needed padding
     my $total_pad_count = 0;
     for my $j ( 1 .. $maximum_field_index ) {
@@ -4837,7 +4852,7 @@ sub valign_output_step_A {
           );
 
         # compute spaces of padding before this field
-        my $col = $line->get_column( $j - 1 );
+        my $col = $alignments[ $j - 1 ]->{'column'};
         my $pad = $col - ( $str_len + $leading_space_count );
 
         if ($do_not_align) {
@@ -4907,11 +4922,12 @@ sub combine_fields {
     if ( !defined($imax_align) ) { $imax_align = -1 }
 
     # First delete the unwanted tokens
-    my $jmax_old       = $line_0->{'jmax'};
-    my @old_alignments = $line_0->get_alignments();
-    my @idel           = ( $imax_align + 1 .. $jmax_old - 2 );
-
+    my $jmax_old = $line_0->{'jmax'};
+    my @idel     = ( $imax_align + 1 .. $jmax_old - 2 );
     return unless (@idel);
+
+    # Get old alignments before any changes are made
+    my @old_alignments = @{ $line_0->{'ralignments'} };
 
     foreach my $line ( $line_0, $line_1 ) {
         delete_selected_tokens( $line, \@idel );
@@ -4929,8 +4945,8 @@ sub combine_fields {
 
     $new_alignments[ $jmax_new - 1 ] = $old_alignments[ $jmax_old - 1 ];
     $new_alignments[$jmax_new] = $old_alignments[$jmax_old];
-    $line_0->set_alignments(@new_alignments);
-    $line_1->set_alignments(@new_alignments);
+    $line_0->{'ralignments'} = \@new_alignments;
+    $line_1->{'ralignments'} = \@new_alignments;
     return;
 }
 
