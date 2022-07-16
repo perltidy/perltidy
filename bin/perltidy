@@ -283,6 +283,19 @@ Here are some examples:
   <-bext='/backup'>   F<.backup>         Delete if no errors
   <-bext='original/'> F<.original>       Delete if no errors
 
+=item B<-bm=s>,  B<--backup-method=s>
+
+This parameter should not normally be used but is available in the event that
+problems arise as a transition is made from an older implementation of the
+backup logic to a newer implementation.  The newer implementation is the
+default and is specified with B<-bm='copy'>. The older implementation is
+specified with B<-bm='move'>.  The difference is that the older implementation
+made the backup by moving the input file to the backup file, and the newer
+implementation makes the backup by copying the input file.  The newer
+implemenation preserves the file system B<inode> value. This may avoid
+problems with other software running simultaneously.  This change was made
+as part of issue B<git #103> at github.
+
 =item B<-w>,    B<--warning-output>
 
 Setting B<-w> causes any non-critical warning
