@@ -42,26 +42,12 @@ EOM
         return $self;
     }
 
-    sub set_alignment {
-        my ( $self, $j, $val ) = @_;
-        $self->{ralignments}->[$j] = $val;
-        return;
-    }
-
-    sub get_alignments { return @{ $_[0]->{ralignments} } }
-
     # This sub is called many times and has been optimized a bit
     sub get_column {
         ##my ( $self, $j ) = @_;
         my $alignment = $_[0]->{ralignments}->[ $_[1] ];
         return unless defined($alignment);
         return $alignment->get_column();
-    }
-
-    sub set_alignments {
-        my ( $self, @args ) = @_;
-        @{ $self->{ralignments} } = @args;
-        return;
     }
 
     sub current_field_width {
