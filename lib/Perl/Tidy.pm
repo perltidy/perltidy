@@ -662,7 +662,7 @@ in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
 This is probably an error introduced by a recent programming change.
-Perl::Tidy::FileWriter.pm reports VERSION='$VERSION'.
+Perl::Tidy.pm reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
