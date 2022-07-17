@@ -780,6 +780,35 @@ if ($count) {
 if (-s $gfile) {
    print STDERR "please see $gfile\n";
 }
+
+if (-d 'BLINKERS') {
+   print STDERR "BLINKERS directory exists - please check\n";
+}
+my @ERR = glob('*.ERR');
+if (@ERR) {
+   my $num=@ERR;
+   print STDERR "Found $num .ERR files\n";
+}
+
+# Backup 'nohup.my'
+my $basename = 'nohup.my';
+if ( -e $basename ) {
+    my $ext;
+    my $bname;
+    for ( my $j = 1 ; $j < 99 ; $j++ ) {
+        $ext   = 'ba' . $j;
+        $bname = "$basename.$ext";
+        next if ( -e $bname );
+        system "mv $basename $bname";
+        last;
+    }
+    if ($bname) {
+        print "Moved $basename -> $bname\n";
+    }
+    else {
+        die "too many backup versions of $basename - move some\n";
+    }
+}
 EOM
         close RUN;
         system("chmod +x $runme");

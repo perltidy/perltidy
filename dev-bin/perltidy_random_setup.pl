@@ -1001,7 +1001,7 @@ EOM
             }
         }
         my $max_cases =
-          get_num( "Number of new random profiles to generate", 50 );
+          get_num( "Number of new random profiles to generate", 10000 );
         for ( 1 .. $max_cases ) {
             $case += 1;
             my $profile = "profile.$case";
