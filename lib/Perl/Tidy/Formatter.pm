@@ -24515,8 +24515,8 @@ sub pad_token {
         @{is_binary_type}{@q} = (1) x scalar(@q);
 
         # token keywords which prevent using leading word as a container name
-        @_ = qw(and or err eq ne cmp);
-        @is_binary_keyword{@_} = (1) x scalar(@_);
+        @q = qw(and or err eq ne cmp);
+        @is_binary_keyword{@q} = (1) x scalar(@q);
 
         # Some common function calls whose args can be aligned.  These do not
         # give good alignments if the lengths differ significantly.

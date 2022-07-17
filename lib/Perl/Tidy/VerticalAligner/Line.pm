@@ -42,10 +42,9 @@ EOM
         return $self;
     }
 
-    # This sub is called many times and has been optimized a bit
     sub get_column {
-        ##my ( $self, $j ) = @_;
-        my $alignment = $_[0]->{ralignments}->[ $_[1] ];
+        my ( $self, $j ) = @_;
+        my $alignment = $self->{ralignments}->[$j];
         return unless defined($alignment);
         return $alignment->get_column();
     }

@@ -43,9 +43,8 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Nested subs are used for error handling in Tidy.pm.
 [-Subroutines::ProhibitNestedSubs]
 
-# In critical routines this can significantly reduce processing speed.
-# So we have to skip it.
-[-Subroutines::RequireArgUnpacking]
+[Subroutines::RequireArgUnpacking]
+short_subroutine_statements = 2
 
 # Completely Disagree. The advantages of 'use constant' greatly outweigh the
 # few disadvantages.  Perl::Tidy relies heavily on constants for efficient and

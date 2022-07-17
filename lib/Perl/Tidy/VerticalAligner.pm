@@ -4944,9 +4944,9 @@ sub combine_fields {
     my $jmax_new = $line_0->{'jmax'};
 
     $new_alignments[ $jmax_new - 1 ] = $old_alignments[ $jmax_old - 1 ];
-    $new_alignments[$jmax_new] = $old_alignments[$jmax_old];
-    $line_0->{'ralignments'} = \@new_alignments;
-    $line_1->{'ralignments'} = \@new_alignments;
+    $new_alignments[$jmax_new]       = $old_alignments[$jmax_old];
+    $line_0->{'ralignments'}         = \@new_alignments;
+    $line_1->{'ralignments'}         = \@new_alignments;
     return;
 }
 
