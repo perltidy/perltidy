@@ -2620,11 +2620,13 @@ sub set_whitespace_flags {
             next;
         }
 
-        $rtokh_last_last = $rtokh_last;
-
-        $rtokh_last = $rtokh;
         $last_token = $token;
         $last_type  = $type;
+
+        if ( $type ne '#' ) {
+            $rtokh_last_last = $rtokh_last;
+            $rtokh_last      = $rtokh;
+        }
 
         $rtokh = $rLL->[$j];
         $token = $rtokh->[_TOKEN_];
@@ -2886,26 +2888,29 @@ sub set_whitespace_flags {
                 # NOTE: this would be the place to allow spaces between
                 # repeated parens, like () () (), as in case c017, but I
                 # decided that would not be a good idea.
+
+                # Updated to allow detached '->' from tokenizer (issue c140)
                 elsif (
-                    ##$last_type =~ /^[wCUG]$/
+
+                    #        /^[wCUG]$/
                     $is_wCUG{$last_type}
+
                     || (
-                        ##$last_type =~ /^[wi]$/
+
+                        #      /^[wi]$/
                         $is_wi{$last_type}
 
                         && (
+
+                            # with prefix '->' or '&'
                             $last_token =~ /^([\&]|->)/
 
-                            # or -> or & split from bareword by newline (b1337)
-                            || (
-                                $last_token =~ /^\w/
-                                && (
-                                    $rtokh_last_last->[_TYPE_] eq '->'
-                                    || (   $rtokh_last_last->[_TYPE_] eq 't'
-                                        && $rtokh_last_last->[_TOKEN_] =~
-                                        /^\&\s*$/ )
-                                )
-                            )
+                            # or preceding token '->' (see b1337; c140)
+                            || $rtokh_last_last->[_TYPE_] eq '->'
+
+                            # or preceding sub call operator token '&'
+                            || (   $rtokh_last_last->[_TYPE_] eq 't'
+                                && $rtokh_last_last->[_TOKEN_] =~ /^\&\s*$/ )
                         )
                     )
                   )
@@ -2937,9 +2942,10 @@ sub set_whitespace_flags {
                 $ws = WS_OPTIONAL;
             }
 
-            # keep space between 'sub' and '{' for anonymous sub definition
+            # keep space between 'sub' and '{' for anonymous sub definition,
+            # be sure type = 'k' (added for c140)
             if ( $type eq '{' ) {
-                if ( $last_token eq 'sub' ) {
+                if ( $last_token eq 'sub' && $last_type eq 'k' ) {
                     $ws = WS_YES;
                 }
 
