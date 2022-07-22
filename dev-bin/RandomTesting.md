@@ -1,19 +1,42 @@
 # Running Random Tests with Perltidy
 
-The basic idea is to try to cause perltidy to fail in some way by running it on
-a large number of random input parameters and files.  The runs which do this
-work can run for many hours, processing hundreds of test files, each with
-perhaps hundreds of parameter combinations.  The results can be checked at any
-time, and the scripts are written so that they can stop and restart any time.
-That's okay, computer time is cheap.  The hard part will be at the end, sifting
-through the results.
+The tests which ship with perltidy check that its basic functionality is
+correct.  Perltidy has well over 100 input parameters, and most of them are
+checked in a simple way with these tests.  But when we consider that the
+parameters do not each operate independently but rather interact with each
+other, these tests barely "scratch the surface" in testing perltidy. It would
+require an impossible number of tests to really do an in-depth check for
+problems.  To illustrate, suppose we had just 100 input parameters and they
+were simple binary switches, we would need 2^100, or about 10^30, tests to test
+all possible combinations. But many of the flags can take more than 2 settings,
+so the number of combinations in far greater.  For example, the line length
+parameter takes any integer as value.  And the problem becomes even more
+complex when we consider that problems among interacting parameters may only
+occur on some particular sequence of input text.
 
-When this type of testing was begun, several dozen problems were quickly
-identified and fixed.  The most common problem was that an uninitialized
-variable was referenced in some way.  It has been some time since a new problem
-was detected with these scripts, but it is important to run these
-tests periodically, and always before a release, because new coding and new
-parameters may introduce bugs.
+What to do?  Several strategies have been developed to handle this problem. One
+of these which has always been used is to check all source code changes
+on a very large body of perl code with a variety of parameter settings.  This requires
+several cpu hours of runs for each coding change.
+
+Another approach, described here, is random testing.  The basic idea is
+to try to cause perltidy to fail in some way by running it on a large number of
+random input parameters and files.  The runs which do this work can run for
+many hours, processing hundreds of test files, each with many thousands of
+random parameter combinations.  The results can be checked at any time, and the
+scripts are written so that they can stop and restart any time.  That's okay,
+computer time is cheap.
+
+This type of testing has been extremely helpful in making perltidy more robust.
+Over 1300 issues have been identified with this method so far and have been
+corrected.  All of these are extremely rare edge cases that would have been
+difficult to find by any other method.  Perltidy has become very robust as a
+result of this work, and the mean time for the discovery of a new convergence
+issue is now about 50 cpu hours.
+
+Another strategy which is employed at the same time is to turn on the
+``DEVEL_MODE`` flags in perltidy which cause it to do numerous self-checks as
+it runs.  These slow perltidy down, so they are only turned on during testing.
 
 There are currently a set of three scripts for this work.
 
@@ -27,9 +50,8 @@ personal bin directory.
 
 ## Prepare a temporary directory
 
-First collect a large number (say 50 or more) of arbitrary perl scripts in a
-single directory.  You may also include other arbitrary files, such as
-text or html files.
+First collect a large number of arbitrary perl scripts in a single directory.
+You may also include other arbitrary files, such as text or html files.
 
 Then create a temporary sub directory and enter it, say
 

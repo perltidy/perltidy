@@ -26,6 +26,11 @@
       # perltidy -drc:
             ignoreSpec( $file, "file", \%spec, \%Rspec );
 
+    - Fixed a minor inconsistency in html colors when -html is used.
+      Previously, a '->' at the end of a line got a black color by default,
+      but a '->' within a line got the color of the following identifier.
+      Now all pointers get the same color, which is black by default.
+
 ## 2022 06 13
 
     - No significant bugs have been found since the last release but users
