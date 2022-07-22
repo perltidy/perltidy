@@ -29,6 +29,9 @@ use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
+# This can be removed after testing
+use constant OLD_POINTER_LOGIC => 0;
+
 use Perl::Tidy::LineBuffer;
 use Carp;
 
@@ -2058,10 +2061,19 @@ EOM
         my $i_plus_1  = $i + 1;
         my $fast_scan_type;
 
+        #-------------------------------------------------------
+        # Do full scan for anything following a pointer, such as
+        #      $cref->&*;    # a postderef
+        # This is part of POINTER_LOGIC update but always ok
+        #-------------------------------------------------------
+        if ( $last_nonblank_token eq '->' ) {
+
+        }
+
         ###############################
         # quick scan with leading sigil
         ###############################
-        if (  !$id_scan_state
+        elsif ( !$id_scan_state
             && $i_plus_1 <= $max_token_index
             && $fast_scan_context{$tok} )
         {
@@ -2335,7 +2347,8 @@ EOM
         # (vorboard.pl, sort.t).  Something like:
         #   /^(print|printf|sort|exec|system)$/
         if (
-            $is_indirect_object_taker{$last_nonblank_token}
+               $is_indirect_object_taker{$last_nonblank_token}
+            && $last_nonblank_type eq 'k'
             || ( ( $last_nonblank_token eq '(' )
                 && $is_indirect_object_taker{ $paren_type[$paren_depth] } )
             || (   $last_nonblank_type eq 'w'
@@ -2379,7 +2392,6 @@ EOM
                 # are not marked as a block, we might have a method call.
                 # Added ')' to fix case c017, something like ()()()
                 && $last_nonblank_token !~ /^([\]\}\)\&]|\-\>)/
-
               )
             {
 
@@ -3307,6 +3319,8 @@ EOM
     sub do_POINTER {
 
         #  '->'
+
+        # OLD POINTER LOGIC:
         # if -> points to a bare word, we must scan for an identifier,
         # otherwise something like ->y would look like the y operator
 
@@ -3318,7 +3332,14 @@ EOM
         # ' @ % * '.  A disadvantage with doing this is that this would
         # have to be fixed if the perltidy syntax is ever extended to make
         # any of these valid.  So for now this check is not done.
-        scan_simple_identifier();
+
+        # POINTER_LOGIC update, Part 1: make pointers separate tokens
+        # and look backwards when scanning the next thing.  This makes the
+        # logic independent of any line breaks and comments between the '->'
+        # and the next tokens.
+        if (OLD_POINTER_LOGIC) {
+            scan_simple_identifier();
+        }
         return;
     } ## end sub do_POINTER
 
@@ -3980,10 +4001,18 @@ EOM
         elsif ( $last_nonblank_token eq '->' ) {
             scan_bare_identifier();
 
-            # Patch for c043, part 4; use type 'w' after a '->'.
-            # This is just a safety check on sub scan_bare_identifier,
-            # which should get this case correct.
-            $type = 'w';
+            # POINTER_LOGIC update, Part 2: a bareward after '->' gets type 'i'
+            if (OLD_POINTER_LOGIC) {
+
+                # OLD_POINTER_LOGIC to catch a '->' on previous line:
+                # Patch for c043, part 4; use type 'w' after a '->'.
+                # This is just a safety check on sub scan_bare_identifier,
+                # which should get this case correct.
+                $type = 'w';
+            }
+            else {
+                $type = 'i';
+            }
         }
 
         # handle operator x (now we know it isn't $x=)
@@ -4670,8 +4699,7 @@ EOM
                 # fix for git #63.
                 if ( $last_last_nonblank_token eq '->' ) {
                     if (   $last_nonblank_type eq 'w'
-                        || $last_nonblank_type eq 'i'
-                        && substr( $last_nonblank_token, 0, 1 ) eq '$' )
+                        || $last_nonblank_type eq 'i' )
                     {
                         $last_nonblank_token = '->' . $last_nonblank_token;
                         $last_nonblank_type  = 'i';
@@ -5642,12 +5670,13 @@ BEGIN {
       ... **= <<= >>= &&= ||= //= <=> !~~ &.= |.= ^.= <<~
     );
     push @q, ',';
-    push @q, '(';    # for completeness, not currently a token type
+    push @q, '(';     # for completeness, not currently a token type
+    push @q, '->';    # was previously in UNKNOWN
     @{op_expected_table}{@q} = (TERM) x scalar(@q);
 
-    # Always UNKNOWN following these types:
-    # Fix for c030: added '->' to this list
-    @q = qw( w -> );
+    # Always UNKNOWN following these types;
+    # previously had '->' in this list for c030
+    @q = qw( w );
     @{op_expected_table}{@q} = (UNKNOWN) x scalar(@q);
 
     # Always expecting OPERATOR ...
@@ -7555,7 +7584,6 @@ BEGIN {
     sub do_id_scan_state_dollar {
 
         # We saw a sigil, now looking to start a variable name
-
         if ( $tok eq '$' ) {
 
             $identifier .= $tok;
@@ -8101,7 +8129,11 @@ BEGIN {
             }
             $identifier = $tok;
 
-            if ( $tok eq '$' || $tok eq '*' ) {
+            if ( $last_nonblank_token eq '->' ) {
+                $identifier    = '->' . $identifier;
+                $id_scan_state = $scan_state_SIGIL;
+            }
+            elsif ( $tok eq '$' || $tok eq '*' ) {
                 $id_scan_state = $scan_state_SIGIL;
                 $context       = SCALAR_CONTEXT;
             }
