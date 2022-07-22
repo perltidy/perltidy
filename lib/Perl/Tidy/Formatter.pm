@@ -3909,6 +3909,9 @@ EOM
         #    $a->$b($c);
         $binary_bond_strength{'i'}{'->'} = 1.45 * STRONG;
 
+        # Added for c140 to make 'w ->' and 'i ->' behave the same
+        $binary_bond_strength{'w'}{'->'} = 1.45 * STRONG;
+
     # Note that the following alternative strength would make the break at the
     # '->' rather than opening the '('.  Both have advantages and disadvantages.
     # $binary_bond_strength{'i'}{'->'} = 0.5*STRONG + 0.5 * NOMINAL; #
@@ -4354,7 +4357,8 @@ EOM
             elsif ( $type eq 'w' ) {
                 $bond_str = NO_BREAK
                   if ( !$old_breakpoint_to_go[$i]
-                    && substr( $next_nonblank_token, 0, 1 ) eq '/' );
+                    && substr( $next_nonblank_token, 0, 1 ) eq '/'
+                    && $next_nonblank_type ne '//' );
             }
 
             $bond_str_2 = $bond_str if (DEBUG_BOND);
