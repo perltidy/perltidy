@@ -2522,7 +2522,7 @@ BEGIN {
 
     # The following hash is used to skip over needless if tests.
     # Be sure to update it when adding new checks in its block.
-    my @q = qw(k w i C m - Q);
+    my @q = qw(k w C m - Q);
     push @q, '#';
     @is_special_ws_type{@q} = (1) x scalar(@q);
 
@@ -2720,17 +2720,10 @@ sub set_whitespace_flags {
         #---------------------------------------------------------------
         # The hash '%is_special_ws_type' significantly speeds up this routine,
         # but be sure to update it if a new check is added.
-        # Currently has types: qw(k w i C m - Q #)
+        # Currently has types: qw(k w C m - Q #)
         if ( $is_special_ws_type{$type} ) {
-            if ( $type eq 'i' ) {
 
-                # never a space before ->
-                if ( substr( $token, 0, 2 ) eq '->' ) {
-                    $ws = WS_NO;
-                }
-            }
-
-            elsif ( $type eq 'k' ) {
+            if ( $type eq 'k' ) {
 
                 # Keywords 'for', 'foreach' are special cases for -kpit since
                 # the opening paren does not always immediately follow the
@@ -2763,11 +2756,6 @@ sub set_whitespace_flags {
             # retain any space between '-' and bare word
             elsif ( $type eq 'w' || $type eq 'C' ) {
                 $ws = WS_OPTIONAL if $last_type eq '-';
-
-                # never a space before ->
-                if ( substr( $token, 0, 2 ) eq '->' ) {
-                    $ws = WS_NO;
-                }
             }
 
             # retain any space between '-' and bare word; for example
@@ -6635,55 +6623,6 @@ sub respace_tokens_inner_loop {
                     $token .= $word if ( defined($word) );    # fix c104
                     $rtoken_vars->[_TOKEN_] = $token;
                 }
-            }
-
-            # Split identifiers with leading arrows, inserting blanks
-            # if necessary.  It is easier and safer here than in the
-            # tokenizer.  For example '->new' becomes two tokens, '->'
-            # and 'new' with a possible blank between.
-            #
-            # Note: there is a related patch in sub set_whitespace_flags
-            elsif (length($token) > 2
-                && substr( $token, 0, 2 ) eq '->'
-                && $token =~ /^\-\>(.*)$/
-                && $1 )
-            {
-
-                my $token_save = $1;
-                my $type_save  = $type;
-
-                # Change '-> new'  to '->new'
-                $token_save =~ s/^\s+//g;
-
-                # store a blank to left of arrow if necessary
-                my $Kprev = $self->K_previous_nonblank($KK);
-                if (   defined($Kprev)
-                    && $rLL->[$Kprev]->[_TYPE_] ne 'b'
-                    && $rOpts_add_whitespace
-                    && $want_left_space{'->'} == WS_YES )
-                {
-                    my $rcopy = copy_token_as_type( $rtoken_vars, 'b', SPACE );
-                    $self->store_token($rcopy);
-                }
-
-                # then store the arrow
-                my $rcopy = copy_token_as_type( $rtoken_vars, '->', '->' );
-                $self->store_token($rcopy);
-
-                # store a blank after the arrow if requested
-                # added for issue git #33
-                if ( $want_right_space{'->'} == WS_YES ) {
-                    my $rcopy_b =
-                      copy_token_as_type( $rtoken_vars, 'b', SPACE );
-                    $self->store_token($rcopy_b);
-                }
-
-                # then reset the current token to be the remainder,
-                # and reset the whitespace flag according to the arrow
-                $token = $rtoken_vars->[_TOKEN_] = $token_save;
-                $type  = $rtoken_vars->[_TYPE_]  = $type_save;
-                $self->store_token($rtoken_vars);
-                next;
             }
 
             # Trim certain spaces in identifiers

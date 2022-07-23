@@ -29,9 +29,6 @@ use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
-# This can be removed after testing
-use constant OLD_POINTER_LOGIC => 0;
-
 use Perl::Tidy::LineBuffer;
 use Carp;
 
@@ -3319,27 +3316,6 @@ EOM
     sub do_POINTER {
 
         #  '->'
-
-        # OLD POINTER LOGIC:
-        # if -> points to a bare word, we must scan for an identifier,
-        # otherwise something like ->y would look like the y operator
-
-        # NOTE: this will currently allow things like
-        #     '->@array'    '->*VAR'  '->%hash'
-        # to get parsed as identifiers, even though these are not currently
-        # allowed syntax.  To catch syntax errors like this we could first
-        # check that the next character and skip this call if it is one of
-        # ' @ % * '.  A disadvantage with doing this is that this would
-        # have to be fixed if the perltidy syntax is ever extended to make
-        # any of these valid.  So for now this check is not done.
-
-        # POINTER_LOGIC update, Part 1: make pointers separate tokens
-        # and look backwards when scanning the next thing.  This makes the
-        # logic independent of any line breaks and comments between the '->'
-        # and the next tokens.
-        if (OLD_POINTER_LOGIC) {
-            scan_simple_identifier();
-        }
         return;
     } ## end sub do_POINTER
 
@@ -3926,13 +3902,6 @@ EOM
         #    true if this token ends the current line
         #    false otherwise
 
-        # Patch for c043, part 3: A bareword after '->' expects a TERM
-        # FIXME: It would be cleaner to give method calls a new type 'M'
-        # and update sub operator_expected to handle this.
-        if ( $last_nonblank_type eq '->' ) {
-            $expecting = TERM;
-        }
-
         my ( $next_nonblank_token, $i_next ) =
           find_next_nonblank_token( $i, $rtokens, $max_token_index );
 
@@ -3968,10 +3937,19 @@ EOM
 
         # They may also need to check and set various flags
 
+        # Scan a bare word following a -> as an identifier; it could
+        # have a long package name.  Fixes c037, c041.
+        if ( $last_nonblank_token eq '->' ) {
+            scan_bare_identifier();
+
+            # a bareward after '->' gets type 'i'
+            $type = 'i';
+        }
+
         # Quote a word followed by => operator
         # unless the word __END__ or __DATA__ and the only word on
         # the line.
-        if (  !$is_END_or_DATA
+        elsif ( !$is_END_or_DATA
             && $next_nonblank_token eq '='
             && $rtokens->[ $i_next + 1 ] eq '>' )
         {
@@ -3994,25 +3972,6 @@ EOM
           )
         {
             $type = 'w';
-        }
-
-        # Scan a bare word following a -> as an identifier; it could
-        # have a long package name.  Fixes c037, c041.
-        elsif ( $last_nonblank_token eq '->' ) {
-            scan_bare_identifier();
-
-            # POINTER_LOGIC update, Part 2: a bareward after '->' gets type 'i'
-            if (OLD_POINTER_LOGIC) {
-
-                # OLD_POINTER_LOGIC to catch a '->' on previous line:
-                # Patch for c043, part 4; use type 'w' after a '->'.
-                # This is just a safety check on sub scan_bare_identifier,
-                # which should get this case correct.
-                $type = 'w';
-            }
-            else {
-                $type = 'i';
-            }
         }
 
         # handle operator x (now we know it isn't $x=)

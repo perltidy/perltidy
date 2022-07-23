@@ -12,24 +12,27 @@
       created for the formatted output.  This caused the inode to change.  For
       the new default method, -bm='copy', the input is copied to the backup
       and then the input file is reopened and rewritten. This preserves the
-      file inode. Before using the --backup-and-modify-in-place
-      parameter please verify that it works correctly in your environment and
-      operating system.
+      file inode.  Tests have not produced any problems with this change, but
+      before using the --backup-and-modify-in-place parameter please verify
+      that it works correctly in your environment and operating system.
 
     - Fix undefined value message when perltidy -D is used (git #104)
 
     - Added parameter --delete-repeated-commas (-drc) to delete repeated
-      commas. This is off by default. For example, given this line:
+      commas. This is off by default. I added this option after discovering
+      an unwanted repeated comma in the perltidy source. For example, given:
 
             ignoreSpec( $file, "file",, \%spec, \%Rspec );
 
       # perltidy -drc:
             ignoreSpec( $file, "file", \%spec, \%Rspec );
 
-    - Fixed a minor inconsistency in html colors when -html is used.
-      Previously, a '->' at the end of a line got a black color by default,
-      but a '->' within a line got the color of the following identifier.
-      Now all pointers get the same color, which is black by default.
+    - Fixed an inconsistency in html colors near pointers when -html is used.
+      Previously, a '->' at the end of a line got the 'punctuation color', black
+      by default but a '->' before an identifier got the color of the following
+      identifier. Now all pointers get the same color, which is black by default.
+      Also, previously a word following a '->' was given the color of a bareword,
+      black by default, but now it is given the color of an identifier.
 
 ## 2022 06 13
 

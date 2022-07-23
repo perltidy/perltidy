@@ -798,7 +798,7 @@ if ( -e $basename ) {
     for ( my $j = 1 ; $j < 99 ; $j++ ) {
         $ext   = 'ba' . $j;
         $bname = "$basename.$ext";
-        next if ( -e $bname );
+        next if ( -e $bname || -e $bname . ".gz" );
         system "mv $basename $bname";
         last;
     }
