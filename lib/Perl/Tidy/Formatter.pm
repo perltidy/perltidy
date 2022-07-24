@@ -2910,8 +2910,6 @@ sub set_whitespace_flags {
 
                 # space between something like $i and ( in 'snippets/space2.in'
                 # for $i ( 0 .. 20 ) {
-                # FIXME: eventually, type 'i' could be split into multiple
-                # token types so this can be a hardwired rule.
                 elsif ( $last_type eq 'i' && $last_token =~ /^[\$\%\@]/ ) {
                     $ws = WS_YES;
                 }

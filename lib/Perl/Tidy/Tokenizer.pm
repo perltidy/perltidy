@@ -2061,15 +2061,14 @@ EOM
         #-------------------------------------------------------
         # Do full scan for anything following a pointer, such as
         #      $cref->&*;    # a postderef
-        # This is part of POINTER_LOGIC update but always ok
         #-------------------------------------------------------
         if ( $last_nonblank_token eq '->' ) {
 
         }
 
-        ###############################
+        #------------------------------
         # quick scan with leading sigil
-        ###############################
+        #------------------------------
         elsif ( !$id_scan_state
             && $i_plus_1 <= $max_token_index
             && $fast_scan_context{$tok} )
@@ -2115,10 +2114,10 @@ EOM
             }
         }
 
-        ############################
+        #---------------------------
         # Quick scan with leading ->
         # Look for ->[ and ->{
-        ############################
+        #---------------------------
         elsif (
                $tok eq '->'
             && $i < $max_token_index
@@ -2132,9 +2131,9 @@ EOM
             $context        = UNKNOWN_CONTEXT;
         }
 
-        #######################################
+        #--------------------------------------
         # Verify correctness during development
-        #######################################
+        #--------------------------------------
         if ( VERIFY_FASTSCAN && $fast_scan_type ) {
 
             # We will call the full method
@@ -2162,9 +2161,9 @@ EOM
             }
         }
 
-        ###################################################
+        #-------------------------------------------------
         # call full scanner if fast method did not succeed
-        ###################################################
+        #-------------------------------------------------
         if ( !$fast_scan_type ) {
             scan_identifier();
         }
@@ -5734,9 +5733,7 @@ sub operator_expected {
     my ( $prev_type, $tok, $next_type ) = @{$rarg};
 
     # Types 'k', '}' and 'Z' depend on context
-    # FIXME: Types 'i', 'n', 'v', 'q' currently also temporarily depend on
-    # context but that dependence could eventually be eliminated with better
-    # token type definition
+    # Types 'i', 'n', 'v', 'q' currently also temporarily depend on context.
 
     # identifier...
     if ( $last_nonblank_type eq 'i' ) {
@@ -5876,9 +5873,7 @@ sub operator_expected {
     # 'J'; not 'q'; or maybe mark as type 'Y'
     elsif ( $last_nonblank_type eq 'q' ) {
         $op_expected = OPERATOR;
-        if ( $last_nonblank_token eq 'prototype' )
-          ##|| $last_nonblank_token eq 'switch' )
-        {
+        if ( $last_nonblank_token eq 'prototype' ) {
             $op_expected = TERM;
         }
     }

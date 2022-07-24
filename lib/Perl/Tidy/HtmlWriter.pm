@@ -385,7 +385,6 @@ BEGIN {
     );
 
     # These token types will all be called identifiers for now
-    # FIXME: could separate user defined modules as separate type
     my @identifier = qw< i t U C Y Z G :: CORE::>;
     @token_short_names{@identifier} = ('i') x scalar(@identifier);
 
