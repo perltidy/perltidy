@@ -809,6 +809,8 @@ if ( -e $basename ) {
         die "too many backup versions of $basename - move some\n";
     }
 }
+print "Run 'get_perltidy.pl' if perltidy has changed\n";
+print "Enter './GO.sh' to continue\n";
 EOM
         close RUN;
         system("chmod +x $runme");

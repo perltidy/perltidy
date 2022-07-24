@@ -7443,8 +7443,6 @@ sub add_phantom_semicolon {
 sub check_Q {
 
     # Check that a quote looks okay
-    # This sub works but needs to by sync'd with the log file output
-    # before it can be used.
     my ( $self, $KK, $Kfirst, $line_number ) = @_;
     my $token = $rLL->[$KK]->[_TOKEN_];
     $self->note_embedded_tab($line_number) if ( $token =~ "\t" );
@@ -7485,12 +7483,9 @@ sub check_Q {
     my $type_0  = $rLL->[$Kfirst]->[_TYPE_];
 
     if (
-        ##$token =~ /^(s|tr|y|m|\/)/
-        ##&& $previous_nonblank_token =~ /^(=|==|!=)$/
-        1
 
         # preceded by simple scalar
-        && $previous_nonblank_type_2 eq 'i'
+        $previous_nonblank_type_2 eq 'i'
         && $previous_nonblank_token_2 =~ /^\$/
 
         # followed by some kind of termination
@@ -8346,9 +8341,6 @@ sub weld_cuddled_blocks {
                     next unless ( $CBO == 2 );
                     $rbreak_container->{$closing_seqno} = 1;
                 }
-
-                # we will let the trailing block be either broken or intact
-                ## && $is_broken_block->($opening_seqno);
 
                 # We can weld the closing brace to its following word ..
                 my $Ko = $K_closing_container->{$closing_seqno};
@@ -9366,13 +9358,10 @@ EOM
         # instead of -asbl, and this fixed most cases. But it turns out that
         # the real problem was the -asbl flag, and switching to this was
         # necessary to fixe b1268.  This also fixes b1269, b1277, b1278.
-        if (
-            !$do_not_weld_rule
-            ##&& $is_one_line_weld
+        if (  !$do_not_weld_rule
             && $rOpts_line_up_parentheses
             && $rOpts_asbl
-            && $ris_asub_block->{$outer_seqno}
-          )
+            && $ris_asub_block->{$outer_seqno} )
         {
             $do_not_weld_rule = '2A';
         }
@@ -12434,10 +12423,9 @@ EOM
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
-        $max_index_to_go         = UNDEFINED_INDEX;
-        $summed_lengths_to_go[0] = 0;
-        $nesting_depth_to_go[0]  = 0;
-        ##@summed_lengths_to_go       = @nesting_depth_to_go = (0);
+        $max_index_to_go            = UNDEFINED_INDEX;
+        $summed_lengths_to_go[0]    = 0;
+        $nesting_depth_to_go[0]     = 0;
         $ri_starting_one_line_block = [];
 
         # The initialization code for the remaining batch arrays is as follows
@@ -13951,7 +13939,7 @@ sub starting_one_line_block {
 
             # give up if not on this line
             return 0 unless ( $i_opening >= 0 );
-            $i_start = $i_opening;    ##$index_max_forced_break + 1;
+            $i_start = $i_opening;
 
             # go back one token before the opening paren
             if ( $i_start > 0 )                                  { $i_start-- }
@@ -14314,7 +14302,6 @@ sub compare_indentation_levels {
         $forced_breakpoint_count      = 0;
         $index_max_forced_break       = UNDEFINED_INDEX;
         $forced_breakpoint_undo_count = 0;
-        ##@forced_breakpoint_undo_stack = (); # not needed
         return;
     }
 
@@ -14759,17 +14746,8 @@ EOM
 
             if ( $ilast_nonblank >= 0 ) {
                 $inext_to_go[$ilast_nonblank] = $i;
-
-                # just in case there are two blanks in a row (shouldn't
-                # happen)
-                if ( ++$ilast_nonblank < $i ) {
-                    $inext_to_go[$ilast_nonblank] = $i;
-                }
             }
             $ilast_nonblank = $i;
-
-            # This is a good spot to efficiently collect information needed
-            # for breaking lines...
 
             # gather info needed by sub break_long_lines
             if ( $type_sequence_to_go[$i] ) {
@@ -19020,7 +18998,7 @@ EOM
                 $last_nonblank_type       = $type;
                 $last_nonblank_token      = $token;
                 $last_nonblank_block_type = $block_type;
-            } ## end if ( $type ne 'b' )
+            }
             $type          = $types_to_go[$i];
             $block_type    = $block_type_to_go[$i];
             $token         = $tokens_to_go[$i];
@@ -19082,7 +19060,7 @@ EOM
                         $want_previous_breakpoint = $i
                           unless ($skip);
 
-                    } ## end if ( $next_nonblank_type...)
+                    }
                 } ## end if ($rOpts_break_at_old_keyword_breakpoints)
 
                 # Break before attributes if user broke there
@@ -19152,7 +19130,7 @@ EOM
               )
             {
                 $self->set_forced_breakpoint( $i - 1 );
-            } ## end if ( $type eq 'k' && $i...)
+            }
 
             # remember locations of '||'  and '&&' for possible breaks if we
             # decide this is a long logical expression.
@@ -19161,13 +19139,13 @@ EOM
                 ++$has_old_logical_breakpoints[$depth]
                   if ( ( $i == $i_line_start || $i == $i_line_end )
                     && $rOpts_break_at_old_logical_breakpoints );
-            } ## end elsif ( $type eq '||' )
+            }
             elsif ( $type eq '&&' ) {
                 push @{ $rand_or_list[$depth][3] }, $i;
                 ++$has_old_logical_breakpoints[$depth]
                   if ( ( $i == $i_line_start || $i == $i_line_end )
                     && $rOpts_break_at_old_logical_breakpoints );
-            } ## end elsif ( $type eq '&&' )
+            }
             elsif ( $type eq 'f' ) {
                 push @{ $rfor_semicolon_list[$depth] }, $i;
             }
@@ -19177,7 +19155,7 @@ EOM
                     ++$has_old_logical_breakpoints[$depth]
                       if ( ( $i == $i_line_start || $i == $i_line_end )
                         && $rOpts_break_at_old_logical_breakpoints );
-                } ## end if ( $token eq 'and' )
+                }
 
                 # break immediately at 'or's which are probably not in a logical
                 # block -- but we will break in logical breaks below so that
@@ -19196,8 +19174,8 @@ EOM
                         {
                             $saw_good_breakpoint = 1;
                         }
-                    } ## end else [ if ( $is_logical_container...)]
-                } ## end elsif ( $token eq 'or' )
+                    }
+                }
                 elsif ( $token eq 'if' || $token eq 'unless' ) {
                     push @{ $rand_or_list[$depth][4] }, $i;
                     if ( ( $i == $i_line_start || $i == $i_line_end )
@@ -19205,8 +19183,8 @@ EOM
                     {
                         $self->set_forced_breakpoint($i);
                     }
-                } ## end elsif ( $token eq 'if' ||...)
-            } ## end elsif ( $type eq 'k' )
+                }
+            }
             elsif ( $is_assignment{$type} ) {
                 $i_equals[$depth] = $i;
             }
@@ -19230,7 +19208,7 @@ EOM
 
                 $self->break_lists_increase_depth();
 
-            } ## end if ( $depth > $current_depth)
+            }
 
             #--------------------------
             # Handle Decreasing Depth..
@@ -19245,7 +19223,7 @@ EOM
                 $comma_follows_last_closing_token =
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
 
-            } ## end elsif ( $depth < $current_depth)
+            }
 
             #------------------
             # Handle this token
@@ -19266,7 +19244,7 @@ EOM
                 $want_comma_break[$depth]   = 1;
                 $index_before_arrow[$depth] = $i_last_nonblank_token;
                 next;
-            } ## end if ( $type eq '=>' )
+            }
 
             elsif ( $type eq '.' ) {
                 $last_dot_index[$depth] = $i;
@@ -19284,7 +19262,7 @@ EOM
                 $dont_align[$depth]         = 1;
                 $want_comma_break[$depth]   = 0;
                 $index_before_arrow[$depth] = -1;
-            } ## end elsif ( ( $type =~ /^[\;\<\>\~]$/...))
+            }
 
             # now just handle any commas
             next unless ( $type eq ',' );
@@ -19323,12 +19301,7 @@ EOM
                     if ( $types_to_go[$ibreak] eq 'b' )  { $ibreak-- }
                     if ( $types_to_go[$ibreak] =~ /^[,wiZCUG\(\{\[]$/ ) {
 
-                        # don't break pointer calls, such as the following:
-                        #  File::Spec->curdir  => 1,
-                        # (This is tokenized as adjacent 'w' tokens)
-                        ##if ( $tokens_to_go[ $ibreak + 1 ] !~ /^->/ ) {
-
-                        # And don't break before a comma, as in the following:
+                        # don't break before a comma, as in the following:
                         # ( LONGER_THAN,=> 1,
                         #    EIGHTY_CHARACTERS,=> 2,
                         #    CAUSES_FORMATTING,=> 3,
@@ -19340,8 +19313,8 @@ EOM
                         {
                             $self->set_forced_breakpoint($ibreak);
                         }
-                    } ## end if ( $types_to_go[$ibreak...])
-                } ## end if ( $ibreak > 0 && $tokens_to_go...)
+                    }
+                }
 
                 $want_comma_break[$depth]   = 0;
                 $index_before_arrow[$depth] = -1;
@@ -19350,7 +19323,7 @@ EOM
                 # treat any list items so far as an interrupted list
                 $interrupted_list[$depth] = 1;
                 next;
-            } ## end if ( $want_comma_break...)
+            }
 
             # Break after all commas above starting depth...
             # But only if the last closing token was followed by a comma,
@@ -19378,7 +19351,7 @@ EOM
                 {
                     $dont_align[$depth] = 1;
                 }
-            } ## end if ( $item_count == 0 )
+            }
 
             $comma_index[$depth][$item_count] = $i;
             ++$item_count_stack[$depth];
@@ -19440,7 +19413,7 @@ EOM
             && $i_old_assignment_break < $max_index_to_go )
         {
             $saw_good_breakpoint = 1;
-        } ## end elsif ( $i_old_assignment_break...)
+        }
 
         return $saw_good_breakpoint;
     } ## end sub break_lists
@@ -19469,15 +19442,15 @@ EOM
                         $self->set_forced_breakpoint( $i_equals[$depth] );
                         $i_equals[$depth] = -1;
                     }
-                } ## end if ( ( $i == $i_line_start...))
-            } ## end if ( $type eq ':' )
+                }
+            }
             if ( has_postponed_breakpoint($type_sequence) ) {
                 my $inc = ( $type eq ':' ) ? 0 : 1;
                 if ( $i >= $inc ) {
                     $self->set_forced_breakpoint( $i - $inc );
                 }
             }
-        } ## end if ( $is_closing_sequence_token{$token} )
+        }
 
         # set breaks at ?/: if they will get separated (and are
         # not a ?/: chain), or if the '?' is at the end of the
@@ -19508,8 +19481,8 @@ EOM
                     $self->set_forced_breakpoint($i);
                 }
                 $self->set_closing_breakpoint($i);
-            } ## end if ( $i_colon <= 0  ||...)
-        } ## end elsif ( $token eq '?' )
+            }
+        }
 
         elsif ( $is_opening_token{$token} ) {
 
@@ -19627,7 +19600,7 @@ EOM
           )
         {
             $self->set_forced_breakpoint( $i - 1 );
-        } ## end if ( $block_type && ( ...))
+        }
 
         return;
     } ## end sub break_lists_increase_depth
@@ -19656,7 +19629,7 @@ EOM
             && !$rOpts_opening_brace_always_on_right )
         {
             $self->set_forced_breakpoint($i);
-        } ## end if ( $token eq ')' && ...
+        }
 
 #print "LISTY sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth next=$next_nonblank_type next_block=$next_nonblank_block_type inter=$interrupted_list[$current_depth]\n";
 
@@ -19731,7 +19704,7 @@ EOM
                  $cab_flag == 4
               || $cab_flag == 0 && $last_nonblank_token eq ','
               || $cab_flag == 5 && $old_breakpoint_to_go[$i_opening];
-        } ## end if ( !$is_long_term &&...)
+        }
 
         # mark term as long if the length between opening and closing
         # parens exceeds allowed line length
@@ -19783,7 +19756,7 @@ EOM
 
             $is_long_term = $excess + $tol > 0;
 
-        } ## end if ( !$is_long_term &&...)
+        }
 
         # We've set breaks after all comma-arrows.  Now we have to
         # undo them if this can be a one-line block
@@ -19821,7 +19794,7 @@ EOM
         {
             $self->undo_forced_breakpoint_stack(
                 $breakpoint_undo_stack[$current_depth] );
-        } ## end if ( ( $rOpts_comma_arrow_breakpoints...))
+        }
 
         # now see if we have any comma breakpoints left
         my $has_comma_breakpoints =
@@ -19958,7 +19931,7 @@ EOM
             else {
                 $self->set_logical_breakpoints($current_depth);
             }
-        } ## end if ( $item_count_stack...)
+        }
 
         if ( $is_long_term
             && @{ $rfor_semicolon_list[$current_depth] } )
@@ -19968,7 +19941,7 @@ EOM
             # open up a long 'for' or 'foreach' container to allow
             # leading term alignment unless -lp is used.
             $has_comma_breakpoints = 1 unless ($lp_object);
-        } ## end if ( $is_long_term && ...)
+        }
 
         if (
 
@@ -20059,8 +20032,8 @@ EOM
                     {
                         $self->set_forced_breakpoint($i_prev);
                     }
-                } ## end if ( $i_opening > 2 )
-            } ## end if ( $minimum_depth <=...)
+                }
+            }
 
             # break after comma following closing structure
             if ( $types_to_go[ $i + 1 ] eq ',' ) {
@@ -20075,7 +20048,7 @@ EOM
               )
             {
                 $self->set_forced_breakpoint($i);
-            } ## end if ( $is_assignment{$next_nonblank_type...})
+            }
 
             # break at any comma before the opening structure Added
             # for -lp, but seems to be good in general.  It isn't
@@ -20089,7 +20062,7 @@ EOM
                     $self->set_forced_breakpoint($icomma);
                 }
             }
-        } ## end logic to open up a container
+        }
 
         # Break open a logical container open if it was already open
         elsif ($is_simple_logical_expression
@@ -20104,7 +20077,7 @@ EOM
             # must set fake breakpoint to alert outer containers that
             # they are complex
             set_fake_breakpoint();
-        } ## end elsif ($is_long_term)
+        }
 
         return;
     } ## end sub break_lists_decrease_depth
@@ -20545,7 +20518,6 @@ EOM
         if (   $rOpts_variable_maximum_line_length
             && $tokens_to_go[$i_opening_paren] eq '('
             && @i_term_begin )
-          ##&& !$old_breakpoint_to_go[$i_opening_paren] )  ## in b1210 patch
         {
             my $ib   = $i_term_begin[0];
             my $type = $types_to_go[$ib];
@@ -20834,7 +20806,6 @@ EOM
             && $item_count < 9           # doesn't have too many items
             && $opening_is_in_block      # not a sub-container
             && $two_line_word_wrap_ok    # ok to wrap this paren list
-            ##&& $opening_token eq '('    # is paren list
           )
         {
 
@@ -23464,17 +23435,11 @@ EOM
                 # because it may occur in short blocks).
                 elsif (
 
-                    # we haven't already set it
-                    ##!$alignment_type
-
                     # previous token IS one of these:
                     (
                            $vert_last_nonblank_type eq ','
                         || $vert_last_nonblank_type eq ';'
                     )
-
-                    # and its not the first token of the line
-                    ## && $i > $ibeg
 
                     # and it follows a blank
                     && $types_to_go[ $i - 1 ] eq 'b'
@@ -25344,12 +25309,9 @@ sub make_paren_name {
             # Undo ci of line with leading closing eval brace,
             # but not beyond the indentation of the line with
             # the opening brace.
-            if (
-                $block_type_beg eq 'eval'
-                ##&& !$rOpts_line_up_parentheses
+            if (   $block_type_beg eq 'eval'
                 && !ref($leading_spaces_beg)
-                && !$rOpts_indent_closing_brace
-              )
+                && !$rOpts_indent_closing_brace )
             {
                 (
                     $opening_indentation, $opening_offset,
