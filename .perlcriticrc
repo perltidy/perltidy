@@ -1,23 +1,23 @@
 # perlcritic is a good tool for locating potentially 'dodgy' coding.
+# This file customizes it to the specific needs of Perl::Tidy.
 
 # Some useful links:
 # https://manpages.ubuntu.com/manpages/xenial/man1/perlcritic.1p.html
 # https://perlmaven.com/perl-critic
 
-severity = 1
-
-verbose = %f: [%p] %m at line %l, column %c.\n
-
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# Below is a list of policies that are skipped or customized to the needs of
-# Perl::Tidy.  I have found that using 'no critic' comments is very
-# troublesome*, so policies are either 'on' or 'off' for all modules.  ( *For
-# example, it is necessary to specify a policy even in a side comment, which
-# seems needless.  The very long policy names make the line hard to read, and
-# so long that side comment will usually exceed the desired line length,
-# leading to more trouble if that causes a new line break.
+# I have found that using 'no critic' comments is very troublesome*, so
+# non-configurable policies are either 'on' or 'off'.
+# *perlcritic requires specifying a policy even in a side comment, which seems
+# pointless.  The very long policy names make a simple statement very hard to
+# read, and so long that side comment will usually exceed the desired line
+# length.
+
+severity = 1
+
+verbose = %f: [%p] %m at line %l, column %c.\n
 
 #--------------------------------------------------------------
 # Following is a list of policies to be skipped for severity=4:
@@ -31,7 +31,9 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 [-Variables::RequireInitializationForLocalVars] 
 
 # There is a stringy eval in Formatter.pm and Tokenizer.pm which is essential
-# for checking user input. So we have to skip this.
+# for checking user input. So we have to skip this.  I would have liked
+# to mark it with a nocritic side comment, but see note above for the trouble
+# this causes.
 [-BuiltinFunctions::ProhibitStringyEval]
 
 # Tidy.pm exports 'perltidy'. Changing this could break existing scripts.
@@ -106,8 +108,8 @@ max_nests=7
 # The Tokenizer.pm needs package variables
 [-Variables::ProhibitPackageVars]
 
-# Do not change any debugged regular expressions without good reason.
-# It is too easy to introduce a subtle error.
+# These would be okay for new code, but do not change any debugged regular
+# expressions without good reason.  It is too easy to introduce a subtle error.
 [-RegularExpressions::RequireExtendedFormatting]
 [-RegularExpressions::ProhibitComplexRegexes]
 [-RegularExpressions::ProhibitUnusedCapture]
@@ -118,11 +120,12 @@ max_nests=7
 #--------------------------------------------------------------
 
 # Disagree. In fact, following this policy caused a parsing error in Perl
-# version 5.14 at file test operators.  So skip this.
+# version 5.14 at file test operators.  So skip this because it can cause
+# loss of code robustness.
 [-BuiltinFunctions::ProhibitUselessTopic]
 
-# Do not change any debugged regular expressions without good reason.
-# It is too easy to introduce a subtle error.
+# These would be okay for new code, but do not change any debugged regular
+# expressions without good reason.  It is too easy to introduce a subtle error.
 [-RegularExpressions::RequireDotMatchAnything]
 [-RegularExpressions::RequireLineBoundaryMatching]
 
@@ -162,8 +165,8 @@ max_nests=7
 [-NamingConventions::Capitalization]
 
 # It would be nice if this option were configurable to skip STDERR and STDOUT
-# which are used by perltidy for debug statements.  I don't think {*STDOUT} is
-# preferable to simply STDOUT. So skip it.
+# which are used by perltidy almost exclusively for debug statements.  I don't
+# think {*STDOUT} is preferable to simply STDOUT. So skip it.
 [-InputOutput::RequireBracedFileHandleWithPrint]
 
 # PerlCritic should not suggest this policy for complex sorts because it can
@@ -176,8 +179,8 @@ max_nests=7
 # you have a comparison of the form $b->[*] <=> $a->[*]. So skip this.
 [-BuiltinFunctions::ProhibitReverseSortBlock]
 
-# Do not change any debugged regular expressions without good reason.
-# It is too easy to introduce a subtle error.
+# These would be okay for new code, but do not change any debugged regular
+# expressions without good reason.  It is too easy to introduce a subtle error.
 [-RegularExpressions::ProhibitEscapedMetacharacters]
 [-RegularExpressions::ProhibitEnumeratedClasses]
 [-RegularExpressions::ProhibitUnusualDelimiters]
@@ -195,8 +198,9 @@ max_nests=7
 # These have been checked and are correct as written 
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
-# Completely disagree: parens can add clarity and may even be essential.
-# There is little to be gained by omitting them.
+# Completely disagree: parens can add clarity and may even be essential, for
+# example in ternary expressions. There is little to be gained by omitting
+# them.
 [-CodeLayout::ProhibitParensWithBuiltins] 
 
 # This is OK if we exclude 'print'. Most of the 'print' statements
