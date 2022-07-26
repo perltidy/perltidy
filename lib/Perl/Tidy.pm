@@ -2902,46 +2902,6 @@ EOM
     return $msg;
 } ## end sub compare_string_buffers
 
-sub get_stream_as_named_file {
-
-    # Return the name of a file containing a stream of data, creating
-    # a temporary file if necessary.
-    # Given:
-    #  $stream - the name of a file or stream
-    # Returns:
-    #  $fname = name of file if possible, or undef
-    #  $if_tmpfile = true if temp file, undef if not temp file
-    #
-    # NOTE: This routine was previously needed for passing actual files to Perl
-    # for a syntax check. It is not currently used.
-    my ($stream) = @_;
-    my $is_tmpfile;
-    my $fname;
-    if ($stream) {
-        if ( ref($stream) ) {
-            my ( $fh_stream, $fh_name ) =
-              Perl::Tidy::streamhandle( $stream, 'r' );
-            if ($fh_stream) {
-                my ( $fout, $tmpnam ) = File::Temp::tempfile();
-                if ($fout) {
-                    $fname      = $tmpnam;
-                    $is_tmpfile = 1;
-                    binmode $fout;
-                    while ( my $line = $fh_stream->getline() ) {
-                        $fout->print($line);
-                    }
-                    $fout->close();
-                }
-                $fh_stream->close();
-            }
-        }
-        elsif ( $stream ne '-' && -f $stream ) {
-            $fname = $stream;
-        }
-    }
-    return ( $fname, $is_tmpfile );
-} ## end sub get_stream_as_named_file
-
 sub fileglob_to_re {
 
     # modified (corrected) from version in find2perl

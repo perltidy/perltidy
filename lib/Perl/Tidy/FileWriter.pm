@@ -182,11 +182,6 @@ sub get_convergence_check {
     return $self->[_K_arrival_order_matches_] && !@{$rlist};
 }
 
-sub get_K_sequence_error_msg {
-    my ($self) = @_;
-    return $self->[_K_sequence_error_msg_];
-}
-
 sub get_output_line_number {
     return $_[0]->[_output_line_number_];
 }

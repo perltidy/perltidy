@@ -1170,11 +1170,6 @@ sub get_convergence_check {
     return $self->[_converged_];
 }
 
-sub get_added_semicolon_count {
-    my $self = shift;
-    return $self->[_added_semicolon_count_];
-}
-
 sub get_output_line_number {
     my ($self) = @_;
     my $vao = $self->[_vertical_aligner_object_];
@@ -14293,14 +14288,6 @@ sub compare_indentation_levels {
 
         push @q, ',';
         @break_before_or_after_token{@q} = (1) x scalar(@q);
-    }
-
-    # This is no longer called - global vars - moved into initialize_batch_vars
-    sub initialize_forced_breakpoint_vars {
-        $forced_breakpoint_count      = 0;
-        $index_max_forced_break       = UNDEFINED_INDEX;
-        $forced_breakpoint_undo_count = 0;
-        return;
     }
 
     sub set_fake_breakpoint {
