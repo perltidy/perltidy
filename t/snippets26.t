@@ -11,6 +11,7 @@
 #8 c139.def
 #9 drc.def
 #10 drc.drc
+#11 git105.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -102,6 +103,18 @@ sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
 
         'drc' => <<'----------',
 ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
+----------
+
+        'git105' => <<'----------',
+use v5.36;
+
+use experimental 'for_list';
+
+for my ( $k, $v ) ( 1, 2, 3, 4 ) {
+    say "$k:$v";
+}
+say 'end';
+
 ----------
 
         'git93' => <<'----------',
@@ -427,6 +440,22 @@ ignoreSpec( $file, "file",, \%spec,,, \%Rspec );
             expect => <<'#10...........',
 ignoreSpec( $file, "file", \%spec, \%Rspec );
 #10...........
+        },
+
+        'git105.def' => {
+            source => "git105",
+            params => "def",
+            expect => <<'#11...........',
+use v5.36;
+
+use experimental 'for_list';
+
+for my ( $k, $v ) ( 1, 2, 3, 4 ) {
+    say "$k:$v";
+}
+say 'end';
+
+#11...........
         },
     };
 

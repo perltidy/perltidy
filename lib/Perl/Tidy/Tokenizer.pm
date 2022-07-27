@@ -2436,7 +2436,15 @@ EOM
                 } ## end else [ if ( $last_last_nonblank_token...
             } ## end if ( $expecting == OPERATOR...
         }
-        $paren_type[$paren_depth] = $container_type;
+
+        # Do not update container type at ') ('; fix for git #105.  This will
+        # propagate the container type onward so that any subsequent brace gets
+        # correctly marked.  I have implemented this as a general rule, which
+        # should be safe, but if necessary it could be restricted to certain
+        # container statement types such as 'for'.
+        $paren_type[$paren_depth] = $container_type
+          if ( $last_nonblank_token ne ')' );
+
         ( $type_sequence, $indent_flag ) =
           increase_nesting_depth( PAREN, $rtoken_map->[$i_tok] );
 

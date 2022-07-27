@@ -1,0 +1,9 @@
+use v5.36;
+
+use experimental 'for_list';
+
+for my ( $k, $v ) ( 1, 2, 3, 4 ) {
+    say "$k:$v";
+}
+say 'end';
+
