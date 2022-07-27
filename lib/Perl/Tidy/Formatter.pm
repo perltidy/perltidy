@@ -519,6 +519,7 @@ BEGIN {
         _rix_seqno_controlling_ci_   => $i++,
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
+        _has_unmatched_opening_      => $i++,
     };
 }
 
@@ -14799,6 +14800,9 @@ EOM
         my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
           @unmatched_closing_indexes_in_this_batch;
 
+        $this_batch->[_has_unmatched_opening_] =
+          @unmatched_opening_indexes_in_this_batch;
+
         #------------------------
         # Set special breakpoints
         #------------------------
@@ -22969,7 +22973,8 @@ EOM
     # remember indentation of lines containing opening containers for
     # later use by sub final_indentation_adjustment
     $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list )
-      if ( !$is_block_comment );
+      if ( $this_batch->[_has_unmatched_opening_]
+        || $types_to_go[$max_index_to_go] eq 'q' );
 
     # output any new -cscw block comment
     if ($cscw_block_comment) {
