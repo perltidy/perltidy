@@ -87,6 +87,7 @@ t/snippets8.t
 t/snippets9.t
 t/test-eol.t
 t/test.t
+t/test_DEBUG.t
 t/testsa.t
 t/testss.t
 t/testwide-passthrough.pl.src

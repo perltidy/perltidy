@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.02
+## 2022 06 13.03
 
     - Fix for issue git #105, incorrect formatting with 5.36 experimental
       for_list feature.
