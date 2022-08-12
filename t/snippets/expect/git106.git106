@@ -1,0 +1,43 @@
+is($module->VERSION, $expected,
+   "$main_module->VERSION matches $module->VERSION ($expected)");
+
+ok(($@ eq "" && "@b" eq "1 4 5 9"),
+   'redefinition should not take effect during the sort');
+
+&$f((map { $points->slice($_) } @sls1),
+    (map { $n->slice($_) } @sls1),
+    (map { $this->{Colors}->slice($_) } @sls1));
+
+AA("0123456789012345678901234567890123456789",
+   "0123456789012345678901234567890123456789");
+
+AAAAAA("0123456789012345678901234567890123456789",
+       "0123456789012345678901234567890123456789");
+
+# padded
+return !(   $elem->isa('PPI::Statement::End')
+         || $elem->isa('PPI::Statement::Data'));
+
+for ($s = $dbobj->seq($k, $v, R_LAST) ;
+     $s == 0 ;
+     $s = $dbobj->seq($k, $v, R_PREV))
+{
+    print "$k: $v\n";
+}
+
+# excess without -xci
+fresh_perl_is('-C-',
+     <<'abcdefghijklmnopq', {}, "ambiguous unary operator check doesn't crash");
+Warning: Use of "-C-" without parentheses is ambiguous at - line 1.
+abcdefghijklmnopq
+
+# excess with -xci
+{
+    {
+        {
+            $self->privmsg($to,
+                   "One moment please, I shall display the groups with agendas:"
+            );
+        }
+    }
+}

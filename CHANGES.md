@@ -2,6 +2,18 @@
 
 ## 2022 06 13.03
 
+    - Fix issue git #106. This fixes some edge cases of formatting with the
+      combination -xlp -pt=2, mainly for two-line lists with short function
+      names. One indentation space is removed to improve alignment:
+
+      # OLD: perltidy -xlp -pt=2
+        is($module->VERSION, $expected,
+            "$main_module->VERSION matches $module->VERSION ($expected)");
+
+      # NEW: perltidy -xlp -pt=2
+        is($module->VERSION, $expected,
+           "$main_module->VERSION matches $module->VERSION ($expected)");
+
     - Fix for issue git #105, incorrect formatting with 5.36 experimental
       for_list feature.
 

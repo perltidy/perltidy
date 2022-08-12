@@ -12,6 +12,8 @@
 #9 drc.def
 #10 drc.drc
 #11 git105.def
+#12 git106.def
+#13 git106.git106
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,11 +31,12 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bal2'  => "-bal=2",
-        'c133'  => "-boc",
-        'def'   => "",
-        'drc'   => "-drc",
-        'git93' => <<'----------',
+        'bal2'   => "-bal=2",
+        'c133'   => "-boc",
+        'def'    => "",
+        'drc'    => "-drc",
+        'git106' => "-xlp -gnu -xci",
+        'git93'  => <<'----------',
 -vxl='q'
 ----------
         'lpxl6' => <<'----------',
@@ -115,6 +118,59 @@ for my ( $k, $v ) ( 1, 2, 3, 4 ) {
 }
 say 'end';
 
+----------
+
+        'git106' => <<'----------',
+is( $module->VERSION, $expected,
+    "$main_module->VERSION matches $module->VERSION ($expected)" );
+
+ok( ( $@ eq "" && "@b" eq "1 4 5 9" ),
+    'redefinition should not take effect during the sort' );
+
+&$f(
+    ( map { $points->slice($_) } @sls1 ),
+    ( map { $n->slice($_) } @sls1 ),
+    ( map { $this->{Colors}->slice($_) } @sls1 )
+);
+
+AA(
+    "0123456789012345678901234567890123456789",
+    "0123456789012345678901234567890123456789"
+);
+
+AAAAAA(
+    "0123456789012345678901234567890123456789",
+    "0123456789012345678901234567890123456789"
+);
+
+# padded
+return !( $elem->isa('PPI::Statement::End')
+    || $elem->isa('PPI::Statement::Data') );
+
+for (
+    $s = $dbobj->seq( $k, $v, R_LAST ) ;
+    $s == 0 ;
+    $s = $dbobj->seq( $k, $v, R_PREV )
+  )
+{
+    print "$k: $v\n";
+}
+
+# excess without -xci
+fresh_perl_is( '-C-',
+    <<'abcdefghijklmnopq', {}, "ambiguous unary operator check doesn't crash" );
+Warning: Use of "-C-" without parentheses is ambiguous at - line 1.
+abcdefghijklmnopq
+
+# excess with -xci
+{
+    {
+        {
+            $self->privmsg( $to,
+                "One moment please, I shall display the groups with agendas:" );
+        }
+    }
+}
 ----------
 
         'git93' => <<'----------',
@@ -456,6 +512,113 @@ for my ( $k, $v ) ( 1, 2, 3, 4 ) {
 say 'end';
 
 #11...........
+        },
+
+        'git106.def' => {
+            source => "git106",
+            params => "def",
+            expect => <<'#12...........',
+is( $module->VERSION, $expected,
+    "$main_module->VERSION matches $module->VERSION ($expected)" );
+
+ok( ( $@ eq "" && "@b" eq "1 4 5 9" ),
+    'redefinition should not take effect during the sort' );
+
+&$f(
+    ( map { $points->slice($_) } @sls1 ),
+    ( map { $n->slice($_) } @sls1 ),
+    ( map { $this->{Colors}->slice($_) } @sls1 )
+);
+
+AA(
+    "0123456789012345678901234567890123456789",
+    "0123456789012345678901234567890123456789"
+);
+
+AAAAAA(
+    "0123456789012345678901234567890123456789",
+    "0123456789012345678901234567890123456789"
+);
+
+# padded
+return !( $elem->isa('PPI::Statement::End')
+    || $elem->isa('PPI::Statement::Data') );
+
+for (
+    $s = $dbobj->seq( $k, $v, R_LAST ) ;
+    $s == 0 ;
+    $s = $dbobj->seq( $k, $v, R_PREV )
+  )
+{
+    print "$k: $v\n";
+}
+
+# excess without -xci
+fresh_perl_is( '-C-',
+    <<'abcdefghijklmnopq', {}, "ambiguous unary operator check doesn't crash" );
+Warning: Use of "-C-" without parentheses is ambiguous at - line 1.
+abcdefghijklmnopq
+
+# excess with -xci
+{
+    {
+        {
+            $self->privmsg( $to,
+                "One moment please, I shall display the groups with agendas:" );
+        }
+    }
+}
+#12...........
+        },
+
+        'git106.git106' => {
+            source => "git106",
+            params => "git106",
+            expect => <<'#13...........',
+is($module->VERSION, $expected,
+   "$main_module->VERSION matches $module->VERSION ($expected)");
+
+ok(($@ eq "" && "@b" eq "1 4 5 9"),
+   'redefinition should not take effect during the sort');
+
+&$f((map { $points->slice($_) } @sls1),
+    (map { $n->slice($_) } @sls1),
+    (map { $this->{Colors}->slice($_) } @sls1));
+
+AA("0123456789012345678901234567890123456789",
+   "0123456789012345678901234567890123456789");
+
+AAAAAA("0123456789012345678901234567890123456789",
+       "0123456789012345678901234567890123456789");
+
+# padded
+return !(   $elem->isa('PPI::Statement::End')
+         || $elem->isa('PPI::Statement::Data'));
+
+for ($s = $dbobj->seq($k, $v, R_LAST) ;
+     $s == 0 ;
+     $s = $dbobj->seq($k, $v, R_PREV))
+{
+    print "$k: $v\n";
+}
+
+# excess without -xci
+fresh_perl_is('-C-',
+     <<'abcdefghijklmnopq', {}, "ambiguous unary operator check doesn't crash");
+Warning: Use of "-C-" without parentheses is ambiguous at - line 1.
+abcdefghijklmnopq
+
+# excess with -xci
+{
+    {
+        {
+            $self->privmsg($to,
+                   "One moment please, I shall display the groups with agendas:"
+            );
+        }
+    }
+}
+#13...........
         },
     };
 

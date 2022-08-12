@@ -31,6 +31,7 @@ BEGIN {
         _K_begin_line_       => $i++,
         _arrow_count_        => $i++,
         _standard_spaces_    => $i++,
+        _K_extra_space_      => $i++,
     };
 }
 
@@ -102,6 +103,7 @@ sub new {
     $self->[_K_begin_line_]       = $input_hash{K_begin_line};
     $self->[_arrow_count_]        = 0;
     $self->[_standard_spaces_]    = $input_hash{standard_spaces};
+    $self->[_K_extra_space_]      = $input_hash{K_extra_space};
 
     bless $self, $class;
     return $self;
@@ -187,6 +189,7 @@ sub decrease_SPACES {
 
 sub decrease_available_spaces {
     my ( $self, $value ) = @_;
+
     if ( defined($value) ) {
         $self->[_available_spaces_] -= $value;
     }
@@ -236,6 +239,10 @@ sub get_lp_item_index {
 
 sub get_K_begin_line {
     return $_[0]->[_K_begin_line_];
+}
+
+sub get_K_extra_space {
+    return $_[0]->[_K_extra_space_];
 }
 
 sub set_have_child {

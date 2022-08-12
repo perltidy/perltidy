@@ -356,6 +356,7 @@
 ../snippets26.t	c139.def
 ../snippets26.t	drc.def
 ../snippets26.t	drc.drc
+../snippets26.t	git105.def
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -496,4 +497,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets26.t	git105.def
+../snippets26.t	git106.def
+../snippets26.t	git106.git106

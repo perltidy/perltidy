@@ -21982,6 +21982,7 @@ EOM
         # it becomes clear that we do not have a good list.
         my $available_spaces = 0;
         my $align_seqno      = 0;
+        my $K_extra_space;
 
         my $last_nonblank_seqno;
         my $last_nonblank_block_type;
@@ -22089,8 +22090,35 @@ EOM
                 }
                 elsif ( $available_spaces > 1 ) {
                     $min_gnu_indentation += $available_spaces + 1;
+
+                    # The "+1" space can cause mis-alignment if there is no
+                    # blank space between the opening paren and the next
+                    # nonblank token (i.e., -pt=2) and the container does not
+                    # get broken open.  So we will mark this token for later
+                    # space removal by sub 'xlp_tweak' if this container
+                    # remains intact (issue git #106).
+                    if (
+                        $type ne 'b'
+
+                        # Skip if the maximum line length is exceeded here
+                        && $excess <= 0
+
+                        # This is only for level changes, not ci level changes.
+                        # But note: this test is here out of caution but I have
+                        # not found a case where it is actually necessary.
+                        && $is_opening_token{$last_nonblank_token}
+
+                        # Be sure we are at consecutive nonblanks.  This test
+                        # should be true, but it guards against future coding
+                        # changes to level values assigned to blank spaces.
+                        && $ii > 0
+                        && $types_to_go[ $ii - 1 ] ne 'b'
+
+                      )
+                    {
+                        $K_extra_space = $K_to_go[$ii];
+                    }
                 }
-                ##elsif ( $last_nonblank_token =~ /^[\{\[\(]$/ ) {
                 elsif ( $is_opening_token{$last_nonblank_token} ) {
                     if ( ( $tightness{$last_nonblank_token} < 2 ) ) {
                         $min_gnu_indentation += 2;
@@ -22165,6 +22193,7 @@ EOM
                     stack_depth      => $max_lp_stack,
                     K_begin_line     => $K_begin_line,
                     standard_spaces  => $standard_spaces,
+                    K_extra_space    => $K_extra_space,
                 );
 
                 DEBUG_LP && do {
@@ -22562,6 +22591,9 @@ sub convey_batch_to_vertical_aligner {
     $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
         $starting_in_quote )
       if ( $n_last_line > 0 && $rOpts_logical_padding );
+
+    $self->xlp_tweak( $ri_first, $ri_last )
+      if ( $rOpts_extended_line_up_parentheses && $n_last_line > 0 );
 
     if (DEVEL_MODE) { $self->check_batch_summed_lengths() }
 
@@ -24349,6 +24381,64 @@ sub pad_token {
     }
     return;
 } ## end sub pad_token
+
+sub xlp_tweak {
+
+    # Remove one indentation space from unbroken containers marked with
+    # 'K_extra_space'.  These are mostly two-line lists with short names
+    # formatted with -xlp -pt=2.
+    #
+    # Before this fix (extra space in line 2):
+    #    is($module->VERSION, $expected,
+    #        "$main_module->VERSION matches $module->VERSION ($expected)");
+    #
+    # After this fix:
+    #    is($module->VERSION, $expected,
+    #       "$main_module->VERSION matches $module->VERSION ($expected)");
+    #
+    # Notes:
+    #  - This fixes issue git #106
+    #  - This must be called after 'set_logical_padding'.
+    #  - This is currently only applied to -xlp. It would also work for -lp
+    #    but that style is essentially frozen.
+
+    my ( $self, $ri_first, $ri_last ) = @_;
+
+    # Must be 2 or more lines
+    return unless ( @{$ri_first} > 1 );
+
+    # Pull indentation object from start of second line
+    my $ibeg_1    = $ri_first->[1];
+    my $lp_object = $leading_spaces_to_go[$ibeg_1];
+    return if ( !ref($lp_object) );
+
+    # This only applies to an indentation object with a marked token
+    my $K_extra_space = $lp_object->get_K_extra_space();
+    return unless ($K_extra_space);
+
+    # Look for the marked token within the first line of this batch
+    my $ibeg_0 = $ri_first->[0];
+    my $iend_0 = $ri_last->[0];
+    my $ii     = $ibeg_0 + $K_extra_space - $K_to_go[$ibeg_0];
+    return if ( $ii <= $ibeg_0 || $ii > $iend_0 );
+
+    # Skip padded tokens, they have already been aligned
+    my $tok = $tokens_to_go[$ii];
+    return if ( substr( $tok, 0, 1 ) eq SPACE );
+
+    # Skip 'if'-like statements, this does not improve them
+    return
+      if ( $types_to_go[$ibeg_0] eq 'k'
+        && $is_if_unless_elsif{ $tokens_to_go[$ibeg_0] } );
+
+    # Looks okay, reduce indentation by 1 space if possible
+    my $spaces = $lp_object->get_spaces();
+    if ( $spaces > 0 ) {
+        $lp_object->decrease_SPACES(1);
+    }
+
+    return;
+}
 
 {    ## begin closure make_alignment_patterns
 
