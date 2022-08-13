@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.03
+## 2022 06 13.04
 
     - Fix issue git #106. This fixes some edge cases of formatting with the
       combination -xlp -pt=2, mainly for two-line lists with short function
