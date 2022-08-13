@@ -23990,6 +23990,9 @@ sub get_seqno {
                         $ok_comma = $tok_next_next eq $tok_next;
                     }
 
+                    # no padding of C-style 'for' terms ('f' is ';' c154)
+                    next if ( $types_to_go[$iendm] eq 'f' );
+
                     next
                       unless (
                            $is_assignment{ $types_to_go[$iendm] }
