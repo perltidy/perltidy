@@ -1310,8 +1310,8 @@ sub fix_terminal_else {
 my %is_closing_block_type;
 
 BEGIN {
-    @_ = qw< } ] >;
-    @is_closing_block_type{@_} = (1) x scalar(@_);
+    my @q = qw< } ] >;
+    @is_closing_block_type{@q} = (1) x scalar(@q);
 }
 
 sub check_match {

@@ -1863,25 +1863,25 @@ EOM
     );
 
     my %is_for_foreach;
-    @_ = qw(for foreach);
-    @is_for_foreach{@_} = (1) x scalar(@_);
+    @q = qw(for foreach);
+    @is_for_foreach{@q} = (1) x scalar(@q);
 
     my %is_my_our_state;
-    @_ = qw(my our state);
-    @is_my_our_state{@_} = (1) x scalar(@_);
+    @q = qw(my our state);
+    @is_my_our_state{@q} = (1) x scalar(@q);
 
     # These keywords may introduce blocks after parenthesized expressions,
     # in the form:
     # keyword ( .... ) { BLOCK }
     # patch for SWITCH/CASE: added 'switch' 'case' 'given' 'when'
     my %is_blocktype_with_paren;
-    @_ =
+    @q =
       qw(if elsif unless while until for foreach switch case given when catch);
-    @is_blocktype_with_paren{@_} = (1) x scalar(@_);
+    @is_blocktype_with_paren{@q} = (1) x scalar(@q);
 
     my %is_case_default;
-    @_ = qw(case default);
-    @is_case_default{@_} = (1) x scalar(@_);
+    @q = qw(case default);
+    @is_case_default{@q} = (1) x scalar(@q);
 
     #------------------------
     # end of tokenizer hashes
