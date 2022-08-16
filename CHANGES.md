@@ -42,6 +42,26 @@
       # perltidy -drc:
             ignoreSpec( $file, "file", \%spec, \%Rspec );
 
+    - Add continuation indentation to long C-style 'for' terms; i.e.
+
+            # OLD
+            for (
+                $j = $i - $shell ;
+                $j >= 0
+                && ++$ncomp
+                && $array->[$j] gt $array->[ $j + $shell ] ;
+                $j -= $shell
+              )
+
+            # NEW
+            for (
+                $j = $i - $shell ;
+                $j >= 0
+                  && ++$ncomp
+                  && $array->[$j] gt $array->[ $j + $shell ] ;
+                $j -= $shell
+              )
+
     - Fixed an inconsistency in html colors near pointers when -html is used.
       Previously, a '->' at the end of a line got the 'punctuation color', black
       by default but a '->' before an identifier got the color of the following

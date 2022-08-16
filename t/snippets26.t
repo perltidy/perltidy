@@ -14,6 +14,7 @@
 #11 git105.def
 #12 git106.def
 #13 git106.git106
+#14 c154.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -102,6 +103,47 @@ _
 $r = $c->         
 
 sql_set_env_attr( $evh, $SQL_ATTR_ODBC_VERSION, $SQL_OV_ODBC2, 0 );
+----------
+
+        'c154' => <<'----------',
+{{{{
+for (
+    $order =
+    $start_order * $nbSubOrderByOrder + $start_suborder ;
+    !exists $level_hash{$level}->{$order}
+    and $order <=
+    $stop_order * $nbSubOrderByOrder + $stop_suborder ;
+    $order++
+  )
+{
+}
+
+# has comma
+for (
+    $q = 201 ;
+    print '-' x 79,
+    "\n" ;
+    $g = (
+	$f ^ ( $w = ( $z = $m . $e ) ^ substr $e, $q )
+	  ^ ( $n = $b ^ $d | $a ^ $l )
+    ) & ( $w | $z ^ $f ^ $n ) & ( $l | $g )
+  )
+{
+    ...;
+}
+
+for (
+    $j = 0, $match_j = -1 ;
+    $j < $sub_len
+      &&
+
+      # changed from naive_string_matcher
+      $sub->[$j] eq $big->[ $i + $j ] ; $j++
+  )
+{
+    ...;
+}
+}}}}
 ----------
 
         'drc' => <<'----------',
@@ -619,6 +661,57 @@ abcdefghijklmnopq
     }
 }
 #13...........
+        },
+
+        'c154.def' => {
+            source => "c154",
+            params => "def",
+            expect => <<'#14...........',
+{
+    {
+        {
+            {
+                for (
+                    $order =
+                      $start_order * $nbSubOrderByOrder + $start_suborder ;
+                    !exists $level_hash{$level}->{$order}
+                      and $order <=
+                      $stop_order * $nbSubOrderByOrder + $stop_suborder ;
+                    $order++
+                  )
+                {
+                }
+
+                # has comma
+                for (
+                    $q = 201 ;
+                    print '-' x 79, "\n" ;
+                    $g = (
+                          $f ^ ( $w = ( $z = $m . $e ) ^ substr $e, $q )
+                          ^ ( $n = $b ^ $d | $a ^ $l )
+                    ) & ( $w | $z ^ $f ^ $n ) & ( $l | $g )
+                  )
+                {
+                    ...;
+                }
+
+                for (
+                    $j = 0, $match_j = -1 ;
+                    $j < $sub_len
+                      &&
+
+                      # changed from naive_string_matcher
+                      $sub->[$j] eq $big->[ $i + $j ] ;
+                    $j++
+                  )
+                {
+                    ...;
+                }
+            }
+        }
+    }
+}
+#14...........
         },
     };
 

@@ -519,7 +519,7 @@ BEGIN {
         _rix_seqno_controlling_ci_   => $i++,
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
-        _has_unmatched_opening_      => $i++,
+        _runmatched_opening_indexes_ => $i++,
     };
 }
 
@@ -6197,11 +6197,6 @@ my $Klast_old;
 my $Klast_old_code;
 my $CODE_type;
 
-##Possible closure variables:
-##my $Kfirst;
-##my $Klast;
-##my $input_line_number;
-
 my $rwhitespace_flags;
 
 sub initialize_respace_tokens_closure {
@@ -6233,6 +6228,7 @@ sub initialize_respace_tokens_closure {
     $roverride_cab3            = $self->[_roverride_cab3_];
     $rparent_of_seqno          = $self->[_rparent_of_seqno_];
     $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
+    $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
     # Note that $K_opening_container and $K_closing_container have values
     # defined in sub get_line() for the previous K indexes.  They were needed
@@ -6243,8 +6239,6 @@ sub initialize_respace_tokens_closure {
     $K_closing_container = $self->[_K_closing_container_] = {};
 
     %K_first_here_doc_by_seqno = ();
-
-    $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
     $last_nonblank_code_type       = ';';
     $last_nonblank_code_token      = ';';
@@ -6265,11 +6259,6 @@ sub initialize_respace_tokens_closure {
     $Klast_old      = undef;          # max K of old line
     $Klast_old_code = undef;          # K of last token if side comment
     $CODE_type      = EMPTY_STRING;
-
-    ##possible closure variables:
-    ##$Kfirst         = undef;
-    ##$Klast          = undef;
-    ##$input_line_number = undef;
 
     # Set the whitespace flags, which indicate the token spacing preference.
     $rwhitespace_flags = $self->set_whitespace_flags();
@@ -6825,6 +6814,7 @@ sub respace_post_loop_ops {
     }
 
     # Find and remember lists by sequence number
+    my %is_C_style_for;
     foreach my $seqno ( keys %{$K_opening_container} ) {
         my $K_opening = $K_opening_container->{$seqno};
         next unless defined($K_opening);
@@ -6844,7 +6834,11 @@ sub respace_post_loop_ops {
         if ($rtype_count) {
             my $comma_count     = $rtype_count->{','};
             my $fat_comma_count = $rtype_count->{'=>'};
-            my $semicolon_count = $rtype_count->{';'} || $rtype_count->{'f'};
+            my $semicolon_count = $rtype_count->{';'};
+            if ( $rtype_count->{'f'} ) {
+                $semicolon_count += $rtype_count->{'f'};
+                $is_C_style_for{$seqno} = 1;
+            }
 
             # We will define a list to be a container with one or more commas
             # and no semicolons. Note that we have included the semicolons
@@ -7006,6 +7000,20 @@ sub respace_post_loop_ops {
             }
         }
     }
+
+    # Add -ci to C-style for loops (issue c154)
+    # This is much easier to do here than in the tokenizer.
+    foreach my $seqno ( keys %is_C_style_for ) {
+        my $K_opening = $K_opening_container->{$seqno};
+        my $K_closing = $K_closing_container->{$seqno};
+        my $type_last = 'f';
+        for my $KK ( $K_opening + 1 .. $K_closing - 1 ) {
+            $rLL_new->[$KK]->[_CI_LEVEL_] = $type_last eq 'f' ? 0 : 1;
+            my $type = $rLL_new->[$KK]->[_TYPE_];
+            if ( $type ne 'b' && $type ne '#' ) { $type_last = $type }
+        }
+    }
+
     return;
 } ## end sub respace_post_loop_ops
 
@@ -14551,9 +14559,8 @@ EOM
     my $peak_batch_size;
     my $batch_count;
 
-    # variables to keep track of unbalanced containers.
+    # variables to keep track of indentation of unmatched containers.
     my %saved_opening_indentation;
-    my @unmatched_opening_indexes_in_this_batch;
 
     sub initialize_grind_batch_of_CODE {
         @nonblank_lines_at_depth   = ();
@@ -14706,9 +14713,7 @@ EOM
         # Normal route
         #-------------
 
-        my $rLL                      = $self->[_rLL_];
-        my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
-        my $rwant_container_open     = $self->[_rwant_container_open_];
+        my $rLL = $self->[_rLL_];
 
         #-------------------------------------------------------
         # Loop over the batch to initialize some batch variables
@@ -14720,9 +14725,9 @@ EOM
         my %comma_arrow_count;
         my $comma_arrow_count_contained = 0;
         my @unmatched_closing_indexes_in_this_batch;
+        my @unmatched_opening_indexes_in_this_batch;
 
-        @unmatched_opening_indexes_in_this_batch = ();
-
+        my @i_for_semicolon;
         foreach my $i ( 0 .. $max_index_to_go ) {
             $iprev_to_go[$i] = $ilast_nonblank;
             $inext_to_go[$i] = $i + 1;
@@ -14742,12 +14747,12 @@ EOM
 
                 # remember indexes of any tokens controlling xci
                 # in this batch. This list is needed by sub undo_ci.
-                if ( $ris_seqno_controlling_ci->{$seqno} ) {
+                if ( $self->[_ris_seqno_controlling_ci_]->{$seqno} ) {
                     push @ix_seqno_controlling_ci, $i;
                 }
 
                 if ( $is_opening_sequence_token{$token} ) {
-                    if ( $rwant_container_open->{$seqno} ) {
+                    if ( $self->[_rwant_container_open_]->{$seqno} ) {
                         $self->set_forced_breakpoint($i);
                     }
                     push @unmatched_opening_indexes_in_this_batch, $i;
@@ -14757,7 +14762,7 @@ EOM
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
 
-                    if ( $i > 0 && $rwant_container_open->{$seqno} ) {
+                    if ( $i > 0 && $self->[_rwant_container_open_]->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
                     }
 
@@ -14795,13 +14800,28 @@ EOM
                     $comma_arrow_count{$seqno}++;
                 }
             }
+            elsif ( $type eq 'f' ) {
+                push @i_for_semicolon, $i;
+            }
+
         } ## end for ( my $i = 0 ; $i <=...)
+
+        # Break at a single interior C-style for semicolon in this batch (c154)
+        if ( @i_for_semicolon == 1 ) {
+            my $i     = $i_for_semicolon[0];
+            my $inext = $inext_to_go[$i];
+            if ( $inext <= $max_index_to_go && $types_to_go[$inext] ne '#' ) {
+                $self->set_forced_breakpoint($i);
+            }
+        }
 
         my $is_unbalanced_batch = @unmatched_opening_indexes_in_this_batch +
           @unmatched_closing_indexes_in_this_batch;
 
-        $this_batch->[_has_unmatched_opening_] =
-          @unmatched_opening_indexes_in_this_batch;
+        if (@unmatched_opening_indexes_in_this_batch) {
+            $this_batch->[_runmatched_opening_indexes_] =
+              \@unmatched_opening_indexes_in_this_batch;
+        }
 
         #------------------------
         # Set special breakpoints
@@ -15183,7 +15203,12 @@ EOM
         # saves indentations of lines of all unmatched opening tokens.
         # These will be used by sub get_opening_indentation.
 
-        my ( $self, $ri_first, $ri_last, $rindentation_list ) = @_;
+        my ( $self, $ri_first, $ri_last, $rindentation_list,
+            $runmatched_opening_indexes )
+          = @_;
+
+        $runmatched_opening_indexes = []
+          if ( !defined($runmatched_opening_indexes) );
 
         # QW INDENTATION PATCH 1:
         # Also save indentation for multiline qw quotes
@@ -15200,7 +15225,7 @@ EOM
 
         # we need to save indentations of any unmatched opening tokens
         # in this batch because we may need them in a subsequent batch.
-        foreach ( @unmatched_opening_indexes_in_this_batch, @i_qw ) {
+        foreach ( @{$runmatched_opening_indexes}, @i_qw ) {
 
             my $seqno = $type_sequence_to_go[$_];
 
@@ -18879,6 +18904,7 @@ EOM
         %quick_filter = %is_assignment;
         @q            = qw# => . ; < > ~ #;
         push @q, ',';
+        push @q, 'f';    # added for ';' for issue c154
         @quick_filter{@q} = (1) x scalar(@q);
     }
 
@@ -19245,12 +19271,15 @@ EOM
             # not a list.  Note that '=' could be in any of the = operators
             # (lextest.t). We can't just use the reported environment
             # because it can be incorrect in some cases.
-            elsif ( ( $type =~ /^[\;\<\>\~]$/ || $is_assignment{$type} )
+            elsif ( ( $type =~ /^[\;\<\>\~f]$/ || $is_assignment{$type} )
                 && !$self->is_in_list_by_i($i) )
             {
                 $dont_align[$depth]         = 1;
                 $want_comma_break[$depth]   = 0;
                 $index_before_arrow[$depth] = -1;
+
+                # no special comma breaks in C-style 'for' terms (c154)
+                if ( $type eq 'f' ) { $last_comma_index[$depth] = undef }
             }
 
             # now just handle any commas
@@ -19922,12 +19951,13 @@ EOM
             }
         }
 
+        # break long terms at any C-style for semicolons (c154)
         if ( $is_long_term
             && @{ $rfor_semicolon_list[$current_depth] } )
         {
             $self->set_for_semicolon_breakpoints($current_depth);
 
-            # open up a long 'for' or 'foreach' container to allow
+            # and open up a long 'for' or 'foreach' container to allow
             # leading term alignment unless -lp is used.
             $has_comma_breakpoints = 1 unless ($lp_object);
         }
@@ -23004,8 +23034,9 @@ EOM
 
     # remember indentation of lines containing opening containers for
     # later use by sub final_indentation_adjustment
-    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list )
-      if ( $this_batch->[_has_unmatched_opening_]
+    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list,
+        $this_batch->[_runmatched_opening_indexes_] )
+      if ( $this_batch->[_runmatched_opening_indexes_]
         || $types_to_go[$max_index_to_go] eq 'q' );
 
     # output any new -cscw block comment
@@ -23989,9 +24020,6 @@ sub get_seqno {
                         my $tok_next_next  = $tokens_to_go[$ibeg_next_next];
                         $ok_comma = $tok_next_next eq $tok_next;
                     }
-
-                    # no padding of C-style 'for' terms ('f' is ';' c154)
-                    next if ( $types_to_go[$iendm] eq 'f' );
 
                     next
                       unless (

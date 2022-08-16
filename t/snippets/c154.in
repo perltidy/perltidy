@@ -1,0 +1,38 @@
+{{{{
+for (
+    $order =
+    $start_order * $nbSubOrderByOrder + $start_suborder ;
+    !exists $level_hash{$level}->{$order}
+    and $order <=
+    $stop_order * $nbSubOrderByOrder + $stop_suborder ;
+    $order++
+  )
+{
+}
+
+# has comma
+for (
+    $q = 201 ;
+    print '-' x 79,
+    "\n" ;
+    $g = (
+	$f ^ ( $w = ( $z = $m . $e ) ^ substr $e, $q )
+	  ^ ( $n = $b ^ $d | $a ^ $l )
+    ) & ( $w | $z ^ $f ^ $n ) & ( $l | $g )
+  )
+{
+    ...;
+}
+
+for (
+    $j = 0, $match_j = -1 ;
+    $j < $sub_len
+      &&
+
+      # changed from naive_string_matcher
+      $sub->[$j] eq $big->[ $i + $j ] ; $j++
+  )
+{
+    ...;
+}
+}}}}
