@@ -12115,31 +12115,29 @@ EOM
 
         # First check: skip if next line is not one deeper
         my $Knext_nonblank = $self->K_next_nonblank($K_last);
-        goto RETURN if ( !defined($Knext_nonblank) );
+        return if ( !defined($Knext_nonblank) );
         my $level_next = $rLL->[$Knext_nonblank]->[_LEVEL_];
-        goto RETURN if ( $level_next != $level_beg + 1 );
+        return if ( $level_next != $level_beg + 1 );
 
         # Find the parent container of the first token on the next line
         my $parent_seqno = $self->parent_seqno_by_K($Knext_nonblank);
-        goto RETURN unless ( defined($parent_seqno) );
+        return unless ( defined($parent_seqno) );
 
         # Must not be a weld (can be unstable)
-        goto RETURN
+        return
           if ( $total_weld_count && $self->is_welded_at_seqno($parent_seqno) );
 
         # Opening container must exist and be on this line
         my $Ko = $K_opening_container->{$parent_seqno};
-        goto RETURN unless ( defined($Ko) && $Ko > $K_first && $Ko <= $K_last );
+        return unless ( defined($Ko) && $Ko > $K_first && $Ko <= $K_last );
 
         # Verify that the closing container exists and is on a later line
         my $Kc = $K_closing_container->{$parent_seqno};
-        goto RETURN unless ( defined($Kc) && $Kc > $K_last );
+        return unless ( defined($Kc) && $Kc > $K_last );
 
         # That's it
         $K_closing = $Kc;
-        goto RETURN;
 
-      RETURN:
         return;
     };
 
@@ -16039,6 +16037,7 @@ sub break_equals {
         # Loop over all sub-sections.  Note that we have to work backwards
         # from the end of the batch since the sections use original line
         # numbers, and the line numbers change as we go.
+      OUTER_LOOP:
         while ( my $section = pop @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
 
@@ -16058,7 +16057,7 @@ sub break_equals {
                 # Safety check for excess total iterations
                 $it_count++;
                 if ( $it_count > $it_count_max ) {
-                    goto RETURN;
+                    last OUTER_LOOP;
                 }
 
                 my $n_best = 0;
@@ -16311,8 +16310,6 @@ sub break_equals {
             }    # end iteration loop
 
         }    # end loop over sections
-
-      RETURN:
 
         if (DEBUG_RECOMBINE) {
             my $nmax_last = @{$ri_end} - 1;
@@ -22840,7 +22837,7 @@ EOM
         $rvao_args->{rvertical_tightness_flags} =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
             $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
-          if ( !$is_block_comment );
+          unless ( $is_block_comment || $rOpts_freeze_whitespace );
 
         # ----------------------------------
         # define 'is_terminal_ternary'  flag
@@ -25915,6 +25912,8 @@ sub set_vertical_tightness_flags {
       = @_;
 
     # Define vertical tightness controls for the nth line of a batch.
+    # Note: do not call this sub for a block comment or if
+    # $rOpts_freeze_whitespace is set.
 
     # These parameters are passed to the vertical aligner to indicated
     # if we should combine this line with the next line to achieve the
@@ -25944,11 +25943,6 @@ sub set_vertical_tightness_flags {
     # continually increase if we allowed it when the -fws flag is set.
     # See case b499 for an example.
 
-    # Speedup: just return for a comment
-    if ( $max_index_to_go == 0 && $types_to_go[0] eq '#' ) {
-        return;
-    }
-
     # Define these values...
     my $vt_type         = 0;
     my $vt_opening_flag = 0;
@@ -25959,9 +25953,6 @@ sub set_vertical_tightness_flags {
     my $vt_seqno_end    = 0;
     my $vt_min_lines    = 0;
     my $vt_max_lines    = 0;
-
-    goto RETURN
-      if ($rOpts_freeze_whitespace);
 
     # Uses these global parameters:
     #   $rOpts_block_brace_tightness
@@ -26331,8 +26322,6 @@ sub set_vertical_tightness_flags {
     if ( !$vt_seqno_end && $types_to_go[$iend] eq 'q' ) {
         $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
     }
-
-  RETURN:
 
     my $rvertical_tightness_flags = {
         _vt_type         => $vt_type,
