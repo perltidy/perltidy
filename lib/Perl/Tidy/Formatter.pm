@@ -5669,14 +5669,14 @@ sub set_CODE_type {
         my $Last_line_had_side_comment = $has_side_comment;
         if ($has_side_comment) {
             push @ix_side_comments, $ix_line - 1;
+            $has_side_comment = 0;
         }
-        $has_side_comment = 0;
 
         my $last_CODE_type = $CODE_type;
         $CODE_type = EMPTY_STRING;
 
         if ( $line_type ne 'CODE' ) {
-            goto NEXT;
+            next;
         }
 
         my $Klast_prev = $Klast;
@@ -5713,7 +5713,7 @@ sub set_CODE_type {
                     "Line $input_line_no: Exiting format-skipping section\n");
             }
             $CODE_type = 'FS';
-            goto NEXT;
+            next;
         }
 
         # Check for a continued quote..
@@ -5727,7 +5727,7 @@ sub set_CODE_type {
                     $self->note_embedded_tab($input_line_number);
                 }
                 $CODE_type = 'VB';
-                goto NEXT;
+                next;
             }
         }
 
@@ -5748,7 +5748,7 @@ sub set_CODE_type {
             write_logfile_entry(
                 "Line $input_line_no: Entering format-skipping section\n");
             $CODE_type = 'FS';
-            goto NEXT;
+            next;
         }
 
         # ignore trailing blank tokens (they will get deleted later)
@@ -5759,7 +5759,7 @@ sub set_CODE_type {
         # blank line..
         if ( $jmax < 0 ) {
             $CODE_type = 'BL';
-            goto NEXT;
+            next;
         }
 
         # Handle comments
@@ -5811,7 +5811,7 @@ sub set_CODE_type {
                 if ( $last_CODE_type eq 'HSC' ) {
                     $has_side_comment = 1;
                     $CODE_type        = 'HSC';
-                    goto NEXT;
+                    next;
                 }
 
                 #  starting a new HSC chain?
@@ -5845,14 +5845,14 @@ sub set_CODE_type {
                     if ( !$follows_csc ) {
                         $has_side_comment = 1;
                         $CODE_type        = 'HSC';
-                        goto NEXT;
+                        next;
                     }
                 }
             }
 
             if ($is_static_block_comment) {
                 $CODE_type = $no_leading_space ? 'SBCX' : 'SBC';
-                goto NEXT;
+                next;
             }
             elsif ($Last_line_had_side_comment
                 && !$rOpts_maximum_consecutive_blank_lines
@@ -5863,11 +5863,11 @@ sub set_CODE_type {
                 # cannot be inserted.  There is related code in sub
                 # 'process_line_of_CODE'
                 $CODE_type = 'SBCX';
-                goto NEXT;
+                next;
             }
             else {
                 $CODE_type = 'BC';
-                goto NEXT;
+                next;
             }
         }
 
@@ -5875,12 +5875,12 @@ sub set_CODE_type {
 
         if ($rOpts_indent_only) {
             $CODE_type = 'IO';
-            goto NEXT;
+            next;
         }
 
         if ( !$rOpts_add_newlines ) {
             $CODE_type = 'NIN';
-            goto NEXT;
+            next;
         }
 
         #   Patch needed for MakeMaker.  Do not break a statement
@@ -5914,10 +5914,10 @@ sub set_CODE_type {
 
             # This code type has lower priority than others
             $CODE_type = 'VER';
-            goto NEXT;
+            next;
         }
-
-      NEXT:
+    }
+    continue {
         $line_of_tokens->{_code_type} = $CODE_type;
     }
 
@@ -18695,15 +18695,16 @@ sub do_colon_breaks {
         my $bp_count           = 0;
         my $do_not_break_apart = 0;
 
-        # Do not break a list unless there are some non-line-ending commas.
-        # This avoids getting different results with only non-essential commas,
-        # and fixes b1192.
-        my $seqno = $type_sequence_stack[$dd];
-        my $real_comma_count =
-          $seqno ? $self->[_rtype_count_by_seqno_]->{$seqno}->{','} : 1;
-
         # anything to do?
         if ( $item_count_stack[$dd] ) {
+
+            # Do not break a list unless there are some non-line-ending commas.
+            # This avoids getting different results with only non-essential
+            # commas, and fixes b1192.
+            my $seqno = $type_sequence_stack[$dd];
+
+            my $real_comma_count =
+              $seqno ? $self->[_rtype_count_by_seqno_]->{$seqno}->{','} : 1;
 
             # handle commas not in containers...
             if ( $dont_align[$dd] ) {
@@ -19387,7 +19388,8 @@ EOM
 
             $interrupted_list[$dd]   = 1;
             $has_broken_sublist[$dd] = 1 if ( $dd < $current_depth );
-            $self->set_comma_breakpoints( $dd, $rbond_strength_bias );
+            $self->set_comma_breakpoints( $dd, $rbond_strength_bias )
+              if ( $item_count_stack[$dd] );
             $self->set_logical_breakpoints($dd)
               if ( $has_old_logical_breakpoints[$dd] );
             $self->set_for_semicolon_breakpoints($dd);
@@ -19652,8 +19654,10 @@ EOM
 #print "LISTY sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth next=$next_nonblank_type next_block=$next_nonblank_block_type inter=$interrupted_list[$current_depth]\n";
 
         # set breaks at commas if necessary
-        my ( $bp_count, $do_not_break_apart ) =
-          $self->set_comma_breakpoints( $current_depth, $rbond_strength_bias );
+        my ( $bp_count, $do_not_break_apart ) = ( 0, 0 );
+        ( $bp_count, $do_not_break_apart ) =
+          $self->set_comma_breakpoints( $current_depth, $rbond_strength_bias )
+          if ( $item_count_stack[$current_depth] );
 
         my $i_opening = $opening_structure_index_stack[$current_depth];
         my $saw_opening_structure = ( $i_opening >= 0 );
@@ -23432,16 +23436,17 @@ EOM
                         $alignment_type = EMPTY_STRING;
                     }
 
-                    # For a paren after keyword, only align something like this:
-                    #    if    ( $a ) { &a }
-                    #    elsif ( $b ) { &b }
                     if ( $token eq '(' ) {
 
-                        if ( $vert_last_nonblank_type eq 'k' ) {
-                            $alignment_type = EMPTY_STRING
-                              unless
-                              $is_if_unless_elsif{$vert_last_nonblank_token};
-                            ##unless $vert_last_nonblank_token =~ /^(if|unless|elsif)$/;
+			# For a paren after keyword, only align if-like parens,
+                        # such as:
+                        #    if    ( $a ) { &a }
+                        #    elsif ( $b ) { &b }
+                        #          ^-------------------aligned parens
+                        if ( $vert_last_nonblank_type eq 'k'
+                            && !$is_if_unless_elsif{$vert_last_nonblank_token} )
+                        {
+                            $alignment_type = EMPTY_STRING;
                         }
 
                         # Do not align a spaced-function-paren if requested.
@@ -24763,10 +24768,8 @@ sub xlp_tweak {
                    # is_d( { foo => $a, bar => $a }, { foo => $b, bar => $c } );
                    # is_d( [ \$a,       \$a ], [ \$b,             \$c ] );
 
-                        my $name = $token;
-                        if ( $token eq '(' ) {
-                            $name = $self->make_paren_name($i);
-                        }
+                        my $name =
+                          $token eq '(' ? $self->make_paren_name($i) : $token;
 
                         # name cannot be '.', so change to something else if so
                         if ( $name eq '.' ) { $name = 'dot' }

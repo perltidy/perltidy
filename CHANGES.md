@@ -69,6 +69,9 @@
       Also, previously a word following a '->' was given the color of a bareword,
       black by default, but now it is given the color of an identifier.
 
+    - This version runs about 5 percent faster on large files than the previous
+      release.
+
 ## 2022 06 13
 
     - No significant bugs have been found since the last release but users
