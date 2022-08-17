@@ -745,7 +745,7 @@ sub new {
     initialize_undo_ci();
     initialize_process_line_of_CODE();
     initialize_grind_batch_of_CODE();
-    initialize_final_indentation_adjustment();
+    initialize_get_final_indentation();
     initialize_postponed_breakpoint();
     initialize_batch_variables();
     initialize_write_line();
@@ -10412,7 +10412,7 @@ sub break_before_list_opening_containers {
         next unless ($ci_flag);
 
         # -bbxi=1: This option removes ci and is handled in
-        # later sub final_indentation_adjustment
+        # later sub get_final_indentation
         if ( $ci_flag == 1 ) {
             $rwant_reduced_ci->{$seqno} = 1;
             next;
@@ -10501,9 +10501,9 @@ sub break_before_list_opening_containers {
         # Otherwise skip it
         next;
 
-        #################################################################
+        #------------------------------------------------------------
         # Part 3: Looks OK: apply -bbx=n and any related -bbxi=n flag
-        #################################################################
+        #------------------------------------------------------------
 
       OK:
 
@@ -16585,7 +16585,7 @@ sub break_equals {
             # trailing clause will be far to the right.
             #
             # The logic here is synchronized with the logic in sub
-            # sub final_indentation_adjustment, which actually does
+            # sub get_final_indentation, which actually does
             # the outdenting.
             #
             $skip_Section_3 ||= $this_line_is_semicolon_terminated
@@ -16639,7 +16639,7 @@ sub break_equals {
             #       #handle error
             #     };
             # The alternative, for uncuddled style, is to create
-            # a patch in final_indentation_adjustment which undoes
+            # a patch in get_final_indentation which undoes
             # the indentation of a leading line like 'or do {'.
             # This doesn't work well with -icb through
             if (
@@ -22607,23 +22607,24 @@ sub convey_batch_to_vertical_aligner {
           $self->add_closing_side_comment( $ri_first, $ri_last );
     }
 
-    # flush before a long if statement to avoid unwanted alignment
-    if (   $n_last_line > 0
-        && $type_beg_next eq 'k'
-        && $is_if_unless{$token_beg_next} )
-    {
-        $self->flush_vertical_aligner();
-    }
-
     $self->undo_ci( $ri_first, $ri_last, $rix_seqno_controlling_ci )
       if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation );
 
-    $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
-        $starting_in_quote )
-      if ( $n_last_line > 0 && $rOpts_logical_padding );
+    # for multi-line batches ...
+    if ( $n_last_line > 0 ) {
 
-    $self->xlp_tweak( $ri_first, $ri_last )
-      if ( $rOpts_extended_line_up_parentheses && $n_last_line > 0 );
+        # flush before a long if statement to avoid unwanted alignment
+        $self->flush_vertical_aligner()
+          if ( $type_beg_next eq 'k'
+            && $is_if_unless{$token_beg_next} );
+
+        $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
+            $starting_in_quote )
+          if ($rOpts_logical_padding);
+
+        $self->xlp_tweak( $ri_first, $ri_last )
+          if ($rOpts_extended_line_up_parentheses);
+    }
 
     if (DEVEL_MODE) { $self->check_batch_summed_lengths() }
 
@@ -22672,7 +22673,7 @@ sub convey_batch_to_vertical_aligner {
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
-        #  $ljump is a level jump needed by 'sub final_indentation_adjustment'
+        #  $ljump is a level jump needed by 'sub get_final_indentation'
         my $ljump = 0;
 
         # Get some vars on line [n+1], if any:
@@ -22736,12 +22737,11 @@ EOM
         # --------------------------------------
         # get the final indentation of this line
         # --------------------------------------
-        my ( $indentation, $lev, $level_end, $terminal_type,
-            $terminal_block_type, $is_semicolon_terminated, $is_outdented_line )
-          = $self->final_indentation_adjustment( $ibeg, $iend, $rfields,
+        my ( $indentation, $lev, $level_end, $i_terminal, $is_outdented_line )
+          = $self->get_final_indentation( $ibeg, $iend, $rfields,
             $rpatterns,         $ri_first, $ri_last,
             $rindentation_list, $ljump,    $starting_in_quote,
-            $is_static_block_comment, );
+            $is_static_block_comment );
 
         # --------------------------------
         # define flag 'outdent_long_lines'
@@ -22860,6 +22860,7 @@ EOM
 
             my $is_terminal_ternary = 0;
             my $last_leading_type   = $n > 0 ? $type_beg_last : ':';
+            my $terminal_type       = $types_to_go[$i_terminal];
             if (   $terminal_type ne ';'
                 && $n_last_line > $n
                 && $level_end == $lev )
@@ -22966,7 +22967,7 @@ EOM
         # This flag tells the vertical aligner to reset the side comment
         # location if we are entering a new block from level 0.  This is
         # intended to keep side comments from drifting too far to the right.
-        if (   $terminal_block_type
+        if (   $block_type_to_go[$i_terminal]
             && $nesting_depth_end > $nesting_depth_beg )
         {
             my $level_adj        = $lev;
@@ -23001,41 +23002,41 @@ EOM
 
         $do_not_pad = 0;
 
-        # Set flag indicating if this line ends in an opening
-        # token and is very short, so that a blank line is not
-        # needed if the subsequent line is a comment.
-        # Examples of what we are looking for:
-        #   {
-        #   && (
-        #   BEGIN {
-        #   default {
-        #   sub {
-        $self->[_last_output_short_opening_token_]
-
-          # line ends in opening token
-          #              /^[\{\(\[L]$/
-          = $is_opening_type{$type_end}
-
-          # and either
-          && (
-            # line has either single opening token
-            $Kend == $Kbeg
-
-            # or is a single token followed by opening token.
-            # Note that sub identifiers have blanks like 'sub doit'
-            #                                 $token_beg !~ /\s+/
-            || ( $Kend - $Kbeg <= 2 && index( $token_beg, SPACE ) < 0 )
-          )
-
-          # and limit total to 10 character widths
-          && token_sequence_length( $ibeg, $iend ) <= 10;
-
     } ## end of loop to output each line
 
+    # Set flag indicating if the last line ends in an opening
+    # token and is very short, so that a blank line is not
+    # needed if the subsequent line is a comment.
+    # Examples of what we are looking for:
+    #   {
+    #   && (
+    #   BEGIN {
+    #   default {
+    #   sub {
+    $self->[_last_output_short_opening_token_]
+
+      # line ends in opening token
+      #              /^[\{\(\[L]$/
+      = $is_opening_type{$type_end}
+
+      # and either
+      && (
+        # line has either single opening token
+        $iend_next == $ibeg_next
+
+        # or is a single token followed by opening token.
+        # Note that sub identifiers have blanks like 'sub doit'
+        #                                 $token_beg !~ /\s+/
+        || ( $iend_next - $ibeg_next <= 2 && index( $token_beg, SPACE ) < 0 )
+      )
+
+      # and limit total to 10 character widths
+      && token_sequence_length( $ibeg_next, $iend_next ) <= 10;
+
     # remember indentation of lines containing opening containers for
-    # later use by sub final_indentation_adjustment
-    $self->save_opening_indentation( $ri_first, $ri_last, $rindentation_list,
-        $this_batch->[_runmatched_opening_indexes_] )
+    # later use by sub get_final_indentation
+    $self->save_opening_indentation( $ri_first, $ri_last,
+        $rindentation_list, $this_batch->[_runmatched_opening_indexes_] )
       if ( $this_batch->[_runmatched_opening_indexes_]
         || $types_to_go[$max_index_to_go] eq 'q' );
 
@@ -23797,7 +23798,7 @@ sub get_seqno {
             # SECTION 2: Undo ci at cuddled blocks
             #-------------------------------------
 
-            # Note that sub final_indentation_adjustment will be called later to
+            # Note that sub get_final_indentation will be called later to
             # actually do this, but for now we will tentatively mark cuddled
             # lines with ci=0 so that the the -xci loop which follows will be
             # correct at cuddles.
@@ -25074,19 +25075,19 @@ sub make_paren_name {
     return $name;
 } ## end sub make_paren_name
 
-{    ## begin closure final_indentation_adjustment
+{    ## begin closure get_final_indentation
 
     my ( $last_indentation_written, $last_unadjusted_indentation,
         $last_leading_token );
 
-    sub initialize_final_indentation_adjustment {
+    sub initialize_get_final_indentation {
         $last_indentation_written    = 0;
         $last_unadjusted_indentation = 0;
         $last_leading_token          = EMPTY_STRING;
         return;
     }
 
-    sub final_indentation_adjustment {
+    sub get_final_indentation {
 
         #--------------------------------------------------------------------
         # This routine sets the final indentation of a line in the Formatter.
@@ -25133,7 +25134,6 @@ sub make_paren_name {
                 $terminal_type = $types_to_go[$i_terminal];
             }
         }
-        my $terminal_block_type = $block_type_to_go[$i_terminal];
 
         my $is_outdented_line = 0;
 
@@ -25174,7 +25174,7 @@ sub make_paren_name {
         # }
         #
 
-        # MOJO: Set a flag if this lines begins with ')->'
+        # MOJO patch: Set a flag if this lines begins with ')->'
         my $leading_paren_arrow = (
                  $is_closing_type_beg
               && $token_beg eq ')'
@@ -25591,7 +25591,7 @@ sub make_paren_name {
             # $indentation = $reduced_spaces_to_go[$i_terminal];
             # $lev         = $levels_to_go[$i_terminal];
 
-            # Generalization for MOJO:
+            # Generalization for MOJO patch:
             # Use the lowest level indentation of the tokens on the line.
             # For example, here we can use the indentation of the ending ';':
             #    } until ($selection > 0 and $selection < 10);   # ok to use ';'
@@ -25799,7 +25799,7 @@ sub make_paren_name {
 
         if (
             defined($opening_indentation)
-            && !$leading_paren_arrow    # MOJO
+            && !$leading_paren_arrow    # MOJO patch
             && !$is_isolated_block_brace
             && !$is_unaligned_colon
           )
@@ -25852,11 +25852,10 @@ sub make_paren_name {
             }
         }
 
-        return ( $indentation, $lev, $level_end, $terminal_type,
-            $terminal_block_type, $is_semicolon_terminated,
+        return ( $indentation, $lev, $level_end, $i_terminal,
             $is_outdented_line );
-    } ## end sub final_indentation_adjustment
-} ## end closure final_indentation_adjustment
+    } ## end sub get_final_indentation
+} ## end closure get_final_indentation
 
 sub get_opening_indentation {
 
