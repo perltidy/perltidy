@@ -5663,8 +5663,7 @@ sub set_CODE_type {
     my $ix_line = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $ix_line++;
-        my $input_line_no = $line_of_tokens->{_line_number};
-        my $line_type     = $line_of_tokens->{_line_type};
+        my $line_type = $line_of_tokens->{_line_type};
 
         my $Last_line_had_side_comment = $has_side_comment;
         if ($has_side_comment) {
@@ -5709,6 +5708,7 @@ sub set_CODE_type {
               )
             {
                 $In_format_skipping_section = 0;
+                my $input_line_no = $line_of_tokens->{_line_number};
                 write_logfile_entry(
                     "Line $input_line_no: Exiting format-skipping section\n");
             }
@@ -5745,6 +5745,7 @@ sub set_CODE_type {
           )
         {
             $In_format_skipping_section = 1;
+            my $input_line_no = $line_of_tokens->{_line_number};
             write_logfile_entry(
                 "Line $input_line_no: Entering format-skipping section\n");
             $CODE_type = 'FS';
