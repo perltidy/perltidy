@@ -20134,7 +20134,9 @@ sub find_token_starting_list {
     # This will be the return index
     my $i_opening_minus = $i_opening_paren;
 
-    goto RETURN if ( $i_opening_minus <= 0 );
+    if ( $i_opening_minus <= 0 ) {
+        return $i_opening_minus;
+    }
 
     my $im1 = $i_opening_paren - 1;
     my ( $iprev_nb, $type_prev_nb ) = ( $im1, $types_to_go[$im1] );
@@ -20174,8 +20176,6 @@ sub find_token_starting_list {
         }
         if ( $types_to_go[$i_opening_minus] eq 'b' ) { $i_opening_minus++ }
     }
-
-  RETURN:
 
     DEBUG_FIND_START && print <<EOM;
 FIND_START: i=$i_opening_paren tok=$tokens_to_go[$i_opening_paren] => im=$i_opening_minus tok=$tokens_to_go[$i_opening_minus]
@@ -23438,7 +23438,7 @@ EOM
 
                     if ( $token eq '(' ) {
 
-			# For a paren after keyword, only align if-like parens,
+                        # For a paren after keyword, only align if-like parens,
                         # such as:
                         #    if    ( $a ) { &a }
                         #    elsif ( $b ) { &b }
