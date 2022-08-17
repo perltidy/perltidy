@@ -7939,8 +7939,8 @@ EOM
     # relinking lines and tokens after the tokens have been respaced.  A fault
     # here indicates some kind of bug has been introduced into the above loops.
     # There is not good way to keep going; we better stop here.
-    # FIXME: This will produce zero output. it would be best to find a way to
-    # dump the input file.
+    # FIXME: Calling Fault will produce zero output. it would be best to find
+    # a way to dump the input file.
     if ( $Knext <= $Kmax ) {
 
         Fault("unexpected tokens at end of file when reconstructing lines");
@@ -20908,7 +20908,7 @@ EOM
                 $i_effective_last_comma + 1 ) > 0;
         }
 
-        # FIXME: For an item after a '=>', try to include the length of the
+        # TODO: For an item after a '=>', try to include the length of the
         # thing before the '=>'.  This is crude and should be improved by
         # actually looking back token by token.
         if ( !$too_long && $i_opening_paren > 0 && $list_type eq '=>' ) {
@@ -21071,7 +21071,7 @@ sub study_list_complexity {
                 && $i_last_last_break != $i - 2 )
             {
 
-                ## FIXME: don't strand a small term
+                ## TODO: don't strand a small term
                 pop @i_ragged_break_list;
                 push @i_ragged_break_list, $i - 2;
                 push @i_ragged_break_list, $i - 1;
@@ -24146,24 +24146,6 @@ sub get_seqno {
             # fix the problem or it will be corrected next time the
             # entire file is processed with perltidy.
             next if ( $ipad == 0 && $peak_batch_size <= 1 );
-
-## THIS PATCH REMOVES THE FOLLOWING POOR PADDING (math.t) with -pbp, BUT
-## IT DID MORE HARM THAN GOOD
-##            ceil(
-##                      $font->{'loca'}->{'glyphs'}[$x]->read->{'xMin'} * 1000
-##                    / $upem
-##            ),
-##            # do not put leading padding for just 2 lines of math
-##            if (   $ipad == $ibeg
-##                && $line > 0
-##                && $levels_to_go[$ipad] > $levels_to_go[ $ipad - 1 ]
-##                && $is_math_op{$type_next}
-##                && $line + 2 <= $max_line )
-##            {
-##                my $ibeg_next_next = $ri_first->[ $line + 2 ];
-##                my $type_next_next = $types_to_go[$ibeg_next_next];
-##                next if !$is_math_op{$type_next_next};
-##            }
 
             # next line must not be at greater depth
             my $iend_next = $ri_last->[ $line + 1 ];

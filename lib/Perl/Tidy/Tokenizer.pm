@@ -3790,7 +3790,7 @@ EOM
                 #    '-' => \&sse_sub,
                 #    '*' => \&sse_mul,
                 #    '/' => \&sse_div;
-                # FIXME: this should eventually be generalized
+                # TODO: this could eventually be generalized
                 if (   $saw_use_module{$current_package}->{'RPerl'}
                     && $tok =~ /^sse_(mul|div|add|sub)$/ )
                 {
@@ -5747,9 +5747,9 @@ sub operator_expected {
     if ( $last_nonblank_type eq 'i' ) {
         $op_expected = OPERATOR;
 
-        # FIXME: it would be cleaner to make this a special type
-        # expecting VERSION or {} after package NAMESPACE
-        # TODO: maybe mark these words as type 'Y'?
+        # TODO: it would be cleaner to make this a special type
+        # expecting VERSION or {} after package NAMESPACE;
+        # maybe mark these words as type 'Y'?
         if (   substr( $last_nonblank_token, 0, 7 ) eq 'package'
             && $statement_type      =~ /^package\b/
             && $last_nonblank_token =~ /^package\b/ )
@@ -5877,8 +5877,8 @@ sub operator_expected {
     }
 
     # quote...
-    # FIXME: labeled prototype words should probably be given type 'A' or maybe
-    # 'J'; not 'q'; or maybe mark as type 'Y'
+    # TODO: labeled prototype words would better be given type 'A' or maybe
+    # 'J'; not 'q'; or maybe mark as type 'Y'?
     elsif ( $last_nonblank_type eq 'q' ) {
         $op_expected = OPERATOR;
         if ( $last_nonblank_token eq 'prototype' ) {
@@ -7116,7 +7116,7 @@ sub scan_bare_identifier_do {
             #    $tok='eval'; # patch to do braces like eval  - doesn't work
             #    $type = 'k';
             #}
-            # FIXME: This could become a separate type to allow for different
+            # TODO: This could become a separate type to allow for different
             # future behavior:
             elsif ( $is_block_function{$package}{$sub_name} ) {
                 $type = 'G';
