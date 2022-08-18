@@ -125,6 +125,31 @@ EOM
     return;
 } ## end sub Fault
 
+sub Fault_Warn {
+    my ($msg) = @_;
+
+    # This is the same as Fault except that it calls Warn instead of Die
+    # and returns.
+    my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
+    my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
+    my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my $input_stream_name = get_input_stream_name();
+
+    Warn(<<EOM);
+==============================================================================
+While operating on input stream with name: '$input_stream_name'
+A fault was detected at line $line0 of sub '$subroutine1'
+in file '$filename1'
+which was called from line $line1 of sub '$subroutine2'
+Message: '$msg'
+This is probably an error introduced by a recent programming change.
+Perl::Tidy::Formatter.pm reports VERSION='$VERSION'.
+==============================================================================
+EOM
+
+    return;
+} ## end sub Fault_Warn
+
 sub Exit {
     my ($msg) = @_;
     Perl::Tidy::Exit($msg);
@@ -5585,7 +5610,12 @@ EOM
     # required.  Also make any other changes, such as adding semicolons.
     # All token changes must be made here so that the token data structure
     # remains fixed for the rest of this iteration.
-    $self->respace_tokens();
+    $severe_error = $self->respace_tokens();
+    if ($severe_error) {
+        $self->dump_verbatim();
+        $self->wrapup();
+        return;
+    }
 
     $self->set_excluded_lp_containers();
 
@@ -6276,6 +6306,8 @@ sub respace_tokens {
     # This routine is called once per file to do as much formatting as possible
     # before new line breaks are set.
 
+    # Returns 1 on a severe error which requires processing to terminate
+
     # This routine makes all necessary and possible changes to the tokenization
     # after the initial tokenization of the file. This is a tedious routine,
     # but basically it consists of inserting and deleting whitespace between
@@ -6327,13 +6359,12 @@ sub respace_tokens {
         # of K values.  Or a line of CODE may have been mis-marked as
         # something else.  There is no good way to continue after such an
         # error.
-        # FIXME: Calling Fault will produce zero output; it would be best to
-        # find a way to dump the input file.
         if ( defined($last_K_out) ) {
             if ( $Kfirst != $last_K_out + 1 ) {
-                Fault(
+                Fault_Warn(
                     "Program Bug: last K out was $last_K_out but Kfirst=$Kfirst"
                 );
+                return 1;
             }
         }
         else {
@@ -6493,9 +6524,9 @@ sub respace_tokens {
     DEVEL_MODE && $self->check_token_array();
 
     # update the token limits of each line
-    $self->resync_lines_and_tokens();
+    my $severe_error = $self->resync_lines_and_tokens();
 
-    return;
+    return $severe_error;
 } ## end sub respace_tokens
 
 sub respace_tokens_inner_loop {
@@ -7815,6 +7846,8 @@ sub resync_lines_and_tokens {
     # since they have probably changed due to inserting and deleting blanks
     # and a few other tokens.
 
+    # Returns 1 on a severe error which requires processing to terminate
+
     # This is the next token and its line index:
     my $Knext = 0;
     my $Kmax  = defined($Klimit) ? $Klimit : -1;
@@ -7939,11 +7972,10 @@ EOM
     # relinking lines and tokens after the tokens have been respaced.  A fault
     # here indicates some kind of bug has been introduced into the above loops.
     # There is not good way to keep going; we better stop here.
-    # FIXME: Calling Fault will produce zero output. it would be best to find
-    # a way to dump the input file.
     if ( $Knext <= $Kmax ) {
-
-        Fault("unexpected tokens at end of file when reconstructing lines");
+        Fault_Warn(
+            "unexpected tokens at end of file when reconstructing lines");
+        return 1;
     }
     $self->[_rKrange_code_without_comments_] = \@Krange_code_without_comments;
 
