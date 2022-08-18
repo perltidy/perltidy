@@ -17592,8 +17592,12 @@ sub correct_lp_indentation {
                       get_saved_opening_indentation($align_seqno);
                     if ( defined($indent) ) {
 
-                        # FIXME: should use '1' here if no space after opening
-                        # and '2' if want space; hardwired at 1 like -gnu-style
+                        # NOTE: we could use '1' here if no space after
+                        # opening and '2' if want space; it is hardwired at 1
+                        # like -gnu-style. But it is probably best to leave
+                        # this alone because changing it would change
+                        # formatting of much existing code without any
+                        # significant benefit.
                         $actual_pos = get_spaces($indent) + $offset + 1;
                     }
                 }
