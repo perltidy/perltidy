@@ -10678,8 +10678,7 @@ sub extended_ci {
         my $KK = $KNEXT;
         $KNEXT = $rLL->[$KNEXT]->[_KNEXT_SEQ_ITEM_];
 
-        my $seqno     = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        my $K_opening = $K_opening_container->{$seqno};
+        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
 
         # see if we have reached the end of the current controlling container
         if ( $seqno_top && $seqno == $seqno_top ) {
@@ -10709,26 +10708,23 @@ sub extended_ci {
             next;
         }
 
-        # Skip if requested by -bbx to avoid blinkers
-        if ( $rno_xci_by_seqno->{$seqno} ) {
-            next;
-        }
-
-        # Skip if this is a -bli container (this fixes case b1065) Note: case
-        # b1065 is also fixed by the update for b1055, so this update is not
-        # essential now.  But there does not seem to be a good reason to add
-        # xci and bli together, so the update is retained.
-        if ( $ris_bli_container->{$seqno} ) {
-            next;
-        }
-
         # We are looking for opening container tokens with ci
+        my $K_opening = $K_opening_container->{$seqno};
         next unless ( defined($K_opening) && $KK == $K_opening );
 
         # Make sure there is a corresponding closing container
         # (could be missing if the script has a brace error)
         my $K_closing = $K_closing_container->{$seqno};
         next unless defined($K_closing);
+
+        # Skip if requested by -bbx to avoid blinkers
+        next if ( $rno_xci_by_seqno->{$seqno} );
+
+        # Skip if this is a -bli container (this fixes case b1065) Note: case
+        # b1065 is also fixed by the update for b1055, so this update is not
+        # essential now.  But there does not seem to be a good reason to add
+        # xci and bli together, so the update is retained.
+        next if ( $ris_bli_container->{$seqno} );
 
         # Require different input lines. This will filter out a large number
         # of small hash braces and array brackets.  If we accidentally filter
@@ -11162,41 +11158,41 @@ sub collapsed_lengths {
                     else {
 
                         # Fix for b1319, b1320
-                        goto NOT_MULTILINE_QW;
+                        $K_start_multiline_qw = undef;
                     }
                 }
             }
 
-            $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
-              $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+            if ( defined($K_start_multiline_qw) ) {
+                $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
+                  $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
 
-            # We may have to add the spaces of one level or ci level ...  it
-            # depends depends on the -xci flag, the -wn flag, and if the qw
-            # uses a container token as the quote delimiter.
+                # We may have to add the spaces of one level or ci level ...  it
+                # depends depends on the -xci flag, the -wn flag, and if the qw
+                # uses a container token as the quote delimiter.
 
-            # First rule: add ci if there is a $ci_level
-            if ($ci_level) {
-                $len += $rOpts_continuation_indentation;
+                # First rule: add ci if there is a $ci_level
+                if ($ci_level) {
+                    $len += $rOpts_continuation_indentation;
+                }
+
+                # Second rule: otherwise, look for an extra indentation level
+                # from the start and add one indentation level if found.
+                elsif ( $level > $level_start_multiline_qw ) {
+                    $len += $rOpts_indent_columns;
+                }
+
+                if ( $len > $max_prong_len ) { $max_prong_len = $len }
+
+                $last_nonblank_type = 'q';
+
+                $K_begin_loop = $K_first + 1;
+
+                # We can skip to the next line if more tokens
+                next if ( $K_begin_loop > $K_last );
             }
-
-            # Second rule: otherwise, look for an extra indentation level
-            # from the start and add one indentation level if found.
-            elsif ( $level > $level_start_multiline_qw ) {
-                $len += $rOpts_indent_columns;
-            }
-
-            if ( $len > $max_prong_len ) { $max_prong_len = $len }
-
-            $last_nonblank_type = 'q';
-
-            $K_begin_loop = $K_first + 1;
-
-            # We can skip to the next line if more tokens
-            next if ( $K_begin_loop > $K_last );
-
         }
 
-      NOT_MULTILINE_QW:
         $K_start_multiline_qw = undef;
 
         # Find the terminal token, before any side comment
@@ -14673,6 +14669,15 @@ EOM
         return;
     } ## end sub check_grind_input
 
+    # This filter speeds up a critical if-test
+    my %quick_filter;
+
+    BEGIN {
+        my @q = qw# L { ( [ R ] ) } ? : f => #;
+        push @q, ',';
+        @quick_filter{@q} = (1) x scalar(@q);
+    }
+
     sub grind_batch_of_CODE {
 
         my ($self) = @_;
@@ -14763,16 +14768,22 @@ EOM
 
         my @i_for_semicolon;
         foreach my $i ( 0 .. $max_index_to_go ) {
-            $iprev_to_go[$i] = $ilast_nonblank;
-            $inext_to_go[$i] = $i + 1;
+            $iprev_to_go[$i] = $ilast_nonblank;    # correct value
+            $inext_to_go[$i] = $i + 1;             # just a first guess
 
-            my $type = $types_to_go[$i];
-            next if $type eq 'b';
+            next if ( $types_to_go[$i] eq 'b' );
 
             if ( $ilast_nonblank >= 0 ) {
-                $inext_to_go[$ilast_nonblank] = $i;
+                $inext_to_go[$ilast_nonblank] = $i;    # correction
             }
             $ilast_nonblank = $i;
+
+            # This is an optional shortcut to save a bit of time by skipping
+            # most tokens.  Note: the filter may need to be updated if the
+            # next 'if' tests are ever changed to include more token types.
+            next if ( !$quick_filter{ $types_to_go[$i] } );
+
+            my $type = $types_to_go[$i];
 
             # gather info needed by sub break_long_lines
             if ( $type_sequence_to_go[$i] ) {
@@ -14827,7 +14838,7 @@ EOM
             } ## end if ($seqno)
 
             elsif ( $type eq ',' ) { $comma_count_in_batch++; }
-            elsif ( $tokens_to_go[$i] eq '=>' ) {
+            elsif ( $type eq '=>' ) {
                 if (@unmatched_opening_indexes_in_this_batch) {
                     my $j     = $unmatched_opening_indexes_in_this_batch[-1];
                     my $seqno = $type_sequence_to_go[$j];
@@ -19036,7 +19047,8 @@ EOM
         my $comma_follows_last_closing_token;
 
         $self->check_for_new_minimum_depth( $current_depth,
-            $parent_seqno_to_go[0] );
+            $parent_seqno_to_go[0] )
+          if ( $current_depth < $minimum_depth );
 
         my $want_previous_breakpoint = -1;
 
@@ -19669,7 +19681,8 @@ EOM
         # finish off any old list when depth decreases
         # token $i is a ')','}', or ']'
 
-        $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] );
+        $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] )
+          if ( $depth < $minimum_depth );
 
         # force all outer logical containers to break after we see on
         # old breakpoint

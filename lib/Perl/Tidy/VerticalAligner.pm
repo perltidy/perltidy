@@ -1314,6 +1314,13 @@ BEGIN {
     @is_closing_block_type{@q} = (1) x scalar(@q);
 }
 
+# This is a flag for testing alignment by sub sweep_left_to_right only.
+# This test can help find problems with the alignment logic.
+# This flag should normally be zero.
+use constant TEST_SWEEP_ONLY => 0;
+
+use constant EXPLAIN_CHECK_MATCH => 0;
+
 sub check_match {
 
     # See if the current line matches the current vertical alignment group.
@@ -1326,9 +1333,15 @@ sub check_match {
     #  $prev_line = the line just before $new_line
 
     # returns a flag and a value as follows:
-    #    return (0, $imax_align)     if the line does not match
-    #    return (1, $imax_align)     if the line matches but does not fit
-    #    return (2, $imax_align)     if the line matches and fits
+    #    return (0, $imax_align)   if the line does not match
+    #    return (1, $imax_align)   if the line matches but does not fit
+    #    return (2, $imax_align)   if the line matches and fits
+
+    use constant NO_MATCH      => 0;
+    use constant MATCH_NO_FIT  => 1;
+    use constant MATCH_AND_FIT => 2;
+
+    my $return_value;
 
     # Returns '$imax_align' which is the index of the maximum matching token.
     # It will be used in the subsequent left-to-right sweep to align as many
@@ -1337,12 +1350,6 @@ sub check_match {
 
     # variable $GoToMsg explains reason for no match, for debugging
     my $GoToMsg = EMPTY_STRING;
-    use constant EXPLAIN_CHECK_MATCH => 0;
-
-    # This is a flag for testing alignment by sub sweep_left_to_right only.
-    # This test can help find problems with the alignment logic.
-    # This flag should normally be zero.
-    use constant TEST_SWEEP_ONLY => 0;
 
     my $jmax                = $new_line->{'jmax'};
     my $maximum_field_index = $base_line->{'jmax'};
@@ -1363,51 +1370,53 @@ sub check_match {
         # A group with hanging side comments ends with the first non hanging
         # side comment.
         if ( $base_line->{'is_hanging_side_comment'} ) {
-            $GoToMsg = "end of hanging side comments";
-            goto NO_MATCH;
+            $GoToMsg      = "end of hanging side comments";
+            $return_value = NO_MATCH;
+        }
+        else {
+
+            # The number of tokens that this line shares with the previous
+            # line has been stored with the previous line.  This value was
+            # calculated and stored by sub 'match_line_pair'.
+            $imax_align = $prev_line->{'imax_pair'};
+
+            if ( $imax_align != $jlimit ) {
+                $GoToMsg = "Not all tokens match: $imax_align != $jlimit\n";
+                $return_value = NO_MATCH;
+            }
+        }
+    }
+
+    if ( !defined($return_value) ) {
+
+        # The tokens match, but the lines must have identical number of
+        # tokens to join the group.
+        if ( $maximum_field_index != $jmax ) {
+            $GoToMsg      = "token count differs";
+            $return_value = NO_MATCH;
         }
 
-        # The number of tokens that this line shares with the previous line
-        # has been stored with the previous line.  This value was calculated
-        # and stored by sub 'match_line_pair'.
-        $imax_align = $prev_line->{'imax_pair'};
+        # The tokens match. Now See if there is space for this line in the
+        # current group.
+        elsif ( $self->check_fit( $new_line, $base_line ) && !TEST_SWEEP_ONLY )
+        {
 
-        if ( $imax_align != $jlimit ) {
-            $GoToMsg = "Not all tokens match: $imax_align != $jlimit\n";
-            goto NO_MATCH;
+            $GoToMsg = "match and fit, imax_align=$imax_align, jmax=$jmax\n";
+            $return_value = MATCH_AND_FIT;
+            $imax_align   = $jlimit;
         }
-
+        else {
+            $GoToMsg = "match but no fit, imax_align=$imax_align, jmax=$jmax\n";
+            $return_value = MATCH_NO_FIT;
+            $imax_align   = $jlimit;
+        }
     }
-
-    # The tokens match, but the lines must have identical number of
-    # tokens to join the group.
-    if ( $maximum_field_index != $jmax ) {
-        $GoToMsg = "token count differs";
-        goto NO_MATCH;
-    }
-
-    # The tokens match. Now See if there is space for this line in the
-    # current group.
-    if ( $self->check_fit( $new_line, $base_line ) && !TEST_SWEEP_ONLY ) {
-
-        EXPLAIN_CHECK_MATCH
-          && print "match and fit, imax_align=$imax_align, jmax=$jmax\n";
-        return ( 2, $jlimit );
-    }
-    else {
-
-        EXPLAIN_CHECK_MATCH
-          && print "match but no fit, imax_align=$imax_align, jmax=$jmax\n";
-        return ( 1, $jlimit );
-    }
-
-  NO_MATCH:
 
     EXPLAIN_CHECK_MATCH
       && print
-      "no match because $GoToMsg, max match index =i $imax_align, jmax=$jmax\n";
+"returning $return_value because $GoToMsg, max match index =i $imax_align, jmax=$jmax\n";
 
-    return ( 0, $imax_align );
+    return ( $return_value, $imax_align );
 }
 
 sub check_fit {
@@ -3118,7 +3127,7 @@ sub match_line_pairs {
 
         my ( $tok, $tok_m, $pat, $pat_m, $pad ) = @_;
         my $GoToMsg     = EMPTY_STRING;
-        my $return_code = 1;
+        my $return_code = 0;
 
         my ( $alignment_token, $lev, $tag, $tok_count ) =
           decode_alignment_token($tok);
@@ -3136,8 +3145,13 @@ sub match_line_pairs {
 
             # do not align commas unless they are in named
             # containers
-            $GoToMsg = "do not align commas in unnamed containers";
-            goto NO_MATCH unless ( $tok =~ /[A-Za-z]/ );
+            if ( $tok !~ /[A-Za-z]/ ) {
+                $return_code = 1;
+                $GoToMsg     = "do not align commas in unnamed containers";
+            }
+            else {
+                $return_code = 0;
+            }
         }
 
         # do not align parens unless patterns match;
@@ -3146,8 +3160,13 @@ sub match_line_pairs {
 
             # But we can allow a match if the parens don't
             # require any padding.
-            $GoToMsg = "do not align '(' unless patterns match or pad=0";
-            if ( $pad != 0 ) { goto NO_MATCH }
+            if ( $pad != 0 ) {
+                $return_code = 1;
+                $GoToMsg = "do not align '(' unless patterns match or pad=0";
+            }
+            else {
+                $return_code = 0;
+            }
         }
 
         # Handle an '=' alignment with different patterns to
@@ -3165,8 +3184,8 @@ sub match_line_pairs {
             # letter of the pattern.  This is crude, but works
             # well enough.
             if ( substr( $pat_m, 0, 1 ) ne substr( $pat, 0, 1 ) ) {
-                $GoToMsg = "first character before equals differ";
-                goto NO_MATCH;
+                $GoToMsg     = "first character before equals differ";
+                $return_code = 1;
             }
 
             # The introduction of sub 'prune_alignment_tree'
@@ -3189,20 +3208,22 @@ sub match_line_pairs {
             elsif (
                 ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) )
             {
-                $GoToMsg = "mixed commas/no-commas before equals";
+                $GoToMsg     = "mixed commas/no-commas before equals";
+                $return_code = 1;
                 if ( $lev eq $group_level ) {
                     $return_code = 2;
                 }
-                goto NO_MATCH;
+            }
+            else {
+                $return_code = 0;
             }
         }
-
-      MATCH:
-        return ( 0, \$GoToMsg );
-
-      NO_MATCH:
+        else {
+            $return_code = 0;
+        }
 
         EXPLAIN_COMPARE_PATTERNS
+          && $return_code
           && print STDERR "no match because $GoToMsg\n";
 
         return ( $return_code, \$GoToMsg );
@@ -3952,16 +3973,24 @@ sub Dump_tree_groups {
 
         my $is_marginal = 0;
 
-        # always keep alignments of a terminal else or ternary
-        goto RETURN if ( defined( $line_1->{'j_terminal_match'} ) );
+        #---------------------------------------
+        # Always align certain special cases ...
+        #---------------------------------------
+        if (
 
-        # always align lists
-        my $group_list_type = $line_0->{'list_type'};
-        goto RETURN if ($group_list_type);
+            # always keep alignments of a terminal else or ternary
+            defined( $line_1->{'j_terminal_match'} )
 
-        # always align hanging side comments
-        my $is_hanging_side_comment = $line_1->{'is_hanging_side_comment'};
-        goto RETURN if ($is_hanging_side_comment);
+            # always align lists
+            || $line_0->{'list_type'}
+
+            # always align hanging side comments
+            || $line_1->{'is_hanging_side_comment'}
+
+          )
+        {
+            return ( $is_marginal, $imax_align );
+        }
 
         my $jmax_0           = $line_0->{'jmax'};
         my $jmax_1           = $line_1->{'jmax'};
@@ -4099,10 +4128,12 @@ sub Dump_tree_groups {
           && $jmax_1 == 2
           && $sc_term0 ne $sc_term1;
 
-        ########################################
-        # return unless this is a marginal match
-        ########################################
-        goto RETURN if ( !$is_marginal );
+        #---------------------------------------
+        # return if this is not a marginal match
+        #---------------------------------------
+        if ( !$is_marginal ) {
+            return ( $is_marginal, $imax_align );
+        }
 
         # Undo the marginal match flag in certain cases,
 
@@ -4128,9 +4159,9 @@ sub Dump_tree_groups {
         my $pat0 = $rpatterns_0->[0];
         my $pat1 = $rpatterns_1->[0];
 
-        ##########################################################
+        #---------------------------------------------------------
         # Turn off the marginal flag for some types of assignments
-        ##########################################################
+        #---------------------------------------------------------
         if ( $is_assignment{$raw_tokb} ) {
 
             # undo marginal flag if first line is semicolon terminated
@@ -4153,9 +4184,9 @@ sub Dump_tree_groups {
             }
         }
 
-        ######################################################
+        #-----------------------------------------------------
         # Turn off the marginal flag if we saw an 'if' or 'or'
-        ######################################################
+        #-----------------------------------------------------
 
         # A trailing 'if' and 'or' often gives a good alignment
         # For example, we can align these:
@@ -4182,9 +4213,9 @@ sub Dump_tree_groups {
             $imax_align = $jfirst_bad - 1;
         }
 
-        ###########################################################
+        #----------------------------------------------------------
         # Allow sweep to match lines with leading '=' in some cases
-        ###########################################################
+        #----------------------------------------------------------
         if ( $imax_align < 0 && defined($j0_eq_pad) ) {
 
             if (
@@ -4233,10 +4264,9 @@ sub Dump_tree_groups {
             }
         }
 
-      RETURN:
         return ( $is_marginal, $imax_align );
     }
-}
+} ## end closure for sub is_marginal_match
 
 sub get_extra_leading_spaces {
 

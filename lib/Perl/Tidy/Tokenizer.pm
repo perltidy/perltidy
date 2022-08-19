@@ -6815,7 +6815,7 @@ sub guess_if_pattern_or_division {
         if ( $divide_possible < 0 ) {
             $msg        = "pattern (division not possible here)\n";
             $is_pattern = 1;
-            goto RETURN;
+            return ( $is_pattern, $msg );
         }
 
         $i = $ibeg + 1;
@@ -6946,8 +6946,6 @@ sub guess_if_pattern_or_division {
             }
         }
     }
-
-  RETURN:
     return ( $is_pattern, $msg );
 } ## end sub guess_if_pattern_or_division
 
@@ -8133,6 +8131,8 @@ BEGIN {
                     $tokenizer_self->[_in_error_] = 1;
                 }
                 $id_scan_state = EMPTY_STRING;
+
+                # emergency return
                 goto RETURN;
             }
             $saw_type = !$saw_alpha;
@@ -8697,23 +8697,27 @@ sub find_next_noncomment_type {
           find_next_nonblank_token( $i_next, $rtokens, $max_token_index );
     }
 
-    goto RETURN if ( !$next_nonblank_token || $next_nonblank_token eq SPACE );
+    # check for a digraph
+    if (   $next_nonblank_token
+        && $next_nonblank_token ne SPACE
+        && defined( $rtokens->[ $i_next + 1 ] ) )
+    {
+        my $test2 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
+        if ( $is_digraph{$test2} ) {
+            $next_nonblank_token = $test2;
+            $i_next              = $i_next + 1;
 
-    # check for possible a digraph
-    goto RETURN if ( !defined( $rtokens->[ $i_next + 1 ] ) );
-    my $test2 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
-    goto RETURN if ( !$is_digraph{$test2} );
-    $next_nonblank_token = $test2;
-    $i_next              = $i_next + 1;
+            # check for a trigraph
+            if ( defined( $rtokens->[ $i_next + 1 ] ) ) {
+                my $test3 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
+                if ( $is_trigraph{$test3} ) {
+                    $next_nonblank_token = $test3;
+                    $i_next              = $i_next + 1;
+                }
+            }
+        }
+    }
 
-    # check for possible a trigraph
-    goto RETURN if ( !defined( $rtokens->[ $i_next + 1 ] ) );
-    my $test3 = $next_nonblank_token . $rtokens->[ $i_next + 1 ];
-    goto RETURN if ( !$is_trigraph{$test3} );
-    $next_nonblank_token = $test3;
-    $i_next              = $i_next + 1;
-
-  RETURN:
     return ( $next_nonblank_token, $i_next );
 } ## end sub find_next_noncomment_type
 
