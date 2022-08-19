@@ -753,7 +753,7 @@ sub pod_to_html {
         # this error shouldn't happen ... we just used this filename
         Perl::Tidy::Warn(
             "unable to open temporary file $tmpfile; cannot use pod2html\n");
-        goto RETURN;
+        return $success_flag;
     }
 
     my $html_fh = $self->{_html_fh};
@@ -949,7 +949,6 @@ sub pod_to_html {
         $success_flag = 0;
     }
 
-  RETURN:
     close_object($html_fh);
 
     # note that we have to unlink tmpfile before making frames

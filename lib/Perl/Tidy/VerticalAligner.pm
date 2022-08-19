@@ -4322,14 +4322,16 @@ sub is_good_side_comment_column {
     # a previous side comment should be forgotten.  This involves
     # checking several rules.
 
-    # Return true to keep old comment location
-    # Return false to forget old comment location
+    # Return true to KEEP old comment location
+    # Return false to FORGET old comment location
+    my $KEEP   = 1;
+    my $FORGET = 0;
 
     my $rfields                 = $line->{'rfields'};
     my $is_hanging_side_comment = $line->{'is_hanging_side_comment'};
 
     # RULE1: Never forget comment before a hanging side comment
-    goto KEEP if ($is_hanging_side_comment);
+    return $KEEP if ($is_hanging_side_comment);
 
     # RULE2: Forget a side comment after a short line difference,
     # where 'short line difference' is computed from a formula.
@@ -4358,14 +4360,14 @@ sub is_good_side_comment_column {
 
     my $short_diff = SC_LONG_LINE_DIFF / ( 1 + $alev_diff * $num5 );
 
-    goto FORGET
+    return $FORGET
       if ( $line_diff > $short_diff
         || !$self->[_rOpts_valign_side_comments_] );
 
     # RULE3: Forget a side comment if this line is at lower level and
     # ends a block
     my $last_sc_level = $self->[_last_side_comment_level_];
-    goto FORGET
+    return $FORGET
       if ( $level < $last_sc_level
         && $is_closing_block_type{ substr( $rfields->[0], 0, 1 ) } );
 
@@ -4384,18 +4386,12 @@ sub is_good_side_comment_column {
         #    [0, 3, 6], [1, 4, 7], [2, 5, 8],    # columns
         #    [0, 4, 8], [2, 4, 6]
         #  )                                     # diagonals
-        goto FORGET
+        return $FORGET
           if ( $cached_line_type == 2 || $cached_line_type == 4 );
     }
 
     # Otherwise, keep it alive
-    goto KEEP;
-
-  FORGET:
-    return 0;
-
-  KEEP:
-    return 1;
+    return $KEEP;
 }
 
 sub align_side_comments {

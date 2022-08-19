@@ -10483,62 +10483,65 @@ sub break_before_list_opening_containers {
             && $rOpts_continuation_indentation > $rOpts_indent_columns );
 
         # Always ok to change ci for permanently broken containers
-        if ( $ris_permanently_broken->{$seqno} ) {
-            goto OK;
-        }
+        if ( $ris_permanently_broken->{$seqno} ) { }
 
         # Always OK if this list contains a broken sub-container with
         # a non-terminal line-ending comma
-        if ($has_list_with_lec) { goto OK }
+        elsif ($has_list_with_lec) { }
 
-        # From here on we are considering a single container...
+        # Otherwise, we are considering a single container...
+        else {
 
-        # A single container must have at least 1 line-ending comma:
-        next unless ( $rlec_count_by_seqno->{$seqno} );
+            # A single container must have at least 1 line-ending comma:
+            next unless ( $rlec_count_by_seqno->{$seqno} );
 
-        # Since it has a line-ending comma, it will stay broken if the -boc
-        # flag is set
-        if ($rOpts_break_at_old_comma_breakpoints) { goto OK }
+            my $OK;
 
-        # OK if the container contains multiple fat commas
-        # Better: multiple lines with fat commas
-        if ( !$rOpts_ignore_old_breakpoints ) {
-            my $rtype_count = $rtype_count_by_seqno->{$seqno};
-            next unless ($rtype_count);
-            my $fat_comma_count = $rtype_count->{'=>'};
-            DEBUG_BBX
-              && print STDOUT "BBX: fat comma count=$fat_comma_count\n";
-            if ( $fat_comma_count && $fat_comma_count >= 2 ) { goto OK }
-        }
+            # Since it has a line-ending comma, it will stay broken if the
+            # -boc flag is set
+            if ($rOpts_break_at_old_comma_breakpoints) { $OK = 1 }
 
-        # The last check we can make is to see if this container could fit on a
-        # single line.  Use the least possible indentation estimate, ci=0,
-        # so we are not subtracting $ci * $rOpts_continuation_indentation from
-        # tabulated $maximum_text_length  value.
-        my $maximum_text_length = $maximum_text_length_at_level[$level];
-        my $K_closing           = $K_closing_container->{$seqno};
-        my $length = $self->cumulative_length_before_K($K_closing) -
-          $self->cumulative_length_before_K($KK);
-        my $excess_length = $length - $maximum_text_length;
-        DEBUG_BBX
-          && print STDOUT
+            # OK if the container contains multiple fat commas
+            # Better: multiple lines with fat commas
+            if ( !$OK && !$rOpts_ignore_old_breakpoints ) {
+                my $rtype_count = $rtype_count_by_seqno->{$seqno};
+                next unless ($rtype_count);
+                my $fat_comma_count = $rtype_count->{'=>'};
+                DEBUG_BBX
+                  && print STDOUT "BBX: fat comma count=$fat_comma_count\n";
+                if ( $fat_comma_count && $fat_comma_count >= 2 ) { $OK = 1 }
+            }
+
+            # The last check we can make is to see if this container could
+            # fit on a single line.  Use the least possible indentation
+            # estimate, ci=0, so we are not subtracting $ci *
+            # $rOpts_continuation_indentation from tabulated
+            # $maximum_text_length  value.
+            if ( !$OK ) {
+                my $maximum_text_length = $maximum_text_length_at_level[$level];
+                my $K_closing           = $K_closing_container->{$seqno};
+                my $length = $self->cumulative_length_before_K($K_closing) -
+                  $self->cumulative_length_before_K($KK);
+                my $excess_length = $length - $maximum_text_length;
+                DEBUG_BBX
+                  && print STDOUT
 "BBX: excess=$excess_length: maximum_text_length=$maximum_text_length, length=$length, ci=$ci\n";
 
-        # OK if the net container definitely breaks on length
-        if ( $excess_length > $length_tol ) {
-            DEBUG_BBX
-              && print STDOUT "BBX: excess_length=$excess_length\n";
-            goto OK;
-        }
+                # OK if the net container definitely breaks on length
+                if ( $excess_length > $length_tol ) {
+                    $OK = 1;
+                    DEBUG_BBX
+                      && print STDOUT "BBX: excess_length=$excess_length\n";
+                }
 
-        # Otherwise skip it
-        next;
+                # Otherwise skip it
+                else { next }
+            }
+        }
 
         #------------------------------------------------------------
         # Part 3: Looks OK: apply -bbx=n and any related -bbxi=n flag
         #------------------------------------------------------------
-
-      OK:
 
         DEBUG_BBX && print STDOUT "BBX: OK to break\n";
 
