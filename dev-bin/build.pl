@@ -50,7 +50,6 @@ my $rstatus = {};
 foreach my $step ( @{$rsteps} ) { $rstatus->{$step} = 'TBD' }
 
 my $rcode = {
-    ## 'A'   => \&autopilot,   # can be confusing, deactivated
     'CHK' => sub {
         openurl("local-docs/Release-Checklist.md")
           unless $rstatus->{CHK} eq 'OK';
@@ -65,9 +64,9 @@ my $rcode = {
     'T'        => \&make_tests,
     'DOCS'     => \&make_docs,
     'DIST'     => \&make_dist,
-    'CL'       => sub { openurl($changelog) },
-    'LOG'      => sub { openurl($logfile) },
-    'HTML'     => sub { openurl("docs/index.html") },
+    'CL'       => sub { openurl($changelog);        $rstatus->{CL}   = 'OK' },
+    'LOG'      => sub { openurl($logfile);          $rstatus->{LOG}  = 'OK' },
+    'HTML'     => sub { openurl("docs/index.html"); $rstatus->{HTML} = 'OK' },
 };
 
 open( $fh_log, ">", $logfile ) or die "cannot open log file $logfile: $!\n";
@@ -105,20 +104,6 @@ EOM
         }
         elsif ( $ans eq 'Q' || $ans eq 'X' ) {
             return;
-        }
-    }
-    return;
-}
-
-sub autopilot {
-    foreach my $step ( @{$rsteps} ) {
-        if ( $rstatus->{$step} ne 'OK' ) {
-            $rcode->{$step}->();
-            if ( $rstatus->{$step} ne 'OK' ) {
-                hitcr("Step '$step' FAILED; stopping Autopilot.");
-                return;
-            }
-            return if ( !ifyes("Step '$step' Done; Continue [Y/N]") );
         }
     }
     return;
@@ -364,9 +349,9 @@ sub make_dist {
         )
       )
     {
-       my $fout   = "tmp/cpants_lint.out";
-       my $cmd = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
-       post_result($fout);
+        my $fout = "tmp/cpants_lint.out";
+        my $cmd  = "cpants_lint.pl $tar_gz_file >$fout 2>$fout";
+        post_result($fout);
     }
     return;
 }

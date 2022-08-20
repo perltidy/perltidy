@@ -20249,6 +20249,158 @@ EOM
 
     use constant DEBUG_SPARSE => 0;
 
+    sub comma_broken_sublist_rule {
+
+        my (
+            $self,          $item_count,        $interrupted,
+            $i_first_comma, $i_true_last_comma, $ri_term_end,
+            $ri_term_begin, $ri_term_comma,     $ritem_lengths
+        ) = @_;
+
+        # Break at every comma except for a comma between two
+        # simple, small terms.  This prevents long vertical
+        # columns of, say, just 0's.
+        my $small_length = 10;    # 2 + actual maximum length wanted
+
+        # We'll insert a break in long runs of small terms to
+        # allow alignment in uniform tables.
+        my $skipped_count = 0;
+        my $columns       = table_columns_available($i_first_comma);
+        my $fields        = int( $columns / $small_length );
+        if (   $rOpts_maximum_fields_per_table
+            && $fields > $rOpts_maximum_fields_per_table )
+        {
+            $fields = $rOpts_maximum_fields_per_table;
+        }
+        my $max_skipped_count = $fields - 1;
+
+        my $is_simple_last_term = 0;
+        my $is_simple_next_term = 0;
+        foreach my $j ( 0 .. $item_count ) {
+            $is_simple_last_term = $is_simple_next_term;
+            $is_simple_next_term = 0;
+            if (   $j < $item_count
+                && $ri_term_end->[$j] == $ri_term_begin->[$j]
+                && $ritem_lengths->[$j] <= $small_length )
+            {
+                $is_simple_next_term = 1;
+            }
+            next if $j == 0;
+            if (   $is_simple_last_term
+                && $is_simple_next_term
+                && $skipped_count < $max_skipped_count )
+            {
+                $skipped_count++;
+            }
+            else {
+                $skipped_count = 0;
+                my $i_tc = $ri_term_comma->[ $j - 1 ];
+                last unless defined $i_tc;
+                $self->set_forced_breakpoint($i_tc);
+            }
+        }
+
+        # always break at the last comma if this list is
+        # interrupted; we wouldn't want to leave a terminal '{', for
+        # example.
+        if ($interrupted) {
+            $self->set_forced_breakpoint($i_true_last_comma);
+        }
+        return;
+    }
+
+    sub set_emergency_comma_breakpoints {
+
+        my ( $self, $number_of_fields_best, $rinput_hash, $comma_count,
+            $i_first_comma )
+          = @_;
+
+        # The number of fields worked out to be negative, so we
+        # have to make an emergency fix.
+
+        my $rcomma_index        = $rinput_hash->{rcomma_index};
+        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
+        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
+        my $must_break_open     = $rinput_hash->{must_break_open};
+
+        # are we an item contained in an outer list?
+        my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
+
+        # In many cases, it may be best to not force a break if there is just
+        # one comma, because the standard continuation break logic will do a
+        # better job without it.
+
+        # In the common case that all but one of the terms can fit
+        # on a single line, it may look better not to break open the
+        # containing parens.  Consider, for example
+
+        #     $color =
+        #       join ( '/',
+        #         sort { $color_value{$::a} <=> $color_value{$::b}; }
+        #         keys %colors );
+
+        # which will look like this with the container broken:
+
+        #   $color = join (
+        #       '/',
+        #       sort { $color_value{$::a} <=> $color_value{$::b}; } keys %colors
+        #   );
+
+        # Here is an example of this rule for a long last term:
+
+        #   log_message( 0, 256, 128,
+        #       "Number of routes in adj-RIB-in to be considered: $peercount" );
+
+        # And here is an example with a long first term:
+
+        # $s = sprintf(
+        # "%2d wallclock secs (%$f usr %$f sys + %$f cusr %$f csys = %$f CPU)",
+        #     $r, $pu, $ps, $cu, $cs, $tt
+        #   )
+        #   if $style eq 'all';
+
+        my $i_last_comma = $rcomma_index->[ $comma_count - 1 ];
+
+        my $long_last_term = $self->excess_line_length( 0, $i_last_comma ) <= 0;
+        my $long_first_term =
+          $self->excess_line_length( $i_first_comma + 1, $max_index_to_go ) <=
+          0;
+
+        # break at every comma ...
+        if (
+
+            # if requested by user or is best looking
+            $number_of_fields_best == 1
+
+            # or if this is a sublist of a larger list
+            || $in_hierarchical_list
+
+            # or if multiple commas and we don't have a long first or last
+            # term
+            || ( $comma_count > 1
+                && !( $long_last_term || $long_first_term ) )
+          )
+        {
+            foreach ( 0 .. $comma_count - 1 ) {
+                $self->set_forced_breakpoint( $rcomma_index->[$_] );
+            }
+        }
+        elsif ($long_last_term) {
+
+            $self->set_forced_breakpoint($i_last_comma);
+            ${$rdo_not_break_apart} = 1 unless $must_break_open;
+        }
+        elsif ($long_first_term) {
+
+            $self->set_forced_breakpoint($i_first_comma);
+        }
+        else {
+
+            # let breaks be defined by default bond strength logic
+        }
+        return;
+    }
+
     sub set_comma_breakpoints_do {
 
         # Given a list with some commas, set breakpoints at some of the
@@ -20285,12 +20437,15 @@ EOM
         # find lengths of all items in the list to calculate page layout
         #---------------------------------------------------------------
         my $comma_count = $item_count;
-        my @item_lengths;
-        my @i_term_begin;
-        my @i_term_end;
-        my @i_term_comma;
+
+        my $ritem_lengths = [];
+        my $ri_term_begin = [];
+        my $ri_term_end   = [];
+        my $ri_term_comma = [];
+
+        my $rmax_length = [ 0, 0 ];
+
         my $i_prev_plus;
-        my @max_length = ( 0, 0 );
         my $first_term_length;
         my $i      = $i_opening_paren;
         my $is_odd = 1;
@@ -20306,22 +20461,22 @@ EOM
               ( $types_to_go[$i_prev_plus] eq 'b' )
               ? $i_prev_plus + 1
               : $i_prev_plus;
-            push @i_term_begin, $i_term_begin;
-            push @i_term_end,   $i_term_end;
-            push @i_term_comma, $i;
+            push @{$ri_term_begin}, $i_term_begin;
+            push @{$ri_term_end},   $i_term_end;
+            push @{$ri_term_comma}, $i;
 
             # note: currently adding 2 to all lengths (for comma and space)
             my $length =
               2 + token_sequence_length( $i_term_begin, $i_term_end );
-            push @item_lengths, $length;
+            push @{$ritem_lengths}, $length;
 
             if ( $j == 0 ) {
                 $first_term_length = $length;
             }
             else {
 
-                if ( $length > $max_length[$is_odd] ) {
-                    $max_length[$is_odd] = $length;
+                if ( $length > $rmax_length->[$is_odd] ) {
+                    $rmax_length->[$is_odd] = $length;
                 }
             }
         }
@@ -20345,15 +20500,15 @@ EOM
 
             # add 2 to length because other lengths include a comma and a blank
             $last_item_length += 2;
-            push @item_lengths, $last_item_length;
-            push @i_term_begin, $i_b + 1;
-            push @i_term_end,   $i_e;
-            push @i_term_comma, undef;
+            push @{$ritem_lengths}, $last_item_length;
+            push @{$ri_term_begin}, $i_b + 1;
+            push @{$ri_term_end},   $i_e;
+            push @{$ri_term_comma}, undef;
 
             my $i_odd = $item_count % 2;
 
-            if ( $last_item_length > $max_length[$i_odd] ) {
-                $max_length[$i_odd] = $last_item_length;
+            if ( $last_item_length > $rmax_length->[$i_odd] ) {
+                $rmax_length->[$i_odd] = $last_item_length;
             }
 
             $item_count++;
@@ -20375,56 +20530,11 @@ EOM
         # Rule.
         #---------------------------------------------------------------
         if ($has_broken_sublist) {
-
-            # Break at every comma except for a comma between two
-            # simple, small terms.  This prevents long vertical
-            # columns of, say, just 0's.
-            my $small_length = 10;    # 2 + actual maximum length wanted
-
-            # We'll insert a break in long runs of small terms to
-            # allow alignment in uniform tables.
-            my $skipped_count = 0;
-            my $columns       = table_columns_available($i_first_comma);
-            my $fields        = int( $columns / $small_length );
-            if (   $rOpts_maximum_fields_per_table
-                && $fields > $rOpts_maximum_fields_per_table )
-            {
-                $fields = $rOpts_maximum_fields_per_table;
-            }
-            my $max_skipped_count = $fields - 1;
-
-            my $is_simple_last_term = 0;
-            my $is_simple_next_term = 0;
-            foreach my $j ( 0 .. $item_count ) {
-                $is_simple_last_term = $is_simple_next_term;
-                $is_simple_next_term = 0;
-                if (   $j < $item_count
-                    && $i_term_end[$j] == $i_term_begin[$j]
-                    && $item_lengths[$j] <= $small_length )
-                {
-                    $is_simple_next_term = 1;
-                }
-                next if $j == 0;
-                if (   $is_simple_last_term
-                    && $is_simple_next_term
-                    && $skipped_count < $max_skipped_count )
-                {
-                    $skipped_count++;
-                }
-                else {
-                    $skipped_count = 0;
-                    my $i_tc = $i_term_comma[ $j - 1 ];
-                    last unless defined $i_tc;
-                    $self->set_forced_breakpoint($i_tc);
-                }
-            }
-
-            # always break at the last comma if this list is
-            # interrupted; we wouldn't want to leave a terminal '{', for
-            # example.
-            if ($interrupted) {
-                $self->set_forced_breakpoint($i_true_last_comma);
-            }
+            $self->comma_broken_sublist_rule(
+                $item_count,        $interrupted, $i_first_comma,
+                $i_true_last_comma, $ri_term_end, $ri_term_begin,
+                $ri_term_comma,     $ritem_lengths
+            );
             return;
         }
 
@@ -20498,8 +20608,8 @@ EOM
               $maximum_line_length_at_level[ $levels_to_go[$i_opening_minus] ]
               - total_line_length( $i_opening_minus, $i_opening_paren );
             $need_lp_break_open =
-                 ( $max_length[0] > $columns_if_unbroken )
-              || ( $max_length[1] > $columns_if_unbroken )
+                 ( $rmax_length->[0] > $columns_if_unbroken )
+              || ( $rmax_length->[1] > $columns_if_unbroken )
               || ( $first_term_length > $columns_if_unbroken );
         }
 
@@ -20508,8 +20618,8 @@ EOM
         # list items might be a hash list.  But if we can be sure that
         # it is not a hash, then we can allow an odd number for more
         # flexibility.
-        my $odd_or_even = 2;    # 1 = odd field count ok, 2 = want even count
-
+        # 1 = odd field count ok, 2 = want even count
+        my $odd_or_even = 2;
         if (   $identifier_count >= $item_count - 1
             || $is_assignment{$next_nonblank_type}
             || ( $list_type && $list_type ne '=>' && $list_type !~ /^[\:\?]$/ )
@@ -20521,12 +20631,12 @@ EOM
         # do we have a long first term which should be
         # left on a line by itself?
         my $use_separate_first_term = (
-            $odd_or_even == 1           # only if we can use 1 field/line
-              && $item_count > 3        # need several items
+            $odd_or_even == 1              # only if we can use 1 field/line
+              && $item_count > 3           # need several items
               && $first_term_length >
-              2 * $max_length[0] - 2    # need long first term
+              2 * $rmax_length->[0] - 2    # need long first term
               && $first_term_length >
-              2 * $max_length[1] - 2    # need long first term
+              2 * $rmax_length->[1] - 2    # need long first term
         );
 
         # or do we know from the type of list that the first term should
@@ -20562,23 +20672,25 @@ EOM
             $i_first_comma   = $rcomma_index->[1];
             $item_count--;
             return if $comma_count == 1;
-            shift @item_lengths;
-            shift @i_term_begin;
-            shift @i_term_end;
-            shift @i_term_comma;
+            shift @{$ritem_lengths};
+            shift @{$ri_term_begin};
+            shift @{$ri_term_end};
+            shift @{$ri_term_comma};
         }
 
         # if not, update the metrics to include the first term
         else {
-            if ( $first_term_length > $max_length[0] ) {
-                $max_length[0] = $first_term_length;
+            if ( $first_term_length > $rmax_length->[0] ) {
+                $rmax_length->[0] = $first_term_length;
             }
         }
 
         # Field width parameters
-        my $pair_width = ( $max_length[0] + $max_length[1] );
+        my $pair_width = ( $rmax_length->[0] + $rmax_length->[1] );
         my $max_width =
-          ( $max_length[0] > $max_length[1] ) ? $max_length[0] : $max_length[1];
+          ( $rmax_length->[0] > $rmax_length->[1] )
+          ? $rmax_length->[0]
+          : $rmax_length->[1];
 
         # Number of free columns across the page width for laying out tables
         my $columns = table_columns_available($i_first_comma);
@@ -20590,9 +20702,9 @@ EOM
         # paren, but in some cases we might not.
         if (   $rOpts_variable_maximum_line_length
             && $tokens_to_go[$i_opening_paren] eq '('
-            && @i_term_begin )
+            && @{$ri_term_begin} )
         {
-            my $ib   = $i_term_begin[0];
+            my $ib   = $ri_term_begin->[0];
             my $type = $types_to_go[$ib];
 
             # So far, the only known instance of this problem is when
@@ -20613,19 +20725,19 @@ EOM
             }
         }
 
-        # Estimated maximum number of fields which fit this space
-        # This will be our first guess
+        # Estimated maximum number of fields which fit this space.
+        # This will be our first guess:
         my $number_of_fields_max =
           maximum_number_of_fields( $columns, $odd_or_even, $max_width,
             $pair_width );
         my $number_of_fields = $number_of_fields_max;
 
-        # Find the best-looking number of fields
-        # and make this our second guess if possible
+        # Find the best-looking number of fields.
+        # This will be our second guess, if possible.
         my ( $number_of_fields_best, $ri_ragged_break_list,
             $new_identifier_count )
-          = $self->study_list_complexity( \@i_term_begin, \@i_term_end,
-            \@item_lengths, $max_width );
+          = $self->study_list_complexity( $ri_term_begin, $ri_term_end,
+            $ritem_lengths, $max_width );
 
         if (   $number_of_fields_best != 0
             && $number_of_fields_best < $number_of_fields_max )
@@ -20633,10 +20745,10 @@ EOM
             $number_of_fields = $number_of_fields_best;
         }
 
-        # ----------------------------------------------------------------------
+        #-----------------------------------------------------------
         # If we are crowded and the -lp option is being used, try to
         # undo some indentation
-        # ----------------------------------------------------------------------
+        #-----------------------------------------------------------
         if (
             $is_lp_formatting
             && (
@@ -20654,7 +20766,7 @@ EOM
 
                 if ( $number_of_fields_best == 0 ) {
                     $number_of_fields_best =
-                      get_maximum_fields_wanted( \@item_lengths );
+                      get_maximum_fields_wanted($ritem_lengths);
                 }
 
                 if ( $number_of_fields_best != 1 ) {
@@ -20711,87 +20823,16 @@ EOM
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
 
+        #---------------------------------------------------------------
+        # We're in trouble if we come up with a negative number.
+        # There is no simple answer here; we may have a single long list
+        # item, or many. Must bail out.
+        #---------------------------------------------------------------
         if ( $number_of_fields <= 0 ) {
-
-#         #---------------------------------------------------------------
-#         # We're in trouble.  We can't find a single field width that works.
-#         # There is no simple answer here; we may have a single long list
-#         # item, or many.
-#         #---------------------------------------------------------------
-#
-#         In many cases, it may be best to not force a break if there is just one
-#         comma, because the standard continuation break logic will do a better
-#         job without it.
-#
-#         In the common case that all but one of the terms can fit
-#         on a single line, it may look better not to break open the
-#         containing parens.  Consider, for example
-#
-#             $color =
-#               join ( '/',
-#                 sort { $color_value{$::a} <=> $color_value{$::b}; }
-#                 keys %colors );
-#
-#         which will look like this with the container broken:
-#
-#             $color = join (
-#                 '/',
-#                 sort { $color_value{$::a} <=> $color_value{$::b}; } keys %colors
-#             );
-#
-#         Here is an example of this rule for a long last term:
-#
-#             log_message( 0, 256, 128,
-#                 "Number of routes in adj-RIB-in to be considered: $peercount" );
-#
-#         And here is an example with a long first term:
-#
-#         $s = sprintf(
-# "%2d wallclock secs (%$f usr %$f sys + %$f cusr %$f csys = %$f CPU)",
-#             $r, $pu, $ps, $cu, $cs, $tt
-#           )
-#           if $style eq 'all';
-
-            $i_last_comma = $rcomma_index->[ $comma_count - 1 ];
-
-            my $long_last_term =
-              $self->excess_line_length( 0, $i_last_comma ) <= 0;
-            my $long_first_term =
-              $self->excess_line_length( $i_first_comma + 1, $max_index_to_go )
-              <= 0;
-
-            # break at every comma ...
-            if (
-
-                # if requested by user or is best looking
-                $number_of_fields_best == 1
-
-                # or if this is a sublist of a larger list
-                || $in_hierarchical_list
-
-                # or if multiple commas and we don't have a long first or last
-                # term
-                || ( $comma_count > 1
-                    && !( $long_last_term || $long_first_term ) )
-              )
-            {
-                foreach ( 0 .. $comma_count - 1 ) {
-                    $self->set_forced_breakpoint( $rcomma_index->[$_] );
-                }
-            }
-            elsif ($long_last_term) {
-
-                $self->set_forced_breakpoint($i_last_comma);
-                ${$rdo_not_break_apart} = 1 unless $must_break_open;
-            }
-            elsif ($long_first_term) {
-
-                $self->set_forced_breakpoint($i_first_comma);
-            }
-            else {
-
-                # let breaks be defined by default bond strength logic
-            }
+            $self->set_emergency_comma_breakpoints(
+                $number_of_fields_best, $rinput_hash,
+                $comma_count,           $i_first_comma
+            );
             return;
         }
 
@@ -20908,7 +20949,7 @@ EOM
               )
             {
 
-                my $break_count = $self->set_ragged_breakpoints( \@i_term_comma,
+                my $break_count = $self->set_ragged_breakpoints( $ri_term_comma,
                     $ri_ragged_break_list );
                 ++$break_count if ($use_separate_first_term);
 
@@ -21007,7 +21048,7 @@ EOM
             # let the continuation logic handle it if 2 lines
             else {
 
-                my $break_count = $self->set_ragged_breakpoints( \@i_term_comma,
+                my $break_count = $self->set_ragged_breakpoints( $ri_term_comma,
                     $ri_ragged_break_list );
                 ++$break_count if ($use_separate_first_term);
 
