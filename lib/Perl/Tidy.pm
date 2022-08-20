@@ -4826,7 +4826,7 @@ sub Win_Config_Locs {
 
 sub dump_config_file {
     my ( $fh, $config_file, $rconfig_file_chatter ) = @_;
-    print STDOUT "$$rconfig_file_chatter";
+    print STDOUT "${$rconfig_file_chatter}";
     if ($fh) {
         print STDOUT "# Dump of file: '$config_file'\n";
         while ( my $line = $fh->getline() ) { print STDOUT $line }

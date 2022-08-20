@@ -4063,7 +4063,6 @@ EOM
             && ( $i_next <= $max_token_index )    # colon on same line
 
             # like 'sub : lvalue' ?
-            ##&& !$sub_attribute_ok_here            # like 'sub : lvalue' ?
             && !sub_attribute_ok_here( $tok_kw, $next_nonblank_token, $i_next )
             && label_ok()
           )
@@ -4143,11 +4142,6 @@ EOM
             $routput_token_type->[$i] = $type;
 
         }
-
-        # Removed to fix b1280.  This is not needed and was causing the
-        # starting type 'qw' to be lost, leading to mis-tokenization of
-        # a trailing block brace in a parenless for stmt 'for .. qw.. {'
-        ##$tok = $quote_character if ($quote_character);
 
         # scan for the end of the quote or pattern
         (
@@ -8657,6 +8651,12 @@ EOM
 # Tokenizer utility routines which may use CONSTANTS but no other GLOBALS
 #########################################################################
 
+# Decimal values of some ascii characters for quick checks
+use constant ORD_PRINTABLE_MIN => 33;
+use constant ORD_PRINTABLE_MAX => 126;
+use constant ORD_TAB           => 9;
+use constant ORD_SPACE         => 32;
+
 sub find_next_nonblank_token {
     my ( $i, $rtokens, $max_token_index ) = @_;
 
@@ -8672,12 +8672,31 @@ sub find_next_nonblank_token {
     }
 
     my $next_nonblank_token = $rtokens->[ ++$i ];
-    return ( SPACE, $i ) unless defined($next_nonblank_token);
+    return ( SPACE, $i )
+      unless ( defined($next_nonblank_token) && length($next_nonblank_token) );
 
-    if ( $next_nonblank_token =~ /^\s*$/ ) {
+    # Quick test for nonblank ascii char. Note that we just have to
+    # examine the first character here.
+    my $ord = ord( substr( $next_nonblank_token, 0, 1 ) );
+    if (   $ord >= ORD_PRINTABLE_MIN
+        && $ord <= ORD_PRINTABLE_MAX )
+    {
+        return ( $next_nonblank_token, $i );
+    }
+
+    # Quick test to skip over an ascii space or tab
+    elsif ( $ord == ORD_SPACE || $ord == ORD_TAB ) {
         $next_nonblank_token = $rtokens->[ ++$i ];
         return ( SPACE, $i ) unless defined($next_nonblank_token);
     }
+
+    # Slow test to skip over something else identified as whitespace
+    elsif ( $next_nonblank_token =~ /^\s*$/ ) {
+        $next_nonblank_token = $rtokens->[ ++$i ];
+        return ( SPACE, $i ) unless defined($next_nonblank_token);
+    }
+
+    # We should be at a nonblank now
     return ( $next_nonblank_token, $i );
 } ## end sub find_next_nonblank_token
 
