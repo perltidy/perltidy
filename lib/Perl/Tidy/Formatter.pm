@@ -17855,6 +17855,8 @@ sub undo_lp_ci {
 # CODE SECTION 10: Code to break long statments
 ###############################################
 
+use constant DEBUG_BREAK_LINES => 0;
+
 sub break_long_lines {
 
     #-----------------------------------------------------------
@@ -17895,8 +17897,6 @@ sub break_long_lines {
     # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
     # order.
 
-    use constant DEBUG_BREAK_LINES => 0;
-
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
@@ -17925,16 +17925,11 @@ sub break_long_lines {
     my $imax = $max_index_to_go;
     if ( $types_to_go[$imin] eq 'b' ) { $imin++ }
     if ( $types_to_go[$imax] eq 'b' ) { $imax-- }
-    my $i_begin = $imin;    # index for starting next iteration
 
-    my $leading_spaces          = leading_spaces_to_go($imin);
-    my $line_count              = 0;
-    my $last_break_strength     = NO_BREAK;
-    my $i_last_break            = -1;
-    my $max_bias                = 0.001;
-    my $tiny_bias               = 0.0001;
-    my $leading_alignment_token = EMPTY_STRING;
-    my $leading_alignment_type  = EMPTY_STRING;
+    my $i_begin             = $imin;
+    my $last_break_strength = NO_BREAK;
+    my $i_last_break        = -1;
+    my $line_count          = 0;
 
     # see if any ?/:'s are in order
     my $colons_in_order = 1;
@@ -17947,461 +17942,32 @@ sub break_long_lines {
     # This is a sufficient but not necessary condition for colon chain
     my $is_colon_chain = ( $colons_in_order && @{$rcolon_list} > 2 );
 
-    my $Msg = EMPTY_STRING;
-
-    #-------------------------------------------------------
-    # BEGINNING of main loop to set continuation breakpoints
+    #------------------------------------------
+    # BEGINNING of main loop to set breakpoints
     # Keep iterating until we reach the end
-    #-------------------------------------------------------
+    #------------------------------------------
     while ( $i_begin <= $imax ) {
-        my $lowest_strength        = NO_BREAK;
-        my $starting_sum           = $summed_lengths_to_go[$i_begin];
-        my $i_lowest               = -1;
-        my $i_test                 = -1;
-        my $lowest_next_token      = EMPTY_STRING;
-        my $lowest_next_type       = 'b';
-        my $i_lowest_next_nonblank = -1;
-        my $maximum_line_length =
-          $maximum_line_length_at_level[ $levels_to_go[$i_begin] ];
 
-        # Do not separate an isolated bare word from an opening paren.
-        # Alternate Fix #2 for issue b1299.  This waits as long as possible
-        # to make the decision.
-        if ( $types_to_go[$i_begin] eq 'i'
-            && substr( $tokens_to_go[$i_begin], 0, 1 ) =~ /\w/ )
-        {
-            my $i_next_nonblank = $inext_to_go[$i_begin];
-            if ( $tokens_to_go[$i_next_nonblank] eq '(' ) {
-                $rbond_strength_to_go->[$i_begin] = NO_BREAK;
-            }
-        }
+        #------------------------------------------------------------------
+        # Find the best next breakpoint based on token-token bond strengths
+        #------------------------------------------------------------------
+        my ( $i_lowest, $lowest_strength, $leading_alignment_type, $Msg ) =
+          $self->break_lines_inner_loop(
 
-        #-------------------------------------------------------
-        # BEGINNING of inner loop to find the best next breakpoint
-        #-------------------------------------------------------
-        my $strength = NO_BREAK;
-        $i_test = $i_begin - 1;
-        while ( ++$i_test <= $imax ) {
-            my $type                     = $types_to_go[$i_test];
-            my $token                    = $tokens_to_go[$i_test];
-            my $next_type                = $types_to_go[ $i_test + 1 ];
-            my $next_token               = $tokens_to_go[ $i_test + 1 ];
-            my $i_next_nonblank          = $inext_to_go[$i_test];
-            my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
-            my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
-            my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
+            $i_begin,
+            $i_last_break,
+            $imax,
+            $last_break_strength,
+            $line_count,
+            $rbond_strength_to_go,
+            $saw_good_break,
 
-            # adjustments to the previous bond strength may have been made, and
-            # we must keep the bond strength of a token and its following blank
-            # the same;
-            my $last_strength = $strength;
-            $strength = $rbond_strength_to_go->[$i_test];
-            if ( $type eq 'b' ) { $strength = $last_strength }
+          );
 
-            # reduce strength a bit to break ties at an old comma breakpoint ...
-            if (
-
-                $old_breakpoint_to_go[$i_test]
-
-                # Patch: limited to just commas to avoid blinking states
-                && $type eq ','
-
-                # which is a 'good' breakpoint, meaning ...
-                # we don't want to break before it
-                && !$want_break_before{$type}
-
-                # and either we want to break before the next token
-                # or the next token is not short (i.e. not a '*', '/' etc.)
-                && $i_next_nonblank <= $imax
-                && (   $want_break_before{$next_nonblank_type}
-                    || $token_lengths_to_go[$i_next_nonblank] > 2
-                    || $next_nonblank_type eq ','
-                    || $is_opening_type{$next_nonblank_type} )
-              )
-            {
-                $strength -= $tiny_bias;
-                DEBUG_BREAK_LINES && do { $Msg .= " :-bias at i=$i_test" };
-            }
-
-            # otherwise increase strength a bit if this token would be at the
-            # maximum line length.  This is necessary to avoid blinking
-            # in the above example when the -iob flag is added.
-            else {
-                my $len =
-                  $leading_spaces +
-                  $summed_lengths_to_go[ $i_test + 1 ] -
-                  $starting_sum;
-                if ( $len >= $maximum_line_length ) {
-                    $strength += $tiny_bias;
-                    DEBUG_BREAK_LINES && do { $Msg .= " :+bias at i=$i_test" };
-                }
-            }
-
-            my $must_break = 0;
-
-            # Force an immediate break at certain operators
-            # with lower level than the start of the line,
-            # unless we've already seen a better break.
-            #
-            #------------------------------------
-            # Note on an issue with a preceding ?
-            #------------------------------------
-            # We don't include a ? in the above list, but there may
-            # be a break at a previous ? if the line is long.
-            # Because of this we do not want to force a break if
-            # there is a previous ? on this line.  For now the best way
-            # to do this is to not break if we have seen a lower strength
-            # point, which is probably a ?.
-            #
-            # Example of unwanted breaks we are avoiding at a '.' following a ?
-            # from pod2html using perltidy -gnu:
-            # )
-            # ? "\n&lt;A NAME=\""
-            # . $value
-            # . "\"&gt;\n$text&lt;/A&gt;\n"
-            # : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
-            if (
-                ( $strength <= $lowest_strength )
-                && ( $nesting_depth_to_go[$i_begin] >
-                    $nesting_depth_to_go[$i_next_nonblank] )
-                && (
-                    $next_nonblank_type =~ /^(\.|\&\&|\|\|)$/
-                    || (
-                        $next_nonblank_type eq 'k'
-
-                        ##  /^(and|or)$/  # note: includes 'xor' now
-                        && $is_and_or{$next_nonblank_token}
-                    )
-                )
-              )
-            {
-                $self->set_forced_breakpoint($i_next_nonblank);
-                DEBUG_BREAK_LINES
-                  && do { $Msg .= " :Forced break at i=$i_next_nonblank" };
-            }
-
-            if (
-
-                # Try to put a break where requested by break_lists
-                $forced_breakpoint_to_go[$i_test]
-
-                # break between ) { in a continued line so that the '{' can
-                # be outdented
-                # See similar logic in break_lists which catches instances
-                # where a line is just something like ') {'.  We have to
-                # be careful because the corresponding block keyword might
-                # not be on the first line, such as 'for' here:
-                #
-                # eval {
-                #     for ("a") {
-                #         for $x ( 1, 2 ) { local $_ = "b"; s/(.*)/+$1/ }
-                #     }
-                # };
-                #
-                || (
-                       $line_count
-                    && ( $token eq ')' )
-                    && ( $next_nonblank_type eq '{' )
-                    && ($next_nonblank_block_type)
-                    && ( $next_nonblank_block_type ne $tokens_to_go[$i_begin] )
-
-                    # RT #104427: Dont break before opening sub brace because
-                    # sub block breaks handled at higher level, unless
-                    # it looks like the preceding list is long and broken
-                    && !(
-
-                        (
-                               $next_nonblank_block_type =~ /$SUB_PATTERN/
-                            || $next_nonblank_block_type =~ /$ASUB_PATTERN/
-                        )
-                        && ( $nesting_depth_to_go[$i_begin] ==
-                            $nesting_depth_to_go[$i_next_nonblank] )
-                    )
-
-                    && !$rOpts_opening_brace_always_on_right
-                )
-
-                # There is an implied forced break at a terminal opening brace
-                || ( ( $type eq '{' ) && ( $i_test == $imax ) )
-              )
-            {
-
-                # Forced breakpoints must sometimes be overridden, for example
-                # because of a side comment causing a NO_BREAK.  It is easier
-                # to catch this here than when they are set.
-                if ( $strength < NO_BREAK - 1 ) {
-                    $strength   = $lowest_strength - $tiny_bias;
-                    $must_break = 1;
-                    DEBUG_BREAK_LINES
-                      && do { $Msg .= " :set must_break at i=$i_next_nonblank" };
-                }
-            }
-
-            # quit if a break here would put a good terminal token on
-            # the next line and we already have a possible break
-            if (
-                   !$must_break
-                && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
-                && (
-                    (
-                        $leading_spaces +
-                        $summed_lengths_to_go[ $i_next_nonblank + 1 ] -
-                        $starting_sum
-                    ) > $maximum_line_length
-                )
-              )
-            {
-                if ( $i_lowest >= 0 ) {
-                    DEBUG_BREAK_LINES && do {
-                        $Msg .= " :quit at good terminal='$next_nonblank_type'";
-                    };
-                    last;
-                }
-            }
-
-            # Avoid a break which would strand a single punctuation
-            # token.  For example, we do not want to strand a leading
-            # '.' which is followed by a long quoted string.
-            # But note that we do want to do this with -extrude (l=1)
-            # so please test any changes to this code on -extrude.
-            if (
-                   !$must_break
-                && ( $i_test == $i_begin )
-                && ( $i_test < $imax )
-                && ( $token eq $type )
-                && (
-                    (
-                        $leading_spaces +
-                        $summed_lengths_to_go[ $i_test + 1 ] -
-                        $starting_sum
-                    ) < $maximum_line_length
-                )
-              )
-            {
-                $i_test = min( $imax, $inext_to_go[$i_test] );
-                DEBUG_BREAK_LINES && do {
-                    $Msg .= " :redo at i=$i_test";
-                };
-                redo;
-            }
-
-            if ( ( $strength <= $lowest_strength ) && ( $strength < NO_BREAK ) )
-            {
-
-                # break at previous best break if it would have produced
-                # a leading alignment of certain common tokens, and it
-                # is different from the latest candidate break
-                if ($leading_alignment_type) {
-                    DEBUG_BREAK_LINES && do {
-                        $Msg .=
-" :last at leading_alignment='$leading_alignment_type'";
-                    };
-                    last;
-                }
-
-                # Force at least one breakpoint if old code had good
-                # break It is only called if a breakpoint is required or
-                # desired.  This will probably need some adjustments
-                # over time.  A goal is to try to be sure that, if a new
-                # side comment is introduced into formatted text, then
-                # the same breakpoints will occur.  scbreak.t
-                if (
-                    $i_test == $imax            # we are at the end
-                    && !$forced_breakpoint_count
-                    && $saw_good_break          # old line had good break
-                    && $type =~ /^[#;\{]$/      # and this line ends in
-                                                # ';' or side comment
-                    && $i_last_break < 0        # and we haven't made a break
-                    && $i_lowest >= 0           # and we saw a possible break
-                    && $i_lowest < $imax - 1    # (but not just before this ;)
-                    && $strength - $lowest_strength < 0.5 * WEAK # and it's good
-                  )
-                {
-
-                    DEBUG_BREAK_LINES && do {
-                        $Msg .= " :last at good old break\n";
-                    };
-                    last;
-                }
-
-                # Do not skip past an important break point in a short final
-                # segment.  For example, without this check we would miss the
-                # break at the final / in the following code:
-                #
-                #  $depth_stop =
-                #    ( $tau * $mass_pellet * $q_0 *
-                #        ( 1. - exp( -$t_stop / $tau ) ) -
-                #        4. * $pi * $factor * $k_ice *
-                #        ( $t_melt - $t_ice ) *
-                #        $r_pellet *
-                #        $t_stop ) /
-                #    ( $rho_ice * $Qs * $pi * $r_pellet**2 );
-                #
-                if (
-                       $line_count > 2
-                    && $i_lowest >= 0    # and we saw a possible break
-                    && $i_lowest < $i_test
-                    && $i_test > $imax - 2
-                    && $nesting_depth_to_go[$i_begin] >
-                    $nesting_depth_to_go[$i_lowest]
-                    && $lowest_strength < $last_break_strength - .5 * WEAK
-                  )
-                {
-                    # Make this break for math operators for now
-                    my $ir = $inext_to_go[$i_lowest];
-                    my $il = $iprev_to_go[$ir];
-                    if (   $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
-                        || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ )
-                    {
-                        DEBUG_BREAK_LINES && do {
-                            $Msg .= " :last-noskip_short";
-                        };
-                        last;
-                    }
-                }
-
-                # Update the minimum bond strength location
-                $lowest_strength        = $strength;
-                $i_lowest               = $i_test;
-                $lowest_next_token      = $next_nonblank_token;
-                $lowest_next_type       = $next_nonblank_type;
-                $i_lowest_next_nonblank = $i_next_nonblank;
-                if ($must_break) {
-                    DEBUG_BREAK_LINES && do {
-                        $Msg .= " :last-must_break";
-                    };
-                    last;
-                }
-
-                # set flags to remember if a break here will produce a
-                # leading alignment of certain common tokens
-                if (   $line_count > 0
-                    && $i_test < $imax
-                    && ( $lowest_strength - $last_break_strength <= $max_bias )
-                  )
-                {
-                    my $i_last_end = $iprev_to_go[$i_begin];
-                    my $tok_beg    = $tokens_to_go[$i_begin];
-                    my $type_beg   = $types_to_go[$i_begin];
-                    if (
-
-                        # check for leading alignment of certain tokens
-                        (
-                               $tok_beg eq $next_nonblank_token
-                            && $is_chain_operator{$tok_beg}
-                            && (   $type_beg eq 'k'
-                                || $type_beg eq $tok_beg )
-                            && $nesting_depth_to_go[$i_begin] >=
-                            $nesting_depth_to_go[$i_next_nonblank]
-                        )
-
-                        || (   $tokens_to_go[$i_last_end] eq $token
-                            && $is_chain_operator{$token}
-                            && ( $type eq 'k' || $type eq $token )
-                            && $nesting_depth_to_go[$i_last_end] >=
-                            $nesting_depth_to_go[$i_test] )
-                      )
-                    {
-                        $leading_alignment_token = $next_nonblank_token;
-                        $leading_alignment_type  = $next_nonblank_type;
-                    }
-                }
-            }
-
-            my $too_long = ( $i_test >= $imax );
-            if ( !$too_long ) {
-                my $next_length =
-                  $leading_spaces +
-                  $summed_lengths_to_go[ $i_test + 2 ] -
-                  $starting_sum;
-                $too_long = $next_length > $maximum_line_length;
-
-                # To prevent blinkers we will avoid leaving a token exactly at
-                # the line length limit unless it is the last token or one of
-                # several "good" types.
-                #
-                # The following code was a blinker with -pbp before this
-                # modification:
-##                    $last_nonblank_token eq '('
-##                        && $is_indirect_object_taker{ $paren_type
-##                            [$paren_depth] }
-                # The issue causing the problem is that if the
-                # term [$paren_depth] gets broken across a line then
-                # the whitespace routine doesn't see both opening and closing
-                # brackets and will format like '[ $paren_depth ]'.  This
-                # leads to an oscillation in length depending if we break
-                # before the closing bracket or not.
-                if (  !$too_long
-                    && $i_test + 1 < $imax
-                    && $next_nonblank_type ne ','
-                    && !$is_closing_type{$next_nonblank_type} )
-                {
-                    $too_long = $next_length >= $maximum_line_length;
-                    DEBUG_BREAK_LINES && do {
-                        $Msg .= " :too_long=$too_long" if ($too_long);
-                    }
-                }
-            }
-
-            DEBUG_BREAK_LINES && do {
-                my $ltok = $token;
-                my $rtok =
-                  $next_nonblank_token ? $next_nonblank_token : EMPTY_STRING;
-                my $i_testp2 = $i_test + 2;
-                if ( $i_testp2 > $max_index_to_go + 1 ) {
-                    $i_testp2 = $max_index_to_go + 1;
-                }
-                if ( length($ltok) > 6 ) { $ltok = substr( $ltok, 0, 8 ) }
-                if ( length($rtok) > 6 ) { $rtok = substr( $rtok, 0, 8 ) }
-                print STDOUT
-"BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] 2long=$too_long str=$strength    $ltok $rtok\n";
-            };
-
-            # allow one extra terminal token after exceeding line length
-            # if it would strand this token.
-            if (   $rOpts_fuzzy_line_length
-                && $too_long
-                && $i_lowest == $i_test
-                && $token_lengths_to_go[$i_test] > 1
-                && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
-              )
-            {
-                $too_long = 0;
-                DEBUG_BREAK_LINES && do {
-                    $Msg .= " :do_not_strand next='$next_nonblank_type'";
-                };
-            }
-
-            # we are done if...
-            if (
-
-                # ... no more space and we have a break
-                $too_long && $i_lowest >= 0
-
-                # ... or no more tokens
-                || $i_test == $imax
-              )
-            {
-                DEBUG_BREAK_LINES && do {
-                    $Msg .=
-" :Done-too_long=$too_long or i_lowest=$i_lowest or $i_test==imax";
-                };
-                last;
-            }
-        }
-
-        #-------------------------------------------------------
-        # END of inner loop to find the best next breakpoint
-        # Now decide exactly where to put the breakpoint
-        #-------------------------------------------------------
-
-        # it's always ok to break at imax if no other break was found
-        if ( $i_lowest < 0 ) { $i_lowest = $imax }
-
-        # semi-final index calculation
-        my $i_next_nonblank     = $inext_to_go[$i_lowest];
-        my $next_nonblank_type  = $types_to_go[$i_next_nonblank];
-        my $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
+        #--------------------------------------------------------------
+        # Now make any adjustments required by ternary breakpoint rules
+        #--------------------------------------------------------------
+        my $i_next_nonblank = $inext_to_go[$i_lowest];
 
         #-------------------------------------------------------
         # ?/: rule 1 : if a break here will separate a '?' on this
@@ -18428,28 +17994,21 @@ sub break_long_lines {
             last;
         }
 
-        #-------------------------------------------------------
-        # END of inner loop to find the best next breakpoint:
         # Break the line after the token with index i=$i_lowest
-        #-------------------------------------------------------
-
-        # final index calculation
-        $i_next_nonblank     = $inext_to_go[$i_lowest];
-        $next_nonblank_type  = $types_to_go[$i_next_nonblank];
-        $next_nonblank_token = $tokens_to_go[$i_next_nonblank];
+        $i_next_nonblank = $inext_to_go[$i_lowest];
+        my $next_nonblank_type = $types_to_go[$i_next_nonblank];
 
         DEBUG_BREAK_LINES
           && print STDOUT
 "BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
-        $Msg = EMPTY_STRING;
 
-        #-------------------------------------------------------
+        #-------------------------------------------------------------
         # ?/: rule 2 : if we break at a '?', then break at its ':'
         #
         # Note: this rule is also in sub break_lists to handle a break
         # at the start and end of a line (in case breaks are dictated
         # by side comments).
-        #-------------------------------------------------------
+        #-------------------------------------------------------------
         if ( $next_nonblank_type eq '?' ) {
             $self->set_closing_breakpoint($i_next_nonblank);
         }
@@ -18457,11 +18016,11 @@ sub break_long_lines {
             $self->set_closing_breakpoint($i_lowest);
         }
 
-        #-------------------------------------------------------
+        #--------------------------------------------------------
         # ?/: rule 3 : if we break at a ':' then we save
         # its location for further work below.  We may need to go
         # back and break at its '?'.
-        #-------------------------------------------------------
+        #--------------------------------------------------------
         if ( $next_nonblank_type eq ':' ) {
             push @i_colon_breaks, $i_next_nonblank;
         }
@@ -18493,37 +18052,25 @@ sub break_long_lines {
             $self->set_closing_breakpoint($i_lowest);
         }
 
-        # get ready to go again
-        $i_begin                 = $i_lowest + 1;
-        $last_break_strength     = $lowest_strength;
-        $i_last_break            = $i_lowest;
-        $leading_alignment_token = EMPTY_STRING;
-        $leading_alignment_type  = EMPTY_STRING;
-        $lowest_next_token       = EMPTY_STRING;
-        $lowest_next_type        = 'b';
+        # get ready to find the next breakpoint
+        $last_break_strength = $lowest_strength;
+        $i_last_break        = $i_lowest;
+        $i_begin             = $i_lowest + 1;
 
+        # skip past a blank
         if ( ( $i_begin <= $imax ) && ( $types_to_go[$i_begin] eq 'b' ) ) {
             $i_begin++;
         }
-
-        # update indentation size
-        if ( $i_begin <= $imax ) {
-            $leading_spaces = leading_spaces_to_go($i_begin);
-            DEBUG_BREAK_LINES
-              && print STDOUT
-              "updating leading spaces to be $leading_spaces at i=$i_begin\n";
-        }
     }
 
-    #-------------------------------------------------------
+    #-------------------------------------------------
     # END of main loop to set continuation breakpoints
-    # Now go back and make any necessary corrections
-    #-------------------------------------------------------
+    #-------------------------------------------------
 
-    #-------------------------------------------------------
+    #-----------------------------------------------------------
     # ?/: rule 4 -- if we broke at a ':', then break at
     # corresponding '?' unless this is a chain of ?: expressions
-    #-------------------------------------------------------
+    #-----------------------------------------------------------
     if (@i_colon_breaks) {
         my $is_chain = ( $colons_in_order && @i_colon_breaks > 1 );
         if ( !$is_chain ) {
@@ -18533,6 +18080,460 @@ sub break_long_lines {
 
     return ( \@i_first, \@i_last, $rbond_strength_to_go );
 } ## end sub break_long_lines
+
+# small bond strength numbers to help break ties
+use constant TINY_BIAS => 0.0001;
+use constant MAX_BIAS  => 0.001;
+
+sub break_lines_inner_loop {
+
+    my (
+        $self,    #
+
+        $i_begin,
+        $i_last_break,
+        $imax,
+        $last_break_strength,
+        $line_count,
+        $rbond_strength_to_go,
+        $saw_good_break,
+
+    ) = @_;
+
+    my $Msg                    = EMPTY_STRING;
+    my $strength               = NO_BREAK;
+    my $i_test                 = $i_begin - 1;
+    my $i_lowest               = -1;
+    my $starting_sum           = $summed_lengths_to_go[$i_begin];
+    my $lowest_strength        = NO_BREAK;
+    my $leading_alignment_type = EMPTY_STRING;
+    my $leading_spaces         = leading_spaces_to_go($i_begin);
+    my $maximum_line_length =
+      $maximum_line_length_at_level[ $levels_to_go[$i_begin] ];
+    DEBUG_BREAK_LINES
+      && do {
+        $Msg .= "updating leading spaces to be $leading_spaces at i=$i_begin\n";
+      };
+
+    # Do not separate an isolated bare word from an opening paren.
+    # Alternate Fix #2 for issue b1299.  This waits as long as possible
+    # to make the decision.
+    if ( $types_to_go[$i_begin] eq 'i'
+        && substr( $tokens_to_go[$i_begin], 0, 1 ) =~ /\w/ )
+    {
+        my $i_next_nonblank = $inext_to_go[$i_begin];
+        if ( $tokens_to_go[$i_next_nonblank] eq '(' ) {
+            $rbond_strength_to_go->[$i_begin] = NO_BREAK;
+        }
+    }
+
+    while ( ++$i_test <= $imax ) {
+        my $type                     = $types_to_go[$i_test];
+        my $token                    = $tokens_to_go[$i_test];
+        my $next_type                = $types_to_go[ $i_test + 1 ];
+        my $next_token               = $tokens_to_go[ $i_test + 1 ];
+        my $i_next_nonblank          = $inext_to_go[$i_test];
+        my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
+        my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
+        my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
+
+        # adjustments to the previous bond strength may have been made, and
+        # we must keep the bond strength of a token and its following blank
+        # the same;
+        my $last_strength = $strength;
+        $strength = $rbond_strength_to_go->[$i_test];
+        if ( $type eq 'b' ) { $strength = $last_strength }
+
+        # reduce strength a bit to break ties at an old comma breakpoint ...
+        if (
+
+            $old_breakpoint_to_go[$i_test]
+
+            # Patch: limited to just commas to avoid blinking states
+            && $type eq ','
+
+            # which is a 'good' breakpoint, meaning ...
+            # we don't want to break before it
+            && !$want_break_before{$type}
+
+            # and either we want to break before the next token
+            # or the next token is not short (i.e. not a '*', '/' etc.)
+            && $i_next_nonblank <= $imax
+            && (   $want_break_before{$next_nonblank_type}
+                || $token_lengths_to_go[$i_next_nonblank] > 2
+                || $next_nonblank_type eq ','
+                || $is_opening_type{$next_nonblank_type} )
+          )
+        {
+            $strength -= TINY_BIAS;
+            DEBUG_BREAK_LINES && do { $Msg .= " :-bias at i=$i_test" };
+        }
+
+        # otherwise increase strength a bit if this token would be at the
+        # maximum line length.  This is necessary to avoid blinking
+        # in the above example when the -iob flag is added.
+        else {
+            my $len =
+              $leading_spaces +
+              $summed_lengths_to_go[ $i_test + 1 ] -
+              $starting_sum;
+            if ( $len >= $maximum_line_length ) {
+                $strength += TINY_BIAS;
+                DEBUG_BREAK_LINES && do { $Msg .= " :+bias at i=$i_test" };
+            }
+        }
+
+        my $must_break = 0;
+
+        # Force an immediate break at certain operators
+        # with lower level than the start of the line,
+        # unless we've already seen a better break.
+        #
+        #------------------------------------
+        # Note on an issue with a preceding ?
+        #------------------------------------
+        # We don't include a ? in the above list, but there may
+        # be a break at a previous ? if the line is long.
+        # Because of this we do not want to force a break if
+        # there is a previous ? on this line.  For now the best way
+        # to do this is to not break if we have seen a lower strength
+        # point, which is probably a ?.
+        #
+        # Example of unwanted breaks we are avoiding at a '.' following a ?
+        # from pod2html using perltidy -gnu:
+        # )
+        # ? "\n&lt;A NAME=\""
+        # . $value
+        # . "\"&gt;\n$text&lt;/A&gt;\n"
+        # : "\n$type$pod2.html\#" . $value . "\"&gt;$text&lt;\/A&gt;\n";
+        if (
+            ( $strength <= $lowest_strength )
+            && ( $nesting_depth_to_go[$i_begin] >
+                $nesting_depth_to_go[$i_next_nonblank] )
+            && (
+                $next_nonblank_type =~ /^(\.|\&\&|\|\|)$/
+                || (
+                    $next_nonblank_type eq 'k'
+
+                    ##  /^(and|or)$/  # note: includes 'xor' now
+                    && $is_and_or{$next_nonblank_token}
+                )
+            )
+          )
+        {
+            $self->set_forced_breakpoint($i_next_nonblank);
+            DEBUG_BREAK_LINES
+              && do { $Msg .= " :Forced break at i=$i_next_nonblank" };
+        }
+
+        if (
+
+            # Try to put a break where requested by break_lists
+            $forced_breakpoint_to_go[$i_test]
+
+            # break between ) { in a continued line so that the '{' can
+            # be outdented
+            # See similar logic in break_lists which catches instances
+            # where a line is just something like ') {'.  We have to
+            # be careful because the corresponding block keyword might
+            # not be on the first line, such as 'for' here:
+            #
+            # eval {
+            #     for ("a") {
+            #         for $x ( 1, 2 ) { local $_ = "b"; s/(.*)/+$1/ }
+            #     }
+            # };
+            #
+            || (
+                   $line_count
+                && ( $token eq ')' )
+                && ( $next_nonblank_type eq '{' )
+                && ($next_nonblank_block_type)
+                && ( $next_nonblank_block_type ne $tokens_to_go[$i_begin] )
+
+                # RT #104427: Dont break before opening sub brace because
+                # sub block breaks handled at higher level, unless
+                # it looks like the preceding list is long and broken
+                && !(
+
+                    (
+                           $next_nonblank_block_type =~ /$SUB_PATTERN/
+                        || $next_nonblank_block_type =~ /$ASUB_PATTERN/
+                    )
+                    && ( $nesting_depth_to_go[$i_begin] ==
+                        $nesting_depth_to_go[$i_next_nonblank] )
+                )
+
+                && !$rOpts_opening_brace_always_on_right
+            )
+
+            # There is an implied forced break at a terminal opening brace
+            || ( ( $type eq '{' ) && ( $i_test == $imax ) )
+          )
+        {
+
+            # Forced breakpoints must sometimes be overridden, for example
+            # because of a side comment causing a NO_BREAK.  It is easier
+            # to catch this here than when they are set.
+            if ( $strength < NO_BREAK - 1 ) {
+                $strength   = $lowest_strength - TINY_BIAS;
+                $must_break = 1;
+                DEBUG_BREAK_LINES
+                  && do { $Msg .= " :set must_break at i=$i_next_nonblank" };
+            }
+        }
+
+        # quit if a break here would put a good terminal token on
+        # the next line and we already have a possible break
+        if (
+               !$must_break
+            && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
+            && (
+                (
+                    $leading_spaces +
+                    $summed_lengths_to_go[ $i_next_nonblank + 1 ] -
+                    $starting_sum
+                ) > $maximum_line_length
+            )
+          )
+        {
+            if ( $i_lowest >= 0 ) {
+                DEBUG_BREAK_LINES && do {
+                    $Msg .= " :quit at good terminal='$next_nonblank_type'";
+                };
+                last;
+            }
+        }
+
+        # Avoid a break which would strand a single punctuation
+        # token.  For example, we do not want to strand a leading
+        # '.' which is followed by a long quoted string.
+        # But note that we do want to do this with -extrude (l=1)
+        # so please test any changes to this code on -extrude.
+        if (
+               !$must_break
+            && ( $i_test == $i_begin )
+            && ( $i_test < $imax )
+            && ( $token eq $type )
+            && (
+                (
+                    $leading_spaces +
+                    $summed_lengths_to_go[ $i_test + 1 ] -
+                    $starting_sum
+                ) < $maximum_line_length
+            )
+          )
+        {
+            $i_test = min( $imax, $inext_to_go[$i_test] );
+            DEBUG_BREAK_LINES && do {
+                $Msg .= " :redo at i=$i_test";
+            };
+            redo;
+        }
+
+        if ( ( $strength <= $lowest_strength ) && ( $strength < NO_BREAK ) ) {
+
+            # break at previous best break if it would have produced
+            # a leading alignment of certain common tokens, and it
+            # is different from the latest candidate break
+            if ($leading_alignment_type) {
+                DEBUG_BREAK_LINES && do {
+                    $Msg .=
+                      " :last at leading_alignment='$leading_alignment_type'";
+                };
+                last;
+            }
+
+            # Force at least one breakpoint if old code had good
+            # break It is only called if a breakpoint is required or
+            # desired.  This will probably need some adjustments
+            # over time.  A goal is to try to be sure that, if a new
+            # side comment is introduced into formatted text, then
+            # the same breakpoints will occur.  scbreak.t
+            if (
+                $i_test == $imax            # we are at the end
+                && !$forced_breakpoint_count
+                && $saw_good_break          # old line had good break
+                && $type =~ /^[#;\{]$/      # and this line ends in
+                                            # ';' or side comment
+                && $i_last_break < 0        # and we haven't made a break
+                && $i_lowest >= 0           # and we saw a possible break
+                && $i_lowest < $imax - 1    # (but not just before this ;)
+                && $strength - $lowest_strength < 0.5 * WEAK    # and it's good
+              )
+            {
+
+                DEBUG_BREAK_LINES && do {
+                    $Msg .= " :last at good old break\n";
+                };
+                last;
+            }
+
+            # Do not skip past an important break point in a short final
+            # segment.  For example, without this check we would miss the
+            # break at the final / in the following code:
+            #
+            #  $depth_stop =
+            #    ( $tau * $mass_pellet * $q_0 *
+            #        ( 1. - exp( -$t_stop / $tau ) ) -
+            #        4. * $pi * $factor * $k_ice *
+            #        ( $t_melt - $t_ice ) *
+            #        $r_pellet *
+            #        $t_stop ) /
+            #    ( $rho_ice * $Qs * $pi * $r_pellet**2 );
+            #
+            if (
+                   $line_count > 2
+                && $i_lowest >= 0    # and we saw a possible break
+                && $i_lowest < $i_test
+                && $i_test > $imax - 2
+                && $nesting_depth_to_go[$i_begin] >
+                $nesting_depth_to_go[$i_lowest]
+                && $lowest_strength < $last_break_strength - .5 * WEAK
+              )
+            {
+                # Make this break for math operators for now
+                my $ir = $inext_to_go[$i_lowest];
+                my $il = $iprev_to_go[$ir];
+                if (   $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
+                    || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ )
+                {
+                    DEBUG_BREAK_LINES && do {
+                        $Msg .= " :last-noskip_short";
+                    };
+                    last;
+                }
+            }
+
+            # Update the minimum bond strength location
+            $lowest_strength = $strength;
+            $i_lowest        = $i_test;
+            if ($must_break) {
+                DEBUG_BREAK_LINES && do {
+                    $Msg .= " :last-must_break";
+                };
+                last;
+            }
+
+            # set flags to remember if a break here will produce a
+            # leading alignment of certain common tokens
+            if (   $line_count > 0
+                && $i_test < $imax
+                && ( $lowest_strength - $last_break_strength <= MAX_BIAS ) )
+            {
+                my $i_last_end = $iprev_to_go[$i_begin];
+                my $tok_beg    = $tokens_to_go[$i_begin];
+                my $type_beg   = $types_to_go[$i_begin];
+                if (
+
+                    # check for leading alignment of certain tokens
+                    (
+                           $tok_beg eq $next_nonblank_token
+                        && $is_chain_operator{$tok_beg}
+                        && (   $type_beg eq 'k'
+                            || $type_beg eq $tok_beg )
+                        && $nesting_depth_to_go[$i_begin] >=
+                        $nesting_depth_to_go[$i_next_nonblank]
+                    )
+
+                    || (   $tokens_to_go[$i_last_end] eq $token
+                        && $is_chain_operator{$token}
+                        && ( $type eq 'k' || $type eq $token )
+                        && $nesting_depth_to_go[$i_last_end] >=
+                        $nesting_depth_to_go[$i_test] )
+                  )
+                {
+                    $leading_alignment_type = $next_nonblank_type;
+                }
+            }
+        }
+
+        my $too_long = ( $i_test >= $imax );
+        if ( !$too_long ) {
+            my $next_length =
+              $leading_spaces +
+              $summed_lengths_to_go[ $i_test + 2 ] -
+              $starting_sum;
+            $too_long = $next_length > $maximum_line_length;
+
+            # To prevent blinkers we will avoid leaving a token exactly at
+            # the line length limit unless it is the last token or one of
+            # several "good" types.
+            #
+            # The following code was a blinker with -pbp before this
+            # modification:
+##                    $last_nonblank_token eq '('
+##                        && $is_indirect_object_taker{ $paren_type
+##                            [$paren_depth] }
+            # The issue causing the problem is that if the
+            # term [$paren_depth] gets broken across a line then
+            # the whitespace routine doesn't see both opening and closing
+            # brackets and will format like '[ $paren_depth ]'.  This
+            # leads to an oscillation in length depending if we break
+            # before the closing bracket or not.
+            if (  !$too_long
+                && $i_test + 1 < $imax
+                && $next_nonblank_type ne ','
+                && !$is_closing_type{$next_nonblank_type} )
+            {
+                $too_long = $next_length >= $maximum_line_length;
+                DEBUG_BREAK_LINES && do {
+                    $Msg .= " :too_long=$too_long" if ($too_long);
+                }
+            }
+        }
+
+        DEBUG_BREAK_LINES && do {
+            my $ltok = $token;
+            my $rtok =
+              $next_nonblank_token ? $next_nonblank_token : EMPTY_STRING;
+            my $i_testp2 = $i_test + 2;
+            if ( $i_testp2 > $max_index_to_go + 1 ) {
+                $i_testp2 = $max_index_to_go + 1;
+            }
+            if ( length($ltok) > 6 ) { $ltok = substr( $ltok, 0, 8 ) }
+            if ( length($rtok) > 6 ) { $rtok = substr( $rtok, 0, 8 ) }
+            print STDOUT
+"BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] 2long=$too_long str=$strength    $ltok $rtok\n";
+        };
+
+        # allow one extra terminal token after exceeding line length
+        # if it would strand this token.
+        if (   $rOpts_fuzzy_line_length
+            && $too_long
+            && $i_lowest == $i_test
+            && $token_lengths_to_go[$i_test] > 1
+            && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' ) )
+        {
+            $too_long = 0;
+            DEBUG_BREAK_LINES && do {
+                $Msg .= " :do_not_strand next='$next_nonblank_type'";
+            };
+        }
+
+        # we are done if...
+        if (
+
+            # ... no more space and we have a break
+            $too_long && $i_lowest >= 0
+
+            # ... or no more tokens
+            || $i_test == $imax
+          )
+        {
+            DEBUG_BREAK_LINES && do {
+                $Msg .=
+" :Done-too_long=$too_long or i_lowest=$i_lowest or $i_test==imax";
+            };
+            last;
+        }
+    }
+
+    # it's always ok to break at imax if no other break was found
+    if ( $i_lowest < 0 ) { $i_lowest = $imax }
+
+    return ( $i_lowest, $lowest_strength, $leading_alignment_type, $Msg );
+} ## end sub break_lines_inner_loop
 
 sub do_colon_breaks {
     my ( $self, $ri_colon_breaks, $ri_first, $ri_last ) = @_;
