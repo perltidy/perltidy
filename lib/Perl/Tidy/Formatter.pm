@@ -21068,6 +21068,18 @@ EOM
         #---------------------------------------------------------------
         # go ahead and format as a table
         #---------------------------------------------------------------
+        $self->write_formatted_table( $number_of_fields, $comma_count,
+            $rcomma_index, $use_separate_first_term );
+        return;
+    } ## end sub set_comma_breakpoints_do
+
+    sub write_formatted_table {
+
+        # Write a table of comma separated items with fixed number of fields
+        my ( $self, $number_of_fields, $comma_count, $rcomma_index,
+            $use_separate_first_term )
+          = @_;
+
         write_logfile_entry(
             "List: auto formatting with $number_of_fields fields/row\n");
 
@@ -21081,7 +21093,7 @@ EOM
             $j += $number_of_fields;
         }
         return;
-    } ## end sub set_comma_breakpoints_do
+    }
 } ## end closure set_comma_breakpoints_do
 
 sub study_list_complexity {
