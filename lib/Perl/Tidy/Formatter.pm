@@ -17972,26 +17972,26 @@ sub break_long_lines {
         #-------------------------------------------------------
         # ?/: rule 1 : if a break here will separate a '?' on this
         # line from its closing ':', then break at the '?' instead.
+        # But do not break a sequential chain of ?/: statements
         #-------------------------------------------------------
-        foreach my $i ( $i_begin + 1 .. $i_lowest - 1 ) {
-            next unless ( $tokens_to_go[$i] eq '?' );
+        if ( @{$rcolon_list} && !$is_colon_chain ) {
+            foreach my $i ( $i_begin + 1 .. $i_lowest - 1 ) {
+                next unless ( $tokens_to_go[$i] eq '?' );
 
-            # do not break if probable sequence of ?/: statements
-            next if ($is_colon_chain);
+                # do not break if statement is broken by side comment
+                next
+                  if ( $tokens_to_go[$max_index_to_go] eq '#'
+                    && terminal_type_i( 0, $max_index_to_go ) !~ /^[\;\}]$/ );
 
-            # do not break if statement is broken by side comment
-            next
-              if ( $tokens_to_go[$max_index_to_go] eq '#'
-                && terminal_type_i( 0, $max_index_to_go ) !~ /^[\;\}]$/ );
+                # no break needed if matching : is also on the line
+                next
+                  if ( $mate_index_to_go[$i] >= 0
+                    && $mate_index_to_go[$i] <= $i_next_nonblank );
 
-            # no break needed if matching : is also on the line
-            next
-              if ( $mate_index_to_go[$i] >= 0
-                && $mate_index_to_go[$i] <= $i_next_nonblank );
-
-            $i_lowest = $i;
-            if ( $want_break_before{'?'} ) { $i_lowest-- }
-            last;
+                $i_lowest = $i;
+                if ( $want_break_before{'?'} ) { $i_lowest-- }
+                last;
+            }
         }
 
         # Break the line after the token with index i=$i_lowest
