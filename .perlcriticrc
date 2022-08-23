@@ -80,7 +80,7 @@ short_subroutine_statements = 2
 
 # The max values below can be reduced to locate code which might be simplified.
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=125
+max_mccabe=120
 [ControlStructures::ProhibitDeepNests]
 max_nests=7
 

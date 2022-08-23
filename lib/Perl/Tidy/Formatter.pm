@@ -15173,24 +15173,7 @@ EOM
         # unmask phantom semicolons
         #--------------------------
         if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-            my $i       = $imax;
-            my $tok     = ';';
-            my $tok_len = 1;
-            if ( $want_left_space{';'} != WS_NO ) {
-                $tok     = ' ;';
-                $tok_len = 2;
-            }
-            $tokens_to_go[$i]        = $tok;
-            $token_lengths_to_go[$i] = $tok_len;
-            my $KK = $K_to_go[$i];
-            $rLL->[$KK]->[_TOKEN_]        = $tok;
-            $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
-            my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-            $self->note_added_semicolon($line_number);
-
-            foreach ( $imax .. $max_index_to_go ) {
-                $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
-            }
+            $self->unmask_phantom_semicolon($imax);
         }
 
         if ( $rOpts_one_line_block_semicolons == 0 ) {
@@ -15241,6 +15224,30 @@ EOM
 
         return;
     } ## end sub grind_batch_of_CODE
+
+    sub unmask_phantom_semicolon {
+        my ( $self, $imax ) = @_;
+        my $rLL     = $self->[_rLL_];
+        my $i       = $imax;
+        my $tok     = ';';
+        my $tok_len = 1;
+        if ( $want_left_space{';'} != WS_NO ) {
+            $tok     = ' ;';
+            $tok_len = 2;
+        }
+        $tokens_to_go[$i]        = $tok;
+        $token_lengths_to_go[$i] = $tok_len;
+        my $KK = $K_to_go[$i];
+        $rLL->[$KK]->[_TOKEN_]        = $tok;
+        $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
+        my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
+        $self->note_added_semicolon($line_number);
+
+        foreach ( $imax .. $max_index_to_go ) {
+            $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
+        }
+        return;
+    }
 
     sub save_opening_indentation {
 
@@ -20762,46 +20769,19 @@ EOM
             )
           )
         {
-            my $available_spaces =
-              $self->get_available_spaces_to_go($i_first_comma);
-            if ( $available_spaces > 0 ) {
+            ( $number_of_fields, $number_of_fields_best, $columns ) =
+              $self->lp_table_fix(
 
-                my $spaces_wanted = $max_width - $columns;    # for 1 field
+                $columns,
+                $i_first_comma,
+                $max_width,
+                $number_of_fields,
+                $number_of_fields_best,
+                $odd_or_even,
+                $pair_width,
+                $ritem_lengths,
 
-                if ( $number_of_fields_best == 0 ) {
-                    $number_of_fields_best =
-                      get_maximum_fields_wanted($ritem_lengths);
-                }
-
-                if ( $number_of_fields_best != 1 ) {
-                    my $spaces_wanted_2 =
-                      1 + $pair_width - $columns;    # for 2 fields
-                    if ( $available_spaces > $spaces_wanted_2 ) {
-                        $spaces_wanted = $spaces_wanted_2;
-                    }
-                }
-
-                if ( $spaces_wanted > 0 ) {
-                    my $deleted_spaces =
-                      $self->reduce_lp_indentation( $i_first_comma,
-                        $spaces_wanted );
-
-                    # redo the math
-                    if ( $deleted_spaces > 0 ) {
-                        $columns = table_columns_available($i_first_comma);
-                        $number_of_fields_max =
-                          maximum_number_of_fields( $columns, $odd_or_even,
-                            $max_width, $pair_width );
-                        $number_of_fields = $number_of_fields_max;
-
-                        if (   $number_of_fields_best == 1
-                            && $number_of_fields >= 1 )
-                        {
-                            $number_of_fields = $number_of_fields_best;
-                        }
-                    }
-                }
-            }
+              );
         }
 
         # try for one column if two won't work
@@ -21075,6 +21055,66 @@ EOM
             $rcomma_index, $use_separate_first_term );
         return;
     } ## end sub set_comma_breakpoints_do
+
+    sub lp_table_fix {
+
+        # try to undo some -lp indentation to improve table formatting
+
+        my (
+
+            $self,
+
+            $columns,
+            $i_first_comma,
+            $max_width,
+            $number_of_fields,
+            $number_of_fields_best,
+            $odd_or_even,
+            $pair_width,
+            $ritem_lengths,
+
+        ) = @_;
+
+        my $available_spaces =
+          $self->get_available_spaces_to_go($i_first_comma);
+        if ( $available_spaces > 0 ) {
+
+            my $spaces_wanted = $max_width - $columns;    # for 1 field
+
+            if ( $number_of_fields_best == 0 ) {
+                $number_of_fields_best =
+                  get_maximum_fields_wanted($ritem_lengths);
+            }
+
+            if ( $number_of_fields_best != 1 ) {
+                my $spaces_wanted_2 = 1 + $pair_width - $columns; # for 2 fields
+                if ( $available_spaces > $spaces_wanted_2 ) {
+                    $spaces_wanted = $spaces_wanted_2;
+                }
+            }
+
+            if ( $spaces_wanted > 0 ) {
+                my $deleted_spaces =
+                  $self->reduce_lp_indentation( $i_first_comma,
+                    $spaces_wanted );
+
+                # redo the math
+                if ( $deleted_spaces > 0 ) {
+                    $columns = table_columns_available($i_first_comma);
+                    $number_of_fields =
+                      maximum_number_of_fields( $columns, $odd_or_even,
+                        $max_width, $pair_width );
+
+                    if (   $number_of_fields_best == 1
+                        && $number_of_fields >= 1 )
+                    {
+                        $number_of_fields = $number_of_fields_best;
+                    }
+                }
+            }
+        }
+        return ( $number_of_fields, $number_of_fields_best, $columns );
+    } ## end sub lp_table_fix
 
     sub write_formatted_table {
 
