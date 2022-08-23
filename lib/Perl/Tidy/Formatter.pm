@@ -25197,7 +25197,7 @@ sub make_paren_name {
             $rpatterns,  $ri_first,
             $ri_last,    $rindentation_list,
             $level_jump, $starting_in_quote,
-            $is_static_block_comment,
+            $is_static_block_comment
         ) = @_;
 
         # Find the last code token of this line
@@ -25221,9 +25221,6 @@ sub make_paren_name {
         my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
         my $seqno_beg           = $type_sequence_to_go[$ibeg];
         my $is_closing_type_beg = $is_closing_type{$type_beg};
-
-        my $ris_bli_container = $self->[_ris_bli_container_];
-        my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
         # QW INDENTATION PATCH 3:
         my $seqno_qw_closing;
@@ -25275,8 +25272,403 @@ sub make_paren_name {
         #       2 - vertically align with opening token
         #       3 - indent
         #---------------------------------------------------------
+
+        my $adjust_indentation         = 0;
+        my $default_adjust_indentation = 0;
+
+        # Parameters needed for option 2, aligning with opening token:
+        my (
+            $opening_indentation, $opening_offset,
+            $is_leading,          $opening_exists
+        );
+
+        #-------------------------------------
+        # Section 1A:
+        # if line starts with a sequenced item
+        #-------------------------------------
+        if ( $seqno_beg || $seqno_qw_closing ) {
+
+            # This can be tedious so we let a sub do it
+            (
+                $adjust_indentation,  $default_adjust_indentation,
+                $opening_indentation, $opening_offset,
+                $is_leading,          $opening_exists
+              )
+              = $self->get_closing_token_indentation(
+
+                $ibeg,
+                $iend,
+                $ri_first,
+                $ri_last,
+                $rindentation_list,
+                $level_jump,
+                $i_terminal,
+                $is_semicolon_terminated,
+                $seqno_qw_closing,
+
+              );
+        }
+
+        #--------------------------------------------------------
+        # Section 1B:
+        # if at ');', '};', '>;', and '];' of a terminal qw quote
+        #--------------------------------------------------------
+        elsif (
+               substr( $rpatterns->[0], 0, 2 ) eq 'qb'
+            && substr( $rfields->[0], -1, 1 ) eq ';'
+            ##         $rpatterns->[0] =~ /^qb*;$/
+            && $rfields->[0] =~ /^([\)\}\]\>]);$/
+          )
+        {
+            if ( $closing_token_indentation{$1} == 0 ) {
+                $adjust_indentation = 1;
+            }
+            else {
+                $adjust_indentation = 3;
+            }
+        }
+
+        #---------------------------------------------------------
+        # Section 2: set indentation according to flag set above
+        #
+        # Select the indentation object to define leading
+        # whitespace.  If we are outdenting something like '} } );'
+        # then we want to use one level below the last token
+        # ($i_terminal) in order to get it to fully outdent through
+        # all levels.
+        #---------------------------------------------------------
+        my $indentation;
+        my $lev;
+        my $level_end = $levels_to_go[$iend];
+
+        #------------------------------------
+        # Section 2A: adjust_indentation == 0
+        # No change in indentation
+        #------------------------------------
+        if ( $adjust_indentation == 0 ) {
+            $indentation = $leading_spaces_beg;
+            $lev         = $level_beg;
+        }
+
+        #-------------------------------------------------------------------
+        # Secton 2B: adjust_indentation == 1
+        # Change the indentation to be that of a different token on the line
+        #-------------------------------------------------------------------
+        elsif ( $adjust_indentation == 1 ) {
+
+            # Previously, the indentation of the terminal token was used:
+            # OLD CODING:
+            # $indentation = $reduced_spaces_to_go[$i_terminal];
+            # $lev         = $levels_to_go[$i_terminal];
+
+            # Generalization for MOJO patch:
+            # Use the lowest level indentation of the tokens on the line.
+            # For example, here we can use the indentation of the ending ';':
+            #    } until ($selection > 0 and $selection < 10);   # ok to use ';'
+            # But this will not outdent if we use the terminal indentation:
+            #    )->then( sub {      # use indentation of the ->, not the {
+            # Warning: reduced_spaces_to_go[] may be a reference, do not
+            # do numerical checks with it
+
+            my $i_ind = $ibeg;
+            $indentation = $reduced_spaces_to_go[$i_ind];
+            $lev         = $levels_to_go[$i_ind];
+            while ( $i_ind < $i_terminal ) {
+                $i_ind++;
+                if ( $levels_to_go[$i_ind] < $lev ) {
+                    $indentation = $reduced_spaces_to_go[$i_ind];
+                    $lev         = $levels_to_go[$i_ind];
+                }
+            }
+        }
+
+        #--------------------------------------------------------------
+        # Secton 2C: adjust_indentation == 2
+        # Handle indented closing token which aligns with opening token
+        #--------------------------------------------------------------
+        elsif ( $adjust_indentation == 2 ) {
+
+            # handle option to align closing token with opening token
+            $lev = $level_beg;
+
+            # calculate spaces needed to align with opening token
+            my $space_count =
+              get_spaces($opening_indentation) + $opening_offset;
+
+            # Indent less than the previous line.
+            #
+            # Problem: For -lp we don't exactly know what it was if there
+            # were recoverable spaces sent to the aligner.  A good solution
+            # would be to force a flush of the vertical alignment buffer, so
+            # that we would know.  For now, this rule is used for -lp:
+            #
+            # When the last line did not start with a closing token we will
+            # be optimistic that the aligner will recover everything wanted.
+            #
+            # This rule will prevent us from breaking a hierarchy of closing
+            # tokens, and in a worst case will leave a closing paren too far
+            # indented, but this is better than frequently leaving it not
+            # indented enough.
+            my $last_spaces = get_spaces($last_indentation_written);
+
+            if ( ref($last_indentation_written)
+                && !$is_closing_token{$last_leading_token} )
+            {
+                $last_spaces +=
+                  get_recoverable_spaces($last_indentation_written);
+            }
+
+            # reset the indentation to the new space count if it works
+            # only options are all or none: nothing in-between looks good
+            $lev = $level_beg;
+
+            my $diff = $last_spaces - $space_count;
+            if ( $diff > 0 ) {
+                $indentation = $space_count;
+            }
+            else {
+
+                # We need to fix things ... but there is no good way to do it.
+                # The best solution is for the user to use a longer maximum
+                # line length.  We could get a smooth variation if we just move
+                # the paren in using
+                #    $space_count -= ( 1 - $diff );
+                # But unfortunately this can give a rather unbalanced look.
+
+                # For -xlp we currently allow a tolerance of one indentation
+                # level and then revert to a simpler default.  This will jump
+                # suddenly but keeps a balanced look.
+                if (   $rOpts_extended_line_up_parentheses
+                    && $diff >= -$rOpts_indent_columns
+                    && $space_count > $leading_spaces_beg )
+                {
+                    $indentation = $space_count;
+                }
+
+                # Otherwise revert to defaults
+                elsif ( $default_adjust_indentation == 0 ) {
+                    $indentation = $leading_spaces_beg;
+                }
+                elsif ( $default_adjust_indentation == 1 ) {
+                    $indentation = $reduced_spaces_to_go[$i_terminal];
+                    $lev         = $levels_to_go[$i_terminal];
+                }
+            }
+        }
+
+        #-------------------------------------------------------------
+        # Secton 2D: adjust_indentation == 3
+        # Full indentation of closing tokens (-icb and -icp or -cti=2)
+        #-------------------------------------------------------------
+        else {
+
+            # handle -icb (indented closing code block braces)
+            # Updated method for indented block braces: indent one full level if
+            # there is no continuation indentation.  This will occur for major
+            # structures such as sub, if, else, but not for things like map
+            # blocks.
+            #
+            # Note: only code blocks without continuation indentation are
+            # handled here (if, else, unless, ..). In the following snippet,
+            # the terminal brace of the sort block will have continuation
+            # indentation as shown so it will not be handled by the coding
+            # here.  We would have to undo the continuation indentation to do
+            # this, but it probably looks ok as is.  This is a possible future
+            # update for semicolon terminated lines.
+            #
+            #     if ($sortby eq 'date' or $sortby eq 'size') {
+            #         @files = sort {
+            #             $file_data{$a}{$sortby} <=> $file_data{$b}{$sortby}
+            #                 or $a cmp $b
+            #                 } @files;
+            #         }
+            #
+            if (   $block_type_beg
+                && $ci_levels_to_go[$i_terminal] == 0 )
+            {
+                my $spaces = get_spaces( $leading_spaces_to_go[$i_terminal] );
+                $indentation = $spaces + $rOpts_indent_columns;
+
+                # NOTE: for -lp we could create a new indentation object, but
+                # there is probably no need to do it
+            }
+
+            # handle -icp and any -icb block braces which fall through above
+            # test such as the 'sort' block mentioned above.
+            else {
+
+                # There are currently two ways to handle -icp...
+                # One way is to use the indentation of the previous line:
+                # $indentation = $last_indentation_written;
+
+                # The other way is to use the indentation that the previous line
+                # would have had if it hadn't been adjusted:
+                $indentation = $last_unadjusted_indentation;
+
+                # Current method: use the minimum of the two. This avoids
+                # inconsistent indentation.
+                if ( get_spaces($last_indentation_written) <
+                    get_spaces($indentation) )
+                {
+                    $indentation = $last_indentation_written;
+                }
+            }
+
+            # use previous indentation but use own level
+            # to cause list to be flushed properly
+            $lev = $level_beg;
+        }
+
+        #-------------------------------------------------------------
+        # Remember indentation except for multi-line quotes, which get
+        # no indentation
+        #-------------------------------------------------------------
+        if ( !( $ibeg == 0 && $starting_in_quote ) ) {
+            $last_indentation_written    = $indentation;
+            $last_unadjusted_indentation = $leading_spaces_beg;
+            $last_leading_token          = $token_beg;
+
+            # Patch to make a line which is the end of a qw quote work with the
+            # -lp option.  Make $token_beg look like a closing token as some
+            # type even if it is not.  This variable will become
+            # $last_leading_token at the end of this loop.  Then, if the -lp
+            # style is selected, and the next line is also a
+            # closing token, it will not get more indentation than this line.
+            # We need to do this because qw quotes (at present) only get
+            # continuation indentation, not one level of indentation, so we
+            # need to turn off the -lp indentation.
+
+            # ... a picture is worth a thousand words:
+
+            # perltidy -wn -gnu (Without this patch):
+            #   ok(defined(
+            #       $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
+            #       2981014)])
+            #             ));
+
+            # perltidy -wn -gnu (With this patch):
+            #  ok(defined(
+            #      $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
+            #      2981014)])
+            #  ));
+            if ( $seqno_qw_closing
+                && ( length($token_beg) > 1 || $token_beg eq '>' ) )
+            {
+                $last_leading_token = ')';
+            }
+        }
+
+        #---------------------------------------------------------------------
+        # Rule: lines with leading closing tokens should not be outdented more
+        # than the line which contained the corresponding opening token.
+        #---------------------------------------------------------------------
+
+        # Updated per bug report in alex_bug.pl: we must not
+        # mess with the indentation of closing logical braces, so
+        # we must treat something like '} else {' as if it were
+        # an isolated brace
+        my $is_isolated_block_brace = $block_type_beg
+          && ( $i_terminal == $ibeg
+            || $is_if_elsif_else_unless_while_until_for_foreach{$block_type_beg}
+          );
+
+        # only do this for a ':; which is aligned with its leading '?'
+        my $is_unaligned_colon = $type_beg eq ':' && !$is_leading;
+
+        if (
+            defined($opening_indentation)
+            && !$leading_paren_arrow    # MOJO patch
+            && !$is_isolated_block_brace
+            && !$is_unaligned_colon
+          )
+        {
+            if ( get_spaces($opening_indentation) > get_spaces($indentation) ) {
+                $indentation = $opening_indentation;
+            }
+        }
+
+        #----------------------------------------------------
+        # remember the indentation of each line of this batch
+        #----------------------------------------------------
+        push @{$rindentation_list}, $indentation;
+
+        #---------------------------------------------
+        # outdent lines with certain leading tokens...
+        #---------------------------------------------
+        if (
+
+            # must be first word of this batch
+            $ibeg == 0
+
+            # and ...
+            && (
+
+                # certain leading keywords if requested
+                $rOpts_outdent_keywords
+                && $type_beg eq 'k'
+                && $outdent_keyword{$token_beg}
+
+                # or labels if requested
+                || $rOpts_outdent_labels && $type_beg eq 'J'
+
+                # or static block comments if requested
+                || $is_static_block_comment
+                && $rOpts_outdent_static_block_comments
+            )
+          )
+        {
+            my $space_count = leading_spaces_to_go($ibeg);
+            if ( $space_count > 0 ) {
+                $space_count -= $rOpts_continuation_indentation;
+                $is_outdented_line = 1;
+                if ( $space_count < 0 ) { $space_count = 0 }
+
+                # do not promote a spaced static block comment to non-spaced;
+                # this is not normally necessary but could be for some
+                # unusual user inputs (such as -ci = -i)
+                if ( $type_beg eq '#' && $space_count == 0 ) {
+                    $space_count = 1;
+                }
+
+                $indentation = $space_count;
+            }
+        }
+
+        return ( $indentation, $lev, $level_end, $i_terminal,
+            $is_outdented_line );
+    } ## end sub get_final_indentation
+
+    sub get_closing_token_indentation {
+
+        # Determine indentation adjustment for a line with a leading closing
+        # token - i.e. one of these:     ) ] } :
+
+        my (
+            $self,
+
+            $ibeg,
+            $iend,
+            $ri_first,
+            $ri_last,
+            $rindentation_list,
+            $level_jump,
+            $i_terminal,
+            $is_semicolon_terminated,
+            $seqno_qw_closing,
+
+        ) = @_;
+
         my $adjust_indentation         = 0;
         my $default_adjust_indentation = $adjust_indentation;
+        my $terminal_type              = $types_to_go[$i_terminal];
+
+        my $type_beg            = $types_to_go[$ibeg];
+        my $token_beg           = $tokens_to_go[$ibeg];
+        my $level_beg           = $levels_to_go[$ibeg];
+        my $block_type_beg      = $block_type_to_go[$ibeg];
+        my $leading_spaces_beg  = $leading_spaces_to_go[$ibeg];
+        my $seqno_beg           = $type_sequence_to_go[$ibeg];
+        my $is_closing_type_beg = $is_closing_type{$type_beg};
 
         my (
             $opening_indentation, $opening_offset,
@@ -25302,6 +25694,9 @@ sub make_paren_name {
                 if ( $Kterm == $K_beg ) { $adjust_indentation = 1 }
             }
         }
+
+        my $ris_bli_container = $self->[_ris_bli_container_];
+        my $is_bli_beg = $seqno_beg ? $ris_bli_container->{$seqno_beg} : 0;
 
         # Update the $is_bli flag as we go. It is initially 1.
         # We note seeing a leading opening brace by setting it to 2.
@@ -25615,22 +26010,6 @@ sub make_paren_name {
             }
         } ## end if ( $is_closing_type_beg || $seqno_qw_closing )
 
-        # if at ');', '};', '>;', and '];' of a terminal qw quote
-        elsif (
-               substr( $rpatterns->[0], 0, 2 ) eq 'qb'
-            && substr( $rfields->[0], -1, 1 ) eq ';'
-            ##&& $rpatterns->[0] =~ /^qb*;$/
-            && $rfields->[0] =~ /^([\)\}\]\>]);$/
-          )
-        {
-            if ( $closing_token_indentation{$1} == 0 ) {
-                $adjust_indentation = 1;
-            }
-            else {
-                $adjust_indentation = 3;
-            }
-        }
-
         # if line begins with a ':', align it with any
         # previous line leading with corresponding ?
         elsif ( $type_beg eq ':' ) {
@@ -25643,295 +26022,11 @@ sub make_paren_name {
             if ($is_leading) { $adjust_indentation = 2; }
         }
 
-        #---------------------------------------------------------
-        # Section 2: set indentation according to flag set above
-        #
-        # Select the indentation object to define leading
-        # whitespace.  If we are outdenting something like '} } );'
-        # then we want to use one level below the last token
-        # ($i_terminal) in order to get it to fully outdent through
-        # all levels.
-        #---------------------------------------------------------
-        my $indentation;
-        my $lev;
-        my $level_end = $levels_to_go[$iend];
+        return ( $adjust_indentation, $default_adjust_indentation,
+            $opening_indentation, $opening_offset,
+            $is_leading,          $opening_exists );
+    }
 
-        if ( $adjust_indentation == 0 ) {
-            $indentation = $leading_spaces_beg;
-            $lev         = $level_beg;
-        }
-        elsif ( $adjust_indentation == 1 ) {
-
-            # Change the indentation to be that of a different token on the line
-            # Previously, the indentation of the terminal token was used:
-            # OLD CODING:
-            # $indentation = $reduced_spaces_to_go[$i_terminal];
-            # $lev         = $levels_to_go[$i_terminal];
-
-            # Generalization for MOJO patch:
-            # Use the lowest level indentation of the tokens on the line.
-            # For example, here we can use the indentation of the ending ';':
-            #    } until ($selection > 0 and $selection < 10);   # ok to use ';'
-            # But this will not outdent if we use the terminal indentation:
-            #    )->then( sub {      # use indentation of the ->, not the {
-            # Warning: reduced_spaces_to_go[] may be a reference, do not
-            # do numerical checks with it
-
-            my $i_ind = $ibeg;
-            $indentation = $reduced_spaces_to_go[$i_ind];
-            $lev         = $levels_to_go[$i_ind];
-            while ( $i_ind < $i_terminal ) {
-                $i_ind++;
-                if ( $levels_to_go[$i_ind] < $lev ) {
-                    $indentation = $reduced_spaces_to_go[$i_ind];
-                    $lev         = $levels_to_go[$i_ind];
-                }
-            }
-        }
-
-        # handle indented closing token which aligns with opening token
-        elsif ( $adjust_indentation == 2 ) {
-
-            # handle option to align closing token with opening token
-            $lev = $level_beg;
-
-            # calculate spaces needed to align with opening token
-            my $space_count =
-              get_spaces($opening_indentation) + $opening_offset;
-
-            # Indent less than the previous line.
-            #
-            # Problem: For -lp we don't exactly know what it was if there
-            # were recoverable spaces sent to the aligner.  A good solution
-            # would be to force a flush of the vertical alignment buffer, so
-            # that we would know.  For now, this rule is used for -lp:
-            #
-            # When the last line did not start with a closing token we will
-            # be optimistic that the aligner will recover everything wanted.
-            #
-            # This rule will prevent us from breaking a hierarchy of closing
-            # tokens, and in a worst case will leave a closing paren too far
-            # indented, but this is better than frequently leaving it not
-            # indented enough.
-            my $last_spaces = get_spaces($last_indentation_written);
-
-            if ( ref($last_indentation_written)
-                && !$is_closing_token{$last_leading_token} )
-            {
-                $last_spaces +=
-                  get_recoverable_spaces($last_indentation_written);
-            }
-
-            # reset the indentation to the new space count if it works
-            # only options are all or none: nothing in-between looks good
-            $lev = $level_beg;
-
-            my $diff = $last_spaces - $space_count;
-            if ( $diff > 0 ) {
-                $indentation = $space_count;
-            }
-            else {
-
-                # We need to fix things ... but there is no good way to do it.
-                # The best solution is for the user to use a longer maximum
-                # line length.  We could get a smooth variation if we just move
-                # the paren in using
-                #    $space_count -= ( 1 - $diff );
-                # But unfortunately this can give a rather unbalanced look.
-
-                # For -xlp we currently allow a tolerance of one indentation
-                # level and then revert to a simpler default.  This will jump
-                # suddenly but keeps a balanced look.
-                if (   $rOpts_extended_line_up_parentheses
-                    && $diff >= -$rOpts_indent_columns
-                    && $space_count > $leading_spaces_beg )
-                {
-                    $indentation = $space_count;
-                }
-
-                # Otherwise revert to defaults
-                elsif ( $default_adjust_indentation == 0 ) {
-                    $indentation = $leading_spaces_beg;
-                }
-                elsif ( $default_adjust_indentation == 1 ) {
-                    $indentation = $reduced_spaces_to_go[$i_terminal];
-                    $lev         = $levels_to_go[$i_terminal];
-                }
-            }
-        }
-
-        # Full indentation of closing tokens (-icb and -icp or -cti=2)
-        else {
-
-            # handle -icb (indented closing code block braces)
-            # Updated method for indented block braces: indent one full level if
-            # there is no continuation indentation.  This will occur for major
-            # structures such as sub, if, else, but not for things like map
-            # blocks.
-            #
-            # Note: only code blocks without continuation indentation are
-            # handled here (if, else, unless, ..). In the following snippet,
-            # the terminal brace of the sort block will have continuation
-            # indentation as shown so it will not be handled by the coding
-            # here.  We would have to undo the continuation indentation to do
-            # this, but it probably looks ok as is.  This is a possible future
-            # update for semicolon terminated lines.
-            #
-            #     if ($sortby eq 'date' or $sortby eq 'size') {
-            #         @files = sort {
-            #             $file_data{$a}{$sortby} <=> $file_data{$b}{$sortby}
-            #                 or $a cmp $b
-            #                 } @files;
-            #         }
-            #
-            if (   $block_type_beg
-                && $ci_levels_to_go[$i_terminal] == 0 )
-            {
-                my $spaces = get_spaces( $leading_spaces_to_go[$i_terminal] );
-                $indentation = $spaces + $rOpts_indent_columns;
-
-                # NOTE: for -lp we could create a new indentation object, but
-                # there is probably no need to do it
-            }
-
-            # handle -icp and any -icb block braces which fall through above
-            # test such as the 'sort' block mentioned above.
-            else {
-
-                # There are currently two ways to handle -icp...
-                # One way is to use the indentation of the previous line:
-                # $indentation = $last_indentation_written;
-
-                # The other way is to use the indentation that the previous line
-                # would have had if it hadn't been adjusted:
-                $indentation = $last_unadjusted_indentation;
-
-                # Current method: use the minimum of the two. This avoids
-                # inconsistent indentation.
-                if ( get_spaces($last_indentation_written) <
-                    get_spaces($indentation) )
-                {
-                    $indentation = $last_indentation_written;
-                }
-            }
-
-            # use previous indentation but use own level
-            # to cause list to be flushed properly
-            $lev = $level_beg;
-        }
-
-        # remember indentation except for multi-line quotes, which get
-        # no indentation
-        unless ( $ibeg == 0 && $starting_in_quote ) {
-            $last_indentation_written    = $indentation;
-            $last_unadjusted_indentation = $leading_spaces_beg;
-            $last_leading_token          = $token_beg;
-
-            # Patch to make a line which is the end of a qw quote work with the
-            # -lp option.  Make $token_beg look like a closing token as some
-            # type even if it is not.  This variable will become
-            # $last_leading_token at the end of this loop.  Then, if the -lp
-            # style is selected, and the next line is also a
-            # closing token, it will not get more indentation than this line.
-            # We need to do this because qw quotes (at present) only get
-            # continuation indentation, not one level of indentation, so we
-            # need to turn off the -lp indentation.
-
-            # ... a picture is worth a thousand words:
-
-            # perltidy -wn -gnu (Without this patch):
-            #   ok(defined(
-            #       $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
-            #       2981014)])
-            #             ));
-
-            # perltidy -wn -gnu (With this patch):
-            #  ok(defined(
-            #      $seqio = $gb->get_Stream_by_batch([qw(J00522 AF303112
-            #      2981014)])
-            #  ));
-            if ( $seqno_qw_closing
-                && ( length($token_beg) > 1 || $token_beg eq '>' ) )
-            {
-                $last_leading_token = ')';
-            }
-        }
-
-        # be sure lines with leading closing tokens are not outdented more
-        # than the line which contained the corresponding opening token.
-
-        #--------------------------------------------------------
-        # updated per bug report in alex_bug.pl: we must not
-        # mess with the indentation of closing logical braces so
-        # we must treat something like '} else {' as if it were
-        # an isolated brace
-        #--------------------------------------------------------
-        my $is_isolated_block_brace = $block_type_beg
-          && ( $i_terminal == $ibeg
-            || $is_if_elsif_else_unless_while_until_for_foreach{$block_type_beg}
-          );
-
-        # only do this for a ':; which is aligned with its leading '?'
-        my $is_unaligned_colon = $type_beg eq ':' && !$is_leading;
-
-        if (
-            defined($opening_indentation)
-            && !$leading_paren_arrow    # MOJO patch
-            && !$is_isolated_block_brace
-            && !$is_unaligned_colon
-          )
-        {
-            if ( get_spaces($opening_indentation) > get_spaces($indentation) ) {
-                $indentation = $opening_indentation;
-            }
-        }
-
-        # remember the indentation of each line of this batch
-        push @{$rindentation_list}, $indentation;
-
-        # outdent lines with certain leading tokens...
-        if (
-
-            # must be first word of this batch
-            $ibeg == 0
-
-            # and ...
-            && (
-
-                # certain leading keywords if requested
-                $rOpts_outdent_keywords
-                && $type_beg eq 'k'
-                && $outdent_keyword{$token_beg}
-
-                # or labels if requested
-                || $rOpts_outdent_labels && $type_beg eq 'J'
-
-                # or static block comments if requested
-                || $is_static_block_comment
-                && $rOpts_outdent_static_block_comments
-            )
-          )
-        {
-            my $space_count = leading_spaces_to_go($ibeg);
-            if ( $space_count > 0 ) {
-                $space_count -= $rOpts_continuation_indentation;
-                $is_outdented_line = 1;
-                if ( $space_count < 0 ) { $space_count = 0 }
-
-                # do not promote a spaced static block comment to non-spaced;
-                # this is not normally necessary but could be for some
-                # unusual user inputs (such as -ci = -i)
-                if ( $type_beg eq '#' && $space_count == 0 ) {
-                    $space_count = 1;
-                }
-
-                $indentation = $space_count;
-            }
-        }
-
-        return ( $indentation, $lev, $level_end, $i_terminal,
-            $is_outdented_line );
-    } ## end sub get_final_indentation
 } ## end closure get_final_indentation
 
 sub get_opening_indentation {
