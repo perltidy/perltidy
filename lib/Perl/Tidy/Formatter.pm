@@ -17864,23 +17864,6 @@ sub break_long_lines {
     # maximum line length.
     #-----------------------------------------------------------
 
-    # Define an array of indexes for inserting newline characters to
-    # keep the line lengths below the maximum desired length.  There is
-    # an implied break after the last token, so it need not be included.
-
-    # Method:
-    # This routine is part of series of routines which adjust line
-    # lengths.  It is only called if a statement is longer than the
-    # maximum line length, or if a preliminary scanning located
-    # desirable break points.   Sub break_lists has already looked at
-    # these tokens and set breakpoints (in array
-    # $forced_breakpoint_to_go[$i]) where it wants breaks (for example
-    # after commas, after opening parens, and before closing parens).
-    # This routine will honor these breakpoints and also add additional
-    # breakpoints as necessary to keep the line length below the maximum
-    # requested.  It bases its decision on where the 'bond strength' is
-    # lowest.
-
     # Output: returns references to the arrays:
     #  @i_first
     #  @i_last
@@ -17897,11 +17880,23 @@ sub break_long_lines {
     # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
     # order.
 
+    # Method:
+    # This routine is called if a statement is longer than the maximum line
+    # length, or if a preliminary scanning located desirable break points.
+    # Sub break_lists has already looked at these tokens and set breakpoints
+    # (in array $forced_breakpoint_to_go[$i]) where it wants breaks (for
+    # example after commas, after opening parens, and before closing parens).
+    # This routine will honor these breakpoints and also add additional
+    # breakpoints as necessary to keep the line length below the maximum
+    # requested.  It bases its decision on where the 'bond strength' is
+    # lowest.
+
     my @i_first        = ();    # the first index to output
     my @i_last         = ();    # the last index to output
     my @i_colon_breaks = ();    # needed to decide if we have to break at ?'s
     if ( $types_to_go[0] eq ':' ) { push @i_colon_breaks, 0 }
 
+    # Get the 'bond strengths' between tokens
     my $rbond_strength_to_go = $self->set_bond_strengths();
 
     # Add any comma bias set by break_lists
@@ -17964,72 +17959,80 @@ sub break_long_lines {
 
           );
 
-        #--------------------------------------------------------------
         # Now make any adjustments required by ternary breakpoint rules
-        #--------------------------------------------------------------
-        my $i_next_nonblank = $inext_to_go[$i_lowest];
+        if ( @{$rcolon_list} ) {
 
-        #-------------------------------------------------------
-        # ?/: rule 1 : if a break here will separate a '?' on this
-        # line from its closing ':', then break at the '?' instead.
-        # But do not break a sequential chain of ?/: statements
-        #-------------------------------------------------------
-        if ( @{$rcolon_list} && !$is_colon_chain ) {
-            foreach my $i ( $i_begin + 1 .. $i_lowest - 1 ) {
-                next unless ( $tokens_to_go[$i] eq '?' );
+            my $i_next_nonblank = $inext_to_go[$i_lowest];
 
-                # do not break if statement is broken by side comment
-                next
-                  if ( $tokens_to_go[$max_index_to_go] eq '#'
-                    && terminal_type_i( 0, $max_index_to_go ) !~ /^[\;\}]$/ );
+            #-------------------------------------------------------
+            # ?/: rule 1 : if a break here will separate a '?' on this
+            # line from its closing ':', then break at the '?' instead.
+            # But do not break a sequential chain of ?/: statements
+            #-------------------------------------------------------
+            if ( !$is_colon_chain ) {
+                foreach my $i ( $i_begin + 1 .. $i_lowest - 1 ) {
+                    next unless ( $tokens_to_go[$i] eq '?' );
 
-                # no break needed if matching : is also on the line
-                next
-                  if ( $mate_index_to_go[$i] >= 0
-                    && $mate_index_to_go[$i] <= $i_next_nonblank );
+                    # do not break if statement is broken by side comment
+                    next
+                      if ( $tokens_to_go[$max_index_to_go] eq '#'
+                        && terminal_type_i( 0, $max_index_to_go ) !~
+                        /^[\;\}]$/ );
 
-                $i_lowest = $i;
-                if ( $want_break_before{'?'} ) { $i_lowest-- }
-                last;
+                    # no break needed if matching : is also on the line
+                    next
+                      if ( $mate_index_to_go[$i] >= 0
+                        && $mate_index_to_go[$i] <= $i_next_nonblank );
+
+                    $i_lowest = $i;
+                    if ( $want_break_before{'?'} ) { $i_lowest-- }
+                    $i_next_nonblank = $inext_to_go[$i_lowest];
+                    last;
+                }
             }
+
+            my $next_nonblank_type = $types_to_go[$i_next_nonblank];
+
+            #-------------------------------------------------------------
+            # ?/: rule 2 : if we break at a '?', then break at its ':'
+            #
+            # Note: this rule is also in sub break_lists to handle a break
+            # at the start and end of a line (in case breaks are dictated
+            # by side comments).
+            #-------------------------------------------------------------
+            if ( $next_nonblank_type eq '?' ) {
+                $self->set_closing_breakpoint($i_next_nonblank);
+            }
+            elsif ( $types_to_go[$i_lowest] eq '?' ) {
+                $self->set_closing_breakpoint($i_lowest);
+            }
+
+            #--------------------------------------------------------
+            # ?/: rule 3 : if we break at a ':' then we save
+            # its location for further work below.  We may need to go
+            # back and break at its '?'.
+            #--------------------------------------------------------
+            if ( $next_nonblank_type eq ':' ) {
+                push @i_colon_breaks, $i_next_nonblank;
+            }
+            elsif ( $types_to_go[$i_lowest] eq ':' ) {
+                push @i_colon_breaks, $i_lowest;
+            }
+
+            # here we should set breaks for all '?'/':' pairs which are
+            # separated by this line
         }
 
-        # Break the line after the token with index i=$i_lowest
-        $i_next_nonblank = $inext_to_go[$i_lowest];
-        my $next_nonblank_type = $types_to_go[$i_next_nonblank];
+        # guard against infinite loop (should never happen)
+        if ( $i_lowest <= $i_last_break ) {
+            DEVEL_MODE
+              && Fault("i_lowest=$i_lowest <= i_last_break=$i_last_break\n");
+            $i_lowest = $imax;
+        }
 
         DEBUG_BREAK_LINES
           && print STDOUT
 "BREAK: best is i = $i_lowest strength = $lowest_strength;\nReason>> $Msg\n";
-
-        #-------------------------------------------------------------
-        # ?/: rule 2 : if we break at a '?', then break at its ':'
-        #
-        # Note: this rule is also in sub break_lists to handle a break
-        # at the start and end of a line (in case breaks are dictated
-        # by side comments).
-        #-------------------------------------------------------------
-        if ( $next_nonblank_type eq '?' ) {
-            $self->set_closing_breakpoint($i_next_nonblank);
-        }
-        elsif ( $types_to_go[$i_lowest] eq '?' ) {
-            $self->set_closing_breakpoint($i_lowest);
-        }
-
-        #--------------------------------------------------------
-        # ?/: rule 3 : if we break at a ':' then we save
-        # its location for further work below.  We may need to go
-        # back and break at its '?'.
-        #--------------------------------------------------------
-        if ( $next_nonblank_type eq ':' ) {
-            push @i_colon_breaks, $i_next_nonblank;
-        }
-        elsif ( $types_to_go[$i_lowest] eq ':' ) {
-            push @i_colon_breaks, $i_lowest;
-        }
-
-        # here we should set breaks for all '?'/':' pairs which are
-        # separated by this line
 
         $line_count++;
 
