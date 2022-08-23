@@ -1,4 +1,4 @@
-# perlcritic is a good tool for locating potentially 'dodgy' coding.
+# perlcritic is a useful tool for locating potentially 'dodgy' coding.
 # This file customizes it to the specific needs of Perl::Tidy.
 
 # Some useful links:
@@ -8,13 +8,14 @@
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# I have found that using 'no critic' comments is very troublesome*, so
-# non-configurable policies are either 'on' or 'off'.
-# *perlcritic requires specifying a policy even in a side comment, which seems
-# pointless.  The very long policy names make a simple statement very hard to
-# read, and so long that side comment will usually exceed the desired line
-# length.
+# I have found that using 'no critic' comments is too troublesome*, so
+# non-configurable policies are either 'on' or 'off'.  
+# *perlcritic requires specifying a policy even in a side comment for a
+# single statement, which seems pointless.  And the very long policy names
+# make a simple statement very hard to read, and the side comment will often
+# exceed the desired line length, making it unclear what is going on.
 
+# severity = 1 gives the most strict checking.
 severity = 1
 
 verbose = %f: [%p] %m at line %l, column %c.\n
@@ -45,10 +46,11 @@ verbose = %f: [%p] %m at line %l, column %c.\n
 # Nested subs are used for error handling in Tidy.pm.
 [-Subroutines::ProhibitNestedSubs]
 
+# Don't require arg unpacking for very short (possibly time-critical) subs.
 [Subroutines::RequireArgUnpacking]
 short_subroutine_statements = 2
 
-# Completely Disagree. The advantages of 'use constant' greatly outweigh the
+# The advantages of 'use constant' greatly outweigh the
 # few disadvantages.  Perl::Tidy relies heavily on constants for efficient and
 # robust coding of array indexes and debug code, and to avoid autovivication
 # problems that would occur if hashes were used instead.
@@ -59,7 +61,7 @@ short_subroutine_statements = 2
 # my editor uses color to make it clear if interpolation is in effect.
 [-ValuesAndExpressions::RequireQuotedHeredocTerminator]
 
-# Perlcritic doesn't know ARGV actually is localized
+# Perlcritic doesn't know that ARGV in Perl::Tidy actually is localized
 [-Variables::RequireLocalizedPunctuationVars]
 
 # Unfortunately the perlcritic coding for this policy is buggy when lines=n is
@@ -77,10 +79,8 @@ short_subroutine_statements = 2
 [-ClassHierarchies::ProhibitAutoloading]
 
 # The max values below can be reduced to locate code which might be simplified.
-# There are a couple of complex routines in Formatter.pm which reach a mccabe
-# of 150 and cannot be simplified without significantly slowing down perltidy.
 [Subroutines::ProhibitExcessComplexity]
-max_mccabe=150
+max_mccabe=125
 [ControlStructures::ProhibitDeepNests]
 max_nests=7
 
@@ -135,15 +135,16 @@ max_nests=7
 # In some cases a postfix control shows the logical flow best
 [-ControlStructures::ProhibitPostfixControls]
 
-# Sometimes an unless block is clearer than an if block
-# For example, I prefer the first of these:
+# Sometimes an unless statement is clearer than an if block, so why not use
+# it?  For example, I might prefer the first of these:
 #  return unless ($everything_is_ok);
 # vs.
 #  return if (!$everything_is_ok);
 [-ControlStructures::ProhibitUnlessBlocks]
 
-# The very few instances of boolean grep are fine. Profiling shows that
-# changing them would not result in a measureable improvement in speed. 
+# The very few instances of boolean grep in Perl::Tidy are fine. Profiling
+# shows that changing them would not result in a measureable improvement in
+# speed.
 [-BuiltinFunctions::ProhibitBooleanGrep] 
 
 # The only escaped characters in Perl::Tidy are in code for detecting and
@@ -151,9 +152,8 @@ max_nests=7
 # best left unchanged.
 [-ValuesAndExpressions::ProhibitEscapedCharacters] 
 
-# These have been checked. This is a good idea but has to be turned off because
-# there are many cases where a number has been explained in a comment or is
-# obvious.
+# This is a good general idea but has to be turned off because there are many
+# cases where a number has been explained in a comment or is obvious.
 [-ValuesAndExpressions::ProhibitMagicNumbers]
 
 #--------------------------------------------------------------
@@ -188,8 +188,8 @@ max_nests=7
 [-RegularExpressions::RequireBracesForMultiline]
 [-RegularExpressions::ProhibitSingleCharAlternation]
 
-# Completely disagree. Double quotes are easier to read than single quotes and
-# allow a uniform style for quotes.  My editor has color coding which indicates
+# Disagree. Double quotes are easier to read than single quotes and allow a
+# uniform style for quotes.  My editor has color coding which indicates
 # interpolation. Double quotes do not increase processing time by any
 # measurable amount.  Using them as default simplfies making editing changes.
 # So skip this:
@@ -198,9 +198,8 @@ max_nests=7
 # These have been checked and are correct as written 
 [-ValuesAndExpressions::RequireInterpolationOfMetachars]
 
-# Completely disagree: parens can add clarity and may even be essential, for
-# example in ternary expressions. There is little to be gained by omitting
-# them.
+# Disagree: parens can add clarity and may even be essential, for example in
+# ternary expressions. There is little to be gained by omitting them.
 [-CodeLayout::ProhibitParensWithBuiltins] 
 
 # This is OK if we exclude 'print'. Most of the 'print' statements
