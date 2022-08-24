@@ -24759,6 +24759,8 @@ sub xlp_tweak {
 
         my $i_start        = $ibeg;
         my $depth          = 0;
+        my $i_depth_prev   = $i_start;
+        my $depth_prev     = $depth;
         my %container_name = ( 0 => EMPTY_STRING );
 
         my @tokens        = ();
@@ -24789,95 +24791,36 @@ sub xlp_tweak {
                 && !$is_my_local_our{ $tokens_to_go[$ibeg] }
                 && $levels_to_go[$ibeg] eq $levels_to_go[$iterm] )
             {
-
-                # Make a container name by combining all leading barewords,
-                # keywords and functions.
-                my $name  = EMPTY_STRING;
-                my $count = 0;
-                my $count_max;
-                my $iname_end;
-                my $ilast_blank;
-                for ( $ibeg .. $iterm ) {
-                    my $type = $types_to_go[$_];
-
-                    if ( $type eq 'b' ) {
-                        $ilast_blank = $_;
-                        next;
-                    }
-
-                    my $token = $tokens_to_go[$_];
-
-                    # Give up if we find an opening paren, binary operator or
-                    # comma within or after the proposed container name.
-                    if (   $token eq '('
-                        || $is_binary_type{$type}
-                        || $type eq 'k' && $is_binary_keyword{$token} )
-                    {
-                        $name = EMPTY_STRING;
-                        last;
-                    }
-
-                    # The container name is only built of certain types:
-                    last if ( !$is_kwU{$type} );
-
-                    # Normally it is made of one word, but two words for 'use'
-                    if ( $count == 0 ) {
-                        if (   $type eq 'k'
-                            && $is_use_like{ $tokens_to_go[$_] } )
-                        {
-                            $count_max = 2;
-                        }
-                        else {
-                            $count_max = 1;
-                        }
-                    }
-                    elsif ( defined($count_max) && $count >= $count_max ) {
-                        last;
-                    }
-
-                    if ( defined( $name_map{$token} ) ) {
-                        $token = $name_map{$token};
-                    }
-
-                    $name .= SPACE . $token;
-                    $iname_end = $_;
-                    $count++;
-                }
-
-                # Require a space after the container name token(s)
-                if (   $name
-                    && defined($ilast_blank)
-                    && $ilast_blank > $iname_end )
-                {
-                    $name = substr( $name, 1 );
-                    $container_name{'0'} = $name;
-                }
+                $container_name{'0'} =
+                  make_uncontained_comma_name( $iterm, $ibeg, $iend );
             }
         }
 
-        # --------------------
-        # Loop over all tokens
-        # --------------------
+        #--------------------------------
+        # Begin main loop over all tokens
+        #--------------------------------
         my $j = 0;    # field index
 
         $patterns[0] = EMPTY_STRING;
         my %token_count;
         for my $i ( $ibeg .. $iend ) {
 
-            # Keep track of containers balanced on this line only.
+            #-------------------------------------------------------------
+            # Part 1: keep track of containers balanced on this line only.
+            #-------------------------------------------------------------
             # These are used below to prevent unwanted cross-line alignments.
             # Unbalanced containers already avoid aligning across
             # container boundaries.
-
-            my $type       = $types_to_go[$i];
-            my $token      = $tokens_to_go[$i];
-            my $depth_last = $depth;
+            my $type = $types_to_go[$i];
             if ( $type_sequence_to_go[$i] ) {
+                my $token = $tokens_to_go[$i];
                 if ( $is_opening_token{$token} ) {
 
                     # if container is balanced on this line...
                     my $i_mate = $mate_index_to_go[$i];
                     if ( $i_mate > $i && $i_mate <= $iend ) {
+                        $i_depth_prev = $i;
+                        $depth_prev   = $depth;
                         $depth++;
 
                      # Append the previous token name to make the container name
@@ -24944,12 +24887,16 @@ sub xlp_tweak {
                 } ## end if ( $is_opening_token...)
 
                 elsif ( $is_closing_type{$token} ) {
+                    $i_depth_prev = $i;
+                    $depth_prev   = $depth;
                     $depth-- if $depth > 0;
                 }
             } ## end if ( $type_sequence_to_go...)
 
-            # if we find a new synchronization token, we are done with
-            # a field
+            #------------------------------------------------------------
+            # Part 2: if we find a new synchronization token, we are done
+            # with a field
+            #------------------------------------------------------------
             if ( $i > $i_start && $ralignment_type_to_go->[$i] ) {
 
                 my $tok = my $raw_tok = $ralignment_type_to_go->[$i];
@@ -24970,6 +24917,7 @@ sub xlp_tweak {
 
                   # If we are at an opening token which increased depth, we have
                   # to use the name from the previous depth.
+                    my $depth_last = $i == $i_depth_prev ? $depth_prev : $depth;
                     my $depth_p =
                       ( $depth_last < $depth ? $depth_last : $depth );
                     if ( $container_name{$depth_p} ) {
@@ -25052,7 +25000,9 @@ sub xlp_tweak {
                 $patterns[$j] = EMPTY_STRING;
             } ## end if ( new synchronization token
 
-            # continue accumulating tokens
+            #-----------------------------------------------
+            # Part 3: continue accumulating the next pattern
+            #-----------------------------------------------
 
             # for keywords we have to use the actual text
             if ( $type eq 'k' ) {
@@ -25123,15 +25073,18 @@ sub xlp_tweak {
             # everything else
             else {
                 $patterns[$j] .= $type;
+
+                # remove any zero-level name at first fat comma
+                if ( $depth == 0 && $type eq '=>' ) {
+                    $container_name{$depth} = EMPTY_STRING;
+                }
             }
 
-            # remove any zero-level name at first fat comma
-            if ( $depth == 0 && $type eq '=>' ) {
-                $container_name{$depth} = EMPTY_STRING;
-            }
         } ## end for my $i ( $ibeg .. $iend)
 
-        # done with this line .. join text of tokens to make the last field
+        #---------------------------------------------------------------
+        # End of main loop .. join text of tokens to make the last field
+        #---------------------------------------------------------------
         push( @fields,
             join( EMPTY_STRING, @tokens_to_go[ $i_start .. $iend ] ) );
         push @field_lengths,
@@ -25139,6 +25092,73 @@ sub xlp_tweak {
 
         return [ \@tokens, \@fields, \@patterns, \@field_lengths ];
     } ## end sub make_alignment_patterns
+
+    sub make_uncontained_comma_name {
+        my ( $iterm, $ibeg, $iend ) = @_;
+
+        # Make a container name by combining all leading barewords,
+        # keywords and functions.
+        my $name  = EMPTY_STRING;
+        my $count = 0;
+        my $count_max;
+        my $iname_end;
+        my $ilast_blank;
+        for ( $ibeg .. $iterm ) {
+            my $type = $types_to_go[$_];
+
+            if ( $type eq 'b' ) {
+                $ilast_blank = $_;
+                next;
+            }
+
+            my $token = $tokens_to_go[$_];
+
+            # Give up if we find an opening paren, binary operator or
+            # comma within or after the proposed container name.
+            if (   $token eq '('
+                || $is_binary_type{$type}
+                || $type eq 'k' && $is_binary_keyword{$token} )
+            {
+                $name = EMPTY_STRING;
+                last;
+            }
+
+            # The container name is only built of certain types:
+            last if ( !$is_kwU{$type} );
+
+            # Normally it is made of one word, but two words for 'use'
+            if ( $count == 0 ) {
+                if (   $type eq 'k'
+                    && $is_use_like{ $tokens_to_go[$_] } )
+                {
+                    $count_max = 2;
+                }
+                else {
+                    $count_max = 1;
+                }
+            }
+            elsif ( defined($count_max) && $count >= $count_max ) {
+                last;
+            }
+
+            if ( defined( $name_map{$token} ) ) {
+                $token = $name_map{$token};
+            }
+
+            $name .= SPACE . $token;
+            $iname_end = $_;
+            $count++;
+        }
+
+        # Require a space after the container name token(s)
+        if (   $name
+            && defined($ilast_blank)
+            && $ilast_blank > $iname_end )
+        {
+            $name = substr( $name, 1 );
+        }
+        return $name;
+    } ## end sub make_uncontained_comma_name
 
     sub length_tag {
 
