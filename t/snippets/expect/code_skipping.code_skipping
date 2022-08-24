@@ -1,0 +1,10 @@
+%Hdr        = %U2E    = %E2U      = %Fallback = ();
+$in_charmap = $nerror = $nwarning = 0;
+$.          = 0;
+#<<V  code skipping: perltidy will pass this verbatim without error checking
+
+    }}} {{{
+
+#>>V
+my $self    = shift;
+my $cloning = shift;

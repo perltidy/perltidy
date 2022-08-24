@@ -15,6 +15,7 @@
 #12 git106.def
 #13 git106.git106
 #14 c154.def
+#15 code_skipping.code_skipping
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -32,8 +33,14 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'bal2'   => "-bal=2",
-        'c133'   => "-boc",
+        'bal2'          => "-bal=2",
+        'c133'          => "-boc",
+        'code_skipping' => <<'----------',
+# same as the default but tests -cs -csb and -cse
+--code-skipping
+--code-skipping-begin='#<<V'
+--code-skipping-end='#>>V'
+----------
         'def'    => "",
         'drc'    => "-drc",
         'git106' => "-xlp -gnu -xci",
@@ -144,6 +151,19 @@ for (
     ...;
 }
 }}}}
+----------
+
+        'code_skipping' => <<'----------',
+%Hdr=%U2E=%E2U=%Fallback=();
+$in_charmap=$nerror=$nwarning=0;
+$.=0;
+#<<V  code skipping: perltidy will pass this verbatim without error checking
+
+    }}} {{{
+
+#>>V
+my $self=shift;
+my $cloning=shift;
 ----------
 
         'drc' => <<'----------',
@@ -712,6 +732,23 @@ abcdefghijklmnopq
     }
 }
 #14...........
+        },
+
+        'code_skipping.code_skipping' => {
+            source => "code_skipping",
+            params => "code_skipping",
+            expect => <<'#15...........',
+%Hdr        = %U2E    = %E2U      = %Fallback = ();
+$in_charmap = $nerror = $nwarning = 0;
+$.          = 0;
+#<<V  code skipping: perltidy will pass this verbatim without error checking
+
+    }}} {{{
+
+#>>V
+my $self    = shift;
+my $cloning = shift;
+#15...........
         },
     };
 

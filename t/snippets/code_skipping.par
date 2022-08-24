@@ -1,0 +1,4 @@
+# same as the default but tests -cs -csb and -cse
+--code-skipping
+--code-skipping-begin='#<<V'
+--code-skipping-end='#>>V'

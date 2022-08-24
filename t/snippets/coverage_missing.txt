@@ -1,5 +1,6 @@
 # No coverage in test snippets for these parameters
 DEBUG
+add-terminal-newline
 assert-tidy
 assert-untidy
 backlink
@@ -8,6 +9,9 @@ cachedir
 closing-side-comment-prefix
 closing-side-comment-warnings
 closing-token-indentation
+code-skipping
+code-skipping-begin
+code-skipping-end
 cuddled-block-list-exclusive
 dump-cuddled-block-list
 dump-defaults
@@ -18,10 +22,12 @@ dump-short-names
 dump-token-types
 dump-want-left-space
 dump-want-right-space
+encode-output-strings
 extended-syntax
 file-size-order
 force-read-binary
 frames
+grep-alias-exclusion-list
 help
 html
 html-bold-bareword
@@ -119,14 +125,11 @@ show-options
 standard-output
 static-side-comment-prefix
 stylesheet
-tabs
 tee-block-comments
 tee-pod
 tee-side-comments
 title
 trim-qw
 use-unicode-gcstring
-valign
 version
 vertical-tightness
-vertical-tightness-closing
