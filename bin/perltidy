@@ -2378,7 +2378,7 @@ B<-ce>.
 When cuddled else formatting is selected with B<-ce>, setting this flag causes
 perltidy to ignore its built-in defaults and rely exclusively on the block types
 specified on the B<-cbl> flag described in the previous section.  For example,
-to avoid using cuddled B<catch> and B<finally>, which among in the defaults, the
+to avoid using cuddled B<catch> and B<finally>, which are among the defaults, the
 following set of parameters could be used:
 
   perltidy -ce -cbl='else elsif continue' -cblx
