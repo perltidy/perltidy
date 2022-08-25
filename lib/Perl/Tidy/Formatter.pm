@@ -19019,13 +19019,15 @@ EOM
 
         my ( $self, $is_long_line, $rbond_strength_bias ) = @_;
 
-        #----------------------------------------------------------------------
-        # This routine is called once per batch, if the batch is a list, to set
-        # line breaks so that hierarchical structure can be displayed and so
-        # that list items can be vertically aligned.  The output of this
+        #--------------------------------------------------------------------
+        # This routine is called once per batch, if the batch is a list, to
+        # set line breaks so that hierarchical structure can be displayed and
+        # so that list items can be vertically aligned.  The output of this
         # routine is stored in the array @forced_breakpoint_to_go, which is
-        # used by sub 'break_long_lines' to set final breakpoints.
-        #----------------------------------------------------------------------
+        # used by sub 'break_long_lines' to set final breakpoints.  This is
+        # probably the most complex routine in perltidy, so I have
+        # broken it into pieces and over-commented it.
+        #--------------------------------------------------------------------
 
         my $rLL                  = $self->[_rLL_];
         my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
@@ -19086,6 +19088,10 @@ EOM
             $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
             $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
 
+            #-------------------------------------------
+            # Loop Section A: Look for special breakpoints...
+            #-------------------------------------------
+
             # set break if flag was set
             if ( $want_previous_breakpoint >= 0 ) {
                 $self->set_forced_breakpoint($want_previous_breakpoint);
@@ -19094,66 +19100,17 @@ EOM
 
             $last_old_breakpoint_count = $old_breakpoint_count;
 
-            # Fixed for case b1097 to not consider old breaks at highly
-            # stressed locations, such as types 'L' and 'R'.  It might be
-            # useful to generalize this concept in the future by looking at
-            # actual bond strengths.
+            # Check for a good old breakpoint ..
+            # Note: ignore old breaks at types 'L' and 'R' to fix case
+            # b1097. These breaks only occur under high stress.
             if (   $old_breakpoint_to_go[$i]
                 && $type ne 'L'
                 && $next_nonblank_type ne 'R' )
             {
-                $i_line_end   = $i;
-                $i_line_start = $i_next_nonblank;
-
-                $old_breakpoint_count++;
-
-                # Break before certain keywords if user broke there and
-                # this is a 'safe' break point. The idea is to retain
-                # any preferred breaks for sequential list operations,
-                # like a schwartzian transform.
-                if ($rOpts_break_at_old_keyword_breakpoints) {
-                    if (
-                           $next_nonblank_type eq 'k'
-                        && $is_keyword_returning_list{$next_nonblank_token}
-                        && (   $type =~ /^[=\)\]\}Riw]$/
-                            || $type eq 'k'
-                            && $is_keyword_returning_list{$token} )
-                      )
-                    {
-
-                        # we actually have to set this break next time through
-                        # the loop because if we are at a closing token (such
-                        # as '}') which forms a one-line block, this break might
-                        # get undone.
-
-                        # But do not do this at an '=' if:
-                        # - the user wants breaks before an equals (b434 b903)
-                        # - or -naws is set (can be unstable, see b1354)
-                        my $skip = $type eq '='
-                          && ( $want_break_before{$type}
-                            || !$rOpts_add_whitespace );
-
-                        $want_previous_breakpoint = $i
-                          unless ($skip);
-
-                    }
-                } ## end if ($rOpts_break_at_old_keyword_breakpoints)
-
-                # Break before attributes if user broke there
-                if ($rOpts_break_at_old_attribute_breakpoints) {
-                    if ( $next_nonblank_type eq 'A' ) {
-                        $want_previous_breakpoint = $i;
-                    }
-                }
-
-                # remember an = break as possible good break point
-                if ( $is_assignment{$type} ) {
-                    $i_old_assignment_break = $i;
-                }
-                elsif ( $is_assignment{$next_nonblank_type} ) {
-                    $i_old_assignment_break = $i_next_nonblank;
-                }
-            } ## end if ( $old_breakpoint_to_go...)
+                ( $want_previous_breakpoint, $i_old_assignment_break ) =
+                  $self->check_old_breakpoints( $i_next_nonblank,
+                    $want_previous_breakpoint, $i_old_assignment_break );
+            }
 
             next if ( $type eq 'b' );
 
@@ -19265,30 +19222,26 @@ EOM
                 $i_equals[$depth] = $i;
             }
 
-            #-----------------------
-            # Handle sequenced token
-            #-----------------------
+            #-----------------------------------------
+            # Loop Section B: Handle a sequenced token
+            #-----------------------------------------
             if ($type_sequence) {
                 $self->break_lists_type_sequence;
             }
 
-#print "LISTX sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth\n";
-
-            #--------------------------
-            # Handle Increasing Depth..
-            #--------------------------
+            #------------------------------------------
+            # Loop Section C: Handle Increasing Depth..
+            #------------------------------------------
 
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be opening..fixes c102
             if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
-
                 $self->break_lists_increase_depth();
-
             }
 
-            #--------------------------
-            # Handle Decreasing Depth..
-            #--------------------------
+            #------------------------------------------
+            # Loop Section D: Handle Decreasing Depth..
+            #------------------------------------------
 
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be closing .. fixes c102
@@ -19301,9 +19254,9 @@ EOM
 
             }
 
-            #------------------
-            # Handle this token
-            #------------------
+            #----------------------------------
+            # Loop Section E: Handle this token
+            #----------------------------------
 
             $current_depth = $depth;
 
@@ -19344,106 +19297,16 @@ EOM
             }
 
             # now just handle any commas
-            next unless ( $type eq ',' );
+            next if ( $type ne ',' );
+            $self->study_comma($comma_follows_last_closing_token);
 
-            $last_dot_index[$depth]   = undef;
-            $last_comma_index[$depth] = $i;
-
-            # break here if this comma follows a '=>'
-            # but not if there is a side comment after the comma
-            if ( $want_comma_break[$depth] ) {
-
-                if ( $next_nonblank_type =~ /^[\)\}\]R]$/ ) {
-                    if ($rOpts_comma_arrow_breakpoints) {
-                        $want_comma_break[$depth] = 0;
-                        next;
-                    }
-                }
-
-                $self->set_forced_breakpoint($i)
-                  unless ( $next_nonblank_type eq '#' );
-
-                # break before the previous token if it looks safe
-                # Example of something that we will not try to break before:
-                #   DBI::SQL_SMALLINT() => $ado_consts->{adSmallInt},
-                # Also we don't want to break at a binary operator (like +):
-                # $c->createOval(
-                #    $x + $R, $y +
-                #    $R => $x - $R,
-                #    $y - $R, -fill   => 'black',
-                # );
-                my $ibreak = $index_before_arrow[$depth] - 1;
-                if (   $ibreak > 0
-                    && $tokens_to_go[ $ibreak + 1 ] !~ /^[\)\}\]]$/ )
-                {
-                    if ( $tokens_to_go[$ibreak] eq '-' ) { $ibreak-- }
-                    if ( $types_to_go[$ibreak] eq 'b' )  { $ibreak-- }
-                    if ( $types_to_go[$ibreak] =~ /^[,wiZCUG\(\{\[]$/ ) {
-
-                        # don't break before a comma, as in the following:
-                        # ( LONGER_THAN,=> 1,
-                        #    EIGHTY_CHARACTERS,=> 2,
-                        #    CAUSES_FORMATTING,=> 3,
-                        #    LIKE_THIS,=> 4,
-                        # );
-                        # This example is for -tso but should be general rule
-                        if (   $tokens_to_go[ $ibreak + 1 ] ne '->'
-                            && $tokens_to_go[ $ibreak + 1 ] ne ',' )
-                        {
-                            $self->set_forced_breakpoint($ibreak);
-                        }
-                    }
-                }
-
-                $want_comma_break[$depth]   = 0;
-                $index_before_arrow[$depth] = -1;
-
-                # handle list which mixes '=>'s and ','s:
-                # treat any list items so far as an interrupted list
-                $interrupted_list[$depth] = 1;
-                next;
-            }
-
-            # Break after all commas above starting depth...
-            # But only if the last closing token was followed by a comma,
-            #   to avoid breaking a list operator (issue c119)
-            if (   $depth < $starting_depth
-                && $comma_follows_last_closing_token
-                && !$dont_align[$depth] )
-            {
-                $self->set_forced_breakpoint($i)
-                  unless ( $next_nonblank_type eq '#' );
-                next;
-            }
-
-            # add this comma to the list..
-            my $item_count = $item_count_stack[$depth];
-            if ( $item_count == 0 ) {
-
-                # but do not form a list with no opening structure
-                # for example:
-
-                #            open INFILE_COPY, ">$input_file_copy"
-                #              or die ("very long message");
-                if ( ( $opening_structure_index_stack[$depth] < 0 )
-                    && $self->is_in_block_by_i($i) )
-                {
-                    $dont_align[$depth] = 1;
-                }
-            }
-
-            $comma_index[$depth][$item_count] = $i;
-            ++$item_count_stack[$depth];
-            if ( $last_nonblank_type =~ /^[iR\]]$/ ) {
-                $identifier_count_stack[$depth]++;
-            }
         } ## end while ( ++$i <= $max_index_to_go)
 
-        #------------------------------------------
-        # end of loop over all tokens in this batch
-        #------------------------------------------
+        #-------------------------------------------
+        # END of loop over all tokens in this batch
+        # Now set breaks for any unfinished lists ..
+        #-------------------------------------------
 
-        # set breaks for any unfinished lists ..
         foreach my $dd ( reverse( $minimum_depth .. $current_depth ) ) {
 
             $interrupted_list[$dd]   = 1;
@@ -19470,8 +19333,11 @@ EOM
             }
         } ## end for ( my $dd = $current_depth...)
 
-        # Return a flag indicating if the input file had some good breakpoints.
-        # This flag will be used to force a break in a line shorter than the
+        #----------------------------------------
+        # Return the flag '$saw_good_breakpoint'.
+        #----------------------------------------
+        # This indicates if the input file had some good breakpoints.  This
+        # flag will be used to force a break in a line shorter than the
         # allowed line length.
         if ( $has_old_logical_breakpoints[$current_depth] ) {
             $saw_good_breakpoint = 1;
@@ -19497,6 +19363,167 @@ EOM
 
         return $saw_good_breakpoint;
     } ## end sub break_lists
+
+    sub study_comma {
+
+        # study and store info for a list comma
+
+        my ( $self, $comma_follows_last_closing_token ) = @_;
+
+        $last_dot_index[$depth]   = undef;
+        $last_comma_index[$depth] = $i;
+
+        # break here if this comma follows a '=>'
+        # but not if there is a side comment after the comma
+        if ( $want_comma_break[$depth] ) {
+
+            if ( $next_nonblank_type =~ /^[\)\}\]R]$/ ) {
+                if ($rOpts_comma_arrow_breakpoints) {
+                    $want_comma_break[$depth] = 0;
+                    return;
+                }
+            }
+
+            $self->set_forced_breakpoint($i)
+              unless ( $next_nonblank_type eq '#' );
+
+            # break before the previous token if it looks safe
+            # Example of something that we will not try to break before:
+            #   DBI::SQL_SMALLINT() => $ado_consts->{adSmallInt},
+            # Also we don't want to break at a binary operator (like +):
+            # $c->createOval(
+            #    $x + $R, $y +
+            #    $R => $x - $R,
+            #    $y - $R, -fill   => 'black',
+            # );
+            my $ibreak = $index_before_arrow[$depth] - 1;
+            if (   $ibreak > 0
+                && $tokens_to_go[ $ibreak + 1 ] !~ /^[\)\}\]]$/ )
+            {
+                if ( $tokens_to_go[$ibreak] eq '-' ) { $ibreak-- }
+                if ( $types_to_go[$ibreak] eq 'b' )  { $ibreak-- }
+                if ( $types_to_go[$ibreak] =~ /^[,wiZCUG\(\{\[]$/ ) {
+
+                    # don't break before a comma, as in the following:
+                    # ( LONGER_THAN,=> 1,
+                    #    EIGHTY_CHARACTERS,=> 2,
+                    #    CAUSES_FORMATTING,=> 3,
+                    #    LIKE_THIS,=> 4,
+                    # );
+                    # This example is for -tso but should be general rule
+                    if (   $tokens_to_go[ $ibreak + 1 ] ne '->'
+                        && $tokens_to_go[ $ibreak + 1 ] ne ',' )
+                    {
+                        $self->set_forced_breakpoint($ibreak);
+                    }
+                }
+            }
+
+            $want_comma_break[$depth]   = 0;
+            $index_before_arrow[$depth] = -1;
+
+            # handle list which mixes '=>'s and ','s:
+            # treat any list items so far as an interrupted list
+            $interrupted_list[$depth] = 1;
+            return;
+        }
+
+        # Break after all commas above starting depth...
+        # But only if the last closing token was followed by a comma,
+        #   to avoid breaking a list operator (issue c119)
+        if (   $depth < $starting_depth
+            && $comma_follows_last_closing_token
+            && !$dont_align[$depth] )
+        {
+            $self->set_forced_breakpoint($i)
+              unless ( $next_nonblank_type eq '#' );
+            return;
+        }
+
+        # add this comma to the list..
+        my $item_count = $item_count_stack[$depth];
+        if ( $item_count == 0 ) {
+
+            # but do not form a list with no opening structure
+            # for example:
+
+            #            open INFILE_COPY, ">$input_file_copy"
+            #              or die ("very long message");
+            if ( ( $opening_structure_index_stack[$depth] < 0 )
+                && $self->is_in_block_by_i($i) )
+            {
+                $dont_align[$depth] = 1;
+            }
+        }
+
+        $comma_index[$depth][$item_count] = $i;
+        ++$item_count_stack[$depth];
+        if ( $last_nonblank_type =~ /^[iR\]]$/ ) {
+            $identifier_count_stack[$depth]++;
+        }
+        return;
+    } ## end sub study_comma
+
+    sub check_old_breakpoints {
+
+        # Check for a good old breakpoint
+
+        my ( $self, $i_next_nonblank, $want_previous_breakpoint,
+            $i_old_assignment_break )
+          = @_;
+
+        $i_line_end   = $i;
+        $i_line_start = $i_next_nonblank;
+
+        $old_breakpoint_count++;
+
+        # Break before certain keywords if user broke there and
+        # this is a 'safe' break point. The idea is to retain
+        # any preferred breaks for sequential list operations,
+        # like a schwartzian transform.
+        if ($rOpts_break_at_old_keyword_breakpoints) {
+            if (
+                   $next_nonblank_type eq 'k'
+                && $is_keyword_returning_list{$next_nonblank_token}
+                && (   $type =~ /^[=\)\]\}Riw]$/
+                    || $type eq 'k' && $is_keyword_returning_list{$token} )
+              )
+            {
+
+                # we actually have to set this break next time through
+                # the loop because if we are at a closing token (such
+                # as '}') which forms a one-line block, this break might
+                # get undone.
+
+                # But do not do this at an '=' if:
+                # - the user wants breaks before an equals (b434 b903)
+                # - or -naws is set (can be unstable, see b1354)
+                my $skip = $type eq '='
+                  && ( $want_break_before{$type}
+                    || !$rOpts_add_whitespace );
+
+                $want_previous_breakpoint = $i
+                  unless ($skip);
+
+            }
+        }
+
+        # Break before attributes if user broke there
+        if ($rOpts_break_at_old_attribute_breakpoints) {
+            if ( $next_nonblank_type eq 'A' ) {
+                $want_previous_breakpoint = $i;
+            }
+        }
+
+        # remember an = break as possible good break point
+        if ( $is_assignment{$type} ) {
+            $i_old_assignment_break = $i;
+        }
+        elsif ( $is_assignment{$next_nonblank_type} ) {
+            $i_old_assignment_break = $i_next_nonblank;
+        }
+        return ( $want_previous_breakpoint, $i_old_assignment_break );
+    } ## end sub check_old_breakpoints
 
     sub break_lists_type_sequence {
 
