@@ -8281,19 +8281,6 @@ sub weld_cuddled_blocks {
     my $K_opening_container = $self->[_K_opening_container_];
     my $K_closing_container = $self->[_K_closing_container_];
 
-    my $length_to_opening_seqno = sub {
-        my ($seqno) = @_;
-        my $KK      = $K_opening_container->{$seqno};
-        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-        return $lentot;
-    };
-    my $length_to_closing_seqno = sub {
-        my ($seqno) = @_;
-        my $KK      = $K_closing_container->{$seqno};
-        my $lentot  = $KK <= 0 ? 0 : $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
-        return $lentot;
-    };
-
     my $is_broken_block = sub {
 
         # a block is broken if the input line numbers of the braces differ
@@ -9049,22 +9036,6 @@ sub weld_nested_containers {
     # this restricted value keeps test case wn6.wn working as before.
     # It may be necessary to include '[' and '{' here in the future.
     my $one_line_tol = $opening_vertical_tightness{'('} ? 1 : 0;
-
-    my $length_to_opening_seqno = sub {
-        my ($seqno) = @_;
-        my $KK      = $K_opening_container->{$seqno};
-        my $lentot  = defined($KK)
-          && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
-        return $lentot;
-    };
-
-    my $length_to_closing_seqno = sub {
-        my ($seqno) = @_;
-        my $KK      = $K_closing_container->{$seqno};
-        my $lentot  = defined($KK)
-          && $KK > 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
-        return $lentot;
-    };
 
     # Abbreviations:
     #  _oo=outer opening, i.e. first of  { {
