@@ -13846,12 +13846,26 @@ BEGIN {
 
 sub starting_one_line_block {
 
-    # after seeing an opening curly brace, look for the closing brace and see
+    # After seeing an opening curly brace, look for the closing brace and see
     # if the entire block will fit on a line.  This routine is not always right
     # so a check is made later (at the closing brace) to make sure we really
     # have a one-line block.  We have to do this preliminary check, though,
     # because otherwise we would always break at a semicolon within a one-line
     # block if the block contains multiple statements.
+
+    # Given:
+    #  $Kj              = index of opening brace
+    #  $K_last_nonblank = index of previous nonblank code token
+    #  $K_last          = index of last token of input line
+
+    # Calls 'create_one_line_block' if one-line block might be formed.
+
+    # Also returns a flag '$too_long':
+    #  true  = distance from opening keyword to OPENING brace exceeds
+    #          the maximum line length.
+    #  false = otherwise
+    # Note that this flag is for distance to the opening brace, not the
+    # closing brace.
 
     my ( $self, $Kj, $K_last_nonblank, $K_last ) = @_;
 
@@ -13863,10 +13877,6 @@ sub starting_one_line_block {
 
     # kill any current block - we can only go 1 deep
     destroy_one_line_block();
-
-    # return value:
-    #  1=distance from start of block to opening brace exceeds line length
-    #  0=otherwise
 
     my $i_start = 0;
 
@@ -13902,7 +13912,9 @@ sub starting_one_line_block {
         }
     }
 
+    #---------------------------------------------------------------------
     # find the starting keyword for this block (such as 'if', 'else', ...)
+    #---------------------------------------------------------------------
     if (
         $max_index_to_go == 0
         ##|| $block_type =~ /^[\{\}\;\:]$/
@@ -14036,6 +14048,9 @@ sub starting_one_line_block {
         return 0 if ($ldiff);
     }
 
+    #------------------------------------------------------------------
+    # Loop to check contents and length of the potential one-line block
+    #------------------------------------------------------------------
     foreach my $Ki ( $Kj + 1 .. $K_last ) {
 
         # old whitespace could be arbitrarily large, so don't use it
@@ -14150,7 +14165,9 @@ sub starting_one_line_block {
                 }
             }
 
+            #--------------------------
             # ok, it's a one-line block
+            #--------------------------
             create_one_line_block( $i_start, 20 );
             return 0;
         }
@@ -14159,6 +14176,10 @@ sub starting_one_line_block {
         else {
         }
     }
+
+    #--------------------------------------------------
+    # End Loop to examine tokens in potential one-block
+    #--------------------------------------------------
 
     # We haven't hit the closing brace, but there is still space. So the
     # question here is, should we keep going to look at more lines in hopes of
@@ -18068,6 +18089,26 @@ use constant MAX_BIAS  => 0.001;
 
 sub break_lines_inner_loop {
 
+    #-----------------------------------------------------------------
+    # Find the best next breakpoint in index range ($i_begin .. $imax)
+    # which, if possible, does not exceed the maximum line length.
+    #-----------------------------------------------------------------
+
+    # Given:
+    #   $i_begin               = first index of range
+    #   $i_last_break          = index of previous break
+    #   $imax                  = last index of range
+    #   $last_break_strength   = bond strength of last break
+    #   $line_count            = number of output lines so far
+    #   $rbond_strength_to_go  = ref to array of bond strengths
+    #   $saw_good_break        = true if old line had a good breakpoint
+
+    # Returns:
+    #   $i_lowest               = index of best breakpoint
+    #   $lowest_strength        = 'bond strength' at best breakpoint
+    #   $leading_alignment_type = special token type after break
+    #   $Msg                    = string of debug info
+
     my (
         $self,    #
 
@@ -18108,6 +18149,9 @@ sub break_lines_inner_loop {
         }
     }
 
+    #-------------------------------------------------
+    # Begin loop over the indexes in the _to_go arrays
+    #-------------------------------------------------
     while ( ++$i_test <= $imax ) {
         my $type                     = $types_to_go[$i_test];
         my $token                    = $tokens_to_go[$i_test];
@@ -18117,6 +18161,10 @@ sub break_lines_inner_loop {
         my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
         my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
         my $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
+
+        #---------------------------------------------------------------
+        # Section A: Get token-token strength and handle any adjustments
+        #---------------------------------------------------------------
 
         # adjustments to the previous bond strength may have been made, and
         # we must keep the bond strength of a token and its following blank
@@ -18164,21 +18212,21 @@ sub break_lines_inner_loop {
             }
         }
 
+        #-------------------------------------
+        # Section B: Handle forced breakpoints
+        #-------------------------------------
         my $must_break = 0;
 
         # Force an immediate break at certain operators
         # with lower level than the start of the line,
         # unless we've already seen a better break.
         #
-        #------------------------------------
-        # Note on an issue with a preceding ?
-        #------------------------------------
-        # We don't include a ? in the above list, but there may
-        # be a break at a previous ? if the line is long.
-        # Because of this we do not want to force a break if
-        # there is a previous ? on this line.  For now the best way
-        # to do this is to not break if we have seen a lower strength
-        # point, which is probably a ?.
+        # Note on an issue with a preceding '?' :
+
+        # There may be a break at a previous ? if the line is long.  Because
+        # of this we do not want to force a break if there is a previous ? on
+        # this line.  For now the best way to do this is to not break if we
+        # have seen a lower strength point, which is probably a ?.
         #
         # Example of unwanted breaks we are avoiding at a '.' following a ?
         # from pod2html using perltidy -gnu:
@@ -18312,6 +18360,9 @@ sub break_lines_inner_loop {
             redo;
         }
 
+        #------------------------------------------------------------
+        # Section C: Look for the lowest bond strength between tokens
+        #------------------------------------------------------------
         if ( ( $strength <= $lowest_strength ) && ( $strength < NO_BREAK ) ) {
 
             # break at previous best break if it would have produced
@@ -18429,6 +18480,9 @@ sub break_lines_inner_loop {
             }
         }
 
+        #-----------------------------------------------------------
+        # Section D: See if the maximum line length will be exceeded
+        #-----------------------------------------------------------
         my $too_long = ( $i_test >= $imax );
         if ( !$too_long ) {
             my $next_length =
@@ -18492,7 +18546,7 @@ sub break_lines_inner_loop {
             };
         }
 
-        # we are done if...
+        # Stop if line will be too long and we have a solution
         if (
 
             # ... no more space and we have a break
@@ -18510,7 +18564,12 @@ sub break_lines_inner_loop {
         }
     }
 
-    # it's always ok to break at imax if no other break was found
+    #-----------------------------------------------
+    # End loop over the indexes in the _to_go arrays
+    #-----------------------------------------------
+
+    # Be sure we return an index in the range ($ibegin .. $imax).
+    # We will break at imax if no other break was found.
     if ( $i_lowest < 0 ) { $i_lowest = $imax }
 
     return ( $i_lowest, $lowest_strength, $leading_alignment_type, $Msg );
@@ -18750,7 +18809,7 @@ sub do_colon_breaks {
                 # look like a function call)
                 my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiU]$/;
 
-                $self->set_comma_breakpoints_do(
+                $self->set_comma_breakpoints_final(
                     {
                         depth            => $dd,
                         i_opening_paren  => $opening_structure_index_stack[$dd],
@@ -20243,7 +20302,7 @@ EOM
     return $i_opening_minus;
 } ## end sub find_token_starting_list
 
-{    ## begin closure set_comma_breakpoints_do
+{    ## begin closure set_comma_breakpoints_final
 
     my %is_keyword_with_special_leading_term;
 
@@ -20410,10 +20469,10 @@ EOM
         return;
     }
 
-    sub set_comma_breakpoints_do {
+    sub set_comma_breakpoints_final {
 
-        # Given a list with some commas, set breakpoints at some of the
-        # commas, if necessary, to make it easy to read.
+        # Given a list of comma-separated items, set breakpoints at some of
+        # the commas, if necessary, to make it easy to read.
 
         my ( $self, $rinput_hash ) = @_;
 
@@ -20442,9 +20501,10 @@ EOM
         }
         my $is_lp_formatting = ref( $leading_spaces_to_go[$i_first_comma] );
 
-        #---------------------------------------------------------------
-        # find lengths of all items in the list to calculate page layout
-        #---------------------------------------------------------------
+        #-----------------------------------------------------------
+        # Section A: Find lengths of all items in the list needed to
+        # calculate page layout
+        #-----------------------------------------------------------
         my $comma_count = $item_count;
 
         my $ritem_lengths = [];
@@ -20528,16 +20588,18 @@ EOM
             }
         }
 
-        #---------------------------------------------------------------
         # End of length calculations
-        #---------------------------------------------------------------
 
-        #---------------------------------------------------------------
-        # Compound List Rule 1:
+        #-----------------------------------------
+        # Section B: Handle some special cases ...
+        #-----------------------------------------
+
+        #-------------------------------------------------------------
+        # Special Case B1: Compound List Rule 1:
         # Break at (almost) every comma for a list containing a broken
         # sublist.  This has higher priority than the Interrupted List
         # Rule.
-        #---------------------------------------------------------------
+        #-------------------------------------------------------------
         if ($has_broken_sublist) {
             $self->comma_broken_sublist_rule(
                 $item_count,        $interrupted, $i_first_comma,
@@ -20552,11 +20614,11 @@ EOM
 #i_first = $i_first_comma  i_last=$i_last_comma max=$max_index_to_go\n";
 #print "depth=$depth has_broken=$has_broken_sublist[$depth] is_multi=$is_multiline opening_paren=($i_opening_paren) \n";
 
-        #---------------------------------------------------------------
-        # Interrupted List Rule:
+        #--------------------------------------------------------------
+        # Special Case B2: Interrupted List Rule:
         # A list is forced to use old breakpoints if it was interrupted
         # by side comments or blank lines, or requested by user.
-        #---------------------------------------------------------------
+        #--------------------------------------------------------------
         if (   $rOpts_break_at_old_comma_breakpoints
             || $interrupted
             || $i_opening_paren < 0 )
@@ -20565,19 +20627,16 @@ EOM
             return;
         }
 
-        #---------------------------------------------------------------
-        # Looks like a list of items.  We have to look at it and size it up.
-        #---------------------------------------------------------------
-
         my $opening_token       = $tokens_to_go[$i_opening_paren];
         my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
 
-        #-------------------------------------------------------------------
-        # Return if this will fit on one line
-        #-------------------------------------------------------------------
+        #-----------------------------------------------------------------
+        # Special Case B3: If it fits on one line, return and let the line
+        # break logic decide if and where to break.
+        #-----------------------------------------------------------------
 
-        # The -bbxi=2 parameters can add an extra hidden level of indentation;
-        # this needs a tolerance to avoid instability.  Fixes b1259, 1260.
+        # The -bbxi=2 parameters can add an extra hidden level of indentation
+        # so they need a tolerance to avoid instability.  Fixes b1259, 1260.
         my $tol = 0;
         if (   $break_before_container_types{$opening_token}
             && $container_indentation_options{$opening_token}
@@ -20592,15 +20651,22 @@ EOM
         }
 
         my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
-        return
-          unless $self->excess_line_length( $i_opening_minus, $i_closing_paren )
-          + $tol > 0;
+        my $excess =
+          $self->excess_line_length( $i_opening_minus, $i_closing_paren );
+        return if ( $excess + $tol <= 0 );
 
-        #-------------------------------------------------------------------
+        #---------------------------------------
+        # Section C: Handle a multiline list ...
+        #---------------------------------------
+
+        #---------------------------------------------------------------
+        # Section C1: Determine '$number_of_fields' = the best number of
+        # fields to use if this is to be formatted as a table.
+        #---------------------------------------------------------------
+
         # Now we know that this block spans multiple lines; we have to set
         # at least one breakpoint -- real or fake -- as a signal to break
         # open any outer containers.
-        #-------------------------------------------------------------------
         set_fake_breakpoint();
 
         # be sure we do not extend beyond the current list length
@@ -20754,10 +20820,8 @@ EOM
             $number_of_fields = $number_of_fields_best;
         }
 
-        #-----------------------------------------------------------
-        # If we are crowded and the -lp option is being used, try to
-        # undo some indentation
-        #-----------------------------------------------------------
+        # If we are crowded and the -lp option is being used, try
+        # to undo some indentation
         if (
             $is_lp_formatting
             && (
@@ -20805,11 +20869,10 @@ EOM
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
 
-        #---------------------------------------------------------------
-        # We're in trouble if we come up with a negative number.
-        # There is no simple answer here; we may have a single long list
-        # item, or many. Must bail out.
-        #---------------------------------------------------------------
+        #-----------------------------------------------------------------
+        # Section C2: Stop here if we did not compute a positive number of
+        # fields. In this case we just have to bail out.
+        #-----------------------------------------------------------------
         if ( $number_of_fields <= 0 ) {
             $self->set_emergency_comma_breakpoints(
                 $number_of_fields_best, $rinput_hash,
@@ -20818,10 +20881,13 @@ EOM
             return;
         }
 
-        # --------------------------------------------------------
-        # We have a tentative field count that seems to work.
+        #------------------------------------------------------------------
+        # Section C3: We have a tentative field count that seems to work.
+        # Now we must look more closely to determine if a table layout will
+        # actually look okay.
+        #------------------------------------------------------------------
+
         # How many lines will this require?
-        # --------------------------------------------------------
         my $formatted_lines = $item_count / ($number_of_fields);
         if ( $formatted_lines != int $formatted_lines ) {
             $formatted_lines = 1 + int $formatted_lines;
@@ -20894,9 +20960,11 @@ EOM
             }
         }
 
-        # Begin check for shortcut methods, which avoid treating a list
-        # as a table for relatively small parenthesized lists.  These
+        #-------------------------------------------------------------------
+        # Section C4: Check for shortcut methods, which avoid treating
+        # a list as a table for relatively small parenthesized lists.  These
         # are usually easier to read if not formatted as tables.
+        #-------------------------------------------------------------------
         if (
             $packed_lines <= 2           # probably can fit in 2 lines
             && $item_count < 9           # doesn't have too many items
@@ -20905,7 +20973,7 @@ EOM
           )
         {
 
-            # Shortcut method 1: for -lp and just one comma:
+            # Section C4A: Shortcut method 1: for -lp and just one comma:
             # This is a no-brainer, just break at the comma.
             if (
                 $is_lp_formatting      # -lp
@@ -20920,8 +20988,8 @@ EOM
 
             }
 
-            # method 2 is for most small ragged lists which might look
-            # best if not displayed as a table.
+            # Section C4B: Shortcut method 2 is for most small ragged lists
+            # which might look best if not displayed as a table.
             if (
                 ( $number_of_fields == 2 && $item_count == 3 )
                 || (
@@ -20959,15 +21027,15 @@ EOM
 
         };
 
-        #---------------------------------------------------------------
-        # Compound List Rule 2:
+        #------------------------------------------------------------------
+        # Section C5: Compound List Rule 2:
         # If this list is too long for one line, and it is an item of a
         # larger list, then we must format it, regardless of sparsity
         # (ian.t).  One reason that we have to do this is to trigger
         # Compound List Rule 1, above, which causes breaks at all commas of
         # all outer lists.  In this way, the structure will be properly
         # displayed.
-        #---------------------------------------------------------------
+        #------------------------------------------------------------------
 
         # Decide if this list is too long for one line unless broken
         my $total_columns = table_columns_available($i_opening_paren);
@@ -21003,23 +21071,21 @@ EOM
 
 #print "LISTX: next=$next_nonblank_type  avail cols=$columns packed=$packed_columns must format = $must_break_open_container too-long=$too_long  opening=$opening_token list_type=$list_type formatted_lines=$formatted_lines  packed=$packed_lines max_sparsity= $max_allowed_sparsity sparsity=$sparsity \n";
 
-        #---------------------------------------------------------------
-        # The main decision:
-        # Now decide if we will align the data into aligned columns.  Do not
-        # attempt to align columns if this is a tiny table or it would be
-        # too spaced.  It seems that the more packed lines we have, the
-        # sparser the list that can be allowed and still look ok.
-        #---------------------------------------------------------------
+        #--------------------------------------------------------------------
+        # Section C6: A table will work here. But do not attempt to align
+        # columns if this is a tiny table or it would be too spaced.  It
+        # seems that the more packed lines we have, the sparser the list that
+        # can be allowed and still look ok.
+        #--------------------------------------------------------------------
 
         if (   ( $formatted_lines < 3 && $packed_lines < $formatted_lines )
             || ( $formatted_lines < 2 )
             || ( $unused_columns > $max_allowed_sparsity * $formatted_columns )
           )
         {
-
-            #---------------------------------------------------------------
-            # too sparse: would look ugly if aligned in a table;
-            #---------------------------------------------------------------
+            #----------------------------------------------------------------
+            # Section C6A: too sparse: would not look good aligned in a table
+            #----------------------------------------------------------------
 
             # use old breakpoints if this is a 'big' list
             if ( $packed_lines > 2 && $item_count > 10 ) {
@@ -21046,13 +21112,14 @@ EOM
             return;
         }
 
-        #---------------------------------------------------------------
-        # go ahead and format as a table
-        #---------------------------------------------------------------
+        #--------------------------------------------
+        # Section C6B: Go ahead and format as a table
+        #--------------------------------------------
         $self->write_formatted_table( $number_of_fields, $comma_count,
             $rcomma_index, $use_separate_first_term );
+
         return;
-    } ## end sub set_comma_breakpoints_do
+    } ## end sub set_comma_breakpoints_final
 
     sub lp_table_fix {
 
@@ -21135,7 +21202,7 @@ EOM
         }
         return;
     }
-} ## end closure set_comma_breakpoints_do
+} ## end closure set_comma_breakpoints_final
 
 sub study_list_complexity {
 

@@ -2682,11 +2682,11 @@ EOM
     sub delete_unmatched_tokens {
         my ( $rlines, $group_level ) = @_;
 
-        # This is a preliminary step in vertical alignment in which we remove
-        # as many obviously un-needed alignment tokens as possible.  This will
-        # prevent them from interfering with the final alignment.
+        # This is a important first step in vertical alignment in which
+        # we remove as many obviously un-needed alignment tokens as possible.
+        # This will prevent them from interfering with the final alignment.
 
-        # These are the return values
+        # Returns:
         my $max_lev_diff     = 0;    # used to avoid a call to prune_tree
         my $saw_side_comment = 0;    # used to avoid a call for side comments
 
@@ -2718,7 +2718,9 @@ EOM
         my @equals_info;
         my @line_info;
 
-        # create a hash of tokens for each line
+        #------------------------------------------------------------
+        # Loop to create a hash of alignment token info for each line
+        #------------------------------------------------------------
         my $rline_hashes = [];
         foreach my $line ( @{$rnew_lines} ) {
             my $rhash     = {};
@@ -2773,7 +2775,9 @@ EOM
             }
         }
 
-        # compare each line pair and record matches
+        #----------------------------------------------------
+        # Loop to compare each line pair and remember matches
+        #----------------------------------------------------
         my $rtok_hash = {};
         my $nr        = 0;
         foreach my $jl ( 0 .. $jmax - 1 ) {
@@ -2782,12 +2786,8 @@ EOM
             my $jr      = $jl + 1;
             my $rhash_l = $rline_hashes->[$jl];
             my $rhash_r = $rline_hashes->[$jr];
-            my $count   = 0;                      # UNUSED NOW?
-            my $ntoks   = 0;
             foreach my $tok ( keys %{$rhash_l} ) {
-                $ntoks++;
                 if ( defined( $rhash_r->{$tok} ) ) {
-                    if ( $tok ne '#' ) { $count++; }
                     my $il = $rhash_l->{$tok}->[0];
                     my $ir = $rhash_r->{$tok}->[0];
                     $rhash_l->{$tok}->[2] = $ir;
@@ -2841,7 +2841,10 @@ EOM
             }
         }
 
-        # find subgroups
+        #------------------------------------------------------------
+        # Find independent subgroups of lines.  Neighboring subgroups
+        # do not have a common alignment token.
+        #------------------------------------------------------------
         my @subgroups;
         push @subgroups, [ 0, $jmax ];
         foreach my $jl ( 0 .. $jmax - 1 ) {
@@ -2854,17 +2857,17 @@ EOM
         # flag to allow skipping pass 2
         my $saw_large_group;
 
-        ############################################################
+        #-----------------------------------------------------------
         # PASS 1 over subgroups to remove unmatched alignment tokens
-        ############################################################
+        #-----------------------------------------------------------
         foreach my $item (@subgroups) {
             my ( $jbeg, $jend ) = @{$item};
 
             my $nlines = $jend - $jbeg + 1;
 
-            ####################################################
+            #---------------------------------------------------
             # Look for complete if/elsif/else and ternary blocks
-            ####################################################
+            #---------------------------------------------------
 
             # We are looking for a common '$dividing_token' like these:
 
@@ -2917,9 +2920,9 @@ EOM
                 }
             }
 
-            #####################################################
-            # Loop over lines to remove unwanted alignment tokens
-            #####################################################
+            #-------------------------------------------------------------
+            # Loop over subgroup lines to remove unwanted alignment tokens
+            #-------------------------------------------------------------
             foreach my $jj ( $jbeg .. $jend ) {
                 my $line    = $rnew_lines->[$jj];
                 my $rtokens = $line->{'rtokens'};
@@ -2940,10 +2943,10 @@ EOM
                     my ( $iii, $il, $ir, $raw_tok, $lev, $tag, $tok_count ) =
                       @{ $rhash->{$tok} };
 
-                    #######################################################
+                    #------------------------------------------------------
                     # Here is the basic RULE: remove an unmatched alignment
                     # which does not occur in the surrounding lines.
-                    #######################################################
+                    #------------------------------------------------------
                     my $delete_me = !defined($il) && !defined($ir);
 
                     # Apply any user controls. Note that not all lines pass
@@ -2989,7 +2992,7 @@ EOM
                     #    );
                     if ( defined($delete_above_level) ) {
                         if ( $lev > $delete_above_level ) {
-                            $delete_me ||= 1;    #$tag;
+                            $delete_me ||= 1;
                         }
                         else { $delete_above_level = undef }
                     }
@@ -3053,9 +3056,9 @@ EOM
                     # Do not let a user exclusion be reactivated by above rules
                     $delete_me ||= !$align_ok;
 
-                    #####################################
+                    #------------------------------------
                     # Add this token to the deletion list
-                    #####################################
+                    #------------------------------------
                     if ($delete_me) {
                         push @idel, $i;
 
@@ -3083,11 +3086,17 @@ EOM
             }    # End loopover lines
         }    # End loop over subgroups
 
-        # PASS 2: Construct a tree of matched lines and delete some small deeper
-        # levels of tokens.  They also block good alignments.
+        # End PASS 1
+
+        #----------------------------------------------------------------
+        # PASS 2: Construct a tree of matched lines and delete some small
+        # deeper levels of tokens.  They also block good alignments.
+        #----------------------------------------------------------------
         prune_alignment_tree($rnew_lines) if ($max_lev_diff);
 
-        # PASS 2: compare all lines for common tokens
+        #--------------------------------------------
+        # PASS 3: compare all lines for common tokens
+        #--------------------------------------------
         match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
 
         return ( $max_lev_diff, $saw_side_comment );
