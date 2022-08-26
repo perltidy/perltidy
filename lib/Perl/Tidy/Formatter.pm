@@ -19266,7 +19266,7 @@ EOM
             # hardened against bad input syntax: depth jump must be 1 and type
             # must be opening..fixes c102
             if ( $depth == $current_depth + 1 && $is_opening_type{$type} ) {
-                $self->break_lists_increase_depth();
+                $self->break_lists_increasing_depth();
             }
 
             #------------------------------------------
@@ -19277,7 +19277,7 @@ EOM
             # must be closing .. fixes c102
             elsif ( $depth == $current_depth - 1 && $is_closing_type{$type} ) {
 
-                $self->break_lists_decrease_depth();
+                $self->break_lists_decreasing_depth();
 
                 $comma_follows_last_closing_token =
                   $next_nonblank_type eq ',' || $next_nonblank_type eq '=>';
@@ -19643,7 +19643,7 @@ EOM
         return;
     } ## end sub break_lists_type_sequence
 
-    sub break_lists_increase_depth {
+    sub break_lists_increasing_depth {
 
         my ($self) = @_;
 
@@ -19740,14 +19740,21 @@ EOM
         }
 
         return;
-    } ## end sub break_lists_increase_depth
+    } ## end sub break_lists_increasing_depth
 
-    sub break_lists_decrease_depth {
+    sub break_lists_decreasing_depth {
 
         my ( $self, $rbond_strength_bias ) = @_;
 
-        # finish off any old list when depth decreases
-        # token $i is a ')','}', or ']'
+        # We have arrived at a closing container token in sub break_lists:
+        # the token at index $i is one of these: ')','}', ']'
+        # A number of important breakpoints for this container can now be set
+        # based on the information that we have collected. This includes:
+        # - breaks at commas to format tables
+        # - breaks at certain logical operators and other good breakpoints
+        # - breaks at opening and closing containers if needed by selected
+        #   formatting styles
+        # These breaks are made by calling sub 'set_forced_breakpoint'
 
         $self->check_for_new_minimum_depth( $depth, $parent_seqno_to_go[$i] )
           if ( $depth < $minimum_depth );
@@ -19771,12 +19778,19 @@ EOM
 
 #print "LISTY sees: i=$i type=$type  tok=$token  block=$block_type depth=$depth next=$next_nonblank_type next_block=$next_nonblank_block_type inter=$interrupted_list[$current_depth]\n";
 
-        # set breaks at commas if necessary
+        #-----------------------------------------------------------------
+        # Set breaks at commas to display a table of values if appropriate
+        #-----------------------------------------------------------------
         my ( $bp_count, $do_not_break_apart ) = ( 0, 0 );
         ( $bp_count, $do_not_break_apart ) =
           $self->set_comma_breakpoints( $current_depth, $rbond_strength_bias )
           if ( $item_count_stack[$current_depth] );
 
+        #-----------------------------------------------------------
+        # Now set flags needed to decide if we should break open the
+        # container ... This is a long rambling section which has
+        # grown over time to handle all situations.
+        #-----------------------------------------------------------
         my $i_opening = $opening_structure_index_stack[$current_depth];
         my $saw_opening_structure = ( $i_opening >= 0 );
         my $lp_object;
@@ -19947,89 +19961,96 @@ EOM
           || $is_long_term
           || $has_comma_breakpoints;
 
-# Having come to the closing ')', '}', or ']', now we have to decide if we
-# should 'open up' the structure by placing breaks at the opening and
-# closing containers.  This is a tricky decision.  Here are some of the
-# basic considerations:
-#
-# -If this is a BLOCK container, then any breakpoints will have already
-# been set (and according to user preferences), so we need do nothing here.
-#
-# -If we have a comma-separated list for which we can align the list items,
-# then we need to do so because otherwise the vertical aligner cannot
-# currently do the alignment.
-#
-# -If this container does itself contain a container which has been broken
-# open, then it should be broken open to properly show the structure.
-#
-# -If there is nothing to align, and no other reason to break apart,
-# then do not do it.
-#
-# We will not break open the parens of a long but 'simple' logical expression.
-# For example:
-#
-# This is an example of a simple logical expression and its formatting:
-#
-#     if ( $bigwasteofspace1 && $bigwasteofspace2
-#         || $bigwasteofspace3 && $bigwasteofspace4 )
-#
-# Most people would prefer this than the 'spacey' version:
-#
-#     if (
-#         $bigwasteofspace1 && $bigwasteofspace2
-#         || $bigwasteofspace3 && $bigwasteofspace4
-#     )
-#
-# To illustrate the rules for breaking logical expressions, consider:
-#
-#             FULLY DENSE:
-#             if ( $opt_excl
-#                 and ( exists $ids_excl_uc{$id_uc}
-#                     or grep $id_uc =~ /$_/, @ids_excl_uc ))
-#
-# This is on the verge of being difficult to read.  The current default is to
-# open it up like this:
-#
-#             DEFAULT:
-#             if (
-#                 $opt_excl
-#                 and ( exists $ids_excl_uc{$id_uc}
-#                     or grep $id_uc =~ /$_/, @ids_excl_uc )
-#               )
-#
-# This is a compromise which tries to avoid being too dense and to spacey.
-# A more spaced version would be:
-#
-#             SPACEY:
-#             if (
-#                 $opt_excl
-#                 and (
-#                     exists $ids_excl_uc{$id_uc}
-#                     or grep $id_uc =~ /$_/, @ids_excl_uc
-#                 )
-#               )
-#
-# Some people might prefer the spacey version -- an option could be added.  The
-# innermost expression contains a long block '( exists $ids_...  ')'.
-#
-# Here is how the logic goes: We will force a break at the 'or' that the
-# innermost expression contains, but we will not break apart its opening and
-# closing containers because (1) it contains no multi-line sub-containers itself,
-# and (2) there is no alignment to be gained by breaking it open like this
-#
-#             and (
-#                 exists $ids_excl_uc{$id_uc}
-#                 or grep $id_uc =~ /$_/, @ids_excl_uc
-#             )
-#
-# (although this looks perfectly ok and might be good for long expressions).  The
-# outer 'if' container, though, contains a broken sub-container, so it will be
-# broken open to avoid too much density.  Also, since it contains no 'or's, there
-# will be a forced break at its 'and'.
+        # Having come to the closing ')', '}', or ']', now we have to decide
+        # if we should 'open up' the structure by placing breaks at the
+        # opening and closing containers.  This is a tricky decision.  Here
+        # are some of the basic considerations:
+        #
+        # -If this is a BLOCK container, then any breakpoints will have
+        # already been set (and according to user preferences), so we need do
+        # nothing here.
+        #
+        # -If we have a comma-separated list for which we can align the list
+        # items, then we need to do so because otherwise the vertical aligner
+        # cannot currently do the alignment.
+        #
+        # -If this container does itself contain a container which has been
+        # broken open, then it should be broken open to properly show the
+        # structure.
+        #
+        # -If there is nothing to align, and no other reason to break apart,
+        # then do not do it.
+        #
+        # We will not break open the parens of a long but 'simple' logical
+        # expression.  For example:
+        #
+        # This is an example of a simple logical expression and its formatting:
+        #
+        #     if ( $bigwasteofspace1 && $bigwasteofspace2
+        #         || $bigwasteofspace3 && $bigwasteofspace4 )
+        #
+        # Most people would prefer this than the 'spacey' version:
+        #
+        #     if (
+        #         $bigwasteofspace1 && $bigwasteofspace2
+        #         || $bigwasteofspace3 && $bigwasteofspace4
+        #     )
+        #
+        # To illustrate the rules for breaking logical expressions, consider:
+        #
+        #             FULLY DENSE:
+        #             if ( $opt_excl
+        #                 and ( exists $ids_excl_uc{$id_uc}
+        #                     or grep $id_uc =~ /$_/, @ids_excl_uc ))
+        #
+        # This is on the verge of being difficult to read.  The current
+        # default is to open it up like this:
+        #
+        #             DEFAULT:
+        #             if (
+        #                 $opt_excl
+        #                 and ( exists $ids_excl_uc{$id_uc}
+        #                     or grep $id_uc =~ /$_/, @ids_excl_uc )
+        #               )
+        #
+        # This is a compromise which tries to avoid being too dense and to
+        # spacey.  A more spaced version would be:
+        #
+        #             SPACEY:
+        #             if (
+        #                 $opt_excl
+        #                 and (
+        #                     exists $ids_excl_uc{$id_uc}
+        #                     or grep $id_uc =~ /$_/, @ids_excl_uc
+        #                 )
+        #               )
+        #
+        # Some people might prefer the spacey version -- an option could be
+        # added.  The innermost expression contains a long block '( exists
+        # $ids_...  ')'.
+        #
+        # Here is how the logic goes: We will force a break at the 'or' that
+        # the innermost expression contains, but we will not break apart its
+        # opening and closing containers because (1) it contains no
+        # multi-line sub-containers itself, and (2) there is no alignment to
+        # be gained by breaking it open like this
+        #
+        #             and (
+        #                 exists $ids_excl_uc{$id_uc}
+        #                 or grep $id_uc =~ /$_/, @ids_excl_uc
+        #             )
+        #
+        # (although this looks perfectly ok and might be good for long
+        # expressions).  The outer 'if' container, though, contains a broken
+        # sub-container, so it will be broken open to avoid too much density.
+        # Also, since it contains no 'or's, there will be a forced break at
+        # its 'and'.
 
-        # Open-up if parens if requested. We do this by pretending we
-        # did not see the opening structure, since in that case parens
-        # always get opened up.
+        # Handle the experimental flag --break-open-compact-parens
+        # NOTE: This flag is not currently used and may eventually be removed.
+        # If this flag is set, we will implement it by
+        # pretending we did not see the opening structure, since in that case
+        # parens always get opened up.
         if (   $saw_opening_structure
             && $rOpts_break_open_compact_parens )
         {
@@ -20050,7 +20071,7 @@ EOM
             }
         }
 
-        # set some flags telling something about this container..
+        # Set some more flags telling something about this container..
         my $is_simple_logical_expression = 0;
         if (   $item_count_stack[$current_depth] == 0
             && $saw_opening_structure
@@ -20065,9 +20086,11 @@ EOM
                 $is_simple_logical_expression = 1;
             }
 
+            #---------------------------------------------------
             # This seems to be a simple logical expression with
             # breakpoints (broken sublists, for example).  Break
             # at all 'or's and '||'s.
+            #---------------------------------------------------
             else {
                 $self->set_logical_breakpoints($current_depth);
             }
@@ -20084,6 +20107,10 @@ EOM
             $has_comma_breakpoints = 1 unless ($lp_object);
         }
 
+        #----------------------------------------------------------------
+        # FINALLY: Break open container according to the flags which have
+        # been set.
+        #----------------------------------------------------------------
         if (
 
             # breaks for code BLOCKS are handled at a higher level
@@ -20205,7 +20232,9 @@ EOM
             }
         }
 
+        #-----------------------------------------------------------
         # Break open a logical container open if it was already open
+        #-----------------------------------------------------------
         elsif ($is_simple_logical_expression
             && $has_old_logical_breakpoints[$current_depth] )
         {
@@ -20221,7 +20250,7 @@ EOM
         }
 
         return;
-    } ## end sub break_lists_decrease_depth
+    } ## end sub break_lists_decreasing_depth
 } ## end closure break_lists
 
 my %is_kwiZ;
