@@ -860,18 +860,14 @@ sub get_line {
         _square_bracket_depth      => $square_bracket_depth,
         _paren_depth               => $paren_depth,
         _quote_character           => EMPTY_STRING,
-##        _rtoken_type               => undef,
-##        _rtokens                   => undef,
-##        _rlevels                   => undef,
-##        _rblock_type               => undef,
-##        _rcontainer_type           => undef,
-##        _rcontainer_environment    => undef,
-##        _rtype_sequence            => undef,
-##        _rnesting_tokens           => undef,
-##        _rci_levels                => undef,
-##        _rnesting_blocks           => undef,
-##        _starting_in_quote         => 0,
-##        _ending_in_quote           => 0,
+##      _rtoken_type               => undef,
+##      _rtokens                   => undef,
+##      _rlevels                   => undef,
+##      _rblock_type               => undef,
+##      _rtype_sequence            => undef,
+##      _rci_levels                => undef,
+##      _starting_in_quote         => 0,
+##      _ending_in_quote           => 0,
     };
 
     # must print line unchanged if we are in a here document
@@ -2197,9 +2193,9 @@ EOM
         my $tok_begin = $tok;
         my $number;
 
-        ##################################
+        #---------------------------------
         # Quick check for (signed) integer
-        ##################################
+        #---------------------------------
 
         # This will be the string of digits:
         my $i_d   = $i;
@@ -2240,9 +2236,9 @@ EOM
             }
         }
 
-        #######################################
+        #--------------------------------------
         # Verify correctness during development
-        #######################################
+        #--------------------------------------
         if ( VERIFY_FASTNUM && defined($number) ) {
 
             # We will call the full method
@@ -2266,9 +2262,9 @@ EOM
             }
         }
 
-        #########################################
+        #----------------------------------------
         # call full scanner if may not be integer
-        #########################################
+        #----------------------------------------
         if ( !defined($number) ) {
             $number = scan_number();
         }
@@ -3671,24 +3667,6 @@ EOM
                 );
             }
         }
-        elsif ( $tok eq 'continue' ) {
-            if (   $last_nonblank_token ne ';'
-                && $last_nonblank_block_type !~
-                /(^(\{|\}|;|while|until|for|foreach)|:$)/ )
-            {
-
-                # note: ';' '{' and '}' in list above
-                # because continues can follow bare blocks;
-                # ':' is labeled block
-                #
-                ############################################
-                # NOTE: This check has been deactivated because
-                # continue has an alternative usage for given/when
-                # blocks in perl 5.10
-                ## warning("'$tok' should follow a block\n");
-                ############################################
-            }
-        }
 
         # patch for SWITCH/CASE if 'case' and 'when are
         # treated as keywords.  Also 'default' for Switch::Plain
@@ -3699,31 +3677,11 @@ EOM
             $statement_type = $tok;    # next '{' is block
         }
 
-        #
-        # indent trailing if/unless/while/until
-        # outdenting will be handled by later indentation loop
-## DEACTIVATED: unfortunately this can cause some unwanted indentation like:
-##$opt_o = 1
-##  if !(
-##             $opt_b
-##          || $opt_c
-##          || $opt_d
-##          || $opt_f
-##          || $opt_i
-##          || $opt_l
-##          || $opt_o
-##          || $opt_x
-##  );
-##                    if (   $tok =~ /^(if|unless|while|until)$/
-##                        && $next_nonblank_token ne '(' )
-##                    {
-##                        $indent_flag = 1;
-##                    }
         return;
     } ## end sub do_KEYWORD
 
     sub do_QUOTE_OPERATOR {
-##NICOL PATCH
+
         if ( $expecting == OPERATOR ) {
 
             # Be careful not to call an error for a qw quote
@@ -4852,13 +4810,13 @@ EOM
                 $in_attribute_list = 0;
             }
 
-            ###############################################################
+            #--------------------------------------------------------
             # We have the next token, $tok.
             # Now we have to examine this token and decide what it is
             # and define its $type
             #
             # section 1: bare words
-            ###############################################################
+            #--------------------------------------------------------
 
             if ( $pre_type eq 'w' ) {
                 $expecting =
@@ -4867,18 +4825,18 @@ EOM
                 last if ($is_last);
             }
 
-            ###############################################################
+            #-----------------------------
             # section 2: strings of digits
-            ###############################################################
+            #-----------------------------
             elsif ( $pre_type eq 'd' ) {
                 $expecting =
                   operator_expected( [ $prev_type, $tok, $next_type ] );
                 do_DIGITS();
             }
 
-            ###############################################################
+            #----------------------------
             # section 3: all other tokens
-            ###############################################################
+            #----------------------------
             else {
                 my $code = $tokenization_code->{$tok};
                 if ($code) {
@@ -5026,9 +4984,7 @@ EOM
         my $rtoken_map_im;
         foreach my $i ( @{$routput_token_list} ) {
 
-            # Get $tok_i, the PRE-token.  It only equals the token for symbols
             my $type_i = $routput_token_type->[$i];
-            my $tok_i  = $rtokens->[$i];
 
             # Quick handling of indentation levels for blanks and comments
             if ( $type_i eq 'b' || $type_i eq '#' ) {
@@ -5038,6 +4994,9 @@ EOM
 
             # All other types
             else {
+
+                # $tok_i is the PRE-token.  It only equals the token for symbols
+                my $tok_i = $rtokens->[$i];
 
                 # Check for an invalid token type..
                 # This can happen by running perltidy on non-scripts although
@@ -5605,7 +5564,7 @@ EOM
     } ## end sub tokenizer_wrapup_line
 } ## end tokenize_this_line
 
-#########i#############################################################
+#######################################################################
 # Tokenizer routines which assist in identifying token types
 #######################################################################
 
@@ -5713,9 +5672,9 @@ sub operator_expected {
 
     my ($rarg) = @_;
 
-    ##############
+    #-------------
     # Table lookup
-    ##############
+    #-------------
 
     # Many types are can be obtained by a table lookup given the previous type.
     # This typically handles half or more of the calls.
@@ -5727,9 +5686,9 @@ sub operator_expected {
         return $op_expected;
     }
 
-    ######################
+    #---------------------
     # Handle special cases
-    ######################
+    #---------------------
 
     $op_expected = UNKNOWN;
     my ( $prev_type, $tok, $next_type ) = @{$rarg};
@@ -5808,7 +5767,7 @@ sub operator_expected {
             $op_expected = OPERATOR;    # block mode following }
         }
 
-        ##elsif ( $last_nonblank_token =~ /^(\)|\$|\-\>)/ ) {
+        #       $last_nonblank_token =~ /^(\)|\$|\-\>)/ 
         elsif ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
             || substr( $last_nonblank_token, 0, 2 ) eq '->' )
         {
@@ -6043,11 +6002,11 @@ sub code_block_type {
         }
     }
 
-    ################################################################
+    #--------------------------------------------------------------
     # NOTE: braces after type characters start code blocks, but for
     # simplicity these are not identified as such.  See also
     # sub is_non_structural_brace.
-    ################################################################
+    #--------------------------------------------------------------
 
 ##    elsif ( $last_nonblank_type eq 't' ) {
 ##       return $last_nonblank_token;
@@ -6350,11 +6309,11 @@ sub is_non_structural_brace {
     #    return 0;
     # }
 
-    ################################################################
+    #--------------------------------------------------------------
     # NOTE: braces after type characters start code blocks, but for
     # simplicity these are not identified as such.  See also
     # sub code_block_type
-    ################################################################
+    #--------------------------------------------------------------
 
     ##if ($last_nonblank_type eq 't') {return 0}
 
@@ -6376,7 +6335,7 @@ sub is_non_structural_brace {
     );
 } ## end sub is_non_structural_brace
 
-#########i#############################################################
+#######################################################################
 # Tokenizer routines for tracking container nesting depths
 #######################################################################
 
@@ -6436,16 +6395,8 @@ sub increase_nesting_depth {
     # a unique set of numbers but still allows the relative location
     # of any type to be determined.
 
-    ########################################################################
-    # OLD SEQNO METHOD for incrementing sequence numbers.
-    # Keep this coding awhile for possible testing.
-    ## $nesting_sequence_number[$aa] += scalar(@closing_brace_names);
-    ## my $seqno = $nesting_sequence_number[$aa];
-
-    # NEW SEQNO METHOD, continuous sequence numbers. This allows sequence
-    # numbers to be used as array indexes, and allows them to be compared.
+    # make a new unique sequence number
     my $seqno = $next_sequence_number++;
-    ########################################################################
 
     $current_sequence_number[$aa][ $current_depth[$aa] ] = $seqno;
 
@@ -6636,7 +6587,7 @@ EOM
     return;
 } ## end sub check_final_nesting_depths
 
-#########i#############################################################
+#######################################################################
 # Tokenizer routines for looking ahead in input stream
 #######################################################################
 
@@ -6691,7 +6642,7 @@ sub peek_ahead_for_nonblank_token {
     return;
 } ## end sub peek_ahead_for_nonblank_token
 
-#########i#############################################################
+#######################################################################
 # Tokenizer guessing routines for ambiguous situations
 #######################################################################
 
@@ -6998,7 +6949,7 @@ sub guess_if_here_doc {
     return $here_doc_expected;
 } ## end sub guess_if_here_doc
 
-#########i#############################################################
+#######################################################################
 # Tokenizer Routines for scanning identifiers and related items
 #######################################################################
 
@@ -8063,15 +8014,15 @@ BEGIN {
         # return flag telling caller to split the pretoken
         my $split_pretoken_flag;
 
-        ####################
+        #-------------------
         # Initialize my vars
-        ####################
+        #-------------------
 
         initialize_my_scan_id_vars();
 
-        #########################################################
+        #--------------------------------------------------------
         # get started by defining a type and a state if necessary
-        #########################################################
+        #--------------------------------------------------------
 
         if ( !$id_scan_state ) {
             $context = UNKNOWN_CONTEXT;
@@ -8144,9 +8095,9 @@ EOM
             }
         }
 
-        ###############################
+        #------------------------------
         # loop to gather the identifier
-        ###############################
+        #------------------------------
 
         $i_save = $i;
 
@@ -8197,9 +8148,9 @@ EOM
 
         } ## end of main loop
 
-        ##############
+        #-------------
         # Check result
-        ##############
+        #-------------
 
         # Be sure a valid state is returned
         if ($id_scan_state) {
@@ -8647,7 +8598,7 @@ EOM
     } ## end sub do_scan_sub
 }
 
-#########i###############################################################
+#########################################################################
 # Tokenizer utility routines which may use CONSTANTS but no other GLOBALS
 #########################################################################
 
@@ -9432,10 +9383,10 @@ sub follow_quoted_string {
     # characters, whereas for a non-alphanumeric delimiter, only tokens of
     # length 1 can match.
 
-    ###################################################################
+    #----------------------------------------------------------------
     # Case 1 (rare): loop for case of alphanumeric quote delimiter..
     # "quote_pos" is the position the current word to begin searching
-    ###################################################################
+    #----------------------------------------------------------------
     if ( $beginning_tok =~ /\w/ ) {
 
         # Note this because it is not recommended practice except
@@ -9494,9 +9445,9 @@ sub follow_quoted_string {
         }
     }
 
-    ########################################################################
+    #-----------------------------------------------------------------------
     # Case 2 (normal): loop for case of a non-alphanumeric quote delimiter..
-    ########################################################################
+    #-----------------------------------------------------------------------
     else {
 
         while ( $i < $max_token_index ) {
