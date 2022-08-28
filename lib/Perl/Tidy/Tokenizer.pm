@@ -1484,6 +1484,7 @@ sub prepare_for_a_new_file {
     # TV4: SCALARS for multi-line identifiers and
     # statements. These are initialized with a subroutine call
     # and continually updated as lines are processed.
+    # NOTE: $indented_if_level is a relic of the past and not used now
     my ( $id_scan_state, $identifier, $want_paren, $indented_if_level );
 
     # TV5: SCALARS for tracking indentation level.
@@ -4985,11 +4986,11 @@ EOM
         foreach my $i ( @{$routput_token_list} ) {
 
             my $type_i = $routput_token_type->[$i];
+            $level_i = $level_in_tokenizer;
 
             # Quick handling of indentation levels for blanks and comments
             if ( $type_i eq 'b' || $type_i eq '#' ) {
                 $ci_string_i = $ci_string_sum + $in_statement_continuation;
-                $level_i     = $level_in_tokenizer;
             }
 
             # All other types
@@ -5010,94 +5011,7 @@ EOM
                     $tokenizer_self->[_in_error_] = 1;
                 }
 
-             # See if we should undo the $forced_indentation_flag.
-             # Forced indentation after 'if', 'unless', 'while' and 'until'
-             # expressions without trailing parens is optional and doesn't
-             # always look good.  It is usually okay for a trailing logical
-             # expression, but if the expression is a function call, code block,
-             # or some kind of list it puts in an unwanted extra indentation
-             # level which is hard to remove.
-             #
-             # Example where extra indentation looks ok:
-             # return 1
-             #   if $det_a < 0 and $det_b > 0
-             #       or $det_a > 0 and $det_b < 0;
-             #
-             # Example where extra indentation is not needed because
-             # the eval brace also provides indentation:
-             # print "not " if defined eval {
-             #     reduce { die if $b > 2; $a + $b } 0, 1, 2, 3, 4;
-             # };
-             #
-             # The following rule works fairly well:
-             #   Undo the flag if the end of this line, or start of the next
-             #   line, is an opening container token or a comma.
-             # This almost always works, but if not after another pass it will
-             # be stable.
                 my $forced_indentation_flag = $routput_indent_flag->[$i];
-                if ( $forced_indentation_flag && $type_i eq 'k' ) {
-                    my $ixlast  = -1;
-                    my $ilast   = $routput_token_list->[$ixlast];
-                    my $toklast = $routput_token_type->[$ilast];
-                    if ( $toklast eq '#' ) {
-                        $ixlast--;
-                        $ilast   = $routput_token_list->[$ixlast];
-                        $toklast = $routput_token_type->[$ilast];
-                    }
-                    if ( $toklast eq 'b' ) {
-                        $ixlast--;
-                        $ilast   = $routput_token_list->[$ixlast];
-                        $toklast = $routput_token_type->[$ilast];
-                    }
-                    if ( $toklast =~ /^[\{,]$/ ) {
-                        $forced_indentation_flag = 0;
-                    }
-                    else {
-                        ( $toklast, my $i_next ) =
-                          find_next_nonblank_token( $max_token_index, $rtokens,
-                            $max_token_index );
-                        if ( $toklast =~ /^[\{,]$/ ) {
-                            $forced_indentation_flag = 0;
-                        }
-                    }
-                } ## end if ( $forced_indentation_flag...)
-
-                # if we are already in an indented if, see if we should outdent
-                if ($indented_if_level) {
-
-                    # don't try to nest trailing if's - shouldn't happen
-                    if ( $type_i eq 'k' ) {
-                        $forced_indentation_flag = 0;
-                    }
-
-                    # check for the normal case - outdenting at next ';'
-                    elsif ( $type_i eq ';' ) {
-                        if ( $level_in_tokenizer == $indented_if_level ) {
-                            $forced_indentation_flag = -1;
-                            $indented_if_level       = 0;
-                        }
-                    }
-
-                    # handle case of missing semicolon
-                    elsif ( $type_i eq '}' ) {
-                        if ( $level_in_tokenizer == $indented_if_level ) {
-                            $indented_if_level = 0;
-
-                            $level_in_tokenizer--;
-                            if ( @{$rslevel_stack} > 1 ) {
-                                pop( @{$rslevel_stack} );
-                            }
-                            if ( length($nesting_block_string) > 1 )
-                            {    # true for valid script
-                                chop $nesting_block_string;
-                                chop $nesting_list_string;
-                            }
-                        }
-                    }
-                } ## end if ($indented_if_level)
-
-                # Now we have the first approximation to the level
-                $level_i = $level_in_tokenizer;
 
                 # set primary indentation levels based on structural braces
                 # Note: these are set so that the leading braces have a HIGHER
@@ -5185,9 +5099,6 @@ EOM
                         # break BEFORE '?' when there is forced indentation
                         if ( $type_i eq '?' ) {
                             $level_i = $level_in_tokenizer;
-                        }
-                        if ( $type_i eq 'k' ) {
-                            $indented_if_level = $level_in_tokenizer;
                         }
 
                         # do not change container environment here if we are not
@@ -5767,7 +5678,7 @@ sub operator_expected {
             $op_expected = OPERATOR;    # block mode following }
         }
 
-        #       $last_nonblank_token =~ /^(\)|\$|\-\>)/ 
+        #       $last_nonblank_token =~ /^(\)|\$|\-\>)/
         elsif ( $is_paren_dollar{ substr( $last_nonblank_token, 0, 1 ) }
             || substr( $last_nonblank_token, 0, 2 ) eq '->' )
         {
