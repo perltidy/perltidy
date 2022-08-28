@@ -1484,8 +1484,7 @@ sub prepare_for_a_new_file {
     # TV4: SCALARS for multi-line identifiers and
     # statements. These are initialized with a subroutine call
     # and continually updated as lines are processed.
-    # NOTE: $indented_if_level is a relic of the past and not used now
-    my ( $id_scan_state, $identifier, $want_paren, $indented_if_level );
+    my ( $id_scan_state, $identifier, $want_paren );
 
     # TV5: SCALARS for tracking indentation level.
     # Initialized once and continually updated as lines are
@@ -1528,10 +1527,9 @@ sub prepare_for_a_new_file {
         $allowed_quote_modifiers = EMPTY_STRING;
 
         # TV4:
-        $id_scan_state     = EMPTY_STRING;
-        $identifier        = EMPTY_STRING;
-        $want_paren        = EMPTY_STRING;
-        $indented_if_level = 0;
+        $id_scan_state = EMPTY_STRING;
+        $identifier    = EMPTY_STRING;
+        $want_paren    = EMPTY_STRING;
 
         # TV5:
         $nesting_token_string   = EMPTY_STRING;
@@ -1584,8 +1582,7 @@ sub prepare_for_a_new_file {
             $quoted_string_2, $allowed_quote_modifiers,
         ];
 
-        my $rTV4 =
-          [ $id_scan_state, $identifier, $want_paren, $indented_if_level ];
+        my $rTV4 = [ $id_scan_state, $identifier, $want_paren ];
 
         my $rTV5 = [
             $nesting_token_string,      $nesting_type_string,
@@ -1633,8 +1630,7 @@ sub prepare_for_a_new_file {
             $quoted_string_1, $quoted_string_2, $allowed_quote_modifiers,
         ) = @{$rTV3};
 
-        ( $id_scan_state, $identifier, $want_paren, $indented_if_level ) =
-          @{$rTV4};
+        ( $id_scan_state, $identifier, $want_paren ) = @{$rTV4};
 
         (
             $nesting_token_string,      $nesting_type_string,
@@ -1743,9 +1739,6 @@ EOM
     } ## end sub split_pretoken
 
     sub get_indentation_level {
-
-        # patch to avoid reporting error if indented if is not terminated
-        if ($indented_if_level) { return $level_in_tokenizer - 1 }
         return $level_in_tokenizer;
     }
 
@@ -4900,9 +4893,117 @@ EOM
 
         # We have broken the current line into tokens. Now we have to wrap up
         # the result for shipping.  Most of the remaining work involves
-        # defining the various indentation parameters that the formatter needs
-        # (indentation level and continuation indentation).  This turns out to
-        # be somewhat complicated.
+        # defining the two indentation parameters that the formatter needs
+        # (structural indentation level and continuation indentation).
+
+        # The method for setting the indentation level is straightforward.
+        # But the method used to define the continuation indentation is
+        # complicated because it has evolved over a long time by trial and
+        # error. It could undoubtedly be simplified but it works okay as is.
+
+        # Here is a brief description of how indentation is computed.
+        # Perl::Tidy computes indentation as the sum of 2 terms:
+        #
+        # (1) structural indentation, such as if/else/elsif blocks
+        # (2) continuation indentation, such as long parameter call lists.
+        #
+        # These are occasionally called primary and secondary indentation.
+        #
+        # Structural indentation is introduced by tokens of type '{',
+        # although the actual tokens might be '{', '(', or '['.  Structural
+        # indentation is of two types: BLOCK and non-BLOCK.  Default
+        # structural indentation is 4 characters if the standard indentation
+        # scheme is used.
+        #
+        # Continuation indentation is introduced whenever a line at BLOCK
+        # level is broken before its termination.  Default continuation
+        # indentation is 2 characters in the standard indentation scheme.
+        #
+        # Both types of indentation may be nested arbitrarily deep and
+        # interlaced.  The distinction between the two is somewhat arbitrary.
+        #
+        # For each token, we will define two variables which would apply if
+        # the current statement were broken just before that token, so that
+        # that token started a new line:
+        #
+        # $level = the structural indentation level,
+        # $ci_level = the continuation indentation level
+        #
+        # The total indentation will be $level * (4 spaces) + $ci_level * (2
+        # spaces), assuming defaults.  However, in some special cases it is
+        # customary to modify $ci_level from this strict value.
+        #
+        # The total structural indentation is easy to compute by adding and
+        # subtracting 1 from a saved value as types '{' and '}' are seen.
+        # The running value of this variable is $level_in_tokenizer.
+        #
+        # The total continuation is much more difficult to compute, and
+        # requires several variables.  These variables are:
+        #
+        # $ci_string_in_tokenizer = a string of 1's and 0's indicating, for
+        #   each indentation level, if there are intervening open secondary
+        #   structures just prior to that level.
+        # $continuation_string_in_tokenizer = a string of 1's and 0's
+        #   indicating if the last token at that level is "continued", meaning
+        #   that it is not the first token of an expression.
+        # $nesting_block_string = a string of 1's and 0's indicating, for each
+        #   indentation level, if the level is of type BLOCK or not.
+        # $nesting_block_flag = the most recent 1 or 0 of $nesting_block_string
+        # $nesting_list_string = a string of 1's and 0's indicating, for each
+        #   indentation level, if it is appropriate for list formatting.
+        #   If so, continuation indentation is used to indent long list items.
+        # $nesting_list_flag = the most recent 1 or 0 of $nesting_list_string
+        # @{$rslevel_stack} = a stack of total nesting depths at each
+        #   structural indentation level, where "total nesting depth" means
+        #   the nesting depth that would occur if every nesting token
+        #   -- '{', '[', #   and '(' -- , regardless of context, is used to
+        #   compute a nesting depth.
+
+        # Notes on the Continuation Indentation
+        #
+        # There is a sort of chicken-and-egg problem with continuation
+        # indentation.  The formatter can't make decisions on line breaks
+        # without knowing what 'ci' will be at arbitrary locations.
+        #
+        # But a problem with setting the continuation indentation (ci) here
+        # in the tokenizer is that we do not know where line breaks will
+        # actually be.  As a result, we don't know if we should propagate
+        # continuation indentation to higher levels of structure.
+        #
+        # For nesting of only structural indentation, we never need to do
+        # this.  For example, in a long if statement, like this
+        #
+        #   if ( !$output_block_type[$i]
+        #     && ($in_statement_continuation) )
+        #   {           <--outdented
+        #       do_something();
+        #   }
+        #
+        # the second line has ci but we do normally give the lines within
+        # the BLOCK any ci.  This would be true if we had blocks nested
+        # arbitrarily deeply.
+        #
+        # But consider something like this, where we have created a break
+        # after an opening paren on line 1, and the paren is not (currently)
+        # a structural indentation token:
+        #
+        # my $file = $menubar->Menubutton(
+        #   qw/-text File -underline 0 -menuitems/ => [
+        #       [
+        #           Cascade    => '~View',
+        #           -menuitems => [
+        #           ...
+        #
+        # The second line has ci, so it would seem reasonable to propagate
+        # it down, giving the third line 1 ci + 1 indentation.  This
+        # suggests the following rule, which is currently used to
+        # propagating ci down: if there are any non-structural opening
+        # parens (or brackets, or braces), before an opening structural
+        # brace, then ci is propagated down, and otherwise
+        # not.  The variable $intervening_secondary_structure contains this
+        # information for the current token, and the string
+        # "$ci_string_in_tokenizer" is a stack of previous values of this
+        # variable.
 
         my @token_type    = ();    # stack of output token types
         my @block_type    = ();    # stack of output code block types
@@ -4915,73 +5016,13 @@ EOM
         # Count the number of '1's in the string (previously sub ones_count)
         my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
 
-# Computing Token Indentation
-#
-#     The final section of the tokenizer forms tokens and also computes
-#     parameters needed to find indentation.  It is much easier to do it
-#     in the tokenizer than elsewhere.  Here is a brief description of how
-#     indentation is computed.  Perl::Tidy computes indentation as the sum
-#     of 2 terms:
-#
-#     (1) structural indentation, such as if/else/elsif blocks
-#     (2) continuation indentation, such as long parameter call lists.
-#
-#     These are occasionally called primary and secondary indentation.
-#
-#     Structural indentation is introduced by tokens of type '{', although
-#     the actual tokens might be '{', '(', or '['.  Structural indentation
-#     is of two types: BLOCK and non-BLOCK.  Default structural indentation
-#     is 4 characters if the standard indentation scheme is used.
-#
-#     Continuation indentation is introduced whenever a line at BLOCK level
-#     is broken before its termination.  Default continuation indentation
-#     is 2 characters in the standard indentation scheme.
-#
-#     Both types of indentation may be nested arbitrarily deep and
-#     interlaced.  The distinction between the two is somewhat arbitrary.
-#
-#     For each token, we will define two variables which would apply if
-#     the current statement were broken just before that token, so that
-#     that token started a new line:
-#
-#     $level = the structural indentation level,
-#     $ci_level = the continuation indentation level
-#
-#     The total indentation will be $level * (4 spaces) + $ci_level * (2 spaces),
-#     assuming defaults.  However, in some special cases it is customary
-#     to modify $ci_level from this strict value.
-#
-#     The total structural indentation is easy to compute by adding and
-#     subtracting 1 from a saved value as types '{' and '}' are seen.  The
-#     running value of this variable is $level_in_tokenizer.
-#
-#     The total continuation is much more difficult to compute, and requires
-#     several variables.  These variables are:
-#
-#     $ci_string_in_tokenizer = a string of 1's and 0's indicating, for
-#       each indentation level, if there are intervening open secondary
-#       structures just prior to that level.
-#     $continuation_string_in_tokenizer = a string of 1's and 0's indicating
-#       if the last token at that level is "continued", meaning that it
-#       is not the first token of an expression.
-#     $nesting_block_string = a string of 1's and 0's indicating, for each
-#       indentation level, if the level is of type BLOCK or not.
-#     $nesting_block_flag = the most recent 1 or 0 of $nesting_block_string
-#     $nesting_list_string = a string of 1's and 0's indicating, for each
-#       indentation level, if it is appropriate for list formatting.
-#       If so, continuation indentation is used to indent long list items.
-#     $nesting_list_flag = the most recent 1 or 0 of $nesting_list_string
-#     @{$rslevel_stack} = a stack of total nesting depths at each
-#       structural indentation level, where "total nesting depth" means
-#       the nesting depth that would occur if every nesting token -- '{', '[',
-#       and '(' -- , regardless of context, is used to compute a nesting
-#       depth.
-
         $line_of_tokens->{_nesting_tokens_0} = $nesting_token_string;
 
         my ( $ci_string_i, $level_i );
 
-        # loop over the list of pre-tokens indexes
+        #-----------------
+        # Loop over tokens
+        #-----------------
         my $rtoken_map_im;
         foreach my $i ( @{$routput_token_list} ) {
 
@@ -5011,15 +5052,23 @@ EOM
                     $tokenizer_self->[_in_error_] = 1;
                 }
 
-                my $forced_indentation_flag = $routput_indent_flag->[$i];
+                # $ternary_indentation_flag indicates that we need a change
+                # in level at a nested ternary, as follows
+                #     1 => at a nested ternary ?
+                #    -1 => at a nested ternary :
+                #     0 => otherwise
+                my $ternary_indentation_flag = $routput_indent_flag->[$i];
 
+                #-------------------------------------------
+                # Section 1: handle a level-increasing token
+                #-------------------------------------------
                 # set primary indentation levels based on structural braces
                 # Note: these are set so that the leading braces have a HIGHER
                 # level than their CONTENTS, which is convenient for indentation
                 # Also, define continuation indentation for each token.
                 if (   $type_i eq '{'
                     || $type_i eq 'L'
-                    || $forced_indentation_flag > 0 )
+                    || $ternary_indentation_flag > 0 )
                 {
 
                     # use environment before updating
@@ -5037,52 +5086,6 @@ EOM
                           $slevel_in_tokenizer - $rslevel_stack->[-1];
                     }
 
-     # Continuation Indentation
-     #
-     # Having tried setting continuation indentation both in the formatter and
-     # in the tokenizer, I can say that setting it in the tokenizer is much,
-     # much easier.  The formatter already has too much to do, and can't
-     # make decisions on line breaks without knowing what 'ci' will be at
-     # arbitrary locations.
-     #
-     # But a problem with setting the continuation indentation (ci) here
-     # in the tokenizer is that we do not know where line breaks will actually
-     # be.  As a result, we don't know if we should propagate continuation
-     # indentation to higher levels of structure.
-     #
-     # For nesting of only structural indentation, we never need to do this.
-     # For example, in a long if statement, like this
-     #
-     #   if ( !$output_block_type[$i]
-     #     && ($in_statement_continuation) )
-     #   {           <--outdented
-     #       do_something();
-     #   }
-     #
-     # the second line has ci but we do normally give the lines within the BLOCK
-     # any ci.  This would be true if we had blocks nested arbitrarily deeply.
-     #
-     # But consider something like this, where we have created a break after
-     # an opening paren on line 1, and the paren is not (currently) a
-     # structural indentation token:
-     #
-     # my $file = $menubar->Menubutton(
-     #   qw/-text File -underline 0 -menuitems/ => [
-     #       [
-     #           Cascade    => '~View',
-     #           -menuitems => [
-     #           ...
-     #
-     # The second line has ci, so it would seem reasonable to propagate it
-     # down, giving the third line 1 ci + 1 indentation.  This suggests the
-     # following rule, which is currently used to propagating ci down: if there
-     # are any non-structural opening parens (or brackets, or braces), before
-     # an opening structural brace, then ci is propagated down, and otherwise
-     # not.  The variable $intervening_secondary_structure contains this
-     # information for the current token, and the string
-     # "$ci_string_in_tokenizer" is a stack of previous values of this
-     # variable.
-
                     # save the current states
                     push( @{$rslevel_stack}, 1 + $slevel_in_tokenizer );
                     $level_in_tokenizer++;
@@ -5094,25 +5097,15 @@ EOM
                           $level_in_tokenizer;
                     }
 
-                    if ($forced_indentation_flag) {
+                    if ($ternary_indentation_flag) {
 
-                        # break BEFORE '?' when there is forced indentation
+                        # break BEFORE '?' in a nested ternary
                         if ( $type_i eq '?' ) {
                             $level_i = $level_in_tokenizer;
                         }
 
-                        # do not change container environment here if we are not
-                        # at a real list. Adding this check prevents "blinkers"
-                        # often near 'unless" clauses, such as in the following
-                        # code:
-##          next
-##            unless -e (
-##                    $archive =
-##                      File::Spec->catdir( $_, "auto", $root, "$sub$lib_ext" )
-##            );
-
                         $nesting_block_string .= "$nesting_block_flag";
-                    } ## end if ($forced_indentation_flag)
+                    } ## end if ($ternary_indentation_flag)
                     else {
 
                         if ( $routput_block_type->[$i] ) {
@@ -5175,7 +5168,7 @@ EOM
                     if (
                         !$routput_block_type->[$i]    # patch: skip for BLOCK
                         && ($in_statement_continuation)
-                        && !( $forced_indentation_flag && $type_i eq ':' )
+                        && !( $ternary_indentation_flag && $type_i eq ':' )
                       )
                     {
                         $total_ci += $in_statement_continuation
@@ -5187,12 +5180,16 @@ EOM
                     $in_statement_continuation = 0;
                 } ## end if ( $type_i eq '{' ||...})
 
+                #-------------------------------------------
+                # Section 2: handle a level-decreasing token
+                #-------------------------------------------
                 elsif ($type_i eq '}'
                     || $type_i eq 'R'
-                    || $forced_indentation_flag < 0 )
+                    || $ternary_indentation_flag < 0 )
                 {
 
-                 # only a nesting error in the script would prevent popping here
+                    # only a nesting error in the script would prevent
+                    # popping here
                     if ( @{$rslevel_stack} > 1 ) { pop( @{$rslevel_stack} ); }
 
                     $level_i = --$level_in_tokenizer;
@@ -5291,7 +5288,9 @@ EOM
                     $ci_string_i = $ci_string_sum + $in_statement_continuation;
                 } ## end elsif ( $type_i eq '}' ||...{)
 
-                # not a structural indentation type..
+                #-----------------------------------------
+                # Section 3: handle a constant level token
+                #-----------------------------------------
                 else {
 
                     $container_environment =
@@ -5369,6 +5368,9 @@ EOM
 
                 } ## end else [ if ( $type_i eq '{' ||...})]
 
+                #-------------------------------------------
+                # Section 4: operations common to all levels
+                #-------------------------------------------
                 if ( $level_in_tokenizer < 0 ) {
                     unless ( $tokenizer_self->[_saw_negative_indentation_] ) {
                         $tokenizer_self->[_saw_negative_indentation_] = 1;
@@ -5416,14 +5418,16 @@ EOM
                 }
             } ## end else [ if ( $type_i eq 'b' ||...)]
 
+            #--------------------------------
             # Store the values for this token
+            #--------------------------------
             push( @ci_string,     $ci_string_i );
             push( @levels,        $level_i );
             push( @block_type,    $routput_block_type->[$i] );
             push( @type_sequence, $routput_type_sequence->[$i] );
             push( @token_type,    $type_i );
 
-            # Form and store the previous token
+            # Form and store the PREVIOUS token
             if ( defined($rtoken_map_im) ) {
                 my $numc =
                   $rtoken_map->[$i] - $rtoken_map_im;    # how many characters
@@ -5449,7 +5453,11 @@ EOM
             $rtoken_map_im = $rtoken_map->[$i];
         } ## end foreach my $i ( @{$routput_token_list...})
 
-        # Form and store the final token
+        #------------------------
+        # End loop to over tokens
+        #------------------------
+
+        # Form and store the final token of this line
         if ( defined($rtoken_map_im) ) {
             my $numc = length($input_line) - $rtoken_map_im;
             if ( $numc > 0 ) {
@@ -5464,6 +5472,9 @@ EOM
             }
         }
 
+        #----------------------------------------------------------
+        # Wrap up this line of tokens for shipping to the Formatter
+        #----------------------------------------------------------
         $line_of_tokens->{_rtoken_type}    = \@token_type;
         $line_of_tokens->{_rtokens}        = \@tokens;
         $line_of_tokens->{_rblock_type}    = \@block_type;
