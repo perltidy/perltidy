@@ -19111,9 +19111,8 @@ EOM
             $block_type    = $block_type_to_go[$i];
             $token         = $tokens_to_go[$i];
             $type_sequence = $type_sequence_to_go[$i];
-            my $next_type       = $types_to_go[ $i + 1 ];
-            my $next_token      = $tokens_to_go[ $i + 1 ];
-            my $i_next_nonblank = ( ( $next_type eq 'b' ) ? $i + 2 : $i + 1 );
+
+            my $i_next_nonblank = $inext_to_go[$i];
             $next_nonblank_type       = $types_to_go[$i_next_nonblank];
             $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
             $next_nonblank_block_type = $block_type_to_go[$i_next_nonblank];
