@@ -4856,7 +4856,7 @@ EOM
         }
 
         # Remember last nonblank values
-        unless ( ( $type eq 'b' ) || ( $type eq '#' ) ) {
+        if ( $type ne 'b' && $type ne '#' ) {
             $last_last_nonblank_token          = $last_nonblank_token;
             $last_last_nonblank_type           = $last_nonblank_type;
             $last_last_nonblank_block_type     = $last_nonblank_block_type;
@@ -5011,7 +5011,6 @@ EOM
         my @tokens        = ();    # output tokens
         my @levels        = ();    # structural brace levels of output tokens
         my @ci_string = ();  # string needed to compute continuation indentation
-        my $container_environment = EMPTY_STRING;
 
         # Count the number of '1's in the string (previously sub ones_count)
         my $ci_string_sum = ( my $str = $ci_string_in_tokenizer ) =~ tr/1/0/;
@@ -5070,12 +5069,6 @@ EOM
                     || $type_i eq 'L'
                     || $ternary_indentation_flag > 0 )
                 {
-
-                    # use environment before updating
-                    $container_environment =
-                        $nesting_block_flag ? 'BLOCK'
-                      : $nesting_list_flag  ? 'LIST'
-                      :                       EMPTY_STRING;
 
                     # if the difference between total nesting levels is not 1,
                     # there are intervening non-structural nesting types between
@@ -5280,11 +5273,6 @@ EOM
                         }
                     } ## end if ( length($nesting_block_string...))
 
-                    # use environment after updating
-                    $container_environment =
-                        $nesting_block_flag ? 'BLOCK'
-                      : $nesting_list_flag  ? 'LIST'
-                      :                       EMPTY_STRING;
                     $ci_string_i = $ci_string_sum + $in_statement_continuation;
                 } ## end elsif ( $type_i eq '}' ||...{)
 
@@ -5292,11 +5280,6 @@ EOM
                 # Section 3: handle a constant level token
                 #-----------------------------------------
                 else {
-
-                    $container_environment =
-                        $nesting_block_flag ? 'BLOCK'
-                      : $nesting_list_flag  ? 'LIST'
-                      :                       EMPTY_STRING;
 
                     # zero the continuation indentation at certain tokens so
                     # that they will be at the same level as its container.  For
@@ -5311,7 +5294,7 @@ EOM
 
                     # be sure binary operators get continuation indentation
                     if (
-                        $container_environment
+                        ( $nesting_block_flag || $nesting_list_flag )
                         && (   $type_i eq 'k' && $is_binary_keyword{$tok_i}
                             || $is_binary_type{$type_i} )
                       )
