@@ -3671,6 +3671,12 @@ EOM
             $statement_type = $tok;    # next '{' is block
         }
 
+        # feature 'err' was removed in Perl 5.10.  So mark this as
+        # a bareword unless an operator is expected (see c158).
+        elsif ( $tok eq 'err' ) {
+            if ( $expecting != OPERATOR ) { $type = 'w' }
+        }
+
         return;
     } ## end sub do_KEYWORD
 

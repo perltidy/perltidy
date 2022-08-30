@@ -69,6 +69,17 @@
       Also, previously a word following a '->' was given the color of a bareword,
       black by default, but now it is given the color of an identifier.
 
+    - Fixed incorrect formatting of any function named 'err'.  This was
+      due to some old code when use feature 'err' was valid.
+
+            # OLD:
+            my ($curr) = current();
+              err (@_);
+
+            # NEW:
+            my ($curr) = current();
+            err(@_);
+
     - This version runs about 5 percent faster on large files than the previous
       release.
 
