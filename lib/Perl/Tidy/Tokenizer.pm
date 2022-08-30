@@ -5146,22 +5146,25 @@ EOM
                     $continuation_string_in_tokenizer .=
                       ( $in_statement_continuation > 0 ) ? '1' : '0';
 
-   #  Sometimes we want to give an opening brace continuation indentation,
-   #  and sometimes not.  For code blocks, we don't do it, so that the leading
-   #  '{' gets outdented, like this:
-   #
-   #   if ( !$output_block_type[$i]
-   #     && ($in_statement_continuation) )
-   #   {           <--outdented
-   #
-   #  For other types, we will give them continuation indentation.  For example,
-   #  here is how a list looks with the opening paren indented:
-   #
-   #     @LoL =
-   #       ( [ "fred", "barney" ], [ "george", "jane", "elroy" ],
-   #         [ "homer", "marge", "bart" ], );
-   #
-   #  This looks best when 'ci' is one-half of the indentation  (i.e., 2 and 4)
+                    #  Sometimes we want to give an opening brace
+                    #  continuation indentation, and sometimes not.  For code
+                    #  blocks, we don't do it, so that the leading '{' gets
+                    #  outdented, like this:
+                    #
+                    #   if ( !$output_block_type[$i]
+                    #     && ($in_statement_continuation) )
+                    #   {           <--outdented
+                    #
+                    #  For other types, we will give them continuation
+                    #  indentation.  For example, here is how a list looks
+                    #  with the opening paren indented:
+                    #
+                    #  @LoL =
+                    #    ( [ "fred", "barney" ], [ "george", "jane", "elroy" ],
+                    #      [ "homer", "marge", "bart" ], );
+                    #
+                    #  This looks best when 'ci' is one-half of the
+                    #  indentation  (i.e., 2 and 4)
 
                     my $total_ci = $ci_string_sum;
                     if (
@@ -5298,7 +5301,10 @@ EOM
                         }
                     }
 
-                    # be sure binary operators get continuation indentation
+                    # Be sure binary operators get continuation indentation.
+                    # Note: the check on $nesting_block_flag is only needed
+                    # to add ci to binary operators following a 'try' block,
+                    # or similar extended syntax block operator (see c158).
                     if (
                         ( $nesting_block_flag || $nesting_list_flag )
                         && (   $type_i eq 'k' && $is_binary_keyword{$tok_i}

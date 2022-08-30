@@ -1,0 +1,5 @@
+my $meta = try { $package->meta }
+or die "$package does not have a ->meta method\n";
+
+my ($curr) = current();
+err(@_);

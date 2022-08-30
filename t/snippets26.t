@@ -16,6 +16,7 @@
 #13 git106.git106
 #14 c154.def
 #15 code_skipping.code_skipping
+#16 c158.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -151,6 +152,14 @@ for (
     ...;
 }
 }}}}
+----------
+
+        'c158' => <<'----------',
+my $meta = try { $package->meta }
+or die "$package does not have a ->meta method\n";
+
+my ($curr) = current();
+err(@_);
 ----------
 
         'code_skipping' => <<'----------',
@@ -749,6 +758,18 @@ $.          = 0;
 my $self    = shift;
 my $cloning = shift;
 #15...........
+        },
+
+        'c158.def' => {
+            source => "c158",
+            params => "def",
+            expect => <<'#16...........',
+my $meta = try { $package->meta }
+  or die "$package does not have a ->meta method\n";
+
+my ($curr) = current();
+err(@_);
+#16...........
         },
     };
 
