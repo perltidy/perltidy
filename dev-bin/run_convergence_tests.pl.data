@@ -10143,6 +10143,25 @@ $font_size
 --maximum-line-length=12
 --nowant-right-space='='
 
+==> b1375.in <==
+# S1
+          $self->{'col_ids'} ||= [
+               $self->numbering .. $self->width() + $self->numbering - 1 ]
+            if ( defined( $self->width() ) && $self->width() > 0 );
+
+# S2
+          $self->{'col_ids'} ||=
+            [ $self->numbering .. $self->width() +
+                    $self->numbering - 1 ]
+            if ( defined( $self->width() ) && $self->width() > 0 );
+
+==> b1375.par <==
+--extended-line-up-parentheses
+--indent-columns=10
+--maximum-line-length=58
+--opening-square-bracket-right
+--variable-maximum-line-length
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

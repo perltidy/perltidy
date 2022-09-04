@@ -26540,8 +26540,9 @@ sub set_vertical_tightness_flags {
             && $token_end ne '||' && $token_end ne '&&'
 
             # Keep break after '=' if -lp. Fixes b964 b1040 b1062 b1083 b1089.
+            # Generalized from '=' to $is_assignment to fix b1375.
             && !(
-                   $token_end eq '='
+                   $is_assignment{ $types_to_go[$iend] }
                 && $rOpts_line_up_parentheses
                 && $self->[_rlp_object_by_seqno_]
                 ->{ $type_sequence_to_go[$ibeg_next] }
