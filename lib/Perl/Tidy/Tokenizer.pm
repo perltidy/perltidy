@@ -5220,7 +5220,9 @@ EOM
 
                             # ...These include non-anonymous subs
                             # note: could be sub ::abc { or sub 'abc
-                            if ( $block_type_i =~ m/^sub\s*/gc ) {
+                            if ( substr( $block_type_i, 0, 3 ) eq 'sub'
+                                && $block_type_i =~ m/^sub\s*/gc )
+                            {
 
                                 # note: older versions of perl require the /gc
                                 # modifier here or else the \G does not work.
@@ -5294,11 +5296,13 @@ EOM
                     # that they will be at the same level as its container.  For
                     # commas, this simplifies the -lp indentation logic, which
                     # counts commas.  For ?: it makes them stand out.
-                    if ($nesting_list_flag) {
+                    if (
+                        $nesting_list_flag
                         ##      $type_i =~ /^[,\?\:]$/
-                        if ( $is_comma_question_colon{$type_i} ) {
-                            $in_statement_continuation = 0;
-                        }
+                        && $is_comma_question_colon{$type_i}
+                      )
+                    {
+                        $in_statement_continuation = 0;
                     }
 
                     # Be sure binary operators get continuation indentation.
@@ -5306,7 +5310,8 @@ EOM
                     # to add ci to binary operators following a 'try' block,
                     # or similar extended syntax block operator (see c158).
                     if (
-                        ( $nesting_block_flag || $nesting_list_flag )
+                           !$in_statement_continuation
+                        && ( $nesting_block_flag || $nesting_list_flag )
                         && (   $type_i eq 'k' && $is_binary_keyword{$tok_i}
                             || $is_binary_type{$type_i} )
                       )
