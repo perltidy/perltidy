@@ -518,6 +518,7 @@ BEGIN {
         _ris_essential_old_breakpoint_     => $i++,
         _roverride_cab3_                   => $i++,
         _ris_assigned_structure_           => $i++,
+        _ris_short_broken_eval_block_      => $i++,
 
         _rseqno_non_indenting_brace_by_ix_    => $i++,
         _rreduce_vertical_tightness_by_seqno_ => $i++,
@@ -934,6 +935,7 @@ sub new {
     $self->[_ris_essential_old_breakpoint_]     = {};
     $self->[_roverride_cab3_]                   = {};
     $self->[_ris_assigned_structure_]           = {};
+    $self->[_ris_short_broken_eval_block_]      = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_]    = {};
     $self->[_rreduce_vertical_tightness_by_seqno_] = {};
@@ -7434,6 +7436,8 @@ sub add_phantom_semicolon {
         $rLL_new->[$Ktop]->[_TOKEN_LENGTH_] = $len_tok;
         $rLL_new->[$Ktop]->[_TYPE_]         = ';';
 
+        $self->[_rtype_count_by_seqno_]->{$type_sequence}->{';'}++;
+
         # NOTE: we are changing the output stack without updating variables
         # $last_nonblank_code_type, etc. Future needs might require that
         # those variables be updated here.  For now, it seems ok to skip
@@ -12419,9 +12423,10 @@ EOM
     # Batch variables: these describe the current batch of code being formed
     # and sent down the pipeline.  They are initialized in the next
     # sub.
-    my ( $rbrace_follower, $index_start_one_line_block,
-        $semicolons_before_block_self_destruct,
-        $starting_in_quote, $ending_in_quote, );
+    my (
+        $rbrace_follower,   $index_start_one_line_block,
+        $starting_in_quote, $ending_in_quote,
+    );
 
     # Called before the start of each new batch
     sub initialize_batch_variables {
@@ -12465,9 +12470,7 @@ EOM
         $rbrace_follower = undef;
         $ending_in_quote = 0;
 
-        # These get re-initialized by calls to sub destroy_one_line_block():
-        $index_start_one_line_block            = UNDEFINED_INDEX;
-        $semicolons_before_block_self_destruct = 0;
+        $index_start_one_line_block = undef;
 
         # initialize forced breakpoint vars associated with each output batch
         $forced_breakpoint_count      = 0;
@@ -12489,14 +12492,10 @@ EOM
     } ## end sub leading_spaces_to_go
 
     sub create_one_line_block {
-        ( $index_start_one_line_block, $semicolons_before_block_self_destruct )
-          = @_;
-        return;
-    }
 
-    sub destroy_one_line_block {
-        $index_start_one_line_block            = UNDEFINED_INDEX;
-        $semicolons_before_block_self_destruct = 0;
+        # set index starting next one-line block
+        # call with no args to delete the current one-line block
+        ($index_start_one_line_block) = @_;
         return;
     }
 
@@ -12798,7 +12797,7 @@ EOM
 
             # Exception 2: just set a tentative breakpoint if we might be in a
             # one-line block
-            if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
+            if ( defined($index_start_one_line_block) ) {
                 $self->set_forced_breakpoint($max_index_to_go);
                 return;
             }
@@ -12822,7 +12821,7 @@ EOM
 
         # end the current batch with 1 exception
 
-        destroy_one_line_block();
+        $index_start_one_line_block = undef;
 
         # Exception: if we are flushing within the code stream only to insert
         # blank line(s), then we can keep the batch intact at a weld. This
@@ -12952,7 +12951,7 @@ EOM
                 return;
             }
 
-            destroy_one_line_block();
+            $index_start_one_line_block = undef;
             $self->end_batch() if ( $max_index_to_go >= 0 );
 
             # output a blank line before block comments
@@ -13080,8 +13079,10 @@ EOM
         # This is a good place to kill incomplete one-line blocks
         if ( $max_index_to_go >= 0 ) {
             if (
+
+                # this check needed -mangle (for example rt125012)
                 (
-                       ( $semicolons_before_block_self_destruct == 0 )
+                       ( !$index_start_one_line_block )
                     && ( $last_old_nonblank_type eq ';' )
                     && ( $first_new_nonblank_token ne '}' )
                 )
@@ -13093,7 +13094,7 @@ EOM
             {
                 $forced_breakpoint_to_go[$max_index_to_go] = 1
                   if ($rOpts_break_at_old_comma_breakpoints);
-                destroy_one_line_block();
+                $index_start_one_line_block = undef;
                 $self->end_batch();
             }
 
@@ -13103,7 +13104,7 @@ EOM
             #   1 => hard break, flush the batch
             #   2 => soft break, set breakpoint and continue building the batch
             if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
-                destroy_one_line_block();
+                $index_start_one_line_block = undef;
                 if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} == 2 ) {
                     $self->set_forced_breakpoint($max_index_to_go);
                 }
@@ -13168,7 +13169,7 @@ EOM
                     && $tokens_to_go[$max_index_to_go] eq 'overload' )
               )
             {
-                destroy_one_line_block();
+                $index_start_one_line_block = undef;
                 $self->end_batch();
             }
 
@@ -13301,22 +13302,12 @@ EOM
                     $next_nonblank_token_type = $rLL->[$Knnb]->[_TYPE_];
                 }
 
-                my $break_before_semicolon = ( $Ktoken_vars == $K_first )
-                  && $rOpts_break_at_old_semicolon_breakpoints;
-
-                # kill one-line blocks with too many semicolons
-                $semicolons_before_block_self_destruct--;
-                if (
-                       $break_before_semicolon
-                    || ( $semicolons_before_block_self_destruct < 0 )
-                    || (   $semicolons_before_block_self_destruct == 0
-                        && $next_nonblank_token_type !~ /^[b\}]$/ )
-                  )
+                if (   $rOpts_break_at_old_semicolon_breakpoints
+                    && ( $Ktoken_vars == $K_first )
+                    && $max_index_to_go >= 0
+                    && !defined($index_start_one_line_block) )
                 {
-                    destroy_one_line_block();
-                    $self->end_batch()
-                      if ( $break_before_semicolon
-                        && $max_index_to_go >= 0 );
+                    $self->end_batch();
                 }
 
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -13377,7 +13368,7 @@ EOM
                     $want_break
 
                     # and we were unable to start looking for a block,
-                    && $index_start_one_line_block == UNDEFINED_INDEX
+                    && !defined($index_start_one_line_block)
 
                     # or if it will not be on same line as its keyword, so that
                     # it will be outdented (eval.t, overload.t), and the user
@@ -13422,7 +13413,7 @@ EOM
                 }
 
                 # If there is a pending one-line block ..
-                if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
+                if ( defined($index_start_one_line_block) ) {
 
                     # Fix for b1208: if a side comment follows this closing
                     # brace then we must include its length in the length test
@@ -13444,14 +13435,9 @@ EOM
                         # token
                         $self->excess_line_length( $index_start_one_line_block,
                             $max_index_to_go ) + $added_length >= 0
-
-                        # or if it has too many semicolons
-                        || (   $semicolons_before_block_self_destruct == 0
-                            && defined($K_last_nonblank_code)
-                            && $rLL->[$K_last_nonblank_code]->[_TYPE_] ne ';' )
                       )
                     {
-                        destroy_one_line_block();
+                        $index_start_one_line_block = undef;
                     }
                 }
 
@@ -13459,7 +13445,7 @@ EOM
                 $self->end_batch()
                   if ( $max_index_to_go >= 0
                     && !$nobreak_BEFORE_BLOCK
-                    && $index_start_one_line_block == UNDEFINED_INDEX );
+                    && !defined($index_start_one_line_block) );
 
                 # store the closing curly brace
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -13471,7 +13457,7 @@ EOM
                 # if this '}' successfully ends a one-line block..
                 my $is_one_line_block = 0;
                 my $keep_going        = 0;
-                if ( $index_start_one_line_block != UNDEFINED_INDEX ) {
+                if ( defined($index_start_one_line_block) ) {
 
                     # Remember the type of token just before the
                     # opening brace.  It would be more general to use
@@ -13508,7 +13494,7 @@ EOM
                       $index_start_one_line_block;
 
                     # then re-initialize for the next one-line block
-                    destroy_one_line_block();
+                    $index_start_one_line_block = undef;
 
                     # then decide if we want to break after the '}' ..
                     # We will keep going to allow certain brace followers as in:
@@ -13669,7 +13655,6 @@ EOM
 
                 # no newlines after seeing here-target
                 $no_internal_newlines = 2;
-                ## destroy_one_line_block();  # deleted to fix case b529
                 $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
             }
 
@@ -13876,7 +13861,7 @@ sub starting_one_line_block {
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
     # kill any current block - we can only go 1 deep
-    destroy_one_line_block();
+    create_one_line_block();
 
     my $i_start = 0;
 
@@ -14168,7 +14153,7 @@ sub starting_one_line_block {
             #--------------------------
             # ok, it's a one-line block
             #--------------------------
-            create_one_line_block( $i_start, 20 );
+            create_one_line_block($i_start);
             return 0;
         }
 
@@ -14196,7 +14181,31 @@ sub starting_one_line_block {
     # The blocks which we can keep going are in a hash, but we never want
     # to continue if we are at a '-bli' block.
     if ( $want_one_line_block{$block_type} && !$is_bli ) {
-        create_one_line_block( $i_start, 1 );
+        my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence_j};
+        my $semicolon_count = $rtype_count
+          && $rtype_count->{';'} ? $rtype_count->{';'} : 0;
+
+        # Ignore a terminal semicolon in the count
+        if ( $semicolon_count <= 2 ) {
+            my $K_closing_container = $self->[_K_closing_container_];
+            my $K_closing_j         = $K_closing_container->{$type_sequence_j};
+            my $Kp                  = $self->K_previous_nonblank($K_closing_j);
+            if ( defined($Kp)
+                && $rLL->[$Kp]->[_TYPE_] eq ';' )
+            {
+                $semicolon_count -= 1;
+            }
+        }
+        if ( $semicolon_count <= 0 ) {
+            create_one_line_block($i_start);
+        }
+        elsif ( $semicolon_count == 1 && $block_type eq 'eval' ) {
+
+            # Mark short broken eval blocks for possible later use in
+            # avoiding adding spaces before a 'package' line. This is not
+            # essential but helps keep newer and older formatting the same.
+            $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
+        }
     }
     return 0;
 } ## end sub starting_one_line_block
@@ -14990,7 +14999,11 @@ EOM
 
                 # break before all package declarations
                 elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
-                    $want_blank = $rOpts->{'blank-lines-before-packages'};
+
+                    # ... except in a very short eval block
+                    my $pseqno = $parent_seqno_to_go[$imin];
+                    $want_blank = $rOpts->{'blank-lines-before-packages'}
+                      if ( !$self->[_ris_short_broken_eval_block_]->{$pseqno} );
                 }
             }
 
@@ -15118,8 +15131,8 @@ EOM
             )
           )
         {
-            @{$ri_first} = ($imin);
-            @{$ri_last}  = ($imax);
+            $ri_first = [$imin];
+            $ri_last  = [$imax];
         }
 
         #-----------------------------
@@ -21677,8 +21690,8 @@ sub get_available_spaces_to_go {
     }
 
     # shared variables, re-initialized for each batch
-    my $rlp_object_list    = [];
-    my $max_lp_object_list = UNDEFINED_INDEX;
+    my $rlp_object_list;
+    my $max_lp_object_list;
     my %lp_comma_count;
     my %lp_arrow_count;
     my $space_count;
@@ -21706,7 +21719,7 @@ sub get_available_spaces_to_go {
 
         # List of -lp indentation objects created in this batch
         $rlp_object_list    = [];
-        $max_lp_object_list = UNDEFINED_INDEX;
+        $max_lp_object_list = -1;
 
         %lp_comma_count          = ();
         %lp_arrow_count          = ();
