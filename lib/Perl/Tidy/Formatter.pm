@@ -13848,9 +13848,9 @@ sub starting_one_line_block {
     # Also returns a flag '$too_long':
     #  true  = distance from opening keyword to OPENING brace exceeds
     #          the maximum line length.
-    #  false = otherwise
-    # Note that this flag is for distance to the opening brace, not the
-    # closing brace.
+    #  false (simple return) => not too long
+    # Note that this flag is for distance from the statement start to the
+    # OPENING brace, not the closing brace.
 
     my ( $self, $Kj, $K_last_nonblank, $K_last ) = @_;
 
@@ -13873,13 +13873,13 @@ sub starting_one_line_block {
     if ( !defined($max_index_to_go) || $max_index_to_go < 0 ) {
         Fault("program bug: store_token_to_go called incorrectly\n")
           if (DEVEL_MODE);
-        return 0;
+        return;
     }
 
     # Return if block should be broken
     my $type_sequence_j = $rLL->[$Kj]->[_TYPE_SEQUENCE_];
     if ( $rbreak_container->{$type_sequence_j} ) {
-        return 0;
+        return;
     }
 
     my $ris_bli_container = $self->[_ris_bli_container_];
@@ -13930,22 +13930,22 @@ sub starting_one_line_block {
 
             # Find the opening paren
             my $K_start = $K_to_go[$i_start];
-            return 0 unless defined($K_start);
+            return unless defined($K_start);
             my $seqno = $type_sequence_to_go[$i_start];
-            return 0 unless ($seqno);
+            return unless ($seqno);
             my $K_opening = $K_opening_container->{$seqno};
-            return 0 unless defined($K_opening);
+            return unless defined($K_opening);
             my $i_opening = $i_start + ( $K_opening - $K_start );
 
             # give up if not on this line
-            return 0 unless ( $i_opening >= 0 );
+            return unless ( $i_opening >= 0 );
             $i_start = $i_opening;
 
             # go back one token before the opening paren
             if ( $i_start > 0 )                                  { $i_start-- }
             if ( $types_to_go[$i_start] eq 'b' && $i_start > 0 ) { $i_start--; }
             my $lev = $levels_to_go[$i_start];
-            if ( $lev > $rLL->[$Kj]->[_LEVEL_] ) { return 0 }
+            if ( $lev > $rLL->[$Kj]->[_LEVEL_] ) { return }
         }
     }
 
@@ -13972,7 +13972,7 @@ sub starting_one_line_block {
             $stripped_block_type = substr( $block_type, 0, -2 );
         }
         unless ( $tokens_to_go[$i_start] eq $stripped_block_type ) {
-            return 0;
+            return;
         }
     }
 
@@ -13986,11 +13986,14 @@ sub starting_one_line_block {
             $i_start++;
         }
         unless ( $tokens_to_go[$i_start] eq $block_type ) {
-            return 0;
+            return;
         }
     }
-
     else {
+
+        #-------------------------------------------
+        # Couldn't find start - return too_long flag
+        #-------------------------------------------
         return 1;
     }
 
@@ -13999,15 +14002,23 @@ sub starting_one_line_block {
     my $maximum_line_length =
       $maximum_line_length_at_level[ $levels_to_go[$i_start] ];
 
-    # see if block starting location is too great to even start
+    # see if distance to the opening container is too great to even start
     if ( $pos > $maximum_line_length ) {
+
+        #------------------------------
+        # too long to the opening token
+        #------------------------------
         return 1;
     }
 
-    # See if everything to the closing token will fit on one line
+    #-----------------------------------------------------------------------
+    # OK so far: the statement is not to long just to the OPENING token. Now
+    # see if everything to the closing token will fit on one line
+    #-----------------------------------------------------------------------
+
     # This is part of an update to fix cases b562 .. b983
     my $K_closing = $self->[_K_closing_container_]->{$type_sequence_j};
-    return 0 unless ( defined($K_closing) );
+    return unless ( defined($K_closing) );
     my $container_length = $rLL->[$K_closing]->[_CUMULATIVE_LENGTH_] -
       $rLL->[$Kj]->[_CUMULATIVE_LENGTH_];
 
@@ -14022,7 +14033,7 @@ sub starting_one_line_block {
 
         # line is too long...  there is no chance of forming a one line block
         # if the excess is more than 1 char
-        return 0 if ( $excess > 1 );
+        return if ( $excess > 1 );
 
         # ... and give up if it is not a one-line block on input.
         # note: for a one-line block on input, it may be possible to keep
@@ -14030,7 +14041,7 @@ sub starting_one_line_block {
         my $K_start = $K_to_go[$i_start];
         my $ldiff =
           $rLL->[$K_closing]->[_LINE_INDEX_] - $rLL->[$K_start]->[_LINE_INDEX_];
-        return 0 if ($ldiff);
+        return if ($ldiff);
     }
 
     #------------------------------------------------------------------
@@ -14048,7 +14059,7 @@ sub starting_one_line_block {
 
         # Return false result if we exceed the maximum line length,
         if ( $pos > $maximum_line_length ) {
-            return 0;
+            return;
         }
 
         # keep going for non-containers
@@ -14063,7 +14074,7 @@ sub starting_one_line_block {
             && $rblock_type_of_seqno->{$type_sequence_i}
             && !$nobreak )
         {
-            return 0;
+            return;
         }
 
         # if we find our closing brace..
@@ -14145,7 +14156,7 @@ sub starting_one_line_block {
                     }
 
                     if ( $pos >= $maximum_line_length ) {
-                        return 0;
+                        return;
                     }
                 }
             }
@@ -14154,7 +14165,7 @@ sub starting_one_line_block {
             # ok, it's a one-line block
             #--------------------------
             create_one_line_block($i_start);
-            return 0;
+            return;
         }
 
         # just keep going for other characters
@@ -14207,7 +14218,7 @@ sub starting_one_line_block {
             $self->[_ris_short_broken_eval_block_]->{$type_sequence_j} = 1;
         }
     }
-    return 0;
+    return;
 } ## end sub starting_one_line_block
 
 sub unstore_token_to_go {

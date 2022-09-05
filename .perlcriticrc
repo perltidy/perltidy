@@ -8,12 +8,8 @@
 # Example command to run a single policy on single module:
 # perlcritic --single-policy Subroutines::ProhibitSubroutinePrototypes Module.pm
 
-# I have found that using 'no critic' comments is too troublesome*, so
+# I have found that using 'no critic' comments is much too troublesome, so
 # non-configurable policies are either 'on' or 'off'.  
-# *perlcritic requires specifying a policy even in a side comment for a
-# single statement, which seems pointless.  And the very long policy names
-# make a simple statement very hard to read, and the side comment will often
-# exceed the desired line length, making it unclear what is going on.
 
 # severity = 1 gives the most strict checking.
 severity = 1
