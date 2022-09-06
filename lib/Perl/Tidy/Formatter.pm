@@ -14727,20 +14727,15 @@ EOM
 
         return if ( $max_index_to_go < 0 );
 
-        $self->set_lp_indentation()
-          if ($rOpts_line_up_parentheses);
+        if ($rOpts_line_up_parentheses) {
+            $self->set_lp_indentation();
+        }
 
-        #----------------------------
+        #--------------------------------------------------
         # Shortcut for block comments
-        #----------------------------
-        if (
-               $max_index_to_go == 0
-            && $types_to_go[0] eq '#'
-
-            # this shortcut does not work for -lp yet
-            && !$rOpts_line_up_parentheses
-          )
-        {
+        # Note that this shortcut does not work for -lp yet
+        #--------------------------------------------------
+        elsif ( $max_index_to_go == 0 && $types_to_go[0] eq '#' ) {
             my $ibeg = 0;
             $this_batch->[_ri_first_]                 = [$ibeg];
             $this_batch->[_ri_last_]                  = [$ibeg];
