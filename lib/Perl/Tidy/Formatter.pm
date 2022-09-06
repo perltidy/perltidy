@@ -942,6 +942,8 @@ sub new {
     $self->[_rseqno_non_indenting_brace_by_ix_]    = {};
     $self->[_rreduce_vertical_tightness_by_seqno_] = {};
 
+    $self->[_no_vertical_tightness_flags_] = 0;
+
     # This flag will be updated later by a call to get_save_logfile()
     $self->[_save_logfile_] = defined($logger_object);
 
@@ -5632,7 +5634,8 @@ EOM
     # Implement any welding needed for the -wn or -cb options
     $self->weld_containers();
 
-    $self->collapsed_lengths()
+    # Collect info needed to implement the -xlp style
+    $self->xlp_collapsed_lengths()
       if ( $rOpts_line_up_parentheses && $rOpts_extended_line_up_parentheses );
 
     # Locate small nested blocks which should not be broken
@@ -7588,24 +7591,6 @@ EOM
     $rnew_token[_TYPE_SEQUENCE_] = EMPTY_STRING;
     return \@rnew_token;
 } ## end sub copy_token_as_type
-
-sub Debug_dump_tokens {
-
-    # a debug routine, not normally used
-    my ( $self, $msg ) = @_;
-    my $rLL   = $self->[_rLL_];
-    my $nvars = @{$rLL};
-    print STDERR "$msg\n";
-    print STDERR "ntokens=$nvars\n";
-    print STDERR "K\t_TOKEN_\t_TYPE_\n";
-    my $K = 0;
-
-    foreach my $item ( @{$rLL} ) {
-        print STDERR "$K\t$item->[_TOKEN_]\t$item->[_TYPE_]\n";
-        $K++;
-    }
-    return;
-} ## end sub Debug_dump_tokens
 
 sub K_next_code {
     my ( $self, $KK, $rLL ) = @_;
@@ -11023,7 +11008,7 @@ BEGIN {
     };
 }
 
-sub collapsed_lengths {
+sub xlp_collapsed_lengths {
 
     my $self = shift;
 
@@ -11509,7 +11494,7 @@ EOM
     }
 
     return;
-} ## end sub collapsed_lengths
+} ## end sub xlp_collapsed_lengths
 
 sub is_excluded_lp {
 
@@ -11568,6 +11553,7 @@ sub is_excluded_lp {
         elsif ( $flag1 eq 'F' ) { $match_flag1 = !$is_f }
         elsif ( $flag1 eq 'w' ) { $match_flag1 = $is_w }
         elsif ( $flag1 eq 'W' ) { $match_flag1 = !$is_w }
+        ## else { no match found }
     }
 
     # See if we can exclude this based on the flag1 test...
@@ -11665,15 +11651,15 @@ sub process_all_lines {
     my $i_last_POD_END = -10;
     my $i              = -1;
     foreach my $line_of_tokens ( @{$rlines} ) {
-        $i++;
 
         # insert blank lines requested for keyword sequences
-        if (   $i > 0
-            && defined( $rwant_blank_line_after->{ $i - 1 } )
-            && $rwant_blank_line_after->{ $i - 1 } == 1 )
+        if ( defined( $rwant_blank_line_after->{$i} )
+            && $rwant_blank_line_after->{$i} == 1 )
         {
             $self->want_blank_line();
         }
+
+        $i++;
 
         my $last_line_type = $line_type;
         $line_type = $line_of_tokens->{_line_type};
@@ -12832,25 +12818,16 @@ EOM
 
         # It outputs full-line comments and blank lines immediately.
 
-        # The tokens are copied one-by-one from the global token array $rLL to
-        # a set of '_to_go' arrays which collect batches of tokens for a
-        # further processing via calls to 'sub store_token_to_go', until a well
-        # defined 'structural' break point* or 'forced' breakpoint* is reached.
-        # Then, the batch of collected '_to_go' tokens is passed along to 'sub
-        # grind_batch_of_CODE' for further processing.
-
-        # * 'structural' break points are basically line breaks corresponding
-        # to code blocks.  An example is a chain of if-elsif-else statements,
-        # which should typically be broken at the opening and closing braces.
-
-        # * 'forced' break points are breaks required by side comments or by
-        # special user controls.
-
-        # So this routine is just making an initial set of required line
-        # breaks, basically regardless of the maximum requested line length.
-        # The subsequent stage of formatting make additional line breaks
-        # appropriate for lists and logical structures, and to keep line
-        # lengths below the requested maximum line length.
+        # For lines of code:
+        # - Tokens are copied one-by-one from the global token
+        #   array $rLL to a set of '_to_go' arrays which collect batches of
+        #   tokens. This is done with calls to 'store_token_to_go'.
+        # - A batch is closed and processed upon reaching a well defined
+        #   structural break point (i.e. code block boundary) or forced
+        #   breakpoint (i.e. side comment or special user controls).
+        # - Subsequent stages of formatting make additional line breaks
+        #   appropriate for lists and logical structures, and as necessary to
+        #   keep line lengths below the requested maximum line length.
 
         #-----------------------------------
         # begin initialize closure variables
@@ -12997,30 +12974,33 @@ EOM
             return;
         }
 
-        # Compare input/output indentation except for:
-        #  - hanging side comments
-        #  - continuation lines (have unknown amount of initial blank space)
-        #  - and lines which are quotes (because they may have been outdented)
-        my $guessed_indentation_level =
-          $line_of_tokens->{_guessed_indentation_level};
+        #--------------------------------------------
+        # Compare input/output indentation in logfile
+        #--------------------------------------------
+        if ( $self->[_save_logfile_] ) {
 
-        unless ( $CODE_type eq 'HSC'
-            || $rtok_first->[_CI_LEVEL_] > 0
-            || $guessed_indentation_level == 0 && $rtok_first->[_TYPE_] eq 'Q' )
-        {
-            my $input_line_number = $line_of_tokens->{_line_number};
-            $self->compare_indentation_levels( $K_first,
-                $guessed_indentation_level, $input_line_number );
+            # Compare input/output indentation except for:
+            #  - hanging side comments
+            #  - continuation lines (have unknown leading blank space)
+            #  - and lines which are quotes (they may have been outdented)
+            my $guessed_indentation_level =
+              $line_of_tokens->{_guessed_indentation_level};
+
+            unless ( $CODE_type eq 'HSC'
+                || $rtok_first->[_CI_LEVEL_] > 0
+                || $guessed_indentation_level == 0
+                && $rtok_first->[_TYPE_] eq 'Q' )
+            {
+                my $input_line_number = $line_of_tokens->{_line_number};
+                $self->compare_indentation_levels( $K_first,
+                    $guessed_indentation_level, $input_line_number );
+            }
         }
 
-        #------------------------
-        # Handle indentation-only
-        #------------------------
+        #-----------------------------------------
+        # Handle a line marked as indentation-only
+        #-----------------------------------------
 
-        # NOTE: In previous versions we sent all qw lines out immediately here.
-        # No longer doing this: also write a line which is entirely a 'qw' list
-        # to allow stacking of opening and closing tokens.  Note that interior
-        # qw lines will still go out at the end of this routine.
         if ( $CODE_type eq 'IO' ) {
             $self->flush();
             my $line = $input_line;

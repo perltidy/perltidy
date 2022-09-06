@@ -80,8 +80,8 @@
             my ($curr) = current();
             err(@_);
 
-    - This version runs about 5 percent faster on large files than the previous
-      release.
+    - This version runs 5 to 15 percent faster than the previous
+      release on large files, depending on formatting parameters.
 
 ## 2022 06 13
 
