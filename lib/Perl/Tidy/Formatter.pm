@@ -523,6 +523,8 @@ BEGIN {
         _rseqno_non_indenting_brace_by_ix_    => $i++,
         _rreduce_vertical_tightness_by_seqno_ => $i++,
 
+        _no_vertical_tightness_flags_ => $i++,
+
         _LAST_SELF_INDEX_ => $i - 1,
     };
 }
@@ -5618,6 +5620,8 @@ EOM
         $self->wrapup();
         return;
     }
+
+    $self->examine_vertical_tightness_flags();
 
     $self->set_excluded_lp_containers();
 
@@ -23098,7 +23102,8 @@ EOM
         $rvao_args->{rvertical_tightness_flags} =
           $self->set_vertical_tightness_flags( $n, $n_last_line, $ibeg, $iend,
             $ri_first, $ri_last, $ending_in_quote, $closing_side_comment )
-          unless ( $is_block_comment || $rOpts_freeze_whitespace );
+          unless ( $is_block_comment
+            || $self->[_no_vertical_tightness_flags_] );
 
         # ----------------------------------
         # define 'is_terminal_ternary'  flag
@@ -26263,6 +26268,61 @@ sub get_opening_indentation {
     return ( $indent, $offset, $is_leading, $exists );
 } ## end sub get_opening_indentation
 
+sub examine_vertical_tightness_flags {
+    my ($self) = @_;
+
+    # For efficiency, we will set a flag to skip all calls to sub
+    # 'set_vertical_tightness_flags' if vertical tightness is not possible with
+    # the user input parameters.  If vertical tightness is possible, we will
+    # simply leave the flag undefined and return.
+
+    # Vertical tightness is never possible with --freeze-whitespace
+    if ($rOpts_freeze_whitespace) {
+        $self->[_no_vertical_tightness_flags_] = 1;
+        return;
+    }
+
+    # This sub is coordinated with sub set_vertical_tightness_flags.
+    # The Section numbers in the following comments are the sections
+    # in sub set_vertical_tightness_flags:
+
+    # Examine controls for Section 1a:
+    return if ($rOpts_line_up_parentheses);
+
+    foreach my $key ( keys %opening_vertical_tightness ) {
+        return if ( $opening_vertical_tightness{$key} );
+    }
+
+    # Examine controls for Section 1b:
+    foreach my $key ( keys %closing_vertical_tightness ) {
+        return if ( $closing_vertical_tightness{$key} );
+    }
+
+    # Examine controls for Section 1c:
+    foreach my $key ( keys %opening_token_right ) {
+        return if ( $opening_token_right{$key} );
+    }
+
+    # Examine controls for Section 1d:
+    foreach my $key ( keys %stack_opening_token ) {
+        return if ( $stack_opening_token{$key} );
+    }
+    foreach my $key ( keys %stack_closing_token ) {
+        return if ( $stack_closing_token{$key} );
+    }
+
+    # Examine controls for Section 2:
+    return if ($rOpts_block_brace_vertical_tightness);
+
+    # Examine controls for Section 3:
+    return if ($rOpts_stack_closing_block_brace);
+
+    # None of the controls used for vertical tightness are set, so
+    # we can skip all calls to sub set_vertical_tightness_flags
+    $self->[_no_vertical_tightness_flags_] = 1;
+    return;
+}
+
 sub set_vertical_tightness_flags {
 
     my ( $self, $n, $n_last_line, $ibeg, $iend, $ri_first, $ri_last,
@@ -26316,6 +26376,7 @@ sub set_vertical_tightness_flags {
     #   $rOpts_block_brace_tightness
     #   $rOpts_block_brace_vertical_tightness
     #   $rOpts_stack_closing_block_brace
+    #   $rOpts_line_up_parentheses
     #   %opening_vertical_tightness
     #   %closing_vertical_tightness
     #   %opening_token_right
@@ -26409,7 +26470,6 @@ sub set_vertical_tightness_flags {
             && $is_closing_token{$token_next}
             && $types_to_go[$iend] ne '#' )    # for safety, shouldn't happen!
         {
-            my $ovt = $opening_vertical_tightness{$token_next};
             my $cvt = $closing_vertical_tightness{$token_next};
 
             # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
