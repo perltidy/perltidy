@@ -5638,7 +5638,7 @@ EOM
     # Locate small nested blocks which should not be broken
     $self->mark_short_nested_blocks();
 
-    $self->adjust_indentation_levels();
+    $self->special_indentation_adjustments();
 
     # Verify that the main token array looks OK.  If this ever causes a fault
     # then place similar checks before the sub calls above to localize the
@@ -9993,7 +9993,7 @@ sub mark_short_nested_blocks {
     return;
 } ## end sub mark_short_nested_blocks
 
-sub adjust_indentation_levels {
+sub special_indentation_adjustments {
 
     my ($self) = @_;
 
@@ -10040,7 +10040,7 @@ sub adjust_indentation_levels {
     $self->clip_adjusted_levels();
 
     return;
-} ## end sub adjust_indentation_levels
+} ## end sub special_indentation_adjustments
 
 sub clip_adjusted_levels {
 
@@ -10849,7 +10849,7 @@ sub find_multiline_qw {
     # and creates a separate sequence number system for later use.
 
     # This is straightforward because they always begin at the end of one line
-    # and and at the beginning of a later line. This is true no matter how we
+    # and end at the beginning of a later line. This is true no matter how we
     # finally make our line breaks, so we can find them before deciding on new
     # line breaks.
 
@@ -11654,26 +11654,6 @@ sub process_all_lines {
     my $logger_object              = $self->[_logger_object_];
     my $vertical_aligner_object    = $self->[_vertical_aligner_object_];
     my $save_logfile               = $self->[_save_logfile_];
-
-    # Note for RT#118553, leave only one newline at the end of a file.
-    # Example code to do this is in comments below:
-    # my $Opt_trim_ending_blank_lines = 0;
-    # if ($Opt_trim_ending_blank_lines) {
-    #     while ( my $line_of_tokens = pop @{$rlines} ) {
-    #         my $line_type = $line_of_tokens->{_line_type};
-    #         if ( $line_type eq 'CODE' ) {
-    #             my $CODE_type = $line_of_tokens->{_code_type};
-    #             next if ( $CODE_type eq 'BL' );
-    #         }
-    #         push @{$rlines}, $line_of_tokens;
-    #         last;
-    #     }
-    # }
-
-   # But while this would be a trivial update, it would have very undesirable
-   # side effects when perltidy is run from within an editor on a small snippet.
-   # So this is best done with a separate filter, such
-   # as 'delete_ending_blank_lines.pl' in the examples folder.
 
     # Flag to prevent blank lines when POD occurs in a format skipping sect.
     my $in_format_skipping_section;
@@ -23853,8 +23833,16 @@ sub make_vertical_alignments {
     #---------------------------------------------------------
     # Step 1: Define the alignment tokens for the entire batch
     #---------------------------------------------------------
-    my ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line )
-      = $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+    my ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line );
+
+    # We only need to make this call if vertical alignment of code is
+    # requested or if a line might have a side comment.
+    if (   $rOpts_valign_code
+        || $types_to_go[$max_index_to_go] eq '#' )
+    {
+        ( $ralignment_type_to_go, $ralignment_counts, $ralignment_hash_by_line )
+          = $self->set_vertical_alignment_markers( $ri_first, $ri_last );
+    }
 
     #----------------------------------------------
     # Step 2: Break each line into alignment fields
