@@ -51,7 +51,8 @@ use constant SPACE        => q{ };
 { #<<< A non-indenting brace to contain all lexical variables
 
 use Carp;
-use English qw( -no_match_vars );
+use English    qw( -no_match_vars );
+use List::Util qw( min max );          # min, max are in Perl 5.8
 our $VERSION = '20220613.04';
 
 # The Tokenizer will be loaded with the Formatter
@@ -1230,20 +1231,6 @@ sub consecutive_nonblank_lines {
     my $vao                = $self->[_vertical_aligner_object_];
     return $file_writer_object->get_consecutive_nonblank_lines() +
       $vao->get_cached_line_count();
-}
-
-sub max {
-    my (@vals) = @_;
-    my $max = shift @vals;
-    for (@vals) { $max = $_ > $max ? $_ : $max }
-    return $max;
-}
-
-sub min {
-    my (@vals) = @_;
-    my $min = shift @vals;
-    for (@vals) { $min = $_ < $min ? $_ : $min }
-    return $min;
 }
 
 sub split_words {
@@ -10062,7 +10049,12 @@ sub clip_adjusted_levels {
     my ($self) = @_;
     my $radjusted_levels = $self->[_radjusted_levels_];
     return unless defined($radjusted_levels) && @{$radjusted_levels};
-    foreach ( @{$radjusted_levels} ) { $_ = 0 if ( $_ < 0 ) }
+    my $min = min( @{$radjusted_levels} );   # fast check for min
+    if ( $min < 0 ) {
+
+        # slow loop, but rarely needed
+        foreach ( @{$radjusted_levels} ) { $_ = 0 if ( $_ < 0 ) }
+    }
     return;
 } ## end sub clip_adjusted_levels
 
