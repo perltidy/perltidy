@@ -5596,38 +5596,42 @@ EOM
         $self->[_save_logfile_] = $logger_object->get_save_logfile();
     }
 
-    my $rix_side_comments = $self->set_CODE_type();
+    {
+        my $rix_side_comments = $self->set_CODE_type();
 
-    $self->find_non_indenting_braces($rix_side_comments);
+        $self->find_non_indenting_braces($rix_side_comments);
 
-    # Handle any requested side comment deletions. It is easier to get
-    # this done here rather than farther down the pipeline because IO
-    # lines take a different route, and because lines with deleted HSC
-    # become BL lines.  We have already handled any tee requests in sub
-    # getline, so it is safe to delete side comments now.
-    $self->delete_side_comments($rix_side_comments)
-      if ( $rOpts_delete_side_comments
-        || $rOpts_delete_closing_side_comments );
+        # Handle any requested side comment deletions. It is easier to get
+        # this done here rather than farther down the pipeline because IO
+        # lines take a different route, and because lines with deleted HSC
+        # become BL lines.  We have already handled any tee requests in sub
+        # getline, so it is safe to delete side comments now.
+        $self->delete_side_comments($rix_side_comments)
+          if ( $rOpts_delete_side_comments
+            || $rOpts_delete_closing_side_comments );
+    }
 
     # Verify that the line hash does not have any unknown keys.
     $self->check_line_hashes() if (DEVEL_MODE);
 
-    # Make a pass through all tokens, adding or deleting any whitespace as
-    # required.  Also make any other changes, such as adding semicolons.
-    # All token changes must be made here so that the token data structure
-    # remains fixed for the rest of this iteration.
-    $severe_error = $self->respace_tokens();
-    if ($severe_error) {
-        $self->dump_verbatim();
-        $self->wrapup();
-        return;
+    {
+        # Make a pass through all tokens, adding or deleting any whitespace as
+        # required.  Also make any other changes, such as adding semicolons.
+        # All token changes must be made here so that the token data structure
+        # remains fixed for the rest of this iteration.
+        my ( $severe_error, $rqw_lines ) = $self->respace_tokens();
+        if ($severe_error) {
+            $self->dump_verbatim();
+            $self->wrapup();
+            return;
+        }
+
+        $self->find_multiline_qw($rqw_lines);
     }
 
     $self->examine_vertical_tightness_flags();
 
     $self->set_excluded_lp_containers();
-
-    $self->find_multiline_qw();
 
     $self->keep_old_line_breaks();
 
@@ -6310,12 +6314,18 @@ sub initialize_respace_tokens_closure {
 sub respace_tokens {
 
     my $self = shift;
-    return if $rOpts->{'indent-only'};
+
+    # return parameters
+    my ( $severe_error, $rqw_lines );
+
+    if ( $rOpts->{'indent-only'} ) {
+        return ( $severe_error, $rqw_lines );
+    }
 
     # This routine is called once per file to do as much formatting as possible
     # before new line breaks are set.
 
-    # Returns 1 on a severe error which requires processing to terminate
+    # Set $severe_error=true if processing must terminate immediately
 
     # This routine makes all necessary and possible changes to the tokenization
     # after the initial tokenization of the file. This is a tedious routine,
@@ -6373,7 +6383,8 @@ sub respace_tokens {
                 Fault_Warn(
                     "Program Bug: last K out was $last_K_out but Kfirst=$Kfirst"
                 );
-                return 1;
+                $severe_error = 1;
+                return ( $severe_error, $rqw_lines );
             }
         }
         else {
@@ -6533,9 +6544,9 @@ sub respace_tokens {
     DEVEL_MODE && $self->check_token_array();
 
     # update the token limits of each line
-    my $severe_error = $self->resync_lines_and_tokens();
+    ( $severe_error, $rqw_lines ) = $self->resync_lines_and_tokens();
 
-    return $severe_error;
+    return ( $severe_error, $rqw_lines );
 } ## end sub respace_tokens
 
 sub respace_tokens_inner_loop {
@@ -7828,18 +7839,22 @@ sub is_list_by_seqno {
 
 sub resync_lines_and_tokens {
 
-    my $self   = shift;
+    my $self = shift;
+
+    # Re-construct the arrays of tokens associated with the original input
+    # lines since they have probably changed due to inserting and deleting
+    # blanks and a few other tokens.
+
+    # Return paremeters:
+    # set severe_error = true if processing needs to terminate
+    my $severe_error;
+    my $rqw_lines = [];
+
     my $rLL    = $self->[_rLL_];
     my $Klimit = $self->[_Klimit_];
     my $rlines = $self->[_rlines_];
     my @Krange_code_without_comments;
     my @Klast_valign_code;
-
-    # Re-construct the arrays of tokens associated with the original input lines
-    # since they have probably changed due to inserting and deleting blanks
-    # and a few other tokens.
-
-    # Returns 1 on a severe error which requires processing to terminate
 
     # This is the next token and its line index:
     my $Knext = 0;
@@ -7958,6 +7973,18 @@ EOM
                     $line_of_tokens->{_code_type} = 'BL';
                 }
             }
+            else {
+
+                #---------------------------------------------------
+                # save indexes of all lines with a 'q' at either end
+                # for later use by sub find_multiline_qw
+                #---------------------------------------------------
+                if (   $rLL->[$Kfirst]->[_TYPE_] eq 'q'
+                    || $rLL->[$Klast]->[_TYPE_] eq 'q' )
+                {
+                    push @{$rqw_lines}, $iline;
+                }
+            }
         }
     }
 
@@ -7968,7 +7995,8 @@ EOM
     if ( $Knext <= $Kmax ) {
         Fault_Warn(
             "unexpected tokens at end of file when reconstructing lines");
-        return 1;
+        $severe_error = 1;
+        return ( $severe_error, $rqw_lines );
     }
     $self->[_rKrange_code_without_comments_] = \@Krange_code_without_comments;
 
@@ -8005,7 +8033,7 @@ EOM
             $ris_essential_old_breakpoint->{$Klast_prev} = 1;
         }
     }
-    return;
+    return ( $severe_error, $rqw_lines );
 } ## end sub resync_lines_and_tokens
 
 sub keep_old_line_breaks {
@@ -10827,7 +10855,7 @@ sub bli_adjustment {
 
 sub find_multiline_qw {
 
-    my $self = shift;
+    my ( $self, $rqw_lines ) = @_;
 
     # Multiline qw quotes are not sequenced items like containers { [ (
     # but behave in some respects in a similar way. So this routine finds them
@@ -10838,6 +10866,26 @@ sub find_multiline_qw {
     # finally make our line breaks, so we can find them before deciding on new
     # line breaks.
 
+    # Input parameter:
+    #   if $rqw_lines is defined it is a ref to array of all line index numbers
+    #   for which there is a type 'q' qw quote at either end of the line. This
+    #   was defined by sub resync_lines_and_tokens for efficiency.
+    #
+
+    my $rlines = $self->[_rlines_];
+
+    # if $rqw_lines is not defined (this will occur with -io option) then we
+    # will have to scan all lines.
+    if ( !defined($rqw_lines) ) {
+        $rqw_lines = [ 0 .. @{$rlines} - 1 ];
+    }
+
+    # if $rqw_lines is defined but empty, just return because there are no
+    # multiline qw's
+    else {
+        if ( !@{$rqw_lines} ) { return }
+    }
+
     my $rstarting_multiline_qw_seqno_by_K = {};
     my $rending_multiline_qw_seqno_by_K   = {};
     my $rKrange_multiline_qw_by_seqno     = {};
@@ -10845,19 +10893,25 @@ sub find_multiline_qw {
 
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
 
-    my $rlines = $self->[_rlines_];
-    my $rLL    = $self->[_rLL_];
+    my $rLL = $self->[_rLL_];
     my $qw_seqno;
     my $num_qw_seqno = 0;
     my $K_start_multiline_qw;
 
-    foreach my $line_of_tokens ( @{$rlines} ) {
+    # For reference, here is the old loop, before $rqw_lines became available:
+    ##  foreach my $line_of_tokens ( @{$rlines} ) {
+    foreach my $iline ( @{$rqw_lines} ) {
+        my $line_of_tokens = $rlines->[$iline];
 
+        # Note that these first checks are required in case we have to scan
+        # all lines, not just lines with type 'q' at the ends.
         my $line_type = $line_of_tokens->{_line_type};
         next unless ( $line_type eq 'CODE' );
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
         next unless ( defined($Kfirst) && defined($Klast) );   # skip blank line
+
+        # Continuing a sequence of qw lines ...
         if ( defined($K_start_multiline_qw) ) {
             my $type = $rLL->[$Kfirst]->[_TYPE_];
 
@@ -10881,6 +10935,8 @@ EOM
                 $qw_seqno             = undef;
             }
         }
+
+        # Starting a new a sequence of qw lines ?
         if ( !defined($K_start_multiline_qw)
             && $rLL->[$Klast]->[_TYPE_] eq 'q' )
         {
