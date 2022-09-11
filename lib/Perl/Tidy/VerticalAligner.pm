@@ -530,7 +530,13 @@ BEGIN {
 
 sub valign_input {
 
-    # Place one line in the current vertical group.
+    #---------------------------------------------------------------------
+    # This is the front door of the vertical aligner.  On each call
+    # we receive one line of specially marked text for vertical alignment.
+    # We compare the line with the current group, and either:
+    # - the line joins the current group if alignments match, or
+    # - the current group is flushed and a new group is started otherwise
+    #---------------------------------------------------------------------
     #
     # The key input parameters describing each line are:
     #     $level          = indentation level of this line
@@ -1473,9 +1479,9 @@ EOM
         # Revert to the starting state if does not fit
         if ( $pad > $padding_available ) {
 
-            ################################################
+            #----------------------------------------------
             # Line does not fit -- revert to starting state
-            ################################################
+            #----------------------------------------------
             foreach my $alignment (@alignments) {
                 $alignment->restore_column();
             }
@@ -1487,9 +1493,9 @@ EOM
         $padding_available -= $pad;
     }
 
-    ######################################
+    #-------------------------------------
     # The line fits, the match is accepted
-    ######################################
+    #-------------------------------------
     return 1;
 
 }
@@ -1645,18 +1651,18 @@ sub _flush_group_lines {
 "APPEND0: _flush_group_lines called from $a $b $c lines=$nlines, type=$group_type \n";
     };
 
-    ############################################
+    #-------------------------------------------
     # Section 1: Handle a group of COMMENT lines
-    ############################################
+    #-------------------------------------------
     if ( $group_type eq 'COMMENT' ) {
         $self->_flush_comment_lines();
         return;
     }
 
-    #########################################################################
+    #------------------------------------------------------------------------
     # Section 2: Handle line(s) of CODE.  Most of the actual work of vertical
     # aligning happens here in the following steps:
-    #########################################################################
+    #------------------------------------------------------------------------
 
     # STEP 1: Remove most unmatched tokens. They block good alignments.
     my ( $max_lev_diff, $saw_side_comment ) =
@@ -2075,9 +2081,9 @@ sub sweep_left_to_right {
     my $ng_max = @{$rgroups} - 1;
     return unless ( $ng_max > 0 );
 
-    ############################################################################
+    #---------------------------------------------------------------------
     # Step 1: Loop over groups to find all common leading alignment tokens
-    ############################################################################
+    #---------------------------------------------------------------------
 
     my $line;
     my $rtokens;
@@ -2192,9 +2198,9 @@ sub sweep_left_to_right {
     }
     return unless @icommon;
 
-    ###########################################################
+    #----------------------------------------------------------
     # Step 2: Reorder and consolidate the list into a task list
-    ###########################################################
+    #----------------------------------------------------------
 
     # We have to work first from lowest token index to highest, then by group,
     # sort our list first on token index then group number
@@ -2220,9 +2226,9 @@ sub sweep_left_to_right {
         push @todo, [ $i, $ng_beg, $ng_end, $raw_tok, $lev ];
     }
 
-    ###############################
+    #------------------------------
     # Step 3: Execute the task list
-    ###############################
+    #------------------------------
     do_left_to_right_sweep( $rlines, $rgroups, \@todo, \%max_move, $short_pad,
         $group_level );
     return;
@@ -3275,18 +3281,18 @@ sub match_line_pairs {
 
             # find number of leading common tokens
 
-            #################################
+            #---------------------------------
             # No match to hanging side comment
-            #################################
+            #---------------------------------
             if ( $line->{'is_hanging_side_comment'} ) {
 
                 # Should not get here; HSC's have been filtered out
                 $imax_align = -1;
             }
 
-            ##############################
+            #-----------------------------
             # Handle comma-separated lists
-            ##############################
+            #-----------------------------
             elsif ( $list_type && $list_type eq $list_type_m ) {
 
                 # do not align lists across a ci jump with new list method
@@ -3305,9 +3311,9 @@ sub match_line_pairs {
                 $imax_align = $i_nomatch - 1;
             }
 
-            ##################
+            #-----------------
             # Handle non-lists
-            ##################
+            #-----------------
             else {
                 my $i_nomatch = $imax_min + 1;
                 foreach my $i ( 0 .. $imax_min ) {
@@ -3583,9 +3589,9 @@ sub prune_alignment_tree {
 
     use constant EXPLAIN_PRUNE => 0;
 
-    ####################################################################
+    #-------------------------------------------------------------------
     # Prune Tree Step 1. Start by scanning the lines and collecting info
-    ####################################################################
+    #-------------------------------------------------------------------
 
     # Note that the caller had this info but we have to redo this now because
     # alignment tokens may have been deleted.
@@ -3631,9 +3637,9 @@ sub prune_alignment_tree {
     # the patterns and levels of the next line being tested at each depth
     my ( @token_patterns_next, @levels_next, @token_indexes_next );
 
-    #########################################################
+    #-----------------------------------------------------------
     # define a recursive worker subroutine for tree construction
-    #########################################################
+    #-----------------------------------------------------------
 
     # This is a recursive routine which is called if a match condition changes
     # at any depth when a new line is encountered.  It ends the match node
@@ -3692,9 +3698,9 @@ sub prune_alignment_tree {
         return;
     };    ## end sub end_node
 
-    ######################################################
+    #-----------------------------------------------------
     # Prune Tree Step 2. Loop to form the tree of matches.
-    ######################################################
+    #-----------------------------------------------------
     foreach my $jp ( 0 .. $jmax ) {
 
         # working with two adjacent line indexes, 'm'=minus, 'p'=plus
@@ -3764,9 +3770,9 @@ sub prune_alignment_tree {
         }
     } ## end loop to form tree of matches
 
-    ##########################################################
+    #---------------------------------------------------------
     # Prune Tree Step 3. Make links from parent to child nodes
-    ##########################################################
+    #---------------------------------------------------------
 
     # It seemed cleaner to do this as a separate step rather than during tree
     # construction.  The children nodes have links up to the parent node which
@@ -3801,9 +3807,9 @@ sub prune_alignment_tree {
         }
     };
 
-    #######################################################
+    #------------------------------------------------------
     # Prune Tree Step 4. Make a list of nodes to be deleted
-    #######################################################
+    #------------------------------------------------------
 
     #  list of lines with tokens to be deleted:
     #  [$jbeg, $jend, $level_keep]
@@ -3882,9 +3888,9 @@ sub prune_alignment_tree {
         @todo_list = @todo_next;
     } ## end loop to mark nodes to delete
 
-    #############################################################
+    #------------------------------------------------------------
     # Prune Tree Step 5. Loop to delete selected alignment tokens
-    #############################################################
+    #------------------------------------------------------------
     foreach my $item (@delete_list) {
         my ( $jbeg, $jend, $level_keep ) = @{$item};
         foreach my $jj ( $jbeg .. $jend ) {
@@ -4325,12 +4331,12 @@ sub get_extra_leading_spaces {
           ? $extra_indentation_spaces_wanted
           : $avail;
 
-        #########################################################
+        #--------------------------------------------------------
         # Note: min spaces can be negative; for example with -gnu
         # f(
         #   do { 1; !!(my $x = bless []); }
         #  );
-        #########################################################
+        #--------------------------------------------------------
         # The following rule is needed to match older formatting:
         # For multiple groups, we will keep spaces non-negative.
         # For a single group, we will allow a negative space.
@@ -4626,11 +4632,11 @@ sub align_side_comments {
 
 sub valign_output_step_A {
 
-    ###############################################################
+    #------------------------------------------------------------
     # This is Step A in writing vertically aligned lines.
     # The line is prepared according to the alignments which have
     # been found. Then it is shipped to the next step.
-    ###############################################################
+    #------------------------------------------------------------
 
     my ( $self, $rinput_hash ) = @_;
 
@@ -5139,12 +5145,12 @@ sub get_output_line_number {
 
     sub valign_output_step_B {
 
-        ###############################################################
+        #---------------------------------------------------------
         # This is Step B in writing vertically aligned lines.
         # Vertical tightness is applied according to preset flags.
         # In particular this routine handles stacking of opening
         # and closing tokens.
-        ###############################################################
+        #---------------------------------------------------------
 
         my ( $self, $rinput ) = @_;
 
@@ -5367,12 +5373,12 @@ sub get_output_line_number {
 
     sub valign_output_step_C {
 
-        ###############################################################
+        #-----------------------------------------------------------------------
         # This is Step C in writing vertically aligned lines.
         # Lines are either stored in a buffer or passed along to the next step.
         # The reason for storing lines is that we may later want to reduce their
         # indentation when -sot and -sct are both used.
-        ###############################################################
+        #-----------------------------------------------------------------------
         my (
             $self,
             $seqno_string,
@@ -5402,7 +5408,8 @@ sub get_output_line_number {
             # Start storing lines when we see a line with multiple stacked
             # opening tokens.
             # patch for RT #94354, requested by Colin Williams
-            if (   $seqno_string =~ /^\d+(\:+\d+)+$/
+            if (   index( $seqno_string, ':' ) >= 0
+                && $seqno_string =~ /^\d+(\:+\d+)+$/
                 && $args_to_D[0] !~ /^[\}\)\]\:\?]/ )
             {
 
@@ -5446,11 +5453,11 @@ sub get_output_line_number {
 
 sub valign_output_step_D {
 
-    ###############################################################
+    #----------------------------------------------------------------
     # This is Step D in writing vertically aligned lines.
     # It is the end of the vertical alignment pipeline.
     # Write one vertically aligned line of code to the output object.
-    ###############################################################
+    #----------------------------------------------------------------
 
     my ( $self, $line, $leading_space_count, $level, $Kend ) = @_;
 

@@ -230,6 +230,7 @@ my (
 
     # Static hashes initialized in a BEGIN block
     %is_assignment,
+    %is_non_list_type,
     %is_if_unless_and_or_last_next_redo_return,
     %is_if_elsif_else_unless_while_until_for_foreach,
     %is_if_unless_while_until_for_foreach,
@@ -597,6 +598,10 @@ BEGIN {
       x=
     );
     @is_assignment{@q} = (1) x scalar(@q);
+
+    # a hash needed by break_lists for efficiency:
+    push @q, qw{ ; < > ~ f };
+    @is_non_list_type{@q} = (1) x scalar(@q);
 
     @q = qw(is if unless and or err last next redo return);
     @is_if_unless_and_or_last_next_redo_return{@q} = (1) x scalar(@q);
@@ -4044,6 +4049,11 @@ EOM
 
         my ($self) = @_;
 
+        #-----------------------------------------------------------------
+        # Define a 'bond strength' for each token pair in an output batch.
+        # See comments above for definition of bond strength.
+        #-----------------------------------------------------------------
+
         my $rbond_strength_to_go = [];
 
         my $rLL               = $self->[_rLL_];
@@ -5390,7 +5400,14 @@ EOM
     sub write_line_inner_loop {
         my ( $self, $line_of_tokens_old, $line_of_tokens ) = @_;
 
-        # Copy the tokens for this line to their new storage location
+        #---------------------------------------------------------------------
+        # Copy the tokens on one line received from the tokenizer to their new
+        # storage locations.
+        #---------------------------------------------------------------------
+
+        # Input parameters:
+        #  $line_of_tokens_old = line received from tokenizer
+        #  $line_of_tokens     = line of tokens being formed for formatter
 
         my $rtokens = $line_of_tokens_old->{_rtokens};
         my $jmax    = @{$rtokens} - 1;
@@ -5752,7 +5769,7 @@ sub set_CODE_type {
             # A line which is entirely a quote or pattern must go out
             # verbatim.  Note: the \n is contained in $input_line.
             if ( $jmax <= 0 ) {
-                if ( ( $input_line =~ "\t" ) ) {
+                if ( $self->[_save_logfile_] && $input_line =~ /\t/ ) {
                     my $input_line_number = $line_of_tokens->{_line_number};
                     $self->note_embedded_tab($input_line_number);
                 }
@@ -6302,17 +6319,19 @@ sub respace_tokens {
 
     my $self = shift;
 
-    # return parameters
+    #--------------------------------------------------------------------------
+    # This routine is called once per file to do as much formatting as possible
+    # before new line breaks are set.
+    #--------------------------------------------------------------------------
+
+    # Return parameters:
+    # Set $severe_error=true if processing must terminate immediately
     my ( $severe_error, $rqw_lines );
 
+    # We change any spaces in --indent-only mode
     if ( $rOpts->{'indent-only'} ) {
         return ( $severe_error, $rqw_lines );
     }
-
-    # This routine is called once per file to do as much formatting as possible
-    # before new line breaks are set.
-
-    # Set $severe_error=true if processing must terminate immediately
 
     # This routine makes all necessary and possible changes to the tokenization
     # after the initial tokenization of the file. This is a tedious routine,
@@ -6499,7 +6518,7 @@ sub respace_tokens {
                 # The level and ci_level of newly created spaces should be the
                 # same as the previous token. Otherwise blinking states can
                 # be created if the -lp mode is used. See similar coding in
-                # sub 'store_token_and_space'.  Fixes cases b1109 b1110.
+                # sub 'store_space_and_token'.  Fixes cases b1109 b1110.
                 $rcopy->[_LEVEL_] =
                   $rLL_new->[-1]->[_LEVEL_];
                 $rcopy->[_CI_LEVEL_] =
@@ -6540,9 +6559,10 @@ sub respace_tokens_inner_loop {
 
     my ( $self, $Kfirst, $Klast, $input_line_number ) = @_;
 
-    #-------------------------------------------------------
-    # Loop to copy all tokens on this line, with any changes
-    #-------------------------------------------------------
+    #-----------------------------------------------------------------
+    # Loop to copy all tokens on one line, making any spacing changes,
+    # while also collecting information needed by later subs.
+    #-----------------------------------------------------------------
     my $type_sequence;
     my $rtoken_vars;
     foreach my $KK ( $Kfirst .. $Klast ) {
@@ -6797,10 +6817,15 @@ EOM
             # this)
             $token =~ s/\s*$//;
             $rtoken_vars->[_TOKEN_] = $token;
-            $self->note_embedded_tab($input_line_number)
-              if ( $token =~ "\t" );
-            $self->store_token_and_space( $rtoken_vars,
-                $rwhitespace_flags->[$KK] == WS_YES );
+            if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
+                $self->note_embedded_tab($input_line_number);
+            }
+            if ( $rwhitespace_flags->[$KK] == WS_YES ) {
+                $self->store_space_and_token($rtoken_vars);
+            }
+            else {
+                $self->store_token($rtoken_vars);
+            }
             next;
         } ## end if ( $type eq 'q' )
 
@@ -6823,12 +6848,13 @@ EOM
 
         # check a quote for problems
         elsif ( $type eq 'Q' ) {
-            $self->check_Q( $KK, $Kfirst, $input_line_number );
+            $self->check_Q( $KK, $Kfirst, $input_line_number )
+              if ( $self->[_save_logfile_] );
         }
 
         # Store this token with possible previous blank
         if ( $rwhitespace_flags->[$KK] == WS_YES ) {
-            $self->store_token_and_space( $rtoken_vars, 1 );
+            $self->store_space_and_token($rtoken_vars);
         }
         else {
             $self->store_token($rtoken_vars);
@@ -7066,14 +7092,20 @@ sub set_permanently_broken {
 } ## end sub set_permanently_broken
 
 sub store_token {
+
     my ( $self, $item ) = @_;
+
+    #------------------------------------------
+    # Store one token during respace operations
+    #------------------------------------------
+
+    # Input parameter:
+    #  $item = ref to a token
 
     # This will be the index of this item in the new array
     my $KK_new = @{$rLL_new};
 
-    #------------------------------------------------------------------
-    # NOTE: called once per token so coding efficiency is critical here
-    #------------------------------------------------------------------
+    # NOTE: this sub is called once per token so coding efficiency is critical.
 
     # The next multiple assignment statements are significantly faster than
     # doing them one-by-one.
@@ -7299,14 +7331,13 @@ sub store_token {
     return;
 } ## end sub store_token
 
-sub store_token_and_space {
-    my ( $self, $item, $want_space ) = @_;
+sub store_space_and_token {
+    my ( $self, $item ) = @_;
 
     # store a token with preceding space if requested and needed
 
     # First store the space
-    if (   $want_space
-        && @{$rLL_new}
+    if (   @{$rLL_new}
         && $rLL_new->[-1]->[_TYPE_] ne 'b'
         && $rOpts_add_whitespace )
     {
@@ -7333,7 +7364,7 @@ sub store_token_and_space {
     # then the token
     $self->store_token($item);
     return;
-} ## end sub store_token_and_space
+} ## end sub store_space_and_token
 
 sub add_phantom_semicolon {
 
@@ -7485,10 +7516,14 @@ sub add_phantom_semicolon {
 
 sub check_Q {
 
-    # Check that a quote looks okay
+    # Check that a quote looks okay, and report possible problems
+    # to the logfile.
+
     my ( $self, $KK, $Kfirst, $line_number ) = @_;
     my $token = $rLL->[$KK]->[_TOKEN_];
-    $self->note_embedded_tab($line_number) if ( $token =~ "\t" );
+    if ( $token =~ /\t/ ) {
+        $self->note_embedded_tab($line_number);
+    }
 
     # The remainder of this routine looks for something like
     #        '$var = s/xxx/yyy/;'
@@ -9659,7 +9694,7 @@ sub weld_nested_quotes {
             my $next_type  = $rLL->[$Kn]->[_TYPE_];
             next
               unless ( ( $next_type eq 'q' || $next_type eq 'Q' )
-                && $next_token =~ /^q/ );
+                && substr( $next_token, 0, 1 ) eq 'q' );
 
             # The token before the closing container must also be a quote
             my $Kouter_closing = $K_closing_container->{$outer_seqno};
@@ -10049,7 +10084,7 @@ sub clip_adjusted_levels {
     my ($self) = @_;
     my $radjusted_levels = $self->[_radjusted_levels_];
     return unless defined($radjusted_levels) && @{$radjusted_levels};
-    my $min = min( @{$radjusted_levels} );   # fast check for min
+    my $min = min( @{$radjusted_levels} );    # fast check for min
     if ( $min < 0 ) {
 
         # slow loop, but rarely needed
@@ -12526,14 +12561,17 @@ EOM
 
         my ( $self, $Ktoken_vars, $rtoken_vars ) = @_;
 
-        # Add one token to the next batch.
+        #-------------------------------------------------------
+        # Token storage utility for sub process_line_of_CODE.
+        # Add one token to the next batch of '_to_go' variables.
+        #-------------------------------------------------------
+
+        # Input parameters:
         #   $Ktoken_vars = the index K in the global token array
         #   $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
         #                  unless they are temporarily being overridden
 
-        #------------------------------------------------------------------
         # NOTE: called once per token so coding efficiency is critical here
-        #------------------------------------------------------------------
 
         my (
 
@@ -12627,7 +12665,7 @@ EOM
           $summed_lengths_to_go[$max_index_to_go] + $length;
 
         # Initializations for first token of new batch
-        if ( $max_index_to_go == 0 ) {
+        if ( !$max_index_to_go ) {
 
             # Reset flag '$starting_in_quote' for a new batch.  It must be set
             # to the value of '$in_continued_quote', but here for efficiency we
@@ -13213,6 +13251,10 @@ EOM
     sub process_line_inner_loop {
 
         my ( $self, $has_side_comment ) = @_;
+
+        #--------------------------------------------------------------------
+        # Loop to move all tokens from an input line to a newly forming batch
+        #--------------------------------------------------------------------
 
         # We do not want a leading blank if the previous batch just got output
 
@@ -14706,6 +14748,11 @@ EOM
 
         my ($self) = @_;
 
+        #-----------------------------------------------------------------
+        # This sub directs the formatting of one complete batch of tokens.
+        # The tokens of the batch are in the '_to_go' arrays.
+        #-----------------------------------------------------------------
+
         my $this_batch = $self->[_this_batch_];
         $batch_count++;
 
@@ -14747,7 +14794,7 @@ EOM
         # Shortcut for block comments
         # Note that this shortcut does not work for -lp yet
         #--------------------------------------------------
-        elsif ( $max_index_to_go == 0 && $types_to_go[0] eq '#' ) {
+        elsif ( !$max_index_to_go && $types_to_go[0] eq '#' ) {
             my $ibeg = 0;
             $this_batch->[_ri_first_]                 = [$ibeg];
             $this_batch->[_ri_last_]                  = [$ibeg];
@@ -15081,21 +15128,22 @@ EOM
         my $called_pad_array_to_go;
 
         # set all forced breakpoints for good list formatting
-        my $is_long_line = $max_index_to_go > 0
-          && $self->excess_line_length( $imin, $max_index_to_go ) > 0;
-
-        my $old_line_count_in_batch = 1;
+        my $is_long_line;
+        my $multiple_old_lines_in_batch;
         if ( $max_index_to_go > 0 ) {
+            $is_long_line =
+              $self->excess_line_length( $imin, $max_index_to_go ) > 0;
+
             my $Kbeg = $K_to_go[0];
             my $Kend = $K_to_go[$max_index_to_go];
-            $old_line_count_in_batch +=
+            $multiple_old_lines_in_batch =
               $rLL->[$Kend]->[_LINE_INDEX_] - $rLL->[$Kbeg]->[_LINE_INDEX_];
         }
 
         my $rbond_strength_bias = [];
         if (
                $is_long_line
-            || $old_line_count_in_batch > 1
+            || $multiple_old_lines_in_batch
 
             # must always call break_lists() with unbalanced batches because
             # it is maintaining some stacks
@@ -15168,7 +15216,8 @@ EOM
 
             $self->break_all_chain_tokens( $ri_first, $ri_last );
 
-            $self->break_equals( $ri_first, $ri_last );
+            $self->break_equals( $ri_first, $ri_last )
+              if @{$ri_first} >= 3;
 
             # now we do a correction step to clean this up a bit
             # (The only time we would not do this is for debugging)
@@ -17894,6 +17943,14 @@ sub break_long_lines {
     # maximum line length.
     #-----------------------------------------------------------
 
+    my ( $self, $saw_good_break, $rcolon_list, $rbond_strength_bias ) = @_;
+
+    # Input parameters:
+    #  $saw_good_break - a flag set by break_lists
+    #  $rcolon_list    - ref to a list of all the ? and : tokens in the batch,
+    #    in order.
+    #  $rbond_strength_bias - small bond strength bias values set by break_lists
+
     # Output: returns references to the arrays:
     #  @i_first
     #  @i_last
@@ -17904,11 +17961,6 @@ sub break_long_lines {
     #   $forced_breakpoint_to_go[$i]
     # may be updated to be =1 for any index $i after which there must be
     # a break.  This signals later routines not to undo the breakpoint.
-
-    my ( $self, $saw_good_break, $rcolon_list, $rbond_strength_bias ) = @_;
-
-    # @{$rcolon_list} is a list of all the ? and : tokens in the batch, in
-    # order.
 
     # Method:
     # This routine is called if a statement is longer than the maximum line
@@ -18125,6 +18177,19 @@ sub break_lines_inner_loop {
     # which, if possible, does not exceed the maximum line length.
     #-----------------------------------------------------------------
 
+    my (
+        $self,    #
+
+        $i_begin,
+        $i_last_break,
+        $imax,
+        $last_break_strength,
+        $line_count,
+        $rbond_strength_to_go,
+        $saw_good_break,
+
+    ) = @_;
+
     # Given:
     #   $i_begin               = first index of range
     #   $i_last_break          = index of previous break
@@ -18139,19 +18204,6 @@ sub break_lines_inner_loop {
     #   $lowest_strength        = 'bond strength' at best breakpoint
     #   $leading_alignment_type = special token type after break
     #   $Msg                    = string of debug info
-
-    my (
-        $self,    #
-
-        $i_begin,
-        $i_last_break,
-        $imax,
-        $last_break_strength,
-        $line_count,
-        $rbond_strength_to_go,
-        $saw_good_break,
-
-    ) = @_;
 
     my $Msg                    = EMPTY_STRING;
     my $strength               = NO_BREAK;
@@ -19339,13 +19391,12 @@ EOM
                 $last_dot_index[$depth] = $i;
             }
 
-            # Turn off alignment if we are sure that this is not a list
+            # Turn off comma alignment if we are sure that this is not a list
             # environment.  To be safe, we will do this if we see certain
-            # non-list tokens, such as ';', and also the environment is
-            # not a list.  Note that '=' could be in any of the = operators
-            # (lextest.t). We can't just use the reported environment
-            # because it can be incorrect in some cases.
-            elsif ( ( $type =~ /^[\;\<\>\~f]$/ || $is_assignment{$type} )
+            # non-list tokens, such as ';', '=', and also the environment is
+            # not a list.
+            ##      $type =~ /^[\;\<\>\~f]$/ || $is_assignment{$type}
+            elsif ( $is_non_list_type{$type}
                 && !$self->is_in_list_by_i($i) )
             {
                 $dont_align[$depth]         = 1;
@@ -21725,12 +21776,12 @@ sub get_available_spaces_to_go {
 
     sub set_lp_indentation {
 
+        my ($self) = @_;
+
         #------------------------------------------------------------------
         # Define the leading whitespace for all tokens in the current batch
         # when the -lp formatting is selected.
         #------------------------------------------------------------------
-
-        my ($self) = @_;
 
         return unless ($rOpts_line_up_parentheses);
         return unless ( defined($max_index_to_go) && $max_index_to_go >= 0 );
@@ -22841,9 +22892,10 @@ sub convey_batch_to_vertical_aligner {
     # have been defined. Here we prepare the lines for passing to the vertical
     # aligner.  We do the following tasks:
     # - mark certain vertical alignment tokens, such as '=', in each line
-    # - make minor indentation adjustments
+    # - make final indentation adjustments
     # - do logical padding: insert extra blank spaces to help display certain
     #   logical constructions
+    # - send the line to the vertical aligner
 
     my $this_batch = $self->[_this_batch_];
     my $ri_first   = $this_batch->[_ri_first_];
@@ -23012,11 +23064,28 @@ EOM
         # --------------------------------------
         # get the final indentation of this line
         # --------------------------------------
-        my ( $indentation, $lev, $level_end, $i_terminal, $is_outdented_line )
-          = $self->get_final_indentation( $ibeg, $iend, $rfields,
-            $rpatterns,         $ri_first, $ri_last,
-            $rindentation_list, $ljump,    $starting_in_quote,
-            $is_static_block_comment );
+        my (
+
+            $indentation,
+            $lev,
+            $level_end,
+            $i_terminal,
+            $is_outdented_line,
+
+        ) = $self->get_final_indentation(
+
+            $ibeg,
+            $iend,
+            $rfields,
+            $rpatterns,
+            $ri_first,
+            $ri_last,
+            $rindentation_list,
+            $ljump,
+            $starting_in_quote,
+            $is_static_block_comment,
+
+        );
 
         # --------------------------------
         # define flag 'outdent_long_lines'
@@ -23399,15 +23468,20 @@ EOM
 
     sub set_vertical_alignment_markers {
 
-        # This routine takes the first step toward vertical alignment of the
-        # lines of output text.  It looks for certain tokens which can serve as
-        # vertical alignment markers (such as an '=').
-        #
+        my ( $self, $ri_first, $ri_last ) = @_;
+
+        #----------------------------------------------------------------------
+        # This routine looks at output lines for certain tokens which can serve
+        # as vertical alignment markers (such as an '=').
+        #----------------------------------------------------------------------
+
+        # Input parameters:
+        #   $ri_first = ref to list of starting line indexes in _to_go arrays
+        #   $ri_last  = ref to list of ending line indexes in _to_go arrays
+
         # Method: We look at each token $i in this output batch and set
         # $ralignment_type_to_go->[$i] equal to those tokens at which we would
         # accept vertical alignment.
-
-        my ( $self, $ri_first, $ri_last ) = @_;
 
         my $ralignment_type_to_go;
         my $ralignment_counts       = [];
@@ -24823,11 +24897,26 @@ sub xlp_tweak {
 
     sub make_alignment_patterns {
 
-        # Here we do some important preliminary work for the
-        # vertical aligner.  We create four arrays for one
-        # output line. These arrays contain strings that can
-        # be tested by the vertical aligner to see if
-        # consecutive lines can be aligned vertically.
+        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count,
+            $ralignment_hash )
+          = @_;
+
+        #------------------------------------------------------------------
+        # This sub creates arrays of vertical alignment info for one output
+        # line.
+        #------------------------------------------------------------------
+
+        # Input parameters:
+        #  $ibeg, $iend - index range of this line in the _to_go arrays
+        #  $ralignment_type_to_go - alignment type of tokens, like '=', if any
+        #  $alignment_count - number of alignment tokens in the line
+        #  $ralignment_hash - this contains all of the alignments for this
+        #    line.  It is not yet used but is available for future coding in
+        #    case there is a need to do a preliminary scan of alignment tokens.
+
+        # The arrays which are created contain strings that can be tested by
+        # the vertical aligner to see if consecutive lines can be aligned
+        # vertically.
         #
         # The four arrays are indexed on the vertical
         # alignment fields and are:
@@ -24844,13 +24933,6 @@ sub xlp_tweak {
         #   allowed, even when the alignment tokens match.
         # @field_lengths - the display width of each field
 
-        my ( $self, $ibeg, $iend, $ralignment_type_to_go, $alignment_count,
-            $ralignment_hash )
-          = @_;
-
-        # The var $ralignment_hash contains all of the alignments for this
-        # line.  It is not yet used but is available for future coding in case
-        # there is a need to do a preliminary scan of the alignment tokens.
         if (DEVEL_MODE) {
             my $new_count = 0;
             if ( defined($ralignment_hash) ) {
@@ -25374,9 +25456,26 @@ sub make_paren_name {
 
     sub get_final_indentation {
 
-        #--------------------------------------------------------------------
-        # This routine sets the final indentation of a line in the Formatter.
-        #--------------------------------------------------------------------
+        my (
+            $self,    #
+
+            $ibeg,
+            $iend,
+            $rfields,
+            $rpatterns,
+            $ri_first,
+            $ri_last,
+            $rindentation_list,
+            $level_jump,
+            $starting_in_quote,
+            $is_static_block_comment
+
+        ) = @_;
+
+        #--------------------------------------------------------------
+        # This routine makes any necessary adjustments to get the final
+        # indentation of a line in the Formatter.
+        #--------------------------------------------------------------
 
         # It starts with the basic indentation which has been defined for the
         # leading token, and then takes into account any options that the user
@@ -25398,15 +25497,6 @@ sub make_paren_name {
         #    but note that there is some overlap with the functions of sub
         #    undo_ci, which was processed earlier, so care has to be taken to
         #    keep them coordinated.
-
-        my (
-            $self,       $ibeg,
-            $iend,       $rfields,
-            $rpatterns,  $ri_first,
-            $ri_last,    $rindentation_list,
-            $level_jump, $starting_in_quote,
-            $is_static_block_comment
-        ) = @_;
 
         # Find the last code token of this line
         my $i_terminal    = $iend;
@@ -25498,11 +25588,14 @@ sub make_paren_name {
 
             # This can be tedious so we let a sub do it
             (
-                $adjust_indentation,  $default_adjust_indentation,
-                $opening_indentation, $opening_offset,
-                $is_leading,          $opening_exists
-              )
-              = $self->get_closing_token_indentation(
+                $adjust_indentation,
+                $default_adjust_indentation,
+                $opening_indentation,
+                $opening_offset,
+                $is_leading,
+                $opening_exists
+
+            ) = $self->get_closing_token_indentation(
 
                 $ibeg,
                 $iend,
@@ -25514,7 +25607,7 @@ sub make_paren_name {
                 $is_semicolon_terminated,
                 $seqno_qw_closing,
 
-              );
+            );
         }
 
         #--------------------------------------------------------
@@ -25842,8 +25935,15 @@ sub make_paren_name {
             }
         }
 
-        return ( $indentation, $lev, $level_end, $i_terminal,
-            $is_outdented_line );
+        return (
+
+            $indentation,
+            $lev,
+            $level_end,
+            $i_terminal,
+            $is_outdented_line,
+
+        );
     } ## end sub get_final_indentation
 
     sub get_closing_token_indentation {
@@ -25852,7 +25952,7 @@ sub make_paren_name {
         # token - i.e. one of these:     ) ] } :
 
         my (
-            $self,
+            $self,    #
 
             $ibeg,
             $iend,
@@ -25951,8 +26051,6 @@ sub make_paren_name {
               = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
                 $ri_last, $rindentation_list, $seqno_qw_closing );
 
-            my $terminal_is_in_list = $self->is_in_list_by_i($i_terminal);
-
             # First set the default behavior:
             if (
 
@@ -26017,7 +26115,7 @@ sub make_paren_name {
 
                 # require LIST environment; otherwise, we may outdent too much -
                 # this can happen in calls without parentheses (overload.t);
-                && $terminal_is_in_list
+                && $self->is_in_list_by_i($i_terminal)
               )
             {
                 $adjust_indentation = 1;
@@ -26075,10 +26173,10 @@ sub make_paren_name {
                 # but right now we do not have that information.  For now
                 # we see if we are in a list, and this works well.
                 # See test files 'sub*.t' for good test cases.
-                if (   $terminal_is_in_list
-                    && !$rOpts_indent_closing_brace
+                if (  !$rOpts_indent_closing_brace
                     && $block_type_beg
-                    && $block_type_beg =~ /$ASUB_PATTERN/ )
+                    && $self->[_ris_asub_block_]->{$seqno_beg}
+                    && $self->is_in_list_by_i($i_terminal) )
                 {
                     (
                         $opening_indentation, $opening_offset,
@@ -26230,9 +26328,16 @@ sub make_paren_name {
             if ($is_leading) { $adjust_indentation = 2; }
         }
 
-        return ( $adjust_indentation, $default_adjust_indentation,
-            $opening_indentation, $opening_offset,
-            $is_leading,          $opening_exists );
+        return (
+
+            $adjust_indentation,
+            $default_adjust_indentation,
+            $opening_indentation,
+            $opening_offset,
+            $is_leading,
+            $opening_exists,
+
+        );
     }
 
 } ## end closure get_final_indentation

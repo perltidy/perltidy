@@ -781,6 +781,15 @@ sub get_input_line_number {
     return $tokenizer_self->[_last_line_number_];
 }
 
+sub write_logfile_numbered_msg {
+    my ($msg) = @_;
+
+    # write input line number + message to logfile
+    my $input_line_number = get_input_line_number();
+    write_logfile_entry("Line $input_line_number: $msg");
+    return;
+}
+
 # returns the next tokenized line
 sub get_line {
 
@@ -795,12 +804,6 @@ sub get_line {
     return unless ($input_line);
 
     my $input_line_number = ++$tokenizer_self->[_last_line_number_];
-
-    my $write_logfile_entry = sub {
-        my ($msg) = @_;
-        write_logfile_entry("Line $input_line_number: $msg");
-        return;
-    };
 
     # Find and remove what characters terminate this line, including any
     # control r
@@ -820,7 +823,7 @@ sub get_line {
     # for backwards compatibility we keep the line text terminated with
     # a newline character
     $input_line .= "\n";
-    $tokenizer_self->[_line_of_text_] = $input_line;    # update
+    $tokenizer_self->[_line_of_text_] = $input_line;
 
     # create a data structure describing this line which will be
     # returned to the caller.
@@ -860,6 +863,7 @@ sub get_line {
         _square_bracket_depth      => $square_bracket_depth,
         _paren_depth               => $paren_depth,
         _quote_character           => EMPTY_STRING,
+## Skip these needless initializations for efficiency:
 ##      _rtoken_type               => undef,
 ##      _rtokens                   => undef,
 ##      _rlevels                   => undef,
@@ -887,7 +891,8 @@ sub get_line {
         if ( $candidate_target eq $here_doc_target ) {
             $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
             $line_of_tokens->{_line_type} = 'HERE_END';
-            $write_logfile_entry->("Exiting HERE document $here_doc_target\n");
+            write_logfile_numbered_msg(
+                "Exiting HERE document $here_doc_target\n");
 
             my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
             if ( @{$rhere_target_list} ) {  # there can be multiple here targets
@@ -896,7 +901,7 @@ sub get_line {
                 $tokenizer_self->[_here_doc_target_] = $here_doc_target;
                 $tokenizer_self->[_here_quote_character_] =
                   $here_quote_character;
-                $write_logfile_entry->(
+                write_logfile_numbered_msg(
                     "Entering HERE document $here_doc_target\n");
                 $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
                 $tokenizer_self->[_started_looking_for_here_target_at_] =
@@ -932,7 +937,7 @@ sub get_line {
 
             # This is the end when count reaches 0
             if ( !$tokenizer_self->[_in_format_] ) {
-                $write_logfile_entry->("Exiting format section\n");
+                write_logfile_numbered_msg("Exiting format section\n");
                 $line_of_tokens->{_line_type} = 'FORMAT_END';
             }
         }
@@ -954,7 +959,7 @@ sub get_line {
         $line_of_tokens->{_line_type} = 'POD';
         if ( $input_line =~ /^=cut/ ) {
             $line_of_tokens->{_line_type} = 'POD_END';
-            $write_logfile_entry->("Exiting POD section\n");
+            write_logfile_numbered_msg("Exiting POD section\n");
             $tokenizer_self->[_in_pod_] = 0;
         }
         if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->[_in_end_] ) {
@@ -972,7 +977,7 @@ sub get_line {
         $line_of_tokens->{_line_type} = 'SKIP';
         if ( $input_line =~ /$code_skipping_pattern_end/ ) {
             $line_of_tokens->{_line_type} = 'SKIP_END';
-            $write_logfile_entry->("Exiting code-skipping section\n");
+            write_logfile_numbered_msg("Exiting code-skipping section\n");
             $tokenizer_self->[_in_skipped_] = 0;
         }
         return $line_of_tokens;
@@ -996,7 +1001,7 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            $write_logfile_entry->("Entering POD section\n");
+            write_logfile_numbered_msg("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
@@ -1015,7 +1020,7 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            $write_logfile_entry->("Entering POD section\n");
+            write_logfile_numbered_msg("Entering POD section\n");
             $tokenizer_self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
@@ -1147,13 +1152,13 @@ sub get_line {
                 warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
                 ) unless (DEVEL_MODE);
-                $write_logfile_entry->("Entering POD section\n");
+                write_logfile_numbered_msg("Entering POD section\n");
             }
         }
 
         else {
             $line_of_tokens->{_line_type} = 'POD_START';
-            $write_logfile_entry->("Entering POD section\n");
+            write_logfile_numbered_msg("Entering POD section\n");
         }
 
         return $line_of_tokens;
@@ -1163,7 +1168,7 @@ sub get_line {
     if ( $tokenizer_self->[_in_skipped_] ) {
 
         $line_of_tokens->{_line_type} = 'SKIP';
-        $write_logfile_entry->("Entering code-skipping section\n");
+        write_logfile_numbered_msg("Entering code-skipping section\n");
         return $line_of_tokens;
     }
 
@@ -1176,7 +1181,7 @@ sub get_line {
         $tokenizer_self->[_in_here_doc_]          = 1;
         $tokenizer_self->[_here_doc_target_]      = $here_doc_target;
         $tokenizer_self->[_here_quote_character_] = $here_quote_character;
-        $write_logfile_entry->("Entering HERE document $here_doc_target\n");
+        write_logfile_numbered_msg("Entering HERE document $here_doc_target\n");
         $tokenizer_self->[_started_looking_for_here_target_at_] =
           $input_line_number;
     }
@@ -1186,13 +1191,13 @@ sub get_line {
     # which are not tokenized (and cannot be read with <DATA> either!).
     if ( $tokenizer_self->[_in_data_] ) {
         $line_of_tokens->{_line_type} = 'DATA_START';
-        $write_logfile_entry->("Starting __DATA__ section\n");
+        write_logfile_numbered_msg("Starting __DATA__ section\n");
         $tokenizer_self->[_saw_data_] = 1;
 
         # keep parsing after __DATA__ if use SelfLoader was seen
         if ( $tokenizer_self->[_saw_selfloader_] ) {
             $tokenizer_self->[_in_data_] = 0;
-            $write_logfile_entry->(
+            write_logfile_numbered_msg(
                 "SelfLoader seen, continuing; -nlsl deactivates\n");
         }
 
@@ -1201,13 +1206,13 @@ sub get_line {
 
     elsif ( $tokenizer_self->[_in_end_] ) {
         $line_of_tokens->{_line_type} = 'END_START';
-        $write_logfile_entry->("Starting __END__ section\n");
+        write_logfile_numbered_msg("Starting __END__ section\n");
         $tokenizer_self->[_saw_end_] = 1;
 
         # keep parsing after __END__ if use AutoLoader was seen
         if ( $tokenizer_self->[_saw_autoloader_] ) {
             $tokenizer_self->[_in_end_] = 0;
-            $write_logfile_entry->(
+            write_logfile_numbered_msg(
                 "AutoLoader seen, continuing; -nlal deactivates\n");
         }
         return $line_of_tokens;
@@ -1232,7 +1237,7 @@ sub get_line {
     # Note: if keyword 'format' occurs in this line code, it is still CODE
     # (keyword 'format' need not start a line)
     if ( $tokenizer_self->[_in_format_] ) {
-        $write_logfile_entry->("Entering format section\n");
+        write_logfile_numbered_msg("Entering format section\n");
     }
 
     if ( $tokenizer_self->[_in_quote_]
@@ -1244,7 +1249,7 @@ sub get_line {
             /^\s*$/ )
         {
             $tokenizer_self->[_line_start_quote_] = $input_line_number;
-            $write_logfile_entry->(
+            write_logfile_numbered_msg(
                 "Start multi-line quote or pattern ending in $quote_target\n");
         }
     }
@@ -1252,7 +1257,7 @@ sub get_line {
         && !$tokenizer_self->[_in_quote_] )
     {
         $tokenizer_self->[_line_start_quote_] = -1;
-        $write_logfile_entry->("End of multi-line quote or pattern\n");
+        write_logfile_numbered_msg("End of multi-line quote or pattern\n");
     }
 
     # we are returning a line of CODE
@@ -4534,7 +4539,15 @@ EOM
     } ## end sub tokenize_this_line
 
     sub tokenizer_main_loop {
+
         my ($is_END_or_DATA) = @_;
+
+        #---------------------------------
+        # Break one input line into tokens
+        #---------------------------------
+
+        # Input parameter:
+        #   $is_END_or_DATA is true for a __END__ or __DATA__ line
 
         # start by breaking the line into pre-tokens
         my $max_tokens_wanted = 0; # this signals pre_tokenize to get all tokens
@@ -4561,9 +4574,9 @@ EOM
         $i     = -1;
         $i_tok = -1;
 
-        # ------------------------------------------------------------
+        #-----------------------------
         # begin main tokenization loop
-        # ------------------------------------------------------------
+        #-----------------------------
 
         # we are looking at each pre-token of one line and combining them
         # into tokens
@@ -4897,10 +4910,14 @@ EOM
     sub tokenizer_wrapup_line {
         my ($line_of_tokens) = @_;
 
-        # We have broken the current line into tokens. Now we have to wrap up
-        # the result for shipping.  Most of the remaining work involves
-        # defining the two indentation parameters that the formatter needs
-        # (structural indentation level and continuation indentation).
+        #---------------------------------------------------------
+        # Package a line of tokens for shipping back to the caller
+        #---------------------------------------------------------
+
+        # Most of the remaining work involves defining the two indentation
+        # parameters that the formatter needs for each token:
+        # - $level    = structural indentation level and
+        # - $ci_level = continuation indentation level
 
         # The method for setting the indentation level is straightforward.
         # But the method used to define the continuation indentation is
@@ -9516,6 +9533,12 @@ sub write_on_underline {
 
 sub pre_tokenize {
 
+    my ( $str, $max_tokens_wanted ) = @_;
+
+    # Input parameter:
+    #  $max_tokens_wanted > 0  to stop on reaching this many tokens.
+    #                     = 0 means get all tokens
+
     # Break a string, $str, into a sequence of preliminary tokens.  We
     # are interested in these types of tokens:
     #   words       (type='w'),            example: 'max_tokens_wanted'
@@ -9529,9 +9552,8 @@ sub pre_tokenize {
     # An advantage of doing this pre-tokenization step is that it keeps almost
     # all of the regex work highly localized.  A disadvantage is that in some
     # very rare instances we will have to go back and split a pre-token.
-    my ( $str, $max_tokens_wanted ) = @_;
 
-    # we return references to these 3 arrays:
+    # Return parameters:
     my @tokens    = ();     # array of the tokens themselves
     my @token_map = (0);    # string position of start of each token
     my @type      = ();     # 'b'=whitespace, 'd'=digits, 'w'=alpha, or punct
