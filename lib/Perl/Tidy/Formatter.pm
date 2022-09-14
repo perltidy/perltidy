@@ -18722,16 +18722,27 @@ sub do_colon_breaks {
     );
 
     my (
-        @breakpoint_stack,              @breakpoint_undo_stack,
-        @comma_index,                   @container_type,
-        @identifier_count_stack,        @index_before_arrow,
-        @interrupted_list,              @item_count_stack,
-        @last_comma_index,              @last_dot_index,
-        @last_nonblank_type,            @old_breakpoint_count_stack,
-        @opening_structure_index_stack, @rfor_semicolon_list,
-        @has_old_logical_breakpoints,   @rand_or_list,
-        @i_equals,                      @override_cab3,
+
+        @breakpoint_stack,
+        @breakpoint_undo_stack,
+        @comma_index,
+        @container_type,
+        @identifier_count_stack,
+        @index_before_arrow,
+        @interrupted_list,
+        @item_count_stack,
+        @last_comma_index,
+        @last_dot_index,
+        @last_nonblank_type,
+        @old_breakpoint_count_stack,
+        @opening_structure_index_stack,
+        @rfor_semicolon_list,
+        @has_old_logical_breakpoints,
+        @rand_or_list,
+        @i_equals,
+        @override_cab3,
         @type_sequence_stack,
+
     );
 
     # these arrays must retain values between calls
@@ -20430,9 +20441,18 @@ EOM
     sub comma_broken_sublist_rule {
 
         my (
-            $self,          $item_count,        $interrupted,
-            $i_first_comma, $i_true_last_comma, $ri_term_end,
-            $ri_term_begin, $ri_term_comma,     $ritem_lengths
+
+            $self,    #
+
+            $item_count,
+            $interrupted,
+            $i_first_comma,
+            $i_true_last_comma,
+            $ri_term_end,
+            $ri_term_begin,
+            $ri_term_comma,
+            $ritem_lengths
+
         ) = @_;
 
         # Break at every comma except for a comma between two
@@ -20489,9 +20509,16 @@ EOM
 
     sub set_emergency_comma_breakpoints {
 
-        my ( $self, $number_of_fields_best, $rinput_hash, $comma_count,
-            $i_first_comma )
-          = @_;
+        my (
+
+            $self,    #
+
+            $number_of_fields_best,
+            $rinput_hash,
+            $comma_count,
+            $i_first_comma
+
+        ) = @_;
 
         # The number of fields worked out to be negative, so we
         # have to make an emergency fix.
@@ -20711,10 +20738,18 @@ EOM
         # Rule.
         #-------------------------------------------------------------
         if ($has_broken_sublist) {
+
             $self->comma_broken_sublist_rule(
-                $item_count,        $interrupted, $i_first_comma,
-                $i_true_last_comma, $ri_term_end, $ri_term_begin,
-                $ri_term_comma,     $ritem_lengths
+
+                $item_count,
+                $interrupted,
+                $i_first_comma,
+                $i_true_last_comma,
+                $ri_term_end,
+                $ri_term_begin,
+                $ri_term_comma,
+                $ritem_lengths
+
             );
             return;
         }
@@ -20984,9 +21019,14 @@ EOM
         # fields. In this case we just have to bail out.
         #-----------------------------------------------------------------
         if ( $number_of_fields <= 0 ) {
+
             $self->set_emergency_comma_breakpoints(
-                $number_of_fields_best, $rinput_hash,
-                $comma_count,           $i_first_comma
+
+                $number_of_fields_best,
+                $rinput_hash,
+                $comma_count,
+                $i_first_comma
+
             );
             return;
         }
@@ -21237,7 +21277,7 @@ EOM
 
         my (
 
-            $self,
+            $self,    #
 
             $columns,
             $i_first_comma,

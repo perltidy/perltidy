@@ -25,12 +25,18 @@ use English qw( -no_match_vars );
 
 our $VERSION = '20220613.04';
 
+use Perl::Tidy::LineBuffer;
+use Carp;
+
 use constant DEVEL_MODE   => 0;
 use constant EMPTY_STRING => q{};
 use constant SPACE        => q{ };
 
-use Perl::Tidy::LineBuffer;
-use Carp;
+# Decimal values of some ascii characters for quick checks
+use constant ORD_TAB           => 9;
+use constant ORD_SPACE         => 32;
+use constant ORD_PRINTABLE_MIN => 33;
+use constant ORD_PRINTABLE_MAX => 126;
 
 # PACKAGE VARIABLES for processing an entire FILE.
 # These must be package variables because most may get localized during
@@ -466,7 +472,7 @@ sub new {
     $tokenizer_self = $self;
 
     prepare_for_a_new_file();
-    find_starting_indentation_level();
+    $self->find_starting_indentation_level();
 
     # This is not a full class yet, so die if an attempt is made to
     # create more than one object.
@@ -781,11 +787,11 @@ sub get_input_line_number {
     return $tokenizer_self->[_last_line_number_];
 }
 
-sub write_logfile_numbered_msg {
-    my ($msg) = @_;
+sub log_numbered_msg {
+    my ( $self, $msg ) = @_;
 
     # write input line number + message to logfile
-    my $input_line_number = get_input_line_number();
+    my $input_line_number = $self->[_last_line_number_];
     write_logfile_entry("Line $input_line_number: $msg");
     return;
 }
@@ -795,15 +801,15 @@ sub get_line {
 
     my $self = shift;
 
-    # USES GLOBAL VARIABLES: $tokenizer_self, $brace_depth,
-    # $square_bracket_depth, $paren_depth
+    # USES GLOBAL VARIABLES:
+    #   $brace_depth, $square_bracket_depth, $paren_depth
 
-    my $input_line = $tokenizer_self->[_line_buffer_object_]->get_line();
-    $tokenizer_self->[_line_of_text_] = $input_line;
+    my $input_line = $self->[_line_buffer_object_]->get_line();
+    $self->[_line_of_text_] = $input_line;
 
     return unless ($input_line);
 
-    my $input_line_number = ++$tokenizer_self->[_last_line_number_];
+    my $input_line_number = ++$self->[_last_line_number_];
 
     # Find and remove what characters terminate this line, including any
     # control r
@@ -823,7 +829,7 @@ sub get_line {
     # for backwards compatibility we keep the line text terminated with
     # a newline character
     $input_line .= "\n";
-    $tokenizer_self->[_line_of_text_] = $input_line;
+    $self->[_line_of_text_] = $input_line;
 
     # create a data structure describing this line which will be
     # returned to the caller.
@@ -875,11 +881,11 @@ sub get_line {
     };
 
     # must print line unchanged if we are in a here document
-    if ( $tokenizer_self->[_in_here_doc_] ) {
+    if ( $self->[_in_here_doc_] ) {
 
         $line_of_tokens->{_line_type} = 'HERE';
-        my $here_doc_target      = $tokenizer_self->[_here_doc_target_];
-        my $here_quote_character = $tokenizer_self->[_here_quote_character_];
+        my $here_doc_target      = $self->[_here_doc_target_];
+        my $here_quote_character = $self->[_here_quote_character_];
         my $candidate_target     = $input_line;
         chomp $candidate_target;
 
@@ -889,28 +895,26 @@ sub get_line {
             $candidate_target =~ s/^\s*//;
         }
         if ( $candidate_target eq $here_doc_target ) {
-            $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
+            $self->[_nearly_matched_here_target_at_] = undef;
             $line_of_tokens->{_line_type} = 'HERE_END';
-            write_logfile_numbered_msg(
-                "Exiting HERE document $here_doc_target\n");
+            $self->log_numbered_msg("Exiting HERE document $here_doc_target\n");
 
-            my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
+            my $rhere_target_list = $self->[_rhere_target_list_];
             if ( @{$rhere_target_list} ) {  # there can be multiple here targets
                 ( $here_doc_target, $here_quote_character ) =
                   @{ shift @{$rhere_target_list} };
-                $tokenizer_self->[_here_doc_target_] = $here_doc_target;
-                $tokenizer_self->[_here_quote_character_] =
-                  $here_quote_character;
-                write_logfile_numbered_msg(
+                $self->[_here_doc_target_]      = $here_doc_target;
+                $self->[_here_quote_character_] = $here_quote_character;
+                $self->log_numbered_msg(
                     "Entering HERE document $here_doc_target\n");
-                $tokenizer_self->[_nearly_matched_here_target_at_] = undef;
-                $tokenizer_self->[_started_looking_for_here_target_at_] =
+                $self->[_nearly_matched_here_target_at_] = undef;
+                $self->[_started_looking_for_here_target_at_] =
                   $input_line_number;
             }
             else {
-                $tokenizer_self->[_in_here_doc_]          = 0;
-                $tokenizer_self->[_here_doc_target_]      = EMPTY_STRING;
-                $tokenizer_self->[_here_quote_character_] = EMPTY_STRING;
+                $self->[_in_here_doc_]          = 0;
+                $self->[_here_doc_target_]      = EMPTY_STRING;
+                $self->[_here_quote_character_] = EMPTY_STRING;
             }
         }
 
@@ -920,24 +924,23 @@ sub get_line {
             $candidate_target =~ s/\s*$//;
             $candidate_target =~ s/^\s*//;
             if ( $candidate_target eq $here_doc_target ) {
-                $tokenizer_self->[_nearly_matched_here_target_at_] =
-                  $input_line_number;
+                $self->[_nearly_matched_here_target_at_] = $input_line_number;
             }
         }
         return $line_of_tokens;
     }
 
     # Print line unchanged if we are in a format section
-    elsif ( $tokenizer_self->[_in_format_] ) {
+    elsif ( $self->[_in_format_] ) {
 
         if ( $input_line =~ /^\.[\s#]*$/ ) {
 
             # Decrement format depth count at a '.' after a 'format'
-            $tokenizer_self->[_in_format_]--;
+            $self->[_in_format_]--;
 
             # This is the end when count reaches 0
-            if ( !$tokenizer_self->[_in_format_] ) {
-                write_logfile_numbered_msg("Exiting format section\n");
+            if ( !$self->[_in_format_] ) {
+                $self->log_numbered_msg("Exiting format section\n");
                 $line_of_tokens->{_line_type} = 'FORMAT_END';
             }
         }
@@ -947,22 +950,22 @@ sub get_line {
 
                 # Increment format depth count at a 'format' within a 'format'
                 # This is a simple way to handle nested formats (issue c019).
-                $tokenizer_self->[_in_format_]++;
+                $self->[_in_format_]++;
             }
         }
         return $line_of_tokens;
     }
 
     # must print line unchanged if we are in pod documentation
-    elsif ( $tokenizer_self->[_in_pod_] ) {
+    elsif ( $self->[_in_pod_] ) {
 
         $line_of_tokens->{_line_type} = 'POD';
         if ( $input_line =~ /^=cut/ ) {
             $line_of_tokens->{_line_type} = 'POD_END';
-            write_logfile_numbered_msg("Exiting POD section\n");
-            $tokenizer_self->[_in_pod_] = 0;
+            $self->log_numbered_msg("Exiting POD section\n");
+            $self->[_in_pod_] = 0;
         }
-        if ( $input_line =~ /^\#\!.*perl\b/ && !$tokenizer_self->[_in_end_] ) {
+        if ( $input_line =~ /^\#\!.*perl\b/ && !$self->[_in_end_] ) {
             warning(
                 "Hash-bang in pod can cause older versions of perl to fail! \n"
             );
@@ -972,13 +975,13 @@ sub get_line {
     }
 
     # print line unchanged if in skipped section
-    elsif ( $tokenizer_self->[_in_skipped_] ) {
+    elsif ( $self->[_in_skipped_] ) {
 
         $line_of_tokens->{_line_type} = 'SKIP';
         if ( $input_line =~ /$code_skipping_pattern_end/ ) {
             $line_of_tokens->{_line_type} = 'SKIP_END';
-            write_logfile_numbered_msg("Exiting code-skipping section\n");
-            $tokenizer_self->[_in_skipped_] = 0;
+            $self->log_numbered_msg("Exiting code-skipping section\n");
+            $self->[_in_skipped_] = 0;
         }
         return $line_of_tokens;
     }
@@ -987,13 +990,13 @@ sub get_line {
     # are seeing illegal tokens and cannot continue.  Syntax errors do
     # not pass this route).  Calling routine can decide what to do, but
     # the default can be to just pass all lines as if they were after __END__
-    elsif ( $tokenizer_self->[_in_error_] ) {
+    elsif ( $self->[_in_error_] ) {
         $line_of_tokens->{_line_type} = 'ERROR';
         return $line_of_tokens;
     }
 
     # print line unchanged if we are __DATA__ section
-    elsif ( $tokenizer_self->[_in_data_] ) {
+    elsif ( $self->[_in_data_] ) {
 
         # ...but look for POD
         # Note that the _in_data and _in_end flags remain set
@@ -1001,8 +1004,8 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_numbered_msg("Entering POD section\n");
-            $tokenizer_self->[_in_pod_] = 1;
+            $self->log_numbered_msg("Entering POD section\n");
+            $self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
         else {
@@ -1012,7 +1015,7 @@ sub get_line {
     }
 
     # print line unchanged if we are in __END__ section
-    elsif ( $tokenizer_self->[_in_end_] ) {
+    elsif ( $self->[_in_end_] ) {
 
         # ...but look for POD
         # Note that the _in_data and _in_end flags remain set
@@ -1020,8 +1023,8 @@ sub get_line {
         # end of a pod section
         if ( $input_line =~ /^=(\w+)\b/ && $1 ne 'cut' ) {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_numbered_msg("Entering POD section\n");
-            $tokenizer_self->[_in_pod_] = 1;
+            $self->log_numbered_msg("Entering POD section\n");
+            $self->[_in_pod_] = 1;
             return $line_of_tokens;
         }
         else {
@@ -1031,17 +1034,17 @@ sub get_line {
     }
 
     # check for a hash-bang line if we haven't seen one
-    if ( !$tokenizer_self->[_saw_hash_bang_] ) {
+    if ( !$self->[_saw_hash_bang_] ) {
         if ( $input_line =~ /^\#\!.*perl\b/ ) {
-            $tokenizer_self->[_saw_hash_bang_] = $input_line_number;
+            $self->[_saw_hash_bang_] = $input_line_number;
 
             # check for -w and -P flags
             if ( $input_line =~ /^\#\!.*perl\s.*-.*P/ ) {
-                $tokenizer_self->[_saw_perl_dash_P_] = 1;
+                $self->[_saw_perl_dash_P_] = 1;
             }
 
             if ( $input_line =~ /^\#\!.*perl\s.*-.*w/ ) {
-                $tokenizer_self->[_saw_perl_dash_w_] = 1;
+                $self->[_saw_perl_dash_w_] = 1;
             }
 
             if (
@@ -1053,7 +1056,7 @@ sub get_line {
                        $last_nonblank_block_type
                     && $last_nonblank_block_type eq 'BEGIN'
                 )
-                && !$tokenizer_self->[_look_for_hash_bang_]
+                && !$self->[_look_for_hash_bang_]
 
                 # Try to avoid giving a false alarm at a simple comment.
                 # These look like valid hash-bang lines:
@@ -1074,7 +1077,7 @@ sub get_line {
 
                 # this is helpful for VMS systems; we may have accidentally
                 # tokenized some DCL commands
-                if ( $tokenizer_self->[_started_tokenizing_] ) {
+                if ( $self->[_started_tokenizing_] ) {
                     warning(
 "There seems to be a hash-bang after line 1; do you need to run with -x ?\n"
                     );
@@ -1094,8 +1097,8 @@ sub get_line {
     }
 
     # wait for a hash-bang before parsing if the user invoked us with -x
-    if ( $tokenizer_self->[_look_for_hash_bang_]
-        && !$tokenizer_self->[_saw_hash_bang_] )
+    if ( $self->[_look_for_hash_bang_]
+        && !$self->[_saw_hash_bang_] )
     {
         $line_of_tokens->{_line_type} = 'SYSTEM';
         return $line_of_tokens;
@@ -1118,33 +1121,32 @@ sub get_line {
     #        _in_skipped_
     #        _in_pod_
     #        _in_quote_
-    my $ending_in_quote_last = $tokenizer_self->[_in_quote_];
-    tokenize_this_line($line_of_tokens);
+    my $ending_in_quote_last = $self->[_in_quote_];
+    $self->tokenize_this_line($line_of_tokens);
 
     # Now finish defining the return structure and return it
-    $line_of_tokens->{_ending_in_quote} = $tokenizer_self->[_in_quote_];
+    $line_of_tokens->{_ending_in_quote} = $self->[_in_quote_];
 
     # handle severe error (binary data in script)
-    if ( $tokenizer_self->[_in_error_] ) {
-        $tokenizer_self->[_in_quote_] = 0;    # to avoid any more messages
+    if ( $self->[_in_error_] ) {
+        $self->[_in_quote_] = 0;    # to avoid any more messages
         warning("Giving up after error\n");
         $line_of_tokens->{_line_type} = 'ERROR';
-        reset_indentation_level(0);           # avoid error messages
+        reset_indentation_level(0);    # avoid error messages
         return $line_of_tokens;
     }
 
     # handle start of pod documentation
-    if ( $tokenizer_self->[_in_pod_] ) {
+    if ( $self->[_in_pod_] ) {
 
         # This gets tricky..above a __DATA__ or __END__ section, perl
         # accepts '=cut' as the start of pod section. But afterwards,
         # only pod utilities see it and they may ignore an =cut without
         # leading =head.  In any case, this isn't good.
         if ( $input_line =~ /^=cut\b/ ) {
-            if ( $tokenizer_self->[_saw_data_] || $tokenizer_self->[_saw_end_] )
-            {
+            if ( $self->[_saw_data_] || $self->[_saw_end_] ) {
                 complain("=cut while not in pod ignored\n");
-                $tokenizer_self->[_in_pod_] = 0;
+                $self->[_in_pod_] = 0;
                 $line_of_tokens->{_line_type} = 'POD_END';
             }
             else {
@@ -1152,67 +1154,66 @@ sub get_line {
                 warning(
 "=cut starts a pod section .. this can fool pod utilities.\n"
                 ) unless (DEVEL_MODE);
-                write_logfile_numbered_msg("Entering POD section\n");
+                $self->log_numbered_msg("Entering POD section\n");
             }
         }
 
         else {
             $line_of_tokens->{_line_type} = 'POD_START';
-            write_logfile_numbered_msg("Entering POD section\n");
+            $self->log_numbered_msg("Entering POD section\n");
         }
 
         return $line_of_tokens;
     }
 
     # handle start of skipped section
-    if ( $tokenizer_self->[_in_skipped_] ) {
+    if ( $self->[_in_skipped_] ) {
 
         $line_of_tokens->{_line_type} = 'SKIP';
-        write_logfile_numbered_msg("Entering code-skipping section\n");
+        $self->log_numbered_msg("Entering code-skipping section\n");
         return $line_of_tokens;
     }
 
     # see if this line contains here doc targets
-    my $rhere_target_list = $tokenizer_self->[_rhere_target_list_];
+    my $rhere_target_list = $self->[_rhere_target_list_];
     if ( @{$rhere_target_list} ) {
 
         my ( $here_doc_target, $here_quote_character ) =
           @{ shift @{$rhere_target_list} };
-        $tokenizer_self->[_in_here_doc_]          = 1;
-        $tokenizer_self->[_here_doc_target_]      = $here_doc_target;
-        $tokenizer_self->[_here_quote_character_] = $here_quote_character;
-        write_logfile_numbered_msg("Entering HERE document $here_doc_target\n");
-        $tokenizer_self->[_started_looking_for_here_target_at_] =
-          $input_line_number;
+        $self->[_in_here_doc_]          = 1;
+        $self->[_here_doc_target_]      = $here_doc_target;
+        $self->[_here_quote_character_] = $here_quote_character;
+        $self->log_numbered_msg("Entering HERE document $here_doc_target\n");
+        $self->[_started_looking_for_here_target_at_] = $input_line_number;
     }
 
     # NOTE: __END__ and __DATA__ statements are written unformatted
     # because they can theoretically contain additional characters
     # which are not tokenized (and cannot be read with <DATA> either!).
-    if ( $tokenizer_self->[_in_data_] ) {
+    if ( $self->[_in_data_] ) {
         $line_of_tokens->{_line_type} = 'DATA_START';
-        write_logfile_numbered_msg("Starting __DATA__ section\n");
-        $tokenizer_self->[_saw_data_] = 1;
+        $self->log_numbered_msg("Starting __DATA__ section\n");
+        $self->[_saw_data_] = 1;
 
         # keep parsing after __DATA__ if use SelfLoader was seen
-        if ( $tokenizer_self->[_saw_selfloader_] ) {
-            $tokenizer_self->[_in_data_] = 0;
-            write_logfile_numbered_msg(
+        if ( $self->[_saw_selfloader_] ) {
+            $self->[_in_data_] = 0;
+            $self->log_numbered_msg(
                 "SelfLoader seen, continuing; -nlsl deactivates\n");
         }
 
         return $line_of_tokens;
     }
 
-    elsif ( $tokenizer_self->[_in_end_] ) {
+    elsif ( $self->[_in_end_] ) {
         $line_of_tokens->{_line_type} = 'END_START';
-        write_logfile_numbered_msg("Starting __END__ section\n");
-        $tokenizer_self->[_saw_end_] = 1;
+        $self->log_numbered_msg("Starting __END__ section\n");
+        $self->[_saw_end_] = 1;
 
         # keep parsing after __END__ if use AutoLoader was seen
-        if ( $tokenizer_self->[_saw_autoloader_] ) {
-            $tokenizer_self->[_in_end_] = 0;
-            write_logfile_numbered_msg(
+        if ( $self->[_saw_autoloader_] ) {
+            $self->[_in_end_] = 0;
+            $self->log_numbered_msg(
                 "AutoLoader seen, continuing; -nlal deactivates\n");
         }
         return $line_of_tokens;
@@ -1222,42 +1223,39 @@ sub get_line {
     $line_of_tokens->{_line_type} = 'CODE';
 
     # remember if we have seen any real code
-    if (  !$tokenizer_self->[_started_tokenizing_]
+    if (  !$self->[_started_tokenizing_]
         && $input_line !~ /^\s*$/
         && $input_line !~ /^\s*#/ )
     {
-        $tokenizer_self->[_started_tokenizing_] = 1;
+        $self->[_started_tokenizing_] = 1;
     }
 
-    if ( $tokenizer_self->[_debugger_object_] ) {
-        $tokenizer_self->[_debugger_object_]
-          ->write_debug_entry($line_of_tokens);
+    if ( $self->[_debugger_object_] ) {
+        $self->[_debugger_object_]->write_debug_entry($line_of_tokens);
     }
 
     # Note: if keyword 'format' occurs in this line code, it is still CODE
     # (keyword 'format' need not start a line)
-    if ( $tokenizer_self->[_in_format_] ) {
-        write_logfile_numbered_msg("Entering format section\n");
+    if ( $self->[_in_format_] ) {
+        $self->log_numbered_msg("Entering format section\n");
     }
 
-    if ( $tokenizer_self->[_in_quote_]
-        and ( $tokenizer_self->[_line_start_quote_] < 0 ) )
+    if ( $self->[_in_quote_]
+        and ( $self->[_line_start_quote_] < 0 ) )
     {
 
         #if ( ( my $quote_target = get_quote_target() ) !~ /^\s*$/ ) {
-        if ( ( my $quote_target = $tokenizer_self->[_quote_target_] ) !~
-            /^\s*$/ )
-        {
-            $tokenizer_self->[_line_start_quote_] = $input_line_number;
-            write_logfile_numbered_msg(
+        if ( ( my $quote_target = $self->[_quote_target_] ) !~ /^\s*$/ ) {
+            $self->[_line_start_quote_] = $input_line_number;
+            $self->log_numbered_msg(
                 "Start multi-line quote or pattern ending in $quote_target\n");
         }
     }
-    elsif ( ( $tokenizer_self->[_line_start_quote_] >= 0 )
-        && !$tokenizer_self->[_in_quote_] )
+    elsif ( ( $self->[_line_start_quote_] >= 0 )
+        && !$self->[_in_quote_] )
     {
-        $tokenizer_self->[_line_start_quote_] = -1;
-        write_logfile_numbered_msg("End of multi-line quote or pattern\n");
+        $self->[_line_start_quote_] = -1;
+        $self->log_numbered_msg("End of multi-line quote or pattern\n");
     }
 
     # we are returning a line of CODE
@@ -1272,17 +1270,17 @@ sub find_starting_indentation_level {
     # example) it may not be zero.  The user may specify this with the
     # -sil=n parameter but normally doesn't so we have to guess.
     #
-    # USES GLOBAL VARIABLES: $tokenizer_self
+    my ($self) = @_;
     my $starting_level = 0;
 
     # use value if given as parameter
-    if ( $tokenizer_self->[_know_starting_level_] ) {
-        $starting_level = $tokenizer_self->[_starting_level_];
+    if ( $self->[_know_starting_level_] ) {
+        $starting_level = $self->[_starting_level_];
     }
 
     # if we know there is a hash_bang line, the level must be zero
-    elsif ( $tokenizer_self->[_look_for_hash_bang_] ) {
-        $tokenizer_self->[_know_starting_level_] = 1;
+    elsif ( $self->[_look_for_hash_bang_] ) {
+        $self->[_know_starting_level_] = 1;
     }
 
     # otherwise figure it out from the input file
@@ -1292,9 +1290,7 @@ sub find_starting_indentation_level {
 
         # keep looking at lines until we find a hash bang or piece of code
         my $msg = EMPTY_STRING;
-        while ( $line =
-            $tokenizer_self->[_line_buffer_object_]->peek_ahead( $i++ ) )
-        {
+        while ( $line = $self->[_line_buffer_object_]->peek_ahead( $i++ ) ) {
 
             # if first line is #! then assume starting level is zero
             if ( $i == 1 && $line =~ /^\#\!/ ) {
@@ -1309,7 +1305,7 @@ sub find_starting_indentation_level {
         $msg = "Line $i implies starting-indentation-level = $starting_level\n";
         write_logfile_entry("$msg");
     }
-    $tokenizer_self->[_starting_level_] = $starting_level;
+    $self->[_starting_level_] = $starting_level;
     reset_indentation_level($starting_level);
     return;
 } ## end sub find_starting_indentation_level
@@ -4108,15 +4104,28 @@ EOM
 
         # scan for the end of the quote or pattern
         (
-            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
-            $quoted_string_1, $quoted_string_2
-          )
-          = do_quote(
-            $i,               $in_quote,    $quote_character,
-            $quote_pos,       $quote_depth, $quoted_string_1,
-            $quoted_string_2, $rtokens,     $rtoken_map,
-            $max_token_index
-          );
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $quoted_string_1,
+            $quoted_string_2,
+
+        ) = do_quote(
+
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $quoted_string_1,
+            $quoted_string_2,
+            $rtokens,
+            $rtoken_map,
+            $max_token_index,
+
+        );
 
         # all done if we didn't find it
         if ($in_quote) { return }
@@ -4397,7 +4406,7 @@ EOM
   #
   # -----------------------------------------------------------------------
 
-        my $line_of_tokens = shift;
+        my ( $self, $line_of_tokens ) = @_;
         my ($untrimmed_input_line) = $line_of_tokens->{_line_text};
 
         # Extract line number for use in error messages
@@ -4413,7 +4422,7 @@ EOM
             if ( !$in_quote
                 && ( operator_expected( [ 'b', '=', 'b' ] ) == TERM ) )
             {
-                $tokenizer_self->[_in_pod_] = 1;
+                $self->[_in_pod_] = 1;
                 return;
             }
         }
@@ -4446,14 +4455,14 @@ EOM
                 my $spaces         = length($leading_spaces);
 
                 # handle leading tabs
-                if ( ord( substr( $leading_spaces, 0, 1 ) ) == 9
+                if ( ord( substr( $leading_spaces, 0, 1 ) ) == ORD_TAB
                     && $leading_spaces =~ /^(\t+)/ )
                 {
-                    my $tabsize = $tokenizer_self->[_tabsize_];
+                    my $tabsize = $self->[_tabsize_];
                     $spaces += length($1) * ( $tabsize - 1 );
                 }
 
-                my $indent_columns = $tokenizer_self->[_indent_columns_];
+                my $indent_columns = $self->[_indent_columns_];
                 $line_of_tokens->{_guessed_indentation_level} =
                   int( $spaces / $indent_columns );
             }
@@ -4470,7 +4479,7 @@ EOM
                 if (   $rOpts_code_skipping
                     && $input_line =~ /$code_skipping_pattern_begin/ )
                 {
-                    $tokenizer_self->[_in_skipped_] = 1;
+                    $self->[_in_skipped_] = 1;
                     return;
                 }
 
@@ -4505,7 +4514,7 @@ EOM
 
         # update the copy of the line for use in error messages
         # This must be exactly what we give the pre_tokenizer
-        $tokenizer_self->[_line_of_text_] = $input_line;
+        $self->[_line_of_text_] = $input_line;
 
         # re-initialize for the main loop
         $routput_token_list     = [];    # stack of output token indexes
@@ -4526,21 +4535,21 @@ EOM
         $indent_flag     = 0;
         $peeked_ahead    = 0;
 
-        tokenizer_main_loop($is_END_or_DATA);
+        $self->tokenizer_main_loop($is_END_or_DATA);
 
         #-----------------------------------------------
         # all done tokenizing this line ...
         # now prepare the final list of tokens and types
         #-----------------------------------------------
 
-        tokenizer_wrapup_line($line_of_tokens);
+        $self->tokenizer_wrapup_line($line_of_tokens);
 
         return;
     } ## end sub tokenize_this_line
 
     sub tokenizer_main_loop {
 
-        my ($is_END_or_DATA) = @_;
+        my ( $self, $is_END_or_DATA ) = @_;
 
         #---------------------------------
         # Break one input line into tokens
@@ -4898,17 +4907,17 @@ EOM
             }
         }
 
-        $tokenizer_self->[_in_attribute_list_] = $in_attribute_list;
-        $tokenizer_self->[_in_quote_]          = $in_quote;
-        $tokenizer_self->[_quote_target_] =
+        $self->[_in_attribute_list_] = $in_attribute_list;
+        $self->[_in_quote_]          = $in_quote;
+        $self->[_quote_target_] =
           $in_quote ? matching_end_token($quote_character) : EMPTY_STRING;
-        $tokenizer_self->[_rhere_target_list_] = $rhere_target_list;
+        $self->[_rhere_target_list_] = $rhere_target_list;
 
         return;
     } ## end sub tokenizer_main_loop
 
     sub tokenizer_wrapup_line {
-        my ($line_of_tokens) = @_;
+        my ( $self, $line_of_tokens ) = @_;
 
         #---------------------------------------------------------
         # Package a line of tokens for shipping back to the caller
@@ -5071,7 +5080,7 @@ EOM
                     warning(
 "unexpected character decimal $val ($type_i) in script\n"
                     );
-                    $tokenizer_self->[_in_error_] = 1;
+                    $self->[_in_error_] = 1;
                 }
 
                 # $ternary_indentation_flag indicates that we need a change
@@ -5106,11 +5115,8 @@ EOM
                     push( @{$rslevel_stack}, 1 + $slevel_in_tokenizer );
                     $level_in_tokenizer++;
 
-                    if ( $level_in_tokenizer >
-                        $tokenizer_self->[_maximum_level_] )
-                    {
-                        $tokenizer_self->[_maximum_level_] =
-                          $level_in_tokenizer;
+                    if ( $level_in_tokenizer > $self->[_maximum_level_] ) {
+                        $self->[_maximum_level_] = $level_in_tokenizer;
                     }
 
                     if ($ternary_indentation_flag) {
@@ -5389,8 +5395,8 @@ EOM
                 # Section 4: operations common to all levels
                 #-------------------------------------------
                 if ( $level_in_tokenizer < 0 ) {
-                    unless ( $tokenizer_self->[_saw_negative_indentation_] ) {
-                        $tokenizer_self->[_saw_negative_indentation_] = 1;
+                    unless ( $self->[_saw_negative_indentation_] ) {
+                        $self->[_saw_negative_indentation_] = 1;
                         warning("Starting negative indentation\n");
                     }
                 }
@@ -6615,11 +6621,25 @@ sub guess_if_pattern_or_conditional {
         my $quote_pos       = 0;
         my $quoted_string;
         (
-            $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
-            $quoted_string
-          )
-          = follow_quoted_string( $ibeg, $in_quote, $rtokens, $quote_character,
-            $quote_pos, $quote_depth, $max_token_index );
+
+            $i,
+            $in_quote,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $quoted_string,
+
+        ) = follow_quoted_string(
+
+            $ibeg,
+            $in_quote,
+            $rtokens,
+            $quote_character,
+            $quote_pos,
+            $quote_depth,
+            $max_token_index,
+
+        );
 
         if ($in_quote) {
 
@@ -8541,12 +8561,6 @@ EOM
 # Tokenizer utility routines which may use CONSTANTS but no other GLOBALS
 #########################################################################
 
-# Decimal values of some ascii characters for quick checks
-use constant ORD_PRINTABLE_MIN => 33;
-use constant ORD_PRINTABLE_MAX => 126;
-use constant ORD_TAB           => 9;
-use constant ORD_SPACE         => 32;
-
 sub find_next_nonblank_token {
     my ( $i, $rtokens, $max_token_index ) = @_;
 
@@ -9204,10 +9218,18 @@ sub do_quote {
     #  $quoted_string_1 = quoted string seen while in_quote=1
     #  $quoted_string_2 = quoted string seen while in_quote=2
     my (
-        $i,               $in_quote,    $quote_character,
-        $quote_pos,       $quote_depth, $quoted_string_1,
-        $quoted_string_2, $rtokens,     $rtoken_map,
-        $max_token_index
+
+        $i,
+        $in_quote,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $quoted_string_1,
+        $quoted_string_2,
+        $rtokens,
+        $rtoken_map,
+        $max_token_index,
+
     ) = @_;
 
     my $in_quote_starting = $in_quote;
@@ -9244,8 +9266,17 @@ sub do_quote {
             $quoted_string_1 .= "\n";
         }
     }
-    return ( $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
-        $quoted_string_1, $quoted_string_2 );
+    return (
+
+        $i,
+        $in_quote,
+        $quote_character,
+        $quote_pos,
+        $quote_depth,
+        $quoted_string_1,
+        $quoted_string_2,
+
+    );
 } ## end sub do_quote
 
 sub follow_quoted_string {
@@ -9265,9 +9296,18 @@ sub follow_quoted_string {
     #   $quote_pos = index to check next for alphanumeric delimiter
     #   $quote_depth = nesting depth, since delimiters '{ ( [ <' can be nested.
     #   $quoted_string = the text of the quote (without quotation tokens)
-    my ( $i_beg, $in_quote, $rtokens, $beginning_tok, $quote_pos, $quote_depth,
-        $max_token_index )
-      = @_;
+    my (
+
+        $i_beg,
+        $in_quote,
+        $rtokens,
+        $beginning_tok,
+        $quote_pos,
+        $quote_depth,
+        $max_token_index,
+
+    ) = @_;
+
     my ( $tok, $end_tok );
     my $i             = $i_beg - 1;
     my $quoted_string = EMPTY_STRING;
@@ -9414,8 +9454,16 @@ sub follow_quoted_string {
         }
     }
     if ( $i > $max_token_index ) { $i = $max_token_index }
-    return ( $i, $in_quote, $beginning_tok, $quote_pos, $quote_depth,
-        $quoted_string );
+    return (
+
+        $i,
+        $in_quote,
+        $beginning_tok,
+        $quote_pos,
+        $quote_depth,
+        $quoted_string,
+
+    );
 } ## end sub follow_quoted_string
 
 sub indicate_error {
