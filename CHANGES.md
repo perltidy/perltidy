@@ -2,6 +2,27 @@
 
 ## 2022 06 13.04
 
+    - Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
+      is set, along with -wn, perltidy is allowed to weld an opening paren
+      to an inner opening container when they are separated by a hash key
+      and fat comma (=>).  For example:
+
+        # perltidy -wn
+        elf->call_method(
+            method_name_foo => {
+                some_arg1       => $foo,
+                some_other_arg3 => $bar->{'baz'},
+            }
+        );
+
+        # perltidy -wn -wfc
+        elf->call_method( method_name_foo => {
+            some_arg1       => $foo,
+            some_other_arg3 => $bar->{'baz'},
+        } );
+
+     This flag is off by default.
+
     - Fix issue git #106. This fixes some edge cases of formatting with the
       combination -xlp -pt=2, mainly for two-line lists with short function
       names. One indentation space is removed to improve alignment:

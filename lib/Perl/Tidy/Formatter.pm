@@ -319,6 +319,7 @@ my (
     %stack_closing_token,
 
     %weld_nested_exclusion_rules,
+    %weld_fat_comma_rules,
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
@@ -1990,6 +1991,7 @@ EOM
     }
 
     initialize_weld_nested_exclusion_rules();
+    initialize_weld_fat_comma_rules();
 
     %line_up_parentheses_control_hash    = ();
     $line_up_parentheses_control_is_lxpl = 1;
@@ -2202,6 +2204,27 @@ EOM
     }
     return;
 } ## end sub initialize_weld_nested_exclusion_rules
+
+sub initialize_weld_fat_comma_rules {
+
+    # Initialize a hash controlling which opening token types can be
+    # welded around a fat comma
+    %weld_fat_comma_rules = ();
+
+    # The -wfc flag turns on welding of '=>' after an opening paren
+    if ( $rOpts->{'weld-fat-comma'} ) { $weld_fat_comma_rules{'('} = 1 }
+
+    # This could be generalized in the future by introducing a parameter
+    # -weld-fat-comma-after=str (-wfca=str), where str contains any of:
+    #    * { [ (
+    # to indicate which opening parens may weld to a subsequent '=>'
+
+    # The flag -wfc would then be equivalent to -wfca='('
+
+    # This has not been done because it is not yet clear how useful
+    # this generalization would be.
+    return;
+} ## end sub initialize_weld_fat_comma_rules
 
 sub initialize_line_up_parentheses_control_hash {
     my ( $str, $opt_name ) = @_;
@@ -8513,6 +8536,12 @@ sub find_nested_pairs {
         my $token_outer_closing = $rLL->[$K_outer_closing]->[_TOKEN_];
         next unless ( $is_closing_token{$token_outer_closing} );
 
+        # Simple filter: No commas or semicolons in the outer container
+        my $rtype_count = $self->[_rtype_count_by_seqno_]->{$outer_seqno};
+        if ($rtype_count) {
+            next if ( $rtype_count->{','} || $rtype_count->{';'} );
+        }
+
         # Now we have to check the opening tokens.
         my $K_outer_opening = $K_opening_container->{$outer_seqno};
         my $K_inner_opening = $K_opening_container->{$inner_seqno};
@@ -8580,7 +8609,9 @@ sub find_nested_pairs {
         # They can be separated by a small amount.
         my $K_diff = $K_inner_opening - $K_outer_opening;
 
-        # Count nonblank characters separating them.
+        # Count the number of nonblank characters separating them.
+        # Note: the $nonblank_count includes the inner opening container
+        # but not the outer opening container, so it will be >= 1.
         if ( $K_diff < 0 ) { next }    # Shouldn't happen
         my $nonblank_count = 0;
         my $type;
@@ -8594,6 +8625,7 @@ sub find_nested_pairs {
         my $Kn_first = $K_outer_opening;
         my $Kn_last_nonblank;
         my $saw_comment;
+
         foreach my $Kn ( $K_outer_opening + 1 .. $K_inner_opening ) {
             next if ( $rLL->[$Kn]->[_TYPE_] eq 'b' );
             if ( !$nonblank_count )        { $Kn_first = $Kn }
@@ -8607,6 +8639,9 @@ sub find_nested_pairs {
             if ( $type eq '#' ) { $saw_comment = 1; last }
             $is_name = $is_name_type->{$type};
             next if ( $is_name && $last_is_name );
+
+            # do not count a possible leading - of bareword hash key
+            next if ( $type eq 'm' && !$last_type );
 
             $nonblank_count++;
             last if ( $nonblank_count > 2 );
@@ -8627,16 +8662,14 @@ sub find_nested_pairs {
             if ( $is_sort_map_grep{$token} ) { $nonblank_count = 10 }
         }
 
+        my $token_oo = $rLL->[$K_outer_opening]->[_TOKEN_];
+
         if (
 
-            # adjacent opening containers, like: do {{
+            # 1: adjacent opening containers, like: do {{
             $nonblank_count == 1
 
-            # short item following opening paren, like:  fun( yyy (
-            || (   $nonblank_count == 2
-                && $rLL->[$K_outer_opening]->[_TOKEN_] eq '(' )
-
-            # anonymous sub + prototype or sig:  )->then( sub ($code) {
+            # 2. anonymous sub + prototype or sig:  )->then( sub ($code) {
             # ... but it seems best not to stack two structural blocks, like
             # this
             #    sub make_anon_with_my_sub { sub {
@@ -8645,6 +8678,16 @@ sub find_nested_pairs {
                 && $inner_blocktype eq 'sub'
                 && $rLL->[$Kn_first]->[_TOKEN_] eq 'sub'
                 && !$outer_blocktype )
+
+            # 3. short item following opening paren, like:  fun( yyy (
+            || $nonblank_count == 2 && $token_oo eq '('
+
+            # 4. weld around fat commas, if requested (git #108), such as
+            #     elf->call_method( method_name_foo => {
+            || (   $type eq '=>'
+                && $nonblank_count <= 3
+                && %weld_fat_comma_rules
+                && $weld_fat_comma_rules{$token_oo} )
           )
         {
             push @nested_pairs,

@@ -17,6 +17,8 @@
 #14 c154.def
 #15 code_skipping.code_skipping
 #16 c158.def
+#17 git108.def
+#18 git108.git108
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -45,6 +47,7 @@ BEGIN {
         'def'    => "",
         'drc'    => "-drc",
         'git106' => "-xlp -gnu -xci",
+        'git108' => "-wn -wfc",
         'git93'  => <<'----------',
 -vxl='q'
 ----------
@@ -242,6 +245,27 @@ abcdefghijklmnopq
         }
     }
 }
+----------
+
+        'git108' => <<'----------',
+elf->call_method(
+    method_name_foo => {
+        some_arg1       => $foo,
+        some_other_arg3 => $bar->{'baz'},
+    }
+);
+
+# leading dash
+my $species = new Bio::Species(
+    -classification => [
+        qw(
+          sapiens Homo Hominidae
+          Catarrhini Primates Eutheria
+          Mammalia Vertebrata
+          Chordata Metazoa Eukaryota
+        )
+    ]
+);
 ----------
 
         'git93' => <<'----------',
@@ -770,6 +794,50 @@ my $meta = try { $package->meta }
 my ($curr) = current();
 err(@_);
 #16...........
+        },
+
+        'git108.def' => {
+            source => "git108",
+            params => "def",
+            expect => <<'#17...........',
+elf->call_method(
+    method_name_foo => {
+        some_arg1       => $foo,
+        some_other_arg3 => $bar->{'baz'},
+    }
+);
+
+# leading dash
+my $species = new Bio::Species(
+    -classification => [
+        qw(
+          sapiens Homo Hominidae
+          Catarrhini Primates Eutheria
+          Mammalia Vertebrata
+          Chordata Metazoa Eukaryota
+        )
+    ]
+);
+#17...........
+        },
+
+        'git108.git108' => {
+            source => "git108",
+            params => "git108",
+            expect => <<'#18...........',
+elf->call_method( method_name_foo => {
+    some_arg1       => $foo,
+    some_other_arg3 => $bar->{'baz'},
+} );
+
+# leading dash
+my $species = new Bio::Species( -classification => [ qw(
+    sapiens Homo Hominidae
+    Catarrhini Primates Eutheria
+    Mammalia Vertebrata
+    Chordata Metazoa Eukaryota
+) ] );
+#18...........
         },
     };
 

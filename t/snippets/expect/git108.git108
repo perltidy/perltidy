@@ -1,0 +1,12 @@
+elf->call_method( method_name_foo => {
+    some_arg1       => $foo,
+    some_other_arg3 => $bar->{'baz'},
+} );
+
+# leading dash
+my $species = new Bio::Species( -classification => [ qw(
+    sapiens Homo Hominidae
+    Catarrhini Primates Eutheria
+    Mammalia Vertebrata
+    Chordata Metazoa Eukaryota
+) ] );
