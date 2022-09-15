@@ -8598,11 +8598,9 @@ sub find_nested_pairs {
             my $Kdiff = $K_signature_closing - $K_io_check;
             next if ( $Kdiff > 4 );
 
-            my $saw_comma;
-            foreach my $KK ( $K_io_check + 1 .. $K_signature_closing - 1 ) {
-                if ( $rLL->[$KK]->[_TYPE_] eq ',' ) { $saw_comma = 1; last }
-            }
-            next if ($saw_comma);
+            # backup comma count test; but we cannot get here with Kdiff<=4
+            my $rtc = $self->[_rtype_count_by_seqno_]->{$seqno_signature};
+            next if ( $rtc && $rtc->{','} );
         }
 
         # Yes .. this is a possible nesting pair.
