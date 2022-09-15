@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.04
+## 2022 06 13.05
 
     - Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
       is set, along with -wn, perltidy is allowed to weld an opening paren
@@ -21,7 +21,7 @@
             some_other_arg3 => $bar->{'baz'},
         } );
 
-     This flag is off by default.
+      This flag is off by default.
 
     - Fix issue git #106. This fixes some edge cases of formatting with the
       combination -xlp -pt=2, mainly for two-line lists with short function
