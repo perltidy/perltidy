@@ -9165,9 +9165,7 @@ sub weld_nested_containers {
         # RULE: do not weld to a square bracket which does not contain commas
         if ( $inner_opening->[_TYPE_] eq '[' ) {
             my $rtype_count = $self->[_rtype_count_by_seqno_]->{$inner_seqno};
-            next unless ($rtype_count);
-            my $comma_count = $rtype_count->{','};
-            next unless ($comma_count);
+            next unless ( $rtype_count && $rtype_count->{','} );
 
             # Do not weld if there is text before a '[' such as here:
             #      curr_opt ( @beg [2,5] )
