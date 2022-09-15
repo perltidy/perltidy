@@ -5646,8 +5646,8 @@ EOM
         # required.  Also make any other changes, such as adding semicolons.
         # All token changes must be made here so that the token data structure
         # remains fixed for the rest of this iteration.
-        my ( $severe_error, $rqw_lines ) = $self->respace_tokens();
-        if ($severe_error) {
+        my ( $error, $rqw_lines ) = $self->respace_tokens();
+        if ($error) {
             $self->dump_verbatim();
             $self->wrapup();
             return;
