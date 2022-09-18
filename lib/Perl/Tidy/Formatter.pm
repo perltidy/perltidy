@@ -323,6 +323,8 @@ my (
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
+    %phantom_token_map,
+
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
     # Most can be configured by user parameters.
@@ -733,6 +735,12 @@ BEGIN {
     @q = qw( => ; h f );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
+
+    # type => token of possible phantom tokens
+    %phantom_token_map = (
+        ';' => ';',
+        ',' => ',',
+    );
 
 }
 
@@ -15281,11 +15289,11 @@ EOM
             $do_not_pad = $self->correct_lp_indentation( $ri_first, $ri_last );
         }
 
-        #--------------------------
-        # unmask phantom semicolons
-        #--------------------------
-        if ( !$tokens_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-            $self->unmask_phantom_semicolon($imax);
+        #----------------------------------
+        # unmask line-ending phantom tokens
+        #----------------------------------
+        if ( !$tokens_to_go[$imax] ) {
+            $self->unmask_phantom_token($imax);
         }
 
         if ( $rOpts_one_line_block_semicolons == 0 ) {
@@ -15337,24 +15345,52 @@ EOM
         return;
     } ## end sub grind_batch_of_CODE
 
-    sub unmask_phantom_semicolon {
+    sub unmask_phantom_token {
         my ( $self, $imax ) = @_;
-        my $rLL     = $self->[_rLL_];
-        my $i       = $imax;
-        my $tok     = ';';
-        my $tok_len = 1;
-        if ( $want_left_space{';'} != WS_NO ) {
-            $tok     = ' ;';
-            $tok_len = 2;
+
+        # Turn a phantom token into a real token.
+
+        # Phantom tokens are specially marked token types (such as ';')  with
+        # no token text which only become real tokens if they occur at the end
+        # of an output line.
+
+        # Input parameter:
+        #   $imax = the index in the output batch array of this token.
+        my $type = $types_to_go[$imax];
+
+        # Always ignore deleted side comments
+        return if ( $type eq '#' );
+
+        my $rLL         = $self->[_rLL_];
+        my $KK          = $K_to_go[$imax];
+        my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
+        my $tok         = $phantom_token_map{$type};
+        if ( !$tok ) {
+
+            # TESTING: unexpected blank token, need to investigate
+            if (DEVEL_MODE) {
+                Fault("no token for phantom type $type at line $line_number\n");
+            }
+            return;
         }
-        $tokens_to_go[$i]        = $tok;
-        $token_lengths_to_go[$i] = $tok_len;
-        my $KK = $K_to_go[$i];
+        my $tok_len = length($tok);
+        if ( $want_left_space{$type} != WS_NO ) {
+            $tok = ' ' . $tok;
+            $tok_len += 1;
+        }
+        $tokens_to_go[$imax]        = $tok;
+        $token_lengths_to_go[$imax] = $tok_len;
+
         $rLL->[$KK]->[_TOKEN_]        = $tok;
         $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
-        my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-        $self->note_added_semicolon($line_number);
 
+        if ( $type eq ';' ) {
+            $self->note_added_semicolon($line_number);
+        }
+
+        # TODO: could eventually note added comma here
+
+        # This changes the summed lengths of the rest of this batch
         foreach ( $imax .. $max_index_to_go ) {
             $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
         }
