@@ -6391,6 +6391,17 @@ sub respace_tokens {
         next unless ( $line_type eq 'CODE' );
         my $last_CODE_type = $CODE_type;
         $CODE_type = $line_of_tokens->{_code_type};
+
+        if ( $CODE_type eq 'BL' ) {
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if (   defined($seqno)
+                && !$ris_permanently_broken->{$seqno}
+                && $rOpts_maximum_consecutive_blank_lines )
+            {
+                $self->set_permanently_broken($seqno);
+            }
+        }
+
         my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
         next unless defined($Kfirst);
@@ -6478,16 +6489,6 @@ sub respace_tokens {
 
                     $CODE_type = EMPTY_STRING;
                     $line_of_tokens->{_code_type} = $CODE_type;
-                }
-            }
-
-            if ( $CODE_type eq 'BL' ) {
-                my $seqno = $seqno_stack{ $depth_next - 1 };
-                if (   defined($seqno)
-                    && !$ris_permanently_broken->{$seqno}
-                    && $rOpts_maximum_consecutive_blank_lines )
-                {
-                    $self->set_permanently_broken($seqno);
                 }
             }
 
