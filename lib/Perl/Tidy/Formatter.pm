@@ -323,7 +323,8 @@ my (
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
-    %phantom_token_map,
+    %add_trailing_comma_rules,
+    %delete_trailing_comma_rules,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -432,12 +433,12 @@ BEGIN {
         _K_opening_ternary_         => $i++,
         _K_closing_ternary_         => $i++,
         _K_first_seq_item_          => $i++,
-        _rK_phantom_semicolons_     => $i++,
         _rtype_count_by_seqno_      => $i++,
         _ris_function_call_paren_   => $i++,
         _rlec_count_by_seqno_       => $i++,
         _ris_broken_container_      => $i++,
         _ris_permanently_broken_    => $i++,
+        _rblank_and_comment_count_  => $i++,
         _rhas_list_                 => $i++,
         _rhas_broken_list_          => $i++,
         _rhas_broken_list_with_lec_ => $i++,
@@ -453,6 +454,7 @@ BEGIN {
         _rparent_of_seqno_          => $i++,
         _rchildren_of_seqno_        => $i++,
         _ris_list_by_seqno_         => $i++,
+        _rK_deletion_list_list_     => $i++,
         _rbreak_container_          => $i++,
         _rshort_nested_             => $i++,
         _length_function_           => $i++,
@@ -736,12 +738,6 @@ BEGIN {
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
 
-    # type => token of possible phantom tokens
-    %phantom_token_map = (
-        ';' => ';',
-        ',' => ',',
-    );
-
 }
 
 {    ## begin closure to count instances
@@ -838,9 +834,6 @@ sub new {
     $self->[_K_closing_ternary_]   = {};
     $self->[_K_first_seq_item_]    = undef; # K of first token with a sequence #
 
-    # Array of phantom semicolons, in case we ever need to undo them
-    $self->[_rK_phantom_semicolons_] = undef;
-
     # 'rSS' is the 'Signed Sequence' list, a continuous list of all sequence
     # numbers with + or - indicating opening or closing. This list represents
     # the entire container tree and is invariant under reformatting.  It can be
@@ -863,6 +856,7 @@ sub new {
     $self->[_rlec_count_by_seqno_]       = {};
     $self->[_ris_broken_container_]      = {};
     $self->[_ris_permanently_broken_]    = {};
+    $self->[_rblank_and_comment_count_]  = {};
     $self->[_rhas_list_]                 = {};
     $self->[_rhas_broken_list_]          = {};
     $self->[_rhas_broken_list_with_lec_] = {};
@@ -878,6 +872,7 @@ sub new {
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
+    $self->[_rK_deletion_list_list_]     = [];
 
     $self->[_rbreak_container_] = {};                 # prevent one-line blocks
     $self->[_rshort_nested_]    = {};                 # blocks not forced open
@@ -1770,6 +1765,10 @@ EOM
     initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
         'kba', \%keep_break_after_type );
 
+    %add_trailing_comma_rules    = ();
+    %delete_trailing_comma_rules = ();
+    initialize_trailing_comma_rules();
+
     #------------------------------------------------------------
     # Make global vars for frequently used options for efficiency
     #------------------------------------------------------------
@@ -2431,6 +2430,113 @@ EOM
     return;
 
 } ## end sub initialize_keep_old_breakpoints
+
+sub initialize_trailing_comma_rules {
+
+    # Setup controls for --add-trailing-commas and --delete-trailing-commas
+    # and check for conflicts
+
+    check_trailing_comma_rules( 'add-trailing-commas',
+        [qw( h b m * )], \%add_trailing_comma_rules );
+
+    check_trailing_comma_rules( 'delete-trailing-commas',
+        [qw( w s c * )], \%delete_trailing_comma_rules );
+
+    # Check for conflicts.
+    foreach my $key (qw< ) ] } >) {
+        my $atc = $add_trailing_comma_rules{$key};
+        my $dtc = $delete_trailing_comma_rules{$key};
+        if ( $atc && $dtc ) {
+            if ( $atc eq 'm' || $atc eq '*' || $dtc eq '*' ) {
+                if ( !DEVEL_MODE ) {
+                    Warn(<<EOM);
+Conflict: -atc='$atc' conflicts with -dtc='$dtc'; setting -atc=-dtc=0
+EOM
+                }
+                %add_trailing_comma_rules    = ();
+                %delete_trailing_comma_rules = ();
+                return;
+            }
+        }
+    }
+    return;
+}
+
+sub check_trailing_comma_rules {
+
+    my ( $long_name, $rvalid_flags, $rcontrol_hash ) = @_;
+
+    # Check values of --add-trailing-commas and --delete-trailing-commas
+    # and setup their controls
+
+    my $option = $rOpts->{$long_name};
+
+    if ($option) {
+        $option =~ s/^\s+//;
+        $option =~ s/\s+$//;
+    }
+    if ($option) {
+
+        my $error_message;
+        my %rule_hash;
+        my @q = @{$rvalid_flags};
+        my %is_valid_flag;
+        @is_valid_flag{@q} = (1) x scalar(@q);
+
+        # handle single character control, like -atc='*'
+        if ( length($option) == 1 ) {
+            foreach (qw< ) ] } >) {
+                $rule_hash{$_} = $option;
+            }
+        }
+
+        # handle two-character control(s), like -atc='*)'
+        else {
+            my @parts = split /\s+/, $option;
+            foreach my $part (@parts) {
+                if ( length($part) == 2 ) {
+                    my $key = substr( $part, 1, 1 );
+                    my $val = substr( $part, 0, 1 );
+                    if ( $is_closing_token{$key} ) {
+                        $rule_hash{$key} = $val;
+                    }
+                    else {
+                        $error_message .= "Unrecognized term: '$part'\n";
+                    }
+                }
+                else {
+                    $error_message .= "Unrecognized term: '$part'\n";
+                }
+            }
+        }
+
+        # check control values
+        if ( !$error_message ) {
+            foreach my $key ( keys %rule_hash ) {
+                my $val = $rule_hash{$key};
+                if ( $val && !$is_valid_flag{$val} ) {
+                    my $valid_str = join( SPACE, @{$rvalid_flags} );
+                    $error_message .=
+                      "Unexpected value '$val'; must be one of: $valid_str\n";
+                    last;
+                }
+            }
+        }
+
+        if ($error_message) {
+            Warn(<<EOM);
+Error parsing --$long_name='$option':
+$error_message
+EOM
+        }
+
+        # Set the control hash if no errors
+        else {
+            %{$rcontrol_hash} = %rule_hash;
+        }
+    }
+    return;
+}
 
 sub initialize_whitespace_hashes {
 
@@ -6232,7 +6338,6 @@ my $is_encoded_data;
 
 my $K_closing_ternary;
 my $K_opening_ternary;
-my $rK_phantom_semicolons;
 my $rchildren_of_seqno;
 my $rhas_broken_code_block;
 my $rhas_broken_list;
@@ -6290,7 +6395,6 @@ sub initialize_respace_tokens_closure {
 
     $K_closing_ternary         = $self->[_K_closing_ternary_];
     $K_opening_ternary         = $self->[_K_opening_ternary_];
-    $rK_phantom_semicolons     = $self->[_rK_phantom_semicolons_];
     $rchildren_of_seqno        = $self->[_rchildren_of_seqno_];
     $rhas_broken_code_block    = $self->[_rhas_broken_code_block_];
     $rhas_broken_list          = $self->[_rhas_broken_list_];
@@ -6402,11 +6506,11 @@ sub respace_tokens {
 
         if ( $CODE_type eq 'BL' ) {
             my $seqno = $seqno_stack{ $depth_next - 1 };
-            if (   defined($seqno)
-                && !$ris_permanently_broken->{$seqno}
-                && $rOpts_maximum_consecutive_blank_lines )
-            {
-                $self->set_permanently_broken($seqno);
+            if ( defined($seqno) ) {
+                $self->[_rblank_and_comment_count_]->{$seqno} += 1;
+                $self->set_permanently_broken($seqno)
+                  if (!$ris_permanently_broken->{$seqno}
+                    && $rOpts_maximum_consecutive_blank_lines );
             }
         }
 
@@ -6647,28 +6751,68 @@ sub respace_tokens_inner_loop {
             next;
         }
 
-        # Handle a nonblank token...
-
+        # Handle a sequenced token ... i.e. one of ( ) { } [ ] ? :
         if ($type_sequence) {
 
-            # Insert a tentative missing semicolon if the next token is
-            # a closing block brace
-            if (
-                   $type eq '}'
-                && $token eq '}'
+            # One of ) ] } ...
+            if ( $is_closing_token{$token} ) {
 
-                # not preceded by a ';'
-                && $last_nonblank_code_type ne ';'
+                my $block_type = $rblock_type_of_seqno->{$type_sequence};
 
-                # and this is not a VERSION stmt (is all one line, we
-                # are not inserting semicolons on one-line blocks)
-                && $CODE_type ne 'VER'
+                #---------------------------------------------
+                # check for semicolon addition in a code block
+                #---------------------------------------------
+                if ($block_type) {
 
-                # and we are allowed to add semicolons
-                && $rOpts->{'add-semicolons'}
-              )
-            {
-                $self->add_phantom_semicolon($KK);
+                    # if not preceded by a ';' ..
+                    if ( $last_nonblank_code_type ne ';' ) {
+
+                        # tentatively insert a semicolon if appropriate
+                        $self->add_phantom_semicolon($KK)
+                          if $rOpts->{'add-semicolons'};
+                    }
+                }
+
+                #----------------------------------------------------------
+                # check for addition/deletion of a trailing comma in a list
+                #----------------------------------------------------------
+                else {
+
+                    # if this is a list ..
+                    my $rtype_count = $rtype_count_by_seqno->{$type_sequence};
+                    if (   $rtype_count
+                        && $rtype_count->{','}
+                        && !$rtype_count->{';'}
+                        && !$rtype_count->{'f'} )
+                    {
+
+                        # if NOT preceded by a comma..
+                        if ( $last_nonblank_code_type ne ',' ) {
+
+                            # set interior comma count (TODO: for future use)
+                            $rtype_count->{',-'} = $rtype_count->{','};
+
+                            # insert a comma if requested
+                            if (%add_trailing_comma_rules) {
+                                $self->add_trailing_comma( $KK, $Kfirst,
+                                    $add_trailing_comma_rules{$token} );
+                            }
+                        }
+
+                        # if preceded by a comma ..
+                        else {
+
+                            # set interior comma count
+                            $rtype_count->{',-'} = $rtype_count->{','} - 1;
+
+                            # delete the comma if requested
+                            if (%delete_trailing_comma_rules) {
+                                $self->delete_trailing_comma( $KK, $Kfirst,
+                                    $delete_trailing_comma_rules{$token} );
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -7299,10 +7443,11 @@ sub store_token {
             $token_length = 1;
         }
         my $seqno = $seqno_stack{ $depth_next - 1 };
-        if ( defined($seqno)
-            && !$ris_permanently_broken->{$seqno} )
-        {
-            $self->set_permanently_broken($seqno);
+        if ( defined($seqno) ) {
+            $self->[_rblank_and_comment_count_]->{$seqno} += 1
+              if ( $CODE_type eq 'BC' );
+            $self->set_permanently_broken($seqno)
+              if !$ris_permanently_broken->{$seqno};
         }
     }
 
@@ -7511,11 +7656,6 @@ sub add_phantom_semicolon {
         # those variables be updated here.  For now, it seems ok to skip
         # this.
 
-        # Save list of new K indexes of phantom semicolons.
-        # This will be needed if we want to undo them for iterations in
-        # future coding.
-        push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
-
         # Then store a new blank
         $self->store_token($rcopy);
     }
@@ -7541,10 +7681,399 @@ sub add_phantom_semicolon {
 
         my $rcopy = copy_token_as_type( $rLL_new->[$Kp], ';', EMPTY_STRING );
         $self->store_token($rcopy);
-        push @{$rK_phantom_semicolons}, @{$rLL_new} - 1;
     }
     return;
 } ## end sub add_phantom_semicolon
+
+sub add_trailing_comma {
+
+    my ( $self, $KK, $Kfirst, $add_option ) = @_;
+
+    # Implement the --add-trailing-commas flag to the line end before index $KK:
+
+    # Input parameter:
+    #  $KK = index of closing token in old ($rLL) token list
+    #        which starts a new line and is not preceded by a comma
+    #  $Kfirst = index of first token on the current line of input tokens
+    #  $add_option = user control flag
+
+    # For example, we might want to add a comma here:
+
+    #   bless {
+    #           _name   => $name,
+    #           _price  => $price,
+    #           _rebate => $rebate  <------ location of possible bare comma
+    #          }, $pkg;
+    #          ^-------------------closing token at index $KK on new line
+
+    return unless ($add_option);
+
+    # List of user control flag values:
+    # -atc='' or '0' does not add any new commas [DEFAULT]
+    # -atc='h' add a bare trailing comma to a stable list with about one
+    #        comma per line (such as Hash list of key=>value pairs).
+    # -atc='b' add a Bare trailing comma to any list
+    # -atc='m' add a trailing comma (bare or covered) to a Multiline list
+    #       (i.e. Perl::Critic::Policy::CodeLayout::RequireTrailingCommas)
+    # -atc='*' add a trailing comma (bare or covered) to any list
+
+    # Some terminology:
+
+    #  - trailing comma: an optional comma after the last item of a list
+    #  - bare trailing comma: a trailing comma followed by a newline
+    #  - covered trailing comma: a trailing comma not followed by a newline
+    #  - stable list: a list which will keep its line breaks
+    #  - multiline list: the opening and closing tokens are on different lines
+
+    #----------------------------------------
+    # Set some flags describing this location
+    #----------------------------------------
+
+    my $is_bare_comma = $KK == $Kfirst;
+
+    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    return unless ($type_sequence);
+    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+    return unless ( defined($rtype_count) && $rtype_count->{','} );
+    my $is_permanently_broken =
+      $self->[_ris_permanently_broken_]->{$type_sequence};
+
+    my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
+    return if ( !defined($K_opening) );
+    my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+    my $iline_c      = $rLL->[$KK]->[_LINE_INDEX_];
+    my $line_diff    = $iline_c - $iline_o;
+    my $is_multiline = $line_diff > 0;
+
+    # We will set a flag to allow deletion by 'delete_tokens'
+    # during output as follows:
+
+    # Possible deletion will be done during output by 'delete_tokens' using:
+    # $OK_control_flag =
+    #       c    - delete if still covered in output stream
+    #       s    - delete if still single line in output stream
+    #       '-'  - do not place in the deletion list
+    my $OK_control_flag;
+
+    #-----------------------------------------------------------------
+    # -atc='h' add a bare trailing comma to a stable list with about one
+    #        comma per line (such as Hash list of key=>value pairs).
+    #-----------------------------------------------------------------
+    if ( $add_option eq 'h' ) {
+
+        # This option is only for adding a bare comma
+        return if ( !$is_bare_comma );
+
+        my $blank_line_count =
+          $self->[_rblank_and_comment_count_]->{$type_sequence};
+        $blank_line_count = 0 unless ( defined($blank_line_count) );
+
+        # This is the count if the parens are on separate lines from the list:
+        my $required_comma_count = $line_diff - 2 - $blank_line_count;
+        return unless ( $rtype_count->{','} == $required_comma_count );
+
+        # The -lp style has a special 2-line mode which uses the vertical
+        # aligner to move the closing paren to be at the end of the previous
+        # line. So if we add a comma it will be covered, and it will not
+        # be possible to remove it with -dc.
+        my $min_comma_count = 1;
+        if ( $rOpts_line_up_parentheses && !$is_permanently_broken ) {
+
+            # This test is like to the test in sub set_vertical_tightness_flags
+            # but we do not yet know if this container will use -lp formatting
+            # so we have to assume that it will.
+            my $token_K = $rLL->[$KK]->[_TOKEN_];
+            if ( $token_K eq ')' ) { $min_comma_count = 2 }
+        }
+
+        # First check for a simple hash tables, which are generally stable:
+        # For a perfect key value list missing 1 comma we should use:
+        #     $rtype_count->{'=>'} == $required_comma_count + 1
+        # but to provide mercy for a list to have one item without a fat comma,
+        # we can use:
+        #     $rtype_count->{'=>'} >= $required_comma_count
+        if (   $required_comma_count >= $min_comma_count
+            && $rtype_count->{'=>'}
+            && $rtype_count->{'=>'} >= $required_comma_count
+            && ( !$rOpts_ignore_old_breakpoints || $is_permanently_broken ) )
+        {
+            $OK_control_flag = 'c';
+        }
+
+        # Next check for a simple list of items stabilized by blank lines,
+        # comments, or the -boc flag
+        elsif (
+            $line_diff > $rtype_count->{','}
+            && (   $is_permanently_broken
+                || $rOpts_break_at_old_comma_breakpoints )
+          )
+        {
+            $OK_control_flag = 'c';
+        }
+    }
+
+    #---------------------------------------------
+    # -atc='b' add a Bare trailing comma to any list
+    #---------------------------------------------
+    elsif ( $add_option eq 'b' ) {
+        if ($is_bare_comma) {
+            $OK_control_flag = 'c';
+        }
+    }
+
+    #---------------------------------------------------------------------
+    # -atc=m add a trailing comma (bare or covered) to a Multiline list
+    #       (i.e. Perl::Critic::Policy::CodeLayout::RequireTrailingCommas)
+    #---------------------------------------------------------------------
+    elsif ( $add_option eq 'm' ) {
+        if ($is_multiline) {
+            $OK_control_flag = 's';
+        }
+    }
+
+    #----------------------------------------------------------
+    # -atc='*' add a trailing comma (bare or covered) to any list
+    #----------------------------------------------------------
+    elsif ( $add_option eq '*' ) {
+        $OK_control_flag = '-';
+    }
+
+    # unrecognized parameter, should have been caught in input check
+    else {
+
+    }
+
+    return unless ($OK_control_flag);
+
+    #------------------------------------------------
+    # Do not add a comma if it would follow a comment
+    #------------------------------------------------
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+    my $type_p = $rLL_new->[$Kp]->[_TYPE_];
+    return if ( $type_p eq '#' );
+
+    #-------------------
+    # OK: add a ',' here
+    #-------------------
+    my $Knew = $self->store_new_token( ',', ',', $Kp );
+
+    # Add this token to the deletion list to later undo it if the conditions
+    # are not also met when it is in the output stream
+    if ( $OK_control_flag ne '-' ) {
+        push @{ $self->[_rK_deletion_list_list_] }, [ $Knew, $OK_control_flag ];
+    }
+
+    return;
+
+} ## end sub add_trailing_comma
+
+sub delete_trailing_comma {
+
+    my ( $self, $KK, $Kfirst, $delete_option ) = @_;
+
+    # Apply the --delete-trailing-commas flag to the comma before index $KK
+
+    # Input parameter:
+    #  $KK = index of a closing token in OLD ($rLL) token list
+    #        which is preceded by a comma on the same line.
+    #  $Kfirst = index of first token on the current line of input tokens
+    #  $delete_option = user control flag
+
+    # For example, we might want to delete this comma:
+    #    my @asset = ("FASMX", "FASGX", "FASIX",);
+    #    |                                     |^--------token at index $KK
+    #    |                                     ^------comma of interest
+    #    ^-------------token at $Kfirst
+
+    # The user comma deletion options are:
+
+    #  -dtc='' or '0' does not delete any commas [DEFAULT]
+    #  -dtc='w' deletes Weld interfering commas
+    #  -dtc='s' deletes all Single-line trailing commas
+    #  -dtc='c' deletes all trailing Covered commas
+    #  -dtc='*' deletes all trailing commas, bare or covered. Only if -atc=0.
+
+    return unless ($delete_option);
+
+    # Verify that the previous token is a comma. We REALLY do not want to
+    # delete the wrong token!  Note that we are working in the new token list
+    # $rLL_new.
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+    my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
+    my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
+    if ( $token_p ne ',' ) {
+
+        # shouldn't happen if caller checked that last_nonblank_code_type eq ','
+        DEVEL_MODE && Fault(<<EOM);
+Bad call! Previous nonblank type is '$type_p' but expected ',' because last_nonblank ='$last_nonblank_code_type'
+EOM
+        return;
+    }
+
+    my $is_covered_comma = $KK > $Kfirst;
+
+    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+    return unless ($type_sequence);
+    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+    return unless ( defined($rtype_count) && $rtype_count->{','} );
+
+    # Deletion will be done by 'delete_tokens' during output using:
+    # $OK_control_flag =
+    #       c - delete if still covered in output stream
+    #       s - delete if still covered and single line in output stream
+    #       '*' - delete always
+    my $OK_control_flag;
+
+    #---------------------------------------
+    # -dtc='w' deletes weld-interfering commas
+    #---------------------------------------
+    if ( $delete_option eq 'w' ) {
+
+        # looking for something like '},)' where the comma is the only comma in
+        # the list
+        my $Kpp = $self->K_previous_nonblank( $Kp, $rLL_new );
+        if ( $rtype_count->{','} == 1 && defined($Kp) ) {
+            my $type_pp = $rLL_new->[$Kpp]->[_TYPE_];
+            if ( $is_closing_type{$type_pp} ) {
+                $OK_control_flag = '*';
+            }
+        }
+    }
+
+    #---------------------------------------------------
+    # -dtc='s' delete trailing commas in single line lists
+    #---------------------------------------------------
+    elsif ( $delete_option eq 's' ) {
+
+        # Note that a single line comma is always covered
+        if ($is_covered_comma) {
+
+            # note use of old list here for old index $KK
+            my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
+            return if ( !defined($K_opening) );
+            my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+            my $iline_c      = $rLL->[$KK]->[_LINE_INDEX_];
+            my $line_diff    = $iline_c - $iline_o;
+            my $is_multiline = $line_diff > 0;
+
+            if ( !$is_multiline ) {
+                $OK_control_flag = 's';
+            }
+        }
+    }
+
+    #-------------------------------------------
+    # -dtc='c' deletes all covered trailing commas
+    #-------------------------------------------
+    elsif ( $delete_option eq 'c' ) {
+        if ($is_covered_comma) {
+            $OK_control_flag = 'c';
+        }
+    }
+
+    #---------------------------------------
+    # -dtc='*' deletes all list-ending commas.
+    #---------------------------------------
+    elsif ( $delete_option eq '*' ) {
+        $OK_control_flag = '*';
+    }
+
+    # Unrecognized parameter, should have been caught in input check
+    else {
+
+    }
+
+    return unless ($OK_control_flag);
+
+    # OK to delete; put this token and flag in the deletion list
+    push @{ $self->[_rK_deletion_list_list_] }, [ $Kp, $OK_control_flag ];
+
+    return;
+} ## end sub delete_trailing_comma
+
+sub store_new_token {
+
+    my ( $self, $type, $token, $Kp ) = @_;
+
+    # Create and insert a completely new token into the output stream
+
+    # Input parameters:
+    #  $type  = the token type
+    #  $token = the token text
+    #  $Kp    = index of the previous token in the new list, $rLL_new
+
+    # Returns:
+    #  $Knew = index in $rLL_new of the new token
+
+    # This operation is a little tricky because we are creating a new token and
+    # we have to take care to follow the requested whitespace rules.
+
+    my $Ktop         = @{$rLL_new} - 1;
+    my $top_is_space = $Ktop >= 0 && $rLL_new->[$Ktop]->[_TYPE_] eq 'b';
+    my $Knew;
+    if ( $top_is_space && $want_left_space{$type} == WS_NO ) {
+
+        #----------------------------------------------------
+        # Method 1: Convert the top blank into the new token.
+        #----------------------------------------------------
+
+        # Be Careful: we are working on the top of the new stack, on a token
+        # which has been stored.
+
+        my $rcopy = copy_token_as_type( $rLL_new->[$Ktop], 'b', SPACE );
+
+        $Knew                               = $Ktop;
+        $rLL_new->[$Knew]->[_TOKEN_]        = $token;
+        $rLL_new->[$Knew]->[_TOKEN_LENGTH_] = length($token);
+        $rLL_new->[$Knew]->[_TYPE_]         = $type;
+
+        # NOTE: we are changing the output stack without updating variables
+        # $last_nonblank_code_type, etc. Future needs might require that
+        # those variables be updated here.  For now, we just update the
+        # type counts as necessary.
+
+        if ( $is_counted_type{$type} ) {
+            my $seqno = $seqno_stack{ $depth_next - 1 };
+            if ($seqno) {
+                $self->[_rtype_count_by_seqno_]->{$seqno}->{$type}++;
+            }
+        }
+
+        # Then store a new blank
+        $self->store_token($rcopy);
+    }
+    else {
+
+        #----------------------------------------
+        # Method 2: Use the normal storage method
+        #----------------------------------------
+
+        # Patch for issue c078: keep line indexes in order.  If the top
+        # token is a space that we are keeping (due to '-wls=...) then
+        # we have to check that old line indexes stay in order.
+        # In very rare
+        # instances in which side comments have been deleted and converted
+        # into blanks, we may have filtered down multiple blanks into just
+        # one. In that case the top blank may have a higher line number
+        # than the previous nonblank token. Although the line indexes of
+        # blanks are not really significant, we need to keep them in order
+        # in order to pass error checks.
+        if ($top_is_space) {
+            my $old_top_ix = $rLL_new->[$Ktop]->[_LINE_INDEX_];
+            my $new_top_ix = $rLL_new->[$Kp]->[_LINE_INDEX_];
+            if ( $new_top_ix < $old_top_ix ) {
+                $rLL_new->[$Ktop]->[_LINE_INDEX_] = $new_top_ix;
+            }
+        }
+
+        my $rcopy = copy_token_as_type( $rLL_new->[$Kp], $type, $token );
+        $self->store_token($rcopy);
+        $Knew = @{$rLL_new} - 1;
+    }
+    return $Knew;
+} ## end sub store_new_token
 
 sub check_Q {
 
@@ -7623,30 +8152,35 @@ sub copy_token_as_type {
     # This provides a quick way to create a new token by
     # slightly modifying an existing token.
     my ( $rold_token, $type, $token ) = @_;
-    if ( $type eq 'b' ) {
-        $token = SPACE unless defined($token);
-    }
-    elsif ( $type eq 'q' ) {
-        $token = EMPTY_STRING unless defined($token);
-    }
-    elsif ( $type eq '->' ) {
-        $token = '->' unless defined($token);
-    }
-    elsif ( $type eq ';' ) {
-        $token = ';' unless defined($token);
-    }
-    else {
-
-        # Unexpected type ... this sub will work as long as both $token and
-        # $type are defined, but we should catch any unexpected types during
-        # development.
-        if (DEVEL_MODE) {
-            Fault(<<EOM);
-sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
-EOM
+    if ( !defined($token) ) {
+        if ( $type eq 'b' ) {
+            $token = SPACE;
+        }
+        elsif ( $type eq 'q' ) {
+            $token = EMPTY_STRING;
+        }
+        elsif ( $type eq '->' ) {
+            $token = '->';
+        }
+        elsif ( $type eq ';' ) {
+            $token = ';';
+        }
+        elsif ( $type eq ',' ) {
+            $token = ',';
         }
         else {
-            # shouldn't happen
+
+            # Unexpected type ... this sub will work as long as both $token and
+            # $type are defined, but we should catch any unexpected types during
+            # development.
+            if (DEVEL_MODE) {
+                Fault(<<EOM);
+sub 'copy_token_as_type' received token type '$type' but expects just one of: 'b' 'q' '->' or ';'
+EOM
+            }
+
+            # Shouldn't get here
+            $token = $type;
         }
     }
 
@@ -15292,12 +15826,22 @@ EOM
         #----------------------------------
         # unmask line-ending phantom tokens
         #----------------------------------
-        if ( !$tokens_to_go[$imax] ) {
+
+        # Check for a phantom semicolon at the end of the batch
+        if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
             $self->unmask_phantom_token($imax);
         }
 
         if ( $rOpts_one_line_block_semicolons == 0 ) {
             $self->delete_one_line_semicolons( $ri_first, $ri_last );
+        }
+
+        # Delete tokens in this batch in the deletion list
+        if ( @{ $self->[_rK_deletion_list_list_] }
+            && $self->[_rK_deletion_list_list_]->[0]->[0] <=
+            $K_to_go[$max_index_to_go] )
+        {
+            $self->delete_tokens( $ri_first, $ri_last );
         }
 
         #--------------------
@@ -15345,53 +15889,133 @@ EOM
         return;
     } ## end sub grind_batch_of_CODE
 
+    sub delete_tokens {
+
+        my ( $self, $ri_beg, $ri_end ) = @_;
+
+        # Remove any tokens in this output batch which
+        # - appear in the deletion list @{$rK_conditional_deletion_list}, and
+        # - still obey their deletion requirements
+
+        # Input parameters:
+        # ( $ri_beg, $ri_end) = refs to lists of line ending indexes
+
+        # This sub was created to delete interior commas in the list created
+        # by flags -atc and/or -dtc.  But it could also be used to delete
+        # interior semicolons (instead of using the phantom token method).
+
+        my $rK_conditional_deletion_list = $self->[_rK_deletion_list_list_];
+        my $rLL                          = $self->[_rLL_];
+
+        # extract the next item
+        my $item = shift @{$rK_conditional_deletion_list};
+
+        # loop over lines of this batch and get the ends
+        foreach my $iline ( 0 .. @{$ri_beg} - 1 ) {
+            my $ibeg = $ri_beg->[$iline];
+            my $iend = $ri_end->[$iline];
+            my $Kbeg = $K_to_go[$ibeg];
+            my $Kend = $K_to_go[$iend];
+
+            # see if the next token is in this line
+            while ( defined($item) ) {
+                my ( $Kc_next, $control_flag ) = @{$item};
+
+                last if ( $Kc_next > $Kend );
+
+                my $is_covered = $Kc_next < $Kend;
+
+                my $ok_to_delete;
+
+                # $control_flag =
+                #  c - delete if covered
+                #  s - delete single line (and therefore also covered)
+                #  * - delete always
+                if ( $control_flag eq 'c' ) {
+                    $ok_to_delete = $is_covered;
+                }
+                elsif ( $control_flag eq 's' ) {
+
+                    # check for single line
+                    if ($is_covered) {
+                        my $ic    = $ibeg + $Kc_next - $Kbeg;
+                        my $inext = $inext_to_go[$ic];
+                        my $imate = $mate_index_to_go[$inext];
+                        if ( defined($imate) && $imate >= 0 && $imate < $inext )
+                        {
+                            $ok_to_delete = 1;
+                        }
+                    }
+                }
+                elsif ( $control_flag eq '*' ) {
+                    $ok_to_delete = 1;
+                }
+
+                if ($ok_to_delete) {
+
+                    # we actually keep the token but delete its text
+                    my $ic = $ibeg + $Kc_next - $Kbeg;
+
+                    $tokens_to_go[$ic] = EMPTY_STRING;
+                    my $len = $token_lengths_to_go[$ic];
+                    $token_lengths_to_go[$ic]          = 0;
+                    $rLL->[$Kc_next]->[_TOKEN_]        = EMPTY_STRING;
+                    $rLL->[$Kc_next]->[_TOKEN_LENGTH_] = 0;
+
+                    # update the subsequent summed lengths in the batch
+                    foreach ( $ic .. $max_index_to_go ) {
+                        $summed_lengths_to_go[ $_ + 1 ] -= $len;
+                    }
+                }
+
+                $item = shift @{$rK_conditional_deletion_list};
+                next;
+            }
+        }
+
+        # restore the last unmatched item
+        if ( defined($item) ) {
+            unshift @{$rK_conditional_deletion_list}, $item;
+        }
+        return;
+    } ## end sub delete_tokens
+
     sub unmask_phantom_token {
-        my ( $self, $imax ) = @_;
+        my ( $self, $iend ) = @_;
 
         # Turn a phantom token into a real token.
 
+        # Input parameter:
+        #   $iend = the index in the output batch array of this token.
+
         # Phantom tokens are specially marked token types (such as ';')  with
         # no token text which only become real tokens if they occur at the end
-        # of an output line.
-
-        # Input parameter:
-        #   $imax = the index in the output batch array of this token.
-        my $type = $types_to_go[$imax];
-
-        # Always ignore deleted side comments
-        return if ( $type eq '#' );
+        # of an output line.  At one time phantom ',' tokens were handled
+        # here, but now they are processed by sub 'delete_tokens'.
 
         my $rLL         = $self->[_rLL_];
-        my $KK          = $K_to_go[$imax];
+        my $KK          = $K_to_go[$iend];
         my $line_number = 1 + $rLL->[$KK]->[_LINE_INDEX_];
-        my $tok         = $phantom_token_map{$type};
-        if ( !$tok ) {
 
-            # TESTING: unexpected blank token, need to investigate
-            if (DEVEL_MODE) {
-                Fault("no token for phantom type $type at line $line_number\n");
-            }
-            return;
-        }
+        my $type = $types_to_go[$iend];
+        return unless ( $type eq ';' );
+        my $tok     = $type;
         my $tok_len = length($tok);
         if ( $want_left_space{$type} != WS_NO ) {
             $tok = ' ' . $tok;
             $tok_len += 1;
         }
-        $tokens_to_go[$imax]        = $tok;
-        $token_lengths_to_go[$imax] = $tok_len;
+
+        $tokens_to_go[$iend]        = $tok;
+        $token_lengths_to_go[$iend] = $tok_len;
 
         $rLL->[$KK]->[_TOKEN_]        = $tok;
         $rLL->[$KK]->[_TOKEN_LENGTH_] = $tok_len;
 
-        if ( $type eq ';' ) {
-            $self->note_added_semicolon($line_number);
-        }
-
-        # TODO: could eventually note added comma here
+        $self->note_added_semicolon($line_number);
 
         # This changes the summed lengths of the rest of this batch
-        foreach ( $imax .. $max_index_to_go ) {
+        foreach ( $iend .. $max_index_to_go ) {
             $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
         }
         return;
