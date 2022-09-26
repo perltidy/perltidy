@@ -768,14 +768,17 @@ foreach my $line (@lines) {
 }
 close IN;
 close OUT;
+print STDERR "\n";
 my $gfile="nohup.my.grep";
 my $cmd1 = "grep 'Thank you' ERR.* >>$gfile";
 my $cmd2 = "grep 'Thank you' *.ERR >>$gfile";
 system ($cmd1);
 system ($cmd2);
-print STDERR "**$count problems seen in $nohup\n";
 if ($count) {
-    print STDERR "**please see $ofile\n";
+    print STDERR "**$count problems seen in $nohup. please see '$ofile'\n";
+}
+else {
+    print STDERR "$count problems seen in $nohup\n";
 }
 if (-s $gfile) {
    print STDERR "**please see $gfile\n";
