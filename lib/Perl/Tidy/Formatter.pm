@@ -794,7 +794,7 @@ sub new {
         file_writer_object => $file_writer_object,
         logger_object      => $logger_object,
         diagnostics_object => $diagnostics_object,
-        length_function    => $length_function
+        length_function    => $length_function,
     );
 
     write_logfile_entry("\nStarting tokenization pass...\n");
@@ -2447,10 +2447,14 @@ sub initialize_trailing_comma_rules {
         my $atc = $add_trailing_comma_rules{$key};
         my $dtc = $delete_trailing_comma_rules{$key};
         if ( $atc && $dtc ) {
-            if ( $atc eq 'm' || $atc eq '*' || $dtc eq '*' ) {
+
+            # The easiest way to insure that instabilities occur would be to
+            # allow just one of -atc and -dtc for each container type.  But for
+            # now we allow a few combinations that should be independent.
+            if ( $dtc eq '*' || $atc ne 'h' ) {
                 if ( !DEVEL_MODE ) {
                     Warn(<<EOM);
-Conflict: -atc='$atc' conflicts with -dtc='$dtc'; setting -atc=-dtc=0
+Conflict: cannot use -atc='$atc' and -dtc='$dtc' at a '$key'; using -atc=-dtc=''
 EOM
                 }
                 %add_trailing_comma_rules    = ();
@@ -7289,13 +7293,13 @@ sub store_token {
 
         $type,
         $token,
-        $type_sequence
+        $type_sequence,
 
       ) = @{$item}[
 
       _TYPE_,
       _TOKEN_,
-      _TYPE_SEQUENCE_
+      _TYPE_SEQUENCE_,
 
       ];
 
@@ -7708,6 +7712,14 @@ sub add_trailing_comma {
 
     return unless ($add_option);
 
+    #------------------------------------------------
+    # Do not add a comma if it would follow a comment
+    #------------------------------------------------
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+    my $type_p = $rLL_new->[$Kp]->[_TYPE_];
+    return if ( $type_p eq '#' );
+
     # List of user control flag values:
     # -atc='' or '0' does not add any new commas [DEFAULT]
     # -atc='h' add a bare trailing comma to a stable list with about one
@@ -7748,12 +7760,7 @@ sub add_trailing_comma {
     # We will set a flag to allow deletion by 'delete_tokens'
     # during output as follows:
 
-    # Possible deletion will be done during output by 'delete_tokens' using:
-    # $OK_control_flag =
-    #       c    - delete if still covered in output stream
-    #       s    - delete if still single line in output stream
-    #       '-'  - do not place in the deletion list
-    my $OK_control_flag;
+    my $OK_to_add;
 
     #-----------------------------------------------------------------
     # -atc='h' add a bare trailing comma to a stable list with about one
@@ -7792,12 +7799,25 @@ sub add_trailing_comma {
         # but to provide mercy for a list to have one item without a fat comma,
         # we can use:
         #     $rtype_count->{'=>'} >= $required_comma_count
-        if (   $required_comma_count >= $min_comma_count
-            && $rtype_count->{'=>'}
-            && $rtype_count->{'=>'} >= $required_comma_count
-            && ( !$rOpts_ignore_old_breakpoints || $is_permanently_broken ) )
+        my $fat_comma_count = $rtype_count->{'=>'};
+        $fat_comma_count = 0 unless defined($fat_comma_count);
+        if (
+            $required_comma_count >= $min_comma_count
+
+            && (
+
+                # always ok:
+                $fat_comma_count == $required_comma_count + 1
+
+                # ok with 2 or more fat commas:
+                || (   $fat_comma_count >= $required_comma_count
+                    && $fat_comma_count > 1 )
+            )
+
+            && ( !$rOpts_ignore_old_breakpoints || $is_permanently_broken )
+          )
         {
-            $OK_control_flag = 'c';
+            $OK_to_add = 1;
         }
 
         # Next check for a simple list of items stabilized by blank lines,
@@ -7808,7 +7828,7 @@ sub add_trailing_comma {
                 || $rOpts_break_at_old_comma_breakpoints )
           )
         {
-            $OK_control_flag = 'c';
+            $OK_to_add = 1;
         }
     }
 
@@ -7817,7 +7837,7 @@ sub add_trailing_comma {
     #---------------------------------------------
     elsif ( $add_option eq 'b' ) {
         if ($is_bare_comma) {
-            $OK_control_flag = 'c';
+            $OK_to_add = 1;
         }
     }
 
@@ -7827,7 +7847,7 @@ sub add_trailing_comma {
     #---------------------------------------------------------------------
     elsif ( $add_option eq 'm' ) {
         if ($is_multiline) {
-            $OK_control_flag = 's';
+            $OK_to_add = 1;
         }
     }
 
@@ -7835,7 +7855,7 @@ sub add_trailing_comma {
     # -atc='*' add a trailing comma (bare or covered) to any list
     #----------------------------------------------------------
     elsif ( $add_option eq '*' ) {
-        $OK_control_flag = '-';
+        $OK_to_add = 1;
     }
 
     # unrecognized parameter, should have been caught in input check
@@ -7843,26 +7863,12 @@ sub add_trailing_comma {
 
     }
 
-    return unless ($OK_control_flag);
-
-    #------------------------------------------------
-    # Do not add a comma if it would follow a comment
-    #------------------------------------------------
-    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-    return unless ( defined($Kp) );
-    my $type_p = $rLL_new->[$Kp]->[_TYPE_];
-    return if ( $type_p eq '#' );
+    return unless ($OK_to_add);
 
     #-------------------
     # OK: add a ',' here
     #-------------------
     my $Knew = $self->store_new_token( ',', ',', $Kp );
-
-    # Add this token to the deletion list to later undo it if the conditions
-    # are not also met when it is in the output stream
-    if ( $OK_control_flag ne '-' ) {
-        push @{ $self->[_rK_deletion_list_list_] }, [ $Knew, $OK_control_flag ];
-    }
 
     return;
 
@@ -7905,10 +7911,7 @@ sub delete_trailing_comma {
     my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
     if ( $token_p ne ',' ) {
 
-        # shouldn't happen if caller checked that last_nonblank_code_type eq ','
-        DEVEL_MODE && Fault(<<EOM);
-Bad call! Previous nonblank type is '$type_p' but expected ',' because last_nonblank ='$last_nonblank_code_type'
-EOM
+        # could be a '#'
         return;
     }
 
@@ -13162,7 +13165,7 @@ EOM
             $ci_level,
             $level,
             $seqno,
-            $length
+            $length,
 
           ) = @{$rtoken_vars}[
 
@@ -13171,7 +13174,7 @@ EOM
           _CI_LEVEL_,
           _LEVEL_,
           _TYPE_SEQUENCE_,
-          _TOKEN_LENGTH_
+          _TOKEN_LENGTH_,
 
           ];
 
@@ -16002,7 +16005,7 @@ EOM
         my $tok     = $type;
         my $tok_len = length($tok);
         if ( $want_left_space{$type} != WS_NO ) {
-            $tok = ' ' . $tok;
+            $tok = SPACE . $tok;
             $tok_len += 1;
         }
 
@@ -21151,7 +21154,7 @@ EOM
             $ri_term_end,
             $ri_term_begin,
             $ri_term_comma,
-            $ritem_lengths
+            $ritem_lengths,
 
         ) = @_;
 
@@ -21216,7 +21219,7 @@ EOM
             $number_of_fields_best,
             $rinput_hash,
             $comma_count,
-            $i_first_comma
+            $i_first_comma,
 
         ) = @_;
 
@@ -21448,7 +21451,7 @@ EOM
                 $ri_term_end,
                 $ri_term_begin,
                 $ri_term_comma,
-                $ritem_lengths
+                $ritem_lengths,
 
             );
             return;
@@ -21725,7 +21728,7 @@ EOM
                 $number_of_fields_best,
                 $rinput_hash,
                 $comma_count,
-                $i_first_comma
+                $i_first_comma,
 
             );
             return;
@@ -26208,7 +26211,7 @@ sub make_paren_name {
             $rindentation_list,
             $level_jump,
             $starting_in_quote,
-            $is_static_block_comment
+            $is_static_block_comment,
 
         ) = @_;
 
@@ -26333,7 +26336,7 @@ sub make_paren_name {
                 $opening_indentation,
                 $opening_offset,
                 $is_leading,
-                $opening_exists
+                $opening_exists,
 
             ) = $self->get_closing_token_indentation(
 

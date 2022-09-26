@@ -10162,6 +10162,24 @@ $font_size
 --opening-square-bracket-right
 --variable-maximum-line-length
 
+==> b1376.in <==
+# S1
+            unless ( opendir (
+                  CATDIR, $catdir ) )
+# S2
+            unless ( opendir (
+                  CATDIR, $catdir
+            ) )
+
+
+==> b1376.par <==
+--add-trailing-commas='b'
+--extended-line-up-parentheses
+--indent-columns=6
+--maximum-line-length=47
+--space-keyword-paren
+--weld-nested-containers
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
