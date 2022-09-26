@@ -80,10 +80,11 @@ short_subroutine_statements = 2
 [Subroutines::ProhibitExcessComplexity]
 max_mccabe=125
 
-# This policy can be very helpful for locating complex code, but there are too
-# many good exceptions to use it as a general rule. So it is turned off here.
-[-ControlStructures::ProhibitDeepNests]
-# max_nests=8
+# This policy can be very helpful for locating complex code, but sometimes
+# deep nests are the best option, especially in error handling and debug
+# coding. So a large value is used here.
+[ControlStructures::ProhibitDeepNests]
+max_nests=9
 
 # The if-elsif sequences in perltidy have all been profiled and
 # are fine as is. Changing them would complicate the code without
