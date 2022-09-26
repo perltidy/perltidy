@@ -773,21 +773,21 @@ my $cmd1 = "grep 'Thank you' ERR.* >>$gfile";
 my $cmd2 = "grep 'Thank you' *.ERR >>$gfile";
 system ($cmd1);
 system ($cmd2);
-print STDERR "$count problems seen in $nohup\n";
+print STDERR "**$count problems seen in $nohup\n";
 if ($count) {
-    print STDERR "please see $ofile\n";
+    print STDERR "**please see $ofile\n";
 }
 if (-s $gfile) {
-   print STDERR "please see $gfile\n";
+   print STDERR "**please see $gfile\n";
 }
 
 if (-d 'BLINKERS') {
-   print STDERR "BLINKERS directory exists - please check\n";
+   print STDERR "**BLINKERS directory exists - please check\n";
 }
 my @ERR = glob('*.ERR');
 if (@ERR) {
    my $num=@ERR;
-   print STDERR "Found $num .ERR files\n";
+   print STDERR "**Found $num .ERR files\n";
 }
 
 # Backup 'nohup.my'
@@ -806,7 +806,7 @@ if ( -e $basename ) {
         print "Moved $basename -> $bname\n";
     }
     else {
-        die "too many backup versions of $basename - move some\n";
+        die "**too many backup versions of $basename - move some\n";
     }
 }
 print "Run 'get_perltidy.pl' if perltidy has changed\n";
