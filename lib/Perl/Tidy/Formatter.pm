@@ -514,6 +514,7 @@ BEGIN {
         _rbreak_after_Klast_            => $i++,
         _rwant_container_open_          => $i++,
         _converged_                     => $i++,
+        _deleted_token_count_           => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
@@ -935,6 +936,7 @@ sub new {
     $self->[_rbreak_after_Klast_]            = {};
     $self->[_rwant_container_open_]          = {};
     $self->[_converged_]                     = 0;
+    $self->[_deleted_token_count_]           = 0;
 
     # qw stuff
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
@@ -16034,6 +16036,13 @@ EOM
                     foreach ( $ic .. $max_index_to_go ) {
                         $summed_lengths_to_go[ $_ + 1 ] -= $len;
                     }
+
+                    # Keep count tokens deleted by this sub because
+                    # we have to turn off the simple convergence test
+                    # if there are deletions.  This is because they are
+                    # at the end of formatting and may cause a formatting
+                    # change. See end of sub wrapup.
+                    $self->[_deleted_token_count_]++;
                 }
 
                 $item = shift @{$rK_conditional_deletion_list};
@@ -28507,8 +28516,11 @@ sub wrapup {
 
     $file_writer_object->report_line_length_errors();
 
-    $self->[_converged_] = $file_writer_object->get_convergence_check()
-      || $rOpts->{'indent-only'};
+    # Define the formatter self-check for convergence. It may not be
+    # correct if sub delete_tokens has deleted tokens.
+    $self->[_converged_] = !$self->[_deleted_token_count_]
+      && ( $file_writer_object->get_convergence_check()
+        || $rOpts->{'indent-only'} );
 
     return;
 } ## end sub wrapup
