@@ -1714,6 +1714,11 @@ EOM
         '(' => ')',
         '[' => ']',
         '?' => ':',
+
+        '}' => '{',
+        ')' => '(',
+        ']' => '[',
+        ':' => '?',
     );
 
     if ( $rOpts->{'ignore-old-breakpoints'} ) {
@@ -2437,24 +2442,39 @@ sub initialize_trailing_comma_rules {
     # and check for conflicts
 
     check_trailing_comma_rules( 'add-trailing-commas',
-        [qw( h b m * )], \%add_trailing_comma_rules );
+        [qw( 0 h s m b c * 1 )], \%add_trailing_comma_rules );
 
     check_trailing_comma_rules( 'delete-trailing-commas',
-        [qw( w s c * )], \%delete_trailing_comma_rules );
+        [qw( 0 w s m b c * 1 )], \%delete_trailing_comma_rules );
 
-    # Check for conflicts.
+    # Check for conflicts. Note that for efficiency we are using
+    # closing tokens as the hash keys.
     foreach my $key (qw< ) ] } >) {
-        my $atc = $add_trailing_comma_rules{$key};
-        my $dtc = $delete_trailing_comma_rules{$key};
+        my $atc_item = $add_trailing_comma_rules{$key};
+        my $dtc_item = $delete_trailing_comma_rules{$key};
+        my $atc      = $atc_item->[0];
+        my $dtc      = $dtc_item->[0];
         if ( $atc && $dtc ) {
 
             # The easiest way to insure that instabilities occur would be to
             # allow just one of -atc and -dtc for each container type.  But for
             # now we allow a few combinations that should be independent.
-            if ( $dtc eq '*' || $atc ne 'h' ) {
+            # Here is the current table
+            #   atc=* || dtc=*          => NO,
+            #   atc=h && dtc=s || dtc=c => OK
+            #   dtc=w                   => OK
+            #   otherwise               => NO
+            my $conflict =
+                 ( $atc eq '*' || $atc eq '1' )
+              || ( $dtc eq '*' || $dtc eq '1' )
+              || !($dtc eq 'w'
+                || $atc eq 'h' && ( $dtc eq 's' || $dtc eq 'c' ) );
+
+            if ($conflict) {
+                my $key_opening = $matching_token{$key};
                 if ( !DEVEL_MODE ) {
                     Warn(<<EOM);
-Conflict: cannot use -atc='$atc' and -dtc='$dtc' at a '$key'; using -atc=-dtc=''
+Conflict: cannot use -atc='$atc' and -dtc='$dtc' at a '$key_opening'; using -atc=-dtc=''
 EOM
                 }
                 %add_trailing_comma_rules    = ();
@@ -2490,19 +2510,24 @@ sub check_trailing_comma_rules {
         # handle single character control, like -atc='*'
         if ( length($option) == 1 ) {
             foreach (qw< ) ] } >) {
-                $rule_hash{$_} = $option;
+                $rule_hash{$_} = [ $option, EMPTY_STRING ];
             }
         }
 
-        # handle two-character control(s), like -atc='*)'
+        # handle multi-character control(s), like -atc='(*' or -atc='k(*'
         else {
             my @parts = split /\s+/, $option;
             foreach my $part (@parts) {
-                if ( length($part) == 2 ) {
-                    my $key = substr( $part, 1, 1 );
-                    my $val = substr( $part, 0, 1 );
-                    if ( $is_closing_token{$key} ) {
-                        $rule_hash{$key} = $val;
+                if ( length($part) >= 2 && length($part) <= 3 ) {
+                    my $val   = substr( $part, -1, 1 );
+                    my $key_o = substr( $part, -2, 1 );
+                    if ( $is_opening_token{$key_o} ) {
+                        my $paren_flag = EMPTY_STRING;
+                        if ( length($part) == 3 ) {
+                            $paren_flag = substr( $part, 0, 1 );
+                        }
+                        my $key = $matching_token{$key_o};
+                        $rule_hash{$key} = [ $val, $paren_flag ];
                     }
                     else {
                         $error_message .= "Unrecognized term: '$part'\n";
@@ -2517,12 +2542,25 @@ sub check_trailing_comma_rules {
         # check control values
         if ( !$error_message ) {
             foreach my $key ( keys %rule_hash ) {
-                my $val = $rule_hash{$key};
+                my $item = $rule_hash{$key};
+                my ( $val, $paren_flag ) = @{$item};
                 if ( $val && !$is_valid_flag{$val} ) {
                     my $valid_str = join( SPACE, @{$rvalid_flags} );
                     $error_message .=
                       "Unexpected value '$val'; must be one of: $valid_str\n";
                     last;
+                }
+                if ($paren_flag) {
+                    if ( $paren_flag !~ /^[kKfFwW]$/ ) {
+                        $error_message .=
+"Unexpected paren flag '$paren_flag'; must be one of: k K f F w W\n";
+                        last;
+                    }
+                    if ( $key ne ')' ) {
+                        $error_message .=
+"paren flag '$paren_flag' is only allowed before a '('\n";
+                        last;
+                    }
                 }
             }
         }
@@ -7691,15 +7729,15 @@ sub add_phantom_semicolon {
 
 sub add_trailing_comma {
 
-    my ( $self, $KK, $Kfirst, $add_option ) = @_;
-
     # Implement the --add-trailing-commas flag to the line end before index $KK:
+
+    my ( $self, $KK, $Kfirst, $add_flags ) = @_;
 
     # Input parameter:
     #  $KK = index of closing token in old ($rLL) token list
     #        which starts a new line and is not preceded by a comma
     #  $Kfirst = index of first token on the current line of input tokens
-    #  $add_option = user control flag
+    #  $add_flags = user control flags
 
     # For example, we might want to add a comma here:
 
@@ -7710,46 +7748,119 @@ sub add_trailing_comma {
     #          }, $pkg;
     #          ^-------------------closing token at index $KK on new line
 
-    return unless ($add_option);
-
-    #------------------------------------------------
     # Do not add a comma if it would follow a comment
-    #------------------------------------------------
     my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
     return unless ( defined($Kp) );
     my $type_p = $rLL_new->[$Kp]->[_TYPE_];
     return if ( $type_p eq '#' );
 
-    # List of user control flag values:
-    # -atc='' or '0' does not add any new commas [DEFAULT]
-    # -atc='h' add a bare trailing comma to a stable list with about one
-    #        comma per line (such as Hash list of key=>value pairs).
-    # -atc='b' add a Bare trailing comma to any list
-    # -atc='m' add a trailing comma (bare or covered) to a Multiline list
-    #       (i.e. Perl::Critic::Policy::CodeLayout::RequireTrailingCommas)
-    # -atc='*' add a trailing comma (bare or covered) to any list
+    my $match = $self->match_trailing_comma( $KK, $Kfirst, $add_flags );
 
-    # Some terminology:
+    if ($match) {
+        my $Knew = $self->store_new_token( ',', ',', $Kp );
+    }
 
-    #  - trailing comma: an optional comma after the last item of a list
-    #  - bare trailing comma: a trailing comma followed by a newline
-    #  - covered trailing comma: a trailing comma not followed by a newline
-    #  - stable list: a list which will keep its line breaks
-    #  - multiline list: the opening and closing tokens are on different lines
+    return;
+
+} ## end sub add_trailing_comma
+
+sub delete_trailing_comma {
+
+    my ( $self, $KK, $Kfirst, $delete_flags ) = @_;
+
+    # Apply the --delete-trailing-commas flag to the comma before index $KK
+
+    # Input parameter:
+    #  $KK = index of a closing token in OLD ($rLL) token list
+    #        which is preceded by a comma on the same line.
+    #  $Kfirst = index of first token on the current line of input tokens
+    #  $delete_option = user control flag
+
+    # For example, we might want to delete this comma:
+    #    my @asset = ("FASMX", "FASGX", "FASIX",);
+    #    |                                     |^--------token at index $KK
+    #    |                                     ^------comma of interest
+    #    ^-------------token at $Kfirst
+
+    # Verify that the previous token is a comma.  Note that we are working in
+    # the new token list $rLL_new.
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );
+    my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
+    my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
+    if ( $token_p ne ',' ) {
+
+        # could be a '#'
+        return;
+    }
+
+    my $OK_control_flag =
+      $self->match_trailing_comma( $KK, $Kfirst, $delete_flags );
+
+    if ($OK_control_flag) {
+        push @{ $self->[_rK_deletion_list_list_] }, [ $Kp, $OK_control_flag ];
+    }
+    return;
+
+} ## end sub delete_trailing_comma
+
+sub match_trailing_comma {
+
+    my ( $self, $KK, $Kfirst, $user_control_flags ) = @_;
+
+    # Decide if the trailing comma match criteria are matched.
+    # A trailing comma is an optional comma after the last item of a list.
+
+    # Input parameter:
+    #  $KK = index of closing token in old ($rLL) token list
+    #        which starts a new line and is not preceded by a comma
+    #  $Kfirst = (old) index of first token on the current line of input tokens
+    #  $user_control_flags = packed user control flags
+
+    # For example, we might want to add a comma here:
+
+    #   bless {
+    #           _name   => $name,
+    #           _price  => $price,
+    #           _rebate => $rebate  <------ location of possible bare comma
+    #          }, $pkg;
+    #          ^-------------------closing token at index $KK on new line
+
+    # Returns:
+    #   false if no match
+    #   a deletion code, if match
+
+    return unless ($user_control_flags);
+    my ( $tail_comma_match_option, $paren_flag ) = @{$user_control_flags};
+
+    # List of $tail_comma_match_option values:
+    # '' or '0' does not match; no add or delete possible [DEFAULT]
+    # 'h' (for add only): add a bare trailing comma to a stable list with about
+    #     one comma per line (such as Hash list of key=>value pairs).
+    # 'w' (for delete only): deletes weld-interfering commas
+    # 'c' match "covered" comma location: followed by closing token
+    # 'b' match "bare" comma location : followed by newline
+    # 'm' match multiline list (opening and closing tokens on different lines)
+    # 's' match single line list
+    # '*' or '1': always match
+
+    return if ( !$tail_comma_match_option );
 
     #----------------------------------------
     # Set some flags describing this location
     #----------------------------------------
-
     my $is_bare_comma = $KK == $Kfirst;
 
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
     return unless ($type_sequence);
-    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+    my $closing_token = $rLL->[$KK]->[_TOKEN_];
+    my $rtype_count   = $self->[_rtype_count_by_seqno_]->{$type_sequence};
     return unless ( defined($rtype_count) && $rtype_count->{','} );
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
 
+    # TODO: define _ris_broken_container_ earlier and use it instead
+    # of the following:
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return if ( !defined($K_opening) );
     my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
@@ -7757,16 +7868,15 @@ sub add_trailing_comma {
     my $line_diff    = $iline_c - $iline_o;
     my $is_multiline = $line_diff > 0;
 
-    # We will set a flag to allow deletion by 'delete_tokens'
-    # during output as follows:
+    # The following flag will be set for a match. It is assigned a value
+    # which is needed if by sub 'delete_tokens' in case deletions are done.
+    my $OK_control_flag;
 
-    my $OK_to_add;
-
-    #-----------------------------------------------------------------
+    #-------------------------------------------------------------------
     # -atc='h' add a bare trailing comma to a stable list with about one
     #        comma per line (such as Hash list of key=>value pairs).
-    #-----------------------------------------------------------------
-    if ( $add_option eq 'h' ) {
+    #-------------------------------------------------------------------
+    if ( $tail_comma_match_option eq 'h' ) {
 
         # This option is only for adding a bare comma
         return if ( !$is_bare_comma );
@@ -7781,8 +7891,8 @@ sub add_trailing_comma {
 
         # The -lp style has a special 2-line mode which uses the vertical
         # aligner to move the closing paren to be at the end of the previous
-        # line. So if we add a comma it will be covered, and it will not
-        # be possible to remove it with -dc.
+        # line. So if we add a comma it will be covered, and it may not
+        # be possible to remove it with -dtc.
         my $min_comma_count = 1;
         if ( $rOpts_line_up_parentheses && !$is_permanently_broken ) {
 
@@ -7817,7 +7927,7 @@ sub add_trailing_comma {
             && ( !$rOpts_ignore_old_breakpoints || $is_permanently_broken )
           )
         {
-            $OK_to_add = 1;
+            $OK_control_flag = '*';
         }
 
         # Next check for a simple list of items stabilized by blank lines,
@@ -7828,116 +7938,21 @@ sub add_trailing_comma {
                 || $rOpts_break_at_old_comma_breakpoints )
           )
         {
-            $OK_to_add = 1;
+            $OK_control_flag = '*';
         }
     }
 
-    #---------------------------------------------
-    # -atc='b' add a Bare trailing comma to any list
-    #---------------------------------------------
-    elsif ( $add_option eq 'b' ) {
-        if ($is_bare_comma) {
-            $OK_to_add = 1;
-        }
-    }
-
-    #---------------------------------------------------------------------
-    # -atc=m add a trailing comma (bare or covered) to a Multiline list
-    #       (i.e. Perl::Critic::Policy::CodeLayout::RequireTrailingCommas)
-    #---------------------------------------------------------------------
-    elsif ( $add_option eq 'm' ) {
-        if ($is_multiline) {
-            $OK_to_add = 1;
-        }
-    }
-
-    #----------------------------------------------------------
-    # -atc='*' add a trailing comma (bare or covered) to any list
-    #----------------------------------------------------------
-    elsif ( $add_option eq '*' ) {
-        $OK_to_add = 1;
-    }
-
-    # unrecognized parameter, should have been caught in input check
-    else {
-
-    }
-
-    return unless ($OK_to_add);
-
-    #-------------------
-    # OK: add a ',' here
-    #-------------------
-    my $Knew = $self->store_new_token( ',', ',', $Kp );
-
-    return;
-
-} ## end sub add_trailing_comma
-
-sub delete_trailing_comma {
-
-    my ( $self, $KK, $Kfirst, $delete_option ) = @_;
-
-    # Apply the --delete-trailing-commas flag to the comma before index $KK
-
-    # Input parameter:
-    #  $KK = index of a closing token in OLD ($rLL) token list
-    #        which is preceded by a comma on the same line.
-    #  $Kfirst = index of first token on the current line of input tokens
-    #  $delete_option = user control flag
-
-    # For example, we might want to delete this comma:
-    #    my @asset = ("FASMX", "FASGX", "FASIX",);
-    #    |                                     |^--------token at index $KK
-    #    |                                     ^------comma of interest
-    #    ^-------------token at $Kfirst
-
-    # The user comma deletion options are:
-
-    #  -dtc='' or '0' does not delete any commas [DEFAULT]
-    #  -dtc='w' deletes Weld interfering commas
-    #  -dtc='s' deletes all Single-line trailing commas
-    #  -dtc='c' deletes all trailing Covered commas
-    #  -dtc='*' deletes all trailing commas, bare or covered. Only if -atc=0.
-
-    return unless ($delete_option);
-
-    # Verify that the previous token is a comma. We REALLY do not want to
-    # delete the wrong token!  Note that we are working in the new token list
-    # $rLL_new.
-    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-    return unless ( defined($Kp) );
-    my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
-    my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
-    if ( $token_p ne ',' ) {
-
-        # could be a '#'
-        return;
-    }
-
-    my $is_covered_comma = $KK > $Kfirst;
-
-    my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-    return unless ($type_sequence);
-    my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-    return unless ( defined($rtype_count) && $rtype_count->{','} );
-
-    # Deletion will be done by 'delete_tokens' during output using:
-    # $OK_control_flag =
-    #       c - delete if still covered in output stream
-    #       s - delete if still covered and single line in output stream
-    #       '*' - delete always
-    my $OK_control_flag;
-
-    #---------------------------------------
+    #-----------------------------------------
     # -dtc='w' deletes weld-interfering commas
-    #---------------------------------------
-    if ( $delete_option eq 'w' ) {
+    #-----------------------------------------
+    elsif ( $tail_comma_match_option eq 'w' ) {
 
         # looking for something like '},)' where the comma is the only comma in
         # the list
+        my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+        return unless ( defined($Kp) );
         my $Kpp = $self->K_previous_nonblank( $Kp, $rLL_new );
-        if ( $rtype_count->{','} == 1 && defined($Kp) ) {
+        if ( $rtype_count->{','} == 1 && defined($Kpp) ) {
             my $type_pp = $rLL_new->[$Kpp]->[_TYPE_];
             if ( $is_closing_type{$type_pp} ) {
                 $OK_control_flag = '*';
@@ -7945,56 +7960,93 @@ sub delete_trailing_comma {
         }
     }
 
-    #---------------------------------------------------
-    # -dtc='s' delete trailing commas in single line lists
-    #---------------------------------------------------
-    elsif ( $delete_option eq 's' ) {
+    #--------------------------------
+    # 'b' match a Bare trailing comma
+    #--------------------------------
+    elsif ( $tail_comma_match_option eq 'b' ) {
+        if ($is_bare_comma) {
+            $OK_control_flag = 'b';
+        }
+    }
 
-        # Note that a single line comma is always covered
-        if ($is_covered_comma) {
+    #-----------------------------------
+    # 'c' match a Covered trailing comma
+    #-----------------------------------
+    elsif ( $tail_comma_match_option eq 'c' ) {
+        if ( !$is_bare_comma ) {
 
-            # note use of old list here for old index $KK
-            my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
-            return if ( !defined($K_opening) );
-            my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
-            my $iline_c      = $rLL->[$KK]->[_LINE_INDEX_];
-            my $line_diff    = $iline_c - $iline_o;
-            my $is_multiline = $line_diff > 0;
+            # Choose '*' if -vtc and/or -lp flags are active, and choose
+            # 'c' otherwise.  The flag 'c' will insure covering still exists on
+            # output, but -vtc and -lp can cause the output check to be
+            # fooled. In that case '*' is a better choice.
+            my $cflag = 'c';
 
-            if ( !$is_multiline ) {
-                $OK_control_flag = 's';
+            # The -vtc flag can covering to occur in the VerticalAligner
+            # which will fool any check on output. In that case, '*' is
+            # a better choice.
+            if ( $closing_vertical_tightness{$closing_token} ) { $cflag = '*' }
+
+            # Likewise, the -lp style has a special 2-line mode for parens
+            # which uses the vertical aligner to move the closing paren to be
+            # at the end of the previous line.
+            if (   $rOpts_line_up_parentheses
+                && $closing_token eq ')'
+                && $line_diff <= 2
+                && ( !$rtype_count->{'=>'} || $rtype_count->{'=>'} < 2 ) )
+            {
+                $cflag = '*';
             }
+            $OK_control_flag = $cflag;
         }
     }
 
-    #-------------------------------------------
-    # -dtc='c' deletes all covered trailing commas
-    #-------------------------------------------
-    elsif ( $delete_option eq 'c' ) {
-        if ($is_covered_comma) {
-            $OK_control_flag = 'c';
+    #---------------------------
+    # 'm' match a Multiline list
+    #---------------------------
+    elsif ( $tail_comma_match_option eq 'm' ) {
+        if ($is_multiline) {
+            $OK_control_flag = 'm';
         }
     }
 
-    #---------------------------------------
-    # -dtc='*' deletes all list-ending commas.
-    #---------------------------------------
-    elsif ( $delete_option eq '*' ) {
+    #-----------------------------
+    # 's' match a single line list
+    #-----------------------------
+    elsif ( $tail_comma_match_option eq 's' ) {
+        if ( !$is_multiline ) {
+            $OK_control_flag = 's';
+        }
+    }
+
+    #----------------------------
+    # '*' or '1' : match any list
+    #----------------------------
+    elsif ( $tail_comma_match_option eq '*' || $tail_comma_match_option eq '1' )
+    {
         $OK_control_flag = '*';
     }
 
-    # Unrecognized parameter, should have been caught in input check
+    # Unrecognized parameter, ignore. Should have been caught in input check
     else {
 
     }
 
-    return unless ($OK_control_flag);
+    return if ( !$OK_control_flag );
 
-    # OK to delete; put this token and flag in the deletion list
-    push @{ $self->[_rK_deletion_list_list_] }, [ $Kp, $OK_control_flag ];
+    # Now do any paren check
+    if (   $paren_flag
+        && $paren_flag ne '1'
+        && $paren_flag ne '*'
+        && $closing_token eq ')' )
+    {
+        my $match =
+          $self->match_paren_control_flag( $type_sequence, $paren_flag,
+            $rLL_new );
+        return unless $match;
+    }
 
-    return;
-} ## end sub delete_trailing_comma
+    return $OK_control_flag;
+}
 
 sub store_new_token {
 
@@ -8717,7 +8769,9 @@ sub keep_old_line_breaks {
                 # check for special matching codes
                 if ( !$match ) {
                     if ( $token eq '(' || $token eq ')' ) {
-                        $match = $self->match_paren_flag( $KK, $flag );
+                        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+                        $match =
+                          $self->match_paren_control_flag( $seqno, $flag );
                     }
                     elsif ( $token eq '{' || $token eq '}' ) {
 
@@ -9257,7 +9311,7 @@ sub find_nested_pairs {
     return \@nested_pairs;
 } ## end sub find_nested_pairs
 
-sub match_paren_flag {
+sub match_paren_control_flag {
 
     # Decide if this paren is excluded by user request:
     #   undef matches no parens
@@ -9270,27 +9324,24 @@ sub match_paren_flag {
     #   'F' matches if 'f' does not.
     #   'w' matches if either 'k' or 'f' match.
     #   'W' matches if 'w' does not.
-    my ( $self, $KK, $flag ) = @_;
+    my ( $self, $seqno, $flag, $rLL ) = @_;
+
+    # Input parameters:
+    # $seqno = sequence number of the container (should be paren)
+    # $flag  = the flag which defines what matches
+    # $rLL   = an optional alternate token list needed for respace operations
+    $rLL = $self->[_rLL_] unless ( defined($rLL) );
 
     return 0 unless ( defined($flag) );
     return 0 if $flag eq '0';
     return 1 if $flag eq '1';
     return 1 if $flag eq '*';
-    return 0 unless ( defined($KK) );
-
-    my $rLL         = $self->[_rLL_];
-    my $rtoken_vars = $rLL->[$KK];
-    my $seqno       = $rtoken_vars->[_TYPE_SEQUENCE_];
     return 0 unless ($seqno);
-    my $token     = $rtoken_vars->[_TOKEN_];
-    my $K_opening = $KK;
-    if ( !$is_opening_token{$token} ) {
-        $K_opening = $self->[_K_opening_container_]->{$seqno};
-    }
+    my $K_opening = $self->[_K_opening_container_]->{$seqno};
     return unless ( defined($K_opening) );
 
     my ( $is_f, $is_k, $is_w );
-    my $Kp = $self->K_previous_nonblank($K_opening);
+    my $Kp = $self->K_previous_nonblank( $K_opening, $rLL );
     if ( defined($Kp) ) {
         my $type_p = $rLL->[$Kp]->[_TYPE_];
 
@@ -9311,7 +9362,7 @@ sub match_paren_flag {
     elsif ( $flag eq 'w' ) { $match = $is_w }
     elsif ( $flag eq 'W' ) { $match = !$is_w }
     return $match;
-} ## end sub match_paren_flag
+} ## end sub match_paren_control_flag
 
 sub is_excluded_weld {
 
@@ -9325,7 +9376,8 @@ sub is_excluded_weld {
     my $flag = $is_leading ? $rflags->[0] : $rflags->[1];
     return 0 unless ( defined($flag) );
     return 1 if $flag eq '*';
-    return $self->match_paren_flag( $KK, $flag );
+    my $seqno = $rtoken_vars->[_TYPE_SEQUENCE_];
+    return $self->match_paren_control_flag( $seqno, $flag );
 } ## end sub is_excluded_weld
 
 # hashes to simplify welding logic
@@ -15932,25 +15984,34 @@ EOM
 
                 # $control_flag =
                 #  c - delete if covered
-                #  s - delete single line (and therefore also covered)
-                #  * - delete always
+                #  b - delete if not covered (bare)
+                #  s - delete if single line
+                #  m - delete if multiline
+                #  * or 1 - delete always
                 if ( $control_flag eq 'c' ) {
                     $ok_to_delete = $is_covered;
                 }
-                elsif ( $control_flag eq 's' ) {
+                elsif ( $control_flag eq 'b' ) {
+                    $ok_to_delete = !$is_covered;
+                }
+                elsif ( $control_flag eq 's' || $control_flag eq 'm' ) {
 
-                    # check for single line
+                    # first check for single line (and therefore also covered)
+                    my $is_single_line;
                     if ($is_covered) {
                         my $ic    = $ibeg + $Kc_next - $Kbeg;
                         my $inext = $inext_to_go[$ic];
                         my $imate = $mate_index_to_go[$inext];
                         if ( defined($imate) && $imate >= 0 && $imate < $inext )
                         {
-                            $ok_to_delete = 1;
+                            $is_single_line = 1;
                         }
                     }
+
+                    $ok_to_delete =
+                      $control_flag eq 's' ? $is_single_line : !$is_single_line;
                 }
-                elsif ( $control_flag eq '*' ) {
+                elsif ( $control_flag eq '*' || $control_flag eq '1' ) {
                     $ok_to_delete = 1;
                 }
 
@@ -20861,8 +20922,11 @@ EOM
                 $saw_opening_structure = 0;
             }
             else {
-                my $KK = $K_to_go[$i_opening];
-                $saw_opening_structure = !$self->match_paren_flag( $KK, $flag );
+
+                ## TODO: verify that this equals closure var $type_sequence
+                my $seqno = $type_sequence_to_go[$i_opening];
+                $saw_opening_structure =
+                  !$self->match_paren_control_flag( $seqno, $flag );
             }
         }
 
@@ -21806,9 +21870,9 @@ EOM
                     $two_line_word_wrap_ok = 1;
                 }
                 else {
-                    my $KK = $K_to_go[$i_opening_paren];
+                    my $seqno = $type_sequence_to_go[$i_opening_paren];
                     $two_line_word_wrap_ok =
-                      !$self->match_paren_flag( $KK, $flag );
+                      !$self->match_paren_control_flag( $seqno, $flag );
                 }
             }
         }
