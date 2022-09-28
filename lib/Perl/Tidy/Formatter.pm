@@ -7949,12 +7949,16 @@ sub match_trailing_comma {
 
         # looking for something like '},)' where the comma is the only comma in
         # the list
+        return unless ( $rtype_count->{','} == 1 );
         my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
         return unless ( defined($Kp) );
         my $Kpp = $self->K_previous_nonblank( $Kp, $rLL_new );
-        if ( $rtype_count->{','} == 1 && defined($Kpp) ) {
-            my $type_pp = $rLL_new->[$Kpp]->[_TYPE_];
-            if ( $is_closing_type{$type_pp} ) {
+        return unless ( defined($Kpp) );
+        my $seqno_pp = $rLL_new->[$Kpp]->[_TYPE_SEQUENCE_];
+        my $type_pp  = $rLL_new->[$Kpp]->[_TYPE_];
+
+        if ( $seqno_pp && $is_closing_type{$type_pp} ) {
+            if ( $seqno_pp == $type_sequence + 1 ) {
                 $OK_control_flag = '*';
             }
         }
