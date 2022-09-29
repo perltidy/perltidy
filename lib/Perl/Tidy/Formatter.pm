@@ -6743,15 +6743,14 @@ sub respace_tokens_inner_loop {
     # Loop to copy all tokens on one line, making any spacing changes,
     # while also collecting information needed by later subs.
     #-----------------------------------------------------------------
-    my $type_sequence;
-    my $rtoken_vars;
     foreach my $KK ( $Kfirst .. $Klast ) {
+
+        # TODO: eliminate this closure var by passing directly to store_token
+        # following pattern of store_tokens_to_go.
         $Ktoken_vars = $KK;
-        $rtoken_vars = $rLL->[$KK];
-        my $token              = $rtoken_vars->[_TOKEN_];
-        my $type               = $rtoken_vars->[_TYPE_];
-        my $last_type_sequence = $type_sequence;
-        $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+
+        my $rtoken_vars = $rLL->[$KK];
+        my $type        = $rtoken_vars->[_TYPE_];
 
         # Handle a blank space ...
         if ( $type eq 'b' ) {
@@ -6795,13 +6794,16 @@ sub respace_tokens_inner_loop {
             next;
         }
 
+        my $token = $rtoken_vars->[_TOKEN_];
+
         # Handle a sequenced token ... i.e. one of ( ) { } [ ] ? :
-        if ($type_sequence) {
+        if ( $rtoken_vars->[_TYPE_SEQUENCE_] ) {
 
             # One of ) ] } ...
             if ( $is_closing_token{$token} ) {
 
-                my $block_type = $rblock_type_of_seqno->{$type_sequence};
+                my $type_sequence = $rtoken_vars->[_TYPE_SEQUENCE_];
+                my $block_type    = $rblock_type_of_seqno->{$type_sequence};
 
                 #---------------------------------------------
                 # check for semicolon addition in a code block
@@ -7861,8 +7863,8 @@ sub match_trailing_comma {
     my $is_permanently_broken =
       $self->[_ris_permanently_broken_]->{$type_sequence};
 
-    # TODO: define _ris_broken_container_ earlier and use it instead
-    # of the following:
+    # Note that _ris_broken_container_ also stores the line diff
+    # but it is not available at this early stage.
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return if ( !defined($K_opening) );
     my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
