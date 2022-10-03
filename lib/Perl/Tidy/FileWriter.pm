@@ -300,9 +300,11 @@ $str
 This is probably due to a recent programming change and needs to be fixed.
 EOM
 
+                # Always die during development, this needs to be fixed
                 if (DEVEL_MODE) { Fault($msg) }
 
-                $self->warning($msg);
+                # Otherwise warn if string is not empty (added for b1378)
+                $self->warning($msg) if ( length($str) );
 
                 # Only issue this warning once
                 $self->[_K_sequence_error_msg_] = $msg;

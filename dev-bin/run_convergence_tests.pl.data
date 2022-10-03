@@ -10180,6 +10180,18 @@ $font_size
 --space-keyword-paren
 --weld-nested-containers
 
+==> b1378.in <==
+                           if($biblio->{subtitle})
+                           {        &newsubtitle(
+                                             $biblionumber,
+                                             $biblio
+                                                ->{subtitle}
+                                             ,);
+                                    }
+
+==> b1378.par <==
+-extrude -vtc=2 -dtc=1
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

@@ -16039,7 +16039,7 @@ EOM
                         $summed_lengths_to_go[ $_ + 1 ] -= $len;
                     }
 
-                    # Keep count tokens deleted by this sub because
+                    # Count tokens deleted by this sub because
                     # we have to turn off the simple convergence test
                     # if there are deletions.  This is because they are
                     # at the end of formatting and may cause a formatting

@@ -5286,7 +5286,11 @@ sub get_output_line_number {
 
         # write or cache this line ...
         # fix for case b999: do not cache an outdented line
-        if ( !$open_or_close || $side_comment_length > 0 || $is_outdented_line )
+        # fix for b1378: do not cache an empty line
+        if (  !$open_or_close
+            || $side_comment_length > 0
+            || $is_outdented_line
+            || !$line_length )
         {
             $self->valign_output_step_C(
                 $seqno_string,
