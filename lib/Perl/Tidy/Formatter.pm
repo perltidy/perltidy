@@ -2458,21 +2458,18 @@ sub initialize_trailing_comma_rules {
         my $dtc      = $dtc_item->[0];
         if ( $atc && $dtc ) {
 
-            # The easiest way to insure that instabilities occur would be to
-            # allow just one of -atc and -dtc for each container type.  But for
-            # now we allow a few combinations that should be independent.
-            # Here is the current table
-            #   atc=* || dtc=*          => NO,
-            #   atc=h && dtc=s || dtc=c => OK
-            #   dtc=w                   => OK
-            #   otherwise               => NO
-            my $conflict =
-                 ( $atc eq '*' || $atc eq '1' )
-              || ( $dtc eq '*' || $dtc eq '1' )
-              || !($dtc eq 'w'
-                || $atc eq 'h' && ( $dtc eq 's' || $dtc eq 'c' ) );
+            # The easiest way to prevent instabilities is to allow just one of
+            # -atc and -dtc for each container type.  But we can allow a couple
+            # of exceptions:
+            #   1. dtc eq 'w' and any atc
+            #   2. atc eq 'h' and (dtc=s || dtc=c)
+            my $okay =
 
-            if ($conflict) {
+              $dtc eq 'w'
+
+              || ( $atc eq 'h' && ( $dtc eq 's' || $dtc eq 'c' ) );
+
+            if ( !$okay ) {
                 my $key_opening = $matching_token{$key};
                 if ( !DEVEL_MODE ) {
                     Warn(<<EOM);
@@ -6835,9 +6832,6 @@ sub respace_tokens_inner_loop {
                         # if NOT preceded by a comma..
                         if ( $last_nonblank_code_type ne ',' ) {
 
-                            # set interior comma count (TODO: for future use)
-                            $rtype_count->{',-'} = $rtype_count->{','};
-
                             # insert a comma if requested
                             if (%add_trailing_comma_rules) {
                                 $self->add_trailing_comma( $KK, $Kfirst,
@@ -6847,9 +6841,6 @@ sub respace_tokens_inner_loop {
 
                         # if preceded by a comma ..
                         else {
-
-                            # set interior comma count
-                            $rtype_count->{',-'} = $rtype_count->{','} - 1;
 
                             # delete the comma if requested
                             if (%delete_trailing_comma_rules) {
@@ -7324,9 +7315,6 @@ sub store_token {
     # Input parameter:
     #  $item = ref to a token
 
-    # This will be the index of this item in the new array
-    my $KK_new = @{$rLL_new};
-
     # NOTE: this sub is called once per token so coding efficiency is critical.
 
     # The next multiple assignment statements are significantly faster than
@@ -7364,7 +7352,7 @@ sub store_token {
     # Do not output consecutive blanks. This situation should have been
     # prevented earlier, but it is worth checking because later routines
     # make this assumption.
-    if ( $is_blank && $KK_new && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
+    if ( $is_blank && @{$rLL_new} && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
         return;
     }
 
@@ -7374,6 +7362,9 @@ sub store_token {
 
     # check for a sequenced item (i.e., container or ?/:)
     if ($type_sequence) {
+
+        # This will be the index of this item in the new array
+        my $KK_new = @{$rLL_new};
 
         if ( $is_opening_token{$token} ) {
 
@@ -7418,17 +7409,14 @@ sub store_token {
             if (   $last_nonblank_code_type eq ','
                 || $last_nonblank_code_type eq '=>' )
             {
-                my $seqno = $seqno_stack{ $depth_next - 1 };
-                if ($seqno) {
-                    $rtype_count_by_seqno->{$seqno}->{$last_nonblank_code_type}
-                      --;
+                $rtype_count_by_seqno->{$type_sequence}
+                  ->{$last_nonblank_code_type}--;
 
-                    if (   $Ktoken_vars == $Kfirst_old
-                        && $last_nonblank_code_type eq ','
-                        && $rlec_count_by_seqno->{$seqno} )
-                    {
-                        $rlec_count_by_seqno->{$seqno}--;
-                    }
+                if (   $Ktoken_vars == $Kfirst_old
+                    && $last_nonblank_code_type eq ','
+                    && $rlec_count_by_seqno->{$type_sequence} )
+                {
+                    $rlec_count_by_seqno->{$type_sequence}--;
                 }
             }
 
@@ -7532,6 +7520,7 @@ sub store_token {
 
                 # Remember index of first here doc target
                 if ( $type eq 'h' && !$K_first_here_doc_by_seqno{$seqno} ) {
+                    my $KK_new = @{$rLL_new};
                     $K_first_here_doc_by_seqno{$seqno} = $KK_new;
                 }
             }
@@ -7831,22 +7820,20 @@ sub delete_trailing_comma {
             return;
         }
 
-        # Fix the comma count. Caution: some other vars set by store_token,
-        # such as the $last_* vars, will no longer be correct but that should
-        # be okay in this case.
-        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-        if ($type_sequence) {
-            my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
-            if ( defined($rtype_count) && $rtype_count->{','} ) {
-                $rtype_count->{','} -= 1;
-            }
-        }
+        # A note on updating vars set by sub store_token for this comma: If we
+        # reduce the comma count by 1 then we also have to change the variable
+        # $last_nonblank_code_type to be $last_last_nonblank_code_type because
+        # otherwise sub store_token is going to ALSO reduce the comma count.
+        # Alternatively, we can leave the count alone and the
+        # $last_nonblank_code_type alone. Then sub store_token will produce
+        # the correct result. This is simpler and is done here.
 
         # Now add a blank space after the comma if appropriate.
-        # NOTE: this should cover most cases but some spacing controls might
-        # need another iteration to reach a final state.
+        # Some unusual spacing controls might need another iteration to
+        # reach a final state.
         if ( $rLL_new->[-1]->[_TYPE_] ne 'b' ) {
             if ( defined($rblank) ) {
+                $rblank->[_CUMULATIVE_LENGTH_] -= 1;    # for deleted comma
                 push @{$rLL_new}, $rblank;
             }
         }
