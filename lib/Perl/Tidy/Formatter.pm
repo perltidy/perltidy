@@ -1,4 +1,4 @@
-#####################################################################
+####################################################################
 #
 # The Perl::Tidy::Formatter package adds indentation, whitespace, and
 # line breaks to the token stream
@@ -454,7 +454,7 @@ BEGIN {
         _rparent_of_seqno_          => $i++,
         _rchildren_of_seqno_        => $i++,
         _ris_list_by_seqno_         => $i++,
-        _rK_deletion_list_list_     => $i++,
+        _rK_deletion_list_          => $i++,
         _rbreak_container_          => $i++,
         _rshort_nested_             => $i++,
         _length_function_           => $i++,
@@ -873,7 +873,7 @@ sub new {
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
-    $self->[_rK_deletion_list_list_]     = [];
+    $self->[_rK_deletion_list_]          = [];
 
     $self->[_rbreak_container_] = {};                 # prevent one-line blocks
     $self->[_rshort_nested_]    = {};                 # blocks not forced open
@@ -7790,19 +7790,66 @@ sub delete_trailing_comma {
     # the new token list $rLL_new.
     my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
     return unless ( defined($Kp) );
-    my $type_p  = $rLL_new->[$Kp]->[_TYPE_];
-    my $token_p = $rLL_new->[$Kp]->[_TOKEN_];
-    if ( $token_p ne ',' ) {
+    if ( $rLL_new->[$Kp]->[_TYPE_] ne ',' ) {
 
-        # could be a '#'
+        # there must be a '#' between the ',' and closing token; give up.
         return;
     }
 
+    # See if we match the user request
     my $OK_control_flag =
       $self->match_trailing_comma( $KK, $Kfirst, $delete_flags );
 
     if ($OK_control_flag) {
-        push @{ $self->[_rK_deletion_list_list_] }, [ $Kp, $OK_control_flag ];
+
+        # Old method: delete-on-output.
+        # This works but delete-on-input has advantages.
+        ## push @{ $self->[_rK_deletion_list_] },
+        ##      [ $Kp, $OK_control_flag ];
+        ## return;
+
+        # New method: delete-on-input ...
+        return if ( @{$rLL_new} < 3 );    # for safety, shouldn't happen
+
+        my ( $rcomma, $rblank );
+
+        # case 1: pop comma from top of stack
+        if ( $rLL_new->[-1]->[_TYPE_] eq ',' ) {
+            $rcomma = pop @{$rLL_new};
+        }
+
+        # case 2: pop blank and then comma from top of stack
+        elsif ($rLL_new->[-1]->[_TYPE_] eq 'b'
+            && $rLL_new->[-2]->[_TYPE_] eq ',' )
+        {
+            $rblank = pop @{$rLL_new};
+            $rcomma = pop @{$rLL_new};
+        }
+
+        # case 3: error, shouldn't happen unless bad call
+        else {
+            return;
+        }
+
+        # Fix the comma count. Caution: some other vars set by store_token,
+        # such as the $last_* vars, will no longer be correct but that should
+        # be okay in this case.
+        my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+        if ($type_sequence) {
+            my $rtype_count = $self->[_rtype_count_by_seqno_]->{$type_sequence};
+            if ( defined($rtype_count) && $rtype_count->{','} ) {
+                $rtype_count->{','} -= 1;
+            }
+        }
+
+        # Now add a blank space after the comma if appropriate.
+        # NOTE: this should cover most cases but some spacing controls might
+        # need another iteration to reach a final state.
+        if ( $rLL_new->[-1]->[_TYPE_] ne 'b' ) {
+            if ( defined($rblank) ) {
+                push @{$rLL_new}, $rblank;
+            }
+        }
     }
     return;
 
@@ -15900,8 +15947,8 @@ EOM
         }
 
         # Delete tokens in this batch in the deletion list
-        if ( @{ $self->[_rK_deletion_list_list_] }
-            && $self->[_rK_deletion_list_list_]->[0]->[0] <=
+        if ( @{ $self->[_rK_deletion_list_] }
+            && $self->[_rK_deletion_list_]->[0]->[0] <=
             $K_to_go[$max_index_to_go] )
         {
             $self->delete_tokens( $ri_first, $ri_last );
@@ -15956,8 +16003,12 @@ EOM
 
         my ( $self, $ri_beg, $ri_end ) = @_;
 
+        #------------------------------------------------------------
+        # This sub is being phased out. It can eventually be removed.
+        #------------------------------------------------------------
+
         # Remove any tokens in this output batch which
-        # - appear in the deletion list @{$rK_conditional_deletion_list}, and
+        # - appear in the deletion list @{$rK_deletion_list}, and
         # - still obey their deletion requirements
 
         # Input parameters:
@@ -15967,7 +16018,7 @@ EOM
         # by flags -atc and/or -dtc.  But it could also be used to delete
         # interior semicolons (instead of using the phantom token method).
 
-        my $rK_conditional_deletion_list = $self->[_rK_deletion_list_list_];
+        my $rK_conditional_deletion_list = $self->[_rK_deletion_list_];
         my $rLL                          = $self->[_rLL_];
 
         # extract the next item
