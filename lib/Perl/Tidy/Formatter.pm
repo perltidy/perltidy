@@ -7333,129 +7333,24 @@ sub store_token {
 
       ];
 
-    my (
+    # Set the token length.  Later it may be adjusted again if phantom or
+    # ignoring side comment lengths.
+    my $token_length =
+      $is_encoded_data ? $length_function->($token) : length($token);
 
-        $is_blank,
-        $is_comment,
-        $token_length,
-        $block_type,
+    # handle blanks
+    if ( $type eq 'b' ) {
 
-    ) = (
-
-        $type eq 'b',
-        $type eq '#',
-        length($token),
-        EMPTY_STRING,
-
-    );
-
-    # Do not output consecutive blanks. This situation should have been
-    # prevented earlier, but it is worth checking because later routines
-    # make this assumption.
-    if ( $is_blank && @{$rLL_new} && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
-        return;
-    }
-
-    # Correct the token length if encoded.  Later it may be adjusted again if
-    # phantom or ignoring side comment lengths.
-    if ($is_encoded_data) { $token_length = $length_function->($token) }
-
-    # check for a sequenced item (i.e., container or ?/:)
-    if ($type_sequence) {
-
-        # This will be the index of this item in the new array
-        my $KK_new = @{$rLL_new};
-
-        if ( $is_opening_token{$token} ) {
-
-            $K_opening_container->{$type_sequence} = $KK_new;
-            $block_type = $rblock_type_of_seqno->{$type_sequence};
-
-            # Fix for case b1100: Count a line ending in ', [' as having
-            # a line-ending comma.  Otherwise, these commas can be hidden
-            # with something like --opening-square-bracket-right
-            if (   $last_nonblank_code_type eq ','
-                && $Ktoken_vars == $Klast_old_code
-                && $Ktoken_vars > $Kfirst_old )
-            {
-                $rlec_count_by_seqno->{$type_sequence}++;
-            }
-
-            if (   $last_nonblank_code_type eq '='
-                || $last_nonblank_code_type eq '=>' )
-            {
-                $ris_assigned_structure->{$type_sequence} =
-                  $last_nonblank_code_type;
-            }
-
-            my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-            $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-            push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
-            $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
-            $seqno_stack{$depth_next}               = $type_sequence;
-            $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
-            $depth_next++;
-
-            if ( $depth_next > $depth_next_max ) {
-                $depth_next_max = $depth_next;
-            }
-        }
-        elsif ( $is_closing_token{$token} ) {
-
-            $K_closing_container->{$type_sequence} = $KK_new;
-            $block_type = $rblock_type_of_seqno->{$type_sequence};
-
-            # Do not include terminal commas in counts
-            if (   $last_nonblank_code_type eq ','
-                || $last_nonblank_code_type eq '=>' )
-            {
-                $rtype_count_by_seqno->{$type_sequence}
-                  ->{$last_nonblank_code_type}--;
-
-                if (   $Ktoken_vars == $Kfirst_old
-                    && $last_nonblank_code_type eq ','
-                    && $rlec_count_by_seqno->{$type_sequence} )
-                {
-                    $rlec_count_by_seqno->{$type_sequence}--;
-                }
-            }
-
-            # Update the stack...
-            $depth_next--;
-        }
-        else {
-
-            # For ternary, note parent but do not include as child
-            my $seqno_parent = $seqno_stack{ $depth_next - 1 };
-            $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
-            $rparent_of_seqno->{$type_sequence} = $seqno_parent;
-
-            # These are not yet used but could be useful
-            if ( $token eq '?' ) {
-                $K_opening_ternary->{$type_sequence} = $KK_new;
-            }
-            elsif ( $token eq ':' ) {
-                $K_closing_ternary->{$type_sequence} = $KK_new;
-            }
-            else {
-
-                # We really shouldn't arrive here, just being cautious:
-                # The only sequenced types output by the tokenizer are the
-                # opening & closing containers and the ternary types. Each
-                # of those was checked above. So we would only get here
-                # if the tokenizer has been changed to mark some other
-                # tokens with sequence numbers.
-                if (DEVEL_MODE) {
-                    Fault(
-"Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
-                    );
-                }
-            }
+        # Do not output consecutive blanks. This situation should have been
+        # prevented earlier, but it is worth checking because later routines
+        # make this assumption.
+        if ( @{$rLL_new} && $rLL_new->[-1]->[_TYPE_] eq 'b' ) {
+            return;
         }
     }
 
     # handle comments
-    if ($is_comment) {
+    elsif ( $type eq '#' ) {
 
         # trim comments if necessary
         my $ord = ord( substr( $token, -1, 1 ) );
@@ -7485,15 +7380,104 @@ sub store_token {
         }
     }
 
-    $item->[_TOKEN_LENGTH_] = $token_length;
+    # handle non-blanks and non-comments
+    else {
 
-    # and update the cumulative length
-    $cumulative_length += $token_length;
+        my $block_type;
 
-    # Save the length sum to just AFTER this token
-    $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
+        # check for a sequenced item (i.e., container or ?/:)
+        if ($type_sequence) {
 
-    if ( !$is_blank && !$is_comment ) {
+            # This will be the index of this item in the new array
+            my $KK_new = @{$rLL_new};
+
+            if ( $is_opening_token{$token} ) {
+
+                $K_opening_container->{$type_sequence} = $KK_new;
+                $block_type = $rblock_type_of_seqno->{$type_sequence};
+
+                # Fix for case b1100: Count a line ending in ', [' as having
+                # a line-ending comma.  Otherwise, these commas can be hidden
+                # with something like --opening-square-bracket-right
+                if (   $last_nonblank_code_type eq ','
+                    && $Ktoken_vars == $Klast_old_code
+                    && $Ktoken_vars > $Kfirst_old )
+                {
+                    $rlec_count_by_seqno->{$type_sequence}++;
+                }
+
+                if (   $last_nonblank_code_type eq '='
+                    || $last_nonblank_code_type eq '=>' )
+                {
+                    $ris_assigned_structure->{$type_sequence} =
+                      $last_nonblank_code_type;
+                }
+
+                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                push @{ $rchildren_of_seqno->{$seqno_parent} }, $type_sequence;
+                $rparent_of_seqno->{$type_sequence}     = $seqno_parent;
+                $seqno_stack{$depth_next}               = $type_sequence;
+                $K_old_opening_by_seqno{$type_sequence} = $Ktoken_vars;
+                $depth_next++;
+
+                if ( $depth_next > $depth_next_max ) {
+                    $depth_next_max = $depth_next;
+                }
+            }
+            elsif ( $is_closing_token{$token} ) {
+
+                $K_closing_container->{$type_sequence} = $KK_new;
+                $block_type = $rblock_type_of_seqno->{$type_sequence};
+
+                # Do not include terminal commas in counts
+                if (   $last_nonblank_code_type eq ','
+                    || $last_nonblank_code_type eq '=>' )
+                {
+                    $rtype_count_by_seqno->{$type_sequence}
+                      ->{$last_nonblank_code_type}--;
+
+                    if (   $Ktoken_vars == $Kfirst_old
+                        && $last_nonblank_code_type eq ','
+                        && $rlec_count_by_seqno->{$type_sequence} )
+                    {
+                        $rlec_count_by_seqno->{$type_sequence}--;
+                    }
+                }
+
+                # Update the stack...
+                $depth_next--;
+            }
+            else {
+
+                # For ternary, note parent but do not include as child
+                my $seqno_parent = $seqno_stack{ $depth_next - 1 };
+                $seqno_parent = SEQ_ROOT unless defined($seqno_parent);
+                $rparent_of_seqno->{$type_sequence} = $seqno_parent;
+
+                # These are not yet used but could be useful
+                if ( $token eq '?' ) {
+                    $K_opening_ternary->{$type_sequence} = $KK_new;
+                }
+                elsif ( $token eq ':' ) {
+                    $K_closing_ternary->{$type_sequence} = $KK_new;
+                }
+                else {
+
+                    # We really shouldn't arrive here, just being cautious:
+                    # The only sequenced types output by the tokenizer are the
+                    # opening & closing containers and the ternary types. Each
+                    # of those was checked above. So we would only get here
+                    # if the tokenizer has been changed to mark some other
+                    # tokens with sequence numbers.
+                    if (DEVEL_MODE) {
+                        Fault(
+"Unexpected token type with sequence number: type='$type', seqno='$type_sequence'"
+                        );
+                    }
+                }
+            }
+        }
 
         # Remember the most recent two non-blank, non-comment tokens.
         # NOTE: the phantom semicolon code may change the output stack
@@ -7526,6 +7510,14 @@ sub store_token {
             }
         }
     }
+
+    $item->[_TOKEN_LENGTH_] = $token_length;
+
+    # and update the cumulative length
+    $cumulative_length += $token_length;
+
+    # Save the length sum to just AFTER this token
+    $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
 
     # For reference, here is how to get the parent sequence number.
     # This is not used because it is slower than finding it on the fly
