@@ -8803,7 +8803,6 @@ sub keep_old_line_breaks {
                 # check for special matching codes
                 if ( !$match ) {
                     if ( $token eq '(' || $token eq ')' ) {
-                        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
                         $match =
                           $self->match_paren_control_flag( $seqno, $flag );
                     }
