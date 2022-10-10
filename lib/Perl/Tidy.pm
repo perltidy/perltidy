@@ -3156,14 +3156,15 @@ sub generate_options {
     ########################################
     $category = 3;    # Whitespace control
     ########################################
-    $add_option->( 'add-trailing-commas',                       'atc',   '=s' );
+    $add_option->( 'add-trailing-commas',                       'atc',   '!' );
     $add_option->( 'add-semicolons',                            'asc',   '!' );
     $add_option->( 'add-whitespace',                            'aws',   '!' );
     $add_option->( 'block-brace-tightness',                     'bbt',   '=i' );
     $add_option->( 'brace-tightness',                           'bt',    '=i' );
     $add_option->( 'delete-old-whitespace',                     'dws',   '!' );
     $add_option->( 'delete-repeated-commas',                    'drc',   '!' );
-    $add_option->( 'delete-trailing-commas',                    'dtc',   '=s' );
+    $add_option->( 'delete-trailing-commas',                    'dtc',   '!' );
+    $add_option->( 'delete-weld-interfering-commas',            'dwic',  '!' );
     $add_option->( 'delete-semicolons',                         'dsm',   '!' );
     $add_option->( 'function-paren-vertical-alignment',         'fpva',  '!' );
     $add_option->( 'keyword-paren-inner-tightness',             'kpit',  '=i' );
@@ -3187,6 +3188,7 @@ sub generate_options {
     $add_option->( 'want-left-space',                           'wls',   '=s' );
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
     $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
+    $add_option->( 'trailing-comma-style',                      'tcs',   '=s' );
     $add_option->( 'valign-code',                               'vc',    '!' );
     $add_option->( 'valign-block-comments',                     'vbc',   '!' );
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );
