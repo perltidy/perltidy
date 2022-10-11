@@ -101,8 +101,17 @@
             my ($curr) = current();
             err(@_);
 
+    - The following new parameters are available for manipulating
+      trailing commas:
+
+           --want-trailing-commas=s, -wtc=s
+           --add-trailing-commas,    -atc
+           --delete-trailing-commas, -dtc
+           --delete-weld-interfering-commas, -dwic
+
     - This version runs about 10 to 15 percent faster than the previous
-      release on large files, depending on formatting parameters.
+      release on large files, depending on formatting parameters, due to
+      optimizations made with the help of Devel::NYTProf.
 
 ## 2022 06 13
 

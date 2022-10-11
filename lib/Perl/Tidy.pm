@@ -3187,8 +3187,8 @@ sub generate_options {
     $add_option->( 'trim-pod',                                  'trp',   '!' );
     $add_option->( 'want-left-space',                           'wls',   '=s' );
     $add_option->( 'want-right-space',                          'wrs',   '=s' );
+    $add_option->( 'want-trailing-commas',                      'wtc',   '=s' );
     $add_option->( 'space-prototype-paren',                     'spp',   '=i' );
-    $add_option->( 'trailing-comma-style',                      'tcs',   '=s' );
     $add_option->( 'valign-code',                               'vc',    '!' );
     $add_option->( 'valign-block-comments',                     'vbc',   '!' );
     $add_option->( 'valign-side-comments',                      'vsc',   '!' );

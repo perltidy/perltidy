@@ -2449,7 +2449,7 @@ sub initialize_trailing_comma_rules {
 
     # Setup control hash for trailing commas
 
-    # -tcs=s defines desired trailing comma policy:
+    # -wtc=s defines desired trailing comma policy:
     #
     #  =" "  stable
     #        [ both -atc  and -dtc ignored ]
@@ -2469,7 +2469,7 @@ sub initialize_trailing_comma_rules {
 
     my $rvalid_flags = [qw(0 1 * m b h)];
 
-    my $option = $rOpts->{'trailing-comma-style'};
+    my $option = $rOpts->{'want-trailing-commas'};
 
     if ($option) {
         $option =~ s/^\s+//;
@@ -2542,7 +2542,7 @@ sub initialize_trailing_comma_rules {
 
         if ($error_message) {
             Warn(<<EOM);
-Error parsing --trailing-comma-style='$option':
+Error parsing --want-trailing-commas='$option':
 $error_message
 EOM
         }

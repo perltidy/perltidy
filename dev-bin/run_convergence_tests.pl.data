@@ -10190,7 +10190,7 @@ $font_size
                                     }
 
 ==> b1378.par <==
--extrude -vtc=2 -dtc -tcs=0
+-extrude -vtc=2 -dtc -wtc=0
 
 ==> b1379.in <==
 # S1
@@ -10217,7 +10217,7 @@ print star (
 --maximum-fields-per-table=27
 --maximum-line-length=40
 --space-function-paren
---trailing-comma-style='b'
+--want-trailing-commas='b'
 --variable-maximum-line-length
 --vertical-tightness-closing=2
 
