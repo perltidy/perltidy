@@ -10221,6 +10221,30 @@ print star (
 --variable-maximum-line-length
 --vertical-tightness-closing=2
 
+==> b1381.in <==
+my $formatter = new HTML::FormatPS(
+    'PaperSize'   => 'Letter', 'LeftMargin' => 20,    # in points
+    'RightMargin' => 20,                              # ditto
+    'TopMargin'   => 10, 'BottomMargin' => 30,
+    'FontFamily'  => 'Helvetica', );
+
+my $formatter = new HTML::FormatPS(
+    'PaperSize'   => 'Letter', 'LeftMargin' => 20,    # in points
+    'RightMargin' => 20,                              # ditto
+    'TopMargin'   => 10, 'BottomMargin' => 30, 'FontFamily' => 'Helvetica'
+);
+
+==> b1381.par <==
+--add-trailing-commas
+--comma-arrow-breakpoints=3
+--delete-trailing-commas
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--maximum-line-length=70
+--paren-vertical-tightness-closing=1
+--want-trailing-commas='b'
+--variable-maximum-line-length
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

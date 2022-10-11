@@ -8101,8 +8101,9 @@ sub match_trailing_comma_rule {
             $rLL_new );
     }
 
-    # Fix for b1379, b1380, part 1. Mark bare trailing commas for use by -vtc
-    # logic to avoid instability when -dtc and -atc are both active.
+    # Fix for b1379, b1380, b1381, b1382 part 1. Mark bare trailing commas for
+    # use by -vtc logic to avoid instability when -dtc and -atc are both
+    # active.
     if ( $match
         && ( $trailing_comma_style eq 'b' || $trailing_comma_style eq 'h' ) )
     {
@@ -27500,13 +27501,14 @@ sub set_vertical_tightness_flags {
                 $cvt = 1;
             }
 
-            # Fix for b1379, b1380, part 2. In some rare cases, -cvt=2 can be
-            # unstable with adding and deleting trailing bare commas.
-            # Reducing to -cvt=1 seems to restore stability.
-            if (   $cvt == 2
+            # Fix for b1379, b1380, b1381, b1382 part 2.
+            # Instablility with adding and deleting trailing bare commas.
+            # Reducing -cvt=2 to -cvt=1 fixes stability in b1379, b1380.
+            # Reducing -cvt>0 to -cvt=0 fixes stability in b1381, b1382.
+            if (   $cvt
                 && $self->[_ris_bare_trailing_comma_by_seqno_]->{$seqno} )
             {
-                $cvt = 1;
+                $cvt = 0;
             }
 
             if (
