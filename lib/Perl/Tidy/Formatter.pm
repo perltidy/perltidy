@@ -529,6 +529,7 @@ BEGIN {
         _roverride_cab3_                   => $i++,
         _ris_assigned_structure_           => $i++,
         _ris_short_broken_eval_block_      => $i++,
+        _ris_bare_trailing_comma_by_seqno_ => $i++,
 
         _rseqno_non_indenting_brace_by_ix_    => $i++,
         _rreduce_vertical_tightness_by_seqno_ => $i++,
@@ -952,6 +953,7 @@ sub new {
     $self->[_roverride_cab3_]                   = {};
     $self->[_ris_assigned_structure_]           = {};
     $self->[_ris_short_broken_eval_block_]      = {};
+    $self->[_ris_bare_trailing_comma_by_seqno_] = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_]    = {};
     $self->[_rreduce_vertical_tightness_by_seqno_] = {};
@@ -2463,7 +2465,7 @@ sub initialize_trailing_comma_rules {
     #        if -dtc set => will delete non-bare trailing commas
     #  =h or 'hash': single column stable bare lists require trailing comma
     #        if -atc set will add these
-    #        TODO: currently only works with -atc
+    #        if -dtc set will delete other trailing commas
 
     my $rvalid_flags = [qw(0 1 * m b h)];
 
@@ -8097,6 +8099,18 @@ sub match_trailing_comma_rule {
         $match &&=
           $self->match_paren_control_flag( $type_sequence, $paren_flag,
             $rLL_new );
+    }
+
+    # Fix for b1379, b1380, part 1. Mark bare trailing commas for use by -vtc
+    # logic to avoid instability when -dtc and -atc are both active.
+    if ( $match
+        && ( $trailing_comma_style eq 'b' || $trailing_comma_style eq 'h' ) )
+    {
+        if ( $if_add && $rOpts_delete_trailing_commas
+            || !$if_add && $rOpts_add_trailing_commas )
+        {
+            $self->[_ris_bare_trailing_comma_by_seqno_]->{$type_sequence} = 1;
+        }
     }
 
     return $match;
@@ -27482,6 +27496,15 @@ sub set_vertical_tightness_flags {
             if (   $cvt == 2
                 && $rOpts_delete_old_whitespace
                 && !$rOpts_add_whitespace )
+            {
+                $cvt = 1;
+            }
+
+            # Fix for b1379, b1380, part 2. In some rare cases, -cvt=2 can be
+            # unstable with adding and deleting trailing bare commas.
+            # Reducing to -cvt=1 seems to restore stability.
+            if (   $cvt == 2
+                && $self->[_ris_bare_trailing_comma_by_seqno_]->{$seqno} )
             {
                 $cvt = 1;
             }

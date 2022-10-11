@@ -10190,7 +10190,36 @@ $font_size
                                     }
 
 ==> b1378.par <==
--extrude -vtc=2 -dtc=1
+-extrude -vtc=2 -dtc -tcs=0
+
+==> b1379.in <==
+# S1
+print star (
+             'Sol',
+             planet (
+                      'Earth', moon ('Lunar')
+             ), );
+
+# S2
+print star (
+             'Sol',
+             planet (
+                   'Earth', moon ('Lunar'), )
+);
+
+
+==> b1379.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=3
+--maximum-fields-per-table=27
+--maximum-line-length=40
+--space-function-paren
+--trailing-comma-style='b'
+--variable-maximum-line-length
+--vertical-tightness-closing=2
 
 ==> b140.in <==
 $cmd[ $i ]=[
