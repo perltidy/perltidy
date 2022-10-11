@@ -3516,15 +3516,17 @@ Here is an example.
         "09" => 30, "10" => 31, "11" => 30, "12" => 31
     );
 
-=item B<-wtc=s>,  B<--want-trailing-commas=s>
+=back
+
+=head2 Trailing Commas
 
 A trailing comma is a comma following the last item of a list. Perl allows
 trailing commas but they are not required.  By default, perltidy does not add
 or delete trailing commas, but it is possible to do this with the following set of three related parameters:
 
   --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
-  --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style
-  --delete-trailing-commas, -dtc   - gives permission to delete trailing commas which do not match the style
+  --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
+  --delete-trailing-commas, -dtc   - gives permission to delete trailing commas which do not match the style wanted
 
 The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred style.  The string B<s> indicates which lists should get trailing commas, as follows:
 
@@ -3536,8 +3538,8 @@ The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred sty
   s=' ', or -wtc not defined : leave trailing commas unchanged [DEFAULT].
 
 This parameter by itself only indicates the where trailing commas are
-wanted.  Perltidy only adds these trailing commas if the flag B<--add-trailing-comma>, or B<-atc> is set.  And perltidy only removes unwanted trailing commas
-if the flag B<--delete-trailing-comma> is set.
+wanted.  Perltidy only adds these trailing commas if the flag B<--add-trailing-commas>, or B<-atc> is set.  And perltidy only removes unwanted trailing commas
+if the flag B<--delete-trailing-commas> is set.
 
 Here are some example parameter combinations and their meanings
 
@@ -3548,8 +3550,14 @@ Here are some example parameter combinations and their meanings
   -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
                       any trailing commas on single line lists are removed.
 
-For example, we can add a comma after the variable C<$Root> in the example
-a few lines above using
+For example, given the following input without a trailing comma
+
+    bless {
+        B    => $B,
+        Root => $Root
+    } => $package;
+
+we can add a trailing comma after the variable C<$Root> using
 
     # perltidy -wtc=m -atc
     bless {
@@ -3557,9 +3565,9 @@ a few lines above using
         Root => $Root,
     } => $package;
 
-This could also be achieved in this case with B<-wtc=b -atc> because
-the trailing comma here is bare (separated from the closing brace by a newline).
-And it could also be achieved with B<-wtc=h -atc> because this particular
+This could also be achieved in this case with B<-wtc=b> instead of B<-wtc=m>
+because the trailing comma here is bare (separated from its closing brace by a
+newline).  And it could also be achieved with B<-wtc=h> because this particular
 list is a list of key=>value pairs.
 
 It is possible to apply a different style to different types of containing
@@ -3572,20 +3580,42 @@ lists within square brackets have bare trailing commas. Since there is no
 specification for curly braces in this example, their trailing commas would
 remain unchanged.
 
+An optional additional item of information which can be given for parentheses is an alphanumeric
+letter which is used to limit the selection further depending on the type of
+token immediately before the opening paren.  The possible letters are currently 'k',
+'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
+
+ 'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
+ 'K' matches if 'k' does not, meaning that the previous token is not a keyword.
+ 'f' matches if the previous token is a function other than a keyword.
+ 'F' matches if 'f' does not.
+ 'w' matches if either 'k' or 'f' match.
+ 'W' matches if 'w' does not.
+
+These are the same codes used for B<--line-up-parentheses-inclusion-list>.
+For example,
+
+  -wtc = 'w(m'
+
+means that trailing commas are wanted for multi-line parenthesized lists following a function call or keyword.
+
 Here are some points regarding adding and deleting trailing commas:
 
 =over 4
 
 =item *
 
-For the implementation of these parameters, a B<list> is basically taken to be a sequence of items in a container (parens, square brackets, or braces) which is not a code block, separated by one or more commas.
+For the implementation of these parameters, a B<list> is basically taken to be
+a container of items (parens, square brackets, or braces) which is not a code
+block, with one or more commas.  These parameters only apply to something that
+fits this definition of a list.
 
-So a paren-less list of parameters is not a list by this definition.
+So a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list.
 
-And note that if the only comma in a list is a trailing comma, and it is
-deleted with these commands, then that container will no longer be a list by
-this definition. Consequently, a trailing comma cannot later be added to that
-container.
+Also note that if the only comma in a list is a trailing comma, and it is
+deleted with these commands, then that container will no longer have a comma
+and will therefore no longer be a list by this definition. Consequently, a
+trailing comma cannot later be added back to that container.
 
 =item *
 
@@ -3605,10 +3635,12 @@ or two to reach a final state.
 
 =item *
 
+An effective way to use of these parameters is for the transformation of a program into a new desired state. Then they can be deactivated since the transformed state will remain stable.
+
+=item *
+
 When using these parameters for the first time it is a good idea to practice
 on some test scripts and verify that the results are as expected.
-
-=back
 
 =back
 
