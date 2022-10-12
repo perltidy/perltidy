@@ -2924,50 +2924,6 @@ Here are some additional example strings and their meanings:
     '[ {'  - exclude all brackets and braces
     '[ ( ^K{' - exclude everything except nested structures like do {{  ... }}
 
-=item B<-dwic>,  B<--delete-weld-interfering-commas>
-
-If the closing tokens of two nested containers are separated by a comma, then
-welding cannot occur.  Any commas in this situation are optional trailing
-commas and can be removed if desired.  This can be done by hand, but on large
-scripts it might be easier to use this parameter.  The parameter B<-dwic> tells
-perltidy to remove any such commas that it finds.  For example, using a
-previous example with an added comma, we see that the comma prevents welding:
-
-    # perltidy -wn
-    skip_symbols(
-        [ qw(
-            Perl_dump_fds
-            Perl_ErrorNo
-            Perl_GetVars
-            PL_sys_intern
-        ) ],
-    );
-
-If this is not desired, then the comma can be removed manually or by using B<-dwic>, as follows:
-
-    # perltidy -wn -dwic
-    skip_symbols( [ qw(
-        Perl_dump_fds
-        Perl_ErrorNo
-        Perl_GetVars
-        PL_sys_intern
-    ) ] );
-
-Here are some points to note about the B<-dwic> parameter
-
-=over 4
-
-=item *
-
-This operation is not reversible, so please check results of using this parameter carefully.
-
-=item *
-
-Removing these isolated trailing commas is necessary for welding to be
-possible, but not sufficient.
-
-=back
-
 
 =item B<Vertical tightness> of non-block curly braces, parentheses, and square brackets.
 
@@ -3518,11 +3474,15 @@ Here is an example.
 
 =back
 
-=head2 Trailing Commas
+=head2 Trailing Comma Controls
 
 A trailing comma is a comma following the last item of a list. Perl allows
-trailing commas but they are not required.  By default, perltidy does not add
-or delete trailing commas, but it is possible to do this with the following set of three related parameters:
+trailing commas but they are not required.  So using them is optional, but they
+can be useful. In particular, having a comma at the end of each line of a list
+can simplify the use of an editor to reorder or add new lines.
+
+By default, perltidy does not add or delete commas, but it is possible to
+manipulate trailing commas with the following set of three related parameters:
 
   --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
   --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
@@ -3546,7 +3506,7 @@ Here are some example parameter combinations and their meanings
   -wtc=0 -dtc   : delete all trailing commas
   -wtc=1 -atc   : put trailing commas on all lists
   -wtc=m -atc   : all multi-line lists get trailing commas;
-                  single line lists may or may not have trailing commas
+                  single line lists remain unchanged.
   -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
                       any trailing commas on single line lists are removed.
 
@@ -3570,8 +3530,10 @@ because the trailing comma here is bare (separated from its closing brace by a
 newline).  And it could also be achieved with B<-wtc=h> because this particular
 list is a list of key=>value pairs.
 
-It is possible to apply a different style to different types of containing
-tokens by including an opening token ahead of the style character in the above table.  For example
+The above styles should cover the main of situations of interest, but it is
+possible to apply a different style to each type of container token by
+including an opening token ahead of the style character in the above table.
+For example
 
     -wtc='(m [b'
 
@@ -3580,10 +3542,11 @@ lists within square brackets have bare trailing commas. Since there is no
 specification for curly braces in this example, their trailing commas would
 remain unchanged.
 
-An optional additional item of information which can be given for parentheses is an alphanumeric
-letter which is used to limit the selection further depending on the type of
-token immediately before the opening paren.  The possible letters are currently 'k',
-'K', 'f', 'F', 'w', and 'W', with these meanings for matching whatever precedes an opening paren:
+For parentheses, an additional item of information which can be given is an
+alphanumeric letter which is used to limit the selection further depending on
+the type of token immediately before the opening paren.  The possible letters
+are currently 'k', 'K', 'f', 'F', 'w', and 'W', with these meanings for
+matching whatever precedes an opening paren:
 
  'k' matches if the previous nonblank token is a perl built-in keyword (such as 'if', 'while'),
  'K' matches if 'k' does not, meaning that the previous token is not a keyword.
@@ -3599,23 +3562,34 @@ For example,
 
 means that trailing commas are wanted for multi-line parenthesized lists following a function call or keyword.
 
-Here are some points regarding adding and deleting trailing commas:
+Here are some points to note regarding adding and deleting trailing commas:
 
 =over 4
 
 =item *
 
 For the implementation of these parameters, a B<list> is basically taken to be
-a container of items (parens, square brackets, or braces) which is not a code
+a container of items (parens, square brackets, or braces), which is not a code
 block, with one or more commas.  These parameters only apply to something that
 fits this definition of a list.
 
-So a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list.
+So a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list. For example, the trailing comma
+in the following line cannot be manipulated with these parameters:
 
-Also note that if the only comma in a list is a trailing comma, and it is
-deleted with these commands, then that container will no longer have a comma
-and will therefore no longer be a list by this definition. Consequently, a
-trailing comma cannot later be added back to that container.
+   my $theta = atan2 $y, $x, ;
+
+Another consequence is that if the only comma in a list is deleted, then it
+cannot later be added back with these parameters because the container no
+longer fits this definition of a list.  For example, given
+
+    $x = $r * cos( $theta, );
+
+and if we remove the comma with
+
+    # perltidy -wtc=m -dtc
+    $x = $r * cos( $theta );
+
+then we cannot use these trailing comma controls to add this comma back.
 
 =item *
 
@@ -3625,11 +3599,12 @@ are on different lines.
 =item *
 
 A B<bare> trailing comma is a comma which is at the end of a line. That is,
-the closing container token follows on a different line.
+the closing container token follows on a different line.  So a bare trailing
+comma only occurs in a multi-line list.
 
 =item *
 
-The decision regarding whether or not a list is multiline or bare is
+The decision regarding whether or not a list is multi-line or bare is
 made based on the B<input> stream.  In some cases it may take an iteration
 or two to reach a final state.
 
@@ -3641,6 +3616,68 @@ An effective way to use of these parameters is for the transformation of a progr
 
 When using these parameters for the first time it is a good idea to practice
 on some test scripts and verify that the results are as expected.
+
+=back
+
+=head2 Other Comma Controls
+
+=item B<-dwic>,  B<--delete-weld-interfering-commas>
+
+If the closing tokens of two nested containers are separated by a comma, then
+welding requested with B<--weld-nested-containers> cannot occur.  Any commas in
+this situation are optional trailing commas and can be removed with B<-dwic>.
+For example, a comma in this scipt prevents welding:
+
+    # perltidy -wn
+    skip_symbols(
+        [ qw(
+            Perl_dump_fds
+            Perl_ErrorNo
+            Perl_GetVars
+            PL_sys_intern
+        ) ],
+    );
+
+Using B<-dwic> removes the comma and allows welding:
+
+    # perltidy -wn -dwic
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );
+
+Since the default is not to add or delete commas, this feature is off by default.
+Here are some points to note about the B<-dwic> parameter
+
+=over 4
+
+=item *
+
+This operation is not reversible, so please check results of using this parameter carefully.
+
+=item *
+
+Removing this type of isolated trailing comma is necessary for welding to be
+possible, but not sufficient.  So welding will not always occur where these
+commas are removed.
+
+=back
+
+=item B<-drc>,  B<--delete-repeated-commas>
+
+Repeated commas in a list are undesirable and can be removed with this flag.
+For example, given this list with a repeated comma
+
+      ignoreSpec( $file, "file",, \%spec, \%Rspec );
+
+we can remove it with -drc
+
+      # perltidy -drc:
+      ignoreSpec( $file, "file", \%spec, \%Rspec );
+
+Since the default is not to add or delete commas, this feature is off by default and must be requested.
 
 =back
 
@@ -5240,23 +5277,24 @@ dot is added, and the backup file will be F<somefile.pl~>  .
 The following list shows all short parameter names which allow a prefix
 'n' to produce the negated form:
 
- D      anl    asbl   asc    ast    asu    atnl   aws    b      baa
- baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc
- bok    bol    bom    bos    bot    cblx   ce     conv   cs     csc
- cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop
- dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    eos
- f      fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
- hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
- hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
- hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob
- isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
- lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
- sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
- sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
- tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
- vc     vmll   vsc    w      wn     x      xci    xlp    xs
+ D      anl    asbl   asc    ast    asu    atc    atnl   aws    b
+ baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa
+ boc    bok    bol    bom    bos    bot    cblx   ce     conv   cs
+ csc    cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl
+ dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtt    dwic
+ dwls   dwrs   dws    eos    f      fll    fpva   frm    fs     fso
+ gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm
+ hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent
+ hic    hicm   hico   hih    hihh   hii    hij    hik    him    hin
+ hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html
+ ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi   kis
+ lal    log    lop    lp     lsl    mem    nib    ohbr   okw    ola
+ olc    oll    olq    opr    opt    osbc   osbr   otr    ple    pod
+ pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     vmll   vsc    w      wfc    wn
+ x      xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

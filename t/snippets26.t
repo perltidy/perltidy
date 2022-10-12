@@ -19,6 +19,7 @@
 #16 c158.def
 #17 git108.def
 #18 git108.git108
+#19 wtc.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -353,6 +354,56 @@ $behaviour = {
               dog   => {prowl  => "growl", pool => "drool"},
               mouse => {nibble => "kibble"},
              };
+----------
+
+        'wtc' => <<'----------',
+# both single and multiple line lists:
+@LoL = (
+    [ "fred",   "barney", ],
+    [ "george", "jane",  "elroy" ],
+    [ "homer",  "marge", "bart", ],
+);
+
+# single line
+( $name, $body ) = ( $2, $3, );
+
+# multiline, but not bare
+$text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
+    selectbackgroundxxxxx => 'yellow', );
+
+# this will pass for 'h'
+my $new = {
+      %$item,
+      text => $leaf,
+      color => 'green'
+};
+
+# and this
+my @list = (
+
+    $xx,
+    $yy
+);
+
+# does not match 'h'
+$c1->create(
+    'rectangle', 40, 60, 80, 80,
+    -fill => 'red',
+    -tags => 'rectangle'
+);
+
+$dasm_frame->Button(
+    -text    => 'Locate',
+    -command => sub {
+        $target_binary = $fs->Show( -popover => 'cursor', -create  => 1, );
+    },
+)->pack( -side => 'left', );
+
+my $no_index_1_1 =
+  { 'map' =>
+      { ':key' => { name => \&string, list => { value => \&string }, }, }, };
+
+
 ----------
     };
 
@@ -838,6 +889,59 @@ my $species = new Bio::Species( -classification => [ qw(
     Chordata Metazoa Eukaryota
 ) ] );
 #18...........
+        },
+
+        'wtc.def' => {
+            source => "wtc",
+            params => "def",
+            expect => <<'#19...........',
+# both single and multiple line lists:
+@LoL = (
+    [ "fred",   "barney", ],
+    [ "george", "jane",  "elroy" ],
+    [ "homer",  "marge", "bart", ],
+);
+
+# single line
+( $name, $body ) = ( $2, $3, );
+
+# multiline, but not bare
+$text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
+    selectbackgroundxxxxx => 'yellow', );
+
+# this will pass for 'h'
+my $new = {
+    %$item,
+    text  => $leaf,
+    color => 'green'
+};
+
+# and this
+my @list = (
+
+    $xx,
+    $yy
+);
+
+# does not match 'h'
+$c1->create(
+    'rectangle', 40, 60, 80, 80,
+    -fill => 'red',
+    -tags => 'rectangle'
+);
+
+$dasm_frame->Button(
+    -text    => 'Locate',
+    -command => sub {
+        $target_binary = $fs->Show( -popover => 'cursor', -create => 1, );
+    },
+)->pack( -side => 'left', );
+
+my $no_index_1_1 =
+  { 'map' =>
+      { ':key' => { name => \&string, list => { value => \&string }, }, }, };
+
+#19...........
         },
     };
 

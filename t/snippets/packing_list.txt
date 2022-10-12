@@ -362,6 +362,15 @@
 ../snippets26.t	c154.def
 ../snippets26.t	code_skipping.code_skipping
 ../snippets26.t	c158.def
+../snippets26.t	git108.def
+../snippets26.t	git108.git108
+../snippets26.t	wtc.def
+../snippets27.t	wtc.wtc1
+../snippets27.t	wtc.wtc2
+../snippets27.t	wtc.wtc3
+../snippets27.t	wtc.wtc4
+../snippets27.t	wtc.wtc5
+../snippets27.t	wtc.wtc6
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -502,5 +511,5 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets26.t	git108.def
-../snippets26.t	git108.git108
+../snippets27.t	dwic.def
+../snippets27.t	dwic.dwic
