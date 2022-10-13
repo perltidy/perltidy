@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.05
+## 2022 06 13.06
 
     - Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
       is set, along with -wn, perltidy is allowed to weld an opening paren
