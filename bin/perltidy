@@ -3505,8 +3505,10 @@ Here are some example parameter combinations and their meanings
 
   -wtc=0 -dtc   : delete all trailing commas
   -wtc=1 -atc   : put trailing commas on all lists
-  -wtc=m -atc   : all multi-line lists get trailing commas;
+  -wtc=m -atc   : all multi-line lists get trailing commas, and
                   single line lists remain unchanged.
+  -wtc=m -dtc   : multi-line lists remain unchanged, and
+                  any trailing commas on single line lists are removed.
   -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
                       any trailing commas on single line lists are removed.
 

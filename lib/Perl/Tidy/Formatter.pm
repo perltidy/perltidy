@@ -15623,7 +15623,7 @@ EOM
         } ## end for ( my $i = 0 ; $i <=...)
 
         # Break at a single interior C-style for semicolon in this batch (c154)
-        if ( @i_for_semicolon == 1 ) {
+        if ( @i_for_semicolon && @i_for_semicolon == 1 ) {
             my $i     = $i_for_semicolon[0];
             my $inext = $inext_to_go[$i];
             if ( $inext <= $max_index_to_go && $types_to_go[$inext] ne '#' ) {
