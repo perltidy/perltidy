@@ -1231,9 +1231,9 @@ EOM
         # failure.  Actually, this could happen if you had a file of
         # all comments (or pod) and deleted everything with -dac (-dap)
         # for some reason.
-        if ( !-s $output_file && -s $backup_file && $delete_backup == 1 ) {
+        if ( !-s $input_file && -s $backup_file && $delete_backup == 1 ) {
             Warn(
-"output file '$output_file' missing or zero length; original '$backup_file' not deleted\n"
+"output file '$input_file' missing or zero length; original '$backup_file' not deleted\n"
             );
         }
         else {
@@ -1376,9 +1376,9 @@ EOM
         # failure.  Actually, this could happen if you had a file of
         # all comments (or pod) and deleted everything with -dac (-dap)
         # for some reason.
-        if ( !-s $output_file && -s $backup_name && $delete_backup == 1 ) {
+        if ( !-s $input_file && -s $backup_name && $delete_backup == 1 ) {
             Warn(
-"output file '$output_file' missing or zero length; original '$backup_name' not deleted\n"
+"output file '$input_file' missing or zero length; original '$backup_name' not deleted\n"
             );
         }
         else {
