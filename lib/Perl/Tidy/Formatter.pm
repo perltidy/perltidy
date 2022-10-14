@@ -1595,6 +1595,25 @@ EOM
         ##Warn("Increased -ci=n to n=2 for stability with -lp and -vmll\n");
     }
 
+    #-----------------------------------------------------------
+    # The combination -lp -vmll -atc -dtc -wtc=b can be unstable
+    #-----------------------------------------------------------
+    # This fixes b1386 b1387 b1388
+    if (   $rOpts->{'variable-maximum-line-length'}
+        && $rOpts->{'line-up-parentheses'}
+        && $rOpts->{'add-trailing-commas'}
+        && $rOpts->{'delete-trailing-commas'}
+        && $rOpts->{'want-trailing-commas'}
+        && $rOpts->{'want-trailing-commas'} =~ /b/ )
+    {
+        $rOpts->{'delete-trailing-commas'} = 0;
+## warning causes trouble with test cases and this combo is so rare that
+## it is unlikely to not occur in practice.
+##        Warn(
+##"The combination -vmll -lp -atc -dtc -wtc=b can be unstable; turning off -dtc\n"
+##        );
+    }
+
     %container_indentation_options = ();
     foreach my $pair (
         [ 'break-before-hash-brace-and-indent',     '{' ],
@@ -7860,7 +7879,11 @@ sub unstore_last_nonblank_token {
     # then the issue of what to do about the other variables, such
     # as token counts and the '$last...' vars needs to be considered.
 
-    return if ( @{$rLL_new} < 3 );    # for safety, shouldn't happen
+    # Safety check, shouldn't happen
+    if ( @{$rLL_new} < 3 ) {
+        DEVEL_MODE && Fault("not enough tokens on stack to remove '$type'\n");
+        return;
+    }
 
     my ( $rcomma, $rblank );
 
@@ -7879,6 +7902,7 @@ sub unstore_last_nonblank_token {
 
     # case 3: error, shouldn't happen unless bad call
     else {
+        DEVEL_MODE && Fault("Could not find token type '$type' to remove\n");
         return;
     }
 
@@ -8084,6 +8108,8 @@ sub match_trailing_comma_rule {
 
     # Unrecognized parameter, ignore. Should have been caught in input check
     else {
+
+        DEVEL_MODE && Fault("Unrecognized parameter '$trailing_comma_style'\n");
 
         # treat unknown parameter as stable
         return !$if_add;
@@ -8510,7 +8536,12 @@ sub is_in_block_by_i {
     #     or is at root level
     #     or there is some kind of error (i.e. unbalanced file)
     # returns false otherwise
-    return 1 if ( $i < 0 );    # shouldn't happen, bad call
+
+    if ( $i < 0 ) {
+        DEVEL_MODE && Fault("Bad call, i='$i'\n");
+        return 1;
+    }
+
     my $seqno = $parent_seqno_to_go[$i];
     return 1 if ( !$seqno || $seqno eq SEQ_ROOT );
     return 1 if ( $self->[_rblock_type_of_seqno_]->{$seqno} );

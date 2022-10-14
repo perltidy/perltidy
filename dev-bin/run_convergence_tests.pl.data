@@ -10245,6 +10245,54 @@ my $formatter = new HTML::FormatPS(
 --want-trailing-commas='b'
 --variable-maximum-line-length
 
+==> b1386.in <==
+# S1
+open( OUT,
+      ">"
+              . Bio::Root::IO->catfile(
+                                        "t", "out.pfam"
+              ),
+);
+
+# S2
+open( OUT,
+      ">"
+              . Bio::Root::IO->catfile( "t",
+                                        "out.pfam", ),
+);
+
+==> b1386.par <==
+--add-trailing-commas
+--continuation-indentation=8
+--delete-trailing-commas
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=3
+--maximum-line-length=52
+--variable-maximum-line-length
+--want-trailing-commas='b'
+
+==> b1387.in <==
+unlink(
+       Bio::Root::IO->catfile(
+                    "t", "gcg.out"
+       )
+);
+
+unlink(
+       Bio::Root::IO->catfile(
+           "t", "gcg.out", )
+);
+
+==> b1387.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--maximum-line-length=26
+--variable-maximum-line-length
+--want-trailing-commas='b'
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
