@@ -14422,11 +14422,26 @@ EOM
                 }
                 elsif ($rbrace_follower) {
 
-                    unless ( $rbrace_follower->{$next_nonblank_token} ) {
+                    if ( $rbrace_follower->{$next_nonblank_token} ) {
+
+                        # Fix for b1385: keep break after a comma following a
+                        # 'do' block. This could also be used for other block
+                        # types, but that would cause a significant change in
+                        # existing formatting without much benefit.
+                        if (   $next_nonblank_token eq ','
+                            && $Knnb eq $K_last
+                            && $block_type eq 'do'
+                            && $self->is_trailing_comma($Knnb) )
+                        {
+                            $self->[_rbreak_after_Klast_]->{$K_last} = 1;
+                        }
+                    }
+                    else {
                         $self->end_batch()
                           unless ( $no_internal_newlines
                             || $max_index_to_go < 0 );
                     }
+
                     $rbrace_follower = undef;
                 }
 
@@ -14473,6 +14488,33 @@ EOM
     } ## end sub process_line_inner_loop
 
 } ## end closure process_line_of_CODE
+
+sub is_trailing_comma {
+    my ( $self, $KK ) = @_;
+
+    # Given:
+    #   $KK - index of a comma in token list
+    # Return:
+    #   true if the comma at index $KK is a trailing comma
+    #   false if not
+
+    my $rLL     = $self->[_rLL_];
+    my $type_KK = $rLL->[$KK]->[_TYPE_];
+    if ( $type_KK ne ',' ) {
+        DEVEL_MODE
+          && Fault("Bad call: expected type ',' but received '$type_KK'\n");
+        return;
+    }
+    my $Knnb = $self->K_next_nonblank($KK);
+    if ( defined($Knnb) ) {
+        my $type_sequence = $rLL->[$Knnb]->[_TYPE_SEQUENCE_];
+        my $type_Knnb     = $rLL->[$Knnb]->[_TYPE_];
+        if ( $type_sequence && $is_closing_type{$type_Knnb} ) {
+            return 1;
+        }
+    }
+    return;
+} ## end sub is_trailing_comma
 
 sub tight_paren_follows {
 

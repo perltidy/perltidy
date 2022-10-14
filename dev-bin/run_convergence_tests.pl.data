@@ -10245,6 +10245,34 @@ my $formatter = new HTML::FormatPS(
 --want-trailing-commas='b'
 --variable-maximum-line-length
 
+==> b1385.in <==
+(
+    # optional glob
+    {
+        sub    => 'sub26',
+        p      => [ foo => 1, bar => do { local *BAR; *BAR }, ],
+        expect => q{},
+    },
+);
+
+(
+    # optional glob
+    {
+        sub => 'sub26',
+        p   => [
+            foo => 1,
+            bar => do { local *BAR; *BAR }
+        ],
+        expect => q{},
+    },
+);
+
+==> b1385.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--ignore-old-breakpoints
+--want-trailing-commas='m'
+
 ==> b1386.in <==
 # S1
 open( OUT,
