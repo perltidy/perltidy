@@ -5219,6 +5219,13 @@ EOM
 
                     $level_i = --$level_in_tokenizer;
 
+                    if ( $level_in_tokenizer < 0 ) {
+                        unless ( $self->[_saw_negative_indentation_] ) {
+                            $self->[_saw_negative_indentation_] = 1;
+                            warning("Starting negative indentation\n");
+                        }
+                    }
+
                     # restore previous level values
                     if ( length($nesting_block_string) > 1 )
                     {    # true for valid script
@@ -5300,10 +5307,6 @@ EOM
                                 }
                               );
                             ##if $routput_container_type->[$i] =~ /^[;,\{\}]$/;
-                        }
-
-                        elsif ( $tok_i eq ';' ) {
-                            $in_statement_continuation = 0;
                         }
                     } ## end if ( length($nesting_block_string...))
 
@@ -5394,12 +5397,6 @@ EOM
                 #-------------------------------------------
                 # Section 4: operations common to all levels
                 #-------------------------------------------
-                if ( $level_in_tokenizer < 0 ) {
-                    unless ( $self->[_saw_negative_indentation_] ) {
-                        $self->[_saw_negative_indentation_] = 1;
-                        warning("Starting negative indentation\n");
-                    }
-                }
 
                 # set secondary nesting levels based on all containment token
                 # types Note: these are set so that the nesting depth is the
