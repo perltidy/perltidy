@@ -10173,7 +10173,8 @@ $font_size
 
 
 ==> b1376.par <==
---add-trailing-commas='b'
+--add-trailing-commas
+--want-trailing-commas='b'
 --extended-line-up-parentheses
 --indent-columns=6
 --maximum-line-length=47
@@ -10244,6 +10245,33 @@ my $formatter = new HTML::FormatPS(
 --paren-vertical-tightness-closing=1
 --want-trailing-commas='b'
 --variable-maximum-line-length
+
+==> b1384.in <==
+    eval{
+        my@a=(foo=>'baz',bar=>'quux');
+        validate(@a,
+            {foo=>{regex=>qr/^baz$/},bar=>{regex=>'uqqx'}},
+        );
+    };
+
+    eval{
+        my@a=(foo=>'baz',bar=>'quux');
+        validate(@a,{foo=>{regex=>qr/^baz$/},bar=>{regex=>'uqqx'}});
+    };
+
+
+==> b1384.par <==
+--add-trailing-commas
+--noadd-whitespace
+--continuation-indentation=6
+--delete-old-whitespace
+--delete-trailing-commas
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--maximum-line-length=65
+--paren-vertical-tightness-closing=2
+--variable-maximum-line-length
+--want-trailing-commas='m'
 
 ==> b1385.in <==
 (
