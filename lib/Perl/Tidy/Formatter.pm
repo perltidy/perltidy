@@ -327,6 +327,7 @@ my (
     $line_up_parentheses_control_is_lxpl,
 
     %trailing_comma_rules,
+    $wtc_cutoff_level,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1795,9 +1796,6 @@ EOM
     initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
         'kba', \%keep_break_after_type );
 
-    %trailing_comma_rules = ();
-    initialize_trailing_comma_rules();
-
     #------------------------------------------------------------
     # Make global vars for frequently used options for efficiency
     #------------------------------------------------------------
@@ -2029,6 +2027,9 @@ EOM
         last if ( $remaining_cycles <= 3 );    # 2 does not work
         $stress_level_beta = $level;
     }
+
+    %trailing_comma_rules = ();
+    initialize_trailing_comma_rules();
 
     initialize_weld_nested_exclusion_rules();
     initialize_weld_fat_comma_rules();
@@ -2486,6 +2487,9 @@ sub initialize_trailing_comma_rules {
     #        if -atc set will add these
     #        if -dtc set will delete other trailing commas
 
+    # This routine must be called after the alpha and beta stress levels
+    # have been defined.
+
     my $rvalid_flags = [qw(0 1 * m b h)];
 
     my $option = $rOpts->{'want-trailing-commas'};
@@ -2571,6 +2575,24 @@ EOM
             %trailing_comma_rules = %rule_hash;
         }
     }
+
+    # Adding and deleting under stress can lead to instability.
+    # So we define an indentation level above which we shut things down
+    # if both adding and deleting trailing commas are requested.
+    # This fixes b1389, b1390, b1391, b1392.
+    if ( $rOpts_add_trailing_commas && $rOpts_delete_trailing_commas ) {
+
+        # This is the same as the $lp_cutoff_level used to shut down -lp:
+        $wtc_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+
+        # If the level is zero, then we can turn off everything right now.
+        if ( $wtc_cutoff_level < 1 ) {
+            %trailing_comma_rules         = ();
+            $rOpts_add_trailing_commas    = 0;
+            $rOpts_delete_trailing_commas = 0;
+        }
+    }
+
     return;
 }
 
@@ -7747,6 +7769,10 @@ sub add_trailing_comma {
     my $type_p = $rLL_new->[$Kp]->[_TYPE_];
     return if ( $type_p eq '#' );
 
+    return
+      if ( defined($wtc_cutoff_level)
+        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level );
+
     # see if the user wants a trailing comma here
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $trailing_comma_rule, 1 );
@@ -7789,6 +7815,10 @@ sub delete_trailing_comma {
         # there must be a '#' between the ',' and closing token; give up.
         return;
     }
+
+    return
+      if ( defined($wtc_cutoff_level)
+        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level );
 
     # See if the user wants this trailing comma
     my $match =

@@ -10349,6 +10349,57 @@ unlink(
 --variable-maximum-line-length
 --want-trailing-commas='b'
 
+==> b1390.in <==
+    seek
+      (
+        FH,
+        $end,
+        0
+        ,
+
+      )
+      ;
+
+    seek
+      (
+        FH,
+        $end,
+        0
+
+      )
+      ;
+
+==> b1390.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--maximum-line-length=1
+--want-trailing-commas='h'
+
+==> b1392.in <==
+if (  ioctl (  STDERR, $TIOCGWINSZ,
+               $winsize, )
+  ) {
+          ...;
+}
+
+if (  ioctl (  STDERR, $TIOCGWINSZ, $winsize
+      )
+  )
+{
+          ...;
+}
+
+==> b1392.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--indent-columns=10
+--maximum-line-length=45
+--paren-vertical-tightness=2
+--space-keyword-paren
+--want-trailing-commas='b'
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
