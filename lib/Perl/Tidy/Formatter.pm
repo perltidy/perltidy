@@ -2576,19 +2576,26 @@ EOM
         }
     }
 
-    # Adding and deleting under stress can lead to instability.
-    # So we define an indentation level above which we shut things down
-    # if both adding and deleting trailing commas are requested.
-    # This fixes b1389, b1390, b1391, b1392.
+    # Both adding and deleting commas can lead to instability in extreme cases
     if ( $rOpts_add_trailing_commas && $rOpts_delete_trailing_commas ) {
 
-        # This is the same as the $lp_cutoff_level used to shut down -lp:
+        # If the possible instability is significant, then we can turn off
+        # -dtc as a defensive measure to prevent it.
+
+        # One case is when the indentation level is so high that formatting is
+        # limited by the maximum line length. To handle this we define an
+        # indentation stress level above which we turn off -dtc.  This fixes
+        # b1389, b1390, b1391, b1392.  The following stress level is the same
+        # as used to shut down -lp ($lp_cutoff_level) and has been found to
+        # also work well for trailing commas:
         $wtc_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
-        # If the level is zero, then we can turn off everything right now.
-        if ( $wtc_cutoff_level < 1 ) {
-            %trailing_comma_rules         = ();
-            $rOpts_add_trailing_commas    = 0;
+        # And we must turn off -dtc for very small values of --whitespace-cycle
+        # to avoid instability.  A minimum value of -wc=3 fixes b1393, but a
+        # value of 4 is used here for safety.  This parameter is seldom used,
+        # and much larger than this when used, so the cutoff value is not
+        # critical.
+        if ( $rOpts_whitespace_cycle && $rOpts_whitespace_cycle <= 4 ) {
             $rOpts_delete_trailing_commas = 0;
         }
     }
@@ -7769,10 +7776,6 @@ sub add_trailing_comma {
     my $type_p = $rLL_new->[$Kp]->[_TYPE_];
     return if ( $type_p eq '#' );
 
-    return
-      if ( defined($wtc_cutoff_level)
-        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level );
-
     # see if the user wants a trailing comma here
     my $match =
       $self->match_trailing_comma_rule( $KK, $Kfirst, $trailing_comma_rule, 1 );
@@ -7816,9 +7819,12 @@ sub delete_trailing_comma {
         return;
     }
 
-    return
-      if ( defined($wtc_cutoff_level)
-        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level );
+    # Do not delete commas when formatting under stress to avoid instability.
+    if ( defined($wtc_cutoff_level)
+        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level )
+    {
+        return;
+    }
 
     # See if the user wants this trailing comma
     my $match =

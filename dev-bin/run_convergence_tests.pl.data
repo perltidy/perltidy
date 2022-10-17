@@ -10400,6 +10400,37 @@ if (  ioctl (  STDERR, $TIOCGWINSZ, $winsize
 --space-keyword-paren
 --want-trailing-commas='b'
 
+==> b1393.in <==
+      push (
+         @guaranteedata,
+         {
+   borrowernumber => $guarantees->[$i]->{'borrowernumber'},
+   cardnumber => $guarantees->[$i]->{'cardnumber'},
+   name => $guarantees->[$i]->{'firstname'} . " ". $guarantees->[$i]->{'surname'}
+         }
+      ) ;
+
+      push (
+         @guaranteedata,
+         {
+   borrowernumber => $guarantees->[$i]->{'borrowernumber'},
+   cardnumber => $guarantees->[$i]->{'cardnumber'},
+   name => $guarantees->[$i]->{'firstname'} . " "
+     . $guarantees->[$i]->{'surname'},
+         }
+      ) ;
+
+==> b1393.par <==
+--add-trailing-commas
+--noadd-whitespace
+--break-before-all-operators
+--delete-trailing-commas
+--indent-columns=3
+--maximum-line-length=69
+--variable-maximum-line-length
+--want-trailing-commas='h'
+--whitespace-cycle=3
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
