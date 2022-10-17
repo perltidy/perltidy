@@ -14465,6 +14465,7 @@ EOM
                         if (   $next_nonblank_token eq ','
                             && $Knnb eq $K_last
                             && $block_type eq 'do'
+                            && $rOpts_add_newlines
                             && $self->is_trailing_comma($Knnb) )
                         {
                             $self->[_rbreak_after_Klast_]->{$K_last} = 1;
