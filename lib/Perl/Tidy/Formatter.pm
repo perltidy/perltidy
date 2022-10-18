@@ -5613,7 +5613,12 @@ EOM
 
         my $rtokens = $line_of_tokens_old->{_rtokens};
         my $jmax    = @{$rtokens} - 1;
-        return if ( $jmax < 0 );    # safety check; shouldn't happen
+        if ( $jmax < 0 ) {
+
+            # safety check; shouldn't happen
+            DEVEL_MODE && Fault("unexpected jmax=$jmax\n");
+            return;
+        }
 
         my $line_number    = $line_of_tokens_old->{_line_number};
         my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
@@ -6196,6 +6201,7 @@ sub find_non_indenting_braces {
         if ( $line_type ne 'CODE' ) {
 
             # shouldn't happen
+            DEVEL_MODE && Fault("unexpected line_type=$line_type\n");
             next;
         }
         my $CODE_type = $line_of_tokens->{_code_type};
@@ -6204,6 +6210,7 @@ sub find_non_indenting_braces {
         unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
 
             # shouldn't happen
+            DEVEL_MODE && Fault("did not get a comment\n");
             next;
         }
         next unless ( $Klast > $Kfirst );    # maybe HSC
@@ -6766,8 +6773,8 @@ sub respace_tokens_inner_loop {
     #-----------------------------------------------------------------
     foreach my $KK ( $Kfirst .. $Klast ) {
 
-        # TODO: eliminate this closure var by passing directly to store_token
-        # following pattern of store_tokens_to_go.
+        # TODO: consider eliminating this closure var by passing directly to
+        # store_token following pattern of store_tokens_to_go.
         $Ktoken_vars = $KK;
 
         my $rtoken_vars = $rLL->[$KK];
@@ -7969,8 +7976,8 @@ sub match_trailing_comma_rule {
     # Decide if a trailing comma rule is matched.
 
     # Input parameter:
-    #  $KK = index of closing token in old ($rLL) token list
-    #        which starts a new line and is not preceded by a comma
+    #  $KK = index of closing token in old ($rLL) token list which follows
+    #    the location of a possible trailing comma. See diagram below.
     #  $Kfirst = (old) index of first token on the current line of input tokens
     #  $trailing_comma_rule = packed user control flags
     #  $if_add = true if adding comma, false if deleteing comma
@@ -7984,9 +7991,9 @@ sub match_trailing_comma_rule {
     #   bless {
     #           _name   => $name,
     #           _price  => $price,
-    #           _rebate => $rebate  <------ location of possible bare comma
+    #           _rebate => $rebate  <------ location of possible trailing comma
     #          }, $pkg;
-    #          ^-------------------closing token at index $KK on new line
+    #          ^-------------------closing token at index $KK
 
     return unless ($trailing_comma_rule);
     my ( $trailing_comma_style, $paren_flag ) = @{$trailing_comma_rule};
@@ -7995,15 +8002,15 @@ sub match_trailing_comma_rule {
     #   undef  stable: do not change
     #   '0' never want trailing commas
     #   '* or 1' always want trailing commas
-    #   'h' add a bare trailing comma to a stable list with about
-    #       one comma per line (such as Hash list of key=>value pairs).
-    #   'b' want bare trailing commas ( followed by newline )
     #   'm' want multiline trailing commas
     #       (i.e., opening and closing tokens are on different lines)
+    #   'b' want bare trailing commas ( followed by newline )
+    #   'h' add a bare trailing comma to a stable list with about
+    #       one comma per line (such as Hash list of key=>value pairs).
 
-    #-----------------------
-    #  undef : do not change
-    #-----------------------
+    #-----------------------------------------
+    #  No style defined : do not add or delete
+    #-----------------------------------------
     if ( !defined($trailing_comma_style) ) { return !$if_add }
 
     #----------------------------------------
@@ -8065,6 +8072,10 @@ sub match_trailing_comma_rule {
     #     or stable single field lists with about 1 comma per line.
     #------------------------------------------------------------------
     elsif ( $trailing_comma_style eq 'h' ) {
+
+        # This is a minimal style which can put trailing commas where
+        # they are most useful - at the end of simple lists which might,
+        # for example, need to be sorted.
 
         return if ( !$is_bare_comma );
 
@@ -8142,12 +8153,14 @@ sub match_trailing_comma_rule {
         }
     }
 
-    # Unrecognized parameter, ignore. Should have been caught in input check
+    #-------------------------------------------------------------------------
+    # Unrecognized parameter. This should have been caught in the input check.
+    #-------------------------------------------------------------------------
     else {
 
         DEVEL_MODE && Fault("Unrecognized parameter '$trailing_comma_style'\n");
 
-        # treat unknown parameter as stable
+        # do not add or delete
         return !$if_add;
     }
 
@@ -15397,11 +15410,12 @@ EOM
 
             # shouldn't happen, but not a critical error
             else {
-                DEBUG_UNDOBP && do {
+                if (DEVEL_MODE) {
                     my ( $a, $b, $c ) = caller();
-                    print STDOUT
-"Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go";
-                };
+                    Fault(<<EOM);
+Program Bug: undo_forced_breakpoint from $a $c has i=$i but max=$max_index_to_go
+EOM
+                }
             }
         }
         return;
@@ -16312,6 +16326,7 @@ EOM
 
                     # shouldn't happen
                     $seqno = 'UNKNOWN';
+                    DEVEL_MODE && Fault("unable to find sequence number\n");
                 }
             }
 
@@ -17775,7 +17790,8 @@ sub break_equals {
 
             # Do not recombine at comma which is following the
             # input bias.
-            # TODO: might be best to make a special flag
+            # NOTE: this could be controlled by a special flag,
+            # but it seems to work okay.
             return if ( $old_breakpoint_to_go[$iend_1] );
 
             # An isolated '},' may join with an identifier + ';'
@@ -21110,7 +21126,7 @@ EOM
             }
             else {
 
-                ## TODO: verify that this equals closure var $type_sequence
+                # NOTE: $seqno will be equal to closure var $type_sequence here
                 my $seqno = $type_sequence_to_go[$i_opening];
                 $saw_opening_structure =
                   !$self->match_paren_control_flag( $seqno, $flag );
@@ -22575,11 +22591,12 @@ sub set_nobreaks {
 
     # shouldn't happen; non-critical error
     else {
-        0 && do {
+        if (DEVEL_MODE) {
             my ( $a, $b, $c ) = caller();
-            print STDOUT
-              "NOBREAK ERROR: from $a $c with i=$i j=$j max=$max_index_to_go\n";
-        };
+            Fault(<<EOM);
+NOBREAK ERROR: from $a $c with i=$i j=$j max=$max_index_to_go
+EOM
+        }
     }
     return;
 } ## end sub set_nobreaks
@@ -22846,7 +22863,12 @@ sub get_available_spaces_to_go {
             {
                 my $KK = $K_to_go[$ii];
                 $level = $radjusted_levels->[$KK];
-                if ( $level < 0 ) { $level = 0 }  # note: this should not happen
+                if ( $level < 0 ) {
+
+                    # should not happen
+                    DEVEL_MODE && Fault("unexpected level=$level\n");
+                    $level = 0;
+                }
             }
 
             # get the top state from the stack if it has changed
@@ -23070,7 +23092,6 @@ sub get_available_spaces_to_go {
         # Skip an empty set of parens, such as after channel():
         #   my $exchange = $self->_channel()->exchange(
         # This fixes issues b1318 b1322 b1323 b1328
-        # TODO: maybe also skip parens with just one token?
         my $is_empty_container;
         if ( $ii_last_equals && $ii < $max_index_to_go ) {
             my $seqno    = $type_sequence_to_go[$ii];
@@ -25734,6 +25755,8 @@ sub pad_token {
     else {
 
         # shouldn't happen
+        DEVEL_MODE
+          && Fault("unexpected request for pad spaces = $pad_spaces\n");
         return;
     }
 
@@ -27351,7 +27374,7 @@ sub get_opening_indentation {
     # $rindentation_list - reference to a list containing the indentation
     #            used for each line.
     # $qw_seqno - optional sequence number to use if normal seqno not defined
-    #           (TODO: would be more general to just look this up from index i)
+    #           (NOTE: would be more general to just look this up from index i)
     #
     # return:
     #   -the indentation of the line which contained the opening token
