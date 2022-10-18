@@ -23920,18 +23920,15 @@ sub convey_batch_to_vertical_aligner {
 
     my $n_last_line = @{$ri_first} - 1;
 
-    my $do_not_pad               = $this_batch->[_do_not_pad_];
-    my $peak_batch_size          = $this_batch->[_peak_batch_size_];
-    my $starting_in_quote        = $this_batch->[_starting_in_quote_];
-    my $ending_in_quote          = $this_batch->[_ending_in_quote_];
-    my $is_static_block_comment  = $this_batch->[_is_static_block_comment_];
-    my $rix_seqno_controlling_ci = $this_batch->[_rix_seqno_controlling_ci_];
-    my $batch_CODE_type          = $this_batch->[_batch_CODE_type_];
+    my $do_not_pad              = $this_batch->[_do_not_pad_];
+    my $starting_in_quote       = $this_batch->[_starting_in_quote_];
+    my $ending_in_quote         = $this_batch->[_ending_in_quote_];
+    my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
+    my $batch_CODE_type         = $this_batch->[_batch_CODE_type_];
 
-    my $rLL                  = $self->[_rLL_];
-    my $Klimit               = $self->[_Klimit_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
-    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+    my $rLL               = $self->[_rLL_];
+    my $Klimit            = $self->[_Klimit_];
+    my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
 
     my $ibeg_next = $ri_first->[0];
     my $iend_next = $ri_last->[0];
@@ -23949,8 +23946,10 @@ sub convey_batch_to_vertical_aligner {
           $self->add_closing_side_comment( $ri_first, $ri_last );
     }
 
-    $self->undo_ci( $ri_first, $ri_last, $rix_seqno_controlling_ci )
-      if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation );
+    if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation ) {
+        $self->undo_ci( $ri_first, $ri_last,
+            $this_batch->[_rix_seqno_controlling_ci_] );
+    }
 
     # for multi-line batches ...
     if ( $n_last_line > 0 ) {
@@ -23960,8 +23959,7 @@ sub convey_batch_to_vertical_aligner {
           if ( $type_beg_next eq 'k'
             && $is_if_unless{$token_beg_next} );
 
-        $self->set_logical_padding( $ri_first, $ri_last, $peak_batch_size,
-            $starting_in_quote )
+        $self->set_logical_padding( $ri_first, $ri_last, $starting_in_quote )
           if ($rOpts_logical_padding);
 
         $self->xlp_tweak( $ri_first, $ri_last )
@@ -24167,7 +24165,7 @@ EOM
 
                 my $seqno_m = $rLL->[$Km]->[_TYPE_SEQUENCE_];
                 if ($seqno_m) {
-                    $block_type_m = $rblock_type_of_seqno->{$seqno_m};
+                    $block_type_m = $self->[_rblock_type_of_seqno_]->{$seqno_m};
                 }
             }
 
@@ -25259,8 +25257,7 @@ sub get_seqno {
         #           &Error_OutOfRange;
         #       }
         #
-        my ( $self, $ri_first, $ri_last, $peak_batch_size, $starting_in_quote )
-          = @_;
+        my ( $self, $ri_first, $ri_last, $starting_in_quote ) = @_;
         my $max_line = @{$ri_first} - 1;
 
         my ( $ibeg, $ibeg_next, $ibegm, $iend, $iendm, $ipad, $pad_spaces,
@@ -25516,6 +25513,8 @@ sub get_seqno {
             # an editor.  In that case either the user will see and
             # fix the problem or it will be corrected next time the
             # entire file is processed with perltidy.
+            my $this_batch      = $self->[_this_batch_];
+            my $peak_batch_size = $this_batch->[_peak_batch_size_];
             next if ( $ipad == 0 && $peak_batch_size <= 1 );
 
             # next line must not be at greater depth
@@ -25747,6 +25746,9 @@ sub pad_token {
     if ( $pad_spaces > 0 ) {
         $tok = SPACE x $pad_spaces . $tok;
         $tok_len += $pad_spaces;
+    }
+    elsif ( $pad_spaces == 0 ) {
+        return;
     }
     elsif ( $pad_spaces == -1 && $tokens_to_go[$ipad] eq SPACE ) {
         $tok     = EMPTY_STRING;

@@ -409,7 +409,7 @@ for ( my $nf = $nf_beg ; $nf <= $nf_end ; $nf++ ) {
 
             # reduce this value to increase the fraction of chaining;
             # 0.5 gives equal probability of chain/nochain
-            my $frac_no_chain = 0.4;
+            my $frac_no_chain = 0.25;
 
             #if ( $chain_mode == 1 || int( rand(1) + 0.5 ) ) {
             if ( $chain_mode == 1 || rand(1) > $frac_no_chain ) {
