@@ -8184,6 +8184,12 @@ sub match_trailing_comma_rule {
             || !$if_add && $rOpts_add_trailing_commas )
         {
             $self->[_ris_bare_trailing_comma_by_seqno_]->{$type_sequence} = 1;
+
+            # The combination of -atc and -dtc and -cab=3 can be unstable
+            # (b1394). So we deactivate -cab=3 in this case.
+            if ( $rOpts_comma_arrow_breakpoints == 3 ) {
+                $self->[_roverride_cab3_]->{$type_sequence} = 1;
+            }
         }
     }
 
@@ -23912,23 +23918,22 @@ sub convey_batch_to_vertical_aligner {
     #   logical constructions
     # - send the line to the vertical aligner
 
-    my $this_batch = $self->[_this_batch_];
-    my $ri_first   = $this_batch->[_ri_first_];
-    my $ri_last    = $this_batch->[_ri_last_];
-
-    $self->check_convey_batch_input( $ri_first, $ri_last ) if (DEVEL_MODE);
-
-    my $n_last_line = @{$ri_first} - 1;
+    my $rLL               = $self->[_rLL_];
+    my $Klimit            = $self->[_Klimit_];
+    my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
+    my $this_batch        = $self->[_this_batch_];
 
     my $do_not_pad              = $this_batch->[_do_not_pad_];
     my $starting_in_quote       = $this_batch->[_starting_in_quote_];
     my $ending_in_quote         = $this_batch->[_ending_in_quote_];
     my $is_static_block_comment = $this_batch->[_is_static_block_comment_];
     my $batch_CODE_type         = $this_batch->[_batch_CODE_type_];
+    my $ri_first                = $this_batch->[_ri_first_];
+    my $ri_last                 = $this_batch->[_ri_last_];
 
-    my $rLL               = $self->[_rLL_];
-    my $Klimit            = $self->[_Klimit_];
-    my $ris_list_by_seqno = $self->[_ris_list_by_seqno_];
+    $self->check_convey_batch_input( $ri_first, $ri_last ) if (DEVEL_MODE);
+
+    my $n_last_line = @{$ri_first} - 1;
 
     my $ibeg_next = $ri_first->[0];
     my $iend_next = $ri_last->[0];
@@ -23937,10 +23942,13 @@ sub convey_batch_to_vertical_aligner {
     my $type_end_next  = $types_to_go[$iend_next];
     my $token_beg_next = $tokens_to_go[$ibeg_next];
 
-    my $is_block_comment = $max_index_to_go == 0 && $types_to_go[0] eq '#';
-
     my $rindentation_list = [0];    # ref to indentations for each line
-    my ( $cscw_block_comment, $closing_side_comment );
+    my ( $cscw_block_comment, $closing_side_comment, $is_block_comment );
+
+    if ( !$max_index_to_go && $type_beg_next eq '#' ) {
+        $is_block_comment = 1;
+    }
+
     if ($rOpts_closing_side_comments) {
         ( $closing_side_comment, $cscw_block_comment ) =
           $self->add_closing_side_comment( $ri_first, $ri_last );

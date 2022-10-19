@@ -10431,6 +10431,29 @@ if (  ioctl (  STDERR, $TIOCGWINSZ, $winsize
 --want-trailing-commas='h'
 --whitespace-cycle=3
 
+==> b1394.in <==
+SOAP::Transport::HTTP::Daemon->new (
+                                    LocalAddr => $host,
+                                    LocalPort => $port,
+                                    Reuse => 1
+)->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
+  ->objects_by_reference ('WishListCustomer')->handle ;
+
+SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
+                                    LocalPort => $port,
+                                    Reuse => 1,)
+  ->dispatch_with ({ 'urn:WishListCustomer' => 'WishListCustomer' } )
+  ->objects_by_reference ('WishListCustomer')->handle ;
+
+
+==> b1394.par <==
+--add-trailing-commas
+--noadd-whitespace
+--comma-arrow-breakpoints=3
+--delete-trailing-commas
+--extended-line-up-parentheses
+--want-trailing-commas='h'
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
