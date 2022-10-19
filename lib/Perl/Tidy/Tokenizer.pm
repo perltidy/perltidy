@@ -3453,7 +3453,7 @@ EOM
                         rtokens         => $rtokens,
                         rtoken_map      => $rtoken_map,
                         id_scan_state   => $id_scan_state,
-                        max_token_index => $max_token_index
+                        max_token_index => $max_token_index,
                     }
                 );
 
@@ -7196,7 +7196,7 @@ sub scan_id_do {
                     rtokens         => $rtokens,
                     rtoken_map      => $rtoken_map,
                     id_scan_state   => $id_scan_state,
-                    max_token_index => $max_token_index
+                    max_token_index => $max_token_index,
                 }
             );
         }

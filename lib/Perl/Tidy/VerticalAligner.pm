@@ -4930,7 +4930,7 @@ sub get_output_line_number {
                 $cached_line_text,
                 $cached_line_leading_space_count,
                 $last_level_written,
-                $cached_line_Kend
+                $cached_line_Kend,
             );
         }
 
@@ -4985,7 +4985,7 @@ sub get_output_line_number {
                     $cached_line_text,
                     $cached_line_leading_space_count,
                     $last_level_written,
-                    $cached_line_Kend
+                    $cached_line_Kend,
                 );
             }
         }
@@ -5134,7 +5134,7 @@ sub get_output_line_number {
                     $cached_line_text,
                     $cached_line_leading_space_count,
                     $last_level_written,
-                    $cached_line_Kend
+                    $cached_line_Kend,
                 );
             }
         }
@@ -5299,7 +5299,7 @@ sub get_output_line_number {
                 $line,
                 $leading_space_count,
                 $level,
-                $Kend
+                $Kend,
             );
         }
         else {
@@ -5388,7 +5388,7 @@ sub get_output_line_number {
             $seqno_string,
             $last_nonblank_seqno_string,
 
-            @args_to_D
+            @args_to_D,
         ) = @_;
 
         # Dump any saved lines if we see a line with an unbalanced opening or

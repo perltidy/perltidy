@@ -1662,7 +1662,7 @@ EOM
         $is_encoded_data,
         $decoded_input_as,
         $encoding_log_message,
-        $length_function
+        $length_function,
 
     );
 } ## end sub get_decoded_string_buffer
@@ -4599,13 +4599,13 @@ sub Win_OS_Type {
         1 => {
             0  => "95",
             10 => "98",
-            90 => "Me"
+            90 => "Me",
         },
         2 => {
             0  => "2000",      # or NT 4, see below
             1  => "XP/.Net",
             2  => "Win2003",
-            51 => "NT3.51"
+            51 => "NT3.51",
         }
     }->{$id}->{$minor};
 
