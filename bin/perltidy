@@ -1193,7 +1193,7 @@ has been set to), if possible.  This is the default.  For example:
             fixit($i);
         }
 
-Use B<-nola> to not outdent labels.  To control line breaks after labels see L<"bal=n, --break-after-labels=n">.
+Use B<-nola> to not outdent labels.  To control line breaks after labels see L<"-bal=n, --break-after-labels=n">.
 
 =item B<Outdenting Keywords>
 
@@ -3315,7 +3315,7 @@ with the B<-wba> and B<-wbb> flags.  For example, to break before all operators
 except an B<=> one could use --bbao -wba='=' rather than listing every
 single perl operator except B<=> on a -wbb flag.
 
-=item B<bal=n, --break-after-labels=n>
+=item B<-bal=n, --break-after-labels=n>
 
 This flag controls whether or not a line break occurs after a label. There
 are three possible values for B<n>:
@@ -3474,7 +3474,26 @@ Here is an example.
 
 =back
 
-=head2 Trailing Comma Controls
+=head2 Controls for Adding and Deleting Commas
+
+=over 4
+
+=item B<-drc>,  B<--delete-repeated-commas>
+
+Repeated commas in a list are undesirable and can be removed with this flag.
+For example, given this list with a repeated comma
+
+      ignoreSpec( $file, "file",, \%spec, \%Rspec );
+
+we can remove it with -drc
+
+      # perltidy -drc:
+      ignoreSpec( $file, "file", \%spec, \%Rspec );
+
+Since the default is not to add or delete commas, this feature is off by default and must be requested.
+
+
+=item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 
 A trailing comma is a comma following the last item of a list. Perl allows
 trailing commas but they are not required.  So using them is optional, but they
@@ -3499,7 +3518,7 @@ The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred sty
 
 This parameter by itself only indicates the where trailing commas are
 wanted.  Perltidy only adds these trailing commas if the flag B<--add-trailing-commas>, or B<-atc> is set.  And perltidy only removes unwanted trailing commas
-if the flag B<--delete-trailing-commas> is set.
+if the flag B<--delete-trailing-commas>, or B<-dtc> is set.
 
 Here are some example parameter combinations and their meanings
 
@@ -3601,8 +3620,8 @@ are on different lines.
 =item *
 
 A B<bare> trailing comma is a comma which is at the end of a line. That is,
-the closing container token follows on a different line.  So a bare trailing
-comma only occurs in a multi-line list.
+the closing container token follows on a different line.  So a list with a
+bare trailing comma is a special case of a multi-line list.
 
 =item *
 
@@ -3612,16 +3631,10 @@ or two to reach a final state.
 
 =item *
 
-An effective way to use of these parameters is for the transformation of a program into a new desired state. Then they can be deactivated since the transformed state will remain stable.
-
-=item *
-
 When using these parameters for the first time it is a good idea to practice
 on some test scripts and verify that the results are as expected.
 
 =back
-
-=head2 Other Comma Controls
 
 =item B<-dwic>,  B<--delete-weld-interfering-commas>
 
@@ -3666,20 +3679,6 @@ possible, but not sufficient.  So welding will not always occur where these
 commas are removed.
 
 =back
-
-=item B<-drc>,  B<--delete-repeated-commas>
-
-Repeated commas in a list are undesirable and can be removed with this flag.
-For example, given this list with a repeated comma
-
-      ignoreSpec( $file, "file",, \%spec, \%Rspec );
-
-we can remove it with -drc
-
-      # perltidy -drc:
-      ignoreSpec( $file, "file", \%spec, \%Rspec );
-
-Since the default is not to add or delete commas, this feature is off by default and must be requested.
 
 =back
 
