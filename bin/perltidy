@@ -169,7 +169,7 @@ Option names may be terminated early as long as they are uniquely identified.
 For example, instead of B<--dump-token-types>, it would be sufficient to enter
 B<--dump-tok>, or even B<--dump-t>, to uniquely identify this command.
 
-=head2 I/O control
+=head2 I/O Control
 
 The following parameters concern the files which are read and written.
 
@@ -2265,11 +2265,28 @@ The default is equivalent to -cse='#>>V'.
 
 =head2 Line Break Control
 
-The parameters in this section control breaks after
+The parameters in this and the next sections control breaks after
 non-blank lines of code.  Blank lines are controlled
 separately by parameters in the section L<"Blank Line Control">.
 
 =over 4
+
+=item B<-dnl>,  B<--delete-old-newlines>
+
+By default, perltidy first deletes all old line break locations, and then it
+looks for good break points to match the desired line length.  Use B<-ndnl>
+or  B<--nodelete-old-newlines> to force perltidy to retain all old line break
+points.
+
+=item B<-anl>,  B<--add-newlines>
+
+By default, perltidy will add line breaks when necessary to create
+continuations of long lines and to improve the script appearance.  Use
+B<-nanl> or B<--noadd-newlines> to prevent any new line breaks.
+
+This flag does not prevent perltidy from eliminating existing line
+breaks; see B<--freeze-newlines> to completely prevent changes to line
+break points.
 
 =item B<-fnl>,  B<--freeze-newlines>
 
@@ -2284,6 +2301,12 @@ You may want to use B<-noll> with this.
 Note: If you also want to keep your blank lines exactly
 as they are, you can use the B<-fbl> flag which is described
 in the section L<"Blank Line Control">.
+
+=back
+
+=head2 Controlling Breaks at Braces, Parens, and Square Brackets
+
+=over 4
 
 =item B<-ce>,   B<--cuddled-else>
 
@@ -2719,6 +2742,12 @@ which is placed on a new line by that parameter.  The indentation is as follows:
   -bbpi=0 one continuation level [default]
   -bbpi=1 outdent by one continuation level
   -bbpi=2 indent one full indentation level
+
+=back
+
+=head2 Welding
+
+=over 4
 
 =item B<-wn>,  B<--weld-nested-containers>
 
@@ -3236,24 +3265,9 @@ unnecessary indentation within welded containers.  It is able to do this
 because it works on formatting globally rather than locally, as the B<-sot> and
 B<-sct> flags do.
 
-=item B<-dnl>,  B<--delete-old-newlines>
+=back
 
-By default, perltidy first deletes all old line break locations, and then it
-looks for good break points to match the desired line length.  Use B<-ndnl>
-or  B<--nodelete-old-newlines> to force perltidy to retain all old line break
-points.
-
-=item B<-anl>,  B<--add-newlines>
-
-By default, perltidy will add line breaks when necessary to create
-continuations of long lines and to improve the script appearance.  Use
-B<-nanl> or B<--noadd-newlines> to prevent any new line breaks.
-
-This flag does not prevent perltidy from eliminating existing line
-breaks; see B<--freeze-newlines> to completely prevent changes to line
-break points.
-
-=item B<Controlling whether perltidy breaks before or after operators>
+=head2 Breaking Before or After Operators
 
 Four command line parameters provide some control over whether
 a line break should be before or after specific token types.
@@ -3314,6 +3328,8 @@ These can be used to define an initial break preference which can be fine-tuned
 with the B<-wba> and B<-wbb> flags.  For example, to break before all operators
 except an B<=> one could use --bbao -wba='=' rather than listing every
 single perl operator except B<=> on a -wbb flag.
+
+=over 4
 
 =item B<-bal=n, --break-after-labels=n>
 
@@ -3474,7 +3490,7 @@ Here is an example.
 
 =back
 
-=head2 Controls for Adding and Deleting Commas
+=head2 Adding and Deleting Commas
 
 =over 4
 
