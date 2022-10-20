@@ -2778,7 +2778,8 @@ must either (1) be adjacent as in the above example, or (2) have an anonymous
 sub declaration following an outer opening container symbol which is not a
 code block brace, or (3) have an outer opening paren separated from the inner
 opening symbol by any single non-container symbol or something that looks like
-a function evaluation, as illustrated in the next examples.
+a function evaluation, as illustrated in the next examples. An additonal
+option (4) which can be turned on with the flag B<--weld-fat-comma> is when the opening container symbols are separated by a hash key and fat comma (=>).
 
 Any container symbol may serve as both the inner container of one pair and as
 the outer container of an adjacent pair. Consequently, any number of adjacent
@@ -2856,6 +2857,19 @@ specially in perltidy.
 
 Finally, the stacking of containers defined by this flag have priority over
 any other container stacking flags.  This is because any welding is done first.
+
+=item B<-wfc>,  B<--weld-fat-comma >
+
+When the B<-wfc> flag is set, along with B<-wn>, perltidy is allowed to weld
+an opening paren to an inner opening container when they are separated by a hash key and fat comma (=>). for example
+
+    # perltidy -wn -wfc
+    elf->call_method( method_name_foo => {
+        some_arg1       => $foo,
+        some_other_arg3 => $bar->{'baz'},
+    } );
+
+This option is off by default.
 
 =item B<-wnxl=s>,  B<--weld-nested-exclusion-list>
 
