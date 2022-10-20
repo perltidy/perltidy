@@ -292,7 +292,7 @@ default and is specified with B<-bm='copy'>. The older implementation is
 specified with B<-bm='move'>.  The difference is that the older implementation
 made the backup by moving the input file to the backup file, and the newer
 implementation makes the backup by copying the input file.  The newer
-implemenation preserves the file system B<inode> value. This may avoid
+implementation preserves the file system B<inode> value. This may avoid
 problems with other software running simultaneously.  This change was made
 as part of issue B<git #103> at github.
 
@@ -3512,12 +3512,9 @@ Since the default is not to add or delete commas, this feature is off by default
 =item B<--want-trailing-commas=s> or B<-wtc=s>, B<--add-trailing-commas> or B<-atc>, and B<--delete-trailing-commas> or B<-dtc>
 
 A trailing comma is a comma following the last item of a list. Perl allows
-trailing commas but they are not required.  So using them is optional, but they
-can be useful. In particular, having a comma at the end of each line of a list
-can simplify the use of an editor to reorder or add new lines.
-
-By default, perltidy does not add or delete commas, but it is possible to
-manipulate trailing commas with the following set of three related parameters:
+trailing commas but they are not required.  By default, perltidy does not add
+or delete trailing commas, but it is possible to manipulate them with the
+following set of three related parameters:
 
   --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
   --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
@@ -3529,8 +3526,10 @@ The parameter B<--want-trailing-commas=s>, or B<-wtc=s>, defines a preferred sty
   s=1 or * : every list should have a trailing comma
   s=m a multi-line list should have a trailing commas
   s=b trailing commas should be 'bare' (comma followed by newline)
-  s=h trailing commas should be 'bare' for lists of key=>value pairs, or other lists with about one comma per line.
-  s=' ', or -wtc not defined : leave trailing commas unchanged [DEFAULT].
+  s=h lists of key=>value pairs, with about one one '=>' and one ',' per line,
+      with a bare trailing comma
+  s=i lists with about one comma per line, with a bare trailing comma
+  s=' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
 
 This parameter by itself only indicates the where trailing commas are
 wanted.  Perltidy only adds these trailing commas if the flag B<--add-trailing-commas>, or B<-atc> is set.  And perltidy only removes unwanted trailing commas
@@ -3539,10 +3538,10 @@ if the flag B<--delete-trailing-commas>, or B<-dtc> is set.
 Here are some example parameter combinations and their meanings
 
   -wtc=0 -dtc   : delete all trailing commas
-  -wtc=1 -atc   : put trailing commas on all lists
-  -wtc=m -atc   : all multi-line lists get trailing commas, and
+  -wtc=1 -atc   : all lists get trailing commas
+  -wtc=m -atc   : all multi-line lists get trailing commas, but
                   single line lists remain unchanged.
-  -wtc=m -dtc   : multi-line lists remain unchanged, and
+  -wtc=m -dtc   : multi-line lists remain unchanged, but
                   any trailing commas on single line lists are removed.
   -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
                       any trailing commas on single line lists are removed.
@@ -3650,6 +3649,11 @@ or two to reach a final state.
 When using these parameters for the first time it is a good idea to practice
 on some test scripts and verify that the results are as expected.
 
+=item *
+
+Since the default behavior is not to add or delete commas, these parameters
+can be useful on a temporary basis for reformatting a script.
+
 =back
 
 =item B<-dwic>,  B<--delete-weld-interfering-commas>
@@ -3747,7 +3751,7 @@ For example, given this snippet:
 By default, a method call arrow C<-E<gt>> is considered a candidate for
 a breakpoint, but method chains will fill to the line width before a break is
 considered.  With B<-bom>, breaks before the arrow are preserved, so if you
-have preformatted a method chain:
+have pre-formatted a method chain:
 
   my $q = $rs
     ->related_resultset('CDs')

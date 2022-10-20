@@ -9,6 +9,7 @@
 #6 wtc.wtc6
 #7 dwic.def
 #8 dwic.dwic
+#9 wtc.wtc7
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -33,7 +34,8 @@ BEGIN {
         'wtc3' => "-wtc=m -atc",
         'wtc4' => "-wtc=m -atc -dtc",
         'wtc5' => "-wtc=b -atc -dtc -vtc=2",
-        'wtc6' => "-wtc=h -atc -dtc -vtc=2",
+        'wtc6' => "-wtc=i -atc -dtc -vtc=2",
+        'wtc7' => "-wtc=h -atc -dtc -vtc=2",
     };
 
     ############################
@@ -451,6 +453,55 @@ my $no_index_1_1 =
         PL_sys_intern
     ) ] );
 #8...........
+        },
+
+        'wtc.wtc7' => {
+            source => "wtc",
+            params => "wtc7",
+            expect => <<'#9...........',
+# both single and multiple line lists:
+@LoL = (
+    [ "fred",   "barney" ],
+    [ "george", "jane",  "elroy" ],
+    [ "homer",  "marge", "bart" ] );
+
+# single line
+( $name, $body ) = ( $2, $3 );
+
+# multiline, but not bare
+$text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
+    selectbackgroundxxxxx => 'yellow' );
+
+# this will pass for 'h'
+my $new = {
+    %$item,
+    text  => $leaf,
+    color => 'green',
+};
+
+# and this
+my @list = (
+
+    $xx,
+    $yy );
+
+# does not match 'h'
+$c1->create(
+    'rectangle', 40, 60, 80, 80,
+    -fill => 'red',
+    -tags => 'rectangle' );
+
+$dasm_frame->Button(
+    -text    => 'Locate',
+    -command => sub {
+        $target_binary = $fs->Show( -popover => 'cursor', -create => 1 );
+    } )->pack( -side => 'left' );
+
+my $no_index_1_1 =
+  { 'map' => { ':key' => { name => \&string, list => { value => \&string } } }
+  };
+
+#9...........
         },
     };
 

@@ -2490,7 +2490,7 @@ sub initialize_trailing_comma_rules {
     # This routine must be called after the alpha and beta stress levels
     # have been defined.
 
-    my $rvalid_flags = [qw(0 1 * m b h)];
+    my $rvalid_flags = [qw(0 1 * m b h i)];
 
     my $option = $rOpts->{'want-trailing-commas'};
 
@@ -8000,13 +8000,18 @@ sub match_trailing_comma_rule {
 
     # List of $trailing_comma_style values:
     #   undef  stable: do not change
-    #   '0' never want trailing commas
-    #   '* or 1' always want trailing commas
-    #   'm' want multiline trailing commas
-    #       (i.e., opening and closing tokens are on different lines)
-    #   'b' want bare trailing commas ( followed by newline )
-    #   'h' add a bare trailing comma to a stable list with about
-    #       one comma per line (such as Hash list of key=>value pairs).
+    #   '0' : no list should have a trailing comma
+    #   '1' or '*' : every list should have a trailing comma
+    #   'm' a multi-line list should have a trailing commas
+    #   'b' trailing commas should be 'bare' (comma followed by newline)
+    #   'h' lists of key=>value pairs should have a bare trailing comma
+    #   'i' same as s=h but also include any list with about one comma per line
+    #   ' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
+
+    # Note: an interesting generalization would be to let an upper case
+    # letter denote the negation of styles 'm', 'b', 'h', 'i'. This might
+    # be useful for undoing operations. It would be implemented as a wrapper
+    # around this routine.
 
     #-----------------------------------------
     #  No style defined : do not add or delete
@@ -8069,9 +8074,10 @@ sub match_trailing_comma_rule {
 
     #------------------------------------------------------------------
     # 'h' matches a bare stable list of key=>values ('h' is for 'Hash')
-    #     or stable single field lists with about 1 comma per line.
+    # 'i' same as 'h' but also matches stable single field lists with about 1
+    #     comma per line.
     #------------------------------------------------------------------
-    elsif ( $trailing_comma_style eq 'h' ) {
+    elsif ( $trailing_comma_style eq 'h' || $trailing_comma_style eq 'i' ) {
 
         # This is a minimal style which can put trailing commas where
         # they are most useful - at the end of simple lists which might,
@@ -8108,7 +8114,7 @@ sub match_trailing_comma_rule {
         }
 
         #---------------------------------------------------------
-        # Style 'h', Section 1: check for a stable key=>value list
+        # Styles 'h' and 'i': check for a stable key=>value list
         #---------------------------------------------------------
 
         my $fat_comma_count = $rtype_count->{'=>'};
@@ -8139,17 +8145,20 @@ sub match_trailing_comma_rule {
         }
 
         #--------------------------------------------------------------
-        # Style 'h', Section 2: check for a stable single-field list of
+        # Style 'i': check for a stable single-field list of
         # items stabilized by blank lines, comments, or the -boc flag
         #--------------------------------------------------------------
-        elsif (
+        if ( !$match && $trailing_comma_style eq 'i' ) {
 
             # We are looking for lists with <= 1 comma per line
-            $line_diff > $comma_count && ( $is_permanently_broken
-                || $rOpts_break_at_old_comma_breakpoints )
-          )
-        {
-            $match = 1;
+            if (
+                $line_diff > $comma_count
+                && (   $is_permanently_broken
+                    || $rOpts_break_at_old_comma_breakpoints )
+              )
+            {
+                $match = 1;
+            }
         }
     }
 
