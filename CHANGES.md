@@ -50,9 +50,29 @@
       and then the input file is reopened and rewritten. This preserves the
       file inode.  Tests have not produced any problems with this change, but
       before using the --backup-and-modify-in-place parameter please verify
-      that it works correctly in your environment and operating system.
+      that it works correctly in your environment and operating system. The
+      initial update for this had an error which was caught and fixed
+      in git #109.
 
     - Fix undefined value message when perltidy -D is used (git #104)
+
+    - Fixed an inconsistency in html colors near pointers when -html is used.
+      Previously, a '->' at the end of a line got the 'punctuation color', black
+      by default but a '->' before an identifier got the color of the following
+      identifier. Now all pointers get the same color, which is black by default.
+      Also, previously a word following a '->' was given the color of a bareword,
+      black by default, but now it is given the color of an identifier.
+
+    - Fixed incorrect formatting of any function named 'err'.  This was
+      due to some old code when use feature 'err' was valid.
+
+            # OLD:
+            my ($curr) = current();
+              err (@_);
+
+            # NEW:
+            my ($curr) = current();
+            err(@_);
 
     - Added parameter --delete-repeated-commas (-drc) to delete repeated
       commas. This is off by default. I added this option after discovering
@@ -82,24 +102,6 @@
                   && $array->[$j] gt $array->[ $j + $shell ] ;
                 $j -= $shell
               )
-
-    - Fixed an inconsistency in html colors near pointers when -html is used.
-      Previously, a '->' at the end of a line got the 'punctuation color', black
-      by default but a '->' before an identifier got the color of the following
-      identifier. Now all pointers get the same color, which is black by default.
-      Also, previously a word following a '->' was given the color of a bareword,
-      black by default, but now it is given the color of an identifier.
-
-    - Fixed incorrect formatting of any function named 'err'.  This was
-      due to some old code when use feature 'err' was valid.
-
-            # OLD:
-            my ($curr) = current();
-              err (@_);
-
-            # NEW:
-            my ($curr) = current();
-            err(@_);
 
     - The following new parameters are available for manipulating
       trailing commas:
