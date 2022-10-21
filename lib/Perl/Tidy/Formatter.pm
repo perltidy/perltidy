@@ -20206,11 +20206,17 @@ EOM
             $last_old_breakpoint_count = $old_breakpoint_count;
 
             # Check for a good old breakpoint ..
-            # Note: ignore old breaks at types 'L' and 'R' to fix case
-            # b1097. These breaks only occur under high stress.
-            if (   $old_breakpoint_to_go[$i]
+            if (
+                $old_breakpoint_to_go[$i]
+
+                # Note: ignore old breaks at types 'L' and 'R' to fix case
+                # b1097. These breaks only occur under high stress.
                 && $type ne 'L'
-                && $next_nonblank_type ne 'R' )
+                && $next_nonblank_type ne 'R'
+
+                # ... and ignore other high stress level breaks, fixes b1395
+                && $levels_to_go[$i] < $list_stress_level
+              )
             {
                 ( $want_previous_breakpoint, $i_old_assignment_break ) =
                   $self->check_old_breakpoints( $i_next_nonblank,

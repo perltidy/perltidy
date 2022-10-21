@@ -10454,6 +10454,30 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 --extended-line-up-parentheses
 --want-trailing-commas='h'
 
+==> b1395.in <==
+                  # The old = break is under stress and must be ignored
+                  if(my ($safari_build, $safari_minor) =
+                        split /\./, $1)
+                  {
+                        ...;
+                  }
+
+                  if(
+                        my ($safari_build, $safari_minor)
+                        = split /\./, $1
+                       )
+                  {
+                        ...;
+                  }
+
+
+==> b1395.par <==
+--continuation-indentation=5
+--indent-columns=6
+--maximum-line-length=57
+--nospace-after-keyword='if'
+--paren-tightness=2
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
