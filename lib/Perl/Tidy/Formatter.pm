@@ -15589,8 +15589,10 @@ EOM
         # The tokens of the batch are in the '_to_go' arrays.
         #-----------------------------------------------------------------
 
-        my $this_batch = $self->[_this_batch_];
         $batch_count++;
+        my $this_batch = $self->[_this_batch_];
+        $this_batch->[_peak_batch_size_] = $peak_batch_size;
+        $this_batch->[_batch_count_]     = $batch_count;
 
         $self->check_grind_input() if (DEVEL_MODE);
 
@@ -15634,9 +15636,6 @@ EOM
             my $ibeg = 0;
             $this_batch->[_ri_first_]                 = [$ibeg];
             $this_batch->[_ri_last_]                  = [$ibeg];
-            $this_batch->[_peak_batch_size_]          = $peak_batch_size;
-            $this_batch->[_do_not_pad_]               = 0;
-            $this_batch->[_batch_count_]              = $batch_count;
             $this_batch->[_rix_seqno_controlling_ci_] = [];
 
             $self->convey_batch_to_vertical_aligner();
@@ -16011,88 +16010,98 @@ EOM
         # first and last tokens of line fragments to output..
         my ( $ri_first, $ri_last );
 
-        #-------------------------
-        # write a single line if..
-        #-------------------------
-        if (
-
-            # there is just one token
-            !$max_index_to_go
-
-            # or,
-            || (
-
-                # this line is 'short'
-                !$is_long_line
-
-                # and we didn't see a good breakpoint
-                && !$saw_good_break
-
-                # and we don't already have an interior breakpoint
-                && !$forced_breakpoint_count
-            )
-
-            # or, we aren't allowed to add any newlines
-            || !$rOpts_add_newlines
-
-          )
-        {
+        #-----------------------------
+        # a single token uses one line
+        #-----------------------------
+        if ( !$max_index_to_go ) {
             $ri_first = [$imin];
             $ri_last  = [$imax];
         }
 
-        #-----------------------------
-        # otherwise use multiple lines
-        #-----------------------------
+        # for multiple tokens
         else {
 
-            # add a couple of extra terminal blank tokens if we haven't
-            # already done so
-            $self->pad_array_to_go() unless ($called_pad_array_to_go);
+            #-------------------------
+            # write a single line if..
+            #-------------------------
+            if (
+                (
 
-            ( $ri_first, $ri_last, my $rbond_strength_to_go ) =
-              $self->break_long_lines( $saw_good_break, \@colon_list,
-                $rbond_strength_bias );
+                    # this line is 'short'
+                    !$is_long_line
 
-            $self->break_all_chain_tokens( $ri_first, $ri_last );
+                    # and we didn't see a good breakpoint
+                    && !$saw_good_break
 
-            $self->break_equals( $ri_first, $ri_last )
-              if @{$ri_first} >= 3;
+                    # and we don't already have an interior breakpoint
+                    && !$forced_breakpoint_count
+                )
 
-            # now we do a correction step to clean this up a bit
-            # (The only time we would not do this is for debugging)
-            $self->recombine_breakpoints( $ri_first, $ri_last,
-                $rbond_strength_to_go )
-              if ( $rOpts_recombine && @{$ri_first} > 1 );
+                # or, we aren't allowed to add any newlines
+                || !$rOpts_add_newlines
 
-            $self->insert_final_ternary_breaks( $ri_first, $ri_last )
-              if (@colon_list);
+              )
+            {
+                $ri_first = [$imin];
+                $ri_last  = [$imax];
+            }
 
-            $self->insert_breaks_before_list_opening_containers( $ri_first,
-                $ri_last )
-              if ( %break_before_container_types && $max_index_to_go > 0 );
+            #-----------------------------
+            # otherwise use multiple lines
+            #-----------------------------
+            else {
 
+                # add a couple of extra terminal blank tokens if we haven't
+                # already done so
+                $self->pad_array_to_go() unless ($called_pad_array_to_go);
+
+                ( $ri_first, $ri_last, my $rbond_strength_to_go ) =
+                  $self->break_long_lines( $saw_good_break, \@colon_list,
+                    $rbond_strength_bias );
+
+                $self->break_all_chain_tokens( $ri_first, $ri_last );
+
+                $self->break_equals( $ri_first, $ri_last )
+                  if @{$ri_first} >= 3;
+
+                # now we do a correction step to clean this up a bit
+                # (The only time we would not do this is for debugging)
+                $self->recombine_breakpoints( $ri_first, $ri_last,
+                    $rbond_strength_to_go )
+                  if ( $rOpts_recombine && @{$ri_first} > 1 );
+
+                $self->insert_final_ternary_breaks( $ri_first, $ri_last )
+                  if (@colon_list);
+
+                $self->insert_breaks_before_list_opening_containers( $ri_first,
+                    $ri_last )
+                  if ( %break_before_container_types && $max_index_to_go > 0 );
+
+            }
+
+            # Check for a phantom semicolon at the end of the batch
+            if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
+                $self->unmask_phantom_token($imax);
+            }
+
+            if ( $rOpts_one_line_block_semicolons == 0 ) {
+                $self->delete_one_line_semicolons( $ri_first, $ri_last );
+            }
+
+            # Remember the largest batch size processed. This is needed by the
+            # logical padding routine to avoid padding the first nonblank token
+            if ( $max_index_to_go > $peak_batch_size ) {
+                $peak_batch_size = $max_index_to_go;
+            }
         }
 
         #-------------------
         # -lp corrector step
         #-------------------
-        my $do_not_pad = 0;
         if ($rOpts_line_up_parentheses) {
-            $do_not_pad = $self->correct_lp_indentation( $ri_first, $ri_last );
-        }
-
-        #----------------------------------
-        # unmask line-ending phantom tokens
-        #----------------------------------
-
-        # Check for a phantom semicolon at the end of the batch
-        if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
-            $self->unmask_phantom_token($imax);
-        }
-
-        if ( $rOpts_one_line_block_semicolons == 0 ) {
-            $self->delete_one_line_semicolons( $ri_first, $ri_last );
+            my $do_not_pad =
+              $self->correct_lp_indentation( $ri_first, $ri_last );
+            $this_batch->[_do_not_pad_] = $do_not_pad;
         }
 
         #--------------------
@@ -16100,9 +16109,6 @@ EOM
         #--------------------
         $this_batch->[_ri_first_]                 = $ri_first;
         $this_batch->[_ri_last_]                  = $ri_last;
-        $this_batch->[_peak_batch_size_]          = $peak_batch_size;
-        $this_batch->[_do_not_pad_]               = $do_not_pad;
-        $this_batch->[_batch_count_]              = $batch_count;
         $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
 
         $self->convey_batch_to_vertical_aligner();
@@ -16129,12 +16135,6 @@ EOM
                 my $file_writer_object = $self->[_file_writer_object_];
                 $file_writer_object->require_blank_code_lines($nblanks);
             }
-        }
-
-        # Remember the largest batch size processed. This is needed by the
-        # logical padding routine to avoid padding the first nonblank token
-        if ( $max_index_to_go && $max_index_to_go > $peak_batch_size ) {
-            $peak_batch_size = $max_index_to_go;
         }
 
         return;
