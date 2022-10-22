@@ -16016,8 +16016,8 @@ EOM
         #-------------------------
         if (
 
-            # we aren't allowed to add any newlines
-            !$rOpts_add_newlines
+            # there is just one token
+            !$max_index_to_go
 
             # or,
             || (
@@ -16031,6 +16031,10 @@ EOM
                 # and we don't already have an interior breakpoint
                 && !$forced_breakpoint_count
             )
+
+            # or, we aren't allowed to add any newlines
+            || !$rOpts_add_newlines
+
           )
         {
             $ri_first = [$imin];
@@ -16063,11 +16067,12 @@ EOM
 
             $self->insert_final_ternary_breaks( $ri_first, $ri_last )
               if (@colon_list);
-        }
 
-        $self->insert_breaks_before_list_opening_containers( $ri_first,
-            $ri_last )
-          if ( %break_before_container_types && $max_index_to_go > 0 );
+            $self->insert_breaks_before_list_opening_containers( $ri_first,
+                $ri_last )
+              if ( %break_before_container_types && $max_index_to_go > 0 );
+
+        }
 
         #-------------------
         # -lp corrector step
