@@ -457,7 +457,6 @@ BEGIN {
         _rparent_of_seqno_          => $i++,
         _rchildren_of_seqno_        => $i++,
         _ris_list_by_seqno_         => $i++,
-        _rK_deletion_list_          => $i++,
         _rbreak_container_          => $i++,
         _rshort_nested_             => $i++,
         _length_function_           => $i++,
@@ -517,7 +516,6 @@ BEGIN {
         _rbreak_after_Klast_            => $i++,
         _rwant_container_open_          => $i++,
         _converged_                     => $i++,
-        _deleted_token_count_           => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
         _rending_multiline_qw_seqno_by_K_   => $i++,
@@ -877,7 +875,6 @@ sub new {
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
-    $self->[_rK_deletion_list_]          = [];
 
     $self->[_rbreak_container_] = {};                 # prevent one-line blocks
     $self->[_rshort_nested_]    = {};                 # blocks not forced open
@@ -940,7 +937,6 @@ sub new {
     $self->[_rbreak_after_Klast_]            = {};
     $self->[_rwant_container_open_]          = {};
     $self->[_converged_]                     = 0;
-    $self->[_deleted_token_count_]           = 0;
 
     # qw stuff
     $self->[_rstarting_multiline_qw_seqno_by_K_] = {};
@@ -8040,8 +8036,6 @@ sub match_trailing_comma_rule {
     my $line_diff    = $iline_c - $iline_o;
     my $is_multiline = $line_diff > 0;
 
-    # The following flag will be set for a match. It is assigned a value
-    # which is needed if by sub 'delete_tokens' in case deletions are done.
     my $match;
 
     #----------------------------
@@ -16096,14 +16090,6 @@ EOM
             $self->delete_one_line_semicolons( $ri_first, $ri_last );
         }
 
-        # Delete tokens in this batch in the deletion list
-        if ( @{ $self->[_rK_deletion_list_] }
-            && $self->[_rK_deletion_list_]->[0]->[0] <=
-            $K_to_go[$max_index_to_go] )
-        {
-            $self->delete_tokens( $ri_first, $ri_last );
-        }
-
         #--------------------
         # ship this batch out
         #--------------------
@@ -16149,117 +16135,6 @@ EOM
         return;
     } ## end sub grind_batch_of_CODE
 
-    sub delete_tokens {
-
-        my ( $self, $ri_beg, $ri_end ) = @_;
-
-        #----------------------------------------------------------
-        # This sub is not currently used but could be in the future
-        #----------------------------------------------------------
-
-        # Remove any tokens in this output batch which
-        # - appear in the deletion list @{$rK_deletion_list}, and
-        # - still obey their deletion requirements
-
-        # Input parameters:
-        # ( $ri_beg, $ri_end) = refs to lists of line ending indexes
-
-        # This sub was created to delete interior commas in the list created
-        # by flags -atc and/or -dtc.  But it could also be used to delete
-        # interior semicolons (instead of using the phantom token method).
-
-        my $rK_conditional_deletion_list = $self->[_rK_deletion_list_];
-        my $rLL                          = $self->[_rLL_];
-
-        # extract the next item
-        my $item = shift @{$rK_conditional_deletion_list};
-
-        # loop over lines of this batch and get the ends
-        foreach my $iline ( 0 .. @{$ri_beg} - 1 ) {
-            my $ibeg = $ri_beg->[$iline];
-            my $iend = $ri_end->[$iline];
-            my $Kbeg = $K_to_go[$ibeg];
-            my $Kend = $K_to_go[$iend];
-
-            # see if the next token is in this line
-            while ( defined($item) ) {
-                my ( $Kc_next, $control_flag ) = @{$item};
-
-                last if ( $Kc_next > $Kend );
-
-                my $is_covered = $Kc_next < $Kend;
-
-                my $ok_to_delete;
-
-                # $control_flag =
-                #  c - delete if covered
-                #  b - delete if not covered (bare)
-                #  s - delete if single line
-                #  m - delete if multiline
-                #  * or 1 - delete always
-                if ( $control_flag eq 'c' ) {
-                    $ok_to_delete = $is_covered;
-                }
-                elsif ( $control_flag eq 'b' ) {
-                    $ok_to_delete = !$is_covered;
-                }
-                elsif ( $control_flag eq 's' || $control_flag eq 'm' ) {
-
-                    # first check for single line (and therefore also covered)
-                    my $is_single_line;
-                    if ($is_covered) {
-                        my $ic    = $ibeg + $Kc_next - $Kbeg;
-                        my $inext = $inext_to_go[$ic];
-                        my $imate = $mate_index_to_go[$inext];
-                        if ( defined($imate) && $imate >= 0 && $imate < $inext )
-                        {
-                            $is_single_line = 1;
-                        }
-                    }
-
-                    $ok_to_delete =
-                      $control_flag eq 's' ? $is_single_line : !$is_single_line;
-                }
-                elsif ( $control_flag eq '*' || $control_flag eq '1' ) {
-                    $ok_to_delete = 1;
-                }
-
-                if ($ok_to_delete) {
-
-                    # we actually keep the token but delete its text
-                    my $ic = $ibeg + $Kc_next - $Kbeg;
-
-                    $tokens_to_go[$ic] = EMPTY_STRING;
-                    my $len = $token_lengths_to_go[$ic];
-                    $token_lengths_to_go[$ic]          = 0;
-                    $rLL->[$Kc_next]->[_TOKEN_]        = EMPTY_STRING;
-                    $rLL->[$Kc_next]->[_TOKEN_LENGTH_] = 0;
-
-                    # update the subsequent summed lengths in the batch
-                    foreach ( $ic .. $max_index_to_go ) {
-                        $summed_lengths_to_go[ $_ + 1 ] -= $len;
-                    }
-
-                    # Count tokens deleted by this sub because
-                    # we have to turn off the simple convergence test
-                    # if there are deletions.  This is because they are
-                    # at the end of formatting and may cause a formatting
-                    # change. See end of sub wrapup.
-                    $self->[_deleted_token_count_]++;
-                }
-
-                $item = shift @{$rK_conditional_deletion_list};
-                next;
-            }
-        }
-
-        # restore the last unmatched item
-        if ( defined($item) ) {
-            unshift @{$rK_conditional_deletion_list}, $item;
-        }
-        return;
-    } ## end sub delete_tokens
-
     sub unmask_phantom_token {
         my ( $self, $iend ) = @_;
 
@@ -16271,7 +16146,7 @@ EOM
         # Phantom tokens are specially marked token types (such as ';')  with
         # no token text which only become real tokens if they occur at the end
         # of an output line.  At one time phantom ',' tokens were handled
-        # here, but now they are processed by sub 'delete_tokens'.
+        # here, but now they are processed elsewhere.
 
         my $rLL         = $self->[_rLL_];
         my $KK          = $K_to_go[$iend];
@@ -20206,17 +20081,11 @@ EOM
             $last_old_breakpoint_count = $old_breakpoint_count;
 
             # Check for a good old breakpoint ..
-            if (
-                $old_breakpoint_to_go[$i]
-
-                # Note: ignore old breaks at types 'L' and 'R' to fix case
-                # b1097. These breaks only occur under high stress.
+            # Note: ignore old breaks at types 'L' and 'R' to fix case
+            # b1097. These breaks only occur under high stress.
+            if (   $old_breakpoint_to_go[$i]
                 && $type ne 'L'
-                && $next_nonblank_type ne 'R'
-
-                # ... and ignore other high stress level breaks, fixes b1395
-                && $levels_to_go[$i] < $list_stress_level
-              )
+                && $next_nonblank_type ne 'R' )
             {
                 ( $want_previous_breakpoint, $i_old_assignment_break ) =
                   $self->check_old_breakpoints( $i_next_nonblank,
@@ -28749,11 +28618,10 @@ sub wrapup {
 
     $file_writer_object->report_line_length_errors();
 
-    # Define the formatter self-check for convergence. It may not be
-    # correct if sub delete_tokens has deleted tokens.
-    $self->[_converged_] = !$self->[_deleted_token_count_]
-      && ( $file_writer_object->get_convergence_check()
-        || $rOpts->{'indent-only'} );
+    # Define the formatter self-check for convergence.
+    $self->[_converged_] =
+      (      $file_writer_object->get_convergence_check()
+          || $rOpts->{'indent-only'} );
 
     return;
 } ## end sub wrapup
