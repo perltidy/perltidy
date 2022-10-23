@@ -554,7 +554,6 @@ BEGIN {
         _do_not_pad_                 => $i++,
         _peak_batch_size_            => $i++,
         _batch_count_                => $i++,
-        _rix_seqno_controlling_ci_   => $i++,
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
         _runmatched_opening_indexes_ => $i++,
@@ -14301,14 +14300,14 @@ EOM
                 # So now we have to check for special cases.
 
                 # if this '}' successfully ends a one-line block..
-                my $is_one_line_block = 0;
-                my $keep_going        = 0;
+                my $one_line_block_type = EMPTY_STRING;
+                my $keep_going;
                 if ( defined($index_start_one_line_block) ) {
 
                     # Remember the type of token just before the
                     # opening brace.  It would be more general to use
                     # a stack, but this will work for one-line blocks.
-                    $is_one_line_block =
+                    $one_line_block_type =
                       $types_to_go[$index_start_one_line_block];
 
                     # we have to actually make it by removing tentative
@@ -14354,7 +14353,7 @@ EOM
 
                             # Follow users break point for
                             # one line block types U & G, such as a 'try' block
-                            || $is_one_line_block =~ /^[UG]$/
+                            || $one_line_block_type =~ /^[UG]$/
                             && $Ktoken_vars == $K_last
                         )
 
@@ -14384,7 +14383,7 @@ EOM
 
                 # added eval for borris.t
                 elsif ($is_sort_map_grep_eval{$block_type}
-                    || $is_one_line_block eq 'G' )
+                    || $one_line_block_type eq 'G' )
                 {
                     $rbrace_follower = undef;
                     $keep_going      = 1;
@@ -14392,7 +14391,7 @@ EOM
 
                 # anonymous sub
                 elsif ( $self->[_ris_asub_block_]->{$type_sequence} ) {
-                    if ($is_one_line_block) {
+                    if ($one_line_block_type) {
 
                         $rbrace_follower = \%is_anon_sub_1_brace_follower;
 
@@ -15589,10 +15588,9 @@ EOM
         # The tokens of the batch are in the '_to_go' arrays.
         #-----------------------------------------------------------------
 
-        $batch_count++;
         my $this_batch = $self->[_this_batch_];
         $this_batch->[_peak_batch_size_] = $peak_batch_size;
-        $this_batch->[_batch_count_]     = $batch_count;
+        $this_batch->[_batch_count_]     = ++$batch_count;
 
         $self->check_grind_input() if (DEVEL_MODE);
 
@@ -15634,9 +15632,8 @@ EOM
         #--------------------------------------------------
         elsif ( !$max_index_to_go && $types_to_go[0] eq '#' ) {
             my $ibeg = 0;
-            $this_batch->[_ri_first_]                 = [$ibeg];
-            $this_batch->[_ri_last_]                  = [$ibeg];
-            $this_batch->[_rix_seqno_controlling_ci_] = [];
+            $this_batch->[_ri_first_] = [$ibeg];
+            $this_batch->[_ri_last_]  = [$ibeg];
 
             $self->convey_batch_to_vertical_aligner();
 
@@ -15777,7 +15774,7 @@ EOM
         # blocks on one line.  This is very rare but can happen for
         # user-defined subs.  For example we might be looking at this:
         #  BOOL { $server_data{uptime} > 0; } NUM { $server_data{load}; } STR {
-        my $saw_good_break = 0;    # flag to force breaks even if short line
+        my $saw_good_break;    # flag to force breaks even if short line
         if (
 
             # looking for opening or closing block brace
@@ -15842,16 +15839,16 @@ EOM
         my $last_last_line_leading_level =
           $self->[_last_last_line_leading_level_];
 
-        # add a blank line before certain key types but not after a comment
+        # add blank line(s) before certain key types but not after a comment
         if ( $last_line_leading_type ne '#' ) {
-            my $want_blank    = 0;
+            my $blank_count   = 0;
             my $leading_token = $tokens_to_go[$imin];
             my $leading_type  = $types_to_go[$imin];
 
             # break before certain key blocks except one-liners
             if ( $leading_type eq 'k' ) {
                 if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' ) {
-                    $want_blank = $rOpts->{'blank-lines-before-subs'}
+                    $blank_count = $rOpts->{'blank-lines-before-subs'}
                       if ( terminal_type_i( $imin, $imax ) ne '}' );
                 }
 
@@ -15870,12 +15867,14 @@ EOM
                         $lc = 0;
                     }
 
-                    $want_blank =
-                         $rOpts->{'blanks-before-blocks'}
-                      && $lc >= $rOpts->{'long-block-line-count'}
-                      && $self->consecutive_nonblank_lines() >=
-                      $rOpts->{'long-block-line-count'}
-                      && terminal_type_i( $imin, $imax ) ne '}';
+                    if (   $rOpts->{'blanks-before-blocks'}
+                        && $lc >= $rOpts->{'long-block-line-count'}
+                        && $self->consecutive_nonblank_lines() >=
+                        $rOpts->{'long-block-line-count'}
+                        && terminal_type_i( $imin, $imax ) ne '}' )
+                    {
+                        $blank_count = 1;
+                    }
                 }
             }
 
@@ -15893,7 +15892,7 @@ EOM
                     && $leading_token =~ /$SUB_PATTERN/
                   )
                 {
-                    $want_blank = $rOpts->{'blank-lines-before-subs'}
+                    $blank_count = $rOpts->{'blank-lines-before-subs'}
                       if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
                 }
 
@@ -15902,7 +15901,7 @@ EOM
 
                     # ... except in a very short eval block
                     my $pseqno = $parent_seqno_to_go[$imin];
-                    $want_blank = $rOpts->{'blank-lines-before-packages'}
+                    $blank_count = $rOpts->{'blank-lines-before-packages'}
                       if ( !$self->[_ris_short_broken_eval_block_]->{$pseqno} );
                 }
             }
@@ -15915,18 +15914,18 @@ EOM
                     /$blank_lines_before_closing_block_pattern/ )
                 {
                     my $nblanks = $rOpts->{'blank-lines-before-closing-block'};
-                    if ( $nblanks > $want_blank ) {
-                        $want_blank = $nblanks;
+                    if ( $nblanks > $blank_count ) {
+                        $blank_count = $nblanks;
                     }
                 }
             }
 
-            if ($want_blank) {
+            if ($blank_count) {
 
-                # future: send blank line down normal path to VerticalAligner
+                # future: send blank line down normal path to VerticalAligner?
                 $self->flush_vertical_aligner();
                 my $file_writer_object = $self->[_file_writer_object_];
-                $file_writer_object->require_blank_code_lines($want_blank);
+                $file_writer_object->require_blank_code_lines($blank_count);
             }
         }
 
@@ -16104,12 +16103,15 @@ EOM
             $this_batch->[_do_not_pad_] = $do_not_pad;
         }
 
+        if ( @{$ri_first} > 1 || $rOpts_extended_continuation_indentation ) {
+            $self->undo_ci( $ri_first, $ri_last, \@ix_seqno_controlling_ci );
+        }
+
         #--------------------
         # ship this batch out
         #--------------------
-        $this_batch->[_ri_first_]                 = $ri_first;
-        $this_batch->[_ri_last_]                  = $ri_last;
-        $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
+        $this_batch->[_ri_first_] = $ri_first;
+        $this_batch->[_ri_last_]  = $ri_last;
 
         $self->convey_batch_to_vertical_aligner();
 
@@ -19160,7 +19162,7 @@ sub break_lines_inner_loop {
         #-------------------------------------
         # Section B: Handle forced breakpoints
         #-------------------------------------
-        my $must_break = 0;
+        my $must_break;
 
         # Force an immediate break at certain operators
         # with lower level than the start of the line,
@@ -20086,11 +20088,17 @@ EOM
             $last_old_breakpoint_count = $old_breakpoint_count;
 
             # Check for a good old breakpoint ..
-            # Note: ignore old breaks at types 'L' and 'R' to fix case
-            # b1097. These breaks only occur under high stress.
-            if (   $old_breakpoint_to_go[$i]
+            if (
+                $old_breakpoint_to_go[$i]
+
+                # Note: ignore old breaks at types 'L' and 'R' to fix case
+                # b1097. These breaks only occur under high stress.
                 && $type ne 'L'
-                && $next_nonblank_type ne 'R' )
+                && $next_nonblank_type ne 'R'
+
+                # ... and ignore other high stress level breaks, fixes b1395
+                && $levels_to_go[$i] < $list_stress_level
+              )
             {
                 ( $want_previous_breakpoint, $i_old_assignment_break ) =
                   $self->check_old_breakpoints( $i_next_nonblank,
@@ -21029,7 +21037,7 @@ EOM
         }
 
         # Set some more flags telling something about this container..
-        my $is_simple_logical_expression = 0;
+        my $is_simple_logical_expression;
         if (   $item_count_stack[$current_depth] == 0
             && $saw_opening_structure
             && $tokens_to_go[$i_opening] eq '('
@@ -23843,11 +23851,6 @@ sub convey_batch_to_vertical_aligner {
           $self->add_closing_side_comment( $ri_first, $ri_last );
     }
 
-    if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation ) {
-        $self->undo_ci( $ri_first, $ri_last,
-            $this_batch->[_rix_seqno_controlling_ci_] );
-    }
-
     # for multi-line batches ...
     if ( $n_last_line > 0 ) {
 
@@ -23874,7 +23877,7 @@ sub convey_batch_to_vertical_aligner {
     # ----------------------------------------------
     # loop to send each line to the vertical aligner
     # ----------------------------------------------
-    my ( $type_beg, $type_end, $token_beg );
+    my ( $type_beg, $type_end, $token_beg, $ljump );
 
     for my $n ( 0 .. $n_last_line ) {
 
@@ -23910,10 +23913,8 @@ sub convey_batch_to_vertical_aligner {
         my $Kend_code =
           $batch_CODE_type && $batch_CODE_type ne 'VER' ? undef : $Kend;
 
-        #  $ljump is a level jump needed by 'sub get_final_indentation'
-        my $ljump = 0;
-
-        # Get some vars on line [n+1], if any:
+        # Get some vars on line [n+1], if any,
+        # and define $ljump = level jump needed by 'sub get_final_indentation'
         if ( $n < $n_last_line ) {
             $ibeg_next = $ri_first->[ $n + 1 ];
             $iend_next = $ri_last->[ $n + 1 ];
@@ -23941,6 +23942,9 @@ sub convey_batch_to_vertical_aligner {
             }
             $ljump =
               $rLL->[$Kbeg_next]->[_LEVEL_] - $rLL->[$Kend]->[_LEVEL_];
+        }
+        else {
+            $ljump = 0;
         }
 
         # ---------------------------------------------
@@ -26426,7 +26430,7 @@ sub make_paren_name {
             }
         }
 
-        my $is_outdented_line = 0;
+        my $is_outdented_line;
 
         my $type_beg            = $types_to_go[$ibeg];
         my $token_beg           = $tokens_to_go[$ibeg];
