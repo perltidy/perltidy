@@ -554,6 +554,7 @@ BEGIN {
         _do_not_pad_                 => $i++,
         _peak_batch_size_            => $i++,
         _batch_count_                => $i++,
+        _rix_seqno_controlling_ci_   => $i++,
         _batch_CODE_type_            => $i++,
         _ri_starting_one_line_block_ => $i++,
         _runmatched_opening_indexes_ => $i++,
@@ -15632,8 +15633,9 @@ EOM
         #--------------------------------------------------
         elsif ( !$max_index_to_go && $types_to_go[0] eq '#' ) {
             my $ibeg = 0;
-            $this_batch->[_ri_first_] = [$ibeg];
-            $this_batch->[_ri_last_]  = [$ibeg];
+            $this_batch->[_ri_first_]                 = [$ibeg];
+            $this_batch->[_ri_last_]                  = [$ibeg];
+            $this_batch->[_rix_seqno_controlling_ci_] = [];
 
             $self->convey_batch_to_vertical_aligner();
 
@@ -16103,15 +16105,12 @@ EOM
             $this_batch->[_do_not_pad_] = $do_not_pad;
         }
 
-        if ( @{$ri_first} > 1 || $rOpts_extended_continuation_indentation ) {
-            $self->undo_ci( $ri_first, $ri_last, \@ix_seqno_controlling_ci );
-        }
-
         #--------------------
         # ship this batch out
         #--------------------
-        $this_batch->[_ri_first_] = $ri_first;
-        $this_batch->[_ri_last_]  = $ri_last;
+        $this_batch->[_ri_first_]                 = $ri_first;
+        $this_batch->[_ri_last_]                  = $ri_last;
+        $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
 
         $self->convey_batch_to_vertical_aligner();
 
@@ -23849,6 +23848,11 @@ sub convey_batch_to_vertical_aligner {
     if ($rOpts_closing_side_comments) {
         ( $closing_side_comment, $cscw_block_comment ) =
           $self->add_closing_side_comment( $ri_first, $ri_last );
+    }
+
+    if ( $n_last_line > 0 || $rOpts_extended_continuation_indentation ) {
+        $self->undo_ci( $ri_first, $ri_last,
+            $this_batch->[_rix_seqno_controlling_ci_] );
     }
 
     # for multi-line batches ...
