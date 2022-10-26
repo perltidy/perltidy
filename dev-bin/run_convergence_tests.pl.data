@@ -10478,6 +10478,52 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 --nospace-after-keyword='if'
 --paren-tightness=2
 
+==> b1396.in <==
+     print 'not '
+       unless ( near (
+            great_circle_distance ( 0, 0, 0, pi / 2 ), pi / 2
+       ) );
+
+     print 'not '
+       unless ( near ( great_circle_distance ( 0, 0, 0, pi / 2 ),
+            pi / 2, ) );
+
+
+
+==> b1396.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--extended-continuation-indentation
+--indent-columns=5
+--maximum-line-length=72
+--space-function-paren
+--want-trailing-commas='b'
+--weld-nested-containers
+
+==> b1397.in <==
+         (
+                  my $msg = sprintf (
+                           gettext("%s: fatal error at line %d:\n"), $progname, $line
+                      )
+                      . "@_\n"
+         ) =~ tr/\0//d;
+
+         (
+                  my $msg = sprintf ( gettext("%s: fatal error at line %d:\n"),
+                           $progname, $line, )
+                      . "@_\n"
+         ) =~ tr/\0//d;
+
+
+==> b1397.par <==
+--want-trailing-commas='b'
+--add-trailing-commas
+--delete-trailing-commas
+--continuation-indentation=4
+--indent-columns=9
+--maximum-line-length=92
+--space-keyword-paren
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;

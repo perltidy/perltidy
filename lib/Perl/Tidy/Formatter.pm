@@ -445,6 +445,7 @@ BEGIN {
         _rhas_list_                 => $i++,
         _rhas_broken_list_          => $i++,
         _rhas_broken_list_with_lec_ => $i++,
+        _rfirst_comma_line_index_   => $i++,
         _rhas_code_block_           => $i++,
         _rhas_broken_code_block_    => $i++,
         _rhas_ternary_              => $i++,
@@ -863,6 +864,7 @@ sub new {
     $self->[_rhas_list_]                 = {};
     $self->[_rhas_broken_list_]          = {};
     $self->[_rhas_broken_list_with_lec_] = {};
+    $self->[_rfirst_comma_line_index_]   = {};
     $self->[_rhas_code_block_]           = {};
     $self->[_rhas_broken_code_block_]    = {};
     $self->[_rhas_ternary_]              = {};
@@ -7093,6 +7095,18 @@ EOM
                 ## $self->note_deleted_comma($input_line_number);
                 next;
             }
+
+            # remember input line index of first comma if -wtc is used
+            if (%trailing_comma_rules) {
+                my $seqno = $seqno_stack{ $depth_next - 1 };
+                if ( defined($seqno)
+                    && !defined( $self->[_rfirst_comma_line_index_]->{$seqno} )
+                  )
+                {
+                    $self->[_rfirst_comma_line_index_]->{$seqno} =
+                      $rtoken_vars->[_LINE_INDEX_];
+                }
+            }
         }
 
         # change 'LABEL   :'   to 'LABEL:'
@@ -7781,7 +7795,8 @@ sub add_trailing_comma {
 
     # see if the user wants a trailing comma here
     my $match =
-      $self->match_trailing_comma_rule( $KK, $Kfirst, $trailing_comma_rule, 1 );
+      $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
+        $trailing_comma_rule, 1 );
 
     # if so, add a comma
     if ($match) {
@@ -7831,7 +7846,8 @@ sub delete_trailing_comma {
 
     # See if the user wants this trailing comma
     my $match =
-      $self->match_trailing_comma_rule( $KK, $Kfirst, $trailing_comma_rule, 0 );
+      $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
+        $trailing_comma_rule, 0 );
 
     # If not, delete it
     if ( !$match ) {
@@ -7967,7 +7983,7 @@ sub unstore_last_nonblank_token {
 
 sub match_trailing_comma_rule {
 
-    my ( $self, $KK, $Kfirst, $trailing_comma_rule, $if_add ) = @_;
+    my ( $self, $KK, $Kfirst, $Kp, $trailing_comma_rule, $if_add ) = @_;
 
     # Decide if a trailing comma rule is matched.
 
@@ -7975,6 +7991,7 @@ sub match_trailing_comma_rule {
     #  $KK = index of closing token in old ($rLL) token list which follows
     #    the location of a possible trailing comma. See diagram below.
     #  $Kfirst = (old) index of first token on the current line of input tokens
+    #  $Kp = index of previous nonblank token in new ($rLL_new) array
     #  $trailing_comma_rule = packed user control flags
     #  $if_add = true if adding comma, false if deleteing comma
 
@@ -8017,8 +8034,6 @@ sub match_trailing_comma_rule {
     #----------------------------------------
     # Set some flags describing this location
     #----------------------------------------
-    my $is_bare_comma = $KK == $Kfirst;
-
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
     return unless ($type_sequence);
     my $closing_token = $rLL->[$KK]->[_TOKEN_];
@@ -8031,10 +8046,37 @@ sub match_trailing_comma_rule {
     # but it is not available at this early stage.
     my $K_opening = $self->[_K_opening_container_]->{$type_sequence};
     return if ( !defined($K_opening) );
-    my $iline_o      = $rLL_new->[$K_opening]->[_LINE_INDEX_];
-    my $iline_c      = $rLL->[$KK]->[_LINE_INDEX_];
-    my $line_diff    = $iline_c - $iline_o;
-    my $is_multiline = $line_diff > 0;
+
+    # multiline definition 1: opening and closing tokens on different lines
+    my $iline_o                  = $rLL_new->[$K_opening]->[_LINE_INDEX_];
+    my $iline_c                  = $rLL->[$KK]->[_LINE_INDEX_];
+    my $line_diff_containers     = $iline_c - $iline_o;
+    my $has_multiline_containers = $line_diff_containers > 0;
+
+    # multiline definition 2: first and last commas on different lines
+    my $iline_first = $self->[_rfirst_comma_line_index_]->{$type_sequence};
+    my $iline_last  = $rLL_new->[$Kp]->[_LINE_INDEX_];
+    my $has_multiline_commas;
+    if ( !defined($iline_first) ) {
+
+        # shouldn't happen if caller checked comma count
+        my $type_kp = $rLL_new->[$Kp]->[_TYPE_];
+        Fault(
+"at line $iline_last but line of first comma not defined, at Kp=$Kp, type=$type_kp\n"
+        ) if (DEVEL_MODE);
+    }
+    else {
+        my $line_diff_commas = $iline_first < $iline_last;
+        $has_multiline_commas = $line_diff_commas > 0;
+    }
+
+    # To avoid instability in edge cases, when adding commas we uses the
+    # multiline_commas definition, but when deleting we use multiline
+    # containers.  This fixes b1384, b1396, b1397, b1398, b1400.
+    my $is_multiline =
+      $if_add ? $has_multiline_commas : $has_multiline_containers;
+
+    my $is_bare_comma = $is_multiline && $KK == $Kfirst;
 
     my $match;
 
@@ -8084,8 +8126,9 @@ sub match_trailing_comma_rule {
         $blank_line_count = 0 unless ( defined($blank_line_count) );
 
         # This is the count if the parens are on separate lines from the list:
-        my $required_comma_count = $line_diff - 2 - $blank_line_count;
-        my $comma_count          = $rtype_count->{','};
+        my $required_comma_count =
+          $line_diff_containers - 2 - $blank_line_count;
+        my $comma_count = $rtype_count->{','};
 
         # The comma tests here are based on number of interior commas,
         # so subtract 1 if we are at a trailing comma.
@@ -8146,7 +8189,7 @@ sub match_trailing_comma_rule {
 
             # We are looking for lists with <= 1 comma per line
             if (
-                $line_diff > $comma_count
+                $line_diff_containers > $comma_count
                 && (   $is_permanently_broken
                     || $rOpts_break_at_old_comma_breakpoints )
               )
@@ -13576,10 +13619,11 @@ EOM
 
     sub flush_batch_of_CODE {
 
-        # Finish any batch packaging and call the process routine.
+        # Finish and process the current batch.
         # This must be the only call to grind_batch_of_CODE()
         my ($self) = @_;
 
+        # If a batch has been started ...
         if ( $max_index_to_go >= 0 ) {
 
             # Create an array to hold variables for this batch
@@ -13610,6 +13654,9 @@ EOM
 
             $self->[_this_batch_] = $this_batch;
 
+            #-------------------
+            # process this batch
+            #-------------------
             $self->grind_batch_of_CODE();
 
             # Done .. this batch is history
@@ -13623,14 +13670,14 @@ EOM
 
     sub end_batch {
 
-        # end the current batch, EXCEPT for a few special cases
+        # End the current batch, EXCEPT for a few special cases
         my ($self) = @_;
 
         if ( $max_index_to_go < 0 ) {
 
-            # This is harmless but should be eliminated in development
+            # nothing to do .. this is harmless but wastes time.
             if (DEVEL_MODE) {
-                Fault("End batch called with nothing to do; please fix\n");
+                Fault("sub end_batch called with nothing to do; please fix\n");
             }
             return;
         }
@@ -14045,11 +14092,10 @@ EOM
         my ( $self, $has_side_comment ) = @_;
 
         #--------------------------------------------------------------------
-        # Loop to move all tokens from an input line to a newly forming batch
+        # Loop to move all tokens from one input line to a newly forming batch
         #--------------------------------------------------------------------
 
-        # We do not want a leading blank if the previous batch just got output
-
+        # Do not start a new batch with a blank space
         if ( $max_index_to_go < 0 && $rLL->[$K_first]->[_TYPE_] eq 'b' ) {
             $K_first++;
         }
@@ -16073,12 +16119,11 @@ EOM
 
                 $self->insert_final_ternary_breaks( $ri_first, $ri_last )
                   if (@colon_list);
-
-                $self->insert_breaks_before_list_opening_containers( $ri_first,
-                    $ri_last )
-                  if ( %break_before_container_types && $max_index_to_go > 0 );
-
             }
+
+            $self->insert_breaks_before_list_opening_containers( $ri_first,
+                $ri_last )
+              if ( %break_before_container_types && $max_index_to_go > 0 );
 
             # Check for a phantom semicolon at the end of the batch
             if ( !$token_lengths_to_go[$imax] && $types_to_go[$imax] eq ';' ) {
