@@ -9907,8 +9907,9 @@ sub weld_nested_containers {
     # We use the minimum of two criteria, either of which may be more
     # restrictive.  The 'alpha' value is more restrictive in (b1206, b1252) and
     # the 'beta' value is more restrictive in other cases (b1243).
+    # Reduced beta term from beta+3 to beta+2 to fix b1401.
 
-    my $weld_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 3 );
+    my $weld_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
     # The vertical tightness flags can throw off line length calculations.
     # This patch was added to fix instability issue b1284.
