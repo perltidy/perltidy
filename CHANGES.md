@@ -2,6 +2,10 @@
 
 ## 2022 06 13.06
 
+    - No significant bugs have been found since the last release to CPAN.
+      Several minor issues have been fixed, and some new parameters have been
+      added, as follows:
+
     - Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
       is set, along with -wn, perltidy is allowed to weld an opening paren
       to an inner opening container when they are separated by a hash key
@@ -103,17 +107,19 @@
                 $j -= $shell
               )
 
+      This will change some existing formatting.
+
     - The following new parameters are available for manipulating
-      trailing commas:
+      trailing commas. They are described in the manual.
 
            --want-trailing-commas=s, -wtc=s
            --add-trailing-commas,    -atc
            --delete-trailing-commas, -dtc
            --delete-weld-interfering-commas, -dwic
 
-    - This version runs about 10 to 15 percent faster than the previous
-      release on large files, depending on formatting parameters, due to
-      optimizations made with the help of Devel::NYTProf.
+    - This version runs 10 to 15 percent faster than the previous
+      release on large files due to optimizations made with the help of
+      Devel::NYTProf.
 
 ## 2022 06 13
 

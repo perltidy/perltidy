@@ -1135,7 +1135,7 @@ EOM
             'space-prototype-paren' => [ 0, 2 ],
             'break-after-labels'    => [ 0, 2 ],
 
-            'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', ' ' ],
+            'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
 
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],

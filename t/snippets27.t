@@ -73,10 +73,10 @@ $text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
 my $new = {
       %$item,
       text => $leaf,
-      color => 'green'
+      color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -135,7 +135,7 @@ my $new = {
     color => 'green'
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -188,7 +188,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -241,7 +241,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -294,7 +294,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -347,7 +347,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -399,7 +399,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -416,7 +416,8 @@ $dasm_frame->Button(
     -text    => 'Locate',
     -command => sub {
         $target_binary = $fs->Show( -popover => 'cursor', -create => 1 );
-    } )->pack( -side => 'left' );
+    },
+)->pack( -side => 'left' );
 
 my $no_index_1_1 =
   { 'map' => { ':key' => { name => \&string, list => { value => \&string } } }
@@ -479,7 +480,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -495,7 +496,8 @@ $dasm_frame->Button(
     -text    => 'Locate',
     -command => sub {
         $target_binary = $fs->Show( -popover => 'cursor', -create => 1 );
-    } )->pack( -side => 'left' );
+    },
+)->pack( -side => 'left' );
 
 my $no_index_1_1 =
   { 'map' => { ':key' => { name => \&string, list => { value => \&string } } }

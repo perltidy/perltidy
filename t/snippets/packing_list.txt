@@ -373,6 +373,7 @@
 ../snippets27.t	wtc.wtc6
 ../snippets27.t	dwic.def
 ../snippets27.t	dwic.dwic
+../snippets27.t	wtc.wtc7
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin
@@ -513,4 +514,3 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
-../snippets27.t	wtc.wtc7

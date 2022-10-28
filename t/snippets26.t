@@ -375,10 +375,10 @@ $text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
 my $new = {
       %$item,
       text => $leaf,
-      color => 'green'
+      color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,
@@ -913,10 +913,10 @@ $text = $main->Scrolled( TextUndo, $yyy, $zzz, $wwwww,
 my $new = {
     %$item,
     text  => $leaf,
-    color => 'green'
+    color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,

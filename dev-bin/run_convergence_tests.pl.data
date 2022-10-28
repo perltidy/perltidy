@@ -10540,6 +10540,79 @@ $cmd[ $i ]=
 --nowant-right-space='=~ >>= ||= %= >>= - | /= //= + - |= !~ <= = ||= =~'
 --variable-maximum-line-length
 
+==> b1401.in <==
+    my $moon_variation =
+           0.6583 *
+           sin(
+        torad(
+            2 * (
+                $moon_corrected_longitude
+                       - $sun_lambda
+            ) ) );
+
+    my $moon_variation =
+           0.6583 * sin( torad(
+        2 * (
+            $moon_corrected_longitude
+                   - $sun_lambda
+        )
+           ) );
+
+
+==> b1401.par <==
+--continuation-indentation=7
+--extended-line-up-parentheses
+--maximum-line-length=32
+--weld-nested-containers
+
+==> b1403.in <==
+ $template->param(
+  index        => $index,
+  index2       => $index2,
+  "f1_$result" => "f1_"
+    . $result,
+ );
+
+ $template->param(
+  index        => $index,
+  index2       => $index2,
+  "f1_$result" => "f1_" . $result
+ );
+
+==> b1403.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--indent-columns=1
+--keep-old-breakpoints-before=')'
+--maximum-line-length=33
+--want-trailing-commas='h'
+
+==> b1404.in <==
+my %MyTokens= (
+    '\tiny'       => { Type => 'local' },
+    '\small'      => { Type => 'local' },
+    '\scriptsize' => { Type => 'local' },
+    '\footnotesize' =>{ Type => 'local' }
+);
+
+my %MyTokens= (
+    '\tiny'       => { Type => 'local' },
+    '\small'      => { Type => 'local' },
+    '\scriptsize' => { Type => 'local' },
+    '\footnotesize' =>
+          { Type => 'local' },
+);
+
+==> b1404.par <==
+--add-trailing-commas
+--noadd-whitespace
+--continuation-indentation=6
+--delete-trailing-commas
+--extended-continuation-indentation
+--keep-old-breakpoints-before='Q'
+--maximum-line-length=47
+--want-trailing-commas='i'
+
 ==> b146.in <==
 # State 1
 

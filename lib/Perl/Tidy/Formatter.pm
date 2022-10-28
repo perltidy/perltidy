@@ -8017,8 +8017,9 @@ sub match_trailing_comma_rule {
     #   '1' or '*' : every list should have a trailing comma
     #   'm' a multi-line list should have a trailing commas
     #   'b' trailing commas should be 'bare' (comma followed by newline)
-    #   'h' lists of key=>value pairs should have a bare trailing comma
-    #   'i' same as s=h but also include any list with about one comma per line
+    #   'h' lists of key=>value pairs with a bare trailing comma
+    #   'i' same as s=h but also include any list with no more than about one
+    #       comma per line
     #   ' ' or -wtc not defined : leave trailing commas unchanged [DEFAULT].
 
     # Note: an interesting generalization would be to let an upper case
@@ -8057,6 +8058,7 @@ sub match_trailing_comma_rule {
     my $iline_first = $self->[_rfirst_comma_line_index_]->{$type_sequence};
     my $iline_last  = $rLL_new->[$Kp]->[_LINE_INDEX_];
     my $has_multiline_commas;
+    my $line_diff_commas = 0;
     if ( !defined($iline_first) ) {
 
         # shouldn't happen if caller checked comma count
@@ -8066,7 +8068,7 @@ sub match_trailing_comma_rule {
         ) if (DEVEL_MODE);
     }
     else {
-        my $line_diff_commas = $iline_first < $iline_last;
+        $line_diff_commas     = $iline_last - $iline_first;
         $has_multiline_commas = $line_diff_commas > 0;
     }
 
@@ -8076,7 +8078,7 @@ sub match_trailing_comma_rule {
     my $is_multiline =
       $if_add ? $has_multiline_commas : $has_multiline_containers;
 
-    my $is_bare_comma = $is_multiline && $KK == $Kfirst;
+    my $is_bare_multiline_comma = $is_multiline && $KK == $Kfirst;
 
     my $match;
 
@@ -8087,115 +8089,62 @@ sub match_trailing_comma_rule {
         $match = 0;
     }
 
-    #----------------------------
+    #------------------------------
     # '*' or '1' : matches any list
-    #----------------------------
+    #------------------------------
     elsif ( $trailing_comma_style eq '*' || $trailing_comma_style eq '1' ) {
         $match = 1;
     }
 
-    #---------------------------
+    #-----------------------------
     # 'm' matches a Multiline list
-    #---------------------------
+    #-----------------------------
     elsif ( $trailing_comma_style eq 'm' ) {
         $match = $is_multiline;
     }
 
-    #--------------------------------
+    #----------------------------------
     # 'b' matches a Bare trailing comma
-    #--------------------------------
+    #----------------------------------
     elsif ( $trailing_comma_style eq 'b' ) {
-        $match = $is_bare_comma;
+        $match = $is_bare_multiline_comma;
     }
 
-    #------------------------------------------------------------------
-    # 'h' matches a bare stable list of key=>values ('h' is for 'Hash')
-    # 'i' same as 'h' but also matches stable single field lists with about 1
-    #     comma per line.
-    #------------------------------------------------------------------
+    #--------------------------------------------------------------------------
+    # 'h' matches a bare hash list with about 1 comma and 1 fat comma per line.
+    # 'i' matches a bare stable list with about 1 comma per line.
+    #--------------------------------------------------------------------------
     elsif ( $trailing_comma_style eq 'h' || $trailing_comma_style eq 'i' ) {
 
-        # This is a minimal style which can put trailing commas where
-        # they are most useful - at the end of simple lists which might,
-        # for example, need to be sorted.
+        # We can treat these together because they are similar.
+        # The set of 'i' matches includes the set of 'h' matches.
 
-        return if ( !$is_bare_comma );
+        # the trailing comma must be bare for both 'h' and 'i'
+        return if ( !$is_bare_multiline_comma );
 
-        my $blank_line_count =
-          $self->[_rblank_and_comment_count_]->{$type_sequence};
-        $blank_line_count = 0 unless ( defined($blank_line_count) );
+        # there must be no more than one comma per line for both 'h' and 'i'
+        my $new_comma_count = $rtype_count->{','};
+        $new_comma_count += 1 if ($if_add);
+        return                if ( $new_comma_count > $line_diff_commas + 1 );
 
-        # This is the count if the parens are on separate lines from the list:
-        my $required_comma_count =
-          $line_diff_containers - 2 - $blank_line_count;
-        my $comma_count = $rtype_count->{','};
-
-        # The comma tests here are based on number of interior commas,
-        # so subtract 1 if we are at a trailing comma.
-        $comma_count -= 1 if ( !$if_add );
-
-        return if ( $comma_count != $required_comma_count );
-
-        # The -lp style has a special 2-line mode which uses the vertical
-        # aligner to move the closing paren to be at the end of the previous
-        # line. So if we add a comma it will be covered, and it may not
-        # be possible to remove it with -dtc.
-        my $min_comma_count = 1;
-        if ( $rOpts_line_up_parentheses && !$is_permanently_broken ) {
-
-            # This test is like to the test in sub set_vertical_tightness_flags
-            # but we do not yet know if this container will use -lp formatting
-            # so we have to assume that it will.
-            my $token_K = $rLL->[$KK]->[_TOKEN_];
-            if ( $token_K eq ')' ) { $min_comma_count = 2 }
-        }
-
-        #---------------------------------------------------------
-        # Styles 'h' and 'i': check for a stable key=>value list
-        #---------------------------------------------------------
-
+        # a list of key=>value pairs with at least 2 fat commas is a match
+        # for both 'h' and 'i'
         my $fat_comma_count = $rtype_count->{'=>'};
-        $fat_comma_count = 0 unless defined($fat_comma_count);
+        if ( $fat_comma_count && $fat_comma_count >= 2 ) {
 
-        # For a perfect key value list missing 1 comma we should use:
-        #     $rtype_count->{'=>'} == $required_comma_count + 1
-        # but to provide mercy for a list with one item without a fat comma,
-        # we can use:
-        #     $rtype_count->{'=>'} >= $required_comma_count
-        if (
-            $required_comma_count >= $min_comma_count
-
-            && (
-
-                # always ok:
-                $fat_comma_count == $required_comma_count + 1
-
-                # ok with 2 or more fat commas:
-                || (   $fat_comma_count >= $required_comma_count
-                    && $fat_comma_count > 1 )
-            )
-
-            && ( !$rOpts_ignore_old_breakpoints || $is_permanently_broken )
-          )
-        {
-            $match = 1;
+            # comma count (including trailer) and fat comma count must differ by
+            # by no more than 1. This allows for some small variations.
+            my $comma_diff = $new_comma_count - $fat_comma_count;
+            $match = ( $comma_diff >= -1 && $comma_diff <= 1 );
         }
 
-        #--------------------------------------------------------------
-        # Style 'i': check for a stable single-field list of
-        # items stabilized by blank lines, comments, or the -boc flag
-        #--------------------------------------------------------------
-        if ( !$match && $trailing_comma_style eq 'i' ) {
-
-            # We are looking for lists with <= 1 comma per line
-            if (
-                $line_diff_containers > $comma_count
-                && (   $is_permanently_broken
-                    || $rOpts_break_at_old_comma_breakpoints )
-              )
-            {
-                $match = 1;
-            }
+        # For 'i' only, a list that can be shown to be stable is a match
+        if ( $trailing_comma_style eq 'i' ) {
+            $match ||= (
+                $is_permanently_broken
+                  || ( $rOpts_break_at_old_comma_breakpoints
+                    && !$rOpts_ignore_old_breakpoints )
+            );
         }
     }
 
@@ -8238,7 +8187,6 @@ sub match_trailing_comma_rule {
             }
         }
     }
-
     return $match;
 }
 

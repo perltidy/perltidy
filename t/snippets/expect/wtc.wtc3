@@ -19,7 +19,7 @@ my $new = {
     color => 'green',
 };
 
-# and this
+# matches 'i'
 my @list = (
 
     $xx,

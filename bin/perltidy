@@ -3623,27 +3623,25 @@ a container of items (parens, square brackets, or braces), which is not a code
 block, with one or more commas.  These parameters only apply to something that
 fits this definition of a list.
 
-So a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list. For example, the trailing comma
-in the following line cannot be manipulated with these parameters:
-
-   my $theta = atan2 $y, $x, ;
+Note that a paren-less list of parameters is not a list by this definition, so
+these parameters have no effect on a peren-less list.
 
 Another consequence is that if the only comma in a list is deleted, then it
 cannot later be added back with these parameters because the container no
 longer fits this definition of a list.  For example, given
 
-    $x = $r * cos( $theta, );
+    my ( $self, ) = @_;
 
 and if we remove the comma with
 
     # perltidy -wtc=m -dtc
-    $x = $r * cos( $theta );
+    my ( $self ) = @_;
 
 then we cannot use these trailing comma controls to add this comma back.
 
 =item *
 
-By B<multiline> list is meant a list for which the opening and closing tokens
+By B<multiline> list is meant a list for which the first comma and trailing comma
 are on different lines.
 
 =item *
