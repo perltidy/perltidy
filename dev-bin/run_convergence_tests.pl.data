@@ -10608,6 +10608,26 @@ $cmd[ $i ]=
 --maximum-line-length=32
 --weld-nested-containers
 
+==> b1402.in <==
+ok (  3,
+      int(  at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) )
+      ) == 0
+);
+
+ok (  3,
+      int(
+            at ( sum ( conv2d ( $b, $a, { Boundary => 'Reflect' } ) - $ans ) )
+      ) == 0
+);
+
+
+==> b1402.par <==
+--extended-line-up-parentheses
+--indent-columns=9
+--paren-vertical-tightness=1
+--space-function-paren
+--weld-nested-containers
+
 ==> b1403.in <==
  $template->param(
   index        => $index,

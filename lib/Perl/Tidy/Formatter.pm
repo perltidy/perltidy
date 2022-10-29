@@ -531,8 +531,8 @@ BEGIN {
         _ris_short_broken_eval_block_      => $i++,
         _ris_bare_trailing_comma_by_seqno_ => $i++,
 
-        _rseqno_non_indenting_brace_by_ix_    => $i++,
-        _rreduce_vertical_tightness_by_seqno_ => $i++,
+        _rseqno_non_indenting_brace_by_ix_ => $i++,
+        _rzero_vertical_tightness_         => $i++,
 
         _no_vertical_tightness_flags_ => $i++,
 
@@ -954,8 +954,8 @@ sub new {
     $self->[_ris_short_broken_eval_block_]      = {};
     $self->[_ris_bare_trailing_comma_by_seqno_] = {};
 
-    $self->[_rseqno_non_indenting_brace_by_ix_]    = {};
-    $self->[_rreduce_vertical_tightness_by_seqno_] = {};
+    $self->[_rseqno_non_indenting_brace_by_ix_] = {};
+    $self->[_rzero_vertical_tightness_]         = {};
 
     $self->[_no_vertical_tightness_flags_] = 0;
 
@@ -9800,6 +9800,8 @@ sub weld_nested_containers {
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     my $ris_asub_block            = $self->[_ris_asub_block_];
+    my $rzero_vertical_tightness  = $self->[_rzero_vertical_tightness_];
+
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
     # Find nested pairs of container tokens for any welding.
@@ -9811,29 +9813,6 @@ sub weld_nested_containers {
     # NOTE: It would be nice to apply RULE 5 right here by deleting unwanted
     # pairs.  But it isn't clear if this is possible because we don't know
     # which sequences might actually start a weld.
-
-    # Setup a hash to avoid instabilities with combination -lp -wn -pvt=2.
-    # We do this by reducing -vt=2 to -vt=1 where there could be a conflict
-    # with welding at the same tokens.
-    # See issues b1338, b1339, b1340, b1341, b1342, b1343.
-    if ($rOpts_line_up_parentheses) {
-
-        # NOTE: just parens for now but this could be applied to all types if
-        # necessary.
-        if ( $opening_vertical_tightness{'('} == 2 ) {
-            my $rreduce_vertical_tightness_by_seqno =
-              $self->[_rreduce_vertical_tightness_by_seqno_];
-            foreach my $item ( @{$rnested_pairs} ) {
-                my ( $inner_seqno, $outer_seqno ) = @{$item};
-                if ( !$ris_excluded_lp_container->{$outer_seqno} ) {
-
-                    # Set a flag which means that if a token has -vt=2
-                    # then reduce it to -vt=1.
-                    $rreduce_vertical_tightness_by_seqno->{$outer_seqno} = 1;
-                }
-            }
-        }
-    }
 
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
@@ -9958,6 +9937,17 @@ sub weld_nested_containers {
         my $iline_oc = $outer_closing->[_LINE_INDEX_];
         my $token_oo = $outer_opening->[_TOKEN_];
         my $token_io = $inner_opening->[_TOKEN_];
+
+        # Turn off vertical tightness at possible one-line welds.
+        # Fixes b1402.  Also replaces a previous patch for
+        # issues b1338, b1339, b1340, b1341, b1342, b1343.
+        if (   %opening_vertical_tightness
+            && $opening_vertical_tightness{$token_oo} )
+        {
+            if ( $iline_oc - $iline_oo <= 2 ) {
+                $rzero_vertical_tightness->{$outer_seqno} = 1;
+            }
+        }
 
         my $is_multiline_weld =
              $iline_oo == $iline_io
@@ -27479,17 +27469,17 @@ sub set_vertical_tightness_flags {
               if ( $self->[_rK_weld_left_]->{ $K_to_go[$iend_next] }
                 && $is_closing_type{$type_end_next} );
 
-            # Avoid conflict of -bom and -pt=1 or -pt=2, fixes b1270
-            # See similar patch above for $cvt.
+           # The flag '_rwant_container_open_' avoids conflict of -bom and -pt=1
+           # or -pt=2; fixes b1270. See similar patch above for $cvt.
+           # The flag '_rzero_vertical_tightness_' avoids welding conflicts.
             my $seqno = $type_sequence_to_go[$iend];
-            if ( $ovt && $self->[_rwant_container_open_]->{$seqno} ) {
-                $ovt = 0;
-            }
-
-            if (   $ovt == 2
-                && $self->[_rreduce_vertical_tightness_by_seqno_]->{$seqno} )
+            if (
+                $ovt
+                && (   $self->[_rwant_container_open_]->{$seqno}
+                    || $self->[_rzero_vertical_tightness_]->{$seqno} )
+              )
             {
-                $ovt = 1;
+                $ovt = 0;
             }
 
             unless (
