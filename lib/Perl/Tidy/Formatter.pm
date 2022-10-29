@@ -327,7 +327,6 @@ my (
     $line_up_parentheses_control_is_lxpl,
 
     %trailing_comma_rules,
-    $wtc_cutoff_level,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -357,6 +356,7 @@ my (
     @maximum_text_length_at_level,
     $stress_level_alpha,
     $stress_level_beta,
+    $high_stress_level,
 
     # Total number of sequence items in a weld, for quick checks
     $total_weld_count,
@@ -2026,6 +2026,10 @@ EOM
         $stress_level_beta = $level;
     }
 
+    # This is a combined level which works well for turning off formatting
+    # features in most cases:
+    $high_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+
     %trailing_comma_rules = ();
     initialize_trailing_comma_rules();
 
@@ -2580,15 +2584,7 @@ EOM
         # If the possible instability is significant, then we can turn off
         # -dtc as a defensive measure to prevent it.
 
-        # One case is when the indentation level is so high that formatting is
-        # limited by the maximum line length. To handle this we define an
-        # indentation stress level above which we turn off -dtc.  This fixes
-        # b1389, b1390, b1391, b1392.  The following stress level is the same
-        # as used to shut down -lp ($lp_cutoff_level) and has been found to
-        # also work well for trailing commas:
-        $wtc_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
-
-        # And we must turn off -dtc for very small values of --whitespace-cycle
+        # We must turn off -dtc for very small values of --whitespace-cycle
         # to avoid instability.  A minimum value of -wc=3 fixes b1393, but a
         # value of 4 is used here for safety.  This parameter is seldom used,
         # and much larger than this when used, so the cutoff value is not
@@ -7838,9 +7834,9 @@ sub delete_trailing_comma {
     }
 
     # Do not delete commas when formatting under stress to avoid instability.
-    if ( defined($wtc_cutoff_level)
-        && $rLL_new->[$Kp]->[_LEVEL_] >= $wtc_cutoff_level )
-    {
+    # This fixes b1389, b1390, b1391, b1392.  The $high_stress_level has
+    # been found to work well for trailing commas.
+    if ( $rLL_new->[$Kp]->[_LEVEL_] >= $high_stress_level ) {
         return;
     }
 
@@ -9855,9 +9851,9 @@ sub weld_nested_containers {
     # We use the minimum of two criteria, either of which may be more
     # restrictive.  The 'alpha' value is more restrictive in (b1206, b1252) and
     # the 'beta' value is more restrictive in other cases (b1243).
-    # Reduced beta term from beta+3 to beta+2 to fix b1401.
-
-    my $weld_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+    # Reduced beta term from beta+3 to beta+2 to fix b1401. Previously:
+    # my $weld_cutoff_level = min($stress_level_alpha, $stress_level_beta + 2);
+    # This is now '$high_stress_level'.
 
     # The vertical tightness flags can throw off line length calculations.
     # This patch was added to fix instability issue b1284.
@@ -9930,7 +9926,7 @@ sub weld_nested_containers {
         # welds can still be made.  This rule will seldom be a limiting factor
         # in actual working code. Fixes b1206, b1243.
         my $inner_level = $inner_opening->[_LEVEL_];
-        if ( $inner_level >= $weld_cutoff_level ) { next }
+        if ( $inner_level >= $high_stress_level ) { next }
 
         # Set flag saying if this pair starts a new weld
         my $starting_new_weld = !( @welds && $outer_seqno == $welds[-1]->[0] );
@@ -11087,6 +11083,7 @@ sub break_before_list_opening_containers {
         next unless ($break_option);
 
         # Do not use -bbx under stress for stability ... fixes b1300
+        # TODO: review this; do we also need to look at stress_level_lalpha?
         my $level = $rLL->[$KK]->[_LEVEL_];
         if ( $level >= $stress_level_beta ) {
             DEBUG_BBX
@@ -11555,6 +11552,7 @@ sub extended_ci {
 
         # Fix for b1197 b1198 b1199 b1200 b1201 b1202
         # Do not apply -xci if we are running out of space
+        # TODO: review this; do we also need to look at stress_level_alpha?
         if ( $level >= $stress_level_beta ) {
             DEBUG_XCI
               && print
@@ -16909,7 +16907,7 @@ sub break_equals {
         # That's the task of this routine.
 
         # do nothing under extreme stress
-        return if ( $stress_level_alpha < 1 && !DEVEL_MODE );
+        return if ( $high_stress_level < 1 );
 
         my $rK_weld_right = $self->[_rK_weld_right_];
         my $rK_weld_left  = $self->[_rK_weld_left_];
@@ -19607,7 +19605,6 @@ sub do_colon_breaks {
 
     my $length_tol;
     my $lp_tol_boost;
-    my $list_stress_level;
 
     sub initialize_break_lists {
         @dont_align         = ();
@@ -19674,7 +19671,8 @@ sub do_colon_breaks {
 
         # Define a level where list formatting becomes highly stressed and
         # needs to be simplified. Introduced for case b1262.
-        $list_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+        # $list_stress_level = min($stress_level_alpha, $stress_level_beta + 2);
+        # This is now '$high_stress_level'.
 
         return;
     } ## end sub initialize_break_lists
@@ -20090,7 +20088,7 @@ EOM
                 && $next_nonblank_type ne 'R'
 
                 # ... and ignore other high stress level breaks, fixes b1395
-                && $levels_to_go[$i] < $list_stress_level
+                && $levels_to_go[$i] < $high_stress_level
               )
             {
                 ( $want_previous_breakpoint, $i_old_assignment_break ) =
@@ -20522,7 +20520,7 @@ EOM
                 # retain break at a ':' line break
                 if (   ( $i == $i_line_start || $i == $i_line_end )
                     && $rOpts_break_at_old_ternary_breakpoints
-                    && $levels_to_go[$i] < $list_stress_level )
+                    && $levels_to_go[$i] < $high_stress_level )
                 {
 
                     $self->set_forced_breakpoint($i);
@@ -20785,7 +20783,7 @@ EOM
         # instead of beta:  b1193 b780
         if (   $saw_opening_structure
             && !$lp_object
-            && $levels_to_go[$i_opening] >= $list_stress_level )
+            && $levels_to_go[$i_opening] >= $high_stress_level )
         {
             $cab_flag = 2;
 
@@ -20799,6 +20797,7 @@ EOM
 
             # This option fixes b1240 but not b1235, b1237 with new -lp,
             # but this gives better formatting than the previous option.
+            # TODO: see if stress_level_alha should also be considered
             $do_not_break_apart ||=
               $levels_to_go[$i_opening] > $stress_level_beta;
         }
@@ -22604,9 +22603,6 @@ sub get_available_spaces_to_go {
     # an -lp indentation level.  This survives between batches.
     my $lp_position_predictor;
 
-    # A level at which the lp format becomes too highly stressed to continue
-    my $lp_cutoff_level;
-
     BEGIN {
 
         # Index names for the -lp stack variables.
@@ -22629,10 +22625,9 @@ sub get_available_spaces_to_go {
 
         $lp_position_predictor = 0;
         $max_lp_stack          = 0;
-        $lp_cutoff_level = min( $stress_level_alpha, $stress_level_beta + 2 );
 
         # we can turn off -lp if all levels will be at or above the cutoff
-        if ( $lp_cutoff_level <= 1 ) {
+        if ( $high_stress_level <= 1 ) {
             $rOpts_line_up_parentheses          = 0;
             $rOpts_extended_line_up_parentheses = 0;
         }
@@ -23290,7 +23285,7 @@ EOM
             || $last_nonblank_type ne '{'
 
             # and do not start -lp under stress .. fixes b1244, b1255
-            || !$in_lp_mode && $level >= $lp_cutoff_level
+            || !$in_lp_mode && $level >= $high_stress_level
 
           )
         {
