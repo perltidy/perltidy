@@ -16448,6 +16448,7 @@ sub break_all_chain_tokens {
 
     # now look for any interior tokens of the same types
     $count = 0;
+    my $has_interior_dot_or_plus;
     for my $n ( 0 .. $nmax ) {
         my $il = $ri_left->[$n];
         my $ir = $ri_right->[$n];
@@ -16459,21 +16460,27 @@ sub break_all_chain_tokens {
             if ( $saw_chain_type{$key} ) {
                 push @{ $interior_chain_type{$key} }, $i;
                 $count++;
+                $has_interior_dot_or_plus ||= ( $key eq '.' || $key eq '+' );
             }
         }
     }
     return unless $count;
 
+    my @keys = keys %saw_chain_type;
+
+    # quit if just ONE continuation line with leading .  For example--
+    # print LATEXFILE '\framebox{\parbox[c][' . $h . '][t]{' . $w . '}{'
+    #  . $contents;
+    # Fixed for b1399.
+    if ( $has_interior_dot_or_plus && $nmax == 1 && @keys == 1 ) {
+        return;
+    }
+
     # now make a list of all new break points
     my @insert_list;
 
     # loop over all chain types
-    foreach my $key ( keys %saw_chain_type ) {
-
-        # quit if just ONE continuation line with leading .  For example--
-        # print LATEXFILE '\framebox{\parbox[c][' . $h . '][t]{' . $w . '}{'
-        #  . $contents;
-        last if ( $nmax == 1 && $key =~ /^[\.\+]$/ );
+    foreach my $key (@keys) {
 
         # loop over all interior chain tokens
         foreach my $itest ( @{ $interior_chain_type{$key} } ) {

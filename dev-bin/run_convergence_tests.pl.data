@@ -10524,6 +10524,49 @@ SOAP::Transport::HTTP::Daemon->new (LocalAddr => $host,
 --maximum-line-length=92
 --space-keyword-paren
 
+==> b1399.in <==
+use constant GRAPH_SIZE => 100;
+for ( my $i = 0 ;
+      $i < @$data ;
+      $i++ )
+  {
+     $polygon->addPt(
+          ORIGIN_X_COORD
+            + GRAPH_SIZE
+            / ( @$data - 1 )
+            * $i,
+          ORIGIN_Y_COORD
+            - $$data[$i]
+            * GRAPH_SIZE
+            / LOAD_MAX
+     );
+  } ## end for ( my $i = 0; $i < ...)
+
+for ( my $i = 0 ;
+      $i < @$data ;
+      $i++ )
+  {
+     $polygon->addPt(
+          ORIGIN_X_COORD
+            + GRAPH_SIZE
+            / ( @$data - 1 )
+            * $i,
+          ORIGIN_Y_COORD
+            - $$data[$i]
+            * GRAPH_SIZE / LOAD_MAX,
+     );
+  } ## end for ( my $i = 0; $i < ...)
+
+==> b1399.par <==
+--line-up-parentheses
+--maximum-line-length=33
+--keep-old-breakpoints-before='-'
+--variable-maximum-line-length
+--indent-columns=5
+--break-before-all-operators
+--break-at-old-comma-breakpoints
+--brace-left-and-indent
+
 ==> b140.in <==
 $cmd[ $i ]=[
 	 $s, $e, $cmd, \@hunk, $i ] ;
