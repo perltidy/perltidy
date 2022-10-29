@@ -7845,8 +7845,19 @@ sub delete_trailing_comma {
       $self->match_trailing_comma_rule( $KK, $Kfirst, $Kp,
         $trailing_comma_rule, 0 );
 
-    # If not, delete it
+    # Patch: the --noadd-whitespace flag can cause instability in complex
+    # structures. In this case do not delete the comma. Fixes b1409.
+    if ( !$match && !$rOpts_add_whitespace ) {
+        my $Kn = $self->K_next_nonblank($KK);
+        if ( defined($Kn) ) {
+            my $type_n = $rLL->[$Kn]->[_TYPE_];
+            if ( $type_n ne ';' && $type_n ne '#' ) { return }
+        }
+    }
+
+    # If no match, delete it
     if ( !$match ) {
+
         return $self->unstore_last_nonblank_token(',');
     }
     return;

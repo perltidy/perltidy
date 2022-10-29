@@ -10656,6 +10656,24 @@ my %MyTokens= (
 --maximum-line-length=47
 --want-trailing-commas='i'
 
+==> b1409.in <==
+      local(
+            %cached_env_img,%id_map,
+            %symbolic_labels,%latex_labels
+      )if($FIXEDDIR&&$NO_SUBDIR);
+
+      local(%cached_env_img,%id_map,%symbolic_labels,
+            %latex_labels,)
+        if($FIXEDDIR&&$NO_SUBDIR);
+
+==> b1409.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--want-trailing-commas='b'
+--indent-columns=6
+--maximum-line-length=66
+--noadd-whitespace
+
 ==> b146.in <==
 # State 1
 
