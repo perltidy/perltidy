@@ -532,7 +532,7 @@ BEGIN {
         _ris_bare_trailing_comma_by_seqno_ => $i++,
 
         _rseqno_non_indenting_brace_by_ix_ => $i++,
-        _rzero_vertical_tightness_         => $i++,
+        _rmax_vertical_tightness_          => $i++,
 
         _no_vertical_tightness_flags_ => $i++,
 
@@ -955,7 +955,7 @@ sub new {
     $self->[_ris_bare_trailing_comma_by_seqno_] = {};
 
     $self->[_rseqno_non_indenting_brace_by_ix_] = {};
-    $self->[_rzero_vertical_tightness_]         = {};
+    $self->[_rmax_vertical_tightness_]          = {};
 
     $self->[_no_vertical_tightness_flags_] = 0;
 
@@ -9805,7 +9805,7 @@ sub weld_nested_containers {
     my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
     my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
     my $ris_asub_block            = $self->[_ris_asub_block_];
-    my $rzero_vertical_tightness  = $self->[_rzero_vertical_tightness_];
+    my $rmax_vertical_tightness   = $self->[_rmax_vertical_tightness_];
 
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
@@ -9818,6 +9818,23 @@ sub weld_nested_containers {
     # NOTE: It would be nice to apply RULE 5 right here by deleting unwanted
     # pairs.  But it isn't clear if this is possible because we don't know
     # which sequences might actually start a weld.
+
+    # To avoid instabilities with combination -lp -wn -pvt=2, reduce -vt=2 to
+    # -vt=1 where there could be a conflict with welding at the same tokens.
+    # See issues b1338, b1339, b1340, b1341, b1342, b1343, b1415.
+    if ($rOpts_line_up_parentheses) {
+
+        # NOTE: this has only been found to be necessary for parens, but this
+        # could be applied to all types if necessary.
+        if ( $opening_vertical_tightness{'('} == 2 ) {
+            foreach my $item ( @{$rnested_pairs} ) {
+                my ( $inner_seqno, $outer_seqno ) = @{$item};
+                if ( !$ris_excluded_lp_container->{$outer_seqno} ) {
+                    $rmax_vertical_tightness->{$outer_seqno} = 1;
+                }
+            }
+        }
+    }
 
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
@@ -9943,14 +9960,16 @@ sub weld_nested_containers {
         my $token_oo = $outer_opening->[_TOKEN_];
         my $token_io = $inner_opening->[_TOKEN_];
 
-        # Turn off vertical tightness at possible one-line welds.
-        # Fixes b1402.  Also replaces a previous patch for
-        # issues b1338, b1339, b1340, b1341, b1342, b1343.
+        # Turn off vertical tightness completely at possible one-line welds.
+        # Fixes b1402.  This also fixes issues b1338, b1339, b1340, b1341,
+        # b1342, b1343, but both fixes are needed in general for good
+        # protection against instability.  The line difference of '2'
+        # works but could be increased if necessary.
         if (   %opening_vertical_tightness
             && $opening_vertical_tightness{$token_oo} )
         {
             if ( $iline_oc - $iline_oo <= 2 ) {
-                $rzero_vertical_tightness->{$outer_seqno} = 1;
+                $rmax_vertical_tightness->{$outer_seqno} = 0;
             }
         }
 
@@ -27476,15 +27495,17 @@ sub set_vertical_tightness_flags {
 
            # The flag '_rwant_container_open_' avoids conflict of -bom and -pt=1
            # or -pt=2; fixes b1270. See similar patch above for $cvt.
-           # The flag '_rzero_vertical_tightness_' avoids welding conflicts.
             my $seqno = $type_sequence_to_go[$iend];
-            if (
-                $ovt
-                && (   $self->[_rwant_container_open_]->{$seqno}
-                    || $self->[_rzero_vertical_tightness_]->{$seqno} )
-              )
+            if (   $ovt
+                && $self->[_rwant_container_open_]->{$seqno} )
             {
                 $ovt = 0;
+            }
+
+            # The flag '_rmax_vertical_tightness_' avoids welding conflicts.
+            if ( defined( $self->[_rmax_vertical_tightness_]->{$seqno} ) ) {
+                $ovt =
+                  min( $ovt, $self->[_rmax_vertical_tightness_]->{$seqno} );
             }
 
             unless (

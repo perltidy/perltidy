@@ -10694,6 +10694,58 @@ my %MyTokens= (
 --maximum-line-length=66
 --noadd-whitespace
 
+==> b1413.in <==
+    &PDL::_conv2d_int(
+        $a, $kern, $c,
+        (  !(  defined $opt
+               && exists $$opt{Boundary} )
+        ) ? 0 : (
+            ( $$opt{Boundary} eq "Reflect"
+            ) + 2 * ( $$opt{Boundary} eq "Truncate" )
+        )
+    );
+
+    &PDL::_conv2d_int(
+        $a, $kern, $c,
+        (
+           !(  defined $opt
+               && exists $$opt{Boundary} )
+        ) ? 0 : (
+            ( $$opt{Boundary} eq "Reflect"
+            ) + 2 * ( $$opt{Boundary} eq "Truncate" )
+        )
+    );
+
+==> b1413.par <==
+--delete-old-whitespace
+--keep-old-breakpoints-before=') &&'
+--line-up-parentheses
+--variable-maximum-line-length
+--vertical-tightness=2
+--weld-nested-containers
+
+==> b1415.in <==
+if (
+     ioctl( STDERR, $TIOCGWINSZ,
+            $winsize )
+  )
+{
+    ...;
+}
+
+if ( ioctl( STDERR, $TIOCGWINSZ,
+            $winsize )
+  )
+{
+    ...;
+}
+
+==> b1415.par <==
+--extended-line-up-parentheses
+--maximum-line-length=39
+--paren-vertical-tightness=2
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 
