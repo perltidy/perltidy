@@ -5773,6 +5773,11 @@ sub finish_formatting {
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
 
+    # Some of the code in sub break_lists is not robust enough to process code
+    # with arbitrary brace errors. The simplest fix is to just return the file
+    # verbatim if there are brace errors.  This fixes issue c160.
+    $severe_error ||= get_saw_brace_error();
+
     # Check the maximum level. If it is extremely large we will give up and
     # output the file verbatim.  Note that the actual maximum level is 1
     # greater than the saved value, so we fix that here.
