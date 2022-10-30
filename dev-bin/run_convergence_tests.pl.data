@@ -10754,6 +10754,29 @@ if ( ioctl( STDERR, $TIOCGWINSZ,
 --paren-vertical-tightness=2
 --weld-nested-containers
 
+==> b1419.in <==
+    print (
+        Tr( td( { -class => "forumTitle" },
+                $info{"name"} )
+        ),
+
+    );
+
+    print (
+        Tr(
+            td( { -class => "forumTitle" },
+                $info{"name"} )
+        ),
+
+    ) ;
+
+==> b1419.par <==
+--vertical-tightness=2
+--weld-nested-containers
+--break-at-old-comma-breakpoints
+--indent-columns=5
+--vertical-tightness-closing=1
+
 ==> b146.in <==
 # State 1
 

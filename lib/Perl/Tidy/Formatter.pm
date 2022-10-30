@@ -9964,11 +9964,12 @@ sub weld_nested_containers {
         # Fixes b1402.  This also fixes issues b1338, b1339, b1340, b1341,
         # b1342, b1343, but both fixes are needed in general for good
         # protection against instability.  The line difference of '2'
-        # works but could be increased if necessary.
+        # worked for b1402, but needs to be '3' to include b1419 because
+        # it has -vtc>0 which can add more uncertainty.
         if (   %opening_vertical_tightness
             && $opening_vertical_tightness{$token_oo} )
         {
-            if ( $iline_oc - $iline_oo <= 2 ) {
+            if ( $iline_oc - $iline_oo <= 3 ) {
                 $rmax_vertical_tightness->{$outer_seqno} = 0;
             }
         }
