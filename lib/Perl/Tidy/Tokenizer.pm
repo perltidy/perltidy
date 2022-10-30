@@ -3796,7 +3796,7 @@ EOM
                 # have not seen that SPACE is a constant.  In this case 'x' is
                 # probably an operator. The only disadvantage with an incorrect
                 # guess is that the space after it may be incorrect. For example
-                #   $str .= SPACE x ( 16 - length($str) );
+                #   $str .= SPACE x ( 16 - length($str) ); See also b1410.
                 if ( $tok eq 'x' && $last_nonblank_type eq 'w' ) { $type = 'x' }
 
                 # Fix part 2 for git #63.  Leave type as 'w' to keep
@@ -3821,16 +3821,22 @@ EOM
                 $statement_type = $tok;    # next '{' is block
                 $type           = 'k';     # for keyword syntax coloring
             }
+            if ( $next_nonblank_token eq '(' ) {
 
-            # patch for SWITCH/CASE if switch and given not keywords
-            # Switch is not a perl 5 keyword, but we will gamble
-            # and mark switch followed by paren as a keyword.  This
-            # is only necessary to get html syntax coloring nice,
-            # and does not commit this as being a switch/case.
-            if ( $next_nonblank_token eq '('
-                && ( $tok eq 'switch' || $tok eq 'given' ) )
-            {
-                $type = 'k';    # for keyword syntax coloring
+                # patch for SWITCH/CASE if switch and given not keywords
+                # Switch is not a perl 5 keyword, but we will gamble
+                # and mark switch followed by paren as a keyword.  This
+                # is only necessary to get html syntax coloring nice,
+                # and does not commit this as being a switch/case.
+                if ( $tok eq 'switch' || $tok eq 'given' ) {
+                    $type = 'k';    # for keyword syntax coloring
+                }
+
+                # mark 'x' as operator for something like this (see b1410)
+                #  my $line = join( LD_X, map { LD_H x ( $_ + 2 ) } @$widths );
+                elsif ( $tok eq 'x' && $last_nonblank_type eq 'w' ) {
+                    $type = 'x';
+                }
             }
         }
         return;
