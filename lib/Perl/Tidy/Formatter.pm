@@ -9966,10 +9966,11 @@ sub weld_nested_containers {
         # protection against instability.  The line difference of '2'
         # worked for b1402, but needs to be '3' to include b1419 because
         # it has -vtc>0 which can add more uncertainty.
+        # And for case b1421 it had to be increased to '4'.
         if (   %opening_vertical_tightness
             && $opening_vertical_tightness{$token_oo} )
         {
-            if ( $iline_oc - $iline_oo <= 3 ) {
+            if ( $iline_oc - $iline_oo <= 4 ) {
                 $rmax_vertical_tightness->{$outer_seqno} = 0;
             }
         }

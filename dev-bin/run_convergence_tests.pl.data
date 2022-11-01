@@ -10777,6 +10777,35 @@ if ( ioctl( STDERR, $TIOCGWINSZ,
 --indent-columns=5
 --vertical-tightness-closing=1
 
+==> b1421.in <==
+if ( L2hos
+     ->Link(
+      $image2, $image1,
+     ) )
+{
+L2hos
+  ->Unlink($tmp);
+}
+
+if (
+     L2hos
+     ->Link(
+      $image2, $image1,
+     ) )
+{
+L2hos
+  ->Unlink($tmp);
+}
+
+==> b1421.par <==
+--break-at-old-method-breakpoints
+--extended-line-up-parentheses
+--indent-columns=0
+--maximum-line-length=23
+--paren-vertical-tightness-closing=1
+--paren-vertical-tightness=1
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 
