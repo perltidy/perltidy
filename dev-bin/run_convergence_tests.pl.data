@@ -10676,6 +10676,43 @@ my %MyTokens= (
 --maximum-line-length=47
 --want-trailing-commas='i'
 
+==> b1408.in <==
+          $registry->add_type_constraint(
+                    Moose::Meta::TypeConstraint::Parameterizable->new(
+                              parent =>
+                                Moose::Util::TypeConstraints::find_type_constraint(
+                                        'Ref' ),
+                              constraint_generator => sub {
+
+                                        return sub {
+                                                  foreach my $x ( @$_ ) {
+                                                            ( $check->( $x ) )
+                                                              || return;
+                                                  }
+                                        }
+                              }, ) );
+
+          $registry->add_type_constraint(
+              Moose::Meta::TypeConstraint::Parameterizable->new(
+                   parent =>
+                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
+                   constraint_generator => sub {
+
+                             return sub {
+                                       foreach my $x ( @$_ ) {
+                                                 ( $check->( $x ) ) || return;
+                                       }
+                             }
+                   }, ) );
+
+
+==> b1408.par <==
+--indent-columns=10
+--maximum-line-length=87
+--paren-tightness=0
+--extended-line-up-parentheses
+--vertical-tightness-closing=2
+
 ==> b1409.in <==
       local(
             %cached_env_img,%id_map,

@@ -11956,9 +11956,17 @@ sub xlp_collapsed_lengths {
     push @stack,
       [ $max_prong_len, $handle_len_x, SEQ_ROOT, undef, undef, undef, undef ];
 
+    #--------------------------------
+    # Loop over all lines in the file
+    #--------------------------------
     my $iline = -1;
+    my $skip_next_line;
     foreach my $line_of_tokens ( @{$rlines} ) {
         $iline++;
+        if ($skip_next_line) {
+            $skip_next_line = 0;
+            next;
+        }
         my $line_type = $line_of_tokens->{_line_type};
         next if ( $line_type ne 'CODE' );
         my $CODE_type = $line_of_tokens->{_code_type};
@@ -12063,44 +12071,119 @@ sub xlp_collapsed_lengths {
         # Use length to terminal comma if interrupted list rule applies
         if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
             my $K_c = $stack[-1]->[_K_c_];
-            if (
-                defined($K_c)
-                && $rLL->[$K_terminal]->[_TYPE_] eq ','
+            if ( defined($K_c) ) {
 
-                # Ignore if terminal comma, causes instability (b1297, b1330)
-                && (
-                    $K_c - $K_terminal > 2
-                    || (   $K_c - $K_terminal == 2
-                        && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
-                )
-              )
-            {
-                my $Kend = $K_terminal;
+                #--------------------------------------------------------------
+                # BEGIN patch for issue b1408: If this line ends in an opening
+                # token, look for the closing token and comma at the end of the
+                # next line. If so, combine the two lines to get the correct
+                # sums.  This problem seems to require -xlp -vtc=2 and blank
+                # lines to occur.
+                #--------------------------------------------------------------
+                if ( $rLL->[$K_terminal]->[_TYPE_] eq '{' && !$has_comment ) {
+                    my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
+                    my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
 
-                # This caused an instability in b1311 by making the result
-                # dependent on input.  It is not really necessary because the
-                # comment length is added at the end of the loop.
-                ##if ( $has_comment
-                ##    && !$rOpts_ignore_side_comment_lengths )
-                ##{
-                ##    $Kend = $K_last;
-                ##}
+                    # We are looking for the a short broken remnant on the next
+                    # line; something like the third line here (b1408):
+                    #     parent =>
+                    #       Moose::Util::TypeConstraints::find_type_constraint(
+                    #               'RefXX' ),
+                    # or this
+                    #
+                    #  Help::WorkSubmitter->_filter_chores_and_maybe_warn_user(
+                    #                                    $story_set_all_chores),
+                    if (   defined($Kc_test)
+                        && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
+                        && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
+                    {
+                        my $Kc_test = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
+                        my $line_of_tokens_next = $rlines->[ $iline + 1 ];
+                        my $rtype_count = $rtype_count_by_seqno->{$seqno_end};
+                        my $comma_count =
+                          defined($rtype_count) ? $rtype_count->{','} : 0;
+                        my ( $K_first_next, $K_terminal_next ) =
+                          @{ $line_of_tokens_next->{_rK_range} };
 
-                # changed from $len to my $leng to fix b1302 b1306 b1317 b1321
-                my $leng = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
-                  $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+                        # NOTE: Do not try to do this if there is a side comment
+                        # because then the instability does not seem to occur.
+                        if (
+                            defined($K_terminal_next)
 
-                # Fix for b1331: at a broken => item, include the length of
-                # the previous half of the item plus one for the missing space
-                if ( $last_nonblank_type eq '=>' ) {
-                    $leng += $len + 1;
+                            # next line ends with a comma
+                            && $rLL->[$K_terminal_next]->[_TYPE_] eq ','
+
+                            # which follows the closing container token
+                            && (
+                                $K_terminal_next - $Kc_test == 1
+                                || (   $K_terminal_next - $Kc_test == 2
+                                    && $rLL->[ $K_terminal_next - 1 ]->[_TYPE_]
+                                    eq 'b' )
+                            )
+
+                            # no commas in the container
+                            && (   !defined($rtype_count)
+                                || !$rtype_count->{','} )
+
+                            # for now, restrict this to a container with just 1
+                            # or two tokens
+                            && $K_terminal_next - $K_terminal <= 5
+
+                          )
+                        {
+
+                            # combine the next line with the current line
+                            $K_terminal     = $K_terminal_next;
+                            $skip_next_line = 1;
+                            if (DEBUG_COLLAPSED_LENGTHS) {
+                                print "Combining lines at line $iline\n";
+                            }
+                        }
+                    }
                 }
 
-                if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
+                #--------------------------
+                # END patch for issue b1408
+                #--------------------------
+
+                if (
+                    $rLL->[$K_terminal]->[_TYPE_] eq ','
+
+                   # Ignore if terminal comma, causes instability (b1297, b1330)
+                    && (
+                        $K_c - $K_terminal > 2
+                        || (   $K_c - $K_terminal == 2
+                            && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
+                    )
+                  )
+                {
+                   # This caused an instability in b1311 by making the result
+                   # dependent on input.  It is not really necessary because the
+                   # comment length is added at the end of the loop.
+                    ##if ( $has_comment
+                    ##    && !$rOpts_ignore_side_comment_lengths )
+                    ##{
+                    ##    $Kend = $K_last;
+                    ##}
+
+                    # changed $len to my $leng to fix b1302 b1306 b1317 b1321
+                    my $leng = $rLL->[$K_terminal]->[_CUMULATIVE_LENGTH_] -
+                      $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+
+                    # Fix for b1331: at a broken => item, include the length of
+                    # the previous half of the item plus one for the missing
+                    # space
+                    if ( $last_nonblank_type eq '=>' ) {
+                        $leng += $len + 1;
+                    }
+                    if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
+                }
             }
         }
 
+        #----------------------------------
         # Loop over tokens on this line ...
+        #----------------------------------
         foreach my $KK ( $K_begin_loop .. $K_terminal ) {
 
             my $type = $rLL->[$KK]->[_TYPE_];
