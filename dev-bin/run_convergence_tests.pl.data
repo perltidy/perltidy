@@ -10843,6 +10843,36 @@ L2hos
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1423.in <==
+                if ( L2hos
+                     ->Link( $image2,
+                             $image1,
+                     )
+                  )
+                {
+                    L2hos
+                      ->Unlink($tmp);
+                }
+
+                if (
+                     L2hos
+                     ->Link( $image2,
+                             $image1,
+                     )
+                  )
+                {
+                    L2hos
+                      ->Unlink($tmp);
+                }
+
+
+==> b1423.par <==
+--break-at-old-comma-breakpoints
+--break-at-old-method-breakpoints
+--extended-line-up-parentheses
+--paren-vertical-tightness=1
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 

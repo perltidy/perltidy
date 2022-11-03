@@ -9960,6 +9960,26 @@ sub weld_nested_containers {
         my $token_oo = $outer_opening->[_TOKEN_];
         my $token_io = $inner_opening->[_TOKEN_];
 
+        # DO-NOT-WELD RULE 7: Do not weld if this conflicts with -bom
+        # Added for case b973. Moved here from below to fix b1423.
+        if (  !$do_not_weld_rule
+            && $rOpts_break_at_old_method_breakpoints
+            && $iline_io > $iline_oo )
+        {
+
+            foreach my $iline ( $iline_oo + 1 .. $iline_io ) {
+                my $rK_range = $rlines->[$iline]->{_rK_range};
+                next unless defined($rK_range);
+                my ( $Kfirst, $Klast ) = @{$rK_range};
+                next unless defined($Kfirst);
+                if ( $rLL->[$Kfirst]->[_TYPE_] eq '->' ) {
+                    $do_not_weld_rule = 7;
+                    last;
+                }
+            }
+        }
+        next if ($do_not_weld_rule);
+
         # Turn off vertical tightness completely at possible one-line welds.
         # Fixes b1402.  This also fixes issues b1338, b1339, b1340, b1341,
         # b1342, b1343, but both fixes are needed in general for good
@@ -10322,25 +10342,6 @@ EOM
         }
 
         # DO-NOT-WELD RULE 6: This has been merged into RULE 3 above.
-
-        # DO-NOT-WELD RULE 7: Do not weld if this conflicts with -bom
-        # (case b973)
-        if (  !$do_not_weld_rule
-            && $rOpts_break_at_old_method_breakpoints
-            && $iline_io > $iline_oo )
-        {
-
-            foreach my $iline ( $iline_oo + 1 .. $iline_io ) {
-                my $rK_range = $rlines->[$iline]->{_rK_range};
-                next unless defined($rK_range);
-                my ( $Kfirst, $Klast ) = @{$rK_range};
-                next unless defined($Kfirst);
-                if ( $rLL->[$Kfirst]->[_TYPE_] eq '->' ) {
-                    $do_not_weld_rule = 7;
-                    last;
-                }
-            }
-        }
 
         if ($do_not_weld_rule) {
 
