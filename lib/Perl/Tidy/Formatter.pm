@@ -458,6 +458,8 @@ BEGIN {
         _rparent_of_seqno_          => $i++,
         _rchildren_of_seqno_        => $i++,
         _ris_list_by_seqno_         => $i++,
+        _ris_cuddled_closing_brace_ => $i++,
+        _ris_cuddled_opening_brace_ => $i++,
         _rbreak_container_          => $i++,
         _rshort_nested_             => $i++,
         _length_function_           => $i++,
@@ -877,6 +879,8 @@ sub new {
     $self->[_rparent_of_seqno_]          = {};
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
+    $self->[_ris_cuddled_closing_brace_] = {};
+    $self->[_ris_cuddled_opening_brace_] = {};
 
     $self->[_rbreak_container_] = {};                 # prevent one-line blocks
     $self->[_rshort_nested_]    = {};                 # blocks not forced open
@@ -9100,10 +9104,12 @@ sub weld_cuddled_blocks {
 
     my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
-    my $rbreak_container = $self->[_rbreak_container_];
 
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
+    my $rbreak_container          = $self->[_rbreak_container_];
+    my $ris_cuddled_closing_brace = $self->[_ris_cuddled_closing_brace_];
+    my $ris_cuddled_opening_brace = $self->[_ris_cuddled_opening_brace_];
+    my $K_opening_container       = $self->[_K_opening_container_];
+    my $K_closing_container       = $self->[_K_closing_container_];
 
     my $is_broken_block = sub {
 
@@ -9206,6 +9212,14 @@ sub weld_cuddled_blocks {
                     # so that the cuddled line is balanced.
                     $rbreak_container->{$opening_seqno} = 1
                       if ($CBO);
+
+                    # Remember which braces are cuddled.
+                    # The closing brace is used to set adjusted indentations.
+                    # The opening brace is not yet used but might eventually
+                    # be needed in setting adjusted indentation.
+                    $ris_cuddled_closing_brace->{$closing_seqno} = 1;
+                    $ris_cuddled_opening_brace->{$opening_seqno} = 1;
+
                 }
 
             }
@@ -25199,7 +25213,14 @@ sub get_seqno {
                         $terminal_type = $types_to_go[ $iend - 2 ];
                     }
                 }
-                if ( $terminal_type eq '{' ) {
+
+                # Patch for rt144979, part 2. Coordinated with part 1.
+                # Skip cuddled braces.
+                my $seqno_beg = $type_sequence_to_go[$ibeg];
+                my $is_cuddled_closing_brace = $seqno_beg
+                  && $self->[_ris_cuddled_closing_brace_]->{$seqno_beg};
+
+                if ( $terminal_type eq '{' && !$is_cuddled_closing_brace ) {
                     my $Kbeg = $K_to_go[$ibeg];
                     $ci_levels_to_go[$ibeg] = 0;
                 }
@@ -27082,6 +27103,13 @@ sub make_paren_name {
               = $self->get_opening_indentation( $ibeg_weld_fix, $ri_first,
                 $ri_last, $rindentation_list, $seqno_qw_closing );
 
+            # Patch for rt144979, part 1. Coordinated with part 2.
+            # Do not undo ci for a cuddled closing brace control; it
+            # needs to be treated exactly the same ci as an isolated
+            # closing brace.
+            my $is_cuddled_closing_brace = $seqno_beg
+              && $self->[_ris_cuddled_closing_brace_]->{$seqno_beg};
+
             # First set the default behavior:
             if (
 
@@ -27089,14 +27117,15 @@ sub make_paren_name {
                 # of the form:   ");  };  ];  )->xxx;"
                 $is_semicolon_terminated
 
-                # and 'cuddled parens' of the form:   ")->pack("
-                # Bug fix for RT #123749]: the types here were
-                # incorrectly '(' and ')'.  Corrected to be '{' and '}'
+                # and 'cuddled parens' of the form:   ")->pack(". Bug fix for RT
+                # #123749]: the TYPES here were incorrectly ')' and '('.  The
+                # corrected TYPES are '}' and '{'. But skip a cuddled block.
                 || (
                        $terminal_type eq '{'
                     && $type_beg eq '}'
                     && ( $nesting_depth_to_go[$iend] + 1 ==
                         $nesting_depth_to_go[$ibeg] )
+                    && !$is_cuddled_closing_brace
                 )
 
                 # remove continuation indentation for any line like
@@ -27108,6 +27137,9 @@ sub make_paren_name {
 
                     && (   $types_to_go[$iend] eq '{'
                         || $levels_to_go[$iend] < $level_beg )
+
+                    # but not if a cuddled block
+                    && !$is_cuddled_closing_brace
                 )
 
                 # and when the next line is at a lower indentation level...
@@ -27370,7 +27402,6 @@ sub make_paren_name {
 
         );
     }
-
 } ## end closure get_final_indentation
 
 sub get_opening_indentation {

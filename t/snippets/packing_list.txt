@@ -374,6 +374,8 @@
 ../snippets27.t	dwic.def
 ../snippets27.t	dwic.dwic
 ../snippets27.t	wtc.wtc7
+../snippets27.t	rt144979.def
+../snippets27.t	rt144979.rt144979
 ../snippets3.t	ce_wn1.ce_wn
 ../snippets3.t	ce_wn1.def
 ../snippets3.t	colin.colin

@@ -6,6 +6,9 @@
       Several minor issues have been fixed, and some new parameters have been
       added, as follows:
 
+    - Fixed rare problem with irregular indentation involving --cuddled-else,
+      usually also with the combination -xci and -lp.  Reported in rt #144979.
+
     - Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
       is set, along with -wn, perltidy is allowed to weld an opening paren
       to an inner opening container when they are separated by a hash key

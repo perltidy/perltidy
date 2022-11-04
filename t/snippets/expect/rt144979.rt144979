@@ -1,0 +1,40 @@
+# part 1
+GetOptions(
+      "format|f=s" => sub {
+          my ( $n, $v ) = @_;
+          if ( ( my $k = $formats{$v} ) ) {
+              $format = $k;
+          } else {
+              die("--format must be 'system' or 'user'\n");
+          }
+          return;
+      },
+);
+
+# part 2
+{
+    {
+        {
+            my $desc =
+              $access
+              ? "for -$op under use filetest 'access' $desc_tail"
+              : "for -$op $desc_tail";
+            {
+                local $SIG{__WARN__} = sub {
+                    my $w = shift;
+                    if ( $w =~ /^File::stat ignores VMS ACLs/ ) {
+                        ++$vwarn;
+                    } elsif (
+                             $w =~ /^File::stat ignores use filetest 'access'/ )
+                    {
+                        ++$awarn;
+                    } else {
+                        $warnings .= $w;
+                    }
+                };
+                $rv = eval "$access; -$op \$stat";
+            }
+        }
+    }
+}
+

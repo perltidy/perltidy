@@ -10,6 +10,8 @@
 #7 dwic.def
 #8 dwic.dwic
 #9 wtc.wtc7
+#10 rt144979.def
+#11 rt144979.rt144979
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -27,15 +29,16 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
-        'def'  => "",
-        'dwic' => "-wn -dwic",
-        'wtc1' => "-wtc=0 -dtc",
-        'wtc2' => "-wtc=1 -atc",
-        'wtc3' => "-wtc=m -atc",
-        'wtc4' => "-wtc=m -atc -dtc",
-        'wtc5' => "-wtc=b -atc -dtc -vtc=2",
-        'wtc6' => "-wtc=i -atc -dtc -vtc=2",
-        'wtc7' => "-wtc=h -atc -dtc -vtc=2",
+        'def'      => "",
+        'dwic'     => "-wn -dwic",
+        'rt144979' => "-xci -ce -lp",
+        'wtc1'     => "-wtc=0 -dtc",
+        'wtc2'     => "-wtc=1 -atc",
+        'wtc3'     => "-wtc=m -atc",
+        'wtc4'     => "-wtc=m -atc -dtc",
+        'wtc5'     => "-wtc=b -atc -dtc -vtc=2",
+        'wtc6'     => "-wtc=i -atc -dtc -vtc=2",
+        'wtc7'     => "-wtc=h -atc -dtc -vtc=2",
     };
 
     ############################
@@ -52,6 +55,47 @@ BEGIN {
             PL_sys_intern
         ) ],
     );
+----------
+
+        'rt144979' => <<'----------',
+# part 1
+GetOptions(
+      "format|f=s" => sub {
+          my ( $n, $v ) = @_;
+          if ( ( my $k = $formats{$v} ) ) {
+              $format = $k;
+      } else {
+              die("--format must be 'system' or 'user'\n");
+          }
+          return;
+      },
+); 
+
+# part 2
+{{{
+            my $desc =
+              $access
+              ? "for -$op under use filetest 'access' $desc_tail"
+              : "for -$op $desc_tail";
+            {
+                local $SIG{__WARN__} = sub {
+                    my $w = shift;
+                    if ($w =~ /^File::stat ignores VMS ACLs/)
+                    {
+                        ++$vwarn;
+                      } elsif (
+                              $w =~ /^File::stat ignores use filetest 'access'/)
+                    {
+                        ++$awarn;
+                    } else
+                    {
+                        $warnings .= $w;
+                    }
+                };
+                $rv = eval "$access; -$op \$stat";
+            }
+}}}
+
 ----------
 
         'wtc' => <<'----------',
@@ -504,6 +548,102 @@ my $no_index_1_1 =
   };
 
 #9...........
+        },
+
+        'rt144979.def' => {
+            source => "rt144979",
+            params => "def",
+            expect => <<'#10...........',
+# part 1
+GetOptions(
+    "format|f=s" => sub {
+        my ( $n, $v ) = @_;
+        if ( ( my $k = $formats{$v} ) ) {
+            $format = $k;
+        }
+        else {
+            die("--format must be 'system' or 'user'\n");
+        }
+        return;
+    },
+);
+
+# part 2
+{
+    {
+        {
+            my $desc =
+              $access
+              ? "for -$op under use filetest 'access' $desc_tail"
+              : "for -$op $desc_tail";
+            {
+                local $SIG{__WARN__} = sub {
+                    my $w = shift;
+                    if ( $w =~ /^File::stat ignores VMS ACLs/ ) {
+                        ++$vwarn;
+                    }
+                    elsif ( $w =~ /^File::stat ignores use filetest 'access'/ )
+                    {
+                        ++$awarn;
+                    }
+                    else {
+                        $warnings .= $w;
+                    }
+                };
+                $rv = eval "$access; -$op \$stat";
+            }
+        }
+    }
+}
+
+#10...........
+        },
+
+        'rt144979.rt144979' => {
+            source => "rt144979",
+            params => "rt144979",
+            expect => <<'#11...........',
+# part 1
+GetOptions(
+      "format|f=s" => sub {
+          my ( $n, $v ) = @_;
+          if ( ( my $k = $formats{$v} ) ) {
+              $format = $k;
+          } else {
+              die("--format must be 'system' or 'user'\n");
+          }
+          return;
+      },
+);
+
+# part 2
+{
+    {
+        {
+            my $desc =
+              $access
+              ? "for -$op under use filetest 'access' $desc_tail"
+              : "for -$op $desc_tail";
+            {
+                local $SIG{__WARN__} = sub {
+                    my $w = shift;
+                    if ( $w =~ /^File::stat ignores VMS ACLs/ ) {
+                        ++$vwarn;
+                    } elsif (
+                             $w =~ /^File::stat ignores use filetest 'access'/ )
+                    {
+                        ++$awarn;
+                    } else {
+                        $warnings .= $w;
+                    }
+                };
+                $rv = eval "$access; -$op \$stat";
+            }
+        }
+    }
+}
+
+#11...........
         },
     };
 
