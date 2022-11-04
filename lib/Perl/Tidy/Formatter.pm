@@ -5799,7 +5799,7 @@ EOM
     # output file verbatim if severe error or no formatting requested
     if ( $severe_error || $rOpts->{notidy} ) {
         $self->dump_verbatim();
-        $self->wrapup();
+        $self->wrapup($severe_error);
         return;
     }
 
@@ -25216,7 +25216,7 @@ sub get_seqno {
 
                 # Patch for rt144979, part 2. Coordinated with part 1.
                 # Skip cuddled braces.
-                my $seqno_beg = $type_sequence_to_go[$ibeg];
+                my $seqno_beg                = $type_sequence_to_go[$ibeg];
                 my $is_cuddled_closing_brace = $seqno_beg
                   && $self->[_ris_cuddled_closing_brace_]->{$seqno_beg};
 
@@ -28632,7 +28632,7 @@ sub wrapup {
 
     # This is the last routine called when a file is formatted.
     # Flush buffer and write any informative messages
-    my $self = shift;
+    my ( $self, $severe_error ) = @_;
 
     $self->flush();
     my $file_writer_object = $self->[_file_writer_object_];
@@ -28773,8 +28773,9 @@ sub wrapup {
 
     # Define the formatter self-check for convergence.
     $self->[_converged_] =
-      (      $file_writer_object->get_convergence_check()
-          || $rOpts->{'indent-only'} );
+         $severe_error
+      || $file_writer_object->get_convergence_check()
+      || $rOpts->{'indent-only'};
 
     return;
 } ## end sub wrapup

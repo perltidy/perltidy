@@ -120,6 +120,10 @@
            --delete-trailing-commas, -dtc
            --delete-weld-interfering-commas, -dwic
 
+    - Files with errors due to missing, extra or misplaced parens, braces,
+      or square brackets are now written back out verbatim, without any
+      attempt at formatting.
+
     - This version runs 10 to 15 percent faster than the previous
       release on large files due to optimizations made with the help of
       Devel::NYTProf.
