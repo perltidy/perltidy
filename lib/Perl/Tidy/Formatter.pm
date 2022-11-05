@@ -9994,19 +9994,16 @@ sub weld_nested_containers {
         }
         next if ($do_not_weld_rule);
 
-        # Turn off vertical tightness completely at possible one-line welds.
-        # Fixes b1402.  This also fixes issues b1338, b1339, b1340, b1341,
-        # b1342, b1343, but both fixes are needed in general for good
-        # protection against instability.  The line difference of '2'
-        # worked for b1402, but needs to be '3' to include b1419 because
-        # it has -vtc>0 which can add more uncertainty.
-        # And for case b1421 it had to be increased to '4'.
+        # Turn off vertical tightness at possible one-line welds.  Fixes
+        # b1402,b1419,b1421,b1424,b1425. This also fixes issues b1338, b1339,
+        # b1340, b1341, b1342, b1343, but both fixes are needed in general for
+        # good protection against instability.  Issue c161 is the latest and
+        # simplest check, using $iline_ic==$iline_io as the test.
         if (   %opening_vertical_tightness
+            && $iline_ic == $iline_io
             && $opening_vertical_tightness{$token_oo} )
         {
-            if ( $iline_oc - $iline_oo <= 4 ) {
-                $rmax_vertical_tightness->{$outer_seqno} = 0;
-            }
+            $rmax_vertical_tightness->{$outer_seqno} = 0;
         }
 
         my $is_multiline_weld =
@@ -12112,7 +12109,6 @@ sub xlp_collapsed_lengths {
                         && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
                         && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
                     {
-                        my $Kc_test = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
                         my $line_of_tokens_next = $rlines->[ $iline + 1 ];
                         my $rtype_count = $rtype_count_by_seqno->{$seqno_end};
                         my $comma_count =

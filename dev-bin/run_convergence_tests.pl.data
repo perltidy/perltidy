@@ -10873,6 +10873,64 @@ L2hos
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1424.in <==
+$registry->add_type_constraint( Moose::Meta::TypeConstraint::Parameterizable
+                                  ->new( $a = 1;
+                                         $b = 1;
+
+                                  ) );
+
+$registry->add_type_constraint(
+                                Moose::Meta::TypeConstraint::Parameterizable
+                                  ->new( $a = 1;
+                                         $b = 1;
+
+                                  ) );
+
+
+==> b1424.par <==
+--extended-line-up-parentheses
+--indent-columns=8
+--keep-old-breakpoints-after='q >= - w ; <> ** & ? !='
+--stack-closing-paren
+--vertical-tightness=1
+--weld-nested-containers
+
+==> b1425.in <==
+my$sem=sub
+{
+    my$code=shift;
+  }
+  ->(sub
+     {
+         IPC::Semaphore->new(IPC_PRIVATE,$nsem,
+                           S_IRWXU|S_IRWXG|S_IRWXO|IPC_CREAT);
+     } );
+
+my$sem=sub
+{
+    my$code=shift;
+  }
+  ->(
+     sub
+     {
+         IPC::Semaphore->new(IPC_PRIVATE,$nsem,
+                           S_IRWXU|S_IRWXG|S_IRWXO|IPC_CREAT);
+     } );
+
+
+==> b1425.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--extended-line-up-parentheses
+--ignore-old-breakpoints
+--maximum-line-length=51
+--opening-anonymous-sub-brace-on-new-line
+--paren-vertical-tightness-closing=2
+--paren-vertical-tightness=1
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 

@@ -70,8 +70,8 @@
       Also, previously a word following a '->' was given the color of a bareword,
       black by default, but now it is given the color of an identifier.
 
-    - Fixed incorrect formatting of any function named 'err'.  This was
-      due to some old code when use feature 'err' was valid.
+    - Fixed incorrect indentation of any function named 'err'.  This was
+      due to some old code from when "use feature 'err'" was valid.
 
             # OLD:
             my ($curr) = current();
@@ -82,8 +82,7 @@
             err(@_);
 
     - Added parameter --delete-repeated-commas (-drc) to delete repeated
-      commas. This is off by default. I added this option after discovering
-      an unwanted repeated comma in the perltidy source. For example, given:
+      commas. This is off by default. For example, given:
 
             ignoreSpec( $file, "file",, \%spec, \%Rspec );
 
@@ -113,7 +112,7 @@
       This will change some existing formatting.
 
     - The following new parameters are available for manipulating
-      trailing commas. They are described in the manual.
+      trailing commas of lists. They are described in the manual.
 
            --want-trailing-commas=s, -wtc=s
            --add-trailing-commas,    -atc
