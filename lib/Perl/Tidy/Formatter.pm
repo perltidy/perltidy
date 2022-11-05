@@ -459,7 +459,6 @@ BEGIN {
         _rchildren_of_seqno_        => $i++,
         _ris_list_by_seqno_         => $i++,
         _ris_cuddled_closing_brace_ => $i++,
-        _ris_cuddled_opening_brace_ => $i++,
         _rbreak_container_          => $i++,
         _rshort_nested_             => $i++,
         _length_function_           => $i++,
@@ -880,7 +879,6 @@ sub new {
     $self->[_rchildren_of_seqno_]        = {};
     $self->[_ris_list_by_seqno_]         = {};
     $self->[_ris_cuddled_closing_brace_] = {};
-    $self->[_ris_cuddled_opening_brace_] = {};
 
     $self->[_rbreak_container_] = {};                 # prevent one-line blocks
     $self->[_rshort_nested_]    = {};                 # blocks not forced open
@@ -9107,7 +9105,6 @@ sub weld_cuddled_blocks {
 
     my $rbreak_container          = $self->[_rbreak_container_];
     my $ris_cuddled_closing_brace = $self->[_ris_cuddled_closing_brace_];
-    my $ris_cuddled_opening_brace = $self->[_ris_cuddled_opening_brace_];
     my $K_opening_container       = $self->[_K_opening_container_];
     my $K_closing_container       = $self->[_K_closing_container_];
 
@@ -9218,7 +9215,6 @@ sub weld_cuddled_blocks {
                     # The opening brace is not yet used but might eventually
                     # be needed in setting adjusted indentation.
                     $ris_cuddled_closing_brace->{$closing_seqno} = 1;
-                    $ris_cuddled_opening_brace->{$opening_seqno} = 1;
 
                 }
 
@@ -9836,7 +9832,10 @@ sub weld_nested_containers {
     # To avoid instabilities with combination -lp -wn -pvt=2, reduce -vt=2 to
     # -vt=1 where there could be a conflict with welding at the same tokens.
     # See issues b1338, b1339, b1340, b1341, b1342, b1343, b1415.
-    if ($rOpts_line_up_parentheses) {
+    # FIXME: this block is deactivated.  It will be retained for a while for
+    # use in testing, but can eventually be removed.  It is no longer necessary
+    # because the test c161 below handles this issue.
+    if (0 && $rOpts_line_up_parentheses) {
 
         # NOTE: this has only been found to be necessary for parens, but this
         # could be applied to all types if necessary.
@@ -9994,11 +9993,11 @@ sub weld_nested_containers {
         }
         next if ($do_not_weld_rule);
 
-        # Turn off vertical tightness at possible one-line welds.  Fixes
-        # b1402,b1419,b1421,b1424,b1425. This also fixes issues b1338, b1339,
-        # b1340, b1341, b1342, b1343, but both fixes are needed in general for
-        # good protection against instability.  Issue c161 is the latest and
-        # simplest check, using $iline_ic==$iline_io as the test.
+        # Turn off vertical tightness at possible one-line welds.  Fixes b1402,
+        # b1419, b1421, b1424, b1425. This also fixes issues b1338, b1339,
+        # b1340, b1341, b1342, b1343, which previously used a separate fix.
+        # Issue c161 is the latest and simplest check, using
+        # $iline_ic==$iline_io as the test.
         if (   %opening_vertical_tightness
             && $iline_ic == $iline_io
             && $opening_vertical_tightness{$token_oo} )
@@ -12168,14 +12167,6 @@ sub xlp_collapsed_lengths {
                     )
                   )
                 {
-                   # This caused an instability in b1311 by making the result
-                   # dependent on input.  It is not really necessary because the
-                   # comment length is added at the end of the loop.
-                    ##if ( $has_comment
-                    ##    && !$rOpts_ignore_side_comment_lengths )
-                    ##{
-                    ##    $Kend = $K_last;
-                    ##}
 
                     # changed $len to my $leng to fix b1302 b1306 b1317 b1321
                     my $leng = $rLL->[$K_terminal]->[_CUMULATIVE_LENGTH_] -
@@ -12273,17 +12264,11 @@ sub xlp_collapsed_lengths {
                     }
 
                     # Include length to a comma ending this line
+                    # note: any side comments are handled at loop end (b1332)
                     if (   $interrupted_list_rule
                         && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
                     {
                         my $Kend = $K_terminal;
-
-                        # fix for b1332: side comments handled at end of loop
-                        ##if ( $Kend < $K_last
-                        ##    && !$rOpts_ignore_side_comment_lengths )
-                        ##{
-                        ##    $Kend = $K_last;
-                        ##}
 
                         # Measure from the next blank if any (fixes b1301)
                         my $Kbeg = $KK;
@@ -12449,7 +12434,7 @@ EOM
 
         } ## end loop over tokens on this line
 
-        # Now take care of any side comment
+        # Now take care of any side comment;
         if ($has_comment) {
             if ($rOpts_ignore_side_comment_lengths) {
                 $len = 0;
@@ -12491,6 +12476,9 @@ sub is_excluded_lp {
     # The control hash can either describe:
     #   what to exclude:  $line_up_parentheses_control_is_lxpl = 1, or
     #   what to include:  $line_up_parentheses_control_is_lxpl = 0
+
+    # Input parameter:
+    #   $KK = index of the container opening token
 
     my ( $self, $KK ) = @_;
     my $rLL         = $self->[_rLL_];
