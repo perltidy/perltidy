@@ -9,7 +9,7 @@ package Perl::Tidy::LineSource;
 use strict;
 use warnings;
 use English qw( -no_match_vars );
-our $VERSION = '20220613.06';
+our $VERSION = '20221111';
 
 use constant DEVEL_MODE => 0;
 

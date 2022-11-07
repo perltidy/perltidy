@@ -1,5 +1,133 @@
 <h1>Perltidy Change Log</h1>
 
+<h2>2022 11 11</h2>
+
+<pre><code>- No significant bugs have been found since the last release to CPAN.
+  Several minor issues have been fixed, and some new parameters have been
+  added, as follows:
+
+- Fixed rare problem with irregular indentation involving --cuddled-else,
+  usually also with the combination -xci and -lp.  Reported in rt #144979.
+
+- Add option --weld-fat-comma (-wfc) for issue git #108. When -wfc
+  is set, along with -wn, perltidy is allowed to weld an opening paren
+  to an inner opening container when they are separated by a hash key
+  and fat comma (=&gt;).  For example:
+
+    # perltidy -wn
+    elf-&gt;call_method(
+        method_name_foo =&gt; {
+            some_arg1       =&gt; $foo,
+            some_other_arg3 =&gt; $bar-&gt;{'baz'},
+        }
+    );
+
+    # perltidy -wn -wfc
+    elf-&gt;call_method( method_name_foo =&gt; {
+        some_arg1       =&gt; $foo,
+        some_other_arg3 =&gt; $bar-&gt;{'baz'},
+    } );
+
+  This flag is off by default.
+
+- Fix issue git #106. This fixes some edge cases of formatting with the
+  combination -xlp -pt=2, mainly for two-line lists with short function
+  names. One indentation space is removed to improve alignment:
+
+    # OLD: perltidy -xlp -pt=2
+    is($module-&gt;VERSION, $expected,
+        "$main_module-&gt;VERSION matches $module-&gt;VERSION ($expected)");
+
+    # NEW: perltidy -xlp -pt=2
+    is($module-&gt;VERSION, $expected,
+       "$main_module-&gt;VERSION matches $module-&gt;VERSION ($expected)");
+
+- Fix for issue git #105, incorrect formatting with 5.36 experimental
+  for_list feature.
+
+- Fix for issue git #103. For parameter -b, or --backup-and-modify-in-place,
+  the default backup method has been changed to preserve the inode value
+  of the file being formatted.  If this causes a problem, the previous
+  method is available and can be used by setting -backup-mode='move', or
+  -bm='move'.  The new default corresponds to -bm='copy'.  The difference
+  between the two methods is as follows.  For the older method,
+  -bm='move', the input file was moved to the backup, and a new file was
+  created for the formatted output.  This caused the inode to change.  For
+  the new default method, -bm='copy', the input is copied to the backup
+  and then the input file is reopened and rewritten. This preserves the
+  file inode.  Tests have not produced any problems with this change, but
+  before using the --backup-and-modify-in-place parameter please verify
+  that it works correctly in your environment and operating system. The
+  initial update for this had an error which was caught and fixed
+  in git #109.
+
+- Fix undefined value message when perltidy -D is used (git #104)
+
+- Fixed an inconsistency in html colors near pointers when -html is used.
+  Previously, a '-&gt;' at the end of a line got the 'punctuation color', black
+  by default but a '-&gt;' before an identifier got the color of the following
+  identifier. Now all pointers get the same color, which is black by default.
+  Also, previously a word following a '-&gt;' was given the color of a bareword,
+  black by default, but now it is given the color of an identifier.
+
+- Fixed incorrect indentation of any function named 'err'.  This was
+  due to some old code from when "use feature 'err'" was valid.
+
+        # OLD:
+        my ($curr) = current();
+          err (@_);
+
+        # NEW:
+        my ($curr) = current();
+        err(@_);
+
+- Added parameter --delete-repeated-commas (-drc) to delete repeated
+  commas. This is off by default. For example, given:
+
+        ignoreSpec( $file, "file",, \%spec, \%Rspec );
+
+  # perltidy -drc:
+        ignoreSpec( $file, "file", \%spec, \%Rspec );
+
+- Add continuation indentation to long C-style 'for' terms; i.e.
+
+        # OLD
+        for (
+            $j = $i - $shell ;
+            $j &gt;= 0
+            &amp;&amp; ++$ncomp
+            &amp;&amp; $array-&gt;[$j] gt $array-&gt;[ $j + $shell ] ;
+            $j -= $shell
+          )
+
+        # NEW
+        for (
+            $j = $i - $shell ;
+            $j &gt;= 0
+              &amp;&amp; ++$ncomp
+              &amp;&amp; $array-&gt;[$j] gt $array-&gt;[ $j + $shell ] ;
+            $j -= $shell
+          )
+
+  This will change some existing formatting.
+
+- The following new parameters are available for manipulating
+  trailing commas of lists. They are described in the manual.
+
+       --want-trailing-commas=s, -wtc=s
+       --add-trailing-commas,    -atc
+       --delete-trailing-commas, -dtc
+       --delete-weld-interfering-commas, -dwic
+
+- Files with errors due to missing, extra or misplaced parens, braces,
+  or square brackets are now written back out verbatim, without any
+  attempt at formatting.
+
+- This version runs 10 to 15 percent faster than the previous
+  release on large files due to optimizations made with the help of
+  Devel::NYTProf.
+</code></pre>
+
 <h2>2022 06 13</h2>
 
 <pre><code>- No significant bugs have been found since the last release but users
@@ -22,7 +150,7 @@
 - Added vertical alignment for qw quotes and empty parens in 'use'
   statements (see issue #git 93).  This new alignment is 'on' by default
   and will change formatting as shown below. If this is not wanted it can
-  be turned off with the parameter -vxl='q' (--valign-exclude-list='q').
+  be turned off with the parameter -vxl='q' (--valign-exclusion-list='q').
 
     # old default, or -vxl='q'
     use Getopt::Long qw(GetOptions);

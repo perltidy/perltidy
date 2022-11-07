@@ -7,7 +7,7 @@
 package Perl::Tidy::Logger;
 use strict;
 use warnings;
-our $VERSION = '20220613.06';
+our $VERSION = '20221111';
 use English qw( -no_match_vars );
 
 use constant DEVEL_MODE   => 0;

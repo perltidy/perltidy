@@ -18,7 +18,7 @@
   <li><a href="#EXAMPLES">EXAMPLES</a></li>
   <li><a href="#OPTIONS---OVERVIEW">OPTIONS - OVERVIEW</a>
     <ul>
-      <li><a href="#I-O-control">I/O control</a></li>
+      <li><a href="#I-O-Control">I/O Control</a></li>
     </ul>
   </li>
   <li><a href="#FORMATTING-OPTIONS">FORMATTING OPTIONS</a>
@@ -29,7 +29,11 @@
       <li><a href="#Comment-Controls">Comment Controls</a></li>
       <li><a href="#Skipping-Selected-Sections-of-Code">Skipping Selected Sections of Code</a></li>
       <li><a href="#Line-Break-Control">Line Break Control</a></li>
+      <li><a href="#Controlling-Breaks-at-Braces-Parens-and-Square-Brackets">Controlling Breaks at Braces, Parens, and Square Brackets</a></li>
+      <li><a href="#Welding">Welding</a></li>
+      <li><a href="#Breaking-Before-or-After-Operators">Breaking Before or After Operators</a></li>
       <li><a href="#Controlling-List-Formatting">Controlling List Formatting</a></li>
+      <li><a href="#Adding-and-Deleting-Commas">Adding and Deleting Commas</a></li>
       <li><a href="#Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</a></li>
       <li><a href="#Blank-Line-Control">Blank Line Control</a></li>
       <li><a href="#Styles">Styles</a></li>
@@ -153,7 +157,7 @@
 
 <p>Option names may be terminated early as long as they are uniquely identified. For example, instead of <b>--dump-token-types</b>, it would be sufficient to enter <b>--dump-tok</b>, or even <b>--dump-t</b>, to uniquely identify this command.</p>
 
-<h2 id="I-O-control">I/O control</h2>
+<h2 id="I-O-Control">I/O Control</h2>
 
 <p>The following parameters concern the files which are read and written.</p>
 
@@ -216,6 +220,8 @@
 
 <p>Modify the input file or files in-place and save the original with the extension <i>.bak</i>. Any existing <i>.bak</i> file will be deleted. See next item for changing the default backup extension, and for eliminating the backup file altogether.</p>
 
+<p><b>Please Note</b>: Writing back to the input file increases the risk of data loss or corruption in the event of a software or hardware malfunction. Before using the <b>-b</b> parameter please be sure to have backups and verify that it works correctly in your environment and operating system.</p>
+
 <p>A <b>-b</b> flag will be ignored if input is from standard input or goes to standard output, or if the <b>-html</b> flag is set.</p>
 
 <p>In particular, if you want to use both the <b>-b</b> flag and the <b>-pbp</b> (--perl-best-practices) flag, then you must put a <b>-nst</b> flag after the <b>-pbp</b> flag because it contains a <b>-st</b> flag as one of its components, which means that output will go to the standard output stream.</p>
@@ -239,6 +245,12 @@
   &lt;-bext=&#39;/&#39;&gt;         F&lt;.bak&gt;            Delete if no errors
   &lt;-bext=&#39;/backup&#39;&gt;   F&lt;.backup&gt;         Delete if no errors
   &lt;-bext=&#39;original/&#39;&gt; F&lt;.original&gt;       Delete if no errors</code></pre>
+
+</dd>
+<dt id="bm-s---backup-method-s"><b>-bm=s</b>, <b>--backup-method=s</b></dt>
+<dd>
+
+<p>This parameter should not normally be used but is available in the event that problems arise as a transition is made from an older implementation of the backup logic to a newer implementation. The newer implementation is the default and is specified with <b>-bm=&#39;copy&#39;</b>. The older implementation is specified with <b>-bm=&#39;move&#39;</b>. The difference is that the older implementation made the backup by moving the input file to the backup file, and the newer implementation makes the backup by copying the input file. The newer implementation preserves the file system <b>inode</b> value. This may avoid problems with other software running simultaneously. This change was made as part of issue <b>git #103</b> at github.</p>
 
 </dd>
 <dt id="w---warning-output"><b>-w</b>, <b>--warning-output</b></dt>
@@ -898,7 +910,7 @@
             fixit($i);
         }</code></pre>
 
-<p>Use <b>-nola</b> to not outdent labels. To control line breaks after labels see <a href="#bal-n---break-after-labels-n">&quot;bal=n, --break-after-labels=n&quot;</a>.</p>
+<p>Use <b>-nola</b> to not outdent labels. To control line breaks after labels see <a href="#bal-n---break-after-labels-n">&quot;-bal=n, --break-after-labels=n&quot;</a>.</p>
 
 </dd>
 <dt id="Outdenting-Keywords"><b>Outdenting Keywords</b></dt>
@@ -1755,10 +1767,24 @@
 
 <h2 id="Line-Break-Control">Line Break Control</h2>
 
-<p>The parameters in this section control breaks after non-blank lines of code. Blank lines are controlled separately by parameters in the section <a href="#Blank-Line-Control">&quot;Blank Line Control&quot;</a>.</p>
+<p>The parameters in this and the next sections control breaks after non-blank lines of code. Blank lines are controlled separately by parameters in the section <a href="#Blank-Line-Control">&quot;Blank Line Control&quot;</a>.</p>
 
 <dl>
 
+<dt id="dnl---delete-old-newlines"><b>-dnl</b>, <b>--delete-old-newlines</b></dt>
+<dd>
+
+<p>By default, perltidy first deletes all old line break locations, and then it looks for good break points to match the desired line length. Use <b>-ndnl</b> or <b>--nodelete-old-newlines</b> to force perltidy to retain all old line break points.</p>
+
+</dd>
+<dt id="anl---add-newlines"><b>-anl</b>, <b>--add-newlines</b></dt>
+<dd>
+
+<p>By default, perltidy will add line breaks when necessary to create continuations of long lines and to improve the script appearance. Use <b>-nanl</b> or <b>--noadd-newlines</b> to prevent any new line breaks.</p>
+
+<p>This flag does not prevent perltidy from eliminating existing line breaks; see <b>--freeze-newlines</b> to completely prevent changes to line break points.</p>
+
+</dd>
 <dt id="fnl---freeze-newlines"><b>-fnl</b>, <b>--freeze-newlines</b></dt>
 <dd>
 
@@ -1767,6 +1793,12 @@
 <p>Note: If you also want to keep your blank lines exactly as they are, you can use the <b>-fbl</b> flag which is described in the section <a href="#Blank-Line-Control">&quot;Blank Line Control&quot;</a>.</p>
 
 </dd>
+</dl>
+
+<h2 id="Controlling-Breaks-at-Braces-Parens-and-Square-Brackets">Controlling Breaks at Braces, Parens, and Square Brackets</h2>
+
+<dl>
+
 <dt id="ce---cuddled-else"><b>-ce</b>, <b>--cuddled-else</b></dt>
 <dd>
 
@@ -1834,7 +1866,7 @@
 <dt id="cblx---cuddled-block-list-exclusive"><b>-cblx</b>, <b>--cuddled-block-list-exclusive</b></dt>
 <dd>
 
-<p>When cuddled else formatting is selected with <b>-ce</b>, setting this flag causes perltidy to ignore its built-in defaults and rely exclusively on the block types specified on the <b>-cbl</b> flag described in the previous section. For example, to avoid using cuddled <b>catch</b> and <b>finally</b>, which among in the defaults, the following set of parameters could be used:</p>
+<p>When cuddled else formatting is selected with <b>-ce</b>, setting this flag causes perltidy to ignore its built-in defaults and rely exclusively on the block types specified on the <b>-cbl</b> flag described in the previous section. For example, to avoid using cuddled <b>catch</b> and <b>finally</b>, which are among the defaults, the following set of parameters could be used:</p>
 
 <pre><code>  perltidy -ce -cbl=&#39;else elsif continue&#39; -cblx</code></pre>
 
@@ -2148,6 +2180,12 @@
   -bbpi=2 indent one full indentation level</code></pre>
 
 </dd>
+</dl>
+
+<h2 id="Welding">Welding</h2>
+
+<dl>
+
 <dt id="wn---weld-nested-containers"><b>-wn</b>, <b>--weld-nested-containers</b></dt>
 <dd>
 
@@ -2167,7 +2205,7 @@
             next if $x == $y;
         } } until $x++ &gt; $z;</code></pre>
 
-<p>When this flag is set perltidy makes a preliminary pass through the file and identifies all nested pairs of containers. To qualify as a nested pair, the closing container symbols must be immediately adjacent and the opening symbols must either (1) be adjacent as in the above example, or (2) have an anonymous sub declaration following an outer opening container symbol which is not a code block brace, or (3) have an outer opening paren separated from the inner opening symbol by any single non-container symbol or something that looks like a function evaluation, as illustrated in the next examples.</p>
+<p>When this flag is set perltidy makes a preliminary pass through the file and identifies all nested pairs of containers. To qualify as a nested pair, the closing container symbols must be immediately adjacent and the opening symbols must either (1) be adjacent as in the above example, or (2) have an anonymous sub declaration following an outer opening container symbol which is not a code block brace, or (3) have an outer opening paren separated from the inner opening symbol by any single non-container symbol or something that looks like a function evaluation, as illustrated in the next examples. An additonal option (4) which can be turned on with the flag <b>--weld-fat-comma</b> is when the opening container symbols are separated by a hash key and fat comma (=&gt;).</p>
 
 <p>Any container symbol may serve as both the inner container of one pair and as the outer container of an adjacent pair. Consequently, any number of adjacent opening or closing symbols may join together in weld. For example, here are three levels of wrapped function calls:</p>
 
@@ -2228,6 +2266,20 @@
 <p>Another limitation is that an opening symbol which delimits quoted text cannot be included in a welded pair. This is because quote delimiters are treated specially in perltidy.</p>
 
 <p>Finally, the stacking of containers defined by this flag have priority over any other container stacking flags. This is because any welding is done first.</p>
+
+</dd>
+<dt id="wfc---weld-fat-comma"><b>-wfc</b>, <b>--weld-fat-comma </b></dt>
+<dd>
+
+<p>When the <b>-wfc</b> flag is set, along with <b>-wn</b>, perltidy is allowed to weld an opening paren to an inner opening container when they are separated by a hash key and fat comma (=&gt;). for example</p>
+
+<pre><code>    # perltidy -wn -wfc
+    elf-&gt;call_method( method_name_foo =&gt; {
+        some_arg1       =&gt; $foo,
+        some_other_arg3 =&gt; $bar-&gt;{&#39;baz&#39;},
+    } );</code></pre>
+
+<p>This option is off by default.</p>
 
 </dd>
 <dt id="wnxl-s---weld-nested-exclusion-list"><b>-wnxl=s</b>, <b>--weld-nested-exclusion-list</b></dt>
@@ -2550,22 +2602,9 @@
 <p>Please note that if both opening and closing tokens are to be stacked, then the newer flag <b>-weld-nested-containers</b> may be preferable because it insures that stacking is always done symmetrically. It also removes an extra level of unnecessary indentation within welded containers. It is able to do this because it works on formatting globally rather than locally, as the <b>-sot</b> and <b>-sct</b> flags do.</p>
 
 </dd>
-<dt id="dnl---delete-old-newlines"><b>-dnl</b>, <b>--delete-old-newlines</b></dt>
-<dd>
+</dl>
 
-<p>By default, perltidy first deletes all old line break locations, and then it looks for good break points to match the desired line length. Use <b>-ndnl</b> or <b>--nodelete-old-newlines</b> to force perltidy to retain all old line break points.</p>
-
-</dd>
-<dt id="anl---add-newlines"><b>-anl</b>, <b>--add-newlines</b></dt>
-<dd>
-
-<p>By default, perltidy will add line breaks when necessary to create continuations of long lines and to improve the script appearance. Use <b>-nanl</b> or <b>--noadd-newlines</b> to prevent any new line breaks.</p>
-
-<p>This flag does not prevent perltidy from eliminating existing line breaks; see <b>--freeze-newlines</b> to completely prevent changes to line break points.</p>
-
-</dd>
-<dt id="Controlling-whether-perltidy-breaks-before-or-after-operators"><b>Controlling whether perltidy breaks before or after operators</b></dt>
-<dd>
+<h2 id="Breaking-Before-or-After-Operators">Breaking Before or After Operators</h2>
 
 <p>Four command line parameters provide some control over whether a line break should be before or after specific token types. Two parameters give detailed control:</p>
 
@@ -2605,8 +2644,9 @@
 
 <p>and the <b>-bbao</b> flag sets the default to break before all of these operators. These can be used to define an initial break preference which can be fine-tuned with the <b>-wba</b> and <b>-wbb</b> flags. For example, to break before all operators except an <b>=</b> one could use --bbao -wba=&#39;=&#39; rather than listing every single perl operator except <b>=</b> on a -wbb flag.</p>
 
-</dd>
-<dt id="bal-n---break-after-labels-n"><b>bal=n, --break-after-labels=n</b></dt>
+<dl>
+
+<dt id="bal-n---break-after-labels-n"><b>-bal=n, --break-after-labels=n</b></dt>
 <dd>
 
 <p>This flag controls whether or not a line break occurs after a label. There are three possible values for <b>n</b>:</p>
@@ -2733,6 +2773,174 @@
 </dd>
 </dl>
 
+<h2 id="Adding-and-Deleting-Commas">Adding and Deleting Commas</h2>
+
+<dl>
+
+<dt id="drc---delete-repeated-commas"><b>-drc</b>, <b>--delete-repeated-commas</b></dt>
+<dd>
+
+<p>Repeated commas in a list are undesirable and can be removed with this flag. For example, given this list with a repeated comma</p>
+
+<pre><code>      ignoreSpec( $file, &quot;file&quot;,, \%spec, \%Rspec );</code></pre>
+
+<p>we can remove it with -drc</p>
+
+<pre><code>      # perltidy -drc:
+      ignoreSpec( $file, &quot;file&quot;, \%spec, \%Rspec );</code></pre>
+
+<p>Since the default is not to add or delete commas, this feature is off by default and must be requested.</p>
+
+</dd>
+<dt id="want-trailing-commas-s-or--wtc-s---add-trailing-commas-or--atc-and---delete-trailing-commas-or--dtc"><b>--want-trailing-commas=s</b> or <b>-wtc=s</b>, <b>--add-trailing-commas</b> or <b>-atc</b>, and <b>--delete-trailing-commas</b> or <b>-dtc</b></dt>
+<dd>
+
+<p>A trailing comma is a comma following the last item of a list. Perl allows trailing commas but they are not required. By default, perltidy does not add or delete trailing commas, but it is possible to manipulate them with the following set of three related parameters:</p>
+
+<pre><code>  --want-trailing-commas=s, -wtc=s - defines where trailing commas are wanted
+  --add-trailing-commas,    -atc   - gives permission to add trailing commas to match the style wanted
+  --delete-trailing-commas, -dtc   - gives permission to delete trailing commas which do not match the style wanted</code></pre>
+
+<p>The parameter <b>--want-trailing-commas=s</b>, or <b>-wtc=s</b>, defines a preferred style. The string <b>s</b> indicates which lists should get trailing commas, as follows:</p>
+
+<pre><code>  s=0 : no list should have a trailing comma
+  s=1 or * : every list should have a trailing comma
+  s=m a multi-line list should have a trailing commas
+  s=b trailing commas should be &#39;bare&#39; (comma followed by newline)
+  s=h lists of key=&gt;value pairs, with about one one &#39;=&gt;&#39; and one &#39;,&#39; per line,
+      with a bare trailing comma
+  s=i lists with about one comma per line, with a bare trailing comma
+  s=&#39; &#39; or -wtc not defined : leave trailing commas unchanged [DEFAULT].</code></pre>
+
+<p>This parameter by itself only indicates the where trailing commas are wanted. Perltidy only adds these trailing commas if the flag <b>--add-trailing-commas</b>, or <b>-atc</b> is set. And perltidy only removes unwanted trailing commas if the flag <b>--delete-trailing-commas</b>, or <b>-dtc</b> is set.</p>
+
+<p>Here are some example parameter combinations and their meanings</p>
+
+<pre><code>  -wtc=0 -dtc   : delete all trailing commas
+  -wtc=1 -atc   : all lists get trailing commas
+  -wtc=m -atc   : all multi-line lists get trailing commas, but
+                  single line lists remain unchanged.
+  -wtc=m -dtc   : multi-line lists remain unchanged, but
+                  any trailing commas on single line lists are removed.
+  -wtc=m -atc -dtc  : all multi-line lists get trailing commas, and
+                      any trailing commas on single line lists are removed.</code></pre>
+
+<p>For example, given the following input without a trailing comma</p>
+
+<pre><code>    bless {
+        B    =&gt; $B,
+        Root =&gt; $Root
+    } =&gt; $package;</code></pre>
+
+<p>we can add a trailing comma after the variable <code>$Root</code> using</p>
+
+<pre><code>    # perltidy -wtc=m -atc
+    bless {
+        B    =&gt; $B,
+        Root =&gt; $Root,
+    } =&gt; $package;</code></pre>
+
+<p>This could also be achieved in this case with <b>-wtc=b</b> instead of <b>-wtc=m</b> because the trailing comma here is bare (separated from its closing brace by a newline). And it could also be achieved with <b>-wtc=h</b> because this particular list is a list of key=&gt;value pairs.</p>
+
+<p>The above styles should cover the main of situations of interest, but it is possible to apply a different style to each type of container token by including an opening token ahead of the style character in the above table. For example</p>
+
+<pre><code>    -wtc=&#39;(m [b&#39;</code></pre>
+
+<p>means that lists within parens should have multi-line trailing commas, and that lists within square brackets have bare trailing commas. Since there is no specification for curly braces in this example, their trailing commas would remain unchanged.</p>
+
+<p>For parentheses, an additional item of information which can be given is an alphanumeric letter which is used to limit the selection further depending on the type of token immediately before the opening paren. The possible letters are currently &#39;k&#39;, &#39;K&#39;, &#39;f&#39;, &#39;F&#39;, &#39;w&#39;, and &#39;W&#39;, with these meanings for matching whatever precedes an opening paren:</p>
+
+<pre><code> &#39;k&#39; matches if the previous nonblank token is a perl built-in keyword (such as &#39;if&#39;, &#39;while&#39;),
+ &#39;K&#39; matches if &#39;k&#39; does not, meaning that the previous token is not a keyword.
+ &#39;f&#39; matches if the previous token is a function other than a keyword.
+ &#39;F&#39; matches if &#39;f&#39; does not.
+ &#39;w&#39; matches if either &#39;k&#39; or &#39;f&#39; match.
+ &#39;W&#39; matches if &#39;w&#39; does not.</code></pre>
+
+<p>These are the same codes used for <b>--line-up-parentheses-inclusion-list</b>. For example,</p>
+
+<pre><code>  -wtc = &#39;w(m&#39;</code></pre>
+
+<p>means that trailing commas are wanted for multi-line parenthesized lists following a function call or keyword.</p>
+
+<p>Here are some points to note regarding adding and deleting trailing commas:</p>
+
+<ul>
+
+<li><p>For the implementation of these parameters, a <b>list</b> is basically taken to be a container of items (parens, square brackets, or braces), which is not a code block, with one or more commas. These parameters only apply to something that fits this definition of a list.</p>
+
+<p>Note that a paren-less list of parameters is not a list by this definition, so these parameters have no effect on a peren-less list.</p>
+
+<p>Another consequence is that if the only comma in a list is deleted, then it cannot later be added back with these parameters because the container no longer fits this definition of a list. For example, given</p>
+
+<pre><code>    my ( $self, ) = @_;</code></pre>
+
+<p>and if we remove the comma with</p>
+
+<pre><code>    # perltidy -wtc=m -dtc
+    my ( $self ) = @_;</code></pre>
+
+<p>then we cannot use these trailing comma controls to add this comma back.</p>
+
+</li>
+<li><p>By <b>multiline</b> list is meant a list for which the first comma and trailing comma are on different lines.</p>
+
+</li>
+<li><p>A <b>bare</b> trailing comma is a comma which is at the end of a line. That is, the closing container token follows on a different line. So a list with a bare trailing comma is a special case of a multi-line list.</p>
+
+</li>
+<li><p>The decision regarding whether or not a list is multi-line or bare is made based on the <b>input</b> stream. In some cases it may take an iteration or two to reach a final state.</p>
+
+</li>
+<li><p>When using these parameters for the first time it is a good idea to practice on some test scripts and verify that the results are as expected.</p>
+
+</li>
+<li><p>Since the default behavior is not to add or delete commas, these parameters can be useful on a temporary basis for reformatting a script.</p>
+
+</li>
+</ul>
+
+</dd>
+<dt id="dwic---delete-weld-interfering-commas"><b>-dwic</b>, <b>--delete-weld-interfering-commas</b></dt>
+<dd>
+
+<p>If the closing tokens of two nested containers are separated by a comma, then welding requested with <b>--weld-nested-containers</b> cannot occur. Any commas in this situation are optional trailing commas and can be removed with <b>-dwic</b>. For example, a comma in this scipt prevents welding:</p>
+
+<pre><code>    # perltidy -wn
+    skip_symbols(
+        [ qw(
+            Perl_dump_fds
+            Perl_ErrorNo
+            Perl_GetVars
+            PL_sys_intern
+        ) ],
+    );</code></pre>
+
+<p>Using <b>-dwic</b> removes the comma and allows welding:</p>
+
+<pre><code>    # perltidy -wn -dwic
+    skip_symbols( [ qw(
+        Perl_dump_fds
+        Perl_ErrorNo
+        Perl_GetVars
+        PL_sys_intern
+    ) ] );</code></pre>
+
+<p>Since the default is not to add or delete commas, this feature is off by default. Here are some points to note about the <b>-dwic</b> parameter</p>
+
+<ul>
+
+<li><p>This operation is not reversible, so please check results of using this parameter carefully.</p>
+
+</li>
+<li><p>Removing this type of isolated trailing comma is necessary for welding to be possible, but not sufficient. So welding will not always occur where these commas are removed.</p>
+
+</li>
+</ul>
+
+</dd>
+</dl>
+
 <h2 id="Retaining-or-Ignoring-Existing-Line-Breaks">Retaining or Ignoring Existing Line Breaks</h2>
 
 <p>Several additional parameters are available for controlling the extent to which line breaks in the input script influence the output script. In most cases, the default parameter values are set so that, if a choice is possible, the output style follows the input style. For example, if a short logical container is broken in the input script, then the default behavior is for it to remain broken in the output script.</p>
@@ -2767,7 +2975,7 @@
 <dt id="bom---break-at-old-method-breakpoints"><b>-bom</b>, <b>--break-at-old-method-breakpoints</b></dt>
 <dd>
 
-<p>By default, a method call arrow <code>-&gt;</code> is considered a candidate for a breakpoint, but method chains will fill to the line width before a break is considered. With <b>-bom</b>, breaks before the arrow are preserved, so if you have preformatted a method chain:</p>
+<p>By default, a method call arrow <code>-&gt;</code> is considered a candidate for a breakpoint, but method chains will fill to the line width before a break is considered. With <b>-bom</b>, breaks before the arrow are preserved, so if you have pre-formatted a method chain:</p>
 
 <pre><code>  my $q = $rs
     -&gt;related_resultset(&#39;CDs&#39;)
@@ -3911,23 +4119,24 @@
 
 <p>The following list shows all short parameter names which allow a prefix &#39;n&#39; to produce the negated form:</p>
 
-<pre><code> D      anl    asbl   asc    ast    asu    atnl   aws    b      baa
- baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa    boc
- bok    bol    bom    bos    bot    cblx   ce     conv   cs     csc
- cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl    dop
- dp     dpro   dsc    dsm    dsn    dtt    dwls   dwrs   dws    eos
- f      fll    fpva   frm    fs     fso    gcs    hbc    hbcm   hbco
- hbh    hbhh   hbi    hbj    hbk    hbm    hbn    hbp    hbpd   hbpu
- hbq    hbs    hbsc   hbv    hbw    hent   hic    hicm   hico   hih
- hihh   hii    hij    hik    him    hin    hip    hipd   hipu   hiq
- his    hisc   hiv    hiw    hsc    html   ibc    icb    icp    iob
- isbc   iscl   kgb    kgbd   kgbi   kis    lal    log    lop    lp
- lsl    mem    nib    ohbr   okw    ola    olc    oll    olq    opr
- opt    osbc   osbr   otr    ple    pod    pvl    q      sac    sbc
- sbl    scbb   schb   scp    scsb   sct    se     sfp    sfs    skp
- sob    sobb   sohb   sop    sosb   sot    ssc    st     sts    t
- tac    tbc    toc    tp     tqw    trp    ts     tsc    tso    vbc
- vc     vmll   vsc    w      wn     x      xci    xlp    xs</code></pre>
+<pre><code> D      anl    asbl   asc    ast    asu    atc    atnl   aws    b
+ baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa
+ boc    bok    bol    bom    bos    bot    cblx   ce     conv   cs
+ csc    cscb   cscw   dac    dbc    dcbl   dcsc   ddf    dln    dnl
+ dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtt    dwic
+ dwls   dwrs   dws    eos    f      fll    fpva   frm    fs     fso
+ gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk    hbm
+ hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw    hent
+ hic    hicm   hico   hih    hihh   hii    hij    hik    him    hin
+ hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc    html
+ ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi   kis
+ lal    log    lop    lp     lsl    mem    nib    ohbr   okw    ola
+ olc    oll    olq    opr    opt    osbc   osbr   otr    ple    pod
+ pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb   sct
+ se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb   sot
+ ssc    st     sts    t      tac    tbc    toc    tp     tqw    trp
+ ts     tsc    tso    vbc    vc     vmll   vsc    w      wfc    wn
+ x      xci    xlp    xs</code></pre>
 
 <p>Equivalently, the prefix &#39;no&#39; or &#39;no-&#39; on the corresponding long names may be used.</p>
 
@@ -4005,7 +4214,7 @@
 
 <h1 id="VERSION">VERSION</h1>
 
-<p>This man page documents perltidy version 20220613</p>
+<p>This man page documents perltidy version 20221111</p>
 
 <h1 id="BUG-REPORTS">BUG REPORTS</h1>
 

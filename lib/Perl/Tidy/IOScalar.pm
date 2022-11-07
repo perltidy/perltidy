@@ -10,7 +10,7 @@ package Perl::Tidy::IOScalar;
 use strict;
 use warnings;
 use Carp;
-our $VERSION = '20220613.06';
+our $VERSION = '20221111';
 
 use constant EMPTY_STRING => q{};
 

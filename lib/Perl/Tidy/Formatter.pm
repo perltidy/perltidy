@@ -53,7 +53,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max );          # min, max are in Perl 5.8
-our $VERSION = '20220613.06';
+our $VERSION = '20221111';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -9835,7 +9835,7 @@ sub weld_nested_containers {
     # FIXME: this block is deactivated.  It will be retained for a while for
     # use in testing, but can eventually be removed.  It is no longer necessary
     # because the test c161 below handles this issue.
-    if (0 && $rOpts_line_up_parentheses) {
+    if ( 0 && $rOpts_line_up_parentheses ) {
 
         # NOTE: this has only been found to be necessary for parens, but this
         # could be applied to all types if necessary.

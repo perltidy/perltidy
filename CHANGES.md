@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 06 13.06
+## 2022 11 11
 
     - No significant bugs have been found since the last release to CPAN.
       Several minor issues have been fixed, and some new parameters have been
@@ -34,11 +34,11 @@
       combination -xlp -pt=2, mainly for two-line lists with short function
       names. One indentation space is removed to improve alignment:
 
-      # OLD: perltidy -xlp -pt=2
+        # OLD: perltidy -xlp -pt=2
         is($module->VERSION, $expected,
             "$main_module->VERSION matches $module->VERSION ($expected)");
 
-      # NEW: perltidy -xlp -pt=2
+        # NEW: perltidy -xlp -pt=2
         is($module->VERSION, $expected,
            "$main_module->VERSION matches $module->VERSION ($expected)");
 
