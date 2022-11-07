@@ -327,6 +327,7 @@ my (
     $line_up_parentheses_control_is_lxpl,
 
     %trailing_comma_rules,
+    $controlled_comma_style,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1500,6 +1501,7 @@ EOM
         my @toks = @_;
         foreach my $tok (@toks) {
             if ( $tok eq '?' ) { $tok = ':' }    # patch to coordinate ?/:
+            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
             my $lbs = $left_bond_strength{$tok};
             my $rbs = $right_bond_strength{$tok};
             if ( defined($lbs) && defined($rbs) && $lbs < $rbs ) {
@@ -1513,6 +1515,7 @@ EOM
     my $break_before = sub {
         my @toks = @_;
         foreach my $tok (@toks) {
+            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
             my $lbs = $left_bond_strength{$tok};
             my $rbs = $right_bond_strength{$tok};
             if ( defined($lbs) && defined($rbs) && $rbs < $lbs ) {
@@ -1795,6 +1798,9 @@ EOM
     %keep_break_after_type = ();
     initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
         'kba', \%keep_break_after_type );
+
+    $controlled_comma_style ||= $keep_break_before_type{','};
+    $controlled_comma_style ||= $keep_break_after_type{','};
 
     #------------------------------------------------------------
     # Make global vars for frequently used options for efficiency
@@ -22581,7 +22587,24 @@ sub copy_old_breakpoints {
     my ( $self, $i_first_comma, $i_last_comma ) = @_;
     for my $i ( $i_first_comma .. $i_last_comma ) {
         if ( $old_breakpoint_to_go[$i] ) {
-            $self->set_forced_breakpoint($i);
+
+            # If the comma style is under certain controls, and if this is a
+            # comma breakpoint with the comma is at the beginning of the next
+            # line, then we must pass that index instead. This will allow sub
+            # set_forced_breakpoints to check and follow the user settings. This
+            # produces a uniform style and can prevent instability (b1422).
+            #
+            # The flag '$controlled_comma_style' will be set if the user
+            # entered any of -wbb=',' -wba=',' -kbb=',' -kba=','.  It is not
+            # needed or set for the -boc flag.
+            my $ibreak = $i;
+            if ( $types_to_go[$ibreak] ne ',' && $controlled_comma_style ) {
+                my $index = $inext_to_go[$ibreak];
+                if ( $index > $ibreak && $types_to_go[$index] eq ',' ) {
+                    $ibreak = $index;
+                }
+            }
+            $self->set_forced_breakpoint($ibreak);
         }
     }
     return;

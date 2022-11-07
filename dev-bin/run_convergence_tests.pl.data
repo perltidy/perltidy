@@ -10843,6 +10843,46 @@ L2hos
 --paren-vertical-tightness=1
 --weld-nested-containers
 
+==> b1422.in <==
+    $_ = (
+        $INFO && $INFO =~ /^\d+$/
+        ? join(
+            '',
+            $close_all,
+"<STRONG>$t_title</STRONG><P>\nThis document was generated using the\n",
+"<A HREF=\"$TEX2HTMLADDRESS\"><STRONG>LaTeX</STRONG>2<tt>HTML</tt></A>",
+            " translator Version $TEX2HTMLVERSION\n",
+            "<P>Copyright &#169; 1993, 1994, 1995, 1996,\n"
+            , "<A HREF=\"$AUTHORADDRESS\">Nikos Drakos</A>, \n"
+            , "Computer Based Learning Unit, University of Leeds.\n"
+            , "<BR>Copyright &#169; 1997, 1998, 1999,\n"
+            , "<A HREF=\"$AUTHORADDRESS2\">Ross Moore</A>, \n"
+            , "Mathematics Department, Macquarie University, Sydney.\n"
+            , "<P>The command line arguments were: <BR>\n "
+            , "<STRONG>latex2html</STRONG> <TT>$argv</TT>\n"
+            ,
+            (
+                ( $SHOW_INIT_FILE && ( $INIT_FILE ne '' ) )
+                ? "\n<P>with initialization from: <TT>$INIT_FILE</TT>\n$init_file_mark\n"
+                : ''
+            ),
+"<P>The translation was initiated by $address_data[0] on $address_data[1]",
+            $open_all,
+            $_,
+          )
+        : join(
+            '',
+            $close_all,
+            "$INFO\n",
+            $open_all,
+            $_,
+        )
+    );
+
+
+==> b1422.par <==
+--keep-old-breakpoints-after=','
+
 ==> b1423.in <==
                 if ( L2hos
                      ->Link( $image2,
