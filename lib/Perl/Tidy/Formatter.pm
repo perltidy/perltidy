@@ -9835,26 +9835,6 @@ sub weld_nested_containers {
     # pairs.  But it isn't clear if this is possible because we don't know
     # which sequences might actually start a weld.
 
-    # To avoid instabilities with combination -lp -wn -pvt=2, reduce -vt=2 to
-    # -vt=1 where there could be a conflict with welding at the same tokens.
-    # See issues b1338, b1339, b1340, b1341, b1342, b1343, b1415.
-    # FIXME: this block is deactivated.  It will be retained for a while for
-    # use in testing, but can eventually be removed.  It is no longer necessary
-    # because the test c161 below handles this issue.
-    if ( 0 && $rOpts_line_up_parentheses ) {
-
-        # NOTE: this has only been found to be necessary for parens, but this
-        # could be applied to all types if necessary.
-        if ( $opening_vertical_tightness{'('} == 2 ) {
-            foreach my $item ( @{$rnested_pairs} ) {
-                my ( $inner_seqno, $outer_seqno ) = @{$item};
-                if ( !$ris_excluded_lp_container->{$outer_seqno} ) {
-                    $rmax_vertical_tightness->{$outer_seqno} = 1;
-                }
-            }
-        }
-    }
-
     my $rOpts_break_at_old_method_breakpoints =
       $rOpts->{'break-at-old-method-breakpoints'};
 
@@ -12101,7 +12081,7 @@ sub xlp_collapsed_lengths {
                     my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
                     my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
 
-                    # We are looking for the a short broken remnant on the next
+                    # We are looking for a short broken remnant on the next
                     # line; something like the third line here (b1408):
                     #     parent =>
                     #       Moose::Util::TypeConstraints::find_type_constraint(
