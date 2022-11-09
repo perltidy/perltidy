@@ -7,8 +7,8 @@
   - run NYTProf and check the activity and performance of all changed code
   - suggested random testing minimum test duration without irregularities:
     - 3 cpu hours for a commit candidate
-    - 8 cpu hours for a +0.01 version bump candidate
-    - 24 cpu hours for a new release candidate
+    - 24 cpu hours for a +0.01 version bump candidate
+    - 100 cpu hours for a new release candidate
   - run 'author tests' on a much larger body of code than is covered by the .t
     files.
       - compare results of the current version with previous version

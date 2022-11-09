@@ -109,7 +109,7 @@
             $j -= $shell
           )
 
-  This will change some existing formatting.
+  This will change some existing formatting with very long 'for' terms.
 
 - The following new parameters are available for manipulating
   trailing commas of lists. They are described in the manual.
@@ -126,6 +126,10 @@
 - This version runs 10 to 15 percent faster than the previous
   release on large files due to optimizations made with the help of
   Devel::NYTProf.
+
+- This version was stress-tested for over 200 cpu hours with random
+  input parameters. No failures to converge, internal fault checks,
+  undefined variable references or other irregularities were seen.
 </code></pre>
 
 <h2>2022 06 13</h2>
