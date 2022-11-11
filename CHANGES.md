@@ -1,6 +1,9 @@
 # Perltidy Change Log
 
-## 2022 11 11
+## 2022 11 12
+
+    - Fix rt #145095, undef warning in Perl before 5.12. Version 20221112 is
+      identical to 2022111 except for this fix for older versions of Perl.
 
     - No significant bugs have been found since the last release to CPAN.
       Several minor issues have been fixed, and some new parameters have been
