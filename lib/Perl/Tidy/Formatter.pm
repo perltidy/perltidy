@@ -2508,7 +2508,7 @@ sub initialize_trailing_comma_rules {
         $option =~ s/^\s+//;
         $option =~ s/\s+$//;
     }
-    if ( length($option) ) {
+    if ( defined($option) && length($option) ) {
         my $error_message;
         my %rule_hash;
         my @q = @{$rvalid_flags};
