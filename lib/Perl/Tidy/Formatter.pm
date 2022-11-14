@@ -5811,7 +5811,10 @@ EOM
     # We can save time by skipping logfile calls if it is not going to be saved.
     my $logger_object = $self->[_logger_object_];
     if ($logger_object) {
-        $self->[_save_logfile_] = $logger_object->get_save_logfile();
+        my $save_logfile = $logger_object->get_save_logfile();
+        $self->[_save_logfile_] = $save_logfile;
+        my $file_writer_object = $self->[_file_writer_object_];
+        $file_writer_object->set_save_logfile($save_logfile);
     }
 
     {

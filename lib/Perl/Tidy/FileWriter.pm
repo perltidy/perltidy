@@ -69,6 +69,7 @@ BEGIN {
         _K_arrival_order_matches_     => $i++,
         _K_sequence_error_msg_        => $i++,
         _K_last_arrival_              => $i++,
+        _save_logfile_                => $i++,
     };
 }
 
@@ -88,6 +89,7 @@ sub Fault {
     my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
     my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
     my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+    my $pkg = __PACKAGE__;
 
     Die(<<EOM);
 ==============================================================================
@@ -97,7 +99,7 @@ in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
 This is probably an error introduced by a recent programming change.
-Perl::Tidy::FileWriter.pm reports VERSION='$VERSION'.
+$pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
@@ -145,6 +147,7 @@ sub new {
     $self->[_K_arrival_order_matches_]     = 0;
     $self->[_K_sequence_error_msg_]        = EMPTY_STRING;
     $self->[_K_last_arrival_]              = -1;
+    $self->[_save_logfile_]                = defined($logger_object);
 
     # save input stream name for local error messages
     $input_stream_name = EMPTY_STRING;
@@ -204,6 +207,14 @@ sub reset_consecutive_blank_lines {
     return;
 }
 
+# This sub call allows termination of logfile writing for efficiency when we
+# know that the logfile will not be saved.
+sub set_save_logfile {
+    my ( $self, $save_logfile ) = @_;
+    $self->[_save_logfile_] = $save_logfile;
+    return;
+}
+
 sub want_blank_line {
     my $self = shift;
     unless ( $self->[_consecutive_blank_lines_] ) {
@@ -228,9 +239,14 @@ sub require_blank_code_lines {
 }
 
 sub write_blank_code_line {
-    my $self   = shift;
-    my $forced = shift;
-    my $rOpts  = $self->[_rOpts_];
+    my ( $self, $forced ) = @_;
+
+    # Write a blank line of code, given:
+    #  $forced = optional flag which, if set, forces the blank line
+    #    to be written. This allows the -mbl flag to be temporarily
+    #    exceeded.
+
+    my $rOpts = $self->[_rOpts_];
     return
       if (!$forced
         && $self->[_consecutive_blank_lines_] >=
@@ -245,7 +261,9 @@ sub write_blank_code_line {
         return;
     }
 
-    $self->write_line("\n");
+    $self->[_line_sink_object_]->write_line("\n");
+    $self->[_output_line_number_]++;
+
     $self->[_consecutive_blank_lines_]++;
     $self->[_consecutive_new_blank_lines_]++ if ($forced);
 
@@ -257,10 +275,19 @@ use constant MAX_PRINTED_CHARS => 80;
 sub write_code_line {
     my ( $self, $str, $K ) = @_;
 
+    # Write a line of code, given
+    #  $str = the line of code
+    #  $K   = an optional check integer which, if if given, must
+    #       increase monotonically. This was added to catch cache
+    #       sequence errors in the vertical aligner.
+
     $self->[_consecutive_blank_lines_]     = 0;
     $self->[_consecutive_new_blank_lines_] = 0;
     $self->[_consecutive_nonblank_lines_]++;
-    $self->write_line($str);
+
+    $self->[_line_sink_object_]->write_line($str);
+    if ( chomp $str )              { $self->[_output_line_number_]++; }
+    if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
     #----------------------------
     # Convergence and error check
@@ -319,9 +346,20 @@ EOM
 sub write_line {
     my ( $self, $str ) = @_;
 
-    $self->[_line_sink_object_]->write_line($str);
+    # Write a line directly to the output, without any counting of blank or
+    # non-blank lines.
 
-    if ( chomp $str ) { $self->[_output_line_number_]++; }
+    $self->[_line_sink_object_]->write_line($str);
+    if ( chomp $str )              { $self->[_output_line_number_]++; }
+    if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
+
+    return;
+}
+
+sub check_line_lengths {
+    my ( $self, $str ) = @_;
+
+    # collect info on line lengths for logfile
 
     # This calculation of excess line length ignores any internal tabs
     my $rOpts   = $self->[_rOpts_];
@@ -365,7 +403,10 @@ sub write_line {
 }
 
 sub report_line_length_errors {
-    my $self                    = shift;
+    my $self = shift;
+
+    # Write summary info about line lengths to the log file
+
     my $rOpts                   = $self->[_rOpts_];
     my $line_length_error_count = $self->[_line_length_error_count_];
     if ( $line_length_error_count == 0 ) {
