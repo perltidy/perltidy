@@ -7637,10 +7637,12 @@ sub add_phantom_semicolon {
 
     my ( $self, $KK ) = @_;
 
-    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
-    return unless ( defined($Kp) );
+    # The token at old index $KK is a closing block brace, and not preceded
+    # by a semicolon. Before we push it onto the new token list, we may
+    # want to add a phantom semicolon which can be activated if the the
+    # block is broken on output.
 
-    # we are only adding semicolons for certain block types
+    # We are only adding semicolons for certain block types
     my $type_sequence = $rLL->[$KK]->[_TYPE_SEQUENCE_];
     return unless ($type_sequence);
     my $block_type = $rblock_type_of_seqno->{$type_sequence};
@@ -7649,6 +7651,10 @@ sub add_phantom_semicolon {
       unless ( $ok_to_add_semicolon_for_block_type{$block_type}
         || $block_type =~ /^(sub|package)/
         || $block_type =~ /^\w+\:$/ );
+
+    # Find the most recent token in the new token list
+    my $Kp = $self->K_previous_nonblank( undef, $rLL_new );
+    return unless ( defined($Kp) );    # shouldn't happen except for bad input
 
     my $type_p          = $rLL_new->[$Kp]->[_TYPE_];
     my $token_p         = $rLL_new->[$Kp]->[_TOKEN_];
@@ -11474,21 +11480,17 @@ sub extended_ci {
 
             my $is_list = $ris_list_by_seqno->{$seqno_top};
             my $space   = $available_space{$seqno_top};
-            my $length  = $rLL->[$KLAST]->[_CUMULATIVE_LENGTH_];
             my $count   = 0;
             foreach my $Kt ( $KLAST + 1 .. $KNEXT - 1 ) {
+
+                next if ( $rLL->[$Kt]->[_CI_LEVEL_] );
 
                 # But do not include tokens which might exceed the line length
                 # and are not in a list.
                 # ... This fixes case b1031
-                my $length_before = $length;
-                $length = $rLL->[$Kt]->[_CUMULATIVE_LENGTH_];
-                if (
-                    !$rLL->[$Kt]->[_CI_LEVEL_]
-                    && (   $is_list
-                        || $length - $length_before < $space
-                        || $rLL->[$Kt]->[_TYPE_] eq '#' )
-                  )
+                if (   $is_list
+                    || $rLL->[$Kt]->[_TOKEN_LENGTH_] < $space
+                    || $rLL->[$Kt]->[_TYPE_] eq '#' )
                 {
                     $rLL->[$Kt]->[_CI_LEVEL_] = 1;
                     $rseqno_controlling_my_ci->{$Kt} = $seqno_top;
@@ -11523,7 +11525,7 @@ sub extended_ci {
         }
 
         # If this does not have ci, update ci if necessary and continue looking
-        if ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
+        elsif ( !$rLL->[$KK]->[_CI_LEVEL_] ) {
             if ($seqno_top) {
                 $rLL->[$KK]->[_CI_LEVEL_] = 1;
                 $rseqno_controlling_my_ci->{$KK} = $seqno_top;
@@ -13377,25 +13379,25 @@ EOM
         # the end of the current batch of data.
 
         # So 'long story short': this is a waste of time
-        0 && do { #<<<
-        @block_type_to_go        = ();
-        @type_sequence_to_go     = ();
-        @forced_breakpoint_to_go = ();
-        @token_lengths_to_go     = ();
-        @levels_to_go            = ();
-        @mate_index_to_go        = ();
-        @ci_levels_to_go         = ();
-        @nobreak_to_go           = ();
-        @old_breakpoint_to_go    = ();
-        @tokens_to_go            = ();
-        @K_to_go                 = ();
-        @types_to_go             = ();
-        @leading_spaces_to_go    = ();
-        @reduced_spaces_to_go    = ();
-        @inext_to_go             = ();
-        @iprev_to_go             = ();
-        @parent_seqno_to_go      = ();
-        };
+        ## 0 && do { #<<<
+        ## @block_type_to_go        = ();
+        ## @type_sequence_to_go     = ();
+        ## @forced_breakpoint_to_go = ();
+        ## @token_lengths_to_go     = ();
+        ## @levels_to_go            = ();
+        ## @mate_index_to_go        = ();
+        ## @ci_levels_to_go         = ();
+        ## @nobreak_to_go           = ();
+        ## @old_breakpoint_to_go    = ();
+        ## @tokens_to_go            = ();
+        ## @K_to_go                 = ();
+        ## @types_to_go             = ();
+        ## @leading_spaces_to_go    = ();
+        ## @reduced_spaces_to_go    = ();
+        ## @inext_to_go             = ();
+        ## @iprev_to_go             = ();
+        ## @parent_seqno_to_go      = ();
+        ## };
 
         $rbrace_follower = undef;
         $ending_in_quote = 0;
@@ -20614,8 +20616,11 @@ EOM
 
         my ($self) = @_;
 
-        # handle any postponed closing breakpoints
+        # We have encountered a sequenced token while setting list breakpoints
+
+        # if closing type, one of } ) ] :
         if ( $is_closing_sequence_token{$token} ) {
+
             if ( $type eq ':' ) {
                 $i_last_colon = $i;
 
@@ -20636,6 +20641,8 @@ EOM
                     }
                 }
             }
+
+            # handle any postponed closing breakpoints
             if ( has_postponed_breakpoint($type_sequence) ) {
                 my $inc = ( $type eq ':' ) ? 0 : 1;
                 if ( $i >= $inc ) {
@@ -20644,54 +20651,59 @@ EOM
             }
         }
 
-        # set breaks at ?/: if they will get separated (and are
-        # not a ?/: chain), or if the '?' is at the end of the
-        # line
-        elsif ( $token eq '?' ) {
-            my $i_colon = $mate_index_to_go[$i];
-            if (
-                $i_colon <= 0    # the ':' is not in this batch
-                || $i == 0       # this '?' is the first token of the line
-                || $i == $max_index_to_go    # or this '?' is the last token
-              )
-            {
+        # must be opening token, one of { ( [ ?
+        else {
 
-                # don't break if # this has a side comment, and
-                # don't break at a '?' if preceded by ':' on
-                # this line of previous ?/: pair on this line.
-                # This is an attempt to preserve a chain of ?/:
-                # expressions (elsif2.t).
+            # set breaks at ?/: if they will get separated (and are
+            # not a ?/: chain), or if the '?' is at the end of the
+            # line
+            if ( $token eq '?' ) {
+                my $i_colon = $mate_index_to_go[$i];
                 if (
-                    (
-                           $i_last_colon < 0
-                        || $parent_seqno_to_go[$i_last_colon] !=
-                        $parent_seqno_to_go[$i]
-                    )
-                    && $tokens_to_go[$max_index_to_go] ne '#'
+                    $i_colon <= 0    # the ':' is not in this batch
+                    || $i == 0       # this '?' is the first token of the line
+                    || $i == $max_index_to_go    # or this '?' is the last token
                   )
                 {
-                    $self->set_forced_breakpoint($i);
+
+                    # don't break if # this has a side comment, and
+                    # don't break at a '?' if preceded by ':' on
+                    # this line of previous ?/: pair on this line.
+                    # This is an attempt to preserve a chain of ?/:
+                    # expressions (elsif2.t).
+                    if (
+                        (
+                               $i_last_colon < 0
+                            || $parent_seqno_to_go[$i_last_colon] !=
+                            $parent_seqno_to_go[$i]
+                        )
+                        && $tokens_to_go[$max_index_to_go] ne '#'
+                      )
+                    {
+                        $self->set_forced_breakpoint($i);
+                    }
+                    $self->set_closing_breakpoint($i);
                 }
-                $self->set_closing_breakpoint($i);
             }
-        }
 
-        elsif ( $is_opening_token{$token} ) {
+            # must be one of { ( [
+            else {
 
-            # do requested -lp breaks at the OPENING token for BROKEN
-            # blocks.  NOTE: this can be done for both -lp and -xlp,
-            # but only -xlp can really take advantage of this.  So this
-            # is currently restricted to -xlp to avoid excess changes to
-            # existing -lp formatting.
-            if (   $rOpts_extended_line_up_parentheses
-                && $mate_index_to_go[$i] < 0 )
-            {
-                my $lp_object =
-                  $self->[_rlp_object_by_seqno_]->{$type_sequence};
-                if ($lp_object) {
-                    my $K_begin_line = $lp_object->get_K_begin_line();
-                    my $i_begin_line = $K_begin_line - $K_to_go[0];
-                    $self->set_forced_lp_break( $i_begin_line, $i );
+                # do requested -lp breaks at the OPENING token for BROKEN
+                # blocks.  NOTE: this can be done for both -lp and -xlp,
+                # but only -xlp can really take advantage of this.  So this
+                # is currently restricted to -xlp to avoid excess changes to
+                # existing -lp formatting.
+                if (   $rOpts_extended_line_up_parentheses
+                    && $mate_index_to_go[$i] < 0 )
+                {
+                    my $lp_object =
+                      $self->[_rlp_object_by_seqno_]->{$type_sequence};
+                    if ($lp_object) {
+                        my $K_begin_line = $lp_object->get_K_begin_line();
+                        my $i_begin_line = $K_begin_line - $K_to_go[0];
+                        $self->set_forced_lp_break( $i_begin_line, $i );
+                    }
                 }
             }
         }
