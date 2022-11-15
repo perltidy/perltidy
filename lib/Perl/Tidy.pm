@@ -651,6 +651,7 @@ EOM
         my ( $package0, $filename0, $line0, $subroutine0 ) = caller(0);
         my ( $package1, $filename1, $line1, $subroutine1 ) = caller(1);
         my ( $package2, $filename2, $line2, $subroutine2 ) = caller(2);
+        my $pkg = __PACKAGE__;
 
         my $input_stream_name = $rstatus->{'input_name'};
         $input_stream_name = '(unknown)' unless ($input_stream_name);
@@ -662,7 +663,7 @@ in file '$filename1'
 which was called from line $line1 of sub '$subroutine2'
 Message: '$msg'
 This is probably an error introduced by a recent programming change.
-Perl::Tidy.pm reports VERSION='$VERSION'.
+$pkg reports VERSION='$VERSION'.
 ==============================================================================
 EOM
 
