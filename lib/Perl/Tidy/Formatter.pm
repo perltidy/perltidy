@@ -2510,6 +2510,8 @@ sub initialize_trailing_comma_rules {
         $option =~ s/^\s+//;
         $option =~ s/\s+$//;
     }
+
+    # We need to use length() here because '0' is a possible option
     if ( defined($option) && length($option) ) {
         my $error_message;
         my %rule_hash;
@@ -2605,7 +2607,7 @@ EOM
     }
 
     return;
-}
+} ## end sub initialize_trailing_comma_rules
 
 sub initialize_whitespace_hashes {
 
