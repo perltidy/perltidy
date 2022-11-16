@@ -1984,6 +1984,8 @@ EOM
         my $log_file = $fileroot . $dot . "LOG";
         if ($logfile_stream) { $log_file = $logfile_stream }
 
+        # The logger object handles warning messages, logfile messages,
+        # and can supply basic run information to lower level routines.
         my $logger_object = Perl::Tidy::Logger->new(
             rOpts           => $rOpts,
             log_file        => $log_file,

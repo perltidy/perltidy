@@ -1,6 +1,7 @@
 #####################################################################
 #
-# The Perl::Tidy::Logger class writes the .LOG and .ERR files
+# The Perl::Tidy::Logger class writes any .LOG and .ERR files
+# and supplies some basic run information for error handling.
 #
 #####################################################################
 
@@ -100,11 +101,12 @@ sub new {
         _warning_count                 => 0,
         _complaint_count               => 0,
         _is_encoded_data               => $is_encoded_data,
-        _saw_code_bug      => -1,                   # -1=no 0=maybe 1=for sure
+        _saw_code_bug      => -1,                    # -1=no 0=maybe 1=for sure
         _saw_brace_error   => 0,
         _output_array      => [],
         _input_stream_name => $input_stream_name,
         _filename_stamp    => $filename_stamp,
+        _save_logfile      => $rOpts->{'logfile'},
     }, $class;
 }
 
@@ -448,12 +450,10 @@ sub report_definite_bug {
 
 sub get_save_logfile {
 
-    # To be called after tokenizer has finished to make formatting more
-    # efficient.
-    my $self         = shift;
-    my $saw_code_bug = $self->{_saw_code_bug};
-    my $rOpts        = $self->{_rOpts};
-    return $saw_code_bug == 1 || $rOpts->{'logfile'};
+    # Returns a true/false flag indicating whether or not
+    # the logfile will be saved.
+    my $self = shift;
+    return $self->{_save_logfile};
 }
 
 sub finish {
@@ -461,13 +461,11 @@ sub finish {
     # called after all formatting to summarize errors
     my ($self) = @_;
 
-    my $rOpts         = $self->{_rOpts};
     my $warning_count = $self->{_warning_count};
     my $saw_code_bug  = $self->{_saw_code_bug};
+    my $save_logfile  = $self->{_save_logfile};
+    my $log_file      = $self->{_log_file};
 
-    my $save_logfile = $saw_code_bug == 1
-      || $rOpts->{'logfile'};
-    my $log_file = $self->{_log_file};
     if ($warning_count) {
         if ($save_logfile) {
             $self->block_log_output();    # avoid echoing this to the logfile
