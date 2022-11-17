@@ -489,14 +489,6 @@ sub get_recoverable_spaces {
 # CODE SECTION 3: Code to accept input and form groups
 ######################################################
 
-sub push_group_line {
-
-    my ( $self, $new_line ) = @_;
-    my $rgroup_lines = $self->[_rgroup_lines_];
-    push @{$rgroup_lines}, $new_line;
-    return;
-}
-
 use constant DEBUG_VALIGN      => 0;
 use constant SC_LONG_LINE_DIFF => 12;
 
@@ -779,8 +771,8 @@ sub valign_input {
 
             # Note that for a comment group we are not storing a line
             # but rather just the text and its length.
-            $self->push_group_line(
-                [ $rfields->[0], $rfield_lengths->[0], $Kend ] );
+            push @{ $self->[_rgroup_lines_] },
+              [ $rfields->[0], $rfield_lengths->[0], $Kend ];
             return;
         }
         else {
@@ -854,8 +846,8 @@ sub valign_input {
             $self->[_group_type_]                  = 'COMMENT';
             $self->[_comment_leading_space_count_] = $leading_space_count;
             $self->[_group_maximum_line_length_]   = $maximum_line_length;
-            $self->push_group_line(
-                [ $rfields->[0], $rfield_lengths->[0], $Kend ] );
+            push @{$rgroup_lines},
+              [ $rfields->[0], $rfield_lengths->[0], $Kend ];
             return;
         }
 
@@ -947,7 +939,7 @@ sub valign_input {
     # Append this line to the current group (or start new group)
     # --------------------------------------------------------------------
 
-    $self->push_group_line($new_line);
+    push @{ $self->[_rgroup_lines_] }, $new_line;
     $self->[_group_maximum_line_length_] = $maximum_line_length;
 
     # output this group if it ends in a terminal else or ternary line
