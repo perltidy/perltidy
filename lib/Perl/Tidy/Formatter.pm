@@ -1602,21 +1602,21 @@ EOM
     }
 
     #-----------------------------------------------------------
-    # The combination -lp -vmll -atc -dtc -wtc=b can be unstable
+    # The combination -lp -vmll -atc -dtc can be unstable
     #-----------------------------------------------------------
-    # This fixes b1386 b1387 b1388
+    # This fixes b1386 b1387 b1388 which had -wtc='b'
+    # Updated to to include any -wtc to fix b1426
     if (   $rOpts->{'variable-maximum-line-length'}
         && $rOpts->{'line-up-parentheses'}
         && $rOpts->{'add-trailing-commas'}
         && $rOpts->{'delete-trailing-commas'}
-        && $rOpts->{'want-trailing-commas'}
-        && $rOpts->{'want-trailing-commas'} =~ /b/ )
+        && $rOpts->{'want-trailing-commas'} )
     {
         $rOpts->{'delete-trailing-commas'} = 0;
-## warning causes trouble with test cases and this combo is so rare that
-## it is unlikely to not occur in practice.
+## Issuing a warning message causes trouble with test cases, and this combo is
+## so rare that it is unlikely to not occur in practice. So skip warning.
 ##        Warn(
-##"The combination -vmll -lp -atc -dtc -wtc=b can be unstable; turning off -dtc\n"
+##"The combination -vmll -lp -atc -dtc can be unstable; turning off -dtc\n"
 ##        );
     }
 

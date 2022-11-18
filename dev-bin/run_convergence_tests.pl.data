@@ -10971,6 +10971,23 @@ my$sem=sub
 --variable-maximum-line-length
 --weld-nested-containers
 
+==> b1426.in <==
+        return$self->_mutate($label,$newseq,
+                             $length);
+
+        return
+          $self->_mutate($label,$newseq,$length,);
+
+==> b1426.par <==
+--add-trailing-commas
+--noadd-whitespace
+--delete-trailing-commas
+--ignore-old-breakpoints
+--line-up-parentheses
+--maximum-line-length=44
+--variable-maximum-line-length
+--want-trailing-commas='m'
+
 ==> b146.in <==
 # State 1
 
