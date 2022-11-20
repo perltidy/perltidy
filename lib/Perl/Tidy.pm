@@ -466,6 +466,7 @@ BEGIN {
         _tabsize_                  => $i++,
         _teefile_stream_           => $i++,
         _user_formatter_           => $i++,
+        _input_copied_verbatim_    => $i++,
     };
 }
 
@@ -2025,6 +2026,7 @@ EOM
         $self->[_logger_object_]           = $logger_object;
         $self->[_output_file_]             = $output_file;
         $self->[_teefile_stream_]          = $teefile_stream;
+        $self->[_input_copied_verbatim_]   = 0;
 
         #----------------------------------------------------------
         # Do all formatting of this buffer.
@@ -2037,24 +2039,29 @@ EOM
         #--------------------------------------------------
         if ($in_place_modify) {
 
-            my $backup_method = $rOpts->{'backup-method'};
+            # For -b option, leave the file unchanged if a severe error caused
+            # formatting to be skipped. Otherwise we will overwrite any backup.
+            if ( !$self->[_input_copied_verbatim_] ) {
 
-            # Option 1, -bm='copy': uses newer version in which original is
-            # copied to the backup and rewritten; see git #103.
-            if ( defined($backup_method) && $backup_method eq 'copy' ) {
-                $self->backup_method_copy(
-                    $input_file,       $output_file,
-                    $backup_extension, $delete_backup
-                );
-            }
+                my $backup_method = $rOpts->{'backup-method'};
 
-            # Option 2, -bm='move': uses older version, where original is moved
-            # to the backup and formatted output goes to a new file.
-            else {
-                $self->backup_method_move(
-                    $input_file,       $output_file,
-                    $backup_extension, $delete_backup
-                );
+                # Option 1, -bm='copy': uses newer version in which original is
+                # copied to the backup and rewritten; see git #103.
+                if ( defined($backup_method) && $backup_method eq 'copy' ) {
+                    $self->backup_method_copy(
+                        $input_file,       $output_file,
+                        $backup_extension, $delete_backup
+                    );
+                }
+
+                # Option 2, -bm='move': uses older version, where original is
+                # moved to the backup and formatted output goes to a new file.
+                else {
+                    $self->backup_method_move(
+                        $input_file,       $output_file,
+                        $backup_extension, $delete_backup
+                    );
+                }
             }
             $output_file = $input_file;
         }
@@ -2540,7 +2547,7 @@ sub process_iteration_layer {
         #---------------------------------
         # do processing for this iteration
         #---------------------------------
-        process_single_case( $tokenizer, $formatter );
+        $self->process_single_case( $tokenizer, $formatter );
 
         #-----------------------------------------
         # close the input source and report errors
@@ -2569,7 +2576,7 @@ sub process_iteration_layer {
             );
 
             # stop iterations if errors or converged
-            my $stop_now = $tokenizer->report_tokenization_errors();
+            my $stop_now = $self->[_input_copied_verbatim_];
             $stop_now ||= $tokenizer->get_unexpected_error_count();
             my $stopping_on_error = $stop_now;
             if ($stop_now) {
@@ -2674,7 +2681,7 @@ EOM
 sub process_single_case {
 
     # run the formatter on a single defined case
-    my ( $tokenizer, $formatter ) = @_;
+    my ( $self, $tokenizer, $formatter ) = @_;
 
     # Total formatting is done with these layers of subroutines:
     #   perltidy                - main routine; checks run parameters
@@ -2686,12 +2693,14 @@ sub process_single_case {
     while ( my $line = $tokenizer->get_line() ) {
         $formatter->write_line($line);
     }
-    my $severe_error = $tokenizer->report_tokenization_errors();
 
     # user-defined formatters are possible, and may not have a
     # sub 'finish_formatting', so we have to check
-    $formatter->finish_formatting($severe_error)
-      if $formatter->can('finish_formatting');
+    if ( $formatter->can('finish_formatting') ) {
+        my $severe_error = $tokenizer->report_tokenization_errors();
+        my $verbatim     = $formatter->finish_formatting($severe_error);
+        $self->[_input_copied_verbatim_] = $verbatim;
+    }
 
     return;
 } ## end sub process_single_case

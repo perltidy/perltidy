@@ -5785,6 +5785,10 @@ sub finish_formatting {
     # The file has been tokenized and is ready to be formatted.
     # All of the relevant data is stored in $self, ready to go.
 
+    # Returns:
+    #   true if input file was copied verbatim due to errors
+    #   false otherwise
+
     # Some of the code in sub break_lists is not robust enough to process code
     # with arbitrary brace errors. The simplest fix is to just return the file
     # verbatim if there are brace errors.  This fixes issue c160.
@@ -5808,7 +5812,7 @@ EOM
     if ( $severe_error || $rOpts->{notidy} ) {
         $self->dump_verbatim();
         $self->wrapup($severe_error);
-        return;
+        return 1;
     }
 
     # Update the 'save_logfile' flag based to include any tokenization errors.
@@ -5848,7 +5852,7 @@ EOM
         if ($error) {
             $self->dump_verbatim();
             $self->wrapup();
-            return;
+            return 1;
         }
 
         $self->find_multiline_qw($rqw_lines);
