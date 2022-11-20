@@ -10988,6 +10988,29 @@ my$sem=sub
 --variable-maximum-line-length
 --want-trailing-commas='m'
 
+==> b1431.in <==
+            C4::Circulation::AddRenewal(
+                             $issue->{
+                                'borrowernumber'},    # borrowernumber
+                             $item->itemnumber,
+                             undef, undef,
+                             $circ->{'date'},
+            ) unless ($DEBUG);
+
+            C4::Circulation::AddRenewal(
+                             $issue->{'borrowernumber'}, # borrowernumber
+                             $item->itemnumber,
+                             undef, undef,
+                             $circ->{'date'},
+            ) unless ($DEBUG);
+
+==> b1431.par <==
+--continuation-indentation=9
+--extended-line-up-parentheses
+--ignore-side-comment-lengths
+--maximum-line-length=42
+--variable-maximum-line-length
+
 ==> b146.in <==
 # State 1
 

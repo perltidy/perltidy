@@ -12088,9 +12088,11 @@ sub xlp_collapsed_lengths {
                 # token, look for the closing token and comma at the end of the
                 # next line. If so, combine the two lines to get the correct
                 # sums.  This problem seems to require -xlp -vtc=2 and blank
-                # lines to occur.
+                # lines to occur. Use %is_opening_type to fix b1431.
                 #--------------------------------------------------------------
-                if ( $rLL->[$K_terminal]->[_TYPE_] eq '{' && !$has_comment ) {
+                if ( $is_opening_type{ $rLL->[$K_terminal]->[_TYPE_] }
+                    && !$has_comment )
+                {
                     my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
                     my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
 
@@ -12103,6 +12105,9 @@ sub xlp_collapsed_lengths {
                     #
                     #  Help::WorkSubmitter->_filter_chores_and_maybe_warn_user(
                     #                                    $story_set_all_chores),
+                    # or this (b1438):
+                    #        $issue->{
+                    #           'borrowernumber'},  # borrowernumber
                     if (   defined($Kc_test)
                         && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
                         && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
@@ -12114,8 +12119,17 @@ sub xlp_collapsed_lengths {
                         my ( $K_first_next, $K_terminal_next ) =
                           @{ $line_of_tokens_next->{_rK_range} };
 
-                        # NOTE: Do not try to do this if there is a side comment
-                        # because then the instability does not seem to occur.
+                        # backup at a side comment
+                        if ( defined($K_terminal_next)
+                            && $rLL->[$K_terminal_next]->[_TYPE_] eq '#' )
+                        {
+                            my $Kprev =
+                              $self->K_previous_nonblank($K_terminal_next);
+                            if ( defined($Kprev) && $Kprev >= $K_first_next ) {
+                                $K_terminal_next = $Kprev;
+                            }
+                        }
+
                         if (
                             defined($K_terminal_next)
 
