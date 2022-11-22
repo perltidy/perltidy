@@ -10420,6 +10420,21 @@ EOM
 
             $rK_weld_right->{$Kinner_closing} = $Kouter_closing;
             $rK_weld_left->{$Kouter_closing}  = $Kinner_closing;
+
+            # Keep a broken container broken at multiple welds.  This might
+            # also be useful for simple welds, but for now it is restricted
+            # to multiple welds to minimize changes to existing coding.  This
+            # fixes b1429, b1430.
+            if ( $iline_io != $iline_ic ) {
+
+                # Only set this break if it is the last possible weld in this
+                # chain.  This will keep some extreme test cases unchanged.
+                my $is_chain_end = !@{$rnested_pairs}
+                  || $rnested_pairs->[-1]->[1] != $inner_seqno;
+                if ($is_chain_end) {
+                    $self->[_rwant_container_open_]->{$inner_seqno} = 1;
+                }
+            }
         }
 
         # After welding, reduce the indentation level if all intermediate tokens
@@ -12105,7 +12120,7 @@ sub xlp_collapsed_lengths {
                     #
                     #  Help::WorkSubmitter->_filter_chores_and_maybe_warn_user(
                     #                                    $story_set_all_chores),
-                    # or this (b1438):
+                    # or this (b1431):
                     #        $issue->{
                     #           'borrowernumber'},  # borrowernumber
                     if (   defined($Kc_test)

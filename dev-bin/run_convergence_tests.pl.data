@@ -10988,6 +10988,30 @@ my$sem=sub
 --variable-maximum-line-length
 --want-trailing-commas='m'
 
+==> b1430.in <==
+         $t->post_ok(
+                  "//$auth_userid:$password@/api/v1/advanced_editor/macros" =>
+                          json => $macro_values )->status_is(400)->json_is(
+                  '/errors' => [ {
+                           message => "Read-only.",
+                           path    => "/body/macro_id",
+                  } ]
+                          );
+
+         $t->post_ok(
+                  "//$auth_userid:$password@/api/v1/advanced_editor/macros" =>
+                          json => $macro_values )->status_is(400)
+                 ->json_is( '/errors' =>
+                 [ { message => "Read-only.", path => "/body/macro_id", } ] );
+
+
+==> b1430.par <==
+--continuation-indentation=8
+--ignore-old-breakpoints
+--indent-columns=9
+--weld-fat-comma
+--weld-nested-containers
+
 ==> b1431.in <==
             C4::Circulation::AddRenewal(
                              $issue->{
