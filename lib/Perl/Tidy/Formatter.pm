@@ -11925,6 +11925,35 @@ BEGIN {
     };
 }
 
+sub is_fragile_block_type {
+    my ( $self, $block_type, $seqno ) = @_;
+
+    # Given:
+    #  $block_type = the block type of a token, and
+    #  $seqno      = its sequence number
+
+    # Return:
+    #  true if this block type stays broken after being broken,
+    #  false otherwise
+
+    # This sub has been added to isolate a tricky decision needed
+    # to fix issue b1428.
+
+    # The coding here needs to agree with:
+    # - sub process_line where variable '$rbrace_follower' is set
+    # - sub process_line_inner_loop where variable '$is_opening_BLOCK' is set,
+
+    if (   $is_sort_map_grep_eval{$block_type}
+        || $block_type eq 't'
+        || $self->[_rshort_nested_]->{$seqno} )
+    {
+        return 0;
+    }
+
+    return 1;
+
+} ## end sub is_fragile_block_type
+
 sub xlp_collapsed_lengths {
 
     my $self = shift;
@@ -12385,9 +12414,11 @@ EOM
                             && $block_length <
                             $maximum_line_length_at_level[$level]
 
-                            # But skip this for sort/map/grep/eval blocks
-                            # because they can reform (b1345)
-                            && !$is_sort_map_grep_eval{$block_type}
+                            # But skip this for blocks types which can reform,
+                            # like sort/map/grep/eval blocks, to avoid
+                            # instability (b1345, b1428)
+                            && $self->is_fragile_block_type( $block_type,
+                                $seqno )
                           )
                         {
                             $collapsed_len = $block_length;

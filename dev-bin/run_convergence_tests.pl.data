@@ -10988,6 +10988,26 @@ my$sem=sub
 --variable-maximum-line-length
 --want-trailing-commas='m'
 
+==> b1428.in <==
+         is(
+              grep ( { $_->{branchcode} eq 'MYLIBRARY' and $_->{selected} == 1 }
+                      @$libraries ),
+              1,
+              'Without selected parameter, my library should be preselected',
+         );
+
+         is(
+                  grep (
+                           {              $_->{branchcode} eq 'MYLIBRARY'
+                                      and $_->{selected} == 1 } @$libraries ),
+                  1,
+'Without selected parameter, my library should be preselected',
+         );
+
+==> b1428.par <==
+--extended-line-up-parentheses
+--indent-columns=9
+
 ==> b1430.in <==
          $t->post_ok(
                   "//$auth_userid:$password@/api/v1/advanced_editor/macros" =>
