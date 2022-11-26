@@ -11055,6 +11055,28 @@ my$sem=sub
 --maximum-line-length=42
 --variable-maximum-line-length
 
+==> b1432.in <==
+$last = after ( 7,
+              sub { print "not ok 3\n"; }, );
+
+$last = after (
+                7,
+                sub { print "not ok 3\n"; },
+);
+
+
+==> b1432.par <==
+--add-trailing-commas
+--continuation-indentation=8
+--delete-trailing-commas
+--extended-continuation-indentation
+--ignore-old-breakpoints
+--indent-columns=8
+--line-up-parentheses
+--maximum-line-length=45
+--space-function-paren
+--want-trailing-commas='b'
+
 ==> b146.in <==
 # State 1
 

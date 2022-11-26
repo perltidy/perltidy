@@ -23720,12 +23720,26 @@ EOM
         # nothing can be done if no stack items defined for this line
         return if ( $max_lp_object_list < 0 );
 
-        # see if we have exceeded the maximum desired line length
+        # See if we have exceeded the maximum desired line length ..
         # keep 2 extra free because they are needed in some cases
         # (result of trial-and-error testing)
+        my $tol = 2;
+
+        # But reduce tol to 0 at a terminal comma; fixes b1432
+        if (   $tokens_to_go[$mx_index_to_go] eq ','
+            && $mx_index_to_go < $max_index_to_go )
+        {
+            my $in = $mx_index_to_go + 1;
+            if ( $types_to_go[$in] eq 'b' && $in < $max_index_to_go ) { $in++ }
+            if ( $is_closing_token{ $tokens_to_go[$in] } ) {
+                $tol = 0;
+            }
+        }
+
         my $spaces_needed =
           $lp_position_predictor -
-          $maximum_line_length_at_level[ $levels_to_go[$mx_index_to_go] ] + 2;
+          $maximum_line_length_at_level[ $levels_to_go[$mx_index_to_go] ] +
+          $tol;
 
         return if ( $spaces_needed <= 0 );
 
