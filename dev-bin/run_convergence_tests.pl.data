@@ -10988,6 +10988,25 @@ my$sem=sub
 --variable-maximum-line-length
 --want-trailing-commas='m'
 
+==> b1427.in <==
+print join( "\n",
+          @intersection, ),
+  "\n";
+
+print join( "\n",
+            @intersection
+  ),
+  "\n";
+
+==> b1427.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--extended-line-up-parentheses
+--indent-columns=0
+--maximum-fields-per-table=80
+--maximum-line-length=27
+--want-trailing-commas='b'
+
 ==> b1428.in <==
          is(
               grep ( { $_->{branchcode} eq 'MYLIBRARY' and $_->{selected} == 1 }

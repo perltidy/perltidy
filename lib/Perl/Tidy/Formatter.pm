@@ -22015,6 +22015,13 @@ EOM
             $number_of_fields = $number_of_fields_best;
         }
 
+        # fix b1427
+        elsif ($number_of_fields_best > 1
+            && $number_of_fields_best > $number_of_fields_max )
+        {
+            $number_of_fields_best = $number_of_fields_max;
+        }
+
         # If we are crowded and the -lp option is being used, try
         # to undo some indentation
         if (
