@@ -23722,7 +23722,7 @@ EOM
 
         # look at the current estimated maximum line length, and
         # remove some whitespace if it exceeds the desired maximum
-        my ($mx_index_to_go) = @_;
+        my ($ii_to_go) = @_;
 
         # nothing can be done if no stack items defined for this line
         return if ( $max_lp_object_list < 0 );
@@ -23733,10 +23733,10 @@ EOM
         my $tol = 2;
 
         # But reduce tol to 0 at a terminal comma; fixes b1432
-        if (   $tokens_to_go[$mx_index_to_go] eq ','
-            && $mx_index_to_go < $max_index_to_go )
+        if (   $tokens_to_go[$ii_to_go] eq ','
+            && $ii_to_go < $max_index_to_go )
         {
-            my $in = $mx_index_to_go + 1;
+            my $in = $ii_to_go + 1;
             if ( $types_to_go[$in] eq 'b' && $in < $max_index_to_go ) { $in++ }
             if ( $is_closing_token{ $tokens_to_go[$in] } ) {
                 $tol = 0;
@@ -23745,7 +23745,7 @@ EOM
 
         my $spaces_needed =
           $lp_position_predictor -
-          $maximum_line_length_at_level[ $levels_to_go[$mx_index_to_go] ] +
+          $maximum_line_length_at_level[ $levels_to_go[$ii_to_go] ] +
           $tol;
 
         return if ( $spaces_needed <= 0 );
