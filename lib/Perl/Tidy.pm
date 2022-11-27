@@ -5352,7 +5352,7 @@ Outdenting
  -okwl=s specify alternative keywords for -okw command
 
 Other controls
- -mft=n  maximum fields per table; default n=40
+ -mft=n  maximum fields per table; default n=0 (no limit)
  -x      do not format lines before hash-bang line (i.e., for VMS)
  -asc    allows perltidy to add a ';' when missing (default)
  -dsm    allows perltidy to delete an unnecessary ';'  (default)

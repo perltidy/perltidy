@@ -3432,14 +3432,12 @@ tables in the file must already be nicely formatted.
 
 =item B<-mft=n>,  B<--maximum-fields-per-table=n>
 
-If the computed number of fields for any table exceeds B<n>, then it
-will be reduced to B<n>.  The default value for B<n> is a large number,
-40.  While this value should probably be left unchanged as a general
-rule, it might be used on a small section of code to force a list to
-have a particular number of fields per line, and then either the B<-boc>
-flag could be used to retain this formatting, or a single comment could
-be introduced somewhere to freeze the formatting in future applications
-of perltidy.
+If B<n> is a positive number, and the computed number of fields for any table
+exceeds B<n>, then it will be reduced to B<n>.  This parameter might be used on
+a small section of code to force a list to have a particular number of fields
+per line, and then either the B<-boc> flag could be used to retain this
+formatting, or a single comment could be introduced somewhere to freeze the
+formatting in future applications of perltidy. For example
 
     # perltidy -mft=2
     @month_of_year = (
@@ -3450,6 +3448,9 @@ of perltidy.
         'Sep', 'Oct',
         'Nov', 'Dec'
     );
+
+The default value is B<n=0>, which does not place a limit on the
+number of fields in a table.
 
 =item B<-cab=n>,  B<--comma-arrow-breakpoints=n>
 
