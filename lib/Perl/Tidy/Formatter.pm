@@ -8861,6 +8861,19 @@ EOM
     return ( $severe_error, $rqw_lines );
 } ## end sub resync_lines_and_tokens
 
+my %is_soft_break_type;
+
+BEGIN {
+
+    # Soft breaks are needed to avoid conflicts for token types which might be
+    # treated with special logic for chains.  Fixes b1433, 1434, 1435.
+    # NOTE: $type is used as the hash key for now; if other container tokens
+    # are added it might be necessary to use a token/type mixture.
+    my @q = qw# -> ? : && || + - / * #;
+    @is_soft_break_type{@q} = (1) x scalar(@q);
+
+}
+
 sub keep_old_line_breaks {
 
     # Called once per file to find and mark any old line breaks which
@@ -8936,7 +8949,7 @@ sub keep_old_line_breaks {
         if ( !$seqno ) {
             my $type = $rLL->[$KK]->[_TYPE_];
             if ( $rkeep_break_hash->{$type} ) {
-                $rbreak_hash->{$KK} = 1;
+                $rbreak_hash->{$KK} = $is_soft_break_type{$type} ? 2 : 1;
             }
         }
 
@@ -8968,7 +8981,10 @@ sub keep_old_line_breaks {
                         }
                     }
                 }
-                $rbreak_hash->{$KK} = 1 if ($match);
+                if ($match) {
+                    my $type = $rLL->[$KK]->[_TYPE_];
+                    $rbreak_hash->{$KK} = $is_soft_break_type{$type} ? 2 : 1;
+                }
             }
         }
     };

@@ -11096,6 +11096,45 @@ $last = after (
 --space-function-paren
 --want-trailing-commas='b'
 
+==> b1433.in <==
+    return (
+        ( $val || !exists $opts{$opt} ) ?
+          do { $opts{$opt} = 1 } :
+          do { delete $opts{$opt}; 1 }
+      );
+
+    return (
+        ( $val || !exists $opts{$opt} ) ? do { $opts{$opt} = 1 }
+        :
+          do { delete $opts{$opt}; 1 }
+    );
+
+==> b1433.par <==
+--break-after-all-operators
+--keep-old-breakpoints-after=':'
+--variable-maximum-line-length
+
+==> b1435.in <==
+(-r _)?do{do$vshnurc;&err($@)}
+       :
+       &err(
+    "Cannot read $vshnurc")
+       if-f$vshnurc;
+
+(-r _)?
+       do{do$vshnurc;&err($@)}:
+       &err(
+    "Cannot read $vshnurc")
+       if-f$vshnurc;
+
+
+==> b1435.par <==
+--noadd-whitespace
+--break-after-all-operators
+--continuation-indentation=7
+--keep-old-breakpoints-after=':'
+--maximum-line-length=34
+
 ==> b146.in <==
 # State 1
 
