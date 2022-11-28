@@ -519,7 +519,6 @@ BEGIN {
         _rKrange_code_without_comments_ => $i++,
         _rbreak_before_Kfirst_          => $i++,
         _rbreak_after_Klast_            => $i++,
-        _rwant_container_open_          => $i++,
         _converged_                     => $i++,
 
         _rstarting_multiline_qw_seqno_by_K_ => $i++,
@@ -942,7 +941,6 @@ sub new {
     $self->[_rKrange_code_without_comments_] = [];
     $self->[_rbreak_before_Kfirst_]          = {};
     $self->[_rbreak_after_Klast_]            = {};
-    $self->[_rwant_container_open_]          = {};
     $self->[_converged_]                     = 0;
 
     # qw stuff
@@ -8882,7 +8880,7 @@ sub keep_old_line_breaks {
       $self->[_rKrange_code_without_comments_];
     my $rbreak_before_Kfirst = $self->[_rbreak_before_Kfirst_];
     my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
-    my $rwant_container_open = $self->[_rwant_container_open_];
+    my $rbreak_container     = $self->[_rbreak_container_];
     my $K_opening_container  = $self->[_K_opening_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
@@ -8923,7 +8921,7 @@ sub keep_old_line_breaks {
                 # opens the opening paren when the closing paren opens.
                 # Relevant cases are b977, b1215, b1270, b1303
 
-                $rwant_container_open->{$seqno} = 1;
+                $rbreak_container->{$seqno} = 1;
             }
         }
     }
@@ -10432,7 +10430,7 @@ EOM
                 my $is_chain_end = !@{$rnested_pairs}
                   || $rnested_pairs->[-1]->[1] != $inner_seqno;
                 if ($is_chain_end) {
-                    $self->[_rwant_container_open_]->{$inner_seqno} = 1;
+                    $self->[_rbreak_container_]->{$inner_seqno} = 1;
                 }
             }
         }
@@ -15858,7 +15856,7 @@ EOM
                 }
 
                 if ( $is_opening_sequence_token{$token} ) {
-                    if ( $self->[_rwant_container_open_]->{$seqno} ) {
+                    if ( $self->[_rbreak_container_]->{$seqno} ) {
                         $self->set_forced_breakpoint($i);
                     }
                     push @unmatched_opening_indexes_in_this_batch, $i;
@@ -15868,7 +15866,7 @@ EOM
                 }
                 elsif ( $is_closing_sequence_token{$token} ) {
 
-                    if ( $i > 0 && $self->[_rwant_container_open_]->{$seqno} ) {
+                    if ( $i > 0 && $self->[_rbreak_container_]->{$seqno} ) {
                         $self->set_forced_breakpoint( $i - 1 );
                     }
 
@@ -27701,11 +27699,11 @@ sub set_vertical_tightness_flags {
               if ( $self->[_rK_weld_left_]->{ $K_to_go[$iend_next] }
                 && $is_closing_type{$type_end_next} );
 
-           # The flag '_rwant_container_open_' avoids conflict of -bom and -pt=1
-           # or -pt=2; fixes b1270. See similar patch above for $cvt.
+            # The flag '_rbreak_container_' avoids conflict of -bom and -pt=1
+            # or -pt=2; fixes b1270. See similar patch above for $cvt.
             my $seqno = $type_sequence_to_go[$iend];
             if (   $ovt
-                && $self->[_rwant_container_open_]->{$seqno} )
+                && $self->[_rbreak_container_]->{$seqno} )
             {
                 $ovt = 0;
             }
@@ -27751,7 +27749,7 @@ sub set_vertical_tightness_flags {
             # Avoid conflict of -bom and -pvt=1 or -pvt=2, fixes b977, b1303
             # See similar patch above for $ovt.
             my $seqno = $type_sequence_to_go[$ibeg_next];
-            if ( $cvt && $self->[_rwant_container_open_]->{$seqno} ) {
+            if ( $cvt && $self->[_rbreak_container_]->{$seqno} ) {
                 $cvt = 0;
             }
 
@@ -27936,7 +27934,7 @@ sub set_vertical_tightness_flags {
             my $seq_next = $type_sequence_to_go[$ibeg_next];
             $stackable = $stack_closing_token{$token_beg_next}
               unless ( $block_type_to_go[$ibeg_next]
-                || $seq_next && $self->[_rwant_container_open_]->{$seq_next} );
+                || $seq_next && $self->[_rbreak_container_]->{$seq_next} );
         }
         elsif ($is_opening_token{$token_end}
             && $is_opening_token{$token_beg_next} )
