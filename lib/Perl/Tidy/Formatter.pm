@@ -19276,9 +19276,44 @@ sub break_lines_inner_loop {
         }
     }
 
-    #-------------------------------------------------
-    # Begin loop over the indexes in the _to_go arrays
-    #-------------------------------------------------
+    # Avoid a break which would strand a single punctuation
+    # token.  For example, we do not want to strand a leading
+    # '.' which is followed by a long quoted string.
+    # But note that we do want to do this with -extrude (l=1)
+    # so please test any changes to this code on -extrude.
+    if (
+           ( $i_begin < $imax )
+        && ( $tokens_to_go[$i_begin] eq $types_to_go[$i_begin] )
+        && !$forced_breakpoint_to_go[$i_begin]
+        && !(
+
+            # Allow break after a closing eval brace. This is an
+            # approximate way to simulate a forced breakpoint made in
+            # Section B below.  No differences have been found, but if
+            # necessary the full logic of Section B could be used here
+            # (see c165).
+            $tokens_to_go[$i_begin] eq '}'
+            && $block_type_to_go[$i_begin] eq 'eval'
+        )
+        && (
+            (
+                $leading_spaces +
+                $summed_lengths_to_go[ $i_begin + 1 ] -
+                $starting_sum
+            ) < $maximum_line_length
+        )
+      )
+    {
+        $i_test = min( $imax, $inext_to_go[$i_begin] ) - 1;
+        DEBUG_BREAK_LINES && do {
+            $Msg .= " :skip ahead at i=$i_test";
+        };
+    }
+
+    #-------------------------------------------------------
+    # Begin INNER_LOOP over the indexes in the _to_go arrays
+    #-------------------------------------------------------
+  INNER_LOOP:
     while ( ++$i_test <= $imax ) {
         my $type                     = $types_to_go[$i_test];
         my $token                    = $tokens_to_go[$i_test];
@@ -19442,8 +19477,8 @@ sub break_lines_inner_loop {
         # quit if a break here would put a good terminal token on
         # the next line and we already have a possible break
         if (
-               !$must_break
-            && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
+               ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
+            && !$must_break
             && (
                 (
                     $leading_spaces +
@@ -19457,34 +19492,8 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :quit at good terminal='$next_nonblank_type'";
                 };
-                last;
+                last INNER_LOOP;
             }
-        }
-
-        # Avoid a break which would strand a single punctuation
-        # token.  For example, we do not want to strand a leading
-        # '.' which is followed by a long quoted string.
-        # But note that we do want to do this with -extrude (l=1)
-        # so please test any changes to this code on -extrude.
-        if (
-               !$must_break
-            && ( $i_test == $i_begin )
-            && ( $i_test < $imax )
-            && ( $token eq $type )
-            && (
-                (
-                    $leading_spaces +
-                    $summed_lengths_to_go[ $i_test + 1 ] -
-                    $starting_sum
-                ) < $maximum_line_length
-            )
-          )
-        {
-            $i_test = min( $imax, $inext_to_go[$i_test] );
-            DEBUG_BREAK_LINES && do {
-                $Msg .= " :redo at i=$i_test";
-            };
-            redo;
         }
 
         #------------------------------------------------------------
@@ -19500,7 +19509,7 @@ sub break_lines_inner_loop {
                     $Msg .=
                       " :last at leading_alignment='$leading_alignment_type'";
                 };
-                last;
+                last INNER_LOOP;
             }
 
             # Force at least one breakpoint if old code had good
@@ -19525,7 +19534,7 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :last at good old break\n";
                 };
-                last;
+                last INNER_LOOP;
             }
 
             # Do not skip past an important break point in a short final
@@ -19560,7 +19569,7 @@ sub break_lines_inner_loop {
                     DEBUG_BREAK_LINES && do {
                         $Msg .= " :last-noskip_short";
                     };
-                    last;
+                    last INNER_LOOP;
                 }
             }
 
@@ -19571,7 +19580,7 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :last-must_break";
                 };
-                last;
+                last INNER_LOOP;
             }
 
             # set flags to remember if a break here will produce a
@@ -19610,13 +19619,21 @@ sub break_lines_inner_loop {
         #-----------------------------------------------------------
         # Section D: See if the maximum line length will be exceeded
         #-----------------------------------------------------------
-        my $too_long = ( $i_test >= $imax );
-        if ( !$too_long ) {
-            my $next_length =
-              $leading_spaces +
-              $summed_lengths_to_go[ $i_test + 2 ] -
-              $starting_sum;
-            $too_long = $next_length > $maximum_line_length;
+
+        # Quit if there are no more tokens to test
+        last INNER_LOOP if ( $i_test >= $imax );
+
+        # Keep going if we have not reached the limit
+        my $excess =
+          $leading_spaces +
+          $summed_lengths_to_go[ $i_test + 2 ] -
+          $starting_sum -
+          $maximum_line_length;
+
+        if ( $excess < 0 ) {
+            next INNER_LOOP;
+        }
+        elsif ( $excess == 0 ) {
 
             # To prevent blinkers we will avoid leaving a token exactly at
             # the line length limit unless it is the last token or one of
@@ -19624,26 +19641,33 @@ sub break_lines_inner_loop {
             #
             # The following code was a blinker with -pbp before this
             # modification:
-##                    $last_nonblank_token eq '('
-##                        && $is_indirect_object_taker{ $paren_type
-##                            [$paren_depth] }
+            #     $last_nonblank_token eq '('
+            #         && $is_indirect_object_taker{ $paren_type
+            #             [$paren_depth] }
             # The issue causing the problem is that if the
             # term [$paren_depth] gets broken across a line then
             # the whitespace routine doesn't see both opening and closing
             # brackets and will format like '[ $paren_depth ]'.  This
             # leads to an oscillation in length depending if we break
             # before the closing bracket or not.
-            if (  !$too_long
-                && $i_test + 1 < $imax
+            if (   $i_test + 1 < $imax
                 && $next_nonblank_type ne ','
                 && !$is_closing_type{$next_nonblank_type} )
             {
-                $too_long = $next_length >= $maximum_line_length;
+                # too long
                 DEBUG_BREAK_LINES && do {
-                    $Msg .= " :too_long=$too_long" if ($too_long);
+                    $Msg .= " :too_long";
                 }
             }
+            else {
+                next INNER_LOOP;
+            }
         }
+        else {
+            # too long
+        }
+
+        # a break here makes the line too long ...
 
         DEBUG_BREAK_LINES && do {
             my $ltok = $token;
@@ -19656,44 +19680,35 @@ sub break_lines_inner_loop {
             if ( length($ltok) > 6 ) { $ltok = substr( $ltok, 0, 8 ) }
             if ( length($rtok) > 6 ) { $rtok = substr( $rtok, 0, 8 ) }
             print STDOUT
-"BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] 2long=$too_long str=$strength    $ltok $rtok\n";
+"BREAK: i=$i_test imax=$imax $types_to_go[$i_test] $next_nonblank_type sp=($leading_spaces) lnext= $summed_lengths_to_go[$i_testp2] str=$strength    $ltok $rtok\n";
         };
 
-        # allow one extra terminal token after exceeding line length
+        # Exception: allow one extra terminal token after exceeding line length
         # if it would strand this token.
-        if (   $rOpts_fuzzy_line_length
-            && $too_long
-            && $i_lowest == $i_test
+        if (   $i_lowest == $i_test
             && $token_lengths_to_go[$i_test] > 1
-            && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' ) )
+            && ( $next_nonblank_type eq ';' || $next_nonblank_type eq ',' )
+            && $rOpts_fuzzy_line_length )
         {
-            $too_long = 0;
             DEBUG_BREAK_LINES && do {
                 $Msg .= " :do_not_strand next='$next_nonblank_type'";
             };
+            next INNER_LOOP;
         }
 
-        # Stop if line will be too long and we have a solution
-        if (
-
-            # ... no more space and we have a break
-            $too_long && $i_lowest >= 0
-
-            # ... or no more tokens
-            || $i_test == $imax
-          )
-        {
+        # Stop if here if we have a solution and the line will be too long
+        if ( $i_lowest >= 0 ) {
             DEBUG_BREAK_LINES && do {
                 $Msg .=
-" :Done-too_long=$too_long or i_lowest=$i_lowest or $i_test==imax";
+" :Done-too_long && i_lowest=$i_lowest at itest=$i_test, imax=$imax";
             };
-            last;
+            last INNER_LOOP;
         }
     }
 
-    #-----------------------------------------------
-    # End loop over the indexes in the _to_go arrays
-    #-----------------------------------------------
+    #-----------------------------------------------------
+    # End INNER_LOOP over the indexes in the _to_go arrays
+    #-----------------------------------------------------
 
     # Be sure we return an index in the range ($ibegin .. $imax).
     # We will break at imax if no other break was found.
