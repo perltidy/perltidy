@@ -11135,6 +11135,70 @@ $last = after (
 --keep-old-breakpoints-after=':'
 --maximum-line-length=34
 
+==> b1436.in <==
+    if (
+           $included{'gold'}
+        && $yes_andor =~ /any/
+        && $not_andor !~ /all/
+        && (
+            grep ( { $included{$_} } @COLORS ) +
+            grep ( { $excluded{$_} } @COLORS ) ) == 5
+            )
+    {
+    }
+
+    if (
+           $included{'gold'}
+        && $yes_andor =~ /any/
+        && $not_andor !~ /all/
+        && (  grep ( { $included{$_} } @COLORS )
+            + grep ( { $excluded{$_} } @COLORS ) ) == 5
+            )
+    {
+    }
+
+==> b1436.par <==
+--continuation-indentation=8
+--extended-continuation-indentation
+--keep-old-breakpoints-after='+'
+--variable-maximum-line-length
+--want-break-before='+'
+
+==> b1439.in <==
+                $pt +=
+                  ( 0.1734 - 0.000393 * $t ) * dsin($m) +
+                  0.0021 * dsin( 2 * $m )
+                  - 0.4068 * dsin($mprime) +
+                  0.0161 * dsin( 2 * $mprime )
+                  - 0.0004 * dsin( 3 * $mprime ) +
+                  0.0104 * dsin( 2 * $f )
+                  - 0.0051 * dsin( $m + $mprime )
+                  - 0.0074 * dsin( $m - $mprime ) +
+                  0.0004 * dsin( 2 * $f + $m )
+                  - 0.0004 * dsin( 2 * $f - $m )
+                  - 0.0006 * dsin( 2 * $f + $mprime ) +
+                  0.0010 * dsin( 2 * $f - $mprime ) +
+                  0.0005 * dsin( $m + 2 * $mprime );
+
+                $pt +=
+                  ( 0.1734 - 0.000393 * $t ) * dsin($m) +
+                  0.0021 * dsin( 2 * $m ) -
+                  0.4068 * dsin($mprime) +
+                  0.0161 * dsin( 2 * $mprime ) -
+                  0.0004 * dsin( 3 * $mprime ) +
+                  0.0104 * dsin( 2 * $f ) -
+                  0.0051 * dsin( $m + $mprime )
+                  - 0.0074 * dsin( $m - $mprime ) +
+                  0.0004 * dsin( 2 * $f + $m ) -
+                  0.0004 * dsin( 2 * $f - $m )
+                  - 0.0006 * dsin( 2 * $f + $mprime ) +
+                  0.0010 * dsin( 2 * $f - $mprime ) +
+                  0.0005 * dsin( $m + 2 * $mprime );
+
+==> b1439.par <==
+--keep-old-breakpoints-after='-'
+--want-break-before='-'
+
 ==> b146.in <==
 # State 1
 

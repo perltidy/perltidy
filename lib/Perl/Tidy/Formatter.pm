@@ -261,6 +261,7 @@ my (
     %is_container_label_type,
     %is_die_confess_croak_warn,
     %is_my_our_local,
+    %is_soft_keep_break_type,
 
     @all_operators,
 
@@ -744,6 +745,13 @@ BEGIN {
     @q = qw( => ; h f );
     push @q, ',';
     @is_counted_type{@q} = (1) x scalar(@q);
+
+    # Tokens where --keep-old-break-xxx flags make soft breaks instead
+    # of hard breaks.  See b1433 and b1436.
+    # NOTE: $type is used as the hash key for now; if other container tokens
+    # are added it might be necessary to use a token/type mixture.
+    @q = qw# -> ? : && || + - / * #;
+    @is_soft_keep_break_type{@q} = (1) x scalar(@q);
 
 }
 
@@ -1798,6 +1806,31 @@ EOM
     %keep_break_after_type = ();
     initialize_keep_old_breakpoints( $rOpts->{'keep-old-breakpoints-after'},
         'kba', \%keep_break_after_type );
+
+    # Modify %keep_break_before and %keep_break_after to avoid conflicts
+    # with %want_break_before; fixes b1436.
+    # This became necessary after breaks for some tokens were converted
+    # from hard to soft (see b1433).
+    # We could do this for all tokens, but to minimize changes to existing
+    # code we currently only do this for the soft break tokens.
+    foreach my $key ( keys %keep_break_before_type ) {
+        if (   defined( $want_break_before{$key} )
+            && !$want_break_before{$key}
+            && $is_soft_keep_break_type{$key} )
+        {
+            $keep_break_after_type{$key} = $keep_break_before_type{$key};
+            delete $keep_break_before_type{$key};
+        }
+    }
+    foreach my $key ( keys %keep_break_after_type ) {
+        if (   defined( $want_break_before{$key} )
+            && $want_break_before{$key}
+            && $is_soft_keep_break_type{$key} )
+        {
+            $keep_break_before_type{$key} = $keep_break_after_type{$key};
+            delete $keep_break_after_type{$key};
+        }
+    }
 
     $controlled_comma_style ||= $keep_break_before_type{','};
     $controlled_comma_style ||= $keep_break_after_type{','};
@@ -8861,19 +8894,6 @@ EOM
     return ( $severe_error, $rqw_lines );
 } ## end sub resync_lines_and_tokens
 
-my %is_soft_break_type;
-
-BEGIN {
-
-    # Soft breaks are needed to avoid conflicts for token types which might be
-    # treated with special logic for chains.  Fixes b1433, 1434, 1435.
-    # NOTE: $type is used as the hash key for now; if other container tokens
-    # are added it might be necessary to use a token/type mixture.
-    my @q = qw# -> ? : && || + - / * #;
-    @is_soft_break_type{@q} = (1) x scalar(@q);
-
-}
-
 sub keep_old_line_breaks {
 
     # Called once per file to find and mark any old line breaks which
@@ -8949,7 +8969,7 @@ sub keep_old_line_breaks {
         if ( !$seqno ) {
             my $type = $rLL->[$KK]->[_TYPE_];
             if ( $rkeep_break_hash->{$type} ) {
-                $rbreak_hash->{$KK} = $is_soft_break_type{$type} ? 2 : 1;
+                $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
             }
         }
 
@@ -8983,7 +9003,8 @@ sub keep_old_line_breaks {
                 }
                 if ($match) {
                     my $type = $rLL->[$KK]->[_TYPE_];
-                    $rbreak_hash->{$KK} = $is_soft_break_type{$type} ? 2 : 1;
+                    $rbreak_hash->{$KK} =
+                      $is_soft_keep_break_type{$type} ? 2 : 1;
                 }
             }
         }
