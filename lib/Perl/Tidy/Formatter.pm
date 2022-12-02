@@ -5839,6 +5839,13 @@ Something may be wrong; formatting will be skipped.
 EOM
     }
 
+    # Dump any requested block summary data
+    if ( $rOpts->{'dump-block-summary'} ) {
+        if ($severe_error) { Exit(1) }
+        $self->dump_block_summary();
+        Exit(0);
+    }
+
     # output file verbatim if severe error or no formatting requested
     if ( $severe_error || $rOpts->{notidy} ) {
         $self->dump_verbatim();
@@ -5922,6 +5929,308 @@ EOM
     $self->wrapup();
     return;
 } ## end sub finish_formatting
+
+my %is_loop_type;
+
+BEGIN {
+    my @q = qw( for foreach while do until );
+    @{is_loop_type}{@q} = (1) x scalar(@q);
+}
+
+sub find_level_info {
+
+    # find level ranges and total variations
+    # Returns ref to array indexed on seqno with this info:
+    #  [ starting level, maximum level, total level variation]
+
+    my ($self) = @_;
+
+    my $rSS                  = $self->[_rSS_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+
+    my @stack;
+    my @level_info;
+    my $err;
+    foreach my $sseq ( @{$rSS} ) {
+        my $depth    = @stack;
+        my $seq_next = $sseq > 0 ? $sseq : -$sseq;
+
+        #-------------------------------------------------------------
+        # TODO: this is currently restricted to code blocks. This may
+        # need to be generalized.
+        #-------------------------------------------------------------
+        next if ( !$rblock_type_of_seqno->{$seq_next} );
+        if ( $sseq > 0 ) {
+            foreach my $seq (@stack) {
+                my ( $starting_depth, $maximum_depth, $total_variation ) =
+                  @{ $level_info[$seq] };
+                if ( $maximum_depth < $depth ) { $maximum_depth = $depth }
+                $total_variation++;
+                $level_info[$seq] =
+                  [ $starting_depth, $maximum_depth, $total_variation ];
+            }
+            push @stack, $seq_next;
+            $level_info[$seq_next] = [ $depth, $depth, 1 ];
+        }
+        else {
+            my $seq_test = pop @stack;
+            if ( $seq_test ne $seq_next ) {
+
+                # Shouldn't happen - the $rSS array must have an error
+                DEVEL_MODE && Fault("stack error finding total depths\n");
+
+                @level_info = ();
+                last;
+            }
+        }
+    }
+    return \@level_info;
+} ## end sub find_level_info
+
+sub find_loop_label {
+
+    my ( $self, $seqno ) = @_;
+
+    # Given:
+    #   $seqno = sequence number of a block of code for a loop
+    # Return:
+    #   $label = the loop label text, if any, or an empty string
+
+    my $rLL                 = $self->[_rLL_];
+    my $rlines              = $self->[_rlines_];
+    my $K_opening_container = $self->[_K_opening_container_];
+
+    my $label     = EMPTY_STRING;
+    my $K_opening = $K_opening_container->{$seqno};
+
+    # backup to the line with the opening paren, if any, in case the
+    # keyword is on a different line
+    my $Kp = $self->K_previous_code($K_opening);
+    return $label unless ( defined($Kp) );
+    if ( $rLL->[$Kp]->[_TOKEN_] eq ')' ) {
+        $seqno     = $rLL->[$Kp]->[_TYPE_SEQUENCE_];
+        $K_opening = $K_opening_container->{$seqno};
+    }
+
+    return $label unless ( defined($K_opening) );
+    my $lx_open = $rLL->[$K_opening]->[_LINE_INDEX_];
+
+    # look for a lable within a few lines; allow a couple of blank lines
+    foreach my $lx ( reverse( $lx_open - 3 .. $lx_open ) ) {
+        last if ( $lx < 0 );
+        my $line_of_tokens = $rlines->[$lx];
+        my $line_type      = $line_of_tokens->{_line_type};
+
+        # stop search on a non-code line
+        last if ( $line_type ne 'CODE' );
+
+        my $rK_range = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+
+        # skip a blank line
+        next if ( !defined($Kfirst) );
+
+        # check for a lable
+        if ( $rLL->[$Kfirst]->[_TYPE_] eq 'J' ) {
+            $label = $rLL->[$Kfirst]->[_TOKEN_];
+            last;
+        }
+
+        # quit the search if we are above the starting line
+        last if ( $lx < $lx_open );
+    }
+
+    return $label;
+} ## end sub find_loop_label
+
+sub dump_block_summary {
+    my ($self) = @_;
+
+    # Dump information about selected code blocks to STDOUT
+    # This sub is called when
+    #   --dump-block-summary (-dbs) is set.
+    # The following controls are available:
+    #  --dump-block-types=s (-dbt=s), where s is a list of block types
+    #    (if else elsif for foreach while do ... sub) ; default is 'sub'
+    #  --dump-block-minimum-lines=n (-dbml=n), where n is the minimum
+    #    number of lines for a block to be included; default is 20.
+
+    my $rLL                  = $self->[_rLL_];
+    my $rlines               = $self->[_rlines_];
+    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $K_opening_container  = $self->[_K_opening_container_];
+    my $K_closing_container  = $self->[_K_closing_container_];
+    my $ris_asub_block       = $self->[_ris_asub_block_];
+    my $ris_sub_block        = $self->[_ris_sub_block_];
+
+    my $input_stream_name = get_input_stream_name();
+
+    my $rOpts_dump_block_minimum_lines = $rOpts->{'dump-block-minimum-lines'};
+    if ( !defined($rOpts_dump_block_minimum_lines) ) {
+        $rOpts_dump_block_minimum_lines = 20;
+    }
+
+    my $rOpts_dump_block_types = $rOpts->{'dump-block-types'};
+    if ( !defined($rOpts_dump_block_types) ) { $rOpts_dump_block_types = 'sub' }
+    $rOpts_dump_block_types =~ s/^\s+//;
+    $rOpts_dump_block_types =~ s/\s+$//;
+    my @list = split /\s+/, $rOpts_dump_block_types;
+    my %dump_block_types;
+    @{dump_block_types}{@list} = (1) x scalar(@list);
+    my $dump_all_types = $dump_block_types{'*'};
+
+    # Get level variation info for code blocks
+    my $rlevel_info = $self->find_level_info();
+
+    my $rselected_blocks = {};
+
+    #-------------------------------------
+    # Loop to get info for selected blocks
+    #-------------------------------------
+
+  BLOCK_SUMMARY_LOOP:
+    foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
+
+        my $type;
+        my $name       = "";
+        my $block_type = $rblock_type_of_seqno->{$seqno};
+        my $K_opening  = $K_opening_container->{$seqno};
+        my $K_closing  = $K_closing_container->{$seqno};
+        my $level      = $rLL->[$K_opening]->[_LEVEL_];
+
+        my $lx_open    = $rLL->[$K_opening]->[_LINE_INDEX_];
+        my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
+        my $line_count = $lx_close - $lx_open;
+        if ( $line_count < $rOpts_dump_block_minimum_lines ) {
+            next BLOCK_SUMMARY_LOOP;
+        }
+
+        my $line_of_tokens = $rlines->[$lx_open];
+        my $rK_range       = $line_of_tokens->{_rK_range};
+        my ( $Kfirst, $Klast ) = @{$rK_range};
+        if ( !defined($Kfirst) || !defined($Klast) || $Kfirst > $K_opening ) {
+            my $line_type = $line_of_tokens->{_line_type};
+
+            # shouldn't happen
+            my $CODE_type = $line_of_tokens->{_code_type};
+            DEVEL_MODE && Fault(<<EOM);
+unexpected line_type=$line_type at line $lx_open, code type=$CODE_type
+EOM
+            next BLOCK_SUMMARY_LOOP;
+        }
+
+        # Skip closures unless type 'closure' is explicitely requested
+        if ( ( $block_type eq '}' || $block_type eq ';' )
+            && $dump_block_types{'closure'} )
+        {
+            $type = 'closure';
+        }
+        elsif ( $ris_sub_block->{$seqno}
+            && ( $dump_all_types || $dump_block_types{'sub'} ) )
+        {
+            $type = 'sub';
+
+            # what we want:
+            #      $block_type               $name
+            # 'sub setidentifier($)'    => 'setidentifier'
+            # 'method setidentifier($)' => 'setidentifier'
+            my @parts = split /\s+/, $block_type;
+            $name = $parts[1];
+            $name =~ s/\W.*$//;
+        }
+
+        # Both 'sub' and 'asub' select an anonymous sub.
+        # This allows anonymous subs to be explicitely selected
+        elsif (
+            $ris_asub_block->{$seqno}
+            && (   $dump_all_types
+                || $dump_block_types{'sub'}
+                || $dump_block_types{'asub'} )
+          )
+        {
+            $type = 'asub';
+
+            # Look back to try to find some kind of name, such as
+            #   my $var = sub {        - var is type 'i'
+            #       var => sub {       - var is type 'w'
+            #      -var => sub {       - var is type 'w'
+            #     'var' => sub {       - var is type 'Q'
+            my ( $saw_equals, $saw_fat_comma, $blank_count );
+            foreach my $KK ( reverse( $Kfirst .. $K_opening - 1 ) ) {
+                my $token_type = $rLL->[$KK]->[_TYPE_];
+                if ( $token_type eq 'b' )  { $blank_count++;   next }
+                if ( $token_type eq '=>' ) { $saw_fat_comma++; next }
+                if ( $token_type eq '=' )  { $saw_equals++;    next }
+                if ( $token_type eq 'i' && $saw_equals
+                    || ( $token_type eq 'w' || $token_type eq 'Q' )
+                    && $saw_fat_comma )
+                {
+                    $name = $rLL->[$KK]->[_TOKEN_];
+                    last;
+                }
+            }
+        }
+        elsif ( $dump_all_types || $dump_block_types{$block_type} ) {
+            $type = $block_type;
+            if ( $is_loop_type{$block_type} ) {
+                $name = $self->find_loop_label($seqno);
+            }
+        }
+        else {
+            next BLOCK_SUMMARY_LOOP;
+        }
+
+        my ( $level_diff, $total_variation ) = ( 0, 0 );
+        my $item = $rlevel_info->[$seqno];
+        if ( defined($item) ) {
+            my ( $starting_depth, $maximum_depth, $tv ) = @{$item};
+            $total_variation = $tv;
+            $level_diff      = $maximum_depth - $starting_depth + 1;
+        }
+        $rselected_blocks->{$seqno} = {
+            line_start      => $lx_open + 1,
+            line_count      => $line_count,
+            name            => $name,
+            type            => $type,
+            level           => $level,
+            level_diff      => $level_diff,
+            total_variation => $total_variation,
+        };
+    }
+
+    #---------------------------
+    # Dump the results to STDOUt
+    #---------------------------
+
+    my $routput_lines;
+    push @{$routput_lines},
+      "file,line,type,name,line_count,level_start,level_diff,total_variation\n";
+    foreach my $seqno ( sort { $a <=> $b } keys %{$rselected_blocks} ) {
+        my $type            = $rselected_blocks->{$seqno}->{type};
+        my $name            = $rselected_blocks->{$seqno}->{name};
+        my $line_start      = $rselected_blocks->{$seqno}->{line_start};
+        my $line_count      = $rselected_blocks->{$seqno}->{line_count};
+        my $level           = $rselected_blocks->{$seqno}->{level};
+        my $level_diff      = $rselected_blocks->{$seqno}->{level_diff};
+        my $total_variation = $rselected_blocks->{$seqno}->{total_variation};
+
+        my $line =
+"$input_stream_name,$line_start,$type,$name,$line_count,$level,$level_diff, $total_variation\n";
+        push @{$routput_lines}, $line;
+    }
+
+    push @{$routput_lines}, <<EOM;
+
+'Made with --dump-block-summary (or -dbs) with settings:
+'--dump-block-minimum-lines=$rOpts_dump_block_minimum_lines (or -dbml=$rOpts_dump_block_minimum_lines)
+'--dump-block-types=$rOpts_dump_block_types (or -dbt=$rOpts_dump_block_types)
+EOM
+
+    foreach my $line ( @{$routput_lines} ) {
+        print STDOUT $line;
+    }
+    return;
+} ## end sub dump_block_summary
 
 sub set_CODE_type {
     my ($self) = @_;

@@ -3359,19 +3359,22 @@ sub generate_options {
     ########################################
     $category = 13;    # Debugging
     ########################################
-    $add_option->( 'DIAGNOSTICS',             'I',    '!' ) if (DEVEL_MODE);
-    $add_option->( 'DEBUG',                   'D',    '!' );
-    $add_option->( 'dump-cuddled-block-list', 'dcbl', '!' );
-    $add_option->( 'dump-defaults',           'ddf',  '!' );
-    $add_option->( 'dump-long-names',         'dln',  '!' );
-    $add_option->( 'dump-options',            'dop',  '!' );
-    $add_option->( 'dump-profile',            'dpro', '!' );
-    $add_option->( 'dump-short-names',        'dsn',  '!' );
-    $add_option->( 'dump-token-types',        'dtt',  '!' );
-    $add_option->( 'dump-want-left-space',    'dwls', '!' );
-    $add_option->( 'dump-want-right-space',   'dwrs', '!' );
-    $add_option->( 'fuzzy-line-length',       'fll',  '!' );
-    $add_option->( 'help',                    'h',    EMPTY_STRING );
+    $add_option->( 'DIAGNOSTICS',              'I',    '!' ) if (DEVEL_MODE);
+    $add_option->( 'DEBUG',                    'D',    '!' );
+    $add_option->( 'dump-block-summary',       'dbs',  '!' );
+    $add_option->( 'dump-block-minimum-lines', 'dbml', '=i' );
+    $add_option->( 'dump-block-types',         'dbt',  '=s' );
+    $add_option->( 'dump-cuddled-block-list',  'dcbl', '!' );
+    $add_option->( 'dump-defaults',            'ddf',  '!' );
+    $add_option->( 'dump-long-names',          'dln',  '!' );
+    $add_option->( 'dump-options',             'dop',  '!' );
+    $add_option->( 'dump-profile',             'dpro', '!' );
+    $add_option->( 'dump-short-names',         'dsn',  '!' );
+    $add_option->( 'dump-token-types',         'dtt',  '!' );
+    $add_option->( 'dump-want-left-space',     'dwls', '!' );
+    $add_option->( 'dump-want-right-space',    'dwrs', '!' );
+    $add_option->( 'fuzzy-line-length',        'fll',  '!' );
+    $add_option->( 'help',                     'h',    EMPTY_STRING );
     $add_option->( 'short-concatenation-item-length', 'scl',   '=i' );
     $add_option->( 'show-options',                    'opt',   '!' );
     $add_option->( 'timestamp',                       'ts',    '!' );
@@ -3511,6 +3514,8 @@ sub generate_options {
       cuddled-break-option=1
       delete-old-newlines
       delete-semicolons
+      dump-block-minimum-lines=20
+      dump-block-types=sub
       extended-syntax
       encode-output-strings
       function-paren-vertical-alignment
