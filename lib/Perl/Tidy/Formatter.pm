@@ -2436,11 +2436,12 @@ EOM
 
     # Ignore kbb='(' and '[' and '{': can cause unstable math formatting
     # (issues b1346, b1347, b1348) and likewise ignore kba=')' and ']' and '}'
+    # Also always ignore ? and : (b1440 and b1433-b1439)
     if ( $short_name eq 'kbb' ) {
-        @list = grep { !m/[\(\[\{]/ } @list;
+        @list = grep { !m/[\(\[\{\?\:]/ } @list;
     }
     elsif ( $short_name eq 'kba' ) {
-        @list = grep { !m/[\)\]\}]/ } @list;
+        @list = grep { !m/[\)\]\}\?\:]/ } @list;
     }
 
     # pull out any any leading container code, like f( or *{

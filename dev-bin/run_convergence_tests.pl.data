@@ -11199,6 +11199,27 @@ $last = after (
 --keep-old-breakpoints-after='-'
 --want-break-before='-'
 
+==> b1440.in <==
+        $comp = ( $form->[3] ? (
+                $im3->dummy( 0, 3 ) > 0 ) *
+                  255 :
+                  ( $im3 > 0 ) );
+
+        $comp =
+              ( $form->[3] ?
+                  (
+                $im3->dummy( 0, 3 ) > 0 ) *
+                  255 :
+                  ( $im3 > 0 ) );
+
+==> b1440.par <==
+--break-after-all-operators
+--continuation-indentation=6
+--keep-old-breakpoints-after='?'
+--maximum-line-length=29
+--opening-paren-right
+--variable-maximum-line-length
+
 ==> b146.in <==
 # State 1
 

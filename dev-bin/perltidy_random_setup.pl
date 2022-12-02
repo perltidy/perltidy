@@ -1225,6 +1225,9 @@ EOM
           backup-file-extension
           backup-method
           character-encoding
+          dump-block-summary
+          dump-block-types
+          dump-block-minimum-lines
           dump-cuddled-block-list
           dump-defaults
           dump-long-names
