@@ -113,7 +113,7 @@ BEGIN {
     # then the Release version must be bumped, and it is probably past time for
     # a release anyway.
 
-    $VERSION = '20221112';
+    $VERSION = '20221112.01';
 }
 
 sub DESTROY {
@@ -842,6 +842,17 @@ EOM
     if ( $rOpts->{'dump-options'} ) {
         print STDOUT $readable_options;
         Exit(0);
+    }
+
+    # --dump-block-summary requires one filename in the arg list.
+    # This is a safety precaution in case a user accidentally adds -dbs to the
+    # command line parameters and is expecting formatted output to stdout.
+    # Another precaution, added elsewhere, is to  ignore -dbs in a .perltidyrc
+    my $numf = @Arg_files;
+    if ( $rOpts->{'dump-block-summary'} && $numf != 1 ) {
+        Die(<<EOM);
+--dump-block-summary expects 1 filename in the arg list but saw $numf filenames
+EOM
     }
 
     #----------------------------------------
@@ -4084,6 +4095,7 @@ EOM
                     dump-token-types
                     dump-want-left-space
                     dump-want-right-space
+                    dump-block-summary
                     help
                     stylesheet
                     version

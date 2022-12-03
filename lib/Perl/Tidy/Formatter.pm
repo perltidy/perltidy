@@ -53,7 +53,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max );          # min, max are in Perl 5.8
-our $VERSION = '20221112';
+our $VERSION = '20221112.01';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -6093,7 +6093,7 @@ sub dump_block_summary {
     foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
 
         my $type;
-        my $name       = "";
+        my $name       = EMPTY_STRING;
         my $block_type = $rblock_type_of_seqno->{$seqno};
         my $K_opening  = $K_opening_container->{$seqno};
         my $K_closing  = $K_closing_container->{$seqno};
@@ -6200,8 +6200,10 @@ EOM
     }
 
     #---------------------------
-    # Dump the results to STDOUt
+    # Dump the results to STDOUT
     #---------------------------
+
+    return unless %{$rselected_blocks};
 
     my $routput_lines;
     push @{$routput_lines},
@@ -6219,13 +6221,6 @@ EOM
 "$input_stream_name,$line_start,$type,$name,$line_count,$level,$level_diff, $total_variation\n";
         push @{$routput_lines}, $line;
     }
-
-    push @{$routput_lines}, <<EOM;
-
-'Made with --dump-block-summary (or -dbs) with settings:
-'--dump-block-minimum-lines=$rOpts_dump_block_minimum_lines (or -dbml=$rOpts_dump_block_minimum_lines)
-'--dump-block-types=$rOpts_dump_block_types (or -dbt=$rOpts_dump_block_types)
-EOM
 
     foreach my $line ( @{$routput_lines} ) {
         print STDOUT $line;

@@ -23,7 +23,7 @@ use strict;
 use warnings;
 use English qw( -no_match_vars );
 
-our $VERSION = '20221112';
+our $VERSION = '20221112.01';
 
 use Perl::Tidy::LineBuffer;
 use Carp;

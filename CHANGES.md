@@ -1,5 +1,10 @@
 # Perltidy Change Log
 
+## 2022 11 12.01
+
+    - Added option -dbs, or --dump-block-summary, to dump summary
+      information about code blocks in a file to standard output.
+
 ## 2022 11 12
 
     - Fix rt #145095, undef warning in Perl before 5.12. Version 20221112 is
