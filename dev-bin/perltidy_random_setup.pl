@@ -98,6 +98,10 @@ if ( !@{$rprofiles} ) {
     $rprofiles = filter_profiles($rprofiles);
 }
 
+# this is permanently deactivated
+$rsetup->{'syntax_check'} = 0;
+
+=pod
 $rsetup->{'syntax_check'} = ifyes( <<EOM, "N" );
 Do you want to check syntax with perl -c ?
 This will cause any BEGIN blocks in them to execute, which
@@ -105,6 +109,7 @@ can introduce a security concern.
 Enter 'N' unless you very familiar with the test scripts.
 Y/N:
 EOM
+=cut
 
 my $file_info    = get_file_info($rfiles);
 my $profile_info = get_profile_info();
@@ -442,6 +447,26 @@ sub write_GO {
         system("mv $runme $bak");
     }
 
+    # Backup 'nohup.my'
+    my $basename = 'nohup.my';
+    if ( -e $basename ) {
+        my $ext;
+        my $bname;
+        for ( my $j = 1 ; $j < 99 ; $j++ ) {
+            $ext   = 'ba' . $j;
+            $bname = "$basename.$ext";
+            next if ( -e $bname || -e $bname . ".gz" );
+            system "mv $basename $bname";
+            last;
+        }
+        if ($bname) {
+            print "Moved $basename -> $bname\n";
+        }
+        else {
+            die "**too many backup versions of $basename - move some\n";
+        }
+    }
+
     my $fh;
     open( $fh, '>', $runme ) || die "cannot open $runme: $!\n";
     $fh->print(<<'EOM');
@@ -453,8 +478,6 @@ sub write_GO {
 echo "Perltidy random run ..."
 echo "NOTE: Create a file named 'stop.now' to force an early exit"
 sleep 2
-rm nohup.my
-unlink $0;
 nohup nice -n19 perltidy_random_run.pl >>nohup.my 2>>nohup.my
 EOM
     system("chmod +x $runme");
@@ -1070,9 +1093,10 @@ EOM
 
         my @valign_list = qw#
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=
-          { ( ? : , ; => && || ~~ !~~ =~ !~ // <=> ->
+          { ( ? : ; => && || ~~ !~~ =~ !~ // <=> ->
           if unless and or err for foreach while until
           #;
+        push @valign_list, ',';
 
         my @valign_exclude_all = qw( * * );
 
