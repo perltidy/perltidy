@@ -6052,6 +6052,38 @@ sub find_loop_label {
     return $label;
 } ## end sub find_loop_label
 
+sub find_packages {
+    my ($self) = @_;
+
+    # returns a list of all package statements in a file
+    my $rLL = $self->[_rLL_];
+    my @package_list;
+    foreach my $item ( @{$rLL} ) {
+        my $type = $item->[_TYPE_];
+        if ( $type ne 'i' ) {
+            next;
+        }
+        my $token = $item->[_TOKEN_];
+        if ( substr( $token, 0, 7 ) eq 'package'
+            && $token =~ /^package\s/ )
+        {
+            $token =~ s/\s+/ /g;
+            my $name = substr( $token, 8 );
+            push @package_list,
+              {
+                line_start   => $item->[_LINE_INDEX_] + 1,
+                line_count   => 1,
+                name         => $name,
+                type         => 'package',
+                level        => $item->[_LEVEL_],
+                max_change   => 0,
+                total_change => 0,
+              };
+        }
+    }
+    return \@package_list;
+} ## end sub find_packages
+
 sub dump_block_summary {
     my ($self) = @_;
 
@@ -6207,15 +6239,16 @@ EOM
         };
     }
 
+    # get package info
+    my $rpackage_list = $self->find_packages();
+
     #---------------------------
     # Dump the results to STDOUT
     #---------------------------
 
-    return unless %{$rselected_blocks};
+    return if ( !%{$rselected_blocks} && !@{$rpackage_list} );
 
-    my $routput_lines;
-    push @{$routput_lines},
-      "file,line,line_count,type,name,level,max_change,total_change\n";
+    my $routput_lines = [];
     foreach my $seqno ( sort { $a <=> $b } keys %{$rselected_blocks} ) {
         my $line_start   = $rselected_blocks->{$seqno}->{line_start};
         my $line_count   = $rselected_blocks->{$seqno}->{line_count};
@@ -6225,12 +6258,40 @@ EOM
         my $max_change   = $rselected_blocks->{$seqno}->{max_change};
         my $total_change = $rselected_blocks->{$seqno}->{total_change};
 
-        my $line =
-"$input_stream_name,$line_start,$line_count,$type,$name,$level,$max_change, $total_change\n";
-        push @{$routput_lines}, $line;
+        my $rline_vars = [
+            $input_stream_name, $line_start, $line_count,
+            $type,              $name,       $level,
+            $max_change,        $total_change
+        ];
+        push @{$routput_lines}, $rline_vars;
     }
 
-    foreach my $line ( @{$routput_lines} ) {
+    # merge any package lines
+    my $rpackage_lines = [];
+    foreach my $item ( @{$rpackage_list} ) {
+        my $line_start   = $item->{line_start};
+        my $line_count   = $item->{line_count};
+        my $type         = $item->{type};
+        my $name         = $item->{name};
+        my $level        = $item->{level};
+        my $max_change   = $item->{max_change};
+        my $total_change = $item->{total_change};
+        my $rline_vars   = [
+            $input_stream_name, $line_start, $line_count,
+            $type,              $name,       $level,
+            $max_change,        $total_change
+        ];
+        push @{$routput_lines}, $rline_vars;
+    }
+
+    my @merged_lines =
+      sort { $a->[1] <=> $b->[1] } ( @{$routput_lines}, @{$rpackage_lines} );
+
+    print STDOUT
+      "file,line,line_count,type,name,level,max_change,total_change\n";
+
+    foreach my $rline_vars (@merged_lines) {
+        my $line = join( ",", @{$rline_vars} ) . "\n";
         print STDOUT $line;
     }
     return;
