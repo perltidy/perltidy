@@ -4,8 +4,19 @@ use warnings;
 use Getopt::Long;
 
 #---------------------------------------------------------
-# Define the git home of perltidy on this computer:
-my $PERLTIDY_GIT = '/home/steve/src/perldev/perltidy/git';
+# Try to find the git home of perltidy on this computer.
+# Assuming that this program is git/dev_bin/get_perltidy.pl,
+# or a symlink to that, then we can get its path:
+use Cwd qw(abs_path);
+my $absolute_path = abs_path( readlink $0 );
+print "path is $absolute_path\n";
+use File::Basename;
+my ( $name, $path, $suffix ) = fileparse($absolute_path);
+my $PERLTIDY_GIT = $path . "../";
+
+# If this doesn't work, then replace the above with a specific
+# definition here:
+# my $PERLTIDY_GIT = '/home/.../git
 
 #---------------------------------------------------------
 
@@ -14,7 +25,7 @@ if ( !-e $pm2pl ) {
     die <<EOM;
 Error: did not find 'pm2pl' with the perltidy git directory set as:
 '$PERLTIDY_GIT'
-Please update this directory in $0
+Please update this directory in file $0
 EOM
 }
 
