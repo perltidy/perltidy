@@ -5940,52 +5940,60 @@ BEGIN {
 
 sub find_level_info {
 
-    # find level ranges and total variations
-    # Returns ref to array indexed on seqno with this info:
+    # Find level ranges and total variations of all code blocks in this file.
+
+    # Returns:
+    #   ref to hash with seqno as key with this info:
     #  [ starting level, maximum level, total level variation]
 
     my ($self) = @_;
 
-    my $rSS                  = $self->[_rSS_];
+    # The array _rSS_ has the complete container tree for this file.
+    my $rSS = $self->[_rSS_];
+
+    # We will be ignoring everything except code block containers
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
     my @stack;
-    my @level_info;
+    my %level_info;
     my $err;
-    foreach my $sseq ( @{$rSS} ) {
-        my $depth    = @stack;
-        my $seq_next = $sseq > 0 ? $sseq : -$sseq;
 
-        #-------------------------------------------------------------
-        # TODO: this is currently restricted to code blocks. This may
-        # need to be generalized.
-        #-------------------------------------------------------------
-        next if ( !$rblock_type_of_seqno->{$seq_next} );
+  TREE_LOOP:
+    foreach my $sseq ( @{$rSS} ) {
+        my $stack_depth = @stack;
+        my $seq_next    = $sseq > 0 ? $sseq : -$sseq;
+
+        next TREE_LOOP if ( !$rblock_type_of_seqno->{$seq_next} );
         if ( $sseq > 0 ) {
+
+          STACK_LOOP:
             foreach my $seq (@stack) {
-                my ( $starting_depth, $maximum_depth, $total_variation ) =
-                  @{ $level_info[$seq] };
-                if ( $maximum_depth < $depth ) { $maximum_depth = $depth }
-                $total_variation++;
-                $level_info[$seq] =
-                  [ $starting_depth, $maximum_depth, $total_variation ];
+                my ( $starting_depth, $maximum_depth, $total_depth_gain ) =
+                  @{ $level_info{$seq} };
+                if ( $maximum_depth < $stack_depth ) {
+                    $maximum_depth = $stack_depth;
+                }
+                $total_depth_gain++;
+                $level_info{$seq} =
+                  [ $starting_depth, $maximum_depth, $total_depth_gain ];
             }
+
             push @stack, $seq_next;
-            $level_info[$seq_next] = [ $depth, $depth, 1 ];
+            $level_info{$seq_next} = [ $stack_depth, $stack_depth, 1 ];
         }
         else {
             my $seq_test = pop @stack;
-            if ( $seq_test ne $seq_next ) {
+            if ( $seq_test != $seq_next ) {
 
                 # Shouldn't happen - the $rSS array must have an error
                 DEVEL_MODE && Fault("stack error finding total depths\n");
 
-                @level_info = ();
-                last;
+                %level_info = ();
+                last TREE_LOOP;
             }
         }
     }
-    return \@level_info;
+    return \%level_info;
 } ## end sub find_level_info
 
 sub find_loop_label {
@@ -6181,21 +6189,21 @@ EOM
             next BLOCK_SUMMARY_LOOP;
         }
 
-        my ( $level_diff, $total_variation ) = ( 0, 0 );
-        my $item = $rlevel_info->[$seqno];
+        my ( $max_change, $total_change ) = ( 0, 0 );
+        my $item = $rlevel_info->{$seqno};
         if ( defined($item) ) {
             my ( $starting_depth, $maximum_depth, $tv ) = @{$item};
-            $total_variation = $tv;
-            $level_diff      = $maximum_depth - $starting_depth + 1;
+            $total_change = $tv;
+            $max_change   = $maximum_depth - $starting_depth + 1;
         }
         $rselected_blocks->{$seqno} = {
-            line_start      => $lx_open + 1,
-            line_count      => $line_count,
-            name            => $name,
-            type            => $type,
-            level           => $level,
-            level_diff      => $level_diff,
-            total_variation => $total_variation,
+            line_start   => $lx_open + 1,
+            line_count   => $line_count,
+            name         => $name,
+            type         => $type,
+            level        => $level,
+            max_change   => $max_change,
+            total_change => $total_change,
         };
     }
 
@@ -6207,18 +6215,18 @@ EOM
 
     my $routput_lines;
     push @{$routput_lines},
-      "file,line,type,name,line_count,level_start,level_diff,total_variation\n";
+      "file,line,line_count,type,name,level,max_change,total_change\n";
     foreach my $seqno ( sort { $a <=> $b } keys %{$rselected_blocks} ) {
-        my $type            = $rselected_blocks->{$seqno}->{type};
-        my $name            = $rselected_blocks->{$seqno}->{name};
-        my $line_start      = $rselected_blocks->{$seqno}->{line_start};
-        my $line_count      = $rselected_blocks->{$seqno}->{line_count};
-        my $level           = $rselected_blocks->{$seqno}->{level};
-        my $level_diff      = $rselected_blocks->{$seqno}->{level_diff};
-        my $total_variation = $rselected_blocks->{$seqno}->{total_variation};
+        my $line_start   = $rselected_blocks->{$seqno}->{line_start};
+        my $line_count   = $rselected_blocks->{$seqno}->{line_count};
+        my $type         = $rselected_blocks->{$seqno}->{type};
+        my $name         = $rselected_blocks->{$seqno}->{name};
+        my $level        = $rselected_blocks->{$seqno}->{level};
+        my $max_change   = $rselected_blocks->{$seqno}->{max_change};
+        my $total_change = $rselected_blocks->{$seqno}->{total_change};
 
         my $line =
-"$input_stream_name,$line_start,$type,$name,$line_count,$level,$level_diff, $total_variation\n";
+"$input_stream_name,$line_start,$line_count,$type,$name,$level,$max_change, $total_change\n";
         push @{$routput_lines}, $line;
     }
 
