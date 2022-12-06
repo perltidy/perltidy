@@ -3,7 +3,8 @@
 ## 2022 11 12.01
 
     - Added option -dbs, or --dump-block-summary, to dump summary
-      information about code blocks in a file to standard output.
+      information about code blocks in a file to standard output. The
+      man page file, bin/perltidy, has a description.
 
 ## 2022 11 12
 

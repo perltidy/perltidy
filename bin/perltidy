@@ -4994,6 +4994,56 @@ to avoid causing problems with scripts which have extended syntaxes.
 B<-DEBUG>  will write a file with extension F<.DEBUG> for each input file
 showing the tokenization of all lines of code.
 
+=item B<Making a table of information on code blocks>
+
+A table listing information about the blocks of code in a file can be made with
+B<--dump-block-summary>, or B<-dbs>.  This causes perltidy to read and parse
+the file, write a table of comma-separated values for selected code blocks to
+the standard output, and then exit.  This parameter must be on the command
+line, not in a F<.perlticyrc> file, and it requires a single file name on the
+command line.  For example
+
+   perltidy -dbs somefile.pl >blocks.csv
+
+produces an output file F<blocks.csv> whose lines hold these
+parameters:
+
+    filename     - the name of the file
+    line         - the line number
+    line_count   - the number of lines between opening and closing braces
+    type         - the block type (sub, for, foreach, ...)
+    name         - the block name if applicable (sub name, label, asub name)
+    level        - the starting block nesting level
+    max_change   - the change in level to the deepest block level
+    total_change - the total positive change in level in the block
+
+The level changes are computed by monitoring the change in code block stack
+depth through the file.  The depth increases by one when a block is entered,
+and decreases by one when the block is exited. The last item, total_change, is
+analogous to the total positive elevation change that a person walking over a
+sequence of hills would experience.
+
+These quantities can be useful for identifying complex code.  Although the
+table does not indicate which blocks are nested in other blocks, this can be
+determined by computing and comparing the block ending line numbers. By default
+the table lists subroutines with more than 20 lines, but this can be changed
+with the following two parameters:
+
+B<--dump-block-minimum-lines=n>, or B<-dbml=n>, where B<n> is the minimum
+number of lines to be included. The default is B<-n=20>.
+
+B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
+types to be included.  The type of a block is either the name of the perl
+builtin keyword for that block (such as B<sub if elsif else for foreach ..>) or
+the word immediately before the opening brace.  The type B<sub> selects both
+named subs and anonymous subs.  The special type B<asub> selects just anonymous
+subs, and the special type B<closure> selects nameless blocks.  Finally, the
+type B<*> selects all types except closures.   For example:
+
+    perltidy -dbs -dbt='sub for foreach while' somefile.pl >blocks.csv
+
+The default is B<-dbt='sub'>.
+
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 
 The first $VERSION line of a file which might be eval'd by MakeMaker
