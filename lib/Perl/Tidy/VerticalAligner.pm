@@ -395,7 +395,7 @@ sub flush {
     $self->_flush_group_lines();
 
     # then anything left in the cache of step_B
-    $self->_flush_cache();
+    $self->_flush_step_B_cache();
 
     # then anything left in the buffer of step_C
     $self->dump_valign_buffer();
@@ -2702,8 +2702,6 @@ EOM
             return ( $max_lev_diff, $saw_side_comment );
         }
 
-        my $has_terminal_match = $rlines->[-1]->{'j_terminal_match'};
-
         # ignore hanging side comments in these operations
         my @filtered   = grep { !$_->{'is_hanging_side_comment'} } @{$rlines};
         my $rnew_lines = \@filtered;
@@ -2715,13 +2713,59 @@ EOM
         my $jmax = @{$rnew_lines} - 1;
         return ( $max_lev_diff, $saw_side_comment ) unless ( $jmax >= 0 );
 
-        my @equals_info;
-        my @line_info;
+        #----------------------------------------------------
+        # Create a hash of alignment token info for each line
+        #----------------------------------------------------
+        ( my $rline_hashes, my $requals_info, $saw_side_comment, $max_lev_diff )
+          = make_alignment_info( $group_level, $rnew_lines, $saw_side_comment );
+
+        #------------------------------------------------------------
+        # Find independent subgroups of lines.  Neighboring subgroups
+        # do not have a common alignment token.
+        #------------------------------------------------------------
+        my @subgroups;
+        push @subgroups, [ 0, $jmax ];
+        foreach my $jl ( 0 .. $jmax - 1 ) {
+            if ( $rnew_lines->[$jl]->{'end_group'} ) {
+                $subgroups[-1]->[1] = $jl;
+                push @subgroups, [ $jl + 1, $jmax ];
+            }
+        }
+
+        #-----------------------------------------------------------
+        # PASS 1 over subgroups to remove unmatched alignment tokens
+        #-----------------------------------------------------------
+        delete_unmatched_tokens_main_loop(
+            $group_level,  $rnew_lines, \@subgroups,
+            $rline_hashes, $requals_info
+        );
+
+        #----------------------------------------------------------------
+        # PASS 2: Construct a tree of matched lines and delete some small
+        # deeper levels of tokens.  They also block good alignments.
+        #----------------------------------------------------------------
+        prune_alignment_tree($rnew_lines) if ($max_lev_diff);
+
+        #--------------------------------------------
+        # PASS 3: compare all lines for common tokens
+        #--------------------------------------------
+        match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
+
+        return ( $max_lev_diff, $saw_side_comment );
+    }
+
+    sub make_alignment_info {
+
+        my ( $group_level, $rnew_lines, $saw_side_comment ) = @_;
 
         #------------------------------------------------------------
         # Loop to create a hash of alignment token info for each line
         #------------------------------------------------------------
         my $rline_hashes = [];
+        my @equals_info;
+        my @line_info;    # no longer used
+        my $jmax         = @{$rnew_lines} - 1;
+        my $max_lev_diff = 0;
         foreach my $line ( @{$rnew_lines} ) {
             my $rhash     = {};
             my $rtokens   = $line->{'rtokens'};
@@ -2840,27 +2884,27 @@ EOM
                 }
             }
         }
+        return ( $rline_hashes, \@equals_info, $saw_side_comment,
+            $max_lev_diff );
+    } ## end sub make_alignment_info
 
-        #------------------------------------------------------------
-        # Find independent subgroups of lines.  Neighboring subgroups
-        # do not have a common alignment token.
-        #------------------------------------------------------------
-        my @subgroups;
-        push @subgroups, [ 0, $jmax ];
-        foreach my $jl ( 0 .. $jmax - 1 ) {
-            if ( $rnew_lines->[$jl]->{'end_group'} ) {
-                $subgroups[-1]->[1] = $jl;
-                push @subgroups, [ $jl + 1, $jmax ];
-            }
-        }
+    sub delete_unmatched_tokens_main_loop {
 
-        # flag to allow skipping pass 2
+        my (
+            $group_level,  $rnew_lines, $rsubgroups,
+            $rline_hashes, $requals_info
+        ) = @_;
+
+        #--------------------------------------------------------------
+        # Main loop over subgroups to remove unmatched alignment tokens
+        #--------------------------------------------------------------
+
+        # flag to allow skipping pass 2 - not currently used
         my $saw_large_group;
 
-        #-----------------------------------------------------------
-        # PASS 1 over subgroups to remove unmatched alignment tokens
-        #-----------------------------------------------------------
-        foreach my $item (@subgroups) {
+        my $has_terminal_match = $rnew_lines->[-1]->{'j_terminal_match'};
+
+        foreach my $item ( @{$rsubgroups} ) {
             my ( $jbeg, $jend ) = @{$item};
 
             my $nlines = $jend - $jbeg + 1;
@@ -2927,7 +2971,7 @@ EOM
                 my $line    = $rnew_lines->[$jj];
                 my $rtokens = $line->{'rtokens'};
                 my $rhash   = $rline_hashes->[$jj];
-                my $i_eq    = $equals_info[$jj]->[0];
+                my $i_eq    = $requals_info->[$jj]->[0];
                 my @idel;
                 my $imax = @{$rtokens} - 2;
                 my $delete_above_level;
@@ -3084,23 +3128,10 @@ EOM
                     delete_selected_tokens( $line, \@idel );
                 }
             }    # End loopover lines
-        }    # End loop over subgroups
+        } ## end main loop over subgroups
 
-        # End PASS 1
-
-        #----------------------------------------------------------------
-        # PASS 2: Construct a tree of matched lines and delete some small
-        # deeper levels of tokens.  They also block good alignments.
-        #----------------------------------------------------------------
-        prune_alignment_tree($rnew_lines) if ($max_lev_diff);
-
-        #--------------------------------------------
-        # PASS 3: compare all lines for common tokens
-        #--------------------------------------------
-        match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
-
-        return ( $max_lev_diff, $saw_side_comment );
-    }
+        return;
+    } ## end sub delete_unmatched_tokens_main_loop
 }
 
 sub match_line_pairs {
@@ -3123,121 +3154,6 @@ sub match_line_pairs {
     # Current line vars
     my ( $line, $rtokens, $rpatterns, $rfield_lengths, $imax, $list_type,
         $ci_level );
-
-    use constant EXPLAIN_COMPARE_PATTERNS => 0;
-
-    my $compare_patterns = sub {
-
-        # helper routine to decide if patterns match well enough..
-        # return code:
-        #   0 = patterns match, continue
-        #   1 = no match
-        #   2 = no match, and lines do not match at all
-
-        my ( $tok, $tok_m, $pat, $pat_m, $pad ) = @_;
-        my $GoToMsg     = EMPTY_STRING;
-        my $return_code = 0;
-
-        my ( $alignment_token, $lev, $tag, $tok_count ) =
-          decode_alignment_token($tok);
-
-        # We have to be very careful about aligning commas
-        # when the pattern's don't match, because it can be
-        # worse to create an alignment where none is needed
-        # than to omit one.  Here's an example where the ','s
-        # are not in named containers.  The first line below
-        # should not match the next two:
-        #   ( $a, $b ) = ( $b, $r );
-        #   ( $x1, $x2 ) = ( $x2 - $q * $x1, $x1 );
-        #   ( $y1, $y2 ) = ( $y2 - $q * $y1, $y1 );
-        if ( $alignment_token eq ',' ) {
-
-            # do not align commas unless they are in named
-            # containers
-            if ( $tok !~ /[A-Za-z]/ ) {
-                $return_code = 1;
-                $GoToMsg     = "do not align commas in unnamed containers";
-            }
-            else {
-                $return_code = 0;
-            }
-        }
-
-        # do not align parens unless patterns match;
-        # large ugly spaces can occur in math expressions.
-        elsif ( $alignment_token eq '(' ) {
-
-            # But we can allow a match if the parens don't
-            # require any padding.
-            if ( $pad != 0 ) {
-                $return_code = 1;
-                $GoToMsg = "do not align '(' unless patterns match or pad=0";
-            }
-            else {
-                $return_code = 0;
-            }
-        }
-
-        # Handle an '=' alignment with different patterns to
-        # the left.
-        elsif ( $alignment_token eq '=' ) {
-
-            # It is best to be a little restrictive when
-            # aligning '=' tokens.  Here is an example of
-            # two lines that we will not align:
-            #       my $variable=6;
-            #       $bb=4;
-            # The problem is that one is a 'my' declaration,
-            # and the other isn't, so they're not very similar.
-            # We will filter these out by comparing the first
-            # letter of the pattern.  This is crude, but works
-            # well enough.
-            if ( substr( $pat_m, 0, 1 ) ne substr( $pat, 0, 1 ) ) {
-                $GoToMsg     = "first character before equals differ";
-                $return_code = 1;
-            }
-
-            # The introduction of sub 'prune_alignment_tree'
-            # enabled alignment of lists left of the equals with
-            # other scalar variables. For example:
-            # my ( $D, $s, $e ) = @_;
-            # my $d             = length $D;
-            # my $c             = $e - $s - $d;
-
-            # But this would change formatting of a lot of scripts,
-            # so for now we prevent alignment of comma lists on the
-            # left with scalars on the left.  We will also prevent
-            # any partial alignments.
-
-            # set return code 2 if the = is at line level, but
-            # set return code 1 if the = is below line level, i.e.
-            #  sub new { my ( $p, $v ) = @_; bless \$v, $p }
-            #  sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
-
-            elsif (
-                ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) )
-            {
-                $GoToMsg     = "mixed commas/no-commas before equals";
-                $return_code = 1;
-                if ( $lev eq $group_level ) {
-                    $return_code = 2;
-                }
-            }
-            else {
-                $return_code = 0;
-            }
-        }
-        else {
-            $return_code = 0;
-        }
-
-        EXPLAIN_COMPARE_PATTERNS
-          && $return_code
-          && print STDERR "no match because $GoToMsg\n";
-
-        return ( $return_code, \$GoToMsg );
-
-    };    ## end of $compare_patterns->()
 
     # loop over subgroups
     foreach my $item ( @{$rsubgroups} ) {
@@ -3325,9 +3241,9 @@ sub match_line_pairs {
                     if ( $pat_m ne $pat ) {
                         my $pad =
                           $rfield_lengths->[$i] - $rfield_lengths_m->[$i];
-                        my ( $match_code, $rmsg ) = $compare_patterns->(
-                            $tok, $tok_m, $pat, $pat_m, $pad
-                        );
+                        my ( $match_code, $rmsg ) =
+                          compare_patterns( $group_level,
+                            $tok, $tok_m, $pat, $pat_m, $pad );
                         if ($match_code) {
                             if    ( $match_code == 1 ) { $i_nomatch = $i }
                             elsif ( $match_code == 2 ) { $i_nomatch = 0 }
@@ -3362,6 +3278,124 @@ sub match_line_pairs {
     }
     return;
 }
+
+sub compare_patterns {
+
+    my ( $group_level, $tok, $tok_m, $pat, $pat_m, $pad ) = @_;
+
+    # helper routine for sub match_line_pairs to decide if patterns in two
+    # lines match well enough..Given
+    #   $tok_m, $pat_m = token and pattern of first line
+    #   $tok, $pat     = token and pattern of second line
+    #   $pad           = 0 if no padding is needed, !=0 otherwise
+    # return code:
+    #   0 = patterns match, continue
+    #   1 = no match
+    #   2 = no match, and lines do not match at all
+
+    my $GoToMsg     = EMPTY_STRING;
+    my $return_code = 0;
+
+    use constant EXPLAIN_COMPARE_PATTERNS => 0;
+
+    my ( $alignment_token, $lev, $tag, $tok_count ) =
+      decode_alignment_token($tok);
+
+    # We have to be very careful about aligning commas
+    # when the pattern's don't match, because it can be
+    # worse to create an alignment where none is needed
+    # than to omit one.  Here's an example where the ','s
+    # are not in named containers.  The first line below
+    # should not match the next two:
+    #   ( $a, $b ) = ( $b, $r );
+    #   ( $x1, $x2 ) = ( $x2 - $q * $x1, $x1 );
+    #   ( $y1, $y2 ) = ( $y2 - $q * $y1, $y1 );
+    if ( $alignment_token eq ',' ) {
+
+        # do not align commas unless they are in named
+        # containers
+        if ( $tok !~ /[A-Za-z]/ ) {
+            $return_code = 1;
+            $GoToMsg     = "do not align commas in unnamed containers";
+        }
+        else {
+            $return_code = 0;
+        }
+    }
+
+    # do not align parens unless patterns match;
+    # large ugly spaces can occur in math expressions.
+    elsif ( $alignment_token eq '(' ) {
+
+        # But we can allow a match if the parens don't
+        # require any padding.
+        if ( $pad != 0 ) {
+            $return_code = 1;
+            $GoToMsg     = "do not align '(' unless patterns match or pad=0";
+        }
+        else {
+            $return_code = 0;
+        }
+    }
+
+    # Handle an '=' alignment with different patterns to
+    # the left.
+    elsif ( $alignment_token eq '=' ) {
+
+        # It is best to be a little restrictive when
+        # aligning '=' tokens.  Here is an example of
+        # two lines that we will not align:
+        #       my $variable=6;
+        #       $bb=4;
+        # The problem is that one is a 'my' declaration,
+        # and the other isn't, so they're not very similar.
+        # We will filter these out by comparing the first
+        # letter of the pattern.  This is crude, but works
+        # well enough.
+        if ( substr( $pat_m, 0, 1 ) ne substr( $pat, 0, 1 ) ) {
+            $GoToMsg     = "first character before equals differ";
+            $return_code = 1;
+        }
+
+        # The introduction of sub 'prune_alignment_tree'
+        # enabled alignment of lists left of the equals with
+        # other scalar variables. For example:
+        # my ( $D, $s, $e ) = @_;
+        # my $d             = length $D;
+        # my $c             = $e - $s - $d;
+
+        # But this would change formatting of a lot of scripts,
+        # so for now we prevent alignment of comma lists on the
+        # left with scalars on the left.  We will also prevent
+        # any partial alignments.
+
+        # set return code 2 if the = is at line level, but
+        # set return code 1 if the = is below line level, i.e.
+        #  sub new { my ( $p, $v ) = @_; bless \$v, $p }
+        #  sub iter { my ($x) = @_; return undef if $$x < 0; return $$x--; }
+
+        elsif ( ( index( $pat_m, ',' ) >= 0 ) ne ( index( $pat, ',' ) >= 0 ) ) {
+            $GoToMsg     = "mixed commas/no-commas before equals";
+            $return_code = 1;
+            if ( $lev eq $group_level ) {
+                $return_code = 2;
+            }
+        }
+        else {
+            $return_code = 0;
+        }
+    }
+    else {
+        $return_code = 0;
+    }
+
+    EXPLAIN_COMPARE_PATTERNS
+      && $return_code
+      && print STDERR "no match because $GoToMsg\n";
+
+    return ( $return_code, \$GoToMsg );
+
+} ## end sub compare_patterns
 
 sub fat_comma_to_comma {
     my ($str) = @_;
@@ -3911,6 +3945,8 @@ sub prune_alignment_tree {
 
 sub Dump_tree_groups {
     my ( $rgroup, $msg ) = @_;
+
+    # Debug routine
     print "$msg\n";
     local $LIST_SEPARATOR = ')(';
     foreach my $item ( @{$rgroup} ) {
@@ -4866,8 +4902,10 @@ sub get_output_line_number {
         return;
     }
 
-    sub _flush_cache {
+    sub _flush_step_B_cache {
         my ($self) = @_;
+
+        # Send any text in the step_B cache on to step_C
         if ($cached_line_type) {
             $seqno_string = $cached_seqno_string;
             $self->valign_output_step_C(
@@ -4894,7 +4932,7 @@ sub get_output_line_number {
         my ( $self, $rinput, $leading_string, $leading_string_length ) = @_;
 
         # The cached line will either be:
-        # - written out, or
+        # - passed along to step_C, or
         # - or combined with the current line
 
         my $last_level_written = $self->[_last_level_written_];
@@ -5334,6 +5372,8 @@ sub get_output_line_number {
 
     sub dump_valign_buffer {
         my ($self) = @_;
+
+        # Send all lines in the current buffer on to step_D
         if (@valign_buffer) {
             foreach (@valign_buffer) {
                 $self->valign_output_step_D( @{$_} );
@@ -5347,6 +5387,9 @@ sub get_output_line_number {
     sub reduce_valign_buffer_indentation {
 
         my ( $self, $diff ) = @_;
+
+        # Reduce the leading indentation of lines in the current
+        # buffer by $diff spaces
         if ( $valign_buffer_filling && $diff ) {
             my $max_valign_buffer = @valign_buffer;
             foreach my $i ( 0 .. $max_valign_buffer - 1 ) {
