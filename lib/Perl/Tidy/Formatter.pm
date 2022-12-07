@@ -6084,12 +6084,13 @@ sub find_packages {
     return \@package_list;
 } ## end sub find_packages
 
-sub dump_block_summary {
+sub find_selected_blocks {
     my ($self) = @_;
 
-    # Dump information about selected code blocks to STDOUT
-    # This sub is called when
-    #   --dump-block-summary (-dbs) is set.
+    # Find blocks needed for --dump-block-summary
+    # Returns:
+    #  $rslected_blocks = ref to a list of information on the selected blocks
+
     # The following controls are available:
     #  --dump-block-types=s (-dbt=s), where s is a list of block types
     #    (if else elsif for foreach while do ... sub) ; default is 'sub'
@@ -6103,8 +6104,6 @@ sub dump_block_summary {
     my $K_closing_container  = $self->[_K_closing_container_];
     my $ris_asub_block       = $self->[_ris_asub_block_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
-
-    my $input_stream_name = get_input_stream_name();
 
     my $rOpts_dump_block_minimum_lines = $rOpts->{'dump-block-minimum-lines'};
     if ( !defined($rOpts_dump_block_minimum_lines) ) {
@@ -6123,13 +6122,11 @@ sub dump_block_summary {
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
 
-    my $rselected_blocks = {};
+    my @selected_blocks;
 
-    #-------------------------------------
-    # Loop to get info for selected blocks
-    #-------------------------------------
-
-  BLOCK_SUMMARY_LOOP:
+    #-------------------------------------------
+    # BEGIN loop to get info for selected blocks
+    #-------------------------------------------
     foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
 
         my $type;
@@ -6143,7 +6140,7 @@ sub dump_block_summary {
         my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
         my $line_count = $lx_close - $lx_open;
         if ( $line_count < $rOpts_dump_block_minimum_lines ) {
-            next BLOCK_SUMMARY_LOOP;
+            next;
         }
 
         my $line_of_tokens = $rlines->[$lx_open];
@@ -6157,7 +6154,7 @@ sub dump_block_summary {
             DEVEL_MODE && Fault(<<EOM);
 unexpected line_type=$line_type at line $lx_open, code type=$CODE_type
 EOM
-            next BLOCK_SUMMARY_LOOP;
+            next;
         }
 
         # Skip closures unless type 'closure' is explicitely requested
@@ -6218,7 +6215,7 @@ EOM
             }
         }
         else {
-            next BLOCK_SUMMARY_LOOP;
+            next;
         }
 
         my ( $max_change, $total_change ) = ( 0, 0 );
@@ -6228,7 +6225,8 @@ EOM
             $total_change = $tv;
             $max_change   = $maximum_depth - $starting_depth + 1;
         }
-        $rselected_blocks->{$seqno} = {
+        push @selected_blocks,
+          {
             line_start   => $lx_open + 1,
             line_count   => $line_count,
             name         => $name,
@@ -6236,27 +6234,38 @@ EOM
             level        => $level,
             max_change   => $max_change,
             total_change => $total_change,
-        };
-    }
+          };
+    }    ## END loop to get info for selected blocks
+    return \@selected_blocks;
+} ## end sub find_selected_blocks
+
+sub dump_block_summary {
+    my ($self) = @_;
+
+    # Dump information about selected code blocks to STDOUT
+    # This sub is called when
+    #   --dump-block-summary (-dbs) is set.
+
+    # get block info
+    my $rselected_blocks = $self->find_selected_blocks();
 
     # get package info
     my $rpackage_list = $self->find_packages();
 
-    #---------------------------
-    # Dump the results to STDOUT
-    #---------------------------
+    return if ( !@{$rselected_blocks} && !@{$rpackage_list} );
 
-    return if ( !%{$rselected_blocks} && !@{$rpackage_list} );
+    my $input_stream_name = get_input_stream_name();
 
+    # Merge and print to STDOUT
     my $routput_lines = [];
-    foreach my $seqno ( sort { $a <=> $b } keys %{$rselected_blocks} ) {
-        my $line_start   = $rselected_blocks->{$seqno}->{line_start};
-        my $line_count   = $rselected_blocks->{$seqno}->{line_count};
-        my $type         = $rselected_blocks->{$seqno}->{type};
-        my $name         = $rselected_blocks->{$seqno}->{name};
-        my $level        = $rselected_blocks->{$seqno}->{level};
-        my $max_change   = $rselected_blocks->{$seqno}->{max_change};
-        my $total_change = $rselected_blocks->{$seqno}->{total_change};
+    foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
+        my $line_start   = $item->{line_start};
+        my $line_count   = $item->{line_count};
+        my $type         = $item->{type};
+        my $name         = $item->{name};
+        my $level        = $item->{level};
+        my $max_change   = $item->{max_change};
+        my $total_change = $item->{total_change};
 
         my $rline_vars = [
             $input_stream_name, $line_start, $line_count,
@@ -6266,26 +6275,7 @@ EOM
         push @{$routput_lines}, $rline_vars;
     }
 
-    # merge any package lines
-    my $rpackage_lines = [];
-    foreach my $item ( @{$rpackage_list} ) {
-        my $line_start   = $item->{line_start};
-        my $line_count   = $item->{line_count};
-        my $type         = $item->{type};
-        my $name         = $item->{name};
-        my $level        = $item->{level};
-        my $max_change   = $item->{max_change};
-        my $total_change = $item->{total_change};
-        my $rline_vars   = [
-            $input_stream_name, $line_start, $line_count,
-            $type,              $name,       $level,
-            $max_change,        $total_change
-        ];
-        push @{$routput_lines}, $rline_vars;
-    }
-
-    my @merged_lines =
-      sort { $a->[1] <=> $b->[1] } ( @{$routput_lines}, @{$rpackage_lines} );
+    my @merged_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
     print STDOUT
       "file,line,line_count,type,name,level,max_change,total_change\n";
