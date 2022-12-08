@@ -9260,7 +9260,7 @@ EOM
     return ( $severe_error, $rqw_lines );
 } ## end sub resync_lines_and_tokens
 
-sub check_for_break {
+sub check_for_old_break {
     my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
 
     # This sub is called to help implement flags:
@@ -9399,9 +9399,9 @@ sub keep_old_line_breaks {
 
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
-        $self->check_for_break( $Kfirst, \%keep_break_before_type,
+        $self->check_for_old_break( $Kfirst, \%keep_break_before_type,
             $rbreak_before_Kfirst );
-        $self->check_for_break( $Klast, \%keep_break_after_type,
+        $self->check_for_old_break( $Klast, \%keep_break_after_type,
             $rbreak_after_Klast );
     }
     return;
@@ -17611,7 +17611,6 @@ sub break_equals {
         # Loop over all sub-sections.  Note that we have to work backwards
         # from the end of the batch since the sections use original line
         # numbers, and the line numbers change as we go.
-      OUTER_LOOP:
         while ( my $section = pop @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
 
@@ -17628,10 +17627,14 @@ sub break_equals {
 
             while ($more_to_do) {
 
-                # Safety check for excess total iterations
+                # Emergency return on excess total iterations. The allowed
+                # maximum is large enough that this should never happen.
                 $it_count++;
                 if ( $it_count > $it_count_max ) {
-                    last OUTER_LOOP;
+                    DEVEL_MODE && Fault(<<EOM);
+iteration count=$it_count exceeds max=$it_count_max
+EOM
+                    goto RETURN;
                 }
 
                 my $n_best = 0;
@@ -17650,7 +17653,7 @@ sub break_equals {
                         );
                     }
                     $more_to_do = 0;
-                    last;
+                    goto RETURN;
                 }
                 $nmax_last  = $nmax;
                 $more_to_do = 0;
@@ -17884,6 +17887,8 @@ sub break_equals {
             }    # end iteration loop
 
         }    # end loop over sections
+
+      RETURN:
 
         if (DEBUG_RECOMBINE) {
             my $nmax_last = @{$ri_end} - 1;
@@ -19719,7 +19724,6 @@ sub break_lines_inner_loop {
     #-------------------------------------------------------
     # Begin INNER_LOOP over the indexes in the _to_go arrays
     #-------------------------------------------------------
-  INNER_LOOP:
     while ( ++$i_test <= $imax ) {
         my $type                     = $types_to_go[$i_test];
         my $token                    = $tokens_to_go[$i_test];
@@ -19898,7 +19902,7 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :quit at good terminal='$next_nonblank_type'";
                 };
-                last INNER_LOOP;
+                last;
             }
         }
 
@@ -19915,7 +19919,7 @@ sub break_lines_inner_loop {
                     $Msg .=
                       " :last at leading_alignment='$leading_alignment_type'";
                 };
-                last INNER_LOOP;
+                last;
             }
 
             # Force at least one breakpoint if old code had good
@@ -19940,7 +19944,7 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :last at good old break\n";
                 };
-                last INNER_LOOP;
+                last;
             }
 
             # Do not skip past an important break point in a short final
@@ -19975,7 +19979,7 @@ sub break_lines_inner_loop {
                     DEBUG_BREAK_LINES && do {
                         $Msg .= " :last-noskip_short";
                     };
-                    last INNER_LOOP;
+                    last;
                 }
             }
 
@@ -19986,7 +19990,7 @@ sub break_lines_inner_loop {
                 DEBUG_BREAK_LINES && do {
                     $Msg .= " :last-must_break";
                 };
-                last INNER_LOOP;
+                last;
             }
 
             # set flags to remember if a break here will produce a
@@ -20027,7 +20031,7 @@ sub break_lines_inner_loop {
         #-----------------------------------------------------------
 
         # Quit if there are no more tokens to test
-        last INNER_LOOP if ( $i_test >= $imax );
+        last if ( $i_test >= $imax );
 
         # Keep going if we have not reached the limit
         my $excess =
@@ -20037,7 +20041,7 @@ sub break_lines_inner_loop {
           $maximum_line_length;
 
         if ( $excess < 0 ) {
-            next INNER_LOOP;
+            next;
         }
         elsif ( $excess == 0 ) {
 
@@ -20066,7 +20070,7 @@ sub break_lines_inner_loop {
                 }
             }
             else {
-                next INNER_LOOP;
+                next;
             }
         }
         else {
@@ -20099,7 +20103,7 @@ sub break_lines_inner_loop {
             DEBUG_BREAK_LINES && do {
                 $Msg .= " :do_not_strand next='$next_nonblank_type'";
             };
-            next INNER_LOOP;
+            next;
         }
 
         # Stop if here if we have a solution and the line will be too long
@@ -20108,7 +20112,7 @@ sub break_lines_inner_loop {
                 $Msg .=
 " :Done-too_long && i_lowest=$i_lowest at itest=$i_test, imax=$imax";
             };
-            last INNER_LOOP;
+            last;
         }
     }
 
