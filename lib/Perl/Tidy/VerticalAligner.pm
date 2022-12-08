@@ -2268,6 +2268,40 @@ sub sweep_left_to_right {
 
     }
 
+    sub move_to_common_column {
+
+        # This is a sub called by sub do_left_to_right_sweep to
+        # move the alignment column of token $itok to $col_want for a
+        # sequence of groups.
+        my ( $rlines, $rgroups, $rmax_move, $ngb, $nge, $itok, $col_want,
+            $raw_tok )
+          = @_;
+        return unless ( defined($ngb) && $nge > $ngb );
+        foreach my $ng ( $ngb .. $nge ) {
+
+            my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
+            my $line  = $rlines->[$jbeg];
+            my $col   = $line->get_column($itok);
+            my $avail = $line->get_available_space_on_right();
+            my $move  = $col_want - $col;
+            if ( $move > 0 ) {
+
+                # limit padding increase in isolated two lines
+                next
+                  if ( defined( $rmax_move->{$ng} )
+                    && $move > $rmax_move->{$ng}
+                    && !$is_good_alignment_token{$raw_tok} );
+
+                $line->increase_field_width( $itok, $move );
+            }
+            elsif ( $move < 0 ) {
+
+                # spot to take special action on failure to move
+            }
+        }
+        return;
+    }
+
     sub do_left_to_right_sweep {
         my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $group_level )
           = @_;
@@ -2276,37 +2310,6 @@ sub sweep_left_to_right {
         # $ng-1 and $ng
         my @blocking_level;
         my $group_list_type = $rlines->[0]->{'list_type'};
-
-        my $move_to_common_column = sub {
-
-            # Move the alignment column of token $itok to $col_want for a
-            # sequence of groups.
-            my ( $ngb, $nge, $itok, $col_want, $raw_tok ) = @_;
-            return unless ( defined($ngb) && $nge > $ngb );
-            foreach my $ng ( $ngb .. $nge ) {
-
-                my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
-                my $line  = $rlines->[$jbeg];
-                my $col   = $line->get_column($itok);
-                my $avail = $line->get_available_space_on_right();
-                my $move  = $col_want - $col;
-                if ( $move > 0 ) {
-
-                    # limit padding increase in isolated two lines
-                    next
-                      if ( defined( $rmax_move->{$ng} )
-                        && $move > $rmax_move->{$ng}
-                        && !$is_good_alignment_token{$raw_tok} );
-
-                    $line->increase_field_width( $itok, $move );
-                }
-                elsif ( $move < 0 ) {
-
-                    # spot to take special action on failure to move
-                }
-            }
-            return;
-        };
 
         foreach my $task ( @{$rtodo} ) {
             my ( $itok, $ng_beg, $ng_end, $raw_tok, $lev ) = @{$task};
@@ -2454,8 +2457,9 @@ sub sweep_left_to_right {
                         $blocking_level[$ng] = $lev;
                     }
 
-                    $move_to_common_column->(
-                        $ng_first, $ng - 1, $itok, $col_want, $raw_tok
+                    move_to_common_column(
+                        $rlines, $rgroups, $rmax_move, $ng_first,
+                        $ng - 1, $itok,    $col_want,  $raw_tok
                     );
                     $ng_first        = $ng;
                     $col_want        = $col;
@@ -2475,8 +2479,9 @@ sub sweep_left_to_right {
             } ## end loop over groups
 
             if ( $ng_end > $ng_first ) {
-                $move_to_common_column->(
-                    $ng_first, $ng_end, $itok, $col_want, $raw_tok
+                move_to_common_column(
+                    $rlines, $rgroups, $rmax_move, $ng_first,
+                    $ng_end, $itok,    $col_want,  $raw_tok
                 );
             } ## end loop over groups for one task
         } ## end loop over tasks
