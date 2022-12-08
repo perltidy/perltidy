@@ -5958,15 +5958,15 @@ sub find_level_info {
     my %level_info;
     my $err;
 
-  TREE_LOOP:
+    # TREE_LOOP:
     foreach my $sseq ( @{$rSS} ) {
         my $stack_depth = @stack;
         my $seq_next    = $sseq > 0 ? $sseq : -$sseq;
 
-        next TREE_LOOP if ( !$rblock_type_of_seqno->{$seq_next} );
+        next if ( !$rblock_type_of_seqno->{$seq_next} );
         if ( $sseq > 0 ) {
 
-          STACK_LOOP:
+            # STACK_LOOP:
             foreach my $seq (@stack) {
                 my ( $starting_depth, $maximum_depth, $total_depth_gain ) =
                   @{ $level_info{$seq} };
@@ -5976,23 +5976,25 @@ sub find_level_info {
                 $total_depth_gain++;
                 $level_info{$seq} =
                   [ $starting_depth, $maximum_depth, $total_depth_gain ];
-            }
+            } ## end STACK LOOP
 
             push @stack, $seq_next;
             $level_info{$seq_next} = [ $stack_depth, $stack_depth, 1 ];
         }
         else {
             my $seq_test = pop @stack;
+
+            # error check
             if ( $seq_test != $seq_next ) {
 
                 # Shouldn't happen - the $rSS array must have an error
                 DEVEL_MODE && Fault("stack error finding total depths\n");
 
                 %level_info = ();
-                last TREE_LOOP;
+                last;
             }
         }
-    }
+    } ## end TREE_LOOP
     return \%level_info;
 } ## end sub find_level_info
 
@@ -9258,6 +9260,68 @@ EOM
     return ( $severe_error, $rqw_lines );
 } ## end sub resync_lines_and_tokens
 
+sub check_for_break {
+    my ( $self, $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
+
+    # This sub is called to help implement flags:
+    # --keep-old-breakpoints-before and --keep-old-breakpoints-after
+    # Given:
+    #   $KK               = index of a token,
+    #   $rkeep_break_hash = user control for --keep-old-...
+    #   $rbreak_hash      = hash of tokens where breaks are requested
+    # Set $rbreak_hash as follows if a user break is requested:
+    #    = 1 make a hard break (flush the current batch)
+    #        best for something like leading commas (-kbb=',')
+    #    = 2 make a soft break (keep building current batch)
+    #        best for something like leading ->
+
+    my $rLL = $self->[_rLL_];
+
+    my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
+
+    # non-container tokens use the type as the key
+    if ( !$seqno ) {
+        my $type = $rLL->[$KK]->[_TYPE_];
+        if ( $rkeep_break_hash->{$type} ) {
+            $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
+        }
+    }
+
+    # container tokens use the token as the key
+    else {
+        my $token = $rLL->[$KK]->[_TOKEN_];
+        my $flag  = $rkeep_break_hash->{$token};
+        if ($flag) {
+
+            my $match = $flag eq '1' || $flag eq '*';
+
+            # check for special matching codes
+            if ( !$match ) {
+                if ( $token eq '(' || $token eq ')' ) {
+                    $match = $self->match_paren_control_flag( $seqno, $flag );
+                }
+                elsif ( $token eq '{' || $token eq '}' ) {
+
+                    # These tentative codes 'b' and 'B' for brace types are
+                    # placeholders for possible future brace types. They
+                    # are not documented and may be changed.
+                    my $block_type = $self->[_rblock_type_of_seqno_]->{$seqno};
+                    if    ( $flag eq 'b' ) { $match = $block_type }
+                    elsif ( $flag eq 'B' ) { $match = !$block_type }
+                    else {
+                        # unknown code - no match
+                    }
+                }
+            }
+            if ($match) {
+                my $type = $rLL->[$KK]->[_TYPE_];
+                $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
+            }
+        }
+    }
+    return;
+}
+
 sub keep_old_line_breaks {
 
     # Called once per file to find and mark any old line breaks which
@@ -9281,6 +9345,10 @@ sub keep_old_line_breaks {
     my $K_opening_container  = $self->[_K_opening_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
+
+    #----------------------------------------
+    # Apply --break-at-old-method-breakpoints
+    #----------------------------------------
 
     # This code moved here from sub break_lists to fix b1120
     if ( $rOpts->{'break-at-old-method-breakpoints'} ) {
@@ -9323,65 +9391,18 @@ sub keep_old_line_breaks {
         }
     }
 
+    #---------------------------------------------------------------------
+    # Apply --keep-old-breakpoints-before and --keep-old-breakpoints-after
+    #---------------------------------------------------------------------
+
     return unless ( %keep_break_before_type || %keep_break_after_type );
-
-    my $check_for_break = sub {
-        my ( $KK, $rkeep_break_hash, $rbreak_hash ) = @_;
-        my $seqno = $rLL->[$KK]->[_TYPE_SEQUENCE_];
-
-        # non-container tokens use the type as the key
-        if ( !$seqno ) {
-            my $type = $rLL->[$KK]->[_TYPE_];
-            if ( $rkeep_break_hash->{$type} ) {
-                $rbreak_hash->{$KK} = $is_soft_keep_break_type{$type} ? 2 : 1;
-            }
-        }
-
-        # container tokens use the token as the key
-        else {
-            my $token = $rLL->[$KK]->[_TOKEN_];
-            my $flag  = $rkeep_break_hash->{$token};
-            if ($flag) {
-
-                my $match = $flag eq '1' || $flag eq '*';
-
-                # check for special matching codes
-                if ( !$match ) {
-                    if ( $token eq '(' || $token eq ')' ) {
-                        $match =
-                          $self->match_paren_control_flag( $seqno, $flag );
-                    }
-                    elsif ( $token eq '{' || $token eq '}' ) {
-
-                        # These tentative codes 'b' and 'B' for brace types are
-                        # placeholders for possible future brace types. They
-                        # are not documented and may be changed.
-                        my $block_type =
-                          $self->[_rblock_type_of_seqno_]->{$seqno};
-                        if    ( $flag eq 'b' ) { $match = $block_type }
-                        elsif ( $flag eq 'B' ) { $match = !$block_type }
-                        else {
-                            # unknown code - no match
-                        }
-                    }
-                }
-                if ($match) {
-                    my $type = $rLL->[$KK]->[_TYPE_];
-                    $rbreak_hash->{$KK} =
-                      $is_soft_keep_break_type{$type} ? 2 : 1;
-                }
-            }
-        }
-    };
 
     foreach my $item ( @{$rKrange_code_without_comments} ) {
         my ( $Kfirst, $Klast ) = @{$item};
-        $check_for_break->(
-            $Kfirst, \%keep_break_before_type, $rbreak_before_Kfirst
-        );
-        $check_for_break->(
-            $Klast, \%keep_break_after_type, $rbreak_after_Klast
-        );
+        $self->check_for_break( $Kfirst, \%keep_break_before_type,
+            $rbreak_before_Kfirst );
+        $self->check_for_break( $Klast, \%keep_break_after_type,
+            $rbreak_after_Klast );
     }
     return;
 } ## end sub keep_old_line_breaks
