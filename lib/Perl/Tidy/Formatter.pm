@@ -9343,7 +9343,6 @@ sub keep_old_line_breaks {
     my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
     my $rbreak_container     = $self->[_rbreak_container_];
     my $K_opening_container  = $self->[_K_opening_container_];
-    my $ris_broken_container = $self->[_ris_broken_container_];
     my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
 
     #----------------------------------------
@@ -9547,23 +9546,10 @@ sub weld_cuddled_blocks {
     return unless ( defined($rLL) && @{$rLL} );
 
     my $rbreak_container          = $self->[_rbreak_container_];
+    my $ris_broken_container      = $self->[_ris_broken_container_];
     my $ris_cuddled_closing_brace = $self->[_ris_cuddled_closing_brace_];
     my $K_opening_container       = $self->[_K_opening_container_];
     my $K_closing_container       = $self->[_K_closing_container_];
-
-    my $is_broken_block = sub {
-
-        # a block is broken if the input line numbers of the braces differ
-        # we can only cuddle between broken blocks
-        my ($seqno) = @_;
-        my $K_opening = $K_opening_container->{$seqno};
-        return unless ( defined($K_opening) );
-        my $K_closing = $K_closing_container->{$seqno};
-        return unless ( defined($K_closing) );
-        return $rbreak_container->{$seqno}
-          || $rLL->[$K_closing]->[_LINE_INDEX_] !=
-          $rLL->[$K_opening]->[_LINE_INDEX_];
-    };
 
     # A stack to remember open chains at all levels: This is a hash rather than
     # an array for safety because negative levels can occur in files with
@@ -9629,7 +9615,9 @@ sub weld_cuddled_blocks {
 
                 # The preceding block must be on multiple lines so that its
                 # closing brace will start a new line.
-                if ( !$is_broken_block->($closing_seqno) ) {
+                if (   !$ris_broken_container->{$closing_seqno}
+                    && !$rbreak_container->{$closing_seqno} )
+                {
                     next unless ( $CBO == 2 );
                     $rbreak_container->{$closing_seqno} = 1;
                 }
@@ -11170,6 +11158,7 @@ sub mark_short_nested_blocks {
     my $K_opening_container  = $self->[_K_opening_container_];
     my $K_closing_container  = $self->[_K_closing_container_];
     my $rbreak_container     = $self->[_rbreak_container_];
+    my $ris_broken_container = $self->[_ris_broken_container_];
     my $rshort_nested        = $self->[_rshort_nested_];
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
@@ -11186,19 +11175,6 @@ sub mark_short_nested_blocks {
         my $length = $self->cumulative_length_before_K($K) - $starting_lentot;
         my $excess_length = $length + $length_tol - $maximum_text_length;
         return ($excess_length);
-    };
-
-    my $is_broken_block = sub {
-
-        # a block is broken if the input line numbers of the braces differ
-        my ($seqno) = @_;
-        my $K_opening = $K_opening_container->{$seqno};
-        return unless ( defined($K_opening) );
-        my $K_closing = $K_closing_container->{$seqno};
-        return unless ( defined($K_closing) );
-        return $rbreak_container->{$seqno}
-          || $rLL->[$K_closing]->[_LINE_INDEX_] !=
-          $rLL->[$K_opening]->[_LINE_INDEX_];
     };
 
     # loop over all containers
@@ -11252,7 +11228,9 @@ sub mark_short_nested_blocks {
         next unless ( defined($K_opening) && defined($K_closing) );
 
         # require that this block be entirely on one line
-        next if ( $is_broken_block->($type_sequence) );
+        next
+          if ( $ris_broken_container->{$type_sequence}
+            || $rbreak_container->{$type_sequence} );
 
         # See if this block fits on one line of allowed length (which may
         # be different from the input script)
