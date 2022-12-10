@@ -13228,118 +13228,156 @@ sub process_all_lines {
 
 } ## end sub process_all_lines
 
-sub keyword_group_scan {
-    my $self = shift;
+{    ## closure keyword_group_scan
 
-    #-------------------------------------------------------------------------
-    # Called once per file to process any --keyword-group-blanks-* parameters.
-    #-------------------------------------------------------------------------
+    # this is the return var
+    my $rhash_of_desires;
 
-    # Manipulate blank lines around keyword groups (kgb* flags)
-    # Scan all lines looking for runs of consecutive lines beginning with
-    # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
-    # they may be anything.  We will set flags requesting that blanks be
-    # inserted around and within them according to input parameters.  Note
-    # that we are scanning the lines as they came in in the input stream, so
-    # they are not necessarily well formatted.
+    # user option variables for -kgb
+    my (
 
-    # The output of this sub is a return hash ref whose keys are the indexes of
-    # lines after which we desire a blank line.  For line index i:
-    #     $rhash_of_desires->{$i} = 1 means we want a blank line AFTER line $i
-    #     $rhash_of_desires->{$i} = 2 means we want blank line $i removed
-    my $rhash_of_desires = {};
+        $rOpts_kgb_after,
+        $rOpts_kgb_before,
+        $rOpts_kgb_delete,
+        $rOpts_kgb_inside,
+        $rOpts_kgb_size_max,
+        $rOpts_kgb_size_min,
 
-    # Nothing to do if no blanks can be output. This test added to fix
-    # case b760.
-    if ( !$rOpts_maximum_consecutive_blank_lines ) {
-        return $rhash_of_desires;
-    }
+    );
 
-    my $Opt_blanks_before = $rOpts->{'keyword-group-blanks-before'};   # '-kgbb'
-    my $Opt_blanks_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
-    my $Opt_blanks_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
-    my $Opt_blanks_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
-    my $Opt_size          = $rOpts->{'keyword-group-blanks-size'};     # '-kgbs'
+    # group variables, initialized by kgb_initialize_group_vars
+    my ( $ibeg, $iend, $count, $level_beg, $K_closing );
+    my ( @iblanks, @group, @subgroup );
 
-    # A range of sizes can be input with decimal notation like 'min.max' with
-    # any number of dots between the two numbers. Examples:
-    #    string    =>    min    max  matches
-    #    1.1             1      1    exactly 1
-    #    1.3             1      3    1,2, or 3
-    #    1..3            1      3    1,2, or 3
-    #    5               5      -    5 or more
-    #    6.              6      -    6 or more
-    #    .2              -      2    up to 2
-    #    1.0             1      0    nothing
-    my ( $Opt_size_min, $Opt_size_max ) = split /\.+/, $Opt_size;
-    if (   $Opt_size_min && $Opt_size_min !~ /^\d+$/
-        || $Opt_size_max && $Opt_size_max !~ /^\d+$/ )
-    {
-        Warn(<<EOM);
-Unexpected value for -kgbs: '$Opt_size'; expecting 'min' or 'min.max'; 
+    # line variables, updated by sub keyword_group_scan
+    my ( $line_type, $CODE_type, $K_first, $K_last );
+    my $number_of_groups_seen;
+
+    #------------------------
+    # -kgb helper subroutines
+    #------------------------
+
+    sub kgb_initialize_options {
+
+        # check and initialize user options for -kgb
+        # return error flag:
+        #  true for some input error, do not continue
+        #  false if ok
+
+        # Local copies of the various control parameters
+        $rOpts_kgb_after  = $rOpts->{'keyword-group-blanks-after'};    # '-kgba'
+        $rOpts_kgb_before = $rOpts->{'keyword-group-blanks-before'};   # '-kgbb'
+        $rOpts_kgb_delete = $rOpts->{'keyword-group-blanks-delete'};   # '-kgbd'
+        $rOpts_kgb_inside = $rOpts->{'keyword-group-blanks-inside'};   # '-kgbi'
+
+        # A range of sizes can be input with decimal notation like 'min.max'
+        # with any number of dots between the two numbers. Examples:
+        #    string    =>    min    max  matches
+        #    1.1             1      1    exactly 1
+        #    1.3             1      3    1,2, or 3
+        #    1..3            1      3    1,2, or 3
+        #    5               5      -    5 or more
+        #    6.              6      -    6 or more
+        #    .2              -      2    up to 2
+        #    1.0             1      0    nothing
+        my $rOpts_kgb_size = $rOpts->{'keyword-group-blanks-size'};    # '-kgbs'
+        ( $rOpts_kgb_size_min, $rOpts_kgb_size_max ) = split /\.+/,
+          $rOpts_kgb_size;
+        if (   $rOpts_kgb_size_min && $rOpts_kgb_size_min !~ /^\d+$/
+            || $rOpts_kgb_size_max && $rOpts_kgb_size_max !~ /^\d+$/ )
+        {
+            Warn(<<EOM);
+Unexpected value for -kgbs: '$rOpts_kgb_size'; expecting 'min' or 'min.max';
 ignoring all -kgb flags
 EOM
 
-        # Turn this option off so that this message does not keep repeating
-        # during iterations and other files.
-        $rOpts->{'keyword-group-blanks-size'} = EMPTY_STRING;
-        return $rhash_of_desires;
-    }
-    $Opt_size_min = 1 unless ($Opt_size_min);
+            # Turn this option off so that this message does not keep repeating
+            # during iterations and other files.
+            $rOpts->{'keyword-group-blanks-size'} = EMPTY_STRING;
+            return $rhash_of_desires;
+        }
+        $rOpts_kgb_size_min = 1 unless ($rOpts_kgb_size_min);
 
-    if ( $Opt_size_max && $Opt_size_max < $Opt_size_min ) {
-        return $rhash_of_desires;
-    }
+        if ( $rOpts_kgb_size_max && $rOpts_kgb_size_max < $rOpts_kgb_size_min )
+        {
+            return $rhash_of_desires;
+        }
 
-    # codes for $Opt_blanks_before and $Opt_blanks_after:
-    # 0 = never (delete if exist)
-    # 1 = stable (keep unchanged)
-    # 2 = always (insert if missing)
+        # check codes for $rOpts_kgb_before and
+        # $rOpts_kgb_after:
+        #   0 = never (delete if exist)
+        #   1 = stable (keep unchanged)
+        #   2 = always (insert if missing)
+        return $rhash_of_desires
+          unless $rOpts_kgb_size_min > 0
+          && ( $rOpts_kgb_before != 1
+            || $rOpts_kgb_after != 1
+            || $rOpts_kgb_inside
+            || $rOpts_kgb_delete );
 
-    return $rhash_of_desires
-      unless $Opt_size_min > 0
-      && ( $Opt_blanks_before != 1
-        || $Opt_blanks_after != 1
-        || $Opt_blanks_inside
-        || $Opt_blanks_delete );
+        return;
+    } ## end sub kgb_initialize_options
 
-    my $Opt_pattern         = $keyword_group_list_pattern;
-    my $Opt_comment_pattern = $keyword_group_list_comment_pattern;
-    my $Opt_repeat_count =
-      $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
+    sub kgb_initialize_group_vars {
 
-    my $rlines              = $self->[_rlines_];
-    my $rLL                 = $self->[_rLL_];
-    my $K_closing_container = $self->[_K_closing_container_];
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $rK_weld_right       = $self->[_rK_weld_right_];
+        # Definitions:
+        #      $ibeg = first line index of this entire group
+        #      $iend =  last line index of this entire group
+        #     $count = total number of keywords seen in this entire group
+        # $level_beg = indentation level of this group
+        #     @group = [ $i, $token, $count ] =list of all keywords & blanks
+        #  @subgroup =  $j, index of group where token changes
+        #   @iblanks = line indexes of blank lines in input stream in this group
+        #  where i=starting line index
+        #        token (the keyword)
+        #        count = number of this token in this subgroup
+        #            j = index in group where token changes
+        $ibeg      = -1;
+        $iend      = undef;
+        $level_beg = -1;
+        $K_closing = undef;
+        $count     = 0;
+        @group     = ();
+        @subgroup  = ();
+        @iblanks   = ();
+        return;
+    } ## end sub kgb_initialize_group_vars
 
-    # variables for the current group and subgroups:
-    my ( $ibeg, $iend, $count, $level_beg, $K_closing, @iblanks, @group,
-        @subgroup );
+    sub kgb_initialize_line_vars {
+        $CODE_type = EMPTY_STRING;
+        $K_first   = undef;
+        $K_last    = undef;
+        $line_type = EMPTY_STRING;
+        return;
+    } ## end sub kgb_initialize_line_vars
 
-    # Definitions:
-    # ($ibeg, $iend) = starting and ending line indexes of this entire group
-    #         $count = total number of keywords seen in this entire group
-    #     $level_beg = indentation level of this group
-    #         @group = [ $i, $token, $count ] =list of all keywords & blanks
-    #      @subgroup =  $j, index of group where token changes
-    #       @iblanks = line indexes of blank lines in input stream in this group
-    #  where i=starting line index
-    #        token (the keyword)
-    #        count = number of this token in this subgroup
-    #            j = index in group where token changes
-    #
-    # These vars will contain values for the most recently seen line:
-    my ( $line_type, $CODE_type, $K_first, $K_last );
+    sub kgb_initialize {
 
-    my $number_of_groups_seen = 0;
+        # initialize all closure variables for -kgb
+        # return:
+        #   true to cause immediate exit (something is wrong)
+        #   false to continue ... all is okay
 
-    #-------------------
-    # helper subroutines
-    #-------------------
+        # This is the return variable:
+        $rhash_of_desires = {};
 
-    my $insert_blank_after = sub {
+        # initialize and check user options;
+        my $quit = kgb_initialize_options();
+        if ($quit) { return $quit }
+
+        # initialize variables for the current group and subgroups:
+        kgb_initialize_group_vars();
+
+        # initialize variables for the most recently seen line:
+        kgb_initialize_line_vars();
+
+        $number_of_groups_seen = 0;
+
+        # all okay
+        return;
+    } ## end sub kgb_initialize
+
+    sub kgb_insert_blank_after {
         my ($i) = @_;
         $rhash_of_desires->{$i} = 1;
         my $ip = $i + 1;
@@ -13349,13 +13387,13 @@ EOM
             $rhash_of_desires->{$ip} = 0;
         }
         return;
-    };
+    } ## end sub kgb_insert_blank_after
 
-    my $split_into_sub_groups = sub {
+    sub kgb_split_into_sub_groups {
 
         # place blanks around long sub-groups of keywords
         # ...if requested
-        return unless ($Opt_blanks_inside);
+        return unless ($rOpts_kgb_inside);
 
         # loop over sub-groups, index k
         push @subgroup, scalar @group;
@@ -13374,12 +13412,12 @@ EOM
 
             # This subgroup runs from line $ib to line $ie-1, but may contain
             # blank lines
-            if ( $num >= $Opt_size_min ) {
+            if ( $num >= $rOpts_kgb_size_min ) {
 
                 # if there are blank lines, we require that at least $num lines
                 # be non-blank up to the boundary with the next subgroup.
                 my $nog_b = my $nog_e = 1;
-                if ( @iblanks && !$Opt_blanks_delete ) {
+                if ( @iblanks && !$rOpts_kgb_delete ) {
                     my $j_bb = $j_b + $num - 1;
                     my ( $i_bb, $tok_bb, $count_bb ) = @{ $group[$j_bb] };
                     $nog_b = $count_bb - $count_b + 1 == $num;
@@ -13389,29 +13427,31 @@ EOM
                     $nog_e = $count_e - $count_ee + 1 == $num;
                 }
                 if ( $nog_b && $k > $kbeg ) {
-                    $insert_blank_after->( $i_b - 1 );
+                    kgb_insert_blank_after( $i_b - 1 );
                 }
                 if ( $nog_e && $k < $kend ) {
-                    my ( $i_ep, $tok_ep, $count_ep ) = @{ $group[ $j_e + 1 ] };
-                    $insert_blank_after->( $i_ep - 1 );
+                    my ( $i_ep, $tok_ep, $count_ep ) =
+                      @{ $group[ $j_e + 1 ] };
+                    kgb_insert_blank_after( $i_ep - 1 );
                 }
             }
         }
         return;
-    };
+    } ## end sub kgb_split_into_sub_groups
 
-    my $delete_if_blank = sub {
-        my ($i) = @_;
+    sub kgb_delete_if_blank {
+        my ( $self, $i ) = @_;
 
         # delete line $i if it is blank
+        my $rlines = $self->[_rlines_];
         return unless ( $i >= 0 && $i < @{$rlines} );
         return if ( $rlines->[$i]->{_line_type} ne 'CODE' );
         my $code_type = $rlines->[$i]->{_code_type};
         if ( $code_type eq 'BL' ) { $rhash_of_desires->{$i} = 2; }
         return;
-    };
+    } ## end sub kgb_delete_if_blank
 
-    my $delete_inner_blank_lines = sub {
+    sub kgb_delete_inner_blank_lines {
 
         # always remove unwanted trailing blank lines from our list
         return unless (@iblanks);
@@ -13421,27 +13461,28 @@ EOM
         }
 
         # now mark mark interior blank lines for deletion if requested
-        return unless ($Opt_blanks_delete);
+        return unless ($rOpts_kgb_delete);
 
         while ( my $ibl = pop(@iblanks) ) { $rhash_of_desires->{$ibl} = 2 }
 
         return;
-    };
+    } ## end sub kgb_delete_inner_blank_lines
 
-    my $end_group = sub {
+    sub kgb_end_group {
 
         # end a group of keywords
-        my ($bad_ending) = @_;
+        my ( $self, $bad_ending ) = @_;
         if ( defined($ibeg) && $ibeg >= 0 ) {
 
             # then handle sufficiently large groups
-            if ( $count >= $Opt_size_min ) {
+            if ( $count >= $rOpts_kgb_size_min ) {
 
                 $number_of_groups_seen++;
 
                 # do any blank deletions regardless of the count
-                $delete_inner_blank_lines->();
+                kgb_delete_inner_blank_lines();
 
+                my $rlines = $self->[_rlines_];
                 if ( $ibeg > 0 ) {
                     my $code_type = $rlines->[ $ibeg - 1 ]->{_code_type};
 
@@ -13456,12 +13497,12 @@ EOM
                     # Do not insert a blank after a comment
                     # (this could be subject to a flag in the future)
                     if ( $code_type !~ /(BC|SBC|SBCX)/ ) {
-                        if ( $Opt_blanks_before == INSERT ) {
-                            $insert_blank_after->( $ibeg - 1 );
+                        if ( $rOpts_kgb_before == INSERT ) {
+                            kgb_insert_blank_after( $ibeg - 1 );
 
                         }
-                        elsif ( $Opt_blanks_before == DELETE ) {
-                            $delete_if_blank->( $ibeg - 1 );
+                        elsif ( $rOpts_kgb_before == DELETE ) {
+                            $self->kgb_delete_if_blank( $ibeg - 1 );
                         }
                     }
                 }
@@ -13477,6 +13518,7 @@ EOM
                     # - Do not put a blank line if we ended the search badly
                     # - Do not put a blank at the end of the file
                     # - Do not put a blank line before a hanging side comment
+                    my $rLL      = $self->[_rLL_];
                     my $level    = $rLL->[$K_first]->[_LEVEL_];
                     my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
 
@@ -13486,31 +13528,25 @@ EOM
                         && $iend < @{$rlines}
                         && $CODE_type ne 'HSC' )
                     {
-                        if ( $Opt_blanks_after == INSERT ) {
-                            $insert_blank_after->($iend);
+                        if ( $rOpts_kgb_after == INSERT ) {
+                            kgb_insert_blank_after($iend);
                         }
-                        elsif ( $Opt_blanks_after == DELETE ) {
-                            $delete_if_blank->( $iend + 1 );
+                        elsif ( $rOpts_kgb_after == DELETE ) {
+                            $self->kgb_delete_if_blank( $iend + 1 );
                         }
                     }
                 }
             }
-            $split_into_sub_groups->();
+            kgb_split_into_sub_groups();
         }
 
         # reset for another group
-        $ibeg      = -1;
-        $iend      = undef;
-        $level_beg = -1;
-        $K_closing = undef;
-        @group     = ();
-        @subgroup  = ();
-        @iblanks   = ();
+        kgb_initialize_group_vars();
 
         return;
-    };
+    } ## end sub kgb_end_group
 
-    my $find_container_end = sub {
+    sub kgb_find_container_end {
 
         # If the keyword line is continued onto subsequent lines, find the
         # closing token '$K_closing' so that we can easily skip past the
@@ -13520,9 +13556,12 @@ EOM
         # -contents only one level deep
         # -not welded
 
+        my ($self) = @_;
+
         # First check: skip if next line is not one deeper
         my $Knext_nonblank = $self->K_next_nonblank($K_last);
         return if ( !defined($Knext_nonblank) );
+        my $rLL        = $self->[_rLL_];
         my $level_next = $rLL->[$Knext_nonblank]->[_LEVEL_];
         return if ( $level_next != $level_beg + 1 );
 
@@ -13532,29 +13571,30 @@ EOM
 
         # Must not be a weld (can be unstable)
         return
-          if ( $total_weld_count && $self->is_welded_at_seqno($parent_seqno) );
+          if ( $total_weld_count
+            && $self->is_welded_at_seqno($parent_seqno) );
 
         # Opening container must exist and be on this line
-        my $Ko = $K_opening_container->{$parent_seqno};
+        my $Ko = $self->[_K_opening_container_]->{$parent_seqno};
         return unless ( defined($Ko) && $Ko > $K_first && $Ko <= $K_last );
 
         # Verify that the closing container exists and is on a later line
-        my $Kc = $K_closing_container->{$parent_seqno};
+        my $Kc = $self->[_K_closing_container_]->{$parent_seqno};
         return unless ( defined($Kc) && $Kc > $K_last );
 
         # That's it
         $K_closing = $Kc;
 
         return;
-    };
+    } ## end sub kgb_find_container_end
 
-    my $add_to_group = sub {
-        my ( $i, $token, $level ) = @_;
+    sub kgb_add_to_group {
+        my ( $self, $i, $token, $level ) = @_;
 
         # End the previous group if we have reached the maximum
         # group size
-        if ( $Opt_size_max && @group >= $Opt_size_max ) {
-            $end_group->();
+        if ( $rOpts_kgb_size_max && @group >= $rOpts_kgb_size_max ) {
+            $self->kgb_end_group();
         }
 
         if ( @group == 0 ) {
@@ -13573,209 +13613,252 @@ EOM
         push @group, [ $i, $token, $count ];
 
         # remember if this line ends in an open container
-        $find_container_end->();
+        $self->kgb_find_container_end();
 
         return;
-    };
+    } ## end sub kgb_add_to_group
 
-    #----------------------------------
-    # loop over all lines of the source
-    #----------------------------------
-    $end_group->();
-    my $i = -1;
-    foreach my $line_of_tokens ( @{$rlines} ) {
+    #---------------------
+    # -kgb main subroutine
+    #---------------------
 
-        $i++;
-        last
-          if ( $Opt_repeat_count > 0
-            && $number_of_groups_seen >= $Opt_repeat_count );
+    sub keyword_group_scan {
+        my $self = shift;
 
-        $CODE_type = EMPTY_STRING;
-        $K_first   = undef;
-        $K_last    = undef;
-        $line_type = $line_of_tokens->{_line_type};
+        # Called once per file to process --keyword-group-blanks-* parameters.
 
-        # always end a group at non-CODE
-        if ( $line_type ne 'CODE' ) { $end_group->(); next }
+        # Task:
+        # Manipulate blank lines around keyword groups (kgb* flags)
+        # Scan all lines looking for runs of consecutive lines beginning with
+        # selected keywords.  Example keywords are 'my', 'our', 'local', ... but
+        # they may be anything.  We will set flags requesting that blanks be
+        # inserted around and within them according to input parameters.  Note
+        # that we are scanning the lines as they came in in the input stream, so
+        # they are not necessarily well formatted.
 
-        $CODE_type = $line_of_tokens->{_code_type};
+        # Returns:
+        # The output of this sub is a return hash ref whose keys are the indexes
+        # of lines after which we desire a blank line.  For line index $i:
+        #  $rhash_of_desires->{$i} = 1 means we want a blank line AFTER line $i
+        #  $rhash_of_desires->{$i} = 2 means we want blank line $i removed
 
-        # end any group at a format skipping line
-        if ( $CODE_type && $CODE_type eq 'FS' ) {
-            $end_group->();
-            next;
-        }
-
-        # continue in a verbatim (VB) type; it may be quoted text
-        if ( $CODE_type eq 'VB' ) {
-            if ( $ibeg >= 0 ) { $iend = $i; }
-            next;
-        }
-
-        # and continue in blank (BL) types
-        if ( $CODE_type eq 'BL' ) {
-            if ( $ibeg >= 0 ) {
-                $iend = $i;
-                push @{iblanks}, $i;
-
-                # propagate current subgroup token
-                my $tok = $group[-1]->[1];
-                push @group, [ $i, $tok, $count ];
-            }
-            next;
-        }
-
-        # examine the first token of this line
-        my $rK_range = $line_of_tokens->{_rK_range};
-        ( $K_first, $K_last ) = @{$rK_range};
-        if ( !defined($K_first) ) {
-
-            # Somewhat unexpected blank line..
-            # $rK_range is normally defined for line type CODE, but this can
-            # happen for example if the input line was a single semicolon which
-            # is being deleted.  In that case there was code in the input
-            # file but it is not being retained. So we can silently return.
+        # Nothing to do if no blanks can be output. This test added to fix
+        # case b760.
+        if ( !$rOpts_maximum_consecutive_blank_lines ) {
             return $rhash_of_desires;
         }
 
-        my $level    = $rLL->[$K_first]->[_LEVEL_];
-        my $type     = $rLL->[$K_first]->[_TYPE_];
-        my $token    = $rLL->[$K_first]->[_TOKEN_];
-        my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+        #---------------
+        # initialization
+        #---------------
+        my $quit = kgb_initialize();
+        if ($quit) { return $rhash_of_desires }
 
-        # End a group 'badly' at an unexpected level.  This will prevent
-        # blank lines being incorrectly placed after the end of the group.
-        # We are looking for any deviation from two acceptable patterns:
-        #   PATTERN 1: a simple list; secondary lines are at level+1
-        #   PATTERN 2: a long statement; all secondary lines same level
-        # This was added as a fix for case b1177, in which a complex structure
-        # got incorrectly inserted blank lines.
-        if ( $ibeg >= 0 ) {
+        my $rLL    = $self->[_rLL_];
+        my $rlines = $self->[_rlines_];
 
-            # Check for deviation from PATTERN 1, simple list:
-            if ( defined($K_closing) && $K_first < $K_closing ) {
-                $end_group->(1) if ( $level != $level_beg + 1 );
-            }
+        $self->kgb_end_group();
+        my $i = -1;
+        my $Opt_repeat_count =
+          $rOpts->{'keyword-group-blanks-repeat-count'};    # '-kgbr'
 
-            # Check for deviation from PATTERN 2, single statement:
-            elsif ( $level != $level_beg ) { $end_group->(1) }
-        }
+        #----------------------------------
+        # loop over all lines of the source
+        #----------------------------------
+        foreach my $line_of_tokens ( @{$rlines} ) {
 
-        # Do not look for keywords in lists ( keyword 'my' can occur in lists,
-        # see case b760); fixed for c048.
-        if ( $self->is_list_by_K($K_first) ) {
-            if ( $ibeg >= 0 ) { $iend = $i }
-            next;
-        }
+            $i++;
+            last
+              if ( $Opt_repeat_count > 0
+                && $number_of_groups_seen >= $Opt_repeat_count );
 
-        # see if this is a code type we seek (i.e. comment)
-        if (   $CODE_type
-            && $Opt_comment_pattern
-            && $CODE_type =~ /$Opt_comment_pattern/ )
-        {
+            kgb_initialize_line_vars();
 
-            my $tok = $CODE_type;
+            $line_type = $line_of_tokens->{_line_type};
 
-            # Continuing a group
-            if ( $ibeg >= 0 && $level == $level_beg ) {
-                $add_to_group->( $i, $tok, $level );
-            }
+            # always end a group at non-CODE
+            if ( $line_type ne 'CODE' ) { $self->kgb_end_group(); next }
 
-            # Start new group
-            else {
+            $CODE_type = $line_of_tokens->{_code_type};
 
-                # first end old group if any; we might be starting new
-                # keywords at different level
-                if ( $ibeg >= 0 ) { $end_group->(); }
-                $add_to_group->( $i, $tok, $level );
-            }
-            next;
-        }
-
-        # See if it is a keyword we seek, but never start a group in a
-        # continuation line; the code may be badly formatted.
-        if (   $ci_level == 0
-            && $type eq 'k'
-            && $token =~ /$Opt_pattern/ )
-        {
-
-            # Continuing a keyword group
-            if ( $ibeg >= 0 && $level == $level_beg ) {
-                $add_to_group->( $i, $token, $level );
-            }
-
-            # Start new keyword group
-            else {
-
-                # first end old group if any; we might be starting new
-                # keywords at different level
-                if ( $ibeg >= 0 ) { $end_group->(); }
-                $add_to_group->( $i, $token, $level );
-            }
-            next;
-        }
-
-        # This is not one of our keywords, but we are in a keyword group
-        # so see if we should continue or quit
-        elsif ( $ibeg >= 0 ) {
-
-            # - bail out on a large level change; we may have walked into a
-            #   data structure or anonymous sub code.
-            if ( $level > $level_beg + 1 || $level < $level_beg ) {
-                $end_group->(1);
+            # end any group at a format skipping line
+            if ( $CODE_type && $CODE_type eq 'FS' ) {
+                $self->kgb_end_group();
                 next;
             }
 
-            # - keep going on a continuation line of the same level, since
-            #   it is probably a continuation of our previous keyword,
-            # - and keep going past hanging side comments because we never
-            #   want to interrupt them.
-            if ( ( ( $level == $level_beg ) && $ci_level > 0 )
-                || $CODE_type eq 'HSC' )
+            # continue in a verbatim (VB) type; it may be quoted text
+            if ( $CODE_type eq 'VB' ) {
+                if ( $ibeg >= 0 ) { $iend = $i; }
+                next;
+            }
+
+            # and continue in blank (BL) types
+            if ( $CODE_type eq 'BL' ) {
+                if ( $ibeg >= 0 ) {
+                    $iend = $i;
+                    push @{iblanks}, $i;
+
+                    # propagate current subgroup token
+                    my $tok = $group[-1]->[1];
+                    push @group, [ $i, $tok, $count ];
+                }
+                next;
+            }
+
+            # examine the first token of this line
+            my $rK_range = $line_of_tokens->{_rK_range};
+            ( $K_first, $K_last ) = @{$rK_range};
+            if ( !defined($K_first) ) {
+
+                # Somewhat unexpected blank line..
+                # $rK_range is normally defined for line type CODE, but this can
+                # happen for example if the input line was a single semicolon
+                # which is being deleted.  In that case there was code in the
+                # input file but it is not being retained. So we can silently
+                # return.
+                return $rhash_of_desires;
+            }
+
+            my $level    = $rLL->[$K_first]->[_LEVEL_];
+            my $type     = $rLL->[$K_first]->[_TYPE_];
+            my $token    = $rLL->[$K_first]->[_TOKEN_];
+            my $ci_level = $rLL->[$K_first]->[_CI_LEVEL_];
+
+            # End a group 'badly' at an unexpected level.  This will prevent
+            # blank lines being incorrectly placed after the end of the group.
+            # We are looking for any deviation from two acceptable patterns:
+            #   PATTERN 1: a simple list; secondary lines are at level+1
+            #   PATTERN 2: a long statement; all secondary lines same level
+            # This was added as a fix for case b1177, in which a complex
+            # structure got incorrectly inserted blank lines.
+            if ( $ibeg >= 0 ) {
+
+                # Check for deviation from PATTERN 1, simple list:
+                if ( defined($K_closing) && $K_first < $K_closing ) {
+                    $self->kgb_end_group(1) if ( $level != $level_beg + 1 );
+                }
+
+                # Check for deviation from PATTERN 2, single statement:
+                elsif ( $level != $level_beg ) { $self->kgb_end_group(1) }
+            }
+
+            # Do not look for keywords in lists ( keyword 'my' can occur in
+            # lists, see case b760); fixed for c048.
+            if ( $self->is_list_by_K($K_first) ) {
+                if ( $ibeg >= 0 ) { $iend = $i }
+                next;
+            }
+
+            # see if this is a code type we seek (i.e. comment)
+            if (   $CODE_type
+                && $keyword_group_list_comment_pattern
+                && $CODE_type =~ /$keyword_group_list_comment_pattern/ )
             {
-                $iend = $i;
+
+                my $tok = $CODE_type;
+
+                # Continuing a group
+                if ( $ibeg >= 0 && $level == $level_beg ) {
+                    $self->kgb_add_to_group( $i, $tok, $level );
+                }
+
+                # Start new group
+                else {
+
+                    # first end old group if any; we might be starting new
+                    # keywords at different level
+                    if ( $ibeg >= 0 ) { $self->kgb_end_group(); }
+                    $self->kgb_add_to_group( $i, $tok, $level );
+                }
                 next;
             }
 
-            # - continue if if we are within in a container which started with
-            # the line of the previous keyword.
-            if ( defined($K_closing) && $K_first <= $K_closing ) {
+            # See if it is a keyword we seek, but never start a group in a
+            # continuation line; the code may be badly formatted.
+            if (   $ci_level == 0
+                && $type eq 'k'
+                && $token =~ /$keyword_group_list_pattern/ )
+            {
 
-                # continue if entire line is within container
-                if ( $K_last <= $K_closing ) { $iend = $i; next }
+                # Continuing a keyword group
+                if ( $ibeg >= 0 && $level == $level_beg ) {
+                    $self->kgb_add_to_group( $i, $token, $level );
+                }
 
-                # continue at ); or }; or ];
-                my $KK = $K_closing + 1;
-                if ( $rLL->[$KK]->[_TYPE_] eq ';' ) {
-                    if ( $KK < $K_last ) {
-                        if ( $rLL->[ ++$KK ]->[_TYPE_] eq 'b' ) { ++$KK }
-                        if ( $KK > $K_last || $rLL->[$KK]->[_TYPE_] ne '#' ) {
-                            $end_group->(1);
-                            next;
-                        }
-                    }
+                # Start new keyword group
+                else {
+
+                    # first end old group if any; we might be starting new
+                    # keywords at different level
+                    if ( $ibeg >= 0 ) { $self->kgb_end_group(); }
+                    $self->kgb_add_to_group( $i, $token, $level );
+                }
+                next;
+            }
+
+            # This is not one of our keywords, but we are in a keyword group
+            # so see if we should continue or quit
+            elsif ( $ibeg >= 0 ) {
+
+                # - bail out on a large level change; we may have walked into a
+                #   data structure or anonymous sub code.
+                if ( $level > $level_beg + 1 || $level < $level_beg ) {
+                    $self->kgb_end_group(1);
+                    next;
+                }
+
+                # - keep going on a continuation line of the same level, since
+                #   it is probably a continuation of our previous keyword,
+                # - and keep going past hanging side comments because we never
+                #   want to interrupt them.
+                if ( ( ( $level == $level_beg ) && $ci_level > 0 )
+                    || $CODE_type eq 'HSC' )
+                {
                     $iend = $i;
                     next;
                 }
 
-                $end_group->(1);
+                # - continue if if we are within in a container which started
+                # with the line of the previous keyword.
+                if ( defined($K_closing) && $K_first <= $K_closing ) {
+
+                    # continue if entire line is within container
+                    if ( $K_last <= $K_closing ) { $iend = $i; next }
+
+                    # continue at ); or }; or ];
+                    my $KK = $K_closing + 1;
+                    if ( $rLL->[$KK]->[_TYPE_] eq ';' ) {
+                        if ( $KK < $K_last ) {
+                            if ( $rLL->[ ++$KK ]->[_TYPE_] eq 'b' ) { ++$KK }
+                            if ( $KK > $K_last || $rLL->[$KK]->[_TYPE_] ne '#' )
+                            {
+                                $self->kgb_end_group(1);
+                                next;
+                            }
+                        }
+                        $iend = $i;
+                        next;
+                    }
+
+                    $self->kgb_end_group(1);
+                    next;
+                }
+
+                # - end the group if none of the above
+                $self->kgb_end_group();
                 next;
             }
 
-            # - end the group if none of the above
-            $end_group->();
-            next;
-        }
+            # not in a keyword group; continue
+            else { next }
+        } ## end of loop over all lines
 
-        # not in a keyword group; continue
-        else { next }
-    }
+        $self->kgb_end_group();
+        return $rhash_of_desires;
 
-    # end of loop over all lines
-    $end_group->();
-    return $rhash_of_desires;
-
-} ## end sub keyword_group_scan
+    } ## end sub keyword_group_scan
+} ## end closure keyword_group_scan
 
 #######################################
 # CODE SECTION 7: Process lines of code
