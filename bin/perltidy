@@ -5009,23 +5009,18 @@ produces an output file F<blocks.csv> whose lines hold these
 parameters:
 
     filename     - the name of the file
-    line         - the line number
+    line         - the line number of the opening brace of this block
     line_count   - the number of lines between opening and closing braces
     type         - the block type (sub, for, foreach, ...)
     name         - the block name if applicable (sub name, label, asub name)
-    level        - the starting block nesting level
-    max_change   - the change in level to the deepest block level
-    total_change - the total positive change in level in the block
+    depth        - the nesting depth of the opening block brace
+    max_change   - the change in depth to the most deeply nested code block
+    block_count  - the total number of code blocks nested in this block
 
-The level changes are computed by monitoring the change in code block stack
-depth through the file.  The depth increases by one when a block is entered,
-and decreases by one when the block is exited. The last item, total_change, is
-analogous to the total positive elevation change that a person walking over a
-sequence of hills would experience.
-
-These quantities can be useful for identifying complex code.  Although the
+These quantities can be useful for identifying complex code. Although the
 table does not indicate which blocks are nested in other blocks, this can be
-determined by computing and comparing the block ending line numbers. By default
+determined by computing and comparing the block ending line numbers. The table
+also includes a line for each C<package> statement in the file. By default
 the table lists subroutines with more than 20 lines, but this can be changed
 with the following two parameters:
 
