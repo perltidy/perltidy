@@ -479,6 +479,7 @@ echo "Perltidy random run ..."
 echo "NOTE: Create a file named 'stop.now' to force an early exit"
 sleep 2
 nohup nice -n19 perltidy_random_run.pl >>nohup.my 2>>nohup.my
+perl RUNME.pl
 EOM
     system("chmod +x $runme");
     print STDOUT "Edit $config_file if you want to make any changes\n";
