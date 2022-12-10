@@ -2872,6 +2872,7 @@ sub set_whitespace_flags {
     my ( $ws_1, $ws_2, $ws_3, $ws_4 );
 
     # main loop over all tokens to define the whitespace flags
+    my $last_type_is_opening;
     foreach my $j ( 0 .. $jmax ) {
 
         if ( $rLL->[$j]->[_TYPE_] eq 'b' ) {
@@ -2899,8 +2900,9 @@ sub set_whitespace_flags {
         #---------------------------------------------------------------
 
         #    /^[L\{\(\[]$/
-        if ( $is_opening_type{$last_type} ) {
+        if ($last_type_is_opening) {
 
+            $last_type_is_opening = 0;
             my $seqno           = $rtokh->[_TYPE_SEQUENCE_];
             my $block_type      = $rblock_type_of_seqno->{$seqno};
             my $last_seqno      = $rtokh_last->[_TYPE_SEQUENCE_];
@@ -3090,6 +3092,8 @@ sub set_whitespace_flags {
         #    /^[L\{\(\[]$/
         elsif ( $is_opening_type{$type} ) {
 
+            $last_type_is_opening = 1;
+
             if ( $token eq '(' ) {
 
                 my $seqno = $rtokh->[_TYPE_SEQUENCE_];
@@ -3225,8 +3229,10 @@ sub set_whitespace_flags {
             # Whitespace Rules Section 4:
             # Use the binary rule table.
             #---------------------------------------------------------------
-            $ws   = $binary_ws_rules{$last_type}{$type};
-            $ws_4 = $ws if DEBUG_WHITE;
+            if ( defined( $binary_ws_rules{$last_type}{$type} ) ) {
+                $ws   = $binary_ws_rules{$last_type}{$type};
+                $ws_4 = $ws if DEBUG_WHITE;
+            }
 
             #---------------------------------------------------------------
             # Whitespace Rules Section 5:
@@ -3251,7 +3257,7 @@ sub set_whitespace_flags {
             #
             # -1    vs    1     --> -1
             #  1    vs   -1     --> -1
-            if ( !defined($ws) ) {
+            else {
                 my $wl = $want_left_space{$type};
                 my $wr = $want_right_space{$last_type};
                 if ( !defined($wl) ) {
@@ -3273,7 +3279,7 @@ sub set_whitespace_flags {
         #    my $msg = new Fax::Send
         #      -recipients => $to,
         #      -data => $data;
-        if (   $ws == 0
+        if (  !$ws
             && $rtokh->[_LINE_INDEX_] != $rtokh_last->[_LINE_INDEX_] )
         {
             $ws = 1;
