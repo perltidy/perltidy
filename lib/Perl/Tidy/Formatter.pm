@@ -2795,20 +2795,6 @@ BEGIN {
 
 use constant DEBUG_WHITE => 0;
 
-# closure variables
-my (
-
-    $rLL,
-    $jmax,
-
-    $j_tight_closing_paren,
-    $last_token,
-    $token,
-    $type,
-    $ws,
-
-);
-
 # Hashes to set spaces around container tokens according to their
 # sequence numbers.  These are set as keywords are examined.
 # They are controlled by the -kpit and -kpitl flags.
@@ -2831,14 +2817,12 @@ sub set_whitespace_flags {
 
     my $self = shift;
 
-    # initialize closure variables
-    $rLL  = $self->[_rLL_];
-    $jmax = @{$rLL} - 1;
-
-    $j_tight_closing_paren = -1;
-    $token                 = SPACE;
-    $type                  = 'b';
-    $last_token            = EMPTY_STRING;
+    my $j_tight_closing_paren = -1;
+    my $rLL                   = $self->[_rLL_];
+    my $jmax                  = @{$rLL} - 1;
+    my $token                 = SPACE;
+    my $type                  = 'b';
+    my $last_token            = EMPTY_STRING;
 
     %opening_container_inside_ws = ();
     %closing_container_inside_ws = ();
@@ -2892,7 +2876,7 @@ sub set_whitespace_flags {
         $token = $rtokh->[_TOKEN_];
         $type  = $rtokh->[_TYPE_];
 
-        $ws = undef;
+        my $ws;
 
         #---------------------------------------------------------------
         # Whitespace Rules Section 1:
@@ -2903,6 +2887,7 @@ sub set_whitespace_flags {
         if ($last_type_is_opening) {
 
             $last_type_is_opening = 0;
+
             my $seqno           = $rtokh->[_TYPE_SEQUENCE_];
             my $block_type      = $rblock_type_of_seqno->{$seqno};
             my $last_seqno      = $rtokh_last->[_TYPE_SEQUENCE_];
@@ -2960,7 +2945,28 @@ sub set_whitespace_flags {
                     $ws = WS_NO;
                 }
                 else {
-                    $ws = ws_in_container($j);
+
+                    # find the index of the closing token
+                    my $j_closing =
+                      $self->[_K_closing_container_]->{$last_seqno};
+
+                    # If the closing token is less than five characters ahead
+                    # we must take a closer look
+                    if (   defined($j_closing)
+                        && $j_closing - $j < 5
+                        && $rLL->[$j_closing]->[_TYPE_SEQUENCE_] eq
+                        $last_seqno )
+                    {
+                        $ws =
+                          ws_in_container( $j, $j_closing, $rLL, $type, $token,
+                            $last_token );
+                        if ( $ws == WS_NO ) {
+                            $j_tight_closing_paren = $j_closing;
+                        }
+                    }
+                    else {
+                        $ws = WS_YES;
+                    }
                 }
             }
 
@@ -3333,8 +3339,21 @@ sub set_container_ws_by_keyword {
 
 sub ws_in_container {
 
-    my ($j) = @_;
-    if ( $j + 1 > $jmax ) { return (WS_NO) }
+    my ( $j, $j_closing, $rLL, $type, $token, $last_token ) = @_;
+
+    # Given:
+    #  $j = index of token following an opening container token
+    #  $type, $token = the type and token at index $j
+    #  $j_closing = closing token of the container
+    #  $last_token = the opening token of the container
+    # Return:
+    #  WS_NO  if there is just one token in the container (with exceptions)
+    #  WS_YES otherwise
+
+    #------------------------------------
+    # Look forward for the closing token;
+    #------------------------------------
+    if ( $j + 1 > $j_closing ) { return WS_NO }
 
     # Patch to count '-foo' as single token so that
     # each of  $a{-foo} and $a{foo} and $a{'foo'} do
@@ -3349,7 +3368,7 @@ sub ws_in_container {
     # in the following line. Otherwise, it takes two steps to converge:
     #    deg2rad(-  0.5)
     if (   ( $type eq 'm' || $type eq 'p' )
-        && $j < $jmax + 1
+        && $j < $j_closing + 1
         && $rLL->[ $j + 1 ]->[_TYPE_] eq 'b'
         && $rLL->[ $j + 2 ]->[_TYPE_] eq 'n'
         && $rLL->[ $j + 2 ]->[_TOKEN_] =~ /^\d/ )
@@ -3357,37 +3376,34 @@ sub ws_in_container {
         $j_here = $j + 2;
     }
 
-    # $j_next is where a closing token should be if
-    # the container has a single token
-    if ( $j_here + 1 > $jmax ) { return (WS_NO) }
+    # $j_next is where a closing token should be if the container has
+    # just a "single" token
+    if ( $j_here + 1 > $j_closing ) { return WS_NO }
     my $j_next =
       ( $rLL->[ $j_here + 1 ]->[_TYPE_] eq 'b' )
       ? $j_here + 2
       : $j_here + 1;
 
-    if ( $j_next > $jmax ) { return WS_NO }
-    my $tok_next  = $rLL->[$j_next]->[_TOKEN_];
-    my $type_next = $rLL->[$j_next]->[_TYPE_];
-
-    # for tightness = 1, if there is just one token
-    # within the matching pair, we will keep it tight
+    #-----------------------------------------------------------------
+    # Now decide: if we get to the closing token we will keep it tight
+    #-----------------------------------------------------------------
     if (
-        $tok_next eq $matching_token{$last_token}
+        $j_next == $j_closing
 
-        # but watch out for this: [ [ ]    (misc.t)
-        && $last_token ne $token
+        # OLD PROBLEM: but watch out for this: [ [ ]    (misc.t)
+        # No longer necessary because of the previous check on sequence numbers
+        ##&& $last_token ne $token
 
         # double diamond is usually spaced
         && $token ne '<<>>'
 
       )
     {
-
-        # remember where to put the space for the closing paren
-        $j_tight_closing_paren = $j_next;
-        return (WS_NO);
+        return WS_NO;
     }
-    return (WS_YES);
+
+    return WS_YES;
+
 } ## end sub ws_in_container
 
 } ## end closure set_whitespace_flags
@@ -6906,14 +6922,6 @@ sub initialize_respace_tokens_closure {
     $rtype_count_by_seqno      = $self->[_rtype_count_by_seqno_];
     $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
 
-    # Note that $K_opening_container and $K_closing_container have values
-    # defined in sub get_line() for the previous K indexes.  They were needed
-    # in case option 'indent-only' was set, and we didn't get here. We no longer
-    # need those and will eliminate them now to avoid any possible mixing of
-    # old and new values.
-    $K_opening_container = $self->[_K_opening_container_] = {};
-    $K_closing_container = $self->[_K_closing_container_] = {};
-
     %K_first_here_doc_by_seqno = ();
 
     $last_nonblank_code_type       = ';';
@@ -6938,6 +6946,15 @@ sub initialize_respace_tokens_closure {
 
     # Set the whitespace flags, which indicate the token spacing preference.
     $rwhitespace_flags = $self->set_whitespace_flags();
+
+    # Note that $K_opening_container and $K_closing_container have values
+    # defined in sub get_line() for the previous K indexes.  They were needed
+    # in case option 'indent-only' was set, and we didn't get here. We no
+    # longer need those and will eliminate them now to avoid any possible
+    # mixing of old and new values.  This must be done AFTER the call to
+    # set_whitespace_flags, which needs these.
+    $K_opening_container = $self->[_K_opening_container_] = {};
+    $K_closing_container = $self->[_K_closing_container_] = {};
 
     return;
 
