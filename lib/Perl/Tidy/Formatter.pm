@@ -3215,7 +3215,7 @@ sub set_whitespace_flags {
             }
         } ## end if ( $is_opening_type{$type} ) {
 
-        # always preserver whatever space was used after a possible
+        # always preserve whatever space was used after a possible
         # filehandle (except _) or here doc operator
         if (
             $type ne '#'
@@ -7141,6 +7141,7 @@ sub respace_tokens {
         # if last line was normal CODE.
         # Patch for rt #125012: use K_previous_code rather than '_nonblank'
         # because comments may disappear.
+        # Note that we must do this even if --noadd-whitespace is set
         if ( $last_line_type eq 'CODE' ) {
             my $type_next  = $rLL->[$Kfirst]->[_TYPE_];
             my $token_next = $rLL->[$Kfirst]->[_TOKEN_];
@@ -7155,22 +7156,7 @@ sub respace_tokens {
                 )
               )
             {
-
-                # Copy this first token as blank, but use previous line number
-                my $rcopy = copy_token_as_type( $rLL->[$Kfirst], 'b', SPACE );
-                $rcopy->[_LINE_INDEX_] =
-                  $rLL_new->[-1]->[_LINE_INDEX_];
-
-                # The level and ci_level of newly created spaces should be the
-                # same as the previous token. Otherwise blinking states can
-                # be created if the -lp mode is used. See similar coding in
-                # sub 'store_space_and_token'.  Fixes cases b1109 b1110.
-                $rcopy->[_LEVEL_] =
-                  $rLL_new->[-1]->[_LEVEL_];
-                $rcopy->[_CI_LEVEL_] =
-                  $rLL_new->[-1]->[_CI_LEVEL_];
-
-                $self->store_token($rcopy);
+                $self->store_space();
             }
         }
 
@@ -7517,12 +7503,14 @@ EOM
             if ( $self->[_save_logfile_] && $token =~ /\t/ ) {
                 $self->note_embedded_tab($input_line_number);
             }
-            if ( $rwhitespace_flags->[$KK] == WS_YES ) {
-                $self->store_space_and_token($rtoken_vars);
+            if (   $rwhitespace_flags->[$KK] == WS_YES
+                && @{$rLL_new}
+                && $rLL_new->[-1]->[_TYPE_] ne 'b'
+                && $rOpts_add_whitespace )
+            {
+                $self->store_space();
             }
-            else {
-                $self->store_token($rtoken_vars);
-            }
+            $self->store_token($rtoken_vars);
             next;
         } ## end if ( $type eq 'q' )
 
@@ -7562,12 +7550,14 @@ EOM
         }
 
         # Store this token with possible previous blank
-        if ( $rwhitespace_flags->[$KK] == WS_YES ) {
-            $self->store_space_and_token($rtoken_vars);
+        if (   $rwhitespace_flags->[$KK] == WS_YES
+            && @{$rLL_new}
+            && $rLL_new->[-1]->[_TYPE_] ne 'b'
+            && $rOpts_add_whitespace )
+        {
+            $self->store_space();
         }
-        else {
-            $self->store_token($rtoken_vars);
-        }
+        $self->store_token($rtoken_vars);
 
     }    # End token loop
     return;
@@ -8029,40 +8019,36 @@ sub store_token {
     return;
 } ## end sub store_token
 
-sub store_space_and_token {
-    my ( $self, $item ) = @_;
+sub store_space {
+    my ($self) = @_;
 
-    # store a token with preceding space if requested and needed
-
-    # First store the space
-    if (   @{$rLL_new}
-        && $rLL_new->[-1]->[_TYPE_] ne 'b'
-        && $rOpts_add_whitespace )
+    # Store a blank space in the new array
+    #  - but never start the array with a space
+    #  - and never store two consecutivespaces
+    if ( @{$rLL_new}
+        && $rLL_new->[-1]->[_TYPE_] ne 'b' )
     {
-        my $rcopy = [ @{$item} ];
-        $rcopy->[_TYPE_]          = 'b';
-        $rcopy->[_TOKEN_]         = SPACE;
-        $rcopy->[_TYPE_SEQUENCE_] = EMPTY_STRING;
+        my $ritem = [];
+        $ritem->[_TYPE_]          = 'b';
+        $ritem->[_TOKEN_]         = SPACE;
+        $ritem->[_TYPE_SEQUENCE_] = EMPTY_STRING;
 
-        $rcopy->[_LINE_INDEX_] =
+        $ritem->[_LINE_INDEX_] =
           $rLL_new->[-1]->[_LINE_INDEX_];
 
-        # Patch 23-Jan-2021 to fix -lp blinkers:
         # The level and ci_level of newly created spaces should be the same
         # as the previous token.  Otherwise the coding for the -lp option
-        # can create a blinking state in some rare cases.
-        $rcopy->[_LEVEL_] =
+        # can create a blinking state in some rare cases (see b1109, b1110).
+        $ritem->[_LEVEL_] =
           $rLL_new->[-1]->[_LEVEL_];
-        $rcopy->[_CI_LEVEL_] =
+        $ritem->[_CI_LEVEL_] =
           $rLL_new->[-1]->[_CI_LEVEL_];
 
-        $self->store_token($rcopy);
+        $self->store_token($ritem);
     }
 
-    # then the token
-    $self->store_token($item);
     return;
-} ## end sub store_space_and_token
+} ## end sub store_space
 
 sub add_phantom_semicolon {
 
