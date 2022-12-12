@@ -389,7 +389,6 @@ my (
     @K_to_go,
     @types_to_go,
     @inext_to_go,
-    @iprev_to_go,
     @parent_seqno_to_go,
 
     # forced breakpoint variables associated with each batch of code
@@ -13956,7 +13955,6 @@ EOM
         ## @leading_spaces_to_go    = ();
         ## @reduced_spaces_to_go    = ();
         ## @inext_to_go             = ();
-        ## @iprev_to_go             = ();
         ## @parent_seqno_to_go      = ();
         ## };
 
@@ -16319,15 +16317,13 @@ EOM
 
         my @i_for_semicolon;
         foreach my $i ( 0 .. $max_index_to_go ) {
-            $iprev_to_go[$i] = $ilast_nonblank;    # correct value
-            $inext_to_go[$i] = $i + 1;             # just a first guess
 
-            next if ( $types_to_go[$i] eq 'b' );
-
-            if ( $ilast_nonblank >= 0 ) {
-                $inext_to_go[$ilast_nonblank] = $i;    # correction
+            if ( $types_to_go[$i] eq 'b' ) {
+                $inext_to_go[$i] = $inext_to_go[ $i - 1 ] = $i + 1;
+                next;
             }
-            $ilast_nonblank = $i;
+
+            $inext_to_go[$i] = $i + 1;
 
             # This is an optional shortcut to save a bit of time by skipping
             # most tokens.  Note: the filter may need to be updated if the
@@ -16790,6 +16786,12 @@ EOM
 
         return;
     } ## end sub grind_batch_of_CODE
+
+    sub iprev_to_go {
+        my ($i) = @_;
+        return $i - 1 > 0
+          && $types_to_go[ $i - 1 ] eq 'b' ? $i - 2 : $i - 1;
+    }
 
     sub unmask_phantom_token {
         my ( $self, $iend ) = @_;
@@ -18036,8 +18038,8 @@ EOM
 
                 my $itokp  = min( $inext_to_go[$itok],  $iend_2 );
                 my $itokpp = min( $inext_to_go[$itokp], $iend_2 );
-                my $itokm  = max( $iprev_to_go[$itok],  $ibeg_1 );
-                my $itokmm = max( $iprev_to_go[$itokm], $ibeg_1 );
+                my $itokm  = max( iprev_to_go($itok),  $ibeg_1 );
+                my $itokmm = max( iprev_to_go($itokm), $ibeg_1 );
 
                 # check for a number on the right
                 if ( $types_to_go[$itokp] eq 'n' ) {
@@ -20042,7 +20044,7 @@ sub break_lines_inner_loop {
             {
                 # Make this break for math operators for now
                 my $ir = $inext_to_go[$i_lowest];
-                my $il = $iprev_to_go[$ir];
+                my $il = iprev_to_go($ir);
                 if (   $types_to_go[$il] =~ /^[\/\*\+\-\%]$/
                     || $types_to_go[$ir] =~ /^[\/\*\+\-\%]$/ )
                 {
@@ -20069,7 +20071,7 @@ sub break_lines_inner_loop {
                 && $i_test < $imax
                 && ( $lowest_strength - $last_break_strength <= MAX_BIAS ) )
             {
-                my $i_last_end = $iprev_to_go[$i_begin];
+                my $i_last_end = iprev_to_go($i_begin);
                 my $tok_beg    = $tokens_to_go[$i_begin];
                 my $type_beg   = $types_to_go[$i_begin];
                 if (
@@ -20210,7 +20212,7 @@ sub do_colon_breaks {
         my $i_question = $mate_index_to_go[$_];
         if ( $i_question >= 0 ) {
             if ( $want_break_before{'?'} ) {
-                $i_question = $iprev_to_go[$i_question];
+                $i_question = iprev_to_go($i_question);
             }
 
             if ( $i_question >= 0 ) {
@@ -26645,7 +26647,7 @@ sub xlp_tweak {
         if ( $ibeg == 0 && $iend == $max_index_to_go ) {
             my $iterm = $max_index_to_go;
             if ( $types_to_go[$iterm] eq '#' ) {
-                $iterm = $iprev_to_go[$iterm];
+                $iterm = iprev_to_go($iterm);
             }
 
             # Alignment lines ending like '=> sub {';  fixes issue c093
