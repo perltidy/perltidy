@@ -5964,8 +5964,7 @@ sub find_level_info {
     # Find level ranges and total variations of all code blocks in this file.
 
     # Returns:
-    #   ref to hash with seqno as key with this info:
-    #  [ starting level, maximum level, total level variation]
+    #   ref to hash with block info, with seqno as key (see below)
 
     my ($self) = @_;
 
@@ -5988,19 +5987,33 @@ sub find_level_info {
         if ( $sseq > 0 ) {
 
             # STACK_LOOP:
+            my $item;
             foreach my $seq (@stack) {
-                my ( $starting_depth, $maximum_depth, $total_depth_gain ) =
-                  @{ $level_info{$seq} };
-                if ( $maximum_depth < $stack_depth ) {
-                    $maximum_depth = $stack_depth;
+                $item = $level_info{$seq};
+                if ( $item->{maximum_depth} < $stack_depth ) {
+                    $item->{maximum_depth} = $stack_depth;
                 }
-                $total_depth_gain++;
-                $level_info{$seq} =
-                  [ $starting_depth, $maximum_depth, $total_depth_gain ];
+                $item->{block_count}++;
             } ## end STACK LOOP
 
             push @stack, $seq_next;
-            $level_info{$seq_next} = [ $stack_depth, $stack_depth, 1 ];
+            my $block_type = $rblock_type_of_seqno->{$seq_next};
+
+            # If this block is a loop nested within a loop, then we
+            # will mark it as an 'inner_loop'. This is a useful
+            # complexity measure.
+            my $is_inner_loop = 0;
+            if ( $is_loop_type{$block_type} && defined($item) ) {
+                $is_inner_loop = $is_loop_type{ $item->{block_type} };
+            }
+
+            $level_info{$seq_next} = {
+                starting_depth => $stack_depth,
+                maximum_depth  => $stack_depth,
+                block_count    => 1,
+                block_type     => $block_type,
+                is_inner_loop  => $is_inner_loop,
+            };
         }
         else {
             my $seq_test = pop @stack;
@@ -6094,13 +6107,13 @@ sub find_packages {
             my $name = substr( $token, 8 );
             push @package_list,
               {
-                line_start   => $item->[_LINE_INDEX_] + 1,
-                line_count   => 1,
-                name         => $name,
-                type         => 'package',
-                level        => $item->[_LEVEL_],
-                max_change   => 0,
-                total_change => 0,
+                line_start  => $item->[_LINE_INDEX_] + 1,
+                line_count  => 1,
+                name        => $name,
+                type        => 'package',
+                level       => $item->[_LEVEL_],
+                max_change  => 0,
+                block_count => 0,
               };
         }
     }
@@ -6180,6 +6193,19 @@ EOM
             next;
         }
 
+        my ( $max_change, $block_count, $inner_loop_plus ) =
+          ( 0, 0, EMPTY_STRING );
+        my $item = $rlevel_info->{$seqno};
+        if ( defined($item) ) {
+            my $starting_depth = $item->{starting_depth};
+            my $maximum_depth  = $item->{maximum_depth};
+            $block_count = $item->{block_count};
+            $max_change  = $maximum_depth - $starting_depth + 1;
+
+            # this is a '+' character if this block is an inner loops
+            $inner_loop_plus = $item->{is_inner_loop} ? '+' : EMPTY_STRING;
+        }
+
         # Skip closures unless type 'closure' is explicitely requested
         if ( ( $block_type eq '}' || $block_type eq ';' )
             && $dump_block_types{'closure'} )
@@ -6231,32 +6257,35 @@ EOM
                 }
             }
         }
+        elsif (
+            $is_loop_type{$block_type}
+            && (   $dump_all_types
+                || $dump_block_types{$block_type}
+                || $dump_block_types{ $block_type . $inner_loop_plus }
+                || $dump_block_types{$inner_loop_plus} )
+          )
+        {
+            $type = $block_type . $inner_loop_plus;
+        }
         elsif ( $dump_all_types || $dump_block_types{$block_type} ) {
-            $type = $block_type;
             if ( $is_loop_type{$block_type} ) {
                 $name = $self->find_loop_label($seqno);
             }
+            $type = $block_type;
         }
         else {
             next;
         }
 
-        my ( $max_change, $total_change ) = ( 0, 0 );
-        my $item = $rlevel_info->{$seqno};
-        if ( defined($item) ) {
-            my ( $starting_depth, $maximum_depth, $tv ) = @{$item};
-            $total_change = $tv;
-            $max_change   = $maximum_depth - $starting_depth + 1;
-        }
         push @selected_blocks,
           {
-            line_start   => $lx_open + 1,
-            line_count   => $line_count,
-            name         => $name,
-            type         => $type,
-            level        => $level,
-            max_change   => $max_change,
-            total_change => $total_change,
+            line_start  => $lx_open + 1,
+            line_count  => $line_count,
+            name        => $name,
+            type        => $type,
+            level       => $level,
+            max_change  => $max_change,
+            block_count => $block_count,
           };
     }    ## END loop to get info for selected blocks
     return \@selected_blocks;
@@ -6282,18 +6311,18 @@ sub dump_block_summary {
     # Merge and print to STDOUT
     my $routput_lines = [];
     foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
-        my $line_start   = $item->{line_start};
-        my $line_count   = $item->{line_count};
-        my $type         = $item->{type};
-        my $name         = $item->{name};
-        my $level        = $item->{level};
-        my $max_change   = $item->{max_change};
-        my $total_change = $item->{total_change};
+        my $line_start  = $item->{line_start};
+        my $line_count  = $item->{line_count};
+        my $type        = $item->{type};
+        my $name        = $item->{name};
+        my $level       = $item->{level};
+        my $max_change  = $item->{max_change};
+        my $block_count = $item->{block_count};
 
         my $rline_vars = [
             $input_stream_name, $line_start, $line_count,
             $type,              $name,       $level,
-            $max_change,        $total_change
+            $max_change,        $block_count
         ];
         push @{$routput_lines}, $rline_vars;
     }
@@ -6301,7 +6330,7 @@ sub dump_block_summary {
     my @merged_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
     print STDOUT
-      "file,line,line_count,type,name,level,max_change,total_change\n";
+      "file,line,line_count,type,name,level,max_change,block_count\n";
 
     foreach my $rline_vars (@merged_lines) {
         my $line = join( ",", @{$rline_vars} ) . "\n";
@@ -8023,7 +8052,7 @@ sub store_space {
 
     # Store a blank space in the new array
     #  - but never start the array with a space
-    #  - and never store two consecutivespaces
+    #  - and never store two consecutive spaces
     if ( @{$rLL_new}
         && $rLL_new->[-1]->[_TYPE_] ne 'b' )
     {

@@ -5017,14 +5017,16 @@ parameters:
     max_change   - the change in depth to the most deeply nested code block
     block_count  - the total number of code blocks nested in this block
 
-These quantities can be useful for identifying complex code. Although the
-table does not indicate which blocks are nested in other blocks, this can be
-determined by computing and comparing the block ending line numbers. The table
-also includes a line for each C<package> statement in the file. By default
-the table lists subroutines with more than 20 lines, but this can be changed
-with the following two parameters:
+These quantities can be useful for identifying complex code. For blocks which
+are loops nested within loops, a postfix '+' to the C<type> is added to
+indicate possible code complexity.  Although the table does not otherwise
+indicate which blocks are nested in other blocks, this can be determined by
+computing and comparing the block ending line numbers. The table also includes
+a line for each C<package> statement in the file. By default the table lists
+subroutines with more than 20 lines, but this can be changed with the following
+two parameters:
 
-B<--dump-block-minimum-lines=n>, or B<-dbml=n>, where B<n> is the minimum
+B<--dump-block-minimum-lines=n>, or B<-dbl=n>, where B<n> is the minimum
 number of lines to be included. The default is B<-n=20>.
 
 B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
@@ -5032,12 +5034,22 @@ types to be included.  The type of a block is either the name of the perl
 builtin keyword for that block (such as B<sub if elsif else for foreach ..>) or
 the word immediately before the opening brace.  The type B<sub> selects both
 named subs and anonymous subs.  The special type B<asub> selects just anonymous
-subs, and the special type B<closure> selects nameless blocks.  Finally, the
-type B<*> selects all types except closures.   For example:
+subs, and the special type B<closure> selects nameless blocks.  The
+type B<*> selects all types except closures.  Block loops which are nested
+in other loops can be selected by adding a B<+> after the block name. A single
+token B<+> selects all nested block loops.  Some examples:
+
+This selects block types C<sub for foreach while>:
 
     perltidy -dbs -dbt='sub for foreach while' somefile.pl >blocks.csv
 
-The default is B<-dbt='sub'>.
+This selects blocks with two or more lines which are type C<sub> or which
+are inner loops:
+
+    perltidy -dbs -dbl=2 -dbt='sub +' somefile.pl >blocks.csv
+
+The default is B<-dbt='sub'>.  In addition to the selected blocks, any
+C<package> statements are also always included.
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 
