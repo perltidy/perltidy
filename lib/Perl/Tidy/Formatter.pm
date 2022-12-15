@@ -262,6 +262,7 @@ my (
     %is_die_confess_croak_warn,
     %is_my_our_local,
     %is_soft_keep_break_type,
+    %is_indirect_object_taker,
 
     @all_operators,
 
@@ -751,6 +752,10 @@ BEGIN {
     # are added it might be necessary to use a token/type mixture.
     @q = qw# -> ? : && || + - / * #;
     @is_soft_keep_break_type{@q} = (1) x scalar(@q);
+
+    # these functions allow an identifier in the indirect object slot
+    @q = qw( print printf sort exec system say);
+    @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
 }
 
@@ -3171,7 +3176,11 @@ sub set_whitespace_flags {
                     )
                   )
                 {
-                    $ws = $rOpts_space_function_paren ? WS_YES : WS_NO;
+                    $ws =
+                        $rOpts_space_function_paren
+                      ? $self->ws_space_function_paren( $j, $rtokh_last_last )
+                      : WS_NO;
+
                     set_container_ws_by_keyword( $last_token, $seqno );
                     $ris_function_call_paren->{$seqno} = 1;
                 }
@@ -3404,6 +3413,46 @@ sub ws_in_container {
     return WS_YES;
 
 } ## end sub ws_in_container
+
+sub ws_space_function_paren {
+
+    my ( $self, $j, $rtokh_last_last ) = @_;
+
+    # Called if --space-function-paren is set to see if it might cause
+    # a problem.  The manual warns the user about potential problems with
+    # this flag. Here we just try to catch one common problem.
+
+    # Given:
+    #  $j = index of '(' after function name
+    # Return:
+    #  WS_NO  if no space
+    #  WS_YES otherwise
+
+    # This was added to fix for issue c166. Ignore -sfp at a possible indirect
+    # object location. For example, do not convert this:
+    #   print header() ...
+    # to this:
+    #   print header () ...
+    # because in this latter form, header may be taken to be a file handle
+    # instead of a function call.
+
+    # Start with the normal value for -sfp:
+    my $ws = WS_YES;
+
+    # now check to be sure we don't cause a problem:
+    my $type_ll = $rtokh_last_last->[_TYPE_];
+    my $tok_ll  = $rtokh_last_last->[_TOKEN_];
+
+    # NOTE: this is just a minimal check. For example, we might also check
+    # for something like this:
+    #   print ( header ( ..
+    if ( $type_ll eq 'k' && $is_indirect_object_taker{$tok_ll} ) {
+        $ws = WS_NO;
+    }
+
+    return $ws;
+
+} ## end sub ws_space_function_paren
 
 } ## end closure set_whitespace_flags
 

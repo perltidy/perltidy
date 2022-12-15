@@ -1532,7 +1532,7 @@ B<-sfp>  or B<--space-function-paren>
 
 You will probably also want to use the flag B<-skp> (previous item) too.
 
-The reason this is not recommended is that spacing a function paren can make a
+The parameter is not recommended because spacing a function paren can make a
 program vulnerable to parsing problems by Perl.  For example, the following
 two-line program will run as written but will have a syntax error if
 reformatted with -sfp:
