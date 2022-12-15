@@ -11220,6 +11220,26 @@ $last = after (
 --opening-paren-right
 --variable-maximum-line-length
 
+==> b1441.in <==
+    my $my_handler =
+       new XML::Handler::YAWriter (
+                                  'Output' => $fileHandler,
+
+       );
+
+    my $my_handler =
+       new XML::Handler::YAWriter ( 'Output' => $fileHandler,
+
+       );
+
+
+==> b1441.par <==
+--continuation-indentation=3
+--extended-line-up-parentheses
+--maximum-line-length=61
+--paren-vertical-tightness=1
+--space-function-paren
+
 ==> b146.in <==
 # State 1
 

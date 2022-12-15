@@ -12804,9 +12804,16 @@ sub xlp_collapsed_lengths {
                         }
                     }
 
+                    #--------------------------------------------------
+                    # This block is deactivated to fix b1441. It is not
+                    # needed now because the comma length is added later,
+                    # and including it twice can cause instability.
+                    # This block can eventually be removed.
+                    #--------------------------------------------------
                     # Include length to a comma ending this line
                     # note: any side comments are handled at loop end (b1332)
-                    if (   $interrupted_list_rule
+                    if (   0
+                        && $interrupted_list_rule
                         && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
                     {
                         my $Kend = $K_terminal;
