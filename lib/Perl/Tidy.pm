@@ -3373,7 +3373,7 @@ sub generate_options {
     $add_option->( 'DIAGNOSTICS',              'I',    '!' ) if (DEVEL_MODE);
     $add_option->( 'DEBUG',                    'D',    '!' );
     $add_option->( 'dump-block-summary',       'dbs',  '!' );
-    $add_option->( 'dump-block-minimum-lines', 'dbml', '=i' );
+    $add_option->( 'dump-block-minimum-lines', 'dbl',  '=i' );
     $add_option->( 'dump-block-types',         'dbt',  '=s' );
     $add_option->( 'dump-cuddled-block-list',  'dcbl', '!' );
     $add_option->( 'dump-defaults',            'ddf',  '!' );

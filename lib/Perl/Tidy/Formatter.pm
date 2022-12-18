@@ -3874,7 +3874,7 @@ EOM
             }    ##      End Loop over all operators
         }    ## End loop over all tokens
         return;
-    }    # End sub
+    } ## end sub new_secret_operator_whitespace
 } ## end closure new_secret_operator_whitespace
 
 {    ## begin closure set_bond_strengths
@@ -6137,6 +6137,54 @@ sub find_loop_label {
     return $label;
 } ## end sub find_loop_label
 
+sub find_code_line_count {
+    my ($self) = @_;
+
+    # Find the cumulative number of lines of code, excluding blanks,
+    # comments and pod.
+    # Return '$rcode_line_count' = ref to array with cumulative
+    #   code line count for each input line number.
+
+    my $rcode_line_count;
+    my $rLL             = $self->[_rLL_];
+    my $rlines          = $self->[_rlines_];
+    my $ix_line         = -1;
+    my $code_line_count = 0;
+
+    # loop over all lines
+    foreach my $line_of_tokens ( @{$rlines} ) {
+        $ix_line++;
+
+        # what type of line?
+        my $line_type = $line_of_tokens->{_line_type};
+
+        # if 'CODE' it must be non-blank and non-comment
+        if ( $line_type eq 'CODE' ) {
+            my $rK_range = $line_of_tokens->{_rK_range};
+            my ( $Kfirst, $Klast ) = @{$rK_range};
+
+            if ( defined($Kfirst) ) {
+
+                # it is non-blank
+                my $jmax = defined($Kfirst) ? $Klast - $Kfirst : -1;
+                if ( $jmax > 0 || $rLL->[$Klast]->[_TYPE_] ne '#' ) {
+
+                    # ok, it is a non-comment
+                    $code_line_count++;
+                }
+            }
+        }
+
+        # Count all other special line types except pod;
+        # For a list of line types see sub 'process_all_lines'
+        elsif ( $line_type !~ /^POD/ ) { $code_line_count++ }
+
+        # Store the cumulative count using the input line index
+        $rcode_line_count->[$ix_line] = $code_line_count;
+    }
+    return $rcode_line_count;
+} ## end sub find_code_line_count
+
 sub find_packages {
     my ($self) = @_;
 
@@ -6158,6 +6206,7 @@ sub find_packages {
               {
                 line_start  => $item->[_LINE_INDEX_] + 1,
                 line_count  => 1,
+                code_lines  => 1,
                 name        => $name,
                 type        => 'package',
                 level       => $item->[_LEVEL_],
@@ -6207,11 +6256,14 @@ sub find_selected_blocks {
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
 
+    # Get number of code lines
+    my $rcode_line_count = $self->find_code_line_count();
+
     my @selected_blocks;
 
-    #-------------------------------------------
-    # BEGIN loop to get info for selected blocks
-    #-------------------------------------------
+    #---------------------------------------------------
+    # BEGIN loop over all blocks to find selected blocks
+    #---------------------------------------------------
     foreach my $seqno ( keys %{$rblock_type_of_seqno} ) {
 
         my $type;
@@ -6221,10 +6273,20 @@ sub find_selected_blocks {
         my $K_closing  = $K_closing_container->{$seqno};
         my $level      = $rLL->[$K_opening]->[_LEVEL_];
 
+        # Find total number of lines between the braces
         my $lx_open    = $rLL->[$K_opening]->[_LINE_INDEX_];
         my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
-        my $line_count = $lx_close - $lx_open;
-        if ( $line_count < $rOpts_dump_block_minimum_lines ) {
+        my $line_count = $lx_close - $lx_open + 1;
+
+        # Find total number of lines of code excluding blanks, comments, pod
+        my $code_lines_open  = $rcode_line_count->[$lx_open];
+        my $code_lines_close = $rcode_line_count->[$lx_close];
+        my $code_lines       = 0;
+        if ( defined($code_lines_open) && defined($code_lines_close) ) {
+            $code_lines = $code_lines_close - $code_lines_open + 1;
+        }
+
+        if ( $code_lines < $rOpts_dump_block_minimum_lines ) {
             next;
         }
 
@@ -6330,6 +6392,7 @@ EOM
           {
             line_start  => $lx_open + 1,
             line_count  => $line_count,
+            code_lines  => $code_lines,
             name        => $name,
             type        => $type,
             level       => $level,
@@ -6362,6 +6425,7 @@ sub dump_block_summary {
     foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
         my $line_start  = $item->{line_start};
         my $line_count  = $item->{line_count};
+        my $code_lines  = $item->{code_lines};
         my $type        = $item->{type};
         my $name        = $item->{name};
         my $level       = $item->{level};
@@ -6370,8 +6434,8 @@ sub dump_block_summary {
 
         my $rline_vars = [
             $input_stream_name, $line_start, $line_count,
-            $type,              $name,       $level,
-            $max_change,        $block_count
+            $code_lines,        $type,       $name,
+            $level,             $max_change, $block_count,
         ];
         push @{$routput_lines}, $rline_vars;
     }
@@ -6379,7 +6443,7 @@ sub dump_block_summary {
     my @merged_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
     print STDOUT
-      "file,line,line_count,type,name,level,max_change,block_count\n";
+"file,line,line_count,code_lines,type,name,level,max_change,block_count\n";
 
     foreach my $rline_vars (@merged_lines) {
         my $line = join( ",", @{$rline_vars} ) . "\n";

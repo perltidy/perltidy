@@ -5011,6 +5011,7 @@ parameters:
     filename     - the name of the file
     line         - the line number of the opening brace of this block
     line_count   - the number of lines between opening and closing braces
+    code_lines   - the number of lines excluding blanks, comments, and pod
     type         - the block type (sub, for, foreach, ...)
     name         - the block name if applicable (sub name, label, asub name)
     depth        - the nesting depth of the opening block brace
@@ -5023,11 +5024,11 @@ indicate possible code complexity.  Although the table does not otherwise
 indicate which blocks are nested in other blocks, this can be determined by
 computing and comparing the block ending line numbers. The table also includes
 a line for each C<package> statement in the file. By default the table lists
-subroutines with more than 20 lines, but this can be changed with the following
-two parameters:
+subroutines with more than 20 C<code_lines>, but this can be changed with the
+following two parameters:
 
 B<--dump-block-minimum-lines=n>, or B<-dbl=n>, where B<n> is the minimum
-number of lines to be included. The default is B<-n=20>.
+number of C<code_lines> to be included. The default is B<-n=20>.
 
 B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
 types to be included.  The type of a block is either the name of the perl
