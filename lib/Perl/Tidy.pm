@@ -3262,6 +3262,7 @@ sub generate_options {
     $add_option->( 'cuddled-block-list',                      'cbl',   '=s' );
     $add_option->( 'cuddled-block-list-exclusive',            'cblx',  '!' );
     $add_option->( 'cuddled-break-option',                    'cbo',   '=i' );
+    $add_option->( 'cuddled-paren-brace',                     'cpb',   '!' );
     $add_option->( 'delete-old-newlines',                     'dnl',   '!' );
     $add_option->( 'opening-brace-always-on-right',           'bar',   '!' );
     $add_option->( 'opening-brace-on-new-line',               'bl',    '!' );

@@ -189,6 +189,7 @@ my (
     $rOpts_closing_side_comment_maximum_text,
     $rOpts_comma_arrow_breakpoints,
     $rOpts_continuation_indentation,
+    $rOpts_cuddled_paren_brace,
     $rOpts_delete_closing_side_comments,
     $rOpts_delete_old_whitespace,
     $rOpts_delete_side_comments,
@@ -1872,6 +1873,8 @@ EOM
       $rOpts->{'closing-side-comment-maximum-text'};
     $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
+    $rOpts_cuddled_paren_brace =
+      $rOpts->{'cuddled-paren-brace'};
     $rOpts_delete_closing_side_comments =
       $rOpts->{'delete-closing-side-comments'};
     $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
@@ -17941,16 +17944,33 @@ EOM
 
                     DEBUG_RECOMBINE > 1 && do {
                         print STDERR
-"RECOMBINE: n=$n imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
+"RECOMBINE: n=$n nmax=$nmax imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
                     };
 
                     # If line $n is the last line, we set some flags and
                     # do any special checks for it
                     if ( $n == $nmax ) {
 
-                        # a terminal '{' should stay where it is
-                        # unless preceded by a fat comma
-                        next if ( $type_ibeg_2 eq '{' && $type_iend_1 ne '=>' );
+                        if ( $type_ibeg_2 eq '{' ) {
+
+                            # join isolated ')' and '{' if requested (git #110)
+                            if (   $rOpts_cuddled_paren_brace
+                                && $type_iend_1 eq '}'
+                                && $iend_1 == $ibeg_1
+                                && $ibeg_2 == $iend_2 )
+                            {
+                                if (   $tokens_to_go[$iend_1] eq ')'
+                                    && $tokens_to_go[$ibeg_2] eq '{' )
+                                {
+                                    $n_best = $n;
+                                    last;
+                                }
+                            }
+
+                            # otherwise, a terminal '{' should stay where it is
+                            # unless preceded by a fat comma
+                            next if ( $type_iend_1 ne '=>' );
+                        }
 
                         if (   $type_iend_2 eq '#'
                             && $iend_2 - $ibeg_2 >= 2
