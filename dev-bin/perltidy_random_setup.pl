@@ -1129,6 +1129,7 @@ EOM
             'paren-tightness'               => [ 0, 2 ],
             'square-bracket-tightness'      => [ 0, 2 ],
 
+            'brace-follower-vertical-tightness'         => [ 0, 2 ],
             'block-brace-vertical-tightness'            => [ 0, 2 ],
             'brace-vertical-tightness'                  => [ 0, 2 ],
             'brace-vertical-tightness-closing'          => [ 0, 2 ],
@@ -1285,6 +1286,7 @@ EOM
           tee-pod
           tee-side-comments
           version
+          warning-output
           delete-pod
           tabs
           entab-leading-whitespace

@@ -176,6 +176,7 @@ my (
     $rOpts_blank_lines_after_opening_block,
     $rOpts_block_brace_tightness,
     $rOpts_block_brace_vertical_tightness,
+    $rOpts_brace_follower_vertical_tightness,
     $rOpts_break_after_labels,
     $rOpts_break_at_old_attribute_breakpoints,
     $rOpts_break_at_old_comma_breakpoints,
@@ -1852,6 +1853,8 @@ EOM
     $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
     $rOpts_block_brace_vertical_tightness =
       $rOpts->{'block-brace-vertical-tightness'};
+    $rOpts_brace_follower_vertical_tightness =
+      $rOpts->{'brace-follower-vertical-tightness'};
     $rOpts_break_after_labels = $rOpts->{'break-after-labels'};
     $rOpts_break_at_old_attribute_breakpoints =
       $rOpts->{'break-at-old-attribute-breakpoints'};
@@ -1873,8 +1876,7 @@ EOM
       $rOpts->{'closing-side-comment-maximum-text'};
     $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
     $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
-    $rOpts_cuddled_paren_brace =
-      $rOpts->{'cuddled-paren-brace'};
+    $rOpts_cuddled_paren_brace      = $rOpts->{'cuddled-paren-brace'};
     $rOpts_delete_closing_side_comments =
       $rOpts->{'delete-closing-side-comments'};
     $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
@@ -18461,10 +18463,24 @@ EOM
             # the indentation of a leading line like 'or do {'.
             # This doesn't work well with -icb through
             if (
-                   $block_type_to_go[$iend_1] eq 'eval'
-                && !ref( $leading_spaces_to_go[$iend_1] )
-                && !$rOpts_indent_closing_brace
-                && $tokens_to_go[$iend_2] eq '{'
+                   $block_type_to_go[$iend_1]
+                && $rOpts_brace_follower_vertical_tightness > 0
+                && (
+
+                    # -bfvt=1, allow cuddled eval chains [default]
+                    (
+                           $tokens_to_go[$iend_2] eq '{'
+                        && $block_type_to_go[$iend_1] eq 'eval'
+                        && !ref( $leading_spaces_to_go[$iend_1] )
+                        && !$rOpts_indent_closing_brace
+                    )
+
+                    # -bfvt=2, allow most brace followers [part of git #110]
+                    || (   $rOpts_brace_follower_vertical_tightness > 1
+                        && $ibeg_1 == $iend_1 )
+
+                )
+
                 && (
                     ( $type_ibeg_2 =~ /^(\&\&|\|\|)$/ )
                     || (   $type_ibeg_2 eq 'k'

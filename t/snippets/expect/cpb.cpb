@@ -1,0 +1,8 @@
+foreach my $dir (
+    '05_lexer', '07_token', '08_regression', '11_util',
+    '13_data',  '15_transform'
+) {
+    my @perl = find_files( catdir( 't', 'data', $dir ) );
+    push @files, @perl;
+}
+

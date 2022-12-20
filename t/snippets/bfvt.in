@@ -1,0 +1,34 @@
+# combines with -bfvt>0
+eval {
+    require XSLoader;
+    XSLoader::load( 'Sys::Syslog', $VERSION );
+    1;
+}
+  or do {
+    require DynaLoader;
+    push @ISA, 'DynaLoader';
+    bootstrap Sys::Syslog $VERSION;
+  };
+
+# combines with -bfvt=2
+eval {
+    ( $line, $cond ) = $self->_normalize_if_elif($line);
+    1;
+}
+  or die sprintf "Error at line %d\nLine %d: %s\n%s",
+  ( $line_info->start_line_num() ) x 2, $line, $@;
+
+# stable for bfvt<2; combines for bfvt=2; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+}
+  || "";
+
+# stays combined for all bfvt; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+} || "";

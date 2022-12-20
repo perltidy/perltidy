@@ -516,3 +516,8 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets27.t	bfvt.bfvt0
+../snippets27.t	bfvt.bfvt2
+../snippets27.t	bfvt.def
+../snippets27.t	cpb.cpb
+../snippets27.t	cpb.def

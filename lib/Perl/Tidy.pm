@@ -3256,6 +3256,7 @@ sub generate_options {
     $add_option->( 'add-newlines',                            'anl',   '!' );
     $add_option->( 'block-brace-vertical-tightness',          'bbvt',  '=i' );
     $add_option->( 'block-brace-vertical-tightness-list',     'bbvtl', '=s' );
+    $add_option->( 'brace-follower-vertical-tightness',       'bfvt',  '=i' );
     $add_option->( 'brace-vertical-tightness',                'bvt',   '=i' );
     $add_option->( 'brace-vertical-tightness-closing',        'bvtc',  '=i' );
     $add_option->( 'cuddled-else',                            'ce',    '!' );
@@ -3446,6 +3447,7 @@ sub generate_options {
         'square-bracket-tightness'      => [ 0,      2 ],
 
         'block-brace-vertical-tightness'            => [ 0, 2 ],
+        'brace-follower-vertical-tightness'         => [ 0, 2 ],
         'brace-vertical-tightness'                  => [ 0, 2 ],
         'brace-vertical-tightness-closing'          => [ 0, 2 ],
         'paren-vertical-tightness'                  => [ 0, 2 ],
@@ -3497,6 +3499,7 @@ sub generate_options {
 
       block-brace-tightness=0
       block-brace-vertical-tightness=0
+      brace-follower-vertical-tightness=1
       brace-tightness=1
       brace-vertical-tightness-closing=0
       brace-vertical-tightness=0

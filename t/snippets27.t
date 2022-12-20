@@ -12,6 +12,11 @@
 #9 wtc.wtc7
 #10 rt144979.def
 #11 rt144979.rt144979
+#12 bfvt.bfvt0
+#13 bfvt.bfvt2
+#14 bfvt.def
+#15 cpb.cpb
+#16 cpb.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -29,6 +34,9 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'bfvt0'    => "-bfvt=0",
+        'bfvt2'    => "-bfvt=2",
+        'cpb'      => "-cpb",
         'def'      => "",
         'dwic'     => "-wn -dwic",
         'rt144979' => "-xci -ce -lp",
@@ -45,6 +53,55 @@ BEGIN {
     # BEGIN SECTION 2: Sources #
     ############################
     $rsources = {
+
+        'bfvt' => <<'----------',
+# combines with -bfvt>0
+eval {
+    require XSLoader;
+    XSLoader::load( 'Sys::Syslog', $VERSION );
+    1;
+}
+  or do {
+    require DynaLoader;
+    push @ISA, 'DynaLoader';
+    bootstrap Sys::Syslog $VERSION;
+  };
+
+# combines with -bfvt=2
+eval {
+    ( $line, $cond ) = $self->_normalize_if_elif($line);
+    1;
+}
+  or die sprintf "Error at line %d\nLine %d: %s\n%s",
+  ( $line_info->start_line_num() ) x 2, $line, $@;
+
+# stable for bfvt<2; combines for bfvt=2; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+}
+  || "";
+
+# stays combined for all bfvt; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+} || "";
+----------
+
+        'cpb' => <<'----------',
+foreach my $dir (
+    '05_lexer', '07_token', '08_regression', '11_util',
+    '13_data',  '15_transform'
+  )
+{
+    my @perl = find_files( catdir( 't', 'data', $dir ) );
+    push @files, @perl;
+}
+
+----------
 
         'dwic' => <<'----------',
     skip_symbols(
@@ -69,7 +126,7 @@ GetOptions(
           }
           return;
       },
-); 
+);
 
 # part 2
 {{{
@@ -644,6 +701,156 @@ GetOptions(
 }
 
 #11...........
+        },
+
+        'bfvt.bfvt0' => {
+            source => "bfvt",
+            params => "bfvt0",
+            expect => <<'#12...........',
+# combines with -bfvt>0
+eval {
+    require XSLoader;
+    XSLoader::load( 'Sys::Syslog', $VERSION );
+    1;
+}
+  or do {
+    require DynaLoader;
+    push @ISA, 'DynaLoader';
+    bootstrap Sys::Syslog $VERSION;
+  };
+
+# combines with -bfvt=2
+eval {
+    ( $line, $cond ) = $self->_normalize_if_elif($line);
+    1;
+}
+  or die sprintf "Error at line %d\nLine %d: %s\n%s",
+  ( $line_info->start_line_num() ) x 2, $line, $@;
+
+# stable for bfvt<2; combines for bfvt=2; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  }
+  || "";
+
+# stays combined for all bfvt; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  } || "";
+#12...........
+        },
+
+        'bfvt.bfvt2' => {
+            source => "bfvt",
+            params => "bfvt2",
+            expect => <<'#13...........',
+# combines with -bfvt>0
+eval {
+    require XSLoader;
+    XSLoader::load( 'Sys::Syslog', $VERSION );
+    1;
+} or do {
+    require DynaLoader;
+    push @ISA, 'DynaLoader';
+    bootstrap Sys::Syslog $VERSION;
+};
+
+# combines with -bfvt=2
+eval {
+    ( $line, $cond ) = $self->_normalize_if_elif($line);
+    1;
+} or die sprintf "Error at line %d\nLine %d: %s\n%s",
+  ( $line_info->start_line_num() ) x 2, $line, $@;
+
+# stable for bfvt<2; combines for bfvt=2; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  } || "";
+
+# stays combined for all bfvt; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  } || "";
+#13...........
+        },
+
+        'bfvt.def' => {
+            source => "bfvt",
+            params => "def",
+            expect => <<'#14...........',
+# combines with -bfvt>0
+eval {
+    require XSLoader;
+    XSLoader::load( 'Sys::Syslog', $VERSION );
+    1;
+} or do {
+    require DynaLoader;
+    push @ISA, 'DynaLoader';
+    bootstrap Sys::Syslog $VERSION;
+};
+
+# combines with -bfvt=2
+eval {
+    ( $line, $cond ) = $self->_normalize_if_elif($line);
+    1;
+}
+  or die sprintf "Error at line %d\nLine %d: %s\n%s",
+  ( $line_info->start_line_num() ) x 2, $line, $@;
+
+# stable for bfvt<2; combines for bfvt=2; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  }
+  || "";
+
+# stays combined for all bfvt; has ci
+my $domain = shift
+  || eval {
+    require Net::Domain;
+    Net::Domain::hostfqdn();
+  } || "";
+#14...........
+        },
+
+        'cpb.cpb' => {
+            source => "cpb",
+            params => "cpb",
+            expect => <<'#15...........',
+foreach my $dir (
+    '05_lexer', '07_token', '08_regression', '11_util',
+    '13_data',  '15_transform'
+) {
+    my @perl = find_files( catdir( 't', 'data', $dir ) );
+    push @files, @perl;
+}
+
+#15...........
+        },
+
+        'cpb.def' => {
+            source => "cpb",
+            params => "def",
+            expect => <<'#16...........',
+foreach my $dir (
+    '05_lexer', '07_token', '08_regression', '11_util',
+    '13_data',  '15_transform'
+  )
+{
+    my @perl = find_files( catdir( 't', 'data', $dir ) );
+    push @files, @perl;
+}
+
+#16...........
         },
     };
 
