@@ -8711,15 +8711,32 @@ sub match_trailing_comma_rule {
         # the trailing comma must be bare for both 'h' and 'i'
         return if ( !$is_bare_multiline_comma );
 
-        # there must be no more than one comma per line for both 'h' and 'i'
+        # There must be no more than one comma per line for both 'h' and 'i'
+        # The new_comma_count here will include the trailing comma.
         my $new_comma_count = $rtype_count->{','};
         $new_comma_count += 1 if ($if_add);
-        return                if ( $new_comma_count > $line_diff_commas + 1 );
+        my $excess_commas = $new_comma_count - $line_diff_commas - 1;
+        if ( $excess_commas > 0 ) {
+
+            # Exception for a special edge case for option 'i': if the trailing
+            # comma is followed by a blank line or comment, then it cannot be
+            # covered.  Then we can safely accept a small list to avoid
+            # instability (issue b1443).
+            if (   $trailing_comma_style eq 'i'
+                && $iline_c - $rLL_new->[$Kp]->[_LINE_INDEX_] > 1
+                && $new_comma_count <= 2 )
+            {
+                $match = 1;
+            }
+            else {
+                return;
+            }
+        }
 
         # a list of key=>value pairs with at least 2 fat commas is a match
         # for both 'h' and 'i'
         my $fat_comma_count = $rtype_count->{'=>'};
-        if ( $fat_comma_count && $fat_comma_count >= 2 ) {
+        if ( !$match && $fat_comma_count && $fat_comma_count >= 2 ) {
 
             # comma count (including trailer) and fat comma count must differ by
             # by no more than 1. This allows for some small variations.
@@ -8728,8 +8745,8 @@ sub match_trailing_comma_rule {
         }
 
         # For 'i' only, a list that can be shown to be stable is a match
-        if ( $trailing_comma_style eq 'i' ) {
-            $match ||= (
+        if ( !$match && $trailing_comma_style eq 'i' ) {
+            $match = (
                 $is_permanently_broken
                   || ( $rOpts_break_at_old_comma_breakpoints
                     && !$rOpts_ignore_old_breakpoints )

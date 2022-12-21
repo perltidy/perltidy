@@ -11240,6 +11240,33 @@ $last = after (
 --paren-vertical-tightness=1
 --space-function-paren
 
+==> b1443.in <==
+        @matches = map {
+            $pk = $_ . '::';
+            grep ( /^\w+$/ && (
+                    $sym = "${pk}$_",
+                    defined *$sym{CODE}
+
+                ),
+                keys %$pk );
+        } _search_ISA($pkg);
+
+        @matches = map {
+            $pk = $_ . '::';
+            grep ( /^\w+$/ && (
+                    $sym = "${pk}$_", defined *$sym{CODE},
+
+                ),
+                keys %$pk );
+        } _search_ISA($pkg);
+
+
+==> b1443.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--ignore-old-breakpoints
+--want-trailing-commas='i'
+
 ==> b146.in <==
 # State 1
 
