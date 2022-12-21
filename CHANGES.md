@@ -1,6 +1,31 @@
 # Perltidy Change Log
 
-## 2022 11 12.01
+## 2022 11 12.02
+
+    - Added option -bfvt=n, or --brace-follower-vertical-tightness=n,
+      for part of issue git #110.  For n=2, this option looks for lines
+      which would otherwise be, by default,
+
+      }
+        or ..
+
+      and joins them into a single line
+
+      } or ..
+
+      where the or can be one of a number of logical operators or if unless.
+      The default is not to do this and can be indicated with n=1.
+
+    - Added option -cpb, or --cuddled-paren-brace, for issue git #110.
+      This option  This will cause perltidy to join two lines which
+      otherwise would be, by default,
+
+        )
+      {
+
+      into a single line
+
+      ) {
 
     - Added option -dbs, or --dump-block-summary, to dump summary
       information about code blocks in a file to standard output. The
