@@ -11240,6 +11240,22 @@ $last = after (
 --paren-vertical-tightness=1
 --space-function-paren
 
+==> b1442.in <==
+                $tmpstr =
+                  sprintf ( $self->jump_to_selected_sformat(),
+                    $_, );
+
+                $tmpstr =
+                  sprintf( $self->jump_to_selected_sformat(),
+                    $_ );
+
+==> b1442.par <==
+--add-trailing-commas
+--delete-trailing-commas
+--maximum-line-length=66
+--want-trailing-commas='b'
+--space-keyword-paren
+
 ==> b1443.in <==
         @matches = map {
             $pk = $_ . '::';

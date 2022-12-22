@@ -22649,12 +22649,16 @@ EOM
         if ($use_separate_first_term) {
 
             # ..set a break and update starting values
-            $use_separate_first_term = 1;
             $self->set_forced_breakpoint($i_first_comma);
+            $item_count--;
+
+            # Stop if only one item remains ($i_first_comma will be undef).
+            # Fix for b1442: use '$item_count' here instead of '$comma_count'
+            # to make the result independent of any trailing comma.
+            return if ( $item_count <= 1 );
+
             $i_opening_paren = $i_first_comma;
             $i_first_comma   = $rcomma_index->[1];
-            $item_count--;
-            return if $comma_count == 1;
             shift @{$ritem_lengths};
             shift @{$ri_term_begin};
             shift @{$ri_term_end};
