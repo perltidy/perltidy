@@ -19312,42 +19312,8 @@ sub correct_lp_indentation {
     my $ri_starting_one_line_block =
       $self->[_this_batch_]->[_ri_starting_one_line_block_];
     if ( @{$ri_starting_one_line_block} ) {
-        my @ilist = @{$ri_starting_one_line_block};
-        my $inext = shift(@ilist);
-
-        # loop over lines, checking length of each with a one-line block
-        my ( $ibeg, $iend );
-        foreach my $line ( 0 .. $max_line ) {
-            $iend = $ri_last->[$line];
-            next if ( $inext > $iend );
-            $ibeg = $ri_first->[$line];
-
-            # This is just for lines with indentation objects (c098)
-            my $excess =
-              ref( $leading_spaces_to_go[$ibeg] )
-              ? $self->excess_line_length( $ibeg, $iend )
-              : 0;
-
-            if ( $excess > 0 ) {
-                my $available_spaces = $self->get_available_spaces_to_go($ibeg);
-
-                if ( $available_spaces > 0 ) {
-                    my $delete_want = min( $available_spaces, $excess );
-                    my $deleted_spaces =
-                      $self->reduce_lp_indentation( $ibeg, $delete_want );
-                    $available_spaces =
-                      $self->get_available_spaces_to_go($ibeg);
-                }
-            }
-
-            # skip forward to next one-line block to check
-            while (@ilist) {
-                $inext = shift @ilist;
-                next if ( $inext <= $iend );
-                last if ( $inext > $iend );
-            }
-            last if ( $inext <= $iend );
-        }
+        $self->correct_lp_indentation_pass_1( $ri_first, $ri_last,
+            $ri_starting_one_line_block );
     }
 
     #-------------------------------------------------------------------
@@ -19608,6 +19574,54 @@ sub correct_lp_indentation {
     } ## end loop over lines
     return $do_not_pad;
 } ## end sub correct_lp_indentation
+
+sub correct_lp_indentation_pass_1 {
+    my ( $self, $ri_first, $ri_last, $ri_starting_one_line_block ) = @_;
+
+    # So some of the one-line blocks may be too long when given -lp
+    # indentation.  We will fix that now if possible, using the list of these
+    # closing block indexes.
+
+    my @ilist = @{$ri_starting_one_line_block};
+    return unless (@ilist);
+
+    my $max_line = @{$ri_first} - 1;
+    my $inext    = shift(@ilist);
+
+    # loop over lines, checking length of each with a one-line block
+    my ( $ibeg, $iend );
+    foreach my $line ( 0 .. $max_line ) {
+        $iend = $ri_last->[$line];
+        next if ( $inext > $iend );
+        $ibeg = $ri_first->[$line];
+
+        # This is just for lines with indentation objects (c098)
+        my $excess =
+          ref( $leading_spaces_to_go[$ibeg] )
+          ? $self->excess_line_length( $ibeg, $iend )
+          : 0;
+
+        if ( $excess > 0 ) {
+            my $available_spaces = $self->get_available_spaces_to_go($ibeg);
+
+            if ( $available_spaces > 0 ) {
+                my $delete_want = min( $available_spaces, $excess );
+                my $deleted_spaces =
+                  $self->reduce_lp_indentation( $ibeg, $delete_want );
+                $available_spaces = $self->get_available_spaces_to_go($ibeg);
+            }
+        }
+
+        # skip forward to next one-line block to check
+        while (@ilist) {
+            $inext = shift @ilist;
+            next if ( $inext <= $iend );
+            last if ( $inext > $iend );
+        }
+        last if ( $inext <= $iend );
+    }
+    return;
+} ## end sub correct_lp_indentation_pass_1
 
 sub undo_lp_ci {
 
