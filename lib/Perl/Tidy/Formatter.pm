@@ -17747,9 +17747,6 @@ sub break_equals {
         # do nothing under extreme stress
         return if ( $high_stress_level < 1 );
 
-        my $rK_weld_right = $self->[_rK_weld_right_];
-        my $rK_weld_left  = $self->[_rK_weld_left_];
-
         my $nmax_start = @{$ri_end} - 1;
         return if ( $nmax_start <= 0 );
 
@@ -17822,7 +17819,7 @@ sub break_equals {
         # This is potentially an O(n-squared) loop, but not critical, so we can
         # put a finite limit on the total number of iterations. This is
         # suggested by issue c118, which pushed about 5.e5 lines through here
-        # and caused an excessive run time.
+        # and caused an excessive run time.  For another test case see c167.
 
         # Three lines of defense have been put in place to prevent excessive
         # run times:
@@ -17856,311 +17853,365 @@ sub break_equals {
         # numbers, and the line numbers change as we go.
         while ( my $section = pop @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
+            $it_count = $self->recombine_breakpoints_section_loop(
 
-            # number of ending lines to leave untouched in this pass
-            my $nmax_sec   = @{$ri_end} - 1;
-            my $num_freeze = $nmax_sec - $nend;
+                $ri_beg,
+                $ri_end,
+                $nbeg,
+                $nend,
+                $it_count,
+                $it_count_max,
+                \@joint,
+                $rbond_strength_to_go
 
-            my $more_to_do = 1;
+            );
+            last if ( !defined($it_count) );
+        }
 
-            # We keep looping over all of the lines of this batch
-            # until there are no more possible recombinations
-            my $nmax_last = $nmax_sec + 1;
-            my $reverse   = 0;
+        if (DEBUG_RECOMBINE) {
+            my $nmax_last = @{$ri_end} - 1;
+            if ( !defined($it_count) ) { $it_count = 'UNDEF' }
+            print STDERR
+"exiting recombine with $nmax_last lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
+        }
+        return;
+    } ## end sub recombine_breakpoints
 
-            while ($more_to_do) {
+    sub recombine_breakpoints_section_loop {
+        my (
+            $self,
 
-                # Emergency return on excess total iterations. The allowed
-                # maximum is large enough that this should never happen.
-                $it_count++;
-                if ( $it_count > $it_count_max ) {
-                    my $KK  = $K_to_go[0];
-                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                    DEVEL_MODE && Fault(<<EOM);
+            $ri_beg,
+            $ri_end,
+            $nbeg,
+            $nend,
+            $it_count,
+            $it_count_max,
+            $rjoint,
+            $rbond_strength_to_go,
+
+        ) = @_;
+
+        # Recombine breakpoints for one section of lines in the current batch
+
+        # Given:
+        #   $ri_beg, $ri_end = ref to arrays with token indexes of the first
+        #     and last line
+        #   $nbeg, $nend  = line numbers bounding this section
+        #   $it_count     = iteration counter
+        #   $it_count_max = maximum iteration counter (stop if reached)
+        #   $rjoint       = ref to array of good joining tokens per line
+        #   $rbond_strength_to_go = ref to array of token bond strengths
+
+        # Updates: $ri_beg, $ri_end, $rjoint if lines are joied
+
+        # Returns:
+        #   $it_count = updated iteration count if success
+        #             = undef if ERROR (emergency stop)
+
+        my $rK_weld_right = $self->[_rK_weld_right_];
+        my $rK_weld_left  = $self->[_rK_weld_left_];
+
+        # number of ending lines to leave untouched in this pass
+        my $nmax_sec   = @{$ri_end} - 1;
+        my $num_freeze = $nmax_sec - $nend;
+
+        my $more_to_do = 1;
+
+        # We keep looping over all of the lines of this batch
+        # until there are no more possible recombinations
+        my $nmax_last = $nmax_sec + 1;
+        my $reverse   = 0;
+
+        while ($more_to_do) {
+
+            # Emergency return on excess total iterations. The allowed
+            # maximum is large enough that this should never happen.
+            $it_count++;
+            if ( $it_count > $it_count_max ) {
+                my $KK  = $K_to_go[0];
+                my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                DEVEL_MODE && Fault(<<EOM);
 iteration count=$it_count exceeds max=$it_count_max, near line $lno
 EOM
-                    goto RETURN;
-                }
 
-                my $n_best = 0;
-                my $bs_best;
-                my $nmax = @{$ri_end} - 1;
+                #-------------
+                # ERROR return
+                #-------------
+                return;
+            }
 
-                # Safety check for infinite loop: the line count must decrease
-                unless ( $nmax < $nmax_last ) {
+            my $n_best = 0;
+            my $bs_best;
+            my $nmax = @{$ri_end} - 1;
 
-                    # Shouldn't happen because splice below decreases nmax on
-                    # each iteration.  An error can only be due to a recent
-                    # programming change.  We better stop here.
-                    if (DEVEL_MODE) {
-                        my $KK  = $K_to_go[0];
-                        my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                        Fault(
+            # Safety check for infinite loop: the line count must decrease
+            unless ( $nmax < $nmax_last ) {
+
+                # Shouldn't happen because splice below decreases nmax on
+                # each iteration.  An error can only be due to a recent
+                # programming change.  We better stop here.
+                if (DEVEL_MODE) {
+                    my $KK  = $K_to_go[0];
+                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
+                    Fault(
 "Program bug-infinite loop in recombine breakpoints near line $lno\n"
-                        );
-                    }
-                    $more_to_do = 0;
-                    goto RETURN;
+                    );
                 }
-                $nmax_last  = $nmax;
                 $more_to_do = 0;
 
-                # Count lines with leading &&, ||, :, at any level.
-                # This is used to avoid some recombinations which might
-                # be hard to read.
-                my $rleading_amp_count;
-                ${$rleading_amp_count} = 0;
+                #-------------
+                # ERROR return
+                #-------------
+                return;
+            }
+            $nmax_last  = $nmax;
+            $more_to_do = 0;
 
-                my $this_line_is_semicolon_terminated;
+            # Count lines with leading &&, ||, :, at any level.
+            # This is used to avoid some recombinations which might
+            # be hard to read.
+            my $rleading_amp_count;
+            ${$rleading_amp_count} = 0;
 
-                # loop over all remaining lines in this batch
-                my $nstop = $nmax - $num_freeze;
-                for my $iter ( $nbeg + 1 .. $nstop ) {
+            my $this_line_is_semicolon_terminated;
 
-                    # alternating sweep direction gives symmetric results
-                    # for recombining lines which exceed the line length
-                    # such as eval {{{{.... }}}}
-                    my $n;
-                    if   ($reverse) { $n = $nbeg + 1 + $nstop - $iter; }
-                    else            { $n = $iter }
+            # loop over all remaining lines in this batch
+            my $nstop = $nmax - $num_freeze;
+            for my $iter ( $nbeg + 1 .. $nstop ) {
 
-                    #----------------------------------------------------------
-                    # If we join the current pair of lines,
-                    # line $n-1 will become the left part of the joined line
-                    # line $n will become the right part of the joined line
-                    #
-                    # Here are Indexes of the endpoint tokens of the two lines:
-                    #
-                    #  -----line $n-1--- | -----line $n-----
-                    #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
-                    #                    ^
-                    #                    |
-                    # We want to decide if we should remove the line break
-                    # between the tokens at $iend_1 and $ibeg_2
-                    #
-                    # We will apply a number of ad-hoc tests to see if joining
-                    # here will look ok.  The code will just move to the next
-                    # pair if the join doesn't look good.  If we get through
-                    # the gauntlet of tests, the lines will be recombined.
-                    #----------------------------------------------------------
-                    #
-                    # beginning and ending tokens of the lines we are working on
-                    my $ibeg_1    = $ri_beg->[ $n - 1 ];
-                    my $iend_1    = $ri_end->[ $n - 1 ];
-                    my $iend_2    = $ri_end->[$n];
-                    my $ibeg_2    = $ri_beg->[$n];
-                    my $ibeg_nmax = $ri_beg->[$nmax];
+                # alternating sweep direction gives symmetric results
+                # for recombining lines which exceed the line length
+                # such as eval {{{{.... }}}}
+                my $n;
+                if   ($reverse) { $n = $nbeg + 1 + $nstop - $iter; }
+                else            { $n = $iter }
 
-                    # combined line cannot be too long
-                    my $excess =
-                      $self->excess_line_length( $ibeg_1, $iend_2, 1 );
-                    next if ( $excess > 0 );
+                #----------------------------------------------------------
+                # If we join the current pair of lines,
+                # line $n-1 will become the left part of the joined line
+                # line $n will become the right part of the joined line
+                #
+                # Here are Indexes of the endpoint tokens of the two lines:
+                #
+                #  -----line $n-1--- | -----line $n-----
+                #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
+                #                    ^
+                #                    |
+                # We want to decide if we should remove the line break
+                # between the tokens at $iend_1 and $ibeg_2
+                #
+                # We will apply a number of ad-hoc tests to see if joining
+                # here will look ok.  The code will just move to the next
+                # pair if the join doesn't look good.  If we get through
+                # the gauntlet of tests, the lines will be recombined.
+                #----------------------------------------------------------
+                #
+                # beginning and ending tokens of the lines we are working on
+                my $ibeg_1    = $ri_beg->[ $n - 1 ];
+                my $iend_1    = $ri_end->[ $n - 1 ];
+                my $iend_2    = $ri_end->[$n];
+                my $ibeg_2    = $ri_beg->[$n];
+                my $ibeg_nmax = $ri_beg->[$nmax];
 
-                    my $type_iend_1 = $types_to_go[$iend_1];
-                    my $type_iend_2 = $types_to_go[$iend_2];
-                    my $type_ibeg_1 = $types_to_go[$ibeg_1];
-                    my $type_ibeg_2 = $types_to_go[$ibeg_2];
+                # combined line cannot be too long
+                my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
+                next if ( $excess > 0 );
 
-                    # terminal token of line 2 if any side comment is ignored:
-                    my $iend_2t      = $iend_2;
-                    my $type_iend_2t = $type_iend_2;
+                my $type_iend_1 = $types_to_go[$iend_1];
+                my $type_iend_2 = $types_to_go[$iend_2];
+                my $type_ibeg_1 = $types_to_go[$ibeg_1];
+                my $type_ibeg_2 = $types_to_go[$ibeg_2];
 
-                    DEBUG_RECOMBINE > 1 && do {
-                        print STDERR
+                # terminal token of line 2 if any side comment is ignored:
+                my $iend_2t      = $iend_2;
+                my $type_iend_2t = $type_iend_2;
+
+                DEBUG_RECOMBINE > 1 && do {
+                    print STDERR
 "RECOMBINE: n=$n nmax=$nmax imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
-                    };
+                };
 
-                    # If line $n is the last line, we set some flags and
-                    # do any special checks for it
-                    if ( $n == $nmax ) {
+                # If line $n is the last line, we set some flags and
+                # do any special checks for it
+                if ( $n == $nmax ) {
 
-                        if ( $type_ibeg_2 eq '{' ) {
+                    if ( $type_ibeg_2 eq '{' ) {
 
-                            # join isolated ')' and '{' if requested (git #110)
-                            if (   $rOpts_cuddled_paren_brace
-                                && $type_iend_1 eq '}'
-                                && $iend_1 == $ibeg_1
-                                && $ibeg_2 == $iend_2 )
-                            {
-                                if (   $tokens_to_go[$iend_1] eq ')'
-                                    && $tokens_to_go[$ibeg_2] eq '{' )
-                                {
-                                    $n_best = $n;
-                                    last;
-                                }
-                            }
-
-                            # otherwise, a terminal '{' should stay where it is
-                            # unless preceded by a fat comma
-                            next if ( $type_iend_1 ne '=>' );
-                        }
-
-                        if (   $type_iend_2 eq '#'
-                            && $iend_2 - $ibeg_2 >= 2
-                            && $types_to_go[ $iend_2 - 1 ] eq 'b' )
+                        # join isolated ')' and '{' if requested (git #110)
+                        if (   $rOpts_cuddled_paren_brace
+                            && $type_iend_1 eq '}'
+                            && $iend_1 == $ibeg_1
+                            && $ibeg_2 == $iend_2 )
                         {
-                            $iend_2t      = $iend_2 - 2;
-                            $type_iend_2t = $types_to_go[$iend_2t];
+                            if (   $tokens_to_go[$iend_1] eq ')'
+                                && $tokens_to_go[$ibeg_2] eq '{' )
+                            {
+                                $n_best = $n;
+                                last;
+                            }
                         }
 
-                        $this_line_is_semicolon_terminated =
-                          $type_iend_2t eq ';';
+                        # otherwise, a terminal '{' should stay where it is
+                        # unless preceded by a fat comma
+                        next if ( $type_iend_1 ne '=>' );
                     }
 
-                    #----------------------------------------------------------
-                    # Recombine Section 0:
-                    # Examine the special token joining this line pair, if any.
-                    # Put as many tests in this section to avoid duplicate code
-                    # and to make formatting independent of whether breaks are
-                    # to the left or right of an operator.
-                    #----------------------------------------------------------
-
-                    # Note that parens around ($itok) are essential here:
-                    my ($itok) = @{ $joint[$n] };
-                    if ($itok) {
-                        my $ok_0 =
-                          recombine_section_0( $itok, $ri_beg, $ri_end, $n,
-                            $rleading_amp_count );
-                        next if ( !$ok_0 );
-                    }
-
-                    #----------------------------------------------------------
-                    # Recombine Section 1:
-                    # Join welded nested containers immediately
-                    #----------------------------------------------------------
-
-                    if (
-                        $total_weld_count
-                        && ( $type_sequence_to_go[$iend_1]
-                            && defined( $rK_weld_right->{ $K_to_go[$iend_1] } )
-                            || $type_sequence_to_go[$ibeg_2]
-                            && defined( $rK_weld_left->{ $K_to_go[$ibeg_2] } ) )
-                      )
+                    if (   $type_iend_2 eq '#'
+                        && $iend_2 - $ibeg_2 >= 2
+                        && $types_to_go[ $iend_2 - 1 ] eq 'b' )
                     {
-                        $n_best = $n;
-                        last;
+                        $iend_2t      = $iend_2 - 2;
+                        $type_iend_2t = $types_to_go[$iend_2t];
                     }
 
-                    $reverse = 0;
+                    $this_line_is_semicolon_terminated = $type_iend_2t eq ';';
+                }
 
-                    #----------------------------------------------------------
-                    # Recombine Section 2:
-                    # Examine token at $iend_1 (right end of first line of pair)
-                    #----------------------------------------------------------
+                #----------------------------------------------------------
+                # Recombine Section 0:
+                # Examine the special token joining this line pair, if any.
+                # Put as many tests in this section to avoid duplicate code
+                # and to make formatting independent of whether breaks are
+                # to the left or right of an operator.
+                #----------------------------------------------------------
 
-                    my ( $ok_2, $skip_Section_3 ) =
-                      recombine_section_2( $ri_beg, $ri_end, $n,
-                        $this_line_is_semicolon_terminated,
+                # Note that parens around ($itok) are essential here:
+                my ($itok) = @{ $rjoint->[$n] };
+                if ($itok) {
+                    my $ok_0 =
+                      recombine_section_0( $itok, $ri_beg, $ri_end, $n,
                         $rleading_amp_count );
-                    next if ( !$ok_2 );
+                    next if ( !$ok_0 );
+                }
 
-                    #----------------------------------------------------------
-                    # Recombine Section 3:
-                    # Examine token at $ibeg_2 (left end of second line of pair)
-                    #----------------------------------------------------------
+                #----------------------------------------------------------
+                # Recombine Section 1:
+                # Join welded nested containers immediately
+                #----------------------------------------------------------
 
-                    # Join lines identified above as capable of
-                    # causing an outdented line with leading closing paren.
-                    # Note that we are skipping the rest of this section
-                    # and the rest of the loop to do the join.
-                    if ($skip_Section_3) {
-                        $forced_breakpoint_to_go[$iend_1] = 0;
-                        $n_best = $n;
-                        last;
-                    }
+                if (
+                    $total_weld_count
+                    && ( $type_sequence_to_go[$iend_1]
+                        && defined( $rK_weld_right->{ $K_to_go[$iend_1] } )
+                        || $type_sequence_to_go[$ibeg_2]
+                        && defined( $rK_weld_left->{ $K_to_go[$ibeg_2] } ) )
+                  )
+                {
+                    $n_best = $n;
+                    last;
+                }
 
-                    my ( $ok_3, $bs_tweak ) =
-                      recombine_section_3( $ri_beg, $ri_end, $n,
-                        $this_line_is_semicolon_terminated,
-                        $rleading_amp_count );
-                    next if ( !$ok_3 );
+                $reverse = 0;
 
-                    #----------------------------------------------------------
-                    # Recombine Section 4:
-                    # Combine the lines if we arrive here and it is possible
-                    #----------------------------------------------------------
+                #----------------------------------------------------------
+                # Recombine Section 2:
+                # Examine token at $iend_1 (right end of first line of pair)
+                #----------------------------------------------------------
 
-                    # honor hard breakpoints
-                    next if ( $forced_breakpoint_to_go[$iend_1] > 0 );
+                my ( $ok_2, $skip_Section_3 ) =
+                  recombine_section_2( $ri_beg, $ri_end, $n,
+                    $this_line_is_semicolon_terminated,
+                    $rleading_amp_count );
+                next if ( !$ok_2 );
 
-                    my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
+                #----------------------------------------------------------
+                # Recombine Section 3:
+                # Examine token at $ibeg_2 (left end of second line of pair)
+                #----------------------------------------------------------
 
-                    # Require a few extra spaces before recombining lines if we
-                    # are at an old breakpoint unless this is a simple list or
-                    # terminal line.  The goal is to avoid oscillating between
-                    # two quasi-stable end states.  For example this snippet
-                    # caused problems:
+                # Join lines identified above as capable of
+                # causing an outdented line with leading closing paren.
+                # Note that we are skipping the rest of this section
+                # and the rest of the loop to do the join.
+                if ($skip_Section_3) {
+                    $forced_breakpoint_to_go[$iend_1] = 0;
+                    $n_best = $n;
+                    last;
+                }
+
+                my ( $ok_3, $bs_tweak ) =
+                  recombine_section_3( $ri_beg, $ri_end, $n,
+                    $this_line_is_semicolon_terminated,
+                    $rleading_amp_count );
+                next if ( !$ok_3 );
+
+                #----------------------------------------------------------
+                # Recombine Section 4:
+                # Combine the lines if we arrive here and it is possible
+                #----------------------------------------------------------
+
+                # honor hard breakpoints
+                next if ( $forced_breakpoint_to_go[$iend_1] > 0 );
+
+                my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
+
+                # Require a few extra spaces before recombining lines if we
+                # are at an old breakpoint unless this is a simple list or
+                # terminal line.  The goal is to avoid oscillating between
+                # two quasi-stable end states.  For example this snippet
+                # caused problems:
 
 ##    my $this =
 ##    bless {
 ##        TText => "[" . ( join ',', map { "\"$_\"" } split "\n", $_ ) . "]"
 ##      },
 ##      $type;
+                next
+                  if ( $old_breakpoint_to_go[$iend_1]
+                    && !$this_line_is_semicolon_terminated
+                    && $n < $nmax
+                    && $excess + 4 > 0
+                    && $type_iend_2 ne ',' );
+
+                # do not recombine if we would skip in indentation levels
+                if ( $n < $nmax ) {
+                    my $if_next = $ri_beg->[ $n + 1 ];
                     next
-                      if ( $old_breakpoint_to_go[$iend_1]
-                        && !$this_line_is_semicolon_terminated
-                        && $n < $nmax
-                        && $excess + 4 > 0
-                        && $type_iend_2 ne ',' );
+                      if (
+                           $levels_to_go[$ibeg_1] < $levels_to_go[$ibeg_2]
+                        && $levels_to_go[$ibeg_2] < $levels_to_go[$if_next]
 
-                    # do not recombine if we would skip in indentation levels
-                    if ( $n < $nmax ) {
-                        my $if_next = $ri_beg->[ $n + 1 ];
-                        next
-                          if (
-                               $levels_to_go[$ibeg_1] < $levels_to_go[$ibeg_2]
-                            && $levels_to_go[$ibeg_2] < $levels_to_go[$if_next]
+                        # but an isolated 'if (' is undesirable
+                        && !(
+                               $n == 1
+                            && $iend_1 - $ibeg_1 <= 2
+                            && $type_ibeg_1 eq 'k'
+                            && $tokens_to_go[$ibeg_1] eq 'if'
+                            && $tokens_to_go[$iend_1] ne '('
+                        )
+                      );
+                }
 
-                            # but an isolated 'if (' is undesirable
-                            && !(
-                                   $n == 1
-                                && $iend_1 - $ibeg_1 <= 2
-                                && $type_ibeg_1 eq 'k'
-                                && $tokens_to_go[$ibeg_1] eq 'if'
-                                && $tokens_to_go[$iend_1] ne '('
-                            )
-                          );
-                    }
+                ## OLD: honor no-break's
+                ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
 
-                    ## OLD: honor no-break's
-                    ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
+                # remember the pair with the greatest bond strength
+                if ( !$n_best ) {
+                    $n_best  = $n;
+                    $bs_best = $bs;
+                }
+                else {
 
-                    # remember the pair with the greatest bond strength
-                    if ( !$n_best ) {
+                    if ( $bs > $bs_best ) {
                         $n_best  = $n;
                         $bs_best = $bs;
                     }
-                    else {
-
-                        if ( $bs > $bs_best ) {
-                            $n_best  = $n;
-                            $bs_best = $bs;
-                        }
-                    }
                 }
+            }
 
-                # recombine the pair with the greatest bond strength
-                if ($n_best) {
-                    splice @{$ri_beg}, $n_best,     1;
-                    splice @{$ri_end}, $n_best - 1, 1;
-                    splice @joint,     $n_best,     1;
+            # recombine the pair with the greatest bond strength
+            if ($n_best) {
+                splice @{$ri_beg}, $n_best,     1;
+                splice @{$ri_end}, $n_best - 1, 1;
+                splice @{$rjoint}, $n_best,     1;
 
-                    # keep going if we are still making progress
-                    $more_to_do++;
-                }
-            }    # end iteration loop
-
-        }    # end loop over sections
-
-      RETURN:
-
-        if (DEBUG_RECOMBINE) {
-            my $nmax_last = @{$ri_end} - 1;
-            print STDERR
-"exiting recombine with $nmax_last lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
-        }
-        return;
-    } ## end sub recombine_breakpoints
+                # keep going if we are still making progress
+                $more_to_do++;
+            }
+        }    # end iteration loop
+        return $it_count;
+    } ## end sub recombine_breakpoints_section_loop
 
     sub recombine_section_0 {
         my ( $itok, $ri_beg, $ri_end, $n, $rleading_amp_count ) = @_;
