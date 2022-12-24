@@ -4385,6 +4385,11 @@ EOM
         }
     }
 
+    # Large values of -scl can cause convergence problems, issue c167
+    if ( $rOpts->{'short-concatenation-item-length'} > 12 ) {
+        $rOpts->{'short-concatenation-item-length'} = 12;
+    }
+
     # The freeze-whitespace option is currently a derived option which has its
     # own key
     $rOpts->{'freeze-whitespace'} = !$rOpts->{'add-whitespace'}

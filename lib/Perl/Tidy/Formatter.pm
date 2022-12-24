@@ -17874,8 +17874,10 @@ sub break_equals {
                 # maximum is large enough that this should never happen.
                 $it_count++;
                 if ( $it_count > $it_count_max ) {
+                    my $KK  = $K_to_go[0];
+                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
                     DEVEL_MODE && Fault(<<EOM);
-iteration count=$it_count exceeds max=$it_count_max
+iteration count=$it_count exceeds max=$it_count_max, near line $lno
 EOM
                     goto RETURN;
                 }
@@ -17891,8 +17893,10 @@ EOM
                     # each iteration.  An error can only be due to a recent
                     # programming change.  We better stop here.
                     if (DEVEL_MODE) {
+                        my $KK  = $K_to_go[0];
+                        my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
                         Fault(
-"Program bug-infinite loop in recombine breakpoints\n"
+"Program bug-infinite loop in recombine breakpoints near line $lno\n"
                         );
                     }
                     $more_to_do = 0;
@@ -18914,6 +18918,10 @@ EOM
         # do not recombine lines with leading '.'
         elsif ( $type_ibeg_2 eq '.' ) {
             my $i_next_nonblank = min( $inext_to_go[$ibeg_2], $iend_2 );
+            my $summed_len_1    = $summed_lengths_to_go[ $iend_1 + 1 ] -
+              $summed_lengths_to_go[$ibeg_1];
+            my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
+              $summed_lengths_to_go[$ibeg_2];
             return
               unless (
 
@@ -18933,11 +18941,16 @@ EOM
                 # ... or this would strand a short quote , like this
                 #                . "some long quote"
                 #                . "\n";
-
-                || (   $types_to_go[$i_next_nonblank] eq 'Q'
+                || (
+                       $types_to_go[$i_next_nonblank] eq 'Q'
                     && $i_next_nonblank >= $iend_2 - 1
                     && $token_lengths_to_go[$i_next_nonblank] <
-                    $rOpts_short_concatenation_item_length )
+                    $rOpts_short_concatenation_item_length
+
+                    #  additional constraints to fix c167
+                    && (   $types_to_go[$iend_1] ne 'Q'
+                        || $summed_len_2 < $summed_len_1 )
+                )
               );
         }
 
