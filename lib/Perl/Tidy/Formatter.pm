@@ -12968,33 +12968,6 @@ sub is_fragile_block_type {
                         }
                     }
 
-                    #--------------------------------------------------
-                    # This block is deactivated to fix b1441. It is not
-                    # needed now because the comma length is added later,
-                    # and including it twice can cause instability.
-                    # This block can eventually be removed.
-                    #--------------------------------------------------
-                    # Include length to a comma ending this line
-                    # note: any side comments are handled at loop end (b1332)
-                    if (   0
-                        && $interrupted_list_rule
-                        && $rLL->[$K_terminal]->[_TYPE_] eq ',' )
-                    {
-                        my $Kend = $K_terminal;
-
-                        # Measure from the next blank if any (fixes b1301)
-                        my $Kbeg = $KK;
-                        if (   $rLL->[ $Kbeg + 1 ]->[_TYPE_] eq 'b'
-                            && $Kbeg < $Kend )
-                        {
-                            $Kbeg++;
-                        }
-
-                        my $leng = $rLL->[$Kend]->[_CUMULATIVE_LENGTH_] -
-                          $rLL->[$Kbeg]->[_CUMULATIVE_LENGTH_];
-                        if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
-                    }
-
                     my $K_c = $K_closing_container->{$seqno};
 
                     push @stack, [
