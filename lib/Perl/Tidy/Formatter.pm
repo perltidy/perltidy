@@ -12524,194 +12524,214 @@ sub is_fragile_block_type {
 
 } ## end sub is_fragile_block_type
 
-sub xlp_collapsed_lengths {
+{    ## closure xlp_collapsed_lengths
 
-    my $self = shift;
-
-    #----------------------------------------------------------------
-    # Define the collapsed lengths of containers for -xlp indentation
-    #----------------------------------------------------------------
-
-    # We need an estimate of the minimum required line length starting at any
-    # opening container for the -xlp style. This is needed to avoid using too
-    # much indentation space for lower level containers and thereby running
-    # out of space for outer container tokens due to the maximum line length
-    # limit.
-
-    # The basic idea is that at each node in the tree we imagine that we have a
-    # fork with a handle and collapsible prongs:
-    #
-    #                            |------------
-    #                            |--------
-    #                ------------|-------
-    #                 handle     |------------
-    #                            |--------
-    #                              prongs
-    #
-    # Each prong has a minimum collapsed length. The collapsed length at a node
-    # is the maximum of these minimum lengths, plus the handle length.  Each of
-    # the prongs may itself be a tree node.
-
-    # This is just a rough calculation to get an approximate starting point for
-    # indentation.  Later routines will be more precise.  It is important that
-    # these estimates be independent of the line breaks of the input stream in
-    # order to avoid instabilities.
-
-    my $rLL                        = $self->[_rLL_];
-    my $Klimit                     = $self->[_Klimit_];
-    my $rlines                     = $self->[_rlines_];
-    my $K_opening_container        = $self->[_K_opening_container_];
-    my $K_closing_container        = $self->[_K_closing_container_];
-    my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
-    my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
-    my $ris_excluded_lp_container  = $self->[_ris_excluded_lp_container_];
-    my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
-    my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
-    my $rhas_broken_list           = $self->[_rhas_broken_list_];
-    my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
-
-    my $K_start_multiline_qw;
-    my $level_start_multiline_qw = 0;
-    my $max_prong_len            = 0;
-    my $handle_len_x             = 0;
+    my $max_prong_len;
+    my $len;
+    my $last_nonblank_type;
     my @stack;
-    my $len                = 0;
-    my $last_nonblank_type = 'b';
-    push @stack,
-      [ $max_prong_len, $handle_len_x, SEQ_ROOT, undef, undef, undef, undef ];
 
-    #--------------------------------
-    # Loop over all lines in the file
-    #--------------------------------
-    my $iline = -1;
-    my $skip_next_line;
-    foreach my $line_of_tokens ( @{$rlines} ) {
-        $iline++;
-        if ($skip_next_line) {
-            $skip_next_line = 0;
-            next;
-        }
-        my $line_type = $line_of_tokens->{_line_type};
-        next if ( $line_type ne 'CODE' );
-        my $CODE_type = $line_of_tokens->{_code_type};
+    sub xlp_collapsed_lengths_initialize {
 
-        # Always skip blank lines
-        next if ( $CODE_type eq 'BL' );
+        $max_prong_len      = 0;
+        $len                = 0;
+        $last_nonblank_type = 'b';
+        @stack              = ();
 
-        # Note on other line types:
-        # 'FS' (Format Skipping) lines may contain opening/closing tokens so
-        #      we have to process them to keep the stack correctly sequenced.
-        # 'VB' (Verbatim) lines could be skipped, but testing shows that
-        #      results look better if we include their lengths.
+        push @stack, [
+            0,           # $max_prong_len,
+            0,           # $handle_len,
+            SEQ_ROOT,    # $seqno,
+            undef,       # $iline,
+            undef,       # $KK,
+            undef,       # $K_c,
+            undef,       # $interrupted_list_rule
+        ];
 
-        # Also note that we could exclude -xlp formatting of containers with
-        # 'FS' and 'VB' lines, but in testing that was not really beneficial.
+        return;
+    }
 
-        # So we process tokens in 'FS' and 'VB' lines like all the rest...
+    sub xlp_collapsed_lengths {
 
-        my $rK_range = $line_of_tokens->{_rK_range};
-        my ( $K_first, $K_last ) = @{$rK_range};
-        next unless ( defined($K_first) && defined($K_last) );
+        my $self = shift;
 
-        my $has_comment = $rLL->[$K_last]->[_TYPE_] eq '#';
+        #----------------------------------------------------------------
+        # Define the collapsed lengths of containers for -xlp indentation
+        #----------------------------------------------------------------
 
-        # Always ignore block comments
-        next if ( $has_comment && $K_first == $K_last );
+        # We need an estimate of the minimum required line length starting at
+        # any opening container for the -xlp style. This is needed to avoid
+        # using too much indentation space for lower level containers and
+        # thereby running out of space for outer container tokens due to the
+        # maximum line length limit.
 
-        # Handle an intermediate line of a multiline qw quote. These may
-        # require including some -ci or -i spaces.  See cases c098/x063.
-        # Updated to check all lines (not just $K_first==$K_last) to fix b1316
-        my $K_begin_loop = $K_first;
-        if ( $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
+        # The basic idea is that at each node in the tree we imagine that we
+        # have a fork with a handle and collapsible prongs:
+        #
+        #                            |------------
+        #                            |--------
+        #                ------------|-------
+        #                 handle     |------------
+        #                            |--------
+        #                              prongs
+        #
+        # Each prong has a minimum collapsed length. The collapsed length at a
+        # node is the maximum of these minimum lengths, plus the handle length.
+        # Each of the prongs may itself be a tree node.
 
-            my $KK       = $K_first;
-            my $level    = $rLL->[$KK]->[_LEVEL_];
-            my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
+        # This is just a rough calculation to get an approximate starting point
+        # for indentation.  Later routines will be more precise.  It is
+        # important that these estimates be independent of the line breaks of
+        # the input stream in order to avoid instabilities.
 
-            # remember the level of the start
-            if ( !defined($K_start_multiline_qw) ) {
-                $K_start_multiline_qw     = $K_first;
-                $level_start_multiline_qw = $level;
-                my $seqno_qw =
-                  $self->[_rstarting_multiline_qw_seqno_by_K_]
-                  ->{$K_start_multiline_qw};
-                if ( !$seqno_qw ) {
-                    my $Kp = $self->K_previous_nonblank($K_first);
-                    if ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 'q' ) {
+        my $rLL                        = $self->[_rLL_];
+        my $Klimit                     = $self->[_Klimit_];
+        my $rlines                     = $self->[_rlines_];
+        my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
+        my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
 
-                        $K_start_multiline_qw = $Kp;
-                        $level_start_multiline_qw =
-                          $rLL->[$K_start_multiline_qw]->[_LEVEL_];
+        my $K_start_multiline_qw;
+        my $level_start_multiline_qw = 0;
+
+        xlp_collapsed_lengths_initialize();
+
+        #--------------------------------
+        # Loop over all lines in the file
+        #--------------------------------
+        my $iline = -1;
+        my $skip_next_line;
+        foreach my $line_of_tokens ( @{$rlines} ) {
+            $iline++;
+            if ($skip_next_line) {
+                $skip_next_line = 0;
+                next;
+            }
+            my $line_type = $line_of_tokens->{_line_type};
+            next if ( $line_type ne 'CODE' );
+            my $CODE_type = $line_of_tokens->{_code_type};
+
+            # Always skip blank lines
+            next if ( $CODE_type eq 'BL' );
+
+            # Note on other line types:
+            # 'FS' (Format Skipping) lines may contain opening/closing tokens so
+            #      we have to process them to keep the stack correctly sequenced
+            # 'VB' (Verbatim) lines could be skipped, but testing shows that
+            #      results look better if we include their lengths.
+
+            # Also note that we could exclude -xlp formatting of containers with
+            # 'FS' and 'VB' lines, but in testing that was not really beneficial
+
+            # So we process tokens in 'FS' and 'VB' lines like all the rest...
+
+            my $rK_range = $line_of_tokens->{_rK_range};
+            my ( $K_first, $K_last ) = @{$rK_range};
+            next unless ( defined($K_first) && defined($K_last) );
+
+            my $has_comment = $rLL->[$K_last]->[_TYPE_] eq '#';
+
+            # Always ignore block comments
+            next if ( $has_comment && $K_first == $K_last );
+
+            # Handle an intermediate line of a multiline qw quote. These may
+            # require including some -ci or -i spaces.  See cases c098/x063.
+            # Updated to check all lines (not just $K_first==$K_last) to fix
+            # b1316
+            my $K_begin_loop = $K_first;
+            if ( $rLL->[$K_first]->[_TYPE_] eq 'q' ) {
+
+                my $KK       = $K_first;
+                my $level    = $rLL->[$KK]->[_LEVEL_];
+                my $ci_level = $rLL->[$KK]->[_CI_LEVEL_];
+
+                # remember the level of the start
+                if ( !defined($K_start_multiline_qw) ) {
+                    $K_start_multiline_qw     = $K_first;
+                    $level_start_multiline_qw = $level;
+                    my $seqno_qw =
+                      $self->[_rstarting_multiline_qw_seqno_by_K_]
+                      ->{$K_start_multiline_qw};
+                    if ( !$seqno_qw ) {
+                        my $Kp = $self->K_previous_nonblank($K_first);
+                        if ( defined($Kp) && $rLL->[$Kp]->[_TYPE_] eq 'q' ) {
+
+                            $K_start_multiline_qw = $Kp;
+                            $level_start_multiline_qw =
+                              $rLL->[$K_start_multiline_qw]->[_LEVEL_];
+                        }
+                        else {
+
+                            # Fix for b1319, b1320
+                            $K_start_multiline_qw = undef;
+                        }
                     }
-                    else {
+                }
 
-                        # Fix for b1319, b1320
-                        $K_start_multiline_qw = undef;
+                if ( defined($K_start_multiline_qw) ) {
+                    $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
+                      $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+
+                    # We may have to add the spaces of one level or ci level
+                    # ...  it depends depends on the -xci flag, the -wn flag,
+                    # and if the qw uses a container token as the quote
+                    # delimiter.
+
+                    # First rule: add ci if there is a $ci_level
+                    if ($ci_level) {
+                        $len += $rOpts_continuation_indentation;
                     }
+
+                    # Second rule: otherwise, look for an extra indentation
+                    # level from the start and add one indentation level if
+                    # found.
+                    elsif ( $level > $level_start_multiline_qw ) {
+                        $len += $rOpts_indent_columns;
+                    }
+
+                    if ( $len > $max_prong_len ) { $max_prong_len = $len }
+
+                    $last_nonblank_type = 'q';
+
+                    $K_begin_loop = $K_first + 1;
+
+                    # We can skip to the next line if more tokens
+                    next if ( $K_begin_loop > $K_last );
                 }
             }
 
-            if ( defined($K_start_multiline_qw) ) {
-                $len = $rLL->[$KK]->[_CUMULATIVE_LENGTH_] -
-                  $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_];
+            $K_start_multiline_qw = undef;
 
-                # We may have to add the spaces of one level or ci level ...  it
-                # depends depends on the -xci flag, the -wn flag, and if the qw
-                # uses a container token as the quote delimiter.
-
-                # First rule: add ci if there is a $ci_level
-                if ($ci_level) {
-                    $len += $rOpts_continuation_indentation;
-                }
-
-                # Second rule: otherwise, look for an extra indentation level
-                # from the start and add one indentation level if found.
-                elsif ( $level > $level_start_multiline_qw ) {
-                    $len += $rOpts_indent_columns;
-                }
-
-                if ( $len > $max_prong_len ) { $max_prong_len = $len }
-
-                $last_nonblank_type = 'q';
-
-                $K_begin_loop = $K_first + 1;
-
-                # We can skip to the next line if more tokens
-                next if ( $K_begin_loop > $K_last );
+            # Find the terminal token, before any side comment
+            my $K_terminal = $K_last;
+            if ($has_comment) {
+                $K_terminal -= 1;
+                $K_terminal -= 1
+                  if ( $rLL->[$K_terminal]->[_TYPE_] eq 'b'
+                    && $K_terminal > $K_first );
             }
-        }
 
-        $K_start_multiline_qw = undef;
+            # Use length to terminal comma if interrupted list rule applies
+            if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
+                my $K_c = $stack[-1]->[_K_c_];
+                if ( defined($K_c) ) {
 
-        # Find the terminal token, before any side comment
-        my $K_terminal = $K_last;
-        if ($has_comment) {
-            $K_terminal -= 1;
-            $K_terminal -= 1
-              if ( $rLL->[$K_terminal]->[_TYPE_] eq 'b'
-                && $K_terminal > $K_first );
-        }
+                    #----------------------------------------------------------
+                    # BEGIN patch for issue b1408: If this line ends in an
+                    # opening token, look for the closing token and comma at
+                    # the end of the next line. If so, combine the two lines to
+                    # get the correct sums.  This problem seems to require -xlp
+                    # -vtc=2 and blank lines to occur. Use %is_opening_type to
+                    # fix b1431.
+                    #----------------------------------------------------------
+                    if ( $is_opening_type{ $rLL->[$K_terminal]->[_TYPE_] }
+                        && !$has_comment )
+                    {
+                        my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
+                        my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
 
-        # Use length to terminal comma if interrupted list rule applies
-        if ( @stack && $stack[-1]->[_interrupted_list_rule_] ) {
-            my $K_c = $stack[-1]->[_K_c_];
-            if ( defined($K_c) ) {
+                        # We are looking for a short broken remnant on the next
+                        # line; something like the third line here (b1408):
 
-                #--------------------------------------------------------------
-                # BEGIN patch for issue b1408: If this line ends in an opening
-                # token, look for the closing token and comma at the end of the
-                # next line. If so, combine the two lines to get the correct
-                # sums.  This problem seems to require -xlp -vtc=2 and blank
-                # lines to occur. Use %is_opening_type to fix b1431.
-                #--------------------------------------------------------------
-                if ( $is_opening_type{ $rLL->[$K_terminal]->[_TYPE_] }
-                    && !$has_comment )
-                {
-                    my $seqno_end = $rLL->[$K_terminal]->[_TYPE_SEQUENCE_];
-                    my $Kc_test   = $rLL->[$K_terminal]->[_KNEXT_SEQ_ITEM_];
-
-                    # We are looking for a short broken remnant on the next
-                    # line; something like the third line here (b1408):
                     #     parent =>
                     #       Moose::Util::TypeConstraints::find_type_constraint(
                     #               'RefXX' ),
@@ -12722,93 +12742,151 @@ sub xlp_collapsed_lengths {
                     # or this (b1431):
                     #        $issue->{
                     #           'borrowernumber'},  # borrowernumber
-                    if (   defined($Kc_test)
-                        && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
-                        && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
+                        if (   defined($Kc_test)
+                            && $seqno_end == $rLL->[$Kc_test]->[_TYPE_SEQUENCE_]
+                            && $rLL->[$Kc_test]->[_LINE_INDEX_] == $iline + 1 )
+                        {
+                            my $line_of_tokens_next = $rlines->[ $iline + 1 ];
+                            my $rtype_count =
+                              $rtype_count_by_seqno->{$seqno_end};
+                            my $comma_count =
+                              defined($rtype_count) ? $rtype_count->{','} : 0;
+                            my ( $K_first_next, $K_terminal_next ) =
+                              @{ $line_of_tokens_next->{_rK_range} };
+
+                            # backup at a side comment
+                            if ( defined($K_terminal_next)
+                                && $rLL->[$K_terminal_next]->[_TYPE_] eq '#' )
+                            {
+                                my $Kprev =
+                                  $self->K_previous_nonblank($K_terminal_next);
+                                if ( defined($Kprev)
+                                    && $Kprev >= $K_first_next )
+                                {
+                                    $K_terminal_next = $Kprev;
+                                }
+                            }
+
+                            if (
+                                defined($K_terminal_next)
+
+                                # next line ends with a comma
+                                && $rLL->[$K_terminal_next]->[_TYPE_] eq ','
+
+                                # which follows the closing container token
+                                && (
+                                    $K_terminal_next - $Kc_test == 1
+                                    || (   $K_terminal_next - $Kc_test == 2
+                                        && $rLL->[ $K_terminal_next - 1 ]
+                                        ->[_TYPE_] eq 'b' )
+                                )
+
+                                # no commas in the container
+                                && (   !defined($rtype_count)
+                                    || !$rtype_count->{','} )
+
+                                # for now, restrict this to a container with
+                                # just 1 or two tokens
+                                && $K_terminal_next - $K_terminal <= 5
+
+                              )
+                            {
+
+                                # combine the next line with the current line
+                                $K_terminal     = $K_terminal_next;
+                                $skip_next_line = 1;
+                                if (DEBUG_COLLAPSED_LENGTHS) {
+                                    print "Combining lines at line $iline\n";
+                                }
+                            }
+                        }
+                    }
+
+                    #--------------------------
+                    # END patch for issue b1408
+                    #--------------------------
+
+                    if (
+                        $rLL->[$K_terminal]->[_TYPE_] eq ','
+
+                        # Ignore if terminal comma, causes instability (b1297,
+                        # b1330)
+                        && (
+                            $K_c - $K_terminal > 2
+                            || (   $K_c - $K_terminal == 2
+                                && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
+                        )
+                      )
                     {
-                        my $line_of_tokens_next = $rlines->[ $iline + 1 ];
-                        my $rtype_count = $rtype_count_by_seqno->{$seqno_end};
-                        my $comma_count =
-                          defined($rtype_count) ? $rtype_count->{','} : 0;
-                        my ( $K_first_next, $K_terminal_next ) =
-                          @{ $line_of_tokens_next->{_rK_range} };
 
-                        # backup at a side comment
-                        if ( defined($K_terminal_next)
-                            && $rLL->[$K_terminal_next]->[_TYPE_] eq '#' )
-                        {
-                            my $Kprev =
-                              $self->K_previous_nonblank($K_terminal_next);
-                            if ( defined($Kprev) && $Kprev >= $K_first_next ) {
-                                $K_terminal_next = $Kprev;
-                            }
+                        # $len => my $leng to fix b1302 b1306 b1317 b1321
+                        my $leng = $rLL->[$K_terminal]->[_CUMULATIVE_LENGTH_] -
+                          $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+
+                        # Fix for b1331: at a broken => item, include the
+                        # length of the previous half of the item plus one for
+                        # the missing space
+                        if ( $last_nonblank_type eq '=>' ) {
+                            $leng += $len + 1;
                         }
-
-                        if (
-                            defined($K_terminal_next)
-
-                            # next line ends with a comma
-                            && $rLL->[$K_terminal_next]->[_TYPE_] eq ','
-
-                            # which follows the closing container token
-                            && (
-                                $K_terminal_next - $Kc_test == 1
-                                || (   $K_terminal_next - $Kc_test == 2
-                                    && $rLL->[ $K_terminal_next - 1 ]->[_TYPE_]
-                                    eq 'b' )
-                            )
-
-                            # no commas in the container
-                            && (   !defined($rtype_count)
-                                || !$rtype_count->{','} )
-
-                            # for now, restrict this to a container with just 1
-                            # or two tokens
-                            && $K_terminal_next - $K_terminal <= 5
-
-                          )
-                        {
-
-                            # combine the next line with the current line
-                            $K_terminal     = $K_terminal_next;
-                            $skip_next_line = 1;
-                            if (DEBUG_COLLAPSED_LENGTHS) {
-                                print "Combining lines at line $iline\n";
-                            }
-                        }
+                        if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
                     }
-                }
-
-                #--------------------------
-                # END patch for issue b1408
-                #--------------------------
-
-                if (
-                    $rLL->[$K_terminal]->[_TYPE_] eq ','
-
-                   # Ignore if terminal comma, causes instability (b1297, b1330)
-                    && (
-                        $K_c - $K_terminal > 2
-                        || (   $K_c - $K_terminal == 2
-                            && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
-                    )
-                  )
-                {
-
-                    # changed $len to my $leng to fix b1302 b1306 b1317 b1321
-                    my $leng = $rLL->[$K_terminal]->[_CUMULATIVE_LENGTH_] -
-                      $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
-
-                    # Fix for b1331: at a broken => item, include the length of
-                    # the previous half of the item plus one for the missing
-                    # space
-                    if ( $last_nonblank_type eq '=>' ) {
-                        $leng += $len + 1;
-                    }
-                    if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
                 }
             }
+
+            #----------------------------------
+            # Loop over all tokens on this line
+            #----------------------------------
+            $self->xlp_collapse_lengths_inner_loop( $iline, $K_begin_loop,
+                $K_terminal, $K_last );
+
+            # Now take care of any side comment;
+            if ($has_comment) {
+                if ($rOpts_ignore_side_comment_lengths) {
+                    $len = 0;
+                }
+                else {
+
+                 # For a side comment when -iscl is not set, measure length from
+                 # the start of the previous nonblank token
+                    my $len0 =
+                        $K_terminal > 0
+                      ? $rLL->[ $K_terminal - 1 ]->[_CUMULATIVE_LENGTH_]
+                      : 0;
+                    $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - $len0;
+                    if ( $len > $max_prong_len ) { $max_prong_len = $len }
+                }
+            }
+
+        } ## end loop over lines
+
+        if (DEBUG_COLLAPSED_LENGTHS) {
+            print "\nCollapsed lengths--\n";
+            foreach
+              my $key ( sort { $a <=> $b } keys %{$rcollapsed_length_by_seqno} )
+            {
+                my $clen = $rcollapsed_length_by_seqno->{$key};
+                print "$key -> $clen\n";
+            }
         }
+
+        return;
+    } ## end sub xlp_collapsed_lengths
+
+    sub xlp_collapse_lengths_inner_loop {
+
+        my ( $self, $iline, $K_begin_loop, $K_terminal, $K_last ) = @_;
+
+        my $rLL                 = $self->[_rLL_];
+        my $K_opening_container = $self->[_K_opening_container_];
+        my $K_closing_container = $self->[_K_closing_container_];
+
+        my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
+        my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
+        my $ris_permanently_broken     = $self->[_ris_permanently_broken_];
+        my $ris_list_by_seqno          = $self->[_ris_list_by_seqno_];
+        my $rhas_broken_list           = $self->[_rhas_broken_list_];
+        my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
 
         #----------------------------------
         # Loop over tokens on this line ...
@@ -12919,13 +12997,16 @@ sub xlp_collapsed_lengths {
 
                     my $K_c = $K_closing_container->{$seqno};
 
-                    push @stack,
-                      [
-                        $max_prong_len, $handle_len,
-                        $seqno,         $iline,
-                        $KK,            $K_c,
+                    push @stack, [
+
+                        $max_prong_len,
+                        $handle_len,
+                        $seqno,
+                        $iline,
+                        $KK,
+                        $K_c,
                         $interrupted_list_rule
-                      ];
+                    ];
                 }
 
                 #--------------------
@@ -13070,38 +13151,11 @@ EOM
 
         } ## end loop over tokens on this line
 
-        # Now take care of any side comment;
-        if ($has_comment) {
-            if ($rOpts_ignore_side_comment_lengths) {
-                $len = 0;
-            }
-            else {
+        return;
 
-                # For a side comment when -iscl is not set, measure length from
-                # the start of the previous nonblank token
-                my $len0 =
-                    $K_terminal > 0
-                  ? $rLL->[ $K_terminal - 1 ]->[_CUMULATIVE_LENGTH_]
-                  : 0;
-                $len = $rLL->[$K_last]->[_CUMULATIVE_LENGTH_] - $len0;
-                if ( $len > $max_prong_len ) { $max_prong_len = $len }
-            }
-        }
+    } ## end sub xlp_collapse_lengths_inner_loop
 
-    } ## end loop over lines
-
-    if (DEBUG_COLLAPSED_LENGTHS) {
-        print "\nCollapsed lengths--\n";
-        foreach
-          my $key ( sort { $a <=> $b } keys %{$rcollapsed_length_by_seqno} )
-        {
-            my $clen = $rcollapsed_length_by_seqno->{$key};
-            print "$key -> $clen\n";
-        }
-    }
-
-    return;
-} ## end sub xlp_collapsed_lengths
+} ## end closure xlp_collapsed_lengths
 
 sub is_excluded_lp {
 
