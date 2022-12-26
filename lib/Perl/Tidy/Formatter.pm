@@ -25418,6 +25418,10 @@ EOM
         @is_vertical_alignment_keyword{@q} = (1) x scalar(@q);
     }
 
+    my $ralignment_type_to_go;
+    my $ralignment_counts;
+    my $ralignment_hash_by_line;
+
     sub set_vertical_alignment_markers {
 
         my ( $self, $ri_first, $ri_last ) = @_;
@@ -25435,9 +25439,10 @@ EOM
         # $ralignment_type_to_go->[$i] equal to those tokens at which we would
         # accept vertical alignment.
 
-        my $ralignment_type_to_go;
-        my $ralignment_counts       = [];
-        my $ralignment_hash_by_line = [];
+        # Initialize closure (and return) variables:
+        $ralignment_type_to_go   = [];
+        $ralignment_counts       = [];
+        $ralignment_hash_by_line = [];
 
         # NOTE: closing side comments can insert up to 2 additional tokens
         # beyond the original $max_index_to_go, so we need to check ri_last for
@@ -25452,13 +25457,8 @@ EOM
         #    - and nothing to do if we aren't allowed to change whitespace.
         # -----------------------------------------------------------------
         if ( $max_i <= 0 || !$rOpts_add_whitespace ) {
-            return ( $ralignment_type_to_go, $ralignment_counts,
-                $ralignment_hash_by_line );
+            goto RETURN;
         }
-
-        my $rspecial_side_comment_type = $self->[_rspecial_side_comment_type_];
-        my $ris_function_call_paren    = $self->[_ris_function_call_paren_];
-        my $rLL                        = $self->[_rLL_];
 
         # -------------------------------
         # First handle any side comment.
@@ -25479,7 +25479,7 @@ EOM
             my $do_not_align = (
 
                 # it is any specially marked side comment
-                ( defined($KK) && $rspecial_side_comment_type->{$KK} )
+                ( defined($KK) && $self->[_rspecial_side_comment_type_]->{$KK} )
 
                 # or it is a static side comment
                   || ( $rOpts->{'static-side-comments'}
@@ -25524,16 +25524,12 @@ EOM
         # Nothing more to do on this line if -nvc is set
         # ----------------------------------------------
         if ( !$rOpts_valign_code ) {
-            return ( $ralignment_type_to_go, $ralignment_counts,
-                $ralignment_hash_by_line );
+            goto RETURN;
         }
 
         # -------------------------------------
         # Loop over each line of this batch ...
         # -------------------------------------
-        my $last_vertical_alignment_BEFORE_index;
-        my $vert_last_nonblank_type;
-        my $vert_last_nonblank_token;
 
         foreach my $line ( 0 .. $max_line ) {
 
@@ -25545,312 +25541,335 @@ EOM
             # back up before any side comment
             if ( $iend > $i_terminal ) { $iend = $i_terminal }
 
-            my $level_beg = $levels_to_go[$ibeg];
-            my $token_beg = $tokens_to_go[$ibeg];
-            my $type_beg  = $types_to_go[$ibeg];
-            my $type_beg_special_char =
-              ( $type_beg eq '.' || $type_beg eq ':' || $type_beg eq '?' );
-
-            $last_vertical_alignment_BEFORE_index = -1;
-            $vert_last_nonblank_type              = $type_beg;
-            $vert_last_nonblank_token             = $token_beg;
-
-            # ----------------------------------------------------------------
-            # Initialization code merged from 'sub delete_needless_alignments'
-            # ----------------------------------------------------------------
-            my $i_good_paren  = -1;
-            my $i_elsif_close = $ibeg - 1;
-            my $i_elsif_open  = $iend + 1;
-            my @imatch_list;
-            if ( $type_beg eq 'k' ) {
-
-                # Initialization for paren patch: mark a location of a paren we
-                # should keep, such as one following something like a leading
-                # 'if', 'elsif',
-                $i_good_paren = $ibeg + 1;
-                if ( $types_to_go[$i_good_paren] eq 'b' ) {
-                    $i_good_paren++;
-                }
-
-                # Initialization for 'elsif' patch: remember the paren range of
-                # an elsif, and do not make alignments within them because this
-                # can cause loss of padding and overall brace alignment in the
-                # vertical aligner.
-                if (   $token_beg eq 'elsif'
-                    && $i_good_paren < $iend
-                    && $tokens_to_go[$i_good_paren] eq '(' )
-                {
-                    $i_elsif_open  = $i_good_paren;
-                    $i_elsif_close = $mate_index_to_go[$i_good_paren];
-                }
-            } ## end if ( $type_beg eq 'k' )
-
-            # --------------------------------------------
-            # Loop over each token in this output line ...
-            # --------------------------------------------
-            foreach my $i ( $ibeg + 1 .. $iend ) {
-
-                next if ( $types_to_go[$i] eq 'b' );
-
-                my $type           = $types_to_go[$i];
-                my $token          = $tokens_to_go[$i];
-                my $alignment_type = EMPTY_STRING;
-
-                # ----------------------------------------------
-                # Check for 'paren patch' : Remove excess parens
-                # ----------------------------------------------
-
-                # Excess alignment of parens can prevent other good alignments.
-                # For example, note the parens in the first two rows of the
-                # following snippet.  They would normally get marked for
-                # alignment and aligned as follows:
-
-                #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
-                #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
-                #    my $img = new Gimp::Image( $w, $h, RGB );
-
-                # This causes unnecessary paren alignment and prevents the
-                # third equals from aligning. If we remove the unwanted
-                # alignments we get:
-
-                #    my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
-                #    my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
-                #    my $img = new Gimp::Image( $w, $h, RGB );
-
-                # A rule for doing this which works well is to remove alignment
-                # of parens whose containers do not contain other aligning
-                # tokens, with the exception that we always keep alignment of
-                # the first opening paren on a line (for things like 'if' and
-                # 'elsif' statements).
-                if ( $token eq ')' && @imatch_list ) {
-
-                    # undo the corresponding opening paren if:
-                    # - it is at the top of the stack
-                    # - and not the first overall opening paren
-                    # - does not follow a leading keyword on this line
-                    my $imate = $mate_index_to_go[$i];
-                    if (   $imatch_list[-1] eq $imate
-                        && ( $ibeg > 1 || @imatch_list > 1 )
-                        && $imate > $i_good_paren )
-                    {
-                        if ( $ralignment_type_to_go->[$imate] ) {
-                            $ralignment_type_to_go->[$imate] = EMPTY_STRING;
-                            $ralignment_counts->[$line]--;
-                            delete $ralignment_hash_by_line->[$line]->{$imate};
-                        }
-                        pop @imatch_list;
-                    }
-                }
-
-                # do not align tokens at lower level than start of line
-                # except for side comments
-                if ( $levels_to_go[$i] < $level_beg ) {
-                    next;
-                }
-
-                #--------------------------------------------------------
-                # First see if we want to align BEFORE this token
-                #--------------------------------------------------------
-
-                # The first possible token that we can align before
-                # is index 2 because: 1) it doesn't normally make sense to
-                # align before the first token and 2) the second
-                # token must be a blank if we are to align before
-                # the third
-                if ( $i < $ibeg + 2 ) { }
-
-                # must follow a blank token
-                elsif ( $types_to_go[ $i - 1 ] ne 'b' ) { }
-
-                # otherwise, do not align two in a row to create a
-                # blank field
-                elsif ( $last_vertical_alignment_BEFORE_index == $i - 2 ) { }
-
-                # align before one of these keywords
-                # (within a line, since $i>1)
-                elsif ( $type eq 'k' ) {
-
-                    #  /^(if|unless|and|or|eq|ne)$/
-                    if ( $is_vertical_alignment_keyword{$token} ) {
-                        $alignment_type = $token;
-                    }
-                }
-
-                # align qw in a 'use' statement (issue git #93)
-                elsif ( $type eq 'q' ) {
-                    if ( $types_to_go[0] eq 'k' && $tokens_to_go[0] eq 'use' ) {
-                        $alignment_type = $type;
-                    }
-                }
-
-                # align before one of these types..
-                elsif ( $is_vertical_alignment_type{$type}
-                    && !$is_not_vertical_alignment_token{$token} )
-                {
-                    $alignment_type = $token;
-
-                    # Do not align a terminal token.  Although it might
-                    # occasionally look ok to do this, this has been found to be
-                    # a good general rule.  The main problems are:
-                    # (1) that the terminal token (such as an = or :) might get
-                    # moved far to the right where it is hard to see because
-                    # nothing follows it, and
-                    # (2) doing so may prevent other good alignments.
-                    # Current exceptions are && and || and =>
-                    if ( $i == $iend ) {
-                        $alignment_type = EMPTY_STRING
-                          unless ( $is_terminal_alignment_type{$type} );
-                    }
-
-                    # Do not align leading ': (' or '. ('.  This would prevent
-                    # alignment in something like the following:
-                    #   $extra_space .=
-                    #       ( $input_line_number < 10 )  ? "  "
-                    #     : ( $input_line_number < 100 ) ? " "
-                    #     :                                "";
-                    # or
-                    #  $code =
-                    #      ( $case_matters ? $accessor : " lc($accessor) " )
-                    #    . ( $yesno        ? " eq "       : " ne " )
-
-                    # Also, do not align a ( following a leading ? so we can
-                    # align something like this:
-                    #   $converter{$_}->{ushortok} =
-                    #     $PDL::IO::Pic::biggrays
-                    #     ? ( m/GIF/          ? 0 : 1 )
-                    #     : ( m/GIF|RAST|IFF/ ? 0 : 1 );
-                    if (   $type_beg_special_char
-                        && $i == $ibeg + 2
-                        && $types_to_go[ $i - 1 ] eq 'b' )
-                    {
-                        $alignment_type = EMPTY_STRING;
-                    }
-
-                    # Certain tokens only align at the same level as the
-                    # initial line level
-                    if (   $is_low_level_alignment_token{$token}
-                        && $levels_to_go[$i] != $level_beg )
-                    {
-                        $alignment_type = EMPTY_STRING;
-                    }
-
-                    if ( $token eq '(' ) {
-
-                        # For a paren after keyword, only align if-like parens,
-                        # such as:
-                        #    if    ( $a ) { &a }
-                        #    elsif ( $b ) { &b }
-                        #          ^-------------------aligned parens
-                        if ( $vert_last_nonblank_type eq 'k'
-                            && !$is_if_unless_elsif{$vert_last_nonblank_token} )
-                        {
-                            $alignment_type = EMPTY_STRING;
-                        }
-
-                        # Do not align a spaced-function-paren if requested.
-                        # Issue git #53, #73.
-                        if ( !$rOpts_function_paren_vertical_alignment ) {
-                            my $seqno = $type_sequence_to_go[$i];
-                            $alignment_type = EMPTY_STRING
-                              if ( $ris_function_call_paren->{$seqno} );
-                        }
-
-                        # make () align with qw in a 'use' statement (git #93)
-                        if (   $tokens_to_go[0] eq 'use'
-                            && $types_to_go[0] eq 'k'
-                            && $mate_index_to_go[$i] == $i + 1 )
-                        {
-                            $alignment_type = 'q';
-
-                            ## Note on discussion git #101. We could make this
-                            ## a separate type '()' to separate it from qw's:
-                            ## $alignment_type =
-                            ##  $rOpts_valign_empty_parens_with_qw ? 'q' : '()';
-                        }
-                    }
-
-                    # be sure the alignment tokens are unique
-                    # This didn't work well: reason not determined
-                    # if ($token ne $type) {$alignment_type .= $type}
-                }
-
-                # NOTE: This is deactivated because it causes the previous
-                # if/elsif alignment to fail
-                #elsif ( $type eq '}' && $token eq '}' && $block_type_to_go[$i])
-                #{ $alignment_type = $type; }
-
-                if ($alignment_type) {
-                    $last_vertical_alignment_BEFORE_index = $i;
-                }
-
-                #--------------------------------------------------------
-                # Next see if we want to align AFTER the previous nonblank
-                #--------------------------------------------------------
-
-                # We want to line up ',' and interior ';' tokens, with the added
-                # space AFTER these tokens.  (Note: interior ';' is included
-                # because it may occur in short blocks).
-                elsif (
-
-                    # previous token IS one of these:
-                    (
-                           $vert_last_nonblank_type eq ','
-                        || $vert_last_nonblank_type eq ';'
-                    )
-
-                    # and it follows a blank
-                    && $types_to_go[ $i - 1 ] eq 'b'
-
-                    # and it's NOT one of these
-                    && !$is_closing_token{$type}
-
-                    # then go ahead and align
-                  )
-
-                {
-                    $alignment_type = $vert_last_nonblank_type;
-                }
-
-                #-----------------------
-                # Set the alignment type
-                #-----------------------
-                if ($alignment_type) {
-
-                    # but do not align the opening brace of an anonymous sub
-                    if (   $token eq '{'
-                        && $block_type_to_go[$i] =~ /$ASUB_PATTERN/ )
-                    {
-
-                    }
-
-                    # and do not make alignments within 'elsif' parens
-                    elsif ( $i > $i_elsif_open && $i < $i_elsif_close ) {
-
-                    }
-
-                    # and ignore any tokens which have leading padded spaces
-                    # example: perl527/lop.t
-                    elsif ( substr( $alignment_type, 0, 1 ) eq SPACE ) {
-
-                    }
-
-                    else {
-                        $ralignment_type_to_go->[$i] = $alignment_type;
-                        $ralignment_hash_by_line->[$line]->{$i} =
-                          $alignment_type;
-                        $ralignment_counts->[$line]++;
-                        push @imatch_list, $i;
-                    }
-                }
-
-                $vert_last_nonblank_type  = $type;
-                $vert_last_nonblank_token = $token;
-            }
+            #----------------------------------
+            # Loop over all tokens on this line
+            #----------------------------------
+            $self->set_vertical_alignment_markers_token_loop( $line, $ibeg,
+                $iend );
         }
 
+      RETURN:
         return ( $ralignment_type_to_go, $ralignment_counts,
             $ralignment_hash_by_line );
     } ## end sub set_vertical_alignment_markers
+
+    sub set_vertical_alignment_markers_token_loop {
+        my ( $self, $line, $ibeg, $iend ) = @_;
+
+        # Set vertical alignment markers for the tokens on one line
+        # of the current output batch. This is done by updating the
+        # three closure variables:
+        #   $ralignment_type_to_go
+        #   $ralignment_counts
+        #   $ralignment_hash_by_line
+
+        # Input parameters:
+        #   $line = index of this line in the current batch
+        #   $ibeg, $iend = index range of tokens to check in the _to_go arrays
+
+        my $level_beg = $levels_to_go[$ibeg];
+        my $token_beg = $tokens_to_go[$ibeg];
+        my $type_beg  = $types_to_go[$ibeg];
+        my $type_beg_special_char =
+          ( $type_beg eq '.' || $type_beg eq ':' || $type_beg eq '?' );
+
+        my $last_vertical_alignment_BEFORE_index = -1;
+        my $vert_last_nonblank_type              = $type_beg;
+        my $vert_last_nonblank_token             = $token_beg;
+
+        # ----------------------------------------------------------------
+        # Initialization code merged from 'sub delete_needless_alignments'
+        # ----------------------------------------------------------------
+        my $i_good_paren  = -1;
+        my $i_elsif_close = $ibeg - 1;
+        my $i_elsif_open  = $iend + 1;
+        my @imatch_list;
+        if ( $type_beg eq 'k' ) {
+
+            # Initialization for paren patch: mark a location of a paren we
+            # should keep, such as one following something like a leading
+            # 'if', 'elsif',
+            $i_good_paren = $ibeg + 1;
+            if ( $types_to_go[$i_good_paren] eq 'b' ) {
+                $i_good_paren++;
+            }
+
+            # Initialization for 'elsif' patch: remember the paren range of
+            # an elsif, and do not make alignments within them because this
+            # can cause loss of padding and overall brace alignment in the
+            # vertical aligner.
+            if (   $token_beg eq 'elsif'
+                && $i_good_paren < $iend
+                && $tokens_to_go[$i_good_paren] eq '(' )
+            {
+                $i_elsif_open  = $i_good_paren;
+                $i_elsif_close = $mate_index_to_go[$i_good_paren];
+            }
+        } ## end if ( $type_beg eq 'k' )
+
+        # --------------------------------------------
+        # Loop over each token in this output line ...
+        # --------------------------------------------
+        foreach my $i ( $ibeg + 1 .. $iend ) {
+
+            next if ( $types_to_go[$i] eq 'b' );
+
+            my $type           = $types_to_go[$i];
+            my $token          = $tokens_to_go[$i];
+            my $alignment_type = EMPTY_STRING;
+
+            # ----------------------------------------------
+            # Check for 'paren patch' : Remove excess parens
+            # ----------------------------------------------
+
+            # Excess alignment of parens can prevent other good alignments.
+            # For example, note the parens in the first two rows of the
+            # following snippet.  They would normally get marked for
+            # alignment and aligned as follows:
+
+            #    my $w = $columns * $cell_w + ( $columns + 1 ) * $border;
+            #    my $h = $rows * $cell_h +    ( $rows + 1 ) * $border;
+            #    my $img = new Gimp::Image( $w, $h, RGB );
+
+            # This causes unnecessary paren alignment and prevents the
+            # third equals from aligning. If we remove the unwanted
+            # alignments we get:
+
+            #    my $w   = $columns * $cell_w + ( $columns + 1 ) * $border;
+            #    my $h   = $rows * $cell_h + ( $rows + 1 ) * $border;
+            #    my $img = new Gimp::Image( $w, $h, RGB );
+
+            # A rule for doing this which works well is to remove alignment
+            # of parens whose containers do not contain other aligning
+            # tokens, with the exception that we always keep alignment of
+            # the first opening paren on a line (for things like 'if' and
+            # 'elsif' statements).
+            if ( $token eq ')' && @imatch_list ) {
+
+                # undo the corresponding opening paren if:
+                # - it is at the top of the stack
+                # - and not the first overall opening paren
+                # - does not follow a leading keyword on this line
+                my $imate = $mate_index_to_go[$i];
+                if (   $imatch_list[-1] eq $imate
+                    && ( $ibeg > 1 || @imatch_list > 1 )
+                    && $imate > $i_good_paren )
+                {
+                    if ( $ralignment_type_to_go->[$imate] ) {
+                        $ralignment_type_to_go->[$imate] = EMPTY_STRING;
+                        $ralignment_counts->[$line]--;
+                        delete $ralignment_hash_by_line->[$line]->{$imate};
+                    }
+                    pop @imatch_list;
+                }
+            }
+
+            # do not align tokens at lower level than start of line
+            # except for side comments
+            if ( $levels_to_go[$i] < $level_beg ) {
+                next;
+            }
+
+            #--------------------------------------------------------
+            # First see if we want to align BEFORE this token
+            #--------------------------------------------------------
+
+            # The first possible token that we can align before
+            # is index 2 because: 1) it doesn't normally make sense to
+            # align before the first token and 2) the second
+            # token must be a blank if we are to align before
+            # the third
+            if ( $i < $ibeg + 2 ) { }
+
+            # must follow a blank token
+            elsif ( $types_to_go[ $i - 1 ] ne 'b' ) { }
+
+            # otherwise, do not align two in a row to create a
+            # blank field
+            elsif ( $last_vertical_alignment_BEFORE_index == $i - 2 ) { }
+
+            # align before one of these keywords
+            # (within a line, since $i>1)
+            elsif ( $type eq 'k' ) {
+
+                #  /^(if|unless|and|or|eq|ne)$/
+                if ( $is_vertical_alignment_keyword{$token} ) {
+                    $alignment_type = $token;
+                }
+            }
+
+            # align qw in a 'use' statement (issue git #93)
+            elsif ( $type eq 'q' ) {
+                if ( $types_to_go[0] eq 'k' && $tokens_to_go[0] eq 'use' ) {
+                    $alignment_type = $type;
+                }
+            }
+
+            # align before one of these types..
+            elsif ( $is_vertical_alignment_type{$type}
+                && !$is_not_vertical_alignment_token{$token} )
+            {
+                $alignment_type = $token;
+
+                # Do not align a terminal token.  Although it might
+                # occasionally look ok to do this, this has been found to be
+                # a good general rule.  The main problems are:
+                # (1) that the terminal token (such as an = or :) might get
+                # moved far to the right where it is hard to see because
+                # nothing follows it, and
+                # (2) doing so may prevent other good alignments.
+                # Current exceptions are && and || and =>
+                if ( $i == $iend ) {
+                    $alignment_type = EMPTY_STRING
+                      unless ( $is_terminal_alignment_type{$type} );
+                }
+
+                # Do not align leading ': (' or '. ('.  This would prevent
+                # alignment in something like the following:
+                #   $extra_space .=
+                #       ( $input_line_number < 10 )  ? "  "
+                #     : ( $input_line_number < 100 ) ? " "
+                #     :                                "";
+                # or
+                #  $code =
+                #      ( $case_matters ? $accessor : " lc($accessor) " )
+                #    . ( $yesno        ? " eq "       : " ne " )
+
+                # Also, do not align a ( following a leading ? so we can
+                # align something like this:
+                #   $converter{$_}->{ushortok} =
+                #     $PDL::IO::Pic::biggrays
+                #     ? ( m/GIF/          ? 0 : 1 )
+                #     : ( m/GIF|RAST|IFF/ ? 0 : 1 );
+                if (   $type_beg_special_char
+                    && $i == $ibeg + 2
+                    && $types_to_go[ $i - 1 ] eq 'b' )
+                {
+                    $alignment_type = EMPTY_STRING;
+                }
+
+                # Certain tokens only align at the same level as the
+                # initial line level
+                if (   $is_low_level_alignment_token{$token}
+                    && $levels_to_go[$i] != $level_beg )
+                {
+                    $alignment_type = EMPTY_STRING;
+                }
+
+                if ( $token eq '(' ) {
+
+                    # For a paren after keyword, only align if-like parens,
+                    # such as:
+                    #    if    ( $a ) { &a }
+                    #    elsif ( $b ) { &b }
+                    #          ^-------------------aligned parens
+                    if ( $vert_last_nonblank_type eq 'k'
+                        && !$is_if_unless_elsif{$vert_last_nonblank_token} )
+                    {
+                        $alignment_type = EMPTY_STRING;
+                    }
+
+                    # Do not align a spaced-function-paren if requested.
+                    # Issue git #53, #73.
+                    if ( !$rOpts_function_paren_vertical_alignment ) {
+                        my $seqno = $type_sequence_to_go[$i];
+                        $alignment_type = EMPTY_STRING
+                          if ( $self->[_ris_function_call_paren_]->{$seqno} );
+                    }
+
+                    # make () align with qw in a 'use' statement (git #93)
+                    if (   $tokens_to_go[0] eq 'use'
+                        && $types_to_go[0] eq 'k'
+                        && $mate_index_to_go[$i] == $i + 1 )
+                    {
+                        $alignment_type = 'q';
+
+                        ## Note on discussion git #101. We could make this
+                        ## a separate type '()' to separate it from qw's:
+                        ## $alignment_type =
+                        ##  $rOpts_valign_empty_parens_with_qw ? 'q' : '()';
+                    }
+                }
+
+                # be sure the alignment tokens are unique
+                # This experiment didn't work well: reason not determined
+                # if ($token ne $type) {$alignment_type .= $type}
+            }
+
+            # NOTE: This is deactivated because it causes the previous
+            # if/elsif alignment to fail
+            #elsif ( $type eq '}' && $token eq '}' && $block_type_to_go[$i])
+            #{ $alignment_type = $type; }
+
+            if ($alignment_type) {
+                $last_vertical_alignment_BEFORE_index = $i;
+            }
+
+            #--------------------------------------------------------
+            # Next see if we want to align AFTER the previous nonblank
+            #--------------------------------------------------------
+
+            # We want to line up ',' and interior ';' tokens, with the added
+            # space AFTER these tokens.  (Note: interior ';' is included
+            # because it may occur in short blocks).
+            elsif (
+
+                # previous token IS one of these:
+                (
+                       $vert_last_nonblank_type eq ','
+                    || $vert_last_nonblank_type eq ';'
+                )
+
+                # and it follows a blank
+                && $types_to_go[ $i - 1 ] eq 'b'
+
+                # and it's NOT one of these
+                && !$is_closing_token{$type}
+
+                # then go ahead and align
+              )
+
+            {
+                $alignment_type = $vert_last_nonblank_type;
+            }
+
+            #-----------------------
+            # Set the alignment type
+            #-----------------------
+            if ($alignment_type) {
+
+                # but do not align the opening brace of an anonymous sub
+                if (   $token eq '{'
+                    && $block_type_to_go[$i] =~ /$ASUB_PATTERN/ )
+                {
+
+                }
+
+                # and do not make alignments within 'elsif' parens
+                elsif ( $i > $i_elsif_open && $i < $i_elsif_close ) {
+
+                }
+
+                # and ignore any tokens which have leading padded spaces
+                # example: perl527/lop.t
+                elsif ( substr( $alignment_type, 0, 1 ) eq SPACE ) {
+
+                }
+
+                else {
+                    $ralignment_type_to_go->[$i] = $alignment_type;
+                    $ralignment_hash_by_line->[$line]->{$i} = $alignment_type;
+                    $ralignment_counts->[$line]++;
+                    push @imatch_list, $i;
+                }
+            }
+
+            $vert_last_nonblank_type  = $type;
+            $vert_last_nonblank_token = $token;
+        }
+        return;
+    } ## end sub set_vertical_alignment_markers_token_loop
+
 } ## end closure set_vertical_alignment_markers
 
 sub make_vertical_alignments {
