@@ -101,6 +101,7 @@ use vars qw{
   %is_tetragraph
   %is_valid_token_type
   %is_keyword
+  %is_my_our_state
   %is_code_block_token
   %is_sort_map_grep_eval_do
   %is_sort_map_grep
@@ -335,6 +336,38 @@ sub check_options {
         foreach my $word (@sub_alias_list) {
             $is_sub{$word}                 = 1;
             $is_END_DATA_format_sub{$word} = 1;
+        }
+    }
+
+    # Update hash values for any -use-feature options
+    if ( $rOpts->{'use-feature'} ) {
+
+        # These are the main updates for this option. There are additional
+        # changes elsewhere, usually indicated with a comment 'rt145706'
+
+        # Update hash values for use_feature=class, added for rt145706
+        # see 'perlclass.pod'
+        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+
+            # there are 4 new keywords:
+
+            # 'class' - treated specially as generalization of 'package'
+            # Note: we must not set 'class' to be a keyword to avoid problems
+            # with older uses.
+            $is_package{'class'} = 1;
+
+            # 'method' - treated like sub using the sub-alias-list option
+            # Note: we must not set 'method' to be a keyword to avoid problems
+            # with older uses.
+
+            # 'field'  - added as a keyword, and works like 'my'
+            $is_keyword{'field'}      = 1;
+            $is_my_our_state{'field'} = 1;
+
+            # 'ADJUST' - added as a keyword and works like 'BEGIN'
+            # TODO: if ADJUST gets a paren list, this will need to be updated
+            $is_keyword{'ADJUST'}          = 1;
+            $is_code_block_token{'ADJUST'} = 1;
         }
     }
 
@@ -1859,14 +1892,13 @@ EOM
     @q = qw(for foreach);
     @is_for_foreach{@q} = (1) x scalar(@q);
 
-    my %is_my_our_state;
-    @q = qw(my our state);
-    @is_my_our_state{@q} = (1) x scalar(@q);
-
     # These keywords may introduce blocks after parenthesized expressions,
     # in the form:
     # keyword ( .... ) { BLOCK }
     # patch for SWITCH/CASE: added 'switch' 'case' 'given' 'when'
+    # NOTE for --use-feature=class: if ADJUST blocks eventually take a
+    # parameter list, then ADJUST might need to be added to this list (see
+    # perlclass.pod)
     my %is_blocktype_with_paren;
     @q =
       qw(if elsif unless while until for foreach switch case given when catch);
@@ -2660,7 +2692,8 @@ EOM
 
         # ATTRS: for a '{' following an attribute list, reset
         # things to look like we just saw the sub name
-        if ( $statement_type =~ /^sub\b/ ) {
+        # Added 'package' (can be 'class') for --use-feature=class (rt145706)
+        if ( $statement_type =~ /^(sub|package)\b/ ) {
             $last_nonblank_token = $statement_type;
             $last_nonblank_type  = 'i';
             $statement_type      = EMPTY_STRING;
@@ -2973,7 +3006,8 @@ EOM
 
         # ATTRS: check for a ':' which introduces an attribute list
         # either after a 'sub' keyword or within a paren list
-        elsif ( $statement_type =~ /^sub\b/ ) {
+        # Added 'package' (can be 'class') for --use-feature=class (rt145706)
+        elsif ( $statement_type =~ /^(sub|package)\b/ ) {
             $type              = 'A';
             $in_attribute_list = 1;
         }
@@ -4043,19 +4077,55 @@ EOM
             $i = $i_next;
         }
 
-        #      'sub' or alias
+        # 'sub' or other sub alias
         elsif ( $is_sub{$tok_kw} ) {
-            error_if_expecting_OPERATOR()
-              if ( $expecting == OPERATOR );
-            initialize_subname();
-            scan_id();
+
+            # Update for --use-feature=class (rt145706):
+            # We have to be extra careful to avoid misparsing other uses of
+            # 'method' in older scripts.
+
+            # TODO: This is just a preliminary version. A future version
+            # should add an option to silently parse as a sub and then
+            # on error backtrack and parse as a bareword.
+
+            if ( $tok_kw eq 'method' ) {
+                if (   $expecting == OPERATOR
+                    || $next_nonblank_token !~ /^(\w|\:)/ )
+                {
+                    do_UNKNOWN_BAREWORD($next_nonblank_token);
+                }
+                else { scan_id() }
+            }
+            else {
+                error_if_expecting_OPERATOR()
+                  if ( $expecting == OPERATOR );
+                initialize_subname();
+                scan_id();
+            }
         }
 
-        #      'package'
+        # 'package'
         elsif ( $is_package{$tok_kw} ) {
-            error_if_expecting_OPERATOR()
-              if ( $expecting == OPERATOR );
-            scan_id();
+
+            # Update for --use-feature=class (rt145706):
+            # We have to be extra careful because 'class' may be used for other
+            # purposes on older code; i.e.
+            #   class($x)   - valid sub call
+            #   package($x) - error
+            if ( $tok_kw eq 'class' ) {
+                if (   $expecting == OPERATOR
+                    || !new_statement_ok()
+                    || $next_nonblank_token !~ /^(\w|\:)/ )
+                {
+                    do_UNKNOWN_BAREWORD($next_nonblank_token);
+                }
+                else { scan_id() }
+            }
+            else {
+                error_if_expecting_OPERATOR()
+                  if ( $expecting == OPERATOR );
+                scan_id();
+            }
         }
 
         # Fix for c035: split 'format' from 'is_format_END_DATA' to be
@@ -5787,6 +5857,13 @@ sub operator_expected {
         if ( $last_nonblank_token eq 'prototype' ) {
             $op_expected = TERM;
         }
+
+        # update for --use-feature=class (rt145706):
+        # Look for class VERSION after possible attribute, as in
+        #    class Example::Subclass : isa(Example::Base) 1.345 { ... }
+        elsif ( $statement_type =~ /^package\b/ ) {
+            $op_expected = TERM;
+        }
     }
 
     # file handle or similar
@@ -7343,7 +7420,8 @@ sub do_scan_package {
         # Examples of valid primitive tokens that might follow are:
         #  1235  . ; { } v3  v
         # FIX: added a '#' since a side comment may also follow
-        if ( $next_nonblank_token =~ /^([v\.\d;\{\}\#])|v\d|\d+$/ ) {
+        # Added ':' for class attributes (for --use-feature=class, rt145706)
+        if ( $next_nonblank_token =~ /^([v\.\d;\{\}\#\:])|v\d|\d+$/ ) {
             $statement_type = $tok;
         }
         else {
@@ -9807,10 +9885,15 @@ BEGIN {
     @q = qw( print printf sort exec system say);
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
 
+    # Note: 'field' will be added by sub check_options if --use-feature=class
+    @q = qw(my our state);
+    @is_my_our_state{@q} = (1) x scalar(@q);
+
     # These tokens may precede a code block
     # patched for SWITCH/CASE/CATCH.  Actually these could be removed
     # now and we could let the extended-syntax coding handle them.
     # Added 'default' for Switch::Plain.
+    # Note: 'ADJUST' will be added by sub check_options if --use-feature=class
     @q =
       qw( BEGIN END CHECK INIT AUTOLOAD DESTROY UNITCHECK continue if elsif else
       unless do while until eval for foreach map grep sort
@@ -10060,7 +10143,11 @@ BEGIN {
       isa
 
       catch
+
     );
+
+    # Note: 'ADJUST', 'field' are added by sub check_options
+    # if --use-feature=class
 
     # patched above for SWITCH/CASE given/when err say
     # 'err' is a fairly safe addition.
@@ -10161,6 +10248,7 @@ BEGIN {
     @q = qw(q qq qw qx qr s y tr m);
     @is_q_qq_qw_qx_qr_s_y_tr_m{@q} = (1) x scalar(@q);
 
+    # Note: 'class' will be added by sub check_options if -use-feature=class
     @q = qw(package);
     @is_package{@q} = (1) x scalar(@q);
 

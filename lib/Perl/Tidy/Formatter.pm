@@ -6328,19 +6328,6 @@ EOM
         {
             $type = 'closure';
         }
-        elsif ( $ris_sub_block->{$seqno}
-            && ( $dump_all_types || $dump_block_types{'sub'} ) )
-        {
-            $type = 'sub';
-
-            # what we want:
-            #      $block_type               $name
-            # 'sub setidentifier($)'    => 'setidentifier'
-            # 'method setidentifier($)' => 'setidentifier'
-            my @parts = split /\s+/, $block_type;
-            $name = $parts[1];
-            $name =~ s/\W.*$//;
-        }
 
         # Both 'sub' and 'asub' select an anonymous sub.
         # This allows anonymous subs to be explicitely selected
@@ -6373,6 +6360,28 @@ EOM
                 }
             }
         }
+        elsif ( $ris_sub_block->{$seqno}
+            && ( $dump_all_types || $dump_block_types{'sub'} ) )
+        {
+            $type = 'sub';
+
+            # what we want:
+            #      $block_type               $name
+            # 'sub setidentifier($)'    => 'setidentifier'
+            # 'method setidentifier($)' => 'setidentifier'
+            my @parts = split /\s+/, $block_type;
+            $name = $parts[1];
+            $name =~ s/\(.*$//;
+        }
+        elsif ( $block_type =~ /^package\s/
+            && ( $dump_all_types || $dump_block_types{'package'} ) )
+        {
+            $type = 'package';
+            my @parts = split /\s+/, $block_type;
+            $name = $parts[1];
+            $name =~ s/\(.*$//;
+        }
+
         elsif (
             $is_loop_type{$block_type}
             && (   $dump_all_types

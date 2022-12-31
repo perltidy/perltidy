@@ -3153,6 +3153,7 @@ sub generate_options {
     $add_option->( 'sub-alias-list',               'sal',  '=s' );
     $add_option->( 'grep-alias-list',              'gal',  '=s' );
     $add_option->( 'grep-alias-exclusion-list',    'gaxl', '=s' );
+    $add_option->( 'use-feature',                  'uf',   '=s' );
 
     ########################################
     $category = 2;    # Code indentation control
@@ -4198,6 +4199,54 @@ sub make_grep_alias_string {
     return;
 } ## end sub make_grep_alias_string
 
+sub cleanup_word_list {
+    my ( $rOpts, $option_name, $rforced_words ) = @_;
+
+    # Clean up the list of words in a user option to simplify use by
+    # later routines (delete repeats, replace commas with single space,
+    # remove non-words)
+
+    # Given:
+    #   $rOpts - the global option hash
+    #   $option_name - hash key of this iption
+    #   $rforced_words - ref to list of any words to be added
+
+    # Returns:
+    #   \%seen - hash of the final list of words
+
+    my %seen;
+    my @input_list;
+
+    my $input_string = $rOpts->{$option_name};
+    if ( defined($input_string) && length($input_string) ) {
+        $input_string =~ s/,/ /g;    # allow commas
+        $input_string =~ s/^\s+//;
+        $input_string =~ s/\s+$//;
+        @input_list = split /\s+/, $input_string;
+    }
+
+    if ($rforced_words) {
+        push @input_list, @{$rforced_words};
+    }
+
+    my @filtered_word_list;
+    foreach my $word (@input_list) {
+        if ($word) {
+
+            # look for obviously bad words
+            if ( $word =~ /^\d/ || $word !~ /^\w[\w\d]*$/ ) {
+                Warn("unexpected '$option_name' word '$word' - ignoring\n");
+            }
+            if ( !$seen{$word} ) {
+                $seen{$word}++;
+                push @filtered_word_list, $word;
+            }
+        }
+    }
+    $rOpts->{$option_name} = join SPACE, @filtered_word_list;
+    return \%seen;
+}
+
 sub check_options {
 
     my ( $rOpts, $is_Windows, $Windows_type, $rpending_complaint ) = @_;
@@ -4347,30 +4396,30 @@ EOM
         $rOpts->{'default-tabsize'} = 8;
     }
 
-    # Check and clean up any sub-alias-list
-    if ( $rOpts->{'sub-alias-list'} ) {
-        my $sub_alias_string = $rOpts->{'sub-alias-list'};
-        $sub_alias_string =~ s/,/ /g;    # allow commas
-        $sub_alias_string =~ s/^\s+//;
-        $sub_alias_string =~ s/\s+$//;
-        my @sub_alias_list     = split /\s+/, $sub_alias_string;
-        my @filtered_word_list = ('sub');
-        my %seen;
+    # Check and clean up any use-feature list
+    my $saw_use_feature_class;
+    if ( $rOpts->{'use-feature'} ) {
+        my $rseen = cleanup_word_list( $rOpts, 'use-feature' );
+        $saw_use_feature_class = $rseen->{'class'};
+    }
 
-        # include 'sub' for later convenience
-        $seen{sub}++;
-        foreach my $word (@sub_alias_list) {
-            if ($word) {
-                if ( $word !~ /^\w[\w\d]*$/ ) {
-                    Warn("unexpected sub alias '$word' - ignoring\n");
-                }
-                if ( !$seen{$word} ) {
-                    $seen{$word}++;
-                    push @filtered_word_list, $word;
-                }
-            }
-        }
-        $rOpts->{'sub-alias-list'} = join SPACE, @filtered_word_list;
+    # Check and clean up any sub-alias-list
+    if (
+        defined( $rOpts->{'sub-alias-list'} )
+        && length( $rOpts->{'sub-alias-list'} )
+
+        || $saw_use_feature_class
+      )
+    {
+        my @forced_words;
+
+        # include 'sub' for convenience if this option is used
+        push @forced_words, 'sub';
+
+        # use-feature=class requires method as a sub alias
+        push @forced_words, 'method' if ($saw_use_feature_class);
+
+        cleanup_word_list( $rOpts, 'sub-alias-list', \@forced_words );
     }
 
     make_grep_alias_string($rOpts);
