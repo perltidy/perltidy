@@ -1163,6 +1163,8 @@ EOM
 
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
 
+            'use-feature' => [ 'class', ' ', 'xyzzy' ],
+
             # Arbitrary limits to keep things readable
             'blank-lines-after-opening-block'  => [ 0, 4 ],
             'blank-lines-before-closing-block' => [ 0, 3 ],

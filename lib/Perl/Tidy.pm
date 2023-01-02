@@ -3577,6 +3577,7 @@ sub generate_options {
       noweld-nested-containers
       recombine
       nouse-unicode-gcstring
+      use-feature=class
       valign-code
       valign-block-comments
       valign-side-comments
@@ -4208,7 +4209,7 @@ sub cleanup_word_list {
 
     # Given:
     #   $rOpts - the global option hash
-    #   $option_name - hash key of this iption
+    #   $option_name - hash key of this option
     #   $rforced_words - ref to list of any words to be added
 
     # Returns:

@@ -2,6 +2,14 @@
 
 ## 2022 11 12.02
 
+    - Added option --use-feature=class, or -uf=class, for issue rt #145706.
+      This adds keywords 'class', 'method', 'field', and 'ADJUST' in support of
+      this feature which is being tested for future inclusion in Perl.
+      An effort has been made to avoid conflicts with past uses of these
+      words, especially 'method' and 'class'. The default setting
+      is --use-feature=class. If this causes a conflict, this option can
+      be turned off by entering -uf=' '.
+
     - Added option -bfvt=n, or --brace-follower-vertical-tightness=n,
       for part of issue git #110.  For n=2, this option looks for lines
       which would otherwise be, by default,

@@ -17,6 +17,7 @@
 #14 bfvt.def
 #15 cpb.cpb
 #16 cpb.def
+#17 rt145706.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -153,6 +154,39 @@ GetOptions(
             }
 }}}
 
+----------
+
+        'rt145706' => <<'----------',
+# some tests for default setting --use-feature=class, rt145706
+class Example::Subclass1 : isa(Example::Base) { ... }
+class Example::Subclass2 : isa(Example::Base 2.345) { ... }
+class Example::Subclass3 : isa(Example::Base) 1.345 { ... }
+field $y : param(the_y_value);
+class Pointer 2.0 {
+    field $x : param;
+    field $y : param;
+
+    method to_string() {
+        return "($x, $y)";
+    }
+}
+
+ADJUST {
+    $x = 0;
+}
+
+# these should not produce errors
+method paint => sub {
+    ...;
+};
+is( ( method Pack "a", "b", "c" ), "method,a,b,c" );
+class ExtendsBasicAttributes is BasicAttributes{
+ ...
+}
+class +Night with +Bad {
+    public nine { return 'crazy' }
+};
+my $x = field(50);
 ----------
 
         'wtc' => <<'----------',
@@ -851,6 +885,43 @@ foreach my $dir (
 }
 
 #16...........
+        },
+
+        'rt145706.def' => {
+            source => "rt145706",
+            params => "def",
+            expect => <<'#17...........',
+# some tests for default setting --use-feature=class, rt145706
+class Example::Subclass1 : isa(Example::Base) { ... }
+class Example::Subclass2 : isa(Example::Base 2.345) { ... }
+class Example::Subclass3 : isa(Example::Base) 1.345 { ... }
+field $y : param(the_y_value);
+class Pointer 2.0 {
+    field $x : param;
+    field $y : param;
+
+    method to_string() {
+        return "($x, $y)";
+    }
+}
+
+ADJUST {
+    $x = 0;
+}
+
+# these should not produce errors
+method paint => sub {
+    ...;
+};
+is( ( method Pack "a", "b", "c" ), "method,a,b,c" );
+class ExtendsBasicAttributes is BasicAttributes {
+    ...
+}
+class +Night with +Bad {
+    public nine { return 'crazy' }
+};
+my $x = field(50);
+#17...........
         },
     };
 

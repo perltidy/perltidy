@@ -435,7 +435,7 @@ sub get_val () {
 
 }
 
-method get_value() {
+method get_value () {
 
 }
 

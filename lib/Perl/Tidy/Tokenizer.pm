@@ -2195,6 +2195,137 @@ EOM
         return;
     } ## end sub scan_simple_identifier
 
+    sub method_ok_here {
+
+        # Return:
+        #   false if this is definitely an invalid method declaration
+        #   true otherwise (even if not sure)
+
+        # We are trying to avoid problems with old uses of 'method'
+        # when --use-feature=class is set (rt145706).
+        # For example, this should cause a return of 'false':
+
+        #  method paint => sub {
+        #    return;
+        #  };
+
+        # from do_scan_sub:
+        my $i_beg   = $i + 1;
+        my $pos_beg = $rtoken_map->[$i_beg];
+        pos($input_line) = $pos_beg;
+
+        # TEST 1: look a valid sub NAME
+        if (
+            $input_line =~ m/\G\s*
+        ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
+        (\w+)               # NAME    - required
+        /gcx
+          )
+        {
+            my $subname = $2;
+            my $package = $1 ? $1 : EMPTY_STRING;
+        }
+        else {
+            return;
+        }
+
+        # TEST 2: look for invalid characters after name, such as here:
+        #    method paint => sub {
+        #     ...
+        #    }
+
+        if ( $input_line =~ m/\s*(\S)/gcx ) {
+            my $char = $1;
+
+            # Possibly valid next token types:
+            # '(' could start prototype or signature
+            # ':' could start ATTRIBUTE
+            # '{' cold start BLOCK
+            # ';' or '}' could end a statement
+            if ( $char =~ /^[\(\:\{\;\}]/ ) { return 1 }
+
+            # stop at a side comment - assume ok for now
+            if ( $char eq '#' ) { return 1 }
+
+            # nothing else is valid (in particular '#' and '"')
+            return;
+        }
+
+        # TBD: Still uncertain; may be at end of line
+        # We could continue will stop here and assume ok.
+        return 1;
+    }
+
+    sub class_ok_here {
+
+        # Return:
+        #   false if this is definitely an invalid class declaration
+        #   true otherwise (even if not sure)
+
+        # We are trying to avoid problems with old uses of 'class'
+        # when --use-feature=class is set (rt145706).
+
+        # Valid class declarations look like
+        #   class NAME ATTRS VERSION BLOCK
+        # where ATTRS VERSION and BLOCK are optional
+
+        # For example, this should cause a return of 'false':
+        #
+        #   class ExtendsBasicAttributes is BasicAttributes{
+
+        # TEST 1: class stmt can only go where a new statment can start
+        if ( !new_statement_ok() ) { return }
+
+        my $i_beg   = $i + 1;
+        my $pos_beg = $rtoken_map->[$i_beg];
+        pos($input_line) = $pos_beg;
+
+        # TEST 2: look for a valid NAME
+        if (
+            $input_line =~ m/\G\s*
+        ((?:\w*(?:'|::))*)  # package - something that ends in :: or '
+        (\w+)               # NAME    - required
+        /gcx
+          )
+        {
+            my $subname = $2;
+            my $package = $1 ? $1 : EMPTY_STRING;
+        }
+        else {
+            return;
+        }
+
+        # TEST 3: look for invalid characters after NAME
+        if ( $input_line =~ m/\s*(\S)/gcx ) {
+
+            my $char = $1;
+
+            # Must see one of: ATTRIBUTE, VERSION, BLOCK, or end stmt
+
+            # Possibly valid next token types:
+            # ':' could start ATTRIBUTE
+            # '\d' could start VERSION
+            # '{' cold start BLOCK
+            # ';' could end a statement
+            # '}' could end statement but would be strange
+            if ( $char =~ /^[\:\d\{\;\}]/ ) { return 1 }
+
+            # stop at a side comment - assume ok for now
+            if ( $char eq '#' ) { return 1 }
+
+            # Nothing else should be okay
+            return;
+
+            # non-dight letter - not ok
+            # ( this must be checked after \d )
+            ##OLD: if ( $tok =~ /^\w/) { return }
+        }
+
+        # TBD: Still uncertain; may be at end of line.
+        # We could continue will stop here and assume ok.
+        return 1;
+    }
+
     sub scan_id {
         ( $i, $tok, $type, $id_scan_state ) =
           scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
@@ -2804,8 +2935,15 @@ EOM
             }
         }
 
-        $brace_type[ ++$brace_depth ]        = $block_type;
-        $brace_package[$brace_depth]         = $current_package;
+        $brace_type[ ++$brace_depth ] = $block_type;
+
+        # Patch for CLASS BLOCK definitions: do not update the package for the
+        # current depth if this is a BLOCK type definition.
+        # TODO: should make 'class' separate from 'package' and only do
+        # this for 'class'
+        $brace_package[$brace_depth] = $current_package
+          if ( substr( $block_type, 0, 8 ) ne 'package ' );
+
         $brace_structural_type[$brace_depth] = $type;
         $brace_context[$brace_depth]         = $context;
         ( $type_sequence, $indent_flag ) =
@@ -4090,11 +4228,15 @@ EOM
 
             if ( $tok_kw eq 'method' ) {
                 if (   $expecting == OPERATOR
-                    || $next_nonblank_token !~ /^(\w|\:)/ )
+                    || $next_nonblank_token !~ /^(\w|\:)/
+                    || !method_ok_here() )
                 {
                     do_UNKNOWN_BAREWORD($next_nonblank_token);
                 }
-                else { scan_id() }
+                else {
+                    initialize_subname();
+                    scan_id();
+                }
             }
             else {
                 error_if_expecting_OPERATOR()
@@ -4114,8 +4256,8 @@ EOM
             #   package($x) - error
             if ( $tok_kw eq 'class' ) {
                 if (   $expecting == OPERATOR
-                    || !new_statement_ok()
-                    || $next_nonblank_token !~ /^(\w|\:)/ )
+                    || $next_nonblank_token !~ /^(\w|\:)/
+                    || !class_ok_here() )
                 {
                     do_UNKNOWN_BAREWORD($next_nonblank_token);
                 }
@@ -8624,10 +8766,24 @@ EOM
                 }
             }
             elsif ($next_nonblank_token) {    # EOF technically ok
-                $subname = EMPTY_STRING unless defined($subname);
-                warning(
+
+                if ( $rinput_hash->{tok} eq 'method' && $call_type == SUB_CALL )
+                {
+                    # For a method call, silently ignore this error (rt145706)
+                    # to avoid needless warnings. Example which can produce it:
+                    #     test(method Pack (), "method");
+
+                    # TODO: scan for use feature 'class' and:
+                    # - if we saw 'use feature 'class' then issue the warning.
+                    # - if we did not see use feature 'class' then issue the
+                    #   warning and suggest turning off --use-feature=class
+                }
+                else {
+                    $subname = EMPTY_STRING unless defined($subname);
+                    warning(
 "expecting ':' or ';' or '{' after definition or declaration of sub '$subname' but saw '$next_nonblank_token'\n"
-                );
+                    );
+                }
             }
             check_prototype( $proto, $package, $subname );
         }
