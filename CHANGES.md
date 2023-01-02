@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 11 12.02
+## 2022 11 12.03
 
     - Added option --use-feature=class, or -uf=class, for issue rt #145706.
       This adds keywords 'class', 'method', 'field', and 'ADJUST' in support of

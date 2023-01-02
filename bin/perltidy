@@ -5485,7 +5485,7 @@ The perltidy binary uses the Perl::Tidy module and is installed when that module
 
 =head1 VERSION
 
-This man page documents perltidy version 20221112.02
+This man page documents perltidy version 20221112.03
 
 =head1 BUG REPORTS
 
