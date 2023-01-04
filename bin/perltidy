@@ -5017,9 +5017,11 @@ parameters:
     depth        - the nesting depth of the opening block brace
     max_change   - the change in depth to the most deeply nested code block
     block_count  - the total number of code blocks nested in this block
+    mccabe_count - the McCabe complexity measure of this code block
 
-These quantities can be useful for identifying complex code. For blocks which
-are loops nested within loops, a postfix '+' to the C<type> is added to
+These quantities can be useful for identifying complex code.  The McCabe
+complexity measure follows the definition used by Perl::Critic. For blocks
+which are loops nested within loops, a postfix '+' to the C<type> is added to
 indicate possible code complexity.  Although the table does not otherwise
 indicate which blocks are nested in other blocks, this can be determined by
 computing and comparing the block ending line numbers. The table also includes

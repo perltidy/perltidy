@@ -6142,6 +6142,48 @@ sub find_loop_label {
     return $label;
 } ## end sub find_loop_label
 
+{    ## closure find_mccabe_count
+    my %is_mccabe_logic_keyword;
+    my %is_mccabe_logic_operator;
+
+    BEGIN {
+        my @q = (qw( && || ||= &&= ? <<= >>= ));
+        @is_mccabe_logic_operator{@q} = (1) x scalar(@q);
+
+        @q = (qw( and or xor if else elsif unless until while for foreach ));
+        @is_mccabe_logic_keyword{@q} = (1) x scalar(@q);
+    }
+
+    sub find_mccabe_count {
+        my ($self) = @_;
+
+        # Find the cumulative mccabe count to each token
+        # Return '$rmccabe_count_sum' = ref to array with cumulative
+        #   mccabe count to each token $K
+
+        # NOTE: This sub currently follows the definitions in Perl::Critic
+
+        my $rmccabe_count_sum;
+        my $rLL    = $self->[_rLL_];
+        my $count  = 0;
+        my $Kmax   = @{$rLL};
+        my $Klimit = $self->[_Klimit_];
+        foreach my $KK ( 0 .. $Klimit ) {
+            $rmccabe_count_sum->{$KK} = $count;
+            my $type = $rLL->[$KK]->[_TYPE_];
+            if ( $type eq 'k' ) {
+                my $token = $rLL->[$KK]->[_TOKEN_];
+                if ( $is_mccabe_logic_keyword{$token} ) { $count++ }
+            }
+            elsif ( $is_mccabe_logic_operator{$type} ) {
+                $count++;
+            }
+        }
+        $rmccabe_count_sum->{ $Klimit + 1 } = $count;
+        return $rmccabe_count_sum;
+    } ## end sub find_mccabe_count
+} ## end closure find_mccabe_count
+
 sub find_code_line_count {
     my ($self) = @_;
 
@@ -6191,9 +6233,15 @@ sub find_code_line_count {
 } ## end sub find_code_line_count
 
 sub find_packages {
-    my ($self) = @_;
+
+    my ( $self, $rcode_line_count, $rmccabe_count_sum ) = @_;
 
     # returns a list of all package statements in a file
+
+    # FIXME:
+    #   - find ending line numbers of each package
+    #   - set mccabe count and line count, given line range
+
     my $rLL = $self->[_rLL_];
     my @package_list;
     foreach my $item ( @{$rLL} ) {
@@ -6209,14 +6257,15 @@ sub find_packages {
             my $name = substr( $token, 8 );
             push @package_list,
               {
-                line_start  => $item->[_LINE_INDEX_] + 1,
-                line_count  => 1,
-                code_lines  => 1,
-                name        => $name,
-                type        => 'package',
-                level       => $item->[_LEVEL_],
-                max_change  => 0,
-                block_count => 0,
+                line_start   => $item->[_LINE_INDEX_] + 1,
+                line_count   => 1,
+                code_lines   => 1,
+                name         => $name,
+                type         => 'package',
+                level        => $item->[_LEVEL_],
+                max_change   => 0,
+                block_count  => 0,
+                mccabe_count => 0,
               };
         }
     }
@@ -6224,7 +6273,8 @@ sub find_packages {
 } ## end sub find_packages
 
 sub find_selected_blocks {
-    my ($self) = @_;
+
+    my ( $self, $rcode_line_count, $rmccabe_count_sum ) = @_;
 
     # Find blocks needed for --dump-block-summary
     # Returns:
@@ -6261,9 +6311,6 @@ sub find_selected_blocks {
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
 
-    # Get number of code lines
-    my $rcode_line_count = $self->find_code_line_count();
-
     my @selected_blocks;
 
     #---------------------------------------------------
@@ -6282,6 +6329,18 @@ sub find_selected_blocks {
         my $lx_open    = $rLL->[$K_opening]->[_LINE_INDEX_];
         my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
         my $line_count = $lx_close - $lx_open + 1;
+
+        # Find the mccabe_count for this block
+        # NOTE:
+        #   - add 1 to match Perl::Critic
+        #   - should technically use $K_closing+1 here but it doesn't matter
+        #     because a closing brace is not one of the logical operators
+        my $mccabe_closing = $rmccabe_count_sum->{$K_closing};
+        my $mccabe_opening = $rmccabe_count_sum->{$K_opening};
+        my $mccabe_count   = 1;
+        if ( defined($mccabe_opening) && defined($mccabe_closing) ) {
+            $mccabe_count += $mccabe_closing - $mccabe_opening;
+        }
 
         # Find total number of lines of code excluding blanks, comments, pod
         my $code_lines_open  = $rcode_line_count->[$lx_open];
@@ -6404,14 +6463,15 @@ EOM
 
         push @selected_blocks,
           {
-            line_start  => $lx_open + 1,
-            line_count  => $line_count,
-            code_lines  => $code_lines,
-            name        => $name,
-            type        => $type,
-            level       => $level,
-            max_change  => $max_change,
-            block_count => $block_count,
+            line_start   => $lx_open + 1,
+            line_count   => $line_count,
+            code_lines   => $code_lines,
+            name         => $name,
+            type         => $type,
+            level        => $level,
+            max_change   => $max_change,
+            block_count  => $block_count,
+            mccabe_count => $mccabe_count,
           };
     }    ## END loop to get info for selected blocks
     return \@selected_blocks;
@@ -6424,11 +6484,19 @@ sub dump_block_summary {
     # This sub is called when
     #   --dump-block-summary (-dbs) is set.
 
+    # Get number of code lines
+    my $rcode_line_count = $self->find_code_line_count();
+
+    # Get mccabe count
+    my $rmccabe_count_sum = $self->find_mccabe_count();
+
     # get block info
-    my $rselected_blocks = $self->find_selected_blocks();
+    my $rselected_blocks =
+      $self->find_selected_blocks( $rcode_line_count, $rmccabe_count_sum );
 
     # get package info
-    my $rpackage_list = $self->find_packages();
+    my $rpackage_list =
+      $self->find_packages( $rcode_line_count, $rmccabe_count_sum );
 
     return if ( !@{$rselected_blocks} && !@{$rpackage_list} );
 
@@ -6437,19 +6505,20 @@ sub dump_block_summary {
     # Merge and print to STDOUT
     my $routput_lines = [];
     foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
-        my $line_start  = $item->{line_start};
-        my $line_count  = $item->{line_count};
-        my $code_lines  = $item->{code_lines};
-        my $type        = $item->{type};
-        my $name        = $item->{name};
-        my $level       = $item->{level};
-        my $max_change  = $item->{max_change};
-        my $block_count = $item->{block_count};
 
         my $rline_vars = [
-            $input_stream_name, $line_start, $line_count,
-            $code_lines,        $type,       $name,
-            $level,             $max_change, $block_count,
+
+            $input_stream_name,
+            $item->{line_start},
+            $item->{line_count},
+            $item->{code_lines},
+            $item->{type},
+            $item->{name},
+            $item->{level},
+            $item->{max_change},
+            $item->{block_count},
+            $item->{mccabe_count},
+
         ];
         push @{$routput_lines}, $rline_vars;
     }
@@ -6457,7 +6526,7 @@ sub dump_block_summary {
     my @merged_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
     print STDOUT
-"file,line,line_count,code_lines,type,name,level,max_change,block_count\n";
+"file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe_count\n";
 
     foreach my $rline_vars (@merged_lines) {
         my $line = join( ",", @{$rline_vars} ) . "\n";
