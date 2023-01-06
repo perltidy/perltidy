@@ -5019,40 +5019,70 @@ parameters:
     block_count  - the total number of code blocks nested in this block
     mccabe_count - the McCabe complexity measure of this code block
 
-These quantities can be useful for identifying complex code.  The McCabe
-complexity measure follows the definition used by Perl::Critic. For blocks
-which are loops nested within loops, a postfix '+' to the C<type> is added to
-indicate possible code complexity.  Although the table does not otherwise
-indicate which blocks are nested in other blocks, this can be determined by
-computing and comparing the block ending line numbers. The table also includes
-a line for each C<package> statement in the file. By default the table lists
-subroutines with more than 20 C<code_lines>, but this can be changed with the
-following two parameters:
+This feature was developed to help identify complex sections of code as an aid
+in refactoring.  The McCabe complexity measure follows the definition used by
+Perl::Critic.  By default the table contains these values for subroutines, but
+the user may request them for any or all blocks of code or packages.  For
+blocks which are loops nested within loops, a postfix '+' to the C<type> is
+added to indicate possible code complexity.  Although the table does not
+otherwise indicate which blocks are nested in other blocks, this can be
+determined by computing and comparing the block ending line numbers.
+
+By default the table lists subroutines with more than 20 C<code_lines>, but
+this can be changed with the following two parameters:
 
 B<--dump-block-minimum-lines=n>, or B<-dbl=n>, where B<n> is the minimum
-number of C<code_lines> to be included. The default is B<-n=20>.
+number of C<code_lines> to be included. The default is B<-n=20>.  Note that
+C<code_lines> is the number of lines excluding and comments, blanks and pod.
 
 B<--dump-block-types=s>, or B<-dbt=s>, where string B<s> is a list of block
 types to be included.  The type of a block is either the name of the perl
 builtin keyword for that block (such as B<sub if elsif else for foreach ..>) or
-the word immediately before the opening brace.  The type B<sub> selects both
-named subs and anonymous subs.  The special type B<asub> selects just anonymous
-subs, and the special type B<closure> selects nameless blocks.  The
-type B<*> selects all types except closures.  Block loops which are nested
-in other loops can be selected by adding a B<+> after the block name. A single
-token B<+> selects all nested block loops.  Some examples:
+the word immediately before the opening brace.  In addition, there are
+a few symbols for special block types, as follows:
 
-This selects block types C<sub for foreach while>:
+   if elsif else for foreach ... any keyword introducing a block
+   sub  - any sub or anynomous sub
+   asub - any anonymous sub
+   *    - any block except nameless blocks
+   +    - any nested inner block loop
+   package - any package or class
+   closure - any nameless block
 
-    perltidy -dbs -dbt='sub for foreach while' somefile.pl >blocks.csv
+In addition, specific block loop types which are nested in other loops can be
+selected by adding a B<+> after the block name.
 
-This selects blocks with two or more lines which are type C<sub> or which
-are inner loops:
+The default is B<-dbt='sub'>.
+
+In the following examples a table C<block.csv> is created for a file
+C<somefile.pl>:
+
+=over 4
+
+=item *
+This selects both C<subs> and C<packages> which have 20 or more lines of code.
+This can be useful in code which contains multiple packages.
+
+    perltidy -dbs -dbt='sub package' somefile.pl >blocks.csv
+
+=item *
+This selects block types C<sub for foreach while> with 10 or more code lines.
+
+    perltidy -dbs -dbl=10 -dbt='sub for foreach while' somefile.pl >blocks.csv
+
+=item *
+This selects blocks with 2 or more code lines which are type C<sub> or which
+are inner loops.
 
     perltidy -dbs -dbl=2 -dbt='sub +' somefile.pl >blocks.csv
 
-The default is B<-dbt='sub'>.  In addition to the selected blocks, any
-C<package> statements are also always included.
+=item *
+This selectes every block and package.
+
+    perltidy -dbs -dbl=1 -dbt='* closure' somefile.pl >blocks.csv
+
+=back
+
 
 =item B<Working with MakeMaker, AutoLoader and SelfLoader>
 

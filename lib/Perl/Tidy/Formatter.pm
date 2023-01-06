@@ -6232,59 +6232,111 @@ sub find_code_line_count {
     return $rcode_line_count;
 } ## end sub find_code_line_count
 
-sub find_packages {
+sub find_selected_packages {
 
-    my ( $self, $rcode_line_count, $rmccabe_count_sum ) = @_;
+    my ( $self, $rdump_block_types ) = @_;
 
-    # returns a list of all package statements in a file
+    # returns a list of all package statements in a file if requested
 
-    # FIXME:
-    #   - find ending line numbers of each package
-    #   - set mccabe count and line count, given line range
+    unless ( $rdump_block_types->{'*'}
+        || $rdump_block_types->{'package'}
+        || $rdump_block_types->{'class'} )
+    {
+        return;
+    }
 
-    my $rLL = $self->[_rLL_];
+    my $rLL    = $self->[_rLL_];
+    my $Klimit = $self->[_Klimit_];
+    my $rlines = $self->[_rlines_];
+
+    my $K_closing_container = $self->[_K_closing_container_];
     my @package_list;
-    foreach my $item ( @{$rLL} ) {
+    my @package_sweep;
+    my $lx_max = $rLL->[$Klimit]->[_LINE_INDEX_];
+    foreach my $KK ( 0 .. $Klimit ) {
+        my $item = $rLL->[$KK];
         my $type = $item->[_TYPE_];
         if ( $type ne 'i' ) {
             next;
         }
         my $token = $item->[_TOKEN_];
-        if ( substr( $token, 0, 7 ) eq 'package'
-            && $token =~ /^package\s/ )
+        if (   substr( $token, 0, 7 ) eq 'package' && $token =~ /^package\s/
+            || substr( $token, 0, 5 ) eq 'class' && $token =~ /^class\s/ )
         {
+
             $token =~ s/\s+/ /g;
-            my $name = substr( $token, 8 );
+            my ( $keyword, $name ) = split /\s+/, $token, 2;
+
+            my $lx_start     = $item->[_LINE_INDEX_];
+            my $level        = $item->[_LEVEL_];
+            my $parent_seqno = $self->parent_seqno_by_K($KK);
+
+            # Skip a class BLOCK because it will be handled as a block
+            if ( $keyword eq 'class' ) {
+                my $line_of_tokens = $rlines->[$lx_start];
+                my $rK_range       = $line_of_tokens->{_rK_range};
+                my ( $K_first, $K_last ) = @{$rK_range};
+                if ( $rLL->[$K_last]->[_TYPE_] eq '#' ) {
+                    $K_last = $self->K_previous_code($K_last);
+                }
+                if ( defined($K_last) ) {
+                    my $seqno_class = $rLL->[$K_last]->[_TYPE_SEQUENCE_];
+                    my $block_type_next =
+                      $self->[_rblock_type_of_seqno_]->{$seqno_class};
+
+                    # these block types are currently marked 'package'
+                    # but may be 'class' in the future, so allow both.
+                    if ( defined($block_type_next)
+                        && $block_type_next =~ /^(class|package)\b/ )
+                    {
+                        next;
+                    }
+                }
+            }
+
+            my $K_closing = $Klimit;
+            if ( $parent_seqno != SEQ_ROOT ) {
+                my $Kc = $K_closing_container->{$parent_seqno};
+                if ( defined($Kc) ) {
+                    $K_closing = $Kc;
+                }
+            }
+
+            # This package ends any previous package at this level
+            if ( defined( my $ix = $package_sweep[$level] ) ) {
+                my $rpk = $package_list[$ix];
+                my $Kc  = $rpk->{K_closing};
+                if ( $Kc > $KK ) {
+                    $rpk->{K_closing} = $KK - 1;
+                }
+            }
+            $package_sweep[$level] = @package_list;
+
+            # max_change and block_count are not currently reported 'package'
             push @package_list,
               {
-                line_start   => $item->[_LINE_INDEX_] + 1,
-                line_count   => 1,
-                code_lines   => 1,
-                name         => $name,
-                type         => 'package',
-                level        => $item->[_LEVEL_],
-                max_change   => 0,
-                block_count  => 0,
-                mccabe_count => 0,
+                line_start  => $lx_start + 1,
+                K_opening   => $KK,
+                K_closing   => $Klimit,
+                name        => $name,
+                type        => $keyword,
+                level       => $level,
+                max_change  => 0,
+                block_count => 0,
               };
         }
     }
+
     return \@package_list;
-} ## end sub find_packages
+} ## end sub find_selected_packages
 
 sub find_selected_blocks {
 
-    my ( $self, $rcode_line_count, $rmccabe_count_sum ) = @_;
+    my ( $self, $rdump_block_types ) = @_;
 
     # Find blocks needed for --dump-block-summary
     # Returns:
     #  $rslected_blocks = ref to a list of information on the selected blocks
-
-    # The following controls are available:
-    #  --dump-block-types=s (-dbt=s), where s is a list of block types
-    #    (if else elsif for foreach while do ... sub) ; default is 'sub'
-    #  --dump-block-minimum-lines=n (-dbml=n), where n is the minimum
-    #    number of lines for a block to be included; default is 20.
 
     my $rLL                  = $self->[_rLL_];
     my $rlines               = $self->[_rlines_];
@@ -6294,19 +6346,7 @@ sub find_selected_blocks {
     my $ris_asub_block       = $self->[_ris_asub_block_];
     my $ris_sub_block        = $self->[_ris_sub_block_];
 
-    my $rOpts_dump_block_minimum_lines = $rOpts->{'dump-block-minimum-lines'};
-    if ( !defined($rOpts_dump_block_minimum_lines) ) {
-        $rOpts_dump_block_minimum_lines = 20;
-    }
-
-    my $rOpts_dump_block_types = $rOpts->{'dump-block-types'};
-    if ( !defined($rOpts_dump_block_types) ) { $rOpts_dump_block_types = 'sub' }
-    $rOpts_dump_block_types =~ s/^\s+//;
-    $rOpts_dump_block_types =~ s/\s+$//;
-    my @list = split /\s+/, $rOpts_dump_block_types;
-    my %dump_block_types;
-    @{dump_block_types}{@list} = (1) x scalar(@list);
-    my $dump_all_types = $dump_block_types{'*'};
+    my $dump_all_types = $rdump_block_types->{'*'};
 
     # Get level variation info for code blocks
     my $rlevel_info = $self->find_level_info();
@@ -6325,35 +6365,7 @@ sub find_selected_blocks {
         my $K_closing  = $K_closing_container->{$seqno};
         my $level      = $rLL->[$K_opening]->[_LEVEL_];
 
-        # Find total number of lines between the braces
-        my $lx_open    = $rLL->[$K_opening]->[_LINE_INDEX_];
-        my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
-        my $line_count = $lx_close - $lx_open + 1;
-
-        # Find the mccabe_count for this block
-        # NOTE:
-        #   - add 1 to match Perl::Critic
-        #   - should technically use $K_closing+1 here but it doesn't matter
-        #     because a closing brace is not one of the logical operators
-        my $mccabe_closing = $rmccabe_count_sum->{$K_closing};
-        my $mccabe_opening = $rmccabe_count_sum->{$K_opening};
-        my $mccabe_count   = 1;
-        if ( defined($mccabe_opening) && defined($mccabe_closing) ) {
-            $mccabe_count += $mccabe_closing - $mccabe_opening;
-        }
-
-        # Find total number of lines of code excluding blanks, comments, pod
-        my $code_lines_open  = $rcode_line_count->[$lx_open];
-        my $code_lines_close = $rcode_line_count->[$lx_close];
-        my $code_lines       = 0;
-        if ( defined($code_lines_open) && defined($code_lines_close) ) {
-            $code_lines = $code_lines_close - $code_lines_open + 1;
-        }
-
-        if ( $code_lines < $rOpts_dump_block_minimum_lines ) {
-            next;
-        }
-
+        my $lx_open        = $rLL->[$K_opening]->[_LINE_INDEX_];
         my $line_of_tokens = $rlines->[$lx_open];
         my $rK_range       = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
@@ -6383,7 +6395,7 @@ EOM
 
         # Skip closures unless type 'closure' is explicitely requested
         if ( ( $block_type eq '}' || $block_type eq ';' )
-            && $dump_block_types{'closure'} )
+            && $rdump_block_types->{'closure'} )
         {
             $type = 'closure';
         }
@@ -6393,8 +6405,8 @@ EOM
         elsif (
             $ris_asub_block->{$seqno}
             && (   $dump_all_types
-                || $dump_block_types{'sub'}
-                || $dump_block_types{'asub'} )
+                || $rdump_block_types->{'sub'}
+                || $rdump_block_types->{'asub'} )
           )
         {
             $type = 'asub';
@@ -6420,7 +6432,7 @@ EOM
             }
         }
         elsif ( $ris_sub_block->{$seqno}
-            && ( $dump_all_types || $dump_block_types{'sub'} ) )
+            && ( $dump_all_types || $rdump_block_types->{'sub'} ) )
         {
             $type = 'sub';
 
@@ -6432,26 +6444,29 @@ EOM
             $name = $parts[1];
             $name =~ s/\(.*$//;
         }
-        elsif ( $block_type =~ /^package\s/
-            && ( $dump_all_types || $dump_block_types{'package'} ) )
+        elsif (
+            $block_type =~ /^(package|class)\b/
+            && (   $dump_all_types
+                || $rdump_block_types->{'package'}
+                || $rdump_block_types->{'class'} )
+          )
         {
-            $type = 'package';
+            $type = 'class';
             my @parts = split /\s+/, $block_type;
             $name = $parts[1];
             $name =~ s/\(.*$//;
         }
-
         elsif (
             $is_loop_type{$block_type}
             && (   $dump_all_types
-                || $dump_block_types{$block_type}
-                || $dump_block_types{ $block_type . $inner_loop_plus }
-                || $dump_block_types{$inner_loop_plus} )
+                || $rdump_block_types->{$block_type}
+                || $rdump_block_types->{ $block_type . $inner_loop_plus }
+                || $rdump_block_types->{$inner_loop_plus} )
           )
         {
             $type = $block_type . $inner_loop_plus;
         }
-        elsif ( $dump_all_types || $dump_block_types{$block_type} ) {
+        elsif ( $dump_all_types || $rdump_block_types->{$block_type} ) {
             if ( $is_loop_type{$block_type} ) {
                 $name = $self->find_loop_label($seqno);
             }
@@ -6463,15 +6478,14 @@ EOM
 
         push @selected_blocks,
           {
-            line_start   => $lx_open + 1,
-            line_count   => $line_count,
-            code_lines   => $code_lines,
-            name         => $name,
-            type         => $type,
-            level        => $level,
-            max_change   => $max_change,
-            block_count  => $block_count,
-            mccabe_count => $mccabe_count,
+            K_opening   => $K_opening,
+            K_closing   => $K_closing,
+            line_start  => $lx_open + 1,
+            name        => $name,
+            type        => $type,
+            level       => $level,
+            max_change  => $max_change,
+            block_count => $block_count,
           };
     }    ## END loop to get info for selected blocks
     return \@selected_blocks;
@@ -6484,51 +6498,102 @@ sub dump_block_summary {
     # This sub is called when
     #   --dump-block-summary (-dbs) is set.
 
-    # Get number of code lines
-    my $rcode_line_count = $self->find_code_line_count();
+    # The following controls are available:
+    #  --dump-block-types=s (-dbt=s), where s is a list of block types
+    #    (if else elsif for foreach while do ... sub) ; default is 'sub'
+    #  --dump-block-minimum-lines=n (-dbml=n), where n is the minimum
+    #    number of lines for a block to be included; default is 20.
 
-    # Get mccabe count
-    my $rmccabe_count_sum = $self->find_mccabe_count();
+    my $rOpts_dump_block_types = $rOpts->{'dump-block-types'};
+    if ( !defined($rOpts_dump_block_types) ) { $rOpts_dump_block_types = 'sub' }
+    $rOpts_dump_block_types =~ s/^\s+//;
+    $rOpts_dump_block_types =~ s/\s+$//;
+    my @list = split /\s+/, $rOpts_dump_block_types;
+    my %dump_block_types;
+    @{dump_block_types}{@list} = (1) x scalar(@list);
 
-    # get block info
-    my $rselected_blocks =
-      $self->find_selected_blocks( $rcode_line_count, $rmccabe_count_sum );
+    # Get block info
+    my $rselected_blocks = $self->find_selected_blocks( \%dump_block_types );
 
-    # get package info
-    my $rpackage_list =
-      $self->find_packages( $rcode_line_count, $rmccabe_count_sum );
+    # Get package info
+    my $rpackage_list = $self->find_selected_packages( \%dump_block_types );
 
     return if ( !@{$rselected_blocks} && !@{$rpackage_list} );
 
     my $input_stream_name = get_input_stream_name();
 
-    # Merge and print to STDOUT
+    # Get code line count
+    my $rcode_line_count = $self->find_code_line_count();
+
+    # Get mccabe count
+    my $rmccabe_count_sum = $self->find_mccabe_count();
+
+    my $rOpts_dump_block_minimum_lines = $rOpts->{'dump-block-minimum-lines'};
+    if ( !defined($rOpts_dump_block_minimum_lines) ) {
+        $rOpts_dump_block_minimum_lines = 20;
+    }
+
+    my $rLL = $self->[_rLL_];
+
+    # merge blocks and packages, add various counts, filter and print to STDOUT
     my $routput_lines = [];
     foreach my $item ( @{$rselected_blocks}, @{$rpackage_list} ) {
 
-        my $rline_vars = [
+        my $K_opening = $item->{K_opening};
+        my $K_closing = $item->{K_closing};
+
+        # define total number of lines
+        my $lx_open    = $rLL->[$K_opening]->[_LINE_INDEX_];
+        my $lx_close   = $rLL->[$K_closing]->[_LINE_INDEX_];
+        my $line_count = $lx_close - $lx_open + 1;
+
+        # define total number of lines of code excluding blanks, comments, pod
+        my $code_lines_open  = $rcode_line_count->[$lx_open];
+        my $code_lines_close = $rcode_line_count->[$lx_close];
+        my $code_lines       = 0;
+        if ( defined($code_lines_open) && defined($code_lines_close) ) {
+            $code_lines = $code_lines_close - $code_lines_open + 1;
+        }
+
+        # filter out blocks below the selected code line limit
+        if ( $code_lines < $rOpts_dump_block_minimum_lines ) {
+            next;
+        }
+
+        # add mccabe_count for this block
+        my $mccabe_closing = $rmccabe_count_sum->{ $K_closing + 1 };
+        my $mccabe_opening = $rmccabe_count_sum->{$K_opening};
+        my $mccabe_count   = 1;    # add 1 to match Perl::Critic
+        if ( defined($mccabe_opening) && defined($mccabe_closing) ) {
+            $mccabe_count += $mccabe_closing - $mccabe_opening;
+        }
+
+        # Store the final set of print variables
+        push @{$routput_lines}, [
 
             $input_stream_name,
             $item->{line_start},
-            $item->{line_count},
-            $item->{code_lines},
+            $line_count,
+            $code_lines,
             $item->{type},
             $item->{name},
             $item->{level},
             $item->{max_change},
             $item->{block_count},
-            $item->{mccabe_count},
+            $mccabe_count,
 
         ];
-        push @{$routput_lines}, $rline_vars;
     }
 
-    my @merged_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
+    return unless @{$routput_lines};
+
+    # Sort blocks and packages on starting line number
+    my @sorted_lines = sort { $a->[1] <=> $b->[1] } @{$routput_lines};
 
     print STDOUT
 "file,line,line_count,code_lines,type,name,level,max_change,block_count,mccabe_count\n";
 
-    foreach my $rline_vars (@merged_lines) {
+    foreach my $rline_vars (@sorted_lines) {
         my $line = join( ",", @{$rline_vars} ) . "\n";
         print STDOUT $line;
     }
