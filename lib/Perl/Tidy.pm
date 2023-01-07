@@ -3603,8 +3603,6 @@ sub generate_options {
       html-entities
     );
 
-    push @defaults, "perl-syntax-check-flags=-c -T";
-
     #-----------------------------------------------------------------------
     # Define abbreviations which will be expanded into the above primitives.
     # These may be defined recursively.
