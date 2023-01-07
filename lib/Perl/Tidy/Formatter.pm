@@ -19511,8 +19511,6 @@ sub correct_lp_indentation {
     # tries to patch things up once the actual opening paren locations
     # are known.
     my ( $self, $ri_first, $ri_last ) = @_;
-    my $K_opening_container = $self->[_K_opening_container_];
-    my $K_closing_container = $self->[_K_closing_container_];
     my $do_not_pad          = 0;
 
     #  Note on flag '$do_not_pad':
@@ -19555,10 +19553,9 @@ sub correct_lp_indentation {
     #-------------------------------------------------------------------
 
     # look at each output line ...
-    my ( $ibeg, $iend );
     foreach my $line ( 0 .. $max_line ) {
-        $ibeg = $ri_first->[$line];
-        $iend = $ri_last->[$line];
+        my $ibeg = $ri_first->[$line];
+        my $iend = $ri_last->[$line];
 
         # looking at each token in this output line ...
         foreach my $i ( $ibeg .. $iend ) {
@@ -19584,8 +19581,8 @@ sub correct_lp_indentation {
             next unless ($align_seqno);
 
             # Skip a container which is entirely on this line
-            my $Ko = $K_opening_container->{$align_seqno};
-            my $Kc = $K_closing_container->{$align_seqno};
+            my $Ko = $self->[_K_opening_container_]->{$align_seqno};
+            my $Kc = $self->[_K_closing_container_]->{$align_seqno};
             if ( defined($Ko) && defined($Kc) ) {
                 next if ( $Ko >= $K_to_go[$ibeg] && $Kc <= $K_to_go[$iend] );
             }
