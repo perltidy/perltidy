@@ -19511,7 +19511,8 @@ sub correct_lp_indentation {
     # tries to patch things up once the actual opening paren locations
     # are known.
     my ( $self, $ri_first, $ri_last ) = @_;
-    my $do_not_pad          = 0;
+
+    my $do_not_pad = 0;
 
     #  Note on flag '$do_not_pad':
     #  We want to avoid a situation like this, where the aligner inserts
