@@ -17914,8 +17914,8 @@ sub break_equals {
         # are produced which would look better if they were combined.
         # That's the task of this routine.
 
-        # do nothing under extreme stress
-        return if ( $high_stress_level < 1 );
+        # do nothing under extreme stress; use <= 2 for c171
+        return if ( $high_stress_level <= 2 );
 
         my $nmax_start = @{$ri_end} - 1;
         return if ( $nmax_start <= 0 );
