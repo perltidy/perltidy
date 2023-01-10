@@ -14269,6 +14269,19 @@ EOM
         $nesting_depth_to_go[0]     = 0;
         $ri_starting_one_line_block = [];
 
+        # Redefine some sparse arrays.
+        # It is more efficient to redefine sparse arrays and rely
+        # on undef's instead of initializing to 0's.  Note that using
+        # @array=() seems to be more efficient than $#array=-1
+        @old_breakpoint_to_go    = ();
+        @forced_breakpoint_to_go = ();
+
+        # TODO: These might eventually be handled in the same way, but
+        # some updates are needed to handle undef's
+        ## @nobreak_to_go           = ();
+        ## @mate_index_to_go        = ();
+        ## @block_type_to_go        = ();
+
         # The initialization code for the remaining batch arrays is as follows
         # and can be activated for testing.  But profiling shows that it is
         # time-consuming to re-initialize the batch arrays and is not necessary
@@ -14283,13 +14296,11 @@ EOM
         ## 0 && do { #<<<
         ## @block_type_to_go        = ();
         ## @type_sequence_to_go     = ();
-        ## @forced_breakpoint_to_go = ();
         ## @token_lengths_to_go     = ();
         ## @levels_to_go            = ();
         ## @mate_index_to_go        = ();
         ## @ci_levels_to_go         = ();
         ## @nobreak_to_go           = ();
-        ## @old_breakpoint_to_go    = ();
         ## @tokens_to_go            = ();
         ## @K_to_go                 = ();
         ## @types_to_go             = ();
@@ -14425,17 +14436,19 @@ EOM
         #----------------------------
         # add this token to the batch
         #----------------------------
-        $K_to_go[ ++$max_index_to_go ]             = $Ktoken_vars;
-        $types_to_go[$max_index_to_go]             = $type;
-        $old_breakpoint_to_go[$max_index_to_go]    = 0;
-        $forced_breakpoint_to_go[$max_index_to_go] = 0;
-        $mate_index_to_go[$max_index_to_go]        = -1;
-        $tokens_to_go[$max_index_to_go]            = $token;
-        $ci_levels_to_go[$max_index_to_go]         = $ci_level;
-        $levels_to_go[$max_index_to_go]            = $level;
-        $type_sequence_to_go[$max_index_to_go]     = $seqno;
-        $nobreak_to_go[$max_index_to_go]           = $no_internal_newlines;
-        $token_lengths_to_go[$max_index_to_go]     = $length;
+        $K_to_go[ ++$max_index_to_go ]         = $Ktoken_vars;
+        $types_to_go[$max_index_to_go]         = $type;
+        $mate_index_to_go[$max_index_to_go]    = -1;
+        $tokens_to_go[$max_index_to_go]        = $token;
+        $ci_levels_to_go[$max_index_to_go]     = $ci_level;
+        $levels_to_go[$max_index_to_go]        = $level;
+        $type_sequence_to_go[$max_index_to_go] = $seqno;
+        $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
+        $token_lengths_to_go[$max_index_to_go] = $length;
+
+        # Not required - undef's okay; see sub initialize_batch_variables.
+        ##$old_breakpoint_to_go[$max_index_to_go] = 0;
+        ##$forced_breakpoint_to_go[$max_index_to_go] = 0;
 
         # We keep a running sum of token lengths from the start of this batch:
         #   summed_lengths_to_go[$i]   = total length to just before token $i
@@ -18312,7 +18325,7 @@ EOM
                 #----------------------------------------------------------
 
                 # honor hard breakpoints
-                next if ( $forced_breakpoint_to_go[$iend_1] > 0 );
+                next if ( $forced_breakpoint_to_go[$iend_1] );
 
                 my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
 
@@ -18753,12 +18766,12 @@ EOM
             # honor breaks at opening brace
             # Added to prevent recombining something like this:
             #  } || eval { package main;
-            return if $forced_breakpoint_to_go[$iend_1];
+            return if ( $forced_breakpoint_to_go[$iend_1] );
         }
 
         # do not recombine lines with ending &&, ||,
         elsif ( $is_amp_amp{$type_iend_1} ) {
-            return unless $want_break_before{$type_iend_1};
+            return unless ( $want_break_before{$type_iend_1} );
         }
 
         # Identify and recombine a broken ?/: chain
