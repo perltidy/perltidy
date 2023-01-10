@@ -14275,12 +14275,12 @@ EOM
         # @array=() seems to be more efficient than $#array=-1
         @old_breakpoint_to_go    = ();
         @forced_breakpoint_to_go = ();
+        @block_type_to_go        = ();
 
         # TODO: These might eventually be handled in the same way, but
         # some updates are needed to handle undef's
         ## @nobreak_to_go           = ();
         ## @mate_index_to_go        = ();
-        ## @block_type_to_go        = ();
 
         # The initialization code for the remaining batch arrays is as follows
         # and can be activated for testing.  But profiling shows that it is
@@ -14294,7 +14294,6 @@ EOM
 
         # So 'long story short': this is a waste of time
         ## 0 && do { #<<<
-        ## @block_type_to_go        = ();
         ## @type_sequence_to_go     = ();
         ## @token_lengths_to_go     = ();
         ## @levels_to_go            = ();
@@ -14449,6 +14448,7 @@ EOM
         # Not required - undef's okay; see sub initialize_batch_variables.
         ##$old_breakpoint_to_go[$max_index_to_go] = 0;
         ##$forced_breakpoint_to_go[$max_index_to_go] = 0;
+        ##$block_type_to_go[$max_index_to_go]    = EMPTY_STRING;
 
         # We keep a running sum of token lengths from the start of this batch:
         #   summed_lengths_to_go[$i]   = total length to just before token $i
@@ -14509,7 +14509,6 @@ EOM
         # Initialize some sequence-dependent variables to their normal values
         $parent_seqno_to_go[$max_index_to_go]  = $next_parent_seqno;
         $nesting_depth_to_go[$max_index_to_go] = $next_slevel;
-        $block_type_to_go[$max_index_to_go]    = EMPTY_STRING;
 
         # Then fix them at container tokens:
         if ($seqno) {
@@ -20237,6 +20236,7 @@ sub break_lines_inner_loop {
             # necessary the full logic of Section B could be used here
             # (see c165).
             $tokens_to_go[$i_begin] eq '}'
+            && $block_type_to_go[$i_begin]
             && $block_type_to_go[$i_begin] eq 'eval'
         )
         && (
@@ -21282,7 +21282,8 @@ EOM
                 && ( $last_nonblank_type ne 'n' || $i > 2 )
 
                 # and let keywords follow a closing 'do' brace
-                && $last_nonblank_block_type ne 'do'
+                && (  !$last_nonblank_block_type
+                    || $last_nonblank_block_type ne 'do' )
 
                 && (
                     $is_long_line
@@ -21805,7 +21806,8 @@ EOM
         $dont_align[$depth] =
 
           # code BLOCKS are handled at a higher level
-          ( $block_type ne EMPTY_STRING )
+          ##( $block_type ne EMPTY_STRING )
+          $block_type
 
           # certain paren lists
           || ( $type eq '(' ) && (
@@ -25994,6 +25996,7 @@ EOM
 
                 # but do not align the opening brace of an anonymous sub
                 if (   $token eq '{'
+                    && $block_type_to_go[$i]
                     && $block_type_to_go[$i] =~ /$ASUB_PATTERN/ )
                 {
 
@@ -28347,7 +28350,8 @@ sub make_paren_name {
             # Undo ci of line with leading closing eval brace,
             # but not beyond the indentation of the line with
             # the opening brace.
-            if (   $block_type_beg eq 'eval'
+            if (   $block_type_beg
+                && $block_type_beg eq 'eval'
                 && !ref($leading_spaces_beg)
                 && !$rOpts_indent_closing_brace )
             {
@@ -28980,6 +28984,7 @@ sub set_vertical_tightness_flags {
     elsif ($rOpts_block_brace_vertical_tightness
         && $ibeg eq $iend
         && $types_to_go[$iend] eq '{'
+        && $block_type_to_go[$iend]
         && $block_type_to_go[$iend] =~
         /$block_brace_vertical_tightness_pattern/ )
     {
@@ -29159,10 +29164,12 @@ sub set_vertical_tightness_flags {
                     && (
                         (
                                $i + 1 <= $max_index_to_go
+                            && $block_type_to_go[ $i + 1 ]
                             && $block_type_to_go[ $i + 1 ] eq
                             $accumulating_text_for_block
                         )
                         || (   $i + 2 <= $max_index_to_go
+                            && $block_type_to_go[ $i + 2 ]
                             && $block_type_to_go[ $i + 2 ] eq
                             $accumulating_text_for_block )
                     )
@@ -29217,6 +29224,7 @@ sub set_vertical_tightness_flags {
             my $type       = $types_to_go[$i];
             my $block_type = $block_type_to_go[$i];
             my $token      = $tokens_to_go[$i];
+            $block_type = EMPTY_STRING unless ($block_type);
 
             # remember last nonblank token type
             if ( $type ne '#' && $type ne 'b' ) {
