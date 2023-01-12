@@ -4837,7 +4837,8 @@ EOM
                 # be absolutely sure that we do not allow a break.  So for
                 # these the nobreak flag exceeds 1 as a signal. Otherwise we
                 # can run into trouble when small tolerances are added.
-                $strength += 1 if ( $nobreak_to_go[$i] > 1 );
+                $strength += 1
+                  if ( $nobreak_to_go[$i] && $nobreak_to_go[$i] > 1 );
             }
 
             #---------------------------------------------------------------
@@ -14276,11 +14277,10 @@ EOM
         @old_breakpoint_to_go    = ();
         @forced_breakpoint_to_go = ();
         @block_type_to_go        = ();
+        @mate_index_to_go        = ();
 
         # TODO: These might eventually be handled in the same way, but
         # some updates are needed to handle undef's
-        ## @nobreak_to_go           = ();
-        ## @mate_index_to_go        = ();
 
         # The initialization code for the remaining batch arrays is as follows
         # and can be activated for testing.  But profiling shows that it is
@@ -14292,14 +14292,12 @@ EOM
         # changes which might do this, sub pad_array_to_go adds some undefs at
         # the end of the current batch of data.
 
-        # So 'long story short': this is a waste of time
         ## 0 && do { #<<<
+        ## @nobreak_to_go           = ();
         ## @type_sequence_to_go     = ();
         ## @token_lengths_to_go     = ();
         ## @levels_to_go            = ();
-        ## @mate_index_to_go        = ();
         ## @ci_levels_to_go         = ();
-        ## @nobreak_to_go           = ();
         ## @tokens_to_go            = ();
         ## @K_to_go                 = ();
         ## @types_to_go             = ();
@@ -14360,7 +14358,10 @@ EOM
         #   $rtoken_vars = $rLL->[$Ktoken_vars] = the corresponding token values
         #                  unless they are temporarily being overridden
 
-        # NOTE: called once per token so coding efficiency is critical here
+        #------------------------------------------------------------------
+        # NOTE: called once per token so coding efficiency is critical here.
+        # All changes need to be benchmarked with Devel::NYTProf.
+        #------------------------------------------------------------------
 
         my (
 
@@ -14419,45 +14420,8 @@ EOM
             if ( $type eq 'b' ) { return }
         }
 
-        # Clip levels to zero if there are level errors in the file.
-        # We had to wait until now for reasons explained in sub 'write_line'.
-        if ( $level < 0 ) { $level = 0 }
-
-        # Safety check that length is defined. Should not be needed now.
-        # Former patch for indent-only, in which the entire set of tokens is
-        # turned into type 'q'. Lengths may have not been defined because sub
-        # 'respace_tokens' is bypassed. We do not need lengths in this case,
-        # but we will use the character count to have a defined value.  In the
-        # future, it would be nicer to have 'respace_tokens' convert the lines
-        # to quotes and get correct lengths.
-        if ( !defined($length) ) { $length = length($token) }
-
-        #----------------------------
-        # add this token to the batch
-        #----------------------------
-        $K_to_go[ ++$max_index_to_go ]         = $Ktoken_vars;
-        $types_to_go[$max_index_to_go]         = $type;
-        $mate_index_to_go[$max_index_to_go]    = -1;
-        $tokens_to_go[$max_index_to_go]        = $token;
-        $ci_levels_to_go[$max_index_to_go]     = $ci_level;
-        $levels_to_go[$max_index_to_go]        = $level;
-        $type_sequence_to_go[$max_index_to_go] = $seqno;
-        $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
-        $token_lengths_to_go[$max_index_to_go] = $length;
-
-        # Not required - undef's okay; see sub initialize_batch_variables.
-        ##$old_breakpoint_to_go[$max_index_to_go] = 0;
-        ##$forced_breakpoint_to_go[$max_index_to_go] = 0;
-        ##$block_type_to_go[$max_index_to_go]    = EMPTY_STRING;
-
-        # We keep a running sum of token lengths from the start of this batch:
-        #   summed_lengths_to_go[$i]   = total length to just before token $i
-        #   summed_lengths_to_go[$i+1] = total length to just after token $i
-        $summed_lengths_to_go[ $max_index_to_go + 1 ] =
-          $summed_lengths_to_go[$max_index_to_go] + $length;
-
-        # Initializations for first token of new batch
-        if ( !$max_index_to_go ) {
+        # Update counter and do initializations if first token of new batch
+        if ( !++$max_index_to_go ) {
 
             # Reset flag '$starting_in_quote' for a new batch.  It must be set
             # to the value of '$in_continued_quote', but here for efficiency we
@@ -14506,6 +14470,55 @@ EOM
             $next_slevel = $rdepth_of_opening_seqno->[$next_parent_seqno] + 1;
         }
 
+        # Clip levels to zero if there are level errors in the file.
+        # We had to wait until now for reasons explained in sub 'write_line'.
+        if ( $level < 0 ) { $level = 0 }
+
+        # Safety check that length is defined. This is slow and should not
+        # be needed, so just do it in DEVEL_MODE.
+        # Formerly neede for --indent-only, in which the entire set of tokens is
+        # turned into type 'q'. Lengths may have not been defined because sub
+        # 'respace_tokens' is bypassed. We do not need lengths in this case,
+        # but we will use the character count to have a defined value.
+        # FIXME: convert to fault check after all undef cases have been fixed.
+        if ( !defined($length) ) {
+            ##my $lno = $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
+            ##Fault("undefined length near line $lno; please fix");
+            $length = length($token);
+        }
+
+        #----------------------------
+        # add this token to the batch
+        #----------------------------
+        $K_to_go[$max_index_to_go]             = $Ktoken_vars;
+        $types_to_go[$max_index_to_go]         = $type;
+        $tokens_to_go[$max_index_to_go]        = $token;
+        $ci_levels_to_go[$max_index_to_go]     = $ci_level;
+        $levels_to_go[$max_index_to_go]        = $level;
+        $type_sequence_to_go[$max_index_to_go] = $seqno;
+        $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
+        $token_lengths_to_go[$max_index_to_go] = $length;
+
+        # Skip point initialization for these sparse arrays - undef's okay;
+        # See also related code in sub initialize_batch_variables.
+        ## $old_breakpoint_to_go[$max_index_to_go]    = 0;
+        ## $forced_breakpoint_to_go[$max_index_to_go] = 0;
+        ## $block_type_to_go[$max_index_to_go]        = EMPTY_STRING;
+
+        # NOTE1:  nobreak_to_go can be treated as a sparse array, but testing
+        # showed that there is almost no efficiency gain because an if test
+        # would need to be added.
+
+        # NOTE2: Eventually '$type_sequence_to_go' can be also handled as a
+        # sparse array with undef's, but this will require extensive testing
+        # because of its heavy use.
+
+        # We keep a running sum of token lengths from the start of this batch:
+        #   summed_lengths_to_go[$i]   = total length to just before token $i
+        #   summed_lengths_to_go[$i+1] = total length to just after token $i
+        $summed_lengths_to_go[ $max_index_to_go + 1 ] =
+          $summed_lengths_to_go[$max_index_to_go] + $length;
+
         # Initialize some sequence-dependent variables to their normal values
         $parent_seqno_to_go[$max_index_to_go]  = $next_parent_seqno;
         $nesting_depth_to_go[$max_index_to_go] = $next_slevel;
@@ -14514,8 +14527,7 @@ EOM
         if ($seqno) {
 
             $block_type_to_go[$max_index_to_go] =
-              $rblock_type_of_seqno->{$seqno}
-              if ( $rblock_type_of_seqno->{$seqno} );
+              $rblock_type_of_seqno->{$seqno};
 
             if ( $is_opening_token{$token} ) {
 
@@ -14898,7 +14910,7 @@ EOM
             my $rtoken_vars = $rLL->[$Ktoken_vars];
             $rtoken_vars = copy_token_as_type( $rtoken_vars, 'q', $line );
 
-            # Patch: length is not really important here
+            # Patch: length is not really important here but must be defined
             $rtoken_vars->[_TOKEN_LENGTH_] = length($line);
 
             $self->store_token_to_go( $Ktoken_vars, $rtoken_vars );
@@ -16295,8 +16307,10 @@ sub compare_indentation_levels {
                 $msg .= " but could not set break after i='$i'\n";
             }
             else {
+                my $nobr = $nobreak_to_go[$i_nonblank];
+                $nobr = 0 if ( !defined($nobr) );
                 $msg .= <<EOM;
-set break after $i_nonblank: tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobreak_to_go[$i_nonblank]
+set break after $i_nonblank: tok=$tokens_to_go[$i_nonblank] type=$types_to_go[$i_nonblank] nobr=$nobr
 EOM
                 if ( defined($set_closing) ) {
                     $msg .=
@@ -16356,7 +16370,7 @@ EOM
             my $i_nonblank = ( $types_to_go[$i] ne 'b' ) ? $i : $i - 1;
 
             if (   $i_nonblank >= 0
-                && $nobreak_to_go[$i_nonblank] == 0
+                && !$nobreak_to_go[$i_nonblank]
                 && !$forced_breakpoint_to_go[$i_nonblank] )
             {
                 $forced_breakpoint_to_go[$i_nonblank] = 1;
@@ -16452,7 +16466,7 @@ EOM
         # set a breakpoint at a matching closing token
         my ( $self, $i_break ) = @_;
 
-        if ( $mate_index_to_go[$i_break] >= 0 ) {
+        if ( defined( $mate_index_to_go[$i_break] ) ) {
 
             # Don't reduce the '2' in the statement below.
             # Test files: attrib.t, BasicLyx.pm.html
@@ -17517,7 +17531,7 @@ sub break_all_chain_tokens {
                         && $levels_to_go[$i] != $levels_to_go[$itest] )
                     {
                         my $i_question = $mate_index_to_go[$itest];
-                        if ( $i_question > 0 ) {
+                        if ( defined($i_question) && $i_question > 0 ) {
                             push @insert_list, $i_question - 1;
                         }
                     }
@@ -17537,7 +17551,7 @@ sub break_all_chain_tokens {
                         && $levels_to_go[$i] != $levels_to_go[$itest] )
                     {
                         my $i_question = $mate_index_to_go[$itest];
-                        if ( $i_question >= 0 ) {
+                        if ( defined($i_question) ) {
                             push @insert_list, $i_question;
                         }
                     }
@@ -19360,7 +19374,7 @@ sub insert_final_ternary_breaks {
     # breakpoints before the ?.
     if ( $i_first_colon > 0 ) {
         my $i_question = $mate_index_to_go[$i_first_colon];
-        if ( $i_question > 0 ) {
+        if ( defined($i_question) && $i_question > 0 ) {
             my @insert_list;
             foreach my $ii ( reverse( 0 .. $i_question - 1 ) ) {
                 my $token = $tokens_to_go[$ii];
@@ -20050,7 +20064,7 @@ sub break_long_lines {
 
                     # no break needed if matching : is also on the line
                     next
-                      if ( $mate_index_to_go[$i] >= 0
+                      if ( defined( $mate_index_to_go[$i] )
                         && $mate_index_to_go[$i] <= $i_next_nonblank );
 
                     $i_lowest = $i;
@@ -20671,7 +20685,7 @@ sub do_colon_breaks {
     my @insert_list = ();
     foreach ( @{$ri_colon_breaks} ) {
         my $i_question = $mate_index_to_go[$_];
-        if ( $i_question >= 0 ) {
+        if ( defined($i_question) ) {
             if ( $want_break_before{'?'} ) {
                 $i_question = iprev_to_go($i_question);
             }
@@ -21289,8 +21303,11 @@ EOM
                     $is_long_line
 
                     # or container is broken (by side-comment, etc)
-                    || (   $next_nonblank_token eq '('
-                        && $mate_index_to_go[$i_next_nonblank] < $i )
+                    || (
+                        $next_nonblank_token eq '('
+                        && ( !defined( $mate_index_to_go[$i_next_nonblank] )
+                            || $mate_index_to_go[$i_next_nonblank] < $i )
+                    )
                 )
               )
             {
@@ -21679,7 +21696,9 @@ EOM
                     # Break at a previous '=', but only if it is before
                     # the mating '?'. Mate_index test fixes b1287.
                     my $ieq = $i_equals[$depth];
-                    if ( $ieq > 0 && $ieq < $mate_index_to_go[$i] ) {
+                    my $mix = $mate_index_to_go[$i];
+                    if ( !defined($mix) ) { $mix = -1 }
+                    if ( $ieq > 0 && $ieq < $mix ) {
                         $self->set_forced_breakpoint( $i_equals[$depth] );
                         $i_equals[$depth] = -1;
                     }
@@ -21704,8 +21723,8 @@ EOM
             if ( $token eq '?' ) {
                 my $i_colon = $mate_index_to_go[$i];
                 if (
-                    $i_colon <= 0    # the ':' is not in this batch
-                    || $i == 0       # this '?' is the first token of the line
+                    !defined($i_colon) # the ':' is not in this batch
+                    || $i == 0         # this '?' is the first token of the line
                     || $i == $max_index_to_go    # or this '?' is the last token
                   )
                 {
@@ -21738,8 +21757,8 @@ EOM
                 # but only -xlp can really take advantage of this.  So this
                 # is currently restricted to -xlp to avoid excess changes to
                 # existing -lp formatting.
-                if (   $rOpts_extended_line_up_parentheses
-                    && $mate_index_to_go[$i] < 0 )
+                if ( $rOpts_extended_line_up_parentheses
+                    && !defined( $mate_index_to_go[$i] ) )
                 {
                     my $lp_object =
                       $self->[_rlp_object_by_seqno_]->{$type_sequence};
@@ -21839,7 +21858,7 @@ EOM
 
             # if we have the ')' but not its '(' in this batch..
             && ( $last_nonblank_token eq ')' )
-            && $mate_index_to_go[$i_last_nonblank_token] < 0
+            && !defined( $mate_index_to_go[$i_last_nonblank_token] )
 
             # and user wants brace to left
             && !$rOpts_opening_brace_always_on_right
@@ -25760,6 +25779,7 @@ EOM
             {
                 $i_elsif_open  = $i_good_paren;
                 $i_elsif_close = $mate_index_to_go[$i_good_paren];
+                if ( !defined($i_elsif_close) ) { $i_elsif_close = -1 }
             }
         } ## end if ( $type_beg eq 'k' )
 
@@ -25807,6 +25827,7 @@ EOM
                 # - and not the first overall opening paren
                 # - does not follow a leading keyword on this line
                 my $imate = $mate_index_to_go[$i];
+                if ( !defined($imate) ) { $imate = -1 }
                 if (   $imatch_list[-1] eq $imate
                     && ( $ibeg > 1 || @imatch_list > 1 )
                     && $imate > $i_good_paren )
@@ -25936,6 +25957,7 @@ EOM
                     # make () align with qw in a 'use' statement (git #93)
                     if (   $tokens_to_go[0] eq 'use'
                         && $types_to_go[0] eq 'k'
+                        && defined( $mate_index_to_go[$i] )
                         && $mate_index_to_go[$i] == $i + 1 )
                     {
                         $alignment_type = 'q';
@@ -26609,6 +26631,7 @@ sub get_seqno {
                     # find any unclosed container
                     next
                       unless ( $type_sequence_to_go[$i]
+                        && defined( $mate_index_to_go[$i] )
                         && $mate_index_to_go[$i] > $iend );
 
                     # find next nonblank token to pad
@@ -27174,6 +27197,7 @@ sub xlp_tweak {
 
                     # if container is balanced on this line...
                     my $i_mate = $mate_index_to_go[$i];
+                    if ( !defined($i_mate) ) { $i_mate = -1 }
                     if ( $i_mate > $i && $i_mate <= $iend ) {
                         $i_depth_prev = $i;
                         $depth_prev   = $depth;
@@ -28704,6 +28728,7 @@ sub set_vertical_tightness_flags {
             # or -pt=2; fixes b1270. See similar patch above for $cvt.
             my $seqno = $type_sequence_to_go[$iend];
             if (   $ovt
+                && $seqno
                 && $self->[_rbreak_container_]->{$seqno} )
             {
                 $ovt = 0;
@@ -28799,6 +28824,7 @@ sub set_vertical_tightness_flags {
                             # allow closing up 2-line method calls
                             || (   $rOpts_line_up_parentheses
                                 && $token_next eq ')'
+                                && $type_sequence_to_go[$ibeg_next]
                                 && $self->[_rlp_object_by_seqno_]
                                 ->{ $type_sequence_to_go[$ibeg_next] } )
                         )
@@ -28835,6 +28861,7 @@ sub set_vertical_tightness_flags {
                     my $seqno_ibeg_next = $type_sequence_to_go[$ibeg_next];
                     if (   $rOpts_line_up_parentheses
                         && $total_weld_count
+                        && $seqno_ibeg_next
                         && $self->[_rlp_object_by_seqno_]->{$seqno_ibeg_next}
                         && $self->is_welded_at_seqno($seqno_ibeg_next) )
                     {
@@ -28896,6 +28923,7 @@ sub set_vertical_tightness_flags {
             && !(
                    $is_assignment{ $types_to_go[$iend] }
                 && $rOpts_line_up_parentheses
+                && $type_sequence_to_go[$ibeg_next]
                 && $self->[_rlp_object_by_seqno_]
                 ->{ $type_sequence_to_go[$ibeg_next] }
             )
@@ -29020,14 +29048,22 @@ sub set_vertical_tightness_flags {
 
     # get the sequence numbers of the ends of this line
     $vt_seqno_beg = $type_sequence_to_go[$ibeg];
-    if ( !$vt_seqno_beg && $types_to_go[$ibeg] eq 'q' ) {
-        $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
+    if ( !$vt_seqno_beg ) {
+        if ( $types_to_go[$ibeg] eq 'q' ) {
+            $vt_seqno_beg = $self->get_seqno( $ibeg, $ending_in_quote );
+        }
+        else { $vt_seqno_beg = EMPTY_STRING }
     }
 
     $vt_seqno_end = $type_sequence_to_go[$iend];
-    if ( !$vt_seqno_end && $types_to_go[$iend] eq 'q' ) {
-        $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
+    if ( !$vt_seqno_end ) {
+        if ( $types_to_go[$iend] eq 'q' ) {
+            $vt_seqno_end = $self->get_seqno( $iend, $ending_in_quote );
+        }
+        else { $vt_seqno_end = EMPTY_STRING }
     }
+
+    if ( !defined($vt_seqno) ) { $vt_seqno = EMPTY_STRING }
 
     my $rvertical_tightness_flags = {
         _vt_type         => $vt_type,
@@ -29555,7 +29591,7 @@ sub add_closing_side_comment {
         # ..and the corresponding opening brace must is not in this batch
         # (because we do not need to tag one-line blocks, although this
         # should also be caught with a positive -csci value)
-        && $mate_index_to_go[$i_terminal] < 0
+        && !defined( $mate_index_to_go[$i_terminal] )
 
         # ..and either
         && (
