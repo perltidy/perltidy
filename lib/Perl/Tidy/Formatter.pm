@@ -15061,13 +15061,7 @@ EOM
                         && $is_assignment_or_fat_comma{$type} )
                   )
                 {
-                    my $jobp = $max_index_to_go;
-                    if (   $types_to_go[$max_index_to_go] eq 'b'
-                        && $max_index_to_go > 0 )
-                    {
-                        $jobp--;
-                    }
-                    $old_breakpoint_to_go[$jobp] = 1;
+                    $old_breakpoint_to_go[$max_index_to_go] = 1;
                 }
             }
         }
