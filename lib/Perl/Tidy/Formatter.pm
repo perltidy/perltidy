@@ -18131,7 +18131,6 @@ sub break_equals {
         # We keep looping over all of the lines of this batch
         # until there are no more possible recombinations
         my $nmax_last = $nmax_sec + 1;
-        my $reverse   = 0;
 
         while ($more_to_do) {
 
@@ -18190,12 +18189,7 @@ EOM
             my $nstop = $nmax - $num_freeze;
             for my $iter ( $nbeg + 1 .. $nstop ) {
 
-                # alternating sweep direction gives symmetric results
-                # for recombining lines which exceed the line length
-                # such as eval {{{{.... }}}}
-                my $n;
-                if   ($reverse) { $n = $nbeg + 1 + $nstop - $iter; }
-                else            { $n = $iter }
+                my $n = $iter;
 
                 #----------------------------------------------------------
                 # If we join the current pair of lines,
@@ -18311,8 +18305,6 @@ EOM
                     $n_best = $n;
                     last;
                 }
-
-                $reverse = 0;
 
                 #----------------------------------------------------------
                 # Recombine Section 2:
