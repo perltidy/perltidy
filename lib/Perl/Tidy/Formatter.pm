@@ -7265,6 +7265,22 @@ sub respace_tokens {
 
     # We change any spaces in --indent-only mode
     if ( $rOpts->{'indent-only'} ) {
+
+        # We need to define lengths for -indent-only to avoid undefs, even
+        # though these values are not actually needed for option --indent-only.
+
+        $rLL               = $self->[_rLL_];
+        $length_function   = $self->[_length_function_];
+        $cumulative_length = 0;
+
+        foreach my $item ( @{$rLL} ) {
+            my $token        = $item->[_TOKEN_];
+            my $token_length = $length_function->($token);
+            $cumulative_length += $token_length;
+            $item->[_TOKEN_LENGTH_]      = $token_length;
+            $item->[_CUMULATIVE_LENGTH_] = $cumulative_length;
+        }
+
         return ( $severe_error, $rqw_lines );
     }
 
@@ -14265,22 +14281,28 @@ EOM
     # Called before the start of each new batch
     sub initialize_batch_variables {
 
+        # Initialize array values for a new batch.  Any changes here must be
+        # carefully coordinated with sub store_token_to_go.
+
         $max_index_to_go            = UNDEFINED_INDEX;
         $summed_lengths_to_go[0]    = 0;
         $nesting_depth_to_go[0]     = 0;
         $ri_starting_one_line_block = [];
 
         # Redefine some sparse arrays.
-        # It is more efficient to redefine sparse arrays and rely
-        # on undef's instead of initializing to 0's.  Note that using
-        # @array=() seems to be more efficient than $#array=-1
+        # It is more efficient to redefine these sparse arrays and rely on
+        # undef's instead of initializing to 0's.  Testing showed that using
+        # @array=() is more efficient than $#array=-1
+
         @old_breakpoint_to_go    = ();
         @forced_breakpoint_to_go = ();
         @block_type_to_go        = ();
         @mate_index_to_go        = ();
+        @type_sequence_to_go     = ();
 
-        # TODO: These might eventually be handled in the same way, but
-        # some updates are needed to handle undef's
+        # NOTE: @nobreak_to_go is sparse and could be treated this way, but
+        # testing showed that there would be very little efficiency gain
+        # because an 'if' test must be added in store_token_to_go.
 
         # The initialization code for the remaining batch arrays is as follows
         # and can be activated for testing.  But profiling shows that it is
@@ -14294,7 +14316,6 @@ EOM
 
         ## 0 && do { #<<<
         ## @nobreak_to_go           = ();
-        ## @type_sequence_to_go     = ();
         ## @token_lengths_to_go     = ();
         ## @levels_to_go            = ();
         ## @ci_levels_to_go         = ();
@@ -14474,17 +14495,17 @@ EOM
         # We had to wait until now for reasons explained in sub 'write_line'.
         if ( $level < 0 ) { $level = 0 }
 
-        # Safety check that length is defined. This is slow and should not
-        # be needed, so just do it in DEVEL_MODE.
-        # Formerly neede for --indent-only, in which the entire set of tokens is
-        # turned into type 'q'. Lengths may have not been defined because sub
-        # 'respace_tokens' is bypassed. We do not need lengths in this case,
-        # but we will use the character count to have a defined value.
-        # FIXME: convert to fault check after all undef cases have been fixed.
-        if ( !defined($length) ) {
-            ##my $lno = $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
-            ##Fault("undefined length near line $lno; please fix");
+        # Safety check that length is defined. This is slow and should not be
+        # needed now, so just do it in DEVEL_MODE to check programming changes.
+        # Formerly needed for --indent-only, in which the entire set of tokens
+        # is normally turned into type 'q'. Lengths are now defined in sub
+        # 'respace_tokens' so this check is no longer needed.
+        if ( DEVEL_MODE && !defined($length) ) {
+            my $lno = $rLL->[$Ktoken_vars]->[_LINE_INDEX_] + 1;
             $length = length($token);
+            Fault(<<EOM);
+undefined length near line $lno; num chars=$length, token='$token'
+EOM
         }
 
         #----------------------------
@@ -14495,7 +14516,6 @@ EOM
         $tokens_to_go[$max_index_to_go]        = $token;
         $ci_levels_to_go[$max_index_to_go]     = $ci_level;
         $levels_to_go[$max_index_to_go]        = $level;
-        $type_sequence_to_go[$max_index_to_go] = $seqno;
         $nobreak_to_go[$max_index_to_go]       = $no_internal_newlines;
         $token_lengths_to_go[$max_index_to_go] = $length;
 
@@ -14504,6 +14524,7 @@ EOM
         ## $old_breakpoint_to_go[$max_index_to_go]    = 0;
         ## $forced_breakpoint_to_go[$max_index_to_go] = 0;
         ## $block_type_to_go[$max_index_to_go]        = EMPTY_STRING;
+        ## $type_sequence_to_go[$max_index_to_go]     = $seqno;
 
         # NOTE1:  nobreak_to_go can be treated as a sparse array, but testing
         # showed that there is almost no efficiency gain because an if test
@@ -14525,6 +14546,8 @@ EOM
 
         # Then fix them at container tokens:
         if ($seqno) {
+
+            $type_sequence_to_go[$max_index_to_go] = $seqno;
 
             $block_type_to_go[$max_index_to_go] =
               $rblock_type_of_seqno->{$seqno};
@@ -25539,7 +25562,12 @@ sub check_batch_summed_lengths {
         my $len_tok_i = $token_lengths_to_go[$i];
         my $KK        = $K_to_go[$i];
         my $len_tok_K;
-        if ( defined($KK) ) { $len_tok_K = $rLL->[$KK]->[_TOKEN_LENGTH_] }
+
+        # For --indent-only, there is not always agreement between
+        # token lengths in _rLL_ and token_lengths_to_go, so skip that check.
+        if ( defined($KK) && !$rOpts_indent_only ) {
+            $len_tok_K = $rLL->[$KK]->[_TOKEN_LENGTH_];
+        }
         if ( $len_by_sum != $len_tok_i
             || defined($len_tok_K) && $len_by_sum != $len_tok_K )
         {
