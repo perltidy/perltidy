@@ -25,6 +25,7 @@ where one parameter may be given to specify the operation to be done:
      into the default or selected directory
   -m merge files given in arg list into the default or specified database
   -p packs files given in arg list into a new database
+  -e overwrites old expect data with the new results for cases run
   -r runs the tests [DEFAULT operation]
 
   arg1 arg2 ... may contain: 
@@ -82,6 +83,7 @@ use Getopt::Long;
 #  i.e., -foo and -nofoo are allowed
 # a double dash signals the end of the options list
 my @option_string = qw(
+  e
   h
   m
   p
@@ -99,8 +101,9 @@ if ( $Opts{h} ) {
     exit 1;
 }
 
-# set default .data file
-my $db_fname = $0 . ".data";
+# set default .data file and .expect file
+my $db_fname     = $0 . ".data";
+my $expect_fname = $0 . ".expect";
 
 # set tmp dir - you may need to change this depending on setup
 my $git_home = qx[git rev-parse --show-toplevel];
@@ -217,6 +220,14 @@ else {
     exit 1;
 }
 
+my $rexpect_files;
+if ( -e $expect_fname ) {
+    $rexpect_files = read_data_to_hash($expect_fname);
+}
+else {
+    print STDERR "NOTE: Cannot find expect file $expect_fname\n";
+}
+
 ###############
 # m: merge data
 ###############
@@ -247,15 +258,25 @@ EOM
     exit 1;
 }
 
-run_test_cases( $rdata_files, \@cases );
+my ($rexpect_cases_to_update) =
+  run_test_cases( $rdata_files, $rexpect_files, \@cases );
+
+# Option to rewrite expect data
+if ( @{$rexpect_cases_to_update} ) {
+    write_hash_to_data_file( $expect_fname, $rexpect_files );
+}
+
 exit 1;
 
 sub run_test_cases {
-    my ( $rdata_files, $rcases ) = @_;
+    my ( $rdata_files, $rexpect_files, $rcases ) = @_;
 
     print "\nRun log...\n";
     my $rsources = {};
     my $rparams  = {};
+    my $routputs = {};
+    my @expect_cases_to_update;
+    my @expect_differences;
 
     foreach my $fname ( keys %{$rdata_files} ) {
         if ( $fname =~ /^(.*)\.in$/ ) {
@@ -360,7 +381,30 @@ sub run_test_cases {
             push @output_history, $output;
 
             if ( $output eq $source ) {
-                print "$sname: converged on iteration $iteration\n";
+                $routputs->{$sname} = $output;
+                my $msg    = "";
+                my $expect = $rexpect_files->{$sname};
+                if ( defined($expect) ) {
+                    if ( $expect ne $output ) {
+
+                        # option -e updates expected output
+                        if ( $Opts{e} ) {
+                            $msg = "UPDATING EXPECT";
+                            push @expect_cases_to_update, $sname;
+                            $rexpect_files->{$sname} = $output;
+                        }
+                        else {
+                            push @expect_differences, $sname;
+                            $msg = "FORMATTING CHANGED";
+                        }
+                    }
+                }
+                else {
+                    $msg = "NEW EXPECT";
+                    push @expect_cases_to_update, $sname;
+                    $rexpect_files->{$sname} = $output;
+                }
+                print "$sname: converged on iteration $iteration $msg\n";
                 last;
             }
             elsif ( $iteration < $iteration_max ) {
@@ -408,6 +452,39 @@ SKIPPED: these requested cases were not found in the database:
 @skipped_cases
 EOM
     }
+    if (@expect_cases_to_update) {
+        print <<EOM;
+NEW: the .expect data will be updated with output for these cases
+@expect_cases_to_update
+EOM
+    }
+    if (@expect_differences) {
+
+        # Write first few differences
+        my $count = 0;
+        my $msg = "See the .in .par .new and .exp files in the ./tmp directory";
+        foreach my $sname (@expect_differences) {
+            $count++;
+            if ( $count > 5 ) {
+                $msg .= " for the first 5 cases";
+                last;
+            }
+            my $sfile = $opath . $sname . ".in";
+            my $pfile = $opath . $sname . ".par";
+            my $nfile = $opath . $sname . ".new";
+            my $efile = $opath . $sname . ".exp";
+            write_file( $sfile, $rsources->{$sname},      1 );
+            write_file( $pfile, $rparams->{$sname},       1 );
+            write_file( $nfile, $routputs->{$sname},      1 );
+            write_file( $efile, $rexpect_files->{$sname}, 1 );
+        }
+
+        print <<EOM;
+DIFFERENCES: these cases gave unexpected output; use -e to update .expect:
+@expect_differences
+EOM
+    }
+    return ( \@expect_cases_to_update );
 }
 
 sub read_data_to_hash {
