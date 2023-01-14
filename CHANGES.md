@@ -2,6 +2,44 @@
 
 ## 2022 11 12.03
 
+    - A change was made to the way line breaks are made at the '.'
+      operator when the user sets -wba='.' to requests breaks after a '.'
+      ( this setting is not recommended because it can be hard to read ).
+      The goal of the change is to make switching from breaks before '.'s
+      to breaks after '.'s just move the dots from the end of
+      lines to the beginning of lines.  For example:
+
+            # default and recommended (--want-break-before='.'):
+            $output_rules .=
+              (     'class'
+                  . $dir
+                  . '.stamp: $('
+                  . $dir
+                  . '_JAVA)' . "\n" . "\t"
+                  . '$(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) '
+                  . '$(JAVACFLAGS) $?' . "\n" . "\t"
+                  . 'echo timestamp > class'
+                  . $dir
+                  . '.stamp'
+                  . "\n" );
+
+            # perltidy --want-break-after='.'
+            $output_rules .=
+              ( 'class' .
+                  $dir .
+                  '.stamp: $(' .
+                  $dir .
+                  '_JAVA)' . "\n" . "\t" .
+                  '$(CLASSPATH_ENV) $(JAVAC) -d $(JAVAROOT) ' .
+                  '$(JAVACFLAGS) $?' . "\n" . "\t" .
+                  'echo timestamp > class' .
+                  $dir .
+                  '.stamp' .
+                  "\n" );
+
+      For existing code formatted with -wba='.', this may cause some
+      changes in the formatting of code with long concatenation chains.
+
     - Added option --use-feature=class, or -uf=class, for issue rt #145706.
       This adds keywords 'class', 'method', 'field', and 'ADJUST' in support of
       this feature which is being tested for future inclusion in Perl.

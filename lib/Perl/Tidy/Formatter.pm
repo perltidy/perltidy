@@ -18986,6 +18986,53 @@ EOM
                   unless $want_break_before{ $tokens_to_go[$iend_1] };
             }
         }
+        elsif ( $type_iend_1 eq '.' ) {
+
+            # NOTE: the logic here should match that of section 3 so that
+            # line breaks are independent of choice of break before or after.
+            # It would be nice to combine them in section 0, but the
+            # special junction case ') .' makes that difficult.
+            # This section added to fix issues c172, c174.
+            my $i_next_nonblank = $ibeg_2;
+            my $summed_len_1    = $summed_lengths_to_go[ $iend_1 + 1 ] -
+              $summed_lengths_to_go[$ibeg_1];
+            my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
+              $summed_lengths_to_go[$ibeg_2];
+            my $iend_1_minus = max( $ibeg_1, iprev_to_go($iend_1) );
+            my $ibeg_2_plus  = min( $iend_2, $inext_to_go[$iend_2] );
+
+            return
+              unless (
+
+                # ... unless there is just one and we can reduce
+                # this to two lines if we do.  For example, this
+                #
+                #
+                #  $bodyA .=
+                #    '($dummy, $pat) = &get_next_tex_cmd;' . '$args .= $pat;'
+                #
+                #  looks better than this:
+                #  $bodyA .= '($dummy, $pat) = &get_next_tex_cmd;' .
+                #    '$args .= $pat;'
+
+                # check for 2 lines, not in a long broken '.' chain
+                ( $n == 2 && $n == $nmax && $type_iend_1 ne $type_iend_2 )
+
+                # ... or this would strand a short quote , like this
+                #                "some long quote" .
+                #                "\n";
+                || (
+                       $types_to_go[$i_next_nonblank] eq 'Q'
+                    && $i_next_nonblank >= $iend_2 - 2
+                    && $token_lengths_to_go[$i_next_nonblank] <
+                    $rOpts_short_concatenation_item_length
+
+                    #  additional constraints to fix c167
+                    && (   $types_to_go[$iend_1_minus] ne 'Q'
+                        || $summed_len_2 < $summed_len_1 )
+                )
+              );
+        }
         return ( 1, $skip_Section_3 );
     } ## end sub recombine_section_2
 
