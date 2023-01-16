@@ -3304,6 +3304,7 @@ sub generate_options {
     $add_option->( 'brace-left-list',                         'bll',   '=s' );
     $add_option->( 'brace-left-exclusion-list',               'blxl',  '=s' );
     $add_option->( 'break-after-labels',                      'bal',   '=i' );
+    $add_option->( 'dont-form-one-liners-eval-do-blocks',     'evdml', '!' );
 
     # This was an experiment mentioned in git #78, originally named -bopl. I
     # expanded it to also open logical blocks, based on git discussion #100,

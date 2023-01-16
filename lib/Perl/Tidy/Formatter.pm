@@ -2129,11 +2129,11 @@ sub initialize_grep_and_friends {
 
     ##@q = qw(sort map grep eval);
     %is_sort_map_grep_eval = %is_sort_map_grep;
-    $is_sort_map_grep_eval{'eval'} = 1;
+    $is_sort_map_grep_eval{'eval'} = 1 unless $rOpts->{'dont-form-one-liners-eval-do-blocks'};
 
     ##@q = qw(sort map grep eval do);
     %is_sort_map_grep_eval_do = %is_sort_map_grep_eval;
-    $is_sort_map_grep_eval_do{'do'} = 1;
+    $is_sort_map_grep_eval_do{'do'} = 1 unless $rOpts->{'dont-form-one-liners-eval-do-blocks'};
 
     # These block types can take ci.  This is used by the -xci option.
     # Note that the 'sub' in this list is an anonymous sub.  To be more correct
