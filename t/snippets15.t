@@ -47,7 +47,8 @@ BEGIN {
         'sal'               => <<'----------',
 -sal='method fun'
 ----------
-        'spp0' => "-spp=0",
+        'spp0'              => "-spp=0",
+        'evdml'             => '-evdml -cti=0',
     };
 
     ############################
@@ -193,6 +194,14 @@ my $sub2=sub () { };
             qq<"$parameter" is not defined via get() for $policy_short_name.>,
         );
     }
+----------
+
+        'evdml' => <<'----------',
+eval {
+    my $user = Class::User->new( id => 100500 );
+} or do {
+    confess 'cannot load user!';
+};
 ----------
     };
 
@@ -489,6 +498,18 @@ sub Get_val() { }
 my $sub1 = sub() { };
 my $sub2 = sub() { };
 #19...........
+        },
+
+        'evdml' => {
+            source => "evdml",
+            params => "evdml",
+            expect => <<'#20...........',
+eval {
+    my $user = Class::User->new( id => 100500 );
+} or do {
+    confess 'cannot load user!';
+};
+#20...........
         },
     };
 

@@ -1,0 +1,5 @@
+eval {
+    my $user = Class::User->new(id => 100500);
+} or do {
+    confess 'cannot load user!';
+};
