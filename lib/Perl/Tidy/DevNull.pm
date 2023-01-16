@@ -7,7 +7,7 @@
 package Perl::Tidy::DevNull;
 use strict;
 use warnings;
-our $VERSION = '20221112.03';
+our $VERSION = '20230116';
 sub new   { my $self = shift; return bless {}, $self }
 sub print { return }
 sub close { return }

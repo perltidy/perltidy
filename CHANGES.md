@@ -1,5 +1,9 @@
 # Perltidy Change Log
 
+## 2023 01 16
+    - Added option -evdml, or --dont-form-one-liners-eval-do-blocks. This option
+      will prevent perlridy from trying to make one-liners our of eval/do blocks
+
 ## 2022 11 12.03
 
     - A change was made to the way line breaks are made at the '.'
