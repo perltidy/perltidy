@@ -16663,9 +16663,8 @@ EOM
         #--------------------------------------------------
         elsif ( !$max_index_to_go && $types_to_go[0] eq '#' ) {
             my $ibeg = 0;
-            $this_batch->[_ri_first_]                 = [$ibeg];
-            $this_batch->[_ri_last_]                  = [$ibeg];
-            $this_batch->[_rix_seqno_controlling_ci_] = [];
+            $this_batch->[_ri_first_] = [$ibeg];
+            $this_batch->[_ri_last_]  = [$ibeg];
 
             $self->convey_batch_to_vertical_aligner();
 
@@ -16796,6 +16795,11 @@ EOM
               \@unmatched_opening_indexes_in_this_batch;
         }
 
+        if (@ix_seqno_controlling_ci) {
+            $this_batch->[_rix_seqno_controlling_ci_] =
+              \@ix_seqno_controlling_ci;
+        }
+
         #------------------------
         # Set special breakpoints
         #------------------------
@@ -16912,6 +16916,7 @@ EOM
             elsif ( $leading_type eq 'i' ) {
                 if (
 
+                    #FIXME: fix to work optimally for 'method'
                     # quick check
                     (
                         substr( $leading_token, 0, 3 ) eq 'sub'
@@ -17127,17 +17132,14 @@ EOM
         # -lp corrector step
         #-------------------
         if ($rOpts_line_up_parentheses) {
-            my $do_not_pad =
-              $self->correct_lp_indentation( $ri_first, $ri_last );
-            $this_batch->[_do_not_pad_] = $do_not_pad;
+            $self->correct_lp_indentation( $ri_first, $ri_last );
         }
 
         #--------------------
         # ship this batch out
         #--------------------
-        $this_batch->[_ri_first_]                 = $ri_first;
-        $this_batch->[_ri_last_]                  = $ri_last;
-        $this_batch->[_rix_seqno_controlling_ci_] = \@ix_seqno_controlling_ci;
+        $this_batch->[_ri_first_] = $ri_first;
+        $this_batch->[_ri_last_]  = $ri_last;
 
         $self->convey_batch_to_vertical_aligner();
 
@@ -19591,24 +19593,6 @@ sub correct_lp_indentation {
     # are known.
     my ( $self, $ri_first, $ri_last ) = @_;
 
-    my $do_not_pad = 0;
-
-    #  Note on flag '$do_not_pad':
-    #  We want to avoid a situation like this, where the aligner inserts
-    #  whitespace before the '=' to align it with a previous '=', because
-    #  otherwise the parens might become mis-aligned in a situation like
-    #  this, where the '=' has become aligned with the previous line,
-    #  pushing the opening '(' forward beyond where we want it.
-    #
-    #  $mkFloor::currentRoom = '';
-    #  $mkFloor::c_entry     = $c->Entry(
-    #                                 -width        => '10',
-    #                                 -relief       => 'sunken',
-    #                                 ...
-    #                                 );
-    #
-    #  We leave it to the aligner to decide how to do this.
-
     # first remove continuation indentation if appropriate
     my $rLL      = $self->[_rLL_];
     my $max_line = @{$ri_first} - 1;
@@ -19667,8 +19651,24 @@ sub correct_lp_indentation {
                 next if ( $Ko >= $K_to_go[$ibeg] && $Kc <= $K_to_go[$iend] );
             }
 
+            #  Note on flag '$do_not_pad':
+            #  We want to avoid a situation like this, where the aligner
+            #  inserts whitespace before the '=' to align it with a previous
+            #  '=', because otherwise the parens might become mis-aligned in a
+            #  situation like this, where the '=' has become aligned with the
+            #  previous line, pushing the opening '(' forward beyond where we
+            #  want it.
+            #
+            #  $mkFloor::currentRoom = '';
+            #  $mkFloor::c_entry     = $c->Entry(
+            #                                 -width        => '10',
+            #                                 -relief       => 'sunken',
+            #                                 ...
+            #                                 );
+            #
+            #  We leave it to the aligner to decide how to do this.
             if ( $line == 1 && $i == $ibeg ) {
-                $do_not_pad = 1;
+                $self->[_this_batch_]->[_do_not_pad_] = 1;
             }
 
             #--------------------------------------------
@@ -19883,7 +19883,7 @@ sub correct_lp_indentation {
             }
         } ## end loop over tokens in a line
     } ## end loop over lines
-    return $do_not_pad;
+    return;
 } ## end sub correct_lp_indentation
 
 sub correct_lp_indentation_pass_1 {
@@ -26227,7 +26227,7 @@ sub get_seqno {
         # On a very large list test case, this new coding dropped the run time
         # of this routine from 30 seconds to 169 milliseconds.
         my @i_controlling_ci;
-        if ( @{$rix_seqno_controlling_ci} ) {
+        if ( $rix_seqno_controlling_ci && @{$rix_seqno_controlling_ci} ) {
             my @tmp     = reverse @{$rix_seqno_controlling_ci};
             my $ix_next = pop @tmp;
             foreach my $line ( 0 .. $max_line ) {
