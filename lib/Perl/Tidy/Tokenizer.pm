@@ -2269,13 +2269,16 @@ EOM
         #   true otherwise (even if not sure)
 
         # We are trying to avoid problems with old uses of 'class'
-        # when --use-feature=class is set (rt145706).
+        # when --use-feature=class is set (rt145706).  We look ahead
+        # see if this use of 'class' is obviously inconsistent with
+        # the syntax of use feature 'class'.  This allows the default
+        # setting --use-feature=class to work for old syntax too.
 
         # Valid class declarations look like
-        #   class NAME ATTRS VERSION BLOCK
+        #   class NAME ?ATTRS ?VERSION ?BLOCK
         # where ATTRS VERSION and BLOCK are optional
 
-        # For example, this should cause a return of 'false':
+        # For example, this should produce a return of 'false':
         #
         #   class ExtendsBasicAttributes is BasicAttributes{
 
@@ -2301,34 +2304,33 @@ EOM
             return;
         }
 
-        # TEST 3: look for invalid characters after NAME
-        if ( $input_line =~ m/\s*(\S)/gcx ) {
+        # TEST 3: look for valid characters after NAME
+        my $next_char = EMPTY_STRING;
+        if ( $input_line =~ m/\s*(\S)/gcx ) { $next_char = $1 }
+        if ( !$next_char || $next_char eq '#' ) {
+            ( $next_char, my $i_next ) =
+              find_next_nonblank_token( $max_token_index,
+                $rtokens, $max_token_index );
+        }
+        return unless ($next_char);
 
-            my $char = $1;
+        # Must see one of: ATTRIBUTE, VERSION, BLOCK, or end stmt
 
-            # Must see one of: ATTRIBUTE, VERSION, BLOCK, or end stmt
+        # Possibly valid next token types:
+        # ':' could start ATTRIBUTE
+        # '\d' could start VERSION
+        # '{' cold start BLOCK
+        # ';' could end a statement
+        # '}' could end statement but would be strange
 
-            # Possibly valid next token types:
-            # ':' could start ATTRIBUTE
-            # '\d' could start VERSION
-            # '{' cold start BLOCK
-            # ';' could end a statement
-            # '}' could end statement but would be strange
-            if ( $char =~ /^[\:\d\{\;\}]/ ) { return 1 }
+        if ( $next_char !~ /^[\:\d\{\;\}]/ ) {
 
-            # stop at a side comment - assume ok for now
-            if ( $char eq '#' ) { return 1 }
-
-            # Nothing else should be okay
+            # This does not match use feature 'class' syntax
             return;
-
-            # non-dight letter - not ok
-            # ( this must be checked after \d )
-            ##OLD: if ( $tok =~ /^\w/) { return }
         }
 
-        # TBD: Still uncertain; may be at end of line.
-        # We could continue will stop here and assume ok.
+        # We will stop here and assume that this is valid syntax for
+        # use feature 'class'.
         return 1;
     }
 

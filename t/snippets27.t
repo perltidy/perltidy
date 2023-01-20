@@ -179,8 +179,17 @@ ADJUST {
 method paint => sub {
     ...;
 };
+method painter
+
+  => sub {
+    ...;
+  };
 is( ( method Pack "a", "b", "c" ), "method,a,b,c" );
 class ExtendsBasicAttributes is BasicAttributes{
+ ...
+}
+class BrokenExtendsBasicAttributes
+is BasicAttributes{
  ...
 }
 class +Night with +Bad {
@@ -913,8 +922,17 @@ ADJUST {
 method paint => sub {
     ...;
 };
+
+method painter
+
+  => sub {
+    ...;
+  };
 is( ( method Pack "a", "b", "c" ), "method,a,b,c" );
 class ExtendsBasicAttributes is BasicAttributes {
+    ...
+}
+class BrokenExtendsBasicAttributes is BasicAttributes {
     ...
 }
 class +Night with +Bad {
