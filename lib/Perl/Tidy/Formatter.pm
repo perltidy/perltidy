@@ -22348,9 +22348,26 @@ EOM
             if ( $minimum_depth <= $current_depth ) {
 
                 if ( $i_opening >= 0 ) {
-                    $self->set_forced_breakpoint($i_opening)
-                      unless ( $do_not_break_apart
-                        || is_unbreakable_container($current_depth) );
+                    if (   !$do_not_break_apart
+                        && !is_unbreakable_container($current_depth) )
+                    {
+                        $self->set_forced_breakpoint($i_opening);
+
+                        # Do not let brace types L/R use vertical tightness
+                        # flags to recombine if we have to break on length
+                        # because instability is possible if both vt and vtc
+                        # flags are set ... see issue b1444.
+                        if (   $is_long_term
+                            && $types_to_go[$i_opening] eq 'L'
+                            && $opening_vertical_tightness{'{'}
+                            && $closing_vertical_tightness{'}'} )
+                        {
+                            my $seqno = $type_sequence_to_go[$i_opening];
+                            if ($seqno) {
+                                $self->[_rbreak_container_]->{$seqno} = 1;
+                            }
+                        }
+                    }
                 }
 
                 # break at ',' of lower depth level before opening token

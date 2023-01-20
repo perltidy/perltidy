@@ -11283,6 +11283,33 @@ $last = after (
 --ignore-old-breakpoints
 --want-trailing-commas='i'
 
+==> b1444.in <==
+                  while ( my ( $k, $v )
+                           = each %{ $self->{channels}->{$chk}->{device_cache}
+                           } )
+                  {
+                           ...;
+                  }
+
+                  while (  my ( $k, $v )
+                           = each %{$self->{channels}->{$chk}->{device_cache} }
+                         )
+                  {
+                           ...;
+                  }
+
+
+==> b1444.par <==
+--brace-vertical-tightness-closing=1
+--break-before-all-operators
+--continuation-indentation=7
+--extended-continuation-indentation
+--extended-line-up-parentheses
+--indent-columns=9
+--maximum-line-length=79
+--space-keyword-paren
+--vertical-tightness=1
+
 ==> b146.in <==
 # State 1
 

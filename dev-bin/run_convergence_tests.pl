@@ -400,7 +400,7 @@ sub run_test_cases {
                     }
                 }
                 else {
-                    $msg = "NEW EXPECT";
+                    $msg = "..NEW";
                     push @expect_cases_to_update, $sname;
                     $rexpect_files->{$sname} = $output;
                 }
@@ -453,9 +453,9 @@ SKIPPED: these requested cases were not found in the database:
 EOM
     }
     if (@expect_cases_to_update) {
+        my $new_expect = @expect_cases_to_update;
         print <<EOM;
-NEW: the .expect data will be updated with output for these cases
-@expect_cases_to_update
+NEW: added $new_expect cases to .expect: @expect_cases_to_update
 EOM
     }
     if (@expect_differences) {

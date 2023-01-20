@@ -7653,6 +7653,26 @@ $last = after (
         } _search_ISA($pkg);
 
 
+==> b1444 <==
+                  while (  my ( $k, $v )
+                           = each %{
+                                    $self->{channels}->{$chk}->{device_cache}
+                           }
+                         )
+                  {
+                           ...;
+                  }
+
+                  while (  my ( $k, $v )
+                           = each %{
+                                    $self->{channels}->{$chk}->{device_cache}
+                           }
+                         )
+                  {
+                           ...;
+                  }
+
+
 ==> b146 <==
 # State 1
 
