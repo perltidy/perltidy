@@ -339,37 +339,42 @@ sub check_options {
         }
     }
 
+    #------------------------------------------------
     # Update hash values for any -use-feature options
-    if ( $rOpts->{'use-feature'} ) {
+    #------------------------------------------------
+    my $use_feature_class = $rOpts->{'use-feature'} =~ /\bclass\b/;
 
-        # These are the main updates for this option. There are additional
-        # changes elsewhere, usually indicated with a comment 'rt145706'
+    # These are the main updates for this option. There are additional
+    # changes elsewhere, usually indicated with a comment 'rt145706'
 
-        # Update hash values for use_feature=class, added for rt145706
-        # see 'perlclass.pod'
-        if ( $rOpts->{'use-feature'} =~ /\bclass\b/ ) {
+    # Update hash values for use_feature=class, added for rt145706
+    # see 'perlclass.pod'
 
-            # there are 4 new keywords:
+    # IMPORTANT: We are changing global hash values initially set in a BEGIN
+    # block.  Values must be defined (true or false) for each of these new
+    # words whether true or false. Otherwise, programs using the module which
+    # change options between runs (such as test code) will have
+    # incorrect settings and fail.
 
-            # 'class' - treated specially as generalization of 'package'
-            # Note: we must not set 'class' to be a keyword to avoid problems
-            # with older uses.
-            $is_package{'class'} = 1;
+    # There are 4 new keywords:
 
-            # 'method' - treated like sub using the sub-alias-list option
-            # Note: we must not set 'method' to be a keyword to avoid problems
-            # with older uses.
+    # 'class' - treated specially as generalization of 'package'
+    # Note: we must not set 'class' to be a keyword to avoid problems
+    # with older uses.
+    $is_package{'class'} = $use_feature_class;
 
-            # 'field'  - added as a keyword, and works like 'my'
-            $is_keyword{'field'}      = 1;
-            $is_my_our_state{'field'} = 1;
+    # 'method' - treated like sub using the sub-alias-list option
+    # Note: we must not set 'method' to be a keyword to avoid problems
+    # with older uses.
 
-            # 'ADJUST' - added as a keyword and works like 'BEGIN'
-            # TODO: if ADJUST gets a paren list, this will need to be updated
-            $is_keyword{'ADJUST'}          = 1;
-            $is_code_block_token{'ADJUST'} = 1;
-        }
-    }
+    # 'field'  - added as a keyword, and works like 'my'
+    $is_keyword{'field'}      = $use_feature_class;
+    $is_my_our_state{'field'} = $use_feature_class;
+
+    # 'ADJUST' - added as a keyword and works like 'BEGIN'
+    # TODO: if ADJUST gets a paren list, this will need to be updated
+    $is_keyword{'ADJUST'}          = $use_feature_class;
+    $is_code_block_token{'ADJUST'} = $use_feature_class;
 
     %is_grep_alias = ();
     if ( $rOpts->{'grep-alias-list'} ) {
@@ -385,6 +390,7 @@ sub check_options {
       make_code_skipping_pattern( $rOpts, 'code-skipping-begin', '#<<V' );
     $code_skipping_pattern_end =
       make_code_skipping_pattern( $rOpts, 'code-skipping-end', '#>>V' );
+
     return;
 } ## end sub check_options
 
