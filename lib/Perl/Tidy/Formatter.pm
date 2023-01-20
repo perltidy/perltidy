@@ -14971,13 +14971,16 @@ EOM
             # to add a blank.  The value of the flag is as follows:
             #   1 => hard break, flush the batch
             #   2 => soft break, set breakpoint and continue building the batch
-            if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} ) {
+            # added check on max_index_to_go for c177
+            if (   $max_index_to_go >= 0
+                && $self->[_rbreak_before_Kfirst_]->{$K_first_true} )
+            {
                 $index_start_one_line_block = undef;
                 if ( $self->[_rbreak_before_Kfirst_]->{$K_first_true} == 2 ) {
                     $self->set_forced_breakpoint($max_index_to_go);
                 }
                 else {
-                    $self->end_batch() if ( $max_index_to_go >= 0 );
+                    $self->end_batch();
                 }
             }
         }
