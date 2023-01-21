@@ -2239,26 +2239,33 @@ EOM
         #    method paint => sub {
         #     ...
         #    }
+        my $next_char = EMPTY_STRING;
+        if ( $input_line =~ m/\s*(\S)/gcx ) { $next_char = $1 }
+        if ( !$next_char || $next_char eq '#' ) {
+            ( $next_char, my $i_next ) =
+              find_next_nonblank_token( $max_token_index,
+                $rtokens, $max_token_index );
+        }
 
-        if ( $input_line =~ m/\s*(\S)/gcx ) {
-            my $char = $1;
+        if ( !$next_char ) {
 
-            # Possibly valid next token types:
-            # '(' could start prototype or signature
-            # ':' could start ATTRIBUTE
-            # '{' cold start BLOCK
-            # ';' or '}' could end a statement
-            if ( $char =~ /^[\(\:\{\;\}]/ ) { return 1 }
-
-            # stop at a side comment - assume ok for now
-            if ( $char eq '#' ) { return 1 }
-
-            # nothing else is valid (in particular '#' and '"')
+            # out of characters - give up
             return;
         }
 
-        # TBD: Still uncertain; may be at end of line
-        # We could continue will stop here and assume ok.
+        # Possibly valid next token types:
+        # '(' could start prototype or signature
+        # ':' could start ATTRIBUTE
+        # '{' cold start BLOCK
+        # ';' or '}' could end a statement
+        if ( $next_char !~ /^[\(\:\{\;\}]/ ) {
+
+            # This does not match use feature 'class' syntax
+            return;
+        }
+
+        # We will stop here and assume that this is valid syntax for
+        # use feature 'class'.
         return 1;
     }
 
@@ -2312,7 +2319,11 @@ EOM
               find_next_nonblank_token( $max_token_index,
                 $rtokens, $max_token_index );
         }
-        return unless ($next_char);
+        if ( !$next_char ) {
+
+            # out of characters - give up
+            return;
+        }
 
         # Must see one of: ATTRIBUTE, VERSION, BLOCK, or end stmt
 

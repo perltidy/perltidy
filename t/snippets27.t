@@ -922,7 +922,6 @@ ADJUST {
 method paint => sub {
     ...;
 };
-
 method painter
 
   => sub {
