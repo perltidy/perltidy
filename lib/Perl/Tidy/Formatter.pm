@@ -477,6 +477,7 @@ BEGIN {
         _radjusted_levels_          => $i++,
         _this_batch_                => $i++,
 
+        _ris_special_identifier_token_    => $i++,
         _last_output_short_opening_token_ => $i++,
 
         _last_line_leading_type_       => $i++,
@@ -911,6 +912,7 @@ sub new {
     $self->[_this_batch_] = [];
 
     # Memory of processed text...
+    $self->[_ris_special_identifier_token_]    = {};
     $self->[_last_last_line_leading_level_]    = 0;
     $self->[_last_line_leading_level_]         = 0;
     $self->[_last_line_leading_type_]          = '#';
@@ -7684,6 +7686,9 @@ sub respace_tokens_inner_loop {
                     # one space max, and no tabs
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
+
+                    $self->[_ris_special_identifier_token_]->{$token} = 'sub';
+
                 }
 
                 # clean up spaces in package identifiers, like
@@ -7693,6 +7698,10 @@ sub respace_tokens_inner_loop {
                 {
                     $token =~ s/\s+/ /g;
                     $rtoken_vars->[_TOKEN_] = $token;
+
+                    $self->[_ris_special_identifier_token_]->{$token} =
+                      'package';
+
                 }
 
                 # trim identifiers of trailing blanks which can occur
@@ -7864,6 +7873,7 @@ EOM
         $self->store_token($rtoken_vars);
 
     }    # End token loop
+
     return;
 } ## end sub respace_tokens_inner_loop
 
@@ -16917,30 +16927,28 @@ EOM
 
             # blank lines before subs except declarations and one-liners
             elsif ( $leading_type eq 'i' ) {
-                if (
+                my $special_identifier =
+                  $self->[_ris_special_identifier_token_]->{$leading_token};
+                if ($special_identifier) {
+                    ##   $leading_token =~ /$SUB_PATTERN/
+                    if ( $special_identifier eq 'sub' ) {
 
-                    #FIXME: fix to work optimally for 'method'
-                    # quick check
-                    (
-                        substr( $leading_token, 0, 3 ) eq 'sub'
-                        || $rOpts_sub_alias_list
-                    )
+                        $blank_count = $rOpts->{'blank-lines-before-subs'}
+                          if (
+                            terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
+                    }
 
-                    # slow check
-                    && $leading_token =~ /$SUB_PATTERN/
-                  )
-                {
-                    $blank_count = $rOpts->{'blank-lines-before-subs'}
-                      if ( terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
-                }
+                    # break before all package declarations
+                    ##      substr( $leading_token, 0, 8 ) eq 'package '
+                    elsif ( $special_identifier eq 'package' ) {
 
-                # break before all package declarations
-                elsif ( substr( $leading_token, 0, 8 ) eq 'package ' ) {
-
-                    # ... except in a very short eval block
-                    my $pseqno = $parent_seqno_to_go[$imin];
-                    $blank_count = $rOpts->{'blank-lines-before-packages'}
-                      if ( !$self->[_ris_short_broken_eval_block_]->{$pseqno} );
+                        # ... except in a very short eval block
+                        my $pseqno = $parent_seqno_to_go[$imin];
+                        $blank_count = $rOpts->{'blank-lines-before-packages'}
+                          if (
+                            !$self->[_ris_short_broken_eval_block_]->{$pseqno}
+                          );
+                    }
                 }
             }
 
