@@ -16880,17 +16880,19 @@ EOM
         my $last_line_leading_type  = $self->[_last_line_leading_type_];
         my $last_line_leading_level = $self->[_last_line_leading_level_];
 
+        my $leading_type  = $types_to_go[0];
+        my $leading_level = $levels_to_go[0];
+
         # add blank line(s) before certain key types but not after a comment
         if ( $last_line_leading_type ne '#' ) {
             my $blank_count   = 0;
-            my $leading_token = $tokens_to_go[$imin];
-            my $leading_type  = $types_to_go[$imin];
+            my $leading_token = $tokens_to_go[0];
 
             # break before certain key blocks except one-liners
             if ( $leading_type eq 'k' ) {
                 if ( $leading_token eq 'BEGIN' || $leading_token eq 'END' ) {
                     $blank_count = $rOpts->{'blank-lines-before-subs'}
-                      if ( terminal_type_i( $imin, $imax ) ne '}' );
+                      if ( terminal_type_i( 0, $max_index_to_go ) ne '}' );
                 }
 
                 # Break before certain block types if we haven't had a
@@ -16904,7 +16906,7 @@ EOM
 
                     # patch for RT #128216: no blank line inserted at a level
                     # change
-                    if ( $levels_to_go[$imin] != $last_line_leading_level ) {
+                    if ( $levels_to_go[0] != $last_line_leading_level ) {
                         $lc = 0;
                     }
 
@@ -16912,7 +16914,7 @@ EOM
                         && $lc >= $rOpts->{'long-block-line-count'}
                         && $self->consecutive_nonblank_lines() >=
                         $rOpts->{'long-block-line-count'}
-                        && terminal_type_i( $imin, $imax ) ne '}' )
+                        && terminal_type_i( 0, $max_index_to_go ) ne '}' )
                     {
                         $blank_count = 1;
                     }
@@ -16928,8 +16930,8 @@ EOM
                     if ( $special_identifier eq 'sub' ) {
 
                         $blank_count = $rOpts->{'blank-lines-before-subs'}
-                          if (
-                            terminal_type_i( $imin, $imax ) !~ /^[\;\}\,]$/ );
+                          if ( terminal_type_i( 0, $max_index_to_go ) !~
+                            /^[\;\}\,]$/ );
                     }
 
                     # break before all package declarations
@@ -16937,7 +16939,7 @@ EOM
                     elsif ( $special_identifier eq 'package' ) {
 
                         # ... except in a very short eval block
-                        my $pseqno = $parent_seqno_to_go[$imin];
+                        my $pseqno = $parent_seqno_to_go[0];
                         $blank_count = $rOpts->{'blank-lines-before-packages'}
                           if (
                             !$self->[_ris_short_broken_eval_block_]->{$pseqno}
@@ -16949,8 +16951,8 @@ EOM
             # Check for blank lines wanted before a closing brace
             elsif ( $leading_token eq '}' ) {
                 if (   $rOpts->{'blank-lines-before-closing-block'}
-                    && $block_type_to_go[$imin]
-                    && $block_type_to_go[$imin] =~
+                    && $block_type_to_go[0]
+                    && $block_type_to_go[0] =~
                     /$blank_lines_before_closing_block_pattern/ )
                 {
                     my $nblanks = $rOpts->{'blank-lines-before-closing-block'};
@@ -16971,22 +16973,18 @@ EOM
 
         # update blank line variables and count number of consecutive
         # non-blank, non-comment lines at this level
-        my $last_last_line_leading_level = $last_line_leading_level;
-        $last_line_leading_level = $levels_to_go[$imin];
-        $last_line_leading_type  = $types_to_go[$imin];
-        if (   $last_line_leading_level == $last_last_line_leading_level
-            && $last_line_leading_type ne 'b'
-            && $last_line_leading_type ne '#'
-            && defined( $nonblank_lines_at_depth[$last_line_leading_level] ) )
+        if (   $leading_level == $last_line_leading_level
+            && $leading_type ne '#'
+            && defined( $nonblank_lines_at_depth[$leading_level] ) )
         {
-            $nonblank_lines_at_depth[$last_line_leading_level]++;
+            $nonblank_lines_at_depth[$leading_level]++;
         }
         else {
-            $nonblank_lines_at_depth[$last_line_leading_level] = 1;
+            $nonblank_lines_at_depth[$leading_level] = 1;
         }
 
-        $self->[_last_line_leading_type_]  = $last_line_leading_type;
-        $self->[_last_line_leading_level_] = $last_line_leading_level;
+        $self->[_last_line_leading_type_]  = $leading_type;
+        $self->[_last_line_leading_level_] = $leading_level;
 
         #--------------------------
         # scan lists and long lines
