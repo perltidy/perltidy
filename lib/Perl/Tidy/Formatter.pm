@@ -480,9 +480,8 @@ BEGIN {
         _ris_special_identifier_token_    => $i++,
         _last_output_short_opening_token_ => $i++,
 
-        _last_line_leading_type_       => $i++,
-        _last_line_leading_level_      => $i++,
-        _last_last_line_leading_level_ => $i++,
+        _last_line_leading_type_  => $i++,
+        _last_line_leading_level_ => $i++,
 
         _added_semicolon_count_    => $i++,
         _first_added_semicolon_at_ => $i++,
@@ -913,7 +912,6 @@ sub new {
 
     # Memory of processed text...
     $self->[_ris_special_identifier_token_]    = {};
-    $self->[_last_last_line_leading_level_]    = 0;
     $self->[_last_line_leading_level_]         = 0;
     $self->[_last_line_leading_type_]          = '#';
     $self->[_last_output_short_opening_token_] = 0;
@@ -16682,8 +16680,6 @@ EOM
             $self->convey_batch_to_vertical_aligner();
 
             my $level = $levels_to_go[$ibeg];
-            $self->[_last_last_line_leading_level_] =
-              $self->[_last_line_leading_level_];
             $self->[_last_line_leading_type_]  = $types_to_go[$ibeg];
             $self->[_last_line_leading_level_] = $level;
             $nonblank_lines_at_depth[$level]   = 1;
@@ -16883,8 +16879,6 @@ EOM
 
         my $last_line_leading_type  = $self->[_last_line_leading_type_];
         my $last_line_leading_level = $self->[_last_line_leading_level_];
-        my $last_last_line_leading_level =
-          $self->[_last_last_line_leading_level_];
 
         # add blank line(s) before certain key types but not after a comment
         if ( $last_line_leading_type ne '#' ) {
@@ -16977,10 +16971,9 @@ EOM
 
         # update blank line variables and count number of consecutive
         # non-blank, non-comment lines at this level
-        $last_last_line_leading_level = $last_line_leading_level;
-        $last_line_leading_level      = $levels_to_go[$imin];
-        if ( $last_line_leading_level < 0 ) { $last_line_leading_level = 0 }
-        $last_line_leading_type = $types_to_go[$imin];
+        my $last_last_line_leading_level = $last_line_leading_level;
+        $last_line_leading_level = $levels_to_go[$imin];
+        $last_line_leading_type  = $types_to_go[$imin];
         if (   $last_line_leading_level == $last_last_line_leading_level
             && $last_line_leading_type ne 'b'
             && $last_line_leading_type ne '#'
@@ -16992,9 +16985,8 @@ EOM
             $nonblank_lines_at_depth[$last_line_leading_level] = 1;
         }
 
-        $self->[_last_line_leading_type_]       = $last_line_leading_type;
-        $self->[_last_line_leading_level_]      = $last_line_leading_level;
-        $self->[_last_last_line_leading_level_] = $last_last_line_leading_level;
+        $self->[_last_line_leading_type_]  = $last_line_leading_type;
+        $self->[_last_line_leading_level_] = $last_line_leading_level;
 
         #--------------------------
         # scan lists and long lines
