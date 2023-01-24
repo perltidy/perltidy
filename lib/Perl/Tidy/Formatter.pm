@@ -229,7 +229,6 @@ my (
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
     $rOpts_variable_maximum_line_length,
-    $rOpts_valign,
     $rOpts_valign_code,
     $rOpts_valign_side_comments,
     $rOpts_whitespace_cycle,
@@ -1923,7 +1922,6 @@ EOM
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
-    $rOpts_valign                    = $rOpts->{'valign'};
     $rOpts_valign_code               = $rOpts->{'valign-code'};
     $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
     $rOpts_variable_maximum_line_length =
