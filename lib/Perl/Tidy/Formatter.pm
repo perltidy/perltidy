@@ -224,7 +224,6 @@ my (
     $rOpts_space_prototype_paren,
     $rOpts_stack_closing_block_brace,
     $rOpts_static_block_comments,
-    $rOpts_sub_alias_list,
     $rOpts_tee_block_comments,
     $rOpts_tee_pod,
     $rOpts_tee_side_comments,
@@ -1918,7 +1917,6 @@ EOM
     $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
     $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
     $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
-    $rOpts_sub_alias_list            = $rOpts->{'sub-alias-list'};
     $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
     $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
     $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
@@ -5589,18 +5587,14 @@ EOM
 
         $self->[_rblock_type_of_seqno_]->{$seqno} = $block_type;
 
-        if ( substr( $block_type, 0, 3 ) eq 'sub'
-            || $rOpts_sub_alias_list )
-        {
-            if ( $block_type =~ /$ASUB_PATTERN/ ) {
-                $self->[_ris_asub_block_]->{$seqno} = 1;
-            }
-            elsif ( $block_type =~ /$SUB_PATTERN/ ) {
-                $self->[_ris_sub_block_]->{$seqno} = 1;
-            }
+        if ( $block_type =~ /$ASUB_PATTERN/ ) {
+            $self->[_ris_asub_block_]->{$seqno} = 1;
+        }
+        elsif ( $block_type =~ /$SUB_PATTERN/ ) {
+            $self->[_ris_sub_block_]->{$seqno} = 1;
         }
         return;
-    }
+    } ## end sub store_block_type
 
     sub write_line {
 
@@ -7655,14 +7649,7 @@ sub respace_tokens_inner_loop {
             # Trim certain spaces in identifiers
             if ( $type eq 'i' ) {
 
-                if (
-                    (
-                        substr( $token, 0, 3 ) eq 'sub'
-                        || $rOpts_sub_alias_list
-                    )
-                    && $token =~ /$SUB_PATTERN/
-                  )
-                {
+                if ( $token =~ /$SUB_PATTERN/ ) {
 
                     # -spp = 0 : no space before opening prototype paren
                     # -spp = 1 : stable (follow input spacing)
