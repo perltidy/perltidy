@@ -11310,6 +11310,34 @@ $last = after (
 --space-keyword-paren
 --vertical-tightness=1
 
+==> b1445.in <==
+         $cfg
+                  ->
+                  {
+                  $type
+                  }
+                  [$num
+                  ]
+                  or
+                  die
+"Unrecognized $type number: $num\n";
+
+         $cfg->{
+                  $type
+                  }
+                  [$num
+                  ]
+                  or
+                  die
+"Unrecognized $type number: $num\n";
+
+==> b1445.par <==
+--continuation-indentation=9
+--indent-columns=9
+--keep-old-breakpoints-after='->'
+--maximum-line-length=20
+--opening-hash-brace-right
+
 ==> b146.in <==
 # State 1
 

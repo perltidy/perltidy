@@ -29006,6 +29006,9 @@ sub set_vertical_tightness_flags {
 
             # looks bad if we align vertically with the wrong container
             && $tokens_to_go[$ibeg] ne $tokens_to_go[$ibeg_next]
+
+            # give -kba priority over -otr (b1445)
+            && !$self->[_rbreak_after_Klast_]->{ $K_to_go[$iend] }
           )
         {
             my $spaces = ( $types_to_go[ $ibeg_next - 1 ] eq 'b' ) ? 1 : 0;

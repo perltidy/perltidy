@@ -7673,6 +7673,27 @@ $last = after (
                   }
 
 
+==> b1445 <==
+         $cfg->
+                  {
+                  $type
+                  }
+                  [$num
+                  ]
+                  or
+                  die
+"Unrecognized $type number: $num\n";
+
+         $cfg->
+                  {
+                  $type
+                  }
+                  [$num
+                  ]
+                  or
+                  die
+"Unrecognized $type number: $num\n";
+
 ==> b146 <==
 # State 1
 
