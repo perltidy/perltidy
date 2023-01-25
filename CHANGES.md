@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 11 12.03
+## 2022 11 12.04
 
     - For the -b (--backup-and-modify-in-place) option, the file timestamps
       are changing (issue rt#145999).  First, if there are no formatting
