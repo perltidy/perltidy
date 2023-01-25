@@ -2,6 +2,15 @@
 
 ## 2022 11 12.03
 
+    - For the -b (--backup-and-modify-in-place) option, the file timestamps
+      are changing (issue rt#145999).  First, if there are no formatting
+      changes to an input file, it will keep its original modification time.
+      Second, any backup file will keep its original modification time.  This
+      was previously true for --backup-method=move but not for the default
+      --backup-method=copy.  The purpose of these changes is to avoid
+      triggering Makefile operations when there are no actual file changes.
+      If this causes a problem please open an issue for discussion on github.
+
     - A change was made to the way line breaks are made at the '.'
       operator when the user sets -wba='.' to requests breaks after a '.'
       ( this setting is not recommended because it can be hard to read ).

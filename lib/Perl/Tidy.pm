@@ -467,6 +467,7 @@ BEGIN {
         _teefile_stream_           => $i++,
         _user_formatter_           => $i++,
         _input_copied_verbatim_    => $i++,
+        _input_output_difference_  => $i++,
     };
 }
 
@@ -1172,6 +1173,13 @@ sub backup_method_copy {
     $self->set_output_file_permissions( $backup_file, \@input_file_stat,
         $in_place_modify );
 
+    # set the modification time of the copy to the original value (rt#145999)
+    my ( $read_time, $write_time ) = @input_file_stat[ 8, 9 ];
+    if ( defined($write_time) ) {
+        utime( $read_time, $write_time, $backup_file )
+          || Warn("error setting times for backup file '$backup_file'\n");
+    }
+
     # Open the original input file for writing ... opening with ">" will
     # truncate the existing data.
     open( my $fout, ">", $input_file )
@@ -1221,6 +1229,12 @@ EOM
     # have been reset.
     $self->set_output_file_permissions( $input_file, \@input_file_stat,
         $in_place_modify );
+
+    # Keep original modification time if no change (rt#145999)
+    if ( !$self->[_input_output_difference_] && defined($write_time) ) {
+        utime( $read_time, $write_time, $input_file )
+          || Warn("error setting times for '$input_file'\n");
+    }
 
     #---------------------------------------------------------
     # remove the original file for in-place modify as follows:
@@ -1366,6 +1380,13 @@ EOM
     my $in_place_modify = 1;
     $self->set_output_file_permissions( $input_file, \@input_file_stat,
         $in_place_modify );
+
+    # Keep original modification time if no change (rt#145999)
+    my ( $read_time, $write_time ) = @input_file_stat[ 8, 9 ];
+    if ( !$self->[_input_output_difference_] && defined($write_time) ) {
+        utime( $read_time, $write_time, $input_file )
+          || Warn("error setting times for '$input_file'\n");
+    }
 
     #---------------------------------------------------------
     # remove the original file for in-place modify as follows:
@@ -2038,6 +2059,7 @@ EOM
         $self->[_output_file_]             = $output_file;
         $self->[_teefile_stream_]          = $teefile_stream;
         $self->[_input_copied_verbatim_]   = 0;
+        $self->[_input_output_difference_] = 1;    ## updated later if -b used
 
         #----------------------------------------------------------
         # Do all formatting of this buffer.
@@ -2158,7 +2180,7 @@ sub process_filter_layer {
     my $sink_object;
 
     # vars for checking assertions, if needed
-    my $digest_input = 0;
+    my $digest_input;
     my $saved_input_buf;
 
     my $ref_destination_stream = ref($destination_stream);
@@ -2167,8 +2189,11 @@ sub process_filter_layer {
     # if needed.  These are only used for 'tidy' formatting.
     if ( $rOpts->{'format'} eq 'tidy' ) {
 
-        # evaluate MD5 sum of input file for assert tests before any prefilter
-        if ( $rOpts->{'assert-tidy'} || $rOpts->{'assert-untidy'} ) {
+        # evaluate MD5 sum of input file, if needed, before any prefilter
+        if (   $rOpts->{'assert-tidy'}
+            || $rOpts->{'assert-untidy'}
+            || $rOpts->{'backup-and-modify-in-place'} )
+        {
             $digest_input    = $md5_hex->($buf);
             $saved_input_buf = $buf;
         }
@@ -2186,7 +2211,8 @@ sub process_filter_layer {
              $postfilter
           || $remove_terminal_newline
           || $rOpts->{'assert-tidy'}
-          || $rOpts->{'assert-untidy'};
+          || $rOpts->{'assert-untidy'}
+          || $rOpts->{'backup-and-modify-in-place'};
 
         #-------------------------
         # Setup destination_buffer
@@ -2274,10 +2300,15 @@ EOM
           ? $postfilter->($postfilter_buffer)
           : $postfilter_buffer;
 
+        if ( defined($digest_input) ) {
+            my $digest_output = $md5_hex->($buf_post);
+            $self->[_input_output_difference_] =
+              $digest_output ne $digest_input;
+        }
+
         # Check if file changed if requested, but only after any postfilter
         if ( $rOpts->{'assert-tidy'} ) {
-            my $digest_output = $md5_hex->($buf_post);
-            if ( $digest_output ne $digest_input ) {
+            if ( $self->[_input_output_difference_] ) {
                 my $diff_msg =
                   compare_string_buffers( $saved_input_buf, $buf_post,
                     $is_encoded_data );
@@ -2291,8 +2322,7 @@ EOM
         }
 
         if ( $rOpts->{'assert-untidy'} ) {
-            my $digest_output = $md5_hex->($buf_post);
-            if ( $digest_output eq $digest_input ) {
+            if ( !$self->[_input_output_difference_] ) {
                 $logger_object->warning(
 "assertion failure: '--assert-untidy' is set but output equals input\n"
                 );
