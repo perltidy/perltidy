@@ -45,6 +45,9 @@ WriteMakefile(
                 url  => 'https://github.com/perltidy/perltidy.git',
                 web  => 'https://github.com/perltidy/perltidy',
             },
+            bugtracker => {
+                "web" => "https://github.com/perltidy/perltidy/issues"
+            },
         },
     },
 );
