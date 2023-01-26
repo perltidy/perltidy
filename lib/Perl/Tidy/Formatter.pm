@@ -5724,7 +5724,7 @@ EOM
             return;
         }
 
-        my $line_number    = $line_of_tokens_old->{_line_number};
+        my $line_index     = $line_of_tokens_old->{_line_number} - 1;
         my $rtoken_type    = $line_of_tokens_old->{_rtoken_type};
         my $rblock_type    = $line_of_tokens_old->{_rblock_type};
         my $rtype_sequence = $line_of_tokens_old->{_rtype_sequence};
@@ -5737,7 +5737,7 @@ EOM
 
         DEVEL_MODE
           && check_sequence_numbers( $rtokens, $rtoken_type,
-            $rtype_sequence, $line_number );
+            $rtype_sequence, $line_index + 1 );
 
         # Find the starting nesting depth ...
         # It must be the value of variable 'level' of the first token
@@ -5751,20 +5751,26 @@ EOM
             $rdepth_of_opening_seqno->[SEQ_ROOT] = $nesting_depth - 1;
         }
 
-        foreach my $j ( 0 .. $jmax ) {
+        my $j = -1;
+
+        # NOTE: coding efficiency is critical in this loop over all tokens
+        foreach my $token ( @{$rtokens} ) {
 
             # Do not clip the 'level' variable yet. We will do this
             # later, in sub 'store_token_to_go'. The reason is that in
             # files with level errors, the logic in 'weld_cuddled_else'
             # uses a stack logic that will give bad welds if we clip
             # levels here.
+            ## $j++;
             ## if ( $rlevels->[$j] < 0 ) { $rlevels->[$j] = 0 }
 
+            my $seqno = EMPTY_STRING;
+
             # Handle tokens with sequence numbers ...
-            my $seqno = $rtype_sequence->[$j];
-            if ($seqno) {
-                my $token = $rtokens->[$j];
-                my $sign  = 1;
+            # note the ++ increment hidden here for efficiency
+            if ( $rtype_sequence->[ ++$j ] ) {
+                $seqno = $rtype_sequence->[$j];
+                my $sign = 1;
                 if ( $is_opening_token{$token} ) {
                     $self->[_K_opening_container_]->{$seqno} = @{$rLL};
                     $rdepth_of_opening_seqno->[$seqno] = $nesting_depth;
@@ -5832,28 +5838,36 @@ EOM
                     my $level = $rlevels->[$j];
                     if ( $level > $self->[_maximum_level_] ) {
                         $self->[_maximum_level_]         = $level;
-                        $self->[_maximum_level_at_line_] = $line_number;
+                        $self->[_maximum_level_at_line_] = $line_index + 1;
                     }
                 }
                 else { $self->[_Iss_closing_]->[$seqno] = @{$rSS} }
                 push @{$rSS}, $sign * $seqno;
 
             }
-            else {
-                $seqno = EMPTY_STRING unless ( defined($seqno) );
-            }
 
             my @tokary;
             @tokary[
-              _TOKEN_, _TYPE_,     _TYPE_SEQUENCE_,
-              _LEVEL_, _CI_LEVEL_, _LINE_INDEX_,
-              ]
-              = (
-                $rtokens->[$j],    $rtoken_type->[$j], $seqno, $rlevels->[$j],
-                $rci_levels->[$j], $line_number - 1,
+
+              _TOKEN_,
+              _TYPE_,
+              _TYPE_SEQUENCE_,
+              _LEVEL_,
+              _CI_LEVEL_,
+              _LINE_INDEX_,
+
+              ] = (
+
+                $token,
+                $rtoken_type->[$j],
+                $seqno,
+                $rlevels->[$j],
+                $rci_levels->[$j],
+                $line_index,
+
               );
             push @{$rLL}, \@tokary;
-        } ## end foreach my $j ( 0 .. $jmax )
+        } ## end token loop
 
         # Need to remember if we can trim the input line
         $line_of_tokens->{_ended_in_blank_token} = $rtoken_type->[$jmax] eq 'b';
