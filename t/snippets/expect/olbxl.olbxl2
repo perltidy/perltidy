@@ -1,0 +1,18 @@
+            eval {
+                require Ace;
+            };
+
+            @list = map {
+                $frm{ ( /@(.*?)>/ ? $1 : $_ ) }++ ? () : ($_);
+            } @list;
+
+            $color = join(
+                '/',
+                sort {
+                    $color_value{$::a} <=> $color_value{$::b};
+                } keys %colors
+            );
+
+            @sorted = sort {
+                $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b}
+            };

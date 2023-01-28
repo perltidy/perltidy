@@ -1162,6 +1162,8 @@ EOM
             'break-after-labels'    => [ 0, 2 ],
 
             'want-trailing-commas' => [ '0', '*', 'm', 'b', 'h', 'i', ' ' ],
+            'one-line-block-exclusion-list' =>
+              [ 'sort', 'map', 'grep', 'eval', '*', 'zzyzx' ],
 
             'use-feature' => [ 'class', ' ', 'xyzzy' ],
 

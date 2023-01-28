@@ -1285,7 +1285,7 @@ sub check_options {
     initialize_bond_strength_hashes();
 
     # This function must be called early to get hashes with grep initialized
-    initialize_grep_and_friends( $rOpts->{'grep-alias-list'} );
+    initialize_grep_and_friends();
 
     # Make needed regex patterns for matching text.
     # NOTE: sub_matching_patterns must be made first because later patterns use
@@ -1334,12 +1334,6 @@ sub check_options {
     make_block_brace_vertical_tightness_pattern();
     make_blank_line_pattern();
     make_keyword_group_list_pattern();
-
-    # Make initial list of desired one line block types
-    # They will be modified by 'prepare_cuddled_block_types'
-    # NOTE: this line must come after is_sort_map_grep_eval is
-    # initialized in sub 'initialize_grep_and_friends'
-    %want_one_line_block = %is_sort_map_grep_eval;
 
     prepare_cuddled_block_types();
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
@@ -2106,22 +2100,50 @@ EOM
 use constant ALIGN_GREP_ALIASES => 0;
 
 sub initialize_grep_and_friends {
-    my ($str) = @_;
 
     # Initialize or re-initialize hashes with 'grep' and grep aliases. This
     # must be done after each set of options because new grep aliases may be
     # used.
 
-    # re-initialize the hash ... this is critical!
+    # re-initialize the hashes ... this is critical!
     %is_sort_map_grep = ();
 
     my @q = qw(sort map grep);
     @is_sort_map_grep{@q} = (1) x scalar(@q);
 
+    my $olbxl = $rOpts->{'one-line-block-exclusion-list'};
+    my %is_olb_exclusion_word;
+    if ( defined($olbxl) ) {
+        my @list = split_words($olbxl);
+        if (@list) {
+            @is_olb_exclusion_word{@list} = (1) x scalar(@list);
+        }
+    }
+
+    # Make the list of block types which may be re-formed into one line.
+    # They will be modified with the grep-alias-list below and
+    # by sub 'prepare_cuddled_block_types'.
+    # Note that it is essential to always re-initialize the hash here:
+    %want_one_line_block = ();
+    if ( !$is_olb_exclusion_word{'*'} ) {
+        foreach (qw(sort map grep eval)) {
+            if ( !$is_olb_exclusion_word{$_} ) { $want_one_line_block{$_} = 1 }
+        }
+    }
+
     # Note that any 'grep-alias-list' string has been preprocessed to be a
     # trimmed, space-separated list.
+    my $str = $rOpts->{'grep-alias-list'};
     my @grep_aliases = split /\s+/, $str;
-    @{is_sort_map_grep}{@grep_aliases} = (1) x scalar(@grep_aliases);
+
+    if (@grep_aliases) {
+
+        @{is_sort_map_grep}{@grep_aliases} = (1) x scalar(@grep_aliases);
+
+        if ( $want_one_line_block{'grep'} ) {
+            @{want_one_line_block}{@grep_aliases} = (1) x scalar(@grep_aliases);
+        }
+    }
 
     ##@q = qw(sort map grep eval);
     %is_sort_map_grep_eval = %is_sort_map_grep;

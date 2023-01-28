@@ -4451,9 +4451,9 @@ checks for and adds any optional terminating semicolon (unless the B<-nasc>
 option is used) if the block is a code block.
 
 The main exception is that perltidy will attempt to form new one-line
-blocks following the keywords C<map>, C<eval>, and C<sort>, because
+blocks following the keywords C<map>, C<eval>, and C<sort>, C<eval>, because
 these code blocks are often small and most clearly displayed in a single
-line.
+line. This behavior can be controlled with the flag B<--one-line-block-exclusion-list> described below.
 
 One-line block rules can conflict with the cuddled-else option.  When
 the cuddled-else option is used, perltidy retains existing one-line
@@ -4490,6 +4490,18 @@ the result is
     }
 
 This shows that blocks with a single statement become one-line blocks.
+
+=item B<-olbxl=s>, B<--one-line-block-exclusion-list=s>
+
+As noted above, perltidy will, by default, attempt to create new one-line
+blocks for certain block types.  This flag allows the user to prevent this
+behavior for the block types listed in the string B<s>.  The list B<s> may
+include any of the words C<sort>, C<map>, C<grep>, C<eval>,  or it may be C<*>
+to indicate all of these.
+
+So for example to prevent multi-line 'eval' blocks from becomming one-line
+blocks, the command would be B<-olbxl='eval'>.  In this case, existing one-line B<eval> blocks will remain on one-line if possible, and existing multi-line
+B<eval> blocks will remain multi-line blocks.
 
 =item B<-olbs=n>, B<--one-line-block-semicolons=n>
 
@@ -4533,9 +4545,7 @@ If the parameter B<-olbn=1> is given, then the line will be left intact if it
 is a single line in the source, or it will be broken into multiple lines if it
 is broken in multiple lines in the source.
 
-
 =back
-
 
 =head2 Controlling Vertical Alignment
 
@@ -5403,22 +5413,22 @@ The following list shows all short parameter names which allow a prefix
 
  D      anl    asbl   asc    ast    asu    atc    atnl   aws    b
  baa    baao   bar    bbao   bbb    bbc    bbs    bl     bli    boa
- boc    bok    bol    bom    bos    bot    cblx   ce     conv   cs
- csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc   ddf    dln
- dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc    dtt
- dwic   dwls   dwrs   dws    eos    f      fll    fpva   frm    fs
- fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj    hbk
- hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv    hbw
- hent   hic    hicm   hico   hih    hihh   hii    hij    hik    him
- hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw    hsc
- html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd   kgbi
- kis    lal    log    lop    lp     lsl    mem    nib    ohbr   okw
- ola    olc    oll    olq    opr    opt    osbc   osbr   otr    ple
- pod    pvl    q      sac    sbc    sbl    scbb   schb   scp    scsb
- sct    se     sfp    sfs    skp    sob    sobb   sohb   sop    sosb
- sot    ssc    st     sts    t      tac    tbc    toc    tp     tqw
- trp    ts     tsc    tso    vbc    vc     vmll   vsc    w      wfc
- wn     x      xci    xlp    xs
+ boc    bok    bol    bom    bos    bot    cblx   ce     conv   cpb
+ cs     csc    cscb   cscw   dac    dbc    dbs    dcbl   dcsc   ddf
+ dln    dnl    dop    dp     dpro   drc    dsc    dsm    dsn    dtc
+ dtt    dwic   dwls   dwrs   dws    eos    f      fll    fpva   frm
+ fs     fso    gcs    hbc    hbcm   hbco   hbh    hbhh   hbi    hbj
+ hbk    hbm    hbn    hbp    hbpd   hbpu   hbq    hbs    hbsc   hbv
+ hbw    hent   hic    hicm   hico   hih    hihh   hii    hij    hik
+ him    hin    hip    hipd   hipu   hiq    his    hisc   hiv    hiw
+ hsc    html   ibc    icb    icp    iob    isbc   iscl   kgb    kgbd
+ kgbi   kis    lal    log    lop    lp     lsl    mem    nib    ohbr
+ okw    ola    olc    oll    olq    opr    opt    osbc   osbr   otr
+ ple    pod    pvl    q      sac    sbc    sbl    scbb   schb   scp
+ scsb   sct    se     sfp    sfs    skp    sob    sobb   sohb   sop
+ sosb   sot    ssc    st     sts    t      tac    tbc    toc    tp
+ tqw    trp    ts     tsc    tso    vbc    vc     vmll   vsc    w
+ wfc    wn     x      xci    xlp    xs
 
 Equivalently, the prefix 'no' or 'no-' on the corresponding long names may be
 used.

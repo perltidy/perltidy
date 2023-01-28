@@ -18,6 +18,8 @@
 #15 cpb.cpb
 #16 cpb.def
 #17 rt145706.def
+#18 olbxl.def
+#19 olbxl.olbxl1
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -40,6 +42,7 @@ BEGIN {
         'cpb'      => "-cpb",
         'def'      => "",
         'dwic'     => "-wn -dwic",
+        'olbxl1'   => "-olbxl=eval",
         'rt144979' => "-xci -ce -lp",
         'wtc1'     => "-wtc=0 -dtc",
         'wtc2'     => "-wtc=1 -atc",
@@ -113,6 +116,26 @@ foreach my $dir (
             PL_sys_intern
         ) ],
     );
+----------
+
+        'olbxl' => <<'----------',
+            eval {
+               require Ace };
+
+            @list = map {
+                $frm{ ( /@(.*?)>/ ? $1 : $_ ) }++ ? () : ($_);
+            } @list;
+
+            $color = join(
+                '/',
+                sort {
+                    $color_value{$::a} <=> $color_value{$::b};
+                } keys %colors
+            );
+
+            @sorted = sort {
+                $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b}
+                };
 ----------
 
         'rt144979' => <<'----------',
@@ -939,6 +962,44 @@ class +Night with +Bad {
 };
 my $x = field(50);
 #17...........
+        },
+
+        'olbxl.def' => {
+            source => "olbxl",
+            params => "def",
+            expect => <<'#18...........',
+            eval { require Ace };
+
+            @list =
+              map { $frm{ ( /@(.*?)>/ ? $1 : $_ ) }++ ? () : ($_); } @list;
+
+            $color = join( '/',
+                sort { $color_value{$::a} <=> $color_value{$::b}; }
+                  keys %colors );
+
+            @sorted =
+              sort { $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b} };
+#18...........
+        },
+
+        'olbxl.olbxl1' => {
+            source => "olbxl",
+            params => "olbxl1",
+            expect => <<'#19...........',
+            eval {
+                require Ace;
+            };
+
+            @list =
+              map { $frm{ ( /@(.*?)>/ ? $1 : $_ ) }++ ? () : ($_); } @list;
+
+            $color = join( '/',
+                sort { $color_value{$::a} <=> $color_value{$::b}; }
+                  keys %colors );
+
+            @sorted =
+              sort { $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b} };
+#19...........
         },
     };
 

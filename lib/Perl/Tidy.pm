@@ -3325,6 +3325,7 @@ sub generate_options {
     $add_option->( 'keep-interior-semicolons',                'kis',   '!' );
     $add_option->( 'one-line-block-semicolons',               'olbs',  '=i' );
     $add_option->( 'one-line-block-nesting',                  'olbn',  '=i' );
+    $add_option->( 'one-line-block-exclusion-list',           'olbxl', '=s' );
     $add_option->( 'break-before-hash-brace',                 'bbhb',  '=i' );
     $add_option->( 'break-before-hash-brace-and-indent',      'bbhbi', '=i' );
     $add_option->( 'break-before-square-bracket',             'bbsb',  '=i' );

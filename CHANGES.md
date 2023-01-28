@@ -2,6 +2,14 @@
 
 ## 2022 11 12.04
 
+    - Added parameter --one-line-block-exclusion-list=s, or -olbxl=s, where
+      s is a list of block types which should not automatically be turned
+      into one-line blocks.  This implements the issue raised in PR #111.
+      The list s may include any of the words 'sort map grep eval', or
+      it may be '*' to indicate all of these.  So for example to prevent
+      multi-line 'eval' blocks from becomming one-line blocks, the command
+      would be -olbxl='eval'.
+
     - For the -b (--backup-and-modify-in-place) option, the file timestamps
       are changing (issue rt#145999).  First, if there are no formatting
       changes to an input file, it will keep its original modification time.
