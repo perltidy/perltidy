@@ -180,6 +180,8 @@ myfunc ( $a, $b, $c );    # test -sfp
 push ( @array, $val );    # test -skp and also -sak='push'
 split( /\|/, $txt );      # test -skp and also -sak='push'
 my ( $v1, $v2 ) = @_;     # test -sak='push'
+$c->    #sub set_whitespace_flags must look back past side comment
+  bind( $o, $n, [ \&$q, \%m ] );
 ----------
 
         'tightness' => <<'----------',
@@ -406,6 +408,8 @@ myfunc( $a, $b, $c );    # test -sfp
 push( @array, $val );    # test -skp and also -sak='push'
 split( /\|/, $txt );     # test -skp and also -sak='push'
 my ( $v1, $v2 ) = @_;    # test -sak='push'
+$c->    #sub set_whitespace_flags must look back past side comment
+  bind( $o, $n, [ \&$q, \%m ] );
 #14...........
         },
 
@@ -417,6 +421,8 @@ myfunc ( $a, $b, $c );    # test -sfp
 push ( @array, $val );    # test -skp and also -sak='push'
 split ( /\|/, $txt );     # test -skp and also -sak='push'
 my ( $v1, $v2 ) = @_;     # test -sak='push'
+$c->    #sub set_whitespace_flags must look back past side comment
+  bind ( $o, $n, [ \&$q, \%m ] );
 #15...........
         },
 
@@ -428,6 +434,8 @@ myfunc( $a, $b, $c );     # test -sfp
 push ( @array, $val );    # test -skp and also -sak='push'
 split( /\|/, $txt );      # test -skp and also -sak='push'
 my ( $v1, $v2 ) = @_;     # test -sak='push'
+$c->    #sub set_whitespace_flags must look back past side comment
+  bind( $o, $n, [ \&$q, \%m ] );
 #16...........
         },
 

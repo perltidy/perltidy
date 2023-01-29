@@ -2845,9 +2845,6 @@ sub set_whitespace_flags {
     my $j_tight_closing_paren = -1;
     my $rLL                   = $self->[_rLL_];
     my $jmax                  = @{$rLL} - 1;
-    my $token                 = SPACE;
-    my $type                  = 'b';
-    my $last_token            = EMPTY_STRING;
 
     %opening_container_inside_ws = ();
     %closing_container_inside_ws = ();
@@ -2865,41 +2862,34 @@ sub set_whitespace_flags {
 
     my %is_for_foreach = ( 'for' => 1, 'foreach' => 1 );
 
-    my $rtokh;
-    my $rtokh_last      = $rLL->[0];
+    my $last_token = SPACE;
+    my $last_type  = 'b';
+
+    my $rtokh_last = [ @{ $rLL->[0] } ];
+    $rtokh_last->[_TOKEN_]         = $last_token;
+    $rtokh_last->[_TYPE_]          = $last_type;
+    $rtokh_last->[_TYPE_SEQUENCE_] = EMPTY_STRING;
+    $rtokh_last->[_LINE_INDEX_]    = 0;
+
     my $rtokh_last_last = $rtokh_last;
-
-    my $last_type = EMPTY_STRING;
-
-    $rtokh = [ @{ $rLL->[0] } ];
-
-    $rtokh->[_TOKEN_]         = $token;
-    $rtokh->[_TYPE_]          = $type;
-    $rtokh->[_TYPE_SEQUENCE_] = EMPTY_STRING;
-    $rtokh->[_LINE_INDEX_]    = 0;
 
     my ( $ws_1, $ws_2, $ws_3, $ws_4 );
 
     # main loop over all tokens to define the whitespace flags
     my $last_type_is_opening;
-    foreach my $j ( 0 .. $jmax ) {
+    my ( $token, $type );
+    my $j = -1;
+    foreach my $rtokh ( @{$rLL} ) {
 
-        if ( $rLL->[$j]->[_TYPE_] eq 'b' ) {
+        $j++;
+
+        $type = $rtokh->[_TYPE_];
+        if ( $type eq 'b' ) {
             $rwhitespace_flags->[$j] = WS_OPTIONAL;
             next;
         }
 
-        $last_token = $token;
-        $last_type  = $type;
-
-        if ( $type ne '#' ) {
-            $rtokh_last_last = $rtokh_last;
-            $rtokh_last      = $rtokh;
-        }
-
-        $rtokh = $rLL->[$j];
         $token = $rtokh->[_TOKEN_];
-        $type  = $rtokh->[_TYPE_];
 
         my $ws;
 
@@ -3045,6 +3035,20 @@ sub set_whitespace_flags {
                 }
             }
 
+            # handle a comment
+            elsif ( $type eq '#' ) {
+
+                # newline before block comment ($j==0), and
+                # space before side comment    ($j>0), so ..
+                $ws = WS_YES;
+
+                #---------------------------------
+                # Nothing more to do for a comment
+                #---------------------------------
+                $rwhitespace_flags->[$j] = $ws;
+                next;
+            }
+
             # retain any space between '-' and bare word
             elsif ( $type eq 'w' || $type eq 'C' ) {
                 $ws = WS_OPTIONAL if $last_type eq '-';
@@ -3056,9 +3060,6 @@ sub set_whitespace_flags {
             elsif ( $type eq 'm' || $type eq '-' ) {
                 $ws = WS_OPTIONAL if ( $last_type eq 'w' );
             }
-
-            # always space before side comment
-            elsif ( $type eq '#' ) { $ws = WS_YES if $j > 0 }
 
             # space_backslash_quote; RT #123774  <<snippets/rt123774.in>>
             # allow a space between a backslash and single or double quote
@@ -3247,9 +3248,11 @@ sub set_whitespace_flags {
         # always preserve whatever space was used after a possible
         # filehandle (except _) or here doc operator
         if (
-            $type ne '#'
-            && ( ( $last_type eq 'Z' && $last_token ne '_' )
-                || $last_type eq 'h' )
+            (
+                ( $last_type eq 'Z' && $last_token ne '_' )
+                || $last_type eq 'h'
+            )
+            && $type ne '#' # no longer required due to early exit for '#' above
           )
         {
             $ws = WS_OPTIONAL;
@@ -3317,10 +3320,16 @@ sub set_whitespace_flags {
         if (  !$ws
             && $rtokh->[_LINE_INDEX_] != $rtokh_last->[_LINE_INDEX_] )
         {
-            $ws = 1;
+            $ws = WS_YES;
         }
 
         $rwhitespace_flags->[$j] = $ws;
+
+        # remember non-blank, non-comment tokens
+        $last_token      = $token;
+        $last_type       = $type;
+        $rtokh_last_last = $rtokh_last;
+        $rtokh_last      = $rtokh;
 
         next if ( !DEBUG_WHITE );
 
@@ -10484,11 +10493,13 @@ sub setup_new_weld_measurements {
     # - Convert from '$ok_to_weld' to '$new_weld_ok' to fix b1162.
     # - relaxed constraints for b1227
     # - added skip if type is 'q' for b1349 and b1350 b1351 b1352 b1353
+    # - added skip if type is 'Q' for b1447
     if (   $starting_ci
         && $rOpts_line_up_parentheses
         && $rOpts_delete_old_whitespace
         && !$rOpts_add_whitespace
         && $rLL->[$Kinner_opening]->[_TYPE_] ne 'q'
+        && $rLL->[$Kinner_opening]->[_TYPE_] ne 'Q'
         && defined($Kprev) )
     {
         my $type_first  = $rLL->[$Kfirst]->[_TYPE_];

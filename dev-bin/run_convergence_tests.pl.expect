@@ -7694,6 +7694,17 @@ $last = after (
                   die
 "Unrecognized $type number: $num\n";
 
+==> b1447 <==
+    ok(defined($seqio=
+                  $gb->get_Stream_by_batch([qw(J00522 AF303112
+                 2981014)] )
+    ));
+
+    ok(defined($seqio=
+                  $gb->get_Stream_by_batch([qw(J00522 AF303112
+                 2981014)] )
+    ));
+
 ==> b146 <==
 # State 1
 

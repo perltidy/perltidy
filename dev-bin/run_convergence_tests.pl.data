@@ -11338,6 +11338,27 @@ $last = after (
 --maximum-line-length=20
 --opening-hash-brace-right
 
+==> b1447.in <==
+    ok(defined($seqio=
+                  $gb->get_Stream_by_batch([qw(J00522 AF303112
+                 2981014)])));
+
+    ok(defined($seqio=
+                  $gb->get_Stream_by_batch(
+                                           [qw(J00522 AF303112
+                 2981014)])));
+
+==> b1447.par <==
+# note that notrim-qw converts the quote type from 'q' to 'Q'
+--noadd-whitespace
+--delete-old-whitespace
+--extended-line-up-parentheses
+--stack-opening-square-bracket
+--notrim-qw
+--vertical-tightness-closing=1
+--vertical-tightness=2
+--weld-nested-containers
+
 ==> b146.in <==
 # State 1
 
