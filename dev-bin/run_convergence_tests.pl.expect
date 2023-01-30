@@ -6122,18 +6122,18 @@ $obj = {
 subtest '->save' => sub {
     plan tests => 1;
     my $layout
-    =C4::Patroncards::Layout->new ( layout_name => "new patron card",
-                                    layout_id   => '',               # The interface send an empty string
-                                    layout_xml  => 'some_xml'
+    =C4::Patroncards::Layout->new (layout_name => "new patron card",
+                                   layout_id   => '',                # The interface send an empty string
+                                   layout_xml  => 'some_xml'
     );
 };
 
 subtest '->save' => sub {
     plan tests => 1;
     my $layout
-    =C4::Patroncards::Layout->new ( layout_name => "new patron card",
-                                    layout_id   => '',               # The interface send an empty string
-                                    layout_xml  => 'some_xml'
+    =C4::Patroncards::Layout->new (layout_name => "new patron card",
+                                   layout_id   => '',                # The interface send an empty string
+                                   layout_xml  => 'some_xml'
     );
 };
 
@@ -7693,6 +7693,31 @@ $last = after (
                   or
                   die
 "Unrecognized $type number: $num\n";
+
+==> b1446 <==
+     serverprint(
+         $d,
+         &X::newxCreateGlyphCursorReq($cursor=&next_resource_id,
+                                      $c,# sourcefont
+                                      $c,# maskfont
+                                      $ch,# sourcechar
+                                      $ch+1,# maskchar
+                                      $fr,$fg,$fb,
+                                      $br,$bg,$bb
+         )
+     );
+
+     serverprint(
+         $d,
+         &X::newxCreateGlyphCursorReq($cursor=&next_resource_id,
+                                      $c,# sourcefont
+                                      $c,# maskfont
+                                      $ch,# sourcechar
+                                      $ch+1,# maskchar
+                                      $fr,$fg,$fb,
+                                      $br,$bg,$bb
+         )
+     );
 
 ==> b1447 <==
     ok(defined($seqio=

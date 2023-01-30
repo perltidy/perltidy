@@ -12721,6 +12721,46 @@ sub is_fragile_block_type {
         return;
     }
 
+    sub cumulative_length_to_comma {
+        my ( $self, $KK, $K_comma, $K_closing ) = @_;
+
+        # Given:
+        #  $KK        = index of starting token, or blank before start
+        #  $K_comma   = index of line-ending comma
+        #  $K_closing = index of the container closing token
+
+        # Return:
+        #  $length = cumulative length of the term
+
+        my $rLL = $self->[_rLL_];
+        if ( $rLL->[$KK]->[_TYPE_] eq 'b' ) { $KK++ }
+        my $length = 0;
+        if (
+               $KK < $K_comma
+            && $rLL->[$K_comma]->[_TYPE_] eq ','    # should be true
+
+            # Ignore if terminal comma, causes instability (b1297,
+            # b1330)
+            && (
+                $K_closing - $K_comma > 2
+                || (   $K_closing - $K_comma == 2
+                    && $rLL->[ $K_comma + 1 ]->[_TYPE_] ne 'b' )
+            )
+
+            # The comma should be in this container
+            && ( $rLL->[$K_comma]->[_LEVEL_] - 1 ==
+                $rLL->[$K_closing]->[_LEVEL_] )
+          )
+        {
+
+            # $len => $leng to fix b1302 b1306 b1317 b1321
+            my $starting_len =
+              $KK >= 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
+            $length = $rLL->[$K_comma]->[_CUMULATIVE_LENGTH_] - $starting_len;
+        }
+        return $length;
+    } ## end sub cumulative_length_to_comma
+
     sub xlp_collapsed_lengths {
 
         my $self = shift;
@@ -12975,31 +13015,21 @@ sub is_fragile_block_type {
                     #--------------------------
                     # END patch for issue b1408
                     #--------------------------
+                    if ( $rLL->[$K_terminal]->[_TYPE_] eq ',' ) {
 
-                    if (
-                        $rLL->[$K_terminal]->[_TYPE_] eq ','
-
-                        # Ignore if terminal comma, causes instability (b1297,
-                        # b1330)
-                        && (
-                            $K_c - $K_terminal > 2
-                            || (   $K_c - $K_terminal == 2
-                                && $rLL->[ $K_terminal + 1 ]->[_TYPE_] ne 'b' )
-                        )
-                      )
-                    {
-
-                        # $len => my $leng to fix b1302 b1306 b1317 b1321
-                        my $leng = $rLL->[$K_terminal]->[_CUMULATIVE_LENGTH_] -
-                          $rLL->[ $K_first - 1 ]->[_CUMULATIVE_LENGTH_];
+                        my $length =
+                          $self->cumulative_length_to_comma( $K_first,
+                            $K_terminal, $K_c );
 
                         # Fix for b1331: at a broken => item, include the
                         # length of the previous half of the item plus one for
                         # the missing space
                         if ( $last_nonblank_type eq '=>' ) {
-                            $leng += $len + 1;
+                            $length += $len + 1;
                         }
-                        if ( $leng > $max_prong_len ) { $max_prong_len = $leng }
+                        if ( $length > $max_prong_len ) {
+                            $max_prong_len = $length;
+                        }
                     }
                 }
             }
@@ -13140,6 +13170,27 @@ sub is_fragile_block_type {
 
                     my $K_c = $K_closing_container->{$seqno};
 
+                    # Add length of any terminal list item if interrupted
+                    # so that the result is the same as if the term is
+                    # in the next line (b1446).
+
+                    if (
+                           $interrupted_list_rule
+                        && $KK < $K_terminal
+
+                        # The line should end in a comma
+                        # NOTE: this currently assumes break after comma.
+                        # As long as the other call to cumulative_length..
+                        # makes the same assumption we should remain stable.
+                        && $rLL->[$K_terminal]->[_TYPE_] eq ','
+
+                      )
+                    {
+                        $max_prong_len =
+                          $self->cumulative_length_to_comma( $KK + 1,
+                            $K_terminal, $K_c );
+                    }
+
                     push @stack, [
 
                         $max_prong_len,
@@ -13150,6 +13201,7 @@ sub is_fragile_block_type {
                         $K_c,
                         $interrupted_list_rule
                     ];
+
                 }
 
                 #--------------------

@@ -11338,6 +11338,40 @@ $last = after (
 --maximum-line-length=20
 --opening-hash-brace-right
 
+==> b1446.in <==
+     serverprint($d,
+                 &X::newxCreateGlyphCursorReq(
+                                             $cursor=&next_resource_id,
+                                             $c,# sourcefont
+                                             $c,# maskfont
+                                             $ch,# sourcechar
+                                             $ch+1,# maskchar
+                                             $fr,$fg,$fb,
+                                             $br,$bg,$bb
+                 )
+     );
+
+     serverprint(
+         $d,
+         &X::newxCreateGlyphCursorReq($cursor=&next_resource_id,
+                                      $c,# sourcefont
+                                      $c,# maskfont
+                                      $ch,# sourcechar
+                                      $ch+1,# maskchar
+                                      $fr,$fg,$fb,
+                                      $br,$bg,$bb
+         )
+     );
+
+==> b1446.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--extended-line-up-parentheses
+--indent-columns=5
+--maximum-line-length=56
+--variable-maximum-line-length
+--vertical-tightness=2
+
 ==> b1447.in <==
     ok(defined($seqio=
                   $gb->get_Stream_by_batch([qw(J00522 AF303112
