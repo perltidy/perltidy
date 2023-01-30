@@ -399,45 +399,6 @@ other words that the input code is 'untidy' according to the formatting
 parameters.  If this is not the case, an error message noting this is produced.
 This flag has no other effect on the functioning of perltidy.
 
-=item B<-sal=s>,   B<--sub-alias-list=s>
-
-This flag causes one or more words to be treated the same as if they were the keyword 'sub'.  The string B<s> contains one or more alias words, separated by spaces or commas.
-
-For example,
-
-        perltidy -sal='method fun _sub M4'
-
-will cause the perltidy to treat the words 'method', 'fun', '_sub' and 'M4' the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
-
-Note that several other parameters accept a list of keywords, including 'sub' (see L<"Specifying Block Types">).
-You do not need to include any sub aliases in these lists. Just include keyword 'sub' if you wish, and all aliases are automatically included.
-
-=item B<-gal=s>,   B<--grep-alias-list=s>
-
-This flag allows a code block following an external 'list operator' function to be formatted as if it followed one of the built-in keywords B<grep>,  B<map> or B<sort>.  The string B<s> contains the names of one or more such list operators, separated by spaces or commas.
-
-By 'list operator' is meant a function which is invoked in the form
-
-      word {BLOCK} @list
-
-Perltidy tries to keep code blocks for these functions intact, since they are usually short, and does not automatically break after the closing brace since a list may follow. It also does some special handling of continuation indentation.
-
-For example, the code block arguments to functions 'My_grep' and 'My_map' can be given formatting like 'grep' with
-
-        perltidy -gal='My_grep My_map'
-
-By default, the following list operators in List::Util are automatically included:
-
-      all any first none notall reduce reductions
-
-Any operators specified with B<--grep-alias-list> are added to this list.
-The next parameter can be used to remove words from this default list.
-
-=item B<-gaxl=s>,   B<--grep-alias-exclusion-list=s>
-
-The B<-gaxl=s> flag provides a method for removing any of the default list operators given above
-by listing them in the string B<s>.  To remove all of the default operators use B<-gaxl='*'>.
-
 =back
 
 =head1 FORMATTING OPTIONS
@@ -570,29 +531,6 @@ indentation spaces as for the output stream (any other assumption would lead to
 unstable editing).
 
 =back
-
-=item B<-xs>,   B<--extended-syntax>
-
-A problem with formatting Perl code is that some modules can introduce new
-syntax.  This flag allows perltidy to handle certain common extensions
-to the standard syntax without complaint.
-
-For example, without this flag a structure such as the following would generate
-a syntax error and the braces would not be balanced:
-
-    method deposit( Num $amount) {
-        $self->balance( $self->balance + $amount );
-    }
-
-For one of the extensions, module Switch::Plain, colons are marked as labels.
-If you use this module, you may want to also use the B<--nooutdent-labels> flag
-to prevent lines such as 'default:' from being outdented.
-
-This flag is enabled by default but it can be deactivated with B<-nxs>.
-Probably the only reason to deactivate this flag is to generate more diagnostic
-messages when debugging a script.
-
-For another method of handling extended syntax see the section L<"Skipping Selected Sections of Code">.
 
 =item B<-io>,   B<--indent-only>
 
@@ -4691,6 +4629,86 @@ alignment cannot be made for some reason.
 
 But also notice that side comments remain aligned because their alignment is
 controlled separately with the parameter B<--valign-side_comments> described above.
+
+=back
+
+=head2 Extended Syntax
+
+This section describes some parameters for dealing with extended syntax.
+
+For another method of handling extended syntax see the section L<"Skipping Selected Sections of Code">.
+
+Also note that the module F<Perl::Tidy> supplies a pre-filter and post-filter capability. This requires calling the module from a separate program rather than through the binary F<perltidy>. 
+
+=over 4
+
+=item B<-xs>,   B<--extended-syntax>
+
+This flag allows perltidy to handle certain common extensions
+to the standard syntax without complaint.
+
+For example, without this flag a structure such as the following would generate
+a syntax error and the braces would not be balanced:
+
+    method deposit( Num $amount) {
+        $self->balance( $self->balance + $amount );
+    }
+
+For one of the extensions, module Switch::Plain, colons are marked as labels.
+If you use this module, you may want to also use the B<--nooutdent-labels> flag
+to prevent lines such as 'default:' from being outdented.
+
+This flag is enabled by default but it can be deactivated with B<-nxs>.
+Probably the only reason to deactivate this flag is to generate more diagnostic
+messages when debugging a script.
+
+=item B<-sal=s>,   B<--sub-alias-list=s>
+
+This flag causes one or more words to be treated the same as if they were the keyword B<sub>.  The string B<s> contains one or more alias words, separated by spaces or commas.
+
+For example,
+
+        perltidy -sal='method fun _sub M4'
+
+will cause the perltidy to treat the words 'method', 'fun', '_sub' and 'M4' the same as if they were 'sub'.  Note that if the alias words are separated by spaces then the string of words should be placed in quotes.
+
+Note that several other parameters accept a list of keywords, including 'sub' (see L<"Specifying Block Types">).
+You do not need to include any sub aliases in these lists. Just include keyword 'sub' if you wish, and all aliases are automatically included.
+
+=item B<-gal=s>,   B<--grep-alias-list=s>
+
+This flag allows a code block following an external 'list operator' function to be formatted as if it followed one of the built-in keywords B<grep>,  B<map> or B<sort>.  The string B<s> contains the names of one or more such list operators, separated by spaces or commas.
+
+By 'list operator' is meant a function which is invoked in the form
+
+      word {BLOCK} @list
+
+Perltidy tries to keep code blocks for these functions intact, since they are usually short, and does not automatically break after the closing brace since a list may follow. It also does some special handling of continuation indentation.
+
+For example, the code block arguments to functions 'My_grep' and 'My_map' can be given formatting like 'grep' with
+
+        perltidy -gal='My_grep My_map'
+
+By default, the following list operators in List::Util are automatically included:
+
+      all any first none notall reduce reductions
+
+Any operators specified with B<--grep-alias-list> are added to this list.
+The next parameter can be used to remove words from this default list.
+
+=item B<-gaxl=s>,   B<--grep-alias-exclusion-list=s>
+
+The B<-gaxl=s> flag provides a method for removing any of the default list operators given above
+by listing them in the string B<s>.  To remove all of the default operators use B<-gaxl='*'>.
+
+=item B<-uf=s>,   B<--use-feature=s>
+
+This flag tells perltidy to allow the syntax associated a pragma in string
+B<s>. Currently only the recognized values for the string are B<s='class'> or
+string B<s=' '>.  The default is B<--use-feature='class'>.  This enables
+perltidy to recognized the special words B<class>, B<method>, B<field>, and
+B<ADJUST>.  If this causes a conflict with other uses of these words, the
+default can be turned off with B<--use-feature=' '>.
 
 =back
 
