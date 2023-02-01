@@ -1,6 +1,6 @@
 # Perltidy Change Log
 
-## 2022 11 12.04
+## 2022 11 12.05
 
     - Added parameter --one-line-block-exclusion-list=s, or -olbxl=s, where
       s is a list of block types which should not automatically be turned
