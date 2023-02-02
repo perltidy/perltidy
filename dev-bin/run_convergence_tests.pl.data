@@ -11393,6 +11393,38 @@ $last = after (
 --vertical-tightness=2
 --weld-nested-containers
 
+==> b1448.in <==
+       $save_check =
+                $menu_frame->Checkbutton(
+                                          -variable => \$root->{'modified'},
+                                          ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+                                          -highlightthickness => 0,
+                                          -padx               => 0,
+                                          -pady               => 0,
+
+                                          #-font => "times 5",
+                );
+
+       $save_check =
+                $menu_frame->Checkbutton(
+                            -variable => \$root->{'modified'},
+                            (
+                               $os ne 'win' ? ( -selectcolor => "red" ) : ()
+                            ),
+                            -highlightthickness => 0,
+                            -padx               => 0,
+                            -pady               => 0,
+
+                            #-font => "times 5",
+                );
+
+
+==> b1448.par <==
+--continuation-indentation=9
+--extended-line-up-parentheses
+--indent-columns=7
+--paren-vertical-tightness-closing=1
+
 ==> b146.in <==
 # State 1
 

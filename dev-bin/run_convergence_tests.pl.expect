@@ -7231,34 +7231,30 @@ my %MyTokens= (
 
 ==> b1408 <==
           $registry->add_type_constraint(
-                    Moose::Meta::TypeConstraint::Parameterizable->new(
-                              parent =>
-                                Moose::Util::TypeConstraints::find_type_constraint(
-                                        'Ref' ),
-                              constraint_generator => sub {
+              Moose::Meta::TypeConstraint::Parameterizable->new(
+                   parent =>
+                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
+                   constraint_generator => sub {
 
-                                        return sub {
-                                                  foreach my $x ( @$_ ) {
-                                                            ( $check->( $x ) )
-                                                              || return;
-                                                  }
-                                        }
-                              }, ) );
+                             return sub {
+                                       foreach my $x ( @$_ ) {
+                                                 ( $check->( $x ) ) || return;
+                                       }
+                             }
+                   }, ) );
 
           $registry->add_type_constraint(
-                    Moose::Meta::TypeConstraint::Parameterizable->new(
-                              parent =>
-                                Moose::Util::TypeConstraints::find_type_constraint(
-                                        'Ref' ),
-                              constraint_generator => sub {
+              Moose::Meta::TypeConstraint::Parameterizable->new(
+                   parent =>
+                     Moose::Util::TypeConstraints::find_type_constraint( 'Ref' ),
+                   constraint_generator => sub {
 
-                                        return sub {
-                                                  foreach my $x ( @$_ ) {
-                                                            ( $check->( $x ) )
-                                                              || return;
-                                                  }
-                                        }
-                              }, ) );
+                             return sub {
+                                       foreach my $x ( @$_ ) {
+                                                 ( $check->( $x ) ) || return;
+                                       }
+                             }
+                   }, ) );
 
 
 ==> b1409 <==
@@ -7729,6 +7725,30 @@ $last = after (
                   $gb->get_Stream_by_batch([qw(J00522 AF303112
                  2981014)] )
     ));
+
+==> b1448 <==
+       $save_check =
+                $menu_frame->Checkbutton(
+                                          -variable => \$root->{'modified'},
+                                          ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+                                          -highlightthickness => 0,
+                                          -padx               => 0,
+                                          -pady               => 0,
+
+                                          #-font => "times 5",
+                );
+
+       $save_check =
+                $menu_frame->Checkbutton(
+                                          -variable => \$root->{'modified'},
+                                          ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+                                          -highlightthickness => 0,
+                                          -padx               => 0,
+                                          -pady               => 0,
+
+                                          #-font => "times 5",
+                );
+
 
 ==> b146 <==
 # State 1

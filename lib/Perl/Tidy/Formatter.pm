@@ -12753,7 +12753,33 @@ sub is_fragile_block_type {
           )
         {
 
-            # $len => $leng to fix b1302 b1306 b1317 b1321
+            # An additional check: if line ends in ), and the ) has vtc then
+            # skip this estimate. Otherwise, vtc can give oscillating results.
+            # Fixes b1448. For example, this could be unstable:
+
+            #  ( $os ne 'win' ? ( -selectcolor => "red" ) : () ),
+            #  |                                               |^--K_comma
+            #  |                                               ^-- K_prev
+            #  ^--- KK
+
+            # An alternative, possibly better strategy would be to try to turn
+            # off -vtc locally, but it turns out to be difficult to locate the
+            # appropriate closing token when it is not on the same line as its
+            # opening token.
+
+            my $K_prev = $self->K_previous_nonblank($K_comma);
+            if (   defined($K_prev)
+                && $K_prev >= $KK
+                && $rLL->[$K_prev]->[_TYPE_SEQUENCE_] )
+            {
+                my $token = $rLL->[$K_prev]->[_TOKEN_];
+                my $type  = $rLL->[$K_prev]->[_TYPE_];
+                if ( $closing_vertical_tightness{$token} && $type ne 'R' ) {
+                    ## type 'R' does not normally get broken, so ignore
+                    ## skip length calculation
+                    return 0;
+                }
+            }
             my $starting_len =
               $KK >= 0 ? $rLL->[ $KK - 1 ]->[_CUMULATIVE_LENGTH_] : 0;
             $length = $rLL->[$K_comma]->[_CUMULATIVE_LENGTH_] - $starting_len;
