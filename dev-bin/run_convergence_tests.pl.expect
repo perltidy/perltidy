@@ -7750,6 +7750,20 @@ $last = after (
                 );
 
 
+==> b1449 <==
+    return wantarray
+      ? map $_->(),
+      @data
+      : ( defined(wantarray) ? sub { $_[0] } : sub { print $_[0] } )
+      ->( join( "\n", map $_->(), @data ) . "\n" );
+
+    return wantarray
+      ? map $_->(),
+      @data
+      : ( defined(wantarray) ? sub { $_[0] } : sub { print $_[0] } )
+      ->( join( "\n", map $_->(), @data ) . "\n" );
+
+
 ==> b146 <==
 # State 1
 

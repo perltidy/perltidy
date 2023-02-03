@@ -11425,6 +11425,22 @@ $last = after (
 --indent-columns=7
 --paren-vertical-tightness-closing=1
 
+==> b1449.in <==
+    return wantarray
+      ? map $_->(),
+      @data
+      : ( defined(wantarray) ? sub { $_[0] } : sub { print $_[0] } )
+      ->( join( "\n", map $_->(), @data ) . "\n" );
+
+    return wantarray
+      ? map $_->(), @data
+      : ( defined(wantarray) ? sub { $_[0] } : sub { print $_[0] } )
+      ->( join( "\n", map $_->(), @data ) . "\n" );
+
+
+==> b1449.par <==
+--nobreak-at-old-ternary-breakpoints
+
 ==> b146.in <==
 # State 1
 

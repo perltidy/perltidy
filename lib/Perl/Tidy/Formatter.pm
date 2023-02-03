@@ -21282,7 +21282,22 @@ EOM
                     # Switched from excluded to included for b1214. If necessary
                     # the token could also be checked if type_m eq 'k'
                     if ( $is_uncontained_comma_break_included_type{$type_m} ) {
-                        $self->set_forced_breakpoint($ibreak);
+
+                        # Rule added to fix b1449:
+                        # Do not break before a '?' if -nbot is set
+                        # Otherwise, we may alternately arrive here and
+                        # set the break, or not, depending on the input.
+                        my $no_break;
+                        my $ibreak_p = $inext_to_go[$ibreak_m];
+                        if (  !$rOpts_break_at_old_ternary_breakpoints
+                            && $ibreak_p <= $max_index_to_go )
+                        {
+                            my $type_p = $types_to_go[$ibreak_p];
+                            $no_break = $type_p eq '?';
+                        }
+
+                        $self->set_forced_breakpoint($ibreak)
+                          if ( !$no_break );
                     }
                 }
             }
