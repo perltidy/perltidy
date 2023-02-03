@@ -1336,6 +1336,7 @@ sub check_options {
     make_keyword_group_list_pattern();
 
     prepare_cuddled_block_types();
+
     if ( $rOpts->{'dump-cuddled-block-list'} ) {
         dump_cuddled_block_list(*STDOUT);
         Exit(0);
@@ -1500,71 +1501,7 @@ EOM
         @space_after_keyword{@q} = (1) x scalar(@q);
     }
 
-    # implement user break preferences
-    my $break_after = sub {
-        my @toks = @_;
-        foreach my $tok (@toks) {
-            if ( $tok eq '?' ) { $tok = ':' }    # patch to coordinate ?/:
-            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
-            my $lbs = $left_bond_strength{$tok};
-            my $rbs = $right_bond_strength{$tok};
-            if ( defined($lbs) && defined($rbs) && $lbs < $rbs ) {
-                ( $right_bond_strength{$tok}, $left_bond_strength{$tok} ) =
-                  ( $lbs, $rbs );
-            }
-        }
-        return;
-    };
-
-    my $break_before = sub {
-        my @toks = @_;
-        foreach my $tok (@toks) {
-            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
-            my $lbs = $left_bond_strength{$tok};
-            my $rbs = $right_bond_strength{$tok};
-            if ( defined($lbs) && defined($rbs) && $rbs < $lbs ) {
-                ( $right_bond_strength{$tok}, $left_bond_strength{$tok} ) =
-                  ( $lbs, $rbs );
-            }
-        }
-        return;
-    };
-
-    $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
-    $break_before->(@all_operators)
-      if ( $rOpts->{'break-before-all-operators'} );
-
-    $break_after->( split_words( $rOpts->{'want-break-after'} ) );
-    $break_before->( split_words( $rOpts->{'want-break-before'} ) );
-
-    # make note if breaks are before certain key types
-    %want_break_before = ();
-    foreach my $tok ( @all_operators, ',' ) {
-        $want_break_before{$tok} =
-          $left_bond_strength{$tok} < $right_bond_strength{$tok};
-    }
-
-    # Coordinate ?/: breaks, which must be similar
-    # The small strength 0.01 which is added is 1% of the strength of one
-    # indentation level and seems to work okay.
-    if ( !$want_break_before{':'} ) {
-        $want_break_before{'?'}   = $want_break_before{':'};
-        $right_bond_strength{'?'} = $right_bond_strength{':'} + 0.01;
-        $left_bond_strength{'?'}  = NO_BREAK;
-    }
-
-    # Only make a hash entry for the next parameters if values are defined.
-    # That allows a quick check to be made later.
-    %break_before_container_types = ();
-    for ( $rOpts->{'break-before-hash-brace'} ) {
-        $break_before_container_types{'{'} = $_ if $_ && $_ > 0;
-    }
-    for ( $rOpts->{'break-before-square-bracket'} ) {
-        $break_before_container_types{'['} = $_ if $_ && $_ > 0;
-    }
-    for ( $rOpts->{'break-before-paren'} ) {
-        $break_before_container_types{'('} = $_ if $_ && $_ > 0;
-    }
+    initialize_token_break_preferences();
 
     #--------------------------------------------------------------
     # The combination -lp -iob -vmll -bbx=2 can be unstable (b1266)
@@ -1831,246 +1768,9 @@ EOM
     $controlled_comma_style ||= $keep_break_before_type{','};
     $controlled_comma_style ||= $keep_break_after_type{','};
 
-    #------------------------------------------------------------
-    # Make global vars for frequently used options for efficiency
-    #------------------------------------------------------------
-
-    $rOpts_add_newlines        = $rOpts->{'add-newlines'};
-    $rOpts_add_trailing_commas = $rOpts->{'add-trailing-commas'};
-    $rOpts_add_whitespace      = $rOpts->{'add-whitespace'};
-    $rOpts_blank_lines_after_opening_block =
-      $rOpts->{'blank-lines-after-opening-block'};
-    $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
-    $rOpts_block_brace_vertical_tightness =
-      $rOpts->{'block-brace-vertical-tightness'};
-    $rOpts_brace_follower_vertical_tightness =
-      $rOpts->{'brace-follower-vertical-tightness'};
-    $rOpts_break_after_labels = $rOpts->{'break-after-labels'};
-    $rOpts_break_at_old_attribute_breakpoints =
-      $rOpts->{'break-at-old-attribute-breakpoints'};
-    $rOpts_break_at_old_comma_breakpoints =
-      $rOpts->{'break-at-old-comma-breakpoints'};
-    $rOpts_break_at_old_keyword_breakpoints =
-      $rOpts->{'break-at-old-keyword-breakpoints'};
-    $rOpts_break_at_old_logical_breakpoints =
-      $rOpts->{'break-at-old-logical-breakpoints'};
-    $rOpts_break_at_old_semicolon_breakpoints =
-      $rOpts->{'break-at-old-semicolon-breakpoints'};
-    $rOpts_break_at_old_ternary_breakpoints =
-      $rOpts->{'break-at-old-ternary-breakpoints'};
-    $rOpts_break_open_compact_parens = $rOpts->{'break-open-compact-parens'};
-    $rOpts_closing_side_comments     = $rOpts->{'closing-side-comments'};
-    $rOpts_closing_side_comment_else_flag =
-      $rOpts->{'closing-side-comment-else-flag'};
-    $rOpts_closing_side_comment_maximum_text =
-      $rOpts->{'closing-side-comment-maximum-text'};
-    $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
-    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
-    $rOpts_cuddled_paren_brace      = $rOpts->{'cuddled-paren-brace'};
-    $rOpts_delete_closing_side_comments =
-      $rOpts->{'delete-closing-side-comments'};
-    $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
-    $rOpts_extended_continuation_indentation =
-      $rOpts->{'extended-continuation-indentation'};
-    $rOpts_delete_side_comments   = $rOpts->{'delete-side-comments'};
-    $rOpts_delete_trailing_commas = $rOpts->{'delete-trailing-commas'};
-    $rOpts_delete_weld_interfering_commas =
-      $rOpts->{'delete-weld-interfering-commas'};
-    $rOpts_format_skipping   = $rOpts->{'format-skipping'};
-    $rOpts_freeze_whitespace = $rOpts->{'freeze-whitespace'};
-    $rOpts_function_paren_vertical_alignment =
-      $rOpts->{'function-paren-vertical-alignment'};
-    $rOpts_fuzzy_line_length      = $rOpts->{'fuzzy-line-length'};
-    $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
-    $rOpts_ignore_side_comment_lengths =
-      $rOpts->{'ignore-side-comment-lengths'};
-    $rOpts_indent_closing_brace     = $rOpts->{'indent-closing-brace'};
-    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
-    $rOpts_indent_only              = $rOpts->{'indent-only'};
-    $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
-    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
-    $rOpts_extended_line_up_parentheses =
-      $rOpts->{'extended-line-up-parentheses'};
-    $rOpts_logical_padding = $rOpts->{'logical-padding'};
-    $rOpts_maximum_consecutive_blank_lines =
-      $rOpts->{'maximum-consecutive-blank-lines'};
-    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
-    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
-    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
-    $rOpts_opening_brace_always_on_right =
-      $rOpts->{'opening-brace-always-on-right'};
-    $rOpts_outdent_keywords      = $rOpts->{'outdent-keywords'};
-    $rOpts_outdent_labels        = $rOpts->{'outdent-labels'};
-    $rOpts_outdent_long_comments = $rOpts->{'outdent-long-comments'};
-    $rOpts_outdent_long_quotes   = $rOpts->{'outdent-long-quotes'};
-    $rOpts_outdent_static_block_comments =
-      $rOpts->{'outdent-static-block-comments'};
-    $rOpts_recombine = $rOpts->{'recombine'};
-    $rOpts_short_concatenation_item_length =
-      $rOpts->{'short-concatenation-item-length'};
-    $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
-    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
-    $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
-    $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
-    $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
-    $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
-    $rOpts_valign_code               = $rOpts->{'valign-code'};
-    $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
-    $rOpts_variable_maximum_line_length =
-      $rOpts->{'variable-maximum-line-length'};
-
-    # Note that both opening and closing tokens can access the opening
-    # and closing flags of their container types.
-    %opening_vertical_tightness = (
-        '(' => $rOpts->{'paren-vertical-tightness'},
-        '{' => $rOpts->{'brace-vertical-tightness'},
-        '[' => $rOpts->{'square-bracket-vertical-tightness'},
-        ')' => $rOpts->{'paren-vertical-tightness'},
-        '}' => $rOpts->{'brace-vertical-tightness'},
-        ']' => $rOpts->{'square-bracket-vertical-tightness'},
-    );
-
-    %closing_vertical_tightness = (
-        '(' => $rOpts->{'paren-vertical-tightness-closing'},
-        '{' => $rOpts->{'brace-vertical-tightness-closing'},
-        '[' => $rOpts->{'square-bracket-vertical-tightness-closing'},
-        ')' => $rOpts->{'paren-vertical-tightness-closing'},
-        '}' => $rOpts->{'brace-vertical-tightness-closing'},
-        ']' => $rOpts->{'square-bracket-vertical-tightness-closing'},
-    );
-
-    # assume flag for '>' same as ')' for closing qw quotes
-    %closing_token_indentation = (
-        ')' => $rOpts->{'closing-paren-indentation'},
-        '}' => $rOpts->{'closing-brace-indentation'},
-        ']' => $rOpts->{'closing-square-bracket-indentation'},
-        '>' => $rOpts->{'closing-paren-indentation'},
-    );
-
-    # flag indicating if any closing tokens are indented
-    $some_closing_token_indentation =
-         $rOpts->{'closing-paren-indentation'}
-      || $rOpts->{'closing-brace-indentation'}
-      || $rOpts->{'closing-square-bracket-indentation'}
-      || $rOpts->{'indent-closing-brace'};
-
-    %opening_token_right = (
-        '(' => $rOpts->{'opening-paren-right'},
-        '{' => $rOpts->{'opening-hash-brace-right'},
-        '[' => $rOpts->{'opening-square-bracket-right'},
-    );
-
-    %stack_opening_token = (
-        '(' => $rOpts->{'stack-opening-paren'},
-        '{' => $rOpts->{'stack-opening-hash-brace'},
-        '[' => $rOpts->{'stack-opening-square-bracket'},
-    );
-
-    %stack_closing_token = (
-        ')' => $rOpts->{'stack-closing-paren'},
-        '}' => $rOpts->{'stack-closing-hash-brace'},
-        ']' => $rOpts->{'stack-closing-square-bracket'},
-    );
-
-    # Create a table of maximum line length vs level for later efficient use.
-    # We will make the tables very long to be sure it will not be exceeded.
-    # But we have to choose a fixed length.  A check will be made at the start
-    # of sub 'finish_formatting' to be sure it is not exceeded.  Note, some of
-    # my standard test problems have indentation levels of about 150, so this
-    # should be fairly large.  If the choice of a maximum level ever becomes
-    # an issue then these table values could be returned in a sub with a simple
-    # memoization scheme.
-
-    # Also create a table of the maximum spaces available for text due to the
-    # level only.  If a line has continuation indentation, then that space must
-    # be subtracted from the table value.  This table is used for preliminary
-    # estimates in welding, extended_ci, BBX, and marking short blocks.
-    use constant LEVEL_TABLE_MAX => 1000;
-
-    # The basic scheme:
-    foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
-        my $indent = $level * $rOpts_indent_columns;
-        $maximum_line_length_at_level[$level] = $rOpts_maximum_line_length;
-        $maximum_text_length_at_level[$level] =
-          $rOpts_maximum_line_length - $indent;
-    }
-
-    # Correct the maximum_text_length table if the -wc=n flag is used
-    $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
-    if ($rOpts_whitespace_cycle) {
-        if ( $rOpts_whitespace_cycle > 0 ) {
-            foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
-                my $level_mod = $level % $rOpts_whitespace_cycle;
-                my $indent    = $level_mod * $rOpts_indent_columns;
-                $maximum_text_length_at_level[$level] =
-                  $rOpts_maximum_line_length - $indent;
-            }
-        }
-        else {
-            $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'} = 0;
-        }
-    }
-
-    # Correct the tables if the -vmll flag is used.  These values override the
-    # previous values.
-    if ($rOpts_variable_maximum_line_length) {
-        foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
-            $maximum_text_length_at_level[$level] = $rOpts_maximum_line_length;
-            $maximum_line_length_at_level[$level] =
-              $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
-        }
-    }
-
-    # Define two measures of indentation level, alpha and beta, at which some
-    # formatting features come under stress and need to start shutting down.
-    # Some combination of the two will be used to shut down different
-    # formatting features.
-    # Put a reasonable upper limit on stress level (say 100) in case the
-    # whitespace-cycle variable is used.
-    my $stress_level_limit = min( 100, LEVEL_TABLE_MAX );
-
-    # Find stress_level_alpha, targeted at very short maximum line lengths.
-    $stress_level_alpha = $stress_level_limit + 1;
-    foreach my $level_test ( 0 .. $stress_level_limit ) {
-        my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
-        my $excess_inside_space =
-          $max_len -
-          $rOpts_continuation_indentation -
-          $rOpts_indent_columns - 8;
-        if ( $excess_inside_space <= 0 ) {
-            $stress_level_alpha = $level_test;
-            last;
-        }
-    }
-
-    # Find stress level beta, a stress level targeted at formatting
-    # at deep levels near the maximum line length.  We start increasing
-    # from zero and stop at the first level which shows no more space.
-
-    # 'const' is a fixed number of spaces for a typical variable.
-    # Cases b1197-b1204 work ok with const=12 but not with const=8
-    my $const = 16;
-    my $denom = max( 1, $rOpts_indent_columns );
-    $stress_level_beta = 0;
-    foreach my $level ( 0 .. $stress_level_limit ) {
-        my $remaining_cycles = max(
-            0,
-            (
-                $maximum_text_length_at_level[$level] -
-                  $rOpts_continuation_indentation - $const
-            ) / $denom
-        );
-        last if ( $remaining_cycles <= 3 );    # 2 does not work
-        $stress_level_beta = $level;
-    }
-
-    # This is a combined level which works well for turning off formatting
-    # features in most cases:
-    $high_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
-
-    %trailing_comma_rules = ();
-    initialize_trailing_comma_rules();
-
+    initialize_global_option_vars();
+    initialize_line_length_vars();
+    initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
     initialize_weld_nested_exclusion_rules();
     initialize_weld_fat_comma_rules();
 
@@ -2443,6 +2143,76 @@ EOM
     return;
 } ## end sub initialize_line_up_parentheses_control_hash
 
+sub initialize_token_break_preferences {
+
+    # implement user break preferences
+    my $break_after = sub {
+        my @toks = @_;
+        foreach my $tok (@toks) {
+            if ( $tok eq '?' ) { $tok = ':' }    # patch to coordinate ?/:
+            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
+            my $lbs = $left_bond_strength{$tok};
+            my $rbs = $right_bond_strength{$tok};
+            if ( defined($lbs) && defined($rbs) && $lbs < $rbs ) {
+                ( $right_bond_strength{$tok}, $left_bond_strength{$tok} ) =
+                  ( $lbs, $rbs );
+            }
+        }
+        return;
+    };
+
+    my $break_before = sub {
+        my @toks = @_;
+        foreach my $tok (@toks) {
+            if ( $tok eq ',' ) { $controlled_comma_style = 1 }
+            my $lbs = $left_bond_strength{$tok};
+            my $rbs = $right_bond_strength{$tok};
+            if ( defined($lbs) && defined($rbs) && $rbs < $lbs ) {
+                ( $right_bond_strength{$tok}, $left_bond_strength{$tok} ) =
+                  ( $lbs, $rbs );
+            }
+        }
+        return;
+    };
+
+    $break_after->(@all_operators) if ( $rOpts->{'break-after-all-operators'} );
+    $break_before->(@all_operators)
+      if ( $rOpts->{'break-before-all-operators'} );
+
+    $break_after->( split_words( $rOpts->{'want-break-after'} ) );
+    $break_before->( split_words( $rOpts->{'want-break-before'} ) );
+
+    # make note if breaks are before certain key types
+    %want_break_before = ();
+    foreach my $tok ( @all_operators, ',' ) {
+        $want_break_before{$tok} =
+          $left_bond_strength{$tok} < $right_bond_strength{$tok};
+    }
+
+    # Coordinate ?/: breaks, which must be similar
+    # The small strength 0.01 which is added is 1% of the strength of one
+    # indentation level and seems to work okay.
+    if ( !$want_break_before{':'} ) {
+        $want_break_before{'?'}   = $want_break_before{':'};
+        $right_bond_strength{'?'} = $right_bond_strength{':'} + 0.01;
+        $left_bond_strength{'?'}  = NO_BREAK;
+    }
+
+    # Only make a hash entry for the next parameters if values are defined.
+    # That allows a quick check to be made later.
+    %break_before_container_types = ();
+    for ( $rOpts->{'break-before-hash-brace'} ) {
+        $break_before_container_types{'{'} = $_ if $_ && $_ > 0;
+    }
+    for ( $rOpts->{'break-before-square-bracket'} ) {
+        $break_before_container_types{'['} = $_ if $_ && $_ > 0;
+    }
+    for ( $rOpts->{'break-before-paren'} ) {
+        $break_before_container_types{'('} = $_ if $_ && $_ > 0;
+    }
+    return;
+} ## end sub initialize_token_break_preferences
+
 use constant DEBUG_KB => 0;
 
 sub initialize_keep_old_breakpoints {
@@ -2534,6 +2304,252 @@ EOM
 
 } ## end sub initialize_keep_old_breakpoints
 
+sub initialize_global_option_vars {
+
+    #------------------------------------------------------------
+    # Make global vars for frequently used options for efficiency
+    #------------------------------------------------------------
+
+    $rOpts_add_newlines        = $rOpts->{'add-newlines'};
+    $rOpts_add_trailing_commas = $rOpts->{'add-trailing-commas'};
+    $rOpts_add_whitespace      = $rOpts->{'add-whitespace'};
+    $rOpts_blank_lines_after_opening_block =
+      $rOpts->{'blank-lines-after-opening-block'};
+    $rOpts_block_brace_tightness = $rOpts->{'block-brace-tightness'};
+    $rOpts_block_brace_vertical_tightness =
+      $rOpts->{'block-brace-vertical-tightness'};
+    $rOpts_brace_follower_vertical_tightness =
+      $rOpts->{'brace-follower-vertical-tightness'};
+    $rOpts_break_after_labels = $rOpts->{'break-after-labels'};
+    $rOpts_break_at_old_attribute_breakpoints =
+      $rOpts->{'break-at-old-attribute-breakpoints'};
+    $rOpts_break_at_old_comma_breakpoints =
+      $rOpts->{'break-at-old-comma-breakpoints'};
+    $rOpts_break_at_old_keyword_breakpoints =
+      $rOpts->{'break-at-old-keyword-breakpoints'};
+    $rOpts_break_at_old_logical_breakpoints =
+      $rOpts->{'break-at-old-logical-breakpoints'};
+    $rOpts_break_at_old_semicolon_breakpoints =
+      $rOpts->{'break-at-old-semicolon-breakpoints'};
+    $rOpts_break_at_old_ternary_breakpoints =
+      $rOpts->{'break-at-old-ternary-breakpoints'};
+    $rOpts_break_open_compact_parens = $rOpts->{'break-open-compact-parens'};
+    $rOpts_closing_side_comments     = $rOpts->{'closing-side-comments'};
+    $rOpts_closing_side_comment_else_flag =
+      $rOpts->{'closing-side-comment-else-flag'};
+    $rOpts_closing_side_comment_maximum_text =
+      $rOpts->{'closing-side-comment-maximum-text'};
+    $rOpts_comma_arrow_breakpoints  = $rOpts->{'comma-arrow-breakpoints'};
+    $rOpts_continuation_indentation = $rOpts->{'continuation-indentation'};
+    $rOpts_cuddled_paren_brace      = $rOpts->{'cuddled-paren-brace'};
+    $rOpts_delete_closing_side_comments =
+      $rOpts->{'delete-closing-side-comments'};
+    $rOpts_delete_old_whitespace = $rOpts->{'delete-old-whitespace'};
+    $rOpts_extended_continuation_indentation =
+      $rOpts->{'extended-continuation-indentation'};
+    $rOpts_delete_side_comments   = $rOpts->{'delete-side-comments'};
+    $rOpts_delete_trailing_commas = $rOpts->{'delete-trailing-commas'};
+    $rOpts_delete_weld_interfering_commas =
+      $rOpts->{'delete-weld-interfering-commas'};
+    $rOpts_format_skipping   = $rOpts->{'format-skipping'};
+    $rOpts_freeze_whitespace = $rOpts->{'freeze-whitespace'};
+    $rOpts_function_paren_vertical_alignment =
+      $rOpts->{'function-paren-vertical-alignment'};
+    $rOpts_fuzzy_line_length      = $rOpts->{'fuzzy-line-length'};
+    $rOpts_ignore_old_breakpoints = $rOpts->{'ignore-old-breakpoints'};
+    $rOpts_ignore_side_comment_lengths =
+      $rOpts->{'ignore-side-comment-lengths'};
+    $rOpts_indent_closing_brace     = $rOpts->{'indent-closing-brace'};
+    $rOpts_indent_columns           = $rOpts->{'indent-columns'};
+    $rOpts_indent_only              = $rOpts->{'indent-only'};
+    $rOpts_keep_interior_semicolons = $rOpts->{'keep-interior-semicolons'};
+    $rOpts_line_up_parentheses      = $rOpts->{'line-up-parentheses'};
+    $rOpts_extended_line_up_parentheses =
+      $rOpts->{'extended-line-up-parentheses'};
+    $rOpts_logical_padding = $rOpts->{'logical-padding'};
+    $rOpts_maximum_consecutive_blank_lines =
+      $rOpts->{'maximum-consecutive-blank-lines'};
+    $rOpts_maximum_fields_per_table  = $rOpts->{'maximum-fields-per-table'};
+    $rOpts_maximum_line_length       = $rOpts->{'maximum-line-length'};
+    $rOpts_one_line_block_semicolons = $rOpts->{'one-line-block-semicolons'};
+    $rOpts_opening_brace_always_on_right =
+      $rOpts->{'opening-brace-always-on-right'};
+    $rOpts_outdent_keywords      = $rOpts->{'outdent-keywords'};
+    $rOpts_outdent_labels        = $rOpts->{'outdent-labels'};
+    $rOpts_outdent_long_comments = $rOpts->{'outdent-long-comments'};
+    $rOpts_outdent_long_quotes   = $rOpts->{'outdent-long-quotes'};
+    $rOpts_outdent_static_block_comments =
+      $rOpts->{'outdent-static-block-comments'};
+    $rOpts_recombine = $rOpts->{'recombine'};
+    $rOpts_short_concatenation_item_length =
+      $rOpts->{'short-concatenation-item-length'};
+    $rOpts_space_prototype_paren     = $rOpts->{'space-prototype-paren'};
+    $rOpts_stack_closing_block_brace = $rOpts->{'stack-closing-block-brace'};
+    $rOpts_static_block_comments     = $rOpts->{'static-block-comments'};
+    $rOpts_tee_block_comments        = $rOpts->{'tee-block-comments'};
+    $rOpts_tee_pod                   = $rOpts->{'tee-pod'};
+    $rOpts_tee_side_comments         = $rOpts->{'tee-side-comments'};
+    $rOpts_valign_code               = $rOpts->{'valign-code'};
+    $rOpts_valign_side_comments      = $rOpts->{'valign-side-comments'};
+    $rOpts_variable_maximum_line_length =
+      $rOpts->{'variable-maximum-line-length'};
+
+    # Note that both opening and closing tokens can access the opening
+    # and closing flags of their container types.
+    %opening_vertical_tightness = (
+        '(' => $rOpts->{'paren-vertical-tightness'},
+        '{' => $rOpts->{'brace-vertical-tightness'},
+        '[' => $rOpts->{'square-bracket-vertical-tightness'},
+        ')' => $rOpts->{'paren-vertical-tightness'},
+        '}' => $rOpts->{'brace-vertical-tightness'},
+        ']' => $rOpts->{'square-bracket-vertical-tightness'},
+    );
+
+    %closing_vertical_tightness = (
+        '(' => $rOpts->{'paren-vertical-tightness-closing'},
+        '{' => $rOpts->{'brace-vertical-tightness-closing'},
+        '[' => $rOpts->{'square-bracket-vertical-tightness-closing'},
+        ')' => $rOpts->{'paren-vertical-tightness-closing'},
+        '}' => $rOpts->{'brace-vertical-tightness-closing'},
+        ']' => $rOpts->{'square-bracket-vertical-tightness-closing'},
+    );
+
+    # assume flag for '>' same as ')' for closing qw quotes
+    %closing_token_indentation = (
+        ')' => $rOpts->{'closing-paren-indentation'},
+        '}' => $rOpts->{'closing-brace-indentation'},
+        ']' => $rOpts->{'closing-square-bracket-indentation'},
+        '>' => $rOpts->{'closing-paren-indentation'},
+    );
+
+    # flag indicating if any closing tokens are indented
+    $some_closing_token_indentation =
+         $rOpts->{'closing-paren-indentation'}
+      || $rOpts->{'closing-brace-indentation'}
+      || $rOpts->{'closing-square-bracket-indentation'}
+      || $rOpts->{'indent-closing-brace'};
+
+    %opening_token_right = (
+        '(' => $rOpts->{'opening-paren-right'},
+        '{' => $rOpts->{'opening-hash-brace-right'},
+        '[' => $rOpts->{'opening-square-bracket-right'},
+    );
+
+    %stack_opening_token = (
+        '(' => $rOpts->{'stack-opening-paren'},
+        '{' => $rOpts->{'stack-opening-hash-brace'},
+        '[' => $rOpts->{'stack-opening-square-bracket'},
+    );
+
+    %stack_closing_token = (
+        ')' => $rOpts->{'stack-closing-paren'},
+        '}' => $rOpts->{'stack-closing-hash-brace'},
+        ']' => $rOpts->{'stack-closing-square-bracket'},
+    );
+    return;
+} ## end sub initialize_global_option_vars
+
+sub initialize_line_length_vars {
+
+    # Create a table of maximum line length vs level for later efficient use.
+    # We will make the tables very long to be sure it will not be exceeded.
+    # But we have to choose a fixed length.  A check will be made at the start
+    # of sub 'finish_formatting' to be sure it is not exceeded.  Note, some of
+    # my standard test problems have indentation levels of about 150, so this
+    # should be fairly large.  If the choice of a maximum level ever becomes
+    # an issue then these table values could be returned in a sub with a simple
+    # memoization scheme.
+
+    # Also create a table of the maximum spaces available for text due to the
+    # level only.  If a line has continuation indentation, then that space must
+    # be subtracted from the table value.  This table is used for preliminary
+    # estimates in welding, extended_ci, BBX, and marking short blocks.
+    use constant LEVEL_TABLE_MAX => 1000;
+
+    # The basic scheme:
+    foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
+        my $indent = $level * $rOpts_indent_columns;
+        $maximum_line_length_at_level[$level] = $rOpts_maximum_line_length;
+        $maximum_text_length_at_level[$level] =
+          $rOpts_maximum_line_length - $indent;
+    }
+
+    # Correct the maximum_text_length table if the -wc=n flag is used
+    $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'};
+    if ($rOpts_whitespace_cycle) {
+        if ( $rOpts_whitespace_cycle > 0 ) {
+            foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
+                my $level_mod = $level % $rOpts_whitespace_cycle;
+                my $indent    = $level_mod * $rOpts_indent_columns;
+                $maximum_text_length_at_level[$level] =
+                  $rOpts_maximum_line_length - $indent;
+            }
+        }
+        else {
+            $rOpts_whitespace_cycle = $rOpts->{'whitespace-cycle'} = 0;
+        }
+    }
+
+    # Correct the tables if the -vmll flag is used.  These values override the
+    # previous values.
+    if ($rOpts_variable_maximum_line_length) {
+        foreach my $level ( 0 .. LEVEL_TABLE_MAX ) {
+            $maximum_text_length_at_level[$level] = $rOpts_maximum_line_length;
+            $maximum_line_length_at_level[$level] =
+              $rOpts_maximum_line_length + $level * $rOpts_indent_columns;
+        }
+    }
+
+    # Define two measures of indentation level, alpha and beta, at which some
+    # formatting features come under stress and need to start shutting down.
+    # Some combination of the two will be used to shut down different
+    # formatting features.
+    # Put a reasonable upper limit on stress level (say 100) in case the
+    # whitespace-cycle variable is used.
+    my $stress_level_limit = min( 100, LEVEL_TABLE_MAX );
+
+    # Find stress_level_alpha, targeted at very short maximum line lengths.
+    $stress_level_alpha = $stress_level_limit + 1;
+    foreach my $level_test ( 0 .. $stress_level_limit ) {
+        my $max_len = $maximum_text_length_at_level[ $level_test + 1 ];
+        my $excess_inside_space =
+          $max_len -
+          $rOpts_continuation_indentation -
+          $rOpts_indent_columns - 8;
+        if ( $excess_inside_space <= 0 ) {
+            $stress_level_alpha = $level_test;
+            last;
+        }
+    }
+
+    # Find stress level beta, a stress level targeted at formatting
+    # at deep levels near the maximum line length.  We start increasing
+    # from zero and stop at the first level which shows no more space.
+
+    # 'const' is a fixed number of spaces for a typical variable.
+    # Cases b1197-b1204 work ok with const=12 but not with const=8
+    my $const = 16;
+    my $denom = max( 1, $rOpts_indent_columns );
+    $stress_level_beta = 0;
+    foreach my $level ( 0 .. $stress_level_limit ) {
+        my $remaining_cycles = max(
+            0,
+            (
+                $maximum_text_length_at_level[$level] -
+                  $rOpts_continuation_indentation - $const
+            ) / $denom
+        );
+        last if ( $remaining_cycles <= 3 );    # 2 does not work
+        $stress_level_beta = $level;
+    }
+
+    # This is a combined level which works well for turning off formatting
+    # features in most cases:
+    $high_stress_level = min( $stress_level_alpha, $stress_level_beta + 2 );
+
+    return;
+} ## end sub initialize_line_length_vars
+
 sub initialize_trailing_comma_rules {
 
     # Setup control hash for trailing commas
@@ -2556,8 +2572,12 @@ sub initialize_trailing_comma_rules {
     #        if -atc set will add these
     #        if -dtc set will delete other trailing commas
 
+    #-------------------------------------------------------------------
     # This routine must be called after the alpha and beta stress levels
-    # have been defined.
+    # have been defined in sub 'initialize_line_length_vars'.
+    #-------------------------------------------------------------------
+
+    %trailing_comma_rules = ();
 
     my $rvalid_flags = [qw(0 1 * m b h i)];
 
