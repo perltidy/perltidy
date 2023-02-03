@@ -266,8 +266,6 @@ my (
 
     @all_operators,
 
-    # Initialized in check_options. These are constants and could
-    # just as well be initialized in a BEGIN block.
     %is_do_follower,
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
@@ -755,6 +753,32 @@ BEGIN {
     # these functions allow an identifier in the indirect object slot
     @q = qw( print printf sort exec system say);
     @is_indirect_object_taker{@q} = (1) x scalar(@q);
+
+    # Define here tokens which may follow the closing brace of a do statement
+    # on the same line, as in:
+    #   } while ( $something);
+    my @dof = qw(until while unless if ; : );
+    push @dof, ',';
+    @is_do_follower{@dof} = (1) x scalar(@dof);
+
+    # what can follow a multi-line anonymous sub definition closing curly:
+    my @asf = qw# ; : => or and  && || ~~ !~~ ) #;
+    push @asf, ',';
+    @is_anon_sub_brace_follower{@asf} = (1) x scalar(@asf);
+
+    # what can follow a one-line anonymous sub closing curly:
+    # one-line anonymous subs also have ']' here...
+    # see tk3.t and PP.pm
+    my @asf1 = qw#  ; : => or and  && || ) ] ~~ !~~ #;
+    push @asf1, ',';
+    @is_anon_sub_1_brace_follower{@asf1} = (1) x scalar(@asf1);
+
+    # What can follow a closing curly of a block
+    # which is not an if/elsif/else/do/sort/map/grep/eval/sub
+    # Testfiles: 'Toolbar.pm', 'Menubar.pm', bless.t, '3rules.pl'
+    my @obf = qw#  ; : => or and  && || ) #;
+    push @obf, ',';
+    @is_other_brace_follower{@obf} = (1) x scalar(@obf);
 
 }
 
@@ -1290,7 +1314,7 @@ sub check_options {
     # Make needed regex patterns for matching text.
     # NOTE: sub_matching_patterns must be made first because later patterns use
     # them; see RT #133130.
-    make_sub_matching_pattern();
+    make_sub_matching_pattern();    # must be first pattern made
     make_static_block_comment_pattern();
     make_static_side_comment_pattern();
     make_closing_side_comment_prefix();
@@ -1330,9 +1354,13 @@ sub check_options {
     }
 
     make_bli_pattern();
+
     make_bl_pattern();
+
     make_block_brace_vertical_tightness_pattern();
+
     make_blank_line_pattern();
+
     make_keyword_group_list_pattern();
 
     prepare_cuddled_block_types();
@@ -1482,24 +1510,7 @@ EOM
         Exit(0);
     }
 
-    # default keywords for which space is introduced before an opening paren
-    # (at present, including them messes up vertical alignment)
-    my @sak = qw(my local our and or xor err eq ne if else elsif until
-      unless while for foreach return switch case given when catch);
-    %space_after_keyword = map { $_ => 1 } @sak;
-
-    # first remove any or all of these if desired
-    if ( my @q = split_words( $rOpts->{'nospace-after-keyword'} ) ) {
-
-        # -nsak='*' selects all the above keywords
-        if ( @q == 1 && $q[0] eq '*' ) { @q = keys(%space_after_keyword) }
-        @space_after_keyword{@q} = (0) x scalar(@q);
-    }
-
-    # then allow user to add to these defaults
-    if ( my @q = split_words( $rOpts->{'space-after-keyword'} ) ) {
-        @space_after_keyword{@q} = (1) x scalar(@q);
-    }
+    initialize_space_after_keyword();
 
     initialize_token_break_preferences();
 
@@ -1587,32 +1598,6 @@ EOM
             $container_indentation_options{$tok} = $opt;
         }
     }
-
-    # Define here tokens which may follow the closing brace of a do statement
-    # on the same line, as in:
-    #   } while ( $something);
-    my @dof = qw(until while unless if ; : );
-    push @dof, ',';
-    @is_do_follower{@dof} = (1) x scalar(@dof);
-
-    # what can follow a multi-line anonymous sub definition closing curly:
-    my @asf = qw# ; : => or and  && || ~~ !~~ ) #;
-    push @asf, ',';
-    @is_anon_sub_brace_follower{@asf} = (1) x scalar(@asf);
-
-    # what can follow a one-line anonymous sub closing curly:
-    # one-line anonymous subs also have ']' here...
-    # see tk3.t and PP.pm
-    my @asf1 = qw#  ; : => or and  && || ) ] ~~ !~~ #;
-    push @asf1, ',';
-    @is_anon_sub_1_brace_follower{@asf1} = (1) x scalar(@asf1);
-
-    # What can follow a closing curly of a block
-    # which is not an if/elsif/else/do/sort/map/grep/eval/sub
-    # Testfiles: 'Toolbar.pm', 'Menubar.pm', bless.t, '3rules.pl'
-    my @obf = qw#  ; : => or and  && || ) #;
-    push @obf, ',';
-    @is_other_brace_follower{@obf} = (1) x scalar(@obf);
 
     $right_bond_strength{'{'} = WEAK;
     $left_bond_strength{'{'}  = VERY_STRONG;
@@ -1769,9 +1754,13 @@ EOM
     $controlled_comma_style ||= $keep_break_after_type{','};
 
     initialize_global_option_vars();
-    initialize_line_length_vars();
+
+    initialize_line_length_vars();    # after 'initialize_global_option_vars'
+
     initialize_trailing_comma_rules();    # after 'initialize_line_length_vars'
+
     initialize_weld_nested_exclusion_rules();
+
     initialize_weld_fat_comma_rules();
 
     %line_up_parentheses_control_hash    = ();
@@ -2142,6 +2131,30 @@ EOM
 
     return;
 } ## end sub initialize_line_up_parentheses_control_hash
+
+sub initialize_space_after_keyword {
+
+    # default keywords for which space is introduced before an opening paren
+    # (at present, including them messes up vertical alignment)
+    my @sak = qw(my local our and or xor err eq ne if else elsif until
+      unless while for foreach return switch case given when catch);
+    %space_after_keyword = map { $_ => 1 } @sak;
+
+    # first remove any or all of these if desired
+    if ( my @q = split_words( $rOpts->{'nospace-after-keyword'} ) ) {
+
+        # -nsak='*' selects all the above keywords
+        if ( @q == 1 && $q[0] eq '*' ) { @q = keys(%space_after_keyword) }
+        @space_after_keyword{@q} = (0) x scalar(@q);
+    }
+
+    # then allow user to add to these defaults
+    if ( my @q = split_words( $rOpts->{'space-after-keyword'} ) ) {
+        @space_after_keyword{@q} = (1) x scalar(@q);
+    }
+
+    return;
+}
 
 sub initialize_token_break_preferences {
 
