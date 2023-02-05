@@ -168,8 +168,11 @@ my (
     # parameters.  They remain constant as a file is being processed.
     #-----------------------------------------------------------------
 
-    # user parameters and shortcuts
+    # INITIALIZER: sub check_options
     $rOpts,
+
+    # short-cut option variables
+    # INITIALIZER: sub initialize_global_option_vars
     $rOpts_add_newlines,
     $rOpts_add_whitespace,
     $rOpts_add_trailing_commas,
@@ -233,7 +236,8 @@ my (
     $rOpts_whitespace_cycle,
     $rOpts_extended_line_up_parentheses,
 
-    # Static hashes initialized in a BEGIN block
+    # Static hashes
+    # INITIALIZER: BEGIN block
     %is_assignment,
     %is_non_list_type,
     %is_if_unless_and_or_last_next_redo_return,
@@ -264,99 +268,123 @@ my (
     %is_my_our_local,
     %is_soft_keep_break_type,
     %is_indirect_object_taker,
-
     @all_operators,
-
     %is_do_follower,
     %is_anon_sub_brace_follower,
     %is_anon_sub_1_brace_follower,
     %is_other_brace_follower,
 
-    # Initialized and re-initialized in sub initialize_grep_and_friends;
+    # INITIALIZER: sub check_options
+    $controlled_comma_style,
+    %keep_break_before_type,
+    %keep_break_after_type,
+    %outdent_keyword,
+    %keyword_paren_inner_tightness,
+    %container_indentation_options,
+    %tightness,
+    %line_up_parentheses_control_hash,
+    $line_up_parentheses_control_is_lxpl,
+
     # These can be modified by grep-alias-list
+    # INITIALIZER: sub initialize_grep_and_friends
     %is_sort_map_grep,
     %is_sort_map_grep_eval,
     %is_sort_map_grep_eval_do,
     %is_block_with_ci,
     %is_keyword_returning_list,
-    %block_type_map,
+    %block_type_map,         # initialized in BEGIN, but may be changed
+    %want_one_line_block,    # may be changed in prepare_cuddled_block_types
 
-    # Initialized in sub initialize_whitespace_hashes;
-    # Some can be modified according to user parameters.
+    # INITIALIZER: sub prepare_cuddled_block_types
+    $rcuddled_block_types,
+
+    # INITIALIZER: sub initialize_whitespace_hashes
     %binary_ws_rules,
     %want_left_space,
     %want_right_space,
 
-    # Configured in sub initialize_bond_strength_hashes
+    # INITIALIZER: sub initialize_bond_strength_hashes
     %right_bond_strength,
     %left_bond_strength,
 
-    # Hashes for -kbb=s and -kba=s
-    %keep_break_before_type,
-    %keep_break_after_type,
-
-    # Initialized in check_options, modified by prepare_cuddled_block_types:
-    %want_one_line_block,
-
-    # Initialized in sub prepare_cuddled_block_types
-    $rcuddled_block_types,
-
-    # Initialized and configured in check_options
-    %outdent_keyword,
-    %keyword_paren_inner_tightness,
-
+    # INITIALIZER: sub initialize_token_break_preferences
     %want_break_before,
-
     %break_before_container_types,
-    %container_indentation_options,
 
+    # INITIALIZER: sub initialize_space_after_keyword
     %space_after_keyword,
 
-    %tightness,
-
+    # INITIALIZED BY initialize_global_option_vars
     %opening_vertical_tightness,
     %closing_vertical_tightness,
     %closing_token_indentation,
     $some_closing_token_indentation,
-
     %opening_token_right,
     %stack_opening_token,
     %stack_closing_token,
 
+    # INITIALIZER: sub initialize_weld_nested_exclusion_rules
     %weld_nested_exclusion_rules,
+
+    # INITIALIZER: sub initialize_weld_fat_comma_rules
     %weld_fat_comma_rules,
-    %line_up_parentheses_control_hash,
-    $line_up_parentheses_control_is_lxpl,
 
-    $controlled_comma_style,
-
-    # initialized in sub 'initialize_trailing_comma_rules'
+    # INITIALIZER: sub initialize_trailing_comma_rules
     %trailing_comma_rules,
 
     # regex patterns for text identification.
-    # Most are initialized in a sub make_**_pattern during configuration.
     # Most can be configured by user parameters.
+    # Most are initialized in a sub make_**_pattern during configuration.
+
+    # INITIALIZER: sub make_sub_matching_pattern
     $SUB_PATTERN,
     $ASUB_PATTERN,
+
+    # INITIALIZER: make_static_block_comment_pattern
     $static_block_comment_pattern,
+
+    # INITIALIZER: sub make_static_side_comment_pattern
     $static_side_comment_pattern,
+
+    # INITIALIZER: make_format_skipping_pattern
     $format_skipping_pattern_begin,
     $format_skipping_pattern_end,
+
+    # INITIALIZER: sub make_non_indenting_brace_pattern
     $non_indenting_brace_pattern,
+
+    # INITIALIZER: sub make_bl_pattern
     $bl_exclusion_pattern,
+
+    # INITIALIZER: make_bl_pattern
     $bl_pattern,
+
+    # INITIALIZER: sub make_bli_pattern
     $bli_exclusion_pattern,
+
+    # INITIALIZER: sub make_bli_pattern
     $bli_pattern,
+
+    # INITIALIZER: sub make_block_brace_vertical_tightness_pattern
     $block_brace_vertical_tightness_pattern,
+
+    # INITIALIZER: sub make_blank_line_pattern
     $blank_lines_after_opening_block_pattern,
     $blank_lines_before_closing_block_pattern,
+
+    # INITIALIZER: sub make_keyword_group_list_pattern
     $keyword_group_list_pattern,
     $keyword_group_list_comment_pattern,
+
+    # INITIALIZER: sub make_closing_side_comment_prefix
     $closing_side_comment_prefix_pattern,
+
+    # INITIALIZER: sub make_closing_side_comment_list_pattern
     $closing_side_comment_list_pattern,
 
     # Table to efficiently find indentation and max line length
     # from level.
+    # INITIALIZER: sub initialize_line_length_vars
     @maximum_line_length_at_level,
     @maximum_text_length_at_level,
     $stress_level_alpha,
@@ -364,6 +392,7 @@ my (
     $high_stress_level,
 
     # Total number of sequence items in a weld, for quick checks
+    # INITIALIZER: weld_containers
     $total_weld_count,
 
     #--------------------------------------------------------
@@ -371,7 +400,7 @@ my (
     #--------------------------------------------------------
 
     # These are re-initialized for each batch of code
-    # in sub initialize_batch_variables.
+    # INITIALIZER: sub initialize_batch_variables
     $max_index_to_go,
     @block_type_to_go,
     @type_sequence_to_go,
