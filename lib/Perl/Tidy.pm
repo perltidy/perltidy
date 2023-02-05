@@ -1563,8 +1563,7 @@ sub get_decoded_string_buffer {
 
         # In testing I have found that including additional guess 'suspect'
         # encodings sometimes works but can sometimes lead to disaster by
-        # using an incorrect decoding.  The user can always specify a
-        # specific input encoding.
+        # using an incorrect decoding.
         my $buf_in = $buf;
 
         my $decoder = guess_encoding( $buf_in, 'utf8' );
