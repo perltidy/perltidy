@@ -2730,12 +2730,6 @@ sub initialize_whitespace_hashes {
     # simple as adding your new letter to @spaces_both_sides, for
     # example.
 
-    my @opening_type = qw< L { ( [ >;
-    @is_opening_type{@opening_type} = (1) x scalar(@opening_type);
-
-    my @closing_type = qw< R } ) ] >;
-    @is_closing_type{@closing_type} = (1) x scalar(@closing_type);
-
     my @spaces_both_sides = qw#
       + - * / % ? = . : x < > | & ^ .. << >> ** && .. || // => += -=
       .= %= x= &= |= ^= *= <> <= >= == =~ !~ /= != ... <<= >>= ~~ !~~
