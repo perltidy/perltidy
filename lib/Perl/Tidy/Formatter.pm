@@ -258,6 +258,7 @@ my (
     %is_counted_type,
     %is_opening_sequence_token,
     %is_closing_sequence_token,
+    %matching_token,
     %is_container_label_type,
     %is_die_confess_croak_warn,
     %is_my_our_local,
@@ -312,7 +313,6 @@ my (
     %space_after_keyword,
 
     %tightness,
-    %matching_token,
 
     %opening_vertical_tightness,
     %closing_vertical_tightness,
@@ -722,6 +722,18 @@ BEGIN {
 
     @q = qw< } ) ] : >;
     @is_closing_sequence_token{@q} = (1) x scalar(@q);
+
+    %matching_token = (
+        '{' => '}',
+        '(' => ')',
+        '[' => ']',
+        '?' => ':',
+
+        '}' => '{',
+        ')' => '(',
+        ']' => '[',
+        ':' => '?',
+    );
 
     # a hash needed by sub break_lists for labeling containers
     @q = qw( k => && || ? : . );
@@ -1663,17 +1675,6 @@ EOM
         ')' => $rOpts->{'paren-tightness'},
         '[' => $rOpts->{'square-bracket-tightness'},
         ']' => $rOpts->{'square-bracket-tightness'},
-    );
-    %matching_token = (
-        '{' => '}',
-        '(' => ')',
-        '[' => ']',
-        '?' => ':',
-
-        '}' => '{',
-        ')' => '(',
-        ']' => '[',
-        ':' => '?',
     );
 
     if ( $rOpts->{'ignore-old-breakpoints'} ) {
