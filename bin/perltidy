@@ -35,8 +35,12 @@ perltidy - a perl script indenter and reformatter
 
 =head1 DESCRIPTION
 
-Perltidy reads a perl script and writes an indented, reformatted script.
-This document describes the parameters available for controlling this formatting.
+Perltidy reads a perl script and writes an indented, reformatted script.  The
+formatting process involves converting the script into a string of tokens,
+removing any non-essential whitespace, and then rewriting the string of tokens
+with whitespace using whatever rules are specified, or defaults.  This happens
+in a series of operations which can be controlled with the parameters described
+in this document.
 
 Perltidy is a commandline frontend to the module Perl::Tidy.  For documentation
 describing how to call the Perl::Tidy module from other applications see the
