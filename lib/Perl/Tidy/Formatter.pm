@@ -328,8 +328,10 @@ my (
     %line_up_parentheses_control_hash,
     $line_up_parentheses_control_is_lxpl,
 
-    %trailing_comma_rules,
     $controlled_comma_style,
+
+    # initialized in sub 'initialize_trailing_comma_rules'
+    %trailing_comma_rules,
 
     # regex patterns for text identification.
     # Most are initialized in a sub make_**_pattern during configuration.
@@ -1316,6 +1318,8 @@ sub check_options {
     # This routine is called to check the user-supplied run parameters
     # and to configure the control hashes to them.
     $rOpts = shift;
+
+    $controlled_comma_style = 0;
 
     initialize_whitespace_hashes();
     initialize_bond_strength_hashes();
