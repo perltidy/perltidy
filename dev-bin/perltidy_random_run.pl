@@ -151,6 +151,14 @@ Requested range of profiles is $np_beg to $np_end
 EOM
 }
 
+# move any GO.sh to a backup to prevent accidentally running multiple copies
+my $runme = "GO.sh";
+if ( -e $runme ) {
+    my $bak = "$runme.bak";
+    if ( -e $bak ) { unlink $bak }
+    system("mv $runme $bak");
+}
+
 # Outer loop over files
 my $file_count = 0;
 my $case       = 0;
