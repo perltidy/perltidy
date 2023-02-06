@@ -327,6 +327,10 @@ sub run_test_cases {
     }
 
     my @skipped_cases;
+    my $run_count              = 0;
+    my $iteration_total        = 0;
+    my $iteration_maximum      = 0;
+    my $iteration_maximum_case = "";
     foreach my $sname ( sort @selected_cases ) {
 
         # remove any old tmp files for this case
@@ -405,6 +409,14 @@ sub run_test_cases {
                     $rexpect_files->{$sname} = $output;
                 }
                 print "$sname: converged on iteration $iteration $msg\n";
+
+                $run_count++;
+                $iteration_total += $iteration;
+                if ( $iteration > $iteration_maximum ) {
+                    $iteration_maximum      = $iteration;
+                    $iteration_maximum_case = $sname;
+                }
+
                 last;
             }
             elsif ( $iteration < $iteration_max ) {
@@ -431,7 +443,18 @@ sub run_test_cases {
         }
     }
 
-    print "...\n";
+    print "-" x 31 . "\n";
+    if ( $run_count > 0 ) {
+        my $iteration_mean = sprintf( "%.2f", $iteration_total / $run_count );
+        my $spaces         = " " x length($iteration_maximum_case);
+        print <<EOM;
+<<Stats for $run_count runs>>
+$spaces  converged on iteration $iteration_mean (average)
+$iteration_maximum_case: converged on iteration $iteration_maximum    (max)
+EOM
+    }
+
+    print "-" x 31 . "\n";
     if (@failed_to_converge) {
 
         print <<EOM;
