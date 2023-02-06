@@ -1657,49 +1657,6 @@ EOM
         $rOpts->{'long-block-line-count'} = 1_000_000;
     }
 
-    my $ole = $rOpts->{'output-line-ending'};
-    if ($ole) {
-        my %endings = (
-            dos  => "\015\012",
-            win  => "\015\012",
-            mac  => "\015",
-            unix => "\012",
-        );
-
-        # Patch for RT #99514, a memoization issue.
-        # Normally, the user enters one of 'dos', 'win', etc, and we change the
-        # value in the options parameter to be the corresponding line ending
-        # character.  But, if we are using memoization, on later passes through
-        # here the option parameter will already have the desired ending
-        # character rather than the keyword 'dos', 'win', etc.  So
-        # we must check to see if conversion has already been done and, if so,
-        # bypass the conversion step.
-        my %endings_inverted = (
-            "\015\012" => 'dos',
-            "\015\012" => 'win',
-            "\015"     => 'mac',
-            "\012"     => 'unix',
-        );
-
-        if ( defined( $endings_inverted{$ole} ) ) {
-
-            # we already have valid line ending, nothing more to do
-        }
-        else {
-            $ole = lc $ole;
-            unless ( $rOpts->{'output-line-ending'} = $endings{$ole} ) {
-                my $str = join SPACE, keys %endings;
-                Die(<<EOM);
-Unrecognized line ending '$ole'; expecting one of: $str
-EOM
-            }
-            if ( $rOpts->{'preserve-line-endings'} ) {
-                Warn("Ignoring -ple; conflicts with -ole\n");
-                $rOpts->{'preserve-line-endings'} = undef;
-            }
-        }
-    }
-
     # hashes used to simplify setting whitespace
     %tightness = (
         '{' => $rOpts->{'brace-tightness'},
