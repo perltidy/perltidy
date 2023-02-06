@@ -456,6 +456,7 @@ BEGIN {
         _fileroot_                 => $i++,
         _is_encoded_data_          => $i++,
         _length_function_          => $i++,
+        _line_separator_default_   => $i++,
         _line_separator_           => $i++,
         _logger_object_            => $i++,
         _output_file_              => $i++,
@@ -859,9 +860,7 @@ EOM
     #----------------------------------------
     # check parameters and their interactions
     #----------------------------------------
-    my $tabsize =
-      check_options( $rOpts, $is_Windows, $Windows_type, $rpending_complaint );
-    $self->[_tabsize_] = $tabsize;
+    $self->check_options( $is_Windows, $Windows_type, $rpending_complaint );
 
     if ($user_formatter) {
         $rOpts->{'format'} = 'user';
@@ -1728,9 +1727,10 @@ sub process_all_files {
     #   process_iteration_layer - handle any iterations on formatting
     #   process_single_case     - solves one formatting problem
 
-    my $rOpts              = $self->[_rOpts_];
-    my $dot                = $self->[_file_extension_separator_];
-    my $diagnostics_object = $self->[_diagnostics_object_];
+    my $rOpts                  = $self->[_rOpts_];
+    my $dot                    = $self->[_file_extension_separator_];
+    my $diagnostics_object     = $self->[_diagnostics_object_];
+    my $line_separator_default = $self->[_line_separator_default_];
 
     my $destination_stream = $rinput_hash->{'destination'};
     my $errorfile_stream   = $rinput_hash->{'errorfile'};
@@ -2038,11 +2038,12 @@ EOM
             $logger_object->complain( ${$rpending_complaint} );
         }
 
-        my $line_separator = $rOpts->{'output-line-ending'};
+        # Use input line endings if requested
+        my $line_separator = $line_separator_default;
         if ( $rOpts->{'preserve-line-endings'} ) {
-            $line_separator = find_input_line_ending($input_file);
+            my $ls_input = find_input_line_ending($input_file);
+            if ( defined($ls_input) ) { $line_separator = $ls_input }
         }
-        $line_separator = "\n" unless defined($line_separator);
 
         # additional parameters needed by lower level routines
         $self->[_actual_output_extension_] = $actual_output_extension;
@@ -4278,7 +4279,9 @@ sub cleanup_word_list {
 
 sub check_options {
 
-    my ( $rOpts, $is_Windows, $Windows_type, $rpending_complaint ) = @_;
+    my ( $self, $is_Windows, $Windows_type, $rpending_complaint ) = @_;
+
+    my $rOpts = $self->[_rOpts_];
 
     #------------------------------------------------------------
     # check and handle any interactions among the basic options..
@@ -4292,8 +4295,6 @@ sub check_options {
 --character-encoding = '$encoding' is not allowed; the options are: 'none', 'guess', 'utf8'
 EOM
     }
-
-    initialize_output_line_ending($rOpts);
 
     # Since -vt, -vtc, and -cti are abbreviations, but under
     # msdos, an unquoted input parameter like vtc=1 will be
@@ -4483,22 +4484,28 @@ EOM
 
     # Define $tabsize, the number of spaces per tab for use in
     # guessing the indentation of source lines with leading tabs.
-    # Assume same as for this run if tabs are used , otherwise assume
+    # Assume same as for this run if tabs are used, otherwise assume
     # a default value, typically 8
-    my $tabsize =
+    $self->[_tabsize_] =
         $rOpts->{'entab-leading-whitespace'}
       ? $rOpts->{'entab-leading-whitespace'}
       : $rOpts->{'tabs'} ? $rOpts->{'indent-columns'}
       :                    $rOpts->{'default-tabsize'};
-    return $tabsize;
+
+    # Define the default line ending, before any -ple option is applied
+    $self->[_line_separator_default_] = get_line_separator_default($rOpts);
+
+    return;
 } ## end sub check_options
 
-sub initialize_output_line_ending {
-    my ($rOpts) = @_;
+sub get_line_separator_default {
 
-    # TODO:
-    #   - need to call with $self
-    #   - the output_line_ending should stored in _line_separator_
+    my ( $rOpts, $input_file ) = @_;
+
+    # Get the line separator that will apply unless overriden by a
+    # --preserve-line-endings flag for a specific file
+
+    my $line_separator_default = "\n";
 
     my $ole = $rOpts->{'output-line-ending'};
     if ($ole) {
@@ -4509,41 +4516,25 @@ sub initialize_output_line_ending {
             unix => "\012",
         );
 
-        # Patch for RT #99514, a memoization issue.
-        # Normally, the user enters one of 'dos', 'win', etc, and we change the
-        # value in the options parameter to be the corresponding line ending
-        # character.  But, if we are using memoization, on later passes through
-        # here the option parameter will already have the desired ending
-        # character rather than the keyword 'dos', 'win', etc.  So
-        # we must check to see if conversion has already been done and, if so,
-        # bypass the conversion step.
-        my %endings_inverted = (
-            "\015\012" => 'dos',
-            "\015\012" => 'win',
-            "\015"     => 'mac',
-            "\012"     => 'unix',
-        );
+        $line_separator_default = $endings{ lc $ole };
 
-        if ( defined( $endings_inverted{$ole} ) ) {
-
-            # we already have valid line ending, nothing more to do
-        }
-        else {
-            $ole = lc $ole;
-            unless ( $rOpts->{'output-line-ending'} = $endings{$ole} ) {
-                my $str = join SPACE, keys %endings;
-                Die(<<EOM);
+        if ( !$line_separator_default ) {
+            my $str = join SPACE, keys %endings;
+            Die(<<EOM);
 Unrecognized line ending '$ole'; expecting one of: $str
 EOM
-            }
-            if ( $rOpts->{'preserve-line-endings'} ) {
-                Warn("Ignoring -ple; conflicts with -ole\n");
-                $rOpts->{'preserve-line-endings'} = undef;
-            }
+        }
+
+        # Check for conflict with -ple conflict
+        if ( $rOpts->{'preserve-line-endings'} ) {
+            Warn("Ignoring -ple; conflicts with -ole\n");
+            $rOpts->{'preserve-line-endings'} = undef;
         }
     }
-    return;
-} ## end sub initialize_output_line_ending
+
+    return $line_separator_default;
+
+} ## end sub get_line_separator_default
 
 sub find_file_upwards {
     my ( $search_dir, $search_file ) = @_;
