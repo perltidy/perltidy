@@ -53,20 +53,14 @@ sub new {
     my $input_file = $args{input_file};
     my $rOpts      = $args{rOpts};
 
-    my $input_line_ending;
-    if ( $rOpts->{'preserve-line-endings'} ) {
-        $input_line_ending = Perl::Tidy::find_input_line_ending($input_file);
-    }
-
     ( my $fh, $input_file ) = Perl::Tidy::streamhandle( $input_file, 'r' );
     return unless $fh;
 
     return bless {
-        _fh                => $fh,
-        _filename          => $input_file,
-        _input_line_ending => $input_line_ending,
-        _rinput_buffer     => [],
-        _started           => 0,
+        _fh            => $fh,
+        _filename      => $input_file,
+        _rinput_buffer => [],
+        _started       => 0,
     }, $class;
 }
 
