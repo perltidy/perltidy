@@ -22870,11 +22870,32 @@ EOM
 
         my ( $self, $rinput_hash ) = @_;
 
+        #-----------------------------------------------------------
+        # Section A: Find lengths of all items in the list needed to
+        # calculate page layout
+        #-----------------------------------------------------------
+        my $rlen_hash = comma_breakpoints_length_analysis($rinput_hash);
+        return if ( !defined($rlen_hash) );
+
+        # Derived variables:
+        my $ritem_lengths          = $rlen_hash->{_ritem_lengths};
+        my $ri_term_begin          = $rlen_hash->{_ri_term_begin};
+        my $ri_term_end            = $rlen_hash->{_ri_term_end};
+        my $ri_term_comma          = $rlen_hash->{_ri_term_comma};
+        my $rmax_length            = $rlen_hash->{_rmax_length};
+        my $item_count             = $rlen_hash->{_item_count};
+        my $identifier_count       = $rlen_hash->{_identifier_count};
+        my $comma_count            = $rlen_hash->{_comma_count};
+        my $i_effective_last_comma = $rlen_hash->{_i_effective_last_comma};
+        my $first_term_length      = $rlen_hash->{_first_term_length};
+        my $i_first_comma          = $rlen_hash->{_i_first_comma};
+        my $i_last_comma           = $rlen_hash->{_i_last_comma};
+        my $i_true_last_comma      = $rlen_hash->{_i_true_last_comma};
+
+        # Veriables received from caller
         my $depth               = $rinput_hash->{depth};
         my $i_opening_paren     = $rinput_hash->{i_opening_paren};
         my $i_closing_paren     = $rinput_hash->{i_closing_paren};
-        my $item_count          = $rinput_hash->{item_count};
-        my $identifier_count    = $rinput_hash->{identifier_count};
         my $rcomma_index        = $rinput_hash->{rcomma_index};
         my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
         my $list_type           = $rinput_hash->{list_type};
@@ -22882,107 +22903,9 @@ EOM
         my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
         my $must_break_open     = $rinput_hash->{must_break_open};
         my $has_broken_sublist  = $rinput_hash->{has_broken_sublist};
-
-        # nothing to do if no commas seen
-        return if ( $item_count < 1 );
-
-        my $i_first_comma     = $rcomma_index->[0];
-        my $i_true_last_comma = $rcomma_index->[ $item_count - 1 ];
-        my $i_last_comma      = $i_true_last_comma;
-        if ( $i_last_comma >= $max_index_to_go ) {
-            $i_last_comma = $rcomma_index->[ --$item_count - 1 ];
-            return if ( $item_count < 1 );
-        }
-        my $is_lp_formatting = ref( $leading_spaces_to_go[$i_first_comma] );
-
-        #-----------------------------------------------------------
-        # Section A: Find lengths of all items in the list needed to
-        # calculate page layout
-        #-----------------------------------------------------------
-        my $comma_count = $item_count;
-
-        my $ritem_lengths = [];
-        my $ri_term_begin = [];
-        my $ri_term_end   = [];
-        my $ri_term_comma = [];
-
-        my $rmax_length = [ 0, 0 ];
-
-        my $i_prev_plus;
-        my $first_term_length;
-        my $i      = $i_opening_paren;
-        my $is_odd = 1;
-
-        foreach my $j ( 0 .. $comma_count - 1 ) {
-            $is_odd      = 1 - $is_odd;
-            $i_prev_plus = $i + 1;
-            $i           = $rcomma_index->[$j];
-
-            my $i_term_end =
-              ( $i == 0 || $types_to_go[ $i - 1 ] eq 'b' ) ? $i - 2 : $i - 1;
-            my $i_term_begin =
-              ( $types_to_go[$i_prev_plus] eq 'b' )
-              ? $i_prev_plus + 1
-              : $i_prev_plus;
-            push @{$ri_term_begin}, $i_term_begin;
-            push @{$ri_term_end},   $i_term_end;
-            push @{$ri_term_comma}, $i;
-
-            # note: currently adding 2 to all lengths (for comma and space)
-            my $length =
-              2 + token_sequence_length( $i_term_begin, $i_term_end );
-            push @{$ritem_lengths}, $length;
-
-            if ( $j == 0 ) {
-                $first_term_length = $length;
-            }
-            else {
-
-                if ( $length > $rmax_length->[$is_odd] ) {
-                    $rmax_length->[$is_odd] = $length;
-                }
-            }
-        }
-
-        # now we have to make a distinction between the comma count and item
-        # count, because the item count will be one greater than the comma
-        # count if the last item is not terminated with a comma
-        my $i_b =
-          ( $types_to_go[ $i_last_comma + 1 ] eq 'b' )
-          ? $i_last_comma + 1
-          : $i_last_comma;
-        my $i_e =
-          ( $types_to_go[ $i_closing_paren - 1 ] eq 'b' )
-          ? $i_closing_paren - 2
-          : $i_closing_paren - 1;
-        my $i_effective_last_comma = $i_last_comma;
-
-        my $last_item_length = token_sequence_length( $i_b + 1, $i_e );
-
-        if ( $last_item_length > 0 ) {
-
-            # add 2 to length because other lengths include a comma and a blank
-            $last_item_length += 2;
-            push @{$ritem_lengths}, $last_item_length;
-            push @{$ri_term_begin}, $i_b + 1;
-            push @{$ri_term_end},   $i_e;
-            push @{$ri_term_comma}, undef;
-
-            my $i_odd = $item_count % 2;
-
-            if ( $last_item_length > $rmax_length->[$i_odd] ) {
-                $rmax_length->[$i_odd] = $last_item_length;
-            }
-
-            $item_count++;
-            $i_effective_last_comma = $i_e + 1;
-
-            if ( $types_to_go[ $i_b + 1 ] =~ /^[iR\]]$/ ) {
-                $identifier_count++;
-            }
-        }
-
-        # End of length calculations
+## these input vars have been changed in the length analysis:
+##      my $item_count          = $rinput_hash->{item_count};
+##      my $identifier_count    = $rinput_hash->{identifier_count};
 
         #-----------------------------------------
         # Section B: Handle some special cases ...
@@ -23080,6 +23003,7 @@ EOM
         # items aligned.  This is necessary if any of the list terms
         # exceeds the available space after the '('.
         my $need_lp_break_open = $must_break_open;
+        my $is_lp_formatting   = ref( $leading_spaces_to_go[$i_first_comma] );
         if ( $is_lp_formatting && !$must_break_open ) {
             my $columns_if_unbroken =
               $maximum_line_length_at_level[ $levels_to_go[$i_opening_minus] ]
@@ -23538,6 +23462,135 @@ EOM
 
         return;
     } ## end sub set_comma_breakpoints_final
+
+    sub comma_breakpoints_length_analysis {
+
+        my ($rinput_hash) = @_;
+
+        # Find lengths of all list items needed to calculate page layout
+
+        # Returns:
+        #    - nothing if this list is empty, or
+        #    - a ref to a hash containg some derived parameters
+
+        my $i_opening_paren  = $rinput_hash->{i_opening_paren};
+        my $i_closing_paren  = $rinput_hash->{i_closing_paren};
+        my $identifier_count = $rinput_hash->{identifier_count};
+        my $rcomma_index     = $rinput_hash->{rcomma_index};
+        my $item_count       = $rinput_hash->{item_count};
+
+        # nothing to do if no commas seen
+        return if ( $item_count < 1 );
+
+        my $i_first_comma     = $rcomma_index->[0];
+        my $i_true_last_comma = $rcomma_index->[ $item_count - 1 ];
+        my $i_last_comma      = $i_true_last_comma;
+        if ( $i_last_comma >= $max_index_to_go ) {
+            $item_count -= 1;
+            return if ( $item_count < 1 );
+            $i_last_comma = $rcomma_index->[ $item_count - 1 ];
+        }
+
+        my $comma_count = $item_count;
+
+        my $ritem_lengths = [];
+        my $ri_term_begin = [];
+        my $ri_term_end   = [];
+        my $ri_term_comma = [];
+
+        my $rmax_length = [ 0, 0 ];
+
+        my $i_prev_plus;
+        my $first_term_length;
+        my $i      = $i_opening_paren;
+        my $is_odd = 1;
+
+        foreach my $j ( 0 .. $comma_count - 1 ) {
+            $is_odd      = 1 - $is_odd;
+            $i_prev_plus = $i + 1;
+            $i           = $rcomma_index->[$j];
+
+            my $i_term_end =
+              ( $i == 0 || $types_to_go[ $i - 1 ] eq 'b' ) ? $i - 2 : $i - 1;
+            my $i_term_begin =
+              ( $types_to_go[$i_prev_plus] eq 'b' )
+              ? $i_prev_plus + 1
+              : $i_prev_plus;
+            push @{$ri_term_begin}, $i_term_begin;
+            push @{$ri_term_end},   $i_term_end;
+            push @{$ri_term_comma}, $i;
+
+            # note: currently adding 2 to all lengths (for comma and space)
+            my $length =
+              2 + token_sequence_length( $i_term_begin, $i_term_end );
+            push @{$ritem_lengths}, $length;
+
+            if ( $j == 0 ) {
+                $first_term_length = $length;
+            }
+            else {
+
+                if ( $length > $rmax_length->[$is_odd] ) {
+                    $rmax_length->[$is_odd] = $length;
+                }
+            }
+        }
+
+        # now we have to make a distinction between the comma count and item
+        # count, because the item count will be one greater than the comma
+        # count if the last item is not terminated with a comma
+        my $i_b =
+          ( $types_to_go[ $i_last_comma + 1 ] eq 'b' )
+          ? $i_last_comma + 1
+          : $i_last_comma;
+        my $i_e =
+          ( $types_to_go[ $i_closing_paren - 1 ] eq 'b' )
+          ? $i_closing_paren - 2
+          : $i_closing_paren - 1;
+        my $i_effective_last_comma = $i_last_comma;
+
+        my $last_item_length = token_sequence_length( $i_b + 1, $i_e );
+
+        if ( $last_item_length > 0 ) {
+
+            # add 2 to length because other lengths include a comma and a blank
+            $last_item_length += 2;
+            push @{$ritem_lengths}, $last_item_length;
+            push @{$ri_term_begin}, $i_b + 1;
+            push @{$ri_term_end},   $i_e;
+            push @{$ri_term_comma}, undef;
+
+            my $i_odd = $item_count % 2;
+
+            if ( $last_item_length > $rmax_length->[$i_odd] ) {
+                $rmax_length->[$i_odd] = $last_item_length;
+            }
+
+            $item_count++;
+            $i_effective_last_comma = $i_e + 1;
+
+            if ( $types_to_go[ $i_b + 1 ] =~ /^[iR\]]$/ ) {
+                $identifier_count++;
+            }
+        }
+
+        return {
+            _ritem_lengths          => $ritem_lengths,
+            _ri_term_begin          => $ri_term_begin,
+            _ri_term_end            => $ri_term_end,
+            _ri_term_comma          => $ri_term_comma,
+            _rmax_length            => $rmax_length,
+            _item_count             => $item_count,
+            _identifier_count       => $identifier_count,
+            _comma_count            => $comma_count,
+            _i_effective_last_comma => $i_effective_last_comma,
+            _first_term_length      => $first_term_length,
+            _i_first_comma          => $i_first_comma,
+            _i_last_comma           => $i_last_comma,
+            _i_true_last_comma      => $i_true_last_comma,
+        };
+
+    } ## end sub comma_breakpoints_length_analysis
 
     sub lp_table_fix {
 
