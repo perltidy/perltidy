@@ -4525,7 +4525,7 @@ Unrecognized line ending '$ole'; expecting one of: $str
 EOM
         }
 
-        # Check for conflict with -ple conflict
+        # Check for conflict with -ple
         if ( $rOpts->{'preserve-line-endings'} ) {
             Warn("Ignoring -ple; conflicts with -ole\n");
             $rOpts->{'preserve-line-endings'} = undef;
