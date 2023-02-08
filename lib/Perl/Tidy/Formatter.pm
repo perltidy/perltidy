@@ -18176,6 +18176,26 @@ sub break_equals {
         my $it_count_max =
           10 + int( 1000 / ( 1 + $nmax_section ) ) + $num_sections;
 
+        # If the current script has more lines than the original script,
+        # then we must allow more iterations.  So we increase the max
+        # by one iteration per additional line. Fixes c186, c187.
+        my $rLL  = $self->[_rLL_];
+        my $K_0  = $K_to_go[0];
+        my $K_x  = $K_to_go[$max_index_to_go];
+        my $li_0 = $rLL->[$K_0]->[_LINE_INDEX_];
+        my $li_x = $rLL->[$K_x]->[_LINE_INDEX_];
+
+        my $nlines_gain = $nmax_start - ( $li_x - $li_0 );
+        if ( $nlines_gain > 0 ) {
+            $it_count_max += $nlines_gain;
+        }
+
+        if ( DEBUG_RECOMBINE > 0 ) {
+            print STDERR <<EOM;
+max iterations =$it_count_max; sections=$num_sections; lines gained is $nlines_gain
+EOM
+        }
+
         if ( DEBUG_RECOMBINE > 1 ) {
             my $max = 0;
             print STDERR
