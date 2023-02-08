@@ -22874,23 +22874,23 @@ EOM
         # Section A: Find lengths of all items in the list needed to
         # calculate page layout
         #-----------------------------------------------------------
-        my $rlen_hash = comma_breakpoints_length_analysis($rinput_hash);
-        return if ( !defined($rlen_hash) );
+        my $rwork_hash = comma_breakpoints_length_analysis($rinput_hash);
+        return if ( !defined($rwork_hash) );
 
         # Derived variables:
-        my $ritem_lengths          = $rlen_hash->{_ritem_lengths};
-        my $ri_term_begin          = $rlen_hash->{_ri_term_begin};
-        my $ri_term_end            = $rlen_hash->{_ri_term_end};
-        my $ri_term_comma          = $rlen_hash->{_ri_term_comma};
-        my $rmax_length            = $rlen_hash->{_rmax_length};
-        my $item_count             = $rlen_hash->{_item_count};
-        my $identifier_count       = $rlen_hash->{_identifier_count};
-        my $comma_count            = $rlen_hash->{_comma_count};
-        my $i_effective_last_comma = $rlen_hash->{_i_effective_last_comma};
-        my $first_term_length      = $rlen_hash->{_first_term_length};
-        my $i_first_comma          = $rlen_hash->{_i_first_comma};
-        my $i_last_comma           = $rlen_hash->{_i_last_comma};
-        my $i_true_last_comma      = $rlen_hash->{_i_true_last_comma};
+        my $ritem_lengths          = $rwork_hash->{_ritem_lengths};
+        my $ri_term_begin          = $rwork_hash->{_ri_term_begin};
+        my $ri_term_end            = $rwork_hash->{_ri_term_end};
+        my $ri_term_comma          = $rwork_hash->{_ri_term_comma};
+        my $rmax_length            = $rwork_hash->{_rmax_length};
+        my $item_count             = $rwork_hash->{_item_count};
+        my $identifier_count       = $rwork_hash->{_identifier_count};
+        my $comma_count            = $rwork_hash->{_comma_count};
+        my $i_effective_last_comma = $rwork_hash->{_i_effective_last_comma};
+        my $first_term_length      = $rwork_hash->{_first_term_length};
+        my $i_first_comma          = $rwork_hash->{_i_first_comma};
+        my $i_last_comma           = $rwork_hash->{_i_last_comma};
+        my $i_true_last_comma      = $rwork_hash->{_i_true_last_comma};
 
         # Veriables received from caller
         my $depth               = $rinput_hash->{depth};
@@ -22994,11 +22994,6 @@ EOM
         # open any outer containers.
         set_fake_breakpoint();
 
-        # be sure we do not extend beyond the current list length
-        if ( $i_effective_last_comma >= $max_index_to_go ) {
-            $i_effective_last_comma = $max_index_to_go - 1;
-        }
-
         # Set a flag indicating if we need to break open to keep -lp
         # items aligned.  This is necessary if any of the list terms
         # exceeds the available space after the '('.
@@ -23014,194 +23009,25 @@ EOM
               || ( $first_term_length > $columns_if_unbroken );
         }
 
-        # Specify if the list must have an even number of fields or not.
-        # It is generally safest to assume an even number, because the
-        # list items might be a hash list.  But if we can be sure that
-        # it is not a hash, then we can allow an odd number for more
-        # flexibility.
-        # 1 = odd field count ok, 2 = want even count
-        my $odd_or_even = 2;
-        if (   $identifier_count >= $item_count - 1
-            || $is_assignment{$next_nonblank_type}
-            || ( $list_type && $list_type ne '=>' && $list_type !~ /^[\:\?]$/ )
-          )
-        {
-            $odd_or_even = 1;
-        }
+        my $nf_hash = $self->number_of_fields( $rinput_hash, $rwork_hash,
+            $is_lp_formatting );
+        return if ( !defined($nf_hash) );
 
-        # do we have a long first term which should be
-        # left on a line by itself?
-        my $use_separate_first_term = (
-            $odd_or_even == 1              # only if we can use 1 field/line
-              && $item_count > 3           # need several items
-              && $first_term_length >
-              2 * $rmax_length->[0] - 2    # need long first term
-              && $first_term_length >
-              2 * $rmax_length->[1] - 2    # need long first term
-        );
+        $i_first_comma   = $nf_hash->{_i_first_comma};
+        $i_opening_paren = $nf_hash->{_i_opening_paren};
+        $item_count      = $nf_hash->{_item_count};
 
-        # or do we know from the type of list that the first term should
-        # be placed alone?
-        if ( !$use_separate_first_term ) {
-            if ( $is_keyword_with_special_leading_term{$list_type} ) {
-                $use_separate_first_term = 1;
-
-                # should the container be broken open?
-                if ( $item_count < 3 ) {
-                    if ( $i_first_comma - $i_opening_paren < 4 ) {
-                        ${$rdo_not_break_apart} = 1;
-                    }
-                }
-                elsif ($first_term_length < 20
-                    && $i_first_comma - $i_opening_paren < 4 )
-                {
-                    my $columns = table_columns_available($i_first_comma);
-                    if ( $first_term_length < $columns ) {
-                        ${$rdo_not_break_apart} = 1;
-                    }
-                }
-            }
-        }
-
-        # if so,
-        if ($use_separate_first_term) {
-
-            # ..set a break and update starting values
-            $self->set_forced_breakpoint($i_first_comma);
-            $item_count--;
-
-            # Stop if only one item remains ($i_first_comma will be undef).
-            # Fix for b1442: use '$item_count' here instead of '$comma_count'
-            # to make the result independent of any trailing comma.
-            return if ( $item_count <= 1 );
-
-            $i_opening_paren = $i_first_comma;
-            $i_first_comma   = $rcomma_index->[1];
-            shift @{$ritem_lengths};
-            shift @{$ri_term_begin};
-            shift @{$ri_term_end};
-            shift @{$ri_term_comma};
-        }
-
-        # if not, update the metrics to include the first term
-        else {
-            if ( $first_term_length > $rmax_length->[0] ) {
-                $rmax_length->[0] = $first_term_length;
-            }
-        }
-
-        # Field width parameters
-        my $pair_width = ( $rmax_length->[0] + $rmax_length->[1] );
-        my $max_width =
-          ( $rmax_length->[0] > $rmax_length->[1] )
-          ? $rmax_length->[0]
-          : $rmax_length->[1];
-
-        # Number of free columns across the page width for laying out tables
-        my $columns = table_columns_available($i_first_comma);
-
-        # Patch for b1210 and b1216-b1218 when -vmll is set.  If we are unable
-        # to break after an opening paren, then the maximum line length for the
-        # first line could be less than the later lines.  So we need to reduce
-        # the line length.  Normally, we will get a break after an opening
-        # paren, but in some cases we might not.
-        if (   $rOpts_variable_maximum_line_length
-            && $tokens_to_go[$i_opening_paren] eq '('
-            && @{$ri_term_begin} )
-        {
-            my $ib   = $ri_term_begin->[0];
-            my $type = $types_to_go[$ib];
-
-            # So far, the only known instance of this problem is when
-            # a bareword follows an opening paren with -vmll
-            if ( $type eq 'w' ) {
-
-                # If a line starts with paren+space+terms, then its max length
-                # could be up to ci+2-i spaces less than if the term went out
-                # on a line after the paren.  So..
-                my $tol_w = max( 0,
-                    2 + $rOpts_continuation_indentation -
-                      $rOpts_indent_columns );
-                $columns = max( 0, $columns - $tol_w );
-
-                ## Here is the original b1210 fix, but it failed on b1216-b1218
-                ##my $columns2 = table_columns_available($i_opening_paren);
-                ##$columns = min( $columns, $columns2 );
-            }
-        }
-
-        # Estimated maximum number of fields which fit this space.
-        # This will be our first guess:
-        my $number_of_fields_max =
-          maximum_number_of_fields( $columns, $odd_or_even, $max_width,
-            $pair_width );
-        my $number_of_fields = $number_of_fields_max;
-
-        # Find the best-looking number of fields.
-        # This will be our second guess, if possible.
-        my ( $number_of_fields_best, $ri_ragged_break_list,
-            $new_identifier_count )
-          = $self->study_list_complexity( $ri_term_begin, $ri_term_end,
-            $ritem_lengths, $max_width );
-
-        if (   $number_of_fields_best != 0
-            && $number_of_fields_best < $number_of_fields_max )
-        {
-            $number_of_fields = $number_of_fields_best;
-        }
-
-        # fix b1427
-        elsif ($number_of_fields_best > 1
-            && $number_of_fields_best > $number_of_fields_max )
-        {
-            $number_of_fields_best = $number_of_fields_max;
-        }
-
-        # If we are crowded and the -lp option is being used, try
-        # to undo some indentation
-        if (
-            $is_lp_formatting
-            && (
-                $number_of_fields == 0
-                || (   $number_of_fields == 1
-                    && $number_of_fields != $number_of_fields_best )
-            )
-          )
-        {
-            ( $number_of_fields, $number_of_fields_best, $columns ) =
-              $self->lp_table_fix(
-
-                $columns,
-                $i_first_comma,
-                $max_width,
-                $number_of_fields,
-                $number_of_fields_best,
-                $odd_or_even,
-                $pair_width,
-                $ritem_lengths,
-
-              );
-        }
-
-        # try for one column if two won't work
-        if ( $number_of_fields <= 0 ) {
-            $number_of_fields = int( $columns / $max_width );
-        }
-
-        # The user can place an upper bound on the number of fields,
-        # which can be useful for doing maintenance on tables
-        if (   $rOpts_maximum_fields_per_table
-            && $number_of_fields > $rOpts_maximum_fields_per_table )
-        {
-            $number_of_fields = $rOpts_maximum_fields_per_table;
-        }
-
-        # How many columns (characters) and lines would this container take
-        # if no additional whitespace were added?
-        my $packed_columns = token_sequence_length( $i_opening_paren + 1,
-            $i_effective_last_comma + 1 );
-        if ( $columns <= 0 ) { $columns = 1 }    # avoid divide by zero
-        my $packed_lines = 1 + int( $packed_columns / $columns );
+        my $columns                 = $nf_hash->{_columns};
+        my $max_width               = $nf_hash->{_max_width};
+        my $new_identifier_count    = $nf_hash->{_new_identifier_count};
+        my $number_of_fields        = $nf_hash->{_number_of_fields};
+        my $number_of_fields_best   = $nf_hash->{_number_of_fields_best};
+        my $odd_or_even             = $nf_hash->{_odd_or_even};
+        my $packed_columns          = $nf_hash->{_packed_columns};
+        my $packed_lines            = $nf_hash->{_packed_lines};
+        my $pair_width              = $nf_hash->{_pair_width};
+        my $ri_ragged_break_list    = $nf_hash->{_ri_ragged_break_list};
+        my $use_separate_first_term = $nf_hash->{_use_separate_first_term};
 
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
@@ -23574,6 +23400,11 @@ EOM
             }
         }
 
+        # be sure we do not extend beyond the current list length
+        if ( $i_effective_last_comma >= $max_index_to_go ) {
+            $i_effective_last_comma = $max_index_to_go - 1;
+        }
+
         return {
             _ritem_lengths          => $ritem_lengths,
             _ri_term_begin          => $ri_term_begin,
@@ -23591,6 +23422,243 @@ EOM
         };
 
     } ## end sub comma_breakpoints_length_analysis
+
+    sub number_of_fields {
+
+        my ( $self, $rinput_hash, $rlength_hash, $is_lp_formatting ) = @_;
+
+        # Determine variables for the best table layout, including
+        # the best number of fields.
+
+        # Variables from caller
+        my $i_opening_paren     = $rinput_hash->{i_opening_paren};
+        my $list_type           = $rinput_hash->{list_type};
+        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
+        my $rcomma_index        = $rinput_hash->{rcomma_index};
+        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
+
+        # Length variables
+        my $first_term_length      = $rlength_hash->{_first_term_length};
+        my $i_effective_last_comma = $rlength_hash->{_i_effective_last_comma};
+        my $i_first_comma          = $rlength_hash->{_i_first_comma};
+        my $identifier_count       = $rlength_hash->{_identifier_count};
+        my $item_count             = $rlength_hash->{_item_count};
+        my $ri_term_begin          = $rlength_hash->{_ri_term_begin};
+        my $ri_term_comma          = $rlength_hash->{_ri_term_comma};
+        my $ri_term_end            = $rlength_hash->{_ri_term_end};
+        my $ritem_lengths          = $rlength_hash->{_ritem_lengths};
+        my $rmax_length            = $rlength_hash->{_rmax_length};
+
+        # Specify if the list must have an even number of fields or not.
+        # It is generally safest to assume an even number, because the
+        # list items might be a hash list.  But if we can be sure that
+        # it is not a hash, then we can allow an odd number for more
+        # flexibility.
+        # 1 = odd field count ok, 2 = want even count
+        my $odd_or_even = 2;
+        if (   $identifier_count >= $item_count - 1
+            || $is_assignment{$next_nonblank_type}
+            || ( $list_type && $list_type ne '=>' && $list_type !~ /^[\:\?]$/ )
+          )
+        {
+            $odd_or_even = 1;
+        }
+
+        # do we have a long first term which should be
+        # left on a line by itself?
+        my $use_separate_first_term = (
+            $odd_or_even == 1              # only if we can use 1 field/line
+              && $item_count > 3           # need several items
+              && $first_term_length >
+              2 * $rmax_length->[0] - 2    # need long first term
+              && $first_term_length >
+              2 * $rmax_length->[1] - 2    # need long first term
+        );
+
+        # or do we know from the type of list that the first term should
+        # be placed alone?
+        if ( !$use_separate_first_term ) {
+            if ( $is_keyword_with_special_leading_term{$list_type} ) {
+                $use_separate_first_term = 1;
+
+                # should the container be broken open?
+                if ( $item_count < 3 ) {
+                    if ( $i_first_comma - $i_opening_paren < 4 ) {
+                        ${$rdo_not_break_apart} = 1;
+                    }
+                }
+                elsif ($first_term_length < 20
+                    && $i_first_comma - $i_opening_paren < 4 )
+                {
+                    my $columns = table_columns_available($i_first_comma);
+                    if ( $first_term_length < $columns ) {
+                        ${$rdo_not_break_apart} = 1;
+                    }
+                }
+            }
+        }
+
+        # if so,
+        if ($use_separate_first_term) {
+
+            # ..set a break and update starting values
+            $self->set_forced_breakpoint($i_first_comma);
+            $item_count--;
+
+            # Stop if only one item remains ($i_first_comma will be undef).
+            # Fix for b1442: use '$item_count' here instead of '$comma_count'
+            # to make the result independent of any trailing comma.
+            return if ( $item_count <= 1 );
+
+            $i_opening_paren = $i_first_comma;
+            $i_first_comma   = $rcomma_index->[1];
+            shift @{$ritem_lengths};
+            shift @{$ri_term_begin};
+            shift @{$ri_term_end};
+            shift @{$ri_term_comma};
+        }
+
+        # if not, update the metrics to include the first term
+        else {
+            if ( $first_term_length > $rmax_length->[0] ) {
+                $rmax_length->[0] = $first_term_length;
+            }
+        }
+
+        # Field width parameters
+        my $pair_width = ( $rmax_length->[0] + $rmax_length->[1] );
+        my $max_width =
+          ( $rmax_length->[0] > $rmax_length->[1] )
+          ? $rmax_length->[0]
+          : $rmax_length->[1];
+
+        # Number of free columns across the page width for laying out tables
+        my $columns = table_columns_available($i_first_comma);
+
+        # Patch for b1210 and b1216-b1218 when -vmll is set.  If we are unable
+        # to break after an opening paren, then the maximum line length for the
+        # first line could be less than the later lines.  So we need to reduce
+        # the line length.  Normally, we will get a break after an opening
+        # paren, but in some cases we might not.
+        if (   $rOpts_variable_maximum_line_length
+            && $tokens_to_go[$i_opening_paren] eq '('
+            && @{$ri_term_begin} )
+        {
+            my $ib   = $ri_term_begin->[0];
+            my $type = $types_to_go[$ib];
+
+            # So far, the only known instance of this problem is when
+            # a bareword follows an opening paren with -vmll
+            if ( $type eq 'w' ) {
+
+                # If a line starts with paren+space+terms, then its max length
+                # could be up to ci+2-i spaces less than if the term went out
+                # on a line after the paren.  So..
+                my $tol_w = max( 0,
+                    2 + $rOpts_continuation_indentation -
+                      $rOpts_indent_columns );
+                $columns = max( 0, $columns - $tol_w );
+
+                ## Here is the original b1210 fix, but it failed on b1216-b1218
+                ##my $columns2 = table_columns_available($i_opening_paren);
+                ##$columns = min( $columns, $columns2 );
+            }
+        }
+
+        # Estimated maximum number of fields which fit this space.
+        # This will be our first guess:
+        my $number_of_fields_max =
+          maximum_number_of_fields( $columns, $odd_or_even, $max_width,
+            $pair_width );
+        my $number_of_fields = $number_of_fields_max;
+
+        # Find the best-looking number of fields.
+        # This will be our second guess, if possible.
+        my ( $number_of_fields_best, $ri_ragged_break_list,
+            $new_identifier_count )
+          = $self->study_list_complexity( $ri_term_begin, $ri_term_end,
+            $ritem_lengths, $max_width );
+
+        if (   $number_of_fields_best != 0
+            && $number_of_fields_best < $number_of_fields_max )
+        {
+            $number_of_fields = $number_of_fields_best;
+        }
+
+        # fix b1427
+        elsif ($number_of_fields_best > 1
+            && $number_of_fields_best > $number_of_fields_max )
+        {
+            $number_of_fields_best = $number_of_fields_max;
+        }
+
+        # If we are crowded and the -lp option is being used, try
+        # to undo some indentation
+        if (
+            $is_lp_formatting
+            && (
+                $number_of_fields == 0
+                || (   $number_of_fields == 1
+                    && $number_of_fields != $number_of_fields_best )
+            )
+          )
+        {
+            ( $number_of_fields, $number_of_fields_best, $columns ) =
+              $self->lp_table_fix(
+
+                $columns,
+                $i_first_comma,
+                $max_width,
+                $number_of_fields,
+                $number_of_fields_best,
+                $odd_or_even,
+                $pair_width,
+                $ritem_lengths,
+
+              );
+        }
+
+        # try for one column if two won't work
+        if ( $number_of_fields <= 0 ) {
+            $number_of_fields = int( $columns / $max_width );
+        }
+
+        # The user can place an upper bound on the number of fields,
+        # which can be useful for doing maintenance on tables
+        if (   $rOpts_maximum_fields_per_table
+            && $number_of_fields > $rOpts_maximum_fields_per_table )
+        {
+            $number_of_fields = $rOpts_maximum_fields_per_table;
+        }
+
+        # How many columns (characters) and lines would this container take
+        # if no additional whitespace were added?
+        my $packed_columns = token_sequence_length( $i_opening_paren + 1,
+            $i_effective_last_comma + 1 );
+        if ( $columns <= 0 ) { $columns = 1 }    # avoid divide by zero
+        my $packed_lines = 1 + int( $packed_columns / $columns );
+
+        return {
+
+            # Updated variables
+            _i_first_comma   => $i_first_comma,
+            _i_opening_paren => $i_opening_paren,
+            _item_count      => $item_count,
+
+            # New variables
+            _columns                 => $columns,
+            _max_width               => $max_width,
+            _new_identifier_count    => $new_identifier_count,
+            _number_of_fields        => $number_of_fields,
+            _number_of_fields_best   => $number_of_fields_best,
+            _odd_or_even             => $odd_or_even,
+            _packed_columns          => $packed_columns,
+            _packed_lines            => $packed_lines,
+            _pair_width              => $pair_width,
+            _ri_ragged_break_list    => $ri_ragged_break_list,
+            _use_separate_first_term => $use_separate_first_term,
+        };
+    } ## end sub number_of_fields
 
     sub lp_table_fix {
 
