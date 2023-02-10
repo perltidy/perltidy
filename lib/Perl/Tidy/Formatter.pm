@@ -21121,7 +21121,7 @@ sub do_colon_breaks {
                 # look like a function call)
                 my $must_break_open = $last_nonblank_type[$dd] !~ /^[kwiU]$/;
 
-                $self->set_comma_breakpoints_final(
+                $self->table_maker(
                     {
                         depth            => $dd,
                         i_opening_paren  => $opening_structure_index_stack[$dd],
@@ -22700,7 +22700,7 @@ EOM
     return $i_opening_minus;
 } ## end sub find_token_starting_list
 
-{    ## begin closure set_comma_breakpoints_final
+{    ## begin closure table_maker
 
     my %is_keyword_with_special_leading_term;
 
@@ -22708,29 +22708,129 @@ EOM
 
         # These keywords have prototypes which allow a special leading item
         # followed by a list
-        my @q =
-          qw(formline grep kill map printf sprintf push chmod join pack unshift);
+        my @q = qw(
+          chmod
+          formline
+          grep
+          join
+          kill
+          map
+          pack
+          printf
+          push
+          sprintf
+          unshift
+        );
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
     }
 
     use constant DEBUG_SPARSE => 0;
 
-    sub comma_broken_sublist_rule {
+    sub table_maker {
 
-        my (
+        # Given a list of comma-separated items, set breakpoints at some of
+        # the commas, if necessary, to make it easy to read.
+        # This is done by making calls to 'set_forced_breakpoint'.
+        # This is a complex routine because there are many special cases.
 
-            $self,    #
+        # Returns: nothing
 
-            $item_count,
-            $interrupted,
-            $i_first_comma,
-            $i_true_last_comma,
-            $ri_term_end,
-            $ri_term_begin,
-            $ri_term_comma,
-            $ritem_lengths,
+        # The numerous variables involved are contained three hashes:
+        # $rhash_IN : For contents see the calling routine
+        # $rhash_A: For contents see return from sub 'table_layout_A'
+        # $rhash_B: For contents see return from sub 'table_layout_B'
 
-        ) = @_;
+        my ( $self, $rhash_IN ) = @_;
+
+        # Find lengths of all list items needed for calculating page layout
+        my $rhash_A = table_layout_A($rhash_IN);
+        return if ( !defined($rhash_A) );
+
+        # Some variables received from caller...
+        my $i_closing_paren    = $rhash_IN->{i_closing_paren};
+        my $i_opening_paren    = $rhash_IN->{i_opening_paren};
+        my $has_broken_sublist = $rhash_IN->{has_broken_sublist};
+        my $interrupted        = $rhash_IN->{interrupted};
+
+        #-----------------------------------------
+        # Section A: Handle some special cases ...
+        #-----------------------------------------
+
+        #-------------------------------------------------------------
+        # Special Case A1: Compound List Rule 1:
+        # Break at (almost) every comma for a list containing a broken
+        # sublist.  This has higher priority than the Interrupted List
+        # Rule.
+        #-------------------------------------------------------------
+        if ($has_broken_sublist) {
+
+            $self->apply_broken_sublist_rule( $rhash_A, $interrupted );
+
+            return;
+        }
+
+        #--------------------------------------------------------------
+        # Special Case A2: Interrupted List Rule:
+        # A list is forced to use old breakpoints if it was interrupted
+        # by side comments or blank lines, or requested by user.
+        #--------------------------------------------------------------
+        if (   $rOpts_break_at_old_comma_breakpoints
+            || $interrupted
+            || $i_opening_paren < 0 )
+        {
+            my $i_first_comma     = $rhash_A->{_i_first_comma};
+            my $i_true_last_comma = $rhash_A->{_i_true_last_comma};
+            $self->copy_old_breakpoints( $i_first_comma, $i_true_last_comma );
+            return;
+        }
+
+        #-----------------------------------------------------------------
+        # Special Case A3: If it fits on one line, return and let the line
+        # break logic decide if and where to break.
+        #-----------------------------------------------------------------
+
+        # The -bbxi=2 parameters can add an extra hidden level of indentation
+        # so they need a tolerance to avoid instability.  Fixes b1259, 1260.
+        my $opening_token = $tokens_to_go[$i_opening_paren];
+        my $tol           = 0;
+        if (   $break_before_container_types{$opening_token}
+            && $container_indentation_options{$opening_token}
+            && $container_indentation_options{$opening_token} == 2 )
+        {
+            $tol = $rOpts_indent_columns;
+
+            # use greater of -ci and -i (fix for case b1334)
+            if ( $tol < $rOpts_continuation_indentation ) {
+                $tol = $rOpts_continuation_indentation;
+            }
+        }
+
+        my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
+        my $excess =
+          $self->excess_line_length( $i_opening_minus, $i_closing_paren );
+        return if ( $excess + $tol <= 0 );
+
+        #---------------------------------------
+        # Section B: Handle a multiline list ...
+        #---------------------------------------
+
+        $self->break_multiline_list( $rhash_IN, $rhash_A,
+            $i_opening_minus );
+        return;
+
+    } ## end sub table_maker
+
+    sub apply_broken_sublist_rule {
+
+        my ( $self, $rhash_A, $interrupted ) = @_;
+
+        my $ritem_lengths     = $rhash_A->{_ritem_lengths};
+        my $ri_term_begin     = $rhash_A->{_ri_term_begin};
+        my $ri_term_end       = $rhash_A->{_ri_term_end};
+        my $ri_term_comma     = $rhash_A->{_ri_term_comma};
+        my $item_count        = $rhash_A->{_item_count_A};
+        my $i_first_comma     = $rhash_A->{_i_first_comma};
+        my $i_true_last_comma = $rhash_A->{_i_true_last_comma};
 
         # Break at every comma except for a comma between two
         # simple, small terms.  This prevents long vertical
@@ -22791,7 +22891,7 @@ EOM
             $self,    #
 
             $number_of_fields_best,
-            $rinput_hash,
+            $rhash_IN,
             $comma_count,
             $i_first_comma,
 
@@ -22800,10 +22900,10 @@ EOM
         # The number of fields worked out to be negative, so we
         # have to make an emergency fix.
 
-        my $rcomma_index        = $rinput_hash->{rcomma_index};
-        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
-        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
-        my $must_break_open     = $rinput_hash->{must_break_open};
+        my $rcomma_index        = $rhash_IN->{rcomma_index};
+        my $next_nonblank_type  = $rhash_IN->{next_nonblank_type};
+        my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
+        my $must_break_open     = $rhash_IN->{must_break_open};
 
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
@@ -22883,129 +22983,45 @@ EOM
         return;
     }
 
-    sub set_comma_breakpoints_final {
+    sub break_multiline_list {
+        my ( $self, $rhash_IN, $rhash_A, $i_opening_minus ) = @_;
 
-        # Given a list of comma-separated items, set breakpoints at some of
-        # the commas, if necessary, to make it easy to read.
-
-        my ( $self, $rinput_hash ) = @_;
-
-        #-----------------------------------------------------------
-        # Section A: Find lengths of all items in the list needed to
-        # calculate page layout
-        #-----------------------------------------------------------
-        my $rwork_hash = comma_breakpoints_length_analysis($rinput_hash);
-        return if ( !defined($rwork_hash) );
+        # Overriden variables
+        my $item_count       = $rhash_A->{_item_count_A};
+        my $identifier_count = $rhash_A->{_identifier_count_A};
 
         # Derived variables:
-        my $ritem_lengths          = $rwork_hash->{_ritem_lengths};
-        my $ri_term_begin          = $rwork_hash->{_ri_term_begin};
-        my $ri_term_end            = $rwork_hash->{_ri_term_end};
-        my $ri_term_comma          = $rwork_hash->{_ri_term_comma};
-        my $rmax_length            = $rwork_hash->{_rmax_length};
-        my $item_count             = $rwork_hash->{_item_count};
-        my $identifier_count       = $rwork_hash->{_identifier_count};
-        my $comma_count            = $rwork_hash->{_comma_count};
-        my $i_effective_last_comma = $rwork_hash->{_i_effective_last_comma};
-        my $first_term_length      = $rwork_hash->{_first_term_length};
-        my $i_first_comma          = $rwork_hash->{_i_first_comma};
-        my $i_last_comma           = $rwork_hash->{_i_last_comma};
-        my $i_true_last_comma      = $rwork_hash->{_i_true_last_comma};
+        my $ritem_lengths          = $rhash_A->{_ritem_lengths};
+        my $ri_term_begin          = $rhash_A->{_ri_term_begin};
+        my $ri_term_end            = $rhash_A->{_ri_term_end};
+        my $ri_term_comma          = $rhash_A->{_ri_term_comma};
+        my $rmax_length            = $rhash_A->{_rmax_length};
+        my $comma_count            = $rhash_A->{_comma_count};
+        my $i_effective_last_comma = $rhash_A->{_i_effective_last_comma};
+        my $first_term_length      = $rhash_A->{_first_term_length};
+        my $i_first_comma          = $rhash_A->{_i_first_comma};
+        my $i_last_comma           = $rhash_A->{_i_last_comma};
+        my $i_true_last_comma      = $rhash_A->{_i_true_last_comma};
 
         # Veriables received from caller
-        my $depth               = $rinput_hash->{depth};
-        my $i_opening_paren     = $rinput_hash->{i_opening_paren};
-        my $i_closing_paren     = $rinput_hash->{i_closing_paren};
-        my $rcomma_index        = $rinput_hash->{rcomma_index};
-        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
-        my $list_type           = $rinput_hash->{list_type};
-        my $interrupted         = $rinput_hash->{interrupted};
-        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
-        my $must_break_open     = $rinput_hash->{must_break_open};
-        my $has_broken_sublist  = $rinput_hash->{has_broken_sublist};
-## these input vars have been changed in the length analysis:
-##      my $item_count          = $rinput_hash->{item_count};
-##      my $identifier_count    = $rinput_hash->{identifier_count};
+        my $i_opening_paren     = $rhash_IN->{i_opening_paren};
+        my $i_closing_paren     = $rhash_IN->{i_closing_paren};
+        my $rcomma_index        = $rhash_IN->{rcomma_index};
+        my $next_nonblank_type  = $rhash_IN->{next_nonblank_type};
+        my $list_type           = $rhash_IN->{list_type};
+        my $interrupted         = $rhash_IN->{interrupted};
+        my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
+        my $must_break_open     = $rhash_IN->{must_break_open};
+## NOTE: these input vars from caller use the values from rhash_A (see above):
+##      my $item_count          = $rhash_IN->{item_count};
+##      my $identifier_count    = $rhash_IN->{identifier_count};
 
-        #-----------------------------------------
-        # Section B: Handle some special cases ...
-        #-----------------------------------------
-
-        #-------------------------------------------------------------
-        # Special Case B1: Compound List Rule 1:
-        # Break at (almost) every comma for a list containing a broken
-        # sublist.  This has higher priority than the Interrupted List
-        # Rule.
-        #-------------------------------------------------------------
-        if ($has_broken_sublist) {
-
-            $self->comma_broken_sublist_rule(
-
-                $item_count,
-                $interrupted,
-                $i_first_comma,
-                $i_true_last_comma,
-                $ri_term_end,
-                $ri_term_begin,
-                $ri_term_comma,
-                $ritem_lengths,
-
-            );
-            return;
-        }
-
-#my ( $a, $b, $c ) = caller();
-#print "LISTX: in set_list $a $c interrupt=$interrupted count=$item_count
-#i_first = $i_first_comma  i_last=$i_last_comma max=$max_index_to_go\n";
-#print "depth=$depth has_broken=$has_broken_sublist[$depth] is_multi=$is_multiline opening_paren=($i_opening_paren) \n";
-
-        #--------------------------------------------------------------
-        # Special Case B2: Interrupted List Rule:
-        # A list is forced to use old breakpoints if it was interrupted
-        # by side comments or blank lines, or requested by user.
-        #--------------------------------------------------------------
-        if (   $rOpts_break_at_old_comma_breakpoints
-            || $interrupted
-            || $i_opening_paren < 0 )
-        {
-            $self->copy_old_breakpoints( $i_first_comma, $i_true_last_comma );
-            return;
-        }
-
-        my $opening_token       = $tokens_to_go[$i_opening_paren];
+        # NOTE: i_opening_paren changes value below so we need to get these here
         my $opening_is_in_block = $self->is_in_block_by_i($i_opening_paren);
-
-        #-----------------------------------------------------------------
-        # Special Case B3: If it fits on one line, return and let the line
-        # break logic decide if and where to break.
-        #-----------------------------------------------------------------
-
-        # The -bbxi=2 parameters can add an extra hidden level of indentation
-        # so they need a tolerance to avoid instability.  Fixes b1259, 1260.
-        my $tol = 0;
-        if (   $break_before_container_types{$opening_token}
-            && $container_indentation_options{$opening_token}
-            && $container_indentation_options{$opening_token} == 2 )
-        {
-            $tol = $rOpts_indent_columns;
-
-            # use greater of -ci and -i (fix for case b1334)
-            if ( $tol < $rOpts_continuation_indentation ) {
-                $tol = $rOpts_continuation_indentation;
-            }
-        }
-
-        my $i_opening_minus = $self->find_token_starting_list($i_opening_paren);
-        my $excess =
-          $self->excess_line_length( $i_opening_minus, $i_closing_paren );
-        return if ( $excess + $tol <= 0 );
-
-        #---------------------------------------
-        # Section C: Handle a multiline list ...
-        #---------------------------------------
+        my $opening_token       = $tokens_to_go[$i_opening_paren];
 
         #---------------------------------------------------------------
-        # Section C1: Determine '$number_of_fields' = the best number of
+        # Section B1: Determine '$number_of_fields' = the best number of
         # fields to use if this is to be formatted as a table.
         #---------------------------------------------------------------
 
@@ -23029,28 +23045,28 @@ EOM
               || ( $first_term_length > $columns_if_unbroken );
         }
 
-        my $nf_hash = $self->number_of_fields( $rinput_hash, $rwork_hash,
+        my $hash_B = $self->table_layout_B( $rhash_IN, $rhash_A,
             $is_lp_formatting );
-        return if ( !defined($nf_hash) );
+        return if ( !defined($hash_B) );
 
         # Updated variables
-        $i_first_comma   = $nf_hash->{_i_first_comma};
-        $i_opening_paren = $nf_hash->{_i_opening_paren};
-        $item_count      = $nf_hash->{_item_count};
+        $i_first_comma   = $hash_B->{_i_first_comma_B};
+        $i_opening_paren = $hash_B->{_i_opening_paren_B};
+        $item_count      = $hash_B->{_item_count_B};
 
         # New variables
-        my $columns                 = $nf_hash->{_columns};
-        my $formatted_columns       = $nf_hash->{_formatted_columns};
-        my $formatted_lines         = $nf_hash->{_formatted_lines};
-        my $max_width               = $nf_hash->{_max_width};
-        my $new_identifier_count    = $nf_hash->{_new_identifier_count};
-        my $number_of_fields        = $nf_hash->{_number_of_fields};
-        my $odd_or_even             = $nf_hash->{_odd_or_even};
-        my $packed_columns          = $nf_hash->{_packed_columns};
-        my $packed_lines            = $nf_hash->{_packed_lines};
-        my $pair_width              = $nf_hash->{_pair_width};
-        my $ri_ragged_break_list    = $nf_hash->{_ri_ragged_break_list};
-        my $use_separate_first_term = $nf_hash->{_use_separate_first_term};
+        my $columns                 = $hash_B->{_columns};
+        my $formatted_columns       = $hash_B->{_formatted_columns};
+        my $formatted_lines         = $hash_B->{_formatted_lines};
+        my $max_width               = $hash_B->{_max_width};
+        my $new_identifier_count    = $hash_B->{_new_identifier_count};
+        my $number_of_fields        = $hash_B->{_number_of_fields};
+        my $odd_or_even             = $hash_B->{_odd_or_even};
+        my $packed_columns          = $hash_B->{_packed_columns};
+        my $packed_lines            = $hash_B->{_packed_lines};
+        my $pair_width              = $hash_B->{_pair_width};
+        my $ri_ragged_break_list    = $hash_B->{_ri_ragged_break_list};
+        my $use_separate_first_term = $hash_B->{_use_separate_first_term};
 
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
@@ -23097,7 +23113,7 @@ EOM
         }
 
         #-------------------------------------------------------------------
-        # Section C2: Check for shortcut methods, which avoid treating
+        # Section B2: Check for shortcut methods, which avoid treating
         # a list as a table for relatively small parenthesized lists.  These
         # are usually easier to read if not formatted as tables.
         #-------------------------------------------------------------------
@@ -23109,7 +23125,7 @@ EOM
           )
         {
 
-            # Section C2A: Shortcut method 1: for -lp and just one comma:
+            # Section B2A: Shortcut method 1: for -lp and just one comma:
             # This is a no-brainer, just break at the comma.
             if (
                 $is_lp_formatting      # -lp
@@ -23124,7 +23140,7 @@ EOM
 
             }
 
-            # Section C2B: Shortcut method 2 is for most small ragged lists
+            # Section B2B: Shortcut method 2 is for most small ragged lists
             # which might look best if not displayed as a table.
             if (
                 ( $number_of_fields == 2 && $item_count == 3 )
@@ -23170,7 +23186,7 @@ EOM
         };
 
         #------------------------------------------------------------------
-        # Section C3: Compound List Rule 2:
+        # Section B3: Compound List Rule 2:
         # If this list is too long for one line, and it is an item of a
         # larger list, then we must format it, regardless of sparsity
         # (ian.t).  One reason that we have to do this is to trigger
@@ -23211,10 +23227,8 @@ EOM
           || ( $too_long
             && ( $in_hierarchical_list || !$two_line_word_wrap_ok ) );
 
-#print "LISTX: next=$next_nonblank_type  avail cols=$columns packed=$packed_columns must format = $must_break_open_container too-long=$too_long  opening=$opening_token list_type=$list_type formatted_lines=$formatted_lines  packed=$packed_lines max_sparsity= $max_allowed_sparsity sparsity=$sparsity \n";
-
         #--------------------------------------------------------------------
-        # Section C4: A table will work here. But do not attempt to align
+        # Section B4: A table will work here. But do not attempt to align
         # columns if this is a tiny table or it would be too spaced.  It
         # seems that the more packed lines we have, the sparser the list that
         # can be allowed and still look ok.
@@ -23226,7 +23240,7 @@ EOM
           )
         {
             #----------------------------------------------------------------
-            # Section C4A: too sparse: would not look good aligned in a table
+            # Section B4A: too sparse: would not look good aligned in a table
             #----------------------------------------------------------------
 
             # use old breakpoints if this is a 'big' list
@@ -23255,17 +23269,17 @@ EOM
         }
 
         #--------------------------------------------
-        # Section C4B: Go ahead and format as a table
+        # Section B4B: Go ahead and format as a table
         #--------------------------------------------
         $self->write_formatted_table( $number_of_fields, $comma_count,
             $rcomma_index, $use_separate_first_term );
 
         return;
-    } ## end sub set_comma_breakpoints_final
+    } ## end sub break_multiline_list
 
-    sub comma_breakpoints_length_analysis {
+    sub table_layout_A {
 
-        my ($rinput_hash) = @_;
+        my ($rhash_IN) = @_;
 
         # Find lengths of all list items needed to calculate page layout
 
@@ -23273,11 +23287,11 @@ EOM
         #    - nothing if this list is empty, or
         #    - a ref to a hash containg some derived parameters
 
-        my $i_opening_paren  = $rinput_hash->{i_opening_paren};
-        my $i_closing_paren  = $rinput_hash->{i_closing_paren};
-        my $identifier_count = $rinput_hash->{identifier_count};
-        my $rcomma_index     = $rinput_hash->{rcomma_index};
-        my $item_count       = $rinput_hash->{item_count};
+        my $i_opening_paren  = $rhash_IN->{i_opening_paren};
+        my $i_closing_paren  = $rhash_IN->{i_closing_paren};
+        my $identifier_count = $rhash_IN->{identifier_count};
+        my $rcomma_index     = $rhash_IN->{rcomma_index};
+        my $item_count       = $rhash_IN->{item_count};
 
         # nothing to do if no commas seen
         return if ( $item_count < 1 );
@@ -23311,7 +23325,9 @@ EOM
             $i           = $rcomma_index->[$j];
 
             my $i_term_end =
-              ( $i == 0 || $types_to_go[ $i - 1 ] eq 'b' ) ? $i - 2 : $i - 1;
+              ( $i == 0 || $types_to_go[ $i - 1 ] eq 'b' )
+              ? $i - 2
+              : $i - 1;
             my $i_term_begin =
               ( $types_to_go[$i_prev_plus] eq 'b' )
               ? $i_prev_plus + 1
@@ -23379,14 +23395,19 @@ EOM
             $i_effective_last_comma = $max_index_to_go - 1;
         }
 
+        # Return the hash of derived variables.
         return {
+
+            # Updated variables
+            _item_count_A       => $item_count,
+            _identifier_count_A => $identifier_count,
+
+            # New variables
             _ritem_lengths          => $ritem_lengths,
             _ri_term_begin          => $ri_term_begin,
             _ri_term_end            => $ri_term_end,
             _ri_term_comma          => $ri_term_comma,
             _rmax_length            => $rmax_length,
-            _item_count             => $item_count,
-            _identifier_count       => $identifier_count,
             _comma_count            => $comma_count,
             _i_effective_last_comma => $i_effective_last_comma,
             _first_term_length      => $first_term_length,
@@ -23395,36 +23416,38 @@ EOM
             _i_true_last_comma      => $i_true_last_comma,
         };
 
-    } ## end sub comma_breakpoints_length_analysis
+    } ## end sub table_layout_A
 
-    sub number_of_fields {
+    sub table_layout_B {
 
-        my ( $self, $rinput_hash, $rlength_hash, $is_lp_formatting ) = @_;
+        my ( $self, $rhash_IN, $rhash_A, $is_lp_formatting ) = @_;
 
-        #---------------------------------------------------------------------
-        # Section C1: Determine variables for the best table layout, including
+        # Determine variables for the best table layout, including
         # the best number of fields.
-        #---------------------------------------------------------------------
+
+        # Returns:
+        #    - nothing if nothing more to do
+        #    - a ref to a hash containg some derived parameters
 
         # Variables from caller
-        my $i_opening_paren     = $rinput_hash->{i_opening_paren};
-        my $list_type           = $rinput_hash->{list_type};
-        my $next_nonblank_type  = $rinput_hash->{next_nonblank_type};
-        my $rcomma_index        = $rinput_hash->{rcomma_index};
-        my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
+        my $i_opening_paren     = $rhash_IN->{i_opening_paren};
+        my $list_type           = $rhash_IN->{list_type};
+        my $next_nonblank_type  = $rhash_IN->{next_nonblank_type};
+        my $rcomma_index        = $rhash_IN->{rcomma_index};
+        my $rdo_not_break_apart = $rhash_IN->{rdo_not_break_apart};
 
-        # Length variables
-        my $comma_count            = $rlength_hash->{_comma_count};
-        my $first_term_length      = $rlength_hash->{_first_term_length};
-        my $i_effective_last_comma = $rlength_hash->{_i_effective_last_comma};
-        my $i_first_comma          = $rlength_hash->{_i_first_comma};
-        my $identifier_count       = $rlength_hash->{_identifier_count};
-        my $item_count             = $rlength_hash->{_item_count};
-        my $ri_term_begin          = $rlength_hash->{_ri_term_begin};
-        my $ri_term_comma          = $rlength_hash->{_ri_term_comma};
-        my $ri_term_end            = $rlength_hash->{_ri_term_end};
-        my $ritem_lengths          = $rlength_hash->{_ritem_lengths};
-        my $rmax_length            = $rlength_hash->{_rmax_length};
+        # Table size variables
+        my $comma_count            = $rhash_A->{_comma_count};
+        my $first_term_length      = $rhash_A->{_first_term_length};
+        my $i_effective_last_comma = $rhash_A->{_i_effective_last_comma};
+        my $i_first_comma          = $rhash_A->{_i_first_comma};
+        my $identifier_count       = $rhash_A->{_identifier_count_A};
+        my $item_count             = $rhash_A->{_item_count_A};
+        my $ri_term_begin          = $rhash_A->{_ri_term_begin};
+        my $ri_term_comma          = $rhash_A->{_ri_term_comma};
+        my $ri_term_end            = $rhash_A->{_ri_term_end};
+        my $ritem_lengths          = $rhash_A->{_ritem_lengths};
+        my $rmax_length            = $rhash_A->{_rmax_length};
 
         # Specify if the list must have an even number of fields or not.
         # It is generally safest to assume an even number, because the
@@ -23433,9 +23456,12 @@ EOM
         # flexibility.
         # 1 = odd field count ok, 2 = want even count
         my $odd_or_even = 2;
-        if (   $identifier_count >= $item_count - 1
+        if (
+               $identifier_count >= $item_count - 1
             || $is_assignment{$next_nonblank_type}
-            || ( $list_type && $list_type ne '=>' && $list_type !~ /^[\:\?]$/ )
+            || (   $list_type
+                && $list_type ne '=>'
+                && $list_type !~ /^[\:\?]$/ )
           )
         {
             $odd_or_even = 1;
@@ -23482,7 +23508,9 @@ EOM
             $self->set_forced_breakpoint($i_first_comma);
             $item_count--;
 
-            # Stop if only one item remains ($i_first_comma will be undef).
+            #---------------------------------------------------------------
+            # Section B1A: Stop if one item remains ($i_first_comma = undef)
+            #---------------------------------------------------------------
             # Fix for b1442: use '$item_count' here instead of '$comma_count'
             # to make the result independent of any trailing comma.
             return if ( $item_count <= 1 );
@@ -23616,7 +23644,7 @@ EOM
         my $packed_lines = 1 + int( $packed_columns / $columns );
 
         #-----------------------------------------------------------------
-        # Section C1A: Stop here if we did not compute a positive number of
+        # Section B1B: Stop here if we did not compute a positive number of
         # fields. In this case we just have to bail out.
         #-----------------------------------------------------------------
         if ( $number_of_fields <= 0 ) {
@@ -23624,7 +23652,7 @@ EOM
             $self->set_emergency_comma_breakpoints(
 
                 $number_of_fields_best,
-                $rinput_hash,
+                $rhash_IN,
                 $comma_count,
                 $i_first_comma,
 
@@ -23633,7 +23661,7 @@ EOM
         }
 
         #------------------------------------------------------------------
-        # Section C1B: We have a tentative field count that seems to work.
+        # Section B1B: We have a tentative field count that seems to work.
         # Now we must look more closely to determine if a table layout will
         # actually look okay.
         #------------------------------------------------------------------
@@ -23647,9 +23675,8 @@ EOM
         # So far we've been trying to fill out to the right margin.  But
         # compact tables are easier to read, so let's see if we can use fewer
         # fields without increasing the number of lines.
-        $number_of_fields =
-          compactify_table( $item_count, $number_of_fields, $formatted_lines,
-            $odd_or_even );
+        $number_of_fields = compactify_table( $item_count, $number_of_fields,
+            $formatted_lines, $odd_or_even );
 
         my $formatted_columns;
 
@@ -23665,12 +23692,13 @@ EOM
             $formatted_columns = $packed_columns;
         }
 
+        # Construce hash_B:
         return {
 
             # Updated variables
-            _i_first_comma   => $i_first_comma,
-            _i_opening_paren => $i_opening_paren,
-            _item_count      => $item_count,
+            _i_first_comma_B   => $i_first_comma,
+            _i_opening_paren_B => $i_opening_paren,
+            _item_count_B      => $item_count,
 
             # New variables
             _columns                 => $columns,
@@ -23686,7 +23714,7 @@ EOM
             _ri_ragged_break_list    => $ri_ragged_break_list,
             _use_separate_first_term => $use_separate_first_term,
         };
-    } ## end sub number_of_fields
+    } ## end sub table_layout_B
 
     sub lp_table_fix {
 
@@ -23759,7 +23787,9 @@ EOM
             "List: auto formatting with $number_of_fields fields/row\n");
 
         my $j_first_break =
-          $use_separate_first_term ? $number_of_fields : $number_of_fields - 1;
+            $use_separate_first_term
+          ? $number_of_fields
+          : $number_of_fields - 1;
 
         my $j = $j_first_break;
         while ( $j < $comma_count ) {
@@ -23768,8 +23798,9 @@ EOM
             $j += $number_of_fields;
         }
         return;
-    }
-} ## end closure set_comma_breakpoints_final
+    } ## end sub write_formatted_table
+
+} ## end closure set_comma_breakpoint_final
 
 sub study_list_complexity {
 
