@@ -23033,15 +23033,18 @@ EOM
             $is_lp_formatting );
         return if ( !defined($nf_hash) );
 
+        # Updated variables
         $i_first_comma   = $nf_hash->{_i_first_comma};
         $i_opening_paren = $nf_hash->{_i_opening_paren};
         $item_count      = $nf_hash->{_item_count};
 
+        # New variables
         my $columns                 = $nf_hash->{_columns};
+        my $formatted_columns       = $nf_hash->{_formatted_columns};
+        my $formatted_lines         = $nf_hash->{_formatted_lines};
         my $max_width               = $nf_hash->{_max_width};
         my $new_identifier_count    = $nf_hash->{_new_identifier_count};
         my $number_of_fields        = $nf_hash->{_number_of_fields};
-        my $number_of_fields_best   = $nf_hash->{_number_of_fields_best};
         my $odd_or_even             = $nf_hash->{_odd_or_even};
         my $packed_columns          = $nf_hash->{_packed_columns};
         my $packed_lines            = $nf_hash->{_packed_lines};
@@ -23051,61 +23054,6 @@ EOM
 
         # are we an item contained in an outer list?
         my $in_hierarchical_list = $next_nonblank_type =~ /^[\}\,]$/;
-
-        #-----------------------------------------------------------------
-        # Section C2: Stop here if we did not compute a positive number of
-        # fields. In this case we just have to bail out.
-        #-----------------------------------------------------------------
-        if ( $number_of_fields <= 0 ) {
-
-            $self->set_emergency_comma_breakpoints(
-
-                $number_of_fields_best,
-                $rinput_hash,
-                $comma_count,
-                $i_first_comma,
-
-            );
-            return;
-        }
-
-        #------------------------------------------------------------------
-        # Section C3: We have a tentative field count that seems to work.
-        # Now we must look more closely to determine if a table layout will
-        # actually look okay.
-        #------------------------------------------------------------------
-
-        # How many lines will this require?
-        my $formatted_lines = $item_count / ($number_of_fields);
-        if ( $formatted_lines != int $formatted_lines ) {
-            $formatted_lines = 1 + int $formatted_lines;
-        }
-
-        # So far we've been trying to fill out to the right margin.  But
-        # compact tables are easier to read, so let's see if we can use fewer
-        # fields without increasing the number of lines.
-        $number_of_fields =
-          compactify_table( $item_count, $number_of_fields, $formatted_lines,
-            $odd_or_even );
-
-        # How many spaces across the page will we fill?
-        my $columns_per_line =
-          ( int $number_of_fields / 2 ) * $pair_width +
-          ( $number_of_fields % 2 ) * $max_width;
-
-        my $formatted_columns;
-
-        if ( $number_of_fields > 1 ) {
-            $formatted_columns =
-              ( $pair_width * ( int( $item_count / 2 ) ) +
-                  ( $item_count % 2 ) * $max_width );
-        }
-        else {
-            $formatted_columns = $max_width * $item_count;
-        }
-        if ( $formatted_columns < $packed_columns ) {
-            $formatted_columns = $packed_columns;
-        }
 
         my $unused_columns = $formatted_columns - $packed_columns;
 
@@ -23149,7 +23097,7 @@ EOM
         }
 
         #-------------------------------------------------------------------
-        # Section C4: Check for shortcut methods, which avoid treating
+        # Section C2: Check for shortcut methods, which avoid treating
         # a list as a table for relatively small parenthesized lists.  These
         # are usually easier to read if not formatted as tables.
         #-------------------------------------------------------------------
@@ -23161,7 +23109,7 @@ EOM
           )
         {
 
-            # Section C4A: Shortcut method 1: for -lp and just one comma:
+            # Section C2A: Shortcut method 1: for -lp and just one comma:
             # This is a no-brainer, just break at the comma.
             if (
                 $is_lp_formatting      # -lp
@@ -23176,7 +23124,7 @@ EOM
 
             }
 
-            # Section C4B: Shortcut method 2 is for most small ragged lists
+            # Section C2B: Shortcut method 2 is for most small ragged lists
             # which might look best if not displayed as a table.
             if (
                 ( $number_of_fields == 2 && $item_count == 3 )
@@ -23210,13 +23158,19 @@ EOM
 
         # debug stuff
         DEBUG_SPARSE && do {
+
+            # How many spaces across the page will we fill?
+            my $columns_per_line =
+              ( int $number_of_fields / 2 ) * $pair_width +
+              ( $number_of_fields % 2 ) * $max_width;
+
             print STDOUT
 "SPARSE:cols=$columns commas=$comma_count items:$item_count ids=$identifier_count pairwidth=$pair_width fields=$number_of_fields lines packed: $packed_lines packed_cols=$packed_columns fmtd:$formatted_lines cols /line:$columns_per_line  unused:$unused_columns fmtd:$formatted_columns sparsity=$sparsity allow=$max_allowed_sparsity\n";
 
         };
 
         #------------------------------------------------------------------
-        # Section C5: Compound List Rule 2:
+        # Section C3: Compound List Rule 2:
         # If this list is too long for one line, and it is an item of a
         # larger list, then we must format it, regardless of sparsity
         # (ian.t).  One reason that we have to do this is to trigger
@@ -23260,7 +23214,7 @@ EOM
 #print "LISTX: next=$next_nonblank_type  avail cols=$columns packed=$packed_columns must format = $must_break_open_container too-long=$too_long  opening=$opening_token list_type=$list_type formatted_lines=$formatted_lines  packed=$packed_lines max_sparsity= $max_allowed_sparsity sparsity=$sparsity \n";
 
         #--------------------------------------------------------------------
-        # Section C6: A table will work here. But do not attempt to align
+        # Section C4: A table will work here. But do not attempt to align
         # columns if this is a tiny table or it would be too spaced.  It
         # seems that the more packed lines we have, the sparser the list that
         # can be allowed and still look ok.
@@ -23272,7 +23226,7 @@ EOM
           )
         {
             #----------------------------------------------------------------
-            # Section C6A: too sparse: would not look good aligned in a table
+            # Section C4A: too sparse: would not look good aligned in a table
             #----------------------------------------------------------------
 
             # use old breakpoints if this is a 'big' list
@@ -23301,7 +23255,7 @@ EOM
         }
 
         #--------------------------------------------
-        # Section C6B: Go ahead and format as a table
+        # Section C4B: Go ahead and format as a table
         #--------------------------------------------
         $self->write_formatted_table( $number_of_fields, $comma_count,
             $rcomma_index, $use_separate_first_term );
@@ -23447,8 +23401,10 @@ EOM
 
         my ( $self, $rinput_hash, $rlength_hash, $is_lp_formatting ) = @_;
 
-        # Determine variables for the best table layout, including
+        #---------------------------------------------------------------------
+        # Section C1: Determine variables for the best table layout, including
         # the best number of fields.
+        #---------------------------------------------------------------------
 
         # Variables from caller
         my $i_opening_paren     = $rinput_hash->{i_opening_paren};
@@ -23458,6 +23414,7 @@ EOM
         my $rdo_not_break_apart = $rinput_hash->{rdo_not_break_apart};
 
         # Length variables
+        my $comma_count            = $rlength_hash->{_comma_count};
         my $first_term_length      = $rlength_hash->{_first_term_length};
         my $i_effective_last_comma = $rlength_hash->{_i_effective_last_comma};
         my $i_first_comma          = $rlength_hash->{_i_first_comma};
@@ -23658,6 +23615,56 @@ EOM
         if ( $columns <= 0 ) { $columns = 1 }    # avoid divide by zero
         my $packed_lines = 1 + int( $packed_columns / $columns );
 
+        #-----------------------------------------------------------------
+        # Section C1A: Stop here if we did not compute a positive number of
+        # fields. In this case we just have to bail out.
+        #-----------------------------------------------------------------
+        if ( $number_of_fields <= 0 ) {
+
+            $self->set_emergency_comma_breakpoints(
+
+                $number_of_fields_best,
+                $rinput_hash,
+                $comma_count,
+                $i_first_comma,
+
+            );
+            return;
+        }
+
+        #------------------------------------------------------------------
+        # Section C1B: We have a tentative field count that seems to work.
+        # Now we must look more closely to determine if a table layout will
+        # actually look okay.
+        #------------------------------------------------------------------
+
+        # How many lines will this require?
+        my $formatted_lines = $item_count / ($number_of_fields);
+        if ( $formatted_lines != int $formatted_lines ) {
+            $formatted_lines = 1 + int $formatted_lines;
+        }
+
+        # So far we've been trying to fill out to the right margin.  But
+        # compact tables are easier to read, so let's see if we can use fewer
+        # fields without increasing the number of lines.
+        $number_of_fields =
+          compactify_table( $item_count, $number_of_fields, $formatted_lines,
+            $odd_or_even );
+
+        my $formatted_columns;
+
+        if ( $number_of_fields > 1 ) {
+            $formatted_columns =
+              ( $pair_width * ( int( $item_count / 2 ) ) +
+                  ( $item_count % 2 ) * $max_width );
+        }
+        else {
+            $formatted_columns = $max_width * $item_count;
+        }
+        if ( $formatted_columns < $packed_columns ) {
+            $formatted_columns = $packed_columns;
+        }
+
         return {
 
             # Updated variables
@@ -23667,10 +23674,11 @@ EOM
 
             # New variables
             _columns                 => $columns,
+            _formatted_columns       => $formatted_columns,
+            _formatted_lines         => $formatted_lines,
             _max_width               => $max_width,
             _new_identifier_count    => $new_identifier_count,
             _number_of_fields        => $number_of_fields,
-            _number_of_fields_best   => $number_of_fields_best,
             _odd_or_even             => $odd_or_even,
             _packed_columns          => $packed_columns,
             _packed_lines            => $packed_lines,
