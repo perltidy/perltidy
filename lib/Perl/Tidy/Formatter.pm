@@ -18074,18 +18074,30 @@ sub break_equals {
 
     sub recombine_breakpoints {
 
-        # We are given indexes to the current lines:
-        #  $ri_beg = ref to array of BEGinning indexes of each line
-        #  $ri_end = ref to array of ENDing indexes of each line
         my ( $self, $ri_beg, $ri_end, $rbond_strength_to_go ) = @_;
 
-        # sub break_long_lines is very liberal in setting line breaks
+        # This sub implements the 'recombine' operation on a batch.
+        # Its task is to combine some of these lines back together to
+        # improve formatting.  The need for this arises because
+        # sub 'break_long_lines' is very liberal in setting line breaks
         # for long lines, always setting breaks at good breakpoints, even
         # when that creates small lines.  Sometimes small line fragments
         # are produced which would look better if they were combined.
-        # That's the task of this routine.
 
-        # do nothing under extreme stress; use <= 2 for c171
+        # Input parameters:
+        #  $ri_beg = ref to array of BEGinning indexes of each line
+        #  $ri_end = ref to array of ENDing indexes of each line
+        #  $rbond_strength_to_go = array of bond strengths pulling
+        #    tokens together, used to decide where best to recombine lines.
+
+        #---------------------------------------------------------------
+        # Do nothing under extreme stress; use <= 2 for c171.
+        # (Actually, c118 & c171 run okay without this now due to the
+        # new optimizations. So this is not strictly necessary now.  But
+        # removing this check is not really useful because this condition
+        # only occurs in test runs, and another formatting pass will fix
+        # things anyway.)
+        #---------------------------------------------------------------
         return if ( $high_stress_level <= 2 );
 
         my $nmax_start = @{$ri_end} - 1;
@@ -18093,7 +18105,7 @@ sub break_equals {
 
         #----------------------------------------------------------------
         # Break into small sub-sections to decrease the maximum n-squared
-        # operations and avoid excess run time. See comments below.
+        # operations and avoid excess run time.
         #----------------------------------------------------------------
 
         # Also make a list of all good joining tokens between the lines
@@ -18157,46 +18169,13 @@ sub break_equals {
 
         my $num_sections = @{$rsections};
 
-        # This is potentially an O(n-squared) loop, but not critical, so we can
-        # put a finite limit on the total number of iterations. This is
-        # suggested by issue c118, which pushed about 5.e5 lines through here
-        # and caused an excessive run time.  For another test case see c167.
-
-        # Three lines of defense have been put in place to prevent excessive
-        # run times:
-        #  1. do nothing if formatting under stress (c118 was under stress)
-        #  2. break into small sub-sections to decrease the maximum n-squared.
-        #  3. put a finite limit on the number of iterations.
-
-        # Testing shows that most batches only require one or two iterations.
-        # A very large batch which is broken into sub-sections can require one
-        # iteration per section.  This suggests the limit here, which allows
-        # up to 10 iterations plus one pass per sub-section.
-        my $it_count = 0;
-        my $it_count_max =
-          10 + int( 1000 / ( 1 + $nmax_section ) ) + $num_sections;
-
-        # If the current script has more lines than the original script,
-        # then we must allow more iterations.  So we increase the max
-        # by one iteration per additional line. Fixes c186, c187.
-        my $rLL  = $self->[_rLL_];
-        my $K_0  = $K_to_go[0];
-        my $K_x  = $K_to_go[$max_index_to_go];
-        my $li_0 = $rLL->[$K_0]->[_LINE_INDEX_];
-        my $li_x = $rLL->[$K_x]->[_LINE_INDEX_];
-
-        my $nlines_gain = $nmax_start - ( $li_x - $li_0 );
-        if ( $nlines_gain > 0 ) {
-            $it_count_max += $nlines_gain;
-        }
-
-        if ( DEBUG_RECOMBINE > 0 ) {
+        if ( DEBUG_RECOMBINE > 1 ) {
             print STDERR <<EOM;
-max iterations =$it_count_max; sections=$num_sections; lines gained is $nlines_gain
+sections=$num_sections; nmax_sec=$nmax_section
 EOM
         }
 
-        if ( DEBUG_RECOMBINE > 1 ) {
+        if ( DEBUG_RECOMBINE > 0 ) {
             my $max = 0;
             print STDERR
               "-----\n$num_sections sections found for nmax=$nmax_start\n";
@@ -18214,27 +18193,18 @@ EOM
         # numbers, and the line numbers change as we go.
         while ( my $section = pop @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
-            $it_count = $self->recombine_breakpoints_section_loop(
+            $self->recombine_breakpoints_section_loop(
 
                 $ri_beg,
                 $ri_end,
                 $nbeg,
                 $nend,
-                $it_count,
-                $it_count_max,
                 \@joint,
-                $rbond_strength_to_go
+                $rbond_strength_to_go,
 
             );
-            last if ( !defined($it_count) );
         }
 
-        if (DEBUG_RECOMBINE) {
-            my $nmax_last = @{$ri_end} - 1;
-            if ( !defined($it_count) ) { $it_count = 'UNDEF' }
-            print STDERR
-"exiting recombine with $nmax_last lines, starting lines=$nmax_start, iterations=$it_count, max_it=$it_count_max numsec=$num_sections\n";
-        }
         return;
     } ## end sub recombine_breakpoints
 
@@ -18246,8 +18216,6 @@ EOM
             $ri_end,
             $nbeg,
             $nend,
-            $it_count,
-            $it_count_max,
             $rjoint,
             $rbond_strength_to_go,
 
@@ -18259,23 +18227,94 @@ EOM
         #   $ri_beg, $ri_end = ref to arrays with token indexes of the first
         #     and last line
         #   $nbeg, $nend  = line numbers bounding this section
-        #   $it_count     = iteration counter
-        #   $it_count_max = maximum iteration counter (stop if reached)
+        #   $num_compares = number of inner loop passes
+        #   $max_compares = maximum inner loop passes (stop if reached)
         #   $rjoint       = ref to array of good joining tokens per line
         #   $rbond_strength_to_go = ref to array of token bond strengths
 
-        # Updates: $ri_beg, $ri_end, $rjoint if lines are joied
+        # Updates: $ri_beg, $ri_end, $rjoint if lines are joined
 
         # Returns:
-        #   $it_count = updated iteration count if success
-        #             = undef if ERROR (emergency stop)
+        #   nothing
+
+        my $rLL = $self->[_rLL_];
 
         my $rK_weld_right = $self->[_rK_weld_right_];
         my $rK_weld_left  = $self->[_rK_weld_left_];
 
-        # number of ending lines to leave untouched in this pass
+        # $num_freeze = number of trailing lines to leave untouched
         my $nmax_sec   = @{$ri_end} - 1;
         my $num_freeze = $nmax_sec - $nend;
+
+        my $ibeg = $ri_beg->[$nbeg];
+        my $iend = $ri_end->[$nend];
+        my $Kbeg = $K_to_go[$ibeg];
+        my $Kend = $K_to_go[$iend];
+
+        # This is potentially an O(n-squared) loop, but not critical, so we can
+        # put a finite limit on the total number of iterations. This is
+        # suggested by issue c118, which pushed about 5.e5 lines through here
+        # and caused an excessive run time.  For other test cases see:
+        # c167, c186, c187.
+
+        # Several lines of defense have been put in place to prevent excessive
+        # run times:
+        #  1. do nothing if formatting under stress (c118 was under stress)
+        #     (this has already been done by the calling routine)
+        #  2. break into small sub-sections to decrease the maximum n-squared.
+        #     (this has already been done by the calling routine)
+        #  3. put a finite limit on the number of iterations.
+        #  4. optimize the inner loop on certain common patterns.
+
+        #----------------
+        # Iteration limit
+        #----------------
+        # The iteration limit guards against excessive run time.
+        # Testing shows that most cases require roughly 1 comparison per line.
+        # The most extreme cases in my large collection of files are:
+        #    camel1.t  - 9   => fault, 10 => pass (obfuscated perl test)
+        #    ternary.t - 10  => fault, 11 => pass
+        #    f2html.pm - 12  => fault, 13 => pass
+        #    Poll.pm   - 16  => fault, 17 => pass
+        # A limiting ratio of 20 will allow essentially all code to pass.
+        # Most of these cases involve input code with extremely long lines.
+        # If the limit is ever exceeded, things will be fixed on the next
+        # formatting pass.
+        use constant MAX_COMPARE_RATIO => 20;
+        my $num_tot      = $nend - $nbeg + 1;
+        my $max_compares = MAX_COMPARE_RATIO * $num_tot;
+        my $num_compares = 0;
+
+        #-------------
+        # Optimization
+        #-------------
+        # There are four modes of operation, as follows:
+        # $optimization_on    $reverse   MODE
+        # ----------------    --------   ----
+        #        false         false     Normal Mode
+        #        false         true      Reverse Mode
+        #        true          false     Optimized Forward Search
+        #        true          true      Optimized Reverse Search
+
+        # The Normal Mode is the basic method.  The main issue is
+        # that it is can potentially take O(N^2) compares.
+
+        # The Reverse Mode works but is mainly for testing because it can give
+        # different results from the Normal Mode in a few cases involving
+        # joining at parens which are order dependent.
+
+        # The Optimized Modes give the same results as Normal Mode but
+        # run in O(N) time when certain patterns are detected.
+
+        # The Optimized Modes may be deactivated with these flags for
+        # testing. These flags should normally be true:
+        use constant OPTIMIZED_FORWARD_SEARCH => 1;
+        use constant OPTIMIZED_REVERSE_SEARCH => 1;
+
+        # Optimization parameters:
+        my $optimization_on = 0;
+        my $reverse         = 0;
+        my $n_best_last;
 
         my $more_to_do = 1;
 
@@ -18283,17 +18322,39 @@ EOM
         # until there are no more possible recombinations
         my $nmax_last = $nmax_sec + 1;
 
+        # This will be the current maximum bond strength after the
+        # iteration gets going.  When set, we can stop immediately
+        # on a joint with this strength, since we know it is the
+        # best, or equal to the best.
+        my $bs_previous_best;
+
+        #---------------------
+        # loop over iterations
+        #---------------------
         while ($more_to_do) {
 
             # Emergency return on excess total iterations. The allowed
-            # maximum is large enough that this should never happen.
-            $it_count++;
-            if ( $it_count > $it_count_max ) {
-                my $KK  = $K_to_go[0];
-                my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                DEVEL_MODE && Fault(<<EOM);
-iteration count=$it_count exceeds max=$it_count_max, near line $lno
+            # maximum should be large enough that this will never happen.
+            if ( $num_compares > $max_compares ) {
+
+                # If the current script has many more lines than the original
+                # script, then we may have trouble converging must allow more
+                # iterations.  In that case it will be better to stop iterating
+                # early and let another formatting pass fix the problem. And
+                # there is no need to trigger a fault check during testing if
+                # that happens.
+                my $li_0        = $rLL->[$Kbeg]->[_LINE_INDEX_];
+                my $li_x        = $rLL->[$Kend]->[_LINE_INDEX_];
+                my $nlines_gain = $num_tot - ( $li_x - $li_0 );
+
+                # The line check is temporarily ignored to collect info
+                use constant IGNORE_CHECK => 1;
+                if ( IGNORE_CHECK || $nlines_gain < 2 * $num_tot ) {
+                    my $lno = $self->[_rLL_]->[$Kbeg]->[_LINE_INDEX_];
+                    DEVEL_MODE && Fault(<<EOM);
+inner loop passes =$num_compares exceeds max=$max_compares, near line $lno
 EOM
+                }
 
                 #-------------
                 # ERROR return
@@ -18302,7 +18363,10 @@ EOM
             }
 
             my $n_best = 0;
-            my $bs_best;
+
+            my ( $bs_best, $bs_last, $num_bs, $dbs_min, $dbs_max );
+            my ( $nbs_min, $nbs_max );
+
             my $nmax = @{$ri_end} - 1;
 
             # Safety check for infinite loop: the line count must decrease
@@ -18336,11 +18400,41 @@ EOM
 
             my $this_line_is_semicolon_terminated;
 
-            # loop over all remaining lines in this batch
-            my $nstop = $nmax - $num_freeze;
-            for my $iter ( $nbeg + 1 .. $nstop ) {
+            # in normal mode: loop over all remaining lines in this batch
+            my $nstart     = $nbeg + 1;
+            my $nstop      = $nmax - $num_freeze;
+            my $num_joints = $nstop - $nbeg;
+            if ($optimization_on) {
+
+                # in optimization modes: start loop at last best joint
+                if ($reverse) {
+                    $nstop = $n_best_last;
+                }
+
+                # In forward optimization mode: backup by 1 because some
+                # tokens can become activated by certain changes.  In
+                # particular, a '?' can become active when a nearby ':'
+                # is joined, or a level changes. And an '=' can become
+                # active if two lines might be made.
+                else {
+                    $nstart = max( $nstart, $n_best_last - 1 );
+                }
+            }
+
+            #-------------------------
+            # loop over all line pairs
+            #-------------------------
+            my $incomplete_loop;
+            for my $iter ( $nstart .. $nstop ) {
 
                 my $n = $iter;
+                if ($reverse) { $n = $nstop - ( $iter - $nstart ) }
+
+                # Count total number of times through the inner loop
+                $num_compares++;
+
+                # This flag will be true if we 'last' out of this loop early:
+                $incomplete_loop = $n != $nstop;
 
                 #----------------------------------------------------------
                 # If we join the current pair of lines,
@@ -18479,7 +18573,8 @@ EOM
                 # and the rest of the loop to do the join.
                 if ($skip_Section_3) {
                     $forced_breakpoint_to_go[$iend_1] = 0;
-                    $n_best = $n;
+                    $n_best                           = $n;
+                    $incomplete_loop                  = 1;
                     last;
                 }
 
@@ -18541,29 +18636,142 @@ EOM
 
                 # remember the pair with the greatest bond strength
                 if ( !$n_best ) {
-                    $n_best  = $n;
-                    $bs_best = $bs;
-                }
-                else {
 
-                    if ( $bs > $bs_best ) {
-                        $n_best  = $n;
-                        $bs_best = $bs;
+                    # First good joint ...
+                    $n_best  = $n;
+                    $nbs_min = $n;
+                    $nbs_max = $n;
+                    $bs_best = $bs;
+                    $dbs_min = undef;
+                    $dbs_max = undef;
+                    $num_bs  = 1;
+                    $bs_last = $bs;
+
+                    # For optimization modes: stop here
+                    if ($optimization_on) {
+
+                        # If $bs is increasing then something has changed.
+                        # (see c188 for an example)
+                        my $dbs = $bs - $bs_previous_best;
+                        if ($reverse) { $dbs = -$dbs }
+                        if ( $dbs > 0 ) {
+
+                            # We will accept this joint but turn off
+                            # optimization; it can restart again if possible.
+                            $optimization_on = 0;
+                            $reverse         = 0;
+                        }
+
+                        last;
                     }
                 }
-            }
+                else {
+                    my $dbs = $bs - $bs_last;
+                    if ($reverse) { $dbs = -$dbs }
+                    $bs_last = $bs;
+
+                    if ( $num_bs <= 1 ) {
+                        $dbs_min = $dbs_max = $dbs;
+                    }
+                    else {
+                        if ( $dbs < $dbs_min ) { $dbs_min = $dbs }
+                        if ( $dbs > $dbs_max ) { $dbs_max = $dbs }
+                    }
+
+                    if ( $n > $nbs_max ) { $nbs_max = $n }
+                    if ( $n < $nbs_min ) { $nbs_min = $n }
+                    $num_bs++;
+
+                    # for forward mode - use first max bs
+                    if ( !$reverse ) {
+                        if ( $bs > $bs_best ) {
+                            $n_best  = $n;
+                            $bs_best = $bs;
+                        }
+                    }
+
+                    # for reverse mode - use last max bs
+                    else {
+                        if ( $bs >= $bs_best ) {
+                            $n_best  = $n;
+                            $bs_best = $bs;
+                        }
+                    }
+                }
+            } ## end loop over all line pairs
 
             # recombine the pair with the greatest bond strength
             if ($n_best) {
+                DEBUG_RECOMBINE > 1
+                  && print
+"BEST: rev=$reverse nb=$n_best nstart=$nstart stop=$nstop nbmin=$nbs_min nbmax=$nbs_max bs=$bs_best dbs=$dbs_max dbsmin=$dbs_min\n";
                 splice @{$ri_beg}, $n_best,     1;
                 splice @{$ri_end}, $n_best - 1, 1;
                 splice @{$rjoint}, $n_best,     1;
 
+                # Note that we must subtract 1 here to get an updated best
+                # index because we decreased all index values by this splice.
+                $n_best_last = $n_best - 1;
+
+                # Look for a pattern which allows optimization:
+                if (
+
+                    # this is not already on, and
+                    !$optimization_on
+
+                    # we have not taken a shortcut to get here, and
+                    && !$incomplete_loop
+
+                    # we have seen multiple good breaks
+                    && defined($num_bs) && $num_bs > 1
+
+                  )
+                {
+
+                    # Look for pattern 1:
+                    #  - we are joining at the first possible joint, and
+                    #  - the strength values do not increase with $n
+                    if ( $n_best == $nbs_min && $dbs_max <= 0 ) {
+                        if (OPTIMIZED_FORWARD_SEARCH) {
+
+                            DEBUG_RECOMBINE > 1
+                              && print STDERR
+"Start FORWARD Optimiation: bs=$bs_best num=$num_bs dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nbs_min=$nbs_min\n";
+
+                            $optimization_on = 1;
+                            $reverse         = 0;
+                        }
+                    }
+
+                    # Look for pattern 2:
+                    #  - we are joining at the last possible joint, and
+                    #  - the strength values increase montonically with $n
+                    elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
+                        if (OPTIMIZED_REVERSE_SEARCH) {
+                            DEBUG_RECOMBINE > 1
+                              && print STDERR
+"Start REVERSE Optimization: bs=$bs_best, dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nmax=$nbs_max\n";
+
+                            $optimization_on = 1;
+                            $reverse         = 1;
+                        }
+                    }
+                }
+
+                $bs_previous_best = $bs_best;
+
                 # keep going if we are still making progress
                 $more_to_do++;
             }
-        }    # end iteration loop
-        return $it_count;
+        } ## end iteration loop
+
+        if (DEBUG_RECOMBINE) {
+            my $ratio = sprintf "%0.3f", $num_compares / $num_tot;
+            print STDERR
+"exiting recombine_inner_loop with $nmax_last lines, opt=$optimization_on, rev=$reverse, starting lines=$num_tot, num_compares=$num_compares, ratio=$ratio\n";
+        }
+
+        return;
     } ## end sub recombine_breakpoints_section_loop
 
     sub recombine_section_0 {
@@ -22814,8 +23022,7 @@ EOM
         # Section B: Handle a multiline list ...
         #---------------------------------------
 
-        $self->break_multiline_list( $rhash_IN, $rhash_A,
-            $i_opening_minus );
+        $self->break_multiline_list( $rhash_IN, $rhash_A, $i_opening_minus );
         return;
 
     } ## end sub table_maker
@@ -23045,8 +23252,8 @@ EOM
               || ( $first_term_length > $columns_if_unbroken );
         }
 
-        my $hash_B = $self->table_layout_B( $rhash_IN, $rhash_A,
-            $is_lp_formatting );
+        my $hash_B =
+          $self->table_layout_B( $rhash_IN, $rhash_A, $is_lp_formatting );
         return if ( !defined($hash_B) );
 
         # Updated variables
