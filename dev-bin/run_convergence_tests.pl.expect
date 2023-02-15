@@ -3662,6 +3662,17 @@ is(
         map { sprintf "%-32s%s", @$_ } @_ );
 
 
+==> b1133 <==
+            $pid=open README,"$html_converter $saved_file |"
+              or
+              $CPAN::Frontend->mydie(qq{
+Could not fork '$html_converter $saved_file': $!});
+
+            $pid=open README,"$html_converter $saved_file |"
+              or
+              $CPAN::Frontend->mydie(qq{
+Could not fork '$html_converter $saved_file': $!});
+
 ==> b1134 <==
 {
        ok do{

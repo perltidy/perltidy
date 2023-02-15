@@ -5526,6 +5526,26 @@ is(
 --maximum-line-length=44
 --norecombine
 
+==> b1133.in <==
+            $pid=open README,"$html_converter $saved_file |"
+                     or
+                     $CPAN::Frontend->mydie(qq{
+Could not fork '$html_converter $saved_file': $!});
+
+            $pid=open README,"$html_converter $saved_file |"
+              or$CPAN::Frontend->mydie(
+                qq{
+Could not fork '$html_converter $saved_file': $!} );
+
+==> b1133.par <==
+--noadd-whitespace
+--delete-old-whitespace
+--line-up-parentheses
+--maximum-line-length=69
+--norecombine
+--variable-maximum-line-length
+--weld-nested-containers
+
 ==> b1134.in <==
 {
        ok do{
