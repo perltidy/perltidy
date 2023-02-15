@@ -1,0 +1,13 @@
+# recombine uses normal forward mode
+$v_gb = -1 * ( eval($pmt_gb) ) * (
+    -1 + (
+        (
+            (
+                (
+                    -1 + ( 1 / ( ( eval($i_gb) / 100 ) + 1 ) )
+                      **( ( eval($n_gb) - 1 ) )
+                )
+            )
+        ) / ( eval($i_gb) / 100 )
+    )
+);

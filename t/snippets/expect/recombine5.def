@@ -1,0 +1,8 @@
+# recombine uses reverse optimization
+$rotate =
+  Math::MatrixReal->new_from_string( "[ "
+      . cos($theta) . " "
+      . -sin($theta) . " ]\n" . "[ "
+      . sin($theta) . " "
+      . cos($theta)
+      . " ]\n" );

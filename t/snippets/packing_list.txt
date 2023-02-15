@@ -525,3 +525,7 @@
 ../snippets9.t	rt98902.def
 ../snippets9.t	rt98902.rt98902
 ../snippets9.t	rt99961.def
+../snippets28.t	recombine5.def
+../snippets28.t	recombine6.def
+../snippets28.t	recombine7.def
+../snippets28.t	recombine8.def

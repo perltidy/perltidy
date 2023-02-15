@@ -1,0 +1,16 @@
+        # recombine operation uses forward optimization
+        $filecol =
+            (/^$/)    ? $filecol
+          : (s/^\+//) ? $filecol + $_
+          : (s/^\-//) ? $filecol - $_
+          : (s/^>//)  ? ( $filecol + $_ ) % $pages
+          : (s/^]//)  ? ( ( $filecol + $_ >= $pages ) ? 0 : $filecol + $_ )
+          : (s/^<//)  ? ( $filecol - $_ ) % $pages
+          : (s/^\[//) ? (
+              ( $filecol == 0 )     ? $pages - ( $pages % $_ || $_ )
+            : ( $filecol - $_ < 0 ) ? 0
+            :                         $filecol - $_
+          )
+          : (/^\d/)    ? $_ - 1
+          : (s/^\\?//) ? ( ( $col{$_}, $row{$_} ) = &pageto($_) )[0]
+          :              0;

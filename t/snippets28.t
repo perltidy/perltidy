@@ -2,6 +2,10 @@
 
 # Contents:
 #1 olbxl.olbxl2
+#2 recombine5.def
+#3 recombine6.def
+#4 recombine7.def
+#5 recombine8.def
 
 # To locate test #13 you can search for its name or the string '#13'
 
@@ -19,6 +23,7 @@ BEGIN {
     # BEGIN SECTION 1: Parameter combinations #
     ###########################################
     $rparams = {
+        'def'    => "",
         'olbxl2' => <<'----------',
 -olbxl='*'
 ----------
@@ -47,6 +52,37 @@ BEGIN {
             @sorted = sort {
                 $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b}
                 };
+----------
+
+        'recombine5' => <<'----------',
+# recombine uses reverse optimization
+$rotate = Math::MatrixReal->new_from_string( "[ " . cos($theta) . " " . -sin($theta) . " ]\n" . "[ " . sin($theta) . " " . cos($theta) . " ]\n" );
+----------
+
+        'recombine6' => <<'----------',
+# recombine operation uses forward optimization
+	$filecol =
+	    (/^$/)     ? $filecol					 :
+	    (s/^\+//)  ? $filecol  + $_					 :
+	    (s/^\-//)  ? $filecol  - $_					 :
+	    (s/^>//)   ? ($filecol + $_) % $pages			 :
+	    (s/^]//)   ? (($filecol + $_ >= $pages) ? 0 : $filecol + $_) :
+	    (s/^<//)   ? ($filecol - $_) % $pages			 :
+	    (s/^\[//)  ? (($filecol == 0) ? $pages - ($pages % $_ || $_) :
+			  ($filecol - $_ < 0) ? 0 : $filecol - $_)	 :
+	    (/^\d/)    ? $_ - 1						 :
+	    (s/^\\?//) ? (($col{$_}, $row{$_}) = &pageto($_))[0]	 : 0;
+----------
+
+        'recombine7' => <<'----------',
+    # recombine uses forward optimization, must recombine at =
+    my $J = int( 365.25 * ( $y + 4712 ) ) +
+      int( ( 30.6 * $m ) + 0.5 ) + 59 + $d - 0.5;
+----------
+
+        'recombine8' => <<'----------',
+# recombine uses normal forward mode
+$v_gb = -1*(eval($pmt_gb))*(-1+((((-1+(1/((eval($i_gb)/100)+1))**  ((eval($n_gb)-1)))))/(eval($i_gb)/100)));
 ----------
     };
 
@@ -78,6 +114,74 @@ BEGIN {
                 $SortDir * $PageTotal{$a} <=> $SortDir * $PageTotal{$b}
             };
 #1...........
+        },
+
+        'recombine5.def' => {
+            source => "recombine5",
+            params => "def",
+            expect => <<'#2...........',
+# recombine uses reverse optimization
+$rotate =
+  Math::MatrixReal->new_from_string( "[ "
+      . cos($theta) . " "
+      . -sin($theta) . " ]\n" . "[ "
+      . sin($theta) . " "
+      . cos($theta)
+      . " ]\n" );
+#2...........
+        },
+
+        'recombine6.def' => {
+            source => "recombine6",
+            params => "def",
+            expect => <<'#3...........',
+        # recombine operation uses forward optimization
+        $filecol =
+            (/^$/)    ? $filecol
+          : (s/^\+//) ? $filecol + $_
+          : (s/^\-//) ? $filecol - $_
+          : (s/^>//)  ? ( $filecol + $_ ) % $pages
+          : (s/^]//)  ? ( ( $filecol + $_ >= $pages ) ? 0 : $filecol + $_ )
+          : (s/^<//)  ? ( $filecol - $_ ) % $pages
+          : (s/^\[//) ? (
+              ( $filecol == 0 )     ? $pages - ( $pages % $_ || $_ )
+            : ( $filecol - $_ < 0 ) ? 0
+            :                         $filecol - $_
+          )
+          : (/^\d/)    ? $_ - 1
+          : (s/^\\?//) ? ( ( $col{$_}, $row{$_} ) = &pageto($_) )[0]
+          :              0;
+#3...........
+        },
+
+        'recombine7.def' => {
+            source => "recombine7",
+            params => "def",
+            expect => <<'#4...........',
+    # recombine uses forward optimization, must recombine at =
+    my $J = int( 365.25 * ( $y + 4712 ) ) +
+      int( ( 30.6 * $m ) + 0.5 ) + 59 + $d - 0.5;
+#4...........
+        },
+
+        'recombine8.def' => {
+            source => "recombine8",
+            params => "def",
+            expect => <<'#5...........',
+# recombine uses normal forward mode
+$v_gb = -1 * ( eval($pmt_gb) ) * (
+    -1 + (
+        (
+            (
+                (
+                    -1 + ( 1 / ( ( eval($i_gb) / 100 ) + 1 ) )
+                      **( ( eval($n_gb) - 1 ) )
+                )
+            )
+        ) / ( eval($i_gb) / 100 )
+    )
+);
+#5...........
         },
     };
 
