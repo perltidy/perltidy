@@ -21635,7 +21635,7 @@ EOM
             $parent_seqno_to_go[0] )
           if ( $current_depth < $minimum_depth );
 
-        my $want_previous_breakpoint = -1;
+        my $i_want_previous_break = -1;
 
         my $saw_good_breakpoint;
 
@@ -21664,18 +21664,18 @@ EOM
             #-------------------------------------------
 
             # set break if flag was set
-            if ( $want_previous_breakpoint >= 0 ) {
-                $self->set_forced_breakpoint($want_previous_breakpoint);
-                $want_previous_breakpoint = -1;
+            if ( $i_want_previous_break >= 0 ) {
+                $self->set_forced_breakpoint($i_want_previous_break);
+                $i_want_previous_break = -1;
             }
 
             $last_old_breakpoint_count = $old_breakpoint_count;
 
             # Check for a good old breakpoint ..
             if ( $old_breakpoint_to_go[$i] ) {
-                ( $want_previous_breakpoint, $i_old_assignment_break ) =
-                  $self->check_old_breakpoints( $i_next_nonblank,
-                    $want_previous_breakpoint, $i_old_assignment_break );
+                ( $i_want_previous_break, $i_old_assignment_break ) =
+                  $self->examine_old_breakpoint( $i_next_nonblank,
+                    $i_want_previous_break, $i_old_assignment_break );
             }
 
             next if ( $type eq 'b' );
@@ -22055,35 +22055,52 @@ EOM
         @{poor_next_keywords}{@q} = (1) x scalar(@q);
     }
 
-    sub check_old_breakpoints {
+    sub examine_old_breakpoint {
 
-        # Check for a good old breakpoint
-
-        my ( $self, $i_next_nonblank, $want_previous_breakpoint,
+        my ( $self, $i_next_nonblank, $i_want_previous_break,
             $i_old_assignment_break )
           = @_;
 
-        # return if this is a poor break in order to avoid instability
-        my $poor_break;
+        # Look at an old breakpoint and set/update certain flags:
 
+        # Given indexes of three tokens in this batch:
+        #   $i_next_nonblank        - index of the next nonblank token
+        #   $i_want_previous_break  - we want a break before this index
+        #   $i_old_assignment_break - the index of an '=' or equivalent
+        # Update:
+        #   $old_breakpoint_count   - a counter to increment unless poor break
+        # Update and return:
+        #   $i_want_previous_break
+        #   $i_old_assignment_break
+
+        #-----------------------
+        # Filter out poor breaks
+        #-----------------------
+        # Just return if this is a poor break and pretend it does not exist.
+        # Otherwise, poor breaks made under stress can cause instability.
+        my $poor_break;
         if   ( $type eq 'k' ) { $poor_break ||= $poor_keywords{$token} }
         else                  { $poor_break ||= $poor_types{$type} }
 
         if ( $next_nonblank_type eq 'k' ) {
             $poor_break ||= $poor_next_keywords{$next_nonblank_token};
         }
-
-        # ... and ignore any high stress level breaks, fixes b1395
         else { $poor_break ||= $poor_next_types{$next_nonblank_type} }
 
+        # Also ignore any high stress level breaks; fixes b1395
         $poor_break ||= $levels_to_go[$i] >= $high_stress_level;
-
         if ($poor_break) { goto RETURN }
 
+        #--------------------------------------------
+        # Not a poor break, so continue to examine it
+        #--------------------------------------------
+        $old_breakpoint_count++;
         $i_line_end   = $i;
         $i_line_start = $i_next_nonblank;
 
-        $old_breakpoint_count++;
+        #---------------------------------------
+        # Do we want to break before this token?
+        #---------------------------------------
 
         # Break before certain keywords if user broke there and
         # this is a 'safe' break point. The idea is to retain
@@ -22110,7 +22127,7 @@ EOM
                   && ( $want_break_before{$type}
                     || !$rOpts_add_whitespace );
 
-                $want_previous_breakpoint = $i
+                $i_want_previous_break = $i
                   unless ($skip);
 
             }
@@ -22119,20 +22136,23 @@ EOM
         # Break before attributes if user broke there
         if ($rOpts_break_at_old_attribute_breakpoints) {
             if ( $next_nonblank_type eq 'A' ) {
-                $want_previous_breakpoint = $i;
+                $i_want_previous_break = $i;
             }
         }
 
-        # remember an = break as possible good break point
+        #---------------------------------
+        # Is this an old assignment break?
+        #---------------------------------
         if ( $is_assignment{$type} ) {
             $i_old_assignment_break = $i;
         }
         elsif ( $is_assignment{$next_nonblank_type} ) {
             $i_old_assignment_break = $i_next_nonblank;
         }
+
       RETURN:
-        return ( $want_previous_breakpoint, $i_old_assignment_break );
-    } ## end sub check_old_breakpoints
+        return ( $i_want_previous_break, $i_old_assignment_break );
+    } ## end sub examine_old_breakpoint
 
     sub break_lists_type_sequence {
 
