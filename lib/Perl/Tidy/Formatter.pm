@@ -18299,9 +18299,7 @@ EOM
         # The Normal Mode is the basic method.  The main issue is
         # that it is can potentially take O(N^2) compares.
 
-        # The Reverse Mode works but is mainly for testing because it can give
-        # different results from the Normal Mode in a few cases involving
-        # joining at parens which are order dependent.
+        # The Reverse Mode is similar but runs backwards.
 
         # The Optimized Modes give the same results as Normal Mode but
         # run in O(N) time when certain patterns are detected.
@@ -18426,7 +18424,6 @@ EOM
             # loop over all line pairs
             #-------------------------
             my $incomplete_loop;
-            my $saw_level_diff = 0;
             for my $iter ( $nstart .. $nstop ) {
 
                 my $n = $iter;
@@ -18474,9 +18471,6 @@ EOM
                 my $type_ibeg_1 = $types_to_go[$ibeg_1];
                 my $type_ibeg_2 = $types_to_go[$ibeg_2];
 
-                $saw_level_diff ||=
-                  $levels_to_go[$ibeg_1] != $levels_to_go[$ibeg_2];
-
                 # terminal token of line 2 if any side comment is ignored:
                 my $iend_2t      = $iend_2;
                 my $type_iend_2t = $type_iend_2;
@@ -18520,6 +18514,11 @@ EOM
                     }
 
                     $this_line_is_semicolon_terminated = $type_iend_2t eq ';';
+                }
+                else {
+
+                    # we may be in reverse mode, so must turn off if n ne nmax
+                    $this_line_is_semicolon_terminated = 0;
                 }
 
                 #----------------------------------------------------------
@@ -18754,11 +18753,7 @@ EOM
                     # Look for pattern 2:
                     #  - we are joining at the last possible joint, and
                     #  - the strength values increase montonically with $n
-                    #  - we did not see a level change (test case c190)
-                    elsif ($n_best == $nbs_max
-                        && $dbs_min > 0
-                        && !$saw_level_diff )
-                    {
+                    elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
                         if (OPTIMIZED_REVERSE_SEARCH) {
                             DEBUG_RECOMBINE > 1
                               && print STDERR
