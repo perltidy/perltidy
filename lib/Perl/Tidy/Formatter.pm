@@ -18362,9 +18362,10 @@ EOM
                 return;
             }
 
-            my $n_best = 0;
+            my $n_best  = 0;
+            my $bs_best = 0.;
 
-            my ( $bs_best, $bs_last, $num_bs, $dbs_min, $dbs_max );
+            my ( $bs_last, $num_bs, $dbs_min, $dbs_max );
             my ( $nbs_min, $nbs_max );
 
             my $nmax = @{$ri_end} - 1;
@@ -18721,6 +18722,9 @@ EOM
 
                     # we have not taken a shortcut to get here, and
                     && !$incomplete_loop
+
+                    # we have a good best break by strength
+                    && defined($bs_best)
 
                     # we have seen multiple good breaks
                     && defined($num_bs) && $num_bs > 1
@@ -21665,18 +21669,7 @@ EOM
             $last_old_breakpoint_count = $old_breakpoint_count;
 
             # Check for a good old breakpoint ..
-            if (
-                $old_breakpoint_to_go[$i]
-
-                # Note: ignore old breaks at types 'L' and 'R' to fix case
-                # b1097. These breaks only occur under high stress.
-                && $type ne 'L'
-                && $next_nonblank_type ne 'R'
-
-                # ... and ignore other high stress level breaks, fixes b1395
-                && $levels_to_go[$i] < $high_stress_level
-              )
-            {
+            if ( $old_breakpoint_to_go[$i] ) {
                 ( $want_previous_breakpoint, $i_old_assignment_break ) =
                   $self->check_old_breakpoints( $i_next_nonblank,
                     $want_previous_breakpoint, $i_old_assignment_break );
@@ -22037,6 +22030,28 @@ EOM
         return;
     } ## end sub study_comma
 
+    my %poor_types;
+    my %poor_keywords;
+    my %poor_next_types;
+    my %poor_next_keywords;
+
+    BEGIN {
+
+        # Setup filters for detecting very poor breaks to ignore.
+        # b1097: old breaks after type 'L' and before 'R' are poor
+        # b1450: old breaks at 'eq' and related operators are poor
+        my @q = qw(== <= >= !=);
+
+        @{poor_types}{@q}      = (1) x scalar(@q);
+        @{poor_next_types}{@q} = (1) x scalar(@q);
+        $poor_types{'L'}      = 1;
+        $poor_next_types{'R'} = 1;
+
+        @q = qw(eq ne le ge lt gt);
+        @{poor_keywords}{@q}      = (1) x scalar(@q);
+        @{poor_next_keywords}{@q} = (1) x scalar(@q);
+    }
+
     sub check_old_breakpoints {
 
         # Check for a good old breakpoint
@@ -22044,6 +22059,23 @@ EOM
         my ( $self, $i_next_nonblank, $want_previous_breakpoint,
             $i_old_assignment_break )
           = @_;
+
+        # return if this is a poor break in order to avoid instability
+        my $poor_break;
+
+        if   ( $type eq 'k' ) { $poor_break ||= $poor_keywords{$token} }
+        else                  { $poor_break ||= $poor_types{$type} }
+
+        if ( $next_nonblank_type eq 'k' ) {
+            $poor_break ||= $poor_next_keywords{$next_nonblank_token};
+        }
+
+        # ... and ignore any high stress level breaks, fixes b1395
+        else { $poor_break ||= $poor_next_types{$next_nonblank_type} }
+
+        $poor_break ||= $levels_to_go[$i] >= $high_stress_level;
+
+        if ($poor_break) { goto RETURN }
 
         $i_line_end   = $i;
         $i_line_start = $i_next_nonblank;
@@ -22095,6 +22127,7 @@ EOM
         elsif ( $is_assignment{$next_nonblank_type} ) {
             $i_old_assignment_break = $i_next_nonblank;
         }
+      RETURN:
         return ( $want_previous_breakpoint, $i_old_assignment_break );
     } ## end sub check_old_breakpoints
 

@@ -5945,10 +5945,9 @@ use overload
 ==> b1283 <==
        $_=join(
               '',$_,
-              (
-                     (      $MAX_SPLIT_DEPTH<=$section_commands{
-                                   $outermost_level}
-                     )?"\n<HR>\n":''
+              (      ($MAX_SPLIT_DEPTH<=
+                              $section_commands{$outermost_level})?
+                       "\n<HR>\n":''
               ),
               "\\$outermost_level",
               "*",
@@ -5958,10 +5957,9 @@ use overload
 
        $_=join(
               '',$_,
-              (
-                     (      $MAX_SPLIT_DEPTH<=$section_commands{
-                                   $outermost_level}
-                     )?"\n<HR>\n":''
+              (      ($MAX_SPLIT_DEPTH<=
+                              $section_commands{$outermost_level})?
+                       "\n<HR>\n":''
               ),
               "\\$outermost_level",
               "*",
@@ -7774,6 +7772,23 @@ $last = after (
       : ( defined(wantarray) ? sub { $_[0] } : sub { print $_[0] } )
       ->( join( "\n", map $_->(), @data ) . "\n" );
 
+
+==> b1450 <==
+                    if (      $x
+                              || (      ($self->allele_ori eq 'g')
+                                        && (      substr($self->dnStreamSeq, -1, 1,) eq
+                                                  'c')))
+                    {
+                              return 1;
+                    }
+
+                    if (      $x
+                              || (      ($self->allele_ori eq 'g')
+                                        && (      substr($self->dnStreamSeq, -1, 1,) eq
+                                                  'c')))
+                    {
+                              return 1;
+                    }
 
 ==> b146 <==
 # State 1

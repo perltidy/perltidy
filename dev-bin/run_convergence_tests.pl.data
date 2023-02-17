@@ -11461,6 +11461,35 @@ $last = after (
 ==> b1449.par <==
 --nobreak-at-old-ternary-breakpoints
 
+==> b1450.in <==
+                    if (      $x
+                              || (      ($self->allele_ori eq 'g')
+                                        && (      substr($self->dnStreamSeq, -1, 1,) eq
+                                                  'c')))
+                    {
+                              return 1;
+                    }
+
+                    if (      $x
+                              || (      ($self->allele_ori eq 'g')
+                                        && (
+                                                  substr(   $self->dnStreamSeq, -1,
+                                                            1,) eq 'c')))
+                    {
+                              return 1;
+                    }
+
+==> b1450.par <==
+--break-before-paren-and-indent=2
+--break-before-paren=2
+--continuation-indentation=9
+--extended-continuation-indentation
+--indent-columns=10
+--maximum-line-length=97
+--paren-tightness=2
+--paren-vertical-tightness-closing=2
+--paren-vertical-tightness=1
+
 ==> b146.in <==
 # State 1
 
