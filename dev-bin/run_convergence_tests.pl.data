@@ -18070,3 +18070,24 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
 
 ==> c100.par <==
 # default settings
+
+==> c190.in <==
+        # reverse sweep needs to look at '$saw_level_change' for these cases
+        local($codeA) = "sub wrap_cmd_$cmd {" . "\n"
+            .'local($cmd, $_) = @_; local ($args, $dummy, $pat) = "";'
+            . $bodyA
+            . (($thisone)? "\nprint \"\\nwrap $cmd:\".\$args.\"\\n\";" : '')
+            . "\n".'(&make_deferred_wrapper(1).$cmd.'
+            . "\"$padding\"".'.$args.&make_deferred_wrapper(0),$_)}'
+            . "\n";
+
+        local($codeA) = "sub wrap_cmd_$cmd {" . "\n"
+            .'local($cmd, $_) = @_; local ($args, $dummy, $pat) = "";'
+            . $bodyA
+            . (($thisone)? "\nprint \"\\nwrap $cmd:\".\$args.\"\\n\";" : '')
+            . "\n".'(&make_deferred_wrapper(1).$cmd.'
+            . "\"$padding\"".'.$args.&make_deferred_wrapper(0),$_)}'
+            . "\n";
+
+==> c190.par <==
+-pbp -nst -nse -wn -xci -conv -fso -gcs -maxue=3

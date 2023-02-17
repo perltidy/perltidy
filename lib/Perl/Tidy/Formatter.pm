@@ -18426,6 +18426,7 @@ EOM
             # loop over all line pairs
             #-------------------------
             my $incomplete_loop;
+            my $saw_level_diff = 0;
             for my $iter ( $nstart .. $nstop ) {
 
                 my $n = $iter;
@@ -18472,6 +18473,9 @@ EOM
                 my $type_iend_2 = $types_to_go[$iend_2];
                 my $type_ibeg_1 = $types_to_go[$ibeg_1];
                 my $type_ibeg_2 = $types_to_go[$ibeg_2];
+
+                $saw_level_diff ||=
+                  $levels_to_go[$ibeg_1] != $levels_to_go[$ibeg_2];
 
                 # terminal token of line 2 if any side comment is ignored:
                 my $iend_2t      = $iend_2;
@@ -18658,7 +18662,7 @@ EOM
                         if ( $dbs > 0 ) {
 
                             # We will accept this joint but turn off
-                            # optimization; it can restart again if possible.
+                            # optimization; it will restart again if possible.
                             $optimization_on = 0;
                             $reverse         = 0;
                         }
@@ -18750,7 +18754,11 @@ EOM
                     # Look for pattern 2:
                     #  - we are joining at the last possible joint, and
                     #  - the strength values increase montonically with $n
-                    elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
+                    #  - we did not see a level change (test case c190)
+                    elsif ($n_best == $nbs_max
+                        && $dbs_min > 0
+                        && !$saw_level_diff )
+                    {
                         if (OPTIMIZED_REVERSE_SEARCH) {
                             DEBUG_RECOMBINE > 1
                               && print STDERR
