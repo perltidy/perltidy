@@ -18103,6 +18103,13 @@ sub break_equals {
         my $nmax_start = @{$ri_end} - 1;
         return if ( $nmax_start <= 0 );
 
+        my $iend_max = $ri_end->[$nmax_start];
+        if ( $types_to_go[$iend_max] eq '#' ) {
+            $iend_max = iprev_to_go($iend_max);
+        }
+        my $batch_is_semicolon_terminated =
+          $iend_max >= 0 && $types_to_go[$iend_max] eq ';';
+
         #----------------------------------------------------------------
         # Break into small sub-sections to decrease the maximum n-squared
         # operations and avoid excess run time.
@@ -18201,6 +18208,7 @@ EOM
                 $nend,
                 \@joint,
                 $rbond_strength_to_go,
+                $batch_is_semicolon_terminated,
 
             );
         }
@@ -18218,6 +18226,7 @@ EOM
             $nend,
             $rjoint,
             $rbond_strength_to_go,
+            $batch_is_semicolon_terminated,
 
         ) = @_;
 
@@ -18231,6 +18240,7 @@ EOM
         #   $max_compares = maximum inner loop passes (stop if reached)
         #   $rjoint       = ref to array of good joining tokens per line
         #   $rbond_strength_to_go = ref to array of token bond strengths
+        #   $batch_is_semicolon_terminated = batch ends in ';'
 
         # Updates: $ri_beg, $ri_end, $rjoint if lines are joined
 
@@ -18391,12 +18401,6 @@ EOM
             $nmax_last  = $nmax;
             $more_to_do = 0;
 
-            # Count lines with leading &&, ||, :, at any level.
-            # This is used to avoid some recombinations which might
-            # be hard to read.
-            my $rleading_amp_count;
-            ${$rleading_amp_count} = 0;
-
             my $this_line_is_semicolon_terminated;
 
             # in normal mode: loop over all remaining lines in this batch
@@ -18471,10 +18475,6 @@ EOM
                 my $type_ibeg_1 = $types_to_go[$ibeg_1];
                 my $type_ibeg_2 = $types_to_go[$ibeg_2];
 
-                # terminal token of line 2 if any side comment is ignored:
-                my $iend_2t      = $iend_2;
-                my $type_iend_2t = $type_iend_2;
-
                 DEBUG_RECOMBINE > 1 && do {
                     print STDERR
 "RECOMBINE: n=$n nmax=$nmax imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
@@ -18505,19 +18505,11 @@ EOM
                         next if ( $type_iend_1 ne '=>' );
                     }
 
-                    if (   $type_iend_2 eq '#'
-                        && $iend_2 - $ibeg_2 >= 2
-                        && $types_to_go[ $iend_2 - 1 ] eq 'b' )
-                    {
-                        $iend_2t      = $iend_2 - 2;
-                        $type_iend_2t = $types_to_go[$iend_2t];
-                    }
+                    $this_line_is_semicolon_terminated =
+                      $batch_is_semicolon_terminated;
 
-                    $this_line_is_semicolon_terminated = $type_iend_2t eq ';';
                 }
                 else {
-
-                    # we may be in reverse mode, so must turn off if n ne nmax
                     $this_line_is_semicolon_terminated = 0;
                 }
 
@@ -18533,8 +18525,7 @@ EOM
                 my ($itok) = @{ $rjoint->[$n] };
                 if ($itok) {
                     my $ok_0 =
-                      recombine_section_0( $itok, $ri_beg, $ri_end, $n,
-                        $rleading_amp_count );
+                      recombine_section_0( $itok, $ri_beg, $ri_end, $n );
                     next if ( !$ok_0 );
                 }
 
@@ -18562,8 +18553,7 @@ EOM
 
                 my ( $ok_2, $skip_Section_3 ) =
                   recombine_section_2( $ri_beg, $ri_end, $n,
-                    $this_line_is_semicolon_terminated,
-                    $rleading_amp_count );
+                    $this_line_is_semicolon_terminated );
                 next if ( !$ok_2 );
 
                 #----------------------------------------------------------
@@ -18584,8 +18574,7 @@ EOM
 
                 my ( $ok_3, $bs_tweak ) =
                   recombine_section_3( $ri_beg, $ri_end, $n,
-                    $this_line_is_semicolon_terminated,
-                    $rleading_amp_count );
+                    $this_line_is_semicolon_terminated );
                 next if ( !$ok_3 );
 
                 #----------------------------------------------------------
@@ -18782,7 +18771,7 @@ EOM
     } ## end sub recombine_breakpoints_section_loop
 
     sub recombine_section_0 {
-        my ( $itok, $ri_beg, $ri_end, $n, $rleading_amp_count ) = @_;
+        my ( $itok, $ri_beg, $ri_end, $n ) = @_;
 
         # Recombine Section 0:
         # Examine special candidate joining token $itok
@@ -18824,7 +18813,6 @@ EOM
                     return unless $want_break_before{$type};
                 }
                 else {
-                    ${$rleading_amp_count}++;
                     return if $want_break_before{$type};
                 }
             } ## end if ':'
@@ -18976,9 +18964,7 @@ EOM
 
     sub recombine_section_2 {
 
-        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated,
-            $rleading_amp_count )
-          = @_;
+        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated ) = @_;
 
         # Recombine Section 2:
         # Examine token at $iend_1 (right end of first line of pair)
@@ -19048,7 +19034,7 @@ EOM
             # sub get_final_indentation, which actually does
             # the outdenting.
             #
-            $skip_Section_3 ||= $this_line_is_semicolon_terminated
+            my $combine_ok = $this_line_is_semicolon_terminated
 
               # only one token on last line
               && $ibeg_1 == $iend_1
@@ -19059,15 +19045,6 @@ EOM
               # style must allow outdenting,
               && !$closing_token_indentation{')'}
 
-              # only leading '&&', '||', and ':' if no others seen
-              # (but note: our count made below could be wrong
-              # due to intervening comments).  Note that this
-              # count includes these tokens at all levels.  The idea is
-              # that seeing these at any level can make it hard to read
-              # formatting if we recombine.
-              && ( !${$rleading_amp_count}
-                || $type_ibeg_2 !~ /^(:|\&\&|\|\|)$/ )
-
               # but leading colons probably line up with a
               # previous colon or question (count could be wrong).
               && $type_ibeg_2 ne ':'
@@ -19076,6 +19053,23 @@ EOM
               # begin with a ')' itself.
               && ( $nesting_depth_to_go[$iend_1] ==
                 $nesting_depth_to_go[$iend_2] + 1 );
+
+            # But only combine leading '&&', '||', if no previous && || :
+            # seen. This count includes these tokens at all levels.  The
+            # idea is that seeing these at any level can make it hard to read
+            # formatting if we recombine.
+            if ( $is_amp_amp{$type_ibeg_2} ) {
+                foreach my $n_t ( reverse( 0 .. $n - 2 ) ) {
+                    my $ibeg_t = $ri_beg->[$n_t];
+                    my $type_t = $types_to_go[$ibeg_t];
+                    if ( $is_amp_amp{$type_t} || $type_t eq ':' ) {
+                        $combine_ok = 0;
+                        last;
+                    }
+                }
+            }
+
+            $skip_Section_3 ||= $combine_ok;
 
             # YVES patch 2 of 2:
             # Allow cuddled eval chains, like this:
@@ -19454,9 +19448,7 @@ EOM
 
     sub recombine_section_3 {
 
-        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated,
-            $rleading_amp_count )
-          = @_;
+        my ( $ri_beg, $ri_end, $n, $this_line_is_semicolon_terminated ) = @_;
 
         # Recombine Section 3:
         # Examine token at $ibeg_2 (right end of first line of pair)
@@ -19494,8 +19486,6 @@ EOM
 
         # handle lines with leading &&, ||
         if ( $is_amp_amp{$type_ibeg_2} ) {
-
-            ${$rleading_amp_count}++;
 
             # ok to recombine if it follows a ? or :
             # and is followed by an open paren..
