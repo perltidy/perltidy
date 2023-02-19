@@ -16790,6 +16790,11 @@ $output_str
 EOM
         };
 
+        # Remove any trailing blank, which is possible (c192 has example)
+        if ( $max_index_to_go >= 0 && $types_to_go[$max_index_to_go] eq 'b' ) {
+            $max_index_to_go -= 1;
+        }
+
         return if ( $max_index_to_go < 0 );
 
         if ($rOpts_line_up_parentheses) {
@@ -16989,7 +16994,7 @@ EOM
         my $imin = 0;
         my $imax = $max_index_to_go;
 
-        # trim any blank tokens
+        # trim any blank tokens - for safety, but should not be necessary
         if ( $types_to_go[$imin] eq 'b' ) { $imin++ }
         if ( $types_to_go[$imax] eq 'b' ) { $imax-- }
 
