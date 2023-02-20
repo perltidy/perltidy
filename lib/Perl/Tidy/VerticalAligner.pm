@@ -3528,7 +3528,6 @@ sub get_line_token_info {
             $rtoken_patterns->{$lev_max} = $token_pattern_max;
             $rtoken_indexes->{$lev_max}  = [ ( 0 .. $imax ) ];
 
-            my $debug   = 0;
             my $lev_top = pop @levs;    # alread did max level
             my $itok    = -1;
             foreach my $tok ( @{$rtokens} ) {
@@ -3854,9 +3853,6 @@ sub prune_alignment_tree {
     #  Groups with ending comma lists and their range of sizes:
     #  $ragged_comma_group{$id} = [ imax_group_min, imax_group_max ]
     ## my %ragged_comma_group;
-
-    # Define a threshold line count for forcing a break
-    my $nlines_break = 3;
 
     # We work with a list of nodes to visit at the next deeper depth.
     my @todo_list;

@@ -6306,7 +6306,6 @@ sub find_selected_packages {
     my $K_closing_container = $self->[_K_closing_container_];
     my @package_list;
     my @package_sweep;
-    my $lx_max = $rLL->[$Klimit]->[_LINE_INDEX_];
     foreach my $KK ( 0 .. $Klimit ) {
         my $item = $rLL->[$KK];
         my $type = $item->[_TYPE_];
@@ -11888,7 +11887,6 @@ sub break_before_list_opening_containers {
 
         next unless ( $is_list || $has_list && $has_list == 1 );
 
-        my $has_broken_list   = $rhas_broken_list->{$seqno};
         my $has_list_with_lec = $rhas_broken_list_with_lec->{$seqno};
 
         # Only for types of container tokens with a non-default break option
@@ -16829,7 +16827,6 @@ EOM
         # Loop over the batch to initialize some batch variables
         #-------------------------------------------------------
         my $comma_count_in_batch = 0;
-        my $ilast_nonblank       = -1;
         my @colon_list;
         my @ix_seqno_controlling_ci;
         my %comma_arrow_count;
@@ -19365,7 +19362,6 @@ EOM
             my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
               $summed_lengths_to_go[$ibeg_2];
             my $iend_1_minus = max( $ibeg_1, iprev_to_go($iend_1) );
-            my $ibeg_2_plus  = min( $iend_2, $inext_to_go[$iend_2] );
 
             return
               unless (

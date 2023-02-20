@@ -2922,7 +2922,6 @@ sub compare_string_buffers {
         $last_nonblank_line = $truncate->( $last_nonblank_line, 72 );
 
         if ($last_nonblank_line) {
-            my $countm = $counti - 1;
             $msg .= <<EOM;
  $last_nonblank_count:$last_nonblank_line
 EOM
@@ -5035,7 +5034,6 @@ sub read_config_file {
         # See rules in perltidy's perldoc page
         # Section: Other Controls - Creating a new abbreviation
         if ( $line =~ /^((\w+)\s*\{)(.*)?$/ ) {
-            my $oldname = $name;
             ( $name, $body ) = ( $2, $3 );
 
             # Cannot start new abbreviation unless old abbreviation is complete

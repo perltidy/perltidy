@@ -1162,7 +1162,6 @@ sub get_line {
     #        _in_skipped_
     #        _in_pod_
     #        _in_quote_
-    my $ending_in_quote_last = $self->[_in_quote_];
     $self->tokenize_this_line($line_of_tokens);
 
     # Now finish defining the return structure and return it
@@ -6379,7 +6378,7 @@ sub decide_if_code_block {
             foreach my $k ( $j + 1 .. @pre_types - 2 ) {
                 if ( $pre_types[$k] eq $quote_mark ) {
                     $j = $k + 1;
-                    my $next = $pre_types[$j];
+                    ##my $next = $pre_types[$j];
                     last;
                 }
             }
@@ -9489,8 +9488,6 @@ sub do_quote {
         $max_token_index,
 
     ) = @_;
-
-    my $in_quote_starting = $in_quote;
 
     my $quoted_string;
     if ( $in_quote == 2 ) {    # two quotes/quoted_string_1s to follow

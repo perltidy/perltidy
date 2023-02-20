@@ -462,7 +462,6 @@ sub finish {
     my ($self) = @_;
 
     my $warning_count = $self->{_warning_count};
-    my $saw_code_bug  = $self->{_saw_code_bug};
     my $save_logfile  = $self->{_save_logfile};
     my $log_file      = $self->{_log_file};
 
