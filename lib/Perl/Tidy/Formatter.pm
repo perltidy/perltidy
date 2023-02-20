@@ -18414,18 +18414,28 @@ EOM
             my $num_joints = $nstop - $nbeg;
             if ($optimization_on) {
 
-                # in optimization modes: start loop at last best joint
-                if ($reverse) {
-                    $nstop = $n_best_last;
+                # Turn off optimization if just two joints remain to allow
+                # special two-line logic to be checked (c193)
+                if ( $num_joints <= 2 ) {
+                    $optimization_on = 0;
+                    $reverse         = 0;
                 }
-
-                # In forward optimization mode: backup by 1 because some
-                # tokens can become activated by certain changes.  In
-                # particular, a '?' can become active when a nearby ':'
-                # is joined, or a level changes. And an '=' can become
-                # active if two lines might be made.
                 else {
-                    $nstart = max( $nstart, $n_best_last - 1 );
+
+                    # In reverse optimization mode: start loop at 1 + last best
+                    # joint in order not to miss some small concatenations
+                    if ($reverse) {
+                        $nstop = min( $nstop, $n_best_last + 1 );
+                    }
+
+                    # In forward optimization mode: backup by 1 because some
+                    # tokens can become activated by certain changes.  In
+                    # particular, a '?' can become active when a nearby ':'
+                    # is joined, or a level changes. And an '=' can become
+                    # active if two lines might be made.
+                    else {
+                        $nstart = max( $nstart, $n_best_last - 1 );
+                    }
                 }
             }
 
@@ -18648,17 +18658,8 @@ EOM
                     # For optimization modes: stop here
                     if ($optimization_on) {
 
-                        # If $bs is increasing then something has changed.
-                        # (see c188 for an example)
-                        my $dbs = $bs - $bs_previous_best;
-                        if ($reverse) { $dbs = -$dbs }
-                        if ( $dbs > 0 ) {
-
-                            # We will accept this joint but turn off
-                            # optimization; it will restart again if possible.
-                            $optimization_on = 0;
-                            $reverse         = 0;
-                        }
+                        # Note: a previous check here turned off optimization
+                        # if $dbs increases. No longer necessary (issue c190).
 
                         last;
                     }
@@ -24570,8 +24571,9 @@ sub get_available_spaces_to_go {
         my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
         my $radjusted_levels  = $self->[_radjusted_levels_];
 
-        my $nws  = @{$radjusted_levels};
         my $imin = 0;
+        my $use_adjusted_levels =
+          defined($radjusted_levels) && @{$radjusted_levels} == $Klimit;
 
         # The 'starting_in_quote' flag means that the first token is the first
         # token of a line and it is also the continuation of some kind of
@@ -24605,11 +24607,10 @@ sub get_available_spaces_to_go {
             my $ci_level    = $ci_levels_to_go[$ii];
             my $total_depth = $nesting_depth_to_go[$ii];
 
-            #--------------------------------------------------
-            # Adjust levels if necessary to recycle whitespace:
-            #--------------------------------------------------
-            if ( defined($radjusted_levels) && @{$radjusted_levels} == $Klimit )
-            {
+            #-------------------------
+            # Adjust levels if defined
+            #-------------------------
+            if ($use_adjusted_levels) {
                 my $KK = $K_to_go[$ii];
                 $level = $radjusted_levels->[$KK];
                 if ( $level < 0 ) {
