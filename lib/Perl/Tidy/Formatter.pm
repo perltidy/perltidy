@@ -6660,7 +6660,6 @@ sub set_CODE_type {
     # Also return a list of lines with side comments.
 
     my $rLL                  = $self->[_rLL_];
-    my $Klimit               = $self->[_Klimit_];
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
@@ -6966,8 +6965,7 @@ sub find_non_indenting_braces {
 
     my ( $self, $rix_side_comments ) = @_;
     return unless ( $rOpts->{'non-indenting-braces'} );
-    my $rLL    = $self->[_rLL_];
-    my $Klimit = $self->[_Klimit_];
+    my $rLL = $self->[_rLL_];
     return unless ( defined($rLL) && @{$rLL} );
     my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
@@ -12837,7 +12835,6 @@ sub is_fragile_block_type {
         # the input stream in order to avoid instabilities.
 
         my $rLL                        = $self->[_rLL_];
-        my $Klimit                     = $self->[_Klimit_];
         my $rlines                     = $self->[_rlines_];
         my $rcollapsed_length_by_seqno = $self->[_rcollapsed_length_by_seqno_];
         my $rtype_count_by_seqno       = $self->[_rtype_count_by_seqno_];
@@ -16299,11 +16296,7 @@ sub compare_indentation_levels {
 
     my $rLL = $self->[_rLL_];
 
-    my $structural_indentation_level = $rLL->[$K_first]->[_LEVEL_];
-    my $radjusted_levels             = $self->[_radjusted_levels_];
-    if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} ) {
-        $structural_indentation_level = $radjusted_levels->[$K_first];
-    }
+    my $structural_indentation_level = $self->[_radjusted_levels_]->[$K_first];
 
     # record max structural depth for log file
     if ( $structural_indentation_level > $self->[_maximum_BLOCK_level_] ) {
@@ -24568,8 +24561,6 @@ sub get_available_spaces_to_go {
         my $radjusted_levels  = $self->[_radjusted_levels_];
 
         my $imin = 0;
-        my $use_adjusted_levels =
-          defined($radjusted_levels) && @{$radjusted_levels} == $Klimit;
 
         # The 'starting_in_quote' flag means that the first token is the first
         # token of a line and it is also the continuation of some kind of
@@ -24602,20 +24593,6 @@ sub get_available_spaces_to_go {
             my $level       = $levels_to_go[$ii];
             my $ci_level    = $ci_levels_to_go[$ii];
             my $total_depth = $nesting_depth_to_go[$ii];
-
-            #-------------------------
-            # Adjust levels if defined
-            #-------------------------
-            if ($use_adjusted_levels) {
-                my $KK = $K_to_go[$ii];
-                $level = $radjusted_levels->[$KK];
-                if ( $level < 0 ) {
-
-                    # should not happen
-                    DEVEL_MODE && Fault("unexpected level=$level\n");
-                    $level = 0;
-                }
-            }
 
             # get the top state from the stack if it has changed
             if ($stack_changed) {
@@ -26091,16 +26068,8 @@ EOM
         if (   $block_type_to_go[$i_terminal]
             && $nesting_depth_end > $nesting_depth_beg )
         {
-            my $level_adj        = $lev;
-            my $radjusted_levels = $self->[_radjusted_levels_];
-            if ( defined($radjusted_levels) && @{$radjusted_levels} == @{$rLL} )
-            {
-                $level_adj = $radjusted_levels->[$Kbeg];
-                if ( $level_adj < 0 ) { $level_adj = 0 }
-            }
-            if ( $level_adj == 0 ) {
-                $rvao_args->{forget_side_comment} = 1;
-            }
+            $rvao_args->{forget_side_comment} =
+              !$self->[_radjusted_levels_]->[$Kbeg];
         }
 
         # -----------------------------------
