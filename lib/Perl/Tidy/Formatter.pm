@@ -18102,7 +18102,7 @@ sub break_equals {
         if ( $types_to_go[$iend_max] eq '#' ) {
             $iend_max = iprev_to_go($iend_max);
         }
-        my $batch_is_semicolon_terminated =
+        my $has_terminal_semicolon =
           $iend_max >= 0 && $types_to_go[$iend_max] eq ';';
 
         #----------------------------------------------------------------
@@ -18195,35 +18195,24 @@ EOM
         # numbers, and the line numbers change as we go.
         while ( my $section = pop @{$rsections} ) {
             my ( $nbeg, $nend ) = @{$section};
-            $self->recombine_breakpoints_section_loop(
-
-                $ri_beg,
-                $ri_end,
-                $nbeg,
-                $nend,
-                \@joint,
-                $rbond_strength_to_go,
-                $batch_is_semicolon_terminated,
-
+            $self->recombine_section_loop(
+                {
+                    _ri_beg                 => $ri_beg,
+                    _ri_end                 => $ri_end,
+                    _nbeg                   => $nbeg,
+                    _nend                   => $nend,
+                    _rjoint                 => \@joint,
+                    _rbond_strength_to_go   => $rbond_strength_to_go,
+                    _has_terminal_semicolon => $has_terminal_semicolon,
+                }
             );
         }
 
         return;
     } ## end sub recombine_breakpoints
 
-    sub recombine_breakpoints_section_loop {
-        my (
-            $self,
-
-            $ri_beg,
-            $ri_end,
-            $nbeg,
-            $nend,
-            $rjoint,
-            $rbond_strength_to_go,
-            $batch_is_semicolon_terminated,
-
-        ) = @_;
+    sub recombine_section_loop {
+        my ( $self, $rhash ) = @_;
 
         # Recombine breakpoints for one section of lines in the current batch
 
@@ -18231,30 +18220,48 @@ EOM
         #   $ri_beg, $ri_end = ref to arrays with token indexes of the first
         #     and last line
         #   $nbeg, $nend  = line numbers bounding this section
-        #   $num_compares = number of inner loop passes
-        #   $max_compares = maximum inner loop passes (stop if reached)
         #   $rjoint       = ref to array of good joining tokens per line
-        #   $rbond_strength_to_go = ref to array of token bond strengths
-        #   $batch_is_semicolon_terminated = batch ends in ';'
 
-        # Updates: $ri_beg, $ri_end, $rjoint if lines are joined
+        # Update: $ri_beg, $ri_end, $rjoint if lines are joined
 
         # Returns:
         #   nothing
 
-        my $rLL = $self->[_rLL_];
+        #-------------
+        # Definitions:
+        #-------------
+        # $rhash = {
 
-        my $rK_weld_right = $self->[_rK_weld_right_];
-        my $rK_weld_left  = $self->[_rK_weld_left_];
+        #   _ri_beg  = ref to array with starting token index by line
+        #   _ri_end  = ref to array with ending token index by line
+        #   _nbeg    = first line number of this section
+        #   _nend    = last line number of this section
+        #   _rjoint  = ref to array of good joining tokens for each line
+        #   _rbond_strength_to_go   = array of bond strengths
+        #   _has_terminal_semicolon = true if last line of batch has ';'
 
-        # $num_freeze = number of trailing lines to leave untouched
-        my $nmax_sec   = @{$ri_end} - 1;
-        my $num_freeze = $nmax_sec - $nend;
+        #   _num_freeze = number of lines at end of batch which do not change
+        #   _optimization_on = true when optimization is in use
+        #   _reverse = true when running in reverse mode
+        #   _num_compares = total number of line compares made so far
 
-        my $ibeg = $ri_beg->[$nbeg];
-        my $iend = $ri_end->[$nend];
-        my $Kbeg = $K_to_go[$ibeg];
-        my $Kend = $K_to_go[$iend];
+        # };
+
+        my $ri_beg = $rhash->{_ri_beg};
+        my $ri_end = $rhash->{_ri_end};
+
+        # Line index range of this section:
+        my $nbeg = $rhash->{_nbeg};    # stays constant
+        my $nend = $rhash->{_nend};    # will decrease
+
+        # $nmax_batch = starting number of lines in the full batch
+        # $num_freeze = number of lines following this section to leave alone
+        my $nmax_batch = @{$ri_end} - 1;
+        $rhash->{_num_freeze} = $nmax_batch - $nend;
+
+        #----------------
+        # Iteration limit
+        #----------------
 
         # This is potentially an O(n-squared) loop, but not critical, so we can
         # put a finite limit on the total number of iterations. This is
@@ -18271,31 +18278,24 @@ EOM
         #  3. put a finite limit on the number of iterations.
         #  4. optimize the inner loop on certain common patterns.
 
-        #----------------
-        # Iteration limit
-        #----------------
         # The iteration limit guards against excessive run time.
         # Testing shows that most cases require roughly 1 comparison per line.
         # The most extreme cases in my large collection of files are:
-        #    camel1.t  - 9   => fault, 10 => pass (obfuscated perl test)
-        #    ternary.t - 10  => fault, 11 => pass
-        #    f2html.pm - 12  => fault, 13 => pass
-        #    Poll.pm   - 16  => fault, 17 => pass
-        # A limiting ratio of 20 will allow essentially all code to pass.
-        # Most of these cases involve input code with extremely long lines.
-        # If the limit is ever exceeded, things will be fixed on the next
-        # formatting pass.
+        #    camel1.t  - needs 10 compares per line (obfuscated perl test)
+        #    ternary.t - needs 11 compares per line
+        # So a limiting ratio of 20 should allow essentially all code to pass.
         use constant MAX_COMPARE_RATIO => 20;
         my $num_tot      = $nend - $nbeg + 1;
         my $max_compares = MAX_COMPARE_RATIO * $num_tot;
-        my $num_compares = 0;
+        $rhash->{_num_compares} = 0;
 
         #-------------
         # Optimization
         #-------------
+
         # There are four modes of operation, as follows:
         # $optimization_on    $reverse   MODE
-        # ----------------    --------   ----
+        #        -----         -----     ----
         #        false         false     Normal Mode
         #        false         true      Reverse Mode
         #        true          false     Optimized Forward Search
@@ -18314,457 +18314,429 @@ EOM
         use constant OPTIMIZED_FORWARD_SEARCH => 1;
         use constant OPTIMIZED_REVERSE_SEARCH => 1;
 
-        # Optimization parameters:
-        my $optimization_on = 0;
-        my $reverse         = 0;
-        my $n_best_last;
+        # Always start in Normal Mode
+        $rhash->{_optimization_on} = 0;
+        $rhash->{_reverse}         = 0;
 
-        my $more_to_do = 1;
+        #--------------------------------------------
+        # loop until there are no more recombinations
+        #--------------------------------------------
+        my $nmax_last = $nmax_batch + 1;
+        while (1) {
 
-        # We keep looping over all of the lines of this batch
-        # until there are no more possible recombinations
-        my $nmax_last = $nmax_sec + 1;
+            # Stop if the number of lines in the batch did not decrease
+            $nmax_batch = @{$ri_end} - 1;
+            if ( $nmax_batch >= $nmax_last ) {
+                last;
+            }
+            $nmax_last = $nmax_batch;
 
-        # This will be the current maximum bond strength after the
-        # iteration gets going.  When set, we can stop immediately
-        # on a joint with this strength, since we know it is the
-        # best, or equal to the best.
-        my $bs_previous_best;
+            #-----------------------------------------
+            # inner loop to find next best combination
+            #-----------------------------------------
+            $self->recombine_inner_loop($rhash);
 
-        #---------------------
-        # loop over iterations
-        #---------------------
-        while ($more_to_do) {
-
-            # Emergency return on excess total iterations. The allowed
-            # maximum should be large enough that this will never happen.
-            if ( $num_compares > $max_compares ) {
-
-                # If the current script has many more lines than the original
-                # script, then we may have trouble converging must allow more
-                # iterations.  In that case it will be better to stop iterating
-                # early and let another formatting pass fix the problem. And
-                # there is no need to trigger a fault check during testing if
-                # that happens.
-                my $li_0        = $rLL->[$Kbeg]->[_LINE_INDEX_];
-                my $li_x        = $rLL->[$Kend]->[_LINE_INDEX_];
-                my $nlines_gain = $num_tot - ( $li_x - $li_0 );
-
-                # The line check is temporarily ignored to collect info
-                use constant IGNORE_CHECK => 1;
-                if ( IGNORE_CHECK || $nlines_gain < 2 * $num_tot ) {
-                    my $lno = $self->[_rLL_]->[$Kbeg]->[_LINE_INDEX_];
-                    DEVEL_MODE && Fault(<<EOM);
-inner loop passes =$num_compares exceeds max=$max_compares, near line $lno
+            # Iteration limit check:
+            if ( $rhash->{_num_compares} > $max_compares ) {
+                if (DEVEL_MODE) {
+                    my $ibeg = $ri_beg->[$nbeg];
+                    my $Kbeg = $K_to_go[$ibeg];
+                    my $lno  = $self->[_rLL_]->[$Kbeg]->[_LINE_INDEX_];
+                    Fault(<<EOM);
+inner loop passes =$rhash->{_num_compares} exceeds max=$max_compares, near line $lno
 EOM
                 }
-
-                #-------------
-                # ERROR return
-                #-------------
-                return;
+                last;
             }
 
-            my $n_best  = 0;
-            my $bs_best = 0.;
+        } ## end iteration loop
 
-            my ( $bs_last, $num_bs, $dbs_min, $dbs_max );
-            my ( $nbs_min, $nbs_max );
+        if (DEBUG_RECOMBINE) {
+            my $ratio = sprintf "%0.3f", $rhash->{_num_compares} / $num_tot;
+            print STDERR
+"exiting recombine_inner_loop with $nmax_last lines, opt=$rhash->{_optimization_on}, rev=$rhash->{_reverse}, starting lines=$num_tot, num_compares=$rhash->{_num_compares}, ratio=$ratio\n";
+        }
 
-            my $nmax = @{$ri_end} - 1;
+        return;
+    } ## end sub recombine_section_loop
 
-            # Safety check for infinite loop: the line count must decrease
-            unless ( $nmax < $nmax_last ) {
+    sub recombine_inner_loop {
+        my ( $self, $rhash ) = @_;
 
-                # Shouldn't happen because splice below decreases nmax on
-                # each iteration.  An error can only be due to a recent
-                # programming change.  We better stop here.
-                if (DEVEL_MODE) {
-                    my $KK  = $K_to_go[0];
-                    my $lno = $self->[_rLL_]->[$KK]->[_LINE_INDEX_];
-                    Fault(
-"Program bug-infinite loop in recombine breakpoints near line $lno\n"
-                    );
-                }
-                $more_to_do = 0;
+        # This is the inner loop of the recombine operation. We look at all of
+        # the remaining joints in this section and select the best joint to be
+        # recombined.  If a recombination is made, the number of lines
+        # in this section will be reduced by one.
 
-                #-------------
-                # ERROR return
-                #-------------
-                return;
+        # Returns: nothing
+
+        my $rK_weld_right = $self->[_rK_weld_right_];
+        my $rK_weld_left  = $self->[_rK_weld_left_];
+
+        my $ri_beg               = $rhash->{_ri_beg};
+        my $ri_end               = $rhash->{_ri_end};
+        my $nbeg                 = $rhash->{_nbeg};
+        my $rjoint               = $rhash->{_rjoint};
+        my $rbond_strength_to_go = $rhash->{_rbond_strength_to_go};
+
+        # This will be the best joint:
+        my $n_best  = 0;
+        my $bs_best = 0.;
+
+        # Variables needed to check for optimization patterns:
+        my ( $bs_last, $num_bs, $dbs_min, $dbs_max, $nbs_min, $nbs_max );
+
+        # In normal mode: loop over all remaining lines in this batch
+        my $nmax       = @{$ri_end} - 1;
+        my $nstart     = $nbeg + 1;
+        my $nstop      = $nmax - $rhash->{_num_freeze};
+        my $num_joints = $nstop - $nbeg;
+
+        # In optimization modes ...
+        if ( $rhash->{_optimization_on} ) {
+
+            # Turn off optimization if just two joints remain to allow
+            # special two-line logic to be checked (c193)
+            if ( $num_joints <= 2 ) {
+                $rhash->{_optimization_on} = 0;
+                $rhash->{_reverse}         = 0;
             }
-            $nmax_last  = $nmax;
-            $more_to_do = 0;
+            else {
 
-            my $this_line_is_semicolon_terminated;
-
-            # in normal mode: loop over all remaining lines in this batch
-            my $nstart     = $nbeg + 1;
-            my $nstop      = $nmax - $num_freeze;
-            my $num_joints = $nstop - $nbeg;
-            if ($optimization_on) {
-
-                # Turn off optimization if just two joints remain to allow
-                # special two-line logic to be checked (c193)
-                if ( $num_joints <= 2 ) {
-                    $optimization_on = 0;
-                    $reverse         = 0;
+                # In reverse optimization mode: start loop at 1 + last best
+                # joint in order not to miss some small concatenations
+                if ( $rhash->{_reverse} ) {
+                    $nstop = min( $nstop, $rhash->{_n_best_last} + 1 );
                 }
+
+                # In forward optimization mode: backup by 1 because some
+                # tokens can become activated by certain changes.  In
+                # particular, a '?' can become active when a nearby ':'
+                # is joined, or a level changes. And an '=' can become
+                # active if two lines might be made.
                 else {
-
-                    # In reverse optimization mode: start loop at 1 + last best
-                    # joint in order not to miss some small concatenations
-                    if ($reverse) {
-                        $nstop = min( $nstop, $n_best_last + 1 );
-                    }
-
-                    # In forward optimization mode: backup by 1 because some
-                    # tokens can become activated by certain changes.  In
-                    # particular, a '?' can become active when a nearby ':'
-                    # is joined, or a level changes. And an '=' can become
-                    # active if two lines might be made.
-                    else {
-                        $nstart = max( $nstart, $n_best_last - 1 );
-                    }
+                    $nstart = max( $nstart, $rhash->{_n_best_last} - 1 );
                 }
             }
+        }
 
-            #-------------------------
-            # loop over all line pairs
-            #-------------------------
-            my $incomplete_loop;
-            for my $iter ( $nstart .. $nstop ) {
+        #-------------------------
+        # loop over all line pairs
+        #-------------------------
+        my $incomplete_loop;
+        for my $iter ( $nstart .. $nstop ) {
 
-                my $n = $iter;
-                if ($reverse) { $n = $nstop - ( $iter - $nstart ) }
+            # '$n' = index of the second line of the pair to test
+            my $n = $iter;
+            if ( $rhash->{_reverse} ) { $n = $nstop - ( $iter - $nstart ) }
 
-                # Count total number of times through the inner loop
-                $num_compares++;
+            # Count total number of times through the inner loop
+            $rhash->{_num_compares}++;
 
-                # This flag will be true if we 'last' out of this loop early:
-                $incomplete_loop = $n != $nstop;
+            # This flag will be true if we 'last' out of this loop early:
+            $incomplete_loop = $n != $nstop;
 
-                #----------------------------------------------------------
-                # If we join the current pair of lines,
-                # line $n-1 will become the left part of the joined line
-                # line $n will become the right part of the joined line
-                #
-                # Here are Indexes of the endpoint tokens of the two lines:
-                #
-                #  -----line $n-1--- | -----line $n-----
-                #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
-                #                    ^
-                #                    |
-                # We want to decide if we should remove the line break
-                # between the tokens at $iend_1 and $ibeg_2
-                #
-                # We will apply a number of ad-hoc tests to see if joining
-                # here will look ok.  The code will just move to the next
-                # pair if the join doesn't look good.  If we get through
-                # the gauntlet of tests, the lines will be recombined.
-                #----------------------------------------------------------
-                #
-                # beginning and ending tokens of the lines we are working on
-                my $ibeg_1    = $ri_beg->[ $n - 1 ];
-                my $iend_1    = $ri_end->[ $n - 1 ];
-                my $iend_2    = $ri_end->[$n];
-                my $ibeg_2    = $ri_beg->[$n];
-                my $ibeg_nmax = $ri_beg->[$nmax];
+            #----------------------------------------------------------
+            # If we join the current pair of lines,
+            # line $n-1 will become the left part of the joined line
+            # line $n will become the right part of the joined line
+            #
+            # Here are Indexes of the endpoint tokens of the two lines:
+            #
+            #  -----line $n-1--- | -----line $n-----
+            #  $ibeg_1   $iend_1 | $ibeg_2   $iend_2
+            #                    ^
+            #                    |
+            # We want to decide if we should remove the line break
+            # between the tokens at $iend_1 and $ibeg_2
+            #
+            # We will apply a number of ad-hoc tests to see if joining
+            # here will look ok.  The code will just move to the next
+            # pair if the join doesn't look good.  If we get through
+            # the gauntlet of tests, the lines will be recombined.
+            #----------------------------------------------------------
+            #
+            # beginning and ending tokens of the lines we are working on
+            my $ibeg_1    = $ri_beg->[ $n - 1 ];
+            my $iend_1    = $ri_end->[ $n - 1 ];
+            my $iend_2    = $ri_end->[$n];
+            my $ibeg_2    = $ri_beg->[$n];
+            my $ibeg_nmax = $ri_beg->[$nmax];
 
-                # combined line cannot be too long
-                my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
-                next if ( $excess > 0 );
+            # The combined line cannot be too long
+            my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
+            next if ( $excess > 0 );
 
-                my $type_iend_1 = $types_to_go[$iend_1];
-                my $type_iend_2 = $types_to_go[$iend_2];
-                my $type_ibeg_1 = $types_to_go[$ibeg_1];
-                my $type_ibeg_2 = $types_to_go[$ibeg_2];
+            my $type_iend_1 = $types_to_go[$iend_1];
+            my $type_iend_2 = $types_to_go[$iend_2];
+            my $type_ibeg_1 = $types_to_go[$ibeg_1];
+            my $type_ibeg_2 = $types_to_go[$ibeg_2];
 
-                DEBUG_RECOMBINE > 1 && do {
-                    print STDERR
+            DEBUG_RECOMBINE > 1 && do {
+                print STDERR
 "RECOMBINE: n=$n nmax=$nmax imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
-                };
+            };
 
-                # If line $n is the last line, we set some flags and
-                # do any special checks for it
-                if ( $n == $nmax ) {
+            # If line $n is the last line, we set some flags and
+            # do any special checks for it
+            my $this_line_is_semicolon_terminated;
+            if ( $n == $nmax ) {
 
-                    if ( $type_ibeg_2 eq '{' ) {
+                if ( $type_ibeg_2 eq '{' ) {
 
-                        # join isolated ')' and '{' if requested (git #110)
-                        if (   $rOpts_cuddled_paren_brace
-                            && $type_iend_1 eq '}'
-                            && $iend_1 == $ibeg_1
-                            && $ibeg_2 == $iend_2 )
+                    # join isolated ')' and '{' if requested (git #110)
+                    if (   $rOpts_cuddled_paren_brace
+                        && $type_iend_1 eq '}'
+                        && $iend_1 == $ibeg_1
+                        && $ibeg_2 == $iend_2 )
+                    {
+                        if (   $tokens_to_go[$iend_1] eq ')'
+                            && $tokens_to_go[$ibeg_2] eq '{' )
                         {
-                            if (   $tokens_to_go[$iend_1] eq ')'
-                                && $tokens_to_go[$ibeg_2] eq '{' )
-                            {
-                                $n_best = $n;
-                                last;
-                            }
+                            $n_best = $n;
+                            last;
                         }
-
-                        # otherwise, a terminal '{' should stay where it is
-                        # unless preceded by a fat comma
-                        next if ( $type_iend_1 ne '=>' );
                     }
 
-                    $this_line_is_semicolon_terminated =
-                      $batch_is_semicolon_terminated;
-
-                }
-                else {
-                    $this_line_is_semicolon_terminated = 0;
+                    # otherwise, a terminal '{' should stay where it is
+                    # unless preceded by a fat comma
+                    next if ( $type_iend_1 ne '=>' );
                 }
 
-                #----------------------------------------------------------
-                # Recombine Section 0:
-                # Examine the special token joining this line pair, if any.
-                # Put as many tests in this section to avoid duplicate code
-                # and to make formatting independent of whether breaks are
-                # to the left or right of an operator.
-                #----------------------------------------------------------
+                $this_line_is_semicolon_terminated =
+                  $rhash->{_has_terminal_semicolon};
 
-                # Note that parens around ($itok) are essential here:
-                my ($itok) = @{ $rjoint->[$n] };
-                if ($itok) {
-                    my $ok_0 =
-                      recombine_section_0( $itok, $ri_beg, $ri_end, $n );
-                    next if ( !$ok_0 );
-                }
+            }
 
-                #----------------------------------------------------------
-                # Recombine Section 1:
-                # Join welded nested containers immediately
-                #----------------------------------------------------------
+            #----------------------------------------------------------
+            # Recombine Section 0:
+            # Examine the special token joining this line pair, if any.
+            # Put as many tests in this section to avoid duplicate code
+            # and to make formatting independent of whether breaks are
+            # to the left or right of an operator.
+            #----------------------------------------------------------
 
-                if (
-                    $total_weld_count
-                    && ( $type_sequence_to_go[$iend_1]
-                        && defined( $rK_weld_right->{ $K_to_go[$iend_1] } )
-                        || $type_sequence_to_go[$ibeg_2]
-                        && defined( $rK_weld_left->{ $K_to_go[$ibeg_2] } ) )
-                  )
-                {
-                    $n_best = $n;
-                    last;
-                }
+            # Note that parens around ($itok) are essential here:
+            my ($itok) = @{ $rjoint->[$n] };
+            if ($itok) {
+                my $ok_0 = recombine_section_0( $itok, $ri_beg, $ri_end, $n );
+                next if ( !$ok_0 );
+            }
 
-                #----------------------------------------------------------
-                # Recombine Section 2:
-                # Examine token at $iend_1 (right end of first line of pair)
-                #----------------------------------------------------------
+            #----------------------------------------------------------
+            # Recombine Section 1:
+            # Join welded nested containers immediately
+            #----------------------------------------------------------
 
-                my ( $ok_2, $skip_Section_3 ) =
-                  recombine_section_2( $ri_beg, $ri_end, $n,
-                    $this_line_is_semicolon_terminated );
-                next if ( !$ok_2 );
+            if (
+                $total_weld_count
+                && ( $type_sequence_to_go[$iend_1]
+                    && defined( $rK_weld_right->{ $K_to_go[$iend_1] } )
+                    || $type_sequence_to_go[$ibeg_2]
+                    && defined( $rK_weld_left->{ $K_to_go[$ibeg_2] } ) )
+              )
+            {
+                $n_best = $n;
+                last;
+            }
 
-                #----------------------------------------------------------
-                # Recombine Section 3:
-                # Examine token at $ibeg_2 (left end of second line of pair)
-                #----------------------------------------------------------
+            #----------------------------------------------------------
+            # Recombine Section 2:
+            # Examine token at $iend_1 (right end of first line of pair)
+            #----------------------------------------------------------
 
-                # Join lines identified above as capable of
-                # causing an outdented line with leading closing paren.
-                # Note that we are skipping the rest of this section
-                # and the rest of the loop to do the join.
-                if ($skip_Section_3) {
-                    $forced_breakpoint_to_go[$iend_1] = 0;
-                    $n_best                           = $n;
-                    $incomplete_loop                  = 1;
-                    last;
-                }
+            my ( $ok_2, $skip_Section_3 ) =
+              recombine_section_2( $ri_beg, $ri_end, $n,
+                $this_line_is_semicolon_terminated );
+            next if ( !$ok_2 );
 
-                my ( $ok_3, $bs_tweak ) =
-                  recombine_section_3( $ri_beg, $ri_end, $n,
-                    $this_line_is_semicolon_terminated );
-                next if ( !$ok_3 );
+            #----------------------------------------------------------
+            # Recombine Section 3:
+            # Examine token at $ibeg_2 (left end of second line of pair)
+            #----------------------------------------------------------
 
-                #----------------------------------------------------------
-                # Recombine Section 4:
-                # Combine the lines if we arrive here and it is possible
-                #----------------------------------------------------------
+            # Join lines identified above as capable of
+            # causing an outdented line with leading closing paren.
+            # Note that we are skipping the rest of this section
+            # and the rest of the loop to do the join.
+            if ($skip_Section_3) {
+                $forced_breakpoint_to_go[$iend_1] = 0;
+                $n_best                           = $n;
+                $incomplete_loop                  = 1;
+                last;
+            }
 
-                # honor hard breakpoints
-                next if ( $forced_breakpoint_to_go[$iend_1] );
+            my ( $ok_3, $bs_tweak ) =
+              recombine_section_3( $ri_beg, $ri_end, $n,
+                $this_line_is_semicolon_terminated );
+            next if ( !$ok_3 );
 
-                my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
+            #----------------------------------------------------------
+            # Recombine Section 4:
+            # Combine the lines if we arrive here and it is possible
+            #----------------------------------------------------------
 
-                # Require a few extra spaces before recombining lines if we
-                # are at an old breakpoint unless this is a simple list or
-                # terminal line.  The goal is to avoid oscillating between
-                # two quasi-stable end states.  For example this snippet
-                # caused problems:
+            # honor hard breakpoints
+            next if ( $forced_breakpoint_to_go[$iend_1] );
+
+            my $bs = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
+
+            # Require a few extra spaces before recombining lines if we
+            # are at an old breakpoint unless this is a simple list or
+            # terminal line.  The goal is to avoid oscillating between
+            # two quasi-stable end states.  For example this snippet
+            # caused problems:
 
 ##    my $this =
 ##    bless {
 ##        TText => "[" . ( join ',', map { "\"$_\"" } split "\n", $_ ) . "]"
 ##      },
 ##      $type;
+            next
+              if ( $old_breakpoint_to_go[$iend_1]
+                && !$this_line_is_semicolon_terminated
+                && $n < $nmax
+                && $excess + 4 > 0
+                && $type_iend_2 ne ',' );
+
+            # do not recombine if we would skip in indentation levels
+            if ( $n < $nmax ) {
+                my $if_next = $ri_beg->[ $n + 1 ];
                 next
-                  if ( $old_breakpoint_to_go[$iend_1]
-                    && !$this_line_is_semicolon_terminated
-                    && $n < $nmax
-                    && $excess + 4 > 0
-                    && $type_iend_2 ne ',' );
+                  if (
+                       $levels_to_go[$ibeg_1] < $levels_to_go[$ibeg_2]
+                    && $levels_to_go[$ibeg_2] < $levels_to_go[$if_next]
 
-                # do not recombine if we would skip in indentation levels
-                if ( $n < $nmax ) {
-                    my $if_next = $ri_beg->[ $n + 1 ];
-                    next
-                      if (
-                           $levels_to_go[$ibeg_1] < $levels_to_go[$ibeg_2]
-                        && $levels_to_go[$ibeg_2] < $levels_to_go[$if_next]
+                    # but an isolated 'if (' is undesirable
+                    && !(
+                           $n == 1
+                        && $iend_1 - $ibeg_1 <= 2
+                        && $type_ibeg_1 eq 'k'
+                        && $tokens_to_go[$ibeg_1] eq 'if'
+                        && $tokens_to_go[$iend_1] ne '('
+                    )
+                  );
+            }
 
-                        # but an isolated 'if (' is undesirable
-                        && !(
-                               $n == 1
-                            && $iend_1 - $ibeg_1 <= 2
-                            && $type_ibeg_1 eq 'k'
-                            && $tokens_to_go[$ibeg_1] eq 'if'
-                            && $tokens_to_go[$iend_1] ne '('
-                        )
-                      );
+            ## OLD: honor no-break's
+            ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
+
+            # remember the pair with the greatest bond strength
+            if ( !$n_best ) {
+
+                # First good joint ...
+                $n_best  = $n;
+                $nbs_min = $n;
+                $nbs_max = $n;
+                $bs_best = $bs;
+                $dbs_min = undef;
+                $dbs_max = undef;
+                $num_bs  = 1;
+                $bs_last = $bs;
+
+                # In optimization mode: stop on the first acceptable joint
+                # because we already know it has the highest strength
+                if ( $rhash->{_optimization_on} ) {
+                    last;
                 }
+            }
+            else {
+                my $dbs = $bs - $bs_last;
+                if ( $rhash->{_reverse} ) { $dbs = -$dbs }
+                $bs_last = $bs;
 
-                ## OLD: honor no-break's
-                ## next if ( $bs >= NO_BREAK - 1 );  # removed for b1257
-
-                # remember the pair with the greatest bond strength
-                if ( !$n_best ) {
-
-                    # First good joint ...
-                    $n_best  = $n;
-                    $nbs_min = $n;
-                    $nbs_max = $n;
-                    $bs_best = $bs;
-                    $dbs_min = undef;
-                    $dbs_max = undef;
-                    $num_bs  = 1;
-                    $bs_last = $bs;
-
-                    # For optimization modes: stop here
-                    if ($optimization_on) {
-
-                        # Note: a previous check here turned off optimization
-                        # if $dbs increases. No longer necessary (issue c190).
-
-                        last;
-                    }
+                if ( $num_bs <= 1 ) {
+                    $dbs_min = $dbs_max = $dbs;
                 }
                 else {
-                    my $dbs = $bs - $bs_last;
-                    if ($reverse) { $dbs = -$dbs }
-                    $bs_last = $bs;
+                    if ( $dbs < $dbs_min ) { $dbs_min = $dbs }
+                    if ( $dbs > $dbs_max ) { $dbs_max = $dbs }
+                }
 
-                    if ( $num_bs <= 1 ) {
-                        $dbs_min = $dbs_max = $dbs;
-                    }
-                    else {
-                        if ( $dbs < $dbs_min ) { $dbs_min = $dbs }
-                        if ( $dbs > $dbs_max ) { $dbs_max = $dbs }
-                    }
+                if ( $n > $nbs_max ) { $nbs_max = $n }
+                if ( $n < $nbs_min ) { $nbs_min = $n }
+                $num_bs++;
 
-                    if ( $n > $nbs_max ) { $nbs_max = $n }
-                    if ( $n < $nbs_min ) { $nbs_min = $n }
-                    $num_bs++;
-
-                    # for forward mode - use first max bs
-                    if ( !$reverse ) {
-                        if ( $bs > $bs_best ) {
-                            $n_best  = $n;
-                            $bs_best = $bs;
-                        }
-                    }
-
-                    # for reverse mode - use last max bs
-                    else {
-                        if ( $bs >= $bs_best ) {
-                            $n_best  = $n;
-                            $bs_best = $bs;
-                        }
+                # in forward mode - save first max strength
+                if ( !$rhash->{_reverse} ) {
+                    if ( $bs > $bs_best ) {
+                        $n_best  = $n;
+                        $bs_best = $bs;
                     }
                 }
-            } ## end loop over all line pairs
 
-            # recombine the pair with the greatest bond strength
-            if ($n_best) {
-                DEBUG_RECOMBINE > 1
-                  && print
-"BEST: rev=$reverse nb=$n_best nstart=$nstart stop=$nstop nbmin=$nbs_min nbmax=$nbs_max bs=$bs_best dbs=$dbs_max dbsmin=$dbs_min\n";
-                splice @{$ri_beg}, $n_best,     1;
-                splice @{$ri_end}, $n_best - 1, 1;
-                splice @{$rjoint}, $n_best,     1;
+                # in reverse mode - save last max strength
+                else {
+                    if ( $bs >= $bs_best ) {
+                        $n_best  = $n;
+                        $bs_best = $bs;
+                    }
+                }
+            }
+        } ## end loop over all line pairs
 
-                # Note that we must subtract 1 here to get an updated best
-                # index because we decreased all index values by this splice.
-                $n_best_last = $n_best - 1;
+        #---------------------------------------------------
+        # recombine the pair with the greatest bond strength
+        #---------------------------------------------------
+        if ($n_best) {
+            DEBUG_RECOMBINE > 1
+              && print
+"BEST: rev=$rhash->{_reverse} nb=$n_best nstart=$nstart stop=$nstop nbmin=$nbs_min nbmax=$nbs_max bs=$bs_best dbs=$dbs_max dbsmin=$dbs_min\n";
+            splice @{$ri_beg}, $n_best,     1;
+            splice @{$ri_end}, $n_best - 1, 1;
+            splice @{$rjoint}, $n_best,     1;
 
-                # Look for a pattern which allows optimization:
-                if (
+            # Note that we must subtract 1 here to get an updated best
+            # index because we decreased all index values by this splice.
+            $rhash->{_n_best_last} = $n_best - 1;
 
-                    # this is not already on, and
-                    !$optimization_on
+            # Look for a pattern which allows optimization:
+            if (
 
-                    # we have not taken a shortcut to get here, and
-                    && !$incomplete_loop
+                # this is not already on, and
+                !$rhash->{_optimization_on}
 
-                    # we have a good best break by strength
-                    && defined($bs_best)
+                # we have not taken a shortcut to get here, and
+                && !$incomplete_loop
 
-                    # we have seen multiple good breaks
-                    && defined($num_bs) && $num_bs > 1
+                # we have seen multiple good breaks
+                && defined($num_bs) && $num_bs > 1
 
-                  )
-                {
+              )
+            {
 
-                    # Look for pattern 1:
-                    #  - we are joining at the first possible joint, and
-                    #  - the strength values do not increase with $n
-                    if ( $n_best == $nbs_min && $dbs_max <= 0 ) {
-                        if (OPTIMIZED_FORWARD_SEARCH) {
+                # Look for pattern 1:
+                #  - this is the first possible joint, and
+                #  - the strength values do not increase with $n
+                if ( $n_best == $nbs_min && $dbs_max <= 0 ) {
+                    if (OPTIMIZED_FORWARD_SEARCH) {
 
-                            DEBUG_RECOMBINE > 1
-                              && print STDERR
+                        DEBUG_RECOMBINE > 1
+                          && print STDERR
 "Start FORWARD Optimiation: bs=$bs_best num=$num_bs dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nbs_min=$nbs_min\n";
 
-                            $optimization_on = 1;
-                            $reverse         = 0;
-                        }
-                    }
-
-                    # Look for pattern 2:
-                    #  - we are joining at the last possible joint, and
-                    #  - the strength values increase montonically with $n
-                    elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
-                        if (OPTIMIZED_REVERSE_SEARCH) {
-                            DEBUG_RECOMBINE > 1
-                              && print STDERR
-"Start REVERSE Optimization: bs=$bs_best, dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nmax=$nbs_max\n";
-
-                            $optimization_on = 1;
-                            $reverse         = 1;
-                        }
+                        $rhash->{_optimization_on} = 1;
+                        $rhash->{_reverse}         = 0;
                     }
                 }
 
-                $bs_previous_best = $bs_best;
+                # Look for pattern 2:
+                #  - this is the last possible joint, and
+                #  - the strength values increase montonically with $n
+                elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
+                    if (OPTIMIZED_REVERSE_SEARCH) {
+                        DEBUG_RECOMBINE > 1
+                          && print STDERR
+"Start REVERSE Optimization: bs=$bs_best, dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nmax=$nbs_max\n";
 
-                # keep going if we are still making progress
-                $more_to_do++;
+                        $rhash->{_optimization_on} = 1;
+                        $rhash->{_reverse}         = 1;
+                    }
+                }
             }
-        } ## end iteration loop
-
-        if (DEBUG_RECOMBINE) {
-            my $ratio = sprintf "%0.3f", $num_compares / $num_tot;
-            print STDERR
-"exiting recombine_inner_loop with $nmax_last lines, opt=$optimization_on, rev=$reverse, starting lines=$num_tot, num_compares=$num_compares, ratio=$ratio\n";
         }
-
         return;
-    } ## end sub recombine_breakpoints_section_loop
+    } ## end sub recombine_inner_loop
 
     sub recombine_section_0 {
         my ( $itok, $ri_beg, $ri_end, $n ) = @_;
