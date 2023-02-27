@@ -19600,6 +19600,7 @@ EOM
               $summed_lengths_to_go[$ibeg_1];
             my $summed_len_2 = $summed_lengths_to_go[ $iend_2 + 1 ] -
               $summed_lengths_to_go[$ibeg_2];
+
             return
               unless (
 
@@ -19626,8 +19627,18 @@ EOM
                     $rOpts_short_concatenation_item_length
 
                     #  additional constraints to fix c167
-                    && (   $types_to_go[$iend_1] ne 'Q'
-                        || $summed_len_2 < $summed_len_1 )
+                    && (
+                        $types_to_go[$iend_1] ne 'Q'
+
+                        # allow a term shorter than the previous term
+                        || $summed_len_2 < $summed_len_1
+
+                        # or allow a short semicolon-terminated term if this
+                        # makes two lines (see c169)
+                        || (   $n == 2
+                            && $n == $nmax
+                            && $this_line_is_semicolon_terminated )
+                    )
                 )
               );
         }

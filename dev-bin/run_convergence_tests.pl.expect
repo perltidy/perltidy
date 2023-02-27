@@ -11190,6 +11190,10 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
                 # Stable (note ';' before '#' )
                 eval { substr( $$textref, $_[4], $_[1] + $_[5] ) = $extra; }; # need to check for sort_map_grep_eval in starting_one_line_block
 
+==> c169 <==
+    eval "format OUT19 = \n" . '@<<<' . "\0\n" . '$v' . "\n" . '@<<<' . "\0\n"
+      . '$v' . "\n.\n";
+
 ==> c190 <==
         # reverse sweep needs to look at '$saw_level_change' for these cases
         local ($codeA)

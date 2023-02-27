@@ -18095,6 +18095,14 @@ s/^([^\t]*)(\t+)/$1.(" " x ((length($2)<<3)-(length($1)&7)))/e )
 ==> c100.par <==
 # default settings
 
+==> c169.in <==
+    eval "format OUT19 = \n" . '@<<<' . "\0\n" . '$v' . "\n" . '@<<<' . "\0\n"
+      . '$v'
+      . "\n.\n";
+
+==> c169.par <==
+# default settings
+
 ==> c190.in <==
         # reverse sweep needs to look at '$saw_level_change' for these cases
         local($codeA) = "sub wrap_cmd_$cmd {" . "\n"
