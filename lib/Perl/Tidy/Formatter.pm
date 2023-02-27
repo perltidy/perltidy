@@ -8106,17 +8106,19 @@ sub respace_post_loop_ops {
             next unless ( $rtype_count && $rtype_count->{'=>'} );
 
             # override -cab=3 if this contains a sub-list
-            if ( $rhas_list->{$seqno} ) {
-                $roverride_cab3->{$seqno} = 1;
-            }
+            if ( !defined( $roverride_cab3->{$seqno} ) ) {
+                if ( $rhas_list->{$seqno} ) {
+                    $roverride_cab3->{$seqno} = 2;
+                }
 
-            # or if this is a sub-list of its parent container
-            else {
-                my $seqno_parent = $rparent_of_seqno->{$seqno};
-                if ( defined($seqno_parent)
-                    && $ris_list_by_seqno->{$seqno_parent} )
-                {
-                    $roverride_cab3->{$seqno} = 1;
+                # or if this is a sub-list of its parent container
+                else {
+                    my $seqno_parent = $rparent_of_seqno->{$seqno};
+                    if ( defined($seqno_parent)
+                        && $ris_list_by_seqno->{$seqno_parent} )
+                    {
+                        $roverride_cab3->{$seqno} = 2;
+                    }
                 }
             }
         }
@@ -8999,8 +9001,9 @@ sub match_trailing_comma_rule {
 
             # The combination of -atc and -dtc and -cab=3 can be unstable
             # (b1394). So we deactivate -cab=3 in this case.
+            # A value of '0' or '4' is required for stability of case b1451.
             if ( $rOpts_comma_arrow_breakpoints == 3 ) {
-                $self->[_roverride_cab3_]->{$type_sequence} = 1;
+                $self->[_roverride_cab3_]->{$type_sequence} = 0;
             }
         }
     }
@@ -21274,12 +21277,10 @@ sub do_colon_breaks {
 
             # these arrays need not retain values between calls
             $type_sequence_stack[$depth_t] = $seqno;
-            $override_cab3[$depth_t] =
-                 $rOpts_comma_arrow_breakpoints == 3
-              && $seqno
-              && $self->[_roverride_cab3_]->{$seqno};
-
-            $override_cab3[$depth_t]          = undef;
+            $override_cab3[$depth_t]       = undef;
+            if ( $rOpts_comma_arrow_breakpoints == 3 && $seqno ) {
+                $override_cab3[$depth_t] = $self->[_roverride_cab3_]->{$seqno};
+            }
             $breakpoint_stack[$depth_t]       = $starting_breakpoint_count;
             $container_type[$depth_t]         = EMPTY_STRING;
             $identifier_count_stack[$depth_t] = 0;
@@ -21848,7 +21849,7 @@ EOM
                 next if $rOpts_break_at_old_comma_breakpoints;
                 next
                   if ( $rOpts_comma_arrow_breakpoints == 3
-                    && !$override_cab3[$depth] );
+                    && !defined( $override_cab3[$depth] ) );
                 $want_comma_break[$depth]   = 1;
                 $index_before_arrow[$depth] = $i_last_nonblank_token;
                 next;
@@ -22277,10 +22278,12 @@ EOM
         # ... use the same order as sub check_for_new_minimum_depth
         #----------------------------------------------------------
         $type_sequence_stack[$depth] = $type_sequence;
-        $override_cab3[$depth] =
-             $rOpts_comma_arrow_breakpoints == 3
-          && $type_sequence
-          && $self->[_roverride_cab3_]->{$type_sequence};
+
+        $override_cab3[$depth] = undef;
+        if ( $rOpts_comma_arrow_breakpoints == 3 && $type_sequence ) {
+            $override_cab3[$depth] =
+              $self->[_roverride_cab3_]->{$type_sequence};
+        }
 
         $breakpoint_stack[$depth] = $forced_breakpoint_count;
         $container_type[$depth] =
@@ -22433,11 +22436,18 @@ EOM
         #    4 - always open up if vt=0
         #    5 - stable: even for one line blocks if vt=0
 
+        my $cab_flag = $rOpts_comma_arrow_breakpoints;
+
+        # replace -cab=3 if overriden
+        if ( $cab_flag == 3 && $type_sequence ) {
+            my $test_cab = $self->[_roverride_cab3_]->{$type_sequence};
+            if ( defined($test_cab) ) { $cab_flag = $test_cab }
+        }
+
         # PATCH: Modify the -cab flag if we are not processing a list:
         # We only want the -cab flag to apply to list containers, so
         # for non-lists we use the default and stable -cab=5 value.
         # Fixes case b939a.
-        my $cab_flag = $rOpts_comma_arrow_breakpoints;
         if ( $type_sequence && !$self->[_ris_list_by_seqno_]->{$type_sequence} )
         {
             $cab_flag = 5;
@@ -22553,9 +22563,6 @@ EOM
 
                 # or user wants to form long blocks with arrows
                 || $cab_flag == 2
-
-                # if -cab=3 is overridden then use -cab=2 behavior
-                || $cab_flag == 3 && $override_cab3[$current_depth]
             )
 
             # and we made breakpoints between the opening and closing

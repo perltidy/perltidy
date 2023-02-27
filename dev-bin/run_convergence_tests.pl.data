@@ -11490,6 +11490,30 @@ $last = after (
 --paren-vertical-tightness-closing=2
 --paren-vertical-tightness=1
 
+==> b1451.in <==
+my %distance_pref =
+     (
+        meter => 1.1,
+        inch  => 0.7,
+        foot  => 0.9,
+        yard  => 0,
+        mile  => 1.0
+     );
+
+my %distance_pref =
+        ( meter => 1.1, inch => 0.7, foot => 0.9, yard => 0, mile => 1.0, );
+
+
+==> b1451.par <==
+--add-trailing-commas
+--break-before-paren-and-indent=2
+--break-before-paren=1
+--comma-arrow-breakpoints=3
+--continuation-indentation=5
+--delete-trailing-commas
+--indent-columns=8
+--want-trailing-commas='m'
+
 ==> b146.in <==
 # State 1
 
