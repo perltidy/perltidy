@@ -18136,7 +18136,9 @@ sub break_equals {
                     $itok = $itest;
                 }
             }
-            $joint[$nn] = [$itok];
+
+            # joint[$nn] = [ index of joint character, skip flag ]
+            $joint[$nn] = [ $itok, 0 ];
 
             # Update the section list
             my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
@@ -18221,6 +18223,7 @@ EOM
         #     and last line
         #   $nbeg, $nend  = line numbers bounding this section
         #   $rjoint       = ref to array of good joining tokens per line
+        #                 = [ index of joint character, skip flag ]
 
         # Update: $ri_beg, $ri_end, $rjoint if lines are joined
 
@@ -18281,8 +18284,8 @@ EOM
         # The iteration limit guards against excessive run time.
         # Testing shows that most cases require roughly 1 comparison per line.
         # The most extreme cases in my large collection of files are:
-        #    camel1.t  - needs 10 compares per line (obfuscated perl test)
-        #    ternary.t - needs 11 compares per line
+        #    camel1.t  - needs 5 compares per line (obfuscated perl test)
+        #    ternary.t - needs 9 compares per line
         # So a limiting ratio of 20 should allow essentially all code to pass.
         use constant MAX_COMPARE_RATIO => 20;
         my $num_tot      = $nend - $nbeg + 1;
@@ -18293,13 +18296,14 @@ EOM
         # Optimization
         #-------------
 
-        # There are four modes of operation, as follows:
+        # There optimization modes are as  follows:
         # $optimization_on    $reverse   MODE
         #        -----         -----     ----
-        #        false         false     Normal Mode
-        #        false         true      Reverse Mode
-        #        true          false     Optimized Forward Search
-        #        true          true      Optimized Reverse Search
+        #          0             0       Normal Mode
+        #          0             1       Reverse Mode
+        #          1             0       Optimized Forward Search
+        #          1             1       Optimized Reverse Search
+        #          2             0       Optimized Tie Search
 
         # The Normal Mode is the basic method.  The main issue is
         # that it is can potentially take O(N^2) compares.
@@ -18307,16 +18311,18 @@ EOM
         # The Reverse Mode is similar but runs backwards.
 
         # The Optimized Modes give the same results as Normal Mode but
-        # run in O(N) time when certain patterns are detected.
+        # run in O(N) time when certain common patterns are detected.
 
         # The Optimized Modes may be deactivated with these flags for
         # testing. These flags should normally be true:
         use constant OPTIMIZED_FORWARD_SEARCH => 1;
         use constant OPTIMIZED_REVERSE_SEARCH => 1;
+        use constant OPTIMIZED_TIE_SEARCH     => 1;
 
         # Always start in Normal Mode
         $rhash->{_optimization_on} = 0;
         $rhash->{_reverse}         = 0;
+        $rhash->{_bs_tie}          = 0;
 
         #--------------------------------------------
         # loop until there are no more recombinations
@@ -18382,6 +18388,7 @@ EOM
         # This will be the best joint:
         my $n_best  = 0;
         my $bs_best = 0.;
+        my $num_tie = 0;
 
         # Variables needed to check for optimization patterns:
         my ( $bs_last, $num_bs, $dbs_min, $dbs_max, $nbs_min, $nbs_max );
@@ -18392,16 +18399,26 @@ EOM
         my $nstop      = $nmax - $rhash->{_num_freeze};
         my $num_joints = $nstop - $nbeg;
 
-        # In optimization modes ...
-        if ( $rhash->{_optimization_on} ) {
+        # Turn off optimization if just two joints remain to allow
+        # special two-line logic to be checked (c193)
+        if ( $rhash->{_optimization_on} && $num_joints <= 2 ) {
+            $rhash->{_optimization_on} = 0;
+            $rhash->{_reverse}         = 0;
+        }
 
-            # Turn off optimization if just two joints remain to allow
-            # special two-line logic to be checked (c193)
-            if ( $num_joints <= 2 ) {
-                $rhash->{_optimization_on} = 0;
-                $rhash->{_reverse}         = 0;
-            }
-            else {
+        # Set the order for visiting each line pair ...
+        my @nlist;
+
+        # The 'tie' mode starts at the last best and circles around
+        if ( $rhash->{_optimization_on} == 2 ) {
+            my $nmid = max( $nstart, $rhash->{_n_best_last} );
+            @nlist = ( $nmid .. $nstop, $nstart .. $nmid - 1 );
+        }
+
+        # All other modes run the full length from one end to the other
+        else {
+
+            if ( $rhash->{_optimization_on} == 1 ) {
 
                 # In reverse optimization mode: start loop at 1 + last best
                 # joint in order not to miss some small concatenations
@@ -18418,23 +18435,32 @@ EOM
                     $nstart = max( $nstart, $rhash->{_n_best_last} - 1 );
                 }
             }
+
+            if ( $rhash->{_reverse} ) {
+                @nlist = reverse( $nstart .. $nstop );
+            }
+            else {
+                @nlist = ( $nstart .. $nstop );
+            }
         }
 
         #-------------------------
         # loop over all line pairs
         #-------------------------
         my $incomplete_loop;
-        for my $iter ( $nstart .. $nstop ) {
+        foreach my $n (@nlist) {
 
-            # '$n' = index of the second line of the pair to test
-            my $n = $iter;
-            if ( $rhash->{_reverse} ) { $n = $nstop - ( $iter - $nstart ) }
+            # This flag will be true if we 'last' out of this loop early:
+            $incomplete_loop = $n != $nlist[-1];
+
+            my ( $itok, $skip ) = @{ $rjoint->[$n] };
+
+            # The skip flag is available for future optimization
+            # but not yet used.
+            next if ($skip);
 
             # Count total number of times through the inner loop
             $rhash->{_num_compares}++;
-
-            # This flag will be true if we 'last' out of this loop early:
-            $incomplete_loop = $n != $nstop;
 
             #----------------------------------------------------------
             # If we join the current pair of lines,
@@ -18457,11 +18483,10 @@ EOM
             #----------------------------------------------------------
             #
             # beginning and ending tokens of the lines we are working on
-            my $ibeg_1    = $ri_beg->[ $n - 1 ];
-            my $iend_1    = $ri_end->[ $n - 1 ];
-            my $iend_2    = $ri_end->[$n];
-            my $ibeg_2    = $ri_beg->[$n];
-            my $ibeg_nmax = $ri_beg->[$nmax];
+            my $ibeg_1 = $ri_beg->[ $n - 1 ];
+            my $iend_1 = $ri_end->[ $n - 1 ];
+            my $iend_2 = $ri_end->[$n];
+            my $ibeg_2 = $ri_beg->[$n];
 
             # The combined line cannot be too long
             my $excess = $self->excess_line_length( $ibeg_1, $iend_2, 1 );
@@ -18516,8 +18541,6 @@ EOM
             # to the left or right of an operator.
             #----------------------------------------------------------
 
-            # Note that parens around ($itok) are essential here:
-            my ($itok) = @{ $rjoint->[$n] };
             if ($itok) {
                 my $ok_0 = recombine_section_0( $itok, $ri_beg, $ri_end, $n );
                 next if ( !$ok_0 );
@@ -18636,11 +18659,13 @@ EOM
 
                 # In optimization mode: stop on the first acceptable joint
                 # because we already know it has the highest strength
-                if ( $rhash->{_optimization_on} ) {
+                if ( $rhash->{_optimization_on} == 1 ) {
                     last;
                 }
             }
             else {
+
+                # Second and later joints ..
                 my $dbs = $bs - $bs_last;
                 if ( $rhash->{_reverse} ) { $dbs = -$dbs }
                 $bs_last = $bs;
@@ -18657,21 +18682,20 @@ EOM
                 if ( $n < $nbs_min ) { $nbs_min = $n }
                 $num_bs++;
 
-                # in forward mode - save first max strength
-                if ( !$rhash->{_reverse} ) {
-                    if ( $bs > $bs_best ) {
-                        $n_best  = $n;
-                        $bs_best = $bs;
-                    }
+                if   ( $bs == $bs_best ) { $num_tie++ }
+                else                     { $num_tie = 0 }
+
+                # save maximum strength; in case of a tie select min $n
+                if ( $bs > $bs_best || $bs == $bs_best && $n < $n_best ) {
+                    $n_best  = $n;
+                    $bs_best = $bs;
                 }
 
-                # in reverse mode - save last max strength
-                else {
-                    if ( $bs >= $bs_best ) {
-                        $n_best  = $n;
-                        $bs_best = $bs;
-                    }
-                }
+            }
+
+            # in 'tie' mode, stop if we see the target strength
+            if ( $rhash->{_optimization_on} == 2 && $bs == $rhash->{_bs_tie} ) {
+                last;
             }
         } ## end loop over all line pairs
 
@@ -18686,9 +18710,21 @@ EOM
             splice @{$ri_end}, $n_best - 1, 1;
             splice @{$rjoint}, $n_best,     1;
 
-            # Note that we must subtract 1 here to get an updated best
-            # index because we decreased all index values by this splice.
+            # NOTE: we must subtract 1 here to get the updated index of this
+            # line end because the splice decreased its index value by 1.
+            # BUT: if we are joining the first two lines, this produces an
+            # invalid joint index of 0. So this index must be tested before use.
             $rhash->{_n_best_last} = $n_best - 1;
+
+            # Turn off tie search if not found
+            my $in_tie_mode = $rhash->{_optimization_on} == 2;
+            if (   $in_tie_mode
+                && $bs_best != $rhash->{_bs_tie} )
+            {
+                $rhash->{_optimization_on} = 0;
+                $rhash->{_reverse}         = 0;
+                $rhash->{_bs_tie}          = 0;
+            }
 
             # Look for a pattern which allows optimization:
             if (
@@ -18708,7 +18744,8 @@ EOM
                 # Look for pattern 1:
                 #  - this is the first possible joint, and
                 #  - the strength values do not increase with $n
-                if ( $n_best == $nbs_min && $dbs_max <= 0 ) {
+                #  - we did not just exit tie mode ($dbs_max may be wrong)
+                if ( $n_best == $nbs_min && $dbs_max <= 0 && !$in_tie_mode ) {
                     if (OPTIMIZED_FORWARD_SEARCH) {
 
                         DEBUG_RECOMBINE > 1
@@ -18723,7 +18760,8 @@ EOM
                 # Look for pattern 2:
                 #  - this is the last possible joint, and
                 #  - the strength values increase montonically with $n
-                elsif ( $n_best == $nbs_max && $dbs_min > 0 ) {
+                #  - we did not just exit tie mode ($dbs_min may be wrong)
+                elsif ( $n_best == $nbs_max && $dbs_min > 0 && !$in_tie_mode ) {
                     if (OPTIMIZED_REVERSE_SEARCH) {
                         DEBUG_RECOMBINE > 1
                           && print STDERR
@@ -18731,6 +18769,20 @@ EOM
 
                         $rhash->{_optimization_on} = 1;
                         $rhash->{_reverse}         = 1;
+                    }
+                }
+
+                # Look for pattern 3:
+                #  - there are multiple joints with this same strength (ties)
+                elsif ( $num_tie > 1 && $bs_best > 0 ) {
+                    if (OPTIMIZED_TIE_SEARCH) {
+                        DEBUG_RECOMBINE > 1
+                          && print STDERR
+"Start TIE Optimization: bs=$bs_best, dbs_min=$dbs_min dbs_max=$dbs_max nbest=$n_best nmax=$nbs_max num_tie=$num_tie\n";
+
+                        $rhash->{_optimization_on} = 2;
+                        $rhash->{_reverse}         = 0;
+                        $rhash->{_bs_tie}          = $bs_best;
                     }
                 }
             }
@@ -27713,8 +27765,9 @@ sub xlp_tweak {
         # Shortcut for lines without alignments
         # -------------------------------------
         if ( !$alignment_count ) {
-            my $rtokens        = [];
-            my $rfield_lengths = [ $summed_lengths_to_go[ $iend + 1 ] -
+            my $rtokens = [];
+            my $rfield_lengths =
+              [ $summed_lengths_to_go[ $iend + 1 ] -
                   $summed_lengths_to_go[$ibeg] ];
             my $rpatterns;
             my $rfields;
