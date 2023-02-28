@@ -16278,6 +16278,10 @@ sub compare_indentation_levels {
 
     my $rLL = $self->[_rLL_];
 
+    # ignore a line with a leading blank token - issue c195
+    my $type = $rLL->[$K_first]->[_TYPE_];
+    return if ( $type eq 'b' );
+
     my $structural_indentation_level = $self->[_radjusted_levels_]->[$K_first];
 
     # record max structural depth for log file
@@ -16290,7 +16294,7 @@ sub compare_indentation_levels {
     my $is_closing_block =
          $type_sequence
       && $self->[_rblock_type_of_seqno_]->{$type_sequence}
-      && $rLL->[$K_first]->[_TYPE_] eq '}';
+      && $type eq '}';
 
     if ( $guessed_indentation_level ne $structural_indentation_level ) {
         $self->[_last_tabbing_disagreement_] = $line_number;
