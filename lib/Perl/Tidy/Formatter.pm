@@ -6084,7 +6084,6 @@ sub find_level_info {
 
     my @stack;
     my %level_info;
-    my $err;
 
     # TREE_LOOP:
     foreach my $sseq ( @{$rSS} ) {
@@ -6220,7 +6219,6 @@ sub find_loop_label {
         my $rmccabe_count_sum;
         my $rLL    = $self->[_rLL_];
         my $count  = 0;
-        my $Kmax   = @{$rLL};
         my $Klimit = $self->[_Klimit_];
         foreach my $KK ( 0 .. $Klimit ) {
             $rmccabe_count_sum->{$KK} = $count;
@@ -6659,9 +6657,8 @@ sub set_CODE_type {
     # Examine each line of code and set a flag '$CODE_type' to describe it.
     # Also return a list of lines with side comments.
 
-    my $rLL                  = $self->[_rLL_];
-    my $rlines               = $self->[_rlines_];
-    my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
+    my $rLL    = $self->[_rLL_];
+    my $rlines = $self->[_rlines_];
 
     my $rOpts_format_skipping_begin = $rOpts->{'format-skipping-begin'};
     my $rOpts_format_skipping_end   = $rOpts->{'format-skipping-end'};
@@ -6981,8 +6978,7 @@ sub find_non_indenting_braces {
             DEVEL_MODE && Fault("unexpected line_type=$line_type\n");
             next;
         }
-        my $CODE_type = $line_of_tokens->{_code_type};
-        my $rK_range  = $line_of_tokens->{_rK_range};
+        my $rK_range = $line_of_tokens->{_rK_range};
         my ( $Kfirst, $Klast ) = @{$rK_range};
         unless ( defined($Kfirst) && $rLL->[$Klast]->[_TYPE_] eq '#' ) {
 
@@ -7367,7 +7363,6 @@ sub respace_tokens {
         my $last_line_type    = $line_type;
         $line_type = $line_of_tokens->{_line_type};
         next unless ( $line_type eq 'CODE' );
-        my $last_CODE_type = $CODE_type;
         $CODE_type = $line_of_tokens->{_code_type};
 
         if ( $CODE_type eq 'BL' ) {
@@ -9700,8 +9695,6 @@ sub keep_old_line_breaks {
     my $rbreak_before_Kfirst = $self->[_rbreak_before_Kfirst_];
     my $rbreak_after_Klast   = $self->[_rbreak_after_Klast_];
     my $rbreak_container     = $self->[_rbreak_container_];
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
 
     #----------------------------------------
     # Apply --break-at-old-method-breakpoints
@@ -9906,7 +9899,6 @@ sub weld_cuddled_blocks {
     my $rbreak_container          = $self->[_rbreak_container_];
     my $ris_broken_container      = $self->[_ris_broken_container_];
     my $ris_cuddled_closing_brace = $self->[_ris_cuddled_closing_brace_];
-    my $K_opening_container       = $self->[_K_opening_container_];
     my $K_closing_container       = $self->[_K_closing_container_];
 
     # A stack to remember open chains at all levels: This is a hash rather than
@@ -10599,14 +10591,13 @@ sub weld_nested_containers {
     # involves setting certain hash values which will be checked
     # later during formatting.
 
-    my $rLL                       = $self->[_rLL_];
-    my $rlines                    = $self->[_rlines_];
-    my $K_opening_container       = $self->[_K_opening_container_];
-    my $K_closing_container       = $self->[_K_closing_container_];
-    my $rblock_type_of_seqno      = $self->[_rblock_type_of_seqno_];
-    my $ris_excluded_lp_container = $self->[_ris_excluded_lp_container_];
-    my $ris_asub_block            = $self->[_ris_asub_block_];
-    my $rmax_vertical_tightness   = $self->[_rmax_vertical_tightness_];
+    my $rLL                     = $self->[_rLL_];
+    my $rlines                  = $self->[_rlines_];
+    my $K_opening_container     = $self->[_K_opening_container_];
+    my $K_closing_container     = $self->[_K_closing_container_];
+    my $rblock_type_of_seqno    = $self->[_rblock_type_of_seqno_];
+    my $ris_asub_block          = $self->[_ris_asub_block_];
+    my $rmax_vertical_tightness = $self->[_rmax_vertical_tightness_];
 
     my $rOpts_asbl = $rOpts->{'opening-anonymous-sub-brace-on-new-line'};
 
@@ -11520,7 +11511,6 @@ sub mark_short_nested_blocks {
     my $rbreak_container     = $self->[_rbreak_container_];
     my $ris_broken_container = $self->[_ris_broken_container_];
     my $rshort_nested        = $self->[_rshort_nested_];
-    my $rlines               = $self->[_rlines_];
     my $rblock_type_of_seqno = $self->[_rblock_type_of_seqno_];
 
     # Variables needed for estimating line lengths
@@ -11699,7 +11689,6 @@ sub do_non_indenting_braces {
       $self->[_rseqno_non_indenting_brace_by_ix_];
     return unless ( %{$rseqno_non_indenting_brace_by_ix} );
 
-    my $rLL                        = $self->[_rLL_];
     my $rlines                     = $self->[_rlines_];
     my $K_opening_container        = $self->[_K_opening_container_];
     my $K_closing_container        = $self->[_K_closing_container_];
@@ -11836,7 +11825,6 @@ sub break_before_list_opening_containers {
     my $ris_broken_container      = $self->[_ris_broken_container_];
     my $ris_permanently_broken    = $self->[_ris_permanently_broken_];
     my $rhas_list                 = $self->[_rhas_list_];
-    my $rhas_broken_list          = $self->[_rhas_broken_list_];
     my $rhas_broken_list_with_lec = $self->[_rhas_broken_list_with_lec_];
     my $radjusted_levels          = $self->[_radjusted_levels_];
     my $rparent_of_seqno          = $self->[_rparent_of_seqno_];
@@ -12231,7 +12219,6 @@ sub extended_ci {
     my $ris_list_by_seqno        = $self->[_ris_list_by_seqno_];
     my $ris_seqno_controlling_ci = $self->[_ris_seqno_controlling_ci_];
     my $rseqno_controlling_my_ci = $self->[_rseqno_controlling_my_ci_];
-    my $rlines                   = $self->[_rlines_];
     my $rno_xci_by_seqno         = $self->[_rno_xci_by_seqno_];
     my $ris_bli_container        = $self->[_ris_bli_container_];
     my $rblock_type_of_seqno     = $self->[_rblock_type_of_seqno_];
@@ -12239,9 +12226,8 @@ sub extended_ci {
     my %available_space;
 
     # Loop over all opening container tokens
-    my $K_opening_container  = $self->[_K_opening_container_];
-    my $K_closing_container  = $self->[_K_closing_container_];
-    my $ris_broken_container = $self->[_ris_broken_container_];
+    my $K_opening_container = $self->[_K_opening_container_];
+    my $K_closing_container = $self->[_K_closing_container_];
     my @seqno_stack;
     my $seqno_top;
     my $KLAST;
@@ -13001,8 +12987,6 @@ sub is_fragile_block_type {
                             my $line_of_tokens_next = $rlines->[ $iline + 1 ];
                             my $rtype_count =
                               $rtype_count_by_seqno->{$seqno_end};
-                            my $comma_count =
-                              defined($rtype_count) ? $rtype_count->{','} : 0;
                             my ( $K_first_next, $K_terminal_next ) =
                               @{ $line_of_tokens_next->{_rK_range} };
 
@@ -13120,7 +13104,6 @@ sub is_fragile_block_type {
         my ( $self, $iline, $K_begin_loop, $K_terminal, $K_last ) = @_;
 
         my $rLL                 = $self->[_rLL_];
-        my $K_opening_container = $self->[_K_opening_container_];
         my $K_closing_container = $self->[_K_closing_container_];
 
         my $rblock_type_of_seqno       = $self->[_rblock_type_of_seqno_];
@@ -13534,8 +13517,6 @@ sub process_all_lines {
 
     my $self                       = shift;
     my $rlines                     = $self->[_rlines_];
-    my $sink_object                = $self->[_sink_object_];
-    my $fh_tee                     = $self->[_fh_tee_];
     my $rOpts_keep_old_blank_lines = $rOpts->{'keep-old-blank-lines'};
     my $file_writer_object         = $self->[_file_writer_object_];
     my $logger_object              = $self->[_logger_object_];
@@ -15579,8 +15560,6 @@ EOM
                         {
                             my $K_closing_container =
                               $self->[_K_closing_container_];
-                            my $K_opening_container =
-                              $self->[_K_opening_container_];
                             my $p_seqno = $parent_seqno_to_go[$max_index_to_go];
                             my $Kc      = $K_closing_container->{$p_seqno};
                             my $is_excluded =
@@ -16629,7 +16608,6 @@ EOM
         else {
             my $type_sequence = $type_sequence_to_go[$i_break];
             if ($type_sequence) {
-                my $closing_token = $matching_token{ $tokens_to_go[$i_break] };
                 $postponed_breakpoint{$type_sequence} = 1;
             }
         }
@@ -19797,7 +19775,6 @@ sub insert_final_ternary_breaks {
     my $nmax = @{$ri_right} - 1;
 
     # scan the left and right end tokens of all lines
-    my $count         = 0;
     my $i_first_colon = -1;
     for my $n ( 0 .. $nmax ) {
         my $il    = $ri_left->[$n];
@@ -19981,7 +19958,6 @@ sub correct_lp_indentation {
     my ( $self, $ri_first, $ri_last ) = @_;
 
     # first remove continuation indentation if appropriate
-    my $rLL      = $self->[_rLL_];
     my $max_line = @{$ri_first} - 1;
 
     #---------------------------------------------------------------------------
@@ -20714,8 +20690,6 @@ sub break_lines_inner_loop {
     while ( ++$i_test <= $imax ) {
         my $type                     = $types_to_go[$i_test];
         my $token                    = $tokens_to_go[$i_test];
-        my $next_type                = $types_to_go[ $i_test + 1 ];
-        my $next_token               = $tokens_to_go[ $i_test + 1 ];
         my $i_next_nonblank          = $inext_to_go[$i_test];
         my $next_nonblank_type       = $types_to_go[$i_next_nonblank];
         my $next_nonblank_token      = $tokens_to_go[$i_next_nonblank];
@@ -21621,12 +21595,6 @@ EOM
         # probably the most complex routine in perltidy, so I have
         # broken it into pieces and over-commented it.
         #--------------------------------------------------------------------
-
-        my $rLL                  = $self->[_rLL_];
-        my $ris_list_by_seqno    = $self->[_ris_list_by_seqno_];
-        my $ris_broken_container = $self->[_ris_broken_container_];
-        my $rbreak_before_container_by_seqno =
-          $self->[_rbreak_before_container_by_seqno_];
 
         $starting_depth = $nesting_depth_to_go[0];
 
@@ -24598,9 +24566,7 @@ sub get_available_spaces_to_go {
         my %last_lp_equals = ();
 
         my $rLL               = $self->[_rLL_];
-        my $Klimit            = $self->[_Klimit_];
         my $starting_in_quote = $self->[_this_batch_]->[_starting_in_quote_];
-        my $radjusted_levels  = $self->[_radjusted_levels_];
 
         my $imin = 0;
 
@@ -26997,7 +26963,6 @@ sub get_seqno {
                   && $self->[_ris_cuddled_closing_brace_]->{$seqno_beg};
 
                 if ( $terminal_type eq '{' && !$is_cuddled_closing_brace ) {
-                    my $Kbeg = $K_to_go[$ibeg];
                     $ci_levels_to_go[$ibeg] = 0;
                 }
             }

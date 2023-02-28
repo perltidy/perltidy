@@ -232,7 +232,7 @@ sub require_blank_code_lines {
     my $need   = $count - $self->[_consecutive_blank_lines_];
     my $rOpts  = $self->[_rOpts_];
     my $forced = $rOpts->{'maximum-consecutive-blank-lines'} > 0;
-    foreach my $i ( 0 .. $need - 1 ) {
+    foreach ( 0 .. $need - 1 ) {
         $self->write_blank_code_line($forced);
     }
     return;

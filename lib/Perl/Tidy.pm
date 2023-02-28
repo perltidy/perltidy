@@ -3942,7 +3942,6 @@ sub _process_command_line {
         }
     }
 
-    my $word;
     my @raw_options        = ();
     my $config_file        = EMPTY_STRING;
     my $saw_ignore_profile = 0;

@@ -2227,6 +2227,7 @@ EOM
         /gcx
           )
         {
+            # For possible future use..
             my $subname = $2;
             my $package = $1 ? $1 : EMPTY_STRING;
         }
@@ -2303,6 +2304,7 @@ EOM
         /gcx
           )
         {
+            # For possible future use..
             my $subname = $2;
             my $package = $1 ? $1 : EMPTY_STRING;
         }
@@ -4958,7 +4960,7 @@ EOM
                 $tok  = $pre_tok;
             }
 
-            my $prev_tok  = $i > 0 ? $rtokens->[ $i - 1 ]     : SPACE;
+##          my $prev_tok  = $i > 0 ? $rtokens->[ $i - 1 ]     : SPACE;
             my $prev_type = $i > 0 ? $rtoken_type->[ $i - 1 ] : 'b';
 
             #-----------------------------------------------------------
@@ -9496,7 +9498,7 @@ sub do_quote {
             $i, $in_quote, $quote_character, $quote_pos, $quote_depth,
             $quoted_string
           )
-          = follow_quoted_string( $i, $in_quote, $rtokens, $quote_character,
+          = follow_quoted_string( $ibeg, $in_quote, $rtokens, $quote_character,
             $quote_pos, $quote_depth, $max_token_index );
         $quoted_string_2 .= $quoted_string;
         if ( $in_quote == 1 ) {

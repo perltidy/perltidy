@@ -1434,7 +1434,6 @@ sub check_fit {
     my $rfield_lengths      = $new_line->{'rfield_lengths'};
     my $padding_available   = $old_line->get_available_space_on_right();
     my $jmax_old            = $old_line->{'jmax'};
-    my $rtokens_old         = $old_line->{'rtokens'};
 
     # Safety check ... only lines with equal array sizes should arrive here
     # from sub check_match.  So if this error occurs, look at recent changes in
@@ -1455,10 +1454,7 @@ EOM
         $alignment->save_column();
     }
 
-    my $is_hanging_side_comment = $new_line->{'is_hanging_side_comment'};
-
     # Loop over all alignments ...
-    my $maximum_field_index = $old_line->{'jmax'};
     for my $j ( 0 .. $jmax ) {
 
         my $pad = $rfield_lengths->[$j] - $old_line->current_field_width($j);
@@ -1561,8 +1557,8 @@ sub _flush_comment_lines {
     my $group_level               = $self->[_group_level_];
     my $group_maximum_line_length = $self->[_group_maximum_line_length_];
     my $leading_space_count       = $self->[_comment_leading_space_count_];
-    my $leading_string =
-      $self->get_leading_string( $leading_space_count, $group_level );
+##  my $leading_string =
+##    $self->get_leading_string( $leading_space_count, $group_level );
 
     # look for excessively long lines
     my $max_excess = 0;
@@ -2280,10 +2276,9 @@ sub sweep_left_to_right {
         foreach my $ng ( $ngb .. $nge ) {
 
             my ( $jbeg, $jend ) = @{ $rgroups->[$ng] };
-            my $line  = $rlines->[$jbeg];
-            my $col   = $line->get_column($itok);
-            my $avail = $line->get_available_space_on_right();
-            my $move  = $col_want - $col;
+            my $line = $rlines->[$jbeg];
+            my $col  = $line->get_column($itok);
+            my $move = $col_want - $col;
             if ( $move > 0 ) {
 
                 # limit padding increase in isolated two lines

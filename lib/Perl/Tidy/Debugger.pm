@@ -45,7 +45,6 @@ sub really_open_debug_file {
 sub close_debug_file {
 
     my $self = shift;
-    my $fh   = $self->{_fh};
     if ( $self->{_debug_file_opened} ) {
         if ( !eval { $self->{_fh}->close(); 1 } ) {
 
