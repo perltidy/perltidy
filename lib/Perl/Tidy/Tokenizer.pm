@@ -4241,11 +4241,6 @@ EOM
             # Update for --use-feature=class (rt145706):
             # We have to be extra careful to avoid misparsing other uses of
             # 'method' in older scripts.
-
-            # TODO: This is just a preliminary version. A future version
-            # should add an option to silently parse as a sub and then
-            # on error backtrack and parse as a bareword.
-
             if ( $tok_kw eq 'method' ) {
                 if (   $expecting == OPERATOR
                     || $next_nonblank_token !~ /^(\w|\:)/

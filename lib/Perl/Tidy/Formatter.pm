@@ -22458,7 +22458,7 @@ EOM
 
             # This option fixes b1240 but not b1235, b1237 with new -lp,
             # but this gives better formatting than the previous option.
-            # TODO: see if stress_level_alha should also be considered
+            # TODO: see if stress_level_alpha should also be considered
             $do_not_break_apart ||=
               $levels_to_go[$i_opening] > $stress_level_beta;
         }
@@ -30329,7 +30329,6 @@ sub add_closing_side_comment {
                         }
                         $cscw_block_comment =
 "## perltidy -cscw $timestamp: $tokens_to_go[$max_index_to_go]";
-## "## perltidy -cscw $year-$month-$day: $tokens_to_go[$max_index_to_go]";
                     }
                 }
 

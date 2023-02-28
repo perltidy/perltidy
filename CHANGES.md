@@ -2,6 +2,10 @@
 
 ## 2022 11 12.05
 
+    - No significant bugs have been found since the last release to CPAN.
+      Several minor issues have been fixed, and some new parameters have been
+      added, as follows:
+
     - Added parameter --one-line-block-exclusion-list=s, or -olbxl=s, where
       s is a list of block types which should not automatically be turned
       into one-line blocks.  This implements the issue raised in PR #111.
@@ -11,7 +15,7 @@
       would be -olbxl='eval'.
 
     - For the -b (--backup-and-modify-in-place) option, the file timestamps
-      are changing (issue rt#145999).  First, if there are no formatting
+      are changing (git #113, rt#145999).  First, if there are no formatting
       changes to an input file, it will keep its original modification time.
       Second, any backup file will keep its original modification time.  This
       was previously true for --backup-method=move but not for the default
@@ -65,6 +69,10 @@
       is --use-feature=class. If this causes a conflict, this option can
       be turned off by entering -uf=' '.
 
+      In other words, perltidy should work for both old and new uses of
+      these keywords with the default settings, but this flag is available
+      if a conflict arises.
+
     - Added option -bfvt=n, or --brace-follower-vertical-tightness=n,
       for part of issue git #110.  For n=2, this option looks for lines
       which would otherwise be, by default,
@@ -80,7 +88,7 @@
       The default is not to do this and can be indicated with n=1.
 
     - Added option -cpb, or --cuddled-paren-brace, for issue git #110.
-      This option  This will cause perltidy to join two lines which
+      This option will cause perltidy to join two lines which
       otherwise would be, by default,
 
         )
@@ -91,8 +99,30 @@
       ) {
 
     - Added option -dbs, or --dump-block-summary, to dump summary
-      information about code blocks in a file to standard output. The
-      man page file, bin/perltidy, has a description.
+      information about code blocks in a file to standard output.
+      Lines with the following comma-separated data items are dumped:
+
+       filename     - the name of the file
+       line         - the line number of the opening brace of this block
+       line_count   - the number of lines between opening and closing braces
+       code_lines   - the number of lines excluding blanks, comments, and pod
+       type         - the block type (sub, for, foreach, ...)
+       name         - the block name if applicable (sub name, label, asub name)
+       depth        - the nesting depth of the opening block brace
+       max_change   - the change in depth to the most deeply nested code block
+       block_count  - the total number of code blocks nested in this block
+       mccabe_count - the McCabe complexity measure of this code block
+
+      This is useful for code restructuring. The man page for perltidy has
+      more information.
+
+    - This version was stress-tested for over 100 cpu hours with random
+      input parameters. No failures to converge, internal fault checks,
+      undefined variable references or other irregularities were seen.
+
+    - This version runs about 4 percent faster than the previous
+      release on large files due to optimizations made with the help of
+      Devel::NYTProf.
 
 ## 2022 11 12
 
