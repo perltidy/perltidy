@@ -98,9 +98,18 @@
 
       ) {
 
+    - Some minor changes to existing formatted output may occur as a result
+      of fixing minor formatting issues with edge cases.  This is especially
+      true for code which uses the -lp or -xlp styles.
+
     - Added option -dbs, or --dump-block-summary, to dump summary
       information about code blocks in a file to standard output.
-      Lines with the following comma-separated data items are dumped:
+      The basic command is:
+
+          perltidy -dbs somefile.pl >blocks.csv
+
+      Instead of formatting ``somefile.pl``, this dumps the following
+      comma-separated items describing its blocks to the standard output:
 
        filename     - the name of the file
        line         - the line number of the opening brace of this block
@@ -113,8 +122,8 @@
        block_count  - the total number of code blocks nested in this block
        mccabe_count - the McCabe complexity measure of this code block
 
-      This is useful for code restructuring. The man page for perltidy has
-      more information.
+      This can be useful for code restructuring. The man page for perltidy
+      has more information and describes controls for selecting block types.
 
     - This version was stress-tested for over 100 cpu hours with random
       input parameters. No failures to converge, internal fault checks,
