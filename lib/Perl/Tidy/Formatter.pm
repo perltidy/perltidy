@@ -11183,8 +11183,10 @@ EOM
             # Keep a broken container broken at multiple welds.  This might
             # also be useful for simple welds, but for now it is restricted
             # to multiple welds to minimize changes to existing coding.  This
-            # fixes b1429, b1430.
-            if ( $iline_io != $iline_ic ) {
+            # fixes b1429, b1430.  Updated for issue c198: but allow a
+            # line differences of 1 (simple shear) so that a simple shear
+            # can remain or become a single line.
+            if ( $iline_ic - $iline_io > 1 ) {
 
                 # Only set this break if it is the last possible weld in this
                 # chain.  This will keep some extreme test cases unchanged.
