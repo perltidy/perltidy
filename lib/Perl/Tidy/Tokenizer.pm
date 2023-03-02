@@ -209,7 +209,7 @@ BEGIN {
         _rOpts_logfile_                      => $i++,
         _rOpts_                              => $i++,
     };
-}
+} ## end BEGIN
 
 {    ## closure for subs to count instances
 
@@ -292,7 +292,7 @@ sub bad_pattern {
     my ($pattern) = @_;
     my $ok = eval "'##'=~/$pattern/";
     return !defined($ok) || $EVAL_ERROR;
-}
+} ## end sub bad_pattern
 
 sub make_code_skipping_pattern {
     my ( $rOpts, $opt_name, $default ) = @_;
@@ -535,7 +535,7 @@ sub warning {
         $logger_object->warning($msg);
     }
     return;
-}
+} ## end sub warning
 
 sub get_input_stream_name {
     my $input_stream_name = EMPTY_STRING;
@@ -544,7 +544,7 @@ sub get_input_stream_name {
         $input_stream_name = $logger_object->get_input_stream_name();
     }
     return $input_stream_name;
-}
+} ## end sub get_input_stream_name
 
 sub complain {
     my $msg           = shift;
@@ -564,7 +564,7 @@ sub write_logfile_entry {
         $logger_object->write_logfile_entry($msg);
     }
     return;
-}
+} ## end sub write_logfile_entry
 
 sub interrupt_logfile {
     my $logger_object = $tokenizer_self->[_logger_object_];
@@ -572,7 +572,7 @@ sub interrupt_logfile {
         $logger_object->interrupt_logfile();
     }
     return;
-}
+} ## end sub interrupt_logfile
 
 sub resume_logfile {
     my $logger_object = $tokenizer_self->[_logger_object_];
@@ -580,7 +580,7 @@ sub resume_logfile {
         $logger_object->resume_logfile();
     }
     return;
-}
+} ## end sub resume_logfile
 
 sub increment_brace_error {
     my $logger_object = $tokenizer_self->[_logger_object_];
@@ -588,7 +588,7 @@ sub increment_brace_error {
         $logger_object->increment_brace_error();
     }
     return;
-}
+} ## end sub increment_brace_error
 
 sub report_definite_bug {
     $tokenizer_self->[_hit_bug_] = 1;
@@ -597,7 +597,7 @@ sub report_definite_bug {
         $logger_object->report_definite_bug();
     }
     return;
-}
+} ## end sub report_definite_bug
 
 sub brace_warning {
     my $msg           = shift;
@@ -606,7 +606,7 @@ sub brace_warning {
         $logger_object->brace_warning($msg);
     }
     return;
-}
+} ## end sub brace_warning
 
 sub get_saw_brace_error {
     my $logger_object = $tokenizer_self->[_logger_object_];
@@ -616,7 +616,7 @@ sub get_saw_brace_error {
     else {
         return 0;
     }
-}
+} ## end sub get_saw_brace_error
 
 sub get_unexpected_error_count {
     my ($self) = @_;
@@ -630,7 +630,7 @@ sub write_diagnostics {
         $tokenizer_self->[_diagnostics_object_]->write_diagnostics($msg);
     }
     return;
-}
+} ## end sub write_diagnostics
 
 sub get_maximum_level {
     return $tokenizer_self->[_maximum_level_];
@@ -835,7 +835,7 @@ sub log_numbered_msg {
     my $input_line_number = $self->[_last_line_number_];
     write_logfile_entry("Line $input_line_number: $msg");
     return;
-}
+} ## end sub log_numbered_msg
 
 # returns the next tokenized line
 sub get_line {
@@ -2013,7 +2013,7 @@ EOM
           scan_bare_identifier_do( $input_line, $i, $tok, $type, $prototype,
             $rtoken_map, $max_token_index );
         return;
-    }
+    } ## end sub scan_bare_identifier
 
     sub scan_identifier {
         (
@@ -2062,7 +2062,7 @@ EOM
             '%' => LIST_CONTEXT,
             '&' => UNKNOWN_CONTEXT,
         );
-    }
+    } ## end BEGIN
 
     sub scan_simple_identifier {
 
@@ -2267,7 +2267,7 @@ EOM
         # We will stop here and assume that this is valid syntax for
         # use feature 'class'.
         return 1;
-    }
+    } ## end sub method_ok_here
 
     sub class_ok_here {
 
@@ -2344,14 +2344,14 @@ EOM
         # We will stop here and assume that this is valid syntax for
         # use feature 'class'.
         return 1;
-    }
+    } ## end sub class_ok_here
 
     sub scan_id {
         ( $i, $tok, $type, $id_scan_state ) =
           scan_id_do( $input_line, $i, $tok, $rtokens, $rtoken_map,
             $id_scan_state, $max_token_index );
         return;
-    }
+    } ## end sub scan_id
 
     sub scan_number {
         my $number;
@@ -2359,7 +2359,7 @@ EOM
           scan_number_do( $input_line, $i, $rtoken_map, $type,
             $max_token_index );
         return $number;
-    }
+    } ## end sub scan_number
 
     use constant VERIFY_FASTNUM => 0;
 
@@ -2493,7 +2493,7 @@ EOM
         error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
-    }
+    } ## end sub do_GREATER_THAN_SIGN
 
     sub do_VERTICAL_LINE {
 
@@ -2501,7 +2501,7 @@ EOM
         error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
-    }
+    } ## end sub do_VERTICAL_LINE
 
     sub do_DOLLAR_SIGN {
 
@@ -3240,7 +3240,7 @@ EOM
           if ( $expecting == OPERATOR );
         scan_simple_identifier();
         return;
-    }
+    } ## end sub do_AT_SIGN
 
     sub do_PERCENT_SIGN {
 
@@ -3386,7 +3386,7 @@ EOM
         #  '::' = probably a sub call
         scan_bare_identifier();
         return;
-    }
+    } ## end sub do_DOUBLE_COLON
 
     sub do_LEFT_SHIFT {
 
@@ -3509,7 +3509,7 @@ EOM
 
         #  '->'
         return;
-    } ## end sub do_POINTER
+    }
 
     sub do_PLUS_PLUS {
 
@@ -3574,7 +3574,7 @@ EOM
         error_if_expecting_TERM()
           if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
         return;
-    }
+    } ## end sub do_LOGICAL_AND
 
     sub do_LOGICAL_OR {
 
@@ -3582,7 +3582,7 @@ EOM
         error_if_expecting_TERM()
           if ( $expecting == TERM && $last_nonblank_token ne ',' );    #c015
         return;
-    }
+    } ## end sub do_LOGICAL_OR
 
     sub do_SLASH_SLASH {
 
@@ -3590,7 +3590,7 @@ EOM
         error_if_expecting_TERM()
           if ( $expecting == TERM );
         return;
-    }
+    } ## end sub do_SLASH_SLASH
 
     sub do_DIGITS {
 
@@ -5794,7 +5794,7 @@ BEGIN {
     @q = qw( n v );
     @{is_n_v}{@q} = (1) x scalar(@q);
 
-}
+} ## end BEGIN
 
 use constant DEBUG_OPERATOR_EXPECTED => 0;
 
@@ -6476,7 +6476,7 @@ BEGIN {
 
     @q = qw(R ]);
     @{is_R_closing_sb}{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 sub is_non_structural_brace {
 
@@ -6930,7 +6930,7 @@ BEGIN {
     # parenless calls of 'ok' are common
     @q = qw( ok );
     @{is_known_function}{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 sub guess_if_pattern_or_division {
 
@@ -7606,7 +7606,7 @@ BEGIN {
     my @q =
       qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
     @{is_special_variable_char}{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 {    ## begin closure for sub scan_complex_identifier
 
@@ -8468,7 +8468,7 @@ EOM
         # lexical subs with these names can cause parsing errors in this version
         my @q = qw( m q qq qr qw qx s tr y );
         @{warn_if_lexical}{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     # saved package and subnames in case prototype is on separate line
     my ( $package_saved, $subname_saved );
@@ -8946,7 +8946,7 @@ sub is_possible_numerator {
         my @q = qw( & && | || ? : + - * and or while if unless);
         push @q, ')', '}', ']', '>', ',', ';';
         @{pattern_test}{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub pattern_expected {
 
@@ -9725,7 +9725,7 @@ sub indicate_error {
     write_error_indicator_pair( $line_number, $input_line, $pos, $carrat );
     resume_logfile();
     return;
-}
+} ## end sub indicate_error
 
 sub write_error_indicator_pair {
     my ( $line_number, $input_line, $pos, $carrat ) = @_;
@@ -9910,7 +9910,7 @@ sub show_tokens {
             '[' => ']',
             '<' => '>',
         );
-    }
+    } ## end BEGIN
 
     sub matching_end_token {
 
@@ -9920,7 +9920,7 @@ sub show_tokens {
             return $matching_end_token{$beginning_token};
         }
         return ($beginning_token);
-    }
+    } ## end sub matching_end_token
 }
 
 sub dump_token_types {
@@ -10657,5 +10657,5 @@ BEGIN {
     #  __DATA__ __END__
 
     @is_keyword{@Keywords} = (1) x scalar(@Keywords);
-}
+} ## end BEGIN
 1;

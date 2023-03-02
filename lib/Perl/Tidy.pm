@@ -114,7 +114,7 @@ BEGIN {
     # a release anyway.
 
     $VERSION = '20221112.05';
-}
+} ## end BEGIN
 
 sub DESTROY {
 
@@ -470,7 +470,7 @@ BEGIN {
         _input_copied_verbatim_    => $i++,
         _input_output_difference_  => $i++,
     };
-}
+} ## end BEGIN
 
 sub perltidy {
 
@@ -635,14 +635,14 @@ EOM
         if   ($flag) { goto ERROR_EXIT }
         else         { goto NORMAL_EXIT }
         croak "unexpectd return to Exit";
-    }
+    } ## end sub Exit
 
     sub Die {
         my $msg = shift;
         Warn($msg);
         Exit(1);
         croak "unexpected return to Die";
-    }
+    } ## end sub Die
 
     sub Fault {
         my ($msg) = @_;
@@ -672,7 +672,7 @@ EOM
 
         # This return is to keep Perl-Critic from complaining.
         return;
-    }
+    } ## end sub Fault
 
     # extract various dump parameters
     my $dump_options_type     = $input_hash{'dump_options_type'};
@@ -1128,7 +1128,7 @@ sub check_in_place_modify {
     }
 
     return ( $in_place_modify, $backup_extension, $delete_backup );
-}
+} ## end sub check_in_place_modify
 
 sub backup_method_copy {
 
@@ -2962,7 +2962,7 @@ sub fileglob_to_re {
     $x =~ s#\*#.*#g;               # '*' -> '.*'
     $x =~ s#\?#.#g;                # '?' -> '.'
     return "^$x\\z";               # match whole word
-}
+} ## end sub fileglob_to_re
 
 sub make_logfile_header {
     my ( $rOpts, $config_file, $rraw_options, $Windows_type, $readable_options )
@@ -4273,7 +4273,7 @@ sub cleanup_word_list {
     }
     $rOpts->{$option_name} = join SPACE, @filtered_word_list;
     return \%seen;
-}
+} ## end sub cleanup_word_list
 
 sub check_options {
 
@@ -4793,7 +4793,7 @@ sub is_unix {
       && ( $OSNAME ne 'VMS' )
       && ( $OSNAME ne 'OS2' )
       && ( $OSNAME ne 'MacOS' );
-}
+} ## end sub is_unix
 
 sub look_for_Windows {
 
@@ -5278,7 +5278,7 @@ sub dump_defaults {
     print STDOUT "Default command line options:\n";
     foreach my $line ( sort @defaults ) { print STDOUT "$line\n" }
     return;
-}
+} ## end sub dump_defaults
 
 sub readable_options {
 

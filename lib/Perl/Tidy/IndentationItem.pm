@@ -1,6 +1,6 @@
 #####################################################################
 #
-# the Perl::Tidy::IndentationItem class supplies items which contain
+# The Perl::Tidy::IndentationItem class supplies items which contain
 # how much whitespace should be used at the start of a line
 #
 #####################################################################
@@ -33,7 +33,7 @@ BEGIN {
         _standard_spaces_    => $i++,
         _K_extra_space_      => $i++,
     };
-}
+} ## end BEGIN
 
 sub AUTOLOAD {
 
@@ -54,7 +54,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -107,7 +107,7 @@ sub new {
 
     bless $self, $class;
     return $self;
-}
+} ## end sub new
 
 sub permanently_decrease_available_spaces {
 
@@ -131,7 +131,7 @@ sub permanently_decrease_available_spaces {
     $item->set_recoverable_spaces(0);
 
     return $deleted_spaces;
-}
+} ## end sub permanently_decrease_available_spaces
 
 sub tentatively_decrease_available_spaces {
 
@@ -149,7 +149,7 @@ sub tentatively_decrease_available_spaces {
     $item->decrease_SPACES($deleted_spaces);
     $item->increase_recoverable_spaces($deleted_spaces);
     return $deleted_spaces;
-}
+} ## end sub tentatively_decrease_available_spaces
 
 sub get_stack_depth {
     return $_[0]->[_stack_depth_];
@@ -173,7 +173,7 @@ sub set_marked {
         $self->[_marked_] = $value;
     }
     return $self->[_marked_];
-}
+} ## end sub set_marked
 
 sub get_available_spaces {
     return $_[0]->[_available_spaces_];
@@ -185,7 +185,7 @@ sub decrease_SPACES {
         $self->[_spaces_] -= $value;
     }
     return $self->[_spaces_];
-}
+} ## end sub decrease_SPACES
 
 sub decrease_available_spaces {
     my ( $self, $value ) = @_;
@@ -194,7 +194,7 @@ sub decrease_available_spaces {
         $self->[_available_spaces_] -= $value;
     }
     return $self->[_available_spaces_];
-}
+} ## end sub decrease_available_spaces
 
 sub get_align_seqno {
     return $_[0]->[_align_seqno_];
@@ -210,7 +210,7 @@ sub set_recoverable_spaces {
         $self->[_recoverable_spaces_] = $value;
     }
     return $self->[_recoverable_spaces_];
-}
+} ## end sub set_recoverable_spaces
 
 sub increase_recoverable_spaces {
     my ( $self, $value ) = @_;
@@ -218,7 +218,7 @@ sub increase_recoverable_spaces {
         $self->[_recoverable_spaces_] += $value;
     }
     return $self->[_recoverable_spaces_];
-}
+} ## end sub increase_recoverable_spaces
 
 sub get_ci_level {
     return $_[0]->[_ci_level_];
@@ -251,7 +251,7 @@ sub set_have_child {
         $self->[_have_child_] = $value;
     }
     return $self->[_have_child_];
-}
+} ## end sub set_have_child
 
 sub get_have_child {
     return $_[0]->[_have_child_];
@@ -263,7 +263,7 @@ sub set_arrow_count {
         $self->[_arrow_count_] = $value;
     }
     return $self->[_arrow_count_];
-}
+} ## end sub set_arrow_count
 
 sub get_arrow_count {
     return $_[0]->[_arrow_count_];
@@ -275,7 +275,7 @@ sub set_comma_count {
         $self->[_comma_count_] = $value;
     }
     return $self->[_comma_count_];
-}
+} ## end sub set_comma_count
 
 sub get_comma_count {
     return $_[0]->[_comma_count_];
@@ -287,7 +287,7 @@ sub set_closed {
         $self->[_closed_] = $value;
     }
     return $self->[_closed_];
-}
+} ## end sub set_closed
 
 sub get_closed {
     return $_[0]->[_closed_];

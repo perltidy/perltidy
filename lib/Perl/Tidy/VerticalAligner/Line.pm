@@ -31,7 +31,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 {
 
@@ -47,7 +47,7 @@ EOM
         my $alignment = $self->{ralignments}->[$j];
         return unless defined($alignment);
         return $alignment->get_column();
-    }
+    } ## end sub get_column
 
     sub current_field_width {
         my ( $self, $j ) = @_;
@@ -62,7 +62,7 @@ EOM
             $col_jm = $alignment_jm->get_column() if defined($alignment_jm);
         }
         return $col_j - $col_jm;
-    }
+    } ## end sub current_field_width
 
     sub increase_field_width {
 
@@ -75,7 +75,7 @@ EOM
             }
         }
         return;
-    }
+    } ## end sub increase_field_width
 
     sub get_available_space_on_right {
         my $jmax = $_[0]->{jmax};

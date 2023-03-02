@@ -34,7 +34,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -108,7 +108,7 @@ sub new {
         _filename_stamp    => $filename_stamp,
         _save_logfile      => $rOpts->{'logfile'},
     }, $class;
-}
+} ## end sub new
 
 sub get_input_stream_name {
     my $self = shift;
@@ -143,14 +143,14 @@ sub interrupt_logfile {
     $self->warning("\n");
     $self->write_logfile_entry( '#' x 24 . "  WARNING  " . '#' x 25 . "\n" );
     return;
-}
+} ## end sub interrupt_logfile
 
 sub resume_logfile {
     my $self = shift;
     $self->write_logfile_entry( '#' x 60 . "\n" );
     $self->{_use_prefix} = 1;
     return;
-}
+} ## end sub resume_logfile
 
 sub we_are_at_the_last_line {
     my $self = shift;
@@ -159,7 +159,7 @@ sub we_are_at_the_last_line {
     }
     $self->{_at_end_of_file} = 1;
     return;
-}
+} ## end sub we_are_at_the_last_line
 
 # record some stuff in case we go down in flames
 use constant MAX_PRINTED_CHARS => 35;
@@ -198,7 +198,7 @@ sub black_box {
         $self->logfile_output( EMPTY_STRING, "$out_str\n" );
     }
     return;
-}
+} ## end sub black_box
 
 sub write_logfile_entry {
 
@@ -207,7 +207,7 @@ sub write_logfile_entry {
     # add leading >>> to avoid confusing error messages and code
     $self->logfile_output( ">>>", "@msg" );
     return;
-}
+} ## end sub write_logfile_entry
 
 sub write_column_headings {
     my $self = shift;
@@ -226,7 +226,7 @@ lines  levels i k            (code begins with one '.' per indent level)
 ------  ----- - - --------   -------------------------------------------
 EOM
     return;
-}
+} ## end sub write_column_headings
 
 sub make_line_information_string {
 
@@ -280,7 +280,7 @@ sub make_line_information_string {
 "L$input_line_number:$output_line_number$extra_space i$guessed_indentation_level:$structural_indentation_level $ci_level $bk $nesting_string";
     }
     return $line_information_string;
-}
+} ## end sub make_line_information_string
 
 sub logfile_output {
     my ( $self, $prompt, $msg ) = @_;
@@ -302,7 +302,7 @@ sub logfile_output {
         }
     }
     return;
-}
+} ## end sub logfile_output
 
 sub get_saw_brace_error {
     my $self = shift;
@@ -331,7 +331,7 @@ sub brace_warning {
         $self->warning("No further warnings of this type will be given\n");
     }
     return;
-}
+} ## end sub brace_warning
 
 sub complain {
 
@@ -350,7 +350,7 @@ sub complain {
         $self->write_logfile_entry($msg);
     }
     return;
-}
+} ## end sub complain
 
 sub warning {
 
@@ -440,7 +440,7 @@ sub warning {
         }
     }
     return;
-}
+} ## end sub warning
 
 sub report_definite_bug {
     my $self = shift;
@@ -454,7 +454,7 @@ sub get_save_logfile {
     # the logfile will be saved.
     my $self = shift;
     return $self->{_save_logfile};
-}
+} ## end sub get_save_logfile
 
 sub finish {
 
@@ -502,5 +502,5 @@ sub finish {
         }
     }
     return;
-}
+} ## end sub finish
 1;

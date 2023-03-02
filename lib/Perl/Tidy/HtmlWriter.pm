@@ -40,7 +40,7 @@ BEGIN {
     if ( !eval { require Pod::Html; 1 } ) {
         $missing_pod_html = $EVAL_ERROR ? $EVAL_ERROR : 1;
     }
-}
+} ## end BEGIN
 
 sub AUTOLOAD {
 
@@ -61,7 +61,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -196,7 +196,7 @@ PRE_END
                                                     # name changes
         _rlast_level       => \$last_level,         # brace indentation level
     }, $class;
-}
+} ## end sub new
 
 sub close_object {
     my ($object) = @_;
@@ -204,7 +204,7 @@ sub close_object {
     # returns true if close works, false if not
     # failure probably means there is no close method
     return eval { $object->close(); 1 };
-}
+} ## end sub close_object
 
 sub add_toc_item {
 
@@ -313,7 +313,7 @@ TOC_END
 TOC_END
     }
     return;
-}
+} ## end sub add_toc_item
 
 BEGIN {
 
@@ -419,7 +419,7 @@ BEGIN {
     #    my @list = qw" .. -> <> ... \ ? ";
     #    @token_long_names{@list} = ('misc-operators') x scalar(@list);
 
-}
+} ## end BEGIN
 
 sub make_getopt_long_names {
     my ( $class, $rgetopt_names ) = @_;
@@ -459,7 +459,7 @@ sub make_getopt_long_names {
     push @{$rgetopt_names}, "podheader!";
     push @{$rgetopt_names}, "podindex!";
     return;
-}
+} ## end sub make_getopt_long_names
 
 sub make_abbreviated_names {
 
@@ -496,7 +496,7 @@ sub make_abbreviated_names {
     ${$rexpansion}{"text"}  = ["html-toc-extension"];
     ${$rexpansion}{"sext"}  = ["html-src-extension"];
     return;
-}
+} ## end sub make_abbreviated_names
 
 sub check_options {
 
@@ -585,7 +585,7 @@ sub check_options {
     }
     $missing_html_entities = 1 unless $rOpts->{'html-entities'};
     return;
-}
+} ## end sub check_options
 
 sub write_style_sheet_file {
 
@@ -597,7 +597,7 @@ sub write_style_sheet_file {
     write_style_sheet_data($fh);
     close_object($fh);
     return;
-}
+} ## end sub write_style_sheet_file
 
 sub write_style_sheet_data {
 
@@ -640,7 +640,7 @@ EOM
         $fh->print("} /* $long_name */\n");
     }
     return;
-}
+} ## end sub write_style_sheet_data
 
 sub set_default_color {
 
@@ -649,7 +649,7 @@ sub set_default_color {
     if ( $rOpts->{$key} ) { $color = $rOpts->{$key} }
     $rOpts->{$key} = check_RGB($color);
     return;
-}
+} ## end sub set_default_color
 
 sub check_RGB {
 
@@ -658,7 +658,7 @@ sub check_RGB {
     my ($color) = @_;
     if ( $color =~ /^[0-9a-fA-F]{6,6}$/ ) { $color = "#$color" }
     return $color;
-}
+} ## end sub check_RGB
 
 sub set_default_properties {
     my ( $short_name, $color, $bold, $italic ) = @_;
@@ -670,7 +670,7 @@ sub set_default_properties {
     $key           = "html-italic-$short_to_long_names{$short_name}";
     $rOpts->{$key} = ( defined $rOpts->{$key} ) ? $rOpts->{$key} : $italic;
     return;
-}
+} ## end sub set_default_properties
 
 sub pod_to_html {
 
@@ -965,7 +965,7 @@ sub pod_to_html {
         $self->make_frame( \@toc );
     }
     return $success_flag;
-}
+} ## end sub pod_to_html
 
 sub make_frame {
 
@@ -1012,7 +1012,7 @@ sub make_frame {
         $toc_basename, $src_basename,  $src_frame_name
     );
     return;
-}
+} ## end sub make_frame
 
 sub write_toc_html {
 
@@ -1039,7 +1039,7 @@ EOM
 EOM
 
     return;
-}
+} ## end sub write_toc_html
 
 sub write_frame_html {
 
@@ -1096,7 +1096,7 @@ EOM
 </html>
 EOM
     return;
-}
+} ## end sub write_frame_html
 
 sub change_anchor_names {
 
@@ -1120,7 +1120,7 @@ sub change_anchor_names {
         }
     }
     return $first_anchor;
-}
+} ## end sub change_anchor_names
 
 sub close_html_file {
     my $self = shift;
@@ -1267,7 +1267,7 @@ HTML_END
         $self->make_frame( \@toc );
     }
     return;
-}
+} ## end sub close_html_file
 
 sub markup_tokens {
     my ( $self, $rtokens, $rtoken_type, $rlevels ) = @_;
@@ -1343,7 +1343,7 @@ sub markup_tokens {
         push @colored_tokens, $token;
     }
     return ( \@colored_tokens );
-}
+} ## end sub markup_tokens
 
 sub markup_html_element {
     my ( $self, $token, $type ) = @_;
@@ -1376,7 +1376,7 @@ sub markup_html_element {
         if ( $html_bold{$short_name} )   { $token = "<b>$token</b>" }
     }
     return $token;
-}
+} ## end sub markup_html_element
 
 sub escape_html {
 
@@ -1391,7 +1391,7 @@ sub escape_html {
         HTML::Entities::encode_entities($token);
     }
     return $token;
-}
+} ## end sub escape_html
 
 sub finish_formatting {
 
@@ -1399,7 +1399,7 @@ sub finish_formatting {
     my $self = shift;
     $self->close_html_file();
     return;
-}
+} ## end sub finish_formatting
 
 sub write_line {
 
@@ -1510,5 +1510,5 @@ EOM
     # write the line
     $html_pre_fh->print("$html_line\n");
     return;
-}
+} ## end sub write_line
 1;

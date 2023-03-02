@@ -78,7 +78,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -120,7 +120,7 @@ EOM
     # We shouldn't get here, but this return is to keep Perl-Critic from
     # complaining.
     return;
-}
+} ## end sub Fault
 
 my %valid_LINE_keys;
 
@@ -154,7 +154,7 @@ BEGIN {
     );
 
     @valid_LINE_keys{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 BEGIN {
 
@@ -211,7 +211,7 @@ BEGIN {
     };
 
     DEBUG_TABS && $debug_warning->('TABS');
-}
+} ## end BEGIN
 
 # GLOBAL variables
 my (
@@ -273,7 +273,7 @@ sub check_options {
     }
 
     return;
-}
+} ## end sub check_options
 
 sub check_keys {
     my ( $rtest, $rvalid, $msg, $exact_match ) = @_;
@@ -378,7 +378,7 @@ sub new {
 
     bless $self, $class;
     return $self;
-}
+} ## end sub new
 
 #################################
 # CODE SECTION 2: Basic Utilities
@@ -401,7 +401,7 @@ sub flush {
     $self->dump_valign_buffer();
 
     return;
-}
+} ## end sub flush
 
 sub initialize_for_new_group {
     my ($self) = @_;
@@ -416,7 +416,7 @@ sub initialize_for_new_group {
     # Note that the value for _group_level_ is
     # handled separately in sub valign_input
     return;
-}
+} ## end sub initialize_for_new_group
 
 sub group_line_count {
     return +@{ $_[0]->[_rgroup_lines_] };
@@ -431,7 +431,7 @@ sub write_diagnostics {
         $diagnostics_object->write_diagnostics($msg);
     }
     return;
-}
+} ## end sub write_diagnostics
 
 {    ## begin closure for logger routines
     my $logger_object;
@@ -452,7 +452,7 @@ sub write_diagnostics {
             $input_stream_name = $logger_object->get_input_stream_name();
         }
         return $input_stream_name;
-    }
+    } ## end sub get_input_stream_name
 
     sub warning {
         my ($msg) = @_;
@@ -460,7 +460,7 @@ sub write_diagnostics {
             $logger_object->warning($msg);
         }
         return;
-    }
+    } ## end sub warning
 
     sub write_logfile_entry {
         my ($msg) = @_;
@@ -468,7 +468,7 @@ sub write_diagnostics {
             $logger_object->write_logfile_entry($msg);
         }
         return;
-    }
+    } ## end sub write_logfile_entry
 }
 
 sub get_cached_line_count {
@@ -483,7 +483,7 @@ sub get_recoverable_spaces {
     # to get them to line up with their opening parens
     my $indentation = shift;
     return ref($indentation) ? $indentation->get_recoverable_spaces() : 0;
-}
+} ## end sub get_recoverable_spaces
 
 ######################################################
 # CODE SECTION 3: Code to accept input and form groups
@@ -967,7 +967,7 @@ sub valign_input {
     };
 
     return;
-}
+} ## end sub valign_input
 
 sub join_hanging_comment {
 
@@ -1014,7 +1014,7 @@ sub join_hanging_comment {
         $rpatterns->[ $j - 1 ] = EMPTY_STRING;
     }
     return 1;
-}
+} ## end sub join_hanging_comment
 
 {    ## closure for sub decide_if_list
 
@@ -1025,7 +1025,7 @@ sub join_hanging_comment {
         my @q = qw( => );
         push @q, ',';
         @is_comma_token{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub decide_if_list {
 
@@ -1054,7 +1054,7 @@ sub join_hanging_comment {
             $line->{'list_type'} = $list_type;
         }
         return;
-    }
+    } ## end sub decide_if_list
 }
 
 sub fix_terminal_ternary {
@@ -1233,7 +1233,7 @@ sub fix_terminal_ternary {
 
     # force a flush after this line
     return $jquestion;
-}
+} ## end sub fix_terminal_ternary
 
 sub fix_terminal_else {
 
@@ -1305,7 +1305,7 @@ sub fix_terminal_else {
     # force a flush after this line if it does not follow a case
     if   ( $rfields_old->[0] =~ /^case\s*$/ ) { return }
     else                                      { return $jbrace }
-}
+} ## end sub fix_terminal_else
 
 my %is_closing_block_type;
 
@@ -1417,7 +1417,7 @@ sub check_match {
 "returning $return_value because $GoToMsg, max match index =i $imax_align, jmax=$jmax\n";
 
     return ( $return_value, $imax_align );
-}
+} ## end sub check_match
 
 sub check_fit {
 
@@ -1488,7 +1488,7 @@ EOM
     #-------------------------------------
     return 1;
 
-}
+} ## end sub check_fit
 
 sub install_new_alignments {
 
@@ -1509,14 +1509,14 @@ sub install_new_alignments {
     }
     $new_line->{'ralignments'} = \@alignments;
     return;
-}
+} ## end sub install_new_alignments
 
 sub copy_old_alignments {
     my ( $new_line, $old_line ) = @_;
     my @new_alignments = @{ $old_line->{'ralignments'} };
     $new_line->{'ralignments'} = \@new_alignments;
     return;
-}
+} ## end sub copy_old_alignments
 
 sub dump_array {
 
@@ -1524,7 +1524,7 @@ sub dump_array {
     local $LIST_SEPARATOR = ')(';
     print STDOUT "(@_)\n";
     return;
-}
+} ## end sub dump_array
 
 sub level_change {
 
@@ -1541,7 +1541,7 @@ sub level_change {
         if ( $level < 0 ) { $level = 0 }
     }
     return $level;
-}
+} ## end sub level_change
 
 ###############################################
 # CODE SECTION 4: Code to process comment lines
@@ -1612,7 +1612,7 @@ sub _flush_comment_lines {
 
     $self->initialize_for_new_group();
     return;
-}
+} ## end sub _flush_comment_lines
 
 ######################################################
 # CODE SECTION 5: Code to process groups of code lines
@@ -1729,7 +1729,7 @@ sub _flush_group_lines {
 
     $self->initialize_for_new_group();
     return;
-}
+} ## end sub _flush_group_lines
 
 {    ## closure for sub sweep_top_down
 
@@ -1762,7 +1762,7 @@ sub _flush_group_lines {
         push @{$rgroups}, [ $jbeg, $jend, undef ];
         $group_line_count++;
         return;
-    }
+    } ## end sub add_to_rgroup
 
     sub get_rgroup_jrange {
 
@@ -1770,7 +1770,7 @@ sub _flush_group_lines {
         return unless ( $group_line_count > 0 );
         my ( $jbeg, $jend ) = @{ $rgroups->[-1] };
         return ( $jbeg, $jend );
-    }
+    } ## end sub get_rgroup_jrange
 
     sub end_rgroup {
 
@@ -1808,7 +1808,7 @@ sub _flush_group_lines {
 
         initialize_for_new_rgroup();
         return;
-    }
+    } ## end sub end_rgroup
 
     sub block_penultimate_match {
 
@@ -1817,7 +1817,7 @@ sub _flush_group_lines {
         return unless @{$rgroups} > 1;
         $rgroups->[-2]->[2] = -1;
         return;
-    }
+    } ## end sub block_penultimate_match
 
     sub sweep_top_down {
         my ( $self, $rlines, $group_level ) = @_;
@@ -1991,7 +1991,7 @@ EOM
 
         end_rgroup(-1);
         return ($rgroups);
-    }
+    } ## end sub sweep_top_down
 }
 
 sub two_line_pad {
@@ -2049,7 +2049,7 @@ sub two_line_pad {
     if ( !$patterns_match && $lenmax > 2 * $lenmin ) { $pad_max = 0 }
 
     return $pad_max;
-}
+} ## end sub two_line_pad
 
 sub sweep_left_to_right {
 
@@ -2222,7 +2222,7 @@ sub sweep_left_to_right {
     do_left_to_right_sweep( $rlines, $rgroups, \@todo, \%max_move, $short_pad,
         $group_level );
     return;
-}
+} ## end sub sweep_left_to_right
 
 {    ## closure for sub do_left_to_right_sweep
 
@@ -2262,7 +2262,7 @@ sub sweep_left_to_right {
           #         if ($is_good_alignment_token{$raw_tok}) => best
           # if defined ($is_good_alignment_token{$raw_tok}) => good or best
 
-    }
+    } ## end BEGIN
 
     sub move_to_common_column {
 
@@ -2295,7 +2295,7 @@ sub sweep_left_to_right {
             }
         }
         return;
-    }
+    } ## end sub move_to_common_column
 
     sub do_left_to_right_sweep {
         my ( $rlines, $rgroups, $rtodo, $rmax_move, $short_pad, $group_level )
@@ -2482,7 +2482,7 @@ sub sweep_left_to_right {
         } ## end loop over tasks
 
         return;
-    }
+    } ## end sub do_left_to_right_sweep
 }
 
 sub delete_selected_tokens {
@@ -2597,7 +2597,7 @@ new patterns: <@{$rpatterns_new}>
 new fields: <@{$rfields_new}>
 EOM
     return;
-}
+} ## end sub delete_selected_tokens
 
 {    ## closure for sub decode_alignment_token
 
@@ -2613,7 +2613,7 @@ EOM
         # number of files is processed at once.
         %decoded_token = ();
         return;
-    }
+    } ## end sub initialize_decode
 
     sub decode_alignment_token {
 
@@ -2652,7 +2652,7 @@ EOM
         my @vals = ( $raw_tok, $lev, $tag, $tok_count );
         $decoded_token{$tok} = \@vals;
         return @vals;
-    }
+    } ## end sub decode_alignment_token
 }
 
 {    ## closure for sub delete_unmatched_tokens
@@ -2677,7 +2677,7 @@ EOM
         );
         @keep_after_deleted_assignment{@q} = (1) x scalar(@q);
 
-    }
+    } ## end BEGIN
 
     sub delete_unmatched_tokens {
         my ( $rlines, $group_level ) = @_;
@@ -2752,7 +2752,7 @@ EOM
         match_line_pairs( $rlines, $rnew_lines, \@subgroups, $group_level );
 
         return ( $max_lev_diff, $saw_side_comment );
-    }
+    } ## end sub delete_unmatched_tokens
 
     sub make_alignment_info {
 
@@ -3277,7 +3277,7 @@ sub match_line_pairs {
         }
     }
     return;
-}
+} ## end sub match_line_pairs
 
 sub compare_patterns {
 
@@ -3405,7 +3405,7 @@ sub fat_comma_to_comma {
     # For example, we will change '=>2+{-3.2' into ',2+{-3'
     if ( $str =~ /^=>([^\.]*)/ ) { $str = ',' . $1 }
     return $str;
-}
+} ## end sub fat_comma_to_comma
 
 sub get_line_token_info {
 
@@ -3557,7 +3557,7 @@ sub get_line_token_info {
         };
     } ## end loop over lines
     return ( $rline_values, $all_monotonic );
-}
+} ## end sub get_line_token_info
 
 sub prune_alignment_tree {
     my ($rlines) = @_;
@@ -3952,7 +3952,7 @@ sub Dump_tree_groups {
         print "(@fix)\n";
     }
     return;
-}
+} ## end sub Dump_tree_groups
 
 {    ## closure for sub is_marginal_match
 
@@ -3984,7 +3984,7 @@ sub Dump_tree_groups {
         @q = qw( { ? => = );
         push @q, (',');
         @is_good_alignment{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub is_marginal_match {
 
@@ -4306,7 +4306,7 @@ sub Dump_tree_groups {
         }
 
         return ( $is_marginal, $imax_align );
-    }
+    } ## end sub is_marginal_match
 } ## end closure for sub is_marginal_match
 
 sub get_extra_leading_spaces {
@@ -4378,7 +4378,7 @@ sub get_extra_leading_spaces {
     # ');' will use the same adjustment.
     $object->permanently_decrease_available_spaces( -$extra_leading_spaces );
     return $extra_leading_spaces;
-}
+} ## end sub get_extra_leading_spaces
 
 sub forget_side_comment {
     my ($self) = @_;
@@ -4463,7 +4463,7 @@ sub is_good_side_comment_column {
 
     # Otherwise, keep it alive
     return $KEEP;
-}
+} ## end sub is_good_side_comment_column
 
 sub align_side_comments {
 
@@ -4650,7 +4650,7 @@ sub align_side_comments {
         $self->[_last_side_comment_level_]       = $group_level;
     }
     return;
-}
+} ## end sub align_side_comments
 
 ###############################
 # CODE SECTION 6: Output Step A
@@ -4778,7 +4778,7 @@ sub valign_output_step_A {
         }
     );
     return;
-}
+} ## end sub valign_output_step_A
 
 sub combine_fields {
 
@@ -4818,7 +4818,7 @@ sub combine_fields {
     $line_0->{'ralignments'}         = \@new_alignments;
     $line_1->{'ralignments'}         = \@new_alignments;
     return;
-}
+} ## end sub combine_fields
 
 sub get_output_line_number {
 
@@ -4827,7 +4827,7 @@ sub get_output_line_number {
     # the number of items written.
     return $_[0]->group_line_count() +
       $_[0]->[_file_writer_object_]->get_output_line_number();
-}
+} ## end sub get_output_line_number
 
 ###############################
 # CODE SECTION 7: Output Step B
@@ -4896,7 +4896,7 @@ sub get_output_line_number {
         $seqno_string               = EMPTY_STRING;
         $last_nonblank_seqno_string = EMPTY_STRING;
         return;
-    }
+    } ## end sub initialize_step_B_cache
 
     sub _flush_step_B_cache {
         my ($self) = @_;
@@ -4921,7 +4921,7 @@ sub get_output_line_number {
             $cached_line_maximum_length = undef;
         }
         return;
-    }
+    } ## end sub _flush_step_B_cache
 
     sub handle_cached_line {
 
@@ -5347,7 +5347,7 @@ sub get_output_line_number {
         $self->[_last_level_written_]       = $level;
         $self->[_last_side_comment_length_] = $side_comment_length;
         return;
-    }
+    } ## end sub valign_output_step_B
 }
 
 ###############################
@@ -5378,7 +5378,7 @@ sub get_output_line_number {
         }
         $valign_buffer_filling = EMPTY_STRING;
         return;
-    }
+    } ## end sub dump_valign_buffer
 
     sub reduce_valign_buffer_indentation {
 
@@ -5406,7 +5406,7 @@ sub get_output_line_number {
             }
         }
         return;
-    }
+    } ## end sub reduce_valign_buffer_indentation
 
     sub valign_output_step_C {
 
@@ -5481,7 +5481,7 @@ sub get_output_line_number {
             }
         }
         return;
-    }
+    } ## end sub valign_output_step_C
 }
 
 ###############################
@@ -5586,7 +5586,7 @@ sub valign_output_step_D {
     $file_writer_object->write_code_line( $line . "\n", $Kend );
 
     return;
-}
+} ## end sub valign_output_step_D
 
 {    ## closure for sub get_leading_string
 
@@ -5659,7 +5659,7 @@ sub valign_output_step_D {
         }
         $leading_string_cache[$leading_whitespace_count] = $leading_string;
         return $leading_string;
-    }
+    } ## end sub get_leading_string
 } ## end get_leading_string
 
 ##########################
@@ -5688,5 +5688,5 @@ sub report_anything_unusual {
         write_logfile_entry("\n");
     }
     return;
-}
+} ## end sub report_anything_unusual
 1;

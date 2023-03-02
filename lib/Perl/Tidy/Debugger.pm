@@ -23,7 +23,7 @@ sub new {
         _fh                => undef,
         _is_encoded_data   => $is_encoded_data,
     }, $class;
-}
+} ## end sub new
 
 sub really_open_debug_file {
 
@@ -40,7 +40,7 @@ sub really_open_debug_file {
     $fh->print(
         "Use -dump-token-types (-dtt) to get a list of token type codes\n");
     return;
-}
+} ## end sub really_open_debug_file
 
 sub close_debug_file {
 
@@ -52,7 +52,7 @@ sub close_debug_file {
         }
     }
     return;
-}
+} ## end sub close_debug_file
 
 sub write_debug_entry {
 
@@ -116,5 +116,5 @@ sub write_debug_entry {
     $fh->print("$token_str\n");
 
     return;
-}
+} ## end sub write_debug_entry
 1;

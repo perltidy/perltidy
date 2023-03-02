@@ -31,7 +31,7 @@ This error is probably due to a recent programming change
 ======================================================================
 EOM
     exit 1;
-}
+} ## end sub AUTOLOAD
 
 sub DESTROY {
 
@@ -71,7 +71,7 @@ BEGIN {
         _K_last_arrival_              => $i++,
         _save_logfile_                => $i++,
     };
-}
+} ## end BEGIN
 
 sub Die {
     my ($msg) = @_;
@@ -105,14 +105,14 @@ EOM
 
     # This return is to keep Perl-Critic from complaining.
     return;
-}
+} ## end sub Fault
 
 sub warning {
     my ( $self, $msg ) = @_;
     my $logger_object = $self->[_logger_object_];
     if ($logger_object) { $logger_object->warning($msg); }
     return;
-}
+} ## end sub warning
 
 sub write_logfile_entry {
     my ( $self, $msg ) = @_;
@@ -121,7 +121,7 @@ sub write_logfile_entry {
         $logger_object->write_logfile_entry($msg);
     }
     return;
-}
+} ## end sub write_logfile_entry
 
 sub new {
     my ( $class, $line_sink_object, $rOpts, $logger_object ) = @_;
@@ -157,7 +157,7 @@ sub new {
 
     bless $self, $class;
     return $self;
-}
+} ## end sub new
 
 sub setup_convergence_test {
     my ( $self, $rlist ) = @_;
@@ -175,7 +175,7 @@ sub setup_convergence_test {
     $self->[_K_sequence_error_msg_]    = EMPTY_STRING;
     $self->[_K_last_arrival_]          = -1;
     return;
-}
+} ## end sub setup_convergence_test
 
 sub get_convergence_check {
     my ($self) = @_;
@@ -183,7 +183,7 @@ sub get_convergence_check {
 
     # converged if all K arrived and in correct order
     return $self->[_K_arrival_order_matches_] && !@{$rlist};
-}
+} ## end sub get_convergence_check
 
 sub get_output_line_number {
     return $_[0]->[_output_line_number_];
@@ -221,7 +221,7 @@ sub want_blank_line {
         $self->write_blank_code_line();
     }
     return;
-}
+} ## end sub want_blank_line
 
 sub require_blank_code_lines {
 
@@ -236,7 +236,7 @@ sub require_blank_code_lines {
         $self->write_blank_code_line($forced);
     }
     return;
-}
+} ## end sub require_blank_code_lines
 
 sub write_blank_code_line {
     my ( $self, $forced ) = @_;
@@ -268,7 +268,7 @@ sub write_blank_code_line {
     $self->[_consecutive_new_blank_lines_]++ if ($forced);
 
     return;
-}
+} ## end sub write_blank_code_line
 
 use constant MAX_PRINTED_CHARS => 80;
 
@@ -341,7 +341,7 @@ EOM
         $self->[_K_last_arrival_] = $K;
     }
     return;
-}
+} ## end sub write_code_line
 
 sub write_line {
     my ( $self, $str ) = @_;
@@ -354,7 +354,7 @@ sub write_line {
     if ( $self->[_save_logfile_] ) { $self->check_line_lengths($str) }
 
     return;
-}
+} ## end sub write_line
 
 sub check_line_lengths {
     my ( $self, $str ) = @_;
@@ -400,7 +400,7 @@ sub check_line_lengths {
         $self->[_line_length_error_count_]++;
     }
     return;
-}
+} ## end sub check_line_lengths
 
 sub report_line_length_errors {
     my $self = shift;
@@ -448,5 +448,5 @@ sub report_line_length_errors {
         }
     }
     return;
-}
+} ## end sub report_line_length_errors
 1;

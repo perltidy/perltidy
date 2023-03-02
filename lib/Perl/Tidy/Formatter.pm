@@ -446,7 +446,7 @@ BEGIN {
         # Number of token variables; must be last in list:
         _NVARS => $i++,
     };
-}
+} ## end BEGIN
 
 BEGIN {
 
@@ -570,7 +570,7 @@ BEGIN {
 
         _LAST_SELF_INDEX_ => $i - 1,
     };
-}
+} ## end BEGIN
 
 BEGIN {
 
@@ -592,7 +592,7 @@ BEGIN {
         _ri_starting_one_line_block_ => $i++,
         _runmatched_opening_indexes_ => $i++,
     };
-}
+} ## end BEGIN
 
 BEGIN {
 
@@ -823,7 +823,7 @@ BEGIN {
     push @obf, ',';
     @is_other_brace_follower{@obf} = (1) x scalar(@obf);
 
-}
+} ## end BEGIN
 
 {    ## begin closure to count instances
 
@@ -1199,7 +1199,7 @@ sub check_token_array {
         );
 
         @valid_line_hash{@valid_line_keys} = (1) x scalar(@valid_line_keys);
-    }
+    } ## end BEGIN
 
     sub check_line_hashes {
         my $self   = shift;
@@ -1233,7 +1233,7 @@ sub check_token_array {
             $input_stream_name = $logger_object->get_input_stream_name();
         }
         return $input_stream_name;
-    }
+    } ## end sub get_input_stream_name
 
     # interface to Perl::Tidy::Logger routines
     sub warning {
@@ -1248,7 +1248,7 @@ sub check_token_array {
             $logger_object->complain($msg);
         }
         return;
-    }
+    } ## end sub complain
 
     sub write_logfile_entry {
         my @msg = @_;
@@ -1256,21 +1256,21 @@ sub check_token_array {
             $logger_object->write_logfile_entry(@msg);
         }
         return;
-    }
+    } ## end sub write_logfile_entry
 
     sub get_saw_brace_error {
         if ($logger_object) {
             return $logger_object->get_saw_brace_error();
         }
         return;
-    }
+    } ## end sub get_saw_brace_error
 
     sub we_are_at_the_last_line {
         if ($logger_object) {
             $logger_object->we_are_at_the_last_line();
         }
         return;
-    }
+    } ## end sub we_are_at_the_last_line
 
 } ## end closure for logger routines
 
@@ -1289,7 +1289,7 @@ sub check_token_array {
             $diagnostics_object->write_diagnostics($msg);
         }
         return;
-    }
+    } ## end sub write_diagnostics
 } ## end closure for diagnostics routines
 
 sub get_convergence_check {
@@ -1309,7 +1309,7 @@ sub want_blank_line {
     my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->want_blank_line();
     return;
-}
+} ## end sub want_blank_line
 
 sub write_unindented_line {
     my ( $self, $line ) = @_;
@@ -1317,7 +1317,7 @@ sub write_unindented_line {
     my $file_writer_object = $self->[_file_writer_object_];
     $file_writer_object->write_line($line);
     return;
-}
+} ## end sub write_unindented_line
 
 sub consecutive_nonblank_lines {
     my ($self)             = @_;
@@ -1325,7 +1325,7 @@ sub consecutive_nonblank_lines {
     my $vao                = $self->[_vertical_aligner_object_];
     return $file_writer_object->get_consecutive_nonblank_lines() +
       $vao->get_cached_line_count();
-}
+} ## end sub consecutive_nonblank_lines
 
 sub split_words {
 
@@ -2145,7 +2145,7 @@ sub initialize_space_after_keyword {
     }
 
     return;
-}
+} ## end sub initialize_space_after_keyword
 
 sub initialize_token_break_preferences {
 
@@ -2834,7 +2834,7 @@ BEGIN {
 
     @q = qw( w i );
     @is_wi{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 use constant DEBUG_WHITE => 0;
 
@@ -3613,7 +3613,7 @@ EOM
           qw{ ? A B C D E F G H I J K L M N O P Q R S T U V W X Y Z [ \ ] ^ _ };
         @{is_special_variable_char}{@q} = (1) x scalar(@q);
 
-    }
+    } ## end BEGIN
 
     sub is_essential_whitespace {
 
@@ -3875,7 +3875,7 @@ EOM
             my $tok = $value->[0];
             push @{ $is_leading_secret_token{$tok} }, $value;
         }
-    }
+    } ## end BEGIN
 
     sub new_secret_operator_whitespace {
 
@@ -4939,7 +4939,7 @@ sub bad_pattern {
     my ($pattern) = @_;
     my $ok = eval "'##'=~/$pattern/";
     return !defined($ok) || $EVAL_ERROR;
-}
+} ## end sub bad_pattern
 
 {    ## begin closure prepare_cuddled_block_types
 
@@ -6205,7 +6205,7 @@ sub find_loop_label {
 
         @q = (qw( and or xor if else elsif unless until while for foreach ));
         @is_mccabe_logic_keyword{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub find_mccabe_count {
         my ($self) = @_;
@@ -7128,7 +7128,7 @@ sub dump_verbatim {
         $self->write_unindented_line($input_line);
     }
     return;
-}
+} ## end sub dump_verbatim
 
 my %wU;
 my %wiq;
@@ -7170,7 +7170,7 @@ BEGIN {
     @q = qw( = == != );
     @is_unexpected_equals{@q} = (1) x scalar(@q);
 
-}
+} ## end BEGIN
 
 { #<<< begin clousure respace_tokens
 
@@ -8713,7 +8713,7 @@ sub delete_weld_interfering_comma {
     }
     return;
 
-} ## end sub delete_trailing_comma
+} ## end sub delete_weld_interfering_comma
 
 sub unstore_last_nonblank_token {
 
@@ -8776,7 +8776,7 @@ sub unstore_last_nonblank_token {
         }
     }
     return 1;
-}
+} ## end sub unstore_last_nonblank_token
 
 sub match_trailing_comma_rule {
 
@@ -9003,7 +9003,7 @@ sub match_trailing_comma_rule {
         }
     }
     return $match;
-}
+} ## end sub match_trailing_comma_rule
 
 sub store_new_token {
 
@@ -9431,7 +9431,7 @@ sub is_list_by_K {
     my $parent_seqno = $self->parent_seqno_by_K($KK);
     return unless defined($parent_seqno);
     return $self->[_ris_list_by_seqno_]->{$parent_seqno};
-}
+} ## end sub is_list_by_K
 
 sub is_list_by_seqno {
 
@@ -9440,7 +9440,7 @@ sub is_list_by_seqno {
     my ( $self, $seqno ) = @_;
     return unless defined($seqno);
     return $self->[_ris_list_by_seqno_]->{$seqno};
-}
+} ## end sub is_list_by_seqno
 
 sub resync_lines_and_tokens {
 
@@ -9673,7 +9673,7 @@ sub check_for_old_break {
         }
     }
     return;
-}
+} ## end sub check_for_old_break
 
 sub keep_old_line_breaks {
 
@@ -10342,7 +10342,7 @@ BEGIN {
     # these types do not 'like' to be separated from a following paren
     @q = qw(w i q Q G C Z U);
     @{has_tight_paren}{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 use constant DEBUG_WELD => 0;
 
@@ -12668,7 +12668,7 @@ BEGIN {
         _K_c_                   => $i++,
         _interrupted_list_rule_ => $i++,
     };
-}
+} ## end BEGIN
 
 sub is_fragile_block_type {
     my ( $self, $block_type, $seqno ) = @_;
@@ -12724,7 +12724,7 @@ sub is_fragile_block_type {
         ];
 
         return;
-    }
+    } ## end sub xlp_collapsed_lengths_initialize
 
     sub cumulative_length_to_comma {
         my ( $self, $KK, $K_comma, $K_closing ) = @_;
@@ -14355,7 +14355,7 @@ EOM
         $next_parent_seqno          = SEQ_ROOT;
         $next_slevel                = undef;
         return;
-    }
+    } ## end sub initialize_process_line_of_CODE
 
     # Batch variables: these describe the current batch of code being formed
     # and sent down the pipeline.  They are initialized in the next
@@ -14445,7 +14445,7 @@ EOM
         # call with no args to delete the current one-line block
         ($index_start_one_line_block) = @_;
         return;
-    }
+    } ## end sub create_one_line_block
 
     # Routine to place the current token into the output stream.
     # Called once per output token.
@@ -14785,7 +14785,7 @@ EOM
         my $vao = $self->[_vertical_aligner_object_];
         $vao->flush();
         return;
-    }
+    } ## end sub flush_vertical_aligner
 
     # flush is called to output any tokens in the pipeline, so that
     # an alternate source of lines can be written in the correct order
@@ -16374,7 +16374,7 @@ sub compare_indentation_levels {
 
         push @q, ',';
         @break_before_or_after_token{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub set_fake_breakpoint {
 
@@ -16383,7 +16383,7 @@ sub compare_indentation_levels {
         # where to make them.
         $forced_breakpoint_count++;
         return;
-    }
+    } ## end sub set_fake_breakpoint
 
     use constant DEBUG_FORCE => 0;
 
@@ -16647,7 +16647,7 @@ EOM
         $batch_count               = 0;
         %saved_opening_indentation = ();
         return;
-    }
+    } ## end sub initialize_grind_batch_of_CODE
 
     # sub grind_batch_of_CODE receives sections of code which are the longest
     # possible lines without a break.  In other words, it receives what is left
@@ -17326,7 +17326,7 @@ EOM
             $summed_lengths_to_go[ $_ + 1 ] += $tok_len;
         }
         return;
-    }
+    } ## end sub unmask_phantom_token
 
     sub save_opening_indentation {
 
@@ -17758,7 +17758,7 @@ EOM
         #  : "<A HREF=\"#item_" . htmlify( 0, $s2 ) . "\">$str</A>"
         push @q, qw( or || ? : );
         @{$ris_break_token}{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub in_same_container_i {
 
@@ -17958,7 +17958,7 @@ sub break_equals {
 
         @q = qw( * / );
         @is_mult_div{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub Debug_dump_breakpoints {
 
@@ -19450,7 +19450,7 @@ EOM
             return if ( $tv > 2 );
         }
         return 1;
-    }
+    } ## end sub simple_rhs
 
     sub recombine_section_3 {
 
@@ -21117,7 +21117,7 @@ sub do_colon_breaks {
         $self->insert_additional_breaks( \@insert_list, $ri_first, $ri_last );
     }
     return;
-}
+} ## end sub do_colon_breaks
 
 ###########################################
 # CODE SECTION 11: Code to break long lists
@@ -21369,7 +21369,7 @@ sub do_colon_breaks {
         my @q = qw< k R } ) ] Y Z U w i q Q .
           = **= += *= &= <<= &&= -= /= |= >>= ||= //= .= %= ^= x=>;
         @is_uncontained_comma_break_included_type{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub do_uncontained_comma_breaks {
 
@@ -21539,7 +21539,7 @@ EOM
         push @q, ',';
         push @q, 'f';    # added for ';' for issue c154
         @quick_filter{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub set_for_semicolon_breakpoints {
         my ( $self, $dd ) = @_;
@@ -21547,7 +21547,7 @@ EOM
             $self->set_forced_breakpoint($_);
         }
         return;
-    }
+    } ## end sub set_for_semicolon_breakpoints
 
     sub set_logical_breakpoints {
         my ( $self, $dd ) = @_;
@@ -21586,7 +21586,7 @@ EOM
         # because bad things can happen (map1.t)
         my $dd = shift;
         return $is_sort_map_grep{ $container_type[$dd] };
-    }
+    } ## end sub is_unbreakable_container
 
     sub break_lists {
 
@@ -22048,7 +22048,7 @@ EOM
         @q = qw(eq ne le ge lt gt);
         @{poor_keywords}{@q}      = (1) x scalar(@q);
         @{poor_next_keywords}{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     sub examine_old_breakpoint {
 
@@ -22900,7 +22900,7 @@ BEGIN {
     @q = qw<( [ { L R } ] ) = b>;
     push @q, ',';
     @is_key_type{@q} = (1) x scalar(@q);
-}
+} ## end BEGIN
 
 use constant DEBUG_FIND_START => 0;
 
@@ -22987,7 +22987,7 @@ EOM
           unshift
         );
         @is_keyword_with_special_leading_term{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     use constant DEBUG_SPARSE => 0;
 
@@ -23146,7 +23146,7 @@ EOM
             $self->set_forced_breakpoint($i_true_last_comma);
         }
         return;
-    }
+    } ## end sub apply_broken_sublist_rule
 
     sub set_emergency_comma_breakpoints {
 
@@ -23245,7 +23245,7 @@ EOM
             # let breaks be defined by default bond strength logic
         }
         return;
-    }
+    } ## end sub set_emergency_comma_breakpoints
 
     sub break_multiline_list {
         my ( $self, $rhash_IN, $rhash_A, $i_opening_minus ) = @_;
@@ -24333,7 +24333,7 @@ sub copy_old_breakpoints {
         }
     }
     return;
-}
+} ## end sub copy_old_breakpoints
 
 sub set_nobreaks {
     my ( $self, $i, $j ) = @_;
@@ -24433,7 +24433,7 @@ sub get_spaces {
     # with a get_spaces method.
     my $indentation = shift;
     return ref($indentation) ? $indentation->get_spaces() : $indentation;
-}
+} ## end sub get_spaces
 
 sub get_recoverable_spaces {
 
@@ -24442,7 +24442,7 @@ sub get_recoverable_spaces {
     # to get them to line up with their opening parens
     my $indentation = shift;
     return ref($indentation) ? $indentation->get_recoverable_spaces() : 0;
-}
+} ## end sub get_recoverable_spaces
 
 sub get_available_spaces_to_go {
 
@@ -24480,7 +24480,7 @@ sub get_available_spaces_to_go {
             _lp_container_seqno_ => $i++,
             _lp_space_count_     => $i++,
         };
-    }
+    } ## end BEGIN
 
     sub initialize_lp_vars {
 
@@ -24522,7 +24522,7 @@ sub get_available_spaces_to_go {
         @hash_test2{@q} = (1) x scalar(@q);
         @q              = qw( . || && );
         @hash_test3{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     # shared variables, re-initialized for each batch
     my $rlp_object_list;
@@ -26228,7 +26228,7 @@ EOM
         # eq and ne were removed from this list to improve alignment chances
         @q = qw(if unless and or err for foreach while until);
         @is_vertical_alignment_keyword{@q} = (1) x scalar(@q);
-    }
+    } ## end BEGIN
 
     my $ralignment_type_to_go;
     my $ralignment_counts;
@@ -27611,7 +27611,7 @@ sub xlp_tweak {
     }
 
     return;
-}
+} ## end sub xlp_tweak
 
 {    ## begin closure make_alignment_patterns
 
@@ -27693,7 +27693,7 @@ sub xlp_tweak {
             ##'is_deeply' => 'is',   # poor; names lengths too different
         );
 
-    }
+    } ## end BEGIN
 
     sub make_alignment_patterns {
 
@@ -28254,7 +28254,7 @@ sub make_paren_name {
         $last_unadjusted_indentation = 0;
         $last_leading_token          = EMPTY_STRING;
         return;
-    }
+    } ## end sub initialize_get_final_indentation
 
     sub get_final_indentation {
 
@@ -29152,7 +29152,7 @@ sub make_paren_name {
             $opening_exists,
 
         );
-    }
+    } ## end sub get_closing_token_indentation
 } ## end closure get_final_indentation
 
 sub get_opening_indentation {
@@ -29255,7 +29255,7 @@ sub examine_vertical_tightness_flags {
     # we can skip all calls to sub set_vertical_tightness_flags
     $self->[_no_vertical_tightness_flags_] = 1;
     return;
-}
+} ## end sub examine_vertical_tightness_flags
 
 sub set_vertical_tightness_flags {
 
@@ -30131,7 +30131,7 @@ sub set_vertical_tightness_flags {
             ')' => '(',
             ']' => '[',
         );
-    }
+    } ## end BEGIN
 
     sub balance_csc_text {
 
