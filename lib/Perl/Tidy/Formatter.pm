@@ -53,7 +53,7 @@ use constant SPACE        => q{ };
 use Carp;
 use English    qw( -no_match_vars );
 use List::Util qw( min max );          # min, max are in Perl 5.8
-our $VERSION = '20221112.05';
+our $VERSION = '20230309';
 
 # The Tokenizer will be loaded with the Formatter
 ##use Perl::Tidy::Tokenizer;    # for is_keyword()
@@ -18199,28 +18199,6 @@ EOM
         return;
     } ## end sub recombine_breakpoints
 
-    sub dump_pair_list {
-
-        #--------------------------------------------
-        # Debug routine, may be eventually be removed
-        #--------------------------------------------
-        my ( $rhash, $msg ) = @_;
-        my $rpair_list = $rhash->{_rpair_list};
-        my $opt        = $rhash->{_optimization_on};
-        $msg = "" unless $msg;
-        print STDERR <<EOM;
- <<$msg>>
-opt=$opt
-EOM
-        foreach my $item ( @{$rpair_list} ) {
-            my ( $n, $bs ) = @{$item};
-            print STDERR <<EOM;
-$n $bs
-EOM
-        }
-        return;
-    }
-
     sub recombine_section_loop {
         my ( $self, $rhash ) = @_;
 
@@ -18293,23 +18271,27 @@ EOM
         # Iteration limit
         #----------------
 
-        # This was originally an O(n-squared) loop which required a check
-        # on the maximum number of ierations. It is now an O(n) loop, but
-        # to guard against programming errors we still place a finite limit
-        # on the total number of iterations.  This should only be reached
-        # in the event of a programming error.
+        # This was originally an O(n-squared) loop which required a check on
+        # the maximum number of iterations for safety. It is now a very fast
+        # loop which runs in O(n) time, but a check on total number of
+        # iterations is retained to guard against future programming errors.
 
-        # Testing shows that most cases require roughly 1 comparison per line.
-        # The upper bound appears to be about 4 comparisons per line unless
-        # optimization is deactivated.
-        # The most extreme cases in my large collection of files are:
-        #    camel1.t  - needs 3 compares per line (12 without optimization)
-        #    ternary.t - needs 4 compares per line (12 without optimization)
-        # So a limiting ratio of 20 should allow all code to pass even with
-        # optimization turned off.  The OPTIMIZE_OK flag should be true
-        # except for testing.
-        use constant OPTIMIZE_OK       => 1;
+        # Most cases require roughly 1 comparison per line pair (1 full pass).
+        # The upper bound is estimated to be about 3 comparisons per line pair
+        # unless optimization is deactivated.  The approximate breakdown is:
+        #   1 pass with 1 compare per joint to do any special cases, plus
+        #   1 pass with up to 2 compares per joint in optimization mode
+        # The most extreme cases in my collection are:
+        #    camel1.t  - needs 2.7 compares per line (12 without optimization)
+        #    ternary.t - needs 2.8 compares per line (12 without optimization)
+        # So a value of MAX_COMPARE_RATIO = 3 looks like an upper bound as
+        # long as optimization is used.  A value of 20 should allow all code to
+        # pass even if optimization is turned off for testing.
+
+        # The OPTIMIZE_OK flag should be true except for testing.
         use constant MAX_COMPARE_RATIO => 20;
+        use constant OPTIMIZE_OK       => 1;
+
         my $num_pairs    = $nend - $nbeg + 1;
         my $max_compares = MAX_COMPARE_RATIO * $num_pairs;
 
@@ -18324,7 +18306,7 @@ EOM
         my $nmax_last = $nmax_batch + 1;
         while (1) {
 
-            # Stop if the number of lines in the batch did not decrease
+            # Stop when the number of lines in the batch does not decrease
             $nmax_batch = @{$ri_end} - 1;
             if ( $nmax_batch >= $nmax_last ) {
                 last;
@@ -18402,9 +18384,6 @@ EOM
         # Start where we ended the last search
         my $ix_start = $rhash->{_ix_best_last};
 
-        # Back up one more during optimization, just to be careful
-        if ( $rhash->{_optimization_on} ) { $ix_start -= 1 }
-
         # Keep the starting index in bounds
         $ix_start = max( 0, $ix_start );
 
@@ -18466,7 +18445,7 @@ EOM
 
             DEBUG_RECOMBINE > 1 && do {
                 print STDERR
-"RECOMBINE: n=$n nmax=$nmax imid=$iend_1 if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
+"RECOMBINE: ix=$ix iend1=$iend_1 iend2=$iend_2 n=$n nmax=$nmax if=$ibeg_1 type=$type_ibeg_1 =$tokens_to_go[$ibeg_1] next_type=$type_ibeg_2 next_tok=$tokens_to_go[$ibeg_2]\n";
             };
 
             # If line $n is the last line, we set some flags and
@@ -18575,13 +18554,13 @@ EOM
 
             if (DEVEL_MODE) {
 
-                # During development, be sure that the strengths are correct
+                # This fault can only occur if an array index error has been
+                # introduced by a recent programming change.
                 my $bs_check = $rbond_strength_to_go->[$iend_1] + $bs_tweak;
                 if ( $bs_check != $bs ) {
                     Fault(<<EOM);
 bs=$bs != $bs_check for break after type $type_iend_1 ix=$ix n=$n
 EOM
-
                 }
             }
 
@@ -18660,27 +18639,27 @@ EOM
         #---------------------------------------------------
         if ($n_best) {
             DEBUG_RECOMBINE > 1
-              && print
-"BEST: rev=$rhash->{_reverse} nb=$n_best nbeg=$nbeg stop=$nstop bs=$bs_best\n";
+              && print "BEST: nb=$n_best nbeg=$nbeg stop=$nstop bs=$bs_best\n";
             splice @{$ri_beg}, $n_best,     1;
             splice @{$ri_end}, $n_best - 1, 1;
             splice @{$rjoint}, $n_best,     1;
 
             splice @{$rpair_list}, $ix_best, 1;
 
-            # Update the pair list:
-            # old $n values greater than the best $n decrease by 1
+            # Update the line indexes in the pair list:
+            # Old $n values greater than the best $n decrease by 1
+            # because of the splice we just did.
             foreach my $item ( @{$rpair_list} ) {
                 my $n_old = $item->[0];
                 if ( $n_old > $n_best ) { $item->[0] -= 1 }
             }
 
-            # And store updated indexes of the best $n. We must subtract 1 to
-            # get the updated indexes because the splice decreased its index
-            # value by 1.  BUT CAUTION: if this is the first line pair, then
-            # this produces an invalid index. So these indexes must be
-            # tested before use in the next pass through the outer loop.
-            $rhash->{_n_best_last}  = $n_best - 1;
+            # Store the index of this location for starting the next search.
+            # We must subtract 1 to get an updated index because the splice
+            # above just removed the best pair.
+            # BUT CAUTION: if this is the first pair in the pair list, then
+            # this produces an invalid index. So this index must be tested
+            # before use in the next pass through the outer loop.
             $rhash->{_ix_best_last} = $ix_best - 1;
 
             # Turn on optimization if ...
@@ -18701,6 +18680,12 @@ EOM
               )
             {
                 $rhash->{_optimization_on} = 1;
+                if (DEBUG_RECOMBINE) {
+                    my $num_compares = $rhash->{_num_compares};
+                    my $num_joints   = @ix_list;
+                    print STDERR
+"Entering optimization phase at $num_compares compares, remaining joints = $num_joints\n";
+                }
             }
         }
         return;
